@@ -79,7 +79,9 @@ def get_latest_snapshot(
         nexus password. Optional parameter.
     """
     log.debug(
-        "======================== MODULE FUNCTION: nexus.get_latest_snapshot, nexus_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, target_dir=%s, classifier=%s)",
+        "======================== MODULE FUNCTION: nexus.get_latest_snapshot,"
+        " nexus_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s,"
+        " target_dir=%s, classifier=%s)",
         nexus_url,
         repository,
         group_id,
@@ -158,7 +160,9 @@ def get_snapshot(
         nexus password. Optional parameter.
     """
     log.debug(
-        "======================== MODULE FUNCTION: nexus.get_snapshot(nexus_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, target_dir=%s, classifier=%s)",
+        "======================== MODULE FUNCTION: nexus.get_snapshot(nexus_url=%s,"
+        " repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s,"
+        " target_dir=%s, classifier=%s)",
         nexus_url,
         repository,
         group_id,
@@ -223,7 +227,9 @@ def get_snapshot_version_string(
         nexus password. Optional parameter.
     """
     log.debug(
-        "======================== MODULE FUNCTION: nexus.get_snapshot_version_string(nexus_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, classifier=%s)",
+        "======================== MODULE FUNCTION:"
+        " nexus.get_snapshot_version_string(nexus_url=%s, repository=%s, group_id=%s,"
+        " artifact_id=%s, packaging=%s, version=%s, classifier=%s)",
         nexus_url,
         repository,
         group_id,
@@ -286,7 +292,9 @@ def get_latest_release(
         nexus password. Optional parameter.
     """
     log.debug(
-        "======================== MODULE FUNCTION: nexus.get_latest_release(nexus_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, target_dir=%s, classifier=%s)",
+        "======================== MODULE FUNCTION:"
+        " nexus.get_latest_release(nexus_url=%s, repository=%s, group_id=%s,"
+        " artifact_id=%s, packaging=%s, target_dir=%s, classifier=%s)",
         nexus_url,
         repository,
         group_id,
@@ -356,7 +364,9 @@ def get_release(
         nexus password. Optional parameter.
     """
     log.debug(
-        "======================== MODULE FUNCTION: nexus.get_release(nexus_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, target_dir=%s, classifier=%s)",
+        "======================== MODULE FUNCTION: nexus.get_release(nexus_url=%s,"
+        " repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s,"
+        " target_dir=%s, classifier=%s)",
         nexus_url,
         repository,
         group_id,
@@ -678,7 +688,7 @@ def __save_artifact(artifact_url, target_file, headers):
             local_file.write(salt.utils.stringutils.to_bytes(f.read()))
         result["status"] = True
         result["comment"] = __append_comment(
-            ("Artifact downloaded from URL: {}".format(artifact_url)),
+            "Artifact downloaded from URL: {}".format(artifact_url),
             result["comment"],
         )
         result["changes"]["downloaded_file"] = target_file
@@ -722,8 +732,8 @@ def __get_error_comment(http_error, request_url):
         comment = "HTTP Error 404. Request URL: " + request_url
     elif http_error.code == http.client.CONFLICT:
         comment = (
-            "HTTP Error 409: Conflict. Requested URL: {}. \n"
-            "This error may be caused by reading snapshot artifact from non-snapshot repository.".format(
+            "HTTP Error 409: Conflict. Requested URL: {}. \nThis error may be caused by"
+            " reading snapshot artifact from non-snapshot repository.".format(
                 request_url
             )
         )

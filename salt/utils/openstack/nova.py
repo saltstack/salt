@@ -569,7 +569,7 @@ class SaltNova:
                 time.sleep(1)
                 if time.time() - start > timeout:
                     log.error(
-                        "Timed out after %s seconds " "while waiting for data", timeout
+                        "Timed out after %s seconds while waiting for data", timeout
                     )
                     return False
 
@@ -707,7 +707,7 @@ class SaltNova:
                 time.sleep(1)
                 if time.time() - start > timeout:
                     log.error(
-                        "Timed out after %d seconds " "while waiting for data", timeout
+                        "Timed out after %d seconds while waiting for data", timeout
                     )
                     return False
 
@@ -738,7 +738,7 @@ class SaltNova:
                 time.sleep(1)
                 if time.time() - start > timeout:
                     log.error(
-                        "Timed out after %s seconds " "while waiting for data", timeout
+                        "Timed out after %s seconds while waiting for data", timeout
                     )
                     return False
 

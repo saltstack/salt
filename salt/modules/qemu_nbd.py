@@ -27,7 +27,8 @@ def __virtual__():
         return "qemu_nbd"
     return (
         False,
-        "The qemu_nbd execution module cannot be loaded: the qemu-nbd binary is not in the path.",
+        "The qemu_nbd execution module cannot be loaded: the qemu-nbd binary is not in"
+        " the path.",
     )
 
 

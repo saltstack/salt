@@ -165,14 +165,15 @@ def config_managed(name, value, force_password=False):
         return _error(ret, str(e))
 
     if name == _password_config_key and (not force_password or not current_value):
-        msg = (
-            '"{}" is already set (we don\'t known if the password is correct)'
-        ).format(name)
-        return _success(ret, msg)
+        return _success(
+            ret,
+            '"{}" is already set (we don\'t known if the password is correct)'.format(
+                name
+            ),
+        )
 
     elif str(value) == current_value:
-        msg = '"{}" is already set to "{}"'.format(name, value)
-        return _success(ret, msg)
+        return _success(ret, '"{}" is already set to "{}"'.format(name, value))
 
     if __opts__["test"]:
         if name == _password_config_key:

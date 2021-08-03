@@ -92,7 +92,8 @@ def __virtual__():
         return "tomcat"
     return (
         False,
-        "Tomcat execution module not loaded: neither Tomcat installed locally nor tomcat-manager credentials set in grains/pillar/config.",
+        "Tomcat execution module not loaded: neither Tomcat installed locally nor"
+        " tomcat-manager credentials set in grains/pillar/config.",
     )
 
 

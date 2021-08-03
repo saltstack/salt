@@ -142,7 +142,7 @@ def describe_hosted_zones(
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if zone_id and domain_name:
         raise SaltInvocationError(
-            "At most one of zone_id or domain_name may " "be provided"
+            "At most one of zone_id or domain_name may be provided"
         )
     retries = 10
     while retries:
@@ -176,8 +176,8 @@ def describe_hosted_zones(
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == e.code:
                     log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
+                        "The request was rejected by AWS API. "
+                        "Route 53 was still processing a prior request."
                     )
                 time.sleep(3)
                 retries -= 1
@@ -252,7 +252,7 @@ def zone_exists(
     error_retries=5,
 ):
     """
-     Check for the existence of a Route53 hosted zone.
+    Check for the existence of a Route53 hosted zone.
 
     .. versionadded:: 2015.8.0
 
@@ -299,8 +299,8 @@ def zone_exists(
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == e.code:
                     log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
+                        "The request was rejected by AWS API. "
+                        "Route 53 was still processing a prior request "
                     )
                 time.sleep(3)
                 error_retries -= 1
@@ -484,8 +484,8 @@ def create_healthcheck(
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == exc.code:
                     log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
+                        "The request was rejected by AWS API. "
+                        "Route 53 was still processing a prior request."
                     )
                 time.sleep(3)
                 error_retries -= 1
@@ -545,7 +545,7 @@ def get_record(
     error_retries=5,
 ):
     """
-     Get a record from a zone.
+    Get a record from a zone.
 
     CLI Example:
 
@@ -608,8 +608,8 @@ def get_record(
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == e.code:
                     log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
+                        "The request was rejected by AWS API. "
+                        "Route 53 was still processing a prior request."
                     )
                 time.sleep(3)
                 error_retries -= 1
@@ -656,7 +656,7 @@ def add_record(
     error_retries=5,
 ):
     """
-     Add a record to a zone.
+    Add a record to a zone.
 
     CLI Example:
 
@@ -710,8 +710,8 @@ def add_record(
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == e.code:
                     log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
+                        "The request was rejected by AWS API. "
+                        "Route 53 was still processing a prior request."
                     )
                 time.sleep(3)
                 error_retries -= 1
@@ -733,8 +733,8 @@ def add_record(
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == e.code:
                     log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
+                        "The request was rejected by AWS API. "
+                        "Route 53 was still processing a prior request."
                     )
                 time.sleep(3)
                 error_retries -= 1
@@ -763,13 +763,13 @@ def update_record(
     error_retries=5,
 ):
     """
-     Modify a record in a zone.
+    Modify a record in a zone.
 
-     CLI Example:
+    CLI Example:
 
-     .. code-block:: bash
+    .. code-block:: bash
 
-         salt myminion boto_route53.modify_record test.example.org 1.1.1.1 example.org A
+        salt myminion boto_route53.modify_record test.example.org 1.1.1.1 example.org A
 
     retry_on_errors
         Continue to query if the zone exists after an error is
@@ -823,8 +823,8 @@ def update_record(
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == e.code:
                     log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
+                        "The request was rejected by AWS API. "
+                        "Route 53 was still processing a prior request."
                     )
                 time.sleep(3)
                 error_retries -= 1
@@ -852,13 +852,13 @@ def delete_record(
     error_retries=5,
 ):
     """
-     Modify a record in a zone.
+    Modify a record in a zone.
 
-     CLI Example:
+    CLI Example:
 
-     .. code-block:: bash
+    .. code-block:: bash
 
-         salt myminion boto_route53.delete_record test.example.org example.org A
+        salt myminion boto_route53.delete_record test.example.org example.org A
 
     retry_on_errors
         Continue to query if the zone exists after an error is
@@ -913,8 +913,8 @@ def delete_record(
                     log.debug("Throttled by AWS API.")
                 elif "PriorRequestNotComplete" == e.code:
                     log.debug(
-                        "The request was rejected by AWS API.\
-                              Route 53 was still processing a prior request"
+                        "The request was rejected by AWS API. "
+                        "Route 53 was still processing a prior request."
                     )
                 time.sleep(3)
                 error_retries -= 1
@@ -1045,7 +1045,7 @@ def create_hosted_zone(
 
     if not domain_name.endswith("."):
         raise SaltInvocationError(
-            "Domain MUST be fully-qualified, complete " "with ending period."
+            "Domain MUST be fully-qualified, complete with ending period."
         )
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -1065,7 +1065,7 @@ def create_hosted_zone(
     if private_zone:
         if not _exactly_one((vpc_name, vpc_id)):
             raise SaltInvocationError(
-                "Either vpc_name or vpc_id is required " "when creating a private zone."
+                "Either vpc_name or vpc_id is required when creating a private zone."
             )
         vpcs = __salt__["boto_vpc.describe_vpcs"](
             vpc_id=vpc_id,
@@ -1079,7 +1079,7 @@ def create_hosted_zone(
             vpcs = [v for v in vpcs if v["region"] == vpc_region]
         if not vpcs:
             log.error(
-                "Private zone requested but a VPC matching given criteria" " not found."
+                "Private zone requested but a VPC matching given criteria not found."
             )
             return None
         if len(vpcs) > 1:

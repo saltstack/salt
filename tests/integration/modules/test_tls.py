@@ -64,8 +64,7 @@ class TLSModuleTest(ModuleCase, LoaderModuleMockMixin):
 
     def test_creating_csr_should_fail_with_no_ca(self):
         expected_message = (
-            'Certificate for CA named "bad_ca" does not exist,'
-            " please create it first."
+            'Certificate for CA named "bad_ca" does not exist, please create it first.'
         )
         self.assertEqual(tls.create_csr(ca_name="bad_ca"), expected_message)
 

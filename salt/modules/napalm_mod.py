@@ -152,7 +152,10 @@ def _junos_prep_fun(napalm_device):
         return {
             "out": None,
             "result": False,
-            "comment": "Please install jxmlease (``pip install jxmlease``) to be able to use this function.",
+            "comment": (
+                "Please install jxmlease (``pip install jxmlease``) to be able to use"
+                " this function."
+            ),
         }
     _inject_junos_proxy(napalm_device)
     return {"result": True}

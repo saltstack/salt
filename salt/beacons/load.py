@@ -27,7 +27,7 @@ def validate(config):
 
     # Configuration for load beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for load beacon must be a list.")
+        return False, "Configuration for load beacon must be a list."
     else:
         _config = {}
         list(map(_config.update, config))
@@ -36,54 +36,42 @@ def validate(config):
             if not isinstance(_config["emitatstartup"], bool):
                 return (
                     False,
-                    (
-                        "Configuration for load beacon option "
-                        "emitatstartup must be a boolean."
-                    ),
+                    "Configuration for load beacon option emitatstartup must be a"
+                    " boolean.",
                 )
 
         if "onchangeonly" in _config:
             if not isinstance(_config["onchangeonly"], bool):
                 return (
                     False,
-                    (
-                        "Configuration for load beacon option "
-                        "onchangeonly must be a boolean."
-                    ),
+                    "Configuration for load beacon option onchangeonly must be a"
+                    " boolean.",
                 )
 
         if "averages" not in _config:
-            return False, ("Averages configuration is required for load beacon.")
+            return False, "Averages configuration is required for load beacon."
         else:
 
             if not any(j in ["1m", "5m", "15m"] for j in _config.get("averages", {})):
                 return (
                     False,
-                    (
-                        "Averages configuration for load beacon "
-                        "must contain 1m, 5m or 15m items."
-                    ),
+                    "Averages configuration for load beacon must contain 1m, 5m or 15m"
+                    " items.",
                 )
 
             for item in ["1m", "5m", "15m"]:
                 if not isinstance(_config["averages"][item], list):
                     return (
                         False,
-                        (
-                            "Averages configuration for load beacon: "
-                            "1m, 5m and 15m items must be "
-                            "a list of two items."
-                        ),
+                        "Averages configuration for load beacon: 1m, 5m and 15m items"
+                        " must be a list of two items.",
                     )
                 else:
                     if len(_config["averages"][item]) != 2:
                         return (
                             False,
-                            (
-                                "Configuration for load beacon: "
-                                "1m, 5m and 15m items must be "
-                                "a list of two items."
-                            ),
+                            "Configuration for load beacon: 1m, 5m and 15m items must"
+                            " be a list of two items.",
                         )
 
     return True, "Valid beacon configuration"
@@ -159,7 +147,7 @@ def beacon(config):
                     LAST_STATUS[k]
                 ) < float(_config["averages"][k][1]):
                     log.debug(
-                        "Emit because %f > %f and last was " "%f",
+                        "Emit because %f > %f and last was %f",
                         float(avg_dict[k]),
                         float(_config["averages"][k][1]),
                         float(LAST_STATUS[k]),
@@ -172,7 +160,7 @@ def beacon(config):
                     LAST_STATUS[k]
                 ) > float(_config["averages"][k][0]):
                     log.debug(
-                        "Emit because %f < %f and last was" "%f",
+                        "Emit because %f < %f and last was%f",
                         float(avg_dict[k]),
                         float(_config["averages"][k][0]),
                         float(LAST_STATUS[k]),
@@ -185,7 +173,7 @@ def beacon(config):
                     avg_dict[k]
                 ) > float(_config["averages"][k][1]):
                     log.debug(
-                        "Emit because %f < %f or > " "%f",
+                        "Emit because %f < %f or > %f",
                         float(avg_dict[k]),
                         float(_config["averages"][k][0]),
                         float(_config["averages"][k][1]),

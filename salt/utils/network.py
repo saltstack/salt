@@ -793,7 +793,8 @@ def _interfaces_ifconfig(out):
         pip = re.compile(r".*?(?:inet addr:|inet [^\d]*)(.*?)\s")
         pip6 = re.compile(".*?(?:inet6 addr: (.*?)/|inet6 )([0-9a-fA-F:]+)")
         pmask6 = re.compile(
-            r".*?(?:inet6 addr: [0-9a-fA-F:]+/(\d+)|prefixlen (\d+))(?: Scope:([a-zA-Z]+)| scopeid (0x[0-9a-fA-F]))?"
+            r".*?(?:inet6 addr: [0-9a-fA-F:]+/(\d+)|prefixlen (\d+))(?:"
+            r" Scope:([a-zA-Z]+)| scopeid (0x[0-9a-fA-F]))?"
         )
     pmask = re.compile(r".*?(?:Mask:|netmask )(?:((?:0x)?[0-9a-fA-F]{8})|([\d\.]+))")
     pupdown = re.compile("UP")
@@ -993,7 +994,8 @@ def _junos_interfaces_ifconfig(out):
     pmac = re.compile("curr media .*? ([0-9a-f:]+)")
 
     pip = re.compile(
-        r".*?inet\s*(primary)*\s+mtu (\d+)\s+local=[^\d]*(.*?)\s+dest=[^\d]*(.*?)\/([\d]*)\s+bcast=((?:[0-9]{1,3}\.){3}[0-9]{1,3})"
+        r".*?inet\s*(primary)*\s+mtu"
+        r" (\d+)\s+local=[^\d]*(.*?)\s+dest=[^\d]*(.*?)\/([\d]*)\s+bcast=((?:[0-9]{1,3}\.){3}[0-9]{1,3})"
     )
     pip6 = re.compile(
         r".*?inet6 mtu [^\d]+\s+local=([0-9a-f:]+)%([a-zA-Z0-9]*)/([\d]*)\s"
@@ -1209,7 +1211,7 @@ def _get_iface_info(iface):
     if iface in iface_info.keys():
         return iface_info, False
     else:
-        error_msg = 'Interface "{}" not in available interfaces: "{}"' "".format(
+        error_msg = 'Interface "{}" not in available interfaces: "{}"'.format(
             iface, '", "'.join(iface_info.keys())
         )
         log.error(error_msg)
@@ -2155,15 +2157,18 @@ def dns_check(addr, port, safe=False, ipv6=None):
         addrinfo = socket.getaddrinfo(addr, port, family, socket.SOCK_STREAM)
         ip_addrs = _test_addrs(addrinfo, port)
     except TypeError:
-        err = (
-            "Attempt to resolve address '{}' failed. Invalid or unresolveable address"
-        ).format(addr)
-        raise SaltSystemExit(code=42, msg=err)
+        raise SaltSystemExit(
+            code=42,
+            msg=(
+                "Attempt to resolve address '{}' failed. Invalid or unresolveable"
+                " address".format(addr)
+            ),
+        )
     except OSError:
         pass
 
     if not ip_addrs:
-        err = ("DNS lookup or connection check of '{}' failed.").format(addr)
+        err = "DNS lookup or connection check of '{}' failed.".format(addr)
         if safe:
             if salt.log.is_console_configured():
                 # If logging is not configured it also means that either

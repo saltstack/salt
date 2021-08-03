@@ -143,7 +143,7 @@ def boolean(name, value, persist=False):
         return ret
     rvalue = _refine_value(value)
     if rvalue is None:
-        ret["comment"] = "{} is not a valid value for the " "boolean".format(value)
+        ret["comment"] = "{} is not a valid value for the boolean".format(value)
         ret["result"] = False
         return ret
     state = bools[name]["State"] == rvalue
@@ -218,7 +218,7 @@ def module(name, module_state="Enabled", version="any", **opts):
         return ret
     rmodule_state = _refine_module_state(module_state)
     if rmodule_state == "unknown":
-        ret["comment"] = "{} is not a valid state for the " "{} module.".format(
+        ret["comment"] = "{} is not a valid state for the {} module.".format(
             module_state, module
         )
         ret["result"] = False
@@ -464,8 +464,10 @@ def fcontext_policy_applied(name, recursive=False):
         ret.update(
             {
                 "result": True,
-                "comment": 'SElinux policies are already applied for filespec "{}"'.format(
-                    name
+                "comment": (
+                    'SElinux policies are already applied for filespec "{}"'.format(
+                        name
+                    )
                 ),
             }
         )

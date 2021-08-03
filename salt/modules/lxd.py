@@ -85,21 +85,18 @@ def __virtual__():
         if LooseVersion(pylxd_version()) < LooseVersion(_pylxd_minimal_version):
             return (
                 False,
-                (
-                    "The lxd execution module cannot be loaded:"
-                    ' pylxd "{}" is not supported,'
-                    ' you need at least pylxd "{}"'
-                ).format(pylxd_version(), _pylxd_minimal_version),
+                'The lxd execution module cannot be loaded: pylxd "{}" is '
+                'not supported, you need at least pylxd "{}"'.format(
+                    pylxd_version(), _pylxd_minimal_version
+                ),
             )
 
         return __virtualname__
 
     return (
         False,
-        (
-            "The lxd execution module cannot be loaded: "
-            "the pylxd python module is not available."
-        ),
+        "The lxd execution module cannot be loaded: "
+        "the pylxd python module is not available.",
     )
 
 
@@ -184,7 +181,7 @@ def init(
         salt '*' lxd.init
     """
 
-    cmd = ("lxd init --auto" ' --storage-backend="{}"').format(storage_backend)
+    cmd = 'lxd init --auto --storage-backend="{}"'.format(storage_backend)
 
     if trust_password is not None:
         cmd = cmd + ' --trust-password="{}"'.format(trust_password)
@@ -351,18 +348,14 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
 
                 if not os.path.isfile(cert):
                     raise SaltInvocationError(
-                        (
-                            'You have given an invalid cert path: "{}", '
-                            "the file does not exists or is not a file."
-                        ).format(cert)
+                        'You have given an invalid cert path: "{}", the '
+                        "file does not exist or is not a file.".format(cert)
                     )
 
                 if not os.path.isfile(key):
                     raise SaltInvocationError(
-                        (
-                            'You have given an invalid key path: "{}", '
-                            "the file does not exists or is not a file."
-                        ).format(key)
+                        'You have given an invalid key path: "{}", the '
+                        "file does not exists or is not a file.".format(key)
                     )
 
                 log.debug(
@@ -387,10 +380,8 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
     except TypeError as e:
         # Happens when the verification failed.
         raise CommandExecutionError(
-            (
-                'Failed to connect to "{}",'
-                " looks like the SSL verification failed, error was: {}"
-            ).format(remote_addr, str(e))
+            'Failed to connect to "{}", looks like the SSL verification '
+            "failed, error was: {}".format(remote_addr, str(e))
         )
 
     _connection_pool[pool_key] = client
@@ -3449,7 +3440,7 @@ def sync_config_devices(obj, newconfig, newdevices, test=False):
             if not test:
                 config_changes[
                     k
-                ] = 'Changed config key "{}" to "{}", ' 'its value was "{}"'.format(
+                ] = 'Changed config key "{}" to "{}", its value was "{}"'.format(
                     k, newconfig[k], obj.config[k]
                 )
                 obj.config[k] = newconfig[k]

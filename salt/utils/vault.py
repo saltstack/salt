@@ -84,13 +84,11 @@ def _get_token_and_url_from_master():
         )
         raise salt.exceptions.CommandExecutionError(result)
     if not isinstance(result, dict):
-        log.error(
-            "Failed to get token from master! " "Response is not a dict: %s", result
-        )
+        log.error("Failed to get token from master! Response is not a dict: %s", result)
         raise salt.exceptions.CommandExecutionError(result)
     if "error" in result:
         log.error(
-            "Failed to get token from master! " "An error was returned: %s",
+            "Failed to get token from master! An error was returned: %s",
             result["error"],
         )
         raise salt.exceptions.CommandExecutionError(result)

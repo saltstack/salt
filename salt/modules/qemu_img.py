@@ -20,7 +20,8 @@ def __virtual__():
         return "qemu_img"
     return (
         False,
-        "The qemu_img execution module cannot be loaded: the qemu-img binary is not in the path.",
+        "The qemu_img execution module cannot be loaded: the qemu-img binary is not in"
+        " the path.",
     )
 
 

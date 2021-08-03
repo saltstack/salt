@@ -430,8 +430,8 @@ class Shell:
                         ret_stdout = (
                             "The host key needs to be accepted, to "
                             "auto accept run salt-ssh with the -i "
-                            "flag:\n{}"
-                        ).format(stdout)
+                            "flag:\n{}".format(stdout)
+                        )
                         return ret_stdout, "", 254
                 elif buff and buff.endswith("_||ext_mods||_"):
                     mods_raw = (

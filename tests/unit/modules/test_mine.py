@@ -24,7 +24,7 @@ class FakeCache:
         return self.data.get((bank, key), {})
 
     def debug(self):
-        print(__name__ + ":FakeCache dump:\n" "{}".format(self.data))
+        print(__name__ + ":FakeCache dump:\n{}".format(self.data))
 
 
 class MineTestCase(TestCase, LoaderModuleMockMixin):

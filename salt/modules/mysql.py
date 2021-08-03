@@ -1044,7 +1044,7 @@ def free_slave(**connection_args):
 
     slave_cur.execute("stop slave")
     slave_cur.execute("reset master")
-    slave_cur.execute("change master to MASTER_HOST=" "")
+    slave_cur.execute("change master to MASTER_HOST=")
     slave_cur.execute("show slave status")
     results = slave_cur.fetchone()
 
@@ -1361,9 +1361,7 @@ def _mysql_user_exists(
 
     server_version = salt.utils.data.decode(version(**connection_args))
     compare_version = "8.0.11"
-    qry = (
-        "SELECT User,Host FROM mysql.user WHERE User = %(user)s AND " "Host = %(host)s"
-    )
+    qry = "SELECT User,Host FROM mysql.user WHERE User = %(user)s AND Host = %(host)s"
     args = {}
     args["user"] = user
     args["host"] = host
@@ -1406,9 +1404,7 @@ def _mariadb_user_exists(
     **connection_args
 ):
 
-    qry = (
-        "SELECT User,Host FROM mysql.user WHERE User = %(user)s AND " "Host = %(host)s"
-    )
+    qry = "SELECT User,Host FROM mysql.user WHERE User = %(user)s AND Host = %(host)s"
     args = {}
     args["user"] = user
     args["host"] = host
@@ -1469,8 +1465,9 @@ def user_exists(
         server_version = salt.utils.data.decode(version(**connection_args))
         if not server_version:
             last_err = __context__["mysql.error"]
-            err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(
-                last_err
+            err = (
+                "MySQL Error: Unable to fetch current server version. Last error was:"
+                ' "{}"'.format(last_err)
             )
             log.error(err)
             return False
@@ -1549,7 +1546,7 @@ def user_info(user, host="localhost", **connection_args):
         return False
 
     cur = dbc.cursor(MySQLdb.cursors.DictCursor)
-    qry = "SELECT * FROM mysql.user WHERE User = %(user)s AND " "Host = %(host)s"
+    qry = "SELECT * FROM mysql.user WHERE User = %(user)s AND Host = %(host)s"
     args = {}
     args["user"] = user
     args["host"] = host
@@ -1735,8 +1732,9 @@ def user_create(
         server_version = salt.utils.data.decode(version(**connection_args))
         if not server_version:
             last_err = __context__["mysql.error"]
-            err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(
-                last_err
+            err = (
+                "MySQL Error: Unable to fetch current server version. Last error was:"
+                ' "{}"'.format(last_err)
             )
             log.error(err)
             return False
@@ -1874,7 +1872,10 @@ def _mysql_user_chpass(
                     salt.utils.versions.version_cmp(server_version, compare_version)
                     >= 0
                 ):
-                    qry = "ALTER USER %(user)s@%(host)s IDENTIFIED WITH %(unix_socket)s AS %(user)s;"
+                    qry = (
+                        "ALTER USER %(user)s@%(host)s IDENTIFIED WITH %(unix_socket)s"
+                        " AS %(user)s;"
+                    )
                 else:
                     qry = (
                         "UPDATE mysql.user SET "
@@ -2022,8 +2023,9 @@ def user_chpass(
         server_version = salt.utils.data.decode(version(**connection_args))
         if not server_version:
             last_err = __context__["mysql.error"]
-            err = 'MySQL Error: Unable to fetch current server version. Last error was: "{}"'.format(
-                last_err
+            err = (
+                "MySQL Error: Unable to fetch current server version. Last error was:"
+                ' "{}"'.format(last_err)
             )
             log.error(err)
             return False
@@ -2596,7 +2598,7 @@ def grant_revoke(
         grant, database, user, host, grant_option, escape, **connection_args
     ):
         log.info(
-            "Grant '%s' on '%s' for user '%s' has been " "revoked",
+            "Grant '%s' on '%s' for user '%s' has been revoked",
             grant,
             database,
             user,
@@ -2604,7 +2606,7 @@ def grant_revoke(
         return True
 
     log.info(
-        "Grant '%s' on '%s' for user '%s' has NOT been " "revoked",
+        "Grant '%s' on '%s' for user '%s' has NOT been revoked",
         grant,
         database,
         user,
@@ -3017,7 +3019,10 @@ def plugin_status(name, **connection_args):
     if dbc is None:
         return ""
     cur = dbc.cursor()
-    qry = "SELECT PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME = %(name)s"
+    qry = (
+        "SELECT PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME ="
+        " %(name)s"
+    )
     args = {}
     args["name"] = name
 

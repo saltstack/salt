@@ -284,7 +284,8 @@ class SlackClient:
                 ret_groups[name]["targets"].update(config.get("targets", {}))
             except (IndexError, AttributeError):
                 log.warning(
-                    "Couldn't use group %s. Check that targets is a dictionary and not a list",
+                    "Couldn't use group %s. Check that targets is a dictionary and not"
+                    " a list",
                     name,
                 )
 
@@ -516,9 +517,7 @@ class SlackClient:
                     )
                     user_id = m_data["message"]["user"]
                 elif "comment" in m_data and "user" in m_data["comment"]:
-                    log.debug(
-                        "Comment was added, " "so we look for user in " "the comment."
-                    )
+                    log.debug("Comment was added, so we look for user in the comment.")
                     user_id = m_data["comment"]["user"]
             else:
                 user_id = m_data.get("user")
@@ -581,13 +580,13 @@ class SlackClient:
                     loaded_groups = self.get_config_groups(groups, groups_pillar_name)
                     if not data.get("user_name"):
                         log.error(
-                            "The user %s can not be looked up via slack. What has happened here?",
+                            "The user %s can not be looked up via slack. What has"
+                            " happened here?",
                             m_data.get("user"),
                         )
                         channel.send_message(
-                            "The user {} can not be looked up via slack.  Not running {}".format(
-                                data["user_id"], msg_text
-                            )
+                            "The user {} can not be looked up via slack.  Not"
+                            " running {}".format(data["user_id"], msg_text)
                         )
                         yield {"message_data": m_data}
                         continue

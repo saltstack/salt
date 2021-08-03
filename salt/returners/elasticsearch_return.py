@@ -118,7 +118,8 @@ def __virtual__():
     if "elasticsearch.index_exists" not in __salt__:
         return (
             False,
-            "Elasticsearch module not availble.  Check that the elasticsearch library is installed.",
+            "Elasticsearch module not availble.  Check that the elasticsearch library"
+            " is installed.",
         )
     return __virtualname__
 
@@ -228,8 +229,7 @@ def returner(ret):
         return
     if ret.get("data", None) is None and ret.get("return") is None:
         log.info(
-            "Won't push new data to Elasticsearch, job with jid=%s was "
-            "not successful",
+            "Won't push new data to Elasticsearch, job with jid=%s was not successful",
             job_id,
         )
         return

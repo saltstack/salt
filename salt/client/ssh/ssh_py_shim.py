@@ -136,8 +136,9 @@ def need_deployment():
                 )
             except OSError:
                 sys.stdout.write(
-                    "\n\nUnable to set permissions on thin directory.\nIf sudo_user is set "
-                    "and is not root, be certain the user is in the same group\nas the login user"
+                    "\n\nUnable to set permissions on thin directory.\nIf sudo_user is"
+                    " set and is not root, be certain the user is in the same group\nas"
+                    " the login user"
                 )
                 sys.exit(1)
 
@@ -248,7 +249,7 @@ def get_executable():
         stdout, _ = subprocess.Popen(
             [
                 py_cmd,
-                "-c"
+                "-c",
                 "import sys; sys.stdout.write('%s:%s' % (sys.version_info[0], sys.version_info[1]))",
             ],
             stdout=subprocess.PIPE,
@@ -292,8 +293,9 @@ def main(argv):  # pylint: disable=W0613
 
         if os.path.exists(OPTIONS.saltdir) and not os.path.isdir(OPTIONS.saltdir):
             sys.stderr.write(
-                'ERROR: salt path "{0}" exists but is'
-                " not a directory\n".format(OPTIONS.saltdir)
+                'ERROR: salt path "{0}" exists but is not a directory\n'.format(
+                    OPTIONS.saltdir
+                )
             )
             sys.exit(EX_CANTCREAT)
 

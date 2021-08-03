@@ -302,7 +302,9 @@ def test_mod_beacon(tmp_path):
                 "name": name,
                 "changes": {},
                 "result": False,
-                "comment": "pkg.latest does not work with the mod_beacon state function",
+                "comment": (
+                    "pkg.latest does not work with the mod_beacon state function"
+                ),
             }
 
             assert ret == expected

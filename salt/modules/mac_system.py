@@ -566,9 +566,7 @@ def set_disable_keyboard_on_lock(enable):
     """
     state = __utils__["mac_utils.validate_enabled"](enable)
 
-    cmd = "systemsetup -setdisablekeyboardwhenenclosurelockisengaged " "{}".format(
-        state
-    )
+    cmd = "systemsetup -setdisablekeyboardwhenenclosurelockisengaged {}".format(state)
     __utils__["mac_utils.execute_return_success"](cmd)
 
     return __utils__["mac_utils.confirm_updated"](

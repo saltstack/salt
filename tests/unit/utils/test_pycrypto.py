@@ -20,7 +20,9 @@ class PycryptoTestCase(TestCase):
             "badsalt": "badsalt",
         },
         "sha256": {
-            "hashed": "$5$rounds=53501$goodsalt$W.uoco0wMfGLDOlsbW52E6raFS1Nhj0McfUTj2vORt7",
+            "hashed": (
+                "$5$rounds=53501$goodsalt$W.uoco0wMfGLDOlsbW52E6raFS1Nhj0McfUTj2vORt7"
+            ),
             "salt": "rounds=53501$goodsalt",
             "badsalt": "badsalt",
         },

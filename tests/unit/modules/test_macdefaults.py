@@ -16,7 +16,8 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(macdefaults.__salt__, {"cmd.run_all": mock}):
             macdefaults.write("com.apple.CrashReporter", "DialogType", "Server")
             mock.assert_called_once_with(
-                'defaults write "com.apple.CrashReporter" "DialogType" -string "Server"',
+                'defaults write "com.apple.CrashReporter" "DialogType" -string'
+                ' "Server"',
                 runas=None,
             )
 
@@ -30,7 +31,8 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
                 "com.apple.CrashReporter", "DialogType", "Server", user="frank"
             )
             mock.assert_called_once_with(
-                'defaults write "com.apple.CrashReporter" "DialogType" -string "Server"',
+                'defaults write "com.apple.CrashReporter" "DialogType" -string'
+                ' "Server"',
                 runas="frank",
             )
 

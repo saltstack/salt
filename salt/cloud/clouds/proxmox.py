@@ -314,7 +314,7 @@ def get_resources_nodes(call=None, resFilter=None):
             ret[name] = resource
 
     if resFilter is not None:
-        log.debug("Filter given: %s, returning requested " "resource: nodes", resFilter)
+        log.debug("Filter given: %s, returning requested resource: nodes", resFilter)
         return ret[resFilter]
 
     log.debug("Filter not given: %s, returning all resource: nodes", ret)
@@ -355,9 +355,7 @@ def get_resources_vms(call=None, resFilter=None, includeConfig=True):
                     )
 
         if time.time() > timeoutTime:
-            raise SaltCloudExecutionTimeout(
-                "FAILED to get the proxmox " "resources vms"
-            )
+            raise SaltCloudExecutionTimeout("FAILED to get the proxmox resources vms")
 
         # Carry on if there wasn't a bad resource return from Proxmox
         if not badResource:
@@ -366,7 +364,7 @@ def get_resources_vms(call=None, resFilter=None, includeConfig=True):
         time.sleep(0.5)
 
     if resFilter is not None:
-        log.debug("Filter given: %s, returning requested " "resource: nodes", resFilter)
+        log.debug("Filter given: %s, returning requested resource: nodes", resFilter)
         return ret[resFilter]
 
     log.debug("Filter not given: %s, returning all resource: nodes", ret)
@@ -803,7 +801,8 @@ def create_node(vm_, newid):
     if vm_["technology"] not in ["qemu", "openvz", "lxc"]:
         # Wrong VM type given
         log.error(
-            "Wrong VM type. Valid options are: qemu, openvz (proxmox3) or lxc (proxmox4)"
+            "Wrong VM type. Valid options are: qemu, openvz (proxmox3) or lxc"
+            " (proxmox4)"
         )
         raise SaltCloudExecutionFailure
 
@@ -989,8 +988,7 @@ def wait_for_created(upid, timeout=300):
     info = _lookup_proxmox_task(upid)
     if not info:
         log.error(
-            "wait_for_created: No task information "
-            "retrieved based on given criteria."
+            "wait_for_created: No task information retrieved based on given criteria."
         )
         raise SaltCloudExecutionFailure
 
@@ -1043,7 +1041,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](

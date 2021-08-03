@@ -101,7 +101,10 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
             ),
             {
                 "result": True,
-                "rule": "nft insert rule ip filter input position 3 ct state { related,established } ip saddr 10.0.0.1 ip daddr 10.0.0.2 accept",
+                "rule": (
+                    "nft insert rule ip filter input position 3 ct state {"
+                    " related,established } ip saddr 10.0.0.1 ip daddr 10.0.0.2 accept"
+                ),
                 "comment": "Successfully built rule",
             },
         )
@@ -361,7 +364,10 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value="table ip filter chain input {{")
         ret = {
             "result": False,
-            "comment": "Rule tcp dport 22 log accept in chain input in table filter in family ipv4 does not exist",
+            "comment": (
+                "Rule tcp dport 22 log accept in chain input in table filter in family"
+                " ipv4 does not exist"
+            ),
         }
         with patch.dict(nftables.__salt__, {"cmd.run": mock}):
             self.assertEqual(nftables.check(chain="input", rule=_ru), ret)
@@ -370,7 +376,10 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=r_val)
         ret = {
             "result": True,
-            "comment": "Rule tcp dport 22 log accept in chain input in table filter in family ipv4 exists",
+            "comment": (
+                "Rule tcp dport 22 log accept in chain input in table filter in family"
+                " ipv4 exists"
+            ),
         }
         with patch.dict(nftables.__salt__, {"cmd.run": mock}):
             self.assertEqual(nftables.check(chain="input", rule=_ru), ret)
@@ -559,7 +568,9 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = {
             "result": False,
-            "comment": "Chain input in table filter in family ipv4 could not be deleted",
+            "comment": (
+                "Chain input in table filter in family ipv4 could not be deleted"
+            ),
         }
         mock = MagicMock(return_value="table ip filter")
         with patch.dict(nftables.__salt__, {"cmd.run": mock}), patch(
@@ -636,7 +647,10 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         r_val = "table ip filter chain input {{ input tcp dport 22 log accept #"
         mock = MagicMock(return_value=r_val)
         _expected = {
-            "comment": "Rule input tcp dport 22 log accept chain input in table filter in family ipv4 already exists",
+            "comment": (
+                "Rule input tcp dport 22 log accept chain input in table filter in"
+                " family ipv4 already exists"
+            ),
             "result": False,
         }
         with patch.dict(nftables.__salt__, {"cmd.run": mock}):
@@ -659,15 +673,18 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
             MagicMock(return_value={"result": True, "comment": ""}),
         ):
             _expected = {
-                "comment": 'Failed to add rule "{}" chain input in table filter in family ipv4.'.format(
-                    _ru
+                "comment": (
+                    'Failed to add rule "{}" chain input in table filter in family'
+                    " ipv4.".format(_ru)
                 ),
                 "result": False,
             }
             self.assertEqual(nftables.append(chain="input", rule=_ru), _expected)
             _expected = {
-                "comment": 'Added rule "{}" chain input in table filter in family ipv4.'.format(
-                    _ru
+                "comment": (
+                    'Added rule "{}" chain input in table filter in family ipv4.'.format(
+                        _ru
+                    )
                 ),
                 "result": True,
             }
@@ -733,15 +750,18 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         ):
             _expected = {
                 "result": False,
-                "comment": 'Failed to add rule "{}" chain input in table filter in family ipv4.'.format(
-                    _ru
+                "comment": (
+                    'Failed to add rule "{}" chain input in table filter in family'
+                    " ipv4.".format(_ru)
                 ),
             }
             self.assertEqual(nftables.insert(chain="input", rule=_ru), _expected)
             _expected = {
                 "result": True,
-                "comment": 'Added rule "{}" chain input in table filter in family ipv4.'.format(
-                    _ru
+                "comment": (
+                    'Added rule "{}" chain input in table filter in family ipv4.'.format(
+                        _ru
+                    )
                 ),
             }
             self.assertEqual(nftables.insert(chain="input", rule=_ru), _expected)
@@ -803,14 +823,19 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         ):
             _expected = {
                 "result": False,
-                "comment": 'Failed to delete rule "None" in chain input  table filter in family ipv4',
+                "comment": (
+                    'Failed to delete rule "None" in chain input  table filter in'
+                    " family ipv4"
+                ),
             }
             self.assertEqual(
                 nftables.delete(table="filter", chain="input", position="3"), _expected
             )
             _expected = {
                 "result": True,
-                "comment": 'Deleted rule "None" in chain input in table filter in family ipv4.',
+                "comment": (
+                    'Deleted rule "None" in chain input in table filter in family ipv4.'
+                ),
             }
             self.assertEqual(
                 nftables.delete(table="filter", chain="input", position="3"), _expected
@@ -851,12 +876,17 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
         ):
             _expected = {
                 "result": False,
-                "comment": "Failed to flush rules from chain input in table filter in family ipv4.",
+                "comment": (
+                    "Failed to flush rules from chain input in table filter in family"
+                    " ipv4."
+                ),
             }
             self.assertEqual(nftables.flush(table="filter", chain="input"), _expected)
             _expected = {
                 "result": True,
-                "comment": "Flushed rules from chain input in table filter in family ipv4.",
+                "comment": (
+                    "Flushed rules from chain input in table filter in family ipv4."
+                ),
             }
             self.assertEqual(nftables.flush(table="filter", chain="input"), _expected)
 

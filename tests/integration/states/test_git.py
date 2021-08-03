@@ -286,10 +286,8 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertEqual(
             ret[next(iter(ret))]["comment"],
-            (
-                "Repository {} is up-to-date, but with uncommitted changes. "
-                "Set 'force_reset' to True to purge uncommitted changes.".format(target)
-            ),
+            "Repository {} is up-to-date, but with uncommitted changes. "
+            "Set 'force_reset' to True to purge uncommitted changes.".format(target),
         )
 
         # Now run the state with force_reset=True
@@ -584,10 +582,8 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         assert ret["result"] is None
         assert ret["changes"] == {"new": "{} => {}".format(TEST_REPO, target)}
-        assert ret["comment"] == (
-            "{} would be cloned to {} with branch '{}'".format(
-                TEST_REPO, target, old_branch
-            )
+        assert ret["comment"] == "{} would be cloned to {} with branch '{}'".format(
+            TEST_REPO, target, old_branch
         )
 
         # Now actually run the state
@@ -597,8 +593,8 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         assert ret["result"] is True
         assert ret["changes"] == {"new": "{} => {}".format(TEST_REPO, target)}
-        assert ret["comment"] == (
-            "{} cloned to {} with branch '{}'".format(TEST_REPO, target, old_branch)
+        assert ret["comment"] == "{} cloned to {} with branch '{}'".format(
+            TEST_REPO, target, old_branch
         )
 
         # Run the state again to test idempotence
@@ -608,9 +604,10 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         assert ret["result"] is True
         assert not ret["changes"]
-        assert ret["comment"] == (
-            "Repository already exists at {} "
-            "and is checked out to branch '{}'".format(target, old_branch)
+        assert ret[
+            "comment"
+        ] == "Repository already exists at {} and is checked out to branch '{}'".format(
+            target, old_branch
         )
 
         # Run the state again to test idempotence (test mode)
@@ -620,9 +617,10 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         assert ret["result"] is True
         assert not ret["changes"]
-        assert ret["comment"] == (
-            "Repository already exists at {} "
-            "and is checked out to branch '{}'".format(target, old_branch)
+        assert ret[
+            "comment"
+        ] == "Repository already exists at {} and is checked out to branch '{}'".format(
+            target, old_branch
         )
 
         # Change branch (test mode)
@@ -681,10 +679,8 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         assert ret["result"] is None
         assert ret["changes"]
-        assert ret["comment"] == (
-            "{} would be cloned to {} with branch '{}'".format(
-                TEST_REPO, target, branch
-            )
+        assert ret["comment"] == "{} would be cloned to {} with branch '{}'".format(
+            TEST_REPO, target, branch
         )
 
         # Now actually run the state

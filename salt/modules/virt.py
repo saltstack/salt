@@ -558,7 +558,8 @@ def _get_disks(conn, dom):
                 except libvirt.libvirtError:
                     # The volume won't be found if the pool is not started, just output less infos
                     log.info(
-                        "Couldn't extract all volume informations: pool is likely not running or refreshed"
+                        "Couldn't extract all volume informations: pool is likely not"
+                        " running or refreshed"
                     )
                 return (qemu_target, extra_properties)
 
@@ -1064,19 +1065,23 @@ def _gen_xml(
     if old_port:
         salt.utils.versions.warn_until(
             "Phosphorus",
-            "'telnet_port' parameter has been deprecated, use the 'serials' and 'consoles' parameters instead. "
-            "'telnet_port' parameter has been deprecated, use the 'serials' parameter with a value "
-            "like ``{{{{'type': 'tcp', 'protocol': 'telnet', 'port': {}}}}}`` instead and a similar `consoles` parameter. "
-            "It will be removed in {{version}}.".format(old_port),
+            "'telnet_port' parameter has been deprecated, use the 'serials' and"
+            " 'consoles' parameters instead. 'telnet_port' parameter has been"
+            " deprecated, use the 'serials' parameter with a value like ``{{{{'type':"
+            " 'tcp', 'protocol': 'telnet', 'port': {}}}}}`` instead and a similar"
+            " `consoles` parameter. It will be removed in {{version}}.".format(
+                old_port
+            ),
         )
 
     old_serial_type = kwargs.get("serial_type")
     if old_serial_type:
         salt.utils.versions.warn_until(
             "Phosphorus",
-            "'serial_type' parameter has been deprecated, use the 'serials' parameter with a value "
-            "like ``{{{{'type': '{}', 'protocol':  'telnet' }}}}`` instead and a similar `consoles` parameter. "
-            "It will be removed in {{version}}.".format(old_serial_type),
+            "'serial_type' parameter has been deprecated, use the 'serials' parameter"
+            " with a value like ``{{{{'type': '{}', 'protocol':  'telnet' }}}}``"
+            " instead and a similar `consoles` parameter. It will be removed in"
+            " {{version}}.".format(old_serial_type),
         )
         serial_context = {"type": old_serial_type}
         if serial_context["type"] == "tcp":
@@ -1088,8 +1093,8 @@ def _gen_xml(
         if old_console:
             salt.utils.versions.warn_until(
                 "Phosphorus",
-                "'console' parameter has been deprecated, use the 'serials' and 'consoles' parameters instead. "
-                "It will be removed in {version}.",
+                "'console' parameter has been deprecated, use the 'serials' and"
+                " 'consoles' parameters instead. It will be removed in {version}.",
             )
             if old_console is True:
                 context["consoles"].append(serial_context)
@@ -1433,8 +1438,9 @@ def _zfs_image_create(
 
     if not pool:
         raise CommandExecutionError(
-            "Unable to create new disk {}, please specify"
-            " the disk pool name".format(disk_name)
+            "Unable to create new disk {}, please specify the disk pool name".format(
+                disk_name
+            )
         )
 
     destination_fs = os.path.join(pool, "{}.{}".format(vm_name, disk_name))
@@ -1993,7 +1999,8 @@ def _handle_remote_boot_params(orig_boot):
         return new_boot
     else:
         raise SaltInvocationError(
-            "Invalid boot parameters,It has to follow this combination: [(kernel, initrd) or/and cmdline] or/and [(loader, nvram) or efi]"
+            "Invalid boot parameters,It has to follow this combination: [(kernel,"
+            " initrd) or/and cmdline] or/and [(loader, nvram) or efi]"
         )
 
 

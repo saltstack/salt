@@ -714,7 +714,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         test_ssh_host = ssh_gateway
         test_ssh_port = ssh_gateway_port
         log.debug(
-            "Attempting connection to host %s on port %s " "via gateway %s on port %s",
+            "Attempting connection to host %s on port %s via gateway %s on port %s",
             host,
             port,
             ssh_gateway,
@@ -824,8 +824,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
             else:
                 gateway_retries -= 1
                 log.error(
-                    "Gateway usage seems to be broken, "
-                    "password error ? Tries left: %s",
+                    "Gateway usage seems to be broken, password error ? Tries left: %s",
                     gateway_retries,
                 )
             if not gateway_retries:
@@ -1512,14 +1511,14 @@ def deploy_script(
                 **ssh_kwargs
             ):
                 ret = root_cmd(
-                    ("sh -c \"( mkdir -p -m 700 '{}' )\"").format(tmp_dir),
+                    "sh -c \"( mkdir -p -m 700 '{}' )\"".format(tmp_dir),
                     tty,
                     sudo,
                     **ssh_kwargs
                 )
                 if ret:
                     raise SaltCloudSystemExit(
-                        "Can't create temporary " "directory in {} !".format(tmp_dir)
+                        "Can't create temporary directory in {} !".format(tmp_dir)
                     )
             if sudo:
                 comps = tmp_dir.lstrip("/").rstrip("/").split("/")
@@ -1723,9 +1722,7 @@ def deploy_script(
                 # subshell fixes that
                 ssh_file(opts, "{}/deploy.sh".format(tmp_dir), script, ssh_kwargs)
                 ret = root_cmd(
-                    ("sh -c \"( chmod +x '{}/deploy.sh' )\";" "exit $?").format(
-                        tmp_dir
-                    ),
+                    "sh -c \"( chmod +x '{}/deploy.sh' )\";exit $?".format(tmp_dir),
                     tty,
                     sudo,
                     **ssh_kwargs
@@ -2596,7 +2593,7 @@ def wait_for_ip(
             max_failures -= 1
             if max_failures <= 0:
                 raise SaltCloudExecutionFailure(
-                    "Too many failures occurred while waiting for " "the IP address."
+                    "Too many failures occurred while waiting for the IP address."
                 )
         elif data is not None:
             return data
@@ -2614,7 +2611,7 @@ def wait_for_ip(
             interval *= interval_multiplier
             if interval > timeout:
                 interval = timeout + 1
-            log.info("Interval multiplier in effect; interval is " "now %ss.", interval)
+            log.info("Interval multiplier in effect; interval is now %ss.", interval)
 
 
 def list_nodes_select(nodes, selection, call=None):
@@ -2623,7 +2620,7 @@ def list_nodes_select(nodes, selection, call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes_select function must be called " "with -f or --function."
+            "The list_nodes_select function must be called with -f or --function."
         )
 
     if "error" in nodes:

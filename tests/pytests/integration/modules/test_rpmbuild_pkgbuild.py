@@ -303,8 +303,9 @@ def gpg_agent(request, gpghome):
     try:
         # launch gpg-agent
         gpg_tty_info_path = gpghome / "gpg_tty_info"
-        gpg_agent_cmd = "gpg-agent --homedir {} --allow-preset-passphrase --max-cache-ttl 600 --daemon".format(
-            gpghome
+        gpg_agent_cmd = (
+            "gpg-agent --homedir {} --allow-preset-passphrase --max-cache-ttl 600"
+            " --daemon".format(gpghome)
         )
         echo_gpg_tty_cmd = (
             "GPG_TTY=$(tty) ; export GPG_TTY ; echo $GPG_TTY=$(tty) > {}".format(

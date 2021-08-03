@@ -210,9 +210,8 @@ class MineTest(ModuleCase, ShellCase):
                 continue
 
             self.fail(
-                "'minion' was not found as a key of the 'mine.get' 'grains.items' call. Full return: {}".format(
-                    pprint.pformat(ret_grains)
-                )
+                "'minion' was not found as a key of the 'mine.get' 'grains.items' call."
+                " Full return: {}".format(pprint.pformat(ret_grains))
             )
 
         self.assertEqual(

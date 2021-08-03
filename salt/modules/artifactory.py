@@ -64,7 +64,9 @@ def get_latest_snapshot(
         Artifactory password. Optional parameter.
     """
     log.debug(
-        "======================== MODULE FUNCTION: artifactory.get_latest_snapshot, artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, target_dir=%s, classifier=%s)",
+        "======================== MODULE FUNCTION: artifactory.get_latest_snapshot,"
+        " artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s,"
+        " target_dir=%s, classifier=%s)",
         artifactory_url,
         repository,
         group_id,
@@ -148,7 +150,9 @@ def get_snapshot(
         Artifactory password. Optional parameter.
     """
     log.debug(
-        "======================== MODULE FUNCTION: artifactory.get_snapshot(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, target_dir=%s, classifier=%s)",
+        "======================== MODULE FUNCTION:"
+        " artifactory.get_snapshot(artifactory_url=%s, repository=%s, group_id=%s,"
+        " artifact_id=%s, packaging=%s, version=%s, target_dir=%s, classifier=%s)",
         artifactory_url,
         repository,
         group_id,
@@ -220,7 +224,9 @@ def get_latest_release(
         Artifactory password. Optional parameter.
     """
     log.debug(
-        "======================== MODULE FUNCTION: artifactory.get_latest_release(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, target_dir=%s, classifier=%s)",
+        "======================== MODULE FUNCTION:"
+        " artifactory.get_latest_release(artifactory_url=%s, repository=%s,"
+        " group_id=%s, artifact_id=%s, packaging=%s, target_dir=%s, classifier=%s)",
         artifactory_url,
         repository,
         group_id,
@@ -299,7 +305,9 @@ def get_release(
         Artifactory password. Optional parameter.
     """
     log.debug(
-        "======================== MODULE FUNCTION: artifactory.get_release(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, target_dir=%s, classifier=%s)",
+        "======================== MODULE FUNCTION:"
+        " artifactory.get_release(artifactory_url=%s, repository=%s, group_id=%s,"
+        " artifact_id=%s, packaging=%s, version=%s, target_dir=%s, classifier=%s)",
         artifactory_url,
         repository,
         group_id,
@@ -705,8 +713,8 @@ def __save_artifact(artifact_url, target_file, headers):
                 return result
             else:
                 result["comment"] = (
-                    "File {} already exists, checksum does not match with Artifactory!\n"
-                    "Checksum URL: {}".format(target_file, checksum_url)
+                    "File {} already exists, checksum does not match with"
+                    " Artifactory!\nChecksum URL: {}".format(target_file, checksum_url)
                 )
 
         else:
@@ -723,7 +731,7 @@ def __save_artifact(artifact_url, target_file, headers):
             local_file.write(salt.utils.stringutils.to_bytes(f.read()))
         result["status"] = True
         result["comment"] = __append_comment(
-            ("Artifact downloaded from URL: {}".format(artifact_url)),
+            "Artifact downloaded from URL: {}".format(artifact_url),
             result["comment"],
         )
         result["changes"]["downloaded_file"] = target_file
@@ -769,8 +777,8 @@ def __get_error_comment(http_error, request_url):
         comment = "HTTP Error 404. Request URL: " + request_url
     elif http_error.code == http.client.CONFLICT:
         comment = (
-            "HTTP Error 409: Conflict. Requested URL: {}. \n"
-            "This error may be caused by reading snapshot artifact from non-snapshot repository.".format(
+            "HTTP Error 409: Conflict. Requested URL: {}. \nThis error may be caused by"
+            " reading snapshot artifact from non-snapshot repository.".format(
                 request_url
             )
         )

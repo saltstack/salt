@@ -26,8 +26,10 @@ class GroupTestCase(TestCase, LoaderModuleMockMixin):
 
         ret.update(
             {
-                "comment": 'Error: Conflicting options "members" with'
-                ' "addusers" and/or "delusers" can not be used together. ',
+                "comment": (
+                    'Error: Conflicting options "members" with'
+                    ' "addusers" and/or "delusers" can not be used together. '
+                ),
                 "result": None,
             }
         )
@@ -35,16 +37,19 @@ class GroupTestCase(TestCase, LoaderModuleMockMixin):
 
         ret.update(
             {
-                "comment": "Error. Same user(s) can not be"
-                " added and deleted simultaneously"
+                "comment": (
+                    "Error. Same user(s) can not be added and deleted simultaneously"
+                )
             }
         )
         self.assertDictEqual(group.present("salt", addusers=["a"], delusers=["a"]), ret)
 
         ret.update(
             {
-                "comment": "The following group attributes are set"
-                " to be changed:\nkey0: value0\nkey1: value1\n"
+                "comment": (
+                    "The following group attributes are set"
+                    " to be changed:\nkey0: value0\nkey1: value1\n"
+                )
             }
         )
 
@@ -69,8 +74,10 @@ class GroupTestCase(TestCase, LoaderModuleMockMixin):
                     ret.update(
                         {
                             "result": False,
-                            "comment": "Group salt is not present but"
-                            " gid 1 is already taken by group stack",
+                            "comment": (
+                                "Group salt is not present but"
+                                " gid 1 is already taken by group stack"
+                            ),
                         }
                     )
                     self.assertDictEqual(group.present("salt", 1), ret)

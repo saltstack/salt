@@ -61,6 +61,7 @@ PY3_PRE_EXT = re.compile(r"\.cpython-{}{}(\.opt-[1-9])?".format(*sys.version_inf
 
 # Will be set to pyximport module at runtime if cython is enabled in config.
 pyximport = None
+
 log = logging.getLogger(__name__)
 
 
@@ -740,8 +741,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             raise
         except ImportError as exc:
             if "magic number" in str(exc):
-                error_msg = "Failed to import {} {}. Bad magic number. If migrating from Python2 to Python3, remove all .pyc files and try again.".format(
-                    self.tag, name
+                error_msg = (
+                    "Failed to import {} {}. Bad magic number. If migrating from"
+                    " Python2 to Python3, remove all .pyc files and try again.".format(
+                        self.tag, name
+                    )
                 )
                 log.warning(error_msg)
                 self.missing_modules[name] = error_msg
@@ -750,8 +754,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             return False
         except Exception as error:  # pylint: disable=broad-except
             log.error(
-                "Failed to import %s %s, this is due most likely to a "
-                "syntax error:\n",
+                "Failed to import %s %s, this is due most likely to a syntax error:\n",
                 self.tag,
                 name,
                 exc_info=True,
@@ -951,7 +954,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             Depends.enforce_dependencies(self._dict, self.tag, name)
         except RuntimeError as exc:
             log.info(
-                "Depends.enforce_dependencies() failed for the following " "reason: %s",
+                "Depends.enforce_dependencies() failed for the following reason: %s",
                 exc,
             )
 

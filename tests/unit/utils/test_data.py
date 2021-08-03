@@ -57,9 +57,11 @@ class DataTestCase(TestCase):
     def test_mysql_to_dict(self):
         test_mysql_output = [
             "+----+------+-----------+------+---------+------+-------+------------------+",
-            "| Id | User | Host      | db   | Command | Time | State | Info             |",
+            "| Id | User | Host      | db   | Command | Time | State | Info         "
+            "    |",
             "+----+------+-----------+------+---------+------+-------+------------------+",
-            "|  7 | root | localhost | NULL | Query   |    0 | init  | show processlist |",
+            "|  7 | root | localhost | NULL | Query   |    0 | init  | show"
+            " processlist |",
             "+----+------+-----------+------+---------+------+-------+------------------+",
         ]
 

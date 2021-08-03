@@ -87,8 +87,9 @@ def test_cumulative_rights_assignments_test_true(stage_single):
         "name": "SeTakeOwnershipPrivilege",
         "result": None,
         "changes": {},
-        "comment": "The following policies are set to change:\n"
-        "SeTakeOwnershipPrivilege",
+        "comment": (
+            "The following policies are set to change:\nSeTakeOwnershipPrivilege"
+        ),
     }
     with patch.dict(win_lgpo_state.__opts__, {"test": True}):
         result = win_lgpo_state.set_(
@@ -153,8 +154,9 @@ def test_non_cumulative_rights_assignments_test_true(stage_multiple):
         "name": "SeTakeOwnershipPrivilege",
         "result": None,
         "changes": {},
-        "comment": "The following policies are set to change:\n"
-        "SeTakeOwnershipPrivilege",
+        "comment": (
+            "The following policies are set to change:\nSeTakeOwnershipPrivilege"
+        ),
     }
     with patch.dict(win_lgpo_state.__opts__, {"test": True}):
         result = win_lgpo_state.set_(
@@ -219,8 +221,9 @@ def test_cumulative_rights_assignments_resolve_name_test_true(stage_single):
         "name": "SeTakeOwnershipPrivilege",
         "result": None,
         "changes": {},
-        "comment": "The following policies are set to change:\n"
-        "SeTakeOwnershipPrivilege",
+        "comment": (
+            "The following policies are set to change:\nSeTakeOwnershipPrivilege"
+        ),
     }
     with patch.dict(win_lgpo_state.__opts__, {"test": True}):
         result = win_lgpo_state.set_(
@@ -285,8 +288,9 @@ def test_non_cumulative_rights_assignments_resolve_name_test_true(stage_multiple
         "name": "SeTakeOwnershipPrivilege",
         "result": None,
         "changes": {},
-        "comment": "The following policies are set to change:\n"
-        "SeTakeOwnershipPrivilege",
+        "comment": (
+            "The following policies are set to change:\nSeTakeOwnershipPrivilege"
+        ),
     }
     with patch.dict(win_lgpo_state.__opts__, {"test": True}):
         result = win_lgpo_state.set_(

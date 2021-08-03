@@ -241,8 +241,10 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             win_service.create_win_salt_restart_task()
             mock.assert_called_once_with(
                 action_type="Execute",
-                arguments="/c ping -n 3 127.0.0.1 && net stop salt-minion && "
-                "net start salt-minion",
+                arguments=(
+                    "/c ping -n 3 127.0.0.1 && net stop salt-minion && "
+                    "net start salt-minion"
+                ),
                 cmd=cmd,
                 force=True,
                 name="restart-salt-minion",

@@ -163,10 +163,10 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
             if map_file is not None:
                 if names != ():
                     msg = (
-                        "Supplying a mapfile, '{}', in addition to instance names {} "
-                        "with the '--destroy' or '-d' function is not supported. "
-                        "Please choose to delete either the entire map file or individual "
-                        "instances.".format(map_file, names)
+                        "Supplying a mapfile, '{}', in addition to instance names {}"
+                        " with the '--destroy' or '-d' function is not supported."
+                        " Please choose to delete either the entire map file or"
+                        " individual instances.".format(map_file, names)
                     )
                     self.handle_exception(msg, SaltCloudSystemExit)
 
@@ -296,14 +296,12 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                         msg += "  {}\n".format(name)
 
                 if dmap["create"]:
-                    msg += "The following virtual machines are set to be " "created:\n"
+                    msg += "The following virtual machines are set to be created:\n"
                     for name in dmap["create"]:
                         msg += "  {}\n".format(name)
 
                 if "destroy" in dmap:
-                    msg += (
-                        "The following virtual machines are set to be " "destroyed:\n"
-                    )
+                    msg += "The following virtual machines are set to be destroyed:\n"
                     for name in dmap["destroy"]:
                         msg += "  {}\n".format(name)
 
@@ -326,7 +324,10 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                 if dmap.get("existing", None):
                     for name in dmap["existing"]:
                         if "ec2" in dmap["existing"][name]["provider"]:
-                            msg = "Instance already exists, or is terminated and has the same name."
+                            msg = (
+                                "Instance already exists, or is terminated and has the"
+                                " same name."
+                            )
                         else:
                             msg = "Already running."
                         ret[name] = {"Message": msg}

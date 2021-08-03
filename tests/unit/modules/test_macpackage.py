@@ -39,7 +39,8 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(macpackage.__salt__, {"cmd.run_all": mock}):
             macpackage.install("/path/to/file.pkg", store=True, allow_untrusted=True)
             mock.assert_called_once_with(
-                "installer -pkg /path/to/file.pkg -target LocalSystem -store -allowUntrusted",
+                "installer -pkg /path/to/file.pkg -target LocalSystem -store"
+                " -allowUntrusted",
                 python_shell=False,
             )
 
@@ -51,7 +52,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(macpackage.__salt__, {"cmd.run": mock}):
             macpackage.install_app("/path/to/file.app")
             mock.assert_called_once_with(
-                'rsync -a --delete "/path/to/file.app/" ' '"/Applications/file.app"'
+                'rsync -a --delete "/path/to/file.app/" "/Applications/file.app"'
             )
 
     def test_install_app_specify_target(self):
@@ -62,7 +63,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(macpackage.__salt__, {"cmd.run": mock}):
             macpackage.install_app("/path/to/file.app", "/Applications/new.app")
             mock.assert_called_once_with(
-                'rsync -a --delete "/path/to/file.app/" ' '"/Applications/new.app"'
+                'rsync -a --delete "/path/to/file.app/" "/Applications/new.app"'
             )
 
     def test_install_app_with_slash(self):
@@ -73,7 +74,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(macpackage.__salt__, {"cmd.run": mock}):
             macpackage.install_app("/path/to/file.app/")
             mock.assert_called_once_with(
-                'rsync -a --delete "/path/to/file.app/" ' '"/Applications/file.app"'
+                'rsync -a --delete "/path/to/file.app/" "/Applications/file.app"'
             )
 
     def test_uninstall(self):
@@ -158,7 +159,8 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                         output_loglevel="quiet",
                     ),
                     call(
-                        "xar -x -f /path/to/file.pkg /path/to/PackageInfo /path/to/some/other/fake/PackageInfo",
+                        "xar -x -f /path/to/file.pkg /path/to/PackageInfo"
+                        " /path/to/some/other/fake/PackageInfo",
                         cwd="/tmp/dmg-ABCDEF",
                         output_loglevel="quiet",
                     ),
@@ -236,8 +238,8 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(macpackage.__salt__, {"cmd.run": mock}):
             out = macpackage._get_pkg_id_from_pkginfo("/tmp/dmg-X/PackageInfo")
             cmd = (
-                "cat /tmp/dmg-X/PackageInfo | grep -Eo 'identifier=\"[a-zA-Z.0-9\\-]*\"' | "
-                "cut -c 13- | tr -d '\"'"
+                "cat /tmp/dmg-X/PackageInfo | grep -Eo"
+                " 'identifier=\"[a-zA-Z.0-9\\-]*\"' | cut -c 13- | tr -d '\"'"
             )
             mock.assert_called_once_with(cmd, python_shell=True)
             self.assertEqual(out, expected)
@@ -251,8 +253,8 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(macpackage.__salt__, {"cmd.run": mock}):
             out = macpackage._get_pkg_id_from_pkginfo("/tmp/dmg-X/PackageInfo")
             cmd = (
-                "cat /tmp/dmg-X/PackageInfo | grep -Eo 'identifier=\"[a-zA-Z.0-9\\-]*\"' | "
-                "cut -c 13- | tr -d '\"'"
+                "cat /tmp/dmg-X/PackageInfo | grep -Eo"
+                " 'identifier=\"[a-zA-Z.0-9\\-]*\"' | cut -c 13- | tr -d '\"'"
             )
             mock.assert_called_once_with(cmd, python_shell=True)
             self.assertEqual(out, expected)
@@ -265,7 +267,10 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value="com.apple.this")
         with patch.dict(macpackage.__salt__, {"cmd.run": mock}):
             out = macpackage._get_pkg_id_dir("/tmp/dmg-X/")
-            cmd = '/usr/libexec/PlistBuddy -c "print :CFBundleIdentifier" /tmp/dmg-X/Contents/Info.plist'
+            cmd = (
+                '/usr/libexec/PlistBuddy -c "print :CFBundleIdentifier"'
+                " /tmp/dmg-X/Contents/Info.plist"
+            )
             mock.assert_called_once_with(cmd, python_shell=False)
             self.assertEqual(out, expected)
 
@@ -277,6 +282,9 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value="com.apple.this")
         with patch.dict(macpackage.__salt__, {"cmd.run": mock}):
             out = macpackage._get_pkg_id_dir("/tmp/dmg-X/*.pkg/")
-            cmd = "/usr/libexec/PlistBuddy -c \"print :CFBundleIdentifier\" '/tmp/dmg-X/*.pkg/Contents/Info.plist'"
+            cmd = (
+                '/usr/libexec/PlistBuddy -c "print :CFBundleIdentifier"'
+                " '/tmp/dmg-X/*.pkg/Contents/Info.plist'"
+            )
             mock.assert_called_once_with(cmd, python_shell=True)
             self.assertEqual(out, expected)
