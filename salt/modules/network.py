@@ -30,7 +30,8 @@ def __virtual__():
     if salt.utils.platform.is_windows():
         return (
             False,
-            "The network execution module cannot be loaded on Windows: use win_network instead.",
+            "The network execution module cannot be loaded on Windows: use win_network"
+            " instead.",
         )
     return True
 
@@ -1466,7 +1467,6 @@ def mod_hostname(hostname):
                 if net.startswith("HOSTNAME"):
                     old_hostname = net.split("=", 1)[1].rstrip()
                     quote_type = __utils__["stringutils.is_quoted"](old_hostname)
-                    # fmt: off
                     fh_.write(
                         __utils__["stringutils.to_str"](
                             "HOSTNAME={1}{0}{1}\n".format(
@@ -1474,7 +1474,6 @@ def mod_hostname(hostname):
                             )
                         )
                     )
-                    # fmt: on
                 else:
                     fh_.write(__utils__["stringutils.to_str"](net))
     elif __grains__["os_family"] in ("Debian", "NILinuxRT"):

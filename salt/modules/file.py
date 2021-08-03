@@ -1544,7 +1544,7 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
                     found = True
     except OSError as exc:
         raise CommandExecutionError(
-            "Unable to open file '{}'. " "Exception: {}".format(path, exc)
+            "Unable to open file '{}'. Exception: {}".format(path, exc)
         )
 
     # We've searched the whole file. If we didn't find anything, return False
@@ -1689,7 +1689,7 @@ def _mkstemp_copy(path, preserve_inode=True):
         temp_file = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX)
     except OSError as exc:
         raise CommandExecutionError(
-            "Unable to create temp file. " "Exception: {}".format(exc)
+            "Unable to create temp file. Exception: {}".format(exc)
         )
     # use `copy` to preserve the inode of the
     # original file, and thus preserve hardlinks
@@ -1701,18 +1701,18 @@ def _mkstemp_copy(path, preserve_inode=True):
             shutil.copy2(path, temp_file)
         except OSError as exc:
             raise CommandExecutionError(
-                "Unable to copy file '{}' to the "
-                "temp file '{}'. "
-                "Exception: {}".format(path, temp_file, exc)
+                "Unable to copy file '{}' to the temp file '{}'. Exception: {}".format(
+                    path, temp_file, exc
+                )
             )
     else:
         try:
             shutil.move(path, temp_file)
         except OSError as exc:
             raise CommandExecutionError(
-                "Unable to move file '{}' to the "
-                "temp file '{}'. "
-                "Exception: {}".format(path, temp_file, exc)
+                "Unable to move file '{}' to the temp file '{}'. Exception: {}".format(
+                    path, temp_file, exc
+                )
             )
 
     return temp_file
@@ -2596,7 +2596,7 @@ def replace(
 
     except OSError as exc:
         raise CommandExecutionError(
-            "Unable to open file '{}'. " "Exception: {}".format(path, exc)
+            "Unable to open file '{}'. Exception: {}".format(path, exc)
         )
     finally:
         if r_data and isinstance(r_data, mmap.mmap):
@@ -2709,8 +2709,7 @@ def replace(
             os.remove(temp_file)
         except OSError as exc:
             raise CommandExecutionError(
-                "Unable to delete temp file '{}'. "
-                "Exception: {}".format(temp_file, exc)
+                "Unable to delete temp file '{}'. Exception: {}".format(temp_file, exc)
             )
 
     if not dry_run and not salt.utils.platform.is_windows():
@@ -3184,8 +3183,7 @@ def patch(originalfile, patchfile, options="", dry_run=False):
     patchpath = salt.utils.path.which("patch")
     if not patchpath:
         raise CommandExecutionError(
-            "patch executable not found. Is the distribution's patch "
-            "package installed?"
+            "patch executable not found. Is the distribution's patch package installed?"
         )
 
     cmd = [patchpath]
@@ -3797,7 +3795,8 @@ def copy(src, dst, recurse=False, remove_existing=False):
         if (os.path.exists(dst) and os.path.isdir(dst)) or os.path.isdir(src):
             if not recurse:
                 raise SaltInvocationError(
-                    "Cannot copy overwriting a directory without recurse flag set to true!"
+                    "Cannot copy overwriting a directory without recurse flag set to"
+                    " true!"
                 )
             if remove_existing:
                 if os.path.exists(dst):
@@ -4426,7 +4425,7 @@ def apply_template_on_contents(contents, template, context, defaults, saltenv):
     else:
         ret = {}
         ret["result"] = False
-        ret["comment"] = ("Specified template format {} is not supported").format(
+        ret["comment"] = "Specified template format {} is not supported".format(
             template
         )
         return ret
@@ -4650,7 +4649,7 @@ def get_managed(
                 return (
                     sfn,
                     {},
-                    ("Specified template format {} is not supported").format(template),
+                    "Specified template format {} is not supported".format(template),
                 )
 
             if data["result"]:
@@ -6867,22 +6866,20 @@ def restore_backup(path, backup_id):
     except ValueError:
         return ret
     except KeyError:
-        ret["comment"] = "backup_id '{}' does not exist for " "{}".format(
-            backup_id, path
-        )
+        ret["comment"] = "backup_id '{}' does not exist for {}".format(backup_id, path)
         return ret
 
     salt.utils.files.backup_minion(path, _get_bkroot())
     try:
         shutil.copyfile(backup["Location"], path)
     except OSError as exc:
-        ret["comment"] = "Unable to restore {} to {}: " "{}".format(
+        ret["comment"] = "Unable to restore {} to {}: {}".format(
             backup["Location"], path, exc
         )
         return ret
     else:
         ret["result"] = True
-        ret["comment"] = "Successfully restored {} to " "{}".format(
+        ret["comment"] = "Successfully restored {} to {}".format(
             backup["Location"], path
         )
 
@@ -6928,9 +6925,7 @@ def delete_backup(path, backup_id):
     except ValueError:
         return ret
     except KeyError:
-        ret["comment"] = "backup_id '{}' does not exist for " "{}".format(
-            backup_id, path
-        )
+        ret["comment"] = "backup_id '{}' does not exist for {}".format(backup_id, path)
         return ret
 
     try:

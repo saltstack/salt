@@ -2235,10 +2235,9 @@ def run(
             if remove is not None:
                 if not ignore_collisions:
                     ret["result"] = False
-                    ret["comment"] = (
-                        "'rm' is an alias for 'auto_remove', they cannot "
-                        "both be used"
-                    )
+                    ret[
+                        "comment"
+                    ] = "'rm' is an alias for 'auto_remove', they cannot both be used"
                     return ret
             else:
                 remove = bool(val)
@@ -2278,9 +2277,7 @@ def run(
                 ret["result"] = False if failhard and retcode != 0 else True
                 ret[
                     "comment"
-                ] = "Container ran and exited with a return code of " "{}".format(
-                    retcode
-                )
+                ] = "Container ran and exited with a return code of {}".format(retcode)
 
     if remove:
         id_ = ret.get("changes", {}).get("Id")
@@ -2478,9 +2475,7 @@ def absent(name, force=False):
 
     pre_state = __salt__["docker.state"](name)
     if pre_state != "stopped" and not force:
-        ret["comment"] = (
-            "Container is running, set force to True to " "forcibly remove it"
-        )
+        ret["comment"] = "Container is running, set force to True to forcibly remove it"
         return ret
 
     if __opts__["test"]:

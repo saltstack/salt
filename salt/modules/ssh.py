@@ -326,9 +326,7 @@ def host_keys(keydir=None, private=True, certs=True):
         m = fnre.match(fn_)
         if m:
             if not m.group("pub") and private is False:
-                log.info(
-                    "Skipping private key file %s as " "private is set to False", fn_
-                )
+                log.info("Skipping private key file %s as private is set to False", fn_)
                 continue
             if m.group("cert") and certs is False:
                 log.info("Skipping key file %s as certs is set to False", fn_)
@@ -418,7 +416,7 @@ def check_key_file(
         return {}
     s_keys = _validate_keys(keyfile, fingerprint_hash_type)
     if not s_keys:
-        err = "No keys detected in {}. Is file properly " "formatted?".format(source)
+        err = "No keys detected in {}. Is file properly formatted?".format(source)
         log.error(err)
         __context__["ssh_auth.error"] = err
         return {}
@@ -1088,8 +1086,10 @@ def set_known_host(
     if port is not None and port != DEFAULT_SSH_PORT and hash_known_hosts:
         return {
             "status": "error",
-            "error": "argument port can not be used in "
-            "conjunction with argument hash_known_hosts",
+            "error": (
+                "argument port can not be used in "
+                "conjunction with argument hash_known_hosts"
+            ),
         }
 
     update_required = False
@@ -1220,9 +1220,9 @@ def set_known_host(
         os.makedirs(ssh_dir)
     except OSError as exc:
         if exc.args[1] == "Permission denied":
-            log.error("Unable to create directory %s: " "%s", ssh_dir, exc.args[1])
+            log.error("Unable to create directory %s: %s", ssh_dir, exc.args[1])
         elif exc.args[1] == "File exists":
-            log.debug("%s already exists, no need to create " "it", ssh_dir)
+            log.debug("%s already exists, no need to create it", ssh_dir)
     else:
         # set proper ownership/permissions
         if user:

@@ -107,9 +107,7 @@ def test_lock():
     """
     Test pkgng.lock
     """
-    lock_cmd = MagicMock(
-        return_value={"stdout": ("pkga-1.0\n" "pkgb-2.0\n"), "retcode": 0}
-    )
+    lock_cmd = MagicMock(return_value={"stdout": "pkga-1.0\npkgb-2.0\n", "retcode": 0})
     with patch.dict(pkgng.__salt__, {"cmd.run_all": lock_cmd}):
 
         result = pkgng.lock("pkga")
@@ -134,7 +132,7 @@ def test_unlock():
     Test pkgng.unlock
     """
     unlock_cmd = MagicMock(
-        return_value={"stdout": ("pkga-1.0\n" "pkgb-2.0\n"), "retcode": 0}
+        return_value={"stdout": "pkga-1.0\npkgb-2.0\n", "retcode": 0}
     )
     with patch.dict(pkgng.__salt__, {"cmd.run_all": unlock_cmd}):
 
@@ -159,9 +157,7 @@ def test_locked():
     """
     Test pkgng.unlock
     """
-    lock_cmd = MagicMock(
-        return_value={"stdout": ("pkga-1.0\n" "pkgb-2.0\n"), "retcode": 0}
-    )
+    lock_cmd = MagicMock(return_value={"stdout": "pkga-1.0\npkgb-2.0\n", "retcode": 0})
     with patch.dict(pkgng.__salt__, {"cmd.run_all": lock_cmd}):
 
         result = pkgng.locked("pkga")
@@ -963,7 +959,7 @@ def test_which_with_default_flags():
     """
     which_cmd = MagicMock(
         return_value={
-            "stdout": ("/usr/local/bin/mutt was installed by package mutt-2.0.6"),
+            "stdout": "/usr/local/bin/mutt was installed by package mutt-2.0.6",
             "retcode": 0,
         }
     )
@@ -984,7 +980,7 @@ def test_which_with_origin_flag():
     """
     which_cmd = MagicMock(
         return_value={
-            "stdout": ("/usr/local/bin/mutt was installed by package mail/mutt"),
+            "stdout": "/usr/local/bin/mutt was installed by package mail/mutt",
             "retcode": 0,
         }
     )

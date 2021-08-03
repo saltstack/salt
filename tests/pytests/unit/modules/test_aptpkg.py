@@ -568,11 +568,15 @@ def test_show():
         "foo-doc": {
             "1.0.5-3ubuntu4": {
                 "Architecture": "all",
-                "Description": "Silly documentation for a silly package (1.0 release cycle)",
+                "Description": (
+                    "Silly documentation for a silly package (1.0 release cycle)"
+                ),
             },
             "1.0.4-2ubuntu1": {
                 "Architecture": "all",
-                "Description": "Silly documentation for a silly package (1.0 release cycle)",
+                "Description": (
+                    "Silly documentation for a silly package (1.0 release cycle)"
+                ),
             },
         },
     }
@@ -700,7 +704,10 @@ def test_mod_repo_match():
                                         )
                                     ),
                                 ):
-                                    source_line_no_slash = "deb http://cdn-aws.deb.debian.org/debian stretch main"
+                                    source_line_no_slash = (
+                                        "deb http://cdn-aws.deb.debian.org/debian"
+                                        " stretch main"
+                                    )
                                     repo = aptpkg.mod_repo(
                                         source_line_no_slash, enabled=False
                                     )

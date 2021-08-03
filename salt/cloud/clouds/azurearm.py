@@ -550,7 +550,7 @@ def list_resource_groups(call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_hosted_services function must be called with " "-f or --function"
+            "The list_hosted_services function must be called with -f or --function"
         )
 
     resconn = get_conn(client_type="resource")
@@ -936,8 +936,9 @@ def request_instance(vm_):
                 ssh_publickeyfile_contents = spkc_.read()
         except Exception as exc:  # pylint: disable=broad-except
             raise SaltCloudConfigError(
-                "Failed to read ssh publickey file '{}': "
-                "{}".format(ssh_publickeyfile, exc.args[-1])
+                "Failed to read ssh publickey file '{}': {}".format(
+                    ssh_publickeyfile, exc.args[-1]
+                )
             )
 
     disable_password_authentication = config.get_cloud_config_value(
@@ -1393,7 +1394,7 @@ def destroy(name, call=None, kwargs=None):  # pylint: disable=unused-argument
 
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     compconn = get_conn(client_type="compute")
@@ -1543,7 +1544,7 @@ def list_storage_accounts(call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_storage_accounts function must be called with " "-f or --function"
+            "The list_storage_accounts function must be called with -f or --function"
         )
 
     storconn = get_conn(client_type="storage")
@@ -1696,7 +1697,7 @@ def list_virtual_networks(call=None, kwargs=None):
 
     if call == "action":
         raise SaltCloudSystemExit(
-            "The avail_sizes function must be called with " "-f or --function"
+            "The avail_sizes function must be called with -f or --function"
         )
 
     netconn = get_conn(client_type="network")
@@ -1727,7 +1728,7 @@ def list_subnets(call=None, kwargs=None):
 
     if call == "action":
         raise SaltCloudSystemExit(
-            "The avail_sizes function must be called with " "-f or --function"
+            "The avail_sizes function must be called with -f or --function"
         )
 
     netconn = get_conn(client_type="network")
@@ -1829,7 +1830,8 @@ def create_or_update_vmextension(
         raise SaltCloudSystemExit("VM extension settings are not valid")
     elif "commandToExecute" not in settings and "script" not in settings:
         raise SaltCloudSystemExit(
-            "VM extension settings are not valid. Either commandToExecute or script must be specified."
+            "VM extension settings are not valid. Either commandToExecute or script"
+            " must be specified."
         )
 
     log.info("Creating VM extension %s", kwargs["extension_name"])

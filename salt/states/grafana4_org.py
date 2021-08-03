@@ -192,9 +192,7 @@ def present(
                     )
                 elif role != db_users[username]["role"]:
                     if __opts__["test"]:
-                        ret[
-                            "comment"
-                        ] = "Org {} user {} role will be " "updated".format(
+                        ret["comment"] = "Org {} user {} role will be updated".format(
                             name, username
                         )
                         return ret

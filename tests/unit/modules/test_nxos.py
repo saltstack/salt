@@ -541,7 +541,11 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
         """UT: nxos module:config method - Using commands arg"""
 
         commands = ["no feature ospf", ["no feature ospf"]]
-        expected_output = "COMMAND_LIST: no feature ospf\n\n--- \n+++ \n@@ -19,7 +19,6 @@\n feature bash-shell\n cfs eth distribute\n feature ngmvpn\n-feature ospf\n feature pim\n feature lldp\n \n"
+        expected_output = (
+            "COMMAND_LIST: no feature ospf\n\n--- \n+++ \n@@ -19,7 +19,6 @@\n feature"
+            " bash-shell\n cfs eth distribute\n feature ngmvpn\n-feature ospf\n feature"
+            " pim\n feature lldp\n \n"
+        )
 
         for cmd_set in commands:
             with patch(
@@ -569,7 +573,11 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
         """UT: nxos module:config method - Template engine is None"""
 
         commands = ["no feature ospf", ["no feature ospf"]]
-        expected_output = "COMMAND_LIST: no feature ospf\n\n--- \n+++ \n@@ -19,7 +19,6 @@\n feature bash-shell\n cfs eth distribute\n feature ngmvpn\n-feature ospf\n feature pim\n feature lldp\n \n"
+        expected_output = (
+            "COMMAND_LIST: no feature ospf\n\n--- \n+++ \n@@ -19,7 +19,6 @@\n feature"
+            " bash-shell\n cfs eth distribute\n feature ngmvpn\n-feature ospf\n feature"
+            " pim\n feature lldp\n \n"
+        )
 
         for cmd_set in commands:
             with patch(
@@ -597,7 +605,11 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
         """UT: nxos module:config method - Using commands arg and output is string"""
 
         commands = "no feature ospf"
-        expected_output = "COMMAND_LIST: no feature ospf\n\n--- \n+++ \n@@ -19,7 +19,6 @@\n feature bash-shell\n cfs eth distribute\n feature ngmvpn\n-feature ospf\n feature pim\n feature lldp\n \n"
+        expected_output = (
+            "COMMAND_LIST: no feature ospf\n\n--- \n+++ \n@@ -19,7 +19,6 @@\n feature"
+            " bash-shell\n cfs eth distribute\n feature ngmvpn\n-feature ospf\n feature"
+            " pim\n feature lldp\n \n"
+        )
 
         with patch(
             "salt.modules.nxos.show",
@@ -624,7 +636,16 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
         """UT: nxos module:config method - Using config_file arg"""
 
         config_file = "salt://bgp_config.txt"
-        expected_output = "COMMAND_LIST: feature bgp ; ! ; router bgp 55 ; address-family ipv4 unicast ; no client-to-client reflection ; additional-paths send\n\n--- \n+++ \n@@ -19,6 +19,7 @@\n feature bash-shell\n cfs eth distribute\n feature ngmvpn\n+feature bgp\n feature pim\n feature lldp\n \n@@ -233,6 +234,10 @@\n line console\n line vty\n boot nxos bootflash:/nxos.9.2.4.bin \n+router bgp 55\n+  address-family ipv4 unicast\n+    no client-to-client reflection\n+    additional-paths send\n \n no logging logfile\n no logging monitor\n"
+        expected_output = (
+            "COMMAND_LIST: feature bgp ; ! ; router bgp 55 ; address-family ipv4"
+            " unicast ; no client-to-client reflection ; additional-paths send\n\n---"
+            " \n+++ \n@@ -19,6 +19,7 @@\n feature bash-shell\n cfs eth distribute\n"
+            " feature ngmvpn\n+feature bgp\n feature pim\n feature lldp\n \n@@ -233,6"
+            " +234,10 @@\n line console\n line vty\n boot nxos"
+            " bootflash:/nxos.9.2.4.bin \n+router bgp 55\n+  address-family ipv4"
+            " unicast\n+    no client-to-client reflection\n+    additional-paths"
+            " send\n \n no logging logfile\n no logging monitor\n"
+        )
 
         with patch(
             "salt.modules.nxos.show",
@@ -687,7 +708,12 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
             ["feature bgp", "router bgp 57"],
             "bgp instance is already running; Tag is 55",
         ]
-        expected_output = "COMMAND_LIST: feature bgp ; router bgp 57\nbgp instance is already running; Tag is 55\n--- \n+++ \n@@ -19,7 +19,6 @@\n feature bash-shell\n cfs eth distribute\n feature ngmvpn\n-feature ospf\n feature pim\n feature lldp\n \n"
+        expected_output = (
+            "COMMAND_LIST: feature bgp ; router bgp 57\nbgp instance is already"
+            " running; Tag is 55\n--- \n+++ \n@@ -19,7 +19,6 @@\n feature bash-shell\n"
+            " cfs eth distribute\n feature ngmvpn\n-feature ospf\n feature pim\n"
+            " feature lldp\n \n"
+        )
 
         with patch(
             "salt.modules.nxos.show",
@@ -867,7 +893,10 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
         username = "devops"
         password = "test123TMM^&"
         hashed_pass = "$5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2"
-        config_line = "username devops password 5 $5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2"
+        config_line = (
+            "username devops password 5"
+            " $5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2"
+        )
 
         with patch("salt.modules.nxos.get_user", autospec=True):
             with patch(
@@ -890,7 +919,10 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
         password = "test123TMM^&"
         crypt_salt = "ZcZqm15X"
         hashed_pass = "$5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2"
-        config_line = "username devops password 5 $5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2"
+        config_line = (
+            "username devops password 5"
+            " $5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2"
+        )
 
         with patch("salt.modules.nxos.get_user", autospec=True):
             with patch(

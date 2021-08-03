@@ -71,7 +71,8 @@ def __virtual__():
     if get_configured_provider() is False:
         return (
             False,
-            "The virtualbox driver cannot be loaded: 'virtualbox' provider is not configured.",
+            "The virtualbox driver cannot be loaded: 'virtualbox' provider is not"
+            " configured.",
         )
 
     # If the name of the driver used does not match the filename,
@@ -271,7 +272,7 @@ def list_nodes_full(kwargs=None, call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes_full function must be called " "with -f or --function."
+            "The list_nodes_full function must be called with -f or --function."
         )
 
     machines = {}
@@ -316,7 +317,7 @@ def list_nodes(kwargs=None, call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes function must be called " "with -f or --function."
+            "The list_nodes function must be called with -f or --function."
         )
 
     attributes = [

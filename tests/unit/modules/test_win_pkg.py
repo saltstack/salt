@@ -292,7 +292,10 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
-        err_msg = "Error: [Errno 11001] getaddrinfo failed reading https://repo.test.com/runme.exe"
+        err_msg = (
+            "Error: [Errno 11001] getaddrinfo failed reading"
+            " https://repo.test.com/runme.exe"
+        )
         mock_none = MagicMock(return_value=None)
         mock_minion_error = MagicMock(side_effect=MinionError(err_msg))
         mock_parse = MagicMock(return_value=[{"firebox": "3.03"}, None])
@@ -313,8 +316,8 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                 version="3.03",
             )
             expected = (
-                "Failed to cache https://repo.test.com/runme.exe\n"
-                "Error: [Errno 11001] getaddrinfo failed reading https://repo.test.com/runme.exe"
+                "Failed to cache https://repo.test.com/runme.exe\nError: [Errno 11001]"
+                " getaddrinfo failed reading https://repo.test.com/runme.exe"
             )
 
             self.assertEqual(ret, expected)

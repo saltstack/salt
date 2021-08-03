@@ -385,9 +385,7 @@ class GitModuleTest(ModuleCase):
                     cwd=self.repo,
                 )
             )
-            log.debug(
-                "Try to set single local value without cwd (should raise " "error)"
-            )
+            log.debug("Try to set single local value without cwd (should raise error)")
             self.assertTrue(
                 "'cwd' argument required unless global=True"
                 in self.run_function(
@@ -921,8 +919,9 @@ class GitModuleTest(ModuleCase):
         self.assertTrue(self.run_function("git.worktree_rm", [worktree_path]))
         # Prune the worktrees
         prune_message = (
-            "Removing worktrees/{}: gitdir file points to non-existent "
-            "location".format(worktree_basename)
+            "Removing worktrees/{}: gitdir file points to non-existent location".format(
+                worktree_basename
+            )
         )
         # Test dry run output. It should match the same output we get when we
         # actually prune the worktrees.

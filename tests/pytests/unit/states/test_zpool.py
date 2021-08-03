@@ -163,7 +163,10 @@ def test_present_import_fail(utils_patch):
     ret = {
         "name": "myzpool",
         "result": False,
-        "comment": "storage pool myzpool was not imported, no (valid) layout specified for creation",
+        "comment": (
+            "storage pool myzpool was not imported, no (valid) layout specified for"
+            " creation"
+        ),
         "changes": {},
     }
 
@@ -243,7 +246,10 @@ def test_present_create_fail(utils_patch):
     ret = {
         "name": "myzpool",
         "result": False,
-        "comment": "storage pool myzpool was not imported, no (valid) layout specified for creation",
+        "comment": (
+            "storage pool myzpool was not imported, no (valid) layout specified for"
+            " creation"
+        ),
         "changes": {},
     }
 

@@ -63,7 +63,9 @@ class RosterEntryConfigTest(TestCase):
                 },
                 "priv": {
                     "type": "string",
-                    "description": "File path to ssh private key, defaults to salt-ssh.rsa",
+                    "description": (
+                        "File path to ssh private key, defaults to salt-ssh.rsa"
+                    ),
                     "title": "Private Key",
                     "minLength": 1,
                 },
@@ -82,12 +84,18 @@ class RosterEntryConfigTest(TestCase):
                 },
                 "timeout": {
                     "type": "integer",
-                    "description": "Number of seconds to wait for response when establishing an SSH connection",
+                    "description": (
+                        "Number of seconds to wait for response when establishing an"
+                        " SSH connection"
+                    ),
                     "title": "Timeout",
                 },
                 "thin_dir": {
                     "type": "string",
-                    "description": "The target system's storage directory for Salt components. Defaults to /tmp/salt-<hash>.",
+                    "description": (
+                        "The target system's storage directory for Salt components."
+                        " Defaults to /tmp/salt-<hash>."
+                    ),
                     "title": "Thin Directory",
                 },
                 # The actuall representation of the minion options would make this HUGE!

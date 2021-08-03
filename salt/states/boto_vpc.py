@@ -1927,7 +1927,7 @@ def request_vpc_peering_connection(
         vpc_ids = []
 
     if vpc_ids:
-        ret["comment"] = "VPC peering connection already exists, " "nothing to be done."
+        ret["comment"] = "VPC peering connection already exists, nothing to be done."
         return ret
 
     if __opts__["test"]:
@@ -2041,7 +2041,7 @@ def vpc_peering_connection_present(
         ):
             ret[
                 "comment"
-            ] = "VPC peering {} already requested - pending " "acceptance by {}".format(
+            ] = "VPC peering {} already requested - pending acceptance by {}".format(
                 conn_name, peer_owner_id or peer_vpc_name or peer_vpc_id
             )
             log.info(ret["comment"])

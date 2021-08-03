@@ -44,7 +44,10 @@ class GlobalConfig:
     error_content = {"Error": {"Code": 101, "Message": "Test-defined error"}}
     policy_ret = dict(
         policyName="testpolicy",
-        policyDocument='{"Version": "2012-10-17", "Statement": [{"Action": ["iot:Publish"], "Resource": ["*"], "Effect": "Allow"}]}',
+        policyDocument=(
+            '{"Version": "2012-10-17", "Statement": [{"Action": ["iot:Publish"],'
+            ' "Resource": ["*"], "Effect": "Allow"}]}'
+        ),
         policyArn="arn:aws:iot:us-east-1:123456:policy/my_policy",
         policyVersionId=1,
         defaultVersionId=1,

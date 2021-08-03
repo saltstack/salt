@@ -128,9 +128,10 @@ def installed(name, options=None):
     if not default_options:
         if options:
             ret["result"] = False
-            ret["comment"] = (
-                "{} does not have any build options, yet "
-                "options were specified".format(name)
+            ret[
+                "comment"
+            ] = "{} does not have any build options, yet options were specified".format(
+                name
             )
             return ret
         else:
@@ -144,7 +145,7 @@ def installed(name, options=None):
             ret["result"] = False
             ret[
                 "comment"
-            ] = "The following options are not available for " "{}: {}".format(
+            ] = "The following options are not available for {}: {}".format(
                 name, ", ".join(bad_opts)
             )
             return ret

@@ -895,7 +895,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         """
         name = self.tmp_dir / "source_hash_indifferent_case"
         self.addCleanup(salt.utils.files.safe_rm, str(name))
-        state_name = "file_|-{0}_|" "-{0}_|-managed".format(name)
+        state_name = "file_|-{0}_|-{0}_|-managed".format(name)
         local_path = os.path.join(RUNTIME_VARS.BASE_FILES, "hello_world.txt")
         actual_hash = "c98c24b677eff44860afea6f493bbaec5bb1c4cbb209c6fc2bbb47f66ff2ad31"
         if IS_WINDOWS:
@@ -1833,7 +1833,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                     pattern="^# en_US.UTF-8$",
                     repl="en_US.UTF-8",
                     append_if_not_found=True,
-                    not_found_content="THIS LINE WASN'T FOUND! SO WE'RE APPENDING IT HERE!",
+                    not_found_content=(
+                        "THIS LINE WASN'T FOUND! SO WE'RE APPENDING IT HERE!"
+                    ),
                 )
             )
 
@@ -2470,7 +2472,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             ret,
         )
         self.assertNotInSaltComment(
-            "TypeError: managed() got multiple values for keyword " "argument 'mode'",
+            "TypeError: managed() got multiple values for keyword argument 'mode'",
             ret,
         )
 
@@ -2519,7 +2521,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             "prepend-foo-management:",
             "  file.blockreplace:",
             "    - name: {0}",
-            '    - marker_start: "#-- start salt managed zonestart -- PLEASE, DO NOT EDIT"',
+            '    - marker_start: "#-- start salt managed zonestart -- PLEASE, DO NOT'
+            ' EDIT"',
             '    - marker_end: "#-- end salt managed zonestart --"',
             "    - content: ''",
             "    - prepend_if_not_found: True",
@@ -2529,7 +2532,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             "append-foo-management:",
             "  file.blockreplace:",
             "    - name: {0}",
-            '    - marker_start: "#-- start salt managed zoneend -- PLEASE, DO NOT EDIT"',
+            '    - marker_start: "#-- start salt managed zoneend -- PLEASE, DO NOT'
+            ' EDIT"',
             '    - marker_end: "#-- end salt managed zoneend --"',
             "    - content: ''",
             "    - append_if_not_found: True",
@@ -2682,7 +2686,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                     )
                 )
             diff = "--- \n+++ \n@@ -1 +1,3 @@\n"
-            diff += "+첫 번째 행{0}" " 한국어 시험{0}" "+마지막 행{0}".format(os.linesep)
+            diff += "+첫 번째 행{0} 한국어 시험{0}+마지막 행{0}".format(os.linesep)
 
             ret = {x.split("_|-")[1]: y for x, y in result.items()}
 
@@ -2851,7 +2855,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltFalseReturn(ret)
         self.assertIn(
-            ("Source file cannot be the same as destination"),
+            "Source file cannot be the same as destination",
             ret[next(iter(ret))]["comment"],
         )
 
@@ -3231,12 +3235,10 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
         # comment here
         """
     )
-    content_explicit_posix_newlines = "Line 1 of block\n" "Line 2 of block\n"
-    content_explicit_windows_newlines = "Line 1 of block\r\n" "Line 2 of block\r\n"
-    without_block_explicit_posix_newlines = "Hello world!\n\n" "# comment here\n"
-    without_block_explicit_windows_newlines = (
-        "Hello world!\r\n\r\n" "# comment here\r\n"
-    )
+    content_explicit_posix_newlines = "Line 1 of block\nLine 2 of block\n"
+    content_explicit_windows_newlines = "Line 1 of block\r\nLine 2 of block\r\n"
+    without_block_explicit_posix_newlines = "Hello world!\n\n# comment here\n"
+    without_block_explicit_windows_newlines = "Hello world!\r\n\r\n# comment here\r\n"
     with_block_prepended_explicit_posix_newlines = (
         "# start\n"
         "Line 1 of block\n"

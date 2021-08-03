@@ -78,7 +78,7 @@ def test_build_schedule_item(sock_dir):
         'Unable to use "seconds", "minutes", "hours", '
         'or "days" with "when" or "cron" options.'
     )
-    comment1 = 'Unable to use "when" and "cron" ' "options together.  Ignoring."
+    comment1 = 'Unable to use "when" and "cron" options together.  Ignoring.'
     with patch.dict(schedule.__opts__, {"job1": {}}):
         assert schedule.build_schedule_item("") == {
             "comment": "Job name is required.",

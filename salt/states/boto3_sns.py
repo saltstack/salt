@@ -334,8 +334,7 @@ def topic_absent(
                 if sub["SubscriptionArn"] == "PendingConfirmation":
                     # The API won't let you delete subscriptions in pending status...
                     log.warning(
-                        "Ignoring PendingConfirmation subscription %s %s on "
-                        "topic %s",
+                        "Ignoring PendingConfirmation subscription %s %s on topic %s",
                         sub["Protocol"],
                         sub["Endpoint"],
                         sub["TopicArn"],

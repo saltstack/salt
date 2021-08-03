@@ -29,12 +29,14 @@ def __virtual__():
     if not __opts__.get("rallydev", {}).get("username", None):
         return (
             False,
-            "The rallydev execution module failed to load: rallydev:username not defined in config.",
+            "The rallydev execution module failed to load: rallydev:username not"
+            " defined in config.",
         )
     if not __opts__.get("rallydev", {}).get("password", None):
         return (
             False,
-            "The rallydev execution module failed to load: rallydev:password not defined in config.",
+            "The rallydev execution module failed to load: rallydev:password not"
+            " defined in config.",
         )
     return True
 
@@ -194,7 +196,7 @@ def update_item(name, id_, field=None, value=None, postdata=None):
 
     if postdata is None:
         raise SaltInvocationError(
-            "Either a field and a value, or a chunk of " "POST data must be specified."
+            "Either a field and a value, or a chunk of POST data must be specified."
         )
 
     status, result = _query(

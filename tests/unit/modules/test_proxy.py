@@ -18,7 +18,10 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
         on macOS
         """
         mock = MagicMock(
-            return_value="Enabled: Yes\nServer: 192.168.0.1\nPort: 3128\nAuthenticated Proxy Enabled: 0"
+            return_value=(
+                "Enabled: Yes\nServer: 192.168.0.1\nPort: 3128\nAuthenticated Proxy"
+                " Enabled: 0"
+            )
         )
         expected = {"enabled": True, "server": "192.168.0.1", "port": "3128"}
 
@@ -33,7 +36,10 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
         on macOS
         """
         mock = MagicMock(
-            return_value="Enabled: Yes\nServer: 192.168.0.1\nPort: 3128\nAuthenticated Proxy Enabled: 0"
+            return_value=(
+                "Enabled: Yes\nServer: 192.168.0.1\nPort: 3128\nAuthenticated Proxy"
+                " Enabled: 0"
+            )
         )
         expected = {"enabled": True, "server": "192.168.0.1", "port": "3128"}
 
@@ -48,7 +54,10 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
         on macOS
         """
         mock = MagicMock(
-            return_value="Enabled: Yes\nServer: 192.168.0.1\nPort: 3128\nAuthenticated Proxy Enabled: 0"
+            return_value=(
+                "Enabled: Yes\nServer: 192.168.0.1\nPort: 3128\nAuthenticated Proxy"
+                " Enabled: 0"
+            )
         )
         expected = {"enabled": True, "server": "192.168.0.1", "port": "3128"}
 
@@ -86,7 +95,8 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                 bypass_hosts=".moo.com,.salt.com",
             )
             mock.assert_called_once_with(
-                "networksetup -setwebproxy Ethernet 192.168.0.1 3128 On frank badpassw0rd"
+                "networksetup -setwebproxy Ethernet 192.168.0.1 3128 On frank"
+                " badpassw0rd"
             )
             self.assertTrue(out)
 
@@ -106,7 +116,8 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                 bypass_hosts=".moo.com,.salt.com",
             )
             mock.assert_called_once_with(
-                "networksetup -setsecurewebproxy Ethernet 192.168.0.1 3128 On frank passw0rd"
+                "networksetup -setsecurewebproxy Ethernet 192.168.0.1 3128 On frank"
+                " passw0rd"
             )
             self.assertTrue(out)
 
@@ -126,7 +137,8 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                 bypass_hosts=".moo.com,.salt.com",
             )
             mock.assert_called_once_with(
-                "networksetup -setftpproxy Ethernet 192.168.0.1 3128 On frank badpassw0rd"
+                "networksetup -setftpproxy Ethernet 192.168.0.1 3128 On frank"
+                " badpassw0rd"
             )
             self.assertTrue(out)
 
@@ -137,7 +149,9 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
         """
         result = [
             {
-                "vdata": "http=192.168.0.1:3128;https=192.168.0.2:3128;ftp=192.168.0.3:3128"
+                "vdata": (
+                    "http=192.168.0.1:3128;https=192.168.0.2:3128;ftp=192.168.0.3:3128"
+                )
             },
             {"vdata": 1},
         ]
@@ -241,7 +255,9 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
         """
         results = [
             {
-                "vdata": "http=192.168.0.1:3128;https=192.168.0.2:3128;ftp=192.168.0.3:3128"
+                "vdata": (
+                    "http=192.168.0.1:3128;https=192.168.0.2:3128;ftp=192.168.0.3:3128"
+                )
             },
             {"vdata": 1},
         ]
@@ -397,7 +413,9 @@ class ProxyTestCase(TestCase, LoaderModuleMockMixin):
                 hive="HKEY_CURRENT_USER",
                 key="SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
                 vname="ProxyServer",
-                vdata="http=192.168.0.1:3128;https=192.168.0.1:3128;ftp=192.168.0.1:3128;",
+                vdata=(
+                    "http=192.168.0.1:3128;https=192.168.0.1:3128;ftp=192.168.0.1:3128;"
+                ),
             ),
             call(
                 hive="HKEY_CURRENT_USER",

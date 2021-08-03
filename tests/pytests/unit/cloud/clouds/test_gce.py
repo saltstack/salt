@@ -69,7 +69,9 @@ def configure_loader_modules():
                     "my-google-cloud": {
                         "gce": {
                             "project": "daenerys-cloud",
-                            "service_account_email_address": "dany@targaryen.westeros.cloud",
+                            "service_account_email_address": (
+                                "dany@targaryen.westeros.cloud"
+                            ),
                             "service_account_private_key": "/home/dany/PRIVKEY.pem",
                             "driver": "gce",
                             "ssh_interface": "public_ips",

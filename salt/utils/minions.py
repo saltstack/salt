@@ -191,7 +191,7 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
             return joined
 
         log.debug(
-            "No nested nodegroups detected. Using original nodegroup " "definition: %s",
+            "No nested nodegroups detected. Using original nodegroup definition: %s",
             nodegroups[nodegroup],
         )
         return ret
@@ -564,7 +564,7 @@ class CkMinions:
                             unmatched.append(word)
                         else:
                             log.error(
-                                "Expression may begin with" " binary operator: %s", word
+                                "Expression may begin with binary operator: %s", word
                             )
                             return {"minions": [], "missing": []}
 

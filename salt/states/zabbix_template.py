@@ -888,8 +888,10 @@ def present(name, params, static_host_list=True, **kwargs):
                 ret["changes"] = {
                     name: {
                         "old": 'Zabbix Template "{}" does not exist.'.format(name),
-                        "new": 'Zabbix Template "{}" would be created '
-                        "according definition.".format(name),
+                        "new": (
+                            'Zabbix Template "{}" would be created '
+                            "according definition.".format(name)
+                        ),
                     }
                 }
             else:
@@ -897,8 +899,10 @@ def present(name, params, static_host_list=True, **kwargs):
                 ret["changes"] = {
                     name: {
                         "old": 'Zabbix Template "{}" did not exist.'.format(name),
-                        "new": 'Zabbix Template "{}" created according definition.'.format(
-                            name
+                        "new": (
+                            'Zabbix Template "{}" created according definition.'.format(
+                                name
+                            )
                         ),
                     }
                 }
@@ -909,8 +913,10 @@ def present(name, params, static_host_list=True, **kwargs):
                 ret["changes"] = {
                     name: {
                         "old": 'Zabbix Template "{}" differs.'.format(name),
-                        "new": 'Zabbix Template "{}" would be updated '
-                        "according definition.".format(name),
+                        "new": (
+                            'Zabbix Template "{}" would be updated '
+                            "according definition.".format(name)
+                        ),
                     }
                 }
             else:
@@ -918,8 +924,10 @@ def present(name, params, static_host_list=True, **kwargs):
                 ret["changes"] = {
                     name: {
                         "old": 'Zabbix Template "{}" differed.'.format(name),
-                        "new": 'Zabbix Template "{}" updated according definition.'.format(
-                            name
+                        "new": (
+                            'Zabbix Template "{}" updated according definition.'.format(
+                                name
+                            )
                         ),
                     }
                 }

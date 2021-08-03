@@ -194,7 +194,7 @@ class SSHThinTestCase(TestCase):
         with pytest.raises(salt.exceptions.SaltSystemExit) as err:
             thin.get_ext_tops(cfg)
         self.assertIn(
-            "specific locked Python version should be a list of " "major/minor version",
+            "specific locked Python version should be a list of major/minor version",
             str(err.value),
         )
 
@@ -738,7 +738,7 @@ class SSHThinTestCase(TestCase):
             thin.sys.exc_clear = lambda: None
             thin.gen_thin("")
         self.assertIn(
-            "The minimum required python version to run salt-ssh is " '"3"',
+            'The minimum required python version to run salt-ssh is "3"',
             str(err.value),
         )
 
@@ -1121,8 +1121,8 @@ class SSHThinTestCase(TestCase):
                         exp_ret[key] = str(pathlib.Path(value).resolve(strict=False))
                 assert ret == exp_ret
                 assert (
-                    "ERROR:Could not auto detect file location for module concurrent for python version python3.7"
-                    in log_handler.messages
+                    "ERROR:Could not auto detect file location for module concurrent"
+                    " for python version python3.7" in log_handler.messages
                 )
 
     def test_get_tops_python_exclude(self):

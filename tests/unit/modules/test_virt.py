@@ -1282,7 +1282,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             )
 
             self.assertEqual(len(diskp), 1)
-            self.assertEqual(diskp[0]["source_file"], ("/path/to/my/image.qcow2"))
+            self.assertEqual(diskp[0]["source_file"], "/path/to/my/image.qcow2")
 
     def test_disk_profile_cdrom_default(self):
         """
@@ -1335,7 +1335,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             [{"name": "mydisk", "pool": "test-vdb"}],
             "hello",
         )
-        self.assertEqual(diskp[0]["filename"], ("vdb1"))
+        self.assertEqual(diskp[0]["filename"], "vdb1")
 
         # Append to the end case
         self.mock_conn.storagePoolLookupByName.return_value.listVolumes.return_value = [
@@ -1349,7 +1349,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             [{"name": "mydisk", "pool": "test-vdb"}],
             "hello",
         )
-        self.assertEqual(diskp[0]["filename"], ("vdb3"))
+        self.assertEqual(diskp[0]["filename"], "vdb3")
 
         # Hole in the middle case
         self.mock_conn.storagePoolLookupByName.return_value.listVolumes.return_value = [
@@ -1363,7 +1363,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             [{"name": "mydisk", "pool": "test-vdb"}],
             "hello",
         )
-        self.assertEqual(diskp[0]["filename"], ("vdb2"))
+        self.assertEqual(diskp[0]["filename"], "vdb2")
 
         # Reuse existing volume case
         diskp = virt._disk_profile(
@@ -1373,7 +1373,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             [{"name": "mydisk", "pool": "test-vdb", "source_file": "vdb1"}],
             "hello",
         )
-        self.assertEqual(diskp[0]["filename"], ("vdb1"))
+        self.assertEqual(diskp[0]["filename"], "vdb1")
 
     def test_gen_xml_volume(self):
         """
@@ -1697,7 +1697,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 {
                     "name": "remote",
                     "device": "cdrom",
-                    "source_file": "http://myhost:8080/url/to/image?query=foo&filter=bar",
+                    "source_file": (
+                        "http://myhost:8080/url/to/image?query=foo&filter=bar"
+                    ),
                     "model": "ide",
                 },
             ],
@@ -2072,8 +2074,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                             boot = {
                                 "kernel": "https://www.example.com/download/vmlinuz",
                                 "initrd": "",
-                                "cmdline": "console=ttyS0 "
-                                "ks=http://example.com/f8-i386/os/",
+                                "cmdline": (
+                                    "console=ttyS0 ks=http://example.com/f8-i386/os/"
+                                ),
                             }
 
                             retval = virt.init(

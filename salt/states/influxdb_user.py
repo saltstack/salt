@@ -120,9 +120,7 @@ def present(name, passwd, admin=False, grants=None, **client_args):
                 ret["result"] = None
                 ret[
                     "comment"
-                ] = "User {} will be updated with the " "following changes:".format(
-                    name
-                )
+                ] = "User {} will be updated with the following changes:".format(name)
                 for k, v in ret["changes"].items():
                     ret["comment"] += "\n{} => {}".format(k, v)
                 ret["changes"] = {}

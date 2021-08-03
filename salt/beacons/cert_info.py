@@ -42,12 +42,12 @@ def validate(config):
 
     # Configuration for cert_info beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for cert_info beacon must be a list.")
+        return False, "Configuration for cert_info beacon must be a list."
 
     if "files" not in _config:
         return (
             False,
-            ("Configuration for cert_info beacon must contain files option."),
+            "Configuration for cert_info beacon must contain files option.",
         )
     return True, "Valid beacon configuration"
 

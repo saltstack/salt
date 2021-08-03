@@ -277,7 +277,7 @@ def present(
         ret["result"] = False
         ret[
             "comment"
-        ] = "Failed to update domain: version cannot be modified " "from {} to {}.".format(
+        ] = "Failed to update domain: version cannot be modified from {} to {}.".format(
             _status.get("ElasticsearchVersion"),
             str(ElasticsearchVersion),
         )

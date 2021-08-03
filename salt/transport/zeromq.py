@@ -113,7 +113,8 @@ def _get_master_uri(master_ip, master_port, source_ip=None, source_port=None):
             )
             log.warning("Consider upgrading to pyzmq >= 16.0.1 and libzmq >= 4.1.6")
             log.warning(
-                "Specific source IP / port for connecting to master returner port: configuraion ignored"
+                "Specific source IP / port for connecting to master returner port:"
+                " configuraion ignored"
             )
 
     return master_uri
@@ -632,10 +633,9 @@ class AsyncZeroMQPubChannel(
             payload = self.serial.loads(messages[1])
         else:
             raise Exception(
-                (
-                    "Invalid number of messages ({}) in zeromq pub"
-                    "message from master"
-                ).format(len(messages_len))
+                "Invalid number of messages ({}) in zeromq pubmessage from master".format(
+                    len(messages_len)
+                )
             )
         # Yield control back to the caller. When the payload has been decoded, assign
         # the decoded payload to 'ret' and resume operation

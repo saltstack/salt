@@ -79,8 +79,10 @@ class LicenseTestCase(TestCase, LoaderModuleMockMixin):
         }
 
         mock = MagicMock(
-            return_value="Name: Win7\r\nDescription: Prof\r\nPartial Product Key: 12345\r\n"
-            "License Status: Licensed"
+            return_value=(
+                "Name: Win7\r\nDescription: Prof\r\nPartial Product Key: 12345\r\n"
+                "License Status: Licensed"
+            )
         )
         with patch.dict(win_license.__salt__, {"cmd.run": mock}):
             out = win_license.info()

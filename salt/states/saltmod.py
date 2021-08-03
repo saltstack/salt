@@ -350,7 +350,7 @@ def state(
         fail_minions = [minion.strip() for minion in fail_minions.split(",")]
     elif not isinstance(fail_minions, list):
         state_ret.setdefault("warnings", []).append(
-            "'fail_minions' needs to be a list or a comma separated " "string. Ignored."
+            "'fail_minions' needs to be a list or a comma separated string. Ignored."
         )
         fail_minions = ()
 
@@ -546,7 +546,7 @@ def function(
         fail_minions = [minion.strip() for minion in fail_minions.split(",")]
     elif not isinstance(fail_minions, list):
         func_ret.setdefault("warnings", []).append(
-            "'fail_minions' needs to be a list or a comma separated " "string. Ignored."
+            "'fail_minions' needs to be a list or a comma separated string. Ignored."
         )
         fail_minions = ()
     for minion, mdata in cmd_ret.items():

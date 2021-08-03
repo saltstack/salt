@@ -484,9 +484,8 @@ class TestMsgpack(TestCase):
                         if run:
                             if str(vanilla_run) == str(run):
                                 self.skipTest(
-                                    "Failed the same way as the vanilla msgpack module:\n{}".format(
-                                        run
-                                    )
+                                    "Failed the same way as the vanilla msgpack"
+                                    " module:\n{}".format(run)
                                 )
                 else:
                     # If subTest isn't available then run the tests collect the errors of all the tests before failing
@@ -495,9 +494,8 @@ class TestMsgpack(TestCase):
                         # If the vanilla msgpack module errored, then skip if we got the same error
                         if str(vanilla_run) == str(run):
                             self.skipTest(
-                                "Test failed the same way the vanilla msgpack module fails:\n{}".format(
-                                    run
-                                )
+                                "Test failed the same way the vanilla msgpack module"
+                                " fails:\n{}".format(run)
                             )
                         else:
                             errors[(test_func.__name__, func_name.__name__)] = run

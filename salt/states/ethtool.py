@@ -116,9 +116,10 @@ def coalesce(name, **kwargs):
                 return ret
             if new:
                 ret["result"] = None
-                ret["comment"] = (
-                    "Device {} coalescing settings are set to be "
-                    "updated:\n{}".format(name, "\n".join(diff))
+                ret[
+                    "comment"
+                ] = "Device {} coalescing settings are set to be updated:\n{}".format(
+                    name, "\n".join(diff)
                 )
                 return ret
 
@@ -204,7 +205,7 @@ def ring(name, **kwargs):
                 ret["result"] = None
                 ret[
                     "comment"
-                ] = "Device {} ring parameters are set to be " "updated:\n{}".format(
+                ] = "Device {} ring parameters are set to be updated:\n{}".format(
                     name, "\n".join(diff)
                 )
                 return ret
@@ -283,7 +284,7 @@ def offload(name, **kwargs):
                 ret["result"] = None
                 ret[
                     "comment"
-                ] = "Device {} offload settings are set to be " "updated:\n{}".format(
+                ] = "Device {} offload settings are set to be updated:\n{}".format(
                     name, "\n".join(diff)
                 )
                 return ret
