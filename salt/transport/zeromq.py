@@ -36,13 +36,7 @@ import zmq.eventloop.ioloop
 import zmq.eventloop.zmqstream
 from salt._compat import ipaddress
 from salt.exceptions import SaltException, SaltReqTimeoutError
-from salt.utils.zeromq import (
-    LIBZMQ_VERSION_INFO,
-    ZMQ_VERSION_INFO,
-    ZMQDefaultLoop,
-    install_zmq,
-    zmq,
-)
+from salt.utils.zeromq import LIBZMQ_VERSION_INFO, ZMQ_VERSION_INFO, zmq
 
 try:
     import zmq.utils.monitor
@@ -150,8 +144,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         # do we have any mapping for this io_loop
         io_loop = kwargs.get("io_loop")
         if io_loop is None:
-            install_zmq()
-            io_loop = ZMQDefaultLoop.current()
+            io_loop = salt.ext.tornado.ioloop.IOLoop.current()
         if io_loop not in cls.instance_map:
             cls.instance_map[io_loop] = weakref.WeakValueDictionary()
         loop_instance_map = cls.instance_map[io_loop]
@@ -250,8 +243,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
 
         self._io_loop = kwargs.get("io_loop")
         if self._io_loop is None:
-            install_zmq()
-            self._io_loop = ZMQDefaultLoop.current()
+            self._io_loop = salt.ext.tornado.ioloop.IOLoop.current()
 
         if self.crypt != "clear":
             # we don't need to worry about auth as a kwarg, since its a singleton
@@ -469,8 +461,7 @@ class AsyncZeroMQPubChannel(
         self._closing = False
 
         if self.io_loop is None:
-            install_zmq()
-            self.io_loop = ZMQDefaultLoop.current()
+            self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
 
         self.hexid = hashlib.sha1(
             salt.utils.stringutils.to_bytes(self.opts["id"])
