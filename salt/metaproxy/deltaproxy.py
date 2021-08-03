@@ -467,7 +467,6 @@ def target(cls, minion_instance, opts, data, connected):
         opts["id"],
     )
 
-    _id = opts["id"]
     if not hasattr(minion_instance, "serial"):
         minion_instance.serial = salt.payload.Serial(opts)
 
@@ -487,9 +486,6 @@ def thread_return(cls, minion_instance, opts, data):
     This method should be used as a threading target, start the actual
     minion side execution.
     """
-
-    _id = opts["id"]
-
     fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
     if opts["multiprocessing"] and not salt.utils.platform.is_windows():
@@ -522,7 +518,7 @@ def thread_return(cls, minion_instance, opts, data):
                 function_name
             )
             for executor in executors
-            if "{}.allow_missing_func" in minion_instance.executors
+            if "{}.allow_missing_func".format(executor) in minion_instance.executors
         ]
     )
     if function_name in minion_instance.functions or allow_missing_funcs is True:

@@ -9,7 +9,7 @@ import pytest
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="module", autouse=True)
 def salt_delta_proxy(salt_delta_proxy):
     """
     Create some dummy proxy minions for testing
@@ -23,20 +23,17 @@ def salt_delta_proxy(salt_delta_proxy):
         return salt_delta_proxy
 
 
-def test_can_it_ping(salt_cli, salt_delta_proxy):
+@pytest.mark.parametrize("proxy_id", ["dummy_proxy_one", "dummy_proxy_two"])
+def test_can_it_ping(salt_cli, proxy_id):
     """
     Ensure the proxy can ping
     """
-    ret = salt_cli.run("test.ping", minion_tgt=salt_delta_proxy.id)
+    ret = salt_cli.run("test.ping", minion_tgt=proxy_id)
     assert ret.json is True
-
-    for proxy in ["dummy_proxy_one", "dummy_proxy_two"]:
-        ret = salt_cli.run("test.ping", minion_tgt=proxy)
-        assert ret.json is True
 
 
 @pytest.mark.parametrize("proxy_id", ["dummy_proxy_one", "dummy_proxy_two"])
-def test_list_pkgs(salt_cli, salt_delta_proxy, proxy_id):
+def test_list_pkgs(salt_cli, proxy_id):
     """
     Package test 1, really just tests that the virtual function capability
     is working OK.
@@ -48,7 +45,7 @@ def test_list_pkgs(salt_cli, salt_delta_proxy, proxy_id):
 
 
 @pytest.mark.parametrize("proxy_id", ["dummy_proxy_one", "dummy_proxy_two"])
-def test_install_pkgs(salt_cli, salt_delta_proxy, proxy_id):
+def test_install_pkgs(salt_cli, proxy_id):
     """
     Package test 2, really just tests that the virtual function capability
     is working OK.
@@ -65,56 +62,54 @@ def test_install_pkgs(salt_cli, salt_delta_proxy, proxy_id):
 
 
 @pytest.mark.parametrize("proxy_id", ["dummy_proxy_one", "dummy_proxy_two"])
-def test_remove_pkgs(salt_cli, salt_delta_proxy, proxy_id):
+def test_remove_pkgs(salt_cli, proxy_id):
     ret = salt_cli.run("pkg.remove", "apache", minion_tgt=proxy_id)
     assert "apache" not in ret.json
 
 
 @pytest.mark.parametrize("proxy_id", ["dummy_proxy_one", "dummy_proxy_two"])
-def test_upgrade(salt_cli, salt_delta_proxy, proxy_id):
+def test_upgrade(salt_cli, proxy_id):
     ret = salt_cli.run("pkg.upgrade", minion_tgt=proxy_id)
     assert ret.json["coreutils"]["new"] == "2.0"
     assert ret.json["redbull"]["new"] == "1000.99"
 
 
 @pytest.mark.parametrize("proxy_id", ["dummy_proxy_one", "dummy_proxy_two"])
-def test_service_list(salt_cli, salt_delta_proxy, proxy_id):
+def test_service_list(salt_cli, proxy_id):
     ret = salt_cli.run("service.list", minion_tgt=proxy_id)
     assert "ntp" in ret.json
 
 
 @pytest.mark.parametrize("proxy_id", ["dummy_proxy_one", "dummy_proxy_two"])
-def test_service_stop(salt_cli, salt_delta_proxy, proxy_id):
+def test_service_stop(salt_cli, proxy_id):
     ret = salt_cli.run("service.stop", "ntp", minion_tgt=proxy_id)
     ret = salt_cli.run("service.status", "ntp", minion_tgt=proxy_id)
     assert ret.json is False
 
 
 @pytest.mark.parametrize("proxy_id", ["dummy_proxy_one", "dummy_proxy_two"])
-def test_service_start(salt_cli, salt_delta_proxy, proxy_id):
+def test_service_start(salt_cli, proxy_id):
     ret = salt_cli.run("service.start", "samba", minion_tgt=proxy_id)
     ret = salt_cli.run("service.status", "samba", minion_tgt=proxy_id)
     assert ret.json is True
 
 
 @pytest.mark.parametrize("proxy_id", ["dummy_proxy_one", "dummy_proxy_two"])
-def test_service_get_all(salt_cli, salt_delta_proxy, proxy_id):
+def test_service_get_all(salt_cli, proxy_id):
     ret = salt_cli.run("service.get_all", minion_tgt=proxy_id)
     assert ret.json
     assert "samba" in ret.json
 
 
 @pytest.mark.parametrize("proxy_id", ["dummy_proxy_one", "dummy_proxy_two"])
-def test_grains_items(salt_cli, salt_delta_proxy, proxy_id):
+def test_grains_items(salt_cli, proxy_id):
     ret = salt_cli.run("grains.items", minion_tgt=proxy_id)
     assert ret.json["kernel"] == "proxy"
     assert ret.json["kernelrelease"] == "proxy"
 
 
 @pytest.mark.parametrize("proxy_id", ["dummy_proxy_one", "dummy_proxy_two"])
-def test_state_apply(
-    salt_cli, salt_delta_proxy, tmp_path, base_env_state_tree_root_dir, proxy_id
-):
+def test_state_apply(salt_cli, tmp_path, base_env_state_tree_root_dir, proxy_id):
     test_file = tmp_path / "testfile"
     core_state = """
     {}:
@@ -134,9 +129,7 @@ def test_state_apply(
 
 @pytest.mark.slow_test
 @pytest.mark.parametrize("proxy_id", ["dummy_proxy_one", "dummy_proxy_two"])
-def test_state_highstate(
-    salt_cli, salt_delta_proxy, tmp_path, base_env_state_tree_root_dir, proxy_id
-):
+def test_state_highstate(salt_cli, tmp_path, base_env_state_tree_root_dir, proxy_id):
     test_file = tmp_path / "testfile"
     top_sls = """
     base:

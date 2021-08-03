@@ -194,13 +194,12 @@ def init(opts):
     """
     Opens the connection with the network device.
     """
-    __context__["napalm_device"] = {}
-    __context__["napalm_device"]["opts"] = opts
-    __context__["napalm_device"]["id"] = opts["id"]
-
-    __context__["napalm_device"]["network_device"] = salt.utils.napalm.get_device(opts)
-    __context__["napalm_device"]["details"] = {}
-    __context__["napalm_device"]["details"]["initialized"] = True
+    __context__["napalm_device"] = {
+        "opts": opts,
+        "id": opts["id"],
+        "network_device": salt.utils.napalm.get_device(opts),
+        "details": {"initialized": True},
+    }
     return True
 
 
