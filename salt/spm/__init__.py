@@ -818,7 +818,11 @@ class SPMClient:
         metadata_filename = "{}/SPM-METADATA".format(repo_path)
         with salt.utils.files.fopen(metadata_filename, "w") as mfh:
             salt.utils.yaml.safe_dump(
-                repo_metadata, mfh, indent=4, canonical=False, default_flow_style=False,
+                repo_metadata,
+                mfh,
+                indent=4,
+                canonical=False,
+                default_flow_style=False,
             )
 
         log.debug("Wrote %s", metadata_filename)

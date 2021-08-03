@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 @pytest.fixture
 def ipv4_tuple():
     """
-        return tuple of IPv4 local, addr1, addr2
+    return tuple of IPv4 local, addr1, addr2
     """
     return ("127.0.0.1", "10.0.0.1", "10.0.0.2")
 
@@ -37,7 +37,7 @@ def ipv4_tuple():
 @pytest.fixture
 def ipv6_tuple():
     """
-        return tuple of IPv6 local, addr1, addr2, scope
+    return tuple of IPv6 local, addr1, addr2, scope
     """
     return (
         "::1",
@@ -784,7 +784,7 @@ def test_rocky_8_os_grains(os_release_dir):
         "oscodename": "Rocky Linux 8.4 (Green Obsidian)",
         "osfullname": "Rocky Linux",
         "osrelease": "8.4",
-        "osrelease_info": (8, 4,),
+        "osrelease_info": (8, 4),
         "osmajorrelease": 8,
         "osfinger": "Rocky Linux-8",
     }
@@ -836,7 +836,7 @@ def test_almalinux_8_os_grains(os_release_dir):
         "oscodename": "AlmaLinux 8",
         "osfullname": "AlmaLinux",
         "osrelease": "8.3",
-        "osrelease_info": (8, 3,),
+        "osrelease_info": (8, 3),
         "osmajorrelease": 8,
         "osfinger": "AlmaLinux-8",
     }
@@ -1426,7 +1426,7 @@ def test_illumos_fallback_virtual():
         return False
 
     with patch.dict(
-        core.__salt__, {"cmd.run_all": MagicMock(side_effect=_cmd_all_side_effect)},
+        core.__salt__, {"cmd.run_all": MagicMock(side_effect=_cmd_all_side_effect)}
     ):
         with patch("salt.utils.path.which", MagicMock(side_effect=_which_side_effect)):
             with patch("os.path.isdir", MagicMock(side_effect=_isdir_side_effect)):
@@ -1454,9 +1454,7 @@ def test_if_virtual_subtype_exists_virtual_should_fallback_to_virtual():
             isfile=MagicMock(return_value=False),
             isdir=MagicMock(side_effect=lambda x: x == "/proc"),
         ):
-            with patch.multiple(
-                os, stat=MagicMock(side_effect=mockstat),
-            ):
+            with patch.multiple(os, stat=MagicMock(side_effect=mockstat)):
                 grains = core._virtual({"kernel": "Linux"})
                 assert grains.get("virtual_subtype") is not None
                 assert grains.get("virtual") == "virtual"
@@ -1596,9 +1594,9 @@ def _run_fqdn_tests(
     with patch.object(
         salt.utils.network, "ip_addrs", MagicMock(return_value=net_ip4_mock)
     ), patch.object(
-        salt.utils.network, "ip_addrs6", MagicMock(return_value=net_ip6_mock),
+        salt.utils.network, "ip_addrs6", MagicMock(return_value=net_ip6_mock)
     ), patch.object(
-        core.socket, "getaddrinfo", side_effect=_getaddrinfo,
+        core.socket, "getaddrinfo", side_effect=_getaddrinfo
     ):
         get_fqdn = core.ip_fqdn()
         ret_keys = ["fqdn_ip4", "fqdn_ip6", "ipv4", "ipv6"]
@@ -2029,15 +2027,8 @@ def test_core_virtual_unicode(mock_file, mock_dir):
                     )
                 },
             ):
-                with patch(
-                    "salt.utils.files.fopen", mock_open(read_data="嗨".encode()),
-                ):
-                    osdata = {
-                        "kernel": "Linux",
-                    }
-                    osdata = {
-                        "kernel": "Linux",
-                    }
+                with patch("salt.utils.files.fopen", mock_open(read_data="嗨".encode())):
+                    osdata = {"kernel": "Linux"}
                     ret = core._virtual(osdata)
                     assert ret["virtual"] == virt
 
@@ -2161,7 +2152,7 @@ def test_locale_info_unicode_error_tzname():
 
     # mock tzname[0].decode()
     decode = Mock(return_value="CST_FAKE")
-    tzname2 = (Mock(decode=decode,),)
+    tzname2 = Mock(decode=decode)
 
     with patch.object(core, "datetime", datetime=datetime) as datetime_module:
         with patch.object(

@@ -328,7 +328,9 @@ def list_nodes(kwargs=None, call=None):
         "public_ips",
     ]
     return __utils__["cloud.list_nodes_select"](
-        list_nodes_full("function"), attributes, call,
+        list_nodes_full("function"),
+        attributes,
+        call,
     )
 
 
@@ -337,7 +339,9 @@ def list_nodes_select(call=None):
     Return a list of the VMs that are on the provider, with select fields
     """
     return __utils__["cloud.list_nodes_select"](
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 

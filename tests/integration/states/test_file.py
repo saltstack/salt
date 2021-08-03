@@ -87,7 +87,10 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
     # to "keep", we're actually changing the permissions of the file to the
     # new mode.
     ret = testcase.run_state(
-        "file.managed", name=str(name), mode=oct(initial_mode), source=grail,
+        "file.managed",
+        name=str(name),
+        mode=oct(initial_mode),
+        source=grail,
     )
 
     if IS_WINDOWS:
@@ -100,7 +103,10 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
         # Update the mode on the fileserver (pass 1)
         os.chmod(grail_fs_path, new_mode_1)
         ret = testcase.run_state(
-            "file.managed", name=str(name), mode="keep", source=grail,
+            "file.managed",
+            name=str(name),
+            mode="keep",
+            source=grail,
         )
         testcase.assertSaltTrueReturn(ret)
         managed_mode = stat.S_IMODE(name.stat().st_mode)
@@ -111,7 +117,10 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
         # this time.
         os.chmod(grail_fs_path, new_mode_2)
         ret = testcase.run_state(
-            "file.managed", name=str(name), mode="keep", source=grail,
+            "file.managed",
+            name=str(name),
+            mode="keep",
+            source=grail,
         )
         testcase.assertSaltTrueReturn(ret)
         managed_mode = stat.S_IMODE(name.stat().st_mode)
@@ -467,7 +476,9 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         name.write_bytes(b"test_managed_show_changes_false\n")
 
         ret = self.run_state(
-            "file.managed", name=str(name), source="salt://grail/scene33",
+            "file.managed",
+            name=str(name),
+            source="salt://grail/scene33",
         )
 
         changes = next(iter(ret.values()))["changes"]
@@ -981,7 +992,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         ret = self.repack_state_returns(
             self.run_function(
-                "state.apply", mods="onchanges_prereq", pillar=pillar, test=True,
+                "state.apply",
+                mods="onchanges_prereq",
+                pillar=pillar,
+                test=True,
             )
         )
         # The file states should both exit with None
@@ -1019,7 +1033,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         ret = self.repack_state_returns(
             self.run_function(
-                "state.apply", mods="onchanges_prereq", pillar=pillar, test=True,
+                "state.apply",
+                mods="onchanges_prereq",
+                pillar=pillar,
+                test=True,
             )
         )
         # The file states should both exit with None
@@ -1490,7 +1507,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         file.recurse test interface
         """
         ret = self.run_state(
-            "file.recurse", test=True, name=name, source="salt://grail",
+            "file.recurse",
+            test=True,
+            name=name,
+            source="salt://grail",
         )
         self.assertSaltNoneReturn(ret)
         self.assertFalse(os.path.isfile(os.path.join(name, "36", "scene")))
@@ -1617,7 +1637,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         files = salt.utils.data.decode(os.listdir(name), normalize=True)
         self.assertEqual(
-            sorted(files), sorted(["foo.txt", "спам.txt", "яйца.txt"]),
+            sorted(files),
+            sorted(["foo.txt", "спам.txt", "яйца.txt"]),
         )
 
     @with_tempfile()
@@ -2072,7 +2093,10 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         merged = {"foo": {"abc": 123, "bar": "%(x)s"}}
 
         ret = self.run_state(
-            "file.serialize", name=name, dataset=data1, formatter="plist",
+            "file.serialize",
+            name=name,
+            dataset=data1,
+            formatter="plist",
         )
         ret = ret[next(iter(ret))]
         assert ret["result"], ret
@@ -2193,7 +2217,12 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         """
         with salt.utils.files.fopen(name, "w+") as fp_:
             fp_.write("comment_me")
-        ret = self.run_state("file.comment", test=True, name=name, regex=".*comment.*",)
+        ret = self.run_state(
+            "file.comment",
+            test=True,
+            name=name,
+            regex=".*comment.*",
+        )
         with salt.utils.files.fopen(name, "r") as fp_:
             self.assertNotIn("#comment", fp_.read())
         self.assertSaltNoneReturn(ret)
@@ -2962,7 +2991,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Run the state
         ret = self.run_state(
-            "file.managed", name=tempfile, user=user, group=group, mode="4750",
+            "file.managed",
+            name=tempfile,
+            user=user,
+            group=group,
+            mode="4750",
         )
         self.assertSaltTrueReturn(ret)
 
@@ -4537,7 +4570,11 @@ class BlockreplaceTest(ModuleCase, SaltReturnAssertsMixin):
 
     @with_tempfile()
     def test_issue_49043(self, name):
-        ret = self.run_function("state.sls", mods="issue-49043", pillar={"name": name},)
+        ret = self.run_function(
+            "state.sls",
+            mods="issue-49043",
+            pillar={"name": name},
+        )
         log.error("ret = %s", repr(ret))
         diff = "--- \n+++ \n@@ -0,0 +1,3 @@\n"
         diff += dedent(
@@ -4758,7 +4795,9 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         Test file.patch using a patch applied to a single file
         """
         ret = self.run_state(
-            "file.patch", name=self.numbers_file, source=self.numbers_patch,
+            "file.patch",
+            name=self.numbers_file,
+            source=self.numbers_patch,
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
@@ -4767,7 +4806,9 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         # Re-run the state, should succeed and there should be a message about
         # a partially-applied hunk.
         ret = self.run_state(
-            "file.patch", name=self.numbers_file, source=self.numbers_patch,
+            "file.patch",
+            name=self.numbers_file,
+            source=self.numbers_patch,
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
@@ -4781,7 +4822,10 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         """
         self._check_patch_version("2.6")
         ret = self.run_state(
-            "file.patch", name=self.base_dir, source=self.all_patch, strip=1,
+            "file.patch",
+            name=self.base_dir,
+            source=self.all_patch,
+            strip=1,
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
@@ -4790,7 +4834,10 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         # Re-run the state, should succeed and there should be a message about
         # a partially-applied hunk.
         ret = self.run_state(
-            "file.patch", name=self.base_dir, source=self.all_patch, strip=1,
+            "file.patch",
+            name=self.base_dir,
+            source=self.all_patch,
+            strip=1,
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
@@ -4804,7 +4851,10 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         self._check_patch_version("2.6")
         # Run the state using -p1
         ret = self.run_state(
-            "file.patch", name=self.base_dir, source=self.all_patch, options="-p1",
+            "file.patch",
+            name=self.base_dir,
+            source=self.all_patch,
+            options="-p1",
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
@@ -4842,7 +4892,10 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         # environment, but that is OK, we just want to test that we're looking
         # in an environment other than base.
         ret = self.run_state(
-            "file.patch", name=self.math_file, source=self.math_patch, saltenv="prod",
+            "file.patch",
+            name=self.math_file,
+            source=self.math_patch,
+            saltenv="prod",
         )
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
@@ -4861,7 +4914,9 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
             pass
 
         ret = self.run_state(
-            "file.patch", name=self.numbers_file, source=self.numbers_patch,
+            "file.patch",
+            name=self.numbers_file,
+            source=self.numbers_patch,
         )
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
@@ -4894,7 +4949,10 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
             pass
 
         ret = self.run_state(
-            "file.patch", name=self.base_dir, source=self.all_patch, strip=1,
+            "file.patch",
+            name=self.base_dir,
+            source=self.all_patch,
+            strip=1,
         )
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
@@ -4925,7 +4983,9 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         # Try without a source_hash and without skip_verify=True, this should
         # fail with a message about the source_hash
         ret = self.run_state(
-            "file.patch", name=self.math_file, source=self.math_patch_http,
+            "file.patch",
+            name=self.math_file,
+            source=self.math_patch_http,
         )
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
@@ -4965,7 +5025,10 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         # Try without a source_hash and without skip_verify=True, this should
         # fail with a message about the source_hash
         ret = self.run_state(
-            "file.patch", name=self.base_dir, source=self.all_patch_http, strip=1,
+            "file.patch",
+            name=self.base_dir,
+            source=self.all_patch_http,
+            strip=1,
         )
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
@@ -5165,7 +5228,10 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         # Try without a source_hash and without skip_verify=True, this should
         # fail with a message about the source_hash
         ret = self.run_state(
-            "file.patch", name=self.numbers_file, source=self.numbers_patch, test=True,
+            "file.patch",
+            name=self.numbers_file,
+            source=self.numbers_patch,
+            test=True,
         )
         self.assertSaltNoneReturn(ret)
         ret = ret[next(iter(ret))]
@@ -5176,7 +5242,9 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         # exit with a True rather than a None result if test=True is used on an
         # already-applied patch.
         ret = self.run_state(
-            "file.patch", name=self.numbers_file, source=self.numbers_patch,
+            "file.patch",
+            name=self.numbers_file,
+            source=self.numbers_patch,
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
@@ -5188,7 +5256,10 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         # the same as if we try to run this state on an already-patched file
         # *without* test=True.
         ret = self.run_state(
-            "file.patch", name=self.numbers_file, source=self.numbers_patch, test=True,
+            "file.patch",
+            name=self.numbers_file,
+            source=self.numbers_patch,
+            test=True,
         )
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
@@ -5204,7 +5275,10 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         # case we should return a False result because we should already know
         # by this point that the patch will not apply cleanly.
         ret = self.run_state(
-            "file.patch", name=self.numbers_file, source=self.numbers_patch, test=True,
+            "file.patch",
+            name=self.numbers_file,
+            source=self.numbers_patch,
+            test=True,
         )
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]

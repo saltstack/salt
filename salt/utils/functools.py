@@ -44,7 +44,11 @@ def alias_function(fun, name, doc=None):
     Copy a function
     """
     alias_fun = types.FunctionType(
-        fun.__code__, fun.__globals__, str(name), fun.__defaults__, fun.__closure__,
+        fun.__code__,
+        fun.__globals__,
+        str(name),
+        fun.__defaults__,
+        fun.__closure__,
     )
     alias_fun.__dict__.update(fun.__dict__)
 

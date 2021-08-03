@@ -848,9 +848,10 @@ def present(
                     __salt__["shadow.del_password"](name)
                     spost = __salt__["shadow.info"](name)
                     if spost["passwd"] != "":
-                        ret["comment"] = (
-                            "User {} created but failed to "
-                            "empty password".format(name)
+                        ret[
+                            "comment"
+                        ] = "User {} created but failed to " "empty password".format(
+                            name
                         )
                         ret["result"] = False
                     ret["changes"]["password"] = ""

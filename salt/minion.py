@@ -1042,7 +1042,8 @@ class MinionManager(MinionBase):
     def _bind(self):
         # start up the event publisher, so we can see events during startup
         self.event_publisher = salt.utils.event.AsyncEventPublisher(
-            self.opts, io_loop=self.io_loop,
+            self.opts,
+            io_loop=self.io_loop,
         )
         self.event = salt.utils.event.get_event(
             "minion", opts=self.opts, io_loop=self.io_loop
@@ -1550,7 +1551,11 @@ class Minion(MinionBase):
             )
         else:
             functions = salt.loader.minion_mods(
-                opts, utils=self.utils, notify=notify, proxy=proxy, context=context,
+                opts,
+                utils=self.utils,
+                notify=notify,
+                proxy=proxy,
+                context=context,
             )
         returners = salt.loader.returners(opts, functions, proxy=proxy, context=context)
         errors = {}
@@ -3006,7 +3011,8 @@ class Minion(MinionBase):
         if name in self.periodic_callbacks:
             return False
         self.periodic_callbacks[name] = salt.ext.tornado.ioloop.PeriodicCallback(
-            method, interval * 1000,
+            method,
+            interval * 1000,
         )
         self.periodic_callbacks[name].start()
         return True
@@ -3576,7 +3582,8 @@ class SyndicManager(MinionBase):
 
         # forward events every syndic_event_forward_timeout
         self.forward_events = salt.ext.tornado.ioloop.PeriodicCallback(
-            self._forward_events, self.opts["syndic_event_forward_timeout"] * 1000,
+            self._forward_events,
+            self.opts["syndic_event_forward_timeout"] * 1000,
         )
         self.forward_events.start()
 
@@ -3841,7 +3848,10 @@ class SProxyMinion(SMinion):
         self.matchers = salt.loader.matchers(self.opts)
         self.functions["sys.reload_modules"] = self.gen_modules
         self.executors = salt.loader.executors(
-            self.opts, functions=self.functions, proxy=self.proxy, context=context,
+            self.opts,
+            functions=self.functions,
+            proxy=self.proxy,
+            context=context,
         )
 
         fq_proxyname = self.opts["proxy"]["proxytype"]

@@ -5,7 +5,6 @@
     Test Salt's loader
 """
 
-
 import collections
 import compileall
 import copy
@@ -125,7 +124,7 @@ class LazyLoaderTest(TestCase):
         # results in a KeyError, the decorator is broken.
         self.assertTrue(
             isinstance(
-                self.loader[self.module_name + ".loaded"], salt.loader.lazy.LoadedFunc,
+                self.loader[self.module_name + ".loaded"], salt.loader.lazy.LoadedFunc
             )
         )
         # Make sure depends correctly kept a function from loading
@@ -405,7 +404,7 @@ class LazyLoaderVirtualDisabledTest(TestCase):
     @pytest.mark.slow_test
     def test_virtual(self):
         self.assertTrue(
-            isinstance(self.loader["test_virtual.ping"], salt.loader.lazy.LoadedFunc,)
+            isinstance(self.loader["test_virtual.ping"], salt.loader.lazy.LoadedFunc)
         )
 
 

@@ -470,9 +470,10 @@ def replica_present(
             )
             if not modified:
                 ret["result"] = False
-                ret["comment"] = (
-                    "Failed to update parameter group of {} RDS "
-                    "instance.".format(name)
+                ret[
+                    "comment"
+                ] = "Failed to update parameter group of {} RDS " "instance.".format(
+                    name
                 )
             ret["changes"]["old"] = pmg_name
             ret["changes"]["new"] = db_parameter_group_name

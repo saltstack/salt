@@ -1975,7 +1975,7 @@ class Map(Cloud):
                             break
 
                         log.warning(
-                            "%r already exists, removing from the create map.", name,
+                            "%r already exists, removing from the create map.", name
                         )
 
                         if "existing" not in ret:

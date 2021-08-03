@@ -26,7 +26,8 @@ class BatchTest(ShellCase):
         """
         ret = "Executing run on [{}]".format(repr("sub_minion"))
         cmd = self.run_salt(
-            '"*minion" test.echo "batch testing" -b 50%', timeout=self.run_timeout,
+            '"*minion" test.echo "batch testing" -b 50%',
+            timeout=self.run_timeout,
         )
         self.assertIn(ret, cmd)
 
@@ -38,7 +39,8 @@ class BatchTest(ShellCase):
         """
         ret = "Executing run on [{}, {}]".format(repr("minion"), repr("sub_minion"))
         cmd = self.run_salt(
-            '"*minion" test.ping --batch-size 2', timeout=self.run_timeout,
+            '"*minion" test.ping --batch-size 2',
+            timeout=self.run_timeout,
         )
         self.assertIn(ret, cmd)
 

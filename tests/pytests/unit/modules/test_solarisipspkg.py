@@ -335,7 +335,9 @@ def test_get_fmri_single_named():
             assert added == expected
 
     expected_calls = [
-        call(["/bin/pkg", "list", "-aHv", install_target],),
+        call(
+            ["/bin/pkg", "list", "-aHv", install_target],
+        ),
     ]
     run_stdout_mock.assert_has_calls(expected_calls, any_order=True)
     assert run_stdout_mock.call_count == 1
@@ -383,7 +385,10 @@ def test_remove_single_named_package():
             assert added == expected
 
     expected_calls = [
-        call(["/bin/pkg", "uninstall", "-v", install_target], output_loglevel="trace",),
+        call(
+            ["/bin/pkg", "uninstall", "-v", install_target],
+            output_loglevel="trace",
+        ),
     ]
     run_all_mock.assert_has_calls(expected_calls, any_order=True)
     assert run_all_mock.call_count == 1

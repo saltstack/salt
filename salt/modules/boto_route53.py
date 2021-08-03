@@ -252,7 +252,7 @@ def zone_exists(
     error_retries=5,
 ):
     """
-    Check for the existence of a Route53 hosted zone.
+     Check for the existence of a Route53 hosted zone.
 
     .. versionadded:: 2015.8.0
 
@@ -262,7 +262,7 @@ def zone_exists(
 
         salt myminion boto_route53.zone_exists example.org
 
-   retry_on_errors
+    retry_on_errors
         Continue to query if the zone exists after an error is
         raised. The previously used argument `retry_on_rate_limit`
         was deprecated for this argument. Users can still use
@@ -277,7 +277,6 @@ def zone_exists(
         `rate_limit_retries` to ensure backwards compatibility,
         but please migrate to using the favored `error_retries`
         argument instead.
-
     """
     if region is None:
         region = "universal"
@@ -546,7 +545,7 @@ def get_record(
     error_retries=5,
 ):
     """
-    Get a record from a zone.
+     Get a record from a zone.
 
     CLI Example:
 
@@ -554,7 +553,7 @@ def get_record(
 
         salt myminion boto_route53.get_record test.example.org example.org A
 
-   retry_on_errors
+    retry_on_errors
         Continue to query if the zone exists after an error is
         raised. The previously used argument `retry_on_rate_limit`
         was deprecated for this argument. Users can still use
@@ -657,7 +656,7 @@ def add_record(
     error_retries=5,
 ):
     """
-    Add a record to a zone.
+     Add a record to a zone.
 
     CLI Example:
 
@@ -665,7 +664,7 @@ def add_record(
 
         salt myminion boto_route53.add_record test.example.org 1.1.1.1 example.org A
 
-   retry_on_errors
+    retry_on_errors
         Continue to query if the zone exists after an error is
         raised. The previously used argument `retry_on_rate_limit`
         was deprecated for this argument. Users can still use
@@ -764,15 +763,15 @@ def update_record(
     error_retries=5,
 ):
     """
-    Modify a record in a zone.
+     Modify a record in a zone.
 
-    CLI Example:
+     CLI Example:
 
-    .. code-block:: bash
+     .. code-block:: bash
 
-        salt myminion boto_route53.modify_record test.example.org 1.1.1.1 example.org A
+         salt myminion boto_route53.modify_record test.example.org 1.1.1.1 example.org A
 
-   retry_on_errors
+    retry_on_errors
         Continue to query if the zone exists after an error is
         raised. The previously used argument `retry_on_rate_limit`
         was deprecated for this argument. Users can still use
@@ -853,15 +852,15 @@ def delete_record(
     error_retries=5,
 ):
     """
-    Modify a record in a zone.
+     Modify a record in a zone.
 
-    CLI Example:
+     CLI Example:
 
-    .. code-block:: bash
+     .. code-block:: bash
 
-        salt myminion boto_route53.delete_record test.example.org example.org A
+         salt myminion boto_route53.delete_record test.example.org example.org A
 
-   retry_on_errors
+    retry_on_errors
         Continue to query if the zone exists after an error is
         raised. The previously used argument `retry_on_rate_limit`
         was deprecated for this argument. Users can still use

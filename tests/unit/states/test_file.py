@@ -2764,14 +2764,16 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 }
                 if test:
                     expected_ret["result"] = None
-                    expected_ret["comment"] = (
-                        "{} backups would have been removed from {}.\n"
-                        "".format(len(deleted_files), fake_name)
+                    expected_ret[
+                        "comment"
+                    ] = "{} backups would have been removed from {}.\n" "".format(
+                        len(deleted_files), fake_name
                     )
                 else:
-                    expected_ret["comment"] = (
-                        "{} backups were removed from {}.\n"
-                        "".format(len(deleted_files), fake_name)
+                    expected_ret[
+                        "comment"
+                    ] = "{} backups were removed from {}.\n" "".format(
+                        len(deleted_files), fake_name
                     )
                     mock_remove.assert_has_calls(
                         [call(os.path.join(fake_name, x)) for x in deleted_files],

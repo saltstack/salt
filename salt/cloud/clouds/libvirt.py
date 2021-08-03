@@ -233,7 +233,11 @@ def list_nodes_select(call=None):
         raise SaltCloudSystemExit("query.selection not found in /etc/salt/cloud")
 
     # TODO: somewhat doubt the implementation of cloud.list_nodes_select
-    return salt.utils.cloud.list_nodes_select(list_nodes_full(), selection, call,)
+    return salt.utils.cloud.list_nodes_select(
+        list_nodes_full(),
+        selection,
+        call,
+    )
 
 
 def to_ip_addr_type(addr_type):

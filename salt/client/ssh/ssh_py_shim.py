@@ -47,7 +47,7 @@ ARGS = None
 
 def get_system_encoding():
     """
-        Get system encoding. Most of this code is a part of salt/__init__.py
+    Get system encoding. Most of this code is a part of salt/__init__.py
     """
     # This is the most trustworthy source of the system encoding, though, if
     # salt is being imported after being daemonized, this information is lost
@@ -215,7 +215,13 @@ def reset_time(path=".", amt=None):
         fname = os.path.join(path, fname)
         if os.path.isdir(fname):
             reset_time(fname, amt=amt)
-        os.utime(fname, (amt, amt,))
+        os.utime(
+            fname,
+            (
+                amt,
+                amt,
+            ),
+        )
 
 
 def get_executable():

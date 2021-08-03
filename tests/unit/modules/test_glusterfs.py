@@ -12,13 +12,13 @@ from tests.support.unit import TestCase
 
 
 class GlusterResults:
-    """ This class holds the xml results from gluster cli transactions """
+    """This class holds the xml results from gluster cli transactions"""
 
     class v34:
-        """ This is for version 3.4 results """
+        """This is for version 3.4 results"""
 
         class list_peers:
-            """ results from "peer status" """
+            """results from "peer status" """
 
         class peer_probe:
             fail_cant_connect = fail_bad_hostname = "\n".join(
@@ -112,9 +112,9 @@ class GlusterResults:
                 ),
             }
             success_first_hostname_from_second_first_time = success_other
-            success_first_hostname_from_second_second_time = success_reverse_already_peer[
-                "hostname"
-            ]
+            success_first_hostname_from_second_second_time = (
+                success_reverse_already_peer["hostname"]
+            )
             success_first_ip_from_second_first_time = success_reverse_already_peer["ip"]
 
     class v37:
@@ -208,9 +208,9 @@ class GlusterResults:
                     ]
                 ),
             }
-            success_first_hostname_from_second_first_time = success_reverse_already_peer[
-                "hostname"
-            ]
+            success_first_hostname_from_second_first_time = (
+                success_reverse_already_peer["hostname"]
+            )
             success_first_ip_from_second_first_time = success_other
             success_first_ip_from_second_second_time = success_reverse_already_peer[
                 "ip"
