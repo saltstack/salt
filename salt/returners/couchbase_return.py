@@ -137,10 +137,16 @@ def _verify_views():
     ddoc = {
         "views": {
             "jids": {
-                "map": "function (doc, meta) { if (meta.id.indexOf('/') === -1 && doc.load){ emit(meta.id, null) } }"
+                "map": (
+                    "function (doc, meta) { if (meta.id.indexOf('/') === -1 &&"
+                    " doc.load){ emit(meta.id, null) } }"
+                )
             },
             "jid_returns": {
-                "map": "function (doc, meta) { if (meta.id.indexOf('/') > -1){ key_parts = meta.id.split('/'); emit(key_parts[0], key_parts[1]); } }"
+                "map": (
+                    "function (doc, meta) { if (meta.id.indexOf('/') > -1){ key_parts ="
+                    " meta.id.split('/'); emit(key_parts[0], key_parts[1]); } }"
+                )
             },
         }
     }

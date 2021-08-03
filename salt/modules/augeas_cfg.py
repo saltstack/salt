@@ -232,9 +232,7 @@ def execute(context=None, lens=None, commands=(), load_path=None):
                 arg = command
             ret[
                 "error"
-            ] = "Invalid formatted command, " "see debug log for details: {}".format(
-                arg
-            )
+            ] = "Invalid formatted command, see debug log for details: {}".format(arg)
             return ret
 
         args = salt.utils.data.decode(args, to_str=True)

@@ -183,9 +183,7 @@ def test_is_binary():
     assert salt.utils.stringutils.is_binary("") is False
     assert salt.utils.stringutils.is_binary(b"") is False
 
-    nontext = 3 * (
-        "".join([chr(x) for x in range(1, 32) if x not in (8, 9, 10, 12, 13)])
-    )
+    nontext = 3 * "".join([chr(x) for x in range(1, 32) if x not in (8, 9, 10, 12, 13)])
     almost_bin_str = "{}{}".format(LOREM_IPSUM[:100], nontext[:42])
 
     assert salt.utils.stringutils.is_binary(almost_bin_str) is False

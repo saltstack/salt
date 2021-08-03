@@ -44,7 +44,7 @@ class VirtualenvModTestCase(TestCase, LoaderModuleMockMixin):
         ):
             mock = MagicMock(side_effect=[True, True, True, False, True, True])
             with patch.object(os.path, "exists", mock):
-                ret.update({"comment": "pip requirements file" " 'salt://a' not found"})
+                ret.update({"comment": "pip requirements file 'salt://a' not found"})
                 self.assertDictEqual(
                     virtualenv_mod.managed("salt", None, "salt://a"), ret
                 )
@@ -53,14 +53,14 @@ class VirtualenvModTestCase(TestCase, LoaderModuleMockMixin):
                     ret.update(
                         {
                             "changes": {"cleared_packages": "True", "old": "True"},
-                            "comment": "Virtualenv salt is set to" " be cleared",
+                            "comment": "Virtualenv salt is set to be cleared",
                             "result": None,
                         }
                     )
                     self.assertDictEqual(virtualenv_mod.managed("salt", clear=1), ret)
                     ret.update(
                         {
-                            "comment": "Virtualenv salt is already" " created",
+                            "comment": "Virtualenv salt is already created",
                             "changes": {},
                             "result": True,
                         }
@@ -69,7 +69,7 @@ class VirtualenvModTestCase(TestCase, LoaderModuleMockMixin):
 
                     ret.update(
                         {
-                            "comment": "Virtualenv salt is set to" " be created",
+                            "comment": "Virtualenv salt is set to be created",
                             "result": None,
                         }
                     )
@@ -78,9 +78,11 @@ class VirtualenvModTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(virtualenv_mod.__opts__, {"test": False}):
                     ret.update(
                         {
-                            "comment": "The 'use_wheel' option is"
-                            " only supported in pip between 1.4 and 9.0.3."
-                            " The version of pip detected was 1.1.",
+                            "comment": (
+                                "The 'use_wheel' option is"
+                                " only supported in pip between 1.4 and 9.0.3."
+                                " The version of pip detected was 1.1."
+                            ),
                             "result": False,
                         }
                     )

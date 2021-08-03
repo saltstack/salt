@@ -851,9 +851,14 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update(
                     {
                         "changes": {
-                            "mypool": "Pool updated, built, autostart flag changed, started"
+                            "mypool": (
+                                "Pool updated, built, autostart flag changed, started"
+                            )
                         },
-                        "comment": "Pool mypool updated, built, autostart flag changed, started",
+                        "comment": (
+                            "Pool mypool updated, built, autostart flag changed,"
+                            " started"
+                        ),
                         "result": True,
                     }
                 )
@@ -1192,7 +1197,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     "undefined": True,
                 },
                 "result": True,
-                "comment": 'Unsupported actions for pool of type "iscsi": deleting volume, deleting pool',
+                "comment": (
+                    'Unsupported actions for pool of type "iscsi": deleting volume,'
+                    " deleting pool"
+                ),
             }
 
             with patch.dict(virt.__opts__, {"test": False}):
@@ -1343,7 +1351,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         "name": "myvol",
                         "changes": {},
                         "result": True,
-                        "comment": "The capacity of the volume is different, but no resize performed",
+                        "comment": (
+                            "The capacity of the volume is different, but no resize"
+                            " performed"
+                        ),
                     },
                 )
                 define_mock.assert_not_called()
@@ -1389,7 +1400,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         "name": "myvol",
                         "changes": {},
                         "result": False,
-                        "comment": "A volume with the same name but different backing store or format is existing",
+                        "comment": (
+                            "A volume with the same name but different backing store or"
+                            " format is existing"
+                        ),
                     },
                 )
                 define_mock.assert_not_called()
@@ -1435,7 +1449,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         "name": "myvol",
                         "changes": {},
                         "result": False,
-                        "comment": "A volume with the same name but different backing store or format is existing",
+                        "comment": (
+                            "A volume with the same name but different backing store or"
+                            " format is existing"
+                        ),
                     },
                 )
                 define_mock.assert_not_called()
@@ -1481,7 +1498,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         "name": "myvol",
                         "changes": {},
                         "result": False,
-                        "comment": "A volume with the same name but different backing store or format is existing",
+                        "comment": (
+                            "A volume with the same name but different backing store or"
+                            " format is existing"
+                        ),
                     },
                 )
                 define_mock.assert_not_called()
@@ -1590,7 +1610,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         "name": "myvol",
                         "changes": {},
                         "result": True,
-                        "comment": "The capacity of the volume is different, but no resize performed",
+                        "comment": (
+                            "The capacity of the volume is different, but no resize"
+                            " performed"
+                        ),
                     },
                 )
                 define_mock.assert_not_called()
@@ -1636,7 +1659,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         "name": "myvol",
                         "changes": {},
                         "result": False,
-                        "comment": "A volume with the same name but different backing store or format is existing",
+                        "comment": (
+                            "A volume with the same name but different backing store or"
+                            " format is existing"
+                        ),
                     },
                 )
                 define_mock.assert_not_called()
@@ -1682,7 +1708,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         "name": "myvol",
                         "changes": {},
                         "result": False,
-                        "comment": "A volume with the same name but different backing store or format is existing",
+                        "comment": (
+                            "A volume with the same name but different backing store or"
+                            " format is existing"
+                        ),
                     },
                 )
                 define_mock.assert_not_called()
@@ -1728,7 +1757,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         "name": "myvol",
                         "changes": {},
                         "result": False,
-                        "comment": "A volume with the same name but different backing store or format is existing",
+                        "comment": (
+                            "A volume with the same name but different backing store or"
+                            " format is existing"
+                        ),
                     },
                 )
                 define_mock.assert_not_called()

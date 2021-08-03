@@ -996,7 +996,10 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                     "host": "master",
                     "status": "0",
                     "disable_until": "1517766661",
-                    "error": "Get value from agent failed: cannot connect to [[10.0.2.15]:10050]: [111] Connection refused",
+                    "error": (
+                        "Get value from agent failed: cannot connect to"
+                        " [[10.0.2.15]:10050]: [111] Connection refused"
+                    ),
                     "available": "2",
                     "errors_from": "1516087871",
                     "lastaccess": "0",

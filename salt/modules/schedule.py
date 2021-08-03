@@ -334,9 +334,10 @@ def build_schedule_item(name, **kwargs):
 
     if time_conflict:
         ret["result"] = False
-        ret[
-            "comment"
-        ] = 'Unable to use "seconds", "minutes", "hours", or "days" with "when" or "cron" options.'
+        ret["comment"] = (
+            'Unable to use "seconds", "minutes", "hours", or "days" with "when" or'
+            ' "cron" options.'
+        )
         return ret
 
     if "when" in kwargs and "cron" in kwargs:
@@ -462,9 +463,10 @@ def add(name, **kwargs):
             time_conflict = True
 
     if time_conflict:
-        ret[
-            "comment"
-        ] = 'Error: Unable to use "seconds", "minutes", "hours", or "days" with "when" or "cron" options.'
+        ret["comment"] = (
+            'Error: Unable to use "seconds", "minutes", "hours", or "days" with "when"'
+            ' or "cron" options.'
+        )
         return ret
 
     if "when" in kwargs and "cron" in kwargs:
@@ -536,9 +538,10 @@ def modify(name, **kwargs):
 
     if time_conflict:
         ret["result"] = False
-        ret[
-            "comment"
-        ] = 'Error: Unable to use "seconds", "minutes", "hours", or "days" with "when" option.'
+        ret["comment"] = (
+            'Error: Unable to use "seconds", "minutes", "hours", or "days" with "when"'
+            " option."
+        )
         return ret
 
     if "when" in kwargs and "cron" in kwargs:
@@ -953,7 +956,8 @@ def reload_():
                     ret["result"] = False
             else:
                 ret["comment"].append(
-                    "Failed to reload schedule on minion.  Saved file is empty or invalid."
+                    "Failed to reload schedule on minion.  Saved file is empty or"
+                    " invalid."
                 )
                 ret["result"] = False
         else:

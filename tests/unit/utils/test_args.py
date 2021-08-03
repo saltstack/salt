@@ -302,7 +302,8 @@ class ArgsTestCase(TestCase):
 
     def test_parse_function_quotes(self):
         fun, args, kwargs = salt.utils.args.parse_function(
-            'amod.afunc("double \\" single \'", \'double " single \\\'\', kw1="equal=equal", kw2=val2)'
+            "amod.afunc(\"double \\\" single '\", 'double \" single \\'',"
+            ' kw1="equal=equal", kw2=val2)'
         )
         self.assertEqual(fun, "amod.afunc")
         self.assertEqual(args, ["double \" single '", "double \" single '"])

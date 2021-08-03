@@ -472,9 +472,7 @@ def replica_present(
                 ret["result"] = False
                 ret[
                     "comment"
-                ] = "Failed to update parameter group of {} RDS " "instance.".format(
-                    name
-                )
+                ] = "Failed to update parameter group of {} RDS instance.".format(name)
             ret["changes"]["old"] = pmg_name
             ret["changes"]["new"] = db_parameter_group_name
         ret["result"] = True
@@ -528,7 +526,7 @@ def subnet_group_present(
     """
     if not salt.utils.data.exactly_one((subnet_ids, subnet_names)):
         raise SaltInvocationError(
-            "One (but not both) of subnet_ids or " "subnet_names must be provided."
+            "One (but not both) of subnet_ids or subnet_names must be provided."
         )
 
     ret = {"name": name, "result": True, "comment": "", "changes": {}}

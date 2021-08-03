@@ -104,8 +104,8 @@ def destructiveTest(caller):
     """
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please stop using `@destructiveTest`, it will be removed in {date}, and instead use "
-        "`@pytest.mark.destructive_test`.",
+        "Please stop using `@destructiveTest`, it will be removed in {date}, and"
+        " instead use `@pytest.mark.destructive_test`.",
         stacklevel=3,
     )
     setattr(caller, "__destructive_test__", True)
@@ -142,8 +142,8 @@ def expensiveTest(caller):
     """
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please stop using `@expensiveTest`, it will be removed in {date}, and instead use "
-        "`@pytest.mark.expensive_test`.",
+        "Please stop using `@expensiveTest`, it will be removed in {date}, and instead"
+        " use `@pytest.mark.expensive_test`.",
         stacklevel=3,
     )
     setattr(caller, "__expensive_test__", True)
@@ -578,8 +578,8 @@ def requires_network(only_local_network=False):
     """
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please stop using `@requires_network`, it will be removed in {date}, and instead use "
-        "`@pytest.mark.requires_network`.",
+        "Please stop using `@requires_network`, it will be removed in {date}, and"
+        " instead use `@pytest.mark.requires_network`.",
         stacklevel=3,
     )
 
@@ -1181,8 +1181,8 @@ def requires_salt_states(*names):
     """
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please stop using `@requires_salt_states`, it will be removed in {date}, and instead use "
-        "`@pytest.mark.requires_salt_states`.",
+        "Please stop using `@requires_salt_states`, it will be removed in {date}, and"
+        " instead use `@pytest.mark.requires_salt_states`.",
         stacklevel=3,
     )
     not_available = _check_required_sminion_attributes("states", *names)
@@ -1199,8 +1199,8 @@ def requires_salt_modules(*names):
     """
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please stop using `@requires_salt_modules`, it will be removed in {date}, and instead use "
-        "`@pytest.mark.requires_salt_modules`.",
+        "Please stop using `@requires_salt_modules`, it will be removed in {date}, and"
+        " instead use `@pytest.mark.requires_salt_modules`.",
         stacklevel=3,
     )
     not_available = _check_required_sminion_attributes("functions", *names)
@@ -1212,8 +1212,8 @@ def requires_salt_modules(*names):
 def skip_if_binaries_missing(*binaries, **kwargs):
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please stop using `@skip_if_binaries_missing`, it will be removed in {date}, and instead use "
-        "`@pytest.mark.skip_if_binaries_missing`.",
+        "Please stop using `@skip_if_binaries_missing`, it will be removed in {date},"
+        " and instead use `@pytest.mark.skip_if_binaries_missing`.",
         stacklevel=3,
     )
     import salt.utils.path
@@ -1248,8 +1248,8 @@ def skip_if_binaries_missing(*binaries, **kwargs):
 def skip_if_not_root(func):
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please stop using `@skip_if_not_root`, it will be removed in {date}, and instead use "
-        "`@pytest.mark.skip_if_not_root`.",
+        "Please stop using `@skip_if_not_root`, it will be removed in {date}, and"
+        " instead use `@pytest.mark.skip_if_not_root`.",
         stacklevel=3,
     )
     setattr(func, "__skip_if_not_root__", True)
@@ -1388,8 +1388,10 @@ def generate_random_name(prefix, size=6):
     """
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please replace your call 'generate_random_name({0})' with 'random_string({0}, lowercase=False)' as "
-        "'generate_random_name' will be removed after {{date}}".format(prefix),
+        "Please replace your call 'generate_random_name({0})' with 'random_string({0},"
+        " lowercase=False)' as 'generate_random_name' will be removed after {{date}}".format(
+            prefix
+        ),
         stacklevel=3,
     )
     return random_string(prefix, size=size, lowercase=False)
@@ -1511,8 +1513,9 @@ class Webserver:
         if self.web_root is None:
             raise RuntimeError("Webserver instance has not been started")
         err_msg = (
-            "invalid path, must be either a relative path or a path "
-            "within {}".format(self.root)
+            "invalid path, must be either a relative path or a path within {}".format(
+                self.root
+            )
         )
         try:
             relpath = (

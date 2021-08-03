@@ -98,10 +98,14 @@ def present(name, params, **kwargs):
                 ret["comment"] = 'Zabbix Value map "{}" would be fixed.'.format(name)
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Value map "{}" differs '
-                        "in following parameters: {}".format(name, diff_params),
-                        "new": 'Zabbix Value map "{}" would correspond to definition.'.format(
-                            name
+                        "old": (
+                            'Zabbix Value map "{}" differs '
+                            "in following parameters: {}".format(name, diff_params)
+                        ),
+                        "new": (
+                            'Zabbix Value map "{}" would correspond to definition.'.format(
+                                name
+                            )
                         ),
                     }
                 }
@@ -118,8 +122,10 @@ def present(name, params, **kwargs):
                     ret["comment"] = 'Zabbix Value map "{}" updated.'.format(name)
                     ret["changes"] = {
                         name: {
-                            "old": 'Zabbix Value map "{}" differed '
-                            "in following parameters: {}".format(name, diff_params),
+                            "old": (
+                                'Zabbix Value map "{}" differed '
+                                "in following parameters: {}".format(name, diff_params)
+                            ),
                             "new": 'Zabbix Value map "{}" fixed.'.format(name),
                         }
                     }
@@ -139,8 +145,10 @@ def present(name, params, **kwargs):
             ret["changes"] = {
                 name: {
                     "old": 'Zabbix Value map "{}" does not exist.'.format(name),
-                    "new": 'Zabbix Value map "{}" would be created '
-                    "according definition.".format(name),
+                    "new": (
+                        'Zabbix Value map "{}" would be created '
+                        "according definition.".format(name)
+                    ),
                 }
             }
         else:
@@ -159,8 +167,10 @@ def present(name, params, **kwargs):
                 ret["changes"] = {
                     name: {
                         "old": 'Zabbix Value map "{}" did not exist.'.format(name),
-                        "new": 'Zabbix Value map "{}" created according definition.'.format(
-                            name
+                        "new": (
+                            'Zabbix Value map "{}" created according definition.'.format(
+                                name
+                            )
                         ),
                     }
                 }

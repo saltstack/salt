@@ -207,7 +207,10 @@ def assumed_creds(prov_dict, role_arn, location=None):
             "Action": "AssumeRole",
             "RoleSessionName": session_name,
             "RoleArn": role_arn,
-            "Policy": '{"Version":"2012-10-17","Statement":[{"Sid":"Stmt1", "Effect":"Allow","Action":"*","Resource":"*"}]}',
+            "Policy": (
+                '{"Version":"2012-10-17","Statement":[{"Sid":"Stmt1",'
+                ' "Effect":"Allow","Action":"*","Resource":"*"}]}'
+            ),
             "DurationSeconds": "3600",
         },
         aws_api_version=version,
@@ -332,9 +335,7 @@ def sig4(
     ).hexdigest()
 
     # Add signing information to the request
-    authorization_header = (
-        "{} Credential={}/{}, SignedHeaders={}, Signature={}"
-    ).format(
+    authorization_header = "{} Credential={}/{}, SignedHeaders={}, Signature={}".format(
         algorithm,
         access_key_id,
         credential_scope,
@@ -450,8 +451,8 @@ def query(
                 endpoint_err = (
                     "Could not find a valid endpoint in the "
                     "requesturl: {}. Looking for something "
-                    "like https://some.aws.endpoint/?args"
-                ).format(requesturl)
+                    "like https://some.aws.endpoint/?args".format(requesturl)
+                )
                 log.error(endpoint_err)
                 if return_url is True:
                     return {"error": endpoint_err}, requesturl

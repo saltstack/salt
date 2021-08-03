@@ -111,8 +111,7 @@ def __virtual__():
     if not salt.utils.win_service.info("CryptSvc")["StartType"] == "Auto":
         return (
             False,
-            "WUA: The Cryptographic Services service (CryptSvc) must not be "
-            "disabled",
+            "WUA: The Cryptographic Services service (CryptSvc) must not be disabled",
         )
 
     if salt.utils.win_service.info("TrustedInstaller")["StartType"] == "Disabled":

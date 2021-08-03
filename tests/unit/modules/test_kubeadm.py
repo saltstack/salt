@@ -685,8 +685,7 @@ class KubeAdmTestCase(TestCase, LoaderModuleMockMixin):
         """
         result = {
             "retcode": 0,
-            "stdout": "[config/images] Pulled image1\n"
-            "[config/images] Pulled image2\n",
+            "stdout": "[config/images] Pulled image1\n[config/images] Pulled image2\n",
         }
         salt_mock = {
             "cmd.run_all": MagicMock(return_value=result),
@@ -703,8 +702,7 @@ class KubeAdmTestCase(TestCase, LoaderModuleMockMixin):
         """
         result = {
             "retcode": 0,
-            "stdout": "[config/images] Pulled image1\n"
-            "[config/images] Pulled image2\n",
+            "stdout": "[config/images] Pulled image1\n[config/images] Pulled image2\n",
         }
         salt_mock = {
             "cmd.run_all": MagicMock(return_value=result),

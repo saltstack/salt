@@ -326,7 +326,10 @@ def test_delete_key_without_passphrase(gpghome):
 
     _expected_result = {
         "res": True,
-        "message": "Secret key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted\nPublic key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted",
+        "message": (
+            "Secret key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted\nPublic"
+            " key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted"
+        ),
     }
 
     mock_opt = MagicMock(return_value="root")
@@ -450,7 +453,10 @@ def test_delete_key_with_passphrase_with_gpg_passphrase_in_pillar(gpghome):
 
     _expected_result = {
         "res": True,
-        "message": "Secret key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted\nPublic key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted",
+        "message": (
+            "Secret key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted\nPublic"
+            " key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted"
+        ),
     }
 
     mock_opt = MagicMock(return_value="root")

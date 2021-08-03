@@ -39,9 +39,8 @@ def __virtual__():
     if LooseVersion(boto3.__version__) < LooseVersion(REQUIRED_BOTO3_VERSION):
         return (
             False,
-            (
-                "The boto3 module must be greater or equal to version {}"
-                "".format(REQUIRED_BOTO3_VERSION)
+            "The boto3 module must be greater or equal to version {}".format(
+                REQUIRED_BOTO3_VERSION
             ),
         )
     return True

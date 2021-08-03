@@ -124,7 +124,7 @@ def _validate(config):
 
     if not isinstance(_config["directories"], dict):
         raise ValidationError(
-            "Configuration for watchdog beacon directories must be a " "dictionary."
+            "Configuration for watchdog beacon directories must be a dictionary."
         )
 
     for path in _config["directories"]:
@@ -134,7 +134,7 @@ def _validate(config):
 def _validate_path(path_config):
     if not isinstance(path_config, dict):
         raise ValidationError(
-            "Configuration for watchdog beacon directory path must be " "a dictionary."
+            "Configuration for watchdog beacon directory path must be a dictionary."
         )
 
     if "mask" in path_config:

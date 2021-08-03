@@ -456,9 +456,8 @@ def thread_return(cls, minion_instance, opts, data):
                 executors = [executors]
             elif not isinstance(executors, list) or not executors:
                 raise SaltInvocationError(
-                    "Wrong executors specification: {}. String or non-empty list expected".format(
-                        executors
-                    )
+                    "Wrong executors specification: {}. String or non-empty list"
+                    " expected".format(executors)
                 )
             if opts.get("sudo_user", "") and executors[-1] != "sudo":
                 executors[-1] = "sudo"  # replace the last one with sudo

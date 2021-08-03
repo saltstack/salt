@@ -77,7 +77,10 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
         """
         ret = {
             "changes": {},
-            "comment": "Update is probably required but update_head=False so we will skip updating.",
+            "comment": (
+                "Update is probably required but update_head=False so we will skip"
+                " updating."
+            ),
             "name": "salt",
             "result": True,
         }

@@ -135,7 +135,7 @@ def present(
             ret["changes"]["new"] = "Dashboard {} created.".format(name)
         else:
             ret["result"] = False
-            ret["comment"] = ("Failed to create dashboard {}, response={}").format(
+            ret["comment"] = "Failed to create dashboard {}, response={}".format(
                 name, response
             )
         return ret
@@ -179,7 +179,7 @@ def present(
             )
         else:
             ret["result"] = False
-            ret["comment"] = ("Failed to update dashboard {}, response={}").format(
+            ret["comment"] = "Failed to update dashboard {}, response={}".format(
                 name, response
             )
         return ret

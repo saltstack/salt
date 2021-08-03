@@ -413,7 +413,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](
@@ -1091,7 +1091,8 @@ def query(action=None, command=None, args=None, method="GET", location=None, dat
 
     if not user:
         log.error(
-            "username is required for Joyent API requests. Please set one in your provider configuration"
+            "username is required for Joyent API requests. Please set one in your"
+            " provider configuration"
         )
 
     password = config.get_cloud_config_value(
@@ -1116,7 +1117,8 @@ def query(action=None, command=None, args=None, method="GET", location=None, dat
 
     if not ssh_keyfile:
         log.error(
-            "ssh_keyfile is required for Joyent API requests.  Please set one in your provider configuration"
+            "ssh_keyfile is required for Joyent API requests.  Please set one in your"
+            " provider configuration"
         )
 
     ssh_keyname = config.get_cloud_config_value(
@@ -1129,7 +1131,8 @@ def query(action=None, command=None, args=None, method="GET", location=None, dat
 
     if not ssh_keyname:
         log.error(
-            "ssh_keyname is required for Joyent API requests.  Please set one in your provider configuration"
+            "ssh_keyname is required for Joyent API requests.  Please set one in your"
+            " provider configuration"
         )
 
     if not location:

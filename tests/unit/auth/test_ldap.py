@@ -28,7 +28,9 @@ class LDAPAuthTestCase(TestCase, LoaderModuleMockMixin):
     @classmethod
     def setUpClass(cls):
         cls.config = {
-            "auth.ldap.binddn": "uid={{username}},cn=users,cn=compat,dc=saltstack,dc=com",
+            "auth.ldap.binddn": (
+                "uid={{username}},cn=users,cn=compat,dc=saltstack,dc=com"
+            ),
             "auth.ldap.port": 389,
             "auth.ldap.tls": False,
             "auth.ldap.server": "172.18.0.2",
@@ -36,7 +38,9 @@ class LDAPAuthTestCase(TestCase, LoaderModuleMockMixin):
             "auth.ldap.groupattribute": "memberOf",
             "auth.ldap.group_basedn": "cn=groups,cn=compat,dc=saltstack,dc=com",
             "auth.ldap.basedn": "dc=saltstack,dc=com",
-            "auth.ldap.group_filter": "(&(memberUid={{ username }})(objectClass=posixgroup))",
+            "auth.ldap.group_filter": (
+                "(&(memberUid={{ username }})(objectClass=posixgroup))"
+            ),
         }
 
     @classmethod

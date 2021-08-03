@@ -56,7 +56,7 @@ def alias_function(fun, name, doc=None):
         alias_fun.__doc__ = doc
     else:
         orig_name = fun.__name__
-        alias_msg = "\nThis function is an alias of " "``{}``.\n".format(orig_name)
+        alias_msg = "\nThis function is an alias of ``{}``.\n".format(orig_name)
         alias_fun.__doc__ = alias_msg + (fun.__doc__ or "")
 
     return alias_fun
@@ -142,8 +142,9 @@ def call_function(salt_function, *args, **kwargs):
         raise SaltInvocationError("Missing arguments: {}".format(", ".join(missing)))
     elif _exp_prm > _passed_prm:
         raise SaltInvocationError(
-            "Function expects {} positional parameters, "
-            "got only {}".format(_exp_prm, _passed_prm)
+            "Function expects {} positional parameters, got only {}".format(
+                _exp_prm, _passed_prm
+            )
         )
 
     return salt_function(*function_args, **function_kwargs)

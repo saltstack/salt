@@ -36,7 +36,7 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
         ret = telegram_bot_msg.validate(None)
         self.assertEqual(
             ret,
-            (False, ("Configuration for telegram_bot_msg beacon must be a list.")),
+            (False, "Configuration for telegram_bot_msg beacon must be a list."),
         )
 
     def test_validate_missing_accept_from_config(self, *args, **kwargs):
@@ -45,7 +45,7 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret,
             (
                 False,
-                ("Not all required configuration for telegram_bot_msg are set."),
+                "Not all required configuration for telegram_bot_msg are set.",
             ),
         )
 
@@ -55,7 +55,7 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret,
             (
                 False,
-                ("Not all required configuration for telegram_bot_msg are set."),
+                "Not all required configuration for telegram_bot_msg are set.",
             ),
         )
 
@@ -67,11 +67,9 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret,
             (
                 False,
-                (
-                    "Configuration for telegram_bot_msg, "
-                    "accept_from must be a list of "
-                    "usernames."
-                ),
+                "Configuration for telegram_bot_msg, "
+                "accept_from must be a list of "
+                "usernames.",
             ),
         )
 

@@ -130,10 +130,14 @@ def present(name, params, **kwargs):
                 ret["comment"] = 'Zabbix Action "{}" would be fixed.'.format(name)
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Action "{}" differs '
-                        "in following parameters: {}".format(name, diff_params),
-                        "new": 'Zabbix Action "{}" would correspond to definition.'.format(
-                            name
+                        "old": (
+                            'Zabbix Action "{}" differs '
+                            "in following parameters: {}".format(name, diff_params)
+                        ),
+                        "new": (
+                            'Zabbix Action "{}" would correspond to definition.'.format(
+                                name
+                            )
                         ),
                     }
                 }
@@ -150,8 +154,10 @@ def present(name, params, **kwargs):
                     ret["comment"] = 'Zabbix Action "{}" updated.'.format(name)
                     ret["changes"] = {
                         name: {
-                            "old": 'Zabbix Action "{}" differed '
-                            "in following parameters: {}".format(name, diff_params),
+                            "old": (
+                                'Zabbix Action "{}" differed '
+                                "in following parameters: {}".format(name, diff_params)
+                            ),
                             "new": 'Zabbix Action "{}" fixed.'.format(name),
                         }
                     }
@@ -171,8 +177,10 @@ def present(name, params, **kwargs):
             ret["changes"] = {
                 name: {
                     "old": 'Zabbix Action "{}" does not exist.'.format(name),
-                    "new": 'Zabbix Action "{}" would be created according definition.'.format(
-                        name
+                    "new": (
+                        'Zabbix Action "{}" would be created according definition.'.format(
+                            name
+                        )
                     ),
                 }
             }
@@ -189,8 +197,10 @@ def present(name, params, **kwargs):
                 ret["changes"] = {
                     name: {
                         "old": 'Zabbix Action "{}" did not exist.'.format(name),
-                        "new": 'Zabbix Action "{}" created according definition.'.format(
-                            name
+                        "new": (
+                            'Zabbix Action "{}" created according definition.'.format(
+                                name
+                            )
                         ),
                     }
                 }

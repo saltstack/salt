@@ -409,7 +409,7 @@ def add_tags(
         if ARN is None:
             if DomainName is None:
                 raise SaltInvocationError(
-                    "One (but not both) of ARN or " "domain must be specified."
+                    "One (but not both) of ARN or domain must be specified."
                 )
             domaindata = status(
                 DomainName=DomainName,
@@ -424,7 +424,7 @@ def add_tags(
             ARN = domaindata.get("domain", {}).get("ARN")
         elif DomainName is not None:
             raise SaltInvocationError(
-                "One (but not both) of ARN or " "domain must be specified."
+                "One (but not both) of ARN or domain must be specified."
             )
         conn.add_tags(ARN=ARN, TagList=tagslist)
         return {"tagged": True}
@@ -454,7 +454,7 @@ def remove_tags(
         if ARN is None:
             if DomainName is None:
                 raise SaltInvocationError(
-                    "One (but not both) of ARN or " "domain must be specified."
+                    "One (but not both) of ARN or domain must be specified."
                 )
             domaindata = status(
                 DomainName=DomainName,
@@ -469,7 +469,7 @@ def remove_tags(
             ARN = domaindata.get("domain", {}).get("ARN")
         elif DomainName is not None:
             raise SaltInvocationError(
-                "One (but not both) of ARN or " "domain must be specified."
+                "One (but not both) of ARN or domain must be specified."
             )
         conn.remove_tags(ARN=domaindata.get("domain", {}).get("ARN"), TagKeys=TagKeys)
         return {"tagged": True}
@@ -501,7 +501,7 @@ def list_tags(
         if ARN is None:
             if DomainName is None:
                 raise SaltInvocationError(
-                    "One (but not both) of ARN or " "domain must be specified."
+                    "One (but not both) of ARN or domain must be specified."
                 )
             domaindata = status(
                 DomainName=DomainName,
@@ -516,7 +516,7 @@ def list_tags(
             ARN = domaindata.get("domain", {}).get("ARN")
         elif DomainName is not None:
             raise SaltInvocationError(
-                "One (but not both) of ARN or " "domain must be specified."
+                "One (but not both) of ARN or domain must be specified."
             )
         ret = conn.list_tags(ARN=ARN)
         log.warning(ret)

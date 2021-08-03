@@ -487,7 +487,8 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
             },
         )
         self.assertEqual(
-            "Certificate needs renewal: 29 days remaining but it needs to be at least 90",
+            "Certificate needs renewal: 29 days remaining but it needs to be at"
+            " least 90",
             second_run[key]["changes"]["Status"]["Old"],
         )
         expiry = datetime.datetime.strptime(

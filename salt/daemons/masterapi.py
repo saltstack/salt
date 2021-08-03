@@ -1112,8 +1112,10 @@ class LocalFuncs:
             return {
                 "error": {
                     "name": err_name,
-                    "message": 'Authentication failure of type "{}" occurred '
-                    "for user {}.".format(auth_type, username),
+                    "message": (
+                        'Authentication failure of type "{}" occurred '
+                        "for user {}.".format(auth_type, username)
+                    ),
                 }
             }
         elif isinstance(runner_check, dict) and "error" in runner_check:
@@ -1162,8 +1164,10 @@ class LocalFuncs:
                 return {
                     "error": {
                         "name": err_name,
-                        "message": 'Authentication failure of type "{}" occurred for '
-                        "user {}.".format(auth_type, username),
+                        "message": (
+                            'Authentication failure of type "{}" occurred for '
+                            "user {}.".format(auth_type, username)
+                        ),
                     }
                 }
             elif isinstance(wheel_check, dict) and "error" in wheel_check:

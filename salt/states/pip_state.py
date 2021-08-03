@@ -749,8 +749,8 @@ def installed(
             ret["comment"] = (
                 "The 'use_wheel' option is only supported in "
                 "pip between {} and {}. The version of pip detected "
-                "was {}."
-            ).format(min_version, max_version, cur_version)
+                "was {}.".format(min_version, max_version, cur_version)
+            )
             return ret
 
     # Check that the pip binary supports the 'no_use_wheel' option
@@ -768,8 +768,8 @@ def installed(
             ret["comment"] = (
                 "The 'no_use_wheel' option is only supported in "
                 "pip between {} and {}. The version of pip detected "
-                "was {}."
-            ).format(min_version, max_version, cur_version)
+                "was {}.".format(min_version, max_version, cur_version)
+            )
             return ret
 
     # Check that the pip binary supports the 'no_binary' option
@@ -783,8 +783,8 @@ def installed(
             ret["comment"] = (
                 "The 'no_binary' option is only supported in "
                 "pip {} and newer. The version of pip detected "
-                "was {}."
-            ).format(min_version, cur_version)
+                "was {}.".format(min_version, cur_version)
+            )
             return ret
 
     # Get the packages parsed name and version from the pip library.
@@ -987,16 +987,18 @@ def installed(
                         ret["changes"]["requirements"] = True
                 if ret["changes"].get("requirements"):
                     comments.append(
-                        "Successfully processed requirements file "
-                        "{}.".format(requirements)
+                        "Successfully processed requirements file {}.".format(
+                            requirements
+                        )
                     )
                 else:
                     comments.append("Requirements were already installed.")
 
             if editable:
                 comments.append(
-                    "Package successfully installed from VCS "
-                    "checkout {}.".format(editable)
+                    "Package successfully installed from VCS checkout {}.".format(
+                        editable
+                    )
                 )
                 ret["changes"]["editable"] = True
             ret["comment"] = " ".join(comments)

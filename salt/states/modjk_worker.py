@@ -129,7 +129,7 @@ def _talk2modjk(name, lbn, target, action, profile="default", tgt_type="glob"):
         ret["result"] = False
         ret[
             "comment"
-        ] = "the following balancers could not find the " "worker {}: {}".format(
+        ] = "the following balancers could not find the worker {}: {}".format(
             name, status["errors"]
         )
         return ret

@@ -2152,7 +2152,7 @@ def test_locale_info_unicode_error_tzname():
 
     # mock tzname[0].decode()
     decode = Mock(return_value="CST_FAKE")
-    tzname2 = Mock(decode=decode)
+    tzname2 = [Mock(decode=decode)]
 
     with patch.object(core, "datetime", datetime=datetime) as datetime_module:
         with patch.object(

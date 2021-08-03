@@ -575,7 +575,7 @@ def file_exists(path, saltenv=None):
     pillar_roots = __opts__.get("pillar_roots")
     if not pillar_roots:
         raise CommandExecutionError(
-            "No pillar_roots found. Are you running " "this on the master?"
+            "No pillar_roots found. Are you running this on the master?"
         )
 
     if saltenv:

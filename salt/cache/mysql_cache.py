@@ -184,9 +184,8 @@ def store(bank, key, data):
     """
     _init_client()
     data = __context__["serial"].dumps(data)
-    query = (
-        b"REPLACE INTO {} (bank, etcd_key, data) values('{}', '{}', "
-        b"'{}')".format(_table_name, bank, key, data)
+    query = b"REPLACE INTO {} (bank, etcd_key, data) values('{}', '{}', '{}')".format(
+        _table_name, bank, key, data
     )
 
     cur, cnt = run_query(client, query)
@@ -242,7 +241,7 @@ def contains(bank, key):
     Checks if the specified bank contains the specified key.
     """
     _init_client()
-    query = "SELECT COUNT(data) FROM {} WHERE bank='{}' " "AND etcd_key='{}'".format(
+    query = "SELECT COUNT(data) FROM {} WHERE bank='{}' AND etcd_key='{}'".format(
         _table_name, bank, key
     )
     cur, _ = run_query(client, query)

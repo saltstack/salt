@@ -53,7 +53,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The twilio_notify execution module failed to load: the twilio python library is not installed.",
+        "The twilio_notify execution module failed to load: the twilio python library"
+        " is not installed.",
     )
 
 

@@ -203,12 +203,12 @@ class IPCServer:
                         exc,
                     )
                 else:
-                    log.error("Exception occurred while " "handling stream: %s", exc)
+                    log.error("Exception occurred while handling stream: %s", exc)
             except Exception as exc:  # pylint: disable=broad-except
-                log.error("Exception occurred while " "handling stream: %s", exc)
+                log.error("Exception occurred while handling stream: %s", exc)
 
     def handle_connection(self, connection, address):
-        log.trace("IPCServer: Handling connection " "to address: %s", address)
+        log.trace("IPCServer: Handling connection to address: %s", address)
         try:
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 stream = IOStream(

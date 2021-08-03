@@ -648,10 +648,11 @@ class TestDeprecatedClassNames(TestCase):
                         target=self.process_target
                     )
                     self.assertEqual(
-                        "Please stop using 'salt.utils.process.SignalHandlingMultiprocessingProcess' "
-                        "and instead use 'salt.utils.process.SignalHandlingProcess'. "
-                        "'salt.utils.process.SignalHandlingMultiprocessingProcess' will go away "
-                        "after 2022-01-01.",
+                        "Please stop using"
+                        " 'salt.utils.process.SignalHandlingMultiprocessingProcess' and"
+                        " instead use 'salt.utils.process.SignalHandlingProcess'."
+                        " 'salt.utils.process.SignalHandlingMultiprocessingProcess'"
+                        " will go away after 2022-01-01.",
                         str(recorded_warnings[0].message),
                     )
         finally:
@@ -670,9 +671,11 @@ class TestDeprecatedClassNames(TestCase):
             ):
                 with self.assertRaisesRegex(
                     RuntimeError,
-                    r"Please stop using 'salt.utils.process.SignalHandlingMultiprocessingProcess' "
+                    r"Please stop using"
+                    r" 'salt.utils.process.SignalHandlingMultiprocessingProcess' "
                     r"and instead use 'salt.utils.process.SignalHandlingProcess'. "
-                    r"'salt.utils.process.SignalHandlingMultiprocessingProcess' will go away "
+                    r"'salt.utils.process.SignalHandlingMultiprocessingProcess' will go"
+                    r" away "
                     r"after 2022-01-01. "
                     r"This warning\(now exception\) triggered on "
                     r"filename '(.*)test_process.py', line number ([\d]+), is "

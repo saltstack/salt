@@ -120,7 +120,10 @@ def bootstrap():
 
         salt 'win01' psget.bootstrap
     """
-    cmd = "Get-PackageProvider -Name NuGet -ForceBootstrap | Select Name, Version, ProviderPath"
+    cmd = (
+        "Get-PackageProvider -Name NuGet -ForceBootstrap | Select Name, Version,"
+        " ProviderPath"
+    )
     ret = _pshell(cmd, depth=1)
     return ret
 

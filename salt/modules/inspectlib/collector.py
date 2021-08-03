@@ -257,10 +257,7 @@ class Inspector(EnvLoader):
         for p_type, p_list in (
             ("f", files),
             ("d", directories),
-            (
-                "l",
-                links,
-            ),
+            ("l", links),
         ):
             for p_obj in p_list:
                 stats = os.stat(p_obj)
@@ -539,7 +536,10 @@ class Inspector(EnvLoader):
         :return:
         """
         if kiwi is None:
-            msg = "Unable to build the image due to the missing dependencies: Kiwi module is not available."
+            msg = (
+                "Unable to build the image due to the missing dependencies: Kiwi module"
+                " is not available."
+            )
             log.error(msg)
             raise CommandExecutionError(msg)
 

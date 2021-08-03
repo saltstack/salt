@@ -556,7 +556,7 @@ def managed(name, enabled=True, **kwargs):
                     ret["result"] = None
                     ret[
                         "comment"
-                    ] = "Bond interface {} is set to be " "updated:\n{}".format(
+                    ] = "Bond interface {} is set to be updated:\n{}".format(
                         name, "\n".join(diff)
                     )
             else:
@@ -722,7 +722,7 @@ def routes(name, **kwargs):
                 ret["result"] = None
                 ret[
                     "comment"
-                ] = "Interface {} routes are set to be " "updated:\n{}".format(
+                ] = "Interface {} routes are set to be updated:\n{}".format(
                     name, "\n".join(diff)
                 )
                 return ret
@@ -787,7 +787,7 @@ def system(name, **kwargs):
                 ret["result"] = None
                 ret[
                     "comment"
-                ] = "Global network settings are set to be " "updated:\n{}".format(
+                ] = "Global network settings are set to be updated:\n{}".format(
                     "\n".join(diff)
                 )
                 return ret
