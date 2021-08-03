@@ -40,29 +40,29 @@ def get_latest_snapshot(
     use_literal_group_id=False,
 ):
     """
-       Gets latest snapshot of the given artifact
+    Gets latest snapshot of the given artifact
 
-       artifactory_url
-           URL of artifactory instance
-       repository
-           Snapshot repository in artifactory to retrieve artifact from, for example: libs-snapshots
-       group_id
-           Group Id of the artifact
-       artifact_id
-           Artifact Id of the artifact
-       packaging
-           Packaging type (jar,war,ear,etc)
-       target_dir
-           Target directory to download artifact to (default: /tmp)
-       target_file
-           Target file to download artifact to (by default it is target_dir/artifact_id-snapshot_version.packaging)
-       classifier
-           Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
-       username
-           Artifactory username. Optional parameter.
-       password
-           Artifactory password. Optional parameter.
-       """
+    artifactory_url
+        URL of artifactory instance
+    repository
+        Snapshot repository in artifactory to retrieve artifact from, for example: libs-snapshots
+    group_id
+        Group Id of the artifact
+    artifact_id
+        Artifact Id of the artifact
+    packaging
+        Packaging type (jar,war,ear,etc)
+    target_dir
+        Target directory to download artifact to (default: /tmp)
+    target_file
+        Target file to download artifact to (by default it is target_dir/artifact_id-snapshot_version.packaging)
+    classifier
+        Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
+    username
+        Artifactory username. Optional parameter.
+    password
+        Artifactory password. Optional parameter.
+    """
     log.debug(
         "======================== MODULE FUNCTION: artifactory.get_latest_snapshot, artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, target_dir=%s, classifier=%s)",
         artifactory_url,
@@ -122,31 +122,31 @@ def get_snapshot(
     use_literal_group_id=False,
 ):
     """
-       Gets snapshot of the desired version of the artifact
+    Gets snapshot of the desired version of the artifact
 
-       artifactory_url
-           URL of artifactory instance
-       repository
-           Snapshot repository in artifactory to retrieve artifact from, for example: libs-snapshots
-       group_id
-           Group Id of the artifact
-       artifact_id
-           Artifact Id of the artifact
-       packaging
-           Packaging type (jar,war,ear,etc)
-       version
-           Version of the artifact
-       target_dir
-           Target directory to download artifact to (default: /tmp)
-       target_file
-           Target file to download artifact to (by default it is target_dir/artifact_id-snapshot_version.packaging)
-       classifier
-           Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
-       username
-           Artifactory username. Optional parameter.
-       password
-           Artifactory password. Optional parameter.
-       """
+    artifactory_url
+        URL of artifactory instance
+    repository
+        Snapshot repository in artifactory to retrieve artifact from, for example: libs-snapshots
+    group_id
+        Group Id of the artifact
+    artifact_id
+        Artifact Id of the artifact
+    packaging
+        Packaging type (jar,war,ear,etc)
+    version
+        Version of the artifact
+    target_dir
+        Target directory to download artifact to (default: /tmp)
+    target_file
+        Target file to download artifact to (by default it is target_dir/artifact_id-snapshot_version.packaging)
+    classifier
+        Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
+    username
+        Artifactory username. Optional parameter.
+    password
+        Artifactory password. Optional parameter.
+    """
     log.debug(
         "======================== MODULE FUNCTION: artifactory.get_snapshot(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, target_dir=%s, classifier=%s)",
         artifactory_url,
@@ -196,29 +196,29 @@ def get_latest_release(
     use_literal_group_id=False,
 ):
     """
-       Gets the latest release of the artifact
+    Gets the latest release of the artifact
 
-       artifactory_url
-           URL of artifactory instance
-       repository
-           Release repository in artifactory to retrieve artifact from, for example: libs-releases
-       group_id
-           Group Id of the artifact
-       artifact_id
-           Artifact Id of the artifact
-       packaging
-           Packaging type (jar,war,ear,etc)
-       target_dir
-           Target directory to download artifact to (default: /tmp)
-       target_file
-           Target file to download artifact to (by default it is target_dir/artifact_id-version.packaging)
-       classifier
-           Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
-       username
-           Artifactory username. Optional parameter.
-       password
-           Artifactory password. Optional parameter.
-       """
+    artifactory_url
+        URL of artifactory instance
+    repository
+        Release repository in artifactory to retrieve artifact from, for example: libs-releases
+    group_id
+        Group Id of the artifact
+    artifact_id
+        Artifact Id of the artifact
+    packaging
+        Packaging type (jar,war,ear,etc)
+    target_dir
+        Target directory to download artifact to (default: /tmp)
+    target_file
+        Target file to download artifact to (by default it is target_dir/artifact_id-version.packaging)
+    classifier
+        Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
+    username
+        Artifactory username. Optional parameter.
+    password
+        Artifactory password. Optional parameter.
+    """
     log.debug(
         "======================== MODULE FUNCTION: artifactory.get_latest_release(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, target_dir=%s, classifier=%s)",
         artifactory_url,
@@ -273,31 +273,31 @@ def get_release(
     use_literal_group_id=False,
 ):
     """
-       Gets the specified release of the artifact
+    Gets the specified release of the artifact
 
-       artifactory_url
-           URL of artifactory instance
-       repository
-           Release repository in artifactory to retrieve artifact from, for example: libs-releases
-       group_id
-           Group Id of the artifact
-       artifact_id
-           Artifact Id of the artifact
-       packaging
-           Packaging type (jar,war,ear,etc)
-       version
-           Version of the artifact
-       target_dir
-           Target directory to download artifact to (default: /tmp)
-       target_file
-           Target file to download artifact to (by default it is target_dir/artifact_id-version.packaging)
-       classifier
-           Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
-       username
-           Artifactory username. Optional parameter.
-       password
-           Artifactory password. Optional parameter.
-       """
+    artifactory_url
+        URL of artifactory instance
+    repository
+        Release repository in artifactory to retrieve artifact from, for example: libs-releases
+    group_id
+        Group Id of the artifact
+    artifact_id
+        Artifact Id of the artifact
+    packaging
+        Packaging type (jar,war,ear,etc)
+    version
+        Version of the artifact
+    target_dir
+        Target directory to download artifact to (default: /tmp)
+    target_file
+        Target file to download artifact to (by default it is target_dir/artifact_id-version.packaging)
+    classifier
+        Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
+    username
+        Artifactory username. Optional parameter.
+    password
+        Artifactory password. Optional parameter.
+    """
     log.debug(
         "======================== MODULE FUNCTION: artifactory.get_release(artifactory_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, target_dir=%s, classifier=%s)",
         artifactory_url,

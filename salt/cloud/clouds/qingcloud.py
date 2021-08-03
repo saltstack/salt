@@ -596,7 +596,9 @@ def list_nodes_select(call=None):
         salt-cloud -S my-qingcloud
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 

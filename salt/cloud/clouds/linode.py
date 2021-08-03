@@ -179,7 +179,7 @@ def get_configured_provider():
     return config.is_provider_configured(
         __opts__,
         _get_active_provider_name() or __virtualname__,
-        ("apikey", "password",),
+        ("apikey", "password"),
     )
 
 
@@ -400,82 +400,82 @@ def _warn_for_api_v3():
 class LinodeAPI:
     @abc.abstractmethod
     def avail_images(self):
-        """ avail_images implementation """
+        """avail_images implementation"""
 
     @abc.abstractmethod
     def avail_locations(self):
-        """ avail_locations implementation """
+        """avail_locations implementation"""
 
     @abc.abstractmethod
     def avail_sizes(self):
-        """ avail_sizes implementation """
+        """avail_sizes implementation"""
 
     @abc.abstractmethod
     def boot(self, name=None, kwargs=None):
-        """ boot implementation """
+        """boot implementation"""
 
     @abc.abstractmethod
     def clone(self, kwargs=None):
-        """ clone implementation """
+        """clone implementation"""
 
     @abc.abstractmethod
     def create_config(self, kwargs=None):
-        """ create_config implementation """
+        """create_config implementation"""
 
     @abc.abstractmethod
     def create(self, vm_):
-        """ create implementation """
+        """create implementation"""
 
     @abc.abstractmethod
     def destroy(self, name):
-        """ destroy implementation """
+        """destroy implementation"""
 
     @abc.abstractmethod
     def get_config_id(self, kwargs=None):
-        """ get_config_id implementation """
+        """get_config_id implementation"""
 
     @abc.abstractmethod
     def list_nodes(self):
-        """ list_nodes implementation """
+        """list_nodes implementation"""
 
     @abc.abstractmethod
     def list_nodes_full(self):
-        """ list_nodes_full implementation """
+        """list_nodes_full implementation"""
 
     @abc.abstractmethod
     def list_nodes_min(self):
-        """ list_nodes_min implementation """
+        """list_nodes_min implementation"""
 
     @abc.abstractmethod
     def reboot(self, name):
-        """ reboot implementation """
+        """reboot implementation"""
 
     @abc.abstractmethod
     def show_instance(self, name):
-        """ show_instance implementation """
+        """show_instance implementation"""
 
     @abc.abstractmethod
     def show_pricing(self, kwargs=None):
-        """ show_pricing implementation """
+        """show_pricing implementation"""
 
     @abc.abstractmethod
     def start(self, name):
-        """ start implementation """
+        """start implementation"""
 
     @abc.abstractmethod
     def stop(self, name):
-        """ stop implementation """
+        """stop implementation"""
 
     @abc.abstractmethod
     def _get_linode_by_name(self, name):
-        """ _get_linode_by_name implementation """
+        """_get_linode_by_name implementation"""
 
     @abc.abstractmethod
     def _get_linode_by_id(self, linode_id):
-        """ _get_linode_by_id implementation """
+        """_get_linode_by_id implementation"""
 
     def get_plan_id(self, kwargs=None):
-        """ get_plan_id implementation """
+        """get_plan_id implementation"""
         raise SaltCloudSystemExit(
             "The get_plan_id is not supported by this api_version."
         )
@@ -495,7 +495,9 @@ class LinodeAPI:
 
     def list_nodes_select(self, call):
         return __utils__["cloud.list_nodes_select"](
-            self.list_nodes_full(), __opts__["query.selection"], call,
+            self.list_nodes_full(),
+            __opts__["query.selection"],
+            call,
         )
 
 
@@ -1016,7 +1018,12 @@ class LinodeAPIv4(LinodeAPI):
         return (public, private)
 
     def _poll(
-        self, description, getter, condition, timeout=None, poll_interval=None,
+        self,
+        description,
+        getter,
+        condition,
+        timeout=None,
+        poll_interval=None,
     ):
         """
         Return true in handler to signal complete.

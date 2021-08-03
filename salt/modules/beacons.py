@@ -188,9 +188,10 @@ def add(name, beacon_data, **kwargs):
 
                 if not valid:
                     ret["result"] = False
-                    ret["comment"] = (
-                        "Beacon {} configuration invalid, "
-                        "not adding.\n{}".format(name, vcomment)
+                    ret[
+                        "comment"
+                    ] = "Beacon {} configuration invalid, " "not adding.\n{}".format(
+                        name, vcomment
                     )
                     return ret
         except KeyError:
@@ -286,9 +287,10 @@ def modify(name, beacon_data, **kwargs):
 
                 if not valid:
                     ret["result"] = False
-                    ret["comment"] = (
-                        "Beacon {} configuration invalid, "
-                        "not modifying.\n{}".format(name, vcomment)
+                    ret[
+                        "comment"
+                    ] = "Beacon {} configuration invalid, " "not modifying.\n{}".format(
+                        name, vcomment
                     )
                     return ret
 
@@ -300,9 +302,10 @@ def modify(name, beacon_data, **kwargs):
 
         if not valid:
             ret["result"] = False
-            ret["comment"] = (
-                "Beacon {} configuration invalid, "
-                "not modifying.\n{}".format(name, vcomment)
+            ret[
+                "comment"
+            ] = "Beacon {} configuration invalid, " "not modifying.\n{}".format(
+                name, vcomment
             )
             return ret
 

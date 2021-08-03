@@ -197,7 +197,9 @@ def list_nodes_select(call=None):
     Return a list of the VMs that are on the provider, with select fields
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -353,7 +355,11 @@ def create(vm_):
         )
 
     private_networking = config.get_cloud_config_value(
-        "private_networking", vm_, __opts__, search_global=False, default=None,
+        "private_networking",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
 
     if private_networking is not None:
@@ -370,7 +376,11 @@ def create(vm_):
         )
 
     backups_enabled = config.get_cloud_config_value(
-        "backups_enabled", vm_, __opts__, search_global=False, default=None,
+        "backups_enabled",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
 
     if backups_enabled is not None:
@@ -379,7 +389,11 @@ def create(vm_):
         kwargs["backups"] = backups_enabled
 
     ipv6 = config.get_cloud_config_value(
-        "ipv6", vm_, __opts__, search_global=False, default=None,
+        "ipv6",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
 
     if ipv6 is not None:
@@ -388,7 +402,11 @@ def create(vm_):
         kwargs["ipv6"] = ipv6
 
     monitoring = config.get_cloud_config_value(
-        "monitoring", vm_, __opts__, search_global=False, default=None,
+        "monitoring",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
 
     if monitoring is not None:
@@ -413,7 +431,11 @@ def create(vm_):
             log.exception("Failed to read userdata from %s: %s", userdata_file, exc)
 
     create_dns_record = config.get_cloud_config_value(
-        "create_dns_record", vm_, __opts__, search_global=False, default=None,
+        "create_dns_record",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
 
     if create_dns_record:
@@ -701,7 +723,8 @@ def list_keypairs(call=None):
 
     while fetch:
         items = query(
-            method="account/keys", command="?page=" + str(page) + "&per_page=100",
+            method="account/keys",
+            command="?page=" + str(page) + "&per_page=100",
         )
 
         for key_pair in items["ssh_keys"]:
@@ -1031,7 +1054,8 @@ def list_floating_ips(call=None):
 
     while fetch:
         items = query(
-            method="floating_ips", command="?page=" + str(page) + "&per_page=200",
+            method="floating_ips",
+            command="?page=" + str(page) + "&per_page=200",
         )
 
         for floating_ip in items["floating_ips"]:

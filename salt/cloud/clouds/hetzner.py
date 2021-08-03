@@ -59,7 +59,9 @@ def get_configured_provider():
     Return the first configured instance.
     """
     return config.is_provider_configured(
-        __opts__, __active_provider_name__ or __virtualname__, ("key",),
+        __opts__,
+        __active_provider_name__ or __virtualname__,
+        ("key",),
     )
 
 
@@ -68,7 +70,8 @@ def get_dependencies():
     Warn if dependencies aren't met.
     """
     return config.check_driver_dependencies(
-        __active_provider_name__ or __virtualname__, {"hcloud": HAS_HCLOUD},
+        __active_provider_name__ or __virtualname__,
+        {"hcloud": HAS_HCLOUD},
     )
 
 
@@ -222,7 +225,9 @@ def show_instance(name, call=None):
         node = {}
 
     __utils__["cloud.cache_node"](
-        node, __active_provider_name__ or __virtualname__, __opts__,
+        node,
+        __active_provider_name__ or __virtualname__,
+        __opts__,
     )
 
     return node
@@ -268,7 +273,9 @@ def create(vm_):
         "starting create",
         "salt/cloud/{}/creating".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
-            "creating", vm_, ["name", "profile", "provider", "driver"],
+            "creating",
+            vm_,
+            ["name", "profile", "provider", "driver"],
         ),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -348,7 +355,9 @@ def create(vm_):
         "created instance",
         "salt/cloud/{}/created".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
-            "created", vm_, ["name", "profile", "provider", "driver"],
+            "created",
+            vm_,
+            ["name", "profile", "provider", "driver"],
         ),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -503,7 +512,9 @@ def destroy(name, call=None):
 
     if __opts__.get("update_cachedir", False) is True:
         __utils__["cloud.delete_minion_cachedir"](
-            name, __active_provider_name__.split(":")[0], __opts__,
+            name,
+            __active_provider_name__.split(":")[0],
+            __opts__,
         )
 
     return {"Destroyed": "{} was destroyed.".format(name)}

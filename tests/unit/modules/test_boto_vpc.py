@@ -1787,8 +1787,10 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
-        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(
-            vpc.id, subnet.id, **conn_parameters
+        network_acl_creation_and_association_result = (
+            boto_vpc.associate_new_network_acl_to_subnet(
+                vpc.id, subnet.id, **conn_parameters
+            )
         )
 
         self.assertTrue(network_acl_creation_and_association_result)
@@ -1804,8 +1806,10 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
-        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(
-            vpc.id, subnet.id, network_acl_name="test", **conn_parameters
+        network_acl_creation_and_association_result = (
+            boto_vpc.associate_new_network_acl_to_subnet(
+                vpc.id, subnet.id, network_acl_name="test", **conn_parameters
+            )
         )
 
         self.assertTrue(network_acl_creation_and_association_result)
@@ -1821,8 +1825,10 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
-        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(
-            vpc.id, subnet.id, tags={"test": "testvalue"}, **conn_parameters
+        network_acl_creation_and_association_result = (
+            boto_vpc.associate_new_network_acl_to_subnet(
+                vpc.id, subnet.id, tags={"test": "testvalue"}, **conn_parameters
+            )
         )
 
         self.assertTrue(network_acl_creation_and_association_result)
@@ -1837,8 +1843,10 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc = self._create_vpc()
 
-        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(
-            vpc.id, "fake", **conn_parameters
+        network_acl_creation_and_association_result = (
+            boto_vpc.associate_new_network_acl_to_subnet(
+                vpc.id, "fake", **conn_parameters
+            )
         )
 
         self.assertFalse(network_acl_creation_and_association_result)

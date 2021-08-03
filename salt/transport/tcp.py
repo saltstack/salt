@@ -310,7 +310,11 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         self._closing = False
         self.message_client = SaltMessageClientPool(
             self.opts,
-            args=(self.opts, master_host, int(master_port),),
+            args=(
+                self.opts,
+                master_host,
+                int(master_port),
+            ),
             kwargs={
                 "io_loop": self.io_loop,
                 "resolver": resolver,
@@ -429,7 +433,9 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     @salt.ext.tornado.gen.coroutine
     def _uncrypted_transfer(self, load, tries=3, timeout=60):
         ret = yield self.message_client.send(
-            self._package_load(load), timeout=timeout, tries=tries,
+            self._package_load(load),
+            timeout=timeout,
+            tries=tries,
         )
 
         raise salt.ext.tornado.gen.Return(ret)
@@ -563,7 +569,9 @@ class AsyncTCPPubChannel(
                 "tag": tag,
             }
             req_channel = salt.utils.asynchronous.SyncWrapper(
-                AsyncTCPReqChannel, (self.opts,), loop_kwarg="io_loop",
+                AsyncTCPReqChannel,
+                (self.opts,),
+                loop_kwarg="io_loop",
             )
             try:
                 req_channel.send(load, timeout=60)
@@ -833,7 +841,11 @@ class TCPReqServerChannel(
             elif req_fun == "send_private":
                 stream.write(
                     salt.transport.frame.frame_msg(
-                        self._encrypt_private(ret, req_opts["key"], req_opts["tgt"],),
+                        self._encrypt_private(
+                            ret,
+                            req_opts["key"],
+                            req_opts["tgt"],
+                        ),
                         header=header,
                     )
                 )
@@ -1385,7 +1397,10 @@ class SaltMessageClient:
                         future.tries,
                     )
                     self.send(
-                        msg, timeout=future.timeout, tries=future.tries, future=future,
+                        msg,
+                        timeout=future.timeout,
+                        tries=future.tries,
+                        future=future,
                     )
 
                 else:
@@ -1699,7 +1714,9 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
             pull_uri = os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
 
         pull_sock = salt.transport.ipc.IPCMessageServer(
-            pull_uri, io_loop=self.io_loop, payload_handler=pub_server.publish_payload,
+            pull_uri,
+            io_loop=self.io_loop,
+            payload_handler=pub_server.publish_payload,
         )
 
         # Securely create socket
@@ -1745,7 +1762,9 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         # TODO: switch to the actual asynchronous interface
         # pub_sock = salt.transport.ipc.IPCMessageClient(self.opts, io_loop=self.io_loop)
         pub_sock = salt.utils.asynchronous.SyncWrapper(
-            salt.transport.ipc.IPCMessageClient, (pull_uri,), loop_kwarg="io_loop",
+            salt.transport.ipc.IPCMessageClient,
+            (pull_uri,),
+            loop_kwarg="io_loop",
         )
         pub_sock.connect()
 

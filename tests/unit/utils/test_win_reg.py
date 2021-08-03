@@ -390,7 +390,11 @@ class WinFunctionsTestCase(TestCase):
                 "vtype": "REG_MULTI_SZ",
             }
             self.assertEqual(
-                win_reg.read_value(hive="HKLM", key=FAKE_KEY, vname="empty_list",),
+                win_reg.read_value(
+                    hive="HKLM",
+                    key=FAKE_KEY,
+                    vname="empty_list",
+                ),
                 expected,
             )
         finally:

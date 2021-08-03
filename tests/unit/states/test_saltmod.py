@@ -386,9 +386,9 @@ class StatemodTests(TestCase, LoaderModuleMockMixin):
         }
 
     def test_statemod_state(self):
-        """ Smoke test for for salt.states.statemod.state().  Ensures that we
-            don't take an exception if optional parameters are not specified in
-            __opts__ or __env__.
+        """Smoke test for for salt.states.statemod.state().  Ensures that we
+        don't take an exception if optional parameters are not specified in
+        __opts__ or __env__.
         """
         args = ("webserver_setup", "webserver2")
         kwargs = {

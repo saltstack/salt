@@ -87,7 +87,14 @@ class PipModuleTest(ModuleCase):
         """
         return any(w in ret for w in ["URLError", "Download error"])
 
-    def pip_successful_install(self, target, expect=("irc3-plugins-test", "pep8",)):
+    def pip_successful_install(
+        self,
+        target,
+        expect=(
+            "irc3-plugins-test",
+            "pep8",
+        ),
+    ):
         """
         isolate regex for extracting `successful install` message from pip
         """

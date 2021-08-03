@@ -437,9 +437,10 @@ def append(name, value, convert=False, delimiter=DEFAULT_TARGET_DELIM):
     if grain or name in __grains__:
         if isinstance(grain, list):
             if value in grain:
-                ret["comment"] = (
-                    "Value {1} is already in the list "
-                    "for grain {0}".format(name, value)
+                ret[
+                    "comment"
+                ] = "Value {1} is already in the list " "for grain {0}".format(
+                    name, value
                 )
                 return ret
             if __opts__["test"]:

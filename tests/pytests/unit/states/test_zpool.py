@@ -403,7 +403,10 @@ def test_present_update_success(utils_patch):
     ):
         assert (
             zpool.present(
-                "myzpool", config=config, layout=layout, properties=properties,
+                "myzpool",
+                config=config,
+                layout=layout,
+                properties=properties,
             )
             == ret
         )
@@ -485,7 +488,10 @@ def test_present_update_nochange_success(utils_patch):
             with patch.dict(zpool.__utils__, utils_patch):
                 assert (
                     zpool.present(
-                        "myzpool", config=config, layout=layout, properties=properties,
+                        "myzpool",
+                        config=config,
+                        layout=layout,
+                        properties=properties,
                     )
                     == ret
                 )

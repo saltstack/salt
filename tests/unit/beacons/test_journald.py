@@ -49,7 +49,7 @@ _STUB_JOURNALD_ENTRY = {
 
 
 class SystemdJournaldMock(Mock):
-    """ Request Mock"""
+    """Request Mock"""
 
     returned_once = False
 

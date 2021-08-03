@@ -60,7 +60,10 @@ def create_event(name, details, service_key, profile):
         ret["comment"] = "Need to create event: {}".format(name)
         return ret
     __salt__["pagerduty.create_event"](
-        description=name, details=details, service_key=service_key, profile=profile,
+        description=name,
+        details=details,
+        service_key=service_key,
+        profile=profile,
     )
     ret["result"] = True
     ret["comment"] = "Created event: {}".format(name)

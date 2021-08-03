@@ -51,7 +51,9 @@ def salt_call_cli_wrapper(salt_call_cli, mysql_container):
 
 def test_database_present_absent(salt_cli_wrapper):
     ret = salt_cli_wrapper(
-        "state.single", "mysql_database.present", name="test_database",
+        "state.single",
+        "mysql_database.present",
+        name="test_database",
     )
     state = ret.json["mysql_database_|-test_database_|-test_database_|-present"]
     assert ret.exitcode == 0, ret
@@ -63,7 +65,9 @@ def test_database_present_absent(salt_cli_wrapper):
     assert state["comment"] == "The database test_database has been created"
 
     ret = salt_cli_wrapper(
-        "state.single", "mysql_database.absent", name="test_database",
+        "state.single",
+        "mysql_database.absent",
+        name="test_database",
     )
     state = ret.json["mysql_database_|-test_database_|-test_database_|-absent"]
 
@@ -84,7 +88,10 @@ def test_grants_present_absent(salt_cli_wrapper, salt_call_cli_wrapper):
 
     # Create a user
     ret = salt_call_cli_wrapper(
-        "mysql.user_create", "george", host="localhost", password="badpassword",
+        "mysql.user_create",
+        "george",
+        host="localhost",
+        password="badpassword",
     )
     assert ret.json
 
@@ -158,7 +165,10 @@ def test_user_present_absent(salt_cli_wrapper):
     assert state["comment"] == "The user george@localhost has been added"
 
     ret = salt_cli_wrapper(
-        "state.single", "mysql_user.absent", name="george", host="localhost",
+        "state.single",
+        "mysql_user.absent",
+        name="george",
+        host="localhost",
     )
     state = ret.json["mysql_user_|-george_|-george_|-absent"]
     assert ret.exitcode == 0, ret

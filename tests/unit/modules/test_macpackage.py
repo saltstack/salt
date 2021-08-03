@@ -10,7 +10,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_install(self):
         """
-            Test installing a PKG file
+        Test installing a PKG file
         """
         mock = MagicMock()
         with patch.dict(macpackage.__salt__, {"cmd.run_all": mock}):
@@ -22,7 +22,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_install_wildcard(self):
         """
-            Test installing a PKG file with a wildcard
+        Test installing a PKG file with a wildcard
         """
         mock = MagicMock()
         with patch.dict(macpackage.__salt__, {"cmd.run_all": mock}):
@@ -33,7 +33,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_install_with_extras(self):
         """
-            Test installing a PKG file with extra options
+        Test installing a PKG file with extra options
         """
         mock = MagicMock()
         with patch.dict(macpackage.__salt__, {"cmd.run_all": mock}):
@@ -45,7 +45,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_install_app(self):
         """
-            Test installing an APP package
+        Test installing an APP package
         """
         mock = MagicMock()
         with patch.dict(macpackage.__salt__, {"cmd.run": mock}):
@@ -56,7 +56,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_install_app_specify_target(self):
         """
-            Test installing an APP package with a specific target
+        Test installing an APP package with a specific target
         """
         mock = MagicMock()
         with patch.dict(macpackage.__salt__, {"cmd.run": mock}):
@@ -67,7 +67,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_install_app_with_slash(self):
         """
-            Test installing an APP package with a specific target
+        Test installing an APP package with a specific target
         """
         mock = MagicMock()
         with patch.dict(macpackage.__salt__, {"cmd.run": mock}):
@@ -78,7 +78,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_uninstall(self):
         """
-            Test Uninstalling an APP package with a specific target
+        Test Uninstalling an APP package with a specific target
         """
         mock = MagicMock()
         with patch.dict(macpackage.__salt__, {"file.remove": mock}):
@@ -87,7 +87,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_mount(self):
         """
-            Test mounting an dmg file to a temporary location
+        Test mounting an dmg file to a temporary location
         """
         cmd_mock = MagicMock()
         temp_mock = MagicMock(return_value="dmg-ABCDEF")
@@ -103,7 +103,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_unmount(self):
         """
-            Test Unmounting an dmg file to a temporary location
+        Test Unmounting an dmg file to a temporary location
         """
         mock = MagicMock()
         with patch.dict(macpackage.__salt__, {"cmd.run": mock}):
@@ -112,7 +112,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_installed_pkgs(self):
         """
-            Test getting a list of the installed packages
+        Test getting a list of the installed packages
         """
         expected = ["com.apple.this", "com.salt.that"]
         mock = MagicMock(return_value="com.apple.this\ncom.salt.that")
@@ -123,7 +123,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_pkg_id_with_files(self):
         """
-            Test getting a the id for a package
+        Test getting a the id for a package
         """
         with patch(
             "salt.modules.macpackage._get_pkg_id_from_pkginfo"
@@ -176,7 +176,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_pkg_id_with_dir(self):
         """
-            Test getting a the id for a package with a directory
+        Test getting a the id for a package with a directory
         """
         with patch("salt.modules.macpackage._get_pkg_id_dir") as pkg_id_dir_mock:
             expected = ["com.apple.this"]
@@ -208,7 +208,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_mpkg_ids(self):
         """
-            Test getting the ids of a mpkg file
+        Test getting the ids of a mpkg file
         """
         with patch("salt.modules.macpackage.get_pkg_id") as get_pkg_id_mock:
             expected = ["com.apple.this", "com.salt.other"]
@@ -229,7 +229,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_pkg_id_from_pkginfo(self):
         """
-            Test getting a package id from pkginfo files
+        Test getting a package id from pkginfo files
         """
         expected = ["com.apple.this", "com.apple.that"]
         mock = MagicMock(return_value="com.apple.this\ncom.apple.that")
@@ -244,7 +244,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_pkg_id_from_pkginfo_no_file(self):
         """
-            Test getting a package id from pkginfo file when it doesn't exist
+        Test getting a package id from pkginfo file when it doesn't exist
         """
         expected = []
         mock = MagicMock(return_value="No such file")
@@ -259,7 +259,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_pkg_id_dir(self):
         """
-            Test getting a package id from a directory
+        Test getting a package id from a directory
         """
         expected = ["com.apple.this"]
         mock = MagicMock(return_value="com.apple.this")
@@ -271,7 +271,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_pkg_id_dir_wildcard(self):
         """
-            Test getting a package id from a directory with a wildcard
+        Test getting a package id from a directory with a wildcard
         """
         expected = ["com.apple.this"]
         mock = MagicMock(return_value="com.apple.this")

@@ -201,7 +201,11 @@ def test_issue_50221(
 
 
 def test_issue_60426(
-    salt_master, salt_call_cli, pillar_tree, tmp_path, salt_minion,
+    salt_master,
+    salt_call_cli,
+    pillar_tree,
+    tmp_path,
+    salt_minion,
 ):
     target_path = tmp_path / "/etc/foo/bar"
     jinja_name = "foo_bar"

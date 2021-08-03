@@ -179,8 +179,10 @@ def call(napalm_device, method, *args, **kwargs):
             traceback.format_exc()
         )  # let's get the full traceback and display for debugging reasons.
         if isinstance(error, NotImplementedError):
-            comment = "{method} is not implemented for the NAPALM {driver} driver!".format(
-                method=method, driver=napalm_device.get("DRIVER_NAME")
+            comment = (
+                "{method} is not implemented for the NAPALM {driver} driver!".format(
+                    method=method, driver=napalm_device.get("DRIVER_NAME")
+                )
             )
         elif (
             retry

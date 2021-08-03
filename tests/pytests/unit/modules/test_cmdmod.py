@@ -191,7 +191,11 @@ def test_run_invalid_umask():
             with patch("os.path.isfile", MagicMock(return_value=True)):
                 with patch("os.access", MagicMock(return_value=True)):
                     pytest.raises(
-                        CommandExecutionError, cmdmod._run, "foo", "bar", umask="baz",
+                        CommandExecutionError,
+                        cmdmod._run,
+                        "foo",
+                        "bar",
+                        umask="baz",
                     )
 
 
