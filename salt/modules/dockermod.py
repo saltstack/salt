@@ -810,7 +810,8 @@ def _error_detail(data, item):
             )
         except TypeError:
             msg = "{}: {}".format(
-                item["errorDetail"]["code"], item["errorDetail"]["message"],
+                item["errorDetail"]["code"],
+                item["errorDetail"]["message"],
             )
     else:
         msg = item["errorDetail"]["message"]
@@ -902,7 +903,7 @@ def _get_create_kwargs(
             client_args = get_client_args(["create_container", "host_config"])
         except CommandExecutionError as exc:
             log.error(
-                "docker.create: Error getting client args: '%s'", exc, exc_info=True,
+                "docker.create: Error getting client args: '%s'", exc, exc_info=True
             )
             raise CommandExecutionError("Failed to get client args: {}".format(exc))
 
@@ -1472,7 +1473,9 @@ def login(*registries):
                 username,
             )
             login_cmd = __salt__["cmd.run_all"](
-                cmd, python_shell=False, output_loglevel="quiet",
+                cmd,
+                python_shell=False,
+                output_loglevel="quiet",
             )
             results[registry] = login_cmd["retcode"] == 0
             if not results[registry]:
@@ -1552,7 +1555,9 @@ def logout(*registries):
                 cmd.append(registry)
             log.debug("Attempting to logout of docker registry '%s'", registry)
             logout_cmd = __salt__["cmd.run_all"](
-                cmd, python_shell=False, output_loglevel="quiet",
+                cmd,
+                python_shell=False,
+                output_loglevel="quiet",
             )
             results[registry] = logout_cmd["retcode"] == 0
             if not results[registry]:

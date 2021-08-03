@@ -969,7 +969,8 @@ class ZfsUtilsTestCase(TestCase):
                         res["stderr"] = ""
                         res["stdout"] = ""
                         self.assertEqual(
-                            zfs.parse_command_result(res), OrderedDict(),
+                            zfs.parse_command_result(res),
+                            OrderedDict(),
                         )
 
     def test_parse_command_result_fail(self):
@@ -1014,7 +1015,8 @@ class ZfsUtilsTestCase(TestCase):
                         res["stderr"] = ""
                         res["stdout"] = ""
                         self.assertEqual(
-                            zfs.parse_command_result(res), OrderedDict(),
+                            zfs.parse_command_result(res),
+                            OrderedDict(),
                         )
 
     def test_parse_command_result_fail_message(self):

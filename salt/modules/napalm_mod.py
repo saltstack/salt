@@ -1067,7 +1067,7 @@ def pyeapi_call(method, *args, **kwargs):
 
         salt '*' napalm.pyeapi_call run_commands 'show version' encoding=text
         salt '*' napalm.pyeapi_call get_config as_string=True
-   """
+    """
     pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
     return __salt__["pyeapi.call"](method, *args, **pyeapi_kwargs)
 
@@ -1154,7 +1154,7 @@ def pyeapi_config(
     .. code-block:: bash
 
         salt '*' napalm.pyeapi_config 'ntp server 1.2.3.4'
-   """
+    """
     pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
     return __salt__["pyeapi.config"](
         commands=commands,

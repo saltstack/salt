@@ -152,9 +152,10 @@ def absent(
     if __salt__["postgres.schema_exists"](dbname, name, **db_args):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = (
-                "Schema {} is set to be removed"
-                " from database {}".format(name, dbname)
+            ret[
+                "comment"
+            ] = "Schema {} is set to be removed" " from database {}".format(
+                name, dbname
             )
             return ret
         elif __salt__["postgres.schema_remove"](dbname, name, **db_args):

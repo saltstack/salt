@@ -280,7 +280,10 @@ def test_managed_static_dns():
         win_network, "_validate", mock_validate
     ):
         ret = win_network.managed(
-            "salt", dns_proto="static", dns_servers=["192.168.0.10"], ip_proto="dhcp",
+            "salt",
+            dns_proto="static",
+            dns_servers=["192.168.0.10"],
+            ip_proto="dhcp",
         )
         assert ret == expected
 
