@@ -65,14 +65,17 @@ def _checksum_file_path(path):
         if re.match(r"..[/\\]", relpath):
             # path is a local file
             relpath = salt.utils.path.join(
-                "local", os.path.splitdrive(path)[-1].lstrip("/\\"),
+                "local",
+                os.path.splitdrive(path)[-1].lstrip("/\\"),
             )
     except ValueError as exc:
         # The path is on a different drive (Windows)
         if str(exc).startswith("path is on"):
             drive, path = os.path.splitdrive(path)
             relpath = salt.utils.path.join(
-                "local", drive.rstrip(":"), path.lstrip("/\\"),
+                "local",
+                drive.rstrip(":"),
+                path.lstrip("/\\"),
             )
         elif str(exc).startswith("Cannot mix UNC"):
             relpath = salt.utils.path.join("unc", path)
@@ -867,7 +870,8 @@ def extracted(
             "Invalid archive_format '{}'. Either set it to a supported "
             "value ({}) or remove this argument and the archive format will "
             "be guessed based on file extension.".format(
-                archive_format, ", ".join(valid_archive_formats),
+                archive_format,
+                ", ".join(valid_archive_formats),
             )
         )
         return ret
@@ -1158,7 +1162,9 @@ def extracted(
             "top-level directory by adding it to the 'name' "
             "value (for example, setting 'name' to {} "
             "instead of {}).".format(
-                archive_format, os.path.join(name, "some_dir"), name,
+                archive_format,
+                os.path.join(name, "some_dir"),
+                name,
             )
         )
         return ret
@@ -1628,7 +1634,8 @@ def extracted(
                 ret["changes"]["directories_created"] = [name]
             ret["changes"]["extracted_files"] = files
             ret["comment"] = "{} extracted to {}".format(
-                salt.utils.url.redact_http_basic_auth(source_match), name,
+                salt.utils.url.redact_http_basic_auth(source_match),
+                name,
             )
             _add_explanation(ret, source_hash_trigger, contents_missing)
             ret["comment"] += ". Output was trimmed to {} number of lines".format(

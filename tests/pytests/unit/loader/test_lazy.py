@@ -48,8 +48,8 @@ def test_loaders_have_uniq_context(loader_dir):
     Loaded functions run in the LazyLoader's context.
     """
     opts = {"optimization_order": [0, 1, 2]}
-    loader_1 = salt.loader.lazy.LazyLoader([loader_dir], opts,)
-    loader_2 = salt.loader.lazy.LazyLoader([loader_dir], opts,)
+    loader_1 = salt.loader.lazy.LazyLoader([loader_dir], opts)
+    loader_2 = salt.loader.lazy.LazyLoader([loader_dir], opts)
     loader_1._load_all()
     loader_2._load_all()
     assert loader_1.pack["__context__"] == {}
@@ -67,7 +67,7 @@ def test_loaded_methods_are_loaded_func(loader_dir):
     Functions loaded from LazyLoader's item lookups are LoadedFunc objects
     """
     opts = {"optimization_order": [0, 1, 2]}
-    loader_1 = salt.loader.lazy.LazyLoader([loader_dir], opts,)
+    loader_1 = salt.loader.lazy.LazyLoader([loader_dir], opts)
     fun = loader_1["mod_a.get_context"]
     assert isinstance(fun, salt.loader.lazy.LoadedFunc)
 
@@ -77,7 +77,7 @@ def test_loaded_modules_are_loaded_mods(loader_dir):
     Modules looked up as attributes of LazyLoaders are LoadedMod objects.
     """
     opts = {"optimization_order": [0, 1, 2]}
-    loader_1 = salt.loader.lazy.LazyLoader([loader_dir], opts,)
+    loader_1 = salt.loader.lazy.LazyLoader([loader_dir], opts)
     mod = loader_1.mod_a
     assert isinstance(mod, salt.loader.lazy.LoadedMod)
 
@@ -87,7 +87,7 @@ def test_loaders_create_named_loader_contexts(loader_dir):
     LazyLoader's create NamedLoaderContexts on the modules the load.
     """
     opts = {"optimization_order": [0, 1, 2]}
-    loader_1 = salt.loader.lazy.LazyLoader([loader_dir], opts,)
+    loader_1 = salt.loader.lazy.LazyLoader([loader_dir], opts)
     mod = loader_1.mod_a
     assert isinstance(mod.mod, dict)
     func = mod.set_context
@@ -112,7 +112,7 @@ def test_loaders_convert_context_to_values(loader_dir):
         "optimization_order": [0, 1, 2],
         "grains": grains,
     }
-    loader_1 = salt.loader.lazy.LazyLoader([loader_dir], opts,)
+    loader_1 = salt.loader.lazy.LazyLoader([loader_dir], opts)
     assert loader_1.opts["grains"] == grains_default
     # The loader's opts is a copy
     assert opts["grains"] == grains

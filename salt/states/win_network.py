@@ -312,18 +312,20 @@ def managed(
             else:
                 if not __salt__["ip.enable"](name):
                     ret["result"] = False
-                    ret["comment"] = (
-                        "Failed to enable interface '{}' to "
-                        "make changes".format(name)
+                    ret[
+                        "comment"
+                    ] = "Failed to enable interface '{}' to " "make changes".format(
+                        name
                     )
                     return ret
 
         errors = _validate(dns_proto, dns_servers, ip_proto, ip_addrs, gateway)
         if errors:
             ret["result"] = False
-            ret["comment"] = (
-                "The following SLS configuration errors were "
-                "detected:\n- {}".format("\n- ".join(errors))
+            ret[
+                "comment"
+            ] = "The following SLS configuration errors were " "detected:\n- {}".format(
+                "\n- ".join(errors)
             )
             return ret
 
@@ -382,9 +384,10 @@ def managed(
                         )
 
             ret["result"] = None
-            ret["comment"] = (
-                "The following changes will be made to "
-                "interface '{}':\n- {}".format(name, "\n- ".join(comments))
+            ret[
+                "comment"
+            ] = "The following changes will be made to " "interface '{}':\n- {}".format(
+                name, "\n- ".join(comments)
             )
             return ret
 

@@ -232,7 +232,12 @@ def _new_serial(ca_name):
     """
     hashnum = int(
         binascii.hexlify(
-            b"_".join((salt.utils.stringutils.to_bytes(_microtime()), os.urandom(5),))
+            b"_".join(
+                (
+                    salt.utils.stringutils.to_bytes(_microtime()),
+                    os.urandom(5),
+                )
+            )
         ),
         16,
     )
@@ -1628,7 +1633,9 @@ def create_pkcs12(ca_name, CN, passphrase="", cacert_path=None, replace=False):
         )
 
     return ('Created PKCS#12 Certificate for "{0}": ' '"{1}/{2}/certs/{0}.p12"').format(
-        CN, cert_base_path(), ca_name,
+        CN,
+        cert_base_path(),
+        ca_name,
     )
 
 
@@ -1797,7 +1804,9 @@ def create_empty_crl(
 
     crl = OpenSSL.crypto.CRL()
     crl_text = crl.export(
-        ca_cert, ca_key, digest=salt.utils.stringutils.to_bytes(digest),
+        ca_cert,
+        ca_key,
+        digest=salt.utils.stringutils.to_bytes(digest),
     )
 
     with salt.utils.files.fopen(crl_file, "w") as f:
@@ -1918,9 +1927,10 @@ def revoke_cert(
                     ).format(cert_path, cert_filename, serial_number)
                 except ValueError:
                     ret["retcode"] = 1
-                    ret["comment"] = (
-                        "Revocation date '{}' does not match"
-                        "format '{}'".format(revoke_date, two_digit_year_fmt)
+                    ret[
+                        "comment"
+                    ] = "Revocation date '{}' does not match" "format '{}'".format(
+                        revoke_date, two_digit_year_fmt
                     )
                     return ret
             elif index_serial_subject in line:

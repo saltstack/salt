@@ -123,7 +123,8 @@ def set_(key, value, profile=None):
     conn, cur, table = _connect(profile)
     value = memoryview(salt.utils.msgpack.packb(value))
     q = profile.get(
-        "set_query", ("INSERT OR REPLACE INTO {} VALUES (:key, :value)").format(table),
+        "set_query",
+        ("INSERT OR REPLACE INTO {} VALUES (:key, :value)").format(table),
     )
     conn.execute(q, {"key": key, "value": value})
     conn.commit()

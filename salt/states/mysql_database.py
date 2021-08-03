@@ -63,7 +63,9 @@ def present(name, character_set=None, collate=None, **connection_args):
         if character_set and character_set != existing_charset:
             alter_charset = True
             log.debug(
-                "character set differes from %s : %s", character_set, existing_charset,
+                "character set differes from %s : %s",
+                character_set,
+                existing_charset,
             )
 
             comment = ("Database character set {} != {} needs to be updated").format(
@@ -79,7 +81,9 @@ def present(name, character_set=None, collate=None, **connection_args):
         if collate and collate != existing_collate:
             alter_collate = True
             log.debug(
-                "collate set differs from %s : %s", collate, existing_collate,
+                "collate set differs from %s : %s",
+                collate,
+                existing_collate,
             )
 
             comment = ("Database collate {} != {} needs to be updated").format(

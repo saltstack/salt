@@ -99,9 +99,19 @@ class DNShelpersCase(TestCase):
         ]
         schemas = [
             OrderedDict((("address", ipaddress.IPv4Address),)),
-            OrderedDict((("preference", int), ("name", str),)),
             OrderedDict(
-                (("prio", int), ("weight", int), ("port", _to_port), ("name", str),)
+                (
+                    ("preference", int),
+                    ("name", str),
+                )
+            ),
+            OrderedDict(
+                (
+                    ("prio", int),
+                    ("weight", int),
+                    ("port", _to_port),
+                    ("name", str),
+                )
             ),
         ]
 
@@ -135,7 +145,12 @@ class DNShelpersCase(TestCase):
                 "30 mbox6.example.com",
             ],
         ]
-        rschema = OrderedDict((("prio", int), ("srvr", str),))
+        rschema = OrderedDict(
+            (
+                ("prio", int),
+                ("srvr", str),
+            )
+        )
 
         results = [
             OrderedDict([(10, ["mbox.example.com"])]),

@@ -1465,9 +1465,10 @@ def hardlink(
         # except for let the user know that this has already happened.
         if _hardlink_same(name, target):
             ret["result"] = True
-            ret["comment"] = (
-                "Target of hard link {} is already pointing "
-                "to {}".format(name, target)
+            ret[
+                "comment"
+            ] = "Target of hard link {} is already pointing " "to {}".format(
+                name, target
             )
             return ret
 
@@ -1745,9 +1746,10 @@ def symlink(
                         name, win_owner
                     )
                 else:
-                    ret["comment"] = (
-                        "Symlink {} is present and owned by "
-                        "{}:{}".format(name, user, group)
+                    ret[
+                        "comment"
+                    ] = "Symlink {} is present and owned by " "{}:{}".format(
+                        name, user, group
                     )
             else:
                 if _set_symlink_ownership(name, user, group, win_owner):
@@ -1757,22 +1759,25 @@ def symlink(
                         )
                         ret["changes"]["ownership"] = win_owner
                     else:
-                        ret["comment"] = (
-                            "Set ownership of symlink {} to "
-                            "{}:{}".format(name, user, group)
+                        ret[
+                            "comment"
+                        ] = "Set ownership of symlink {} to " "{}:{}".format(
+                            name, user, group
                         )
                         ret["changes"]["ownership"] = "{}:{}".format(user, group)
                 else:
                     ret["result"] = False
                     if salt.utils.platform.is_windows():
-                        ret["comment"] += (
-                            "Failed to set ownership of symlink "
-                            "{} to {}".format(name, win_owner)
+                        ret[
+                            "comment"
+                        ] += "Failed to set ownership of symlink " "{} to {}".format(
+                            name, win_owner
                         )
                     else:
-                        ret["comment"] += (
-                            "Failed to set ownership of symlink {} to "
-                            "{}:{}".format(name, user, group)
+                        ret[
+                            "comment"
+                        ] += "Failed to set ownership of symlink {} to " "{}:{}".format(
+                            name, user, group
                         )
             return ret
 
@@ -2985,9 +2990,10 @@ def managed(
             else:
                 ret["comment"] = "File {} not updated".format(name)
         elif not ret["changes"] and ret["result"]:
-            ret["comment"] = (
-                "File {} exists with proper permissions. "
-                "No changes made.".format(name)
+            ret[
+                "comment"
+            ] = "File {} exists with proper permissions. " "No changes made.".format(
+                name
             )
         return ret
 
@@ -3751,9 +3757,10 @@ def directory(
                 # As above with user, we need to make sure group exists.
                 if isinstance(gid, str):
                     ret["result"] = False
-                    ret["comment"] = (
-                        "Failed to enforce group ownership "
-                        "for group {}".format(group)
+                    ret[
+                        "comment"
+                    ] = "Failed to enforce group ownership " "for group {}".format(
+                        group
                     )
             else:
                 ret["result"] = False
@@ -5242,7 +5249,8 @@ def keyvalue(
         if not key_values:
             msg = "is empty"
         return _error(
-            ret, "file.keyvalue key and value not supplied and key_values " + msg,
+            ret,
+            "file.keyvalue key and value not supplied and key_values " + msg,
         )
 
     # try to open the file and only return a comment if ignore_if_missing is
@@ -5754,9 +5762,10 @@ def blockreplace(
         )
     except Exception as exc:  # pylint: disable=broad-except
         log.exception("Encountered error managing block")
-        ret["comment"] = (
-            "Encountered error managing block: {}. "
-            "See the log for details.".format(exc)
+        ret[
+            "comment"
+        ] = "Encountered error managing block: {}. " "See the log for details.".format(
+            exc
         )
         return ret
 
@@ -7199,9 +7208,10 @@ def copy_(
             )
             ret["result"] = None
         else:
-            ret["comment"] = (
-                'The target file "{}" exists and will not be '
-                "overwritten".format(name)
+            ret[
+                "comment"
+            ] = 'The target file "{}" exists and will not be ' "overwritten".format(
+                name
             )
             ret["result"] = True
         return ret
@@ -7287,9 +7297,10 @@ def rename(name, source, force=False, makedirs=False, **kwargs):
 
     if os.path.lexists(source) and os.path.lexists(name):
         if not force:
-            ret["comment"] = (
-                'The target file "{}" exists and will not be '
-                "overwritten".format(name)
+            ret[
+                "comment"
+            ] = 'The target file "{}" exists and will not be ' "overwritten".format(
+                name
             )
             return ret
         elif not __opts__["test"]:
@@ -7971,9 +7982,10 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode="0600"):
     elif ntype == "p":
         # Check for file existence
         if __salt__["file.file_exists"](name):
-            ret["comment"] = (
-                "File {} exists and is not a fifo pipe. Refusing to "
-                "continue".format(name)
+            ret[
+                "comment"
+            ] = "File {} exists and is not a fifo pipe. Refusing to " "continue".format(
+                name
             )
 
         # Check if it is a fifo
@@ -8371,9 +8383,10 @@ def shortcut(
                         ret["changes"]["ownership"] = "{}".format(user)
                     else:
                         ret["result"] = False
-                        ret["comment"] += (
-                            "Failed to set ownership of shortcut {} to "
-                            "{}".format(name, user)
+                        ret[
+                            "comment"
+                        ] += "Failed to set ownership of shortcut {} to " "{}".format(
+                            name, user
                         )
                 return ret
 
@@ -8554,9 +8567,10 @@ def cached(
                 )
                 if local_hash == source_sum["hsum"]:
                     ret["result"] = True
-                    ret["comment"] = (
-                        "File {} is present on the minion and has hash "
-                        "{}".format(full_path, local_hash)
+                    ret[
+                        "comment"
+                    ] = "File {} is present on the minion and has hash " "{}".format(
+                        full_path, local_hash
                     )
                 else:
                     ret["comment"] = (
@@ -8638,9 +8652,10 @@ def cached(
             return ret
 
     if not local_copy:
-        ret["comment"] = (
-            "Failed to cache {}, check minion log for more "
-            "information".format(salt.utils.url.redact_http_basic_auth(name))
+        ret[
+            "comment"
+        ] = "Failed to cache {}, check minion log for more " "information".format(
+            salt.utils.url.redact_http_basic_auth(name)
         )
         return ret
 

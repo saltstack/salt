@@ -864,7 +864,9 @@ def list_nodes_select(call=None):
     Return a list of the VMs that are on the provider, with select fields
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -989,7 +991,10 @@ def show_key(kwargs=None, call=None):
         log.error("A keyname is required.")
         return False
 
-    rcode, data = query(command="my/keys/{}".format(kwargs["keyname"]), method="GET",)
+    rcode, data = query(
+        command="my/keys/{}".format(kwargs["keyname"]),
+        method="GET",
+    )
     return {"keys": {data["name"]: data["key"]}}
 
 
@@ -1028,7 +1033,11 @@ def import_key(kwargs=None, call=None):
     send_data = {"name": kwargs["keyname"], "key": kwargs["key"]}
     kwargs["data"] = salt.utils.json.dumps(send_data)
 
-    rcode, data = query(command="my/keys", method="POST", data=kwargs["data"],)
+    rcode, data = query(
+        command="my/keys",
+        method="POST",
+        data=kwargs["data"],
+    )
     log.debug(pprint.pformat(data))
     return {"keys": {data["name"]: data["key"]}}
 
@@ -1055,7 +1064,8 @@ def delete_key(kwargs=None, call=None):
         return False
 
     rcode, data = query(
-        command="my/keys/{}".format(kwargs["keyname"]), method="DELETE",
+        command="my/keys/{}".format(kwargs["keyname"]),
+        method="DELETE",
     )
     return data
 

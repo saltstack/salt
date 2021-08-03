@@ -385,7 +385,12 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 "vtype": "REG_MULTI_SZ",
             }
             self.assertEqual(
-                reg.read_value(hive="HKLM", key=FAKE_KEY, vname="empty_list",), expected
+                reg.read_value(
+                    hive="HKLM",
+                    key=FAKE_KEY,
+                    vname="empty_list",
+                ),
+                expected,
             )
         finally:
             reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)

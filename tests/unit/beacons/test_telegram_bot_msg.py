@@ -35,21 +35,28 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def test_validate_empty_config(self, *args, **kwargs):
         ret = telegram_bot_msg.validate(None)
         self.assertEqual(
-            ret, (False, ("Configuration for telegram_bot_msg beacon must be a list.")),
+            ret,
+            (False, ("Configuration for telegram_bot_msg beacon must be a list.")),
         )
 
     def test_validate_missing_accept_from_config(self, *args, **kwargs):
         ret = telegram_bot_msg.validate([{"token": "bcd"}])
         self.assertEqual(
             ret,
-            (False, ("Not all required configuration for telegram_bot_msg are set."),),
+            (
+                False,
+                ("Not all required configuration for telegram_bot_msg are set."),
+            ),
         )
 
     def test_validate_missing_token_config(self, *args, **kwargs):
         ret = telegram_bot_msg.validate([{"accept_from": []}])
         self.assertEqual(
             ret,
-            (False, ("Not all required configuration for telegram_bot_msg are set."),),
+            (
+                False,
+                ("Not all required configuration for telegram_bot_msg are set."),
+            ),
         )
 
     def test_validate_config_not_list_in_accept_from(self, *args, **kwargs):

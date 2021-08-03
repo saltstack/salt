@@ -280,7 +280,8 @@ def delete(name, **kwargs):
                 res = __salt__["event.fire"](event_data, "manage_schedule")
                 if res:
                     event_ret = event_bus.get_event(
-                        tag="/salt/minion/minion_schedule_delete_complete", wait=30,
+                        tag="/salt/minion/minion_schedule_delete_complete",
+                        wait=30,
                     )
                     if event_ret and event_ret["complete"]:
                         schedule = event_ret["schedule"]
@@ -496,7 +497,8 @@ def add(name, **kwargs):
                 )
                 if res:
                     event_ret = event_bus.get_event(
-                        tag="/salt/minion/minion_schedule_add_complete", wait=30,
+                        tag="/salt/minion/minion_schedule_add_complete",
+                        wait=30,
                     )
                     if event_ret and event_ret["complete"]:
                         schedule = event_ret["schedule"]
@@ -797,7 +799,8 @@ def save(**kwargs):
                 )
                 if res:
                     event_ret = event_bus.get_event(
-                        tag="/salt/minion/minion_schedule_saved", wait=30,
+                        tag="/salt/minion/minion_schedule_saved",
+                        wait=30,
                     )
                     if event_ret and event_ret["complete"]:
                         ret["result"] = True
@@ -836,7 +839,8 @@ def enable(**kwargs):
                 )
                 if res:
                     event_ret = event_bus.get_event(
-                        tag="/salt/minion/minion_schedule_enabled_complete", wait=30,
+                        tag="/salt/minion/minion_schedule_enabled_complete",
+                        wait=30,
                     )
                     if event_ret and event_ret["complete"]:
                         schedule = event_ret["schedule"]
@@ -879,7 +883,8 @@ def disable(**kwargs):
                 )
                 if res:
                     event_ret = event_bus.get_event(
-                        tag="/salt/minion/minion_schedule_disabled_complete", wait=30,
+                        tag="/salt/minion/minion_schedule_disabled_complete",
+                        wait=30,
                     )
                     if event_ret and event_ret["complete"]:
                         schedule = event_ret["schedule"]
@@ -1262,7 +1267,8 @@ def skip_job(name, current_time, **kwargs):
                 res = __salt__["event.fire"](event_data, "manage_schedule")
                 if res:
                     event_ret = event_bus.get_event(
-                        tag="/salt/minion/minion_schedule_skip_job_complete", wait=30,
+                        tag="/salt/minion/minion_schedule_skip_job_complete",
+                        wait=30,
                     )
                     if event_ret and event_ret["complete"]:
                         schedule = event_ret["schedule"]
@@ -1310,7 +1316,8 @@ def show_next_fire_time(name, **kwargs):
             res = __salt__["event.fire"](event_data, "manage_schedule")
             if res:
                 event_ret = event_bus.get_event(
-                    tag="/salt/minion/minion_schedule_next_fire_time_complete", wait=30,
+                    tag="/salt/minion/minion_schedule_next_fire_time_complete",
+                    wait=30,
                 )
     except KeyError:
         # Effectively a no-op, since we can't really return without an event system

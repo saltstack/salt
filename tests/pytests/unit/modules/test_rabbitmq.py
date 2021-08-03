@@ -207,7 +207,9 @@ def test_add_user():
     mock_run = MagicMock(return_value="Error")
     with patch.dict(rabbitmq.__salt__, {"cmd.run_all": mock_run}):
         with patch.object(
-            rabbitmq, "clear_password", return_value={"Error": "Error", "retcode": 1},
+            rabbitmq,
+            "clear_password",
+            return_value={"Error": "Error", "retcode": 1},
         ):
             pytest.raises(CommandExecutionError, rabbitmq.add_user, "saltstack")
 

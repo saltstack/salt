@@ -862,7 +862,11 @@ class GitProvider:
                     msg = (
                         "{} is enabled and {} lockfile {} is present for "
                         "{} remote '{}'.".format(
-                            global_lock_key, lock_type, lock_file, self.role, self.id,
+                            global_lock_key,
+                            lock_type,
+                            lock_file,
+                            self.role,
+                            self.id,
                         )
                     )
                     if pid:
@@ -1012,7 +1016,9 @@ class GitProvider:
         and blacklist.
         """
         return salt.utils.stringutils.check_whitelist_blacklist(
-            tgt_env, whitelist=self.saltenv_whitelist, blacklist=self.saltenv_blacklist,
+            tgt_env,
+            whitelist=self.saltenv_whitelist,
+            blacklist=self.saltenv_blacklist,
         )
 
     def _fetch(self):

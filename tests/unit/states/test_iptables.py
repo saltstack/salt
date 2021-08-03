@@ -11,7 +11,7 @@ from tests.support.unit import TestCase
 
 class IptablesTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Validate the iptables state
+    Validate the iptables state
     """
 
     def setup_loader_modules(self):
@@ -19,7 +19,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_chain_present(self):
         """
-            Test to verify the chain is exist.
+        Test to verify the chain is exist.
         """
         ret = {"name": "salt", "changes": {}, "result": True, "comment": ""}
 
@@ -68,7 +68,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_chain_absent(self):
         """
-            Test to verify the chain is absent.
+        Test to verify the chain is absent.
         """
         ret = {"name": "salt", "changes": {}, "result": True, "comment": ""}
 
@@ -119,7 +119,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_append(self):
         """
-            Test to append a rule to a chain
+        Test to append a rule to a chain
         """
         ret = {"name": "salt", "changes": {}, "result": None, "comment": ""}
 
@@ -243,7 +243,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_insert(self):
         """
-            Test to insert a rule into a chain
+        Test to insert a rule into a chain
         """
         ret = {"name": "salt", "changes": {}, "result": None, "comment": ""}
 
@@ -374,7 +374,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_delete(self):
         """
-            Test to delete a rule to a chain
+        Test to delete a rule to a chain
         """
         ret = {"name": "salt", "changes": {}, "result": None, "comment": ""}
 
@@ -495,7 +495,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_set_policy(self):
         """
-            Test to sets the default policy for iptables firewall tables
+        Test to sets the default policy for iptables firewall tables
         """
         ret = {"name": "salt", "changes": {}, "result": True, "comment": ""}
 
@@ -561,7 +561,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_flush(self):
         """
-            Test to flush current iptables state
+        Test to flush current iptables state
         """
         ret = {"name": "salt", "changes": {}, "result": None, "comment": ""}
 
@@ -604,7 +604,7 @@ class IptablesTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_mod_aggregate(self):
         """
-            Test to mod_aggregate function
+        Test to mod_aggregate function
         """
         self.assertDictEqual(
             iptables.mod_aggregate({"fun": "salt"}, [], []), {"fun": "salt"}

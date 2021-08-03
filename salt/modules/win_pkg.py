@@ -167,7 +167,9 @@ def latest_version(*names, **kwargs):
             # check, whether latest available version
             # is newer than latest installed version
             if compare_versions(
-                ver1=str(latest_available), oper=">", ver2=str(latest_installed),
+                ver1=str(latest_available),
+                oper=">",
+                ver2=str(latest_installed),
             ):
                 log.debug(
                     "Upgrade of %s from %s to %s is available",
@@ -2032,7 +2034,8 @@ def remove(name=None, pkgs=None, **kwargs):
             # If still no uninstaller found, fail
             if not uninstaller:
                 log.error(
-                    "No installer or uninstaller configured for package %s", pkgname,
+                    "No installer or uninstaller configured for package %s",
+                    pkgname,
                 )
                 ret[pkgname] = {"no uninstaller defined": target}
                 continue

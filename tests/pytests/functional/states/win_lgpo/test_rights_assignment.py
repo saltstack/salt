@@ -28,7 +28,8 @@ def configure_loader_modules(minion_opts, modules):
 @pytest.fixture(scope="function")
 def stage_single():
     current_setting = win_lgpo_module.get_policy(
-        policy_name="SeTakeOwnershipPrivilege", policy_class="machine",
+        policy_name="SeTakeOwnershipPrivilege",
+        policy_class="machine",
     )
     try:
         win_lgpo_module.set_computer_policy(
@@ -48,7 +49,8 @@ def stage_single():
 @pytest.fixture(scope="function")
 def stage_multiple():
     current_setting = win_lgpo_module.get_policy(
-        policy_name="SeTakeOwnershipPrivilege", policy_class="machine",
+        policy_name="SeTakeOwnershipPrivilege",
+        policy_class="machine",
     )
     try:
         win_lgpo_module.set_computer_policy(
@@ -74,7 +76,8 @@ def test_cumulative_rights_assignments(stage_single):
         cumulative_rights_assignments=True,
     )
     result = win_lgpo_module.get_policy(
-        policy_name="SeTakeOwnershipPrivilege", policy_class="machine",
+        policy_name="SeTakeOwnershipPrivilege",
+        policy_class="machine",
     )
     assert sorted(result) == sorted(expected)
 
@@ -139,7 +142,8 @@ def test_non_cumulative_rights_assignments(stage_multiple):
         cumulative_rights_assignments=False,
     )
     result = win_lgpo_module.get_policy(
-        policy_name="SeTakeOwnershipPrivilege", policy_class="machine",
+        policy_name="SeTakeOwnershipPrivilege",
+        policy_class="machine",
     )
     assert sorted(result) == sorted(expected)
 
@@ -204,7 +208,8 @@ def test_cumulative_rights_assignments_resolve_name(stage_single):
         cumulative_rights_assignments=True,
     )
     result = win_lgpo_module.get_policy(
-        policy_name="SeTakeOwnershipPrivilege", policy_class="machine",
+        policy_name="SeTakeOwnershipPrivilege",
+        policy_class="machine",
     )
     assert sorted(result) == sorted(expected)
 
@@ -269,7 +274,8 @@ def test_non_cumulative_rights_assignments_resolve_name(stage_multiple):
         cumulative_rights_assignments=False,
     )
     result = win_lgpo_module.get_policy(
-        policy_name="SeTakeOwnershipPrivilege", policy_class="machine",
+        policy_name="SeTakeOwnershipPrivilege",
+        policy_class="machine",
     )
     assert sorted(result) == sorted(expected)
 

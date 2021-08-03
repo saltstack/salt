@@ -149,7 +149,9 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             timeout = self.RUN_TIMEOUT
         asynchronous = kwargs.get("async", asynchronous)
         arg_str = "{async_flag} -t {timeout} {}".format(
-            arg_str, timeout=timeout, async_flag=" --async" if asynchronous else "",
+            arg_str,
+            timeout=timeout,
+            async_flag=" --async" if asynchronous else "",
         )
         ret = self.run_script(
             "salt-run",

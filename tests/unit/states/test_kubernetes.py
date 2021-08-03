@@ -39,12 +39,18 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
 
     def make_configmap(self, name, namespace="default", data=None):
         return self.make_ret_dict(
-            kind="ConfigMap", name=name, namespace=namespace, data=data,
+            kind="ConfigMap",
+            name=name,
+            namespace=namespace,
+            data=data,
         )
 
     def make_secret(self, name, namespace="default", data=None):
         secret_data = self.make_ret_dict(
-            kind="Secret", name=name, namespace=namespace, data=data,
+            kind="Secret",
+            name=name,
+            namespace=namespace,
+            data=data,
         )
         # Base64 all of the values just like kubectl does
         for key, value in secret_data["data"].items():
@@ -114,7 +120,9 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
             data = {}
 
         self_link = "/api/v1/namespaces/{namespace}/{kind}s/{name}".format(
-            namespace=namespace, kind=kind.lower(), name=name,
+            namespace=namespace,
+            kind=kind.lower(),
+            name=name,
         )
 
         return_data = {
@@ -133,7 +141,9 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_configmap_present__fail(self):
         error = kubernetes.configmap_present(
-            name="testme", data={1: 1}, source="salt://beyond/oblivion.jinja",
+            name="testme",
+            data={1: 1},
+            source="salt://beyond/oblivion.jinja",
         )
         self.assertDictEqual(
             {
@@ -149,7 +159,8 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         # Create a new configmap with test=True
         with self.mock_func("show_configmap", return_value=None, test=True):
             ret = kubernetes.configmap_present(
-                name="example", data={"example.conf": "# empty config file"},
+                name="example",
+                data={"example.conf": "# empty config file"},
             )
             self.assertDictEqual(
                 {
@@ -165,10 +176,15 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         # Create a new configmap
         with self.mock_func("show_configmap", return_value=None):
             cm = self.make_configmap(
-                name="test", namespace="default", data={"foo": "bar"},
+                name="test",
+                namespace="default",
+                data={"foo": "bar"},
             )
             with self.mock_func("create_configmap", return_value=cm):
-                actual = kubernetes.configmap_present(name="test", data={"foo": "bar"},)
+                actual = kubernetes.configmap_present(
+                    name="test",
+                    data={"foo": "bar"},
+                )
                 self.assertDictEqual(
                     {
                         "comment": "",
@@ -182,7 +198,10 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
     def test_configmap_present__create_no_data(self):
         # Create a new configmap with no 'data' attribute
         with self.mock_func("show_configmap", return_value=None):
-            cm = self.make_configmap(name="test", namespace="default",)
+            cm = self.make_configmap(
+                name="test",
+                namespace="default",
+            )
             with self.mock_func("create_configmap", return_value=cm):
                 actual = kubernetes.configmap_present(name="test")
                 self.assertDictEqual(
@@ -225,7 +244,8 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
             new_cm.update({"data": {"action": "make=peace"}})
             with self.mock_func("replace_configmap", return_value=new_cm):
                 actual = kubernetes.configmap_present(
-                    name="settings", data={"action": "make=peace"},
+                    name="settings",
+                    data={"action": "make=peace"},
                 )
                 self.assertDictEqual(
                     {
@@ -304,7 +324,9 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_secret_present__fail(self):
         actual = kubernetes.secret_present(
-            name="sekret", data={"password": "monk3y"}, source="salt://nope.jinja",
+            name="sekret",
+            data={"password": "monk3y"},
+            source="salt://nope.jinja",
         )
         self.assertDictEqual(
             {
@@ -324,7 +346,8 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         with self.mock_func("show_secret", return_value=secret):
             with self.mock_func("replace_secret", return_value=new_secret, test=True):
                 actual = kubernetes.secret_present(
-                    name="sekret", data={"password": "uncle"},
+                    name="sekret",
+                    data={"password": "uncle"},
                 )
                 self.assertDictEqual(
                     {
@@ -342,7 +365,8 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         with self.mock_func("show_secret", return_value=secret):
             with self.mock_func("replace_secret", return_value=secret):
                 actual = kubernetes.secret_present(
-                    name="sekret", data={"password": "booyah"},
+                    name="sekret",
+                    data={"password": "booyah"},
                 )
                 self.assertDictEqual(
                     {
@@ -360,7 +384,8 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         with self.mock_func("show_secret", return_value=None):
             with self.mock_func("create_secret", return_value=secret):
                 actual = kubernetes.secret_present(
-                    name="sekret", data={"password": "booyah"},
+                    name="sekret",
+                    data={"password": "booyah"},
                 )
                 self.assertDictEqual(
                     {
@@ -479,7 +504,9 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         labels = self.make_node_labels()
         with self.mock_func("node_labels", return_value=labels, test=True):
             actual = kubernetes.node_label_present(
-                name="com.zoo-animal", node="minikube", value="monkey",
+                name="com.zoo-animal",
+                node="minikube",
+                value="monkey",
             )
             self.assertDictEqual(
                 {
@@ -601,7 +628,8 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         labels = self.make_node_labels()
         with self.mock_func("node_labels", return_value=labels, test=True):
             actual = kubernetes.node_label_absent(
-                name="non-existent-label", node="minikube",
+                name="non-existent-label",
+                node="minikube",
             )
             self.assertDictEqual(
                 {
@@ -617,7 +645,8 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         labels = self.make_node_labels()
         with self.mock_func("node_labels", return_value=labels):
             actual = kubernetes.node_label_absent(
-                name="non-existent-label", node="minikube",
+                name="non-existent-label",
+                node="minikube",
             )
             self.assertDictEqual(
                 {
@@ -633,7 +662,8 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         labels = self.make_node_labels()
         with self.mock_func("node_labels", return_value=labels, test=True):
             actual = kubernetes.node_label_absent(
-                name="failure-domain.beta.kubernetes.io/region", node="minikube",
+                name="failure-domain.beta.kubernetes.io/region",
+                node="minikube",
             )
             self.assertDictEqual(
                 {
@@ -654,7 +684,8 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         with self.mock_func("node_labels", return_value=labels):
             with self.mock_func("node_remove_label", return_value=node_data):
                 actual = kubernetes.node_label_absent(
-                    name="failure-domain.beta.kubernetes.io/region", node="minikube",
+                    name="failure-domain.beta.kubernetes.io/region",
+                    node="minikube",
                 )
                 self.assertDictEqual(
                     {

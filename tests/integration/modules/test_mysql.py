@@ -373,7 +373,8 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                 "CREATE TABLE {tblname} ("
                 " id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,"
                 " data VARCHAR(100)) ENGINE={engine};".format(
-                    tblname=mysqlmod.quote_identifier(tablename), engine=engine,
+                    tblname=mysqlmod.quote_identifier(tablename),
+                    engine=engine,
                 )
             )
             insert_query = "INSERT INTO {tblname} (data) VALUES ".format(
@@ -401,7 +402,8 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                         "Unexpected query result while populating test table"
                         " '{}' : '{}'"
                     ).format(
-                        tablename, ret,
+                        tablename,
+                        ret,
                     )
                 )
             self.assertEqual(ret["rows affected"], 0)
@@ -419,7 +421,8 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                         "Unexpected query result while populating test table"
                         " '{}' : '{}'"
                     ).format(
-                        tablename, ret,
+                        tablename,
+                        ret,
                     )
                 )
             self.assertEqual(ret["rows affected"], 101)
@@ -437,7 +440,8 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                         "Unexpected query result while removing rows on test table"
                         " '{}' : '{}'"
                     ).format(
-                        tablename, ret,
+                        tablename,
+                        ret,
                     )
                 )
             self.assertEqual(ret["rows affected"], 50)
@@ -1389,7 +1393,8 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             "CREATE TABLE {tblname} ("
             " id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,"
             " data VARCHAR(100)) ENGINE={engine};".format(
-                tblname=mysqlmod.quote_identifier(self.table1), engine="MYISAM",
+                tblname=mysqlmod.quote_identifier(self.table1),
+                engine="MYISAM",
             )
         )
         log.info("Adding table '%s'", self.table1)
@@ -1404,7 +1409,8 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             "CREATE TABLE {tblname} ("
             " id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,"
             " data VARCHAR(100)) ENGINE={engine};".format(
-                tblname=mysqlmod.quote_identifier(self.table2), engine="MYISAM",
+                tblname=mysqlmod.quote_identifier(self.table2),
+                engine="MYISAM",
             )
         )
         log.info("Adding table '%s'", self.table2)

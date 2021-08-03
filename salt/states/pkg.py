@@ -603,7 +603,8 @@ def _find_install_targets(
             # pylint: enable=not-callable
         elif sources:
             desired = __salt__["pkg_resource.pack_sources"](
-                sources, normalize=normalize,
+                sources,
+                normalize=normalize,
             )
 
         if not desired:
@@ -2302,9 +2303,10 @@ def downloaded(
             ret["comment"] = exc.strerror_without_changes
         else:
             ret["changes"] = {}
-            ret["comment"] = (
-                "An error was encountered while downloading "
-                "package(s): {}".format(exc)
+            ret[
+                "comment"
+            ] = "An error was encountered while downloading " "package(s): {}".format(
+                exc
             )
         return ret
 
@@ -2404,18 +2406,20 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
             ret["comment"] = exc.strerror_without_changes
         else:
             ret["changes"] = {}
-            ret["comment"] = (
-                "An error was encountered while downloading "
-                "package(s): {}".format(exc)
+            ret[
+                "comment"
+            ] = "An error was encountered while downloading " "package(s): {}".format(
+                exc
             )
         return ret
 
     if not ret["changes"] and not ret["comment"]:
         status = "downloaded" if downloadonly else "installed"
         ret["result"] = True
-        ret["comment"] = (
-            "Advisory patch is not needed or related packages "
-            "are already {}".format(status)
+        ret[
+            "comment"
+        ] = "Advisory patch is not needed or related packages " "are already {}".format(
+            status
         )
 
     return ret
@@ -2469,159 +2473,159 @@ def latest(
     **kwargs
 ):
     """
-    Ensure that the named package is installed and the latest available
-    package. If the package can be updated, this state function will update
-    the package. Generally it is better for the
-    :mod:`installed <salt.states.pkg.installed>` function to be
-    used, as :mod:`latest <salt.states.pkg.latest>` will update the package
-    whenever a new package is available.
+     Ensure that the named package is installed and the latest available
+     package. If the package can be updated, this state function will update
+     the package. Generally it is better for the
+     :mod:`installed <salt.states.pkg.installed>` function to be
+     used, as :mod:`latest <salt.states.pkg.latest>` will update the package
+     whenever a new package is available.
 
-    .. note::
-        Any argument which is either a) not explicitly defined for this state,
-        or b) not a global state argument like ``saltenv``, or
-        ``reload_modules``, will be passed through to the call to
-        ``pkg.install`` to install the package(s). For example, you can include
-        a ``disablerepo`` argument on platforms that use yum/dnf to disable
-        that repo:
+     .. note::
+         Any argument which is either a) not explicitly defined for this state,
+         or b) not a global state argument like ``saltenv``, or
+         ``reload_modules``, will be passed through to the call to
+         ``pkg.install`` to install the package(s). For example, you can include
+         a ``disablerepo`` argument on platforms that use yum/dnf to disable
+         that repo:
 
-        .. code-block:: yaml
+         .. code-block:: yaml
 
-            mypkg:
+             mypkg:
+               pkg.latest:
+                 - disablerepo: base,updates
+
+         To see what is supported, check :ref:`this page <virtual-pkg>` to find
+         the documentation for your platform's ``pkg`` module, then look at the
+         documentation for the ``install`` function.
+
+         Any argument that is passed through to the ``install`` function, which
+         is not defined for that function, will be silently ignored.
+
+     name
+         The name of the package to maintain at the latest available version.
+         This parameter is ignored if "pkgs" is used.
+
+     fromrepo
+         Specify a repository from which to install
+
+     skip_verify
+         Skip the GPG verification check for the package to be installed
+
+     refresh
+         This parameter controls whether or not the package repo database is
+         updated prior to checking for the latest available version of the
+         requested packages.
+
+         If ``True``, the package database will be refreshed (``apt-get update``
+         or equivalent, depending on platform) before checking for the latest
+         available version of the requested packages.
+
+         If ``False``, the package database will *not* be refreshed before
+         checking.
+
+         If unset, then Salt treats package database refreshes differently
+         depending on whether or not a ``pkg`` state has been executed already
+         during the current Salt run. Once a refresh has been performed in a
+         ``pkg`` state, for the remainder of that Salt run no other refreshes
+         will be performed for ``pkg`` states which do not explicitly set
+         ``refresh`` to ``True``. This prevents needless additional refreshes
+         from slowing down the Salt run.
+
+     :param str cache_valid_time:
+
+         .. versionadded:: 2016.11.0
+
+         This parameter sets the value in seconds after which the cache is
+         marked as invalid, and a cache update is necessary. This overwrites
+         the ``refresh`` parameter's default behavior.
+
+         Example:
+
+         .. code-block:: yaml
+
+             httpd:
+               pkg.latest:
+                 - refresh: True
+                 - cache_valid_time: 300
+
+         In this case, a refresh will not take place for 5 minutes since the last
+         ``apt-get update`` was executed on the system.
+
+         .. note::
+
+             This parameter is available only on Debian based distributions and
+             has no effect on the rest.
+
+     :param bool resolve_capabilities:
+         Turn on resolving capabilities. This allow one to name "provides" or alias names for packages.
+
+         .. versionadded:: 2018.3.0
+
+     Multiple Package Installation Options:
+
+     (Not yet supported for: FreeBSD, OpenBSD, MacOS, and Solaris pkgutil)
+
+     pkgs
+         A list of packages to maintain at the latest available version.
+
+     .. code-block:: yaml
+
+         mypkgs:
+           pkg.latest:
+             - pkgs:
+               - foo
+               - bar
+               - baz
+
+     install_recommends
+         Whether to install the packages marked as recommended. Default is
+         ``True``. Currently only works with APT-based systems.
+
+         .. versionadded:: 2015.5.0
+
+     .. code-block:: yaml
+
+         httpd:
+           pkg.latest:
+             - install_recommends: False
+
+     only_upgrade
+         Only upgrade the packages, if they are already installed. Default is
+         ``False``. Currently only works with APT-based systems.
+
+         .. versionadded:: 2015.5.0
+
+     .. code-block:: yaml
+
+         httpd:
+           pkg.latest:
+             - only_upgrade: True
+
+     .. note::
+         If this parameter is set to True and the package is not already
+         installed, the state will fail.
+
+    report_reboot_exit_codes
+         If the installer exits with a recognized exit code indicating that
+         a reboot is required, the module function
+
+            *win_system.set_reboot_required_witnessed*
+
+         will be called, preserving the knowledge of this event
+         for the remainder of the current boot session. For the time being,
+         ``3010`` is the only recognized exit code, but this
+         is subject to future refinement. The value of this param
+         defaults to ``True``. This parameter has no effect on
+         non-Windows systems.
+
+         .. versionadded:: 2016.11.0
+
+         .. code-block:: yaml
+
+            ms vcpp installed:
               pkg.latest:
-                - disablerepo: base,updates
-
-        To see what is supported, check :ref:`this page <virtual-pkg>` to find
-        the documentation for your platform's ``pkg`` module, then look at the
-        documentation for the ``install`` function.
-
-        Any argument that is passed through to the ``install`` function, which
-        is not defined for that function, will be silently ignored.
-
-    name
-        The name of the package to maintain at the latest available version.
-        This parameter is ignored if "pkgs" is used.
-
-    fromrepo
-        Specify a repository from which to install
-
-    skip_verify
-        Skip the GPG verification check for the package to be installed
-
-    refresh
-        This parameter controls whether or not the package repo database is
-        updated prior to checking for the latest available version of the
-        requested packages.
-
-        If ``True``, the package database will be refreshed (``apt-get update``
-        or equivalent, depending on platform) before checking for the latest
-        available version of the requested packages.
-
-        If ``False``, the package database will *not* be refreshed before
-        checking.
-
-        If unset, then Salt treats package database refreshes differently
-        depending on whether or not a ``pkg`` state has been executed already
-        during the current Salt run. Once a refresh has been performed in a
-        ``pkg`` state, for the remainder of that Salt run no other refreshes
-        will be performed for ``pkg`` states which do not explicitly set
-        ``refresh`` to ``True``. This prevents needless additional refreshes
-        from slowing down the Salt run.
-
-    :param str cache_valid_time:
-
-        .. versionadded:: 2016.11.0
-
-        This parameter sets the value in seconds after which the cache is
-        marked as invalid, and a cache update is necessary. This overwrites
-        the ``refresh`` parameter's default behavior.
-
-        Example:
-
-        .. code-block:: yaml
-
-            httpd:
-              pkg.latest:
-                - refresh: True
-                - cache_valid_time: 300
-
-        In this case, a refresh will not take place for 5 minutes since the last
-        ``apt-get update`` was executed on the system.
-
-        .. note::
-
-            This parameter is available only on Debian based distributions and
-            has no effect on the rest.
-
-    :param bool resolve_capabilities:
-        Turn on resolving capabilities. This allow one to name "provides" or alias names for packages.
-
-        .. versionadded:: 2018.3.0
-
-    Multiple Package Installation Options:
-
-    (Not yet supported for: FreeBSD, OpenBSD, MacOS, and Solaris pkgutil)
-
-    pkgs
-        A list of packages to maintain at the latest available version.
-
-    .. code-block:: yaml
-
-        mypkgs:
-          pkg.latest:
-            - pkgs:
-              - foo
-              - bar
-              - baz
-
-    install_recommends
-        Whether to install the packages marked as recommended. Default is
-        ``True``. Currently only works with APT-based systems.
-
-        .. versionadded:: 2015.5.0
-
-    .. code-block:: yaml
-
-        httpd:
-          pkg.latest:
-            - install_recommends: False
-
-    only_upgrade
-        Only upgrade the packages, if they are already installed. Default is
-        ``False``. Currently only works with APT-based systems.
-
-        .. versionadded:: 2015.5.0
-
-    .. code-block:: yaml
-
-        httpd:
-          pkg.latest:
-            - only_upgrade: True
-
-    .. note::
-        If this parameter is set to True and the package is not already
-        installed, the state will fail.
-
-   report_reboot_exit_codes
-        If the installer exits with a recognized exit code indicating that
-        a reboot is required, the module function
-
-           *win_system.set_reboot_required_witnessed*
-
-        will be called, preserving the knowledge of this event
-        for the remainder of the current boot session. For the time being,
-        ``3010`` is the only recognized exit code, but this
-        is subject to future refinement. The value of this param
-        defaults to ``True``. This parameter has no effect on
-        non-Windows systems.
-
-        .. versionadded:: 2016.11.0
-
-        .. code-block:: yaml
-
-           ms vcpp installed:
-             pkg.latest:
-               - name: ms-vcpp
-               - report_reboot_exit_codes: False
+                - name: ms-vcpp
+                - report_reboot_exit_codes: False
 
     """
     refresh = salt.utils.pkg.check_refresh(__opts__, refresh)
