@@ -215,7 +215,12 @@ def atrm(*args):
             ret = {"jobs": {"removed": opts, "tag": None}}
     else:
         opts = list(
-            list(map(str, [i["job"] for i in atq()["jobs"] if str(i["job"]) in args],))
+            list(
+                map(
+                    str,
+                    [i["job"] for i in atq()["jobs"] if str(i["job"]) in args],
+                )
+            )
         )
         ret = {"jobs": {"removed": opts, "tag": None}}
 

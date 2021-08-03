@@ -181,7 +181,9 @@ def prep_jid(nocache=False, passed_jid=None):
 
     try:
         cb_.add(
-            str(jid), {"nocache": nocache}, ttl=_get_ttl(),
+            str(jid),
+            {"nocache": nocache},
+            ttl=_get_ttl(),
         )
     except couchbase.exceptions.KeyExistsError:
         # TODO: some sort of sleep or something? Spinning is generally bad practice
@@ -202,7 +204,9 @@ def returner(load):
         ret_doc = {"return": load["return"], "full_ret": salt.utils.json.dumps(load)}
 
         cb_.add(
-            hn_key, ret_doc, ttl=_get_ttl(),
+            hn_key,
+            ret_doc,
+            ttl=_get_ttl(),
         )
     except couchbase.exceptions.KeyExistsError:
         log.error(

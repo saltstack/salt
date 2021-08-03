@@ -505,7 +505,10 @@ def port_policy_present(name, sel_type, protocol=None, port=None, sel_range=None
     """
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
     old_state = __salt__["selinux.port_get_policy"](
-        name=name, sel_type=sel_type, protocol=protocol, port=port,
+        name=name,
+        sel_type=sel_type,
+        protocol=protocol,
+        port=port,
     )
     if old_state:
         ret.update(
@@ -533,7 +536,10 @@ def port_policy_present(name, sel_type, protocol=None, port=None, sel_range=None
         else:
             ret.update({"result": True})
             new_state = __salt__["selinux.port_get_policy"](
-                name=name, sel_type=sel_type, protocol=protocol, port=port,
+                name=name,
+                sel_type=sel_type,
+                protocol=protocol,
+                port=port,
             )
             ret["changes"].update({"old": old_state, "new": new_state})
     return ret
@@ -560,7 +566,10 @@ def port_policy_absent(name, sel_type=None, protocol=None, port=None):
     """
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
     old_state = __salt__["selinux.port_get_policy"](
-        name=name, sel_type=sel_type, protocol=protocol, port=port,
+        name=name,
+        sel_type=sel_type,
+        protocol=protocol,
+        port=port,
     )
     if not old_state:
         ret.update(
@@ -577,14 +586,19 @@ def port_policy_absent(name, sel_type=None, protocol=None, port=None):
         ret.update({"result": None})
     else:
         delete_ret = __salt__["selinux.port_delete_policy"](
-            name=name, protocol=protocol, port=port,
+            name=name,
+            protocol=protocol,
+            port=port,
         )
         if delete_ret["retcode"] != 0:
             ret.update({"comment": "Error deleting policy: {}".format(delete_ret)})
         else:
             ret.update({"result": True})
             new_state = __salt__["selinux.port_get_policy"](
-                name=name, sel_type=sel_type, protocol=protocol, port=port,
+                name=name,
+                sel_type=sel_type,
+                protocol=protocol,
+                port=port,
             )
             ret["changes"].update({"old": old_state, "new": new_state})
     return ret

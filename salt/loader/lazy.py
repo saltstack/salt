@@ -266,7 +266,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         self.disabled = set(
             self.opts.get(
-                "disable_{}{}".format(self.tag, "" if self.tag[-1] == "s" else "s"), [],
+                "disable_{}{}".format(self.tag, "" if self.tag[-1] == "s" else "s"),
+                [],
             )
         )
 

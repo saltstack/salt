@@ -164,7 +164,9 @@ def sig2(method, endpoint, params, provider, aws_api_version):
     querystring = urllib.parse.urlencode(list(zip(keys, values)))
 
     canonical = "{}\n{}\n/\n{}".format(
-        method.encode("utf-8"), endpoint.encode("utf-8"), querystring.encode("utf-8"),
+        method.encode("utf-8"),
+        endpoint.encode("utf-8"),
+        querystring.encode("utf-8"),
     )
 
     hashed = hmac.new(secret_access_key, canonical, hashlib.sha256)
@@ -332,7 +334,13 @@ def sig4(
     # Add signing information to the request
     authorization_header = (
         "{} Credential={}/{}, SignedHeaders={}, Signature={}"
-    ).format(algorithm, access_key_id, credential_scope, signed_headers, signature,)
+    ).format(
+        algorithm,
+        access_key_id,
+        credential_scope,
+        signed_headers,
+        signature,
+    )
 
     new_headers["Authorization"] = authorization_header
 

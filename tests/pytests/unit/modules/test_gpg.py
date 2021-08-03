@@ -502,7 +502,9 @@ def test_export_key_without_passphrase(gpghome):
                 ret = gpg.export_key("xxxxxxxxxxxxxxxx")
                 assert ret == GPG_TEST_PUB_KEY
                 gnupg_export_keys.assert_called_with(
-                    ["xxxxxxxxxxxxxxxx"], False, expect_passphrase=False,
+                    ["xxxxxxxxxxxxxxxx"],
+                    False,
+                    expect_passphrase=False,
                 )
 
 
@@ -609,7 +611,9 @@ def test_export_key_with_passphrase_with_gpg_passphrase_in_pillar(gpghome):
                 ret = gpg.export_key("xxxxxxxxxxxxxxxx", use_passphrase=True)
                 assert ret == GPG_TEST_PUB_KEY
                 gnupg_export_keys.assert_called_with(
-                    ["xxxxxxxxxxxxxxxx"], False, passphrase=GPG_TEST_KEY_PASSPHRASE,
+                    ["xxxxxxxxxxxxxxxx"],
+                    False,
+                    passphrase=GPG_TEST_KEY_PASSPHRASE,
                 )
 
 

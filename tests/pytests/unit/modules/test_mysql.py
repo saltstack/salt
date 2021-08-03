@@ -154,7 +154,9 @@ def test_user_exists():
 
     with patch.object(mysql, "version", return_value="8.0.11"):
         with patch.object(
-            mysql, "__get_auth_plugin", MagicMock(return_value="mysql_native_password"),
+            mysql,
+            "__get_auth_plugin",
+            MagicMock(return_value="mysql_native_password"),
         ):
             _test_call(
                 mysql.user_exists,
@@ -245,7 +247,9 @@ def test_user_create():
     """
     with patch.object(mysql, "version", return_value="8.0.10"):
         with patch.object(
-            mysql, "__get_auth_plugin", MagicMock(return_value="mysql_native_password"),
+            mysql,
+            "__get_auth_plugin",
+            MagicMock(return_value="mysql_native_password"),
         ):
             _test_call(
                 mysql.user_create,
@@ -263,7 +267,9 @@ def test_user_create():
 
     with patch.object(mysql, "version", return_value="8.0.11"):
         with patch.object(
-            mysql, "__get_auth_plugin", MagicMock(return_value="mysql_native_password"),
+            mysql,
+            "__get_auth_plugin",
+            MagicMock(return_value="mysql_native_password"),
         ):
             _test_call(
                 mysql.user_create,
@@ -311,7 +317,9 @@ def test_user_create():
         with patch.object(
             mysql, "user_exists", MagicMock(return_value=False)
         ), patch.object(
-            mysql, "__get_auth_plugin", MagicMock(return_value="mysql_native_password"),
+            mysql,
+            "__get_auth_plugin",
+            MagicMock(return_value="mysql_native_password"),
         ):
             _test_call(
                 mysql.user_create,
@@ -501,7 +509,9 @@ def test_db_create():
     Test MySQL db_create function in mysql exec module
     """
     _test_call(
-        mysql.db_create, "CREATE DATABASE IF NOT EXISTS `test``'\" db`;", "test`'\" db",
+        mysql.db_create,
+        "CREATE DATABASE IF NOT EXISTS `test``'\" db`;",
+        "test`'\" db",
     )
 
 
@@ -646,7 +656,12 @@ def test_grant_add():
     Test grant_add function in mysql exec module
     """
     _test_call(
-        mysql.grant_add, "", "SELECT,INSERT,UPDATE", "database.*", "frank", "localhost",
+        mysql.grant_add,
+        "",
+        "SELECT,INSERT,UPDATE",
+        "database.*",
+        "frank",
+        "localhost",
     )
 
 
@@ -742,7 +757,9 @@ def test_plugin_remove():
     """
     with patch.object(mysql, "plugin_status", MagicMock(return_value="ACTIVE")):
         _test_call(
-            mysql.plugin_remove, "UNINSTALL PLUGIN auth_socket", "auth_socket",
+            mysql.plugin_remove,
+            "UNINSTALL PLUGIN auth_socket",
+            "auth_socket",
         )
 
 

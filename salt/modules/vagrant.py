@@ -78,7 +78,7 @@ def _build_machine_uri(machine, cwd):
 
 
 def _update_vm_info(name, vm_):
-    """ store the vm_ information keyed by name """
+    """store the vm_ information keyed by name"""
     __utils__["sdb.sdb_set"](_build_sdb_uri(name), vm_, __opts__)
 
     # store machine-to-name mapping, too

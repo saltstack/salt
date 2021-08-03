@@ -272,7 +272,9 @@ class Shell:
         """
         try:
             proc = salt.utils.nb_popen.NonBlockingPopen(
-                self._split_cmd(cmd), stderr=subprocess.PIPE, stdout=subprocess.PIPE,
+                self._split_cmd(cmd),
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
             )
             while True:
                 time.sleep(0.1)

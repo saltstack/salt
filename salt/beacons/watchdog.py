@@ -19,7 +19,7 @@ except ImportError:
     HAS_WATCHDOG = False
 
     class FileSystemEventHandler:
-        """ A dummy class to make the import work """
+        """A dummy class to make the import work"""
 
         def __init__(self):
             pass

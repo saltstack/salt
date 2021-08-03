@@ -413,7 +413,11 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     password=None,
                 )
                 mocks["autostart"].assert_called_with(
-                    "mypool", state="on", connection=None, username=None, password=None,
+                    "mypool",
+                    state="on",
+                    connection=None,
+                    username=None,
+                    password=None,
                 )
                 mocks["build"].assert_not_called()
 
