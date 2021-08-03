@@ -122,7 +122,8 @@ def test_gen_hash_passlib(algorithm, expected):
 
 def test_gen_hash_passlib_no_arguments():
     # Assert it works without arguments passed
-    assert salt.utils.pycrypto.gen_hash() is not None
+    with pytest.raises(SaltInvocationError):
+        assert salt.utils.pycrypto.gen_hash() is not None
 
 
 def test_gen_hash_passlib_default_algorithm():
