@@ -4334,9 +4334,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "dirty-flag": false
         }]"""
 
-        self.mock_popen.communicate.return_value = [
-            qemu_infos
-        ]  # pylint: disable=no-member
+        self.mock_popen.communicate.return_value = [qemu_infos, ""]
+        self.mock_popen.returncode = 0
 
         with patch.dict(os.path.__dict__, {"exists": MagicMock(return_value=True)}):
             res = virt.purge("test-vm")
@@ -4525,9 +4524,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "dirty-flag": false
         }]"""
 
-        self.mock_popen.communicate.return_value = [
-            qemu_infos
-        ]  # pylint: disable=no-member
+        self.mock_popen.communicate.return_value = [qemu_infos, ""]
+        self.mock_popen.returncode = 0
 
         with patch.dict(os.path.__dict__, {"exists": MagicMock(return_value=True)}):
             res = virt.purge("test-vm", removables=True)
@@ -5867,9 +5865,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "dirty-flag": false
         }]"""
 
-        self.mock_popen.communicate.return_value = [
-            qemu_infos
-        ]  # pylint: disable=no-member
+        self.mock_popen.communicate.return_value = [qemu_infos, ""]
+        self.mock_popen.returncode = 0
 
         self.mock_conn.getInfo = MagicMock(
             return_value=["x86_64", 4096, 8, 2712, 1, 2, 4, 2]
