@@ -223,7 +223,10 @@ def test_to_str(unicode):
     )
     assert salt.utils.stringutils.to_str(ut2, "utf-8", "replace") == "\ufffd"
     assert pytest.raises(
-        UnicodeDecodeError, salt.utils.stringutils.to_str, bytearray(ut2), "utf-8",
+        UnicodeDecodeError,
+        salt.utils.stringutils.to_str,
+        bytearray(ut2),
+        "utf-8",
     )
     assert salt.utils.stringutils.to_str(bytearray(ut2), "utf-8", "replace") == "\ufffd"
 
@@ -370,69 +373,89 @@ def test_check_whitelist_blacklist():
     # Tests with string whitelist/blacklist
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web_one", whitelist=whitelist[1], blacklist=None,
+            "web_one",
+            whitelist=whitelist[1],
+            blacklist=None,
         )
         is False
     )
 
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web_one", whitelist=whitelist[1], blacklist=[],
+            "web_one",
+            whitelist=whitelist[1],
+            blacklist=[],
         )
         is False
     )
 
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web1", whitelist=whitelist[1], blacklist=None,
+            "web1",
+            whitelist=whitelist[1],
+            blacklist=None,
         )
         is True
     )
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web1", whitelist=whitelist[1], blacklist=[],
-        )
-        is True
-    )
-
-    assert (
-        salt.utils.stringutils.check_whitelist_blacklist(
-            "web5", whitelist=None, blacklist=blacklist[1],
-        )
-        is False
-    )
-
-    assert (
-        salt.utils.stringutils.check_whitelist_blacklist(
-            "web5", whitelist=[], blacklist=blacklist[1],
-        )
-        is False
-    )
-
-    assert (
-        salt.utils.stringutils.check_whitelist_blacklist(
-            "web_five", whitelist=None, blacklist=blacklist[1],
+            "web1",
+            whitelist=whitelist[1],
+            blacklist=[],
         )
         is True
     )
 
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web_five", whitelist=[], blacklist=blacklist[1],
-        )
-        is True
-    )
-
-    assert (
-        salt.utils.stringutils.check_whitelist_blacklist(
-            "web5", whitelist=whitelist[1], blacklist=blacklist[1],
+            "web5",
+            whitelist=None,
+            blacklist=blacklist[1],
         )
         is False
     )
 
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web4", whitelist=whitelist[1], blacklist=blacklist[1],
+            "web5",
+            whitelist=[],
+            blacklist=blacklist[1],
+        )
+        is False
+    )
+
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
+            "web_five",
+            whitelist=None,
+            blacklist=blacklist[1],
+        )
+        is True
+    )
+
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
+            "web_five",
+            whitelist=[],
+            blacklist=blacklist[1],
+        )
+        is True
+    )
+
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
+            "web5",
+            whitelist=whitelist[1],
+            blacklist=blacklist[1],
+        )
+        is False
+    )
+
+    assert (
+        salt.utils.stringutils.check_whitelist_blacklist(
+            "web4",
+            whitelist=whitelist[1],
+            blacklist=blacklist[1],
         )
         is True
     )
@@ -440,67 +463,87 @@ def test_check_whitelist_blacklist():
     # Tests with list whitelist/blacklist
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web_one", whitelist=whitelist, blacklist=None,
+            "web_one",
+            whitelist=whitelist,
+            blacklist=None,
         )
         is False
     )
 
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web_one", whitelist=whitelist, blacklist=[],
+            "web_one",
+            whitelist=whitelist,
+            blacklist=[],
         )
         is False
     )
 
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web1", whitelist=whitelist, blacklist=None,
+            "web1",
+            whitelist=whitelist,
+            blacklist=None,
         )
         is True
     )
 
     assert salt.utils.stringutils.check_whitelist_blacklist(
-        "web1", whitelist=whitelist, blacklist=[],
+        "web1",
+        whitelist=whitelist,
+        blacklist=[],
     )
 
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web5", whitelist=None, blacklist=blacklist,
+            "web5",
+            whitelist=None,
+            blacklist=blacklist,
         )
         is False
     )
 
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web5", whitelist=[], blacklist=blacklist,
+            "web5",
+            whitelist=[],
+            blacklist=blacklist,
         )
         is False
     )
 
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web_five", whitelist=None, blacklist=blacklist,
+            "web_five",
+            whitelist=None,
+            blacklist=blacklist,
         )
         is True
     )
 
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web_five", whitelist=[], blacklist=blacklist,
+            "web_five",
+            whitelist=[],
+            blacklist=blacklist,
         )
         is True
     )
 
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web5", whitelist=whitelist, blacklist=blacklist,
+            "web5",
+            whitelist=whitelist,
+            blacklist=blacklist,
         )
         is False
     )
 
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web4", whitelist=whitelist, blacklist=blacklist,
+            "web4",
+            whitelist=whitelist,
+            blacklist=blacklist,
         )
         is True
     )
@@ -508,70 +551,90 @@ def test_check_whitelist_blacklist():
     # Tests with set whitelist/blacklist
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web_one", whitelist=set(whitelist), blacklist=None,
+            "web_one",
+            whitelist=set(whitelist),
+            blacklist=None,
         )
         is False
     )
 
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web_one", whitelist=set(whitelist), blacklist=set(),
+            "web_one",
+            whitelist=set(whitelist),
+            blacklist=set(),
         )
         is False
     )
 
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web1", whitelist=set(whitelist), blacklist=None,
+            "web1",
+            whitelist=set(whitelist),
+            blacklist=None,
         )
         is True
     )
 
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web1", whitelist=set(whitelist), blacklist=set(),
+            "web1",
+            whitelist=set(whitelist),
+            blacklist=set(),
         )
         is True
     )
 
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web5", whitelist=None, blacklist=set(blacklist),
+            "web5",
+            whitelist=None,
+            blacklist=set(blacklist),
         )
         is False
     )
 
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web5", whitelist=set(), blacklist=set(blacklist),
+            "web5",
+            whitelist=set(),
+            blacklist=set(blacklist),
         )
         is False
     )
 
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web_five", whitelist=None, blacklist=set(blacklist),
+            "web_five",
+            whitelist=None,
+            blacklist=set(blacklist),
         )
         is True
     )
 
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web_five", whitelist=set(), blacklist=set(blacklist),
+            "web_five",
+            whitelist=set(),
+            blacklist=set(blacklist),
         )
         is True
     )
 
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web5", whitelist=set(whitelist), blacklist=set(blacklist),
+            "web5",
+            whitelist=set(whitelist),
+            blacklist=set(blacklist),
         )
         is False
     )
 
     assert (
         salt.utils.stringutils.check_whitelist_blacklist(
-            "web4", whitelist=set(whitelist), blacklist=set(blacklist),
+            "web4",
+            whitelist=set(whitelist),
+            blacklist=set(blacklist),
         )
         is True
     )

@@ -739,7 +739,7 @@ def with_system_user(
                     return func(cls, username)
                 except Exception as exc:  # pylint: disable=W0703
                     log.error(
-                        "Running %r raised an exception: %s", func, exc, exc_info=True,
+                        "Running %r raised an exception: %s", func, exc, exc_info=True
                     )
                     # Store the original exception details which will be raised
                     # a little further down the code
@@ -833,7 +833,7 @@ def with_system_group(group, on_existing="delete", delete=True):
                     return func(cls, group)
                 except Exception as exc:  # pylint: disable=W0703
                     log.error(
-                        "Running %r raised an exception: %s", func, exc, exc_info=True,
+                        "Running %r raised an exception: %s", func, exc, exc_info=True
                     )
                     # Store the original exception details which will be raised
                     # a little further down the code
@@ -957,7 +957,7 @@ def with_system_user_and_group(username, group, on_existing="delete", delete=Tru
                     return func(cls, username, group)
                 except Exception as exc:  # pylint: disable=W0703
                     log.error(
-                        "Running %r raised an exception: %s", func, exc, exc_info=True,
+                        "Running %r raised an exception: %s", func, exc, exc_info=True
                     )
                     # Store the original exception details which will be raised
                     # a little further down the code

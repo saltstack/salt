@@ -540,9 +540,10 @@ def safe_accept(target, tgt_type="glob"):
             elif minion not in pending:
                 failures[minion] = "Minion key {} not found by salt-key".format(minion)
             elif pending[minion] != finger:
-                failures[minion] = (
-                    "Minion key {} does not match the key in "
-                    "salt-key: {}".format(finger, pending[minion])
+                failures[
+                    minion
+                ] = "Minion key {} does not match the key in " "salt-key: {}".format(
+                    finger, pending[minion]
                 )
             else:
                 subprocess.call(["salt-key", "-qya", minion])

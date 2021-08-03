@@ -2170,7 +2170,7 @@ class TestComplexComplexDefinitionsSchema(schema.DefinitionsSchema):
 
 
 class ComplexSchemaTestCase(TestCase):
-    """ Test cases with definition schemas containing complex items"""
+    """Test cases with definition schemas containing complex items"""
 
     obj = ComplexSchemaItem()
     complex_obj = ComplexComplexSchemaItem()

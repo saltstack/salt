@@ -276,7 +276,8 @@ def returner(ret):
 
                 # Prefix the key with the run order so it can be sorted
                 new_uid = "{}_|-{}".format(
-                    str(data["__run_num__"]).zfill(max_chars), uid,
+                    str(data["__run_num__"]).zfill(max_chars),
+                    uid,
                 )
 
                 ret["return"][new_uid] = ret["return"].pop(uid)

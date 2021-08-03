@@ -1636,7 +1636,8 @@ def test_update_mem(make_mock_vm):
     domain_mock = make_mock_vm()
 
     ret = virt.update(
-        "my_vm", mem={"boot": "0.5g", "current": "2g", "max": "1g", "slots": 12},
+        "my_vm",
+        mem={"boot": "0.5g", "current": "2g", "max": "1g", "slots": 12},
     )
     assert ret["definition"]
     assert ret["mem"]

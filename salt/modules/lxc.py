@@ -1630,17 +1630,20 @@ def init(
         run(name, "rm -f '{}'".format(SEED_MARKER), path=path, python_shell=False)
     gid = "/.lxc.initial_seed"
     gids = [gid, "/lxc.initial_seed"]
-    if any(
-        retcode(
-            name,
-            "test -e {}".format(x),
-            path=path,
-            chroot_fallback=True,
-            ignore_retcode=True,
+    if (
+        any(
+            retcode(
+                name,
+                "test -e {}".format(x),
+                path=path,
+                chroot_fallback=True,
+                ignore_retcode=True,
+            )
+            == 0
+            for x in gids
         )
-        == 0
-        for x in gids
-    ) or not ret.get("result", True):
+        or not ret.get("result", True)
+    ):
         pass
     elif seed or seed_cmd:
         if seed:
@@ -4373,7 +4376,10 @@ def write_conf(conf_file, conf):
         elif isinstance(line, dict):
             for key in list(line.keys()):
                 out_line = None
-                if isinstance(line[key], (str, (str,), (int,), float),):
+                if isinstance(
+                    line[key],
+                    (str, (str,), (int,), float),
+                ):
                     out_line = " = ".join((key, "{}".format(line[key])))
                 elif isinstance(line[key], dict):
                     out_line = " = ".join((key, line[key]["value"]))

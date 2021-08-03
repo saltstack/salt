@@ -521,7 +521,8 @@ def test_filesystem_present_update(utils_patch):
         zfs.__utils__, utils_patch
     ):
         assert ret == zfs.filesystem_present(
-            name="myzpool/filesystem", properties={"compression": "lz4"},
+            name="myzpool/filesystem",
+            properties={"compression": "lz4"},
         )
 
 
@@ -641,7 +642,9 @@ def test_volume_present_update(utils_patch):
         zfs.__utils__, utils_patch
     ):
         assert ret == zfs.volume_present(
-            name="myzpool/volume", volume_size="1G", properties={"compression": "lz4"},
+            name="myzpool/volume",
+            volume_size="1G",
+            properties={"compression": "lz4"},
         )
 
 
@@ -793,7 +796,10 @@ def test_snapshot_present_fail(utils_patch):
         return_value=OrderedDict(
             [
                 ("snapshotted", False),
-                ("error", "cannot open 'myzpool/filesystem': dataset does not exist",),
+                (
+                    "error",
+                    "cannot open 'myzpool/filesystem': dataset does not exist",
+                ),
             ]
         )
     )

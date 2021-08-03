@@ -175,7 +175,10 @@ def pytest_addoption(parser):
         help="Run proxy tests (DEPRECATED)",
     )
     test_selection_group.addoption(
-        "--run-slow", action="store_true", default=False, help="Run slow tests.",
+        "--run-slow",
+        action="store_true",
+        default=False,
+        help="Run slow tests.",
     )
 
     output_options_group = parser.getgroup("Output Options")
@@ -590,7 +593,8 @@ def groups_collection_modifyitems(config, items):
 
     terminal_reporter = config.pluginmanager.get_plugin("terminalreporter")
     terminal_reporter.write(
-        "Running test group #{} ({} tests)\n".format(group_id, len(items)), yellow=True,
+        "Running test group #{} ({} tests)\n".format(group_id, len(items)),
+        yellow=True,
     )
 
 
@@ -1107,7 +1111,8 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master):
         "UsePAM": "yes",
     }
     factory = salt_factories.get_sshd_daemon(
-        sshd_config_dict=sshd_config_dict, config_dir=sshd_config_dir,
+        sshd_config_dict=sshd_config_dict,
+        config_dir=sshd_config_dir,
     )
     with factory.started():
         yield factory

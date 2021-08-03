@@ -55,7 +55,8 @@ def present(name, params, **kwargs):
     params["name"] = name
     input_params = __salt__["zabbix.substitute_params"](params, **kwargs)
     log.info(
-        "Zabbix Value map: input params: %s", str(json.dumps(input_params, indent=4)),
+        "Zabbix Value map: input params: %s",
+        str(json.dumps(input_params, indent=4)),
     )
 
     search = {"output": "extend", "selectMappings": "extend", "filter": {"name": name}}
@@ -148,7 +149,8 @@ def present(name, params, **kwargs):
                 "valuemap.create", input_params, **kwargs
             )
             log.info(
-                "Zabbix Value map: valuemap.create result: %s", str(valuemap_create),
+                "Zabbix Value map: valuemap.create result: %s",
+                str(valuemap_create),
             )
 
             if valuemap_create:

@@ -370,7 +370,10 @@ class SSHThinTestCase(TestCase):
         :return:
         """
         cfg = {"ns": {"py-version": [2, 7]}}
-        assert thin._get_ext_namespaces(cfg).get("ns") == (2, 7,)
+        assert thin._get_ext_namespaces(cfg).get("ns") == (
+            2,
+            7,
+        )
         assert isinstance(thin._get_ext_namespaces(cfg).get("ns"), tuple)
 
     def test_get_ext_namespaces_failure(self):
@@ -387,14 +390,16 @@ class SSHThinTestCase(TestCase):
         type("distro", (), {"__file__": "/site-packages/distro"}),
     )
     @patch(
-        "salt.utils.thin.salt", type("salt", (), {"__file__": "/site-packages/salt"}),
+        "salt.utils.thin.salt",
+        type("salt", (), {"__file__": "/site-packages/salt"}),
     )
     @patch(
         "salt.utils.thin.jinja2",
         type("jinja2", (), {"__file__": "/site-packages/jinja2"}),
     )
     @patch(
-        "salt.utils.thin.yaml", type("yaml", (), {"__file__": "/site-packages/yaml"}),
+        "salt.utils.thin.yaml",
+        type("yaml", (), {"__file__": "/site-packages/yaml"}),
     )
     @patch(
         "salt.utils.thin.tornado",
@@ -480,14 +485,16 @@ class SSHThinTestCase(TestCase):
         type("distro", (), {"__file__": "/site-packages/distro"}),
     )
     @patch(
-        "salt.utils.thin.salt", type("salt", (), {"__file__": "/site-packages/salt"}),
+        "salt.utils.thin.salt",
+        type("salt", (), {"__file__": "/site-packages/salt"}),
     )
     @patch(
         "salt.utils.thin.jinja2",
         type("jinja2", (), {"__file__": "/site-packages/jinja2"}),
     )
     @patch(
-        "salt.utils.thin.yaml", type("yaml", (), {"__file__": "/site-packages/yaml"}),
+        "salt.utils.thin.yaml",
+        type("yaml", (), {"__file__": "/site-packages/yaml"}),
     )
     @patch(
         "salt.utils.thin.tornado",
@@ -583,14 +590,16 @@ class SSHThinTestCase(TestCase):
         type("distro", (), {"__file__": "/site-packages/distro"}),
     )
     @patch(
-        "salt.utils.thin.salt", type("salt", (), {"__file__": "/site-packages/salt"}),
+        "salt.utils.thin.salt",
+        type("salt", (), {"__file__": "/site-packages/salt"}),
     )
     @patch(
         "salt.utils.thin.jinja2",
         type("jinja2", (), {"__file__": "/site-packages/jinja2"}),
     )
     @patch(
-        "salt.utils.thin.yaml", type("yaml", (), {"__file__": "/site-packages/yaml"}),
+        "salt.utils.thin.yaml",
+        type("yaml", (), {"__file__": "/site-packages/yaml"}),
     )
     @patch(
         "salt.utils.thin.tornado",
@@ -1357,6 +1366,9 @@ class SSHThinTestCase(TestCase):
             tar.extractall(str(thin_dir))
             tar.close()
             ret = venv.run(
-                venv.venv_python, str(thin_dir / "salt-call"), "--version", check=False,
+                venv.venv_python,
+                str(thin_dir / "salt-call"),
+                "--version",
+                check=False,
             )
             assert ret.exitcode == 0, ret
