@@ -31,6 +31,7 @@ import salt.ext.tornado
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.loader
+import salt.loader.lazy
 import salt.log.setup
 import salt.payload
 import salt.pillar
@@ -77,7 +78,7 @@ from salt.utils.event import tagify
 from salt.utils.network import parse_host_port
 from salt.utils.odict import OrderedDict
 from salt.utils.process import ProcessManager, SignalHandlingProcess, default_signals
-from salt.utils.zeromq import ZMQ_VERSION_INFO, ZMQDefaultLoop, install_zmq, zmq
+from salt.utils.zeromq import ZMQ_VERSION_INFO, zmq
 
 HAS_PSUTIL = False
 try:
@@ -921,8 +922,7 @@ class SMinion(MinionBase):
         if self.opts.get("file_client", "remote") == "remote" or self.opts.get(
             "use_master_when_local", False
         ):
-            install_zmq()
-            io_loop = ZMQDefaultLoop.current()
+            io_loop = salt.ext.tornado.ioloop.IOLoop.current()
             io_loop.run_sync(lambda: self.eval_master(self.opts, failed=True))
         self.gen_modules(initial_load=True, context=context)
 
@@ -1025,8 +1025,7 @@ class MinionManager(MinionBase):
         self.minions = []
         self.jid_queue = []
 
-        install_zmq()
-        self.io_loop = ZMQDefaultLoop.current()
+        self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
         self.process_manager = ProcessManager(name="MultiMinionProcessManager")
         self.io_loop.spawn_callback(
             self.process_manager.run, **{"asynchronous": True}
@@ -1245,8 +1244,7 @@ class Minion(MinionBase):
         self.periodic_callbacks = {}
 
         if io_loop is None:
-            install_zmq()
-            self.io_loop = ZMQDefaultLoop.current()
+            self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
         else:
             self.io_loop = io_loop
 
@@ -3371,8 +3369,7 @@ class SyndicManager(MinionBase):
         self.jid_forward_cache = set()
 
         if io_loop is None:
-            install_zmq()
-            self.io_loop = ZMQDefaultLoop.current()
+            self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
         else:
             self.io_loop = io_loop
 
@@ -3709,7 +3706,7 @@ class ProxyMinionManager(MinionManager):
 
 
 def _metaproxy_call(opts, fn_name):
-    loaded_base_name = "{}.{}".format(opts["id"], salt.loader.LOADED_BASE_NAME)
+    loaded_base_name = "{}.{}".format(opts["id"], salt.loader.lazy.LOADED_BASE_NAME)
     metaproxy = salt.loader.metaproxy(opts, loaded_base_name=loaded_base_name)
     try:
         metaproxy_name = opts["metaproxy"]
