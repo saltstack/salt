@@ -1592,11 +1592,12 @@ def _mysql_user_create(
             __context__["mysql.error"] = err
             qry = False
         else:
-            if salt.utils.data.is_true(unix_socket):
-                if host == "localhost":
-                    qry += " IDENTIFIED WITH auth_socket"
-                else:
-                    log.error("Auth via unix_socket can be set only for host=localhost")
+            if host == "localhost":
+                qry += " IDENTIFIED WITH auth_socket"
+            else:
+                log.error("Auth via unix_socket can be set only for host=localhost")
+                __context__["mysql.error"] = err
+                qry = False
     else:
         if not salt.utils.data.is_true(allow_passwordless):
             if password is not None:
@@ -1651,11 +1652,12 @@ def _mariadb_user_create(
             __context__["mysql.error"] = err
             qry = False
         else:
-            if salt.utils.data.is_true(unix_socket):
-                if host == "localhost":
-                    qry += " IDENTIFIED VIA unix_socket"
-                else:
-                    log.error("Auth via unix_socket can be set only for host=localhost")
+            if host == "localhost":
+                qry += " IDENTIFIED VIA unix_socket"
+            else:
+                log.error("Auth via unix_socket can be set only for host=localhost")
+                __context__["mysql.error"] = err
+                qry = False
     else:
         if not salt.utils.data.is_true(allow_passwordless):
             if password is not None:
