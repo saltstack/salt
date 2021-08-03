@@ -392,7 +392,8 @@ def _warn_for_api_v3():
         log.warning(
             "Linode APIv3 has been deprecated and support will be removed "
             "in future releases. Please plan to upgrade to APIv4. For more "
-            "information, see https://docs.saltstack.com/en/latest/topics/cloud/linode.html#migrating-to-apiv4."
+            "information, see"
+            " https://docs.saltstack.com/en/latest/topics/cloud/linode.html#migrating-to-apiv4."
         )
         HAS_WARNED_FOR_API_V3 = True
 
@@ -1422,8 +1423,7 @@ class LinodeAPIv3(LinodeAPI):
             node_id, status=(self._get_status_id_by_name("brand_new"))
         ):
             log.error(
-                "Error creating %s on LINODE\n\n"
-                "while waiting for initial ready status",
+                "Error creating %s on LINODE\n\nwhile waiting for initial ready status",
                 name,
                 exc_info_on_loglevel=logging.DEBUG,
             )
@@ -1703,18 +1703,16 @@ class LinodeAPIv3(LinodeAPI):
         if label not in sizes:
             if "GB" in label:
                 raise SaltCloudException(
-                    "Invalid Linode plan ({}) specified - call avail_sizes() for all available options".format(
-                        label
-                    )
+                    "Invalid Linode plan ({}) specified - call avail_sizes() for all"
+                    " available options".format(label)
                 )
             else:
                 plan = label.split()
 
                 if len(plan) != 2:
                     raise SaltCloudException(
-                        "Invalid Linode plan ({}) specified - call avail_sizes() for all available options".format(
-                            label
-                        )
+                        "Invalid Linode plan ({}) specified - call avail_sizes() for"
+                        " all available options".format(label)
                     )
 
                 plan_type = plan[0]
@@ -1734,9 +1732,8 @@ class LinodeAPIv3(LinodeAPI):
 
                 if new_label not in sizes:
                     raise SaltCloudException(
-                        "Invalid Linode plan ({}) specified - call avail_sizes() for all available options".format(
-                            new_label
-                        )
+                        "Invalid Linode plan ({}) specified - call avail_sizes() for"
+                        " all available options".format(new_label)
                     )
 
                 log.warning(
@@ -1809,9 +1806,9 @@ class LinodeAPIv3(LinodeAPI):
 
         if not distro_id:
             raise SaltCloudNotFound(
-                "The DistributionID for the '{}' profile could not be found.\n"
-                "The '{}' instance could not be provisioned. The following distributions "
-                "are available:\n{}".format(
+                "The DistributionID for the '{}' profile could not be found.\nThe '{}'"
+                " instance could not be provisioned. The following distributions are"
+                " available:\n{}".format(
                     vm_image_name,
                     vm_["name"],
                     pprint.pprint(
@@ -2355,7 +2352,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudException(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
     return _get_cloud_interface().destroy(name)
 

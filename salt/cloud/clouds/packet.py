@@ -375,7 +375,7 @@ def create(vm_):
 
     if device.state != "active":
         log.error(
-            "Error creating %s on PACKET\n\n" "while waiting for initial ready status",
+            "Error creating %s on PACKET\n\nwhile waiting for initial ready status",
             name,
             exc_info_on_loglevel=logging.DEBUG,
         )
@@ -427,8 +427,7 @@ def create(vm_):
 
         if volume.state != "active":
             log.error(
-                "Error creating %s on PACKET\n\n"
-                "while waiting for initial ready status",
+                "Error creating %s on PACKET\n\nwhile waiting for initial ready status",
                 name,
                 exc_info_on_loglevel=logging.DEBUG,
             )
@@ -575,7 +574,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudException(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](

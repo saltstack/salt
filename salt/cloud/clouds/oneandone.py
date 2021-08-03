@@ -425,7 +425,7 @@ def list_nodes_full(conn=None, call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes_full function must be called with -f or " "--function."
+            "The list_nodes_full function must be called with -f or --function."
         )
 
     if not conn:
@@ -735,7 +735,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](

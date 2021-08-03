@@ -422,8 +422,8 @@ def test_running_with_invalid_input(docker_container, container_name, image):
     # Check that the error message about the invalid argument is
     # included in the comment for the state
     assert (
-        "Ulimit definition 'nofile:2048' is not in the format type=soft_limit[:hard_limit]"
-        in ret.comment
+        "Ulimit definition 'nofile:2048' is not in the format"
+        " type=soft_limit[:hard_limit]" in ret.comment
     )
 
 
@@ -1128,8 +1128,8 @@ def test_run_force(docker_container, container_name, image):
     assert ret.result is False
     assert not ret.changes
     assert ret.comment == (
-        "Encountered error running container: Container '{}' exists and is running. "
-        "Run with replace=True and force=True to force removal of the existing container."
+        "Encountered error running container: Container '{}' exists and is running. Run"
+        " with replace=True and force=True to force removal of the existing container."
     ).format(container_name)
 
     # Run again with replace=True and force=True, this should proceed and

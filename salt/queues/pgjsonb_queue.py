@@ -197,9 +197,8 @@ def insert(queue, items):
             try:
                 cur.execute(cmd)
             except psycopg2.IntegrityError as esc:
-                return (
-                    "Item already exists in this queue. "
-                    "postgres error: {}".format(esc)
+                return "Item already exists in this queue. postgres error: {}".format(
+                    esc
                 )
         if isinstance(items, list):
             items = [(salt.utils.json.dumps(el),) for el in items]

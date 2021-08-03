@@ -378,7 +378,8 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
             ("1.9.2", (1, 9, 2)),
             ("1.9rc2", (1, 9)),
             (
-                "virtualenv 20.0.0 from /home/ch3ll/.pyenv/versions/3.6.4/envs/virtualenv/lib/python3.6/site-packages/virtualenv/__init__.py",
+                "virtualenv 20.0.0 from"
+                " /home/ch3ll/.pyenv/versions/3.6.4/envs/virtualenv/lib/python3.6/site-packages/virtualenv/__init__.py",
                 (20, 0, 0),
             ),
             ("16.7.10", (16, 7, 10)),
@@ -402,8 +403,10 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
             mock_ver = MagicMock(
                 return_value={
                     "retcode": 0,
-                    "stdout": "virtualenv 20.0.23+ds from "
-                    "/usr/lib/python3/dist-packages/virtualenv/__init__.py",
+                    "stdout": (
+                        "virtualenv 20.0.23+ds from "
+                        "/usr/lib/python3/dist-packages/virtualenv/__init__.py"
+                    ),
                 }
             )
             with patch.dict(virtualenv_mod.__salt__, {"cmd.run_all": mock_ver}):

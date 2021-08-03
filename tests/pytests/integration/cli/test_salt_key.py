@@ -272,7 +272,8 @@ def test_list_acc_wrong_eauth(salt_key_cli):
     )
     assert ret.exitcode == 0, ret
     assert re.search(
-        r"^The specified external authentication system \"wrongeauth\" is not available\nAvailable eauth types: auto, .*",
+        r"^The specified external authentication system \"wrongeauth\" is not"
+        r" available\nAvailable eauth types: auto, .*",
         ret.stdout.replace("\r\n", "\n"),
     )
 

@@ -131,7 +131,7 @@ def get_conn():
             libcloud.security.VERIFY_SSL_CERT = False
         except (ImportError, AttributeError):
             raise SaltCloudSystemExit(
-                "Could not disable SSL certificate verification. " "Not loading module."
+                "Could not disable SSL certificate verification. Not loading module."
             )
 
     return driver(
@@ -467,7 +467,7 @@ def destroy(name, conn=None, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](

@@ -142,19 +142,26 @@ def test_running():
         },
         {
             "changes": "saltstack",
-            "comment": "Started service salt\nService masking not available on this minion",
+            "comment": (
+                "Started service salt\nService masking not available on this minion"
+            ),
             "name": "salt",
             "result": True,
         },
         {
             "changes": "saltstack",
-            "comment": "Started service salt\nService masking not available on this minion",
+            "comment": (
+                "Started service salt\nService masking not available on this minion"
+            ),
             "name": "salt",
             "result": True,
         },
         {
             "changes": {},
-            "comment": "The service salt is disabled but enable is not True. Set enable to True to successfully start the service.",
+            "comment": (
+                "The service salt is disabled but enable is not True. Set enable to"
+                " True to successfully start the service."
+            ),
             "name": "salt",
             "result": False,
         },

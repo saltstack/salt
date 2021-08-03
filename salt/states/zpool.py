@@ -379,10 +379,9 @@ def present(
 
         # give up, we cannot import the pool and we do not have a layout to create it
         if not ret["result"] and not vdevs:
-            ret[
-                "comment"
-            ] = "storage pool {} was not imported, no (valid) layout specified for creation".format(
-                name
+            ret["comment"] = (
+                "storage pool {} was not imported, no (valid) layout specified for"
+                " creation".format(name)
             )
 
     return ret

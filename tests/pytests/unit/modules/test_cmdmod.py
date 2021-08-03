@@ -22,7 +22,7 @@ from tests.support.mock import MagicMock, Mock, MockTimedProc, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
 
 DEFAULT_SHELL = "foo/bar"
-MOCK_SHELL_FILE = "# List of acceptable shells\n" "\n" "/bin/bash\n"
+MOCK_SHELL_FILE = "# List of acceptable shells\n\n/bin/bash\n"
 
 
 @pytest.fixture

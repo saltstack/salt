@@ -736,7 +736,7 @@ def export(name, path, replace=False):
                             ret["result"] = False
                             ret[
                                 "comment"
-                            ] = "Unable to be re-export zone configuration for {} to {}!".format(
+                            ] = "Unable to be re-export zone configuration for {}" " to {}!".format(
                                 name,
                                 path,
                             )
@@ -751,10 +751,9 @@ def export(name, path, replace=False):
                             ret["changes"][name] = "exported"
                     else:
                         ret["result"] = False
-                        ret[
-                            "comment"
-                        ] = "Zone configuration for {} is different from the one exported to {}!".format(
-                            name, path
+                        ret["comment"] = (
+                            "Zone configuration for {} is different from the one"
+                            " exported to {}!".format(name, path)
                         )
                         if __salt__["file.file_exists"](cfg_tmp):
                             __salt__["file.remove"](cfg_tmp)

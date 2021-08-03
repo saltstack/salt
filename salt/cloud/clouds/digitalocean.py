@@ -351,7 +351,8 @@ def create(vm_):
         kwargs["ssh_interface"] = ssh_interface
     else:
         raise SaltCloudConfigError(
-            "The DigitalOcean driver requires ssh_interface to be defined as 'public' or 'private'."
+            "The DigitalOcean driver requires ssh_interface to be defined as 'public'"
+            " or 'private'."
         )
 
     private_networking = config.get_cloud_config_value(
@@ -444,7 +445,8 @@ def create(vm_):
         dns_domain_name = vm_["name"].split(".")
         if len(dns_domain_name) > 2:
             log.debug(
-                "create_dns_record: inferring default dns_hostname, dns_domain from minion name as FQDN"
+                "create_dns_record: inferring default dns_hostname, dns_domain from"
+                " minion name as FQDN"
             )
             default_dns_hostname = ".".join(dns_domain_name[:-2])
             default_dns_domain = ".".join(dns_domain_name[-2:])
@@ -699,7 +701,7 @@ def _get_node(name):
         except KeyError:
             attempts -= 1
             log.debug(
-                "Failed to get the data for node '%s'. Remaining " "attempts: %s",
+                "Failed to get the data for node '%s'. Remaining attempts: %s",
                 name,
                 attempts,
             )
@@ -861,7 +863,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](

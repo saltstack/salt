@@ -119,9 +119,7 @@ def parse():
         dest="foreground",
         default=False,
         action="store_true",
-        help=(
-            "Run the minions with debug output of the swarm going to " "the terminal"
-        ),
+        help="Run the minions with debug output of the swarm going to the terminal",
     )
     parser.add_option(
         "--temp-dir",
@@ -158,7 +156,7 @@ def parse():
         "-c",
         "--config-dir",
         default="",
-        help=("Pass in a configuration directory containing base configuration."),
+        help="Pass in a configuration directory containing base configuration.",
     )
     parser.add_option("-u", "--user", default=tests.support.runtests.this_user())
 

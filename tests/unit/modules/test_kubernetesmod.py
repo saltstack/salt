@@ -28,7 +28,7 @@ def mock_kubernetes_library():
 
 @skipIf(
     not kubernetes.HAS_LIBS,
-    "Kubernetes client lib is not installed. " "Skipping test_kubernetes.py",
+    "Kubernetes client lib is not installed. Skipping test_kubernetes.py",
 )
 class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
     """

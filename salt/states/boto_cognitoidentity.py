@@ -113,7 +113,7 @@ def _role_present(
     )
     if not r.get("set"):
         ret["result"] = False
-        failure_comment = "Failed to set roles: " "{}".format(
+        failure_comment = "Failed to set roles: {}".format(
             r["error"].get("message", r["error"])
         )
         ret["comment"] = "{}\n{}".format(ret["comment"], failure_comment)
@@ -234,9 +234,10 @@ def pool_present(
                 IdentityPoolName
             )
         else:
-            ret["comment"] = (
-                "An existing identity pool named {} with id "
-                "{}will be updated.".format(IdentityPoolName, IdentityPoolId)
+            ret[
+                "comment"
+            ] = "An existing identity pool named {} with id {}will be updated.".format(
+                IdentityPoolName, IdentityPoolId
             )
         ret["result"] = None
         return ret
@@ -262,7 +263,7 @@ def pool_present(
             IdentityPoolId = updated_identity_pool.get("IdentityPoolId")
             ret[
                 "comment"
-            ] = "A new identity pool with name {}, id {} " "is created.".format(
+            ] = "A new identity pool with name {}, id {} is created.".format(
                 IdentityPoolName, IdentityPoolId
             )
         else:
@@ -281,14 +282,14 @@ def pool_present(
             updated_identity_pool = r.get("identity_pool")
             ret[
                 "comment"
-            ] = "Existing identity pool with name {}, id {} " "is updated.".format(
+            ] = "Existing identity pool with name {}, id {} is updated.".format(
                 IdentityPoolName, IdentityPoolId
             )
         else:
             ret["result"] = False
             ret[
                 "comment"
-            ] = "Failed to update an existing identity pool {} {}: " "{}".format(
+            ] = "Failed to update an existing identity pool {} {}: {}".format(
                 IdentityPoolName,
                 IdentityPoolId,
                 r["error"].get("message", r["error"]),
@@ -389,7 +390,7 @@ def pool_absent(
     if __opts__["test"]:
         ret[
             "comment"
-        ] = "The following matched identity pools will be " "deleted.\n{}".format(
+        ] = "The following matched identity pools will be deleted.\n{}".format(
             identity_pools
         )
         ret["result"] = None

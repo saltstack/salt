@@ -520,8 +520,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                         {
                             "Table": dbname + "." + tablename,
                             "Msg_text": (
-                                "The storage engine for the table doesn't"
-                                " support check"
+                                "The storage engine for the table doesn't support check"
                             ),
                             "Msg_type": "note",
                             "Op": "check",
@@ -1496,8 +1495,7 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             True,
             ret,
             (
-                "Calling grant_add on"
-                " user '{}' and grants '{}' did not return True: {}"
+                "Calling grant_add on user '{}' and grants '{}' did not return True: {}"
             ).format(user, grant, repr(ret)),
         )
         ret = self.run_function(
@@ -1611,14 +1609,10 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             ret,
             [
                 "GRANT USAGE ON *.* TO 'foo'@'localhost'",
-                (
-                    "GRANT SELECT, INSERT, UPDATE, CREATE ON "
-                    "`tes.t'\"saltdb`.* TO 'foo'@'localhost' WITH GRANT OPTION"
-                ),
-                (
-                    "GRANT SELECT, INSERT ON `t_st ``(:=salt%b)`.`foo`"
-                    " TO 'foo'@'localhost' WITH GRANT OPTION"
-                ),
+                "GRANT SELECT, INSERT, UPDATE, CREATE ON "
+                "`tes.t'\"saltdb`.* TO 'foo'@'localhost' WITH GRANT OPTION",
+                "GRANT SELECT, INSERT ON `t_st ``(:=salt%b)`.`foo`"
+                " TO 'foo'@'localhost' WITH GRANT OPTION",
             ],
         )
 
@@ -1633,11 +1627,9 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             ret,
             [
                 "GRANT USAGE ON *.* TO 'user \";--,?:&/\\'@'localhost'",
-                (
-                    "GRANT SELECT, UPDATE, DELETE, CREATE TEMPORARY TABLES ON `tes.t'"
-                    "\"saltdb`.* TO 'user \";--,?:&/\\'@'localhost'"
-                    " WITH GRANT OPTION"
-                ),
+                "GRANT SELECT, UPDATE, DELETE, CREATE TEMPORARY TABLES ON `tes.t'"
+                "\"saltdb`.* TO 'user \";--,?:&/\\'@'localhost'"
+                " WITH GRANT OPTION",
             ],
         )
 
@@ -1652,11 +1644,9 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             ret,
             [
                 "GRANT USAGE ON *.* TO 'user( @ )=foobar'@'localhost'",
-                (
-                    "GRANT SELECT, ALTER, CREATE TEMPORARY TABLES, EXECUTE ON "
-                    "`tes.t'\"saltdb`.* TO 'user( @ )=foobar'@'localhost' "
-                    "WITH GRANT OPTION"
-                ),
+                "GRANT SELECT, ALTER, CREATE TEMPORARY TABLES, EXECUTE ON "
+                "`tes.t'\"saltdb`.* TO 'user( @ )=foobar'@'localhost' "
+                "WITH GRANT OPTION",
             ],
         )
 
@@ -1676,14 +1666,10 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
                     r"GRANT CREATE ON `t\_st ``(:=salt\%b)`.* TO "
                     "'user \xe6\xa8\x99'@'localhost'"
                 ),
-                (
-                    "GRANT SELECT, INSERT ON `t_st ``(:=salt%b)`.`foo ``'%_bar` TO "
-                    "'user \xe6\xa8\x99'@'localhost'"
-                ),
-                (
-                    "GRANT SELECT, INSERT ON `t_st ``(:=salt%b)`.`foo` TO "
-                    "'user \xe6\xa8\x99'@'localhost'"
-                ),
+                "GRANT SELECT, INSERT ON `t_st ``(:=salt%b)`.`foo ``'%_bar` TO "
+                "'user \xe6\xa8\x99'@'localhost'",
+                "GRANT SELECT, INSERT ON `t_st ``(:=salt%b)`.`foo` TO "
+                "'user \xe6\xa8\x99'@'localhost'",
             ],
         )
 
