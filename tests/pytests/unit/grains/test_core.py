@@ -842,6 +842,34 @@ def test_almalinux_8_os_grains(os_release_dir):
     }
     _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
 
+@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+def test_Parrot_OS_grains(os_release_dir):
+    """
+    Test if OS grains are parsed correctly in Parrot OS
+    """
+    _os_release_map = {
+        "os_release_file": {
+           	"PRETTY_NAME": "Parrot OS 4.11",
+            "NAME": "Parrot OS",
+    	      "ID": "parrot",
+    	      "ID_LIKE": "debian",
+    	      "VERSION": "4.11",
+            "VERSION_ID": "4.11",
+        },
+        "_linux_distribution": ("Parrot OS", "4.11", ""),
+    }
+
+    expectation = {
+        "os": "Parrot OS",
+        "os_family": "Debian",
+        "oscodename": "Parrot OS 4.11",
+        "osfullname": "Parrot OS 4.11",
+        "osrelease": "4.11",
+        "osrelease_info": (4, 11),
+        "osmajorrelease": 4,
+        "osfinger": "ParrotOS-4",
+    } 
+    _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
 
 def test_unicode_error():
     raise_unicode_mock = MagicMock(name="raise_unicode_error", side_effect=UnicodeError)
