@@ -209,7 +209,6 @@ import re
 import shutil
 import string
 import subprocess
-import sys
 import time
 import uuid
 
@@ -6657,27 +6656,26 @@ def _compile_state(sls_opts, mods=None):
     """
     Generates the chunks of lowdata from the list of modules
     """
-    st_ = HighState(sls_opts)
+    with HighState(sls_opts) as st_:
+        if not mods:
+            return st_.compile_low_chunks()
 
-    if not mods:
-        return st_.compile_low_chunks()
+        high_data, errors = st_.render_highstate({sls_opts["saltenv"]: mods})
+        high_data, ext_errors = st_.state.reconcile_extend(high_data)
+        errors += ext_errors
+        errors += st_.state.verify_high(high_data)
+        if errors:
+            return errors
 
-    high_data, errors = st_.render_highstate({sls_opts["saltenv"]: mods})
-    high_data, ext_errors = st_.state.reconcile_extend(high_data)
-    errors += ext_errors
-    errors += st_.state.verify_high(high_data)
-    if errors:
-        return errors
+        high_data, req_in_errors = st_.state.requisite_in(high_data)
+        errors += req_in_errors
+        high_data = st_.state.apply_exclude(high_data)
+        # Verify that the high data is structurally sound
+        if errors:
+            return errors
 
-    high_data, req_in_errors = st_.state.requisite_in(high_data)
-    errors += req_in_errors
-    high_data = st_.state.apply_exclude(high_data)
-    # Verify that the high data is structurally sound
-    if errors:
-        return errors
-
-    # Compile and verify the raw chunks
-    return st_.state.compile_high_data(high_data)
+        # Compile and verify the raw chunks
+        return st_.state.compile_high_data(high_data)
 
 
 def call(name, function, *args, **kwargs):
@@ -6725,9 +6723,23 @@ def call(name, function, *args, **kwargs):
         name, thin_path, os.path.join(thin_dest_path, os.path.basename(thin_path))
     )
 
+    # figure out available python interpreter inside the container (only Python3)
+    pycmds = ("python3", "/usr/libexec/platform-python")
+    container_python_bin = None
+    for py_cmd in pycmds:
+        cmd = [py_cmd] + ["--version"]
+        ret = run_all(name, subprocess.list2cmdline(cmd))
+        if ret["retcode"] == 0:
+            container_python_bin = py_cmd
+            break
+    if not container_python_bin:
+        raise CommandExecutionError(
+            "Python interpreter cannot be found inside the container. Make sure Python is installed in the container"
+        )
+
     # untar archive
     untar_cmd = [
-        "python",
+        container_python_bin,
         "-c",
         "import tarfile; "
         'tarfile.open("{0}/{1}").extractall(path="{0}")'.format(
@@ -6741,7 +6753,7 @@ def call(name, function, *args, **kwargs):
     try:
         salt_argv = (
             [
-                "python{}".format(sys.version_info[0]),
+                container_python_bin,
                 os.path.join(thin_dest_path, "salt-call"),
                 "--metadata",
                 "--local",

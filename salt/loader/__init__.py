@@ -8,8 +8,8 @@ import contextlib
 import copy
 import functools
 import importlib
-import importlib.machinery  # pylint: disable=no-name-in-module,import-error
-import importlib.util  # pylint: disable=no-name-in-module,import-error
+import importlib.machinery
+import importlib.util
 import inspect
 import logging
 import os
@@ -663,12 +663,7 @@ def ssh_wrapper(opts, functions=None, context=None):
         ),
         opts,
         tag="wrapper",
-        pack={
-            "__salt__": functions,
-            #        "__grains__": opts.get("grains", {}),
-            #        "__pillar__": opts.get("pillar", {}),
-            "__context__": context,
-        },
+        pack={"__salt__": functions, "__context__": context},
     )
 
 

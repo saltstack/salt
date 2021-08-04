@@ -635,6 +635,10 @@ class CkMinions:
             if search is None:
                 return minions
             addrs = salt.utils.network.local_port_tcp(int(self.opts["publish_port"]))
+            if self.opts.get("detect_remote_minions", False):
+                addrs = addrs.union(
+                    salt.utils.network.remote_port_tcp(self.opts["remote_minions_port"])
+                )
             if "127.0.0.1" in addrs:
                 # Add in the address of a possible locally-connected minion.
                 addrs.discard("127.0.0.1")
