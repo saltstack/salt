@@ -459,17 +459,6 @@ def fcontext_policy_applied(name, recursive=False):
     """
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
-    changes_text = __salt__["selinux.fcontext_policy_is_applied"](name, recursive)
-    if changes_text == "":
-        ret.update(
-            {
-                "result": True,
-                "comment": 'SElinux policies are already applied for filespec "{}"'.format(
-                    name
-                ),
-            }
-        )
-        return ret
     if __opts__["test"]:
         ret.update({"result": None})
     else:

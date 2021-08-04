@@ -631,9 +631,7 @@ def fcontext_policy_is_applied(name, recursive=False):
     """
     .. versionadded:: 2017.7.0
 
-    Returns an empty string if the SELinux policy for a given filespec
-    is applied, returns string with differences in policy and actual
-    situation otherwise.
+    Returns a dictionary with the result from restorecon -n -v [-R] pathname.
 
     name
         filespec of the file or directory.
@@ -651,7 +649,7 @@ def fcontext_policy_is_applied(name, recursive=False):
     if recursive:
         cmd += "-R "
     cmd += name
-    return __salt__["cmd.run_all"](cmd).get("stdout")
+    return __salt__["cmd.run_all"](cmd)
 
 
 def fcontext_apply_policy(name, recursive=False):
@@ -674,7 +672,7 @@ def fcontext_apply_policy(name, recursive=False):
 
         salt '*' selinux.fcontext_apply_policy pathname
     """
-    ret = {}
+    ret = {"changes": {}}
     cmd = "restorecon -v -F "
     if recursive:
         cmd += "-R "
@@ -683,16 +681,19 @@ def fcontext_apply_policy(name, recursive=False):
     ret.update(apply_ret)
     if apply_ret["retcode"] == 0:
         changes_list = []
-        if apply_ret["stdout"] and apply_ret["stdout"].startswith("restorecon reset"):
-            changes_list = re.findall(
-                "restorecon reset (.*) context (.*)->(.*)$", apply_ret["stdout"], re.M
-            )
-        else:
-            ret["retcode"] = 1
-            ret["error"] = "Unrecognized response from restorecon command. {}".format(apply_ret["stdout"])
-            return ret
-        if changes_list:
-            ret.update({"changes": {}})
+        if apply_ret["stdout"]:
+            if apply_ret["stdout"].startswith("Relabeled"):
+                changes_list = re.findall(
+                    "Relabeled (.*) from (.*) to (.*)$", apply_ret["stdout"], re.M
+                )
+            elif apply_ret["stdout"].startswith("restorecon reset"):
+                changes_list = re.findall(
+                    "restorecon reset (.*) context (.*)->(.*)$", apply_ret["stdout"], re.M
+                )
+            else:
+                ret["retcode"] = 1
+                ret["error"] = "Unrecognized response from restorecon command. {}".format(apply_ret["stdout"])
+                return ret
         for item in changes_list:
             filespec = item[0]
             old = _context_string_to_dict(item[1])
