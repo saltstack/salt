@@ -58,7 +58,7 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          var comment_header = `### The Salt Project Needs **Your** Help`
+          var comment_header = `### Hi! I'm your friendly PR bot!`
 
           // Get the existing comments.
           const {data: comments} = await github.issues.listComments({
@@ -84,10 +84,52 @@ jobs:
           // Define the comment message
           var msg = `${comment_header}
 
+          You might be wondering what I'm doing commenting here on your PR.
+
+          **Yes, as a matter of fact, I am...**
+
+          I'm just here to help us improve the documentation. I can't respond to
+          questions or anything, but what I *can* do, I do well!
+
+          **Okay... so what do you do?**
+
+          I detect modules that are missing ``CLI Example`` or python docstrings!
+          When I was created we had a *lot* of these. The documentation for these
+          modules need some love and attention to make Salt better for our users.
+
+          **So what does that have to do with my PR?**
+
+          I noticed that in this PR there are some files changed that have some of these
+          issues. So I'm leaving this comment to let you know your options.
+
+          **Okay, what are they?**
+
+          Well, my favorite, is that since you were making changes here I'm hoping that
+          you would be the most familiar with this module and be able to add some other
+          examples or fix any of the reported issues.
+
+          **If I can, then what?**
+
+          Well, you can either add them to this PR or add them to another PR. Either way
+          is fine!
+
+          **Well... what if I can't, or don't want to?**
+
+          That's also fine! We appreciate *all* contributions to the Salt Project. If you
+          can't add those other examples, either because you're too busy, or unfamiliar,
+          or you just aren't interested, we still appreciate the contributions that
+          you've made already.
+
+          Whatever approach you decide to take, just drop a comment here letting us know!
+
           <details>
-          <summary>Please check the following and see if you can help.</summary>
+          <summary>Detected Issues</summary>
           <pre>${{ steps.prepare-output.outputs.contents }}</pre>
-          </details>`
+          </details>
+
+          ---
+
+          Thanks again!`
 
           // Add the new comment
           github.issues.createComment({
