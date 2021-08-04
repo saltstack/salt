@@ -10,7 +10,6 @@ Execute calls on selinux
     proper packages are installed.
 """
 
-
 import os
 import re
 
@@ -492,8 +491,8 @@ def fcontext_get_policy(
     cmd = (
         "semanage fcontext -l | egrep "
         + "'^{filespec}{spacer}{filetype}{spacer}{sel_user}:{sel_role}:{sel_type}:{sel_level}$'".format(
-            **cmd_kwargs
-        )
+        **cmd_kwargs
+    )
     )
     current_entry_text = __salt__["cmd.shell"](cmd, ignore_retcode=True)
     if current_entry_text == "":
@@ -676,7 +675,6 @@ def fcontext_apply_policy(name, recursive=False):
         salt '*' selinux.fcontext_apply_policy pathname
     """
     ret = {}
-    changes_text = fcontext_policy_is_applied(name, recursive)
     cmd = "restorecon -v -F "
     if recursive:
         cmd += "-R "
@@ -685,17 +683,13 @@ def fcontext_apply_policy(name, recursive=False):
     ret.update(apply_ret)
     if apply_ret["retcode"] == 0:
         changes_list = []
-        if changes_text.startswith("Would relabel"):
+        if apply_ret["stdout"] and apply_ret["stdout"].startswith("restorecon reset"):
             changes_list = re.findall(
-                "Would relabel (.*) from (.*) to (.*)$", changes_text, re.M
-            )
-        elif changes_text.startswith("restorecon reset"):
-            changes_list = re.findall(
-                "restorecon reset (.*) context (.*)->(.*)$", changes_text, re.M
+                "restorecon reset (.*) context (.*)->(.*)$", apply_ret["stdout"], re.M
             )
         else:
             ret["retcode"] = 1
-            ret["error"] = "Unrecognized response from restorecon command."
+            ret["error"] = "Unrecognized response from restorecon command. {}".format(apply_ret["stdout"])
             return ret
         if changes_list:
             ret.update({"changes": {}})
@@ -758,8 +752,8 @@ def port_get_policy(name, sel_type=None, protocol=None, port=None):
     cmd = (
         "semanage port -l | egrep "
         + "'^{sel_type}{spacer}{protocol}{spacer}((.*)*)[ ]{port}($|,)'".format(
-            **cmd_kwargs
-        )
+        **cmd_kwargs
+    )
     )
     port_policy = __salt__["cmd.shell"](cmd, ignore_retcode=True)
     if port_policy == "":
