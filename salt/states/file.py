@@ -311,6 +311,7 @@ import salt.utils.versions
 from salt.exceptions import CommandExecutionError
 from salt.serializers import DeserializationError
 from salt.state import get_accumulator_dir as _get_accumulator_dir
+from salt.utils.odict import OrderedDict
 
 if salt.utils.platform.is_windows():
     import salt.utils.win_dacl
@@ -7418,7 +7419,10 @@ def accumulated(name, filename, text, **kwargs):
     if name not in accum_deps[filename]:
         accum_deps[filename][name] = []
     for accumulator in deps:
-        accum_deps[filename][name].extend(accumulator.values())
+        if isinstance(accumulator, (dict, OrderedDict)):
+            accum_deps[filename][name].extend(accumulator.values())
+        else:
+            accum_deps[filename][name].extend(accumulator)
     if name not in accum_data[filename]:
         accum_data[filename][name] = []
     for chunk in text:

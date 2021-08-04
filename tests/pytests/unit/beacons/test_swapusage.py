@@ -48,6 +48,15 @@ def test_swapusage_match(stub_swap_usage):
         ret = swapusage.beacon(config)
         assert ret == [{"swapusage": 9.7}]
 
+        # Test without the percent
+        config = [{"percent": "9"}, {"interval": 30}]
+
+        ret = swapusage.validate(config)
+        assert ret == (True, "Valid beacon configuration")
+
+        ret = swapusage.beacon(config)
+        assert ret == [{"swapusage": 9.7}]
+
 
 def test_swapusage_nomatch(stub_swap_usage):
     with patch("psutil.swap_memory", MagicMock(return_value=stub_swap_usage)):

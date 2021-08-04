@@ -68,7 +68,7 @@ from salt.utils.debug import (
 )
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
-from salt.utils.zeromq import ZMQ_VERSION_INFO, ZMQDefaultLoop, install_zmq, zmq
+from salt.utils.zeromq import ZMQ_VERSION_INFO, zmq
 
 try:
     import resource
@@ -1023,9 +1023,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         Bind to the local port
         """
-        # using ZMQIOLoop since we *might* need zmq in there
-        install_zmq()
-        self.io_loop = ZMQDefaultLoop()
+        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
         self.io_loop.make_current()
         for req_channel in self.req_channels:
             req_channel.post_fork(
