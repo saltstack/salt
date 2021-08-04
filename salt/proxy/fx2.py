@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-,
 """
 Dell FX2 chassis
 ================
@@ -171,9 +170,7 @@ Look there to find an example structure for pillar as well as an example
 ``.sls`` file for standing up a Dell Chassis from scratch.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
 import salt.utils.http

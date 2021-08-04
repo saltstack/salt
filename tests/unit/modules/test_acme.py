@@ -1,15 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 :codeauthor: Herbert Buurman <herbert.buurman@ogd.nl>
 """
 
-# Import future libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import os
-
-# Import Python libs
 import textwrap
 
 # Import Salt Module
@@ -17,8 +12,6 @@ import salt.modules.acme as acme
 import salt.utils.dictupdate
 import salt.utils.platform
 from salt.exceptions import SaltInvocationError
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Thomas Stoner <tmstoner@cisco.com>
 """
@@ -16,16 +15,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.modules.nxos_upgrade as nxos_upgrade
 from salt.exceptions import CommandExecutionError, NxosError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -54,7 +45,7 @@ class NxosUpgradeTestCase(TestCase, LoaderModuleMockMixin):
 
         """ Assert platform upgrade condition and display appropriate chassis & images upon assertion failure """
 
-        assert bool(condition), "{0}: Upgrade {1} -> {2}".format(
+        assert bool(condition), "{}: Upgrade {} -> {}".format(
             platform.chassis, platform.cimage, platform.nimage
         )
 

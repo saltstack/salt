@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage Dell DRAC from the Master
 
@@ -13,12 +12,9 @@ configuration file.
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import 3rd-party libs
 try:
     import paramiko
 

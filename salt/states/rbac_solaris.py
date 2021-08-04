@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of Solaris RBAC
 
@@ -20,9 +19,7 @@ Management of Solaris RBAC
         - authorizations:
             - solaris.audit.*
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
 log = logging.getLogger(__name__)
@@ -44,7 +41,7 @@ def __virtual__():
     else:
         return (
             False,
-            "{0} state module can only be loaded on Solaris".format(__virtualname__),
+            "{} state module can only be loaded on Solaris".format(__virtualname__),
         )
 
 
@@ -73,7 +70,7 @@ def managed(name, roles=None, profiles=None, authorizations=None):
     ## check properties
     if name not in __salt__["user.list_users"]():
         ret["result"] = False
-        ret["comment"] = "User {0} does not exist!".format(name)
+        ret["comment"] = "User {} does not exist!".format(name)
         return ret
     if roles and not isinstance(roles, (list)):
         ret["result"] = False

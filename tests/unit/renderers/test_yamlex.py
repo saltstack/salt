@@ -1,16 +1,7 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.serializers.yamlex as yamlex
-
-# Import Salt libs
 import salt.state
 from salt.config import minion_config
 from salt.template import compile_template_str
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 
@@ -27,7 +18,7 @@ placeholder: {foo: !aggregate {baz: inga}}
 SKIP_MESSAGE = "%s is unavailable, do prerequisites have been met?"
 
 
-class RendererMixin(object):
+class RendererMixin:
     def render(self, template, opts=None):
         _config = minion_config(None)
         _config["file_client"] = "local"

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 NAPALM: Network Automation and Programmability Abstraction Layer with Multivendor support
 =========================================================================================
@@ -158,15 +157,12 @@ Example using a user-specific library, extending NAPALM's capabilities, e.g. ``c
     ``salt '*' net.arp username=my-alt-usr force_reconnect=True``.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python lib
 import logging
 
 import salt.utils.napalm
 
 # Import Salt modules
-from salt.ext import six
 
 log = logging.getLogger(__file__)
 
@@ -295,7 +291,7 @@ def shutdown(opts):
         log.error(
             "Cannot close connection with %s%s! Please check error: %s",
             NETWORK_DEVICE.get("HOSTNAME", "[unknown hostname]"),
-            ":{0}".format(port) if port else "",
+            ":{}".format(port) if port else "",
             error,
         )
 
@@ -342,7 +338,7 @@ def call(method, *args, **kwargs):
     """
     kwargs_copy = {}
     kwargs_copy.update(kwargs)
-    for karg, warg in six.iteritems(kwargs_copy):
+    for karg, warg in kwargs_copy.items():
         # will remove None values
         # thus the NAPALM methods will be called with their defaults
         if warg is None:

@@ -1,0 +1,1 @@
+Fixed compilation of requisite_ins by also checking state type along with name/id

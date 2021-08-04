@@ -192,6 +192,11 @@ def test_get_disks(make_mock_vm, make_mock_storage_pool):
           <alias name='virtio-disk0'/>
           <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0'/>
         </disk>
+        <disk type='volume' device='disk'>
+          <driver name='qemu' type='qcow2' cache='none' io='native'/>
+          <source pool='stopped' volume='vm05_data'/>
+          <target dev='vdd' bus='virtio'/>
+        </disk>
         <disk type='network' device='cdrom'>
           <driver name='qemu' type='raw' cache='none' io='native'/>
           <source protocol='http' name='/pub/iso/myimage.iso' query='foo=bar&amp;baz=flurb' index='1'>
@@ -205,11 +210,12 @@ def test_get_disks(make_mock_vm, make_mock_storage_pool):
       </devices>
     </domain>
     """
-    domain_mock = make_mock_vm(vm_def)
+    make_mock_vm(vm_def)
 
     pool_mock = make_mock_storage_pool(
         "default", "dir", ["srv01_system", "srv01_data", "vm05_system"]
     )
+    make_mock_storage_pool("stopped", "dir", [])
 
     # Append backing store to srv01_data volume XML description
     srv1data_mock = pool_mock.storageVolLookupByName("srv01_data")
@@ -256,6 +262,7 @@ def test_get_disks(make_mock_vm, make_mock_storage_pool):
                 },
             },
         },
+        "vdd": {"type": "disk", "file": "stopped/vm05_data", "file format": "qcow2"},
         "hda": {
             "type": "cdrom",
             "file format": "raw",

@@ -179,7 +179,12 @@ def test_list_nodes_full():
         mock.name = "abc"
         mock.public_net.ipv4.ip = "127.0.0.1/32"
         mock.public_net.ipv6.ip = "::1/64"
+
+        private_net_mock = MagicMock()
+        private_net_mock.ip = "10.0.0.1/16"
         mock.private_net = []
+        mock.private_net.append(private_net_mock)
+
         mock.labels = "abc"
         connect.return_value.servers.get_all.return_value = [mock]
 
@@ -187,6 +192,11 @@ def test_list_nodes_full():
         assert nodes[mock.name]["id"], mock.id
         # Labels shouldn't be filtered
         assert "labels" in nodes[mock.name]
+
+        assert nodes[mock.name]["public_ips"]["ipv4"] == "127.0.0.1/32"
+        assert nodes[mock.name]["public_ips"]["ipv6"] == "::1/64"
+
+        assert nodes[mock.name]["private_ips"][0]["ip"] == "10.0.0.1/16"
 
 
 def test_list_nodes():
@@ -202,7 +212,12 @@ def test_list_nodes():
         mock.name = "abc"
         mock.public_net.ipv4.ip = "127.0.0.1/32"
         mock.public_net.ipv6.ip = "::1/64"
+
+        private_net_mock = MagicMock()
+        private_net_mock.ip = "10.0.0.1/16"
         mock.private_net = []
+        mock.private_net.append(private_net_mock)
+
         mock.labels = "abc"
         connect.return_value.servers.get_all.return_value = [mock]
 
@@ -210,6 +225,11 @@ def test_list_nodes():
         assert nodes[mock.name]["id"], mock.id
         # Labels should be filtered
         assert "labels" not in nodes[mock.name]
+
+        assert nodes[mock.name]["public_ips"]["ipv4"] == "127.0.0.1/32"
+        assert nodes[mock.name]["public_ips"]["ipv6"] == "::1/64"
+
+        assert nodes[mock.name]["private_ips"][0]["ip"] == "10.0.0.1/16"
 
 
 def test_show_instance():

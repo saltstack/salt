@@ -4,8 +4,6 @@
 
     Salt's logging implementation classes/functionality
 """
-
-
 import logging
 import re
 import sys
@@ -29,8 +27,6 @@ from salt._logging.mixins import NewStyleClassMixin  # isort:skip
 from salt.exceptions import LoggingRuntimeError  # isort:skip
 from salt.utils.ctx import RequestContext  # isort:skip
 from salt.utils.textformat import TextFormat  # isort:skip
-
-# from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=import-error,no-name-in-module
 
 LOG_LEVELS = {
     "all": logging.NOTSET,
@@ -389,11 +385,22 @@ class SaltLoggingClass(
 # Override the python's logging logger class as soon as this module is imported
 if logging.getLoggerClass() is not SaltLoggingClass:
 
+    # Import pip._internal which itself will install it's own custom logging handler
+    # we want to override that handler with ours
+    try:
+        import pip._internal.utils._log as pip_log_module  # pylint: disable=no-name-in-module,import-error
+    except ImportError:
+        pip_log_module = None
+
     logging.setLoggerClass(SaltLoggingClass)
     logging.addLevelName(QUIET, "QUIET")
     logging.addLevelName(PROFILE, "PROFILE")
     logging.addLevelName(TRACE, "TRACE")
     logging.addLevelName(GARBAGE, "GARBAGE")
+    if pip_log_module is not None:
+        # Let's make newer versions of pip work by patching SaltLoggingClass to
+        # add a verbose method which is what pip expects
+        SaltLoggingClass.verbose = SaltLoggingClass.debug
 
     # ----- REMOVE ON REFACTORING COMPLETE -------------------------------------------------------------------------->
     if not logging.root.handlers:

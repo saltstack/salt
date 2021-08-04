@@ -1,14 +1,6 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import third party libs
 import logging
-
-# Import python libs
 import os
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.files
 import salt.utils.platform

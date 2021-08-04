@@ -272,9 +272,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
             return _requirements_file
 
 
-def _install_requirements(
-    session, transport, *extra_requirements, requirements_type="ci"
-):
+def _upgrade_pip_setuptools_and_wheel(session):
     if SKIP_REQUIREMENTS_INSTALL:
         session.log(
             "Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ"
@@ -288,10 +286,17 @@ def _install_requirements(
         "install",
         "--progress-bar=off",
         "-U",
-        "pip",
+        "pip>=20.2.4,<21.2",
         "setuptools!=50.*,!=51.*,!=52.*",
+        "wheel",
     ]
     session.run(*install_command, silent=PIP_INSTALL_SILENT)
+
+
+def _install_requirements(
+    session, transport, *extra_requirements, requirements_type="ci"
+):
+    _upgrade_pip_setuptools_and_wheel(session)
 
     # Install requirements
     requirements_file = _get_pip_requirements_file(
@@ -999,8 +1004,7 @@ def docs_html(session, compress, clean):
     """
     Build Salt's HTML Documentation
     """
-    install_upgrades = ["--progress-bar=off", "-U", "pip", "setuptools", "wheel"]
-    session.install(*install_upgrades, silent=PIP_INSTALL_SILENT)
+    _upgrade_pip_setuptools_and_wheel(session)
     requirements_file = os.path.join(
         "requirements", "static", "ci", _get_pydir(session), "docs.txt"
     )
@@ -1023,8 +1027,7 @@ def docs_man(session, compress, update, clean):
     """
     Build Salt's Manpages Documentation
     """
-    install_upgrades = ["--progress-bar=off", "-U", "pip", "setuptools", "wheel"]
-    session.install(*install_upgrades, silent=PIP_INSTALL_SILENT)
+    _upgrade_pip_setuptools_and_wheel(session)
     requirements_file = os.path.join(
         "requirements", "static", "ci", _get_pydir(session), "docs.txt"
     )
@@ -1042,7 +1045,8 @@ def docs_man(session, compress, update, clean):
     os.chdir("..")
 
 
-def _invoke(session):
+@nox.session(name="invoke", python="3")
+def invoke(session):
     """
     Run invoke tasks
     """
@@ -1067,53 +1071,6 @@ def _invoke(session):
     if files:
         cmd.append("--files={}".format(" ".join(files)))
     session.run(*cmd)
-
-
-@nox.session(name="invoke", python="3")
-def invoke(session):
-    """
-    Run an invoke target
-    """
-    _invoke(session)
-
-
-@nox.session(name="invoke-pre-commit", python=False)
-def invoke_pre_commit(session):
-    """
-    DO NOT CALL THIS NOX SESSION DIRECTLY
-
-    This session is called from a pre-commit hook
-    """
-    if "VIRTUAL_ENV" not in os.environ:
-        session.error(
-            "This should be running from within a virtualenv and "
-            "'VIRTUAL_ENV' was not found as an environment variable."
-        )
-    if "pre-commit" not in os.environ["VIRTUAL_ENV"]:
-        session.error(
-            "This should be running from within a pre-commit virtualenv and "
-            "'VIRTUAL_ENV'({}) does not appear to be a pre-commit virtualenv.".format(
-                os.environ["VIRTUAL_ENV"]
-            )
-        )
-    from nox.virtualenv import VirtualEnv
-
-    # Let's patch nox to make it run inside the pre-commit virtualenv
-    try:
-        session._runner.venv = VirtualEnv(  # pylint: disable=unexpected-keyword-arg
-            os.environ["VIRTUAL_ENV"],
-            interpreter=session._runner.func.python,
-            reuse_existing=True,
-            venv=True,
-        )
-    except TypeError:
-        # This is still nox-py2
-        session._runner.venv = VirtualEnv(
-            os.environ["VIRTUAL_ENV"],
-            interpreter=session._runner.func.python,
-            reuse_existing=True,
-        )
-    _invoke(session)
 
 
 @nox.session(name="changelog", python="3")

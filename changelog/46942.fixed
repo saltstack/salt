@@ -1,0 +1,1 @@
+Fixes postgres_local_cache by removing duplicate unicode encoding.

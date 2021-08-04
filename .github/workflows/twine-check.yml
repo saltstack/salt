@@ -14,17 +14,18 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.8'
-    - uses: actions/cache@v2
-      with:
-        path: ${{ env.pythonLocation }}
-        key: ${{ env.pythonLocation }}-${{ hashFiles('README.rst') }}-${{ hashFiles('.github/workflows/twine-check.yml') }}
+
     - name: Install dependencies
+      env:
+        PIP_EXTRA_INDEX_URL: https://pypi-proxy.saltstack.net/root/local/+simple/
       run: |
         pip install --upgrade pip setuptools wheel
-        pip install twine==3.3.0
-    - name: Python setup
+        pip install twine>=3.4.1
+
+    - name: Create Source Tarball
       run: |
         python3 setup.py sdist
+
     - name: Twine check
       run: |
         python3 -m twine check dist/*

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Sending Messages over XMPP
 ==========================
@@ -16,9 +15,6 @@ protocol
         - profile: my-xmpp-account
         - recipient: admins@xmpp.example.com/salt
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -47,13 +43,13 @@ def send_msg(name, recipient, profile):
     """
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
     if __opts__["test"]:
-        ret["comment"] = "Need to send message to {0}: {1}".format(recipient, name,)
+        ret["comment"] = "Need to send message to {}: {}".format(recipient, name,)
         return ret
     __salt__["xmpp.send_msg_multi"](
         message=name, recipients=[recipient], profile=profile,
     )
     ret["result"] = True
-    ret["comment"] = "Sent message to {0}: {1}".format(recipient, name)
+    ret["comment"] = "Sent message to {}: {}".format(recipient, name)
     return ret
 
 
@@ -83,10 +79,10 @@ def send_msg_multi(name, profile, recipients=None, rooms=None):
 
     comment = ""
     if recipients:
-        comment += " users {0}".format(recipients)
+        comment += " users {}".format(recipients)
     if rooms:
-        comment += " rooms {0}".format(rooms)
-    comment += ", message: {0}".format(name)
+        comment += " rooms {}".format(rooms)
+    comment += ", message: {}".format(name)
 
     if __opts__["test"]:
         ret["comment"] = "Need to send" + comment

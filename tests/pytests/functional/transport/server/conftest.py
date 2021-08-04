@@ -18,9 +18,8 @@ def salt_master(salt_factories, transport):
         "auto_accept": True,
         "sign_pub_messages": False,
     }
-    factory = salt_factories.get_salt_master_daemon(
-        random_string("server-{}-master-".format(transport)),
-        config_defaults=config_defaults,
+    factory = salt_factories.salt_master_daemon(
+        random_string("server-{}-master-".format(transport)), defaults=config_defaults,
     )
     return factory
 
@@ -35,8 +34,7 @@ def salt_minion(salt_master, transport):
         "auth_tries": 1,
         "master_uri": "tcp://127.0.0.1:{}".format(salt_master.config["ret_port"]),
     }
-    factory = salt_master.get_salt_minion_daemon(
-        random_string("server-{}-minion-".format(transport)),
-        config_defaults=config_defaults,
+    factory = salt_master.salt_minion_daemon(
+        random_string("server-{}-minion-".format(transport)), defaults=config_defaults,
     )
     return factory

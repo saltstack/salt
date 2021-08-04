@@ -83,10 +83,16 @@ def _datacenter_to_dict(datacenter):
     }
 
 
-def _network_to_dict(net):
+def _public_network_to_dict(net):
     return {
         "ipv4": getattr(net.ipv4, "ip", None),
         "ipv6": getattr(net.ipv6, "ip", None),
+    }
+
+
+def _private_network_to_dict(net):
+    return {
+        "ip": getattr(net, "ip", None),
     }
 
 
@@ -162,8 +168,8 @@ def list_nodes_full(call=None):
             "image": node.image.name,
             "size": node.server_type.name,
             "state": node.status,
-            "public_ips": _network_to_dict(node.public_net),
-            "private_ips": list(map(_network_to_dict, node.private_net)),
+            "public_ips": _public_network_to_dict(node.public_net),
+            "private_ips": list(map(_private_network_to_dict, node.private_net)),
             "labels": node.labels,
             "created": str(node.created),
             "datacenter": _datacenter_to_dict(node.datacenter),

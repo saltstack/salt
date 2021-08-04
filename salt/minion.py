@@ -31,6 +31,7 @@ import salt.ext.tornado
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.loader
+import salt.loader.lazy
 import salt.log.setup
 import salt.payload
 import salt.pillar
@@ -969,15 +970,13 @@ class MasterMinion:
         whitelist=None,
         ignore_config_errors=True,
     ):
-        self.opts = salt.config.minion_config(
-            opts["conf_file"], ignore_config_errors=ignore_config_errors, role="master"
+        self.opts = salt.config.mminion_config(
+            opts["conf_file"], opts, ignore_config_errors=ignore_config_errors
         )
-        self.opts.update(opts)
         self.whitelist = whitelist
-        self.opts["grains"] = salt.loader.grains(opts)
-        self.opts["pillar"] = {}
         self.mk_returners = returners
         self.mk_states = states
+
         self.mk_rend = rend
         self.mk_matcher = matcher
         self.gen_modules(initial_load=True)
@@ -3711,13 +3710,13 @@ class ProxyMinionManager(MinionManager):
 
 
 def _metaproxy_call(opts, fn_name):
-    loaded_base_name = "{}.{}".format(opts["id"], salt.loader.LOADED_BASE_NAME)
+    loaded_base_name = "{}.{}".format(opts["id"], salt.loader.lazy.LOADED_BASE_NAME)
     metaproxy = salt.loader.metaproxy(opts, loaded_base_name=loaded_base_name)
     try:
         metaproxy_name = opts["metaproxy"]
     except KeyError:
         metaproxy_name = "proxy"
-        log.error(
+        log.debug(
             "No metaproxy key found in opts for id %s. Defaulting to standard proxy minion",
             opts["id"],
         )

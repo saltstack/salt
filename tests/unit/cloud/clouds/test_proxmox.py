@@ -2,12 +2,8 @@
     :codeauthor: Tyler Johnson <tjohnson@saltstack.com>
 """
 
-# Import Salt Libs
 
-# Import Salt Libs
 from salt.cloud.clouds import proxmox
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import ANY, MagicMock, patch
 from tests.support.unit import TestCase

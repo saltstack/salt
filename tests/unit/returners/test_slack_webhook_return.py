@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Carlos D. Álvaro <github@cdalvaro.io>`
 
@@ -8,13 +7,8 @@
     Unit tests for the Slack Webhook Returner.
 """
 
-# Import Python libs
-from __future__ import absolute_import
 
-# Import Salt libs
 import salt.returners.slack_webhook_return as slack_webhook
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase
@@ -93,33 +87,33 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
     }
 
     _EXPECTED_PAYLOAD = {
-        u"attachments": [
+        "attachments": [
             {
-                u"title": u"Success: False",
-                u"color": u"#272727",
-                u"text": u"Function: state.apply\nFunction Args: ['config.vim']\nJID: 20181227105933129338\nTotal: 4\nDuration: 27.03 secs",
-                u"author_link": u"{}".format(_MINION_NAME),
-                u"author_name": u"{}".format(_MINION_NAME),
-                u"fallback": u"{} | Failed".format(_MINION_NAME),
-                u"author_icon": _AUTHOR_ICON,
+                "title": "Success: False",
+                "color": "#272727",
+                "text": "Function: state.apply\nFunction Args: ['config.vim']\nJID: 20181227105933129338\nTotal: 4\nDuration: 27.03 secs",
+                "author_link": "{}".format(_MINION_NAME),
+                "author_name": "{}".format(_MINION_NAME),
+                "fallback": "{} | Failed".format(_MINION_NAME),
+                "author_icon": _AUTHOR_ICON,
             },
-            {u"color": u"good", u"title": u"Unchanged: 2"},
+            {"color": "good", "title": "Unchanged: 2"},
             {
-                u"color": u"warning",
-                u"fields": [
+                "color": "warning",
+                "fields": [
                     {
-                        u"short": False,
-                        u"value": u"config.vim.sls | salt vim plugin updated",
+                        "short": False,
+                        "value": "config.vim.sls | salt vim plugin updated",
                     }
                 ],
-                u"title": u"Changed: 1",
+                "title": "Changed: 1",
             },
             {
-                u"color": u"danger",
-                u"fields": [
-                    {u"short": False, u"value": u"config.vim.sls | macvim present"}
+                "color": "danger",
+                "fields": [
+                    {"short": False, "value": "config.vim.sls | macvim present"}
                 ],
-                u"title": u"Failed: 1",
+                "title": "Failed: 1",
             },
         ]
     }

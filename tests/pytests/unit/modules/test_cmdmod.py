@@ -155,7 +155,7 @@ def test_run_with_tuple():
         with patch("salt.utils.platform.is_windows", MagicMock(return_value=False)):
             with patch("os.path.isfile", mock_true):
                 with patch("os.access", mock_true):
-                    cmdmod._run(("echo", "foo"), python_shell=True)
+                    cmdmod._run(("echo", "foo"), python_shell=True, cwd="/")
 
 
 def test_run_user_not_available():
@@ -643,6 +643,8 @@ def test_run_chroot_runas():
         shell="/bin/sh",
         stdin=None,
         success_retcodes=None,
+        success_stdout=None,
+        success_stderr=None,
         template=None,
         timeout=None,
         umask=None,

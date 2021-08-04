@@ -1,18 +1,12 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import
 
 import logging
 import os
 
-# Import Salt Libs
 import salt.states.git as git_state  # Don't potentially shadow GitPython
-
-# Import Salt Testing Libs
 from tests.support.helpers import with_tempdir
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import DEFAULT, MagicMock, Mock, patch

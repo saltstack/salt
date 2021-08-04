@@ -366,8 +366,11 @@ def test_update_nat_nochange(make_mock_network):
     define_mock.assert_not_called()
 
 
-@pytest.mark.parametrize("test", [True, False])
-def test_update_nat_change(make_mock_network, test):
+@pytest.mark.parametrize(
+    "test, netmask",
+    [(True, "netmask='255.255.255.0'"), (True, "prefix='24'"), (False, "prefix='24'")],
+)
+def test_update_nat_change(make_mock_network, test, netmask):
     """
     Test updating a NAT network with changes
     """
@@ -380,13 +383,15 @@ def test_update_nat_change(make_mock_network, test):
           <bridge name='virbr0' stp='on' delay='0'/>
           <mac address='52:54:00:cd:49:6b'/>
           <domain name='my.lab' localOnly='yes'/>
-          <ip address='192.168.122.1' netmask='255.255.255.0'>
+          <ip address='192.168.122.1' {}>
             <dhcp>
               <range start='192.168.122.2' end='192.168.122.254'/>
             </dhcp>
           </ip>
         </network>
-        """
+        """.format(
+            netmask
+        )
     )
     assert virt.network_update(
         "default",
