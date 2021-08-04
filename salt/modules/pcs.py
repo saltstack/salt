@@ -529,4 +529,3 @@ def resource_create(resource_id, resource_type, resource_options=None, cibfile=N
         extra_args=resource_options,
         cibfile=cibfile,
     )
-

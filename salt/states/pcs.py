@@ -448,7 +448,9 @@ def auth(name, nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=Non
         ret["result"] = None
         return ret
 
-    authorize = __salt__["pcs.auth"](nodes=nodes, pcsuser=pcsuser, pcspasswd=pcspasswd)
+    authorize = __salt__["pcs.auth"](
+        nodes=nodes, pcsuser=pcsuser, pcspasswd=pcspasswd, extra_args=extra_args
+    )
     log.trace("Output of pcs.auth: %s", authorize)
 
     authorize_dict = {}
@@ -487,7 +489,7 @@ def cluster_setup(
     pcsuser="hacluster",
     pcspasswd="hacluster",
     pcs_auth_extra_args=None,
-    wipe_default=False
+    wipe_default=False,
 ):
     """
     Setup Pacemaker cluster on nodes.
@@ -513,7 +515,7 @@ def cluster_setup(
     pcs_auth_extra_args
         Extra args to be passed to the auth function in case of reauth.
     wipe_default
-        This removes the files that are installed with Debian based operating systems. 
+        This removes the files that are installed with Debian based operating systems.
 
     Example:
 
