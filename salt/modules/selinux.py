@@ -637,18 +637,21 @@ def fcontext_policy_is_applied(name, recursive=False):
     situation otherwise.
 
     name
-        filespec of the file or directory. Regex syntax is allowed.
+        filespec of the file or directory.
+
+    recursive
+        Recursively check SELinux policies.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' selinux.fcontext_policy_is_applied my-policy
+        salt '*' selinux.fcontext_policy_is_applied pathname
     """
     cmd = "restorecon -n -v "
     if recursive:
         cmd += "-R "
-    cmd += re.escape(name)
+    cmd += name
     return __salt__["cmd.run_all"](cmd).get("stdout")
 
 
@@ -661,7 +664,7 @@ def fcontext_apply_policy(name, recursive=False):
     the restorecon command otherwise.
 
     name
-        filespec of the file or directory. Regex syntax is allowed.
+        filespec of the file or directory.
 
     recursive
         Recursively apply SELinux policies.
@@ -670,14 +673,14 @@ def fcontext_apply_policy(name, recursive=False):
 
     .. code-block:: bash
 
-        salt '*' selinux.fcontext_apply_policy my-policy
+        salt '*' selinux.fcontext_apply_policy pathname
     """
     ret = {}
     changes_text = fcontext_policy_is_applied(name, recursive)
     cmd = "restorecon -v -F "
     if recursive:
         cmd += "-R "
-    cmd += re.escape(name)
+    cmd += name
     apply_ret = __salt__["cmd.run_all"](cmd)
     ret.update(apply_ret)
     if apply_ret["retcode"] == 0:
