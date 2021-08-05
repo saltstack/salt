@@ -63,7 +63,7 @@ def test_acl_without_merge():
 def test_acl_unauthorized():
     with patch("salt.utils.http.query", MagicMock(return_value={"status": 400})):
         ret = rest.acl("foo", password="password")
-        assert ret == None
+        assert ret is None
 
 def test_acl_no_merge():
     with patch("salt.utils.http.query", MagicMock(return_value={"status": 200, "dict": None})):
