@@ -328,8 +328,10 @@ def raw_mod(opts, name, functions, mod="modules"):
     if name not in loader.file_mapping:
         return {}
 
-    loader._load_module(name)  # load a single module (the one passed in)
-    return dict(loader._dict)  # return a copy of *just* the funcs for `name`
+    # load a single module (the one passed in)
+    loader._load_module(name)
+    # return a copy of *just* the funcs for `name`
+    return dict({x: loader[x] for x in loader._dict})
 
 
 def metaproxy(opts, loaded_base_name=None):
