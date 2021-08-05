@@ -27,7 +27,7 @@ def test_rest_auth_config():
 def test_fetch_call_failed():
     with patch("salt.utils.http.query", MagicMock(return_value={"status": 401})):
         ret = rest.fetch("foo", None)
-        assert ret == False
+        assert ret is False
 
 def test_fetch_call_success_dict_none():
     with patch("salt.utils.http.query", MagicMock(return_value={"status": 200, "dict": None})):
