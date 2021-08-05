@@ -31,8 +31,6 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = "rest"
 
-cached_acl = {}
-
 
 def __virtual__():
     return __virtualname__
@@ -46,11 +44,10 @@ def _rest_auth_setup():
         return False
 
 
-def auth(username, password):
+def fetch(username, password):
     """
-    REST authentication
+    Call the rest authentication endpoint
     """
-
     url = _rest_auth_setup()
 
     data = {"username": username, "password": password}
@@ -60,14 +57,31 @@ def auth(username, password):
     result = salt.utils.http.query(
         url, method="POST", data=data, status=True, decode=True
     )
+
     if result["status"] == 200:
         log.debug("eauth REST call returned 200: %s", result)
+        # Call is successful if None no acl data
         if result["dict"] is not None:
-            cached_acl[username] = result["dict"]
-        return True
+            return result["dict"]
+        else:
+            return []
     else:
         log.debug("eauth REST call failed: %s", result)
         return False
+
+
+def auth(username, password):
+    """
+    REST authentication
+    """
+    # Check auth on API endpoint
+    result = fetch(username, password)
+    if result is False:
+        log.debug("eauth REST call failed: %s", result)
+        return False
+    else:
+        log.debug("eauth REST call Ok: %s", result)
+        return True
 
 
 def acl(username, **kwargs):
@@ -77,17 +91,12 @@ def acl(username, **kwargs):
     salt_eauth_acl = __opts__["external_auth"]["rest"].get(username, [])
     log.debug("acl from salt for user %s: %s", username, salt_eauth_acl)
 
-    eauth_rest_acl = cached_acl.get(username, [])
-    log.debug("acl from cached rest for user %s: %s", username, eauth_rest_acl)
-    # This might be an ACL only call with no auth before, so check the rest api
-    # again
-    if not eauth_rest_acl:
-        # Update cached_acl from REST API
-        result = auth(username, kwargs["password"])
-        log.debug("acl rest result: %s", result)
-        if result:
-            eauth_rest_acl = cached_acl.get(username, [])
-            log.debug("acl from rest for user %s: %s", username, eauth_rest_acl)
+    # Get ACL from REST API
+    eauth_rest_acl = []
+    result = fetch(username, kwargs["password"])
+    if result:
+        eauth_rest_acl = result
+        log.debug("acl from rest for user %s: %s", username, eauth_rest_acl)
 
     merged_acl = salt_eauth_acl + eauth_rest_acl
 
