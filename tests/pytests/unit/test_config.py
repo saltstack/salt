@@ -1,7 +1,14 @@
+"""
+tests.pytests.unit.test_config
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Unit tests for salt's config modulet
+"""
 import salt.config
 
 
 def test_call_id_function(tmp_path):
+    "Defining id_function works as expected"
     cache_dir = tmp_path / "cache"
     extmods = tmp_path / "extmods"
     opts = {
