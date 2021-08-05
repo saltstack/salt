@@ -69,10 +69,19 @@ Options
     an explicit number of minions to execute at once, or a percentage of
     minions to execute on.
 
-.. option:: --batch-wait=SECONDS
+.. option:: --batch-wait=BATCH_WAIT
 
-   The number of seconds to wait, after a minion returns, before sending the
-   command to a new minion.
+   Wait the specified time in seconds after each job is done before
+   freeing the slot in the batch of the next one.
+
+.. option:: --batch-safe-limit=BATCH_SAFE_LIMIT
+
+   Execute the salt job in batch mode if the job would have executed
+   on more than this many minions.
+
+.. option:: --batch-safe-size=BATCH_SAFE_SIZE
+
+   Batch size to use for batch jobs created by --batch-safe-limit.
 
 .. option:: -a EAUTH, --auth=EAUTH
 
