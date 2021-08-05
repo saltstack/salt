@@ -491,8 +491,8 @@ def fcontext_get_policy(
     cmd = (
         "semanage fcontext -l | egrep "
         + "'^{filespec}{spacer}{filetype}{spacer}{sel_user}:{sel_role}:{sel_type}:{sel_level}$'".format(
-        **cmd_kwargs
-    )
+            **cmd_kwargs
+        )
     )
     current_entry_text = __salt__["cmd.shell"](cmd, ignore_retcode=True)
     if current_entry_text == "":
@@ -688,11 +688,17 @@ def fcontext_apply_policy(name, recursive=False):
                 )
             elif apply_ret["stdout"].startswith("restorecon reset"):
                 changes_list = re.findall(
-                    "restorecon reset (.*) context (.*)->(.*)$", apply_ret["stdout"], re.M
+                    "restorecon reset (.*) context (.*)->(.*)$",
+                    apply_ret["stdout"],
+                    re.M,
                 )
             else:
                 ret["retcode"] = 1
-                ret["error"] = "Unrecognized response from restorecon command. {}".format(apply_ret["stdout"])
+                ret[
+                    "error"
+                ] = "Unrecognized response from restorecon command. {}".format(
+                    apply_ret["stdout"]
+                )
                 return ret
         for item in changes_list:
             filespec = item[0]
@@ -753,8 +759,8 @@ def port_get_policy(name, sel_type=None, protocol=None, port=None):
     cmd = (
         "semanage port -l | egrep "
         + "'^{sel_type}{spacer}{protocol}{spacer}((.*)*)[ ]{port}($|,)'".format(
-        **cmd_kwargs
-    )
+            **cmd_kwargs
+        )
     )
     port_policy = __salt__["cmd.shell"](cmd, ignore_retcode=True)
     if port_policy == "":

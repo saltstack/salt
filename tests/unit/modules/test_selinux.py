@@ -211,49 +211,74 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
         Test failure response for invalid restorecon data.
         """
         with patch.dict(
-            selinux.__salt__, {"cmd.run_all": MagicMock(
-                return_value={"pid": 2585008,
-                              "retcode": 255,
-                              "stdout": "",
-                              "stderr": "restorecon: SELinux: Could not get canonical path for /foo/bar restorecon:"
-                                        " No such file or directory."})}
+            selinux.__salt__,
+            {
+                "cmd.run_all": MagicMock(
+                    return_value={
+                        "pid": 2585008,
+                        "retcode": 255,
+                        "stdout": "",
+                        "stderr": "restorecon: SELinux: Could not get canonical path for /foo/bar restorecon:"
+                        " No such file or directory.",
+                    }
+                )
+            },
         ):
-            self.assertEqual(selinux.fcontext_policy_is_applied("/foo/bar")['retcode'], 255)
-            self.assertEqual(selinux.fcontext_policy_is_applied('/foo/bar')['stderr'],
-                             'restorecon: SELinux: Could not get canonical path for /foo/bar restorecon:'
-                             ' No such file or directory.')
+            self.assertEqual(
+                selinux.fcontext_policy_is_applied("/foo/bar")["retcode"], 255
+            )
+            self.assertEqual(
+                selinux.fcontext_policy_is_applied("/foo/bar")["stderr"],
+                "restorecon: SELinux: Could not get canonical path for /foo/bar restorecon:"
+                " No such file or directory.",
+            )
 
     def test_fcontext_apply_policy_fail(self):
         """
         Test failure response for invalid restorecon data.
         """
         with patch.dict(
-            selinux.__salt__, {"cmd.run_all": MagicMock(
-                return_value={"pid": 2585008,
-                              "retcode": 255,
-                              "stdout": "",
-                              "stderr": "restorecon: SELinux: Could not get canonical path for /foo/bar restorecon:"
-                                        " No such file or directory."})}
+            selinux.__salt__,
+            {
+                "cmd.run_all": MagicMock(
+                    return_value={
+                        "pid": 2585008,
+                        "retcode": 255,
+                        "stdout": "",
+                        "stderr": "restorecon: SELinux: Could not get canonical path for /foo/bar restorecon:"
+                        " No such file or directory.",
+                    }
+                )
+            },
         ):
-            self.assertEqual(selinux.fcontext_apply_policy("/foo/bar")['retcode'], 255)
-            self.assertEqual(selinux.fcontext_apply_policy('/foo/bar')['stderr'],
-                             'restorecon: SELinux: Could not get canonical path for /foo/bar restorecon:'
-                             ' No such file or directory.')
+            self.assertEqual(selinux.fcontext_apply_policy("/foo/bar")["retcode"], 255)
+            self.assertEqual(
+                selinux.fcontext_apply_policy("/foo/bar")["stderr"],
+                "restorecon: SELinux: Could not get canonical path for /foo/bar restorecon:"
+                " No such file or directory.",
+            )
 
     def test_fcontext_apply_policy_changed_new(self):
         """
         Test parsing the stdout response of restorecon used in fcontext_policy_applied, new style.
         """
         restorecon_ret = "Relabeled /foo/bar from some_u:some_r:some_t:s0 to other_u:other_r:other_t:s0"
-        with patch.dict(selinux.__salt__, {"cmd.run_all": MagicMock(
-            return_value={"pid": 2585008,
-                          "retcode": 0,
-                          "stdout": restorecon_ret,
-                          "stderr": ""})}
-                        ):
-            print('----------------------------------------------')
+        with patch.dict(
+            selinux.__salt__,
+            {
+                "cmd.run_all": MagicMock(
+                    return_value={
+                        "pid": 2585008,
+                        "retcode": 0,
+                        "stdout": restorecon_ret,
+                        "stderr": "",
+                    }
+                )
+            },
+        ):
+            print("----------------------------------------------")
             print(selinux.fcontext_apply_policy("/foo/bar"))
-            print('----------------------------------------------')
+            print("----------------------------------------------")
             self.assertEqual(
                 selinux.fcontext_apply_policy("/foo/bar"),
                 {
@@ -283,12 +308,19 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
         Test parsing the stdout response of restorecon used in fcontext_policy_applied, old style.
         """
         restorecon_ret = "restorecon reset /foo/bar context some_u:some_r:some_t:s0->other_u:other_r:other_t:s0"
-        with patch.dict(selinux.__salt__, {"cmd.run_all": MagicMock(
-            return_value={"pid": 2585008,
-                          "retcode": 0,
-                          "stdout": restorecon_ret,
-                          "stderr": ""})}
-                        ):
+        with patch.dict(
+            selinux.__salt__,
+            {
+                "cmd.run_all": MagicMock(
+                    return_value={
+                        "pid": 2585008,
+                        "retcode": 0,
+                        "stdout": restorecon_ret,
+                        "stderr": "",
+                    }
+                )
+            },
+        ):
             self.assertEqual(
                 selinux.fcontext_apply_policy("/foo/bar"),
                 {
@@ -318,12 +350,19 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
         Test parsing the stdout response of restorecon used in fcontext_policy_applied, old style.
         """
         restorecon_ret = "restorecon reset /foo/bar context some_u:some_r:some_t:s0->other_u:other_r:other_t:s0"
-        with patch.dict(selinux.__salt__, {"cmd.run_all": MagicMock(
-            return_value={"pid": 2585008,
-                          "retcode": 0,
-                          "stdout": restorecon_ret,
-                          "stderr": ""})}
-                        ):
+        with patch.dict(
+            selinux.__salt__,
+            {
+                "cmd.run_all": MagicMock(
+                    return_value={
+                        "pid": 2585008,
+                        "retcode": 0,
+                        "stdout": restorecon_ret,
+                        "stderr": "",
+                    }
+                )
+            },
+        ):
             self.assertEqual(
                 selinux.fcontext_apply_policy("/foo/bar"),
                 {
