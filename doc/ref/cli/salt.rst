@@ -69,6 +69,11 @@ Options
     an explicit number of minions to execute at once, or a percentage of
     minions to execute on.
 
+.. option:: --batch-wait=SECONDS
+
+   The number of seconds to wait, after a minion returns, before sending the
+   command to a new minion.
+
 .. option:: -a EAUTH, --auth=EAUTH
 
     Pass in an external authentication medium to validate against. The
