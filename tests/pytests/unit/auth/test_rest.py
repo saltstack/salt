@@ -21,7 +21,6 @@ def configure_loader_modules():
         }
 
 def test_rest_auth_config():
-    config = {}
     ret = rest._rest_auth_setup()
     assert ret == "https://test_url/rest"
 
