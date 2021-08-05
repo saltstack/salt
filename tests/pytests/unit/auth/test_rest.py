@@ -41,20 +41,20 @@ def test_fetch_call_success_dict_acl():
 
 def test_auth_nopass():
     ret = rest.auth("foo", None)
-    assert ret == False
+    assert ret is False
 
 def test_auth_nouser():
     ret = rest.auth(None, "foo")
-    assert ret == False
+    assert ret is False
 
 def test_auth_nouserandpass():
     ret = rest.auth(None, None)
-    assert ret == False
+    assert ret is False
 
 def test_auth_ok():
     with patch("salt.utils.http.query", MagicMock(return_value={"status": 200, "dict": ['@wheel']})):
         ret = rest.auth("foo", None)
-        assert ret == True
+        assert ret is True
 
 def test_acl_without_merge():
     ret = rest.acl("fred", password="password")
