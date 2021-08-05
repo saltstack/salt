@@ -929,7 +929,7 @@ def status(**connection_args):
     ret = {}
     for _ in range(cur.rowcount):
         row = cur.fetchone()
-        ret[row[0]] = row[1]
+        ret[salt.utils.data.decode(row[0])] = row[1]
     return ret
 
 
