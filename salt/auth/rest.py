@@ -31,8 +31,6 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = "rest"
 
-cached_acl = {}
-
 
 def __virtual__():
     return __virtualname__
@@ -91,8 +89,11 @@ def acl(username, **kwargs):
     log.debug("acl from salt for user %s: %s", username, salt_eauth_acl)
 
     # Get ACL from REST API
-    eauth_rest_acl = fetch(username, kwargs["password"])
-    log.debug("acl from rest for user %s: %s", username, eauth_rest_acl)
+    eauth_rest_acl = []
+    result = fetch(username, kwargs["password"])
+    if result:
+        eauth_rest_acl = result
+        log.debug("acl from rest for user %s: %s", username, eauth_rest_acl)
 
     merged_acl = salt_eauth_acl + eauth_rest_acl
 
