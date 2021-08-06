@@ -385,7 +385,9 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_lvcreate_extra_arguments_no_parameter(self):
         extra_args = {
+            "ignoreactivationskip": None,
             "ignoremonitoring": None,
+            "nolocking": None,
             "nosync": None,
             "noudevsync": None,
             "thin": None,
