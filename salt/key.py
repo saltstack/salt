@@ -695,8 +695,9 @@ class Key:
                         if revoke_auth:
                             if self.opts.get("rotate_aes_key") is False:
                                 print(
-                                    "Immediate auth revocation specified but AES key rotation not allowed. "
-                                    "Minion will not be disconnected until the master AES key is rotated."
+                                    "Immediate auth revocation specified but AES key"
+                                    " rotation not allowed. Minion will not be"
+                                    " disconnected until the master AES key is rotated."
                                 )
                             else:
                                 try:

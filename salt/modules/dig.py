@@ -22,8 +22,7 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The dig execution module cannot be loaded: "
-        "the dig binary is not in the path.",
+        "The dig execution module cannot be loaded: the dig binary is not in the path.",
     )
 
 

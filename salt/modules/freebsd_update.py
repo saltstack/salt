@@ -30,7 +30,8 @@ def __virtual__():
     if __grains__["os"] != "FreeBSD":
         return (
             False,
-            "The freebsd_update execution module cannot be loaded: only available on FreeBSD systems.",
+            "The freebsd_update execution module cannot be loaded: only available on"
+            " FreeBSD systems.",
         )
     if float(__grains__["osrelease"]) < 6.2:
         return (

@@ -315,7 +315,8 @@ def present(
             if __opts__["test"]:
                 changes["running"] = "Would start the container"
                 return _unchanged(
-                    ret, 'Container "{}" would get changed and started.'.format(name),
+                    ret,
+                    'Container "{}" would get changed and started.'.format(name),
                 )
             else:
                 container.start(wait=True)
@@ -325,7 +326,8 @@ def present(
             if __opts__["test"]:
                 changes["stopped"] = "Would stopped the container"
                 return _unchanged(
-                    ret, 'Container "{}" would get changed and stopped.'.format(name),
+                    ret,
+                    'Container "{}" would get changed and stopped.'.format(name),
                 )
             else:
                 container.stop(wait=True)
@@ -675,7 +677,7 @@ def migrated(
     src_key=None,
     src_verify_cert=None,
 ):
-    """ Ensure a container is migrated to another host
+    """Ensure a container is migrated to another host
 
     If the container is running, it either must be shut down
     first (use stop_and_start=True) or criu must be installed
@@ -778,9 +780,11 @@ def migrated(
         return _error(ret, 'Source Container "{}" not found'.format(name))
 
     if __opts__["test"]:
-        ret["changes"]["migrated"] = (
-            'Would migrate the container "{}" from "{}" to "{}"'
-        ).format(name, src_remote_addr, remote_addr)
+        ret["changes"][
+            "migrated"
+        ] = 'Would migrate the container "{}" from "{}" to "{}"'.format(
+            name, src_remote_addr, remote_addr
+        )
         return _unchanged(ret, ret["changes"]["migrated"])
 
     try:
@@ -799,9 +803,9 @@ def migrated(
     except CommandExecutionError as e:
         return _error(ret, str(e))
 
-    ret["changes"]["migrated"] = (
-        'Migrated the container "{}" from "{}" to "{}"'
-    ).format(name, src_remote_addr, remote_addr)
+    ret["changes"]["migrated"] = 'Migrated the container "{}" from "{}" to "{}"'.format(
+        name, src_remote_addr, remote_addr
+    )
     return _success(ret, ret["changes"]["migrated"])
 
 

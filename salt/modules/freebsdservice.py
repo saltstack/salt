@@ -35,7 +35,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The freebsdservice execution module cannot be loaded: only available on FreeBSD systems.",
+        "The freebsdservice execution module cannot be loaded: only available on"
+        " FreeBSD systems.",
     )
 
 

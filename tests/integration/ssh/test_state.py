@@ -317,7 +317,8 @@ class SSHStateTest(SSHCase):
                 break
             if time.time() > future:
                 self.fail(
-                    "state.pkg is still running overtime. Test did not clean up correctly."
+                    "state.pkg is still running overtime. Test did not clean up"
+                    " correctly."
                 )
 
     def tearDown(self):
