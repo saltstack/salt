@@ -79,9 +79,9 @@ def beacon(config):
             sensor_min = min_default.get(sensor, "0")
             sensor_max = str(sensor_config)
 
-        if "%" in sensor_min:
+        if isinstance(sensor_min, str) and "%" in sensor_min:
             sensor_min = re.sub("%", "", sensor_min)
-        if "%" in sensor_max:
+        if isinstance(sensor_max, str) and "%" in sensor_max:
             sensor_max = re.sub("%", "", sensor_max)
         sensor_min = float(sensor_min)
         sensor_max = float(sensor_max)
