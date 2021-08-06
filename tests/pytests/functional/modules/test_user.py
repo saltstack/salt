@@ -1,6 +1,7 @@
 import pathlib
 
 import pytest
+import salt.utils.platform
 from saltfactories.utils import random_string
 
 pytestmark = [
@@ -57,3 +58,17 @@ def test_delete_remove(user, account, remove):
         assert pathlib.Path(user_info["home"]).exists() is False
     else:
         assert pathlib.Path(user_info["home"]).exists() is True
+
+
+def test_info_after_deletion(user, account):
+    """
+    This test targets a situation where, at least on macOS, the call to ``user.info(username)``
+    returns data after the account has been deleted from the system.
+    It's a weird caching issue with ``pwd.getpwnam``
+    """
+    kwargs = {}
+    if not salt.utils.platform.is_windows():
+        kwargs["remove"] = True
+    ret = user.delete(account.username, **kwargs)
+    assert ret is True
+    assert not user.info(account.username)
