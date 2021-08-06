@@ -577,7 +577,7 @@ def _get_disks(conn, dom):
                 elif elem.get("device", "disk") != "cdrom":
                     # Extract disk sizes, snapshots, backing files
                     try:
-                        stdout = subprocess.Popen(
+                        process = subprocess.Popen(
                             [
                                 "qemu-img",
                                 "info",
@@ -589,12 +589,17 @@ def _get_disks(conn, dom):
                             ],
                             shell=False,
                             stdout=subprocess.PIPE,
-                        ).communicate()[0]
-                        qemu_output = salt.utils.stringutils.to_str(stdout)
-                        output = _parse_qemu_img_info(qemu_output)
-                        extra_properties = output
-                    except TypeError:
-                        disk.update({"file": "Does not exist"})
+                            stderr=subprocess.PIPE,
+                        )
+                        stdout, stderr = process.communicate()
+                        if process.returncode == 0:
+                            qemu_output = salt.utils.stringutils.to_str(stdout)
+                            output = _parse_qemu_img_info(qemu_output)
+                            extra_properties = output
+                        else:
+                            extra_properties = {"error": stderr}
+                    except FileNotFoundError:
+                        extra_properties = {"error": "qemu-img not found"}
             elif disk_type == "block":
                 qemu_target = source.get("dev", "")
                 # If the qemu_target is a known path, output a volume
@@ -4220,7 +4225,7 @@ def update(
                     if (
                         item in changes["disk"]["new"]
                         and source_file
-                        and not os.path.isfile(source_file)
+                        and not os.path.exists(source_file)
                     ):
                         _qemu_image_create(all_disks[idx])
                     elif item in changes["disk"]["new"] and not source_file:

@@ -1,7 +1,3 @@
-"""
-tests.pytests.integration.cli.test_salt_master
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-"""
 import logging
 import time
 
