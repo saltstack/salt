@@ -357,18 +357,18 @@ def test_info():
     Tests the return of user information
     """
     mock_pwnam = pwd.struct_passwd(
-        ("test", "*", 0, 0, "TEST USER", "/var/test", "/bin/bash")
+        ("root", "*", 0, 0, "TEST USER", "/var/test", "/bin/bash")
     )
     ret = {
         "shell": "/bin/bash",
-        "name": "test",
+        "name": "root",
         "gid": 0,
         "groups": ["_TEST_GROUP"],
         "home": "/var/test",
         "fullname": "TEST USER",
         "uid": 0,
     }
-    with patch("pwd.getpwnam", MagicMock(return_value=mock_pwnam)), patch(
+    with patch("pwd.getpwall", MagicMock(return_value=[mock_pwnam])), patch(
         "salt.modules.mac_user.list_groups", MagicMock(return_value=["_TEST_GROUP"])
     ):
         assert mac_user.info("root") == ret
