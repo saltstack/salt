@@ -385,9 +385,9 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_lvcreate_extra_arguments_no_parameter(self):
         extra_args = {
+            "ignoremonitoring": None,
             "nosync": None,
             "noudevsync": None,
-            "ignoremonitoring": None,
             "thin": None,
         }
         mock = MagicMock(return_value={"retcode": 0, "stderr": ""})
