@@ -679,6 +679,31 @@ def _sanitize_comments(content):
     return sqlparse.format(content, strip_comments=True)
 
 
+def _disable_conversions():
+    # The following 3 lines stops MySQLdb from converting the MySQL results
+    # into Python objects. It leaves them as strings.
+    orig_conv = MySQLdb.converters.conversions
+    conv_iter = iter(orig_conv)
+    conv = dict(zip(conv_iter, [str] * len(orig_conv)))
+
+    # some converters are lists, do not break theses
+    conv_mysqldb = {"MYSQLDB": True}
+    if conv_mysqldb.get(MySQLdb.__package__.upper()):
+        conv[FIELD_TYPE.BLOB] = [
+            (FLAG.BINARY, str),
+        ]
+        conv[FIELD_TYPE.STRING] = [
+            (FLAG.BINARY, str),
+        ]
+        conv[FIELD_TYPE.VAR_STRING] = [
+            (FLAG.BINARY, str),
+        ]
+        conv[FIELD_TYPE.VARCHAR] = [
+            (FLAG.BINARY, str),
+        ]
+    return conv
+
+
 def query(database, query, **connection_args):
     """
     Run an arbitrary SQL query and return the results or
@@ -747,29 +772,9 @@ def query(database, query, **connection_args):
     # I don't think it handles multiple queries at once, so adding "commit"
     # might not work.
 
-    # The following 3 lines stops MySQLdb from converting the MySQL results
-    # into Python objects. It leaves them as strings.
-    orig_conv = MySQLdb.converters.conversions
-    conv_iter = iter(orig_conv)
-    conv = dict(zip(conv_iter, [str] * len(orig_conv)))
-
-    # some converters are lists, do not break theses
-    conv_mysqldb = {"MYSQLDB": True}
-    if conv_mysqldb.get(MySQLdb.__package__.upper()):
-        conv[FIELD_TYPE.BLOB] = [
-            (FLAG.BINARY, str),
-        ]
-        conv[FIELD_TYPE.STRING] = [
-            (FLAG.BINARY, str),
-        ]
-        conv[FIELD_TYPE.VAR_STRING] = [
-            (FLAG.BINARY, str),
-        ]
-        conv[FIELD_TYPE.VARCHAR] = [
-            (FLAG.BINARY, str),
-        ]
-
-    connection_args.update({"connection_db": database, "connection_conv": conv})
+    connection_args.update(
+        {"connection_db": database, "connection_conv": _disable_conversions()}
+    )
     dbc = _connect(**connection_args)
     if dbc is None:
         return {}
@@ -1541,6 +1546,8 @@ def user_info(user, host="localhost", **connection_args):
 
         salt '*' mysql.user_info root localhost
     """
+    connection_args.update({"connection_conv": _disable_conversions()})
+
     dbc = _connect(**connection_args)
     if dbc is None:
         return False
