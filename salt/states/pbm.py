@@ -124,10 +124,8 @@ def __virtual__():
 
         return (
             False,
-            (
-                "State module did not load: Incompatible versions "
-                "of Python and pyVmomi present. See Issue #29537."
-            ),
+            "State module did not load: Incompatible versions "
+            "of Python and pyVmomi present. See Issue #29537.",
         )
     return True
 
@@ -169,15 +167,14 @@ def default_vsan_policy_configured(name, policy):
         # TODO policy schema validation
         si = __salt__["vsphere.get_service_instance_via_proxy"]()
         current_policy = __salt__["vsphere.list_default_vsan_policy"](si)
-        log.trace("current_policy = {}".format(current_policy))
+        log.trace("current_policy = %s", current_policy)
         # Building all diffs between the current and expected policy
         # XXX We simplify the comparison by assuming we have at most 1
         # sub_profile
         if policy.get("subprofiles"):
             if len(policy["subprofiles"]) > 1:
                 raise ArgumentValueError(
-                    "Multiple sub_profiles ({0}) are not "
-                    "supported in the input policy"
+                    "Multiple sub_profiles ({0}) are not supported in the input policy"
                 )
             subprofile = policy["subprofiles"][0]
             current_subprofile = current_policy["subprofiles"][0]
@@ -272,7 +269,7 @@ def default_vsan_policy_configured(name, policy):
             log.trace(changes)
         __salt__["vsphere.disconnect"](si)
     except CommandExecutionError as exc:
-        log.error("Error: {}".format(exc))
+        log.error("Error: %s", exc)
         if si:
             __salt__["vsphere.disconnect"](si)
         if not __opts__["test"]:
@@ -315,11 +312,11 @@ def storage_policies_configured(name, policies):
     changes = []
     changes_required = False
     ret = {"name": name, "changes": {}, "result": None, "comment": None}
-    log.trace("policies = {}".format(policies))
+    log.trace("policies = %s", policies)
     si = None
     try:
         proxy_type = __salt__["vsphere.get_proxy_type"]()
-        log.trace("proxy_type = {}".format(proxy_type))
+        log.trace("proxy_type = %s", proxy_type)
         # All allowed proxies have a shim execution module with the same
         # name which implementes a get_details function
         # All allowed proxies have a vcenter detail
@@ -329,7 +326,7 @@ def storage_policies_configured(name, policies):
         current_policies = __salt__["vsphere.list_storage_policies"](
             policy_names=[policy["name"] for policy in policies], service_instance=si
         )
-        log.trace("current_policies = {}".format(current_policies))
+        log.trace("current_policies = %s", current_policies)
         # TODO Refactor when recurse_differ supports list_differ
         # It's going to make the whole thing much easier
         for policy in policies:
@@ -352,8 +349,9 @@ def storage_policies_configured(name, policies):
                         policy["name"], policy, service_instance=si
                     )
                     comments.append(
-                        "Created storage policy '{}' on "
-                        "vCenter '{}'".format(policy["name"], vcenter)
+                        "Created storage policy '{}' on vCenter '{}'".format(
+                            policy["name"], vcenter
+                        )
                     )
                     changes.append({"new": policy, "old": None})
                 log.trace(comments[-1])
@@ -432,9 +430,9 @@ def storage_policies_configured(name, policies):
                         service_instance=si,
                     )
                     comments.append(
-                        "Updated the storage policy '{}'"
-                        "in vCenter '{}'"
-                        "".format(policy["name"], vcenter)
+                        "Updated the storage policy '{}'in vCenter '{}'".format(
+                            policy["name"], vcenter
+                        )
                     )
                 log.info(comments[-1])
 
@@ -461,12 +459,13 @@ def storage_policies_configured(name, policies):
             else:
                 # No diffs found - no updates required
                 comments.append(
-                    "Storage policy '{}' is up to date. "
-                    "Nothing to be done.".format(policy["name"])
+                    "Storage policy '{}' is up to date. Nothing to be done.".format(
+                        policy["name"]
+                    )
                 )
         __salt__["vsphere.disconnect"](si)
     except CommandExecutionError as exc:
-        log.error("Error: {}".format(exc))
+        log.error("Error: %s", exc)
         if si:
             __salt__["vsphere.disconnect"](si)
         if not __opts__["test"]:
@@ -509,8 +508,7 @@ def default_storage_policy_assigned(name, policy, datastore):
         Name of datastore
     """
     log.info(
-        "Running state {} for policy '{}', datastore '{}'."
-        "".format(name, policy, datastore)
+        "Running state %s for policy '%s', datastore '%s'.", name, policy, datastore
     )
     changes = {}
     changes_required = False
@@ -536,19 +534,19 @@ def default_storage_policy_assigned(name, policy, datastore):
                 }
             }
             if __opts__["test"]:
-                comment = (
-                    "State {} will assign storage policy '{}' to datastore '{}'."
-                ).format(name, policy, datastore)
+                comment = "State {} will assign storage policy '{}' to datastore '{}'.".format(
+                    name, policy, datastore
+                )
             else:
                 __salt__["vsphere.assign_default_storage_policy_to_datastore"](
                     policy=policy, datastore=datastore, service_instance=si
                 )
-                comment = ("Storage policy '{} was assigned to datastore '{}'.").format(
+                comment = "Storage policy '{} was assigned to datastore '{}'.".format(
                     policy, name
                 )
         log.info(comment)
     except CommandExecutionError as exc:
-        log.error("Error: {}".format(exc))
+        log.error("Error: %s", exc)
         if si:
             __salt__["vsphere.disconnect"](si)
         ret.update(

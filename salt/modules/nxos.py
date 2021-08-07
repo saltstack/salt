@@ -225,7 +225,7 @@ def cmd(command, *args, **kwargs):
         if k.startswith("__pub_"):
             kwargs.pop(k)
     local_command = ".".join(["nxos", command])
-    log.info("local command: {}".format(local_command))
+    log.info("local command: %s", local_command)
     if local_command not in __salt__:
         return False
     return __salt__[local_command](*args, **kwargs)

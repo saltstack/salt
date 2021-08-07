@@ -326,7 +326,10 @@ def test_delete_key_without_passphrase(gpghome):
 
     _expected_result = {
         "res": True,
-        "message": "Secret key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted\nPublic key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted",
+        "message": (
+            "Secret key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted\nPublic"
+            " key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted"
+        ),
     }
 
     mock_opt = MagicMock(return_value="root")
@@ -450,7 +453,10 @@ def test_delete_key_with_passphrase_with_gpg_passphrase_in_pillar(gpghome):
 
     _expected_result = {
         "res": True,
-        "message": "Secret key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted\nPublic key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted",
+        "message": (
+            "Secret key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted\nPublic"
+            " key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx deleted"
+        ),
     }
 
     mock_opt = MagicMock(return_value="root")
@@ -502,7 +508,9 @@ def test_export_key_without_passphrase(gpghome):
                 ret = gpg.export_key("xxxxxxxxxxxxxxxx")
                 assert ret == GPG_TEST_PUB_KEY
                 gnupg_export_keys.assert_called_with(
-                    ["xxxxxxxxxxxxxxxx"], False, expect_passphrase=False,
+                    ["xxxxxxxxxxxxxxxx"],
+                    False,
+                    expect_passphrase=False,
                 )
 
 
@@ -609,7 +617,9 @@ def test_export_key_with_passphrase_with_gpg_passphrase_in_pillar(gpghome):
                 ret = gpg.export_key("xxxxxxxxxxxxxxxx", use_passphrase=True)
                 assert ret == GPG_TEST_PUB_KEY
                 gnupg_export_keys.assert_called_with(
-                    ["xxxxxxxxxxxxxxxx"], False, passphrase=GPG_TEST_KEY_PASSPHRASE,
+                    ["xxxxxxxxxxxxxxxx"],
+                    False,
+                    passphrase=GPG_TEST_KEY_PASSPHRASE,
                 )
 
 

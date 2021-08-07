@@ -118,14 +118,12 @@ class IpsetTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual(
                 ipset.add("set", "entry", packets=0),
-                "Error: Set set not created with \
-counters support",
+                "Error: Set set not created with counters support",
             )
 
             self.assertEqual(
                 ipset.add("set", "entry", comment=0),
-                "Error: Set set not created with \
-comment support",
+                "Error: Set set not created with comment support",
             )
 
         mock = MagicMock(return_value={"Type": "bitmap:ip", "Header": "Header"})

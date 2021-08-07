@@ -323,8 +323,9 @@ class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):
             out, err = process.communicate()
         if not out:
             self.skipTest(
-                "Failed to get the output of 'git describe'. "
-                "Error: '{}'".format(salt.utils.stringutils.to_str(err))
+                "Failed to get the output of 'git describe'. Error: '{}'".format(
+                    salt.utils.stringutils.to_str(err)
+                )
             )
 
         parsed_version = SaltStackVersion.parse(out)
@@ -389,10 +390,12 @@ class LoaderModuleMockMixin(metaclass=_FixLoaderModuleMockMixinMroOrder):
             loader_modules_configs = self.setup_loader_modules()
             if not isinstance(loader_modules_configs, dict):
                 raise RuntimeError(
-                    "{}.setup_loader_modules() must return a dictionary where the keys are the "
-                    "modules that require loader mocking setup and the values, the global module "
-                    "variables for each of the module being mocked. For example '__salt__', "
-                    "'__opts__', etc.".format(self.__class__.__name__)
+                    "{}.setup_loader_modules() must return a dictionary where the keys"
+                    " are the modules that require loader mocking setup and the values,"
+                    " the global module variables for each of the module being mocked."
+                    " For example '__salt__', '__opts__', etc.".format(
+                        self.__class__.__name__
+                    )
                 )
 
             mocker = LoaderModuleMock(loader_modules_configs)
@@ -494,7 +497,7 @@ class SaltReturnAssertsMixin:
             for saltret in self.__getWithinSaltReturn(ret, "result"):
                 self.assertTrue(saltret)
         except AssertionError:
-            log.info("Salt Full Return:\n{}".format(pprint.pformat(ret)))
+            log.info("Salt Full Return:\n%s", pprint.pformat(ret))
             try:
                 raise AssertionError(
                     "{result} is not True. Salt Comment:\n{comment}".format(
@@ -513,7 +516,7 @@ class SaltReturnAssertsMixin:
             for saltret in self.__getWithinSaltReturn(ret, "result"):
                 self.assertFalse(saltret)
         except AssertionError:
-            log.info("Salt Full Return:\n{}".format(pprint.pformat(ret)))
+            log.info("Salt Full Return:\n%s", pprint.pformat(ret))
             try:
                 raise AssertionError(
                     "{result} is not False. Salt Comment:\n{comment}".format(
@@ -530,7 +533,7 @@ class SaltReturnAssertsMixin:
             for saltret in self.__getWithinSaltReturn(ret, "result"):
                 self.assertIsNone(saltret)
         except AssertionError:
-            log.info("Salt Full Return:\n{}".format(pprint.pformat(ret)))
+            log.info("Salt Full Return:\n%s", pprint.pformat(ret))
             try:
                 raise AssertionError(
                     "{result} is not None. Salt Comment:\n{comment}".format(

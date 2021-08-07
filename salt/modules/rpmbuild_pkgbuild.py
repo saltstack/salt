@@ -248,7 +248,8 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
 
         if pkg_pub_key_file is None or pkg_priv_key_file is None:
             raise SaltInvocationError(
-                "Pillar data should contain Public and Private keys associated with 'keyid'"
+                "Pillar data should contain Public and Private keys associated with"
+                " 'keyid'"
             )
         try:
             __salt__["gpg.import_key"](
@@ -290,9 +291,8 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
                             break
             except StopIteration:
                 raise SaltInvocationError(
-                    "unable to find keygrip associated with fingerprint '{}' for keyid '{}'".format(
-                        local_key_fingerprint, local_keyid
-                    )
+                    "unable to find keygrip associated with fingerprint '{}' for keyid"
+                    " '{}'".format(local_key_fingerprint, local_keyid)
                 )
 
         if local_keyid is None:
@@ -318,8 +318,10 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
                     )
 
         if local_uids:
-            define_gpg_name = "--define='%_signature gpg' --define='%_gpg_name {}'".format(
-                local_uids[0]
+            define_gpg_name = (
+                "--define='%_signature gpg' --define='%_gpg_name {}'".format(
+                    local_uids[0]
+                )
             )
 
         # need to update rpm with public key
@@ -470,8 +472,8 @@ def make_src_pkg(
     retrc = __salt__["cmd.retcode"](cmd, runas=runas)
     if retrc != 0:
         raise SaltInvocationError(
-            "Make source package for destination directory {}, spec {}, sources {}, failed "
-            "with return error {}, check logs for further details".format(
+            "Make source package for destination directory {}, spec {}, sources {},"
+            " failed with return error {}, check logs for further details".format(
                 dest_dir, spec, sources, retrc
             )
         )
@@ -600,8 +602,8 @@ def build(
             shutil.rmtree(results_dir)
     if retrc != 0:
         raise SaltInvocationError(
-            "Building packages for destination directory {}, spec {}, sources {}, failed "
-            "with return error {}, check logs for further details".format(
+            "Building packages for destination directory {}, spec {}, sources {},"
+            " failed with return error {}, check logs for further details".format(
                 dest_dir, spec, sources, retrc
             )
         )

@@ -314,7 +314,7 @@ def get_resources_nodes(call=None, resFilter=None):
             ret[name] = resource
 
     if resFilter is not None:
-        log.debug("Filter given: %s, returning requested " "resource: nodes", resFilter)
+        log.debug("Filter given: %s, returning requested resource: nodes", resFilter)
         return ret[resFilter]
 
     log.debug("Filter not given: %s, returning all resource: nodes", ret)
@@ -355,9 +355,7 @@ def get_resources_vms(call=None, resFilter=None, includeConfig=True):
                     )
 
         if time.time() > timeoutTime:
-            raise SaltCloudExecutionTimeout(
-                "FAILED to get the proxmox " "resources vms"
-            )
+            raise SaltCloudExecutionTimeout("FAILED to get the proxmox resources vms")
 
         # Carry on if there wasn't a bad resource return from Proxmox
         if not badResource:
@@ -366,7 +364,7 @@ def get_resources_vms(call=None, resFilter=None, includeConfig=True):
         time.sleep(0.5)
 
     if resFilter is not None:
-        log.debug("Filter given: %s, returning requested " "resource: nodes", resFilter)
+        log.debug("Filter given: %s, returning requested resource: nodes", resFilter)
         return ret[resFilter]
 
     log.debug("Filter not given: %s, returning all resource: nodes", ret)
@@ -520,7 +518,9 @@ def list_nodes_select(call=None):
         salt-cloud -S my-proxmox-config
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full(), __opts__["query.selection"], call,
+        list_nodes_full(),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -566,7 +566,9 @@ def _reconfigure_clone(vm_, vmid):
         if re.match(r"^(ide|sata|scsi)(\d+)$", setting):
             postParams = {setting: vm_[setting]}
             query(
-                "post", "nodes/{}/qemu/{}/config".format(vm_["host"], vmid), postParams,
+                "post",
+                "nodes/{}/qemu/{}/config".format(vm_["host"], vmid),
+                postParams,
             )
 
         elif re.match(r"^net(\d+)$", setting):
@@ -589,7 +591,9 @@ def _reconfigure_clone(vm_, vmid):
             # Convert the dictionary back into a string list
             postParams = {setting: _dictionary_to_stringlist(new_setting)}
             query(
-                "post", "nodes/{}/qemu/{}/config".format(vm_["host"], vmid), postParams,
+                "post",
+                "nodes/{}/qemu/{}/config".format(vm_["host"], vmid),
+                postParams,
             )
 
 
@@ -702,7 +706,11 @@ def create(vm_):
     ssh_username = config.get_cloud_config_value(
         "ssh_username", vm_, __opts__, default="root"
     )
-    ssh_password = config.get_cloud_config_value("password", vm_, __opts__,)
+    ssh_password = config.get_cloud_config_value(
+        "password",
+        vm_,
+        __opts__,
+    )
 
     ret["ip_address"] = ip_address
     ret["username"] = ssh_username
@@ -793,7 +801,8 @@ def create_node(vm_, newid):
     if vm_["technology"] not in ["qemu", "openvz", "lxc"]:
         # Wrong VM type given
         log.error(
-            "Wrong VM type. Valid options are: qemu, openvz (proxmox3) or lxc (proxmox4)"
+            "Wrong VM type. Valid options are: qemu, openvz (proxmox3) or lxc"
+            " (proxmox4)"
         )
         raise SaltCloudExecutionFailure
 
@@ -979,8 +988,7 @@ def wait_for_created(upid, timeout=300):
     info = _lookup_proxmox_task(upid)
     if not info:
         log.error(
-            "wait_for_created: No task information "
-            "retrieved based on given criteria."
+            "wait_for_created: No task information retrieved based on given criteria."
         )
         raise SaltCloudExecutionFailure
 
@@ -1033,7 +1041,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](

@@ -167,7 +167,9 @@ def latest_version(*names, **kwargs):
             # check, whether latest available version
             # is newer than latest installed version
             if compare_versions(
-                ver1=str(latest_available), oper=">", ver2=str(latest_installed),
+                ver1=str(latest_available),
+                oper=">",
+                ver2=str(latest_installed),
             ):
                 log.debug(
                     "Upgrade of %s from %s to %s is available",
@@ -973,8 +975,7 @@ def refresh_db(**kwargs):
     repo_details = _get_repo_details(saltenv)
 
     log.debug(
-        "Refreshing pkg metadata db for saltenv '%s' (age of existing "
-        "metadata is %s)",
+        "Refreshing pkg metadata db for saltenv '%s' (age of existing metadata is %s)",
         saltenv,
         datetime.timedelta(seconds=repo_details.winrepo_age),
     )
@@ -1053,8 +1054,9 @@ def _get_repo_details(saltenv):
         ):
 
             raise CommandExecutionError(
-                "Attempting to delete files from a possibly unsafe location: "
-                "{}".format(local_dest)
+                "Attempting to delete files from a possibly unsafe location: {}".format(
+                    local_dest
+                )
             )
 
         __context__[contextkey] = (winrepo_source_dir, local_dest, winrepo_file)
@@ -1141,7 +1143,7 @@ def genrepo(**kwargs):
 
         # Skip hidden directories (.git)
         if re.search(r"[\\/]\..*", root):
-            log.debug("Skipping files in directory: {}".format(root))
+            log.debug("Skipping files in directory: %s", root)
             continue
 
         short_path = os.path.relpath(root, repo_details.local_dest)
@@ -1199,7 +1201,7 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
     renderers = salt.loader.render(__opts__, __salt__)
 
     def _failed_compile(prefix_msg, error_msg):
-        log.error("{} '{}': {} ".format(prefix_msg, short_path_name, error_msg))
+        log.error("%s '%s': %s", prefix_msg, short_path_name, error_msg)
         ret.setdefault("errors", {})[short_path_name] = [
             "{}, {} ".format(prefix_msg, error_msg)
         ]
@@ -1234,15 +1236,15 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
                 # Ensure version is a string/unicode
                 if not isinstance(version_str, str):
                     log.error(
-                        "package '%s' within '%s', version number %s' "
-                        "is not a string",
+                        "package '%s' within '%s', version number %s' is not a string",
                         pkgname,
                         short_path_name,
                         version_str,
                     )
                     errors.append(
-                        "package '{}', version number {} "
-                        "is not a string".format(pkgname, version_str)
+                        "package '{}', version number {} is not a string".format(
+                            pkgname, version_str
+                        )
                     )
                     continue
                 # Ensure version contains a dict
@@ -1284,8 +1286,8 @@ def _get_source_sum(source_hash, file_path, saltenv):
     schemes = ("salt", "http", "https", "ftp", "swift", "s3", "file")
     invalid_hash_msg = (
         "Source hash '{}' format is invalid. It must be in "
-        "the format <hash type>=<hash>"
-    ).format(source_hash)
+        "the format <hash type>=<hash>".format(source_hash)
+    )
     source_hash = str(source_hash)
     source_hash_scheme = urllib.parse.urlparse(source_hash).scheme
 
@@ -1310,7 +1312,7 @@ def _get_source_sum(source_hash, file_path, saltenv):
         items = source_hash.split("=", 1)
 
         if len(items) != 2:
-            invalid_hash_msg = "{}, or it must be a supported protocol" ": {}".format(
+            invalid_hash_msg = "{}, or it must be a supported protocol: {}".format(
                 invalid_hash_msg, ", ".join(schemes)
             )
             raise SaltInvocationError(invalid_hash_msg)
@@ -1331,8 +1333,7 @@ def _get_msiexec(use_msiexec):
             return True, use_msiexec
         else:
             log.warning(
-                "msiexec path '%s' not found. Using system registered "
-                "msiexec instead",
+                "msiexec path '%s' not found. Using system registered msiexec instead",
                 use_msiexec,
             )
             use_msiexec = True
@@ -1774,8 +1775,9 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             ):
                 ret[pkg_name] = {"install status": "task started"}
                 if not __salt__["task.run"](name="update-salt-software"):
-                    log.error("Failed to install %s", pkg_name)
-                    log.error("Scheduled Task failed to run")
+                    log.error(
+                        "Scheduled Task failed to run. Failed to install %s", pkg_name
+                    )
                     ret[pkg_name] = {"install status": "failed"}
                 else:
 
@@ -1790,15 +1792,18 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                             break
 
                     if not task_running:
-                        log.error("Failed to install %s", pkg_name)
-                        log.error("Scheduled Task failed to run")
+                        log.error(
+                            "Scheduled Task failed to run. Failed to install %s",
+                            pkg_name,
+                        )
                         ret[pkg_name] = {"install status": "failed"}
 
             # All other packages run with task scheduler
             else:
                 if not __salt__["task.run_wait"](name="update-salt-software"):
-                    log.error("Failed to install %s", pkg_name)
-                    log.error("Scheduled Task failed to run")
+                    log.error(
+                        "Scheduled Task failed to run. Failed to install %s", pkg_name
+                    )
                     ret[pkg_name] = {"install status": "failed"}
         else:
             # Launch the command
@@ -1824,9 +1829,12 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 ret[pkg_name] = {"install status": "success, reboot initiated"}
                 changed.append(pkg_name)
             else:
-                log.error("Failed to install %s", pkg_name)
-                log.error("retcode %s", result["retcode"])
-                log.error("installer output: %s", result["stdout"])
+                log.error(
+                    "Failed to install %s; retcode: %s; installer output: %s",
+                    pkg_name,
+                    result["retcode"],
+                    result["stdout"],
+                )
                 ret[pkg_name] = {"install status": "failed"}
 
     # Get a new list of installed software
@@ -2025,7 +2033,8 @@ def remove(name=None, pkgs=None, **kwargs):
             # If still no uninstaller found, fail
             if not uninstaller:
                 log.error(
-                    "No installer or uninstaller configured for package %s", pkgname,
+                    "No installer or uninstaller configured for package %s",
+                    pkgname,
                 )
                 ret[pkgname] = {"no uninstaller defined": target}
                 continue
@@ -2140,8 +2149,9 @@ def remove(name=None, pkgs=None, **kwargs):
                 )
                 # Run Scheduled Task
                 if not __salt__["task.run_wait"](name="update-salt-software"):
-                    log.error("Failed to remove %s", pkgname)
-                    log.error("Scheduled Task failed to run")
+                    log.error(
+                        "Scheduled Task failed to run. Failed to remove %s", pkgname
+                    )
                     ret[pkgname] = {"uninstall status": "failed"}
             else:
                 # Launch the command
@@ -2168,9 +2178,12 @@ def remove(name=None, pkgs=None, **kwargs):
                     ret[pkgname] = {"uninstall status": "success, reboot initiated"}
                     changed.append(pkgname)
                 else:
-                    log.error("Failed to remove %s", pkgname)
-                    log.error("retcode %s", result["retcode"])
-                    log.error("uninstaller output: %s", result["stdout"])
+                    log.error(
+                        "Failed to remove %s; retcode: %s; uninstaller output: %s",
+                        pkgname,
+                        result["retcode"],
+                        result["stdout"],
+                    )
                     ret[pkgname] = {"uninstall status": "failed"}
 
     # Get a new list of installed software
@@ -2287,8 +2300,7 @@ def get_repo_data(saltenv="base"):
                 log.exception(exc)
                 return {}
     except OSError as exc:
-        log.error("Not able to read repo file")
-        log.exception(exc)
+        log.exception("Not able to read repo file: %s", exc)
         return {}
 
 

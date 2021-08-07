@@ -558,7 +558,8 @@ def _get_disks(conn, dom):
                 except libvirt.libvirtError:
                     # The volume won't be found if the pool is not started, just output less infos
                     log.info(
-                        "Couldn't extract all volume informations: pool is likely not running or refreshed"
+                        "Couldn't extract all volume informations: pool is likely not"
+                        " running or refreshed"
                     )
                 return (qemu_target, extra_properties)
 
@@ -577,7 +578,7 @@ def _get_disks(conn, dom):
                 elif elem.get("device", "disk") != "cdrom":
                     # Extract disk sizes, snapshots, backing files
                     try:
-                        stdout = subprocess.Popen(
+                        process = subprocess.Popen(
                             [
                                 "qemu-img",
                                 "info",
@@ -589,12 +590,17 @@ def _get_disks(conn, dom):
                             ],
                             shell=False,
                             stdout=subprocess.PIPE,
-                        ).communicate()[0]
-                        qemu_output = salt.utils.stringutils.to_str(stdout)
-                        output = _parse_qemu_img_info(qemu_output)
-                        extra_properties = output
-                    except TypeError:
-                        disk.update({"file": "Does not exist"})
+                            stderr=subprocess.PIPE,
+                        )
+                        stdout, stderr = process.communicate()
+                        if process.returncode == 0:
+                            qemu_output = salt.utils.stringutils.to_str(stdout)
+                            output = _parse_qemu_img_info(qemu_output)
+                            extra_properties = output
+                        else:
+                            extra_properties = {"error": stderr}
+                    except FileNotFoundError:
+                        extra_properties = {"error": "qemu-img not found"}
             elif disk_type == "block":
                 qemu_target = source.get("dev", "")
                 # If the qemu_target is a known path, output a volume
@@ -1059,19 +1065,23 @@ def _gen_xml(
     if old_port:
         salt.utils.versions.warn_until(
             "Phosphorus",
-            "'telnet_port' parameter has been deprecated, use the 'serials' and 'consoles' parameters instead. "
-            "'telnet_port' parameter has been deprecated, use the 'serials' parameter with a value "
-            "like ``{{{{'type': 'tcp', 'protocol': 'telnet', 'port': {}}}}}`` instead and a similar `consoles` parameter. "
-            "It will be removed in {{version}}.".format(old_port),
+            "'telnet_port' parameter has been deprecated, use the 'serials' and"
+            " 'consoles' parameters instead. 'telnet_port' parameter has been"
+            " deprecated, use the 'serials' parameter with a value like ``{{{{'type':"
+            " 'tcp', 'protocol': 'telnet', 'port': {}}}}}`` instead and a similar"
+            " `consoles` parameter. It will be removed in {{version}}.".format(
+                old_port
+            ),
         )
 
     old_serial_type = kwargs.get("serial_type")
     if old_serial_type:
         salt.utils.versions.warn_until(
             "Phosphorus",
-            "'serial_type' parameter has been deprecated, use the 'serials' parameter with a value "
-            "like ``{{{{'type': '{}', 'protocol':  'telnet' }}}}`` instead and a similar `consoles` parameter. "
-            "It will be removed in {{version}}.".format(old_serial_type),
+            "'serial_type' parameter has been deprecated, use the 'serials' parameter"
+            " with a value like ``{{{{'type': '{}', 'protocol':  'telnet' }}}}``"
+            " instead and a similar `consoles` parameter. It will be removed in"
+            " {{version}}.".format(old_serial_type),
         )
         serial_context = {"type": old_serial_type}
         if serial_context["type"] == "tcp":
@@ -1083,8 +1093,8 @@ def _gen_xml(
         if old_console:
             salt.utils.versions.warn_until(
                 "Phosphorus",
-                "'console' parameter has been deprecated, use the 'serials' and 'consoles' parameters instead. "
-                "It will be removed in {version}.",
+                "'console' parameter has been deprecated, use the 'serials' and"
+                " 'consoles' parameters instead. It will be removed in {version}.",
             )
             if old_console is True:
                 context["consoles"].append(serial_context)
@@ -1395,7 +1405,7 @@ def _get_images_dir():
     find legacy virt.images, then tries virt:images.
     """
     img_dir = __salt__["config.get"]("virt:images")
-    log.debug("Image directory from config option `virt:images`" " is %s", img_dir)
+    log.debug("Image directory from config option `virt:images` is %s", img_dir)
     return img_dir
 
 
@@ -1428,8 +1438,9 @@ def _zfs_image_create(
 
     if not pool:
         raise CommandExecutionError(
-            "Unable to create new disk {}, please specify"
-            " the disk pool name".format(disk_name)
+            "Unable to create new disk {}, please specify the disk pool name".format(
+                disk_name
+            )
         )
 
     destination_fs = os.path.join(pool, "{}.{}".format(vm_name, disk_name))
@@ -1443,9 +1454,7 @@ def _zfs_image_create(
             )
         )
     elif destination_fs in existing_disk:
-        log.info(
-            "ZFS filesystem {} already exists. Skipping creation".format(destination_fs)
-        )
+        log.info("ZFS filesystem %s already exists. Skipping creation", destination_fs)
         blockdevice_path = os.path.join("/dev/zvol", pool, vm_name)
         return blockdevice_path
 
@@ -1990,7 +1999,8 @@ def _handle_remote_boot_params(orig_boot):
         return new_boot
     else:
         raise SaltInvocationError(
-            "Invalid boot parameters,It has to follow this combination: [(kernel, initrd) or/and cmdline] or/and [(loader, nvram) or efi]"
+            "Invalid boot parameters,It has to follow this combination: [(kernel,"
+            " initrd) or/and cmdline] or/and [(loader, nvram) or efi]"
         )
 
 
@@ -4222,7 +4232,7 @@ def update(
                     if (
                         item in changes["disk"]["new"]
                         and source_file
-                        and not os.path.isfile(source_file)
+                        and not os.path.exists(source_file)
                     ):
                         _qemu_image_create(all_disks[idx])
                     elif item in changes["disk"]["new"] and not source_file:
@@ -5867,7 +5877,7 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
             # TODO create solution for 'dataset is busy'
             time.sleep(3)
             fs_name = disks[disk]["file"][len("/dev/zvol/") :]
-            log.info("Destroying VM ZFS volume {}".format(fs_name))
+            log.info("Destroying VM ZFS volume %s", fs_name)
             __salt__["zfs.destroy"](name=fs_name, force=True)
         elif os.path.exists(disks[disk]["file"]):
             os.remove(disks[disk]["file"])
@@ -5917,12 +5927,7 @@ def _is_kvm_hyper():
     """
     Returns a bool whether or not this node is a KVM hypervisor
     """
-    try:
-        with salt.utils.files.fopen("/proc/modules") as fp_:
-            if "kvm_" not in salt.utils.stringutils.to_unicode(fp_.read()):
-                return False
-    except OSError:
-        # No /proc/modules? Are we on Windows? Or Solaris?
+    if not os.path.exists("/dev/kvm"):
         return False
     return "libvirtd" in __salt__["cmd.run"](__grains__["ps"])
 
@@ -6945,7 +6950,11 @@ def all_capabilities(**kwargs):
         host_caps = ElementTree.fromstring(conn.getCapabilities())
         domains = [
             [
-                (guest.get("arch", {}).get("name", None), key)
+                (
+                    guest.get("arch", {}).get("name", None),
+                    key,
+                    guest.get("arch", {}).get("emulator", None),
+                )
                 for key in guest.get("arch", {}).get("domains", {}).keys()
             ]
             for guest in [
@@ -6963,10 +6972,10 @@ def all_capabilities(**kwargs):
             "domains": [
                 _parse_domain_caps(
                     ElementTree.fromstring(
-                        conn.getDomainCapabilities(None, arch, None, domain)
+                        conn.getDomainCapabilities(emulator, arch, None, domain)
                     )
                 )
-                for (arch, domain) in flattened
+                for (arch, domain, emulator) in flattened
             ],
         }
         return result
@@ -7703,7 +7712,7 @@ def network_info(name=None, **kwargs):
             for net in nets
         }
     except libvirt.libvirtError as err:
-        log.debug("Silenced libvirt error: %s", str(err))
+        log.debug("Silenced libvirt error: %s", err)
     finally:
         conn.close()
     return result
@@ -8540,7 +8549,7 @@ def pool_info(name=None, **kwargs):
         ]
         result = {pool.name(): _pool_extract_infos(pool) for pool in pools}
     except libvirt.libvirtError as err:
-        log.debug("Silenced libvirt error: %s", str(err))
+        log.debug("Silenced libvirt error: %s", err)
     finally:
         conn.close()
     return result
@@ -8957,7 +8966,7 @@ def volume_infos(pool=None, volume=None, **kwargs):
         }
         return {pool_name: volumes for (pool_name, volumes) in vols.items() if volumes}
     except libvirt.libvirtError as err:
-        log.debug("Silenced libvirt error: %s", str(err))
+        log.debug("Silenced libvirt error: %s", err)
     finally:
         conn.close()
     return result

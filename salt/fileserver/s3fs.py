@@ -488,7 +488,7 @@ def _refresh_buckets_cache_file(cache_file):
                             continue
                         else:
                             log.warning(
-                                "S3 Error! Do you have any files " "in your S3 bucket?"
+                                "S3 Error! Do you have any files in your S3 bucket?"
                             )
                             return {}
 
@@ -532,7 +532,7 @@ def _refresh_buckets_cache_file(cache_file):
                         continue
                     else:
                         log.warning(
-                            "S3 Error! Do you have any files " "in your S3 bucket?"
+                            "S3 Error! Do you have any files in your S3 bucket?"
                         )
                         return {}
 
@@ -594,7 +594,7 @@ def _read_buckets_cache_file(cache_file):
             KeyError,
             ValueError,
         ) as exc:
-            log.debug("Exception reading buckets cache file: '{}'".format(exc))
+            log.debug("Exception reading buckets cache file: '%s'", exc)
             data = None
 
     return data

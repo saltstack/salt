@@ -13,7 +13,8 @@ def __virtual__():
         return "eix"
     return (
         False,
-        "The eix execution module cannot be loaded: either the system is not Gentoo or the eix binary is not in the path.",
+        "The eix execution module cannot be loaded: either the system is not Gentoo or"
+        " the eix binary is not in the path.",
     )
 
 

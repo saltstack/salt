@@ -65,7 +65,9 @@ class JsonTestCase(TestCase, LoaderModuleMockMixin):
                                 },
                             },
                         },
-                        "comment": "States ran successfully. Updating sub_minion, minion.",
+                        "comment": (
+                            "States ran successfully. Updating sub_minion, minion."
+                        ),
                         "duration": 1638.047,
                         "name": "call_sleep_state",
                         "result": True,
@@ -80,7 +82,9 @@ class JsonTestCase(TestCase, LoaderModuleMockMixin):
                             "out": "highstate",
                             "ret": {"minion": "file1\nfile2\nfile3"},
                         },
-                        "comment": "Function ran successfully. Function cmd.run ran on minion.",
+                        "comment": (
+                            "Function ran successfully. Function cmd.run ran on minion."
+                        ),
                         "duration": 412.397,
                         "name": "cmd.run",
                         "result": True,
@@ -171,7 +175,9 @@ class JsonNestedTestCase(TestCase, LoaderModuleMockMixin):
                                             "__sls__": "orch.test.changes",
                                             "changes": {
                                                 "testing": {
-                                                    "new": "Something pretended to change",
+                                                    "new": (
+                                                        "Something pretended to change"
+                                                    ),
                                                     "old": "Unchanged",
                                                 }
                                             },

@@ -228,9 +228,7 @@ def claim_mantle_of_responsibility(file_name):
     # all OSs supported by salt has psutil
     if not HAS_PSUTIL:
         log.critical(
-            "Assuming no other Process has this responsibility! pidfile: {}".format(
-                file_name
-            )
+            "Assuming no other Process has this responsibility! pidfile: %s", file_name
         )
         return True
 
@@ -245,9 +243,9 @@ def claim_mantle_of_responsibility(file_name):
         with salt.utils.files.fopen(file_name, "r") as file:
             file_process_info = json.load(file)
     except json.decoder.JSONDecodeError:
-        log.error("pidfile: {} is corrupted".format(file_name))
+        log.error("pidfile: %s is corrupted", file_name)
     except FileNotFoundError:
-        log.info("pidfile: {} not found".format(file_name))
+        log.info("pidfile: %s not found", file_name)
 
     this_process_info = get_process_info()
 
@@ -282,9 +280,7 @@ def check_mantle_of_responsibility(file_name):
     # all OSs supported by salt has psutil
     if not HAS_PSUTIL:
         log.critical(
-            "Assuming no other Process has this responsibility! pidfile: {}".format(
-                file_name
-            )
+            "Assuming no other Process has this responsibility! pidfile: %s", file_name
         )
         return
 
@@ -293,10 +289,10 @@ def check_mantle_of_responsibility(file_name):
         with salt.utils.files.fopen(file_name, "r") as file:
             file_process_info = json.load(file)
     except json.decoder.JSONDecodeError:
-        log.error("pidfile: {} is corrupted".format(file_name))
+        log.error("pidfile: %s is corrupted", file_name)
         return
     except FileNotFoundError:
-        log.info("pidfile: {} not found".format(file_name))
+        log.info("pidfile: %s not found", file_name)
         return
 
     if not isinstance(file_process_info, dict) or not isinstance(
@@ -317,7 +313,7 @@ def set_pidfile(pidfile, user):
         os.makedirs(pdir)
     try:
         with salt.utils.files.fopen(pidfile, "w+") as ofile:
-            ofile.write(str(os.getpid()))  # future lint: disable=blacklisted-function
+            ofile.write(str(os.getpid()))
     except OSError:
         pass
 
@@ -335,8 +331,9 @@ def set_pidfile(pidfile, user):
         # groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
     except (KeyError, IndexError):
         sys.stderr.write(
-            "Failed to set the pid to user: {}. The user is not "
-            "available.\n".format(user)
+            "Failed to set the pid to user: {}. The user is not available.\n".format(
+                user
+            )
         )
         sys.exit(salt.defaults.exitcodes.EX_NOUSER)
 
@@ -546,7 +543,10 @@ class ProcessManager:
         # create a nicer name for the debug log
         if name is None:
             if isinstance(tgt, types.FunctionType):
-                name = "{}.{}".format(tgt.__module__, tgt.__name__,)
+                name = "{}.{}".format(
+                    tgt.__module__,
+                    tgt.__name__,
+                )
             else:
                 name = "{}{}.{}".format(
                     tgt.__module__,
@@ -1002,9 +1002,10 @@ class SignalHandlingMultiprocessingProcess(SignalHandlingProcess):
     def __init__(self, *args, **kwargs):
         salt.utils.versions.warn_until_date(
             "20220101",
-            "Please stop using '{name}.SignalHandlingMultiprocessingProcess' and instead use "
-            "'{name}.SignalHandlingProcess'. '{name}.SignalHandlingMultiprocessingProcess' "
-            "will go away after {{date}}.".format(name=__name__),
+            "Please stop using '{name}.SignalHandlingMultiprocessingProcess' and"
+            " instead use '{name}.SignalHandlingProcess'."
+            " '{name}.SignalHandlingMultiprocessingProcess' will go away after"
+            " {{date}}.".format(name=__name__),
             stacklevel=3,
         )
         super().__init__(*args, **kwargs)
