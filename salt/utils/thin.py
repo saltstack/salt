@@ -606,7 +606,8 @@ def gen_thin(
     if python2_bin != "python2" or python3_bin != "python3":
         salt.utils.versions.warn_until(
             "Silicon",
-            "python2_bin and python3_bin are no longer used, please update your call to gen_thin",
+            "python2_bin and python3_bin are no longer used, please update your call to"
+            " gen_thin",
         )
     if sys.version_info < (3,):
         raise salt.exceptions.SaltSystemExit(
@@ -805,7 +806,8 @@ def gen_min(
     if python2_bin != "python2" or python3_bin != "python3":
         salt.utils.versions.warn_until(
             "Silicon",
-            "python2_bin and python3_bin are no longer used, please update your call to gen_min",
+            "python2_bin and python3_bin are no longer used, please update your call to"
+            " gen_min",
         )
     mindir = os.path.join(cachedir, "min")
     if not os.path.isdir(mindir):

@@ -499,5 +499,5 @@ def mod_watch(name, sfun=None, **kwargs):
         "name": name,
         "changes": {},
         "result": False,
-        "comment": "watch requisite is not implemented for " "{}".format(sfun),
+        "comment": "watch requisite is not implemented for {}".format(sfun),
     }

@@ -198,10 +198,10 @@ def get_connection(
             aws_access_key_id=keyid, aws_secret_access_key=key, region_name=region
         )
         if session is None:
-            raise SaltInvocationError('Region "{}" is not ' "valid.".format(region))
+            raise SaltInvocationError('Region "{}" is not valid.'.format(region))
         conn = session.client(module)
         if conn is None:
-            raise SaltInvocationError('Region "{}" is not ' "valid.".format(region))
+            raise SaltInvocationError('Region "{}" is not valid.'.format(region))
     except boto.exception.NoAuthHandlerFound:
         raise SaltInvocationError(
             "No authentication credentials found when "
@@ -311,6 +311,5 @@ def ordered(obj):
 
 
 def json_objs_equal(left, right):
-    """ Compare two parsed JSON objects, given non-ordering in JSON objects
-    """
+    """Compare two parsed JSON objects, given non-ordering in JSON objects"""
     return ordered(left) == ordered(right)

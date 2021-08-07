@@ -426,7 +426,8 @@ class BaseSaltAPIHandler(salt.ext.tornado.web.RequestHandler):  # pylint: disabl
         if not hasattr(self.application, "event_listener"):
             log.debug("init a listener")
             self.application.event_listener = EventListener(
-                self.application.mod_opts, self.application.opts,
+                self.application.mod_opts,
+                self.application.opts,
             )
 
         if not hasattr(self, "saltclients"):
@@ -1008,7 +1009,8 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                 except Exception:  # pylint: disable=broad-except
                     pass
             raise salt.ext.tornado.gen.Return(
-                "No minions matched the target. No command was sent, no jid was assigned."
+                "No minions matched the target. No command was sent, no jid was"
+                " assigned."
             )
 
         # get_event for missing minion

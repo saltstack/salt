@@ -417,8 +417,9 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         t, matcher = matcher.split(":", 1)
         if t not in traverse:
             raise Exception(
-                'Unknown traverse option "{}", '
-                "should be one of {}".format(t, traverse.keys())
+                'Unknown traverse option "{}", should be one of {}'.format(
+                    t, traverse.keys()
+                )
             )
         cfgs = matchs.get(traverse[t](matcher, None), [])
         if not isinstance(cfgs, list):

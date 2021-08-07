@@ -330,7 +330,7 @@ class LocalClient:
         elif "jid" not in pub_data:
             return {}
         if pub_data["jid"] == "0":
-            print("Failed to connect to the Master, " "is the Salt Master running?")
+            print("Failed to connect to the Master, is the Salt Master running?")
             return {}
 
         # If we order masters (via a syndic), don't short circuit if no minions
@@ -1451,8 +1451,9 @@ class LocalClient:
             )
         except Exception as exc:  # pylint: disable=broad-except
             raise SaltClientError(
-                "Returner {} could not fetch jid data. "
-                "Exception details: {}".format(self.opts["master_job_cache"], exc)
+                "Returner {} could not fetch jid data. Exception details: {}".format(
+                    self.opts["master_job_cache"], exc
+                )
             )
         for minion in data:
             m_data = {}
@@ -1696,12 +1697,16 @@ class LocalClient:
                             yield {
                                 id_: {
                                     "out": "no_return",
-                                    "ret": "Minion did not return. [No response]"
-                                    "\nThe minions may not have all finished running and any "
-                                    "remaining minions will return upon completion. To look "
-                                    "up the return data for this job later, run the following "
-                                    "command:\n\n"
-                                    "salt-run jobs.lookup_jid {}".format(jid),
+                                    "ret": (
+                                        "Minion did not return. [No response]\nThe"
+                                        " minions may not have all finished running and"
+                                        " any remaining minions will return upon"
+                                        " completion. To look up the return data for"
+                                        " this job later, run the following"
+                                        " command:\n\nsalt-run jobs.lookup_jid {}".format(
+                                            jid
+                                        )
+                                    ),
                                     "retcode": salt.defaults.exitcodes.EX_GENERIC,
                                 }
                             }

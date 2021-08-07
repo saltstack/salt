@@ -275,8 +275,8 @@ def test_user_setpassword_policy(setup_teardown_vars, salt_call_cli):
 
     # fix the policy and store the previous strerror in ret to cleanup
     salt_call_cli.run("lgpo.set", "computer_policy={'Minimum Password Length': 0}")
-    assert ret.json == (
-        "The password does not meet the password policy requirements."
+    assert (
+        ret.json == "The password does not meet the password policy requirements."
         " Check the minimum password length, password complexity and"
         " password history requirements."
     )
