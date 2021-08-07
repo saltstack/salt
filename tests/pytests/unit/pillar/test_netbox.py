@@ -14,7 +14,7 @@ def default_kwargs():
         "pillar": None,
         "api_url": "http://netbox.example.com",
         "api_token": "yeic5oocizei7owuichoesh8ooqu6oob3uWiey9a",
-        "api_query_result_limit": 65535
+        "api_query_result_limit": 65535,
     }
 
 
@@ -1460,7 +1460,10 @@ def test_when_we_retrieve_a_single_device_then_return_list(
         query.return_value = device_results
 
         actual_result = netbox._get_devices(
-            default_kwargs["api_url"], default_kwargs["minion_id"], headers, default_kwargs["api_query_result_limit"]
+            default_kwargs["api_url"],
+            default_kwargs["minion_id"],
+            headers,
+            default_kwargs["api_query_result_limit"],
         )
 
         assert actual_result == expected_result
@@ -1475,7 +1478,10 @@ def test_when_we_retrieve_a_device_and_get_http_error_then_return_empty_list(
         query.return_value = http_error
 
         actual_result = netbox._get_devices(
-            default_kwargs["api_url"], default_kwargs["minion_id"], headers, default_kwargs["api_query_result_limit"]
+            default_kwargs["api_url"],
+            default_kwargs["minion_id"],
+            headers,
+            default_kwargs["api_query_result_limit"],
         )
 
         assert actual_result == expected_result
@@ -1491,7 +1497,10 @@ def test_when_we_retrieve_a_single_virtual_machine_then_return_list(
         query.return_value = virtual_machine_results
 
         actual_result = netbox._get_virtual_machines(
-            default_kwargs["api_url"], default_kwargs["minion_id"], headers, default_kwargs["api_query_result_limit"]
+            default_kwargs["api_url"],
+            default_kwargs["minion_id"],
+            headers,
+            default_kwargs["api_query_result_limit"],
         )
 
         assert actual_result == expected_result
@@ -1507,7 +1516,10 @@ def test_when_we_retrieve_a_virtual_machine_and_get_http_error_then_return_empty
         query.return_value = http_error
 
         actual_result = netbox._get_virtual_machines(
-            default_kwargs["api_url"], default_kwargs["minion_id"], headers, default_kwargs["api_query_result_limit"]
+            default_kwargs["api_url"],
+            default_kwargs["minion_id"],
+            headers,
+            default_kwargs["api_query_result_limit"],
         )
 
         assert actual_result == expected_result
@@ -1528,7 +1540,7 @@ def test_when_we_retrieve_device_interfaces_then_return_dict(
             511,
             "device",
             headers,
-            default_kwargs["api_query_result_limit"]
+            default_kwargs["api_query_result_limit"],
         )
 
         assert actual_result == expected_result
@@ -1549,7 +1561,7 @@ def test_when_we_retrieve_device_interfaces_and_get_http_error_then_return_empty
             511,
             "device",
             headers,
-            default_kwargs["api_query_result_limit"]
+            default_kwargs["api_query_result_limit"],
         )
 
         assert actual_result == expected_result
@@ -1573,7 +1585,7 @@ def test_when_we_retrieve_virtual_machine_interfaces_then_return_list(
             222,
             "virtual-machine",
             headers,
-            default_kwargs["api_query_result_limit"]
+            default_kwargs["api_query_result_limit"],
         )
 
         assert actual_result == expected_result
@@ -1594,7 +1606,7 @@ def test_when_we_retrieve_virtual_machine_interfaces_and_get_http_error_then_ret
             222,
             "virtual-machine",
             headers,
-            default_kwargs["api_query_result_limit"]
+            default_kwargs["api_query_result_limit"],
         )
 
         assert actual_result == expected_result
@@ -1615,7 +1627,7 @@ def test_when_we_retrieve_device_interface_ips_then_return_list(
             511,
             "device",
             headers,
-            default_kwargs["api_query_result_limit"]
+            default_kwargs["api_query_result_limit"],
         )
 
         assert actual_result == expected_result
@@ -1636,7 +1648,7 @@ def test_when_we_retrieve_device_interface_ips_and_get_http_error_then_return_em
             511,
             "device",
             headers,
-            default_kwargs["api_query_result_limit"]
+            default_kwargs["api_query_result_limit"],
         )
 
         assert actual_result == expected_result
@@ -1657,7 +1669,7 @@ def test_when_we_retrieve_virtual_machine_interface_ips_then_return_list(
             222,
             "virtual-machine",
             headers,
-            default_kwargs["api_query_result_limit"]
+            default_kwargs["api_query_result_limit"],
         )
 
         assert actual_result == expected_result
@@ -1678,7 +1690,7 @@ def test_when_we_retrieve_virtual_machine_interface_ips_and_get_http_error_then_
             222,
             "virtual-machine",
             headers,
-            default_kwargs["api_query_result_limit"]
+            default_kwargs["api_query_result_limit"],
         )
 
         assert actual_result == expected_result
@@ -1771,7 +1783,7 @@ def test_when_we_retrieve_site_prefixes_then_return_list(
             "Site 1",
             18,
             headers,
-            default_kwargs["api_query_result_limit"]
+            default_kwargs["api_query_result_limit"],
         )
 
         assert actual_result == expected_result
@@ -1792,7 +1804,7 @@ def test_when_we_retrieve_site_prefixes_and_get_http_error_then_return_empty_lis
             "Site 1",
             18,
             headers,
-            default_kwargs["api_query_result_limit"]
+            default_kwargs["api_query_result_limit"],
         )
 
         assert actual_result == expected_result

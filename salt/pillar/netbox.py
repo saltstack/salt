@@ -757,7 +757,7 @@ def _get_site_details(api_url, minion_id, site_name, site_id, headers):
     site_details_ret = salt.utils.http.query(site_url, header_dict=headers, decode=True)
     if "error" in site_details_ret:
         log.error(
-            'Unable to retrieve site details for %s (ID %d), status code: %d, error %s',
+            "Unable to retrieve site details for %s (ID %d), status code: %d, error %s",
             site_name,
             site_id,
             site_details_ret["status"],
