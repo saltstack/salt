@@ -205,7 +205,12 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
                         self.write(line)
 
             expected = (
-                "\n".join(("2.2.2.2 bar.barbar bar", "3.3.3.3 asdf.asdfadsf asdf",))
+                "\n".join(
+                    (
+                        "2.2.2.2 bar.barbar bar",
+                        "3.3.3.3 asdf.asdfadsf asdf",
+                    )
+                )
                 + "\n"
             )
 
@@ -223,9 +228,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         Tests if specified host entry gets removed from the hosts file
         """
         hosts_content = (
-            b"# one line comment\n"
-            b"10.10.10.10    Salt1\n"
-            b"9.9.9.9    Salt2   # comment\n"
+            b"# one line comment\n10.10.10.10    Salt1\n9.9.9.9    Salt2   # comment\n"
         )
         with patch("salt.utils.files.fopen", mock_open(hosts_content)), patch(
             "salt.modules.hosts.__get_hosts_filename",

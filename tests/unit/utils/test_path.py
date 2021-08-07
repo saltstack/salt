@@ -288,8 +288,10 @@ class TestWhich(TestCase):
                             os.environ,
                             {
                                 "PATH": os.sep + "bin",
-                                "PATHEXT": ".COM;.EXE;.BAT;.CMD;.VBS;"
-                                ".VBE;.JS;.JSE;.WSF;.WSH;.MSC;.PY",
+                                "PATHEXT": (
+                                    ".COM;.EXE;.BAT;.CMD;.VBS;"
+                                    ".VBE;.JS;.JSE;.WSF;.WSH;.MSC;.PY"
+                                ),
                             },
                         ):
 

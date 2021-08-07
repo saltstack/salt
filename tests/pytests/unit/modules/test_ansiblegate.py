@@ -49,7 +49,8 @@ def test_virtual_function(subtests):
 
     with subtests.test("missing ansible-doc binary"):
         with patch(
-            "salt.utils.path.which", side_effect=["/path/to/ansible", None],
+            "salt.utils.path.which",
+            side_effect=["/path/to/ansible", None],
         ):
             assert ansiblegate.__virtual__() == (
                 False,

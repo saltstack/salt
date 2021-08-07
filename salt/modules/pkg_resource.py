@@ -119,7 +119,7 @@ def parse_targets(
     elif pkgs:
         if version is not None:
             log.warning(
-                "'version' argument will be ignored for multiple " "package targets"
+                "'version' argument will be ignored for multiple package targets"
             )
         pkgs = _repack_pkgs(pkgs, normalize=normalize)
         if not pkgs:
@@ -130,7 +130,7 @@ def parse_targets(
     elif sources and __grains__["os"] != "MacOS":
         if version is not None:
             log.warning(
-                "'version' argument will be ignored for multiple " "package targets"
+                "'version' argument will be ignored for multiple package targets"
             )
         sources = pack_sources(sources, normalize=normalize)
         if not sources:

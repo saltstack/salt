@@ -226,14 +226,10 @@ def get_fun(fun):
         # to 1.
         _response = _request(
             "GET",
-            options["url"]
-            + options["db"]
-            + (
-                "/_design/salt/_view/by-minion-fun-times"
-                'tamp?descending=true&endkey=["{0}","{1}'
-                '",0]&startkey=["{0}","{1}",9999999999]&'
-                "limit=1"
-            ).format(minion, fun),
+            options["url"] + options["db"] + "/_design/salt/_view/by-minion-fun-times"
+            'tamp?descending=true&endkey=["{0}","{1}'
+            '",0]&startkey=["{0}","{1}",9999999999]&'
+            "limit=1".format(minion, fun),
         )
         # Skip the minion if we got an error..
         if "error" in _response:

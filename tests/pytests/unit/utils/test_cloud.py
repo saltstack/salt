@@ -98,10 +98,12 @@ def test__save_password_in_keyring(create_class):
         "fake_password_c8231",
     )
     stored_pw = keyring.get_password(
-        "salt.cloud.provider.test_case_provider", "fake_username",
+        "salt.cloud.provider.test_case_provider",
+        "fake_username",
     )
     keyring.delete_password(
-        "salt.cloud.provider.test_case_provider", "fake_username",
+        "salt.cloud.provider.test_case_provider",
+        "fake_username",
     )
     assert stored_pw == "fake_password_c8231"
 
@@ -151,21 +153,26 @@ def test_deploy_windows_default_port():
     """
     mock_true = MagicMock(return_value=True)
     mock_tuple = MagicMock(return_value=(0, 0, 0))
-    # fmt: off
-    with patch("salt.utils.smb.get_conn", MagicMock()) as mock,\
-            patch("salt.utils.smb.mkdirs", MagicMock()), \
-            patch("salt.utils.smb.put_file", MagicMock()), \
-            patch("salt.utils.smb.delete_file", MagicMock()), \
-            patch("salt.utils.smb.delete_directory", MagicMock()), \
-            patch("time.sleep", MagicMock()),\
-            patch.object(cloud, "wait_for_port", mock_true), \
-            patch.object(cloud, "fire_event", MagicMock()), \
-            patch.object(cloud, "wait_for_psexecsvc", mock_true),\
-            patch.object(cloud, "run_psexec_command", mock_tuple):
+    with patch("salt.utils.smb.get_conn", MagicMock()) as mock, patch(
+        "salt.utils.smb.mkdirs", MagicMock()
+    ), patch("salt.utils.smb.put_file", MagicMock()), patch(
+        "salt.utils.smb.delete_file", MagicMock()
+    ), patch(
+        "salt.utils.smb.delete_directory", MagicMock()
+    ), patch(
+        "time.sleep", MagicMock()
+    ), patch.object(
+        cloud, "wait_for_port", mock_true
+    ), patch.object(
+        cloud, "fire_event", MagicMock()
+    ), patch.object(
+        cloud, "wait_for_psexecsvc", mock_true
+    ), patch.object(
+        cloud, "run_psexec_command", mock_tuple
+    ):
 
         cloud.deploy_windows(host="test", win_installer="")
         mock.assert_called_once_with("test", "Administrator", None, 445)
-    # fmt: on
 
 
 @pytest.mark.skip_unless_on_windows(reason="Only applicable for Windows.")
@@ -175,21 +182,26 @@ def test_deploy_windows_custom_port():
     """
     mock_true = MagicMock(return_value=True)
     mock_tuple = MagicMock(return_value=(0, 0, 0))
-    # fmt: off
-    with patch("salt.utils.smb.get_conn", MagicMock()) as mock, \
-            patch("salt.utils.smb.mkdirs", MagicMock()), \
-            patch("salt.utils.smb.put_file", MagicMock()), \
-            patch("salt.utils.smb.delete_file", MagicMock()), \
-            patch("salt.utils.smb.delete_directory", MagicMock()), \
-            patch("time.sleep", MagicMock()), \
-            patch.object(cloud, "wait_for_port", mock_true), \
-            patch.object(cloud, "fire_event", MagicMock()), \
-            patch.object(cloud, "wait_for_psexecsvc", mock_true), \
-            patch.object(cloud, "run_psexec_command", mock_tuple):
+    with patch("salt.utils.smb.get_conn", MagicMock()) as mock, patch(
+        "salt.utils.smb.mkdirs", MagicMock()
+    ), patch("salt.utils.smb.put_file", MagicMock()), patch(
+        "salt.utils.smb.delete_file", MagicMock()
+    ), patch(
+        "salt.utils.smb.delete_directory", MagicMock()
+    ), patch(
+        "time.sleep", MagicMock()
+    ), patch.object(
+        cloud, "wait_for_port", mock_true
+    ), patch.object(
+        cloud, "fire_event", MagicMock()
+    ), patch.object(
+        cloud, "wait_for_psexecsvc", mock_true
+    ), patch.object(
+        cloud, "run_psexec_command", mock_tuple
+    ):
 
         cloud.deploy_windows(host="test", port=1234, win_installer="")
         mock.assert_called_once_with("test", "Administrator", None, 1234)
-    # fmt: on
 
 
 @pytest.mark.skip_unless_on_windows(reason="Only applicable for Windows.")
@@ -199,17 +211,23 @@ def test_winrm_pinnned_version():
     """
     mock_true = MagicMock(return_value=True)
     mock_tuple = MagicMock(return_value=(0, 0, 0))
-    # fmt: off
-    with patch("salt.utils.smb.get_conn", MagicMock()),\
-            patch("salt.utils.smb.mkdirs", MagicMock()), \
-            patch("salt.utils.smb.put_file", MagicMock()), \
-            patch("salt.utils.smb.delete_file", MagicMock()), \
-            patch("salt.utils.smb.delete_directory", MagicMock()), \
-            patch("time.sleep", MagicMock()),\
-            patch.object(cloud, "wait_for_port", mock_true), \
-            patch.object(cloud, "fire_event", MagicMock()), \
-            patch.object(cloud, "wait_for_psexecsvc", mock_true),\
-            patch.object(cloud, "run_psexec_command", mock_tuple):
+    with patch("salt.utils.smb.get_conn", MagicMock()), patch(
+        "salt.utils.smb.mkdirs", MagicMock()
+    ), patch("salt.utils.smb.put_file", MagicMock()), patch(
+        "salt.utils.smb.delete_file", MagicMock()
+    ), patch(
+        "salt.utils.smb.delete_directory", MagicMock()
+    ), patch(
+        "time.sleep", MagicMock()
+    ), patch.object(
+        cloud, "wait_for_port", mock_true
+    ), patch.object(
+        cloud, "fire_event", MagicMock()
+    ), patch.object(
+        cloud, "wait_for_psexecsvc", mock_true
+    ), patch.object(
+        cloud, "run_psexec_command", mock_tuple
+    ):
 
         try:
             import winrm
@@ -217,6 +235,6 @@ def test_winrm_pinnned_version():
             raise pytest.skip('The "winrm" python module is not installed in this env.')
         else:
             import pkg_resources
+
             winrm_pkg = pkg_resources.get_distribution("pywinrm")
-            assert winrm_pkg.version >= '0.3.0'
-    # fmt: on
+            assert winrm_pkg.version >= "0.3.0"
