@@ -1440,7 +1440,9 @@ def test_when_api_query_result_limit_set_but_not_a_positive_integer_then_error_m
         )
 
 
-def test_when_api_token_not_set_then_error_message_should_be_logged(default_kwargs,):
+def test_when_api_token_not_set_then_error_message_should_be_logged(
+    default_kwargs,
+):
 
     default_kwargs["api_token"] = ""
 
@@ -1865,7 +1867,8 @@ def test_when_we_retrieve_multiple_devices_then_error_message_should_be_logged(
         netbox.ext_pillar(**default_kwargs)
 
         fake_error.assert_called_with(
-            'More than one node found for "%s"', "minion1",
+            'More than one node found for "%s"',
+            "minion1",
         )
 
 
@@ -1888,7 +1891,8 @@ def test_when_we_retrieve_multiple_virtual_machines_then_error_message_should_be
         netbox.ext_pillar(**default_kwargs)
 
         fake_error.assert_called_with(
-            'More than one node found for "%s"', "minion1",
+            'More than one node found for "%s"',
+            "minion1",
         )
 
 
@@ -1909,7 +1913,8 @@ def test_when_we_retrieve_a_device_and_a_virtual_machine_then_error_message_shou
         netbox.ext_pillar(**default_kwargs)
 
         fake_error.assert_called_with(
-            'More than one node found for "%s"', "minion1",
+            'More than one node found for "%s"',
+            "minion1",
         )
 
 
@@ -1926,7 +1931,8 @@ def test_when_we_retrieve_no_devices_then_error_message_should_be_logged(
         netbox.ext_pillar(**default_kwargs)
 
         fake_error.assert_called_with(
-            'Unable to pull NetBox data for "%s"', "minion1",
+            'Unable to pull NetBox data for "%s"',
+            "minion1",
         )
 
 
@@ -1946,7 +1952,8 @@ def test_when_we_retrieve_no_virtual_machines_then_error_message_should_be_logge
         netbox.ext_pillar(**default_kwargs)
 
         fake_error.assert_called_with(
-            'Unable to pull NetBox data for "%s"', "minion1",
+            'Unable to pull NetBox data for "%s"',
+            "minion1",
         )
 
 
