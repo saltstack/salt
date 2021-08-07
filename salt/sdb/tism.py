@@ -59,7 +59,9 @@ def get(key, service=None, profile=None):  # pylint: disable=W0613
     request = {"token": profile["token"], "encsecret": key}
 
     result = http.query(
-        profile["url"], method="POST", data=salt.utils.json.dumps(request),
+        profile["url"],
+        method="POST",
+        data=salt.utils.json.dumps(request),
     )
 
     decrypted = result.get("body")

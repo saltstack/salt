@@ -43,7 +43,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "useradd execution module not loaded: either pwd python library not available or system not one of Linux, OpenBSD, NetBSD or AIX",
+        "useradd execution module not loaded: either pwd python library not available"
+        " or system not one of Linux, OpenBSD, NetBSD or AIX",
     )
 
 

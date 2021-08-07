@@ -58,7 +58,13 @@ def _render_tab(lst):
     for pre in lst["pre"]:
         ret.append("{}\n".format(pre))
     for cron in lst["crons"]:
-        ret.append("{} {} {}\n".format(cron["path"], cron["mask"], cron["cmd"],))
+        ret.append(
+            "{} {} {}\n".format(
+                cron["path"],
+                cron["mask"],
+                cron["cmd"],
+            )
+        )
     return ret
 
 

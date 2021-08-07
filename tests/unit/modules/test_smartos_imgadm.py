@@ -68,7 +68,11 @@ image_lx = {
                 "compression": "gzip",
             }
         ],
-        "description": "Container-native Ubuntu 16.04 64-bit image. Built to run on containers with bare metal speed, while offering all the services of a typical unix host.",
+        "description": (
+            "Container-native Ubuntu 16.04 64-bit image. Built to run on containers"
+            " with bare metal speed, while offering all the services of a typical unix"
+            " host."
+        ),
         "homepage": "https://docs.joyent.com/images/container-native-linux",
         "requirements": {
             "networks": [{"name": "net0", "description": "public"}],
@@ -102,7 +106,10 @@ image_zvol = {
                 "compression": "gzip",
             }
         ],
-        "description": "Ubuntu 18.04 LTS (20180808 64-bit). Certified Ubuntu Server Cloud Image from Canonical. For kvm and bhyve.",
+        "description": (
+            "Ubuntu 18.04 LTS (20180808 64-bit). Certified Ubuntu Server Cloud Image"
+            " from Canonical. For kvm and bhyve."
+        ),
         "homepage": "https://docs.joyent.com/images/linux/ubuntu-certified",
         "requirements": {
             "min_platform": {"7.0": "20150929T232348Z"},
@@ -178,7 +185,9 @@ class ImgadmTestCase(TestCase, LoaderModuleMockMixin):
         Feed it an 'native' image as we get it from from imgadm list -j
         """
         ret = {
-            "description": "A SmartOS image pre-configured for building pkgsrc packages.",
+            "description": (
+                "A SmartOS image pre-configured for building pkgsrc packages."
+            ),
             "name": "pkgbuild",
             "os": "smartos",
             "published": "2018-04-09T08:25:52Z",
@@ -193,9 +202,11 @@ class ImgadmTestCase(TestCase, LoaderModuleMockMixin):
         Feed it an 'lx' image as we get it from from imgadm list -j
         """
         ret = {
-            "description": "Container-native Ubuntu 16.04 64-bit image. Built to run on "
-            "containers with bare metal speed, while offering all the "
-            "services of a typical unix host.",
+            "description": (
+                "Container-native Ubuntu 16.04 64-bit image. Built to run on "
+                "containers with bare metal speed, while offering all the "
+                "services of a typical unix host."
+            ),
             "name": "ubuntu-16.04",
             "os": "linux",
             "published": "2016-06-01T02:17:41Z",
@@ -210,8 +221,10 @@ class ImgadmTestCase(TestCase, LoaderModuleMockMixin):
         Feed it an 'zvol' image as we get it from from imgadm list -j
         """
         ret = {
-            "description": "Ubuntu 18.04 LTS (20180808 64-bit). Certified Ubuntu Server "
-            "Cloud Image from Canonical. For kvm and bhyve.",
+            "description": (
+                "Ubuntu 18.04 LTS (20180808 64-bit). Certified Ubuntu Server "
+                "Cloud Image from Canonical. For kvm and bhyve."
+            ),
             "name": "ubuntu-certified-18.04",
             "os": "linux",
             "published": "2018-10-11T12:45:24.804Z",
@@ -226,9 +239,11 @@ class ImgadmTestCase(TestCase, LoaderModuleMockMixin):
         Feed it an 'docker' image as we get it from from imgadm list -j
         """
         ret = {
-            "description": "Docker image imported from "
-            "busybox42/zimbra-docker-centos:latest on "
-            "2019-03-23T01:32:25.320Z.",
+            "description": (
+                "Docker image imported from "
+                "busybox42/zimbra-docker-centos:latest on "
+                "2019-03-23T01:32:25.320Z."
+            ),
             "name": "busybox42/zimbra-docker-centos:latest",
             "os": "linux",
             "published": "2019-03-23T01:32:25.320Z",

@@ -1011,7 +1011,10 @@ class SaltDistribution(distutils.dist.Distribution):
 
         self.name = "salt-ssh" if PACKAGED_FOR_SALT_SSH else "salt"
         self.salt_version = __version__  # pylint: disable=undefined-variable
-        self.description = "Portable, distributed, remote execution and configuration management system"
+        self.description = (
+            "Portable, distributed, remote execution and configuration management"
+            " system"
+        )
         with open(SALT_LONG_DESCRIPTION_FILE, encoding="utf-8") as f:
             self.long_description = f.read()
         self.long_description_content_type = "text/x-rst"

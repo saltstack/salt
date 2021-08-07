@@ -122,7 +122,9 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
             # CASE 1: Numeric ID
             result = proxmox.create_node(vm_, ANY)
             mock_query.assert_called_once_with(
-                "post", "nodes/myhost/qemu/123/clone", {"newid": ANY},
+                "post",
+                "nodes/myhost/qemu/123/clone",
+                {"newid": ANY},
             )
             assert result == {}
 
@@ -131,7 +133,9 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
             vm_["clone_from"] = "otherhost:123"
             result = proxmox.create_node(vm_, ANY)
             mock_query.assert_called_once_with(
-                "post", "nodes/otherhost/qemu/123/clone", {"newid": ANY},
+                "post",
+                "nodes/otherhost/qemu/123/clone",
+                {"newid": ANY},
             )
             assert result == {}
 

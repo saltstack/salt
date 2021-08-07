@@ -39,7 +39,8 @@ warnings.filterwarnings(
 # Filter the backports package UserWarning about being re-imported
 warnings.filterwarnings(
     "ignore",
-    "^Module backports was already imported from (.*), but (.*) is being added to sys.path$",
+    "^Module backports was already imported from (.*), but (.*) is being added to"
+    " sys.path$",
     UserWarning,
     append=True,
 )

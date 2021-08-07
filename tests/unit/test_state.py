@@ -654,9 +654,11 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             "__run_num__": 0,
             "__sls__": "demo.download",
             "changes": {},
-            "comment": "['unless condition is true']  The state would be retried every 5 "
-            "seconds (with a splay of up to 0 seconds) a maximum of 5 times or "
-            "until a result of True is returned",
+            "comment": (
+                "['unless condition is true']  The state would be retried every 5 "
+                "seconds (with a splay of up to 0 seconds) a maximum of 5 times or "
+                "until a result of True is returned"
+            ),
             "name": "/tmp/saltstack.README.rst",
             "result": True,
             "skip_watch": True,
@@ -1050,8 +1052,8 @@ class StateReturnsTestCase(TestCase):
         data = {"arbitrary": "data", "changes": {}}
         out = statedecorators.OutputUnifier("content_check")(lambda: data)()
         assert (
-            " The following keys were not present in the state return: name, result, comment"
-            in out["comment"]
+            " The following keys were not present in the state return: name, result,"
+            " comment" in out["comment"]
         )
         assert not out["result"]
 
@@ -1149,8 +1151,8 @@ class SubStateReturnsTestCase(TestCase):
         data = {"sub_state_run": [{"arbitrary": "data", "changes": {}}]}
         out = statedecorators.OutputUnifier("content_check")(lambda: data)()
         assert (
-            " The following keys were not present in the state return: name, result, comment"
-            in out["sub_state_run"][0]["comment"]
+            " The following keys were not present in the state return: name, result,"
+            " comment" in out["sub_state_run"][0]["comment"]
         )
         assert not out["sub_state_run"][0]["result"]
 

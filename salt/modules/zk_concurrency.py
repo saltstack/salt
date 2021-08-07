@@ -28,7 +28,12 @@ try:
     # https://github.com/python-zk/kazoo/pull/206
     class _Semaphore(kazoo.recipe.lock.Semaphore):
         def __init__(
-            self, client, path, identifier=None, max_leases=1, ephemeral_lease=True,
+            self,
+            client,
+            path,
+            identifier=None,
+            max_leases=1,
+            ephemeral_lease=True,
         ):
             identifier = identifier or gethostname()
             kazoo.recipe.lock.Semaphore.__init__(

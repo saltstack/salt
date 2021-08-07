@@ -27,30 +27,30 @@ def validate(config):
     Validate the beacon configuration
     """
     if not isinstance(config, list):
-        return False, ("Configuration for haproxy beacon must be a list.")
+        return False, "Configuration for haproxy beacon must be a list."
     else:
         _config = {}
         list(map(_config.update, config))
 
         if "backends" not in _config:
-            return False, ("Configuration for haproxy beacon requires backends.")
+            return False, "Configuration for haproxy beacon requires backends."
         else:
             if not isinstance(_config["backends"], dict):
-                return False, ("Backends for haproxy beacon must be a dictionary.")
+                return False, "Backends for haproxy beacon must be a dictionary."
             else:
                 for backend in _config["backends"]:
                     log.debug("_config %s", _config["backends"][backend])
                     if "servers" not in _config["backends"][backend]:
                         return (
                             False,
-                            ("Backends for haproxy beacon require servers."),
+                            "Backends for haproxy beacon require servers.",
                         )
                     else:
                         _servers = _config["backends"][backend]["servers"]
                         if not isinstance(_servers, list):
                             return (
                                 False,
-                                ("Servers for haproxy beacon must be a list."),
+                                "Servers for haproxy beacon must be a list.",
                             )
     return True, "Valid beacon configuration"
 
@@ -90,7 +90,7 @@ def beacon(config):
                         "threshold": threshold,
                     }
                     log.debug(
-                        "Emit because %s > %s" " for %s in %s",
+                        "Emit because %s > %s for %s in %s",
                         scur,
                         threshold,
                         server,

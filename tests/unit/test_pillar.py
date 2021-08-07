@@ -354,7 +354,9 @@ class PillarTestCase(TestCase):
 
         tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         try:
-            sls_files = self._setup_test_topfile_sls_pillar_match(tempdir,)
+            sls_files = self._setup_test_topfile_sls_pillar_match(
+                tempdir,
+            )
             fc_mock = MockFileclient(
                 cache_file=sls_files["top"]["dest"],
                 list_states=["top", "ssh", "ssh.minion", "generic", "generic.minion"],
