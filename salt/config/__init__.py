@@ -3454,7 +3454,7 @@ def call_id_function(opts):
                 type(newid),
             )
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
-        log.info("Evaluated minion ID from module: %s", mod_fun)
+        log.info("Evaluated minion ID from module: %s %s", mod_fun, newid)
         return newid
     except TypeError:
         log.error(
