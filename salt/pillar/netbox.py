@@ -622,7 +622,8 @@ def _get_interfaces(
     api_url, minion_id, node_id, node_type, headers, api_query_result_limit
 ):
     log.debug(
-        'Retrieving interfaces for "%s"', node_id,
+        'Retrieving interfaces for "%s"',
+        node_id,
     )
     interfaces_results = []
     if node_type == "device":
@@ -638,7 +639,10 @@ def _get_interfaces(
     if api_query_result_limit:
         params["limit"] = api_query_result_limit
     interfaces_ret = salt.utils.http.query(
-        interfaces_url, params=params, header_dict=headers, decode=True,
+        interfaces_url,
+        params=params,
+        header_dict=headers,
+        decode=True,
     )
     while True:
         # Check status code for API call
@@ -681,7 +685,8 @@ def _get_interface_ips(
     # We get all the IP addresses for the node at once instead of
     # having to make a separate call for each interface
     log.debug(
-        'Retrieving IP addresses for "%s"', node_id,
+        'Retrieving IP addresses for "%s"',
+        node_id,
     )
     interface_ips_results = []
     if node_type == "device":
@@ -697,7 +702,10 @@ def _get_interface_ips(
     if api_query_result_limit:
         params["limit"] = api_query_result_limit
     interface_ips_ret = salt.utils.http.query(
-        interface_ips_url, params=params, header_dict=headers, decode=True,
+        interface_ips_url,
+        params=params,
+        header_dict=headers,
+        decode=True,
     )
 
     while True:
@@ -822,7 +830,8 @@ def _get_site_prefixes(
 
 def _get_proxy_details(api_url, minion_id, primary_ip, platform_id, headers):
     log.debug(
-        'Retrieving proxy details for "%s"', minion_id,
+        'Retrieving proxy details for "%s"',
+        minion_id,
     )
     platform_url = "{api_url}/{app}/{endpoint}/{id}/".format(
         api_url=api_url, app="dcim", endpoint="platforms", id=platform_id
@@ -830,9 +839,11 @@ def _get_proxy_details(api_url, minion_id, primary_ip, platform_id, headers):
     platform_ret = salt.utils.http.query(platform_url, header_dict=headers, decode=True)
     # Check status code for API call
     if "error" in platform_ret:
-        log.info("Unable to proxy details for %s", minion_id)
         log.error(
-            "Status code: %d, error: %s", platform_ret["status"], platform_ret["error"],
+            "Unable to proxy details for %s, status code: %d, error %s",
+            minion_id,
+            platform_ret["status"],
+            platform_ret["error"],
         )
     else:
         # Assign results from API call to "proxy" key if the platform has a
@@ -888,7 +899,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         return ret
 
         # Check that the user has enabled interfaces if they've enabled interface_ips
-    if api_query_result_limit and not int(api_query_result_limit) > 0:
+    if api_query_result_limit and int(api_query_result_limit) <= 0:
         log.error(
             "The value for api_query_result_limit must be a postive integer if set"
         )
