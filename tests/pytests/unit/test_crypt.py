@@ -13,7 +13,7 @@ def test_get_rsa_pub_key_bad_key(tmp_path):
     """
     get_rsa_pub_key raises InvalidKeyError when encoutering a bad key
     """
-    key_path = tmp_path / "key"
+    key_path = str(tmp_path / "key")
     with salt.utils.files.fopen(key_path, "w") as fp:
         fp.write("")
     with pytest.raises(salt.crypt.InvalidKeyError):
