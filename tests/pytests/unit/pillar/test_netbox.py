@@ -14,6 +14,7 @@ def default_kwargs():
         "pillar": None,
         "api_url": "http://netbox.example.com",
         "api_token": "yeic5oocizei7owuichoesh8ooqu6oob3uWiey9a",
+        "api_query_result_limit": 65535
     }
 
 
@@ -1426,6 +1427,19 @@ def test_when_interface_ips_requested_but_not_interfaces_then_error_message_shou
         )
 
 
+def test_when_api_query_result_limit_set_but_not_a_positive_integer_then_error_message_should_be_logged(
+    default_kwargs,
+):
+    default_kwargs["api_query_result_limit"] = -1
+
+    with patch("salt.pillar.netbox.log.error", autospec=True) as fake_error:
+        netbox.ext_pillar(**default_kwargs)
+
+        fake_error.assert_called_with(
+            "The value for api_query_result_limit must be a postive integer if set"
+        )
+
+
 def test_when_api_token_not_set_then_error_message_should_be_logged(default_kwargs,):
 
     default_kwargs["api_token"] = ""
@@ -1436,7 +1450,7 @@ def test_when_api_token_not_set_then_error_message_should_be_logged(default_kwar
         fake_error.assert_called_with("The value for api_token is not set")
 
 
-def test_when_we_retrieve_a_single_device_then_return_dict(
+def test_when_we_retrieve_a_single_device_then_return_list(
     default_kwargs, headers, device_results
 ):
 
@@ -1446,28 +1460,28 @@ def test_when_we_retrieve_a_single_device_then_return_dict(
         query.return_value = device_results
 
         actual_result = netbox._get_devices(
-            default_kwargs["api_url"], default_kwargs["minion_id"], headers
+            default_kwargs["api_url"], default_kwargs["minion_id"], headers, default_kwargs["api_query_result_limit"]
         )
 
         assert actual_result == expected_result
 
 
-def test_when_we_retrieve_a_device_and_get_http_error_then_return_empty_dict(
+def test_when_we_retrieve_a_device_and_get_http_error_then_return_empty_list(
     default_kwargs, headers, http_error
 ):
-    expected_result = {}
+    expected_result = []
 
     with patch("salt.utils.http.query", autospec=True) as query:
         query.return_value = http_error
 
         actual_result = netbox._get_devices(
-            default_kwargs["api_url"], default_kwargs["minion_id"], headers
+            default_kwargs["api_url"], default_kwargs["minion_id"], headers, default_kwargs["api_query_result_limit"]
         )
 
         assert actual_result == expected_result
 
 
-def test_when_we_retrieve_a_single_virtual_machines_then_return_dict(
+def test_when_we_retrieve_a_single_virtual_machine_then_return_list(
     default_kwargs, headers, virtual_machine_results
 ):
 
@@ -1477,7 +1491,7 @@ def test_when_we_retrieve_a_single_virtual_machines_then_return_dict(
         query.return_value = virtual_machine_results
 
         actual_result = netbox._get_virtual_machines(
-            default_kwargs["api_url"], default_kwargs["minion_id"], headers
+            default_kwargs["api_url"], default_kwargs["minion_id"], headers, default_kwargs["api_query_result_limit"]
         )
 
         assert actual_result == expected_result
@@ -1487,13 +1501,13 @@ def test_when_we_retrieve_a_virtual_machine_and_get_http_error_then_return_empty
     default_kwargs, headers, http_error
 ):
 
-    expected_result = {}
+    expected_result = []
 
     with patch("salt.utils.http.query", autospec=True) as query:
         query.return_value = http_error
 
         actual_result = netbox._get_virtual_machines(
-            default_kwargs["api_url"], default_kwargs["minion_id"], headers
+            default_kwargs["api_url"], default_kwargs["minion_id"], headers, default_kwargs["api_query_result_limit"]
         )
 
         assert actual_result == expected_result
@@ -1514,16 +1528,17 @@ def test_when_we_retrieve_device_interfaces_then_return_dict(
             511,
             "device",
             headers,
+            default_kwargs["api_query_result_limit"]
         )
 
         assert actual_result == expected_result
 
 
-def test_when_we_retrieve_device_interfaces_and_get_http_error_then_return_empty_dict(
+def test_when_we_retrieve_device_interfaces_and_get_http_error_then_return_empty_list(
     default_kwargs, headers, http_error
 ):
 
-    expected_result = {}
+    expected_result = []
 
     with patch("salt.utils.http.query", autospec=True) as query:
         query.return_value = http_error
@@ -1534,12 +1549,13 @@ def test_when_we_retrieve_device_interfaces_and_get_http_error_then_return_empty
             511,
             "device",
             headers,
+            default_kwargs["api_query_result_limit"]
         )
 
         assert actual_result == expected_result
 
 
-def test_when_we_retrieve_virtual_machine_interfaces_then_return_dict(
+def test_when_we_retrieve_virtual_machine_interfaces_then_return_list(
     default_kwargs,
     headers,
     virtual_machine_interface_results,
@@ -1557,16 +1573,17 @@ def test_when_we_retrieve_virtual_machine_interfaces_then_return_dict(
             222,
             "virtual-machine",
             headers,
+            default_kwargs["api_query_result_limit"]
         )
 
         assert actual_result == expected_result
 
 
-def test_when_we_retrieve_virtual_machine_interfaces_and_get_http_error_then_return_empty_dict(
+def test_when_we_retrieve_virtual_machine_interfaces_and_get_http_error_then_return_empty_list(
     default_kwargs, headers, http_error
 ):
 
-    expected_result = {}
+    expected_result = []
 
     with patch("salt.utils.http.query", autospec=True) as query:
         query.return_value = http_error
@@ -1577,12 +1594,13 @@ def test_when_we_retrieve_virtual_machine_interfaces_and_get_http_error_then_ret
             222,
             "virtual-machine",
             headers,
+            default_kwargs["api_query_result_limit"]
         )
 
         assert actual_result == expected_result
 
 
-def test_when_we_retrieve_device_interface_ips_then_return_dict(
+def test_when_we_retrieve_device_interface_ips_then_return_list(
     default_kwargs, headers, device_ip_results
 ):
 
@@ -1597,16 +1615,17 @@ def test_when_we_retrieve_device_interface_ips_then_return_dict(
             511,
             "device",
             headers,
+            default_kwargs["api_query_result_limit"]
         )
 
         assert actual_result == expected_result
 
 
-def test_when_we_retrieve_device_interface_ips_and_get_http_error_then_return_empty_dict(
+def test_when_we_retrieve_device_interface_ips_and_get_http_error_then_return_empty_list(
     default_kwargs, headers, http_error
 ):
 
-    expected_result = {}
+    expected_result = []
 
     with patch("salt.utils.http.query", autospec=True) as query:
         query.return_value = http_error
@@ -1617,12 +1636,13 @@ def test_when_we_retrieve_device_interface_ips_and_get_http_error_then_return_em
             511,
             "device",
             headers,
+            default_kwargs["api_query_result_limit"]
         )
 
         assert actual_result == expected_result
 
 
-def test_when_we_retrieve_virtual_machine_interface_ips_then_return_dict(
+def test_when_we_retrieve_virtual_machine_interface_ips_then_return_list(
     default_kwargs, headers, virtual_machine_ip_results
 ):
 
@@ -1637,16 +1657,17 @@ def test_when_we_retrieve_virtual_machine_interface_ips_then_return_dict(
             222,
             "virtual-machine",
             headers,
+            default_kwargs["api_query_result_limit"]
         )
 
         assert actual_result == expected_result
 
 
-def test_when_we_retrieve_virtual_machine_interface_ips_and_get_http_error_then_return_empty_dict(
+def test_when_we_retrieve_virtual_machine_interface_ips_and_get_http_error_then_return_empty_list(
     default_kwargs, headers, http_error
 ):
 
-    expected_result = {}
+    expected_result = []
 
     with patch("salt.utils.http.query", autospec=True) as query:
         query.return_value = http_error
@@ -1657,12 +1678,13 @@ def test_when_we_retrieve_virtual_machine_interface_ips_and_get_http_error_then_
             222,
             "virtual-machine",
             headers,
+            default_kwargs["api_query_result_limit"]
         )
 
         assert actual_result == expected_result
 
 
-def test_associate_ips_to_interfaces_then_return_dict(
+def test_associate_ips_to_interfaces_then_return_list(
     default_kwargs, device_interfaces_list, device_ip_results, device_interfaces_ip_list
 ):
 
@@ -1678,7 +1700,7 @@ def test_associate_ips_to_interfaces_then_return_dict(
     assert actual_result == expected_result
 
 
-def test_associate_empty_ip_list_to_interfaces_then_return_dict(
+def test_associate_empty_ip_list_to_interfaces_then_return_list(
     default_kwargs, device_interfaces_list, device_ip_results
 ):
 
@@ -1714,11 +1736,11 @@ def test_when_we_retrieve_site_details_then_return_dict(
         assert actual_result == expected_result
 
 
-def test_when_we_retrieve_site_details_and_get_http_error_then_dont_return(
+def test_when_we_retrieve_site_details_and_get_http_error_then_return_empty_dict(
     default_kwargs, headers, http_error
 ):
 
-    expected_result = None
+    expected_result = {}
 
     with patch("salt.utils.http.query", autospec=True) as query:
         query.return_value = http_error
@@ -1734,7 +1756,7 @@ def test_when_we_retrieve_site_details_and_get_http_error_then_dont_return(
         assert actual_result == expected_result
 
 
-def test_when_we_retrieve_site_prefixes_then_return_dict(
+def test_when_we_retrieve_site_prefixes_then_return_list(
     default_kwargs, headers, site_prefixes_results, site_prefixes
 ):
 
@@ -1749,16 +1771,17 @@ def test_when_we_retrieve_site_prefixes_then_return_dict(
             "Site 1",
             18,
             headers,
+            default_kwargs["api_query_result_limit"]
         )
 
         assert actual_result == expected_result
 
 
-def test_when_we_retrieve_site_prefixes_and_get_http_error_then_dont_return(
+def test_when_we_retrieve_site_prefixes_and_get_http_error_then_return_empty_list(
     default_kwargs, headers, http_error
 ):
 
-    expected_result = None
+    expected_result = []
 
     with patch("salt.utils.http.query", autospec=True) as query:
         query.return_value = http_error
@@ -1769,6 +1792,7 @@ def test_when_we_retrieve_site_prefixes_and_get_http_error_then_dont_return(
             "Site 1",
             18,
             headers,
+            default_kwargs["api_query_result_limit"]
         )
 
         assert actual_result == expected_result

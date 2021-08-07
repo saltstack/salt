@@ -556,7 +556,7 @@ def _get_devices(api_url, minion_id, headers, api_query_result_limit):
                 device_ret["status"],
                 device_ret["error"],
             )
-            return {}
+            return []
         else:
             device_results.extend(device_ret["dict"]["results"])
         # Check if we need to paginate and fetch the next result list
@@ -597,7 +597,7 @@ def _get_virtual_machines(api_url, minion_id, headers, api_query_result_limit):
                 vm_ret["status"],
                 vm_ret["error"],
             )
-            return {}
+            return []
         else:
             vm_results.extend(vm_ret["dict"]["results"])
         # Check if we need to paginate and fetch the next result list
@@ -651,7 +651,7 @@ def _get_interfaces(
                 interfaces_ret["status"],
                 interfaces_ret["error"],
             )
-            return {}
+            return []
         else:
             interfaces_results.extend(interfaces_ret["dict"]["results"])
         # Check if we need to paginate and fetch the next result list
@@ -711,7 +711,7 @@ def _get_interface_ips(
                 interface_ips_ret["status"],
                 interface_ips_ret["error"],
             )
-            return {}
+            return []
         else:
             interface_ips_results.extend(interface_ips_ret["dict"]["results"])
         # Check if we need to paginate and fetch the next result list
@@ -756,12 +756,14 @@ def _get_site_details(api_url, minion_id, site_name, site_id, headers):
     )
     site_details_ret = salt.utils.http.query(site_url, header_dict=headers, decode=True)
     if "error" in site_details_ret:
-        log.info("Unable to retrieve site details for %s (ID %d)", site_name, site_id)
         log.error(
-            "Status code: %d, error: %s",
+            'Unable to retrieve site details for %s (ID %d), status code: %d, error %s',
+            site_name,
+            site_id,
             site_details_ret["status"],
             site_details_ret["error"],
         )
+        return {}
     else:
         # Return the results
         return site_details_ret["dict"]
@@ -797,7 +799,7 @@ def _get_site_prefixes(
                 site_prefixes_ret["status"],
                 site_prefixes_ret["error"],
             )
-            return {}
+            return []
         else:
             site_prefixes_results.extend(site_prefixes_ret["dict"]["results"])
         # Check if we need to paginate and fetch the next result list
