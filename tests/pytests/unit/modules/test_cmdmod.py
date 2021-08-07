@@ -664,3 +664,31 @@ def test_cve_2021_25284(caplog):
         with caplog.at_level(logging.DEBUG, logger="salt.modules.cmdmod"):
             cmdmod.run("testcmd -p ImAPassword", output_loglevel="error")
         assert "ImAPassword" not in caplog.text
+
+
+def test__log_cmd_str():
+    "_log_cmd function handles strings"
+    assert cmdmod._log_cmd("foo bar") == "foo"
+
+
+def test__log_cmd_list():
+    "_log_cmd function handles lists"
+    assert cmdmod._log_cmd(["foo", "bar"]) == "foo"
+
+
+def test_log_cmd_tuple():
+    "_log_cmd function handles tuples"
+    assert cmdmod._log_cmd(("foo", "bar")) == "foo"
+
+
+def test_log_cmd_non_str_tuple_list():
+    "_log_cmd function casts objects to strings"
+
+    class cmd:
+        def __init__(self, cmd):
+            self.cmd = cmd
+
+        def __str__(self):
+            return self.cmd
+
+    assert cmdmod._log_cmd(cmd("foo bar")) == "foo"
