@@ -3,7 +3,6 @@ The Salt Key backend API and interface used by the CLI. The Key class can be
 used to manage salt keys directly without interfacing with the CLI.
 """
 
-
 import fnmatch
 import itertools
 import logging
@@ -656,7 +655,8 @@ class Key:
                     continue
                 try:
                     shutil.move(
-                        key_path, os.path.join(self.opts["pki_dir"], self.ACC, key),
+                        key_path,
+                        os.path.join(self.opts["pki_dir"], self.ACC, key),
                     )
                     eload = {"result": True, "act": "accept", "id": key}
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="key"))
