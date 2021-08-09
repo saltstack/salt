@@ -17,7 +17,10 @@ def test_safe_rm():
         assert os_remove_mock.called is True
 
 
-@pytest.mark.skipif(os.path.exists("/tmp/no_way_this_is_a_file_nope.sh"), reason="Test file exists! Skipping safe_rm_exceptions test!")
+@pytest.mark.skipif(
+    os.path.exists("/tmp/no_way_this_is_a_file_nope.sh"),
+    reason="Test file exists! Skipping safe_rm_exceptions test!",
+)
 def test_safe_rm_exceptions():
     error = False
     try:
