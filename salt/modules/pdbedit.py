@@ -364,9 +364,8 @@ def modify(
                 for f in val.upper():
                     if f not in ["N", "D", "H", "L", "X"]:
                         log.warning(
-                            "pdbedit.modify - unknown {f} flag for account_control, ignored".format(
-                                f=f
-                            )
+                            "pdbedit.modify - unknown %s flag for account_control, ignored",
+                            f,
                         )
                     else:
                         new.append(f)
@@ -381,7 +380,8 @@ def modify(
         for change in changes:
             cmds.append(
                 "{flag}{value}".format(
-                    flag=flags[change], value=shlex.quote(changes[change]),
+                    flag=flags[change],
+                    value=shlex.quote(changes[change]),
                 )
             )
         if reset_login_hours:
@@ -391,7 +391,8 @@ def modify(
 
         res = __salt__["cmd.run_all"](
             "pdbedit --modify --user {login} {changes}".format(
-                login=shlex.quote(login), changes=" ".join(cmds),
+                login=shlex.quote(login),
+                changes=" ".join(cmds),
             ),
         )
 

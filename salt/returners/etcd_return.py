@@ -115,7 +115,9 @@ def returner(ret):
     client, path = _get_conn(__opts__, write_profile)
     # Make a note of this minion for the external job cache
     client.set(
-        "/".join((path, "minions", ret["id"])), ret["jid"], ttl=ttl,
+        "/".join((path, "minions", ret["id"])),
+        ret["jid"],
+        ttl=ttl,
     )
 
     for field in ret:
@@ -136,7 +138,9 @@ def save_load(jid, load, minions=None):
     else:
         ttl = __opts__.get("etcd.ttl")
     client.set(
-        "/".join((path, "jobs", jid, ".load.p")), salt.utils.json.dumps(load), ttl=ttl,
+        "/".join((path, "jobs", jid, ".load.p")),
+        salt.utils.json.dumps(load),
+        ttl=ttl,
     )
 
 

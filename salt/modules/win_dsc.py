@@ -506,7 +506,7 @@ def remove_config(reset=False):
         log.info("DSC: %s", exc.info["stdout"])
 
     # Remove configuration files
-    cmd = "Remove-DscConfigurationDocument -Stage Current, Pending, Previous " "-Force"
+    cmd = "Remove-DscConfigurationDocument -Stage Current, Pending, Previous -Force"
     log.info("DSC: Removing Configuration")
     try:
         _pshell(cmd)
@@ -528,7 +528,7 @@ def remove_config(reset=False):
                 log.error("DSC: %s", error)
                 raise CommandExecutionError(error)
 
-    dsc_config_dir = "{}\\System32\\Configuration" "".format(
+    dsc_config_dir = "{}\\System32\\Configuration".format(
         os.getenv("SystemRoot", "C:\\Windows")
     )
 

@@ -52,10 +52,8 @@ def validate(config):
             if not isinstance(_config["services"][name], dict):
                 return (
                     False,
-                    (
-                        "Services configuration for journald beacon "
-                        "must be a list of dictionaries."
-                    ),
+                    "Services configuration for journald beacon must be a list of"
+                    " dictionaries.",
                 )
     return True, "Valid beacon configuration"
 

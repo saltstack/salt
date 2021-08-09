@@ -97,7 +97,8 @@ def __virtual__():
         if HAS_GPG_BINDINGS
         else (
             False,
-            "The gpg execution module cannot be loaded; the gnupg python module is not installed.",
+            "The gpg execution module cannot be loaded; the gnupg python module is not"
+            " installed.",
         )
     )
 

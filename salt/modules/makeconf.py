@@ -15,7 +15,8 @@ def __virtual__():
         return "makeconf"
     return (
         False,
-        "The makeconf execution module cannot be loaded: only available on Gentoo systems.",
+        "The makeconf execution module cannot be loaded: only available on Gentoo"
+        " systems.",
     )
 
 

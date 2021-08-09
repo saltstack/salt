@@ -32,7 +32,11 @@ def refresh_pillar(salt_call_cli, salt_minion):
 @pytest.mark.slow_test
 @pytest.mark.parametrize("sync_refresh", [False, True])
 def test_pillar_refresh(
-    salt_master, salt_minion, salt_call_cli, event_listener, sync_refresh,
+    salt_master,
+    salt_minion,
+    salt_call_cli,
+    event_listener,
+    sync_refresh,
 ):
     """
     test pillar refresh module
@@ -70,7 +74,9 @@ def test_pillar_refresh(
         start_time = time.time()
 
         ret = salt_call_cli.run(
-            "--retcode-passthrough", "saltutil.refresh_pillar", wait=sync_refresh,
+            "--retcode-passthrough",
+            "saltutil.refresh_pillar",
+            wait=sync_refresh,
         )
         assert ret.exitcode == 0
 

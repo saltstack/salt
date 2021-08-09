@@ -207,7 +207,10 @@ def requested_sls_key(minion_opts, state_tree):
             - name: 'Get-ChildItem C:\ | Measure-Object | %{$_.Count}'
             - shell: powershell
         """
-        sls_key = r"cmd_|-count_root_dir_contents_|-Get-ChildItem C:\ | Measure-Object | %{$_.Count}_|-run"
+        sls_key = (
+            r"cmd_|-count_root_dir_contents_|-Get-ChildItem C:\ | Measure-Object |"
+            r" %{$_.Count}_|-run"
+        )
     try:
         with pytest.helpers.temp_file(
             "requested.sls", sls_contents, state_tree
@@ -304,8 +307,9 @@ def test_issue_1876_syntax_error(state, state_tree, tmp_path):
 
         ret = state.sls("issue-1876")
         assert isinstance(ret, list)  # An error
-        errmsg = "ID '{}' in SLS 'issue-1876' contains multiple state declarations of the same type".format(
-            testfile
+        errmsg = (
+            "ID '{}' in SLS 'issue-1876' contains multiple state declarations of the"
+            " same type".format(testfile)
         )
         assert ret == [errmsg]
 

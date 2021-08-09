@@ -7,10 +7,10 @@
 # not be set in the config. If there is no blank line after the comment, the
 # value is presented as an example and is not the default.
 
-# Per default the minion will automatically include all config files
-# from minion.d/*.conf (minion.d is a directory in the same directory
+# Per default the proxy minion will automatically include all config files
+# from proxy.d/*.conf (proxy.d is a directory in the same directory
 # as the main minion config file).
-#default_include: minion.d/*.conf
+#default_include: proxy.d/*.conf
 
 # Backwards compatibility option for proxymodules created before 2015.8.2
 # This setting will default to 'False' in the 2016.3.0 release

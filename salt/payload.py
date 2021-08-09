@@ -12,7 +12,7 @@ import gc
 # import sys  # Use if sys is commented out below
 import logging
 
-import salt.loader_context
+import salt.loader.context
 import salt.log
 import salt.transport.frame
 import salt.utils.immutabletypes as immutabletypes
@@ -336,8 +336,9 @@ class SREQ:
             if tried >= tries:
                 self.clear_socket()
                 raise SaltReqTimeoutError(
-                    "SaltReqTimeoutError: after {} seconds, ran {} "
-                    "tries".format(timeout * tried, tried)
+                    "SaltReqTimeoutError: after {} seconds, ran {} tries".format(
+                        timeout * tried, tried
+                    )
                 )
         return self.serial.loads(self.socket.recv())
 

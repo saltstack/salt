@@ -44,8 +44,7 @@ def _match(udev_info, match_info):
             # If is a dict we probably make a mistake in key from
             # match_info, as is not accessing a final value
             log.warning(
-                "The key %s for the udev information "
-                "dictionary is not a leaf element",
+                "The key %s for the udev information dictionary is not a leaf element",
                 key,
             )
             continue
@@ -124,7 +123,7 @@ def _hwinfo_parse_short(report):
             current_result = value
             key_counter = 0
         else:
-            log.error("Error parsing hwinfo short output: {}".format(line))
+            log.error("Error parsing hwinfo short output: %s", line)
 
     return result
 

@@ -149,7 +149,11 @@ def clean_old_jobs(opts):
     Clean out the old jobs from the job cache
     """
     # TODO: better way to not require creating the masterminion every time?
-    mminion = salt.minion.MasterMinion(opts, states=False, rend=False,)
+    mminion = salt.minion.MasterMinion(
+        opts,
+        states=False,
+        rend=False,
+    )
     # If the master job cache has a clean_old_jobs, call it
     fstr = "{}.clean_old_jobs".format(opts["master_job_cache"])
     if fstr in mminion.returners:
@@ -1108,8 +1112,10 @@ class LocalFuncs:
             return {
                 "error": {
                     "name": err_name,
-                    "message": 'Authentication failure of type "{}" occurred '
-                    "for user {}.".format(auth_type, username),
+                    "message": (
+                        'Authentication failure of type "{}" occurred '
+                        "for user {}.".format(auth_type, username)
+                    ),
                 }
             }
         elif isinstance(runner_check, dict) and "error" in runner_check:
@@ -1158,8 +1164,10 @@ class LocalFuncs:
                 return {
                     "error": {
                         "name": err_name,
-                        "message": 'Authentication failure of type "{}" occurred for '
-                        "user {}.".format(auth_type, username),
+                        "message": (
+                            'Authentication failure of type "{}" occurred for '
+                            "user {}.".format(auth_type, username)
+                        ),
                     }
                 }
             elif isinstance(wheel_check, dict) and "error" in wheel_check:
@@ -1186,7 +1194,9 @@ class LocalFuncs:
         except Exception as exc:  # pylint: disable=broad-except
             log.exception("Exception occurred while introspecting %s", fun)
             data["return"] = "Exception occurred in wheel {}: {}: {}".format(
-                fun, exc.__class__.__name__, exc,
+                fun,
+                exc.__class__.__name__,
+                exc,
             )
             data["success"] = False
             self.event.fire_event(data, salt.utils.event.tagify([jid, "ret"], "wheel"))

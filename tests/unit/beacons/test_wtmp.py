@@ -113,7 +113,8 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret,
             (
                 False,
-                "The time_range parameter for wtmp beacon must contain start & end options.",
+                "The time_range parameter for wtmp beacon must contain start & end"
+                " options.",
             ),
         )
 
@@ -126,7 +127,8 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret,
             (
                 False,
-                "The time_range parameter for wtmp beacon must contain start & end options.",
+                "The time_range parameter for wtmp beacon must contain start & end"
+                " options.",
             ),
         )
 
@@ -139,7 +141,8 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret,
             (
                 False,
-                "The time_range parameter for wtmp beacon must contain start & end options.",
+                "The time_range parameter for wtmp beacon must contain start & end"
+                " options.",
             ),
         )
 
@@ -169,7 +172,7 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 ]
 
                 ret = wtmp.beacon(config)
-                log.debug("{}".format(ret))
+                log.debug("wtmp beacon: %s", ret)
                 self.assertEqual(ret, _expected)
 
     @skipIf(not _TIME_SUPPORTED, "dateutil.parser is missing.")

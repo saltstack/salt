@@ -116,7 +116,7 @@ class VmfsDatastoreDiskIdItem(ComplexSchemaItem):
     )
     backing_disk_id = StringItem(
         title="Backing Disk Id",
-        description=("Specifies the id of the disk backing the VMFS " "datastore"),
+        description="Specifies the id of the disk backing the VMFS datastore",
         pattern=r"[^\s]+",
         required=True,
     )
@@ -139,9 +139,7 @@ class VmfsDatastoreDiskScsiAddressItem(ComplexSchemaItem):
     )
     backing_disk_scsi_addr = VMwareScsiAddressItem(
         title="Backing Disk Scsi Address",
-        description=(
-            "Specifies the SCSI address of the disk backing the VMFS " "datastore"
-        ),
+        description="Specifies the SCSI address of the disk backing the VMFS datastore",
         required=True,
     )
     vmfs_version = IntegerItem(

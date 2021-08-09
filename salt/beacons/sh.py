@@ -42,7 +42,7 @@ def validate(config):
     """
     # Configuration for sh beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for sh beacon must be a list.")
+        return False, "Configuration for sh beacon must be a list."
     return True, "Valid beacon configuration"
 
 

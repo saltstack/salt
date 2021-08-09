@@ -30,7 +30,8 @@ def __virtual__():
     if salt.utils.platform.is_windows():
         return (
             False,
-            "The network execution module cannot be loaded on Windows: use win_network instead.",
+            "The network execution module cannot be loaded on Windows: use win_network"
+            " instead.",
         )
     return True
 
@@ -1406,7 +1407,7 @@ def mod_hostname(hostname):
                 if "Static hostname" in line[0]:
                     o_hostname = line[1].strip()
         else:
-            log.debug("{} was unable to get hostname".format(hostname_cmd))
+            log.debug("%s was unable to get hostname", hostname_cmd)
             o_hostname = __salt__["network.get_hostname"]()
     elif not __utils__["platform.is_sunos"]():
         # don't run hostname -f because -f is not supported on all platforms
@@ -1417,13 +1418,16 @@ def mod_hostname(hostname):
 
     if hostname_cmd.endswith("hostnamectl"):
         result = __salt__["cmd.run_all"](
-            "{} set-hostname {}".format(hostname_cmd, hostname,)
+            "{} set-hostname {}".format(
+                hostname_cmd,
+                hostname,
+            )
         )
         if result["retcode"] != 0:
             log.debug(
-                "{} was unable to set hostname. Error: {}".format(
-                    hostname_cmd, result["stderr"],
-                )
+                "%s was unable to set hostname. Error: %s",
+                hostname_cmd,
+                result["stderr"],
             )
             return False
     elif not __utils__["platform.is_sunos"]():
@@ -1463,7 +1467,6 @@ def mod_hostname(hostname):
                 if net.startswith("HOSTNAME"):
                     old_hostname = net.split("=", 1)[1].rstrip()
                     quote_type = __utils__["stringutils.is_quoted"](old_hostname)
-                    # fmt: off
                     fh_.write(
                         __utils__["stringutils.to_str"](
                             "HOSTNAME={1}{0}{1}\n".format(
@@ -1471,7 +1474,6 @@ def mod_hostname(hostname):
                             )
                         )
                     )
-                    # fmt: on
                 else:
                     fh_.write(__utils__["stringutils.to_str"](net))
     elif __grains__["os_family"] in ("Debian", "NILinuxRT"):
@@ -1480,8 +1482,10 @@ def mod_hostname(hostname):
         if __grains__["lsb_distrib_id"] == "nilrt":
             str_hostname = __utils__["stringutils.to_str"](hostname)
             nirtcfg_cmd = "/usr/local/natinst/bin/nirtcfg"
-            nirtcfg_cmd += " --set section=SystemSettings,token='Host_Name',value='{}'".format(
-                str_hostname
+            nirtcfg_cmd += (
+                " --set section=SystemSettings,token='Host_Name',value='{}'".format(
+                    str_hostname
+                )
             )
             if __salt__["cmd.run_all"](nirtcfg_cmd)["retcode"] != 0:
                 raise CommandExecutionError(
@@ -1817,13 +1821,17 @@ def default_route(family=None):
     if __grains__["kernel"] == "Linux":
         default_route["inet"] = ["0.0.0.0", "default"]
         default_route["inet6"] = ["::/0", "default"]
-    elif __grains__["os"] in [
-        "FreeBSD",
-        "NetBSD",
-        "OpenBSD",
-        "MacOS",
-        "Darwin",
-    ] or __grains__["kernel"] in ("SunOS", "AIX"):
+    elif (
+        __grains__["os"]
+        in [
+            "FreeBSD",
+            "NetBSD",
+            "OpenBSD",
+            "MacOS",
+            "Darwin",
+        ]
+        or __grains__["kernel"] in ("SunOS", "AIX")
+    ):
         default_route["inet"] = ["default"]
         default_route["inet6"] = ["default"]
     else:
@@ -2121,6 +2129,6 @@ def fqdns():
             fqdns.update(item)
 
     elapsed = time.time() - start
-    log.debug("Elapsed time getting FQDNs: {} seconds".format(elapsed))
+    log.debug("Elapsed time getting FQDNs: %s seconds", elapsed)
 
     return {"fqdns": sorted(list(fqdns))}
