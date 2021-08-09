@@ -850,7 +850,9 @@ class State:
             # and __agg__ is True, add the requisites from the
             # chunk to those in the low.
             if chunk["state"] == low["state"] and chunk.get("__agg__"):
-                for req in STATE_REQUISITE_KEYWORDS + STATE_REQUISITE_IN_KEYWORDS:
+                for req in frozenset.union(
+                    *[STATE_REQUISITE_KEYWORDS, STATE_REQUISITE_IN_KEYWORDS]
+                ):
                     if req in chunk:
                         if req in requisites:
                             requisites[req].extend(chunk[req])
