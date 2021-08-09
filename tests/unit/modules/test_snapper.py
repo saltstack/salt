@@ -1,23 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Unit tests for the Snapper module
 
 :codeauthor:    Duncan Mac-Vicar P. <dmacvicar@suse.de>
 :codeauthor:    Pablo Suárez Hernández <psuarezhernandez@suse.de>
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import sys
 
 import salt.modules.snapper as snapper
 from salt.exceptions import CommandExecutionError
-
-# Import Salt libs
-from salt.ext import six
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase, skipIf
@@ -398,28 +388,12 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
             "salt.modules.snapper.snapper.ListConfigs",
             MagicMock(return_value=DBUS_RET["ListConfigs"]),
         ):
-            if six.PY3:
-                self.assertCountEqual(snapper.status(), MODULE_RET["GETFILES"])
-                self.assertCountEqual(
-                    snapper.status(num_pre="42", num_post=43), MODULE_RET["GETFILES"]
-                )
-                self.assertCountEqual(
-                    snapper.status(num_pre=42), MODULE_RET["GETFILES"]
-                )
-                self.assertCountEqual(
-                    snapper.status(num_post=43), MODULE_RET["GETFILES"]
-                )
-            else:
-                self.assertItemsEqual(snapper.status(), MODULE_RET["GETFILES"])
-                self.assertItemsEqual(
-                    snapper.status(num_pre="42", num_post=43), MODULE_RET["GETFILES"]
-                )
-                self.assertItemsEqual(
-                    snapper.status(num_pre=42), MODULE_RET["GETFILES"]
-                )
-                self.assertItemsEqual(
-                    snapper.status(num_post=43), MODULE_RET["GETFILES"]
-                )
+            self.assertCountEqual(snapper.status(), MODULE_RET["GETFILES"])
+            self.assertCountEqual(
+                snapper.status(num_pre="42", num_post=43), MODULE_RET["GETFILES"]
+            )
+            self.assertCountEqual(snapper.status(num_pre=42), MODULE_RET["GETFILES"])
+            self.assertCountEqual(snapper.status(num_post=43), MODULE_RET["GETFILES"])
 
     def test_changed_files(self):
         with patch(
