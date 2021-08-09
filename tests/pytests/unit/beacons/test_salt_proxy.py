@@ -1,16 +1,10 @@
 # Python libs
 
-from collections import namedtuple
-
 import pytest
 
 # Salt libs
 import salt.beacons.salt_proxy as salt_proxy
 from tests.support.mock import MagicMock, patch
-
-PATCH_OPTS = dict(autospec=True, spec_set=True)
-
-FakeProcess = namedtuple("Process", "cmdline pid")
 
 
 @pytest.fixture

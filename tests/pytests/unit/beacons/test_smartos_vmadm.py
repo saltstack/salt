@@ -5,50 +5,68 @@ import pytest
 import salt.beacons.smartos_vmadm as vmadm
 from tests.support.mock import MagicMock, patch
 
-# Mock Results
-MOCK_CLEAN_STATE = {"first_run": True, "vms": []}
-MOCK_VM_NONE = {}
-MOCK_VM_ONE = {
-    "00000000-0000-0000-0000-000000000001": {
-        "state": "running",
-        "alias": "vm1",
-        "hostname": "vm1",
-        "dns_domain": "example.org",
-    },
-}
-MOCK_VM_TWO_STOPPED = {
-    "00000000-0000-0000-0000-000000000001": {
-        "state": "running",
-        "alias": "vm1",
-        "hostname": "vm1",
-        "dns_domain": "example.org",
-    },
-    "00000000-0000-0000-0000-000000000002": {
-        "state": "stopped",
-        "alias": "vm2",
-        "hostname": "vm2",
-        "dns_domain": "example.org",
-    },
-}
-MOCK_VM_TWO_STARTED = {
-    "00000000-0000-0000-0000-000000000001": {
-        "state": "running",
-        "alias": "vm1",
-        "hostname": "vm1",
-        "dns_domain": "example.org",
-    },
-    "00000000-0000-0000-0000-000000000002": {
-        "state": "running",
-        "alias": "vm2",
-        "hostname": "vm2",
-        "dns_domain": "example.org",
-    },
-}
-
 
 @pytest.fixture
 def configure_loader_modules():
     return {vmadm: {"__context__": {}, "__salt__": {}}}
+
+
+@pytest.fixture
+def mock_clean_state():
+    return {"first_run": True, "vms": []}
+
+
+@pytest.fixture
+def mock_vm_none():
+    return {}
+
+
+@pytest.fixture
+def mock_vm_one():
+    return {
+        "00000000-0000-0000-0000-000000000001": {
+            "state": "running",
+            "alias": "vm1",
+            "hostname": "vm1",
+            "dns_domain": "example.org",
+        },
+    }
+
+
+@pytest.fixture
+def mock_vm_two_stopped():
+    return {
+        "00000000-0000-0000-0000-000000000001": {
+            "state": "running",
+            "alias": "vm1",
+            "hostname": "vm1",
+            "dns_domain": "example.org",
+        },
+        "00000000-0000-0000-0000-000000000002": {
+            "state": "stopped",
+            "alias": "vm2",
+            "hostname": "vm2",
+            "dns_domain": "example.org",
+        },
+    }
+
+
+@pytest.fixture
+def mock_vm_two_started():
+    return {
+        "00000000-0000-0000-0000-000000000001": {
+            "state": "running",
+            "alias": "vm1",
+            "hostname": "vm1",
+            "dns_domain": "example.org",
+        },
+        "00000000-0000-0000-0000-000000000002": {
+            "state": "running",
+            "alias": "vm2",
+            "hostname": "vm2",
+            "dns_domain": "example.org",
+        },
+    }
 
 
 def test_non_list_config():
@@ -62,13 +80,13 @@ def test_non_list_config():
     assert ret == (False, "Configuration for vmadm beacon must be a list!")
 
 
-def test_created_startup():
+def test_created_startup(mock_clean_state, mock_vm_one):
     """
     Test with one vm and startup_create_event
     """
     # NOTE: this should yield 1 created event + one state event
-    with patch.dict(vmadm.VMADM_STATE, MOCK_CLEAN_STATE), patch.dict(
-        vmadm.__salt__, {"vmadm.list": MagicMock(return_value=MOCK_VM_ONE)}
+    with patch.dict(vmadm.VMADM_STATE, mock_clean_state), patch.dict(
+        vmadm.__salt__, {"vmadm.list": MagicMock(return_value=mock_vm_one)}
     ):
 
         config = [{"startup_create_event": True}]
@@ -94,13 +112,13 @@ def test_created_startup():
         assert ret == res
 
 
-def test_created_nostartup():
+def test_created_nostartup(mock_clean_state, mock_vm_one):
     """
     Test with one image and startup_import_event unset/false
     """
     # NOTE: this should yield 0 created event _ one state event
-    with patch.dict(vmadm.VMADM_STATE, MOCK_CLEAN_STATE), patch.dict(
-        vmadm.__salt__, {"vmadm.list": MagicMock(return_value=MOCK_VM_ONE)}
+    with patch.dict(vmadm.VMADM_STATE, mock_clean_state), patch.dict(
+        vmadm.__salt__, {"vmadm.list": MagicMock(return_value=mock_vm_one)}
     ):
 
         config = []
@@ -121,14 +139,14 @@ def test_created_nostartup():
         assert ret == res
 
 
-def test_created():
+def test_created(mock_clean_state, mock_vm_one, mock_vm_two_started):
     """
     Test with one vm, create a 2nd one
     """
     # NOTE: this should yield 1 created event + state event
-    with patch.dict(vmadm.VMADM_STATE, MOCK_CLEAN_STATE), patch.dict(
+    with patch.dict(vmadm.VMADM_STATE, mock_clean_state), patch.dict(
         vmadm.__salt__,
-        {"vmadm.list": MagicMock(side_effect=[MOCK_VM_ONE, MOCK_VM_TWO_STARTED])},
+        {"vmadm.list": MagicMock(side_effect=[mock_vm_one, mock_vm_two_started])},
     ):
 
         config = []
@@ -159,14 +177,14 @@ def test_created():
         assert ret == res
 
 
-def test_deleted():
+def test_deleted(mock_clean_state, mock_vm_two_stopped, mock_vm_one):
     """
     Test with two vms and one gets destroyed
     """
     # NOTE: this should yield 1 destroyed event
-    with patch.dict(vmadm.VMADM_STATE, MOCK_CLEAN_STATE), patch.dict(
+    with patch.dict(vmadm.VMADM_STATE, mock_clean_state), patch.dict(
         vmadm.__salt__,
-        {"vmadm.list": MagicMock(side_effect=[MOCK_VM_TWO_STOPPED, MOCK_VM_ONE])},
+        {"vmadm.list": MagicMock(side_effect=[mock_vm_two_stopped, mock_vm_one])},
     ):
 
         config = []
@@ -191,16 +209,18 @@ def test_deleted():
         assert ret == res
 
 
-def test_complex():
+def test_complex(
+    mock_clean_state, mock_vm_one, mock_vm_two_started, mock_vm_two_stopped
+):
     """
     Test with two vms, stop one, delete one
     """
     # NOTE: this should yield 1 delete and 2 import events
-    with patch.dict(vmadm.VMADM_STATE, MOCK_CLEAN_STATE), patch.dict(
+    with patch.dict(vmadm.VMADM_STATE, mock_clean_state), patch.dict(
         vmadm.__salt__,
         {
             "vmadm.list": MagicMock(
-                side_effect=[MOCK_VM_TWO_STARTED, MOCK_VM_TWO_STOPPED, MOCK_VM_ONE]
+                side_effect=[mock_vm_two_started, mock_vm_two_stopped, mock_vm_one]
             )
         },
     ):
