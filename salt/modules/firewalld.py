@@ -23,7 +23,8 @@ def __virtual__():
 
     return (
         False,
-        "The firewalld execution module cannot be loaded: the firewall-cmd binary is not in the path.",
+        "The firewalld execution module cannot be loaded: the firewall-cmd binary is"
+        " not in the path.",
     )
 
 

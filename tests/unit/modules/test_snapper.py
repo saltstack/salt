@@ -143,30 +143,40 @@ MODULE_RET = {
     "DIFF": {
         "/tmp/foo": {
             "comment": "text file changed",
-            "diff": "--- /.snapshots/55/snapshot/tmp/foo\n"
-            "+++ /tmp/foo\n"
-            "@@ -1 +1 @@\n"
-            "-dummy text"
-            "+another foobar",
+            "diff": (
+                "--- /.snapshots/55/snapshot/tmp/foo\n"
+                "+++ /tmp/foo\n"
+                "@@ -1 +1 @@\n"
+                "-dummy text"
+                "+another foobar"
+            ),
         },
         "/tmp/foo2": {
             "comment": "text file created",
-            "diff": "--- /.snapshots/55/snapshot/tmp/foo2\n"
-            "+++ /tmp/foo2\n"
-            "@@ -0,0 +1 @@\n"
-            "+another foobar",
+            "diff": (
+                "--- /.snapshots/55/snapshot/tmp/foo2\n"
+                "+++ /tmp/foo2\n"
+                "@@ -0,0 +1 @@\n"
+                "+another foobar"
+            ),
         },
         "/tmp/foo26": {
             "comment": "text file created",
-            "diff": "--- /.snapshots/55/snapshot/tmp/foo2 \n"
-            "+++ /tmp/foo2 \n"
-            "@@ -1,0 +1,1 @@\n"
-            "+another foobar",
+            "diff": (
+                "--- /.snapshots/55/snapshot/tmp/foo2 \n"
+                "+++ /tmp/foo2 \n"
+                "@@ -1,0 +1,1 @@\n"
+                "+another foobar"
+            ),
         },
         "/tmp/foo3": {
             "comment": "binary file changed",
-            "old_sha256_digest": "e61f8b762d83f3b4aeb3689564b0ffbe54fa731a69a1e208dc9440ce0f69d19b",
-            "new_sha256_digest": "f18f971f1517449208a66589085ddd3723f7f6cefb56c141e3d97ae49e1d87fa",
+            "old_sha256_digest": (
+                "e61f8b762d83f3b4aeb3689564b0ffbe54fa731a69a1e208dc9440ce0f69d19b"
+            ),
+            "new_sha256_digest": (
+                "f18f971f1517449208a66589085ddd3723f7f6cefb56c141e3d97ae49e1d87fa"
+            ),
         },
     },
 }

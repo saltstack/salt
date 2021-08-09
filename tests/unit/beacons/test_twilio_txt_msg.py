@@ -122,7 +122,7 @@ class TwilioMsgTxtBeaconTestCase(TestCase, LoaderModuleMockMixin):
         config = {}
         ret = twilio_txt_msg.validate(config)
         self.assertEqual(
-            ret, (False, ("Configuration for twilio_txt_msg beacon must be a list."))
+            ret, (False, "Configuration for twilio_txt_msg beacon must be a list.")
         )
 
     def test_validate_empty_config(self):
@@ -135,11 +135,9 @@ class TwilioMsgTxtBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret,
             (
                 False,
-                (
-                    "Configuration for twilio_txt_msg "
-                    "beacon must contain account_sid, "
-                    "auth_token and twilio_number items."
-                ),
+                "Configuration for twilio_txt_msg "
+                "beacon must contain account_sid, "
+                "auth_token and twilio_number items.",
             ),
         )
 
@@ -159,11 +157,9 @@ class TwilioMsgTxtBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret,
             (
                 False,
-                (
-                    "Configuration for twilio_txt_msg "
-                    "beacon must contain account_sid, "
-                    "auth_token and twilio_number items."
-                ),
+                "Configuration for twilio_txt_msg "
+                "beacon must contain account_sid, "
+                "auth_token and twilio_number items.",
             ),
         )
 

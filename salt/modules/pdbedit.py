@@ -380,7 +380,8 @@ def modify(
         for change in changes:
             cmds.append(
                 "{flag}{value}".format(
-                    flag=flags[change], value=shlex.quote(changes[change]),
+                    flag=flags[change],
+                    value=shlex.quote(changes[change]),
                 )
             )
         if reset_login_hours:
@@ -390,7 +391,8 @@ def modify(
 
         res = __salt__["cmd.run_all"](
             "pdbedit --modify --user {login} {changes}".format(
-                login=shlex.quote(login), changes=" ".join(cmds),
+                login=shlex.quote(login),
+                changes=" ".join(cmds),
             ),
         )
 

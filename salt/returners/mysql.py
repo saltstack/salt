@@ -499,7 +499,10 @@ def _purge_jobs(timestamp):
     """
     with _get_serv() as cur:
         try:
-            sql = "delete from `jids` where jid in (select distinct jid from salt_returns where alter_time < %s)"
+            sql = (
+                "delete from `jids` where jid in (select distinct jid from salt_returns"
+                " where alter_time < %s)"
+            )
             cur.execute(sql, (timestamp,))
             cur.execute("COMMIT")
         except MySQLdb.Error as e:
@@ -515,7 +518,8 @@ def _purge_jobs(timestamp):
             cur.execute("COMMIT")
         except MySQLdb.Error as e:
             log.error(
-                "mysql returner archiver was unable to delete contents of table 'salt_returns'"
+                "mysql returner archiver was unable to delete contents of table"
+                " 'salt_returns'"
             )
             log.error(str(e))
             raise salt.exceptions.SaltRunnerError(str(e))
@@ -526,7 +530,8 @@ def _purge_jobs(timestamp):
             cur.execute("COMMIT")
         except MySQLdb.Error as e:
             log.error(
-                "mysql returner archiver was unable to delete contents of table 'salt_events'"
+                "mysql returner archiver was unable to delete contents of table"
+                " 'salt_events'"
             )
             log.error(str(e))
             raise salt.exceptions.SaltRunnerError(str(e))
@@ -561,8 +566,11 @@ def _archive_jobs(timestamp):
                 raise salt.exceptions.SaltRunnerError(str(e))
 
         try:
-            sql = "insert into `{}` select * from `{}` where jid in (select distinct jid from salt_returns where alter_time < %s)".format(
-                target_tables["jids"], "jids"
+            sql = (
+                "insert into `{}` select * from `{}` where jid in (select distinct jid"
+                " from salt_returns where alter_time < %s)".format(
+                    target_tables["jids"], "jids"
+                )
             )
             cur.execute(sql, (timestamp,))
             cur.execute("COMMIT")
@@ -584,7 +592,8 @@ def _archive_jobs(timestamp):
             cur.execute("COMMIT")
         except MySQLdb.Error as e:
             log.error(
-                "mysql returner archiver was unable to copy contents of table 'salt_returns'"
+                "mysql returner archiver was unable to copy contents of table"
+                " 'salt_returns'"
             )
             log.error(str(e))
             raise salt.exceptions.SaltRunnerError(str(e))
@@ -597,7 +606,8 @@ def _archive_jobs(timestamp):
             cur.execute("COMMIT")
         except MySQLdb.Error as e:
             log.error(
-                "mysql returner archiver was unable to copy contents of table 'salt_events'"
+                "mysql returner archiver was unable to copy contents of table"
+                " 'salt_events'"
             )
             log.error(str(e))
             raise salt.exceptions.SaltRunnerError(str(e))

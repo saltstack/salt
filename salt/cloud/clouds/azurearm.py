@@ -230,7 +230,9 @@ def get_configured_provider():
 
     for combo in key_combos:
         provider = config.is_provider_configured(
-            __opts__, _get_active_provider_name() or __virtualname__, combo,
+            __opts__,
+            _get_active_provider_name() or __virtualname__,
+            combo,
         )
 
         if provider:
@@ -395,12 +397,15 @@ def avail_images(call=None):
         data = {}
         try:
             offers = compconn.virtual_machine_images.list_offers(
-                location=region, publisher_name=publisher,
+                location=region,
+                publisher_name=publisher,
             )
             for offer_obj in offers:
                 offer = offer_obj.as_dict()
                 skus = compconn.virtual_machine_images.list_skus(
-                    location=region, publisher_name=publisher, offer=offer["name"],
+                    location=region,
+                    publisher_name=publisher,
+                    offer=offer["name"],
                 )
                 for sku_obj in skus:
                     sku = sku_obj.as_dict()
@@ -413,7 +418,12 @@ def avail_images(call=None):
                     for version_obj in results:
                         version = version_obj.as_dict()
                         name = "|".join(
-                            (publisher, offer["name"], sku["name"], version["name"],)
+                            (
+                                publisher,
+                                offer["name"],
+                                sku["name"],
+                                version["name"],
+                            )
                         )
                         data[name] = {
                             "publisher": publisher,
@@ -586,7 +596,7 @@ def list_resource_groups(call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_hosted_services function must be called with " "-f or --function"
+            "The list_hosted_services function must be called with -f or --function"
         )
 
     resconn = get_conn(client_type="resource")
@@ -639,7 +649,8 @@ def delete_interface(call=None, kwargs=None):  # pylint: disable=unused-argument
 
     ips = []
     iface = netconn.network_interfaces.get(
-        kwargs["resource_group"], kwargs["iface_name"],
+        kwargs["resource_group"],
+        kwargs["iface_name"],
     )
     iface_name = iface.name
     for ip_ in iface.ip_configurations:
@@ -781,7 +792,9 @@ def create_network_interface(call=None, kwargs=None):
                 for pool in be_pools:
                     try:
                         lbbep_data = netconn.load_balancer_backend_address_pools.get(
-                            kwargs["resource_group"], load_bal, pool,
+                            kwargs["resource_group"],
+                            load_bal,
+                            pool,
                         )
                         pool_ids.append({"id": lbbep_data.as_dict()["id"]})
                     except CloudError as exc:
@@ -814,7 +827,8 @@ def create_network_interface(call=None, kwargs=None):
         while True:
             try:
                 pub_ip_data = netconn.public_ip_addresses.get(
-                    kwargs["resource_group"], pub_ip_name,
+                    kwargs["resource_group"],
+                    pub_ip_name,
                 )
                 if pub_ip_data.ip_address:  # pylint: disable=no-member
                     ip_kwargs["public_ip_address"] = PublicIPAddress(
@@ -967,8 +981,9 @@ def request_instance(vm_):
                 ssh_publickeyfile_contents = spkc_.read()
         except Exception as exc:  # pylint: disable=broad-except
             raise SaltCloudConfigError(
-                "Failed to read ssh publickey file '{}': "
-                "{}".format(ssh_publickeyfile, exc.args[-1])
+                "Failed to read ssh publickey file '{}': {}".format(
+                    ssh_publickeyfile, exc.args[-1]
+                )
             )
 
     disable_password_authentication = config.get_cloud_config_value(
@@ -988,7 +1003,9 @@ def request_instance(vm_):
             key_data=ssh_publickeyfile_contents,
             path="/home/{}/.ssh/authorized_keys".format(vm_username),
         )
-        sshconfiguration = SshConfiguration(public_keys=[sshpublickey],)
+        sshconfiguration = SshConfiguration(
+            public_keys=[sshpublickey],
+        )
         linuxconfiguration = LinuxConfiguration(
             disable_password_authentication=disable_password_authentication,
             ssh=sshconfiguration,
@@ -1120,7 +1137,10 @@ def request_instance(vm_):
             if "|" in vm_["image"]:
                 img_pub, img_off, img_sku, img_ver = vm_["image"].split("|")
                 img_ref = ImageReference(
-                    publisher=img_pub, offer=img_off, sku=img_sku, version=img_ver,
+                    publisher=img_pub,
+                    offer=img_off,
+                    sku=img_sku,
+                    version=img_ver,
                 )
             elif vm_["image"].startswith("/subscriptions"):
                 img_ref = ImageReference(id=vm_["image"])
@@ -1134,7 +1154,9 @@ def request_instance(vm_):
             name=disk_name,
             vhd=VirtualHardDisk(
                 uri="https://{}.blob.{}/vhds/{}.vhd".format(
-                    vm_["storage_account"], storage_endpoint_suffix, disk_name,
+                    vm_["storage_account"],
+                    storage_endpoint_suffix,
+                    disk_name,
                 ),
             ),
             os_type=os_type,
@@ -1151,7 +1173,10 @@ def request_instance(vm_):
         if "|" in vm_["image"]:
             img_pub, img_off, img_sku, img_ver = vm_["image"].split("|")
             img_ref = ImageReference(
-                publisher=img_pub, offer=img_off, sku=img_sku, version=img_ver,
+                publisher=img_pub,
+                offer=img_off,
+                sku=img_sku,
+                version=img_ver,
             )
         elif vm_["image"].startswith("/subscriptions"):
             img_ref = ImageReference(id=vm_["image"])
@@ -1238,7 +1263,9 @@ def request_instance(vm_):
             vm_size=getattr(VirtualMachineSizeTypes, vm_["size"].lower()),
         ),
         storage_profile=StorageProfile(
-            os_disk=os_disk, data_disks=data_disks, image_reference=img_ref,
+            os_disk=os_disk,
+            data_disks=data_disks,
+            image_reference=img_ref,
         ),
         os_profile=OSProfile(
             admin_username=vm_username, computer_name=vm_["name"], **os_kwargs
@@ -1344,7 +1371,10 @@ def create(vm_):
     try:
         data = __utils__["cloud.wait_for_ip"](
             _query_node_data,
-            update_args=(vm_["name"], vm_["bootstrap_interface"],),
+            update_args=(
+                vm_["name"],
+                vm_["bootstrap_interface"],
+            ),
             timeout=config.get_cloud_config_value(
                 "wait_for_ip_timeout", vm_, __opts__, default=10 * 60
             ),
@@ -1409,7 +1439,7 @@ def destroy(name, call=None, kwargs=None):  # pylint: disable=unused-argument
 
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     compconn = get_conn(client_type="compute")
@@ -1559,7 +1589,7 @@ def list_storage_accounts(call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_storage_accounts function must be called with " "-f or --function"
+            "The list_storage_accounts function must be called with -f or --function"
         )
 
     storconn = get_conn(client_type="storage")
@@ -1694,7 +1724,9 @@ def delete_managed_disk(call=None, kwargs=None):  # pylint: disable=unused-argum
         compconn.disks.begin_delete(kwargs["resource_group"], kwargs["blob"])
     except Exception as exc:  # pylint: disable=broad-except
         log.error(
-            "Error deleting managed disk %s - %s", kwargs.get("blob"), str(exc),
+            "Error deleting managed disk %s - %s",
+            kwargs.get("blob"),
+            str(exc),
         )
         return False
 
@@ -1710,7 +1742,7 @@ def list_virtual_networks(call=None, kwargs=None):
 
     if call == "action":
         raise SaltCloudSystemExit(
-            "The avail_sizes function must be called with " "-f or --function"
+            "The avail_sizes function must be called with -f or --function"
         )
 
     netconn = get_conn(client_type="network")
@@ -1741,7 +1773,7 @@ def list_subnets(call=None, kwargs=None):
 
     if call == "action":
         raise SaltCloudSystemExit(
-            "The avail_sizes function must be called with " "-f or --function"
+            "The avail_sizes function must be called with -f or --function"
         )
 
     netconn = get_conn(client_type="network")
@@ -1843,7 +1875,8 @@ def create_or_update_vmextension(
         raise SaltCloudSystemExit("VM extension settings are not valid")
     elif "commandToExecute" not in settings and "script" not in settings:
         raise SaltCloudSystemExit(
-            "VM extension settings are not valid. Either commandToExecute or script must be specified."
+            "VM extension settings are not valid. Either commandToExecute or script"
+            " must be specified."
         )
 
     log.info("Creating VM extension %s", kwargs["extension_name"])
@@ -1993,7 +2026,8 @@ def start(name, call=None):
             ret = vm_result.as_dict()
         except CloudError as exc:
             salt.utils.azurearm.log_cloud_error(
-                "compute", "Error attempting to start {}: {}".format(name, exc.message),
+                "compute",
+                "Error attempting to start {}: {}".format(name, exc.message),
             )
             ret = {"error": exc.message}
 

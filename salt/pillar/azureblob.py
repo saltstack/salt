@@ -187,7 +187,8 @@ def _init(connection_string, container, multiple_env, environment, blob_cache_ex
     expired = cache_file_mtime <= exp
 
     log.debug(
-        "Blob storage container cache file %s is %sexpired, mtime_diff=%ss, expiration=%ss",
+        "Blob storage container cache file %s is %sexpired, mtime_diff=%ss,"
+        " expiration=%ss",
         cache_file,
         "" if expired else "not ",
         cache_file_mtime - exp,
