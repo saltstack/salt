@@ -326,7 +326,8 @@ def salt_proxy_factory(salt_master_factory):
 
 @pytest.fixture
 def temp_salt_master(
-    request, salt_factories,
+    request,
+    salt_factories,
 ):
     config_defaults = {
         "open_mode": True,

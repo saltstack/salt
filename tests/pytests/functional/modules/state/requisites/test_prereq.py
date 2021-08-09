@@ -183,7 +183,10 @@ def test_requisites_prereq_simple_ordering_and_errors_2(state, state_tree):
       cmd.run:
         - name: echo C second
     """
-    errmsg = "The prereq statement in state 'B' in SLS 'requisite' needs to be formed as a list"
+    errmsg = (
+        "The prereq statement in state 'B' in SLS 'requisite' needs to be formed as a"
+        " list"
+    )
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
         assert isinstance(ret, list)  # Error
@@ -620,7 +623,10 @@ def test_requisites_prereq_simple_ordering_and_errors_10(state, state_tree):
         - prereq_in:
           - cmd: A
     """
-    errmsg = 'A recursive requisite was found, SLS "requisites.prereq_recursion_error" ID "B" ID "A"'
+    errmsg = (
+        'A recursive requisite was found, SLS "requisites.prereq_recursion_error" ID'
+        ' "B" ID "A"'
+    )
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
         assert isinstance(ret, list)  # Error

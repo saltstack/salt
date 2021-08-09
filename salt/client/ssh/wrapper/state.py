@@ -272,13 +272,13 @@ def running(concurrent=False):
     active = __salt__["saltutil.is_running"]("state.*")
     for data in active:
         err = (
-            'The function "{}" is running as PID {} and was started at '
-            "{} with jid {}"
-        ).format(
-            data["fun"],
-            data["pid"],
-            salt.utils.jid.jid_to_time(data["jid"]),
-            data["jid"],
+            'The function "{}" is running as PID {} and was started at {} '
+            "with jid {}".format(
+                data["fun"],
+                data["pid"],
+                salt.utils.jid.jid_to_time(data["jid"]),
+                data["jid"],
+            )
         )
         ret.append(err)
     return ret
@@ -918,8 +918,9 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
 
         if not chunk:
             raise SaltInvocationError(
-                "No matches for ID '{}' found in SLS '{}' within saltenv "
-                "'{}'".format(id_, mods, opts["saltenv"])
+                "No matches for ID '{}' found in SLS '{}' within saltenv '{}'".format(
+                    id_, mods, opts["saltenv"]
+                )
             )
 
         ret = _ssh_state(chunk, st_kwargs, kwargs, test=test)

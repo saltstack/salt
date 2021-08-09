@@ -46,10 +46,16 @@ def test_listen_requisite(state, state_tree):
     """
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        listener_state = 'cmd_|-listener_test_listening_change_state_|-echo "Listening State"_|-mod_watch'
+        listener_state = (
+            'cmd_|-listener_test_listening_change_state_|-echo "Listening'
+            ' State"_|-mod_watch'
+        )
         assert listener_state in ret
 
-        absent_state = 'cmd_|-listener_test_listening_non_changing_state_|-echo "Only run once"_|-mod_watch'
+        absent_state = (
+            'cmd_|-listener_test_listening_non_changing_state_|-echo "Only run'
+            ' once"_|-mod_watch'
+        )
         assert absent_state not in ret
 
 
@@ -98,9 +104,15 @@ def test_listen_in_requisite(state, state_tree):
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
 
-        listener_state = 'cmd_|-listener_test_listening_change_state_|-echo "Listening State"_|-mod_watch'
+        listener_state = (
+            'cmd_|-listener_test_listening_change_state_|-echo "Listening'
+            ' State"_|-mod_watch'
+        )
         assert listener_state in ret
-        absent_state = 'cmd_|-listener_test_listening_non_changing_state_|-echo "Only run once"_|-mod_watch'
+        absent_state = (
+            'cmd_|-listener_test_listening_non_changing_state_|-echo "Only run'
+            ' once"_|-mod_watch'
+        )
         assert absent_state not in ret
 
 
@@ -148,7 +160,10 @@ def test_listen_in_requisite_resolution(state, state_tree):
     """
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        listener_state = 'cmd_|-listener_test_listen_in_resolution_|-echo "Successful listen_in resolution"_|-mod_watch'
+        listener_state = (
+            'cmd_|-listener_test_listen_in_resolution_|-echo "Successful listen_in'
+            ' resolution"_|-mod_watch'
+        )
         assert listener_state in ret
 
 
@@ -193,7 +208,10 @@ def test_listen_requisite_resolution(state, state_tree):
     """
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        listener_state = 'cmd_|-listener_test_listening_resolution_one_|-echo "Successful listen resolution"_|-mod_watch'
+        listener_state = (
+            'cmd_|-listener_test_listening_resolution_one_|-echo "Successful listen'
+            ' resolution"_|-mod_watch'
+        )
         assert listener_state in ret
 
 
@@ -238,10 +256,16 @@ def test_listen_requisite_no_state_module(state, state_tree):
     """
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        listener_state = 'cmd_|-listener_test_listening_change_state_|-echo "Listening State"_|-mod_watch'
+        listener_state = (
+            'cmd_|-listener_test_listening_change_state_|-echo "Listening'
+            ' State"_|-mod_watch'
+        )
         assert listener_state in ret
 
-        absent_state = 'cmd_|-listener_test_listening_non_changing_state_|-echo "Only run once"_|-mod_watch'
+        absent_state = (
+            'cmd_|-listener_test_listening_non_changing_state_|-echo "Only run'
+            ' once"_|-mod_watch'
+        )
         assert absent_state not in ret
 
 
