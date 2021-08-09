@@ -53,6 +53,7 @@ def test_selinux_change():
             },
         ):
             ret = filestate.managed(
-                file_name, selinux={"seuser": "unconfined_u", "setype": "user_tmp_t"},
+                file_name,
+                selinux={"seuser": "unconfined_u", "setype": "user_tmp_t"},
             )
             assert ret["result"]
