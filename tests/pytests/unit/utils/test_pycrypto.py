@@ -1,6 +1,6 @@
-import re
 import contextlib
 import logging
+import re
 
 import pytest
 import salt.utils.platform
@@ -79,10 +79,10 @@ def test_gen_hash_crypt_no_arguments():
 
 
 @pytest.mark.skipif(not salt.utils.pycrypto.HAS_CRYPT, reason="crypt not available")
-def test_gen_hash_crypt_default_algorithm(expected):
+def test_gen_hash_crypt_default_algorithm():
     # Assert it works without algorithm passed
     default_algorithm = salt.utils.pycrypto.crypt.methods[0].name.lower()
-    expected = expected[default_algorithm]
+    expected = expecteds[default_algorithm]
     ret = salt.utils.pycrypto.gen_hash(crypt_salt=expected["salt"], password=passwd)
     assert ret == expected["hashed"]
 
