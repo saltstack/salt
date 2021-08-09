@@ -664,8 +664,11 @@ def _clean_dir(root, keep, exclude_pat):
     Clean out all of the files and directories in a directory (root) while
     preserving the files in a list (keep) and part of exclude_pat
     """
-    # Create a case-sensitive dict before doing comparisons
-    case_keep = keep
+    case_keep = None
+    if salt.utils.files.case_sensitive_filesystem():
+        # Create a case-sensitive dict before doing comparisons
+        # if file system is case sensitive
+        case_keep = keep
 
     root = os.path.normcase(root)
     real_keep = _find_keep_files(root, keep)
@@ -683,9 +686,10 @@ def _clean_dir(root, keep, exclude_pat):
             # check for systems with case sensitive files. If we originally
             # meant to keep a file, but due to case sensitivity python would
             # otherwise remove the file, check against the original list.
-            for item in case_keep:
-                if item.casefold() == nfn.casefold():
-                    return
+            if case_keep:
+                for item in case_keep:
+                    if item.casefold() == nfn.casefold():
+                        return
             removed.add(nfn)
             if not __opts__["test"]:
                 try:
