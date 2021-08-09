@@ -3529,6 +3529,9 @@ def mod_aggregate(low, chunks, running):
                     chunk["__agg__"] = True
             else:
                 # If hold exists in the chunk, do not add to aggregation
+                # otherwise all packages will be held or unheld.
+                # setting a package to be held/unheld is not as
+                # time consuming as installing/uninstalling.
                 if "hold" not in chunk:
                     if pkg_type is None:
                         pkg_type = "pkgs"
