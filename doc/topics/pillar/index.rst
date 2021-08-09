@@ -359,7 +359,7 @@ functions.
 
 Also, for those writing custom execution modules, or contributing to Salt's
 existing execution modules, the in-memory pillar data is available as the
-``__pillar__`` dunder dictionary.
+``__pillar__`` under dictionary.
 
 The in-memory pillar data is generated on minion start, and can be refreshed
 using the :py:func:`saltutil.refresh_pillar
