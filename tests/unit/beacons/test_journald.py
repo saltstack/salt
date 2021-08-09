@@ -37,7 +37,10 @@ _STUB_JOURNALD_ENTRY = {
     "SYSLOG_IDENTIFIER": "sshd",
     "_SOURCE_REALTIME_TIMESTAMP": datetime.datetime(2017, 6, 27, 20, 8, 16, 468454),
     "_SYSTEMD_CGROUP": "/system.slice/ssh.service",
-    "__CURSOR": "s=7711ee01b03446309383870171dd5839;i=a74e;b=ad3915a590084feca635140606525497;m=571f43f8 dd;t=552fc7ed1cdf4;x=4ca0a3d4f1905736",
+    "__CURSOR": (
+        "s=7711ee01b03446309383870171dd5839;i=a74e;b=ad3915a590084feca635140606525497;m=571f43f8"
+        " dd;t=552fc7ed1cdf4;x=4ca0a3d4f1905736"
+    ),
     "_COMM": "sshd",
     "_CMDLINE": "sshd: gareth [priv]",
     "_SYSTEMD_INVOCATION_ID": "38a5d5aad292426d93bfaab72a69c2ab",
@@ -49,7 +52,7 @@ _STUB_JOURNALD_ENTRY = {
 
 
 class SystemdJournaldMock(Mock):
-    """ Request Mock"""
+    """Request Mock"""
 
     returned_once = False
 

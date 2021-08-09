@@ -75,7 +75,10 @@ def post_card(name, message, hook_url=None, title=None, theme_color=None):
 
     try:
         result = __salt__["msteams.post_card"](
-            message=message, hook_url=hook_url, title=title, theme_color=theme_color,
+            message=message,
+            hook_url=hook_url,
+            title=title,
+            theme_color=theme_color,
         )
     except SaltInvocationError as sie:
         ret["comment"] = "Failed to send message ({}): {}".format(sie, name)

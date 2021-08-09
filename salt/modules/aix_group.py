@@ -29,8 +29,7 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The aix_group execution module failed to load: "
-        "only available on AIX systems.",
+        "The aix_group execution module failed to load: only available on AIX systems.",
     )
 
 

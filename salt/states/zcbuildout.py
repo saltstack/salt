@@ -209,7 +209,7 @@ def installed(
     output_loglevel = kwargs.get("output_loglevel", None)
     if output_loglevel and not loglevel:
         log.warning(
-            "Passing 'output_loglevel' is deprecated," " please use loglevel instead"
+            "Passing 'output_loglevel' is deprecated, please use loglevel instead"
         )
     try:
         test_release = int(test_release)

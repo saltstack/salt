@@ -356,7 +356,8 @@ class BuildoutOnlineTestCase(Base):
                 "/d/distribute/distribute-0.6.43.tar.gz"
             )
             download_to(
-                url, os.path.join(cls.ppy_dis, "distribute-0.6.43.tar.gz"),
+                url,
+                os.path.join(cls.ppy_dis, "distribute-0.6.43.tar.gz"),
             )
 
             subprocess.check_call(
@@ -449,7 +450,8 @@ class BuildoutOnlineTestCase(Base):
     def test_run_buildout(self):
         if salt.modules.virtualenv_mod.virtualenv_ver(self.ppy_st) >= (20, 0, 0):
             self.skipTest(
-                "Skiping until upstream resolved https://github.com/pypa/virtualenv/issues/1715"
+                "Skiping until upstream resolved"
+                " https://github.com/pypa/virtualenv/issues/1715"
             )
 
         b_dir = os.path.join(self.tdir, "b")
@@ -464,7 +466,8 @@ class BuildoutOnlineTestCase(Base):
     def test_buildout(self):
         if salt.modules.virtualenv_mod.virtualenv_ver(self.ppy_st) >= (20, 0, 0):
             self.skipTest(
-                "Skiping until upstream resolved https://github.com/pypa/virtualenv/issues/1715"
+                "Skiping until upstream resolved"
+                " https://github.com/pypa/virtualenv/issues/1715"
             )
 
         b_dir = os.path.join(self.tdir, "b")

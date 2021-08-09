@@ -14,7 +14,10 @@ except (ImportError, ValueError):
     HAS_WIN32 = False
 
 if HAS_WIN32:
-    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True,)
+    kernel32 = ctypes.WinDLL(
+        "kernel32",
+        use_last_error=True,
+    )
 
 
 # Although utils are often directly imported, it is also possible to use the

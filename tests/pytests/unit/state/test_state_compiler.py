@@ -737,7 +737,12 @@ def test_render_requisite_require_in_disabled():
                         "test",
                         [
                             OrderedDict(
-                                [("require_in", [OrderedDict([("test", "step_one")])],)]
+                                [
+                                    (
+                                        "require_in",
+                                        [OrderedDict([("test", "step_one")])],
+                                    )
+                                ]
                             ),
                             "succeed_with_changes",
                             {"order": 10001},

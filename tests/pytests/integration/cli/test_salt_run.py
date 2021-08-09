@@ -147,6 +147,7 @@ def test_salt_run_with_wrong_eauth(salt_run_cli, saltdev_account):
     )
     assert ret.exitcode == 0, ret
     assert re.search(
-        r"^The specified external authentication system \"wrongeauth\" is not available\nAvailable eauth types: auto, .*",
+        r"^The specified external authentication system \"wrongeauth\" is not"
+        r" available\nAvailable eauth types: auto, .*",
         ret.stdout.replace("\r\n", "\n"),
     )

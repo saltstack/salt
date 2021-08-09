@@ -91,13 +91,21 @@ def test_uptodate_with_pkgs_with_changes(pkgs):
     ):
         # Run state with test=false
         with patch.dict(pkg.__opts__, {"test": False}):
-            ret = pkg.uptodate("dummy", test=True, pkgs=[pkgname for pkgname in pkgs],)
+            ret = pkg.uptodate(
+                "dummy",
+                test=True,
+                pkgs=[pkgname for pkgname in pkgs],
+            )
             assert ret["result"]
             assert ret["changes"] == pkgs
 
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
-            ret = pkg.uptodate("dummy", test=True, pkgs=[pkgname for pkgname in pkgs],)
+            ret = pkg.uptodate(
+                "dummy",
+                test=True,
+                pkgs=[pkgname for pkgname in pkgs],
+            )
             assert ret["result"] is None
             assert ret["changes"] == pkgs
 
@@ -140,13 +148,21 @@ def test_uptodate_with_pkgs_no_changes(pkgs):
     ):
         # Run state with test=false
         with patch.dict(pkg.__opts__, {"test": False}):
-            ret = pkg.uptodate("dummy", test=True, pkgs=[pkgname for pkgname in pkgs],)
+            ret = pkg.uptodate(
+                "dummy",
+                test=True,
+                pkgs=[pkgname for pkgname in pkgs],
+            )
             assert ret["result"]
             assert ret["changes"] == {}
 
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
-            ret = pkg.uptodate("dummy", test=True, pkgs=[pkgname for pkgname in pkgs],)
+            ret = pkg.uptodate(
+                "dummy",
+                test=True,
+                pkgs=[pkgname for pkgname in pkgs],
+            )
             assert ret["result"]
             assert ret["changes"] == {}
 
@@ -172,13 +188,21 @@ def test_uptodate_with_failed_changes(pkgs):
     ):
         # Run state with test=false
         with patch.dict(pkg.__opts__, {"test": False}):
-            ret = pkg.uptodate("dummy", test=True, pkgs=[pkgname for pkgname in pkgs],)
+            ret = pkg.uptodate(
+                "dummy",
+                test=True,
+                pkgs=[pkgname for pkgname in pkgs],
+            )
             assert not ret["result"]
             assert ret["changes"] == {}
 
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
-            ret = pkg.uptodate("dummy", test=True, pkgs=[pkgname for pkgname in pkgs],)
+            ret = pkg.uptodate(
+                "dummy",
+                test=True,
+                pkgs=[pkgname for pkgname in pkgs],
+            )
             assert ret["result"] is None
             assert ret["changes"] == pkgs
 
@@ -220,7 +244,11 @@ def test_parse_version_string(version_string, expected_version_conditions):
         ("> 1.0.0, < 15.0.0, != 14.0.1", ["14.0.1"], False),
         ("> 1.0.0, < 15.0.0, != 14.0.1", ["16.0.0"], False),
         ("> 1.0.0, < 15.0.0, != 14.0.1", ["2.0.0"], True),
-        ("> 1.0.0, < 15.0.0, != 14.0.1", ["1.0.0", "14.0.1", "16.0.0", "2.0.0"], True,),
+        (
+            "> 1.0.0, < 15.0.0, != 14.0.1",
+            ["1.0.0", "14.0.1", "16.0.0", "2.0.0"],
+            True,
+        ),
         ("> 15.0.0", [], False),
         ("> 15.0.0", ["1.0.0"], False),
         ("> 15.0.0", ["16.0.0"], True),
@@ -256,8 +284,10 @@ def test_fulfills_version_string(version_string, installed_versions, expected_re
     ],
 )
 def test_fulfills_version_spec(installed_versions, operator, version, expected_result):
-    msg = "installed_versions: {}, operator: {}, version: {}, expected_result: {}".format(
-        installed_versions, operator, version, expected_result
+    msg = (
+        "installed_versions: {}, operator: {}, version: {}, expected_result: {}".format(
+            installed_versions, operator, version, expected_result
+        )
     )
     assert expected_result == pkg._fulfills_version_spec(
         installed_versions, operator, version
@@ -277,7 +307,9 @@ def test_mod_beacon(tmp_path):
                 "name": name,
                 "changes": {},
                 "result": False,
-                "comment": "pkg.latest does not work with the mod_beacon state function",
+                "comment": (
+                    "pkg.latest does not work with the mod_beacon state function"
+                ),
             }
 
             assert ret == expected
@@ -358,7 +390,7 @@ def test_mod_beacon(tmp_path):
 
 def test_mod_aggregate():
     """
-        Test to mod_aggregate function
+    Test to mod_aggregate function
     """
     low = {
         "state": "pkg",

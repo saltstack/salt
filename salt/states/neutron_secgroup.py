@@ -43,8 +43,7 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The neutronng execution module failed to load:\
-                    shade python module is not available",
+        "The neutronng execution module failed to load: shade python module is not available",
     )
 
 

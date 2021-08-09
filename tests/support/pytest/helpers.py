@@ -128,7 +128,8 @@ def loader_mock(*args, **kwargs):
     if len(args) > 1:
         loader_modules = args[1]
         warnings.warn(
-            "'request' is not longer an accepted argument to 'loader_mock()'. Please stop passing it.",
+            "'request' is not longer an accepted argument to 'loader_mock()'. Please"
+            " stop passing it.",
             category=DeprecationWarning,
         )
     else:
