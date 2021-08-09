@@ -56,10 +56,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        (
-            "The influxdb execution module could not be loaded:"
-            "influxdb library not available."
-        ),
+        "The influxdb execution module could not be loaded:"
+        "influxdb library not available.",
     )
 
 
@@ -637,7 +635,7 @@ def create_continuous_query(
 
     .. code-block:: bash
 
-        salt '*' influxdb.create_continuous_query mydb cq_month 'SELECT mean(*) INTO mydb.a_month.:MEASUREMENT FROM mydb.a_week./.*/ GROUP BY time(5m), *' """
+        salt '*' influxdb.create_continuous_query mydb cq_month 'SELECT mean(*) INTO mydb.a_month.:MEASUREMENT FROM mydb.a_week./.*/ GROUP BY time(5m), *'"""
     client = _client(**client_args)
     full_query = "CREATE CONTINUOUS QUERY {name} ON {database}"
     if resample_time:

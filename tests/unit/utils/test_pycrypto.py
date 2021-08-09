@@ -20,7 +20,9 @@ class PycryptoTestCase(TestCase):
             "badsalt": "badsalt",
         },
         "sha256": {
-            "hashed": "$5$rounds=53501$goodsalt$W.uoco0wMfGLDOlsbW52E6raFS1Nhj0McfUTj2vORt7",
+            "hashed": (
+                "$5$rounds=53501$goodsalt$W.uoco0wMfGLDOlsbW52E6raFS1Nhj0McfUTj2vORt7"
+            ),
             "salt": "rounds=53501$goodsalt",
             "badsalt": "badsalt",
         },
@@ -48,7 +50,9 @@ class PycryptoTestCase(TestCase):
         for algorithm in methods:
             expected = self.expecteds[algorithm]
             ret = salt.utils.pycrypto.gen_hash(
-                crypt_salt=expected["salt"], password=self.passwd, algorithm=algorithm,
+                crypt_salt=expected["salt"],
+                password=self.passwd,
+                algorithm=algorithm,
             )
             self.assertEqual(ret, expected["hashed"])
 
@@ -71,7 +75,8 @@ class PycryptoTestCase(TestCase):
         default_algorithm = salt.utils.pycrypto.crypt.methods[0].name.lower()
         expected = self.expecteds[default_algorithm]
         ret = salt.utils.pycrypto.gen_hash(
-            crypt_salt=expected["salt"], password=self.passwd,
+            crypt_salt=expected["salt"],
+            password=self.passwd,
         )
         self.assertEqual(ret, expected["hashed"])
 
@@ -87,7 +92,9 @@ class PycryptoTestCase(TestCase):
         for algorithm in methods:
             expected = self.expecteds[algorithm]
             ret = salt.utils.pycrypto.gen_hash(
-                crypt_salt=expected["salt"], password=self.passwd, algorithm=algorithm,
+                crypt_salt=expected["salt"],
+                password=self.passwd,
+                algorithm=algorithm,
             )
             self.assertEqual(ret, expected["hashed"])
 

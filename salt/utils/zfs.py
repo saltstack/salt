@@ -543,10 +543,16 @@ def to_size(value, convert_to_human=True):
         #       see libzfs implementation linked above
         v_size_float = float(value) / v_multiplier
         if v_size_float == int(v_size_float):
-            value = "{:.0f}{}".format(v_size_float, zfs_size[v_power - 1],)
+            value = "{:.0f}{}".format(
+                v_size_float,
+                zfs_size[v_power - 1],
+            )
         else:
             for v_precision in ["{:.2f}{}", "{:.1f}{}", "{:.0f}{}"]:
-                v_size = v_precision.format(v_size_float, zfs_size[v_power - 1],)
+                v_size = v_precision.format(
+                    v_size_float,
+                    zfs_size[v_power - 1],
+                )
                 if len(v_size) <= 5:
                     value = v_size
                     break

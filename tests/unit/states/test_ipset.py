@@ -223,9 +223,11 @@ class IpsetPresentTestCase(TestCase, LoaderModuleMockMixin):
         ret = {
             "name": self.fake_name,
             "result": True,
-            "comment": "entry for 192.168.0.3 already in set {0} for ipv4\n"
-            "entry for 192.168.1.3 already in set {0} for ipv4\n"
-            "".format(self.fake_name),
+            "comment": (
+                "entry for 192.168.0.3 already in set {0} for ipv4\n"
+                "entry for 192.168.1.3 already in set {0} for ipv4\n"
+                "".format(self.fake_name)
+            ),
             "changes": {},
         }
         self._runner(ret, check=True)
@@ -234,9 +236,11 @@ class IpsetPresentTestCase(TestCase, LoaderModuleMockMixin):
         ret = {
             "name": self.fake_name,
             "result": None,
-            "comment": "entry 192.168.0.3 would be added to set {0} for family ipv4\n"
-            "entry 192.168.1.3 would be added to set {0} for family ipv4\n"
-            "".format(self.fake_name),
+            "comment": (
+                "entry 192.168.0.3 would be added to set {0} for family ipv4\n"
+                "entry 192.168.1.3 would be added to set {0} for family ipv4\n"
+                "".format(self.fake_name)
+            ),
             "changes": {},
         }
         self._runner(ret, test=True)
@@ -245,8 +249,10 @@ class IpsetPresentTestCase(TestCase, LoaderModuleMockMixin):
         ret = {
             "name": self.fake_name,
             "result": False,
-            "comment": "Failed to add to entry 192.168.1.3 to set {} for family ipv4.\n"
-            "Error".format(self.fake_name),
+            "comment": (
+                "Failed to add to entry 192.168.1.3 to set {} for family ipv4.\n"
+                "Error".format(self.fake_name)
+            ),
             "changes": {},
         }
         self._runner(ret, add="Error", add_assertion=True)
@@ -255,9 +261,11 @@ class IpsetPresentTestCase(TestCase, LoaderModuleMockMixin):
         ret = {
             "name": self.fake_name,
             "result": True,
-            "comment": "entry 192.168.0.3 added to set {0} for family ipv4\n"
-            "entry 192.168.1.3 added to set {0} for family ipv4\n"
-            "".format(self.fake_name),
+            "comment": (
+                "entry 192.168.0.3 added to set {0} for family ipv4\n"
+                "entry 192.168.1.3 added to set {0} for family ipv4\n"
+                "".format(self.fake_name)
+            ),
             "changes": {"locale": "fake_ipset"},
         }
         self._runner(ret, add="worked", add_assertion=True)
@@ -321,9 +329,11 @@ class IpsetAbsentTestCase(TestCase, LoaderModuleMockMixin):
         ret = {
             "name": self.fake_name,
             "result": True,
-            "comment": "ipset entry for 192.168.0.3 not present in set {0} for ipv4\n"
-            "ipset entry for 192.168.1.3 not present in set {0} for ipv4\n"
-            "".format(self.fake_name),
+            "comment": (
+                "ipset entry for 192.168.0.3 not present in set {0} for ipv4\n"
+                "ipset entry for 192.168.1.3 not present in set {0} for ipv4\n"
+                "".format(self.fake_name)
+            ),
             "changes": {},
         }
         self._runner(ret)
@@ -332,9 +342,11 @@ class IpsetAbsentTestCase(TestCase, LoaderModuleMockMixin):
         ret = {
             "name": self.fake_name,
             "result": None,
-            "comment": "ipset entry 192.168.0.3 would be removed from set {0} for ipv4\n"
-            "ipset entry 192.168.1.3 would be removed from set {0} for ipv4\n"
-            "".format(self.fake_name),
+            "comment": (
+                "ipset entry 192.168.0.3 would be removed from set {0} for ipv4\n"
+                "ipset entry 192.168.1.3 would be removed from set {0} for ipv4\n"
+                "".format(self.fake_name)
+            ),
             "changes": {},
         }
         self._runner(ret, test=True, check=True)
@@ -343,8 +355,10 @@ class IpsetAbsentTestCase(TestCase, LoaderModuleMockMixin):
         ret = {
             "name": self.fake_name,
             "result": False,
-            "comment": "Failed to delete ipset entry from set {} for ipv4. Attempted entry was 192.168.1.3.\n"
-            "Error\n".format(self.fake_name),
+            "comment": (
+                "Failed to delete ipset entry from set {} for ipv4. Attempted entry was"
+                " 192.168.1.3.\nError\n".format(self.fake_name)
+            ),
             "changes": {},
         }
         self._runner(ret, check=True, delete="Error", delete_assertion=True)
@@ -353,9 +367,11 @@ class IpsetAbsentTestCase(TestCase, LoaderModuleMockMixin):
         ret = {
             "name": self.fake_name,
             "result": True,
-            "comment": "ipset entry 192.168.0.3 removed from set {0} for ipv4\n"
-            "ipset entry 192.168.1.3 removed from set {0} for ipv4\n"
-            "".format(self.fake_name),
+            "comment": (
+                "ipset entry 192.168.0.3 removed from set {0} for ipv4\n"
+                "ipset entry 192.168.1.3 removed from set {0} for ipv4\n"
+                "".format(self.fake_name)
+            ),
             "changes": {"locale": "fake_ipset"},
         }
         self._runner(ret, check=True, delete="worked", delete_assertion=True)

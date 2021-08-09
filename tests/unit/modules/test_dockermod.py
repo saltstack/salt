@@ -64,10 +64,12 @@ class DockerUnitTestCase(TestCase, LoaderModuleMockMixin):
         extra_pillar_data = {"some": "extras"}
         fake_trans_tar = MagicMock(return_value=b"hi")
         patch_trans_tar = patch(
-            "salt.modules.dockermod._prepare_trans_tar", fake_trans_tar,
+            "salt.modules.dockermod._prepare_trans_tar",
+            fake_trans_tar,
         )
         patch_call = patch(
-            "salt.modules.dockermod.call", MagicMock(return_value=expected_grains),
+            "salt.modules.dockermod.call",
+            MagicMock(return_value=expected_grains),
         )
         fake_get_pillar = MagicMock()
         fake_get_pillar.compile_pillar.return_value = expected_pillars
@@ -619,8 +621,12 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(docker_mod.__dict__, {"__salt__": __salt__}):
             with patch.object(docker_mod, "_get_client", get_client_mock):
-                docker_mod.volumes(filters={"dangling": [True]},)
-        client.volumes.assert_called_once_with(filters={"dangling": [True]},)
+                docker_mod.volumes(
+                    filters={"dangling": [True]},
+                )
+        client.volumes.assert_called_once_with(
+            filters={"dangling": [True]},
+        )
 
     @skipIf(
         docker_version < (1, 5, 0),
@@ -641,10 +647,14 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(docker_mod.__dict__, {"__salt__": __salt__}):
             with patch.object(docker_mod, "_get_client", get_client_mock):
                 docker_mod.create_volume(
-                    "foo", driver="bridge", driver_opts={},
+                    "foo",
+                    driver="bridge",
+                    driver_opts={},
                 )
         client.create_volume.assert_called_once_with(
-            "foo", driver="bridge", driver_opts={},
+            "foo",
+            driver="bridge",
+            driver_opts={},
         )
 
     @skipIf(
@@ -987,33 +997,35 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         # [ call(name, [args]), ...
         self.maxDiff = None
         self.assertIn("mkdir", docker_run_all_mock.mock_calls[0][1][1])
-        self.assertIn("mkdir", docker_run_all_mock.mock_calls[4][1][1])
+        self.assertIn("mkdir", docker_run_all_mock.mock_calls[5][1][1])
         self.assertNotEqual(
             docker_run_all_mock.mock_calls[0][1][1],
-            docker_run_all_mock.mock_calls[4][1][1],
-        )
-
-        self.assertIn("salt-call", docker_run_all_mock.mock_calls[2][1][1])
-        self.assertIn("salt-call", docker_run_all_mock.mock_calls[6][1][1])
-        self.assertNotEqual(
-            docker_run_all_mock.mock_calls[2][1][1],
-            docker_run_all_mock.mock_calls[6][1][1],
-        )
-
-        # check thin untar
-        self.assertIn("tarfile", docker_run_all_mock.mock_calls[1][1][1])
-        self.assertIn("tarfile", docker_run_all_mock.mock_calls[5][1][1])
-        self.assertNotEqual(
-            docker_run_all_mock.mock_calls[1][1][1],
             docker_run_all_mock.mock_calls[5][1][1],
         )
 
-        # check directory cleanup
-        self.assertIn("rm -rf", docker_run_all_mock.mock_calls[3][1][1])
-        self.assertIn("rm -rf", docker_run_all_mock.mock_calls[7][1][1])
+        self.assertEqual("python3 --version", docker_run_all_mock.mock_calls[1][1][1])
+
+        self.assertIn("salt-call", docker_run_all_mock.mock_calls[3][1][1])
+        self.assertIn("salt-call", docker_run_all_mock.mock_calls[8][1][1])
         self.assertNotEqual(
             docker_run_all_mock.mock_calls[3][1][1],
+            docker_run_all_mock.mock_calls[8][1][1],
+        )
+
+        # check thin untar
+        self.assertIn("tarfile", docker_run_all_mock.mock_calls[2][1][1])
+        self.assertIn("tarfile", docker_run_all_mock.mock_calls[7][1][1])
+        self.assertNotEqual(
+            docker_run_all_mock.mock_calls[2][1][1],
             docker_run_all_mock.mock_calls[7][1][1],
+        )
+
+        # check directory cleanup
+        self.assertIn("rm -rf", docker_run_all_mock.mock_calls[4][1][1])
+        self.assertIn("rm -rf", docker_run_all_mock.mock_calls[9][1][1])
+        self.assertNotEqual(
+            docker_run_all_mock.mock_calls[4][1][1],
+            docker_run_all_mock.mock_calls[9][1][1],
         )
 
         self.assertEqual({"retcode": 0, "comment": "container cmd"}, ret)

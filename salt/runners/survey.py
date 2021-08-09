@@ -87,18 +87,18 @@ def diff(*args, **kwargs):
 
     is_first_time = True
     for k in bulk_ret:
-        print("minion pool :\n" "------------")
+        print("minion pool :\n------------")
         print(k["pool"])
-        print("pool size :\n" "----------")
+        print("pool size :\n----------")
         print("    " + str(len(k["pool"])))
         if is_first_time:
             is_first_time = False
-            print("pool result :\n" "------------")
+            print("pool result :\n------------")
             print("    " + bulk_ret[0]["result"])
             print()
             continue
 
-        outs = ('differences from "{}" results :').format(bulk_ret[0]["pool"][0])
+        outs = 'differences from "{}" results :'.format(bulk_ret[0]["pool"][0])
         print(outs)
         print("-" * (len(outs) - 1))
         from_result = bulk_ret[0]["result"].splitlines()

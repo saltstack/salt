@@ -52,7 +52,9 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
         Test if it return a data structure of the current, in-memory rules
         """
         mock = MagicMock(
-            return_value="kernel-3.10.0-862.el7.x86_64                  Thu Apr 5 00:40:00 2018"
+            return_value=(
+                "kernel-3.10.0-862.el7.x86_64                  Thu Apr 5 00:40:00 2018"
+            )
         )
         with patch.dict(restartcheck.__salt__, {"cmd.run": mock}):
             self.assertListEqual(

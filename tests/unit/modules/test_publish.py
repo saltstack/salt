@@ -109,7 +109,7 @@ class PublishTestCase(TestCase, LoaderModuleMockMixin):
         Test if it execute a runner on the master and return the data
         from the runner function
         """
-        ret = "No access to master. If using salt-call with --local," " please remove."
+        ret = "No access to master. If using salt-call with --local, please remove."
         self.assertEqual(publish.runner("manage.down"), ret)
 
         mock = MagicMock(return_value=True)

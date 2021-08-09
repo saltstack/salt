@@ -125,14 +125,12 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
         cron.present(name="foo", hour="2", user="root", identifier=None)
         self.assertEqual(
             self.get_crontab(),
-            (
-                "# Lines below here are managed by Salt, do not edit\n"
-                "# SALT_CRON_IDENTIFIER:1\n"
-                "* 2 * * * foo\n"
-                "# SALT_CRON_IDENTIFIER:2\n"
-                "* 2 * * * foo\n"
-                "* 2 * * * foo"
-            ),
+            "# Lines below here are managed by Salt, do not edit\n"
+            "# SALT_CRON_IDENTIFIER:1\n"
+            "* 2 * * * foo\n"
+            "# SALT_CRON_IDENTIFIER:2\n"
+            "* 2 * * * foo\n"
+            "* 2 * * * foo",
         )
 
     def test_remove(self):
@@ -170,17 +168,17 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
                 "# Lines below here are managed by Salt, do not edit",
             )
             self.set_crontab(
-                "# Lines below here are managed by Salt, do not edit\n" "* * * * * foo"
+                "# Lines below here are managed by Salt, do not edit\n* * * * * foo"
             )
             cron.absent(name="bar", identifier="1")
             self.assertEqual(
                 self.get_crontab(),
-                "# Lines below here are managed by Salt, do not edit\n" "* * * * * foo",
+                "# Lines below here are managed by Salt, do not edit\n* * * * * foo",
             )
             # old behavior, do not remove with identifier set and
             # even if command match !
             self.set_crontab(
-                "# Lines below here are managed by Salt, do not edit\n" "* * * * * foo"
+                "# Lines below here are managed by Salt, do not edit\n* * * * * foo"
             )
             cron.absent(name="foo", identifier="1")
             self.assertEqual(
@@ -189,7 +187,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
             )
             # old behavior, remove if no identifier and command match
             self.set_crontab(
-                "# Lines below here are managed by Salt, do not edit\n" "* * * * * foo"
+                "# Lines below here are managed by Salt, do not edit\n* * * * * foo"
             )
             cron.absent(name="foo")
             self.assertEqual(
@@ -239,7 +237,7 @@ class CronTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_existing_unmanaged_jobs_are_made_managed(self):
         self.set_crontab(
-            "# Lines below here are managed by Salt, do not edit\n" "0 2 * * * foo"
+            "# Lines below here are managed by Salt, do not edit\n0 2 * * * foo"
         )
         ret = cron._check_cron("root", "foo", hour="2", minute="0")
         self.assertEqual(ret, "present")

@@ -152,9 +152,10 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
                 localemod.log.error.call_args[0][0]
                 % localemod.log.error.call_args[0][1]
             )
-            assert msg == (
-                'Odd locale parameter "Fatal error right in front of screen" detected in dbus locale output.'
-                " This should not happen. You should probably investigate what caused this."
+            assert (
+                msg == 'Odd locale parameter "Fatal error right in front of screen"'
+                " detected in dbus locale output. This should not happen. You should"
+                " probably investigate what caused this."
             )
 
     @patch("salt.utils.path.which", MagicMock(return_value=None))

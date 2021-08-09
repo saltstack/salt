@@ -48,7 +48,11 @@ def get_configured_provider():
     return config.is_provider_configured(
         __opts__,
         _get_active_provider_name() or __virtualname__,
-        ("username", "identity_url", "compute_region",),
+        (
+            "username",
+            "identity_url",
+            "compute_region",
+        ),
     )
 
 

@@ -72,8 +72,7 @@ def sync(opts, form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None)
                     os.makedirs(mod_dir)
                 except OSError:
                     log.error(
-                        "Cannot create cache module directory %s. Check "
-                        "permissions.",
+                        "Cannot create cache module directory %s. Check permissions.",
                         mod_dir,
                     )
             fileclient = salt.fileclient.get_file_client(opts)
