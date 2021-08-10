@@ -8,14 +8,7 @@ import os
 import jinja2.exceptions
 import pytest
 import salt.modules.suse_ip as suse_ip
-from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase
-
-
-"""
-Test cases for salt.modules.suse_ip
-"""
 
 
 @pytest.fixture
