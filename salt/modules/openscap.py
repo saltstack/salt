@@ -212,65 +212,6 @@ def xccdf(file="", operation="eval", upload=True, **kwargs):
     Returns:
         [type]: [description]
     """
-    cmd = "{} --version".format(_oscap_cmd())
-    _version = __salt__["cmd.run"](cmd)
-
-    # Output beautifications
-    _resdict = {}
-    _prep_version = _version.split("\n")
-    while "" in _prep_version:
-        _prep_version.remove("")
-
-    _clean_version = _prep_version[2:]
-
-    # Split the version information based on the section they are in.
-    KEY_RULES = {
-        "Supported specifications": {"split_at": ": "},
-        "Capabilities added by auto-loaded plugins": {"split_at": ": "},
-        "Paths": {"split_at": ": "},
-        "Inbuilt CPE names": {"split_at": " - "},
-    }
-
-    for line in _clean_version:
-        if line.startswith("===="):
-            _head = line.strip("=")[1:-1]
-            _resdict[_head] = {}
-            continue
-
-        if _head == "Supported OVAL objects and associated OpenSCAP probes":
-            if line.startswith("OVAL") or line.startswith("---"):
-                continue
-            _line = line.split(" ")
-            while "" in _line:
-                _line.remove("")
-            _resdict[_head][_line[0]] = {
-                "OVAL object": _line[1],
-                "OpenSCAP probe": _line[2],
-            }
-            continue
-
-        _key = line.split(KEY_RULES[_head]["split_at"])[0]
-        _value = line.split(KEY_RULES[_head]["split_at"])[1]
-        _resdict[_head][_key] = _value
-
-    if "full" in args:
-        return _resdict
-
-    # Default return
-    _bin = _oscap_cmd().split("/")[-1]
-    return {"{}".format(_bin): _prep_version[0].split(" ")[-1]}
-
-
-def xccdf(file="", operation="eval", upload=True, **kwargs):
-    """[summary]
-
-    Args:
-        file (str, optional): [description]. Defaults to "".
-        operation (str, optional): [description]. Defaults to "eval".
-
-    Returns:
-        [type]: [description]
-    """
 
     if not file:
         return "A File must be defined!"
