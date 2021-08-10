@@ -144,6 +144,8 @@ def version(*args):
 
     :return: a dict with the version information
     """
+    print(f"{args} {type(args)}")
+
     cmd = "{} --version".format(_oscap_cmd())
     _version = __salt__["cmd.run"](cmd)
 
@@ -187,8 +189,10 @@ def version(*args):
 
     _bin = _oscap_cmd().split("/")[-1]
     short_version = {"{}".format(_bin): _prep_version[0].split(" ")[-1]}
+    print(_resdict)
     if "full" in args:
-        return _resdict.update(short_version)
+        _resdict.update(short_version)
+        return _resdict
 
     # Default return
     return short_version
