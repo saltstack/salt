@@ -2,11 +2,11 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-import pytest
 import copy
 import os
 
 import jinja2.exceptions
+import pytest
 import salt.modules.suse_ip as suse_ip
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
@@ -16,6 +16,7 @@ from tests.support.unit import TestCase
 """
 Test cases for salt.modules.suse_ip
 """
+
 
 @pytest.fixture
 def configure_loader_modules():
@@ -84,41 +85,40 @@ def test_build_interface():
                 assert suse_ip.build_interface("iface", "vlan", True) == ""
 
             with patch.object(suse_ip, "_read_temp", return_value="A"):
-                with patch.object(
-                    jinja2.Environment, "get_template", MagicMock()
-                ):
-                    assert suse_ip.build_interface("iface", "vlan", True, test="A") == "A"
+                with patch.object(jinja2.Environment, "get_template", MagicMock()):
+                    assert (
+                        suse_ip.build_interface("iface", "vlan", True, test="A") == "A"
+                    )
 
-                    with patch.object(
-                        suse_ip, "_write_file_iface", return_value=None
-                    ):
-                        with patch.object(
-                            os.path, "join", return_value="A"
-                        ):
-                            with patch.object(
-                                suse_ip, "_read_file", return_value="A"
-                            ):
-                                assert suse_ip.build_interface("iface", "vlan", True) == "A"
+                    with patch.object(suse_ip, "_write_file_iface", return_value=None):
+                        with patch.object(os.path, "join", return_value="A"):
+                            with patch.object(suse_ip, "_read_file", return_value="A"):
+                                assert (
+                                    suse_ip.build_interface("iface", "vlan", True)
+                                    == "A"
+                                )
                                 with patch.dict(
                                     suse_ip.__salt__,
-                                    {
-                                        "network.interfaces": lambda: {
-                                            "eth": True
-                                        }
-                                    },
+                                    {"network.interfaces": lambda: {"eth": True}},
                                 ):
-                                    assert suse_ip.build_interface(
-                                               "iface",
-                                               "eth",
-                                               True,
-                                               ipaddrs=["127.0.0.1/8"],
-                                           ) == "A"
-                                    assert suse_ip.build_interface(
-                                               "iface",
-                                               "eth",
-                                               True,
-                                               ipv6addrs=["fc00::1/128"],
-                                           ) == "A"
+                                    assert (
+                                        suse_ip.build_interface(
+                                            "iface",
+                                            "eth",
+                                            True,
+                                            ipaddrs=["127.0.0.1/8"],
+                                        )
+                                        == "A"
+                                    )
+                                    assert (
+                                        suse_ip.build_interface(
+                                            "iface",
+                                            "eth",
+                                            True,
+                                            ipv6addrs=["fc00::1/128"],
+                                        )
+                                        == "A"
+                                    )
 
 
 def test_build_routes():
@@ -172,10 +172,7 @@ def test__parse_settings_eth_hwaddr_and_macaddr():
 
     with pytest.raises(AttributeError):
         suse_ip._parse_settings_eth(
-            opts=opts,
-            iface_type="eth",
-            enabled=True,
-            iface="eth0"
+            opts=opts, iface_type="eth", enabled=True, iface="eth0"
         )
 
 
@@ -251,9 +248,7 @@ def test_apply_network_settings():
     """
     Test to apply global network configuration.
     """
-    with patch.dict(
-        suse_ip.__salt__, {"service.reload": MagicMock(return_value=True)}
-    ):
+    with patch.dict(suse_ip.__salt__, {"service.reload": MagicMock(return_value=True)}):
         assert suse_ip.apply_network_settings()
 
 

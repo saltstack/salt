@@ -546,8 +546,17 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     """
     result = {"name": iface}
     if "proto" in opts:
-        valid = ["static", "dhcp", "dhcp4", "dhcp6", "autoip",
-                 "dhcp+autoip", "auto6", "6to4", "none"]
+        valid = [
+            "static",
+            "dhcp",
+            "dhcp4",
+            "dhcp6",
+            "autoip",
+            "dhcp+autoip",
+            "auto6",
+            "6to4",
+            "none",
+        ]
         if opts["proto"] in valid:
             result["proto"] = opts["proto"]
         else:
@@ -573,7 +582,6 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
 
     if iface_type == "slave":
         result["proto"] = "none"
-
 
     if iface_type == "bond":
         if "mode" not in opts:
@@ -673,15 +681,17 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         result["ipaddrs"] = []
     if "ipaddrs" in opts:
         for opt in opts["ipaddrs"]:
-            if salt.utils.validate.net.ipv4_addr(opt) or salt.utils.validate.net.ipv6_addr(opt):
-                result['ipaddrs'].append(opt)
+            if salt.utils.validate.net.ipv4_addr(
+                opt
+            ) or salt.utils.validate.net.ipv6_addr(opt):
+                result["ipaddrs"].append(opt)
             else:
                 msg = "{} is invalid ipv4 or ipv6 CIDR".format(opt)
                 log.error(msg)
                 raise AttributeError(msg)
     if "ipv6addr" in opts:
         if salt.utils.validate.net.ipv6_addr(opts["ipv6addr"]):
-            result['ipaddrs'].append(opts["ipv6addr"])
+            result["ipaddrs"].append(opts["ipv6addr"])
         else:
             msg = "{} is invalid ipv6 CIDR".format(opt)
             log.error(msg)
@@ -689,7 +699,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if "ipv6addrs" in opts:
         for opt in opts["ipv6addrs"]:
             if salt.utils.validate.net.ipv6_addr(opt):
-                result['ipaddrs'].append(opt)
+                result["ipaddrs"].append(opt)
             else:
                 msg = "{} is invalid ipv6 CIDR".format(opt)
                 log.error(msg)
@@ -824,7 +834,11 @@ def _parse_network_settings(opts, current):
             elif opt == "netconfig_dns_static_searchlist":
                 nopt = "dns_search"
                 result[nopt] = current[opt].split()
-            elif opt.startswith("netconfig_") and opt not in ("netconfig_modules_order", "netconfig_verbose", "netconfig_force_replace"):
+            elif opt.startswith("netconfig_") and opt not in (
+                "netconfig_modules_order",
+                "netconfig_verbose",
+                "netconfig_force_replace",
+            ):
                 nopt = opt[10:]
                 result[nopt] = current[opt]
             else:
