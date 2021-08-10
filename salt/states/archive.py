@@ -65,14 +65,17 @@ def _checksum_file_path(path):
         if re.match(r"..[/\\]", relpath):
             # path is a local file
             relpath = salt.utils.path.join(
-                "local", os.path.splitdrive(path)[-1].lstrip("/\\"),
+                "local",
+                os.path.splitdrive(path)[-1].lstrip("/\\"),
             )
     except ValueError as exc:
         # The path is on a different drive (Windows)
         if str(exc).startswith("path is on"):
             drive, path = os.path.splitdrive(path)
             relpath = salt.utils.path.join(
-                "local", drive.rstrip(":"), path.lstrip("/\\"),
+                "local",
+                drive.rstrip(":"),
+                path.lstrip("/\\"),
             )
         elif str(exc).startswith("Cannot mix UNC"):
             relpath = salt.utils.path.join("unc", path)
@@ -703,10 +706,9 @@ def extracted(
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
 
     if skip_files_list_verify and skip_verify:
-        ret["comment"] = (
-            'Only one of "skip_files_list_verify" and '
-            '"skip_verify" can be set to True'
-        )
+        ret[
+            "comment"
+        ] = 'Only one of "skip_files_list_verify" and "skip_verify" can be set to True'
         return ret
 
     if "keep_source" in kwargs and "keep" in kwargs:
@@ -753,7 +755,7 @@ def extracted(
         ret["comment"] = "Value for 'if_missing' is not an absolute path"
         return ret
     if not _path_is_abs(enforce_ownership_on):
-        ret["comment"] = "Value for 'enforce_ownership_on' is not an " "absolute path"
+        ret["comment"] = "Value for 'enforce_ownership_on' is not an absolute path"
         return ret
     else:
         if enforce_ownership_on is not None:
@@ -867,7 +869,8 @@ def extracted(
             "Invalid archive_format '{}'. Either set it to a supported "
             "value ({}) or remove this argument and the archive format will "
             "be guessed based on file extension.".format(
-                archive_format, ", ".join(valid_archive_formats),
+                archive_format,
+                ", ".join(valid_archive_formats),
             )
         )
         return ret
@@ -958,9 +961,9 @@ def extracted(
                 # string-ified integer.
                 trim_output = int(trim_output)
             except TypeError:
-                ret["comment"] = (
-                    "Invalid value for trim_output, must be True/False or an " "integer"
-                )
+                ret[
+                    "comment"
+                ] = "Invalid value for trim_output, must be True/False or an integer"
                 return ret
 
     if source_hash:
@@ -1114,7 +1117,7 @@ def extracted(
             errors.append("'if_missing' must be set")
         if not enforce_ownership_on and (user or group):
             errors.append(
-                "Ownership cannot be managed without setting " "'enforce_ownership_on'."
+                "Ownership cannot be managed without setting 'enforce_ownership_on'."
             )
         msg = exc.strerror
         if errors:
@@ -1131,8 +1134,7 @@ def extracted(
                 )
             else:
                 msg += (
-                    "The following workarounds must be used for this state to "
-                    "proceed"
+                    "The following workarounds must be used for this state to proceed"
                 )
             msg += " (assuming the source file is a valid {} archive):\n".format(
                 archive_format
@@ -1158,7 +1160,9 @@ def extracted(
             "top-level directory by adding it to the 'name' "
             "value (for example, setting 'name' to {} "
             "instead of {}).".format(
-                archive_format, os.path.join(name, "some_dir"), name,
+                archive_format,
+                os.path.join(name, "some_dir"),
+                name,
             )
         )
         return ret
@@ -1628,7 +1632,8 @@ def extracted(
                 ret["changes"]["directories_created"] = [name]
             ret["changes"]["extracted_files"] = files
             ret["comment"] = "{} extracted to {}".format(
-                salt.utils.url.redact_http_basic_auth(source_match), name,
+                salt.utils.url.redact_http_basic_auth(source_match),
+                name,
             )
             _add_explanation(ret, source_hash_trigger, contents_missing)
             ret["comment"] += ". Output was trimmed to {} number of lines".format(
@@ -1650,9 +1655,9 @@ def extracted(
         if __opts__["test"]:
             if ret["changes"].get("updated ownership"):
                 ret["result"] = None
-                ret["comment"] += (
-                    ". Ownership would be updated on one or more " "files/directories."
-                )
+                ret[
+                    "comment"
+                ] += ". Ownership would be updated on one or more files/directories."
 
     if enforce_missing:
         if not if_missing:

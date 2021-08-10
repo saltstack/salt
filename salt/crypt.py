@@ -36,6 +36,7 @@ import salt.utils.verify
 import salt.version
 from salt.exceptions import (
     AuthenticationError,
+    InvalidKeyError,
     MasterExit,
     SaltClientError,
     SaltReqTimeoutError,
@@ -220,10 +221,16 @@ def get_rsa_pub_key(path):
         with salt.utils.files.fopen(path, "rb") as f:
             data = f.read().replace(b"RSA ", b"")
         bio = BIO.MemoryBuffer(data)
-        key = RSA.load_pub_key_bio(bio)
+        try:
+            key = RSA.load_pub_key_bio(bio)
+        except RSA.RSAError:
+            raise InvalidKeyError("Encountered bad RSA public key")
     else:
         with salt.utils.files.fopen(path) as f:
-            key = RSA.importKey(f.read())
+            try:
+                key = RSA.importKey(f.read())
+            except (ValueError, IndexError, TypeError):
+                raise InvalidKeyError("Encountered bad RSA public key")
     return key
 
 
@@ -284,7 +291,7 @@ def gen_signature(priv_path, pub_path, sign_path, passphrase=None):
 
     if os.path.isfile(sign_path):
         log.trace(
-            "Signature file %s already exists, please remove it first and " "try again",
+            "Signature file %s already exists, please remove it first and try again",
             sign_path,
         )
     else:
@@ -757,7 +764,8 @@ class AsyncAuth:
                 raise salt.ext.tornado.gen.Return("retry")
             else:
                 raise SaltClientError(
-                    "Attempt to authenticate with the salt master failed with timeout error"
+                    "Attempt to authenticate with the salt master failed with timeout"
+                    " error"
                 )
         finally:
             if close_channel:
@@ -1035,7 +1043,7 @@ class AsyncAuth:
                 return False
         except Exception as sign_exc:  # pylint: disable=broad-except
             log.error(
-                "There was an error while verifying the masters public-key " "signature"
+                "There was an error while verifying the masters public-key signature"
             )
             raise Exception(sign_exc)
 

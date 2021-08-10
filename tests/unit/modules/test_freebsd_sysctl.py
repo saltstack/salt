@@ -102,10 +102,12 @@ class FreeBSDSysctlTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch("salt.utils.files.fopen", mock_open()):
             with patch.dict(
-                freebsd_sysctl.__salt__, {"cmd.run_all": mock_cmd},
+                freebsd_sysctl.__salt__,
+                {"cmd.run_all": mock_cmd},
             ):
                 self.assertEqual(
-                    freebsd_sysctl.persist("vfs.usermount", 1), "Updated",
+                    freebsd_sysctl.persist("vfs.usermount", 1),
+                    "Updated",
                 )
 
     def test_persist_updated_tunable(self):

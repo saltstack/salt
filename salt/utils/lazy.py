@@ -17,7 +17,7 @@ def verify_fun(lazy_obj, fun):
     """
     if not fun:
         raise salt.exceptions.SaltInvocationError(
-            "Must specify a function to run!\n" "ex: manage.up"
+            "Must specify a function to run!\nex: manage.up"
         )
     if fun not in lazy_obj:
         # If the requested function isn't available, lets say why
