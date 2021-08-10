@@ -11,7 +11,9 @@ TESTS_INTEGRATION_FILES_PATH = CODE_ROOT / "tests" / "integration" / "files"
 CHANGELOG_ENTRIES_PATH = CODE_ROOT / "changelog"
 CHANGELOG_LIKE_RE = re.compile(r"([\d]+)\.([a-z]+)$")
 CHANGELOG_EXTENSIONS = ("removed", "deprecated", "changed", "fixed", "added")
-CHANGELOG_ENTRY_RE = re.compile(r"[\d]+\.({})$".format("|".join(CHANGELOG_EXTENSIONS)))
+CHANGELOG_ENTRY_RE = re.compile(
+    r"([\d]+|(CVE|cve)-[\d]{{4}}-[\d]+)\.({})$".format("|".join(CHANGELOG_EXTENSIONS))
+)
 
 
 def check_changelog_entries(files):
