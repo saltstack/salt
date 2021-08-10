@@ -271,7 +271,7 @@ Install the ``certifi`` python package.
 
 The most current information on installing the SaltStack Minion in a CentOS 7 environment can be found here_
 
-.. _here: https://repo.saltstack.com/#rhel
+.. _here: https://repo.saltproject.io/#rhel
 
 Information from the install guide is provided here for convenience.
 
@@ -408,4 +408,3 @@ References
 .. _Guestshell_N9k: https://www.cisco.com/c/en/us/td/docs/switches/datacenter/nexus9000/sw/9-x/programmability/guide/b_Cisco_Nexus_9000_Series_NX-OS_Programmability_Guide_9x/b_Cisco_Nexus_9000_Series_NX-OS_Programmability_Guide_9x_chapter_0100.html
 
 .. _GuestShell_N3k: https://www.cisco.com/c/en/us/td/docs/switches/datacenter/nexus3000/sw/programmability/9_x/b_Cisco_Nexus_3000_Series_NX-OS_Programmability_Guide_9x/b_Cisco_Nexus_3000_Series_NX-OS_Programmability_Guide_9x_chapter_0101.html
-
