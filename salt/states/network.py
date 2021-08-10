@@ -650,15 +650,14 @@ def managed(name, enabled=True, **kwargs):
             present_slaves = __salt__["cmd.run"](
                 ["cat", "/sys/class/net/{}/bonding/slaves".format(name)]
             ).split()
-            if isinstance(kwargs['slaves'], list):
-                desired_slaves = kwargs['slaves']
+            if isinstance(kwargs["slaves"], list):
+                desired_slaves = kwargs["slaves"]
             else:
-                desired_slaves = kwargs['slaves'].split()
+                desired_slaves = kwargs["slaves"].split()
             missing_slaves = set(desired_slaves) - set(present_slaves)
 
             # Enslave only slaves missing in master
             if missing_slaves:
-                log.debug("Missing slaves of {}: {}".format(name, missing_slaves))
                 if __grains__["os_family"] != "Suse":
                     ifenslave_path = __salt__["cmd.run"](["which", "ifenslave"]).strip()
                     if ifenslave_path:
@@ -671,7 +670,9 @@ def managed(name, enabled=True, **kwargs):
                         __salt__["cmd.run"](cmd, python_shell=False)
                     else:
                         log.error("Command 'ifenslave' not found")
-                    ret["changes"]["enslave"] = "Added slaves '{}' to master '{}'".format(
+                    ret["changes"][
+                        "enslave"
+                    ] = "Added slaves '{}' to master '{}'".format(
                         " ".join(missing_slaves), name
                     )
             else:
