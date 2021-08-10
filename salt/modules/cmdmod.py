@@ -79,9 +79,10 @@ def __virtual__():
 
 
 def _log_cmd(cmd):
-    if isinstance(cmd, str):
-        return cmd.split()[0].strip()
-    return cmd[0].strip()
+    if isinstance(cmd, (tuple, list)):
+        return cmd[0].strip()
+    else:
+        return str(cmd).split()[0].strip()
 
 
 def _check_cb(cb_):
