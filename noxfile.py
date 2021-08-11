@@ -261,17 +261,31 @@ def _get_pip_requirements_file(session, transport, crypto=None):
             return _requirements_file
 
 
-def _install_requirements(session, transport, *extra_requirements):
+def _upgrade_pip_setuptools_and_wheel(session):
     if SKIP_REQUIREMENTS_INSTALL:
         session.log(
             "Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ"
         )
-        return
+        return False
 
-    # setuptools 50.0.0 is broken
-    # https://github.com/pypa/setuptools/issues?q=is%3Aissue+setuptools+50+
-    install_command = ["--progress-bar=off", "-U", "setuptools<50.0.0"]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    install_command = [
+        "python",
+        "-m",
+        "pip",
+        "install",
+        "--progress-bar=off",
+        "-U",
+        "pip>=20.2.4,<21.2",
+        "setuptools!=50.*,!=51.*,!=52.*",
+        "wheel",
+    ]
+    session.run(*install_command, silent=PIP_INSTALL_SILENT)
+    return True
+
+
+def _install_requirements(session, transport, *extra_requirements):
+    if not _upgrade_pip_setuptools_and_wheel(session):
+        return False
 
     # Install requirements
     requirements_file = _get_pip_requirements_file(session, transport)
@@ -294,6 +308,8 @@ def _install_requirements(session, transport, *extra_requirements):
         install_command = ["--progress-bar=off", "--constraint", requirements_file]
         install_command += EXTRA_REQUIREMENTS_INSTALL.split()
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
+    return True
 
 
 def _run_with_coverage(session, *test_cmd, env=None):
@@ -449,26 +465,26 @@ def runtests_parametrized(session, coverage, transport, crypto):
     DO NOT CALL THIS NOX SESSION DIRECTLY
     """
     # Install requirements
-    _install_requirements(session, transport, "unittest-xml-reporting==2.5.2")
+    if _install_requirements(session, transport, "unittest-xml-reporting==2.5.2"):
 
-    if crypto:
-        session.run(
-            "pip",
-            "uninstall",
-            "-y",
-            "m2crypto",
-            "pycrypto",
-            "pycryptodome",
-            "pycryptodomex",
-            silent=True,
-        )
-        install_command = [
-            "--progress-bar=off",
-            "--constraint",
-            _get_pip_requirements_file(session, transport, crypto=True),
-        ]
-        install_command.append(crypto)
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+        if crypto:
+            session.run(
+                "pip",
+                "uninstall",
+                "-y",
+                "m2crypto",
+                "pycrypto",
+                "pycryptodome",
+                "pycryptodomex",
+                silent=True,
+            )
+            install_command = [
+                "--progress-bar=off",
+                "--constraint",
+                _get_pip_requirements_file(session, transport, crypto=True),
+            ]
+            install_command.append(crypto)
+            session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
         "--tests-logfile={}".format(RUNTESTS_LOGFILE),
@@ -637,14 +653,13 @@ def runtests_cloud(session, coverage):
     runtests.py cloud tests session
     """
     # Install requirements
-    _install_requirements(session, "zeromq", "unittest-xml-reporting==2.2.1")
+    if _install_requirements(session, "zeromq", "unittest-xml-reporting==2.2.1"):
 
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "cloud.txt"
-    )
-
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "cloud.txt"
+        )
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
         "--tests-logfile={}".format(RUNTESTS_LOGFILE),
@@ -660,9 +675,13 @@ def runtests_tornado(session, coverage):
     runtests.py tornado tests session
     """
     # Install requirements
-    _install_requirements(session, "zeromq", "unittest-xml-reporting==2.2.1")
-    session.install("--progress-bar=off", "tornado==5.0.2", silent=PIP_INSTALL_SILENT)
-    session.install("--progress-bar=off", "pyzmq==17.0.0", silent=PIP_INSTALL_SILENT)
+    if _install_requirements(session, "zeromq", "unittest-xml-reporting==2.2.1"):
+        session.install(
+            "--progress-bar=off", "tornado==5.0.2", silent=PIP_INSTALL_SILENT
+        )
+        session.install(
+            "--progress-bar=off", "pyzmq==17.0.0", silent=PIP_INSTALL_SILENT
+        )
 
     cmd_args = ["--tests-logfile={}".format(RUNTESTS_LOGFILE)] + session.posargs
     _runtests(session, coverage, cmd_args)
@@ -677,26 +696,26 @@ def pytest_parametrized(session, coverage, transport, crypto):
     DO NOT CALL THIS NOX SESSION DIRECTLY
     """
     # Install requirements
-    _install_requirements(session, transport)
+    if _install_requirements(session, transport):
 
-    if crypto:
-        session.run(
-            "pip",
-            "uninstall",
-            "-y",
-            "m2crypto",
-            "pycrypto",
-            "pycryptodome",
-            "pycryptodomex",
-            silent=True,
-        )
-        install_command = [
-            "--progress-bar=off",
-            "--constraint",
-            _get_pip_requirements_file(session, transport, crypto=True),
-        ]
-        install_command.append(crypto)
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+        if crypto:
+            session.run(
+                "pip",
+                "uninstall",
+                "-y",
+                "m2crypto",
+                "pycrypto",
+                "pycryptodome",
+                "pycryptodomex",
+                silent=True,
+            )
+            install_command = [
+                "--progress-bar=off",
+                "--constraint",
+                _get_pip_requirements_file(session, transport, crypto=True),
+            ]
+            install_command.append(crypto)
+            session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
         "--rootdir",
@@ -871,13 +890,13 @@ def pytest_cloud(session, coverage):
     pytest cloud tests session
     """
     # Install requirements
-    _install_requirements(session, "zeromq")
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "cloud.txt"
-    )
+    if _install_requirements(session, "zeromq"):
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "cloud.txt"
+        )
 
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
         "--rootdir",
@@ -901,9 +920,13 @@ def pytest_tornado(session, coverage):
     pytest tornado tests session
     """
     # Install requirements
-    _install_requirements(session, "zeromq")
-    session.install("--progress-bar=off", "tornado==5.0.2", silent=PIP_INSTALL_SILENT)
-    session.install("--progress-bar=off", "pyzmq==17.0.0", silent=PIP_INSTALL_SILENT)
+    if _install_requirements(session, "zeromq"):
+        session.install(
+            "--progress-bar=off", "tornado==5.0.2", silent=PIP_INSTALL_SILENT
+        )
+        session.install(
+            "--progress-bar=off", "pyzmq==17.0.0", silent=PIP_INSTALL_SILENT
+        )
 
     cmd_args = [
         "--rootdir",
@@ -1004,12 +1027,12 @@ class Tee:
 
 
 def _lint(session, rcfile, flags, paths, tee_output=True):
-    _install_requirements(session, "zeromq")
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "lint.txt"
-    )
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    if _install_requirements(session, "zeromq"):
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "lint.txt"
+        )
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     if tee_output:
         session.run("pylint", "--version")
@@ -1169,12 +1192,13 @@ def docs_html(session, compress, clean):
     """
     Build Salt's HTML Documentation
     """
-    pydir = _get_pydir(session)
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "docs.txt"
-    )
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    if _upgrade_pip_setuptools_and_wheel(session):
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "docs.txt"
+        )
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
     os.chdir("doc/")
     if clean:
         session.run("make", "clean", external=True)
@@ -1192,12 +1216,13 @@ def docs_man(session, compress, update, clean):
     """
     Build Salt's Manpages Documentation
     """
-    pydir = _get_pydir(session)
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "docs.txt"
-    )
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    if _upgrade_pip_setuptools_and_wheel(session):
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "docs.txt"
+        )
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
     os.chdir("doc/")
     if clean:
         session.run("make", "clean", external=True)
@@ -1214,11 +1239,13 @@ def _invoke(session):
     """
     Run invoke tasks
     """
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "invoke.txt"
-    )
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    if _upgrade_pip_setuptools_and_wheel(session):
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "invoke.txt"
+        )
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
     cmd = ["inv"]
     files = []
 
@@ -1290,11 +1317,12 @@ def changelog(session, draft):
     """
     Generate salt's changelog
     """
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "changelog.txt"
-    )
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    if _upgrade_pip_setuptools_and_wheel(session):
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "changelog.txt"
+        )
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     town_cmd = ["towncrier", "--version={}".format(session.posargs[0])]
     if draft:
