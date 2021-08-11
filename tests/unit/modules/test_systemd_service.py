@@ -81,7 +81,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_systemctl_reload(self):
         """
-            Test to Reloads systemctl
+        Test to Reloads systemctl
         """
         mock = MagicMock(
             side_effect=[
@@ -263,7 +263,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_missing(self):
         """
-            Test to the inverse of service.available.
+        Test to the inverse of service.available.
         """
         mock = MagicMock(side_effect=lambda x: _SYSTEMCTL_STATUS[x])
 
@@ -318,8 +318,8 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
 
 class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Test case for salt.modules.systemd, for functions which use systemd
-        scopes
+    Test case for salt.modules.systemd, for functions which use systemd
+    scopes
     """
 
     def setup_loader_modules(self):

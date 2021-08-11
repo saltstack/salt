@@ -441,7 +441,7 @@ def append(name, table="filter", family="ipv4", **kwargs):
             # Only save if rules in memory are different than saved rules
             if __rules != __saved_rules:
                 out = __salt__["iptables.save"](filename=filename, family=family)
-                ret["comment"] += ("\nSaved iptables rule {} for {}\n" "{}\n{}").format(
+                ret["comment"] += "\nSaved iptables rule {} for {}\n{}\n{}".format(
                     name, family, command.strip(), out
                 )
         return ret
@@ -462,15 +462,17 @@ def append(name, table="filter", family="ipv4", **kwargs):
             else:
                 filename = None
             out = __salt__["iptables.save"](filename=filename, family=family)
-            ret["comment"] = (
-                "Set and saved iptables rule {} for {}\n" "{}\n{}"
-            ).format(name, family, command.strip(), out)
+            ret["comment"] = "Set and saved iptables rule {} for {}\n{}\n{}".format(
+                name, family, command.strip(), out
+            )
         return ret
     else:
         ret["result"] = False
-        ret["comment"] = (
-            "Failed to set iptables rule for {}.\n" "Attempted rule was {} for {}"
-        ).format(name, command.strip(), family)
+        ret[
+            "comment"
+        ] = "Failed to set iptables rule for {}.\nAttempted rule was {} for {}".format(
+            name, command.strip(), family
+        )
         return ret
 
 
@@ -568,7 +570,7 @@ def insert(name, table="filter", family="ipv4", **kwargs):
             # Only save if rules in memory are different than saved rules
             if __rules != __saved_rules:
                 out = __salt__["iptables.save"](filename=filename, family=family)
-                ret["comment"] += ("\nSaved iptables rule {} for {}\n" "{}\n{}").format(
+                ret["comment"] += "\nSaved iptables rule {} for {}\n{}\n{}".format(
                     name, family, command.strip(), out
                 )
         return ret
@@ -591,15 +593,17 @@ def insert(name, table="filter", family="ipv4", **kwargs):
             else:
                 filename = None
             out = __salt__["iptables.save"](filename=filename, family=family)
-            ret["comment"] = (
-                "Set and saved iptables rule {} for {}\n" "{}\n{}"
-            ).format(name, family, command.strip(), out)
+            ret["comment"] = "Set and saved iptables rule {} for {}\n{}\n{}".format(
+                name, family, command.strip(), out
+            )
         return ret
     else:
         ret["result"] = False
-        ret["comment"] = (
-            "Failed to set iptables rule for {}.\n" "Attempted rule was {}"
-        ).format(name, command.strip())
+        ret[
+            "comment"
+        ] = "Failed to set iptables rule for {}.\nAttempted rule was {}".format(
+            name, command.strip()
+        )
         return ret
 
 
@@ -700,15 +704,17 @@ def delete(name, table="filter", family="ipv4", **kwargs):
             else:
                 filename = None
             out = __salt__["iptables.save"](filename=filename, family=family)
-            ret["comment"] = (
-                "Deleted and saved iptables rule {} for {}\n" "{}\n{}"
-            ).format(name, family, command.strip(), out)
+            ret["comment"] = "Deleted and saved iptables rule {} for {}\n{}\n{}".format(
+                name, family, command.strip(), out
+            )
         return ret
     else:
         ret["result"] = False
-        ret["comment"] = (
-            "Failed to delete iptables rule for {}.\n" "Attempted rule was {}"
-        ).format(name, command.strip())
+        ret[
+            "comment"
+        ] = "Failed to delete iptables rule for {}.\nAttempted rule was {}".format(
+            name, command.strip()
+        )
         return ret
 
 
@@ -746,10 +752,9 @@ def set_policy(name, table="filter", family="ipv4", **kwargs):
         )
         return ret
     if __opts__["test"]:
-        ret[
-            "comment"
-        ] = "iptables default policy for chain {} on table {} for {} needs to be set to {}".format(
-            kwargs["chain"], table, family, kwargs["policy"]
+        ret["comment"] = (
+            "iptables default policy for chain {} on table {} for {} needs to be set"
+            " to {}".format(kwargs["chain"], table, family, kwargs["policy"])
         )
         return ret
     if not __salt__["iptables.set_policy"](

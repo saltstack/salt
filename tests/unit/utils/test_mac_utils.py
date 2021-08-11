@@ -300,7 +300,10 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
     @patch("os.path.exists")
     @patch("salt.utils.mac_utils.__salt__")
     def test_available_services_binary_plist(
-        self, mock_run, mock_exists, mock_os_walk,
+        self,
+        mock_run,
+        mock_exists,
+        mock_os_walk,
     ):
         """
         test available_services handles binary plist files.

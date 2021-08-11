@@ -87,7 +87,7 @@ def show_link(name):
         log.error("alternatives: %s does not exist", name)
     except (OSError, IndexError) as exc:  # pylint: disable=duplicate-except
         log.error(
-            "alternatives: unable to get master link for %s. " "Exception: %s",
+            "alternatives: unable to get master link for %s. Exception: %s",
             name,
             exc,
         )

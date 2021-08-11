@@ -119,7 +119,7 @@ class Beacon:
 
                     if not valid:
                         log.info(
-                            "Beacon %s configuration invalid, " "not running.\n%s",
+                            "Beacon %s configuration invalid, not running.\n%s",
                             mod,
                             vcomment,
                         )
@@ -338,7 +338,7 @@ class Beacon:
             complete = False
         else:
             if name in self.opts["beacons"]:
-                comment = "Updating settings for beacon " "item: {}".format(name)
+                comment = "Updating settings for beacon item: {}".format(name)
             else:
                 comment = "Added new beacon item: {}".format(name)
             complete = True
@@ -367,12 +367,11 @@ class Beacon:
 
         if name in self._get_beacons(include_opts=False):
             comment = (
-                "Cannot modify beacon item {}, "
-                "it is configured in pillar.".format(name)
+                "Cannot modify beacon item {}, it is configured in pillar.".format(name)
             )
             complete = False
         else:
-            comment = "Updating settings for beacon " "item: {}".format(name)
+            comment = "Updating settings for beacon item: {}".format(name)
             complete = True
             self.opts["beacons"].update(data)
 
@@ -395,8 +394,7 @@ class Beacon:
 
         if name in self._get_beacons(include_opts=False):
             comment = (
-                "Cannot delete beacon item {}, "
-                "it is configured in pillar.".format(name)
+                "Cannot delete beacon item {}, it is configured in pillar.".format(name)
             )
             complete = False
         else:
@@ -459,8 +457,7 @@ class Beacon:
 
         if name in self._get_beacons(include_opts=False):
             comment = (
-                "Cannot enable beacon item {}, "
-                "it is configured in pillar.".format(name)
+                "Cannot enable beacon item {}, it is configured in pillar.".format(name)
             )
             complete = False
         else:
@@ -488,8 +485,9 @@ class Beacon:
 
         if name in self._get_beacons(include_opts=False):
             comment = (
-                "Cannot disable beacon item {}, "
-                "it is configured in pillar.".format(name)
+                "Cannot disable beacon item {}, it is configured in pillar.".format(
+                    name
+                )
             )
             complete = False
         else:

@@ -139,7 +139,7 @@ def lookup_jid(
     try:
         data = list_job(jid, ext_source=ext_source, display_progress=display_progress)
     except TypeError:
-        return "Requested returner could not be loaded. " "No JIDs could be retrieved."
+        return "Requested returner could not be loaded. No JIDs could be retrieved."
 
     targeted_minions = data.get("Minions", [])
     returns = data.get("Result", {})
@@ -355,8 +355,7 @@ def list_jobs(
                     _match = True
             else:
                 log.error(
-                    "'dateutil' library not available, skipping start_time "
-                    "comparison."
+                    "'dateutil' library not available, skipping start_time comparison."
                 )
 
         if end_time and _match:
@@ -368,7 +367,7 @@ def list_jobs(
                     _match = True
             else:
                 log.error(
-                    "'dateutil' library not available, skipping end_time " "comparison."
+                    "'dateutil' library not available, skipping end_time comparison."
                 )
 
         if _match:

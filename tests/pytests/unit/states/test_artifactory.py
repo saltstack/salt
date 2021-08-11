@@ -66,7 +66,10 @@ def test_downloaded_test_true():
         "name": name,
         "result": True,
         "changes": {},
-        "comment": "Artifact would be downloaded from URL: http://artifactory.intranet.example.com/artifactory",
+        "comment": (
+            "Artifact would be downloaded from URL:"
+            " http://artifactory.intranet.example.com/artifactory"
+        ),
     }
 
     mck = MagicMock(return_value={"status": False, "changes": {}, "comment": ""})

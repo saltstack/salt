@@ -379,13 +379,13 @@ def running(concurrent=False):
     active = __salt__["saltutil.is_running"]("state.*")
     for data in active:
         err = (
-            'The function "{}" is running as PID {} and was started at '
-            "{} with jid {}"
-        ).format(
-            data["fun"],
-            data["pid"],
-            salt.utils.jid.jid_to_time(data["jid"]),
-            data["jid"],
+            'The function "{}" is running as PID {} and was started at {} '
+            "with jid {}".format(
+                data["fun"],
+                data["pid"],
+                salt.utils.jid.jid_to_time(data["jid"]),
+                data["jid"],
+            )
         )
         ret.append(err)
     return ret
@@ -1047,7 +1047,10 @@ def highstate(test=None, queue=False, **kwargs):
             "Salt highstate run is disabled. To re-enable, run state.enable highstate"
         )
         ret = {
-            "name": "Salt highstate run is disabled. To re-enable, run state.enable highstate",
+            "name": (
+                "Salt highstate run is disabled. To re-enable, run state.enable"
+                " highstate"
+            ),
             "result": "False",
             "comment": "Disabled",
         }
@@ -1282,7 +1285,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
     if disabled:
         for state in disabled:
             log.debug(
-                "Salt state %s is disabled. To re-enable, run " "state.enable %s",
+                "Salt state %s is disabled. To re-enable, run state.enable %s",
                 state,
                 state,
             )
@@ -1830,8 +1833,9 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         __opts__["test"] = orig_test
         if not ret:
             raise SaltInvocationError(
-                "No matches for ID '{}' found in SLS '{}' within saltenv "
-                "'{}'".format(id_, mods, opts["saltenv"])
+                "No matches for ID '{}' found in SLS '{}' within saltenv '{}'".format(
+                    id_, mods, opts["saltenv"]
+                )
             )
         return ret
 
@@ -2424,16 +2428,21 @@ def _disabled(funs):
                 if state.startswith(target_state):
                     err = (
                         'The state file "{0}" is currently disabled by "{1}", '
-                        "to re-enable, run state.enable {1}."
-                    ).format(state, _state,)
+                        "to re-enable, run state.enable {1}.".format(
+                            state,
+                            _state,
+                        )
+                    )
                     ret.append(err)
                     continue
             else:
                 if _state == state:
                     err = (
                         'The state file "{0}" is currently disabled, '
-                        "to re-enable, run state.enable {0}."
-                    ).format(_state,)
+                        "to re-enable, run state.enable {0}.".format(
+                            _state,
+                        )
+                    )
                     ret.append(err)
                     continue
     return ret
