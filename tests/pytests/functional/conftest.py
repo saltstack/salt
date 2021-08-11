@@ -66,25 +66,9 @@ class Loaders:
             # execution modules directly. This was also how the non pytest test suite worked
             # Let's load all modules now
             _states._load_all()
-            # for funcname in list(_states):
-            #    _states[funcname]
-
             # Now, we proxy loaded modules through salt.modules.state.single
-            for module_name in list(_states.loaded_modules):
-                for func_name in list(_states.loaded_modules[module_name]):
-                    full_func_name = "{}.{}".format(module_name, func_name)
-                    replacement_function = StateFunction(
-                        self.modules.state.single, full_func_name
-                    )
-                    _states._dict[full_func_name] = replacement_function
-                    _states.loaded_modules[module_name][
-                        func_name
-                    ] = replacement_function
-                    setattr(
-                        _states.loaded_modules[module_name],
-                        func_name,
-                        replacement_function,
-                    )
+            for name in _states:
+                _states[name] = StateFunction(self.modules.state.single, name)
             self._states = _states
         return self._states
 
