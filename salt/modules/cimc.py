@@ -660,8 +660,10 @@ def set_hostname(hostname=None):
         raise salt.exceptions.CommandExecutionError("Hostname option must be provided.")
 
     dn = "sys/rack-unit-1/mgmt/if-1"
-    inconfig = """<mgmtIf dn="sys/rack-unit-1/mgmt/if-1" hostname="{}" ></mgmtIf>""".format(
-        hostname
+    inconfig = (
+        """<mgmtIf dn="sys/rack-unit-1/mgmt/if-1" hostname="{}" ></mgmtIf>""".format(
+            hostname
+        )
     )
 
     ret = __proxy__["cimc.set_config_modify"](dn, inconfig, False)

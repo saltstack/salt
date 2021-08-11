@@ -289,9 +289,8 @@ def validate(config):
         if not isinstance(fun_cfg, dict):
             return (
                 False,
-                "The match structure for the {} execution function output must be a dictionary".format(
-                    fun
-                ),
+                "The match structure for the {} execution function output must be a"
+                " dictionary".format(fun),
             )
         if fun not in __salt__:
             return False, "Execution function {} is not availabe!".format(fun)

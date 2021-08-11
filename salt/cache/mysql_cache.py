@@ -131,7 +131,8 @@ def _create_table():
     # warning on CREATE TABLE
     query = """SELECT COUNT(TABLE_NAME) FROM information_schema.tables
         WHERE table_schema = '{}' AND table_name = '{}'""".format(
-        __context__["mysql_kwargs"]["db"], __context__["mysql_table_name"],
+        __context__["mysql_kwargs"]["db"],
+        __context__["mysql_table_name"],
     )
     cur, _ = run_query(__context__.get("mysql_client"), query)
     r = cur.fetchone()
@@ -153,8 +154,7 @@ def _create_table():
 
 
 def _init_client():
-    """Initialize connection and create table if needed
-    """
+    """Initialize connection and create table if needed"""
     if __context__.get("mysql_client") is not None:
         return
 
@@ -198,7 +198,7 @@ def store(bank, key, data):
     """
     _init_client()
     data = __context__["serial"].dumps(data)
-    query = "REPLACE INTO {} (bank, etcd_key, data) values(%s,%s,%s)".format(
+    query = b"REPLACE INTO {} (bank, etcd_key, data) values(%s,%s,%s)".format(
         __context__["mysql_table_name"]
     )
     args = (bank, key, data)
@@ -260,7 +260,7 @@ def contains(bank, key):
     Checks if the specified bank contains the specified key.
     """
     _init_client()
-    query = "SELECT COUNT(data) FROM {} WHERE bank='{}' " "AND etcd_key='{}'".format(
+    query = "SELECT COUNT(data) FROM {} WHERE bank='{}' AND etcd_key='{}'".format(
         __context__["mysql_table_name"], bank, key
     )
     cur, _ = run_query(__context__.get("mysql_client"), query)

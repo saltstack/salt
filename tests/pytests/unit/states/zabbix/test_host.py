@@ -908,7 +908,10 @@ def test_update_a_hostinterface(basic_host_configuration, existing_host_response
 
     ret = {
         "changes": {
-            "interfaces": "[{'type': '1', 'main': '1', 'useip': '0', 'ip': '', 'dns': 'new_host', 'port': '10050', 'details': []}]"
+            "interfaces": (
+                "[{'type': '1', 'main': '1', 'useip': '0', 'ip': '', 'dns': 'new_host',"
+                " 'port': '10050', 'details': []}]"
+            )
         },
         "comment": "Host new_host updated.",
         "name": "new_host",
@@ -1000,7 +1003,12 @@ def test_add_a_new_hostinterface(basic_host_configuration, existing_host_respons
 
     ret = {
         "changes": {
-            "interfaces": "[{'type': '1', 'main': '1', 'useip': '0', 'ip': '', 'dns': 'new_host', 'port': '10050', 'details': []}, {'type': '3', 'main': '1', 'useip': '0', 'ip': '127.0.0.1', 'dns': 'new_host', 'port': '623', 'details': []}]"
+            "interfaces": (
+                "[{'type': '1', 'main': '1', 'useip': '0', 'ip': '', 'dns': 'new_host',"
+                " 'port': '10050', 'details': []}, {'type': '3', 'main': '1', 'useip':"
+                " '0', 'ip': '127.0.0.1', 'dns': 'new_host', 'port': '623', 'details':"
+                " []}]"
+            )
         },
         "comment": "Host new_host updated.",
         "name": "new_host",

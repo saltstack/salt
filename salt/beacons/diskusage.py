@@ -36,7 +36,7 @@ def validate(config):
     """
     # Configuration for diskusage beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for diskusage beacon must be a list.")
+        return False, "Configuration for diskusage beacon must be a list."
     return True, "Valid beacon configuration"
 
 

@@ -18,7 +18,8 @@ def __virtual__():
     if not salt.utils.path.which("showmount"):
         return (
             False,
-            "The nfs3 execution module failed to load: the showmount binary is not in the path.",
+            "The nfs3 execution module failed to load: the showmount binary is not in"
+            " the path.",
         )
     return True
 

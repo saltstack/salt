@@ -85,7 +85,12 @@ def __init__(opts):  # pylint: disable=unused-argument
 
 
 def get_object_metadata(
-    name, extra_args=None, region=None, key=None, keyid=None, profile=None,
+    name,
+    extra_args=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
 ):
     """
     Get metadata about an S3 object.
@@ -121,7 +126,13 @@ def get_object_metadata(
 
 
 def upload_file(
-    source, name, extra_args=None, region=None, key=None, keyid=None, profile=None,
+    source,
+    name,
+    extra_args=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
 ):
     """
     Upload a local file as an S3 object.

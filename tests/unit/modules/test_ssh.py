@@ -124,7 +124,8 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
             "no-port-forwarding",
             "no-agent-forwarding",
             "no-X11-forwarding",
-            'command="echo \'Please login as the user "ubuntu" rather than the user "root".\'',
+            'command="echo \'Please login as the user "ubuntu" rather than the user'
+            ' "root".\'',
         ]
         email = "foo@example.com"
 

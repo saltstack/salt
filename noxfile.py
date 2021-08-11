@@ -107,7 +107,7 @@ def _get_session_python_version_info(session):
             session._runner.global_config.install_only = False
             session_py_version = session.run(
                 "python",
-                "-c"
+                "-c",
                 'import sys; sys.stdout.write("{}.{}.{}".format(*sys.version_info))',
                 silent=True,
                 log=False,
@@ -133,7 +133,7 @@ def _get_session_python_site_packages_dir(session):
             session._runner.global_config.install_only = False
             site_packages_dir = session.run(
                 "python",
-                "-c"
+                "-c",
                 "import sys; from distutils.sysconfig import get_python_lib; sys.stdout.write(get_python_lib())",
                 silent=True,
                 log=False,
@@ -277,7 +277,7 @@ def _upgrade_pip_setuptools_and_wheel(session):
         session.log(
             "Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ"
         )
-        return
+        return False
 
     install_command = [
         "python",
@@ -291,12 +291,14 @@ def _upgrade_pip_setuptools_and_wheel(session):
         "wheel",
     ]
     session.run(*install_command, silent=PIP_INSTALL_SILENT)
+    return True
 
 
 def _install_requirements(
     session, transport, *extra_requirements, requirements_type="ci"
 ):
-    _upgrade_pip_setuptools_and_wheel(session)
+    if not _upgrade_pip_setuptools_and_wheel(session):
+        return
 
     # Install requirements
     requirements_file = _get_pip_requirements_file(
@@ -312,8 +314,8 @@ def _install_requirements(
 
     if EXTRA_REQUIREMENTS_INSTALL:
         session.log(
-            "Installing the following extra requirements because the EXTRA_REQUIREMENTS_INSTALL environment variable "
-            "was set: %s",
+            "Installing the following extra requirements because the"
+            " EXTRA_REQUIREMENTS_INSTALL environment variable was set: %s",
             EXTRA_REQUIREMENTS_INSTALL,
         )
         # We pass --constraint in this step because in case any of these extra dependencies has a requirement
@@ -710,13 +712,14 @@ def pytest_cloud(session, coverage):
     pytest cloud tests session
     """
     # Install requirements
-    _install_requirements(session, "zeromq")
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "cloud.txt"
-    )
+    if _upgrade_pip_setuptools_and_wheel(session):
+        _install_requirements(session, "zeromq")
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "cloud.txt"
+        )
 
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
         "--rootdir",
@@ -740,9 +743,14 @@ def pytest_tornado(session, coverage):
     pytest tornado tests session
     """
     # Install requirements
-    _install_requirements(session, "zeromq")
-    session.install("--progress-bar=off", "tornado==5.0.2", silent=PIP_INSTALL_SILENT)
-    session.install("--progress-bar=off", "pyzmq==17.0.0", silent=PIP_INSTALL_SILENT)
+    if _upgrade_pip_setuptools_and_wheel(session):
+        _install_requirements(session, "zeromq")
+        session.install(
+            "--progress-bar=off", "tornado==5.0.2", silent=PIP_INSTALL_SILENT
+        )
+        session.install(
+            "--progress-bar=off", "pyzmq==17.0.0", silent=PIP_INSTALL_SILENT
+        )
 
     cmd_args = [
         "--rootdir",
@@ -839,12 +847,13 @@ class Tee:
 
 
 def _lint(session, rcfile, flags, paths, tee_output=True):
-    _install_requirements(session, "zeromq")
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "lint.txt"
-    )
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    if _upgrade_pip_setuptools_and_wheel(session):
+        _install_requirements(session, "zeromq")
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "lint.txt"
+        )
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     if tee_output:
         session.run("pylint", "--version")
@@ -1004,12 +1013,12 @@ def docs_html(session, compress, clean):
     """
     Build Salt's HTML Documentation
     """
-    _upgrade_pip_setuptools_and_wheel(session)
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "docs.txt"
-    )
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    if _upgrade_pip_setuptools_and_wheel(session):
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "docs.txt"
+        )
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
     os.chdir("doc/")
     if clean:
         session.run("make", "clean", external=True)
@@ -1027,12 +1036,12 @@ def docs_man(session, compress, update, clean):
     """
     Build Salt's Manpages Documentation
     """
-    _upgrade_pip_setuptools_and_wheel(session)
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "docs.txt"
-    )
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    if _upgrade_pip_setuptools_and_wheel(session):
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "docs.txt"
+        )
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
     os.chdir("doc/")
     if clean:
         session.run("make", "clean", external=True)
@@ -1050,11 +1059,12 @@ def invoke(session):
     """
     Run invoke tasks
     """
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "invoke.txt"
-    )
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    if _upgrade_pip_setuptools_and_wheel(session):
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "invoke.txt"
+        )
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
     cmd = ["inv"]
     files = []
 
@@ -1079,11 +1089,12 @@ def changelog(session, draft):
     """
     Generate salt's changelog
     """
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "changelog.txt"
-    )
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    if _upgrade_pip_setuptools_and_wheel(session):
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "changelog.txt"
+        )
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     town_cmd = ["towncrier", "--version={}".format(session.posargs[0])]
     if draft:

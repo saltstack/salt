@@ -335,7 +335,7 @@ def set_log_format(log_format, server=_DEFAULT_SERVER):
     format_id = log_format_types.get(log_format, None)
 
     if not format_id:
-        message = ("Invalid log format '{}' specified. Valid formats: {}").format(
+        message = "Invalid log format '{}' specified. Valid formats: {}".format(
             log_format, log_format_types.keys()
         )
         raise SaltInvocationError(message)

@@ -273,7 +273,7 @@ def _bind(username, password, anonymous=False, opts=None):
             # search for the user's DN to be used for the actual authentication
             _ldap = _LDAPConnection(**connargs).ldap
             log.debug(
-                "Running LDAP user dn search with filter:%s, dn:%s, " "scope:%s",
+                "Running LDAP user dn search with filter:%s, dn:%s, scope:%s",
                 paramvalues["filter"],
                 basedn,
                 scope,
