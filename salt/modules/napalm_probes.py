@@ -109,7 +109,6 @@ def results(**kwargs):  # pylint: disable=unused-argument
 
     :return a dictionary with the results of the probes.
 
-
     CLI Example:
 
     .. code-block:: bash

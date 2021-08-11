@@ -1,7 +1,7 @@
 """
 Module for interop with the Splunk API
 
-.. versionadded:: 2016.3.0.
+.. versionadded:: 2016.3.0
 
 
 :depends:   - splunk-sdk python module
@@ -73,7 +73,8 @@ def _get_secret_key(profile):
 
 def _generate_password(email):
     m = hmac.new(
-        base64.b64decode(_get_secret_key("splunk")), str([email, SERVICE_NAME]),
+        base64.b64decode(_get_secret_key("splunk")),
+        str([email, SERVICE_NAME]),
     )
     return base64.urlsafe_b64encode(m.digest()).strip().replace("=", "")
 
@@ -150,6 +151,8 @@ def list_users(profile="splunk"):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion splunk.list_users
     """
 
@@ -167,6 +170,8 @@ def get_user(email, profile="splunk", **kwargs):
     Get a splunk user by name/email
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion splunk.get_user 'user@example.com' user_details=false
         salt myminion splunk.get_user 'user@example.com' user_details=true
@@ -199,6 +204,8 @@ def create_user(email, profile="splunk", **kwargs):
     create a splunk user by name/email
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion splunk.create_user user@example.com roles=['user'] realname="Test User" name=testuser
     """
@@ -254,6 +261,8 @@ def update_user(email, profile="splunk", **kwargs):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion splunk.update_user example@domain.com roles=['user'] realname="Test User"
     """
 
@@ -264,7 +273,7 @@ def update_user(email, profile="splunk", **kwargs):
     user = list_users(profile).get(email)
 
     if not user:
-        log.error("Failed to retrieve user {}".format(email))
+        log.error("Failed to retrieve user %s", email)
         return False
 
     property_map = {}
@@ -308,6 +317,8 @@ def delete_user(email, profile="splunk"):
     Delete a splunk user by email
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion splunk_user.delete 'user@example.com'
     """

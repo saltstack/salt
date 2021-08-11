@@ -186,8 +186,7 @@ def _get_pip_bin(bin_env):
                     return [os.path.normpath(bin_path), "-m", "pip"]
                 else:
                     logger.debug(
-                        "pip: Found python binary by name but it is not "
-                        "executable: %s",
+                        "pip: Found python binary by name but it is not executable: %s",
                         bin_path,
                     )
         raise CommandNotFoundError(
@@ -337,7 +336,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                     current_directory = os.path.abspath(os.curdir)
 
                 logger.info(
-                    "_process_requirements from directory, " "%s -- requirement: %s",
+                    "_process_requirements from directory, %s -- requirement: %s",
                     cwd,
                     requirement,
                 )
@@ -387,7 +386,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                         __salt__["file.copy"](req_file, target_path)
 
                     logger.debug(
-                        "Changing ownership of requirements file '%s' to " "user '%s'",
+                        "Changing ownership of requirements file '%s' to user '%s'",
                         target_path,
                         user,
                     )
@@ -409,9 +408,9 @@ def _format_env_vars(env_vars):
         if isinstance(env_vars, dict):
             for key, val in env_vars.items():
                 if not isinstance(key, str):
-                    key = str(key)  # future lint: disable=blacklisted-function
+                    key = str(key)
                 if not isinstance(val, str):
-                    val = str(val)  # future lint: disable=blacklisted-function
+                    val = str(val)
                 ret[key] = val
         else:
             raise CommandExecutionError(
@@ -675,7 +674,9 @@ def install(
         salt '*' pip.install <package name> bin_env=/path/to/virtualenv
         salt '*' pip.install <package name> bin_env=/path/to/pip_bin
 
-    Complicated CLI example::
+    Complicated CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pip.install markdown,django \
                 editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
@@ -804,8 +805,7 @@ def install(
 
     if no_index and (index_url or extra_index_url):
         raise CommandExecutionError(
-            "'no_index' and ('index_url' or 'extra_index_url') are "
-            "mutually exclusive."
+            "'no_index' and ('index_url' or 'extra_index_url') are mutually exclusive."
         )
 
     if index_url:
@@ -1397,7 +1397,7 @@ def list_upgrades(bin_env=None, user=None, cwd=None):
             if match:
                 name, version_ = match.groups()
             else:
-                logger.error("Can't parse line '{}'".format(line))
+                logger.error("Can't parse line %r", line)
                 continue
             packages[name] = version_
 
@@ -1497,7 +1497,6 @@ def upgrade(bin_env=None, user=None, cwd=None, use_vt=False):
 
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
-
 
     CLI Example:
 

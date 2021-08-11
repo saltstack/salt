@@ -1,1 +1,0 @@
-Added salt-cloud support for Hetzner Cloud via the ``hcloud`` library of the provider.

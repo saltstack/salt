@@ -1,7 +1,7 @@
 """
 Docker Proxy Minion
 
-.. versionadded: 2019.2.0
+.. versionadded:: 2019.2.0
 
 :depends: docker
 

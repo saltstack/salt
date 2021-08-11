@@ -330,6 +330,12 @@ def list_functions(*args, **kwargs):  # pylint: disable=unused-argument
         salt '*' sys.list_functions sys
         salt '*' sys.list_functions sys user
 
+    .. versionadded:: 0.12.0
+
+    .. code-block:: bash
+
+        salt '*' sys.list_functions 'module.specific_function'
+
     Function names can be specified as globs.
 
     .. versionadded:: 2015.5.0
@@ -337,12 +343,6 @@ def list_functions(*args, **kwargs):  # pylint: disable=unused-argument
     .. code-block:: bash
 
         salt '*' sys.list_functions 'sys.list_*'
-
-    .. versionadded:: ?
-
-    .. code-block:: bash
-
-        salt '*' sys.list_functions 'module.specific_function'
 
     """
     # ## NOTE: **kwargs is used here to prevent a traceback when garbage
@@ -546,7 +546,7 @@ def list_state_functions(*args, **kwargs):  # pylint: disable=unused-argument
         salt '*' sys.list_state_functions 'file.*'
         salt '*' sys.list_state_functions 'file.s*'
 
-    .. versionadded:: ?
+    .. versionadded:: 2016.9
 
     .. code-block:: bash
 

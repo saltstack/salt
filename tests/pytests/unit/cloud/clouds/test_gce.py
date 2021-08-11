@@ -27,12 +27,29 @@ DUMMY_TOKEN = {
 class DummyGCEConn:
     def __init__(self):
         self.create_node = MagicMock()
+        self.ex_create_address = MagicMock(return_value=DummyGCEAddress())
 
     def __getattr__(self, attr):
-        if attr != "create_node":
+        funcs = ["create_node", "ex_create_address"]
+        if attr not in funcs:
             # Return back the first thing passed in (i.e. don't call out to get
             # the override value).
             return lambda *args, **kwargs: args[0]
+
+
+class DummyGCERegion:
+    def __init__(self):
+        self.name = MagicMock()
+
+
+class DummyGCEAddress:
+    def __init__(self):
+        self.id = MagicMock()
+        self.name = MagicMock()
+        self.address = MagicMock()
+        self.region = DummyGCERegion()
+        self.driver = MagicMock()
+        self.extra = MagicMock()
 
 
 @pytest.fixture
@@ -52,7 +69,9 @@ def configure_loader_modules():
                     "my-google-cloud": {
                         "gce": {
                             "project": "daenerys-cloud",
-                            "service_account_email_address": "dany@targaryen.westeros.cloud",
+                            "service_account_email_address": (
+                                "dany@targaryen.westeros.cloud"
+                            ),
                             "service_account_private_key": "/home/dany/PRIVKEY.pem",
                             "driver": "gce",
                             "ssh_interface": "public_ips",
@@ -181,3 +200,37 @@ def test_request_instance_with_accelerator(config, location, conn):
     ), patch("salt.cloud.clouds.gce.LIBCLOUD_VERSION_INFO", (2, 5, 0)):
         gce.request_instance(config)
         conn.create_node.assert_called_once_with(**call_kwargs)
+
+
+def test__expand_region():
+    """
+    Test that _expand_region returns the correct data
+    """
+    region = DummyGCERegion()
+    region.name = "us-central1"
+
+    ret = gce._expand_region(region)
+    expected = {"name": "us-central1"}
+
+    assert ret == expected
+
+
+def test_create_address(conn):
+    """
+    Test create_address
+    """
+
+    region = DummyGCERegion()
+    region.name = "us-central1"
+
+    address = DummyGCEAddress()
+    address.region = region
+
+    call_args = ("my-ip", region, address)
+
+    with patch("salt.cloud.clouds.gce.get_conn", MagicMock(return_value=conn)), patch(
+        "salt.cloud.clouds.gce.LIBCLOUD_VERSION_INFO", (2, 3, 0)
+    ):
+        kwargs = {"name": "my-ip", "region": region, "address": address}
+        gce.create_address(kwargs, "function")
+        conn.ex_create_address.assert_called_once_with(*call_args)

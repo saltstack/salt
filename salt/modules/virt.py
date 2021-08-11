@@ -516,41 +516,51 @@ def _get_disks(conn, dom):
             def _get_disk_volume_data(pool_name, volume_name):
                 qemu_target = "{}/{}".format(pool_name, volume_name)
                 pool = conn.storagePoolLookupByName(pool_name)
-                vol = pool.storageVolLookupByName(volume_name)
-                vol_info = vol.info()
-                extra_properties = {
-                    "virtual size": vol_info[1],
-                    "disk size": vol_info[2],
-                }
-
-                backing_files = [
-                    {
-                        "file": node.find("source").get("file"),
-                        "file format": node.find("format").get("type"),
+                extra_properties = {}
+                try:
+                    vol = pool.storageVolLookupByName(volume_name)
+                    vol_info = vol.info()
+                    extra_properties = {
+                        "virtual size": vol_info[1],
+                        "disk size": vol_info[2],
                     }
-                    for node in elem.findall(".//backingStore[source]")
-                ]
 
-                if backing_files:
-                    # We had the backing files in a flat list, nest them again.
-                    extra_properties["backing file"] = backing_files[0]
-                    parent = extra_properties["backing file"]
-                    for sub_backing_file in backing_files[1:]:
-                        parent["backing file"] = sub_backing_file
-                        parent = sub_backing_file
+                    backing_files = [
+                        {
+                            "file": node.find("source").get("file"),
+                            "file format": node.find("format").get("type"),
+                        }
+                        for node in elem.findall(".//backingStore[source]")
+                    ]
 
-                else:
-                    # In some cases the backing chain is not displayed by the domain definition
-                    # Try to see if we have some of it in the volume definition.
-                    vol_desc = ElementTree.fromstring(vol.XMLDesc())
-                    backing_path = vol_desc.find("./backingStore/path")
-                    backing_format = vol_desc.find("./backingStore/format")
-                    if backing_path is not None:
-                        extra_properties["backing file"] = {"file": backing_path.text}
-                        if backing_format is not None:
-                            extra_properties["backing file"][
-                                "file format"
-                            ] = backing_format.get("type")
+                    if backing_files:
+                        # We had the backing files in a flat list, nest them again.
+                        extra_properties["backing file"] = backing_files[0]
+                        parent = extra_properties["backing file"]
+                        for sub_backing_file in backing_files[1:]:
+                            parent["backing file"] = sub_backing_file
+                            parent = sub_backing_file
+
+                    else:
+                        # In some cases the backing chain is not displayed by the domain definition
+                        # Try to see if we have some of it in the volume definition.
+                        vol_desc = ElementTree.fromstring(vol.XMLDesc())
+                        backing_path = vol_desc.find("./backingStore/path")
+                        backing_format = vol_desc.find("./backingStore/format")
+                        if backing_path is not None:
+                            extra_properties["backing file"] = {
+                                "file": backing_path.text
+                            }
+                            if backing_format is not None:
+                                extra_properties["backing file"][
+                                    "file format"
+                                ] = backing_format.get("type")
+                except libvirt.libvirtError:
+                    # The volume won't be found if the pool is not started, just output less infos
+                    log.info(
+                        "Couldn't extract all volume informations: pool is likely not"
+                        " running or refreshed"
+                    )
                 return (qemu_target, extra_properties)
 
             if disk_type == "file":
@@ -568,7 +578,7 @@ def _get_disks(conn, dom):
                 elif elem.get("device", "disk") != "cdrom":
                     # Extract disk sizes, snapshots, backing files
                     try:
-                        stdout = subprocess.Popen(
+                        process = subprocess.Popen(
                             [
                                 "qemu-img",
                                 "info",
@@ -580,12 +590,17 @@ def _get_disks(conn, dom):
                             ],
                             shell=False,
                             stdout=subprocess.PIPE,
-                        ).communicate()[0]
-                        qemu_output = salt.utils.stringutils.to_str(stdout)
-                        output = _parse_qemu_img_info(qemu_output)
-                        extra_properties = output
-                    except TypeError:
-                        disk.update({"file": "Does not exist"})
+                            stderr=subprocess.PIPE,
+                        )
+                        stdout, stderr = process.communicate()
+                        if process.returncode == 0:
+                            qemu_output = salt.utils.stringutils.to_str(stdout)
+                            output = _parse_qemu_img_info(qemu_output)
+                            extra_properties = output
+                        else:
+                            extra_properties = {"error": stderr}
+                    except FileNotFoundError:
+                        extra_properties = {"error": "qemu-img not found"}
             elif disk_type == "block":
                 qemu_target = source.get("dev", "")
                 # If the qemu_target is a known path, output a volume
@@ -656,19 +671,15 @@ def _libvirt_creds():
     """
     Returns the user and group that the disk images should be owned by
     """
-    g_cmd = "grep ^\\s*group /etc/libvirt/qemu.conf"
-    u_cmd = "grep ^\\s*user /etc/libvirt/qemu.conf"
+    g_cmd = ["grep", "^\\s*group", "/etc/libvirt/qemu.conf"]
+    u_cmd = ["grep", "^\\s*user", "/etc/libvirt/qemu.conf"]
     try:
-        stdout = subprocess.Popen(
-            g_cmd, shell=True, stdout=subprocess.PIPE
-        ).communicate()[0]
+        stdout = subprocess.Popen(g_cmd, stdout=subprocess.PIPE).communicate()[0]
         group = salt.utils.stringutils.to_str(stdout).split('"')[1]
     except IndexError:
         group = "root"
     try:
-        stdout = subprocess.Popen(
-            u_cmd, shell=True, stdout=subprocess.PIPE
-        ).communicate()[0]
+        stdout = subprocess.Popen(u_cmd, stdout=subprocess.PIPE).communicate()[0]
         user = salt.utils.stringutils.to_str(stdout).split('"')[1]
     except IndexError:
         user = "root"
@@ -1054,19 +1065,23 @@ def _gen_xml(
     if old_port:
         salt.utils.versions.warn_until(
             "Phosphorus",
-            "'telnet_port' parameter has been deprecated, use the 'serials' and 'consoles' parameters instead. "
-            "'telnet_port' parameter has been deprecated, use the 'serials' parameter with a value "
-            "like ``{{{{'type': 'tcp', 'protocol': 'telnet', 'port': {}}}}}`` instead and a similar `consoles` parameter. "
-            "It will be removed in {{version}}.".format(old_port),
+            "'telnet_port' parameter has been deprecated, use the 'serials' and"
+            " 'consoles' parameters instead. 'telnet_port' parameter has been"
+            " deprecated, use the 'serials' parameter with a value like ``{{{{'type':"
+            " 'tcp', 'protocol': 'telnet', 'port': {}}}}}`` instead and a similar"
+            " `consoles` parameter. It will be removed in {{version}}.".format(
+                old_port
+            ),
         )
 
     old_serial_type = kwargs.get("serial_type")
     if old_serial_type:
         salt.utils.versions.warn_until(
             "Phosphorus",
-            "'serial_type' parameter has been deprecated, use the 'serials' parameter with a value "
-            "like ``{{{{'type': '{}', 'protocol':  'telnet' }}}}`` instead and a similar `consoles` parameter. "
-            "It will be removed in {{version}}.".format(old_serial_type),
+            "'serial_type' parameter has been deprecated, use the 'serials' parameter"
+            " with a value like ``{{{{'type': '{}', 'protocol':  'telnet' }}}}``"
+            " instead and a similar `consoles` parameter. It will be removed in"
+            " {{version}}.".format(old_serial_type),
         )
         serial_context = {"type": old_serial_type}
         if serial_context["type"] == "tcp":
@@ -1078,8 +1093,8 @@ def _gen_xml(
         if old_console:
             salt.utils.versions.warn_until(
                 "Phosphorus",
-                "'console' parameter has been deprecated, use the 'serials' and 'consoles' parameters instead. "
-                "It will be removed in {version}.",
+                "'console' parameter has been deprecated, use the 'serials' and"
+                " 'consoles' parameters instead. It will be removed in {version}.",
             )
             if old_console is True:
                 context["consoles"].append(serial_context)
@@ -1390,7 +1405,7 @@ def _get_images_dir():
     find legacy virt.images, then tries virt:images.
     """
     img_dir = __salt__["config.get"]("virt:images")
-    log.debug("Image directory from config option `virt:images`" " is %s", img_dir)
+    log.debug("Image directory from config option `virt:images` is %s", img_dir)
     return img_dir
 
 
@@ -1423,8 +1438,9 @@ def _zfs_image_create(
 
     if not pool:
         raise CommandExecutionError(
-            "Unable to create new disk {}, please specify"
-            " the disk pool name".format(disk_name)
+            "Unable to create new disk {}, please specify the disk pool name".format(
+                disk_name
+            )
         )
 
     destination_fs = os.path.join(pool, "{}.{}".format(vm_name, disk_name))
@@ -1438,9 +1454,7 @@ def _zfs_image_create(
             )
         )
     elif destination_fs in existing_disk:
-        log.info(
-            "ZFS filesystem {} already exists. Skipping creation".format(destination_fs)
-        )
+        log.info("ZFS filesystem %s already exists. Skipping creation", destination_fs)
         blockdevice_path = os.path.join("/dev/zvol", pool, vm_name)
         return blockdevice_path
 
@@ -1985,7 +1999,8 @@ def _handle_remote_boot_params(orig_boot):
         return new_boot
     else:
         raise SaltInvocationError(
-            "Invalid boot parameters,It has to follow this combination: [(kernel, initrd) or/and cmdline] or/and [(loader, nvram) or efi]"
+            "Invalid boot parameters,It has to follow this combination: [(kernel,"
+            " initrd) or/and cmdline] or/and [(loader, nvram) or efi]"
         )
 
 
@@ -2165,7 +2180,7 @@ def init(
                         0: 60
                iothreads: 4
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param mem: Amount of memory to allocate to the virtual machine in MiB. Since 3002, a dictionary can be used to
         contain detailed configuration which support memory allocation or tuning. Supported parameters are ``boot``,
@@ -2259,7 +2274,7 @@ def init(
         an autoinstallation needing a special first boot configuration.
         Defaults to ``False``
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param boot:
         Specifies kernel, initial ramdisk and kernel command line parameters for the virtual machine.
@@ -2293,7 +2308,7 @@ def init(
         on a NUMA host. ``memnode`` elements can specify memory allocation policies per each guest NUMA node. The definition
         used in the dictionary can be found at :ref:`init-cpu-def`.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
         .. code-block:: python
 
@@ -2305,7 +2320,7 @@ def init(
     :param hypervisor_features:
         Enable or disable hypervisor-specific features on the virtual machine.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
         .. code-block:: yaml
 
@@ -2331,7 +2346,7 @@ def init(
             ``catchup``, ``frequency``, ``mode``, ``present``, ``slew``, ``threshold`` and ``limit``.
             See `libvirt time keeping documentation <https://libvirt.org/formatdomain.html#time-keeping>`_ for the possible values.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
         Set the clock to local time using an offset in seconds
         .. code-block:: yaml
@@ -2369,20 +2384,20 @@ def init(
         Dictionary providing details on the serials connection to create. (Default: ``None``)
         See :ref:`init-chardevs-def` for more details on the possible values.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param consoles:
         Dictionary providing details on the consoles device to create. (Default: ``None``)
         See :ref:`init-chardevs-def` for more details on the possible values.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param host_devices:
         List of host devices to passthrough to the guest.
         The value is a list of device names as provided by the :py:func:`~salt.modules.virt.node_devices` function.
         (Default: ``None``)
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     .. _init-cpu-def:
 
@@ -2548,7 +2563,7 @@ def init(
     efi
        A boolean value.
 
-       .. versionadded:: sodium
+       .. versionadded:: 3001
 
     .. _init-mem-def:
 
@@ -2730,13 +2745,13 @@ def init(
         I/O control policy. String value amongst ``native``, ``threads`` and ``io_uring``.
         (Default: ``native``)
 
-        ..versionadded:: Aluminium
+        .. versionadded:: 3003
 
     iothread_id
         I/O thread id to assign the disk to.
         (Default: none assigned)
 
-        ..versionadded:: Aluminium
+        .. versionadded:: 3003
 
     .. _init-graphics-def:
 
@@ -3640,19 +3655,19 @@ def update(
         for instance: 'numatune': ``None``. Please note that ``None`` is mapped to ``null`` in sls file, pass ``null`` in
         sls file instead.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param serials:
         Dictionary providing details on the serials connection to create. (Default: ``None``)
         See :ref:`init-chardevs-def` for more details on the possible values.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param consoles:
         Dictionary providing details on the consoles device to create. (Default: ``None``)
         See :ref:`init-chardevs-def` for more details on the possible values.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param stop_on_reboot:
         If set to ``True`` the guest will stop instead of rebooting.
@@ -3660,7 +3675,7 @@ def update(
         an autoinstallation needing a special first boot configuration.
         Defaults to ``False``
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param test: run in dry-run mode if set to True
 
@@ -3669,7 +3684,7 @@ def update(
     :param hypervisor_features:
         Enable or disable hypervisor-specific features on the virtual machine.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
         .. code-block:: yaml
 
@@ -3695,7 +3710,7 @@ def update(
             ``catchup``, ``frequency``, ``mode``, ``present``, ``slew``, ``threshold`` and ``limit``.
             See `libvirt time keeping documentation <https://libvirt.org/formatdomain.html#time-keeping>`_ for the possible values.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
         Set the clock to local time using an offset in seconds
         .. code-block:: yaml
@@ -3734,7 +3749,7 @@ def update(
         The value is a list of device names as provided by the :py:func:`~salt.modules.virt.node_devices` function.
         (Default: ``None``)
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :return:
 
@@ -4217,7 +4232,7 @@ def update(
                     if (
                         item in changes["disk"]["new"]
                         and source_file
-                        and not os.path.isfile(source_file)
+                        and not os.path.exists(source_file)
                     ):
                         _qemu_image_create(all_disks[idx])
                     elif item in changes["disk"]["new"] and not source_file:
@@ -4494,7 +4509,7 @@ def _node_devices(conn):
 
     :param conn: the libvirt connection handle to use.
 
-    .. versionadded:: Aluminium
+    .. versionadded:: 3003
     """
     devices = conn.listAllDevices()
 
@@ -4595,7 +4610,7 @@ def node_devices(**kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Aluminium
+    .. versionadded:: 3003
     """
     conn = __get_conn(**kwargs)
     devs = _node_devices(conn)
@@ -4697,7 +4712,7 @@ def get_loader(vm_, **kwargs):
 
         salt '*' virt.get_loader <domain>
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
     """
     conn = __get_conn(**kwargs)
     try:
@@ -5728,7 +5743,7 @@ def seed_non_shared_migrate(disks, force=False):
             # the target exists, check to see if it is compatible
             pre = salt.utils.yaml.safe_load(
                 subprocess.Popen(
-                    "qemu-img info arch", shell=True, stdout=subprocess.PIPE
+                    ["qemu-img", "info", "arch"], stdout=subprocess.PIPE
                 ).communicate()[0]
             )
             if (
@@ -5740,11 +5755,9 @@ def seed_non_shared_migrate(disks, force=False):
             os.makedirs(os.path.dirname(fn_))
         if os.path.isfile(fn_):
             os.remove(fn_)
-        cmd = "qemu-img create -f " + form + " " + fn_ + " " + size
-        subprocess.call(cmd, shell=True)
+        subprocess.call(["qemu-img", "create", "-f", form, fn_, size])
         creds = _libvirt_creds()
-        cmd = "chown " + creds["user"] + ":" + creds["group"] + " " + fn_
-        subprocess.call(cmd, shell=True)
+        subprocess.call(["chown", "{user}:{group}".format(**creds), fn_])
     return True
 
 
@@ -5864,7 +5877,7 @@ def purge(vm_, dirs=False, removables=False, **kwargs):
             # TODO create solution for 'dataset is busy'
             time.sleep(3)
             fs_name = disks[disk]["file"][len("/dev/zvol/") :]
-            log.info("Destroying VM ZFS volume {}".format(fs_name))
+            log.info("Destroying VM ZFS volume %s", fs_name)
             __salt__["zfs.destroy"](name=fs_name, force=True)
         elif os.path.exists(disks[disk]["file"]):
             os.remove(disks[disk]["file"])
@@ -5914,12 +5927,7 @@ def _is_kvm_hyper():
     """
     Returns a bool whether or not this node is a KVM hypervisor
     """
-    try:
-        with salt.utils.files.fopen("/proc/modules") as fp_:
-            if "kvm_" not in salt.utils.stringutils.to_unicode(fp_.read()):
-                return False
-    except OSError:
-        # No /proc/modules? Are we on Windows? Or Solaris?
+    if not os.path.exists("/dev/kvm"):
         return False
     return "libvirtd" in __salt__["cmd.run"](__grains__["ps"])
 
@@ -5979,7 +5987,7 @@ def _is_bhyve_hyper():
     vmm_enabled = False
     try:
         stdout = subprocess.Popen(
-            sysctl_cmd, shell=True, stdout=subprocess.PIPE
+            ["sysctl", "hw.vmm.create"], stdout=subprocess.PIPE
         ).communicate()[0]
         vmm_enabled = len(salt.utils.stringutils.to_str(stdout).split('"')[1]) != 0
     except IndexError:
@@ -6942,7 +6950,11 @@ def all_capabilities(**kwargs):
         host_caps = ElementTree.fromstring(conn.getCapabilities())
         domains = [
             [
-                (guest.get("arch", {}).get("name", None), key)
+                (
+                    guest.get("arch", {}).get("name", None),
+                    key,
+                    guest.get("arch", {}).get("emulator", None),
+                )
                 for key in guest.get("arch", {}).get("domains", {}).keys()
             ]
             for guest in [
@@ -6960,10 +6972,10 @@ def all_capabilities(**kwargs):
             "domains": [
                 _parse_domain_caps(
                     ElementTree.fromstring(
-                        conn.getDomainCapabilities(None, arch, None, domain)
+                        conn.getDomainCapabilities(emulator, arch, None, domain)
                     )
                 )
-                for (arch, domain) in flattened
+                for (arch, domain, emulator) in flattened
             ],
         }
         return result
@@ -7088,7 +7100,7 @@ def network_define(
     :param bridge: Bridge name.
     :param forward: Forward mode (bridge, router, nat).
 
-        .. versionchanged:: Aluminium
+        .. versionchanged:: 3003
            a ``None`` value creates an isolated network with no forwarding at all
 
     :param vport: Virtualport type.
@@ -7102,7 +7114,7 @@ def network_define(
               parameters:
                 interfaceid: 09b11c53-8b5c-4eeb-8f00-d84eaa0aaa4f
 
-        .. versionchanged:: Aluminium
+        .. versionchanged:: 3003
            possible dictionary value
 
     :param tag: Vlan tag.
@@ -7120,7 +7132,7 @@ def network_define(
                   nativeMode: untagged
                 - id: 47
 
-        .. versionchanged:: Aluminium
+        .. versionchanged:: 3003
            possible dictionary value
 
     :param autostart: Network autostart (default True).
@@ -7148,7 +7160,7 @@ def network_define(
     :param mtu: size of the Maximum Transmission Unit (MTU) of the network.
         (default ``None``)
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param domain: DNS domain name of the DHCP server.
         The value is a dictionary with a mandatory ``name`` property and an optional ``localOnly`` boolean one.
@@ -7160,7 +7172,7 @@ def network_define(
               name: lab.acme.org
               localOnly: True
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param nat: addresses and ports to route in NAT forward mode.
         The value is a dictionary with optional keys ``address`` and ``port``.
@@ -7178,7 +7190,7 @@ def network_define(
                 start: 500
                 end: 1000
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param interfaces: whitespace separated list of network interfaces devices that can be used for this network.
         (default ``None``)
@@ -7188,7 +7200,7 @@ def network_define(
           - forward: passthrough
           - interfaces: "eth10 eth11 eth12"
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
         (default ``None``)
@@ -7198,7 +7210,7 @@ def network_define(
           - forward: hostdev
           - interfaces: "0000:04:00.1 0000:e3:01.2"
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param physical_function: device name of the physical interface to use in ``hostdev`` forward mode.
         (default ``None``)
@@ -7208,7 +7220,7 @@ def network_define(
           - forward: hostdev
           - physical_function: "eth0"
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     :param dns: virtual network DNS configuration.
         The value is a dictionary described in net-define-dns_.
@@ -7238,7 +7250,7 @@ def network_define(
                   priority: 1
                   weight: 10
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     .. _net-define-ip:
 
@@ -7255,17 +7267,17 @@ def network_define(
     hosts
         A list of dictionaries with ``ip`` property and optional ``name``, ``mac`` and ``id`` properties.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     bootp
         A dictionary with a ``file`` property and an optional ``server`` one.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     tftp
         The path to the TFTP root directory to serve.
 
-        .. versionadded:: Aluminium
+        .. versionadded:: 3003
 
     .. _net-define-dns:
 
@@ -7513,7 +7525,7 @@ def network_update(
                   priority: 1
                   weight: 10
 
-    .. versionadded:: Aluminium
+    .. versionadded:: 3003
     """
     # Get the current definition to compare the two
     conn = __get_conn(**kwargs)
@@ -7590,7 +7602,7 @@ def network_update(
             if node.get("family", "ipv4") == "ipv4"
         ]
         for ip_node in ipv4_nodes:
-            netmask = ip_node.attrib.pop("netmask")
+            netmask = ip_node.attrib.pop("netmask", None)
             if netmask:
                 address = ipaddress.ip_network(
                     "{}/{}".format(ip_node.get("address"), netmask), strict=False
@@ -7700,7 +7712,7 @@ def network_info(name=None, **kwargs):
             for net in nets
         }
     except libvirt.libvirtError as err:
-        log.debug("Silenced libvirt error: %s", str(err))
+        log.debug("Silenced libvirt error: %s", err)
     finally:
         conn.close()
     return result
@@ -8537,7 +8549,7 @@ def pool_info(name=None, **kwargs):
         ]
         result = {pool.name(): _pool_extract_infos(pool) for pool in pools}
     except libvirt.libvirtError as err:
-        log.debug("Silenced libvirt error: %s", str(err))
+        log.debug("Silenced libvirt error: %s", err)
     finally:
         conn.close()
     return result
@@ -8954,7 +8966,7 @@ def volume_infos(pool=None, volume=None, **kwargs):
         }
         return {pool_name: volumes for (pool_name, volumes) in vols.items() if volumes}
     except libvirt.libvirtError as err:
-        log.debug("Silenced libvirt error: %s", str(err))
+        log.debug("Silenced libvirt error: %s", err)
     finally:
         conn.close()
     return result

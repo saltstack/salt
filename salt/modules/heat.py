@@ -377,7 +377,6 @@ def delete_stack(name=None, poll=0, timeout=60, profile=None):
     profile
         Profile to use
 
-
     CLI Examples:
 
     .. code-block:: bash

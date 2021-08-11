@@ -209,7 +209,6 @@ import re
 import shutil
 import string
 import subprocess
-import sys
 import time
 import uuid
 
@@ -312,16 +311,14 @@ def __virtual__():
             else:
                 return (
                     False,
-                    "Insufficient Docker version (required: {}, "
-                    "installed: {})".format(
+                    "Insufficient Docker version (required: {}, installed: {})".format(
                         ".".join(map(str, MIN_DOCKER)),
                         ".".join(map(str, docker_versioninfo)),
                     ),
                 )
         return (
             False,
-            "Insufficient docker-py version (required: {}, "
-            "installed: {})".format(
+            "Insufficient docker-py version (required: {}, installed: {})".format(
                 ".".join(map(str, MIN_DOCKER_PY)),
                 ".".join(map(str, docker_py_versioninfo)),
             ),
@@ -490,7 +487,7 @@ def _change_state(name, action, expected, *args, **kwargs):
         return {
             "result": False,
             "state": {"old": expected, "new": expected},
-            "comment": ("Container '{}' already {}".format(name, expected)),
+            "comment": "Container '{}' already {}".format(name, expected),
         }
     _client_wrapper(action, name, *args, **kwargs)
     _clear_context()
@@ -507,9 +504,8 @@ def _clear_context():
     """
     Clear the state/exists values stored in context
     """
-    # Can't use 'for key in __context__' or six.iterkeys(__context__) because
-    # an exception will be raised if the size of the dict is modified during
-    # iteration.
+    # Can't use 'for key in __context__' because an exception will be raised if
+    # the size of the dict is modified during iteration.
     keep_context = (
         "docker.client",
         "docker.exec_driver",
@@ -662,8 +658,7 @@ def _client_wrapper(attr, *args, **kwargs):
     err = ""
     try:
         log.debug(
-            'Attempting to run docker-py\'s "%s" function '
-            "with args=%s and kwargs=%s",
+            'Attempting to run docker-py\'s "%s" function with args=%s and kwargs=%s',
             attr,
             args,
             kwargs,
@@ -812,7 +807,8 @@ def _error_detail(data, item):
             )
         except TypeError:
             msg = "{}: {}".format(
-                item["errorDetail"]["code"], item["errorDetail"]["message"],
+                item["errorDetail"]["code"],
+                item["errorDetail"]["message"],
             )
     else:
         msg = item["errorDetail"]["message"]
@@ -904,9 +900,7 @@ def _get_create_kwargs(
             client_args = get_client_args(["create_container", "host_config"])
         except CommandExecutionError as exc:
             log.error(
-                "docker.create: Error getting client args: '%s'",
-                exc.__str__(),
-                exc_info=True,
+                "docker.create: Error getting client args: '%s'", exc, exc_info=True
             )
             raise CommandExecutionError("Failed to get client args: {}".format(exc))
 
@@ -952,7 +946,6 @@ def compare_containers(first, second, ignore=None):
         A comma-separated list (or Python list) of keys to ignore when
         comparing. This is useful when comparing two otherwise identical
         containers which have different hostnames.
-
 
     CLI Examples:
 
@@ -1080,7 +1073,6 @@ def compare_container_networks(first, second):
 
     second
         Name or ID of second container (new)
-
 
     CLI Example:
 
@@ -1298,7 +1290,6 @@ def compare_networks(first, second, ignore="Name,Id,Created,Containers"):
         A comma-separated list (or Python list) of keys to ignore when
         comparing.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -1449,8 +1440,9 @@ def login(*registries):
             registry_auth.update(reg_conf)
         except TypeError:
             errors.append(
-                "Docker registry '{}' was not specified as a "
-                "dictionary".format(reg_name)
+                "Docker registry '{}' was not specified as a dictionary".format(
+                    reg_name
+                )
             )
 
     # If no registries passed, we will auth to all of them
@@ -1479,7 +1471,9 @@ def login(*registries):
                 username,
             )
             login_cmd = __salt__["cmd.run_all"](
-                cmd, python_shell=False, output_loglevel="quiet",
+                cmd,
+                python_shell=False,
+                output_loglevel="quiet",
             )
             results[registry] = login_cmd["retcode"] == 0
             if not results[registry]:
@@ -1540,8 +1534,9 @@ def logout(*registries):
             registry_auth.update(reg_conf)
         except TypeError:
             errors.append(
-                "Docker registry '{}' was not specified as a "
-                "dictionary".format(reg_name)
+                "Docker registry '{}' was not specified as a dictionary".format(
+                    reg_name
+                )
             )
 
     # If no registries passed, we will logout of all known registries
@@ -1559,7 +1554,9 @@ def logout(*registries):
                 cmd.append(registry)
             log.debug("Attempting to logout of docker registry '%s'", registry)
             logout_cmd = __salt__["cmd.run_all"](
-                cmd, python_shell=False, output_loglevel="quiet",
+                cmd,
+                python_shell=False,
+                output_loglevel="quiet",
             )
             results[registry] = logout_cmd["retcode"] == 0
             if not results[registry]:
@@ -1587,7 +1584,6 @@ def depends(name):
 
     - ``Containers`` - A list of containers which depend on the specified image
     - ``Images`` - A list of IDs of images which depend on the specified image
-
 
     CLI Example:
 
@@ -1632,7 +1628,6 @@ def diff(name):
     These keys will only be present if there were changes, so if the container
     has no differences the return dict will be empty.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -1666,7 +1661,6 @@ def exists(name):
     **RETURN DATA**
 
     A boolean (``True`` if the container exists, otherwise ``False``)
-
 
     CLI Example:
 
@@ -1734,7 +1728,6 @@ def history(name, quiet=False):
     - ``Time_Created_Local`` - Time this build step was completed (Minion's
       local timezone)
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -1790,7 +1783,6 @@ def images(verbose=False, **kwargs):
     A dictionary with each key being an image ID, and each value some general
     info about that image (time created, size, tags associated with the image,
     etc.)
-
 
     CLI Example:
 
@@ -1885,7 +1877,6 @@ def inspect(name):
 
     A dictionary of container/image/volume/network information
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -1932,7 +1923,6 @@ def inspect_container(name):
 
     A dictionary of container information
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -1960,7 +1950,6 @@ def inspect_image(name):
     **RETURN DATA**
 
     A dictionary of image information
-
 
     CLI Examples:
 
@@ -1991,7 +1980,7 @@ def list_containers(**kwargs):
 
     .. code-block:: bash
 
-        salt myminion docker.inspect_image <image>
+        salt myminion docker.list_containers
     """
     ret = set()
     for item in ps_(all=kwargs.get("all", False)).values():
@@ -2045,7 +2034,7 @@ def resolve_image_id(name):
         pass
     except KeyError:
         log.error(
-            "Inspecting docker image '%s' returned an unexpected data " "structure: %s",
+            "Inspecting docker image '%s' returned an unexpected data structure: %s",
             name,
             inspect_result,
         )
@@ -2111,7 +2100,7 @@ def resolve_tag(name, **kwargs):
         return False
     except KeyError:
         log.error(
-            "Inspecting docker image '%s' returned an unexpected data " "structure: %s",
+            "Inspecting docker image '%s' returned an unexpected data structure: %s",
             name,
             inspect_result,
         )
@@ -2159,7 +2148,6 @@ def logs(name, **kwargs):
 
         .. note:
             Since it blocks, this option should be used with caution.
-
 
     CLI Examples:
 
@@ -2252,7 +2240,6 @@ def port(name, private_port=None):
     A dictionary of port mappings, with the keys being the port and the values
     being the mapping(s) for that port.
 
-
     CLI Examples:
 
     .. code-block:: bash
@@ -2323,7 +2310,6 @@ def ps_(filters=None, **kwargs):
     A dictionary with each key being an container ID, and each value some
     general info about that container (time created, name, command, etc.)
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -2385,7 +2371,6 @@ def state(name):
     A string representing the current state of the container (either
     ``running``, ``paused``, or ``stopped``)
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -2422,7 +2407,6 @@ def search(name, official=False, trusted=False):
       not)
     - ``Stars`` - Number of stars the image has on the registry
     - ``Trusted`` - A boolean (``True`` if a trusted build, ``False`` if not)
-
 
     CLI Example:
 
@@ -2478,7 +2462,6 @@ def top(name):
 
     CLI Example:
 
-
     **RETURN DATA**
 
     A list of dictionaries containing information about each process
@@ -2531,7 +2514,7 @@ def version():
 
 
 def _create_networking_config(networks):
-    log.debug("creating networking config from {}".format(networks))
+    log.debug("creating networking config from %s", networks)
     return _client_wrapper(
         "create_networking_config",
         {
@@ -3261,7 +3244,6 @@ def create(
     - ``Id`` - ID of the newly-created container
     - ``Name`` - Name of the newly-created container
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -3289,7 +3271,7 @@ def create(
         )
 
     log.debug(
-        "docker.create: creating container %susing the following " "arguments: %s",
+        "docker.create: creating container %susing the following arguments: %s",
         "with name '{}' ".format(name) if name is not None else "",
         kwargs,
     )
@@ -3454,7 +3436,7 @@ def run_container(
             raise SaltInvocationError("Invalid format for networks argument")
 
     log.debug(
-        "docker.create: creating container %susing the following " "arguments: %s",
+        "docker.create: creating container %susing the following arguments: %s",
         "with name '{}' ".format(name) if name is not None else "",
         kwargs,
     )
@@ -3582,7 +3564,6 @@ def copy_from(name, source, dest, overwrite=False, makedirs=False):
 
     A boolean (``True`` if successful, otherwise ``False``)
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -3698,7 +3679,6 @@ def copy_to(name, source, dest, exec_driver=None, overwrite=False, makedirs=Fals
 
     A boolean (``True`` if successful, otherwise ``False``)
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -3775,7 +3755,6 @@ def export(name, path, overwrite=False, makedirs=False, compression=None, **kwar
     - ``Size`` - Size of the file, in bytes
     - ``Size_Human`` - Size of the file, in human-readable units
     - ``Time_Elapsed`` - Time in seconds taken to perform the export
-
 
     CLI Examples:
 
@@ -3928,7 +3907,6 @@ def rm_(name, force=False, volumes=False, **kwargs):
     **RETURN DATA**
 
     A list of the IDs of containers which were removed
-
 
     CLI Example:
 
@@ -4084,7 +4062,6 @@ def build(
       *(Only present if the image specified by the "repository" and "tag"
       arguments was not present on the Minion, or if cache=False)*
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -4215,7 +4192,6 @@ def commit(name, repository, tag="latest", message=None, author=None):
     - ``Image`` - Name of the newly-created image
     - ``Time_Elapsed`` - Time in seconds taken to perform the commit
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -4277,7 +4253,6 @@ def dangling(prune=False, force=False):
       *(Only present if prune failed)*
     - ``Removed`` - A boolean (``True`` if prune was successful, ``False`` if
       not)
-
 
     CLI Example:
 
@@ -4349,7 +4324,6 @@ def import_(source, repository, tag="latest", api_response=False):
     - ``Id`` - ID of the newly-created image
     - ``Image`` - Name of the newly-created image
     - ``Time_Elapsed`` - Time in seconds taken to perform the commit
-
 
     CLI Example:
 
@@ -4455,7 +4429,6 @@ def load(path, repository=None, tag=None):
 
       *(Only present if tag was specified and tagging failed)*
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -4505,9 +4478,9 @@ def load(path, repository=None, tag=None):
                 result = tag_(top_level_images[0], repository=repository, tag=tag)
                 ret["Image"] = tagged_image
             except IndexError:
-                ret["Warning"] = (
-                    "No top-level image layers were loaded, no " "image was tagged"
-                )
+                ret[
+                    "Warning"
+                ] = "No top-level image layers were loaded, no image was tagged"
             except Exception as exc:  # pylint: disable=broad-except
                 ret["Warning"] = "Failed to tag {} as {}: {}".format(
                     top_level_images[0], tagged_image, exc
@@ -4587,7 +4560,6 @@ def pull(
     - ``Status`` - A string containing a summary of the pull action (usually a
       message saying that an image was downloaded, or that it was up to date).
     - ``Time_Elapsed`` - Time in seconds taken to perform the pull
-
 
     CLI Example:
 
@@ -4683,7 +4655,6 @@ def push(
         - ``Pushed`` - Layers that that were pushed
     - ``Time_Elapsed`` - Time in seconds taken to perform the push
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -4758,7 +4729,6 @@ def rmi(*names, **kwargs):
     - ``Layers`` - A list of the IDs of image layers that were removed
     - ``Tags`` - A list of the tags that were removed
     - ``Errors`` - A list of any errors that were encountered
-
 
     CLI Examples:
 
@@ -4880,7 +4850,6 @@ def save(name, path, overwrite=False, makedirs=False, compression=None, **kwargs
     - ``Size`` - Size of the file, in bytes
     - ``Size_Human`` - Size of the file, in human-readable units
     - ``Time_Elapsed`` - Time in seconds taken to perform the save
-
 
     CLI Examples:
 
@@ -5337,7 +5306,6 @@ def create_network(
         - ``aux_addresses="['foo.bar.tld=192.168.50.10', 'hello.world.tld=192.168.50.11']"``
         - ``aux_addresses="{'foo.bar.tld': '192.168.50.10', 'hello.world.tld': '192.168.50.11'}"``
 
-
     CLI Examples:
 
     .. code-block:: bash
@@ -5647,7 +5615,6 @@ def kill(name):
     - ``result`` - A boolean noting whether or not the action was successful
     - ``comment`` - Only present if the container cannot be killed
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -5675,7 +5642,6 @@ def pause(name):
     - ``result`` - A boolean noting whether or not the action was successful
     - ``comment`` - Only present if the container cannot be paused
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -5687,7 +5653,7 @@ def pause(name):
         return {
             "result": False,
             "state": {"old": orig_state, "new": orig_state},
-            "comment": ("Container '{}' is stopped, cannot pause".format(name)),
+            "comment": "Container '{}' is stopped, cannot pause".format(name),
         }
     return _change_state(name, "pause", "paused")
 
@@ -5716,7 +5682,6 @@ def restart(name, timeout=10):
     - ``result`` - A boolean noting whether or not the action was successful
     - ``restarted`` - If restart was successful, this key will be present and
       will be set to ``True``.
-
 
     CLI Examples:
 
@@ -5776,7 +5741,6 @@ def start_(name):
     - ``result`` - A boolean noting whether or not the action was successful
     - ``comment`` - Only present if the container cannot be started
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -5788,7 +5752,7 @@ def start_(name):
         return {
             "result": False,
             "state": {"old": orig_state, "new": orig_state},
-            "comment": ("Container '{}' is paused, cannot start".format(name)),
+            "comment": "Container '{}' is paused, cannot start".format(name),
         }
 
     return _change_state(name, "start", "running")
@@ -5824,7 +5788,6 @@ def stop(name, timeout=None, **kwargs):
       well as the new state
     - ``result`` - A boolean noting whether or not the action was successful
     - ``comment`` - Only present if the container can not be stopped
-
 
     CLI Examples:
 
@@ -5883,7 +5846,6 @@ def unpause(name):
     - ``result`` - A boolean noting whether or not the action was successful
     - ``comment`` - Only present if the container can not be unpaused
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -5895,7 +5857,7 @@ def unpause(name):
         return {
             "result": False,
             "state": {"old": orig_state, "new": orig_state},
-            "comment": ("Container '{}' is stopped, cannot unpause".format(name)),
+            "comment": "Container '{}' is stopped, cannot unpause".format(name),
         }
     return _change_state(name, "unpause", "running")
 
@@ -5931,7 +5893,6 @@ def wait(name, ignore_already_stopped=False, fail_on_exit_status=False):
     - ``result`` - A boolean noting whether or not the action was successful
     - ``exit_status`` - Exit status for the container
     - ``comment`` - Only present if the container is already stopped
-
 
     CLI Example:
 
@@ -6699,27 +6660,26 @@ def _compile_state(sls_opts, mods=None):
     """
     Generates the chunks of lowdata from the list of modules
     """
-    st_ = HighState(sls_opts)
+    with HighState(sls_opts) as st_:
+        if not mods:
+            return st_.compile_low_chunks()
 
-    if not mods:
-        return st_.compile_low_chunks()
+        high_data, errors = st_.render_highstate({sls_opts["saltenv"]: mods})
+        high_data, ext_errors = st_.state.reconcile_extend(high_data)
+        errors += ext_errors
+        errors += st_.state.verify_high(high_data)
+        if errors:
+            return errors
 
-    high_data, errors = st_.render_highstate({sls_opts["saltenv"]: mods})
-    high_data, ext_errors = st_.state.reconcile_extend(high_data)
-    errors += ext_errors
-    errors += st_.state.verify_high(high_data)
-    if errors:
-        return errors
+        high_data, req_in_errors = st_.state.requisite_in(high_data)
+        errors += req_in_errors
+        high_data = st_.state.apply_exclude(high_data)
+        # Verify that the high data is structurally sound
+        if errors:
+            return errors
 
-    high_data, req_in_errors = st_.state.requisite_in(high_data)
-    errors += req_in_errors
-    high_data = st_.state.apply_exclude(high_data)
-    # Verify that the high data is structurally sound
-    if errors:
-        return errors
-
-    # Compile and verify the raw chunks
-    return st_.state.compile_high_data(high_data)
+        # Compile and verify the raw chunks
+        return st_.state.compile_high_data(high_data)
 
 
 def call(name, function, *args, **kwargs):
@@ -6767,11 +6727,25 @@ def call(name, function, *args, **kwargs):
         name, thin_path, os.path.join(thin_dest_path, os.path.basename(thin_path))
     )
 
+    # figure out available python interpreter inside the container (only Python3)
+    pycmds = ("python3", "/usr/libexec/platform-python")
+    container_python_bin = None
+    for py_cmd in pycmds:
+        cmd = [py_cmd] + ["--version"]
+        ret = run_all(name, subprocess.list2cmdline(cmd))
+        if ret["retcode"] == 0:
+            container_python_bin = py_cmd
+            break
+    if not container_python_bin:
+        raise CommandExecutionError(
+            "Python interpreter cannot be found inside the container. Make sure Python is installed in the container"
+        )
+
     # untar archive
     untar_cmd = [
-        "python",
+        container_python_bin,
         "-c",
-        ("import tarfile; " 'tarfile.open("{0}/{1}").extractall(path="{0}")').format(
+        'import tarfile; tarfile.open("{0}/{1}").extractall(path="{0}")'.format(
             thin_dest_path, os.path.basename(thin_path)
         ),
     ]
@@ -6782,7 +6756,7 @@ def call(name, function, *args, **kwargs):
     try:
         salt_argv = (
             [
-                "python{}".format(sys.version_info[0]),
+                container_python_bin,
                 os.path.join(thin_dest_path, "salt-call"),
                 "--metadata",
                 "--local",

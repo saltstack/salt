@@ -63,7 +63,7 @@ class WinTasksTest(ModuleCase):
           </Actions>
         </Task>
         """
-        self.assertEquals(
+        self.assertEqual(
             self.run_function("task.create_task_from_xml", "foo", xml_text=xml_text),
             True,
         )

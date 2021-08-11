@@ -10,7 +10,7 @@ pytestmark = [
 
 
 @pytest.fixture(scope="module")
-def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_sub_minion, salt_cli):
+def pillar_tree(salt_master, salt_minion, salt_sub_minion, salt_cli):
     top_file = """
     base:
       '{}':
@@ -50,15 +50,11 @@ def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_sub_minion, sal
     """.format(
         salt_sub_minion.id
     )
-    top_tempfile = pytest.helpers.temp_file(
-        "top.sls", top_file, base_env_pillar_tree_root_dir
+    top_tempfile = salt_master.pillar_tree.base.temp_file("top.sls", top_file)
+    basic_tempfile = salt_master.pillar_tree.base.temp_file(
+        "basic.sls", basic_pillar_file
     )
-    basic_tempfile = pytest.helpers.temp_file(
-        "basic.sls", basic_pillar_file, base_env_pillar_tree_root_dir
-    )
-    sub_tempfile = pytest.helpers.temp_file(
-        "sub.sls", sub_pillar_file, base_env_pillar_tree_root_dir
-    )
+    sub_tempfile = salt_master.pillar_tree.base.temp_file("sub.sls", sub_pillar_file)
     try:
         with top_tempfile, basic_tempfile, sub_tempfile:
             ret = salt_cli.run("saltutil.refresh_pillar", wait=True, minion_tgt="*")

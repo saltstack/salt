@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 __salt__ = None
 
 
-def __virtual__():  # pylint: disable=expected-2-blank-lines-found-0
+def __virtual__():
     try:
         global __salt__  # pylint: disable=global-statement
         if not __salt__:
@@ -84,13 +84,11 @@ def _get_token_and_url_from_master():
         )
         raise salt.exceptions.CommandExecutionError(result)
     if not isinstance(result, dict):
-        log.error(
-            "Failed to get token from master! " "Response is not a dict: %s", result
-        )
+        log.error("Failed to get token from master! Response is not a dict: %s", result)
         raise salt.exceptions.CommandExecutionError(result)
     if "error" in result:
         log.error(
-            "Failed to get token from master! " "An error was returned: %s",
+            "Failed to get token from master! An error was returned: %s",
             result["error"],
         )
         raise salt.exceptions.CommandExecutionError(result)
@@ -103,6 +101,7 @@ def _get_token_and_url_from_master():
         "url": result["url"],
         "token": result["token"],
         "verify": result.get("verify", None),
+        "namespace": result.get("namespace"),
         "uses": result.get("uses", 1),
         "lease_duration": result["lease_duration"],
         "issued": result["issued"],
@@ -117,6 +116,8 @@ def get_vault_connection():
 
     def _use_local_config():
         log.debug("Using Vault connection details from local config")
+        # Vault Enterprise requires a namespace
+        namespace = __opts__["vault"].get("namespace")
         try:
             if __opts__["vault"]["auth"]["method"] == "approle":
                 verify = __opts__["vault"].get("verify", None)
@@ -127,7 +128,13 @@ def get_vault_connection():
                     payload = {"role_id": __opts__["vault"]["auth"]["role_id"]}
                     if "secret_id" in __opts__["vault"]["auth"]:
                         payload["secret_id"] = __opts__["vault"]["auth"]["secret_id"]
-                    response = requests.post(url, json=payload, verify=verify)
+                    if namespace is not None:
+                        headers = {"X-Vault-Namespace": namespace}
+                        response = requests.post(
+                            url, headers=headers, json=payload, verify=verify
+                        )
+                    else:
+                        response = requests.post(url, json=payload, verify=verify)
                     if response.status_code != 200:
                         errmsg = "An error occurred while getting a token from approle"
                         raise salt.exceptions.CommandExecutionError(errmsg)
@@ -139,6 +146,8 @@ def get_vault_connection():
                 if _wrapped_token_valid():
                     url = "{}/v1/sys/wrapping/unwrap".format(__opts__["vault"]["url"])
                     headers = {"X-Vault-Token": __opts__["vault"]["auth"]["token"]}
+                    if namespace is not None:
+                        headers["X-Vault-Namespace"] = namespace
                     response = requests.post(url, headers=headers, verify=verify)
                     if response.status_code != 200:
                         errmsg = "An error occured while unwrapping vault token"
@@ -148,6 +157,7 @@ def get_vault_connection():
                     ]
             return {
                 "url": __opts__["vault"]["url"],
+                "namespace": namespace,
                 "token": __opts__["vault"]["auth"]["token"],
                 "verify": __opts__["vault"].get("verify", None),
                 "issued": int(round(time.time())),
@@ -192,6 +202,9 @@ def del_cache():
 
 
 def write_cache(connection):
+    """
+    Write the vault token to cache
+    """
     # If uses is 1 and unlimited_use_token is not true, then this is a single use token and should not be cached
     # In that case, we still want to cache the vault metadata lookup information for paths, so continue on
     if (
@@ -271,11 +284,11 @@ def get_cache():
 
     # Determine if ttl still valid
     if ttl10 < cur_time:
-        log.debug("Cached token has expired {} < {}: DELETING".format(ttl10, cur_time))
+        log.debug("Cached token has expired %s < %s: DELETING", ttl10, cur_time)
         del_cache()
         return _gen_new_connection()
     else:
-        log.debug("Token has not expired {} > {}".format(ttl10, cur_time))
+        log.debug("Token has not expired %s > %s", ttl10, cur_time)
     return connection
 
 
@@ -284,6 +297,7 @@ def make_request(
     resource,
     token=None,
     vault_url=None,
+    namespace=None,
     get_token_url=False,
     retry=False,
     **args
@@ -297,6 +311,7 @@ def make_request(
         connection = get_cache()
     token = connection["token"] if not token else token
     vault_url = connection["url"] if not vault_url else vault_url
+    namespace = namespace or connection["namespace"]
     if "verify" in args:
         args["verify"] = args["verify"]
     else:
@@ -307,6 +322,8 @@ def make_request(
             pass
     url = "{}/{}".format(vault_url, resource)
     headers = {"X-Vault-Token": str(token), "Content-Type": "application/json"}
+    if namespace is not None:
+        headers["X-Vault-Namespace"] = namespace
     response = requests.request(method, url, headers=headers, **args)
     if not response.ok and response.json().get("errors", None) == ["permission denied"]:
         log.info("Permission denied from vault")
@@ -345,7 +362,7 @@ def make_request(
                 log.debug("Deleting token from memory")
                 del __context__["vault_token"]
         else:
-            log.debug("Token has {} uses left".format(connection["uses"]))
+            log.debug("Token has %s uses left", connection["uses"])
             write_cache(connection)
 
     if get_token_url:
@@ -360,10 +377,14 @@ def _selftoken_expired():
     """
     try:
         verify = __opts__["vault"].get("verify", None)
+        # Vault Enterprise requires a namespace
+        namespace = __opts__["vault"].get("namespace")
         url = "{}/v1/auth/token/lookup-self".format(__opts__["vault"]["url"])
         if "token" not in __opts__["vault"]["auth"]:
             return True
         headers = {"X-Vault-Token": __opts__["vault"]["auth"]["token"]}
+        if namespace is not None:
+            headers["X-Vault-Namespace"] = namespace
         response = requests.get(url, headers=headers, verify=verify)
         if response.status_code != 200:
             return True
@@ -380,10 +401,14 @@ def _wrapped_token_valid():
     """
     try:
         verify = __opts__["vault"].get("verify", None)
+        # Vault Enterprise requires a namespace
+        namespace = __opts__["vault"].get("namespace")
         url = "{}/v1/sys/wrapping/lookup".format(__opts__["vault"]["url"])
         if "token" not in __opts__["vault"]["auth"]:
             return False
         headers = {"X-Vault-Token": __opts__["vault"]["auth"]["token"]}
+        if namespace is not None:
+            headers["X-Vault-Namespace"] = namespace
         response = requests.post(url, headers=headers, verify=verify)
         if response.status_code != 200:
             return False
@@ -397,8 +422,11 @@ def _wrapped_token_valid():
 def is_v2(path):
     """
     Determines if a given secret path is kv version 1 or 2
+
     CLI Example:
+
     .. code-block:: bash
+
         salt '*' vault.is_v2 "secret/my/secret"
     """
     ret = {"v2": False, "data": path, "metadata": path, "delete": path, "type": None}
@@ -424,14 +452,19 @@ def is_v2(path):
 def _v2_the_path(path, pfilter, ptype="data"):
     """
     Given a path, a filter, and a path type, properly inject 'data' or 'metadata' into the path
+
     CLI Example:
+
     .. code-block:: python
+
         _v2_the_path('dev/secrets/fu/bar', 'dev/secrets', 'data') => 'dev/secrets/data/fu/bar'
     """
     possible_types = ["data", "metadata", "destroy"]
     assert ptype in possible_types
-    msg = "Path {} already contains {} in the right place - saltstack duct tape?".format(
-        path, ptype
+    msg = (
+        "Path {} already contains {} in the right place - saltstack duct tape?".format(
+            path, ptype
+        )
     )
 
     path = path.rstrip("/").lstrip("/")
@@ -459,8 +492,11 @@ def _v2_the_path(path, pfilter, ptype="data"):
 def _get_secret_path_metadata(path):
     """
     Given a path, query vault to determine mount point, type, and version
+
     CLI Example:
+
     .. code-block:: python
+
         _get_secret_path_metadata('dev/secrets/fu/bar')
     """
     ckey = "vault_secret_path_metadata"

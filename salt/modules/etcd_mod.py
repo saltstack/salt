@@ -195,7 +195,6 @@ def ls_(path="/", profile=None, **kwargs):
 
     CLI Example:
 
-
     .. code-block:: bash
 
         salt myminion etcd.ls /path/to/dir/
@@ -215,7 +214,6 @@ def rm_(key, recurse=False, profile=None, **kwargs):
 
     CLI Example:
 
-
     .. code-block:: bash
 
         salt myminion etcd.rm /path/to/key
@@ -234,7 +232,6 @@ def tree(path="/", profile=None, **kwargs):
     Recurse through etcd and return all values.  Returns None on failure.
 
     CLI Example:
-
 
     .. code-block:: bash
 

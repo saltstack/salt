@@ -2,7 +2,7 @@
 Network NTP
 ===========
 
-.. versionadded: 2016.11.0
+.. versionadded:: 2016.11.0
 
 Manage the configuration of NTP peers and servers on the network devices through the NAPALM proxy.
 
@@ -383,7 +383,9 @@ def managed(name, peers=None, servers=None):
         ret.update(
             {
                 "result": None,
-                "comment": "This is in testing mode, the device configuration was not changed!",
+                "comment": (
+                    "This is in testing mode, the device configuration was not changed!"
+                ),
             }
         )
         return ret

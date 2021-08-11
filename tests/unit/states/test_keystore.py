@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Test cases for keystore state
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.states.keystore as keystore
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -42,12 +36,18 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
             "Not After": "2017-08-21 05:26:54",
             "Subject Hash": "97:95:14:4F",
             "Serial Number": "0D:FA",
-            "SHA1 Finger Print": "07:1C:B9:4F:0C:C8:51:4D:02:41:24:70:8E:E8:B2:68:7B:D7:D9:D5",
+            "SHA1 Finger Print": (
+                "07:1C:B9:4F:0C:C8:51:4D:02:41:24:70:8E:E8:B2:68:7B:D7:D9:D5"
+            ),
             "SHA-256 Finger Print": "5F:0F:B5:16:65:81:AA:E6:4A:10:1C:15:83:B1:BE:BE:74:E8:14:A9:1E:7A:8A:14:BA:1E:83:5D:78:F6:E9:E7",
             "MD5 Finger Print": "80:E6:17:AF:78:D8:E4:B8:FB:5F:41:3A:27:1D:CC:F2",
             "Version": 1,
             "Key Size": 512,
-            "Public Key": "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAJv8ZpB5hEK7qxP9K3v43hUS5fGT4waK\ne7ix4Z4mu5UBv+cw7WSFAt0Vaag0sAbsPzU8Hhsrj/qPABvfB8asUwcCAwEAAQ==\n-----END PUBLIC KEY-----\n",
+            "Public Key": (
+                "-----BEGIN PUBLIC"
+                " KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAJv8ZpB5hEK7qxP9K3v43hUS5fGT4waK\ne7ix4Z4mu5UBv+cw7WSFAt0Vaag0sAbsPzU8Hhsrj/qPABvfB8asUwcCAwEAAQ==\n-----END"
+                " PUBLIC KEY-----\n"
+            ),
             "Issuer": {
                 "C": "JP",
                 "organizationName": "Frank4DD",
@@ -140,12 +140,18 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
             "Not After": "2017-08-21 05:26:54",
             "Subject Hash": "97:95:14:4F",
             "Serial Number": "0D:FA",
-            "SHA1 Finger Print": "07:1C:B9:4F:0C:C8:51:4D:02:41:24:70:8E:E8:B2:68:7B:D7:D9:D6",
+            "SHA1 Finger Print": (
+                "07:1C:B9:4F:0C:C8:51:4D:02:41:24:70:8E:E8:B2:68:7B:D7:D9:D6"
+            ),
             "SHA-256 Finger Print": "5F:0F:B5:16:65:81:AA:E6:4A:10:1C:15:83:B1:BE:BE:74:E8:14:A9:1E:7A:8A:14:BA:1E:83:5D:78:F6:E9:E7",
             "MD5 Finger Print": "80:E6:17:AF:78:D8:E4:B8:FB:5F:41:3A:27:1D:CC:F2",
             "Version": 1,
             "Key Size": 512,
-            "Public Key": "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAJv8ZpB5hEK7qxP9K3v43hUS5fGT4waK\ne7ix4Z4mu5UBv+cw7WSFAt0Vaag0sAbsPzU8Hhsrj/qPABvfB8asUwcCAwEAAQ==\n-----END PUBLIC KEY-----\n",
+            "Public Key": (
+                "-----BEGIN PUBLIC"
+                " KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAJv8ZpB5hEK7qxP9K3v43hUS5fGT4waK\ne7ix4Z4mu5UBv+cw7WSFAt0Vaag0sAbsPzU8Hhsrj/qPABvfB8asUwcCAwEAAQ==\n-----END"
+                " PUBLIC KEY-----\n"
+            ),
             "Issuer": {
                 "C": "JP",
                 "organizationName": "Frank4DD",
@@ -304,12 +310,18 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
             "Not After": "2017-08-21 05:26:54",
             "Subject Hash": "97:95:14:4F",
             "Serial Number": "0D:FA",
-            "SHA1 Finger Print": "07:1C:B9:4F:0C:C8:51:4D:02:41:24:70:8E:E8:B2:68:7B:D7:D9:D6",
+            "SHA1 Finger Print": (
+                "07:1C:B9:4F:0C:C8:51:4D:02:41:24:70:8E:E8:B2:68:7B:D7:D9:D6"
+            ),
             "SHA-256 Finger Print": "5F:0F:B5:16:65:81:AA:E6:4A:10:1C:15:83:B1:BE:BE:74:E8:14:A9:1E:7A:8A:14:BA:1E:83:5D:78:F6:E9:E7",
             "MD5 Finger Print": "80:E6:17:AF:78:D8:E4:B8:FB:5F:41:3A:27:1D:CC:F2",
             "Version": 1,
             "Key Size": 512,
-            "Public Key": "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAJv8ZpB5hEK7qxP9K3v43hUS5fGT4waK\ne7ix4Z4mu5UBv+cw7WSFAt0Vaag0sAbsPzU8Hhsrj/qPABvfB8asUwcCAwEAAQ==\n-----END PUBLIC KEY-----\n",
+            "Public Key": (
+                "-----BEGIN PUBLIC"
+                " KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAJv8ZpB5hEK7qxP9K3v43hUS5fGT4waK\ne7ix4Z4mu5UBv+cw7WSFAt0Vaag0sAbsPzU8Hhsrj/qPABvfB8asUwcCAwEAAQ==\n-----END"
+                " PUBLIC KEY-----\n"
+            ),
             "Issuer": {
                 "C": "JP",
                 "organizationName": "Frank4DD",
@@ -354,7 +366,10 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
             "name": name,
             "changes": {},
             "result": None,
-            "comment": "Alias stringhost would have been updated\nAlias oldhost would have been removed",
+            "comment": (
+                "Alias stringhost would have been updated\nAlias oldhost would have"
+                " been removed"
+            ),
         }
         state_return = {
             "name": name,

@@ -1,7 +1,4 @@
-# coding: utf-8
-
 # Python libs
-from __future__ import absolute_import
 
 import logging
 
@@ -13,7 +10,6 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
-# Import 3rd Party libs
 try:
     import twilio
 
@@ -40,10 +36,10 @@ class MockTwilioRestException(Exception):
         self.code = "error code"
         self.msg = "Exception error"
         self.status = "Not send"
-        super(MockTwilioRestException, self).__init__(self.msg)
+        super().__init__(self.msg)
 
 
-class MockMessages(object):
+class MockMessages:
     """
     Mock SMS class
     """
@@ -89,7 +85,7 @@ class MockMessages(object):
         return None
 
 
-class MockSMS(object):
+class MockSMS:
     """
     Mock SMS class
     """
@@ -98,7 +94,7 @@ class MockSMS(object):
         self.messages = MockMessages()
 
 
-class MockTwilioRestClient(object):
+class MockTwilioRestClient:
     """
     Mock TwilioRestClient class
     """
@@ -126,7 +122,7 @@ class TwilioMsgTxtBeaconTestCase(TestCase, LoaderModuleMockMixin):
         config = {}
         ret = twilio_txt_msg.validate(config)
         self.assertEqual(
-            ret, (False, ("Configuration for twilio_txt_msg beacon must be a list."))
+            ret, (False, "Configuration for twilio_txt_msg beacon must be a list.")
         )
 
     def test_validate_empty_config(self):
@@ -139,11 +135,9 @@ class TwilioMsgTxtBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret,
             (
                 False,
-                (
-                    "Configuration for twilio_txt_msg "
-                    "beacon must contain account_sid, "
-                    "auth_token and twilio_number items."
-                ),
+                "Configuration for twilio_txt_msg "
+                "beacon must contain account_sid, "
+                "auth_token and twilio_number items.",
             ),
         )
 
@@ -163,11 +157,9 @@ class TwilioMsgTxtBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret,
             (
                 False,
-                (
-                    "Configuration for twilio_txt_msg "
-                    "beacon must contain account_sid, "
-                    "auth_token and twilio_number items."
-                ),
+                "Configuration for twilio_txt_msg "
+                "beacon must contain account_sid, "
+                "auth_token and twilio_number items.",
             ),
         )
 

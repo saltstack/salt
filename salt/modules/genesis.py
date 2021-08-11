@@ -180,7 +180,10 @@ def bootstrap(
 
     if platform in ("rpm", "yum"):
         _bootstrap_yum(
-            root, pkgs=pkgs, exclude_pkgs=exclude_pkgs, epel_url=epel_url,
+            root,
+            pkgs=pkgs,
+            exclude_pkgs=exclude_pkgs,
+            epel_url=epel_url,
         )
     elif platform == "deb":
         _bootstrap_deb(
@@ -194,7 +197,10 @@ def bootstrap(
         )
     elif platform == "pacman":
         _bootstrap_pacman(
-            root, img_format=img_format, pkgs=pkgs, exclude_pkgs=exclude_pkgs,
+            root,
+            img_format=img_format,
+            pkgs=pkgs,
+            exclude_pkgs=exclude_pkgs,
         )
 
     if img_format != "dir":
@@ -214,7 +220,7 @@ def _mkpart(root, fs_format, fs_opts, mount_dir):
     """
     Make a partition, and make it bootable
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     """
     __salt__["partition.mklabel"](root, "msdos")
     loop1 = __salt__["cmd.run"]("losetup -f")
@@ -254,7 +260,7 @@ def _mkfs(root, fs_format, fs_opts=None):
     """
     Make a filesystem using the appropriate module
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     """
     if fs_opts is None:
         fs_opts = {}
@@ -285,7 +291,11 @@ def _populate_cache(platform, pkg_cache, mount_dir):
 
 
 def _bootstrap_yum(
-    root, pkg_confs="/etc/yum*", pkgs=None, exclude_pkgs=None, epel_url=EPEL_URL,
+    root,
+    pkg_confs="/etc/yum*",
+    pkgs=None,
+    exclude_pkgs=None,
+    epel_url=EPEL_URL,
 ):
     """
     Bootstrap an image using the yum tools
@@ -364,7 +374,13 @@ def _bootstrap_yum(
 
 
 def _bootstrap_deb(
-    root, arch, flavor, repo_url=None, static_qemu=None, pkgs=None, exclude_pkgs=None,
+    root,
+    arch,
+    flavor,
+    repo_url=None,
+    static_qemu=None,
+    pkgs=None,
+    exclude_pkgs=None,
 ):
     """
     Bootstrap an image using the Debian tools
@@ -452,7 +468,11 @@ def _bootstrap_deb(
 
 
 def _bootstrap_pacman(
-    root, pkg_confs="/etc/pacman*", img_format="dir", pkgs=None, exclude_pkgs=None,
+    root,
+    pkg_confs="/etc/pacman*",
+    img_format="dir",
+    pkgs=None,
+    exclude_pkgs=None,
 ):
     """
     Bootstrap an image using the pacman tools
@@ -618,7 +638,10 @@ def _tar(name, root, path=None, compress="bzip2"):
 
     tarfile = "{}/{}.tar.{}".format(path, name, ext)
     out = __salt__["archive.tar"](
-        options="{}pcf".format(compression), tarfile=tarfile, sources=".", dest=root,
+        options="{}pcf".format(compression),
+        tarfile=tarfile,
+        sources=".",
+        dest=root,
     )
 
 
@@ -642,7 +665,9 @@ def _untar(name, dest=None, path=None, compress="bz2"):
 
     tarfile = "{}/{}.tar.{}".format(path, name, ext)
     out = __salt__["archive.tar"](
-        options="{}xf".format(compression), tarfile=tarfile, dest=dest,
+        options="{}xf".format(compression),
+        tarfile=tarfile,
+        dest=dest,
     )
 
 
@@ -672,6 +697,8 @@ def ldd_deps(filename, ret=None):
     dependencies for a file; but it does help.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion genesis.ldd_deps bash
         salt myminion genesis.ldd_deps /bin/bash
@@ -715,10 +742,12 @@ def mksls(fmt, src, dst=None):
 
     CLI Examples:
 
+    .. code-block:: bash
+
         salt <minion> genesis.mksls kickstart /path/to/kickstart.cfg
         salt <minion> genesis.mksls kickstart /path/to/kickstart.cfg /path/to/dest.sls
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
     """
     if fmt == "kickstart":
         return salt.utils.kickstart.mksls(src, dst)

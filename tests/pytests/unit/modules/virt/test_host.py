@@ -1,5 +1,8 @@
+import os.path
+
 import pytest
 import salt.modules.virt as virt
+from tests.support.mock import MagicMock, patch
 
 from .conftest import loader_modules_config
 
@@ -173,7 +176,7 @@ def test_node_devices(make_mock_device):
     ]
     virt.libvirt.openAuth().listAllDevices.return_value = mock_devs
 
-    assert [
+    assert virt.node_devices() == [
         {
             "name": "pci_1002_71c4",
             "caps": "pci",
@@ -216,4 +219,20 @@ def test_node_devices(make_mock_device):
             "state": "down",
             "device name": "pci_0000_02_10_7",
         },
-    ] == virt.node_devices()
+    ]
+
+
+@pytest.mark.parametrize(
+    "dev_kvm, libvirtd", [(True, True), (False, False), (True, False)]
+)
+def test_is_kvm(dev_kvm, libvirtd):
+    """
+    Test the virt._is_kvm_hyper() function
+    """
+    with patch.dict(os.path.__dict__, {"exists": MagicMock(return_value=dev_kvm)}):
+        processes = ["libvirtd"] if libvirtd else []
+        with patch.dict(virt.__grains__, {"ps": MagicMock(return_value="foo")}):
+            with patch.dict(
+                virt.__salt__, {"cmd.run": MagicMock(return_value=processes)}
+            ):
+                assert virt._is_kvm_hyper() == (dev_kvm and libvirtd)

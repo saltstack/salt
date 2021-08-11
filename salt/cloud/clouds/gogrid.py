@@ -270,7 +270,9 @@ def list_nodes_select(call=None):
         salt-cloud -S
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -340,6 +342,7 @@ def list_public_ips(kwargs=None, call=None):
     List all available public IPs.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt-cloud -f list_public_ips <provider>
@@ -347,6 +350,7 @@ def list_public_ips(kwargs=None, call=None):
     To list unavailable (assigned) IPs, use:
 
     CLI Example:
+
     .. code-block:: bash
 
         salt-cloud -f list_public_ips <provider> state=assigned
@@ -407,7 +411,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](

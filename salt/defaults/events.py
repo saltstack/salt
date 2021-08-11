@@ -4,7 +4,7 @@ Event constants used by listeners and servers, to be imported elsewhere in Salt 
 Do NOT, import any salt modules (salt.utils, salt.config, etc.) into this file,
 as this may result in circular imports.
 
-.. versionadded:: Neon
+.. versionadded:: 3000
 """
 
 # Constants for events on the minion bus

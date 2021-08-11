@@ -124,6 +124,8 @@ def get_alert_config(
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion telemetry.get_alert_config rs-ds033197 currentConnections profile=telemetry
         salt myminion telemetry.get_alert_config rs-ds033197 profile=telemetry
     """
@@ -173,6 +175,8 @@ def get_notification_channel_id(notify_channel, profile="telemetry"):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion telemetry.get_notification_channel_id userx@company.com profile=telemetry
     """
 
@@ -197,7 +201,8 @@ def get_notification_channel_id(notify_channel, profile="telemetry"):
         )
         if response.status_code == 200:
             log.info(
-                "Successfully created EscalationPolicy %s with EmailNotificationChannel %s",
+                "Successfully created EscalationPolicy %s with"
+                " EmailNotificationChannel %s",
                 data.get("name"),
                 notify_channel,
             )
@@ -218,6 +223,8 @@ def get_alarms(deployment_id, profile="telemetry"):
     Returns dictionary of alarm information
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion telemetry.get_alarms rs-ds033197 profile=telemetry
 
@@ -258,6 +265,8 @@ def create_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
     Returns (bool success, str message) tuple.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion telemetry.create_alarm rs-ds033197 {} profile=telemetry
 
@@ -304,7 +313,7 @@ def create_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
         _update_cache(deployment_id, metric_name, response.json())
     else:
         log.error(
-            "Failed to create alarm on metric: %s in " "deployment %s: payload: %s",
+            "Failed to create alarm on metric: %s in deployment %s: payload: %s",
             metric_name,
             deployment_id,
             salt.utils.json.dumps(post_body),
@@ -320,6 +329,8 @@ def update_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
     Returns (bool success, str message) tuple.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion telemetry.update_alarm rs-ds033197 {} profile=telemetry
 
@@ -374,8 +385,7 @@ def update_alarm(deployment_id, metric_name, data, api_key=None, profile="teleme
         return True, response.json()
 
     err_msg = (
-        "Failed to create alarm on metric: {} in deployment: {} "
-        "payload: {}".format(
+        "Failed to create alarm on metric: {} in deployment: {} payload: {}".format(
             salt.utils.stringutils.to_unicode(metric_name),
             salt.utils.stringutils.to_unicode(deployment_id),
             salt.utils.json.dumps(post_body),
@@ -394,6 +404,8 @@ def delete_alarms(
     Returns (bool success, str message) tuple.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion telemetry.delete_alarms rs-ds033197 profile=telemetry
 

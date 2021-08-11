@@ -94,8 +94,9 @@ def _check_users(users):
             or 0 <= user_details.get("level") <= 15
         ):
             # warn!
-            messg += "Level must be a integer between 0 and 15 for username {user}. Will assume 0.\n".format(
-                user=user
+            messg += (
+                "Level must be a integer between 0 and 15 for username {user}. Will"
+                " assume 0.\n".format(user=user)
             )
 
     return valid, messg
@@ -201,6 +202,8 @@ def managed(name, users=None, defaults=None):
                                 edb+BAc3aww0naeWpogjSt+We7y2N
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt 'edge01.kix01' state.sls router.users
 

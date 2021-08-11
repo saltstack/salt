@@ -87,6 +87,8 @@ def show_master(path=MASTER_CF):
 
     CLI Examples:
 
+    .. code-block:: bash
+
         salt <minion> postfix.show_master
         salt <minion> postfix.show_master path=/path/to/master.cf
     """
@@ -126,6 +128,8 @@ def set_master(
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt <minion> postfix.set_master smtp inet n y n n 100 smtpd
     """
     conf_dict, conf_list = _parse_master(path)
@@ -133,7 +137,14 @@ def set_master(
     new_conf = []
     dict_key = "{} {}".format(service, conn_type)
     new_line = _format_master(
-        service, conn_type, private, unpriv, chroot, wakeup, maxproc, command,
+        service,
+        conn_type,
+        private,
+        unpriv,
+        chroot,
+        wakeup,
+        maxproc,
+        command,
     )
     for line in conf_list:
         if isinstance(line, dict):
@@ -186,7 +197,14 @@ def _format_master(
         maxproc = "-"
 
     conf_line = "{:9s} {:5s} {:7s} {:7s} {:7s} {:7s} {:7s} {}".format(
-        service, conn_type, private, unpriv, chroot, wakeup, maxproc, command,
+        service,
+        conn_type,
+        private,
+        unpriv,
+        chroot,
+        wakeup,
+        maxproc,
+        command,
     )
     # print(conf_line)
     return conf_line
@@ -250,6 +268,8 @@ def show_main(path=MAIN_CF):
 
     CLI Examples:
 
+    .. code-block:: bash
+
         salt <minion> postfix.show_main
         salt <minion> postfix.show_main path=/path/to/main.cf
     """
@@ -263,6 +283,8 @@ def set_main(key, value, path=MAIN_CF):
     exist, it will be appended to the end.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt <minion> postfix.set_main mailq_path /usr/bin/mailq
     """

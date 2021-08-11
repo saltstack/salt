@@ -10,7 +10,7 @@
 
     Run the state as below
 
-    ..code-block:: yaml
+    .. code-block:: yaml
 
         salt-proxy-configure:
             salt_proxy.configure_proxy:
@@ -43,7 +43,7 @@ def configure_proxy(name, proxyname="p8000", start=True):
 
     Example:
 
-    ..code-block:: yaml
+    .. code-block:: yaml
 
         salt-proxy-configure:
             salt_proxy.configure_proxy:

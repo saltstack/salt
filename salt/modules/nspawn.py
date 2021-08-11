@@ -268,8 +268,9 @@ def _ensure_systemd(version):
 
     if installed < version:
         raise CommandExecutionError(
-            "This function requires systemd >= {} "
-            "(Detected version: {}).".format(version, installed)
+            "This function requires systemd >= {} (Detected version: {}).".format(
+                version, installed
+            )
         )
 
 
@@ -464,7 +465,6 @@ def run_stdout(
         environment variable names can be passed, and those environment
         variables will be kept.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -531,7 +531,6 @@ def run_stderr(
         environment variable names can be passed, and those environment
         variables will be kept.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -597,7 +596,6 @@ def retcode(
         will be kept. Otherwise, a comma-separated list (or Python list) of
         environment variable names can be passed, and those environment
         variables will be kept.
-
 
     CLI Example:
 
@@ -670,7 +668,6 @@ def run_all(
         will be kept. Otherwise, a comma-separated list (or Python list) of
         environment variable names can be passed, and those environment
         variables will be kept.
-
 
     CLI Example:
 
@@ -751,7 +748,9 @@ def bootstrap_salt(
     minion is running as will be created, otherwise the needed bootstrapping
     tools will need to be available on the host.
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' nspawn.bootstrap_salt arch1
     """

@@ -364,10 +364,16 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         expected = {
             "changes": {
                 "owner": "Users",
-                "perms": {
-                    "Backup Operators": {"grant": "read", "deny": ["delete"]},
+                "grant_perms": {"Backup Operators": {"permissions": "read"}},
+                "deny_perms": {
+                    "Backup Operators": {"permissions": ["delete"]},
                     "NETWORK SERVICE": {
-                        "deny": ["delete", "set_value", "write_dac", "write_owner"]
+                        "permissions": [
+                            "delete",
+                            "set_value",
+                            "write_dac",
+                            "write_owner",
+                        ]
                     },
                 },
             },
@@ -453,10 +459,16 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         expected = {
             "changes": {
                 "owner": "Users",
-                "perms": {
-                    "Backup Operators": {"grant": "read", "deny": ["delete"]},
+                "grant_perms": {"Backup Operators": {"permissions": "read"}},
+                "deny_perms": {
+                    "Backup Operators": {"permissions": ["delete"]},
                     "NETWORK SERVICE": {
-                        "deny": ["delete", "set_value", "write_dac", "write_owner"]
+                        "permissions": [
+                            "delete",
+                            "set_value",
+                            "write_dac",
+                            "write_owner",
+                        ]
                     },
                 },
             },
@@ -765,10 +777,11 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
         expected = {
             "changes": {
                 "owner": "Users",
-                "perms": {
-                    "Backup Operators": {"grant": "read", "deny": ["delete"]},
+                "grant_perms": {"Backup Operators": {"permissions": "read"}},
+                "deny_perms": {
+                    "Backup Operators": {"permissions": ["delete"]},
                     "NETWORK SERVICE": {
-                        "deny": [
+                        "permissions": [
                             "delete",
                             "change_permissions",
                             "write_attributes",
@@ -859,10 +872,16 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
         expected = {
             "changes": {
                 "owner": "Users",
-                "perms": {
-                    "Backup Operators": {"grant": "read", "deny": ["delete"]},
+                "grant_perms": {"Backup Operators": {"permissions": "read"}},
+                "deny_perms": {
+                    "Backup Operators": {"permissions": ["delete"]},
                     "NETWORK SERVICE": {
-                        "deny": ["delete", "set_value", "write_dac", "write_owner"]
+                        "permissions": [
+                            "delete",
+                            "set_value",
+                            "write_dac",
+                            "write_owner",
+                        ]
                     },
                 },
             },

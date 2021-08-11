@@ -68,7 +68,7 @@ from salt.utils.debug import (
 )
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
-from salt.utils.zeromq import ZMQ_VERSION_INFO, ZMQDefaultLoop, install_zmq, zmq
+from salt.utils.zeromq import ZMQ_VERSION_INFO, zmq
 
 try:
     import resource
@@ -309,7 +309,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             self.rotate = now
             if self.opts.get("ping_on_rotate"):
                 # Ping all minions to get them to pick up the new key
-                log.debug("Pinging all connected minions " "due to key rotation")
+                log.debug("Pinging all connected minions due to key rotation")
                 salt.utils.master.ping_all_connected_minions(self.opts)
 
     def handle_git_pillar(self):
@@ -376,7 +376,8 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self.__init__(
-            state["opts"], log_queue=state["log_queue"],
+            state["opts"],
+            log_queue=state["log_queue"],
         )
 
     def __getstate__(self):
@@ -438,52 +439,53 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
                     (backend, update_func)
                 ] = None
 
-    def update_fileserver(self, interval, backends):
+    @staticmethod
+    def _do_update(backends):
+        """
+        Perform fileserver updates
+        """
+        for backend, update_args in backends.items():
+            backend_name, update_func = backend
+            try:
+                if update_args:
+                    log.debug(
+                        "Updating %s fileserver cache for the following targets: %s",
+                        backend_name,
+                        update_args,
+                    )
+                    args = (update_args,)
+                else:
+                    log.debug("Updating %s fileserver cache", backend_name)
+                    args = ()
+
+                update_func(*args)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.exception(
+                    "Uncaught exception while updating %s fileserver cache",
+                    backend_name,
+                )
+
+    @classmethod
+    def update(cls, interval, backends, timeout=300):
         """
         Threading target which handles all updates for a given wait interval
         """
-
-        def _do_update():
+        start = time.time()
+        condition = threading.Condition()
+        while time.time() - start < timeout:
             log.debug(
-                "Performing fileserver updates for items with an update "
-                "interval of %d",
+                "Performing fileserver updates for items with an update interval of %d",
                 interval,
             )
-            for backend, update_args in backends.items():
-                backend_name, update_func = backend
-                try:
-                    if update_args:
-                        log.debug(
-                            "Updating %s fileserver cache for the following "
-                            "targets: %s",
-                            backend_name,
-                            update_args,
-                        )
-                        args = (update_args,)
-                    else:
-                        log.debug("Updating %s fileserver cache", backend_name)
-                        args = ()
-
-                    update_func(*args)
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.exception(
-                        "Uncaught exception while updating %s fileserver " "cache",
-                        backend_name,
-                    )
-
+            cls._do_update(backends)
             log.debug(
                 "Completed fileserver updates for items with an update "
                 "interval of %d, waiting %d seconds",
                 interval,
                 interval,
             )
-
-        condition = threading.Condition()
-        _do_update()
-        while True:
             with condition:
                 condition.wait(interval)
-            _do_update()
 
     def run(self):
         """
@@ -506,13 +508,16 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
 
         for interval in self.buckets:
             self.update_threads[interval] = threading.Thread(
-                target=self.update_fileserver, args=(interval, self.buckets[interval]),
+                target=self.update,
+                args=(interval, self.buckets[interval]),
             )
             self.update_threads[interval].start()
 
-        # Keep the process alive
-        while True:
-            time.sleep(60)
+        while self.update_threads:
+            for name, thread in list(self.update_threads.items()):
+                thread.join(1)
+                if not thread.is_alive():
+                    self.update_threads.pop(name)
 
 
 class Master(SMaster):
@@ -796,7 +801,8 @@ class Master(SMaster):
                     log.error("Unable to load SSDP: asynchronous IO is not available.")
                     if sys.version_info.major == 2:
                         log.error(
-                            'You are using Python 2, please install "trollius" module to enable SSDP discovery.'
+                            'You are using Python 2, please install "trollius" module'
+                            " to enable SSDP discovery."
                         )
 
         # Install the SIGINT/SIGTERM handlers if not done so far
@@ -1019,9 +1025,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         Bind to the local port
         """
-        # using ZMQIOLoop since we *might* need zmq in there
-        install_zmq()
-        self.io_loop = ZMQDefaultLoop()
+        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
         self.io_loop.make_current()
         for req_channel in self.req_channels:
             req_channel.post_fork(
@@ -1153,7 +1157,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                     os.nice(-1 * self.opts["req_server_niceness"])
                 else:
                     log.error(
-                        "%s unable to decrement niceness for MWorker, not running as root",
+                        "%s unable to decrement niceness for MWorker, not running as"
+                        " root",
                         self.name,
                     )
                     enforce_mworker_niceness = False
@@ -1167,7 +1172,10 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                 )
                 os.nice(self.opts["mworker_niceness"])
 
-        self.clear_funcs = ClearFuncs(self.opts, self.key,)
+        self.clear_funcs = ClearFuncs(
+            self.opts,
+            self.key,
+        )
         self.aes_funcs = AESFuncs(self.opts)
         salt.utils.crypt.reinit_crypto()
         self.__bind()
@@ -1204,7 +1212,6 @@ class AESFuncs(TransportMethods):
     expose_methods = (
         "verify_minion",
         "_master_tops",
-        "_ext_nodes",
         "_master_opts",
         "_mine_get",
         "_mine",
@@ -1428,9 +1435,6 @@ class AESFuncs(TransportMethods):
         if load is False:
             return {}
         return self.masterapi._master_tops(load, skip_verify=True)
-
-    # Needed so older minions can request master_tops
-    _ext_nodes = _master_tops
 
     def _master_opts(self, load):
         """
@@ -1728,7 +1732,8 @@ class AESFuncs(TransportMethods):
                     return False
                 else:
                     log.info(
-                        "But 'drop_message_signature_fail' is disabled, so message is still accepted."
+                        "But 'drop_message_signature_fail' is disabled, so message is"
+                        " still accepted."
                     )
             load["sig"] = sig
 
@@ -2039,8 +2044,10 @@ class ClearFuncs(TransportMethods):
                 return {
                     "error": {
                         "name": err_name,
-                        "message": 'Authentication failure of type "{}" occurred for '
-                        "user {}.".format(auth_type, username),
+                        "message": (
+                            'Authentication failure of type "{}" occurred for '
+                            "user {}.".format(auth_type, username)
+                        ),
                     }
                 }
             elif isinstance(runner_check, dict) and "error" in runner_check:
@@ -2063,7 +2070,7 @@ class ClearFuncs(TransportMethods):
             fun = clear_load.pop("fun")
             runner_client = salt.runner.RunnerClient(self.opts)
             return runner_client.asynchronous(
-                fun, clear_load.get("kwarg", {}), username
+                fun, clear_load.get("kwarg", {}), username, local=True
             )
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Exception occurred while introspecting %s: %s", fun, exc)
@@ -2102,8 +2109,10 @@ class ClearFuncs(TransportMethods):
                 return {
                     "error": {
                         "name": err_name,
-                        "message": 'Authentication failure of type "{}" occurred for '
-                        "user {}.".format(auth_type, username),
+                        "message": (
+                            'Authentication failure of type "{}" occurred for '
+                            "user {}.".format(auth_type, username)
+                        ),
                     }
                 }
             elif isinstance(wheel_check, dict) and "error" in wheel_check:
@@ -2142,7 +2151,9 @@ class ClearFuncs(TransportMethods):
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Exception occurred while introspecting %s: %s", fun, exc)
             data["return"] = "Exception occurred in wheel {}: {}: {}".format(
-                fun, exc.__class__.__name__, exc,
+                fun,
+                exc.__class__.__name__,
+                exc,
             )
             data["success"] = False
             self.event.fire_event(data, tagify([jid, "ret"], "wheel"))
@@ -2279,8 +2290,10 @@ class ClearFuncs(TransportMethods):
                     "load": {
                         "jid": None,
                         "minions": minions,
-                        "error": "Master could not resolve minions for target {}".format(
-                            clear_load["tgt"]
+                        "error": (
+                            "Master could not resolve minions for target {}".format(
+                                clear_load["tgt"]
+                            )
                         ),
                     },
                 }

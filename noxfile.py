@@ -107,7 +107,7 @@ def _get_session_python_version_info(session):
             session._runner.global_config.install_only = False
             session_py_version = session.run(
                 "python",
-                "-c"
+                "-c",
                 'import sys; sys.stdout.write("{}.{}.{}".format(*sys.version_info))',
                 silent=True,
                 log=False,
@@ -133,7 +133,7 @@ def _get_session_python_site_packages_dir(session):
             session._runner.global_config.install_only = False
             site_packages_dir = session.run(
                 "python",
-                "-c"
+                "-c",
                 "import sys; from distutils.sysconfig import get_python_lib; sys.stdout.write(get_python_lib())",
                 silent=True,
                 log=False,
@@ -181,7 +181,8 @@ def _install_system_packages(session):
                 shutil.copyfile(src, dst)
 
 
-def _get_pip_requirements_file(session, transport, crypto=None):
+def _get_pip_requirements_file(session, transport, crypto=None, requirements_type="ci"):
+    assert requirements_type in ("ci", "pkg")
     pydir = _get_pydir(session)
 
     if IS_WINDOWS:
@@ -189,36 +190,40 @@ def _get_pip_requirements_file(session, transport, crypto=None):
             _requirements_file = os.path.join(
                 "requirements",
                 "static",
-                "ci",
+                requirements_type,
                 pydir,
                 "{}-windows.txt".format(transport),
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
             _requirements_file = os.path.join(
-                "requirements", "static", "ci", pydir, "windows.txt"
+                "requirements", "static", requirements_type, pydir, "windows.txt"
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", "ci", pydir, "windows-crypto.txt"
+            "requirements", "static", requirements_type, pydir, "windows-crypto.txt"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
     elif IS_DARWIN:
         if crypto is None:
             _requirements_file = os.path.join(
-                "requirements", "static", "ci", pydir, "{}-darwin.txt".format(transport)
+                "requirements",
+                "static",
+                requirements_type,
+                pydir,
+                "{}-darwin.txt".format(transport),
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
             _requirements_file = os.path.join(
-                "requirements", "static", "ci", pydir, "darwin.txt"
+                "requirements", "static", requirements_type, pydir, "darwin.txt"
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", "ci", pydir, "darwin-crypto.txt"
+            "requirements", "static", requirements_type, pydir, "darwin-crypto.txt"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
@@ -227,19 +232,19 @@ def _get_pip_requirements_file(session, transport, crypto=None):
             _requirements_file = os.path.join(
                 "requirements",
                 "static",
-                "ci",
+                requirements_type,
                 pydir,
                 "{}-freebsd.txt".format(transport),
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
             _requirements_file = os.path.join(
-                "requirements", "static", "ci", pydir, "freebsd.txt"
+                "requirements", "static", requirements_type, pydir, "freebsd.txt"
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", "ci", pydir, "freebsd-crypto.txt"
+            "requirements", "static", requirements_type, pydir, "freebsd-crypto.txt"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
@@ -247,36 +252,58 @@ def _get_pip_requirements_file(session, transport, crypto=None):
         _install_system_packages(session)
         if crypto is None:
             _requirements_file = os.path.join(
-                "requirements", "static", "ci", pydir, "{}-linux.txt".format(transport)
+                "requirements",
+                "static",
+                requirements_type,
+                pydir,
+                "{}-linux.txt".format(transport),
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
             _requirements_file = os.path.join(
-                "requirements", "static", "ci", pydir, "linux.txt"
+                "requirements", "static", requirements_type, pydir, "linux.txt"
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", "ci", pydir, "linux-crypto.txt"
+            "requirements", "static", requirements_type, pydir, "linux-crypto.txt"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
 
 
-def _install_requirements(session, transport, *extra_requirements):
+def _upgrade_pip_setuptools_and_wheel(session):
     if SKIP_REQUIREMENTS_INSTALL:
         session.log(
             "Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ"
         )
+        return False
+
+    install_command = [
+        "python",
+        "-m",
+        "pip",
+        "install",
+        "--progress-bar=off",
+        "-U",
+        "pip>=20.2.4,<21.2",
+        "setuptools!=50.*,!=51.*,!=52.*",
+        "wheel",
+    ]
+    session.run(*install_command, silent=PIP_INSTALL_SILENT)
+    return True
+
+
+def _install_requirements(
+    session, transport, *extra_requirements, requirements_type="ci"
+):
+    if not _upgrade_pip_setuptools_and_wheel(session):
         return
 
-    # setuptools 50.0.0 is broken
-    # https://github.com/pypa/setuptools/issues?q=is%3Aissue+setuptools+50+
-    install_command = ["--progress-bar=off", "-U", "setuptools<50.0.0"]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
-
     # Install requirements
-    requirements_file = _get_pip_requirements_file(session, transport)
+    requirements_file = _get_pip_requirements_file(
+        session, transport, requirements_type=requirements_type
+    )
     install_command = ["--progress-bar=off", "-r", requirements_file]
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
@@ -287,8 +314,8 @@ def _install_requirements(session, transport, *extra_requirements):
 
     if EXTRA_REQUIREMENTS_INSTALL:
         session.log(
-            "Installing the following extra requirements because the EXTRA_REQUIREMENTS_INSTALL environment variable "
-            "was set: %s",
+            "Installing the following extra requirements because the"
+            " EXTRA_REQUIREMENTS_INSTALL environment variable was set: %s",
             EXTRA_REQUIREMENTS_INSTALL,
         )
         # We pass --constraint in this step because in case any of these extra dependencies has a requirement
@@ -685,13 +712,14 @@ def pytest_cloud(session, coverage):
     pytest cloud tests session
     """
     # Install requirements
-    _install_requirements(session, "zeromq")
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "cloud.txt"
-    )
+    if _upgrade_pip_setuptools_and_wheel(session):
+        _install_requirements(session, "zeromq")
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "cloud.txt"
+        )
 
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
         "--rootdir",
@@ -715,9 +743,14 @@ def pytest_tornado(session, coverage):
     pytest tornado tests session
     """
     # Install requirements
-    _install_requirements(session, "zeromq")
-    session.install("--progress-bar=off", "tornado==5.0.2", silent=PIP_INSTALL_SILENT)
-    session.install("--progress-bar=off", "pyzmq==17.0.0", silent=PIP_INSTALL_SILENT)
+    if _upgrade_pip_setuptools_and_wheel(session):
+        _install_requirements(session, "zeromq")
+        session.install(
+            "--progress-bar=off", "tornado==5.0.2", silent=PIP_INSTALL_SILENT
+        )
+        session.install(
+            "--progress-bar=off", "pyzmq==17.0.0", silent=PIP_INSTALL_SILENT
+        )
 
     cmd_args = [
         "--rootdir",
@@ -814,12 +847,13 @@ class Tee:
 
 
 def _lint(session, rcfile, flags, paths, tee_output=True):
-    _install_requirements(session, "zeromq")
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "lint.txt"
-    )
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    if _upgrade_pip_setuptools_and_wheel(session):
+        _install_requirements(session, "zeromq")
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "lint.txt"
+        )
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     if tee_output:
         session.run("pylint", "--version")
@@ -979,12 +1013,12 @@ def docs_html(session, compress, clean):
     """
     Build Salt's HTML Documentation
     """
-    pydir = _get_pydir(session)
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "docs.txt"
-    )
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    if _upgrade_pip_setuptools_and_wheel(session):
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "docs.txt"
+        )
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
     os.chdir("doc/")
     if clean:
         session.run("make", "clean", external=True)
@@ -1002,12 +1036,12 @@ def docs_man(session, compress, update, clean):
     """
     Build Salt's Manpages Documentation
     """
-    pydir = _get_pydir(session)
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "docs.txt"
-    )
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    if _upgrade_pip_setuptools_and_wheel(session):
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "docs.txt"
+        )
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
     os.chdir("doc/")
     if clean:
         session.run("make", "clean", external=True)
@@ -1020,15 +1054,17 @@ def docs_man(session, compress, update, clean):
     os.chdir("..")
 
 
-def _invoke(session):
+@nox.session(name="invoke", python="3")
+def invoke(session):
     """
     Run invoke tasks
     """
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "invoke.txt"
-    )
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    if _upgrade_pip_setuptools_and_wheel(session):
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "invoke.txt"
+        )
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
     cmd = ["inv"]
     files = []
 
@@ -1047,64 +1083,18 @@ def _invoke(session):
     session.run(*cmd)
 
 
-@nox.session(name="invoke", python="3")
-def invoke(session):
-    """
-    Run an invoke target
-    """
-    _invoke(session)
-
-
-@nox.session(name="invoke-pre-commit", python=False)
-def invoke_pre_commit(session):
-    """
-    DO NOT CALL THIS NOX SESSION DIRECTLY
-
-    This session is called from a pre-commit hook
-    """
-    if "VIRTUAL_ENV" not in os.environ:
-        session.error(
-            "This should be running from within a virtualenv and "
-            "'VIRTUAL_ENV' was not found as an environment variable."
-        )
-    if "pre-commit" not in os.environ["VIRTUAL_ENV"]:
-        session.error(
-            "This should be running from within a pre-commit virtualenv and "
-            "'VIRTUAL_ENV'({}) does not appear to be a pre-commit virtualenv.".format(
-                os.environ["VIRTUAL_ENV"]
-            )
-        )
-    from nox.virtualenv import VirtualEnv
-
-    # Let's patch nox to make it run inside the pre-commit virtualenv
-    try:
-        session._runner.venv = VirtualEnv(  # pylint: disable=unexpected-keyword-arg
-            os.environ["VIRTUAL_ENV"],
-            interpreter=session._runner.func.python,
-            reuse_existing=True,
-            venv=True,
-        )
-    except TypeError:
-        # This is still nox-py2
-        session._runner.venv = VirtualEnv(
-            os.environ["VIRTUAL_ENV"],
-            interpreter=session._runner.func.python,
-            reuse_existing=True,
-        )
-    _invoke(session)
-
-
 @nox.session(name="changelog", python="3")
 @nox.parametrize("draft", [False, True])
 def changelog(session, draft):
     """
     Generate salt's changelog
     """
-    requirements_file = os.path.join(
-        "requirements", "static", "ci", _get_pydir(session), "changelog.txt"
-    )
-    install_command = ["--progress-bar=off", "-r", requirements_file]
-    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    if _upgrade_pip_setuptools_and_wheel(session):
+        requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "changelog.txt"
+        )
+        install_command = ["--progress-bar=off", "-r", requirements_file]
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     town_cmd = ["towncrier", "--version={}".format(session.posargs[0])]
     if draft:

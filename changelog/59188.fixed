@@ -1,1 +1,0 @@
-virt.update doesn't update the definition if efi=True and a loader is already set

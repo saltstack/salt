@@ -127,6 +127,11 @@ Ethernet Interface
         - dns:
           - 8.8.8.8
           - 8.8.4.4
+        - channels:
+            rx: 4
+            tx: 4
+            other: 4
+            combined: 4
 
 Ranged Interfaces (RHEL/CentOS Only)
 ************************************
@@ -464,7 +469,7 @@ def managed(name, enabled=True, **kwargs):
     type : eth
         Type of interface and configuration
 
-        .. versionchanged:: Sodium?
+        .. versionchanged:: 3002
 
     enabled
         Designates the state of this interface.
@@ -549,9 +554,10 @@ def managed(name, enabled=True, **kwargs):
                 elif old != new:
                     diff = difflib.unified_diff(old, new, lineterm="")
                     ret["result"] = None
-                    ret["comment"] = (
-                        "Bond interface {} is set to be "
-                        "updated:\n{}".format(name, "\n".join(diff))
+                    ret[
+                        "comment"
+                    ] = "Bond interface {} is set to be updated:\n{}".format(
+                        name, "\n".join(diff)
                     )
             else:
                 if not old and new:
@@ -714,9 +720,10 @@ def routes(name, **kwargs):
             elif old != new:
                 diff = difflib.unified_diff(old, new, lineterm="")
                 ret["result"] = None
-                ret["comment"] = (
-                    "Interface {} routes are set to be "
-                    "updated:\n{}".format(name, "\n".join(diff))
+                ret[
+                    "comment"
+                ] = "Interface {} routes are set to be updated:\n{}".format(
+                    name, "\n".join(diff)
                 )
                 return ret
         if not old and new:
@@ -778,9 +785,10 @@ def system(name, **kwargs):
             elif old != new:
                 diff = difflib.unified_diff(old, new, lineterm="")
                 ret["result"] = None
-                ret["comment"] = (
-                    "Global network settings are set to be "
-                    "updated:\n{}".format("\n".join(diff))
+                ret[
+                    "comment"
+                ] = "Global network settings are set to be updated:\n{}".format(
+                    "\n".join(diff)
                 )
                 return ret
         if not old and new:

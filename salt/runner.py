@@ -2,7 +2,6 @@
 Execute salt convenience routines
 """
 
-
 import logging
 import os
 

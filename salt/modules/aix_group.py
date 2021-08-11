@@ -29,8 +29,7 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The aix_group execution module failed to load: "
-        "only available on AIX systems.",
+        "The aix_group execution module failed to load: only available on AIX systems.",
     )
 
 
@@ -188,6 +187,8 @@ def members(name, members_list, root=None):
     Replaces members of the group with a provided list.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt '*' group.members foo 'user1,user2,user3,...'
 

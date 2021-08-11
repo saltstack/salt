@@ -53,7 +53,7 @@ def test_man_pages(virtualenv, src_dir):
     }
 
     with virtualenv as venv:
-        rootdir = os.path.join(venv.venv_dir, "installed")
+        rootdir = str(venv.venv_dir / "installed")
         venv.run(
             venv.venv_python,
             "setup.py",

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for low-level interaction with JbossAS7 through CLI.
 
@@ -36,19 +35,13 @@ Example:
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import pprint
 import re
 import time
 
-# Import Salt libs
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -117,7 +110,7 @@ def run_operation(jboss_config, operation, fail_on_error=True, retries=1):
             cli_result["success"] = cli_result["outcome"] == "success"
         else:
             raise CommandExecutionError(
-                "Operation has returned unparseable output: {0}".format(
+                "Operation has returned unparseable output: {}".format(
                     cli_command_result["stdout"]
                 )
             )
@@ -160,13 +153,13 @@ def _call_cli(jboss_config, command, retries=1):
     command_segments = [
         jboss_config["cli_path"],
         "--connect",
-        '--controller="{0}"'.format(jboss_config["controller"]),
+        '--controller="{}"'.format(jboss_config["controller"]),
     ]
-    if "cli_user" in six.iterkeys(jboss_config):
-        command_segments.append('--user="{0}"'.format(jboss_config["cli_user"]))
-    if "cli_password" in six.iterkeys(jboss_config):
-        command_segments.append('--password="{0}"'.format(jboss_config["cli_password"]))
-    command_segments.append('--command="{0}"'.format(__escape_command(command)))
+    if "cli_user" in jboss_config.keys():
+        command_segments.append('--user="{}"'.format(jboss_config["cli_user"]))
+    if "cli_password" in jboss_config.keys():
+        command_segments.append('--password="{}"'.format(jboss_config["cli_password"]))
+    command_segments.append('--command="{}"'.format(__escape_command(command)))
     cli_script = " ".join(command_segments)
 
     cli_command_result = __salt__["cmd.run_all"](cli_script)
@@ -178,7 +171,8 @@ def _call_cli(jboss_config, command, retries=1):
 
     if cli_command_result["retcode"] == 127:
         raise CommandExecutionError(
-            "Could not execute jboss-cli.sh script. Have you specified server_dir variable correctly?\nCurrent CLI path: {cli_path}. ".format(
+            "Could not execute jboss-cli.sh script. Have you specified server_dir"
+            " variable correctly?\nCurrent CLI path: {cli_path}. ".format(
                 cli_path=jboss_config["cli_path"]
             )
         )
@@ -188,9 +182,9 @@ def _call_cli(jboss_config, command, retries=1):
         and "Unable to authenticate against controller" in cli_command_result["stderr"]
     ):
         raise CommandExecutionError(
-            "Could not authenticate against controller, please check username and password for the management console. Err code: {retcode}, stdout: {stdout}, stderr: {stderr}".format(
-                **cli_command_result
-            )
+            "Could not authenticate against controller, please check username and"
+            " password for the management console. Err code: {retcode}, stdout:"
+            " {stdout}, stderr: {stderr}".format(**cli_command_result)
         )
 
     # TODO add WFLYCTL code
@@ -343,7 +337,7 @@ def __process_tokens_internal(tokens, start_at=0):
             log.debug("    TYPE: EXPRESSION")
             is_expression = True
         else:
-            raise CommandExecutionError("Unknown token! Token: {0}".format(token))
+            raise CommandExecutionError("Unknown token! Token: {}".format(token))
 
         token_no = token_no + 1
 
@@ -388,12 +382,7 @@ def __is_long(token):
 
 
 def __get_long(token):
-    if six.PY2:
-        # pylint: disable=incompatible-py3-code,undefined-variable
-        return long(token[0:-1])
-        # pylint: enable=incompatible-py3-code,undefined-variable
-    else:
-        return int(token[0:-1])
+    return int(token[0:-1])
 
 
 def __is_datatype(token):

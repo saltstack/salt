@@ -30,7 +30,8 @@ def __virtual__():
 
     return (
         False,
-        "The vmm execution module cannot be loaded: either the system is not OpenBSD or the vmctl binary was not found",
+        "The vmm execution module cannot be loaded: either the system is not OpenBSD or"
+        " the vmctl binary was not found",
     )
 
 
@@ -137,7 +138,6 @@ def reset(all=False, vms=False, switches=False):
 
     vms:
         Reset and terminate all VMs.
-
 
     CLI Example:
 

@@ -1,7 +1,7 @@
 """
 Utilities for managing YAST
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 """
 
 import xml.etree.ElementTree as ET

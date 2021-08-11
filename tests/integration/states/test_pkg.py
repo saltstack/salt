@@ -265,7 +265,9 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         This is a destructive test as it installs a package
         """
         if not self._PKG_DOT_TARGETS:
-            self.skipTest('No packages with "." in their name have been specified',)
+            self.skipTest(
+                'No packages with "." in their name have been specified',
+            )
 
         target = self._PKG_DOT_TARGETS[0]
 
@@ -422,11 +424,21 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # needs to not be installed before we run the states below
         self.assertFalse(version)
 
-        ret = self.run_state("pkg.installed", name=target, version="*", refresh=False,)
+        ret = self.run_state(
+            "pkg.installed",
+            name=target,
+            version="*",
+            refresh=False,
+        )
         self.assertSaltTrueReturn(ret)
 
         # Repeat state, should pass
-        ret = self.run_state("pkg.installed", name=target, version="*", refresh=False,)
+        ret = self.run_state(
+            "pkg.installed",
+            name=target,
+            version="*",
+            refresh=False,
+        )
 
         expected_comment = (
             "All specified packages are already installed and are at the "
@@ -437,7 +449,10 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Repeat one more time with unavailable version, test should fail
         ret = self.run_state(
-            "pkg.installed", name=target, version="93413*", refresh=False,
+            "pkg.installed",
+            name=target,
+            version="93413*",
+            refresh=False,
         )
         self.assertSaltFalseReturn(ret)
 
@@ -467,7 +482,10 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         try:
             ret = self.run_state(
-                "pkg.installed", name=target, version="<9999999", refresh=False,
+                "pkg.installed",
+                name=target,
+                version="<9999999",
+                refresh=False,
             )
             self.assertSaltTrueReturn(ret)
 
@@ -533,30 +551,41 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 # Exit loop if a versionlock package installed correctly
                 try:
                     self.assertSaltTrueReturn(ret)
-                    log.debug(
-                        "Installed versionlock package: {}".format(versionlock_pkg)
-                    )
+                    log.debug("Installed versionlock package: %s", versionlock_pkg)
                     break
-                except AssertionError as e:
-                    log.debug("Versionlock package not found:\n{}".format(e))
+                except AssertionError as exc:
+                    log.debug("Versionlock package not found:\n%s", exc)
             else:
                 self.fail("Could not install versionlock package from {}".format(pkgs))
 
         target = self._PKG_TARGETS[0]
 
         # First we ensure that the package is installed
-        ret = self.run_state("pkg.installed", name=target, refresh=False,)
+        ret = self.run_state(
+            "pkg.installed",
+            name=target,
+            refresh=False,
+        )
         self.assertSaltTrueReturn(ret)
 
         # Then we check that the package is now held
-        ret = self.run_state("pkg.installed", name=target, hold=True, refresh=False,)
+        ret = self.run_state(
+            "pkg.installed",
+            name=target,
+            hold=True,
+            refresh=False,
+        )
 
         if versionlock_pkg and "-versionlock is not installed" in str(ret):
             self.skipTest("{}  `{}` is installed".format(ret, versionlock_pkg))
 
         # changes from pkg.hold for Red Hat family are different
         target_changes = {}
-        if grains["os_family"] == "RedHat" or grains["os"] == "FreeBSD":
+        if (
+            grains["os_family"] == "RedHat"
+            or grains["os"] == "FreeBSD"
+            or grains["os_family"] == "Suse"
+        ):
             target_changes = {"new": "hold", "old": ""}
         elif grains["os_family"] == "Debian":
             target_changes = {"new": "hold", "old": "install"}
@@ -628,7 +657,9 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @pytest.mark.slow_test
     def test_pkg_017_installed_held_equals_false(self, grains=None):
         """
-        Tests that a package installed with held set to False
+        Tests that a package is installed when hold is explicitly False.
+
+        See https://github.com/saltstack/salt/issues/58801.
         """
         versionlock_pkg = None
         if grains["os_family"] == "RedHat":
@@ -648,12 +679,10 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 # Exit loop if a versionlock package installed correctly
                 try:
                     self.assertSaltTrueReturn(ret)
-                    log.debug(
-                        "Installed versionlock package: {}".format(versionlock_pkg)
-                    )
+                    log.debug("Installed versionlock package: %s", versionlock_pkg)
                     break
-                except AssertionError as e:
-                    log.debug("Versionlock package not found:\n{}".format(e))
+                except AssertionError as exc:
+                    log.debug("Versionlock package not found:\n%s", exc)
             else:
                 self.fail("Could not install versionlock package from {}".format(pkgs))
 
@@ -661,7 +690,10 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         # First we ensure that the package is installed
         target_ret = self.run_state(
-            "pkg.installed", name=target, hold=False, refresh=False,
+            "pkg.installed",
+            name=target,
+            hold=False,
+            refresh=False,
         )
         self.assertSaltTrueReturn(target_ret)
 
@@ -676,7 +708,14 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             # On Centos 7 package is already installed, no change happened
             if target_ret[tag].get("changes"):
                 self.assertIn(target, target_ret[tag]["changes"])
-            self.assertIn("held", target_ret[tag]["comment"])
+            if grains["os_family"] == "Suse":
+                self.assertIn("packages were installed", target_ret[tag]["comment"])
+            else:
+                #  The "held" string is part of a longer comment that may look
+                #  like:
+                #
+                #    Package units is not being held.
+                self.assertIn("held", target_ret[tag]["comment"])
         finally:
             # Clean up, unhold package and remove
             ret = self.run_state("pkg.removed", name=target)

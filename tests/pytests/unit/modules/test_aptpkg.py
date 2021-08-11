@@ -14,7 +14,11 @@ import textwrap
 import pytest
 import salt.modules.aptpkg as aptpkg
 import salt.modules.pkg_resource as pkg_resource
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import (
+    CommandExecutionError,
+    CommandNotFoundError,
+    SaltInvocationError,
+)
 from tests.support.mock import MagicMock, Mock, call, patch
 
 try:
@@ -187,14 +191,16 @@ def _get_uri(repo):
 
 
 class MockSourceEntry:
-    def __init__(self, uri, source_type, line, invalid, file=None):
+    def __init__(self, uri, source_type, line, invalid, dist="", file=None):
         self.uri = uri
         self.type = source_type
         self.line = line
         self.invalid = invalid
         self.file = file
         self.disabled = False
-        self.dist = ""
+        self.dist = dist
+        self.comps = []
+        self.architectures = []
 
     def mysplit(self, line):
         return line.split()
@@ -203,6 +209,12 @@ class MockSourceEntry:
 class MockSourceList:
     def __init__(self):
         self.list = []
+
+    def __iter__(self):
+        yield from self.list
+
+    def save(self):
+        pass
 
 
 @pytest.fixture
@@ -556,11 +568,15 @@ def test_show():
         "foo-doc": {
             "1.0.5-3ubuntu4": {
                 "Architecture": "all",
-                "Description": "Silly documentation for a silly package (1.0 release cycle)",
+                "Description": (
+                    "Silly documentation for a silly package (1.0 release cycle)"
+                ),
             },
             "1.0.4-2ubuntu1": {
                 "Architecture": "all",
-                "Description": "Silly documentation for a silly package (1.0 release cycle)",
+                "Description": (
+                    "Silly documentation for a silly package (1.0 release cycle)"
+                ),
             },
         },
     }
@@ -639,6 +655,65 @@ def test_mod_repo_enabled():
                         data_is_true.reset_mock()
                         repo = aptpkg.mod_repo("foo", disabled=False)
                         data_is_true.assert_called_with(False)
+
+
+def test_mod_repo_match():
+    """
+    Checks if a repo is matched without taking into account any ending "/" in the uri.
+    """
+    source_type = "deb"
+    source_uri = "http://cdn-aws.deb.debian.org/debian/"
+    source_line = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
+
+    mock_source = MockSourceEntry(
+        source_uri, source_type, source_line, False, "stretch"
+    )
+    mock_source_list = MockSourceList()
+    mock_source_list.list = [mock_source]
+
+    with patch.dict(
+        aptpkg.__salt__,
+        {"config.option": MagicMock(), "no_proxy": MagicMock(return_value=False)},
+    ):
+        with patch("salt.modules.aptpkg._check_apt", MagicMock(return_value=True)):
+            with patch("salt.modules.aptpkg.refresh_db", MagicMock(return_value={})):
+                with patch("salt.utils.data.is_true", MagicMock(return_value=True)):
+                    with patch(
+                        "salt.modules.aptpkg._check_apt",
+                        MagicMock(return_value=True),
+                    ):
+                        with patch(
+                            "salt.modules.aptpkg.sourceslist",
+                            MagicMock(),
+                            create=True,
+                        ):
+                            with patch(
+                                "salt.modules.aptpkg.sourceslist.SourcesList",
+                                MagicMock(return_value=mock_source_list),
+                                create=True,
+                            ):
+                                with patch(
+                                    "salt.modules.aptpkg._split_repo_str",
+                                    MagicMock(
+                                        return_value=(
+                                            "deb",
+                                            [],
+                                            "http://cdn-aws.deb.debian.org/debian/",
+                                            "stretch",
+                                            ["main"],
+                                        )
+                                    ),
+                                ):
+                                    source_line_no_slash = (
+                                        "deb http://cdn-aws.deb.debian.org/debian"
+                                        " stretch main"
+                                    )
+                                    repo = aptpkg.mod_repo(
+                                        source_line_no_slash, enabled=False
+                                    )
+                                    assert (
+                                        repo[source_line_no_slash]["uri"] == source_uri
+                                    )
 
 
 @patch("salt.utils.path.os_walk", MagicMock(return_value=[("test", "test", "test")]))
@@ -723,6 +798,8 @@ def test_normalize_name():
         result = aptpkg.normalize_name("foo:amd64")
         assert result == "foo", result
         result = aptpkg.normalize_name("foo:any")
+        assert result == "foo", result
+        result = aptpkg.normalize_name("foo:all")
         assert result == "foo", result
         result = aptpkg.normalize_name("foo:i386")
         assert result == "foo:i386", result
@@ -831,7 +908,8 @@ def test_list_pkgs():
         aptpkg.__salt__,
         {"cmd.run_stdout": MagicMock(return_value=os.linesep.join(apt_out))},
     ), patch.dict(aptpkg.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
-        aptpkg.__salt__, {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
+        aptpkg.__salt__,
+        {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
     ), patch.dict(
         aptpkg.__salt__, {"pkg_resource.sort_pkglist": pkg_resource.sort_pkglist}
     ):
@@ -879,7 +957,8 @@ def test_list_pkgs_no_context():
         aptpkg.__salt__,
         {"cmd.run_stdout": MagicMock(return_value=os.linesep.join(apt_out))},
     ), patch.dict(aptpkg.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
-        aptpkg.__salt__, {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
+        aptpkg.__salt__,
+        {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
     ), patch.dict(
         aptpkg.__salt__, {"pkg_resource.sort_pkglist": pkg_resource.sort_pkglist}
     ), patch.object(
@@ -1010,3 +1089,31 @@ def test_call_apt_dpkg_lock():
             # We should attempt to call the cmd 5 times
             assert cmd_mock.call_count == 5
             cmd_mock.has_calls(expected_calls)
+
+
+def test_services_need_restart_checkrestart_missing():
+    """Test that the user is informed about the required dependency."""
+
+    with patch("salt.utils.path.which_bin", Mock(return_value=None)):
+        with pytest.raises(CommandNotFoundError):
+            aptpkg.services_need_restart()
+
+
+@patch("salt.utils.path.which_bin", Mock(return_value="/usr/sbin/checkrestart"))
+def test_services_need_restart():
+    """
+    Test that checkrestart output is parsed correctly
+    """
+    cr_output = """
+PROCESSES: 24
+PROGRAMS: 17
+PACKAGES: 8
+SERVICE:rsyslog,385,/usr/sbin/rsyslogd
+SERVICE:cups-daemon,390,/usr/sbin/cupsd
+    """
+
+    with patch.dict(aptpkg.__salt__, {"cmd.run_stdout": Mock(return_value=cr_output)}):
+        assert sorted(aptpkg.services_need_restart()) == [
+            "cups-daemon",
+            "rsyslog",
+        ]

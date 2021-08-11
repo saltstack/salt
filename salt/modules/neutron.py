@@ -1443,6 +1443,7 @@ def delete_ipsecpolicy(ipsecpolicy, profile=None):
 def list_firewall_rules(profile=None):
     """
     Fetches a list of all firewall rules for a tenant
+
     CLI Example:
 
     .. code-block:: bash
@@ -1586,6 +1587,7 @@ def update_firewall_rule(
 def list_firewalls(profile=None):
     """
     Fetches a list of all firewalls for a tenant
+
     CLI Example:
 
     .. code-block:: bash

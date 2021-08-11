@@ -3,7 +3,6 @@ Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 """
 
-
 import collections
 import copy
 import datetime
@@ -22,12 +21,10 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import range, zip
 
 log = logging.getLogger(__file__)
 
 __virtualname__ = "status"
-__opts__ = {}
 
 # Don't shadow built-in's.
 __func_alias__ = {"time_": "time"}
@@ -238,7 +235,10 @@ def uptime():
             raise CommandExecutionError("Cannot find kern.boottime system parameter")
         data = bt_data.split("{")[-1].split("}")[0].strip().replace(" ", "")
         uptime = {
-            k: int(v,) for k, v in [p.strip().split("=") for p in data.split(",")]
+            k: int(
+                v,
+            )
+            for k, v in [p.strip().split("=") for p in data.split(",")]
         }
         seconds = int(curr_seconds - uptime["sec"])
     elif salt.utils.platform.is_aix():
@@ -1385,24 +1385,20 @@ def netdev():
 
             # add data
             ret[dev] = {}
-            for i in range(len(netstat_ipv4[0]) - 1):
-                if netstat_ipv4[0][i] == "Name":
+            for val in netstat_ipv4[0][:-1]:
+                if val == "Name":
                     continue
-                if netstat_ipv4[0][i] in ["Address", "Net/Dest"]:
-                    ret[dev][
-                        "IPv4 {field}".format(field=netstat_ipv4[0][i])
-                    ] = netstat_ipv4[1][i]
+                if val in ["Address", "Net/Dest"]:
+                    ret[dev]["IPv4 {field}".format(field=val)] = val
                 else:
-                    ret[dev][netstat_ipv4[0][i]] = _number(netstat_ipv4[1][i])
-            for i in range(len(netstat_ipv6[0]) - 1):
-                if netstat_ipv6[0][i] == "Name":
+                    ret[dev][val] = _number(val)
+            for val in netstat_ipv6[0][:-1]:
+                if val == "Name":
                     continue
-                if netstat_ipv6[0][i] in ["Address", "Net/Dest"]:
-                    ret[dev][
-                        "IPv6 {field}".format(field=netstat_ipv6[0][i])
-                    ] = netstat_ipv6[1][i]
+                if val in ["Address", "Net/Dest"]:
+                    ret[dev]["IPv6 {field}".format(field=val)] = val
                 else:
-                    ret[dev][netstat_ipv6[0][i]] = _number(netstat_ipv6[1][i])
+                    ret[dev][val] = _number(val)
 
         return ret
 
@@ -1778,6 +1774,8 @@ def proxy_reconnect(proxy_name, opts=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt '*' status.proxy_reconnect rest_sample
     """
 
@@ -1791,15 +1789,16 @@ def proxy_reconnect(proxy_name, opts=None):
     if proxy_keepalive_fn not in __proxy__:
         return False  # fail
 
-    if __proxy__[proxy_name + ".get_reboot_active"]():
+    chk_reboot_active_key = proxy_name + ".get_reboot_active"
+    if chk_reboot_active_key in __proxy__ and __proxy__[chk_reboot_active_key]():
         # if rebooting or shutting down, don't run proxy_reconnect
         # it interferes with the connection and disrupts the shutdown/reboot
         # especially
         minion_id = opts.get("proxyid", "") or opts.get("id", "")
         log.info(
-            "{} ({} proxy) is rebooting or shutting down. Don't probe connection.".format(
-                minion_id, proxy_name
-            )
+            "%s (%s proxy) is rebooting or shutting down. Don't probe connection.",
+            minion_id,
+            proxy_name,
         )
         return True
 

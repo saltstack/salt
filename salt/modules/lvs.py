@@ -22,7 +22,8 @@ def __virtual__():
     if not __detect_os():
         return (
             False,
-            "The lvs execution module cannot be loaded: the ipvsadm binary is not in the path.",
+            "The lvs execution module cannot be loaded: the ipvsadm binary is not in"
+            " the path.",
         )
 
     return "lvs"
@@ -95,7 +96,6 @@ def add_service(protocol=None, service_address=None, scheduler="wlc"):
     scheduler
         Algorithm for allocating TCP connections and UDP datagrams to real servers.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -132,7 +132,6 @@ def edit_service(protocol=None, service_address=None, scheduler=None):
     scheduler
         Algorithm for allocating TCP connections and UDP datagrams to real servers.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -166,7 +165,6 @@ def delete_service(protocol=None, service_address=None):
 
     service_address
         The LVS service address.
-
 
     CLI Example:
 
@@ -214,7 +212,6 @@ def add_server(
 
     weight
         The capacity  of a server relative to the others in the pool.
-
 
     CLI Example:
 
@@ -271,7 +268,6 @@ def edit_server(
     weight
         The capacity  of a server relative to the others in the pool.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -313,7 +309,6 @@ def delete_server(protocol=None, service_address=None, server_address=None):
 
     server_address
         The real server address.
-
 
     CLI Example:
 

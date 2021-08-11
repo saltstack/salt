@@ -7,7 +7,7 @@ Support for apk
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 
-.. versionadded: 2017.7.0
+.. versionadded:: 2017.7.0
 
 """
 
@@ -574,6 +574,8 @@ def owner(*paths, **kwargs):
     then an empty string will be returned for that path.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.owns /usr/bin/apachectl
         salt '*' pkg.owns /usr/bin/apachectl /usr/bin/basename

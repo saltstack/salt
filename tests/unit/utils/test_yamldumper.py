@@ -1,16 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     Unit tests for salt.utils.yamldumper
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
-import salt.ext.six
 import salt.utils.yamldumper
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase
 
 
@@ -24,11 +16,7 @@ class YamlDumperTestCase(TestCase):
         Test yaml.dump a dict
         """
         data = {"foo": "bar"}
-
-        if salt.ext.six.PY2:
-            exp_yaml = "{!!python/unicode 'foo': !!python/unicode 'bar'}\n"
-        else:
-            exp_yaml = "{foo: bar}\n"
+        exp_yaml = "{foo: bar}\n"
 
         assert salt.utils.yamldumper.dump(data) == exp_yaml
 

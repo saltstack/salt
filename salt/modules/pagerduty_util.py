@@ -35,11 +35,17 @@ def get_users(profile="pagerduty", subdomain=None, api_key=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion pagerduty.get_users
     """
 
     return _list_items(
-        "users", "id", profile=profile, subdomain=subdomain, api_key=api_key,
+        "users",
+        "id",
+        profile=profile,
+        subdomain=subdomain,
+        api_key=api_key,
     )
 
 
@@ -49,11 +55,17 @@ def get_services(profile="pagerduty", subdomain=None, api_key=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion pagerduty.get_services
     """
 
     return _list_items(
-        "services", "id", profile=profile, subdomain=subdomain, api_key=api_key,
+        "services",
+        "id",
+        profile=profile,
+        subdomain=subdomain,
+        api_key=api_key,
     )
 
 
@@ -63,11 +75,17 @@ def get_schedules(profile="pagerduty", subdomain=None, api_key=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion pagerduty.get_schedules
     """
 
     return _list_items(
-        "schedules", "id", profile=profile, subdomain=subdomain, api_key=api_key,
+        "schedules",
+        "id",
+        profile=profile,
+        subdomain=subdomain,
+        api_key=api_key,
     )
 
 
@@ -76,6 +94,8 @@ def get_escalation_policies(profile="pagerduty", subdomain=None, api_key=None):
     List escalation_policies belonging to this account
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion pagerduty.get_escalation_policies
     """

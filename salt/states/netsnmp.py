@@ -14,7 +14,7 @@ Dependencies
 
 - :mod:`napalm snmp management module (salt.modules.napalm_snmp) <salt.modules.napalm_snmp>`
 
-.. versionadded: 2016.11.0
+.. versionadded:: 2016.11.0
 """
 
 import logging

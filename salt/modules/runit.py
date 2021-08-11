@@ -523,6 +523,8 @@ def show(name):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt '*' service.show <service name>
     """
     ret = {}
@@ -605,7 +607,7 @@ def enable(name, start=False, **kwargs):
                 salt.utils.files.fopen(down_file, "w").close()
                 # pylint: enable=resource-leakage
             except OSError:
-                log.error("Unable to create file {}".format(down_file))
+                log.error("Unable to create file %s", down_file)
                 return False
 
     # enable the service
@@ -614,7 +616,7 @@ def enable(name, start=False, **kwargs):
 
     except OSError:
         # (attempt to) remove temp down_file anyway
-        log.error("Unable to create symlink {}".format(down_file))
+        log.error("Unable to create symlink %s", down_file)
         if not start:
             os.unlink(down_file)
         return False

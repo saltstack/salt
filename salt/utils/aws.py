@@ -14,7 +14,6 @@ import hmac
 import logging
 import random
 import re
-import sys
 import time
 import urllib.parse
 import xml.etree.ElementTree as ET
@@ -165,7 +164,9 @@ def sig2(method, endpoint, params, provider, aws_api_version):
     querystring = urllib.parse.urlencode(list(zip(keys, values)))
 
     canonical = "{}\n{}\n/\n{}".format(
-        method.encode("utf-8"), endpoint.encode("utf-8"), querystring.encode("utf-8"),
+        method.encode("utf-8"),
+        endpoint.encode("utf-8"),
+        querystring.encode("utf-8"),
     )
 
     hashed = hmac.new(secret_access_key, canonical, hashlib.sha256)
@@ -206,7 +207,10 @@ def assumed_creds(prov_dict, role_arn, location=None):
             "Action": "AssumeRole",
             "RoleSessionName": session_name,
             "RoleArn": role_arn,
-            "Policy": '{"Version":"2012-10-17","Statement":[{"Sid":"Stmt1", "Effect":"Allow","Action":"*","Resource":"*"}]}',
+            "Policy": (
+                '{"Version":"2012-10-17","Statement":[{"Sid":"Stmt1",'
+                ' "Effect":"Allow","Action":"*","Resource":"*"}]}'
+            ),
             "DurationSeconds": "3600",
         },
         aws_api_version=version,
@@ -331,9 +335,13 @@ def sig4(
     ).hexdigest()
 
     # Add signing information to the request
-    authorization_header = (
-        "{} Credential={}/{}, SignedHeaders={}, Signature={}"
-    ).format(algorithm, access_key_id, credential_scope, signed_headers, signature,)
+    authorization_header = "{} Credential={}/{}, SignedHeaders={}, Signature={}".format(
+        algorithm,
+        access_key_id,
+        credential_scope,
+        signed_headers,
+        signature,
+    )
 
     new_headers["Authorization"] = authorization_header
 
@@ -443,8 +451,8 @@ def query(
                 endpoint_err = (
                     "Could not find a valid endpoint in the "
                     "requesturl: {}. Looking for something "
-                    "like https://some.aws.endpoint/?args"
-                ).format(requesturl)
+                    "like https://some.aws.endpoint/?args".format(requesturl)
+                )
                 log.error(endpoint_err)
                 if return_url is True:
                     return {"error": endpoint_err}, requesturl
@@ -536,15 +544,10 @@ def query(
         items = root
 
     if setname:
-        if sys.version_info < (2, 7):
-            children_len = len(root.getchildren())
-        else:
-            children_len = len(root)
-
-        for item in range(0, children_len):
-            comps = root[item].tag.split("}")
+        for idx, item in enumerate(root):
+            comps = item.tag.split("}")
             if comps[1] == setname:
-                items = root[item]
+                items = root[idx]
 
     ret = []
     for item in items:

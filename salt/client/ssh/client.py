@@ -39,12 +39,82 @@ class SSHClient:
         # Salt API should never offer a custom roster!
         self.opts["__disable_custom_roster"] = disable_custom_roster
 
+    def sanitize_kwargs(self, kwargs):
+        roster_vals = [
+            ("host", str),
+            ("ssh_user", str),
+            ("ssh_passwd", str),
+            ("ssh_port", int),
+            ("ssh_sudo", bool),
+            ("ssh_sudo_user", str),
+            ("ssh_priv", str),
+            ("ssh_priv_passwd", str),
+            ("ssh_identities_only", bool),
+            ("ssh_remote_port_forwards", str),
+            ("ssh_options", list),
+            ("ssh_max_procs", int),
+            ("ssh_askpass", bool),
+            ("ssh_key_deploy", bool),
+            ("ssh_update_roster", bool),
+            ("ssh_scan_ports", str),
+            ("ssh_scan_timeout", int),
+            ("ssh_timeout", int),
+            ("ssh_log_file", str),
+            ("raw_shell", bool),
+            ("refresh_cache", bool),
+            ("roster", str),
+            ("roster_file", str),
+            ("rosters", list),
+            ("ignore_host_keys", bool),
+            ("raw_shell", bool),
+            ("extra_filerefs", str),
+            ("min_extra_mods", str),
+            ("thin_extra_mods", str),
+            ("verbose", bool),
+            ("static", bool),
+            ("ssh_wipe", bool),
+            ("rand_thin_dir", bool),
+            ("regen_thin", bool),
+            ("python2_bin", str),
+            ("python3_bin", str),
+            ("ssh_run_pre_flight", bool),
+            ("no_host_keys", bool),
+            ("saltfile", str),
+        ]
+        sane_kwargs = {}
+        for name, kind in roster_vals:
+            if name not in kwargs:
+                continue
+            try:
+                val = kind(kwargs[name])
+            except ValueError:
+                log.warning("Unable to cast kwarg %s", name)
+                continue
+            if kind is bool or kind is int:
+                sane_kwargs[name] = val
+            elif kind is str:
+                if val.find("ProxyCommand") != -1:
+                    log.warning("Filter unsafe value for kwarg %s", name)
+                    continue
+                sane_kwargs[name] = val
+            elif kind is list:
+                sane_val = []
+                for item in val:
+                    # This assumes the values are strings
+                    if item.find("ProxyCommand") != -1:
+                        log.warning("Filter unsafe value for kwarg %s", name)
+                        continue
+                    sane_val.append(item)
+                sane_kwargs[name] = sane_val
+        return sane_kwargs
+
     def _prep_ssh(
         self, tgt, fun, arg=(), timeout=None, tgt_type="glob", kwarg=None, **kwargs
     ):
         """
         Prepare the arguments
         """
+        kwargs = self.sanitize_kwargs(kwargs)
         opts = copy.deepcopy(self.opts)
         opts.update(kwargs)
         if timeout:

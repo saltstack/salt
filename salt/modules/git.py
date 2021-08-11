@@ -46,7 +46,7 @@ def _check_worktree_support(failhard=True):
         if failhard:
             raise CommandExecutionError(
                 "Worktrees are only supported in git 2.5.0 and newer "
-                "(detected git version: " + git_version + ")"
+                "(detected git version: {})".format(git_version)
             )
         return False
     return True
@@ -1972,7 +1972,7 @@ def diff(
     if no_index:
         if _LooseVersion(version(versioninfo=False)) < _LooseVersion("1.5.1"):
             raise CommandExecutionError(
-                "The 'no_index' option is only supported in Git 1.5.1 and " "newer"
+                "The 'no_index' option is only supported in Git 1.5.1 and newer"
             )
         ignore_retcode = True
         failhard = False
@@ -2338,7 +2338,6 @@ def init(
 
     .. _`git-init(1)`: http://git-scm.com/docs/git-init
     .. _`template directory`: http://git-scm.com/docs/git-init#_template_directory
-
 
     CLI Examples:
 
@@ -2747,7 +2746,7 @@ def list_worktrees(
 
                 if worktree_data[type_]:
                     log.error(
-                        "git.worktree: Unexpected duplicate %s entry " "'%s', skipping",
+                        "git.worktree: Unexpected duplicate %s entry '%s', skipping",
                         type_,
                         line,
                     )
@@ -3351,7 +3350,7 @@ def merge_base(
     elif fork_point:
         if len(refs) > 1:
             raise SaltInvocationError(
-                "At most one ref/commit can be passed if 'fork_point' is " "specified"
+                "At most one ref/commit can be passed if 'fork_point' is specified"
             )
         elif not refs:
             refs = ["HEAD"]
@@ -3823,7 +3822,6 @@ def rebase(
         .. versionadded:: 2018.3.1
 
     .. _`git-rebase(1)`: http://git-scm.com/docs/git-rebase
-
 
     CLI Example:
 
@@ -4310,7 +4308,7 @@ def remotes(
         action = action.lstrip("(").rstrip(")").lower()
         if action not in ("fetch", "push"):
             log.warning(
-                "Unknown action '%s' for remote '%s' in git checkout " "located in %s",
+                "Unknown action '%s' for remote '%s' in git checkout located in %s",
                 action,
                 remote,
                 cwd,
@@ -5094,7 +5092,7 @@ def symbolic_ref(
     opts = _format_opts(opts)
     if value is not None and any(x in opts for x in ("-d", "--delete")):
         raise SaltInvocationError(
-            "Value cannot be set for symbolic ref if -d/--delete is included " "in opts"
+            "Value cannot be set for symbolic ref if -d/--delete is included in opts"
         )
     command.extend(opts)
     command.append(ref)
@@ -5396,7 +5394,7 @@ def worktree_add(
     if detach:
         if force:
             log.warning(
-                "'force' argument to git.worktree_add is ignored when " "detach=True"
+                "'force' argument to git.worktree_add is ignored when detach=True"
             )
         command.append("--detach")
     else:

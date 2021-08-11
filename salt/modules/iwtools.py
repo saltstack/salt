@@ -28,6 +28,8 @@ def scan(iface, style=None):
 
     CLI Examples:
 
+    .. code-block:: bash
+
         salt minion iwtools.scan wlp3s0
         salt minion iwtools.scan wlp3s0 list
     """
@@ -76,6 +78,8 @@ def set_mode(iface, mode):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt minion iwtools.set_mode wlp3s0 Managed
     """
     if not _valid_iface(iface):
@@ -118,6 +122,8 @@ def list_interfaces(style=None):
     List all of the wireless interfaces
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt minion iwtools.list_interfaces
     """

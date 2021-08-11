@@ -10,15 +10,14 @@ import uuid
 
 import psutil  # pylint: disable=3rd-party-module-not-gated
 import pytest
-import salt.ext.six as six
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 from saltfactories.utils.ports import get_unused_localhost_port
+from saltfactories.utils.tempfiles import temp_file
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempfile
-from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -65,7 +64,7 @@ class CPModuleTest(ModuleCase):
 
     @with_tempfile()
     @skipIf(
-        salt.utils.platform.is_windows() and six.PY3,
+        salt.utils.platform.is_windows(),
         "This test hangs on Windows on Py3",
     )
     def test_get_file_templated_paths(self, tgt):
@@ -229,9 +228,6 @@ class CPModuleTest(ModuleCase):
         self.assertIn("KNIGHT:  They're nervous, sire.", data)
         self.assertNotIn("bacon", data)
 
-    @skipIf(
-        salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
-    )
     @with_tempfile()
     @pytest.mark.slow_test
     def test_get_url_https(self, tgt):
@@ -246,9 +242,6 @@ class CPModuleTest(ModuleCase):
         self.assertIn("Windows", data)
         self.assertNotIn("AYBABTU", data)
 
-    @skipIf(
-        salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
-    )
     @pytest.mark.slow_test
     def test_get_url_https_dest_empty(self):
         """
@@ -263,9 +256,6 @@ class CPModuleTest(ModuleCase):
         self.assertIn("Windows", data)
         self.assertNotIn("AYBABTU", data)
 
-    @skipIf(
-        salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
-    )
     @pytest.mark.slow_test
     def test_get_url_https_no_dest(self):
         """
@@ -350,9 +340,6 @@ class CPModuleTest(ModuleCase):
         ret = self.run_function("cp.get_file_str", [src])
         self.assertEqual(ret, False)
 
-    @skipIf(
-        salt.utils.platform.is_darwin() and six.PY2, "This test hangs on OS X on Py2"
-    )
     @pytest.mark.slow_test
     def test_get_file_str_https(self):
         """
@@ -408,7 +395,10 @@ class CPModuleTest(ModuleCase):
         """
         cp.cache_master
         """
-        ret = self.run_function("cp.cache_master", [tgt],)
+        ret = self.run_function(
+            "cp.cache_master",
+            [tgt],
+        )
         for path in ret:
             self.assertTrue(os.path.exists(path))
 
@@ -528,10 +518,12 @@ class CPModuleTest(ModuleCase):
             RUNTIME_VARS.TMP
         )
 
-        with temp_state_file("top.sls", top_sls), temp_state_file(
-            "core.sls", core_state
-        ):
-            ret = self.run_function("cp.list_states",)
+        with temp_file(
+            "top.sls", top_sls, RUNTIME_VARS.TMP_BASEENV_STATE_TREE
+        ), temp_file("core.sls", core_state, RUNTIME_VARS.TMP_BASEENV_STATE_TREE):
+            ret = self.run_function(
+                "cp.list_states",
+            )
             self.assertIn("core", ret)
             self.assertIn("top", ret)
 

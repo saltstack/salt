@@ -1,7 +1,7 @@
 """
 Utilities for managing kickstart
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 """
 
 import argparse

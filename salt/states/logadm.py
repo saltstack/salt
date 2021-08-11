@@ -6,7 +6,7 @@ Management of logs using Solaris logadm.
 :depends:       salt.modulus.logadm
 :platform:      Oracle Solaris, Sun Solaris, illumos
 
-.. versionadded:: nitrogen
+.. versionadded:: 2017.7.0
 
 .. code-block:: yaml
 

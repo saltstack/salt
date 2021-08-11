@@ -188,6 +188,8 @@ def assign_issue(issue_key, assignee, server=None, username=None, password=None)
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt '*' jira.assign_issue NET-123 example_user
     """
     jira_ = _get_jira(server=server, username=username, password=password)

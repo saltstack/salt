@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Return data by SMS.
 
@@ -28,7 +26,6 @@ To use the sms returner, append '--return sms' to the salt command.
     salt '*' test.ping --return sms
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -89,7 +86,7 @@ def returner(ret):
 
     try:
         message = client.messages.create(
-            body="Minion: {0}\nCmd: {1}\nSuccess: {2}\n\nJid: {3}".format(
+            body="Minion: {}\nCmd: {}\nSuccess: {}\n\nJid: {}".format(
                 ret["id"], ret["fun"], ret["success"], ret["jid"]
             ),
             to=receiver,

@@ -303,7 +303,6 @@ def upgrade(refresh=True, **kwargs):
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -487,7 +486,7 @@ def list_repos(**kwargs):
             nb, url, rsa = line.strip().split(" ", 2)
         except ValueError:
             log.error(
-                "Problem parsing xbps-query: " 'Unexpected formatting in line: "%s"',
+                'Problem parsing xbps-query: Unexpected formatting in line: "%s"',
                 line,
             )
         repo["nbpkg"] = int(nb) if nb.isdigit() else 0

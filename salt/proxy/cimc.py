@@ -39,6 +39,7 @@ the ID.
       host: <ip or dns name of cimc host>
       username: <cimc username>
       password: <cimc password>
+      verify_ssl: True
 
 proxytype
 ^^^^^^^^^
@@ -97,7 +98,7 @@ def _validate_response_code(response_code_to_check, cookie_to_logout=None):
     if formatted_response_code not in ["200", "201", "202", "204"]:
         if cookie_to_logout:
             logout(cookie_to_logout)
-        log.error("Received error HTTP status code: {}".format(formatted_response_code))
+        log.error("Received error HTTP status code: %s", formatted_response_code)
         raise salt.exceptions.CommandExecutionError(
             "Did not receive a valid response from host."
         )
@@ -129,6 +130,10 @@ def init(opts):
     DETAILS["host"] = opts["proxy"]["host"]
     DETAILS["username"] = opts["proxy"].get("username")
     DETAILS["password"] = opts["proxy"].get("password")
+    verify_ssl = opts["proxy"].get("verify_ssl")
+    if verify_ssl is None:
+        verify_ssl = True
+    DETAILS["verify_ssl"] = verify_ssl
 
     # Ensure connectivity to the device
     log.debug("Attempting to connect to cimc proxy host.")
@@ -160,7 +165,7 @@ def set_config_modify(dn=None, inconfig=None, hierarchical=False):
         method="POST",
         decode_type="plain",
         decode=True,
-        verify_ssl=False,
+        verify_ssl=DETAILS["verify_ssl"],
         raise_error=True,
         status=True,
         headers=DETAILS["headers"],
@@ -188,8 +193,10 @@ def get_config_resolver_class(cid=None, hierarchical=False):
     if hierarchical is True:
         h = "true"
 
-    payload = '<configResolveClass cookie="{}" inHierarchical="{}" classId="{}"/>'.format(
-        cookie, h, cid
+    payload = (
+        '<configResolveClass cookie="{}" inHierarchical="{}" classId="{}"/>'.format(
+            cookie, h, cid
+        )
     )
     r = __utils__["http.query"](
         DETAILS["url"],
@@ -197,7 +204,7 @@ def get_config_resolver_class(cid=None, hierarchical=False):
         method="POST",
         decode_type="plain",
         decode=True,
-        verify_ssl=False,
+        verify_ssl=DETAILS["verify_ssl"],
         raise_error=True,
         status=True,
         headers=DETAILS["headers"],
@@ -228,7 +235,7 @@ def logon():
         method="POST",
         decode_type="plain",
         decode=True,
-        verify_ssl=False,
+        verify_ssl=DETAILS["verify_ssl"],
         raise_error=False,
         status=True,
         headers=DETAILS["headers"],
@@ -258,7 +265,7 @@ def logout(cookie=None):
         method="POST",
         decode_type="plain",
         decode=True,
-        verify_ssl=False,
+        verify_ssl=DETAILS["verify_ssl"],
         raise_error=True,
         headers=DETAILS["headers"],
     )

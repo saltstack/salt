@@ -1,22 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Test case for the vault utils module
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import json
 import logging
 import os
 from copy import copy
 
-# Import Salt libs
 import salt.utils.vault as vault
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import ANY, MagicMock, Mock, mock_open, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 
@@ -57,6 +49,16 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
         "url": "http://127.0.0.1:8200",
         "token": "test",
         "verify": None,
+        "namespace": None,
+        "uses": 1,
+        "lease_duration": 100,
+        "issued": 3000,
+    }
+    cache_single_namespace = {
+        "url": "http://127.0.0.1:8200",
+        "token": "test",
+        "verify": None,
+        "namespace": "test_namespace",
         "uses": 1,
         "lease_duration": 100,
         "issued": 3000,
@@ -65,6 +67,7 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
         "url": "http://127.0.0.1:8200",
         "token": "test",
         "verify": None,
+        "namespace": None,
         "uses": 10,
         "lease_duration": 100,
         "issued": 3000,
@@ -74,6 +77,7 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
         "url": "http://127.0.0.1:8200",
         "token": "test",
         "verify": None,
+        "namespace": None,
         "uses": 1,
         "lease_duration": 100,
         "issued": 3000,
@@ -83,6 +87,7 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
         "url": "http://127.0.0.1:8200",
         "token": "test",
         "verify": None,
+        "namespace": None,
         "uses": 0,
         "lease_duration": 100,
         "issued": 3000,
@@ -193,6 +198,7 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
             "url": "http://127.0.0.1:8200",
             "token": "test",
             "verify": None,
+            "namespace": None,
             "uses": 9,
             "lease_duration": 100,
             "issued": 3000,
@@ -327,6 +333,7 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
             "url": "http://127.0.0.1:8200",
             "token": "test",
             "verify": None,
+            "namespace": None,
             "uses": 10,
             "lease_duration": 100,
             "issued": 3000,
@@ -354,6 +361,7 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
             "url": "http://127.0.0.1:8200",
             "token": "test",
             "verify": None,
+            "namespace": None,
             "uses": 0,
             "lease_duration": 100,
             "issued": 3000,
@@ -362,6 +370,7 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
             "url": "http://127.0.0.1:8200",
             "token": "test",
             "verify": None,
+            "namespace": None,
             "uses": 0,
             "lease_duration": 100,
             "issued": 3000,
@@ -398,6 +407,30 @@ class TestVaultUtils(LoaderModuleMockMixin, TestCase):
             mock_get_metadata.return_value = self.metadata_v2
             function_return = vault.is_v2("secret/mything")
             self.assertEqual(function_return, expected_return)
+
+    def test_request_with_namespace(self):
+        """
+        Test request with namespace configured
+        """
+        mock = self._mock_json_response(self.json_success)
+        expected_headers = {
+            "X-Vault-Token": "test",
+            "X-Vault-Namespace": "test_namespace",
+            "Content-Type": "application/json",
+        }
+        supplied_config = {"namespace": "test_namespace"}
+        supplied_context = {"vault_token": copy(self.cache_single_namespace)}
+        with patch.dict(vault.__context__, supplied_context):
+            with patch.dict(vault.__opts__["vault"], supplied_config):
+                with patch("requests.request", mock):
+                    vault_return = vault.make_request("/secret/my/secret", "key")
+                    mock.assert_called_with(
+                        "/secret/my/secret",
+                        "http://127.0.0.1:8200/key",
+                        headers=expected_headers,
+                        verify=ANY,
+                    )
+                    self.assertEqual(vault_return.json(), self.json_success)
 
     def test_get_secret_path_metadata_no_cache(self):
         """

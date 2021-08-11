@@ -1,1 +1,0 @@
-Fixing unhold in yumpkg. Removing unnecessary code and relying on the code that handles dicts later. Adding tests when pkg.installed is called with hold=False.

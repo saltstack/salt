@@ -141,6 +141,14 @@ def query(params=None):
         "secret_access_key", get_configured_provider(), __opts__, search_global=False
     )
 
+    verify_ssl = config.get_cloud_config_value(
+        "verify_ssl",
+        get_configured_provider(),
+        __opts__,
+        default=True,
+        search_global=False,
+    )
+
     # public interface parameters
     real_parameters = {
         "access_key_id": access_key_id,
@@ -171,7 +179,7 @@ def query(params=None):
     # print('parameters:')
     # pprint.pprint(real_parameters)
 
-    request = requests.get(path, params=real_parameters, verify=False)
+    request = requests.get(path, params=real_parameters, verify=verify_ssl)
 
     # print('url:')
     # print(request.url)
@@ -331,7 +339,7 @@ def show_image(kwargs, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The show_images function must be called with " "-f or --function"
+            "The show_images function must be called with -f or --function"
         )
 
     if not isinstance(kwargs, dict):
@@ -588,7 +596,9 @@ def list_nodes_select(call=None):
         salt-cloud -S my-qingcloud
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -859,7 +869,7 @@ def destroy(instance_id, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     instance_data = show_instance(instance_id, call="action")

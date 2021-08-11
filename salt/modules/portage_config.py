@@ -56,7 +56,8 @@ def __virtual__():
         return "portage_config"
     return (
         False,
-        "portage_config execution module cannot be loaded: only available on Gentoo with portage installed.",
+        "portage_config execution module cannot be loaded: only available on Gentoo"
+        " with portage installed.",
     )
 
 
@@ -152,7 +153,6 @@ def enforce_nice_config():
     .. seealso::
        :py:func:`salt.modules.ebuild.ex_mod_init`
          for information on automatically running this when pkg is used.
-
 
     CLI Example:
 
@@ -537,6 +537,7 @@ def has_flag(conf, atom, flag):
 def get_missing_flags(conf, atom, flags):
     """
     Find out which of the given flags are currently not set.
+
     CLI Example:
 
     .. code-block:: bash

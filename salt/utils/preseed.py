@@ -1,7 +1,7 @@
 """
 Utilities for managing Debian preseed
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 """
 
 import shlex

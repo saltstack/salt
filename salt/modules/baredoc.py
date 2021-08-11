@@ -213,6 +213,7 @@ def list_states(name=False, names_only=False):
     :param names_only: Return only a list of the callable functions instead of a dictionary with arguments
 
     CLI Example:
+
     (example truncated for brevity)
 
     .. code-block:: bash

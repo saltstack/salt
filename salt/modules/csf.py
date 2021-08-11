@@ -28,8 +28,9 @@ def _temp_exists(method, ip):
     on the method supplied, (tempallow, tempdeny).
     """
     _type = method.replace("temp", "").upper()
-    cmd = "csf -t | awk -v code=1 -v type=_type -v ip=ip '$1==type && $2==ip {{code=0}} END {{exit code}}'".format(
-        _type=_type, ip=ip
+    cmd = (
+        "csf -t | awk -v code=1 -v type=_type -v ip=ip '$1==type && $2==ip {{code=0}}"
+        " END {{exit code}}'".format(_type=_type, ip=ip)
     )
     exists = __salt__["cmd.run_all"](cmd)
     return not bool(exists["retcode"])
@@ -55,6 +56,7 @@ def exists(
     Returns true a rule for the ip already exists
     based on the method supplied. Returns false if
     not found.
+
     CLI Example:
 
     .. code-block:: bash
@@ -149,7 +151,9 @@ def _access_rule(
         else:
             if method not in ["allow", "deny"]:
                 return {
-                    "error": "Only allow and deny rules are allowed when specifying a port."
+                    "error": (
+                        "Only allow and deny rules are allowed when specifying a port."
+                    )
                 }
             return _access_rule_with_port(
                 method=method,
@@ -367,6 +371,7 @@ def _build_tmp_access_args(method, ip, ttl, port, direction, comment):
 def running():
     """
     Check csf status
+
     CLI Example:
 
     .. code-block:: bash
@@ -379,6 +384,7 @@ def running():
 def disable():
     """
     Disable csf permanently
+
     CLI Example:
 
     .. code-block:: bash
@@ -392,6 +398,7 @@ def disable():
 def enable():
     """
     Activate csf if not running
+
     CLI Example:
 
     .. code-block:: bash
@@ -405,6 +412,7 @@ def enable():
 def reload():
     """
     Restart csf
+
     CLI Example:
 
     .. code-block:: bash
@@ -419,6 +427,7 @@ def tempallow(ip=None, ttl=None, port=None, direction=None, comment=""):
     Add an rule to the temporary ip allow list.
     See :func:`_access_rule`.
     1- Add an IP:
+
     CLI Example:
 
     .. code-block:: bash
@@ -433,6 +442,7 @@ def tempdeny(ip=None, ttl=None, port=None, direction=None, comment=""):
     Add a rule to the temporary ip deny list.
     See :func:`_access_rule`.
     1- Add an IP:
+
     CLI Example:
 
     .. code-block:: bash
@@ -456,6 +466,7 @@ def allow(
     Add an rule to csf allowed hosts
     See :func:`_access_rule`.
     1- Add an IP:
+
     CLI Example:
 
     .. code-block:: bash
@@ -489,6 +500,7 @@ def deny(
     Add an rule to csf denied hosts
     See :func:`_access_rule`.
     1- Deny an IP:
+
     CLI Example:
 
     .. code-block:: bash
@@ -512,6 +524,7 @@ def unallow(ip):
     Remove a rule from the csf denied hosts
     See :func:`_access_rule`.
     1- Deny an IP:
+
     CLI Example:
 
     .. code-block:: bash
@@ -526,6 +539,7 @@ def undeny(ip):
     Remove a rule from the csf denied hosts
     See :func:`_access_rule`.
     1- Deny an IP:
+
     CLI Example:
 
     .. code-block:: bash

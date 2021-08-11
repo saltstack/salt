@@ -2,22 +2,17 @@
 unit tests for the localfs cache
 """
 
-# Import Python libs
 
 import errno
 import shutil
 import tempfile
 
 import salt.cache.localfs as localfs
-
-# Import Salt libs
 import salt.payload
 import salt.utils.files
 from salt.exceptions import SaltCacheError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 

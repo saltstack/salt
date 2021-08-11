@@ -29,7 +29,7 @@ def validate(config):
     """
     # Configuration for glxinfo beacon should be a dictionary
     if not isinstance(config, list):
-        return False, ("Configuration for glxinfo beacon must be a list.")
+        return False, "Configuration for glxinfo beacon must be a list."
 
     _config = {}
     list(map(_config.update, config))
@@ -37,10 +37,7 @@ def validate(config):
     if "user" not in _config:
         return (
             False,
-            (
-                "Configuration for glxinfo beacon must "
-                "include a user as glxinfo is not available to root."
-            ),
+            "Configuration for glxinfo beacon must include a user as glxinfo is not available to root.",
         )
     return True, "Valid beacon configuration"
 

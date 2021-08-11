@@ -27,13 +27,16 @@ Module to provide Citrix Netscaler compatibility to Salt (compatible with netsca
     This data can also be passed into pillar. Options passed into opts will
     overwrite options passed into pillar.
 
-:CLI Examples:
+CLI Examples:
+
     Calls relying on configuration passed using /etc/salt/minion, grains, or pillars:
+
     .. code-block:: bash
 
         salt-call netscaler.server_exists server_name
 
     Calls passing configuration as opts
+
     .. code-block:: bash
 
         salt-call netscaler.server_exists server_name netscaler_host=1.2.3.4 netscaler_user=username netscaler_pass=password
@@ -78,8 +81,7 @@ def __virtual__():
     if salt.utils.platform.is_windows():
         return (
             False,
-            "The netscaler execution module failed to load: not available "
-            "on Windows.",
+            "The netscaler execution module failed to load: not available on Windows.",
         )
     if HAS_NSNITRO:
         return "netscaler"
@@ -475,7 +477,6 @@ def service_up(s_name, **connection_args):
 def service_enable(s_name, **connection_args):
     """
     Enable a service
-
 
     CLI Example:
 
@@ -910,7 +911,8 @@ def vserver_servicegroup_delete(v_name, sg_name, **connection_args):
         NSLBVServerServiceGroupBinding.delete(nitro, vsg)
     except NSNitroError as error:
         log.debug(
-            "netscaler module error - NSLBVServerServiceGroupBinding.delete() failed: %s",
+            "netscaler module error - NSLBVServerServiceGroupBinding.delete()"
+            " failed: %s",
             error,
         )
         ret = False
@@ -1006,7 +1008,8 @@ def vserver_sslcert_delete(v_name, sc_name, **connection_args):
         NSSSLVServerSSLCertKeyBinding.delete(nitro, sslcert)
     except NSNitroError as error:
         log.debug(
-            "netscaler module error - NSSSLVServerSSLCertKeyBinding.delete() failed: %s",
+            "netscaler module error - NSSSLVServerSSLCertKeyBinding.delete()"
+            " failed: %s",
             error,
         )
         ret = False

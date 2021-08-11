@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of incron, the inotify cron
 ==============================================
@@ -41,8 +40,6 @@ then a new cron job will be added to the user's crontab.
 .. versionadded:: 0.17.0
 
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -122,29 +119,29 @@ def present(name, path, mask, cmd, user="root"):
         status = _check_cron(user, path, mask, cmd)
         ret["result"] = None
         if status == "absent":
-            ret["comment"] = "Incron {0} is set to be added".format(name)
+            ret["comment"] = "Incron {} is set to be added".format(name)
         elif status == "present":
             ret["result"] = True
-            ret["comment"] = "Incron {0} already present".format(name)
+            ret["comment"] = "Incron {} already present".format(name)
         elif status == "update":
-            ret["comment"] = "Incron {0} is set to be updated".format(name)
+            ret["comment"] = "Incron {} is set to be updated".format(name)
         return ret
 
     data = __salt__["incron.set_job"](user=user, path=path, mask=mask, cmd=cmd)
     if data == "present":
-        ret["comment"] = "Incron {0} already present".format(name)
+        ret["comment"] = "Incron {} already present".format(name)
         return ret
 
     if data == "new":
-        ret["comment"] = "Incron {0} added to {1}'s incrontab".format(name, user)
+        ret["comment"] = "Incron {} added to {}'s incrontab".format(name, user)
         ret["changes"] = {user: name}
         return ret
 
     if data == "updated":
-        ret["comment"] = "Incron {0} updated".format(name)
+        ret["comment"] = "Incron {} updated".format(name)
         ret["changes"] = {user: name}
         return ret
-    ret["comment"] = "Incron {0} for user {1} failed to commit with error \n{2}".format(
+    ret["comment"] = "Incron {} for user {} failed to commit with error \n{}".format(
         name, user, data
     )
     ret["result"] = False
@@ -183,20 +180,20 @@ def absent(name, path, mask, cmd, user="root"):
         ret["result"] = None
         if status == "absent":
             ret["result"] = True
-            ret["comment"] = "Incron {0} is absent".format(name)
+            ret["comment"] = "Incron {} is absent".format(name)
         elif status == "present" or status == "update":
-            ret["comment"] = "Incron {0} is set to be removed".format(name)
+            ret["comment"] = "Incron {} is set to be removed".format(name)
         return ret
 
     data = __salt__["incron.rm_job"](user=user, path=path, mask=mask, cmd=cmd)
     if data == "absent":
-        ret["comment"] = "Incron {0} already absent".format(name)
+        ret["comment"] = "Incron {} already absent".format(name)
         return ret
     if data == "removed":
-        ret["comment"] = "Incron {0} removed from {1}'s crontab".format(name, user)
+        ret["comment"] = "Incron {} removed from {}'s crontab".format(name, user)
         ret["changes"] = {user: name}
         return ret
-    ret["comment"] = "Incron {0} for user {1} failed to commit with error {2}".format(
+    ret["comment"] = "Incron {} for user {} failed to commit with error {}".format(
         name, user, data
     )
     ret["result"] = False

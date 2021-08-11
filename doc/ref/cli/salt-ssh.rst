@@ -1,4 +1,4 @@
-.. _salt-ssh-cli:
+.. _cli-salt-ssh:
 
 ============
 ``salt-ssh``

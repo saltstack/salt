@@ -1,1 +1,0 @@
-Fix minion race conditions handling SIGTERM signal when loading modules

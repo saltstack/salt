@@ -4,8 +4,6 @@ TCP transport classes
 Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 
 """
-
-
 import errno
 import logging
 import os
@@ -52,7 +50,7 @@ except ImportError:
     try:
         from Cryptodome.Cipher import PKCS1_OAEP
     except ImportError:
-        from Crypto.Cipher import PKCS1_OAEP
+        from Crypto.Cipher import PKCS1_OAEP  # nosec
 
 if salt.utils.platform.is_windows():
     USE_LOAD_BALANCER = True
@@ -312,7 +310,11 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         self._closing = False
         self.message_client = SaltMessageClientPool(
             self.opts,
-            args=(self.opts, master_host, int(master_port),),
+            args=(
+                self.opts,
+                master_host,
+                int(master_port),
+            ),
             kwargs={
                 "io_loop": self.io_loop,
                 "resolver": resolver,
@@ -378,7 +380,9 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         if not self.auth.authenticated:
             yield self.auth.authenticate()
         ret = yield self.message_client.send(
-            self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout
+            self._package_load(self.auth.crypticle.dumps(load)),
+            timeout=timeout,
+            tries=tries,
         )
         key = self.auth.get_keys()
         if HAS_M2:
@@ -403,7 +407,9 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         @salt.ext.tornado.gen.coroutine
         def _do_transfer():
             data = yield self.message_client.send(
-                self._package_load(self.auth.crypticle.dumps(load)), timeout=timeout,
+                self._package_load(self.auth.crypticle.dumps(load)),
+                timeout=timeout,
+                tries=tries,
             )
             # we may not have always data
             # as for example for saltcall ret submission, this is a blind
@@ -426,7 +432,12 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
 
     @salt.ext.tornado.gen.coroutine
     def _uncrypted_transfer(self, load, tries=3, timeout=60):
-        ret = yield self.message_client.send(self._package_load(load), timeout=timeout)
+        ret = yield self.message_client.send(
+            self._package_load(load),
+            timeout=timeout,
+            tries=tries,
+        )
+
         raise salt.ext.tornado.gen.Return(ret)
 
     @salt.ext.tornado.gen.coroutine
@@ -558,13 +569,16 @@ class AsyncTCPPubChannel(
                 "tag": tag,
             }
             req_channel = salt.utils.asynchronous.SyncWrapper(
-                AsyncTCPReqChannel, (self.opts,), loop_kwarg="io_loop",
+                AsyncTCPReqChannel,
+                (self.opts,),
+                loop_kwarg="io_loop",
             )
             try:
                 req_channel.send(load, timeout=60)
             except salt.exceptions.SaltReqTimeoutError:
                 log.info(
-                    "fire_master failed: master could not be contacted. Request timed out."
+                    "fire_master failed: master could not be contacted. Request timed"
+                    " out."
                 )
             except Exception:  # pylint: disable=broad-except
                 log.info("fire_master failed: %s", traceback.format_exc())
@@ -828,7 +842,11 @@ class TCPReqServerChannel(
             elif req_fun == "send_private":
                 stream.write(
                     salt.transport.frame.frame_msg(
-                        self._encrypt_private(ret, req_opts["key"], req_opts["tgt"],),
+                        self._encrypt_private(
+                            ret,
+                            req_opts["key"],
+                            req_opts["tgt"],
+                        ),
                         header=header,
                     )
                 )
@@ -1104,6 +1122,8 @@ class SaltMessageClient:
         self._stream_return_future = salt.ext.tornado.concurrent.Future()
         self.io_loop.spawn_callback(self._stream_return)
 
+        self.backoff = opts.get("tcp_reconnect_backoff", 1)
+
     def _stop_io_loop(self):
         if self.io_loop is not None:
             self.io_loop.stop()
@@ -1182,7 +1202,6 @@ class SaltMessageClient:
 
         return future
 
-    # TODO: tcp backoff opts
     @salt.ext.tornado.gen.coroutine
     def _connect(self):
         """
@@ -1204,7 +1223,8 @@ class SaltMessageClient:
                         }
                     else:
                         log.warning(
-                            "If you need a certain source IP/port, consider upgrading Tornado >= 4.5"
+                            "If you need a certain source IP/port, consider upgrading"
+                            " Tornado >= 4.5"
                         )
                 with salt.utils.asynchronous.current_ioloop(self.io_loop):
                     self._stream = yield self._tcp_client.connect(
@@ -1214,12 +1234,14 @@ class SaltMessageClient:
                 break
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
-                    "TCP Message Client encountered an exception while connecting to %s:%s: %r",
+                    "TCP Message Client encountered an exception while connecting to"
+                    " %s:%s: %r, will reconnect in %d seconds",
                     self.host,
                     self.port,
                     exc,
+                    self.backoff,
                 )
-                yield salt.ext.tornado.gen.sleep(1)  # TODO: backoff
+                yield salt.ext.tornado.gen.sleep(self.backoff)
                 # self._connecting_future.set_exception(exc)
 
     @salt.ext.tornado.gen.coroutine
@@ -1254,7 +1276,8 @@ class SaltMessageClient:
                                 self.io_loop.spawn_callback(self._on_recv, header, body)
                             else:
                                 log.error(
-                                    "Got response for message_id %s that we are not tracking",
+                                    "Got response for message_id %s that we are not"
+                                    " tracking",
                                     message_id,
                                 )
                 except salt.ext.tornado.iostream.StreamClosedError as e:
@@ -1361,22 +1384,45 @@ class SaltMessageClient:
         timeout = self.send_timeout_map.pop(message_id)
         self.io_loop.remove_timeout(timeout)
 
-    def timeout_message(self, message_id):
+    def timeout_message(self, message_id, msg):
         if message_id in self.send_timeout_map:
             del self.send_timeout_map[message_id]
         if message_id in self.send_future_map:
-            self.send_future_map.pop(message_id).set_exception(
-                SaltReqTimeoutError("Message timed out")
-            )
+            future = self.send_future_map.pop(message_id)
+            # In a race condition the message might have been sent by the time
+            # we're timing it out. Make sure the future is not None
+            if future is not None:
+                if future.attempts < future.tries:
+                    future.attempts += 1
 
-    def send(self, msg, timeout=None, callback=None, raw=False):
+                    log.debug(
+                        "SaltReqTimeoutError, retrying. (%s/%s)",
+                        future.attempts,
+                        future.tries,
+                    )
+                    self.send(
+                        msg,
+                        timeout=future.timeout,
+                        tries=future.tries,
+                        future=future,
+                    )
+
+                else:
+                    future.set_exception(SaltReqTimeoutError("Message timed out"))
+
+    def send(self, msg, timeout=None, callback=None, raw=False, future=None, tries=3):
         """
         Send given message, and return a future
         """
         message_id = self._message_id()
         header = {"mid": message_id}
 
-        future = salt.ext.tornado.concurrent.Future()
+        if future is None:
+            future = salt.ext.tornado.concurrent.Future()
+            future.tries = tries
+            future.attempts = 0
+            future.timeout = timeout
+
         if callback is not None:
 
             def handle_future(future):
@@ -1392,7 +1438,7 @@ class SaltMessageClient:
 
         if timeout is not None:
             send_timeout = self.io_loop.call_later(
-                timeout, self.timeout_message, message_id
+                timeout, self.timeout_message, message_id, msg
             )
             self.send_timeout_map[message_id] = send_timeout
 
@@ -1672,7 +1718,9 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
             pull_uri = os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
 
         pull_sock = salt.transport.ipc.IPCMessageServer(
-            pull_uri, io_loop=self.io_loop, payload_handler=pub_server.publish_payload,
+            pull_uri,
+            io_loop=self.io_loop,
+            payload_handler=pub_server.publish_payload,
         )
 
         # Securely create socket
@@ -1718,7 +1766,9 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         # TODO: switch to the actual asynchronous interface
         # pub_sock = salt.transport.ipc.IPCMessageClient(self.opts, io_loop=self.io_loop)
         pub_sock = salt.utils.asynchronous.SyncWrapper(
-            salt.transport.ipc.IPCMessageClient, (pull_uri,), loop_kwarg="io_loop",
+            salt.transport.ipc.IPCMessageClient,
+            (pull_uri,),
+            loop_kwarg="io_loop",
         )
         pub_sock.connect()
 

@@ -23,7 +23,7 @@ def validate(config):
     """
     # Configuration for pkg beacon should be a list
     if not isinstance(config, list):
-        return False, ("Configuration for pkg beacon must be a list.")
+        return False, "Configuration for pkg beacon must be a list."
 
     # Configuration for pkg beacon should contain pkgs
     pkgs_found = False

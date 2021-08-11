@@ -1,2 +1,0 @@
-Fixed an error when running svn.latest in test mode and using the trust_failures
-option.

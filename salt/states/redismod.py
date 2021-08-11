@@ -131,7 +131,7 @@ def slaveof(
     """
     Set this redis instance as a slave.
 
-    .. versionadded: 2016.3.0
+    .. versionadded:: 2016.3.0
 
     name
         Master to make this a slave of

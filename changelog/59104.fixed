@@ -1,1 +1,0 @@
-Fixes to storing schedule items in pillar, when refreshing pillar only update the schedule items if something has changed.

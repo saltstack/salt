@@ -170,7 +170,7 @@ def present(
                 - base: centos
                 - saltenv: base
 
-        .. versionadded: 2017.7.0
+        .. versionadded:: 2017.7.0
         .. versionchanged:: 2018.3.0
             The ``tag`` must be manually specified using the ``tag`` argument.
 
@@ -499,5 +499,5 @@ def mod_watch(name, sfun=None, **kwargs):
         "name": name,
         "changes": {},
         "result": False,
-        "comment": "watch requisite is not implemented for " "{}".format(sfun),
+        "comment": "watch requisite is not implemented for {}".format(sfun),
     }

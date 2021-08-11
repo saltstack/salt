@@ -1,20 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.modules.mod_random as mod_random
 import salt.utils.pycrypto
 from salt.exceptions import SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
@@ -26,12 +16,7 @@ def _test_hashlib():
     except ImportError:
         return False
 
-    if six.PY2:
-        algorithms_attr_name = "algorithms"
-    else:
-        algorithms_attr_name = "algorithms_guaranteed"
-
-    if not hasattr(hashlib, algorithms_attr_name):
+    if not hasattr(hashlib, "algorithms_guaranteed"):
         return False
     else:
         return True
@@ -65,11 +50,8 @@ class ModrandomTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertRaises(SaltInvocationError, mod_random.str_encode, None)
 
-        if six.PY2:
-            self.assertEqual(mod_random.str_encode("A"), "QQ==\n")
-        else:
-            # We're using the base64 module which does not include the trailing new line
-            self.assertEqual(mod_random.str_encode("A"), "QQ==")
+        # We're using the base64 module which does not include the trailing new line
+        self.assertEqual(mod_random.str_encode("A"), "QQ==")
 
     def test_get_str(self):
         """

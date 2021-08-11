@@ -152,7 +152,10 @@ def _junos_prep_fun(napalm_device):
         return {
             "out": None,
             "result": False,
-            "comment": "Please install jxmlease (``pip install jxmlease``) to be able to use this function.",
+            "comment": (
+                "Please install jxmlease (``pip install jxmlease``) to be able to use"
+                " this function."
+            ),
         }
     _inject_junos_proxy(napalm_device)
     return {"result": True}
@@ -556,7 +559,6 @@ def netmiko_multi_call(*methods, **kwargs):
         - ``name``: the name of the Netmiko function to invoke.
         - ``args``: list of arguments to send to the ``name`` method.
         - ``kwargs``: key-value arguments to send to the ``name`` method.
-
 
     CLI Example:
 
@@ -1068,7 +1070,7 @@ def pyeapi_call(method, *args, **kwargs):
 
         salt '*' napalm.pyeapi_call run_commands 'show version' encoding=text
         salt '*' napalm.pyeapi_call get_config as_string=True
-   """
+    """
     pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
     return __salt__["pyeapi.call"](method, *args, **pyeapi_kwargs)
 
@@ -1155,7 +1157,7 @@ def pyeapi_config(
     .. code-block:: bash
 
         salt '*' napalm.pyeapi_config 'ntp server 1.2.3.4'
-   """
+    """
     pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
     return __salt__["pyeapi.config"](
         commands=commands,

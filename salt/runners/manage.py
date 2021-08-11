@@ -540,9 +540,10 @@ def safe_accept(target, tgt_type="glob"):
             elif minion not in pending:
                 failures[minion] = "Minion key {} not found by salt-key".format(minion)
             elif pending[minion] != finger:
-                failures[minion] = (
-                    "Minion key {} does not match the key in "
-                    "salt-key: {}".format(finger, pending[minion])
+                failures[
+                    minion
+                ] = "Minion key {} does not match the key in salt-key: {}".format(
+                    finger, pending[minion]
                 )
             else:
                 subprocess.call(["salt-key", "-qya", minion])
@@ -693,7 +694,6 @@ def bootstrap(
         a ``file:///`` URL, then you should set this to ``urllib2``.
 
         .. versionadded:: 2016.11.0
-
 
     CLI Example:
 
@@ -875,7 +875,10 @@ objShell.Exec("{1}{2}")"""
     # This is to accommodate for reinstalling Salt over an old or broken build,
     # e.g. if the master address is changed, the salt-minion process will fail
     # to authenticate and quit; which means infinite restarts under Windows.
-    batch = "cd /d %TEMP%\nnet stop salt-minion\ndel c:\\salt\\conf\\pki\\minion\\minion_master.pub\n"
+    batch = (
+        "cd /d %TEMP%\nnet stop salt-minion\ndel"
+        " c:\\salt\\conf\\pki\\minion\\minion_master.pub\n"
+    )
 
     # Speaking of command-line hostile, cscript only supports reading a script
     # from a file. Glue it together line by line.

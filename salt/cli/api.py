@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     salt.cli.api
     ~~~~~~~~~~~~~
@@ -7,12 +6,9 @@
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.client.netapi
 import salt.utils.files
 import salt.utils.parsers as parsers
@@ -34,11 +30,11 @@ class SaltAPI(parsers.SaltAPIParser):
 
             super(YourSubClass, self).prepare()
         """
-        super(SaltAPI, self).prepare()
+        super().prepare()
 
         try:
             if self.config["verify_env"]:
-                logfile = self.config["log_file"]
+                logfile = self.options.api_logfile
                 if logfile is not None:
                     # Logfile is not using Syslog, verify
                     with salt.utils.files.set_umask(0o027):
@@ -64,7 +60,7 @@ class SaltAPI(parsers.SaltAPIParser):
 
         NOTE: Run any required code before calling `super()`.
         """
-        super(SaltAPI, self).start()
+        super().start()
         if check_user(self.config["user"]):
             log.info("The salt-api is starting up")
             self.api.run()
@@ -79,7 +75,7 @@ class SaltAPI(parsers.SaltAPIParser):
             exitmsg = msg + exitmsg
         else:
             exitmsg = msg.strip()
-        super(SaltAPI, self).shutdown(exitcode, exitmsg)
+        super().shutdown(exitcode, exitmsg)
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         # escalate signal to the process manager processes
@@ -87,4 +83,4 @@ class SaltAPI(parsers.SaltAPIParser):
         self.api.process_manager.send_signal_to_processes(signum)
         # kill any remaining processes
         self.api.process_manager.kill_children()
-        super(SaltAPI, self)._handle_signals(signum, sigframe)
+        super()._handle_signals(signum, sigframe)

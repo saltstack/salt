@@ -39,7 +39,8 @@ def __virtual__():
     if HAS_LIB is False:
         return (
             False,
-            "Required dependencies 'googleapiclient' and/or 'oauth2client' were not found.",
+            "Required dependencies 'googleapiclient' and/or 'oauth2client' were not"
+            " found.",
         )
     return __virtualname__
 
@@ -100,23 +101,27 @@ def route_create(
 
     CLI Example:
 
-    salt 'salt-master.novalocal' gcp.route_create
-        credential_file=/root/secret_key.json
-        project_id=cp100-170315
-        name=derby-db-route1
-        next_hop_instance=instance-1
-        instance_zone=us-central1-a
-        network=default
-        dest_range=0.0.0.0/0
-        tags=['no-ip']
-        priority=700
+    .. code-block:: bash
+
+        salt 'salt-master.novalocal' gcp.route_create
+            credential_file=/root/secret_key.json
+            project_id=cp100-170315
+            name=derby-db-route1
+            next_hop_instance=instance-1
+            instance_zone=us-central1-a
+            network=default
+            dest_range=0.0.0.0/0
+            tags=['no-ip']
+            priority=700
 
     In above example, the instances which are having tag "no-ip" will route the
     packet to instance "instance-1"(if packet is intended to other network)
     """
 
-    credentials = oauth2client.service_account.ServiceAccountCredentials.from_json_keyfile_name(
-        credential_file
+    credentials = (
+        oauth2client.service_account.ServiceAccountCredentials.from_json_keyfile_name(
+            credential_file
+        )
     )
     service = googleapiclient.discovery.build("compute", "v1", credentials=credentials)
     routes = service.routes()

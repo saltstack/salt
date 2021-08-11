@@ -61,7 +61,7 @@ def list_():
     """
     Return a list of all available services.
 
-    .. versionadded: 2015.8.1
+    .. versionadded:: 2015.8.1
 
     CLI Example:
 

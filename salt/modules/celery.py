@@ -50,7 +50,6 @@ def run_task(
     """
     Execute celery tasks. For celery specific parameters see celery documentation.
 
-
     CLI Example:
 
     .. code-block:: bash

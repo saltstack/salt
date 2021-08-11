@@ -1,2 +1,0 @@
-Fixed the zabbix.host_create call on zabbix_host.present to include the
-optional parameter visible_name. Now working as documented.

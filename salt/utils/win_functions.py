@@ -299,7 +299,7 @@ def broadcast_setting_change(message="Environment"):
 
     CLI Example:
 
-    ... code-block:: python
+    .. code-block:: python
 
         import salt.utils.win_functions
         salt.utils.win_functions.broadcast_setting_change('Environment')

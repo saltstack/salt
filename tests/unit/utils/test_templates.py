@@ -2,15 +2,18 @@
 Unit tests for salt.utils.templates.py
 """
 
+
 import logging
 import os
 import sys
+from collections import OrderedDict
 from pathlib import PurePath, PurePosixPath
 
+import pytest
 import salt.utils.files
 import salt.utils.templates
-from tests.support import mock
 from tests.support.helpers import with_tempdir
+from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
 
 try:
@@ -54,6 +57,31 @@ class RenderTestCase(TestCase):
         ctx["var"] = "OK"
         res = salt.utils.templates.render_jinja_tmpl(tmpl, ctx)
         self.assertEqual(res, "OK")
+
+    def test_render_jinja_tojson_sorted(self):
+        templ = """thing: {{ var|tojson(sort_keys=True) }}"""
+        expected = """thing: {"x": "xxx", "y": "yyy", "z": "zzz"}"""
+
+        with patch.dict(self.context, {"var": {"z": "zzz", "y": "yyy", "x": "xxx"}}):
+            res = salt.utils.templates.render_jinja_tmpl(templ, self.context)
+
+        assert res == expected
+
+    def test_render_jinja_tojson_unsorted(self):
+        templ = """thing: {{ var|tojson(sort_keys=False) }}"""
+        expected = """thing: {"z": "zzz", "x": "xxx", "y": "yyy"}"""
+
+        # Values must be added to the dict in the expected order. This is
+        # only necessary for older Pythons that don't remember dict order.
+        d = OrderedDict()
+        d["z"] = "zzz"
+        d["x"] = "xxx"
+        d["y"] = "yyy"
+
+        with patch.dict(self.context, {"var": d}):
+            res = salt.utils.templates.render_jinja_tmpl(templ, self.context)
+
+        assert res == expected
 
     ### Tests for mako template
     def test_render_mako_sanity(self):
@@ -201,6 +229,13 @@ class RenderTestCase(TestCase):
         res = salt.utils.templates.render_cheetah_tmpl(tmpl, ctx)
         self.assertEqual(res.strip(), "OK")
 
+    def test_render_jinja_cve_2021_25283(self):
+        tmpl = """{{ [].__class__ }}"""
+        ctx = dict(self.context)
+        ctx["var"] = "OK"
+        with pytest.raises(salt.exceptions.SaltRenderError):
+            res = salt.utils.templates.render_jinja_tmpl(tmpl, ctx)
+
 
 class MockRender:
     def __call__(self, tplstr, context, tmplpath=None):
@@ -212,12 +247,12 @@ class MockRender:
 
 class WrapRenderTestCase(TestCase):
     def assertDictContainsAll(self, actual, **expected):
-        """ Make sure dictionary contains at least all expected values"""
+        """Make sure dictionary contains at least all expected values"""
         actual = {key: actual[key] for key in expected if key in actual}
         self.assertEqual(expected, actual)
 
     def _test_generated_sls_context(self, tmplpath, sls, **expected):
-        """ Generic SLS Context Test"""
+        """Generic SLS Context Test"""
         # DeNormalize tmplpath
         tmplpath = str(PurePath(PurePosixPath(tmplpath)))
         if tmplpath.startswith("\\"):
@@ -226,10 +261,10 @@ class WrapRenderTestCase(TestCase):
         actual = salt.utils.templates._generate_sls_context(tmplpath, sls)
         self.assertDictContainsAll(actual, **expected)
 
-    @mock.patch("salt.utils.templates.generate_sls_context")
+    @patch("salt.utils.templates.generate_sls_context")
     @with_tempdir()
     def test_sls_context_call(self, tempdir, generate_sls_context):
-        """ Check that generate_sls_context is called with proper parameters"""
+        """Check that generate_sls_context is called with proper parameters"""
         sls = "foo.bar"
         tmplpath = "/tmp/foo/bar.sls"
 
@@ -242,10 +277,10 @@ class WrapRenderTestCase(TestCase):
         res = wrapped(slsfile, context=context, tmplpath=tmplpath)
         generate_sls_context.assert_called_with(tmplpath, sls)
 
-    @mock.patch("salt.utils.templates.generate_sls_context")
+    @patch("salt.utils.templates.generate_sls_context")
     @with_tempdir()
     def test_sls_context_no_call(self, tempdir, generate_sls_context):
-        """ Check that generate_sls_context is not called if sls is not set"""
+        """Check that generate_sls_context is not called if sls is not set"""
         sls = "foo.bar"
         tmplpath = "/tmp/foo/bar.sls"
 
@@ -259,7 +294,7 @@ class WrapRenderTestCase(TestCase):
         generate_sls_context.assert_not_called()
 
     def test_generate_sls_context__top_level(self):
-        """ generate_sls_context - top_level Use case"""
+        """generate_sls_context - top_level Use case"""
         self._test_generated_sls_context(
             "/tmp/boo.sls",
             "boo",
@@ -273,7 +308,7 @@ class WrapRenderTestCase(TestCase):
         )
 
     def test_generate_sls_context__one_level_init_implicit(self):
-        """ generate_sls_context - Basic one level with implicit init.sls """
+        """generate_sls_context - Basic one level with implicit init.sls"""
         self._test_generated_sls_context(
             "/tmp/foo/init.sls",
             "foo",
@@ -287,7 +322,7 @@ class WrapRenderTestCase(TestCase):
         )
 
     def test_generate_sls_context__one_level_init_explicit(self):
-        """ generate_sls_context - Basic one level with explicit init.sls """
+        """generate_sls_context - Basic one level with explicit init.sls"""
         self._test_generated_sls_context(
             "/tmp/foo/init.sls",
             "foo.init",
@@ -301,7 +336,7 @@ class WrapRenderTestCase(TestCase):
         )
 
     def test_generate_sls_context__one_level(self):
-        """ generate_sls_context - Basic one level with name"""
+        """generate_sls_context - Basic one level with name"""
         self._test_generated_sls_context(
             "/tmp/foo/boo.sls",
             "foo.boo",
@@ -315,7 +350,7 @@ class WrapRenderTestCase(TestCase):
         )
 
     def test_generate_sls_context__one_level_repeating(self):
-        """ generate_sls_context - Basic one level with name same as dir
+        """generate_sls_context - Basic one level with name same as dir
 
         (Issue #56410)
         """
@@ -332,7 +367,7 @@ class WrapRenderTestCase(TestCase):
         )
 
     def test_generate_sls_context__two_level_init_implicit(self):
-        """ generate_sls_context - Basic two level with implicit init.sls """
+        """generate_sls_context - Basic two level with implicit init.sls"""
         self._test_generated_sls_context(
             "/tmp/foo/bar/init.sls",
             "foo.bar",
@@ -346,7 +381,7 @@ class WrapRenderTestCase(TestCase):
         )
 
     def test_generate_sls_context__two_level_init_explicit(self):
-        """ generate_sls_context - Basic two level with explicit init.sls """
+        """generate_sls_context - Basic two level with explicit init.sls"""
         self._test_generated_sls_context(
             "/tmp/foo/bar/init.sls",
             "foo.bar.init",
@@ -360,7 +395,7 @@ class WrapRenderTestCase(TestCase):
         )
 
     def test_generate_sls_context__two_level(self):
-        """ generate_sls_context - Basic two level with name"""
+        """generate_sls_context - Basic two level with name"""
         self._test_generated_sls_context(
             "/tmp/foo/bar/boo.sls",
             "foo.bar.boo",
@@ -374,7 +409,7 @@ class WrapRenderTestCase(TestCase):
         )
 
     def test_generate_sls_context__two_level_repeating(self):
-        """ generate_sls_context - Basic two level with name same as dir
+        """generate_sls_context - Basic two level with name same as dir
 
         (Issue #56410)
         """
@@ -390,26 +425,22 @@ class WrapRenderTestCase(TestCase):
             slspath="foo/foo",
         )
 
-    @mock.patch(
-        "salt.utils.templates._generate_sls_context_legacy", return_value="legacy"
-    )
-    @mock.patch("salt.utils.templates._generate_sls_context", return_value="new")
-    @mock.patch("salt.utils.templates.features.get", return_value=True)
+    @patch("salt.utils.templates._generate_sls_context_legacy", return_value="legacy")
+    @patch("salt.utils.templates._generate_sls_context", return_value="new")
+    @patch("salt.utils.templates.features.get", return_value=True)
     def test_feature_flag_on(self, feature_get, new_impl, legacy_impl):
-        """ Test feature flag selection with FF on"""
+        """Test feature flag selection with FF on"""
         tplpath = "tplpath"
         sls = "sls"
         self.assertEqual("new", salt.utils.templates.generate_sls_context(tplpath, sls))
         new_impl.assert_called_with(tplpath, sls)
         legacy_impl.assert_not_called()
 
-    @mock.patch(
-        "salt.utils.templates._generate_sls_context_legacy", return_value="legacy"
-    )
-    @mock.patch("salt.utils.templates._generate_sls_context", return_value="new")
-    @mock.patch("salt.utils.templates.features.get", return_value=False)
+    @patch("salt.utils.templates._generate_sls_context_legacy", return_value="legacy")
+    @patch("salt.utils.templates._generate_sls_context", return_value="new")
+    @patch("salt.utils.templates.features.get", return_value=False)
     def test_feature_flag_off(self, feature_get, new_impl, legacy_impl):
-        """ Test feature flag selection with FF on"""
+        """Test feature flag selection with FF on"""
         tplpath = "tplpath"
         sls = "sls"
         self.assertEqual(
@@ -421,8 +452,7 @@ class WrapRenderTestCase(TestCase):
 
     @skipIf(sys.platform == "win32", "Backslash not possible under windows")
     def test_generate_sls_context__backslash_in_path(self):
-        """ generate_sls_context - Handle backslash in path on non-windows
-        """
+        """generate_sls_context - Handle backslash in path on non-windows"""
         self._test_generated_sls_context(
             "/tmp/foo/foo\\foo.sls",
             "foo.foo\\foo",

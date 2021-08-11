@@ -1,1 +1,0 @@
-Updating the pkg beacon to fire the events when there are upgrades to packages, but also when watched packages are installed or removed. Breaking out the logic for listing pkgs from context into a separate function to aid in testing. Updating tests to ensure context is not used when use_context option to list_pkgs is False.
