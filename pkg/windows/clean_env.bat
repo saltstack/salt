@@ -5,7 +5,7 @@ echo =====================================================================
 echo.
 
 rem Make sure the script is run as Admin
-echo Administrative permissions required. Detecting permissions...
+echo Administrative permissions required. Detecting permissions ...
 echo ---------------------------------------------------------------------
 net session >nul 2>&1
 if %errorLevel%==0 (
@@ -97,7 +97,7 @@ goto CheckPython37
 :CheckPython37
 if exist "\Python37" goto RemovePython37
 
-goto eof
+goto CheckPython38
 
 :RemovePython37
     echo %0 :: Uninstalling Python 3.7 ...
@@ -121,6 +121,41 @@ goto eof
     echo %0 :: Removing the C:\Python37 Directory ...
     echo ---------------------------------------------------------------------
     rd /s /q "C:\Python37"
+    if %errorLevel%==0 (
+        echo Successful
+    ) else (
+        echo Failed, please remove manually
+    )
+
+    goto eof
+
+:CheckPython38
+if exist "\Python38" goto RemovePython38
+
+goto eof
+
+:RemovePython38
+    echo %0 :: Uninstalling Python 3.8 ...
+    echo ---------------------------------------------------------------------
+    :: 64 bit
+    if exist "%LOCALAPPDATA%\Package Cache\{ef6306ce-2a12-4d59-887e-ebf00b9e4ab5}" (
+        echo %0 :: - 3.8.8 64bit
+        "%LOCALAPPDATA%\Package Cache\{ef6306ce-2a12-4d59-887e-ebf00b9e4ab5}\python-3.8.8-amd64.exe" /uninstall /quiet
+    )
+
+    :: 32 bit
+    if exist "%LOCALAPPDATA%\Package Cache\{ac93da86-1536-4b03-aea1-dc354b5e9282}" (
+        echo %0 :: - 3.8.8 32bit
+        "%LOCALAPPDATA%\Package Cache\{ac93da86-1536-4b03-aea1-dc354b5e9282}\python-3.8.8" /uninstall /quiet
+    )
+    :: Python Launcher, seems to be the same for 32 and 64 bit
+    echo %0 :: - Python Launcher
+    msiexec.exe /x {3B53E5B7-CFC4-401C-80E9-FF7591C58741} /quiet /qn
+
+    rem wipe the Python directory
+    echo %0 :: Removing the C:\Python38 Directory ...
+    echo ---------------------------------------------------------------------
+    rd /s /q "C:\Python38"
     if %errorLevel%==0 (
         echo Successful
     ) else (

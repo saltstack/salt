@@ -86,7 +86,8 @@ def healthy():
     #       if all pools are healthy, otherwise we will get
     #       the same output that we expect from zpool status
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zpool_command"]("status", flags=["-x"]), python_shell=False,
+        __utils__["zfs.zpool_command"]("status", flags=["-x"]),
+        python_shell=False,
     )
     return res["stdout"] == "all pools are healthy"
 
@@ -111,7 +112,8 @@ def status(zpool=None):
 
     ## collect status output
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zpool_command"]("status", target=zpool), python_shell=False,
+        __utils__["zfs.zpool_command"]("status", target=zpool),
+        python_shell=False,
     )
 
     if res["retcode"] != 0:
@@ -194,7 +196,10 @@ def status(zpool=None):
             # NOTE: transform data into dict
             stat_data = OrderedDict(
                 list(
-                    zip(header, [x for x in line.strip().split(" ") if x not in [""]],)
+                    zip(
+                        header,
+                        [x for x in line.strip().split(" ") if x not in [""]],
+                    )
                 )
             )
 
@@ -307,7 +312,12 @@ def iostat(zpool=None, sample_time=5, parsable=True):
 
         # NOTE: transform data into dict
         io_data = OrderedDict(
-            list(zip(header, [x for x in line.strip().split(" ") if x not in [""]],))
+            list(
+                zip(
+                    header,
+                    [x for x in line.strip().split(" ") if x not in [""]],
+                )
+            )
         )
 
         # NOTE: normalize values
@@ -415,7 +425,14 @@ def list_(properties="size,alloc,free,cap,frag,health", zpool=None, parsable=Tru
     ## parse list output
     for line in res["stdout"].splitlines():
         # NOTE: transform data into dict
-        zpool_data = OrderedDict(list(zip(properties, line.strip().split("\t"),)))
+        zpool_data = OrderedDict(
+            list(
+                zip(
+                    properties,
+                    line.strip().split("\t"),
+                )
+            )
+        )
 
         # NOTE: normalize values
         if parsable:
@@ -547,7 +564,10 @@ def set(zpool, prop, value):
     # set property
     res = __salt__["cmd.run_all"](
         __utils__["zfs.zpool_command"](
-            command="set", property_name=prop, property_value=value, target=zpool,
+            command="set",
+            property_name=prop,
+            property_value=value,
+            target=zpool,
         ),
         python_shell=False,
     )
@@ -572,7 +592,10 @@ def exists(zpool):
     # list for zpool
     # NOTE: retcode > 0 if zpool does not exists
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zpool_command"](command="list", target=zpool,),
+        __utils__["zfs.zpool_command"](
+            command="list",
+            target=zpool,
+        ),
         python_shell=False,
         ignore_retcode=True,
     )
@@ -600,7 +623,9 @@ def destroy(zpool, force=False):
     # destroy zpool
     res = __salt__["cmd.run_all"](
         __utils__["zfs.zpool_command"](
-            command="destroy", flags=["-f"] if force else None, target=zpool,
+            command="destroy",
+            flags=["-f"] if force else None,
+            target=zpool,
         ),
         python_shell=False,
     )
@@ -647,7 +672,11 @@ def scrub(zpool, stop=False, pause=False):
 
     ## Scrub storage pool
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zpool_command"](command="scrub", flags=action, target=zpool,),
+        __utils__["zfs.zpool_command"](
+            command="scrub",
+            flags=action,
+            target=zpool,
+        ),
         python_shell=False,
     )
 
@@ -827,7 +856,11 @@ def add(zpool, *vdevs, **kwargs):
 
     ## Update storage pool
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zpool_command"](command="add", flags=flags, target=target,),
+        __utils__["zfs.zpool_command"](
+            command="add",
+            flags=flags,
+            target=target,
+        ),
         python_shell=False,
     )
 
@@ -880,7 +913,11 @@ def attach(zpool, device, new_device, force=False):
 
     ## Update storage pool
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zpool_command"](command="attach", flags=flags, target=target,),
+        __utils__["zfs.zpool_command"](
+            command="attach",
+            flags=flags,
+            target=target,
+        ),
         python_shell=False,
     )
 
@@ -913,7 +950,10 @@ def detach(zpool, device):
     """
     ## Update storage pool
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zpool_command"](command="detach", target=[zpool, device],),
+        __utils__["zfs.zpool_command"](
+            command="detach",
+            target=[zpool, device],
+        ),
         python_shell=False,
     )
 
@@ -1060,7 +1100,11 @@ def replace(zpool, old_device, new_device=None, force=False):
 
     ## Replace device
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zpool_command"](command="replace", flags=flags, target=target,),
+        __utils__["zfs.zpool_command"](
+            command="replace",
+            flags=flags,
+            target=target,
+        ),
         python_shell=False,
     )
 
@@ -1100,7 +1144,9 @@ def create_file_vdev(size, *vdevs):
         else:
             res = __salt__["cmd.run_all"](
                 "{mkfile} {size} {vdev}".format(
-                    mkfile=_mkfile_cmd, size=size, vdev=vdev,
+                    mkfile=_mkfile_cmd,
+                    size=size,
+                    vdev=vdev,
                 ),
                 python_shell=False,
             )
@@ -1150,7 +1196,11 @@ def export(*pools, **kwargs):
 
     ## Export pools
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zpool_command"](command="export", flags=flags, target=targets,),
+        __utils__["zfs.zpool_command"](
+            command="export",
+            flags=flags,
+            target=targets,
+        ),
         python_shell=False,
     )
 
@@ -1334,7 +1384,11 @@ def online(zpool, *vdevs, **kwargs):
 
     ## Bring online device
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zpool_command"](command="online", flags=flags, target=target,),
+        __utils__["zfs.zpool_command"](
+            command="online",
+            flags=flags,
+            target=target,
+        ),
         python_shell=False,
     )
 
@@ -1384,7 +1438,11 @@ def offline(zpool, *vdevs, **kwargs):
 
     ## Take a device offline
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zpool_command"](command="offline", flags=flags, target=target,),
+        __utils__["zfs.zpool_command"](
+            command="offline",
+            flags=flags,
+            target=target,
+        ),
         python_shell=False,
     )
 
@@ -1413,7 +1471,9 @@ def labelclear(device, force=False):
     ## clear label for all specified device
     res = __salt__["cmd.run_all"](
         __utils__["zfs.zpool_command"](
-            command="labelclear", flags=["-f"] if force else None, target=device,
+            command="labelclear",
+            flags=["-f"] if force else None,
+            target=device,
         ),
         python_shell=False,
     )
@@ -1454,7 +1514,10 @@ def clear(zpool, device=None):
 
     ## clear storage pool errors
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zpool_command"](command="clear", target=target,),
+        __utils__["zfs.zpool_command"](
+            command="clear",
+            target=target,
+        ),
         python_shell=False,
     )
 
@@ -1482,7 +1545,10 @@ def reguid(zpool):
     """
     ## generate new GUID for pool
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zpool_command"](command="reguid", target=zpool,),
+        __utils__["zfs.zpool_command"](
+            command="reguid",
+            target=zpool,
+        ),
         python_shell=False,
     )
 
@@ -1507,7 +1573,10 @@ def reopen(zpool):
     """
     ## reopen all devices fro pool
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zpool_command"](command="reopen", target=zpool,),
+        __utils__["zfs.zpool_command"](
+            command="reopen",
+            target=zpool,
+        ),
         python_shell=False,
     )
 
@@ -1552,7 +1621,10 @@ def upgrade(zpool=None, version=None):
     ## Upgrade pool
     res = __salt__["cmd.run_all"](
         __utils__["zfs.zpool_command"](
-            command="upgrade", flags=flags, opts=opts, target=zpool,
+            command="upgrade",
+            flags=flags,
+            opts=opts,
+            target=zpool,
         ),
         python_shell=False,
     )
@@ -1598,7 +1670,11 @@ def history(zpool=None, internal=False, verbose=False):
 
     ## Lookup history
     res = __salt__["cmd.run_all"](
-        __utils__["zfs.zpool_command"](command="history", flags=flags, target=zpool,),
+        __utils__["zfs.zpool_command"](
+            command="history",
+            flags=flags,
+            target=zpool,
+        ),
         python_shell=False,
     )
 

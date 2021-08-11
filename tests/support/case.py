@@ -108,8 +108,8 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         if not roster_file:
             roster_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "roster")
         arg_str = (
-            "{wipe} {raw} -l {log_level} --ignore-host-keys --priv {client_key} --roster-file "
-            "{roster_file} {ssh_opts} localhost {arg_str} --out=json"
+            "{wipe} {raw} -l {log_level} --ignore-host-keys --priv {client_key}"
+            " --roster-file {roster_file} {ssh_opts} localhost {arg_str} --out=json"
         ).format(
             wipe=" -W" if wipe else "",
             raw=" -r" if raw else "",
@@ -149,7 +149,9 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             timeout = self.RUN_TIMEOUT
         asynchronous = kwargs.get("async", asynchronous)
         arg_str = "{async_flag} -t {timeout} {}".format(
-            arg_str, timeout=timeout, async_flag=" --async" if asynchronous else "",
+            arg_str,
+            timeout=timeout,
+            async_flag=" --async" if asynchronous else "",
         )
         ret = self.run_script(
             "salt-run",
@@ -742,7 +744,8 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
             kwargs["timeout"] = kwargs.pop("f_timeout")
         client = self.client if master_tgt is None else self.clients[master_tgt]
         log.debug(
-            "Running client.cmd(minion_tgt=%r, function=%r, arg=%r, timeout=%r, kwarg=%r)",
+            "Running client.cmd(minion_tgt=%r, function=%r, arg=%r, timeout=%r,"
+            " kwarg=%r)",
             minion_tgt,
             function,
             arg,
@@ -804,9 +807,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
                         job_data, job_kill
                     )
                 )
-                ret.append(
-                    "[TEST SUITE ENFORCED]{}" "[/TEST SUITE ENFORCED]".format(msg)
-                )
+                ret.append("[TEST SUITE ENFORCED]{}[/TEST SUITE ENFORCED]".format(msg))
         return ret
 
 

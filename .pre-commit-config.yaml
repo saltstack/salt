@@ -195,7 +195,6 @@ repos:
           - --passthrough-line-from-input=^pyobjc(.*)$
           - requirements/static/pkg/darwin.in
 
-
       - id: pip-tools-compile
         alias: compile-pkg-windows-3.7-zmq-requirements
         name: Windows Packaging Py3.7 ZeroMQ Requirements
@@ -208,33 +207,31 @@ repos:
           - --include=requirements/windows.txt
           - requirements/static/pkg/windows.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-pkg-windows-3.8-zmq-requirements
-#        name: Windows Packaging Py3.8 ZeroMQ Requirements
-#        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.8/windows\.txt))$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.8
-#          - --platform=windows
-#          - --include=requirements/windows.txt
-#          - requirements/static/pkg/windows.in
+      - id: pip-tools-compile
+        alias: compile-pkg-windows-3.8-zmq-requirements
+        name: Windows Packaging Py3.8 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.8/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=windows
+          - --include=requirements/windows.txt
+          - requirements/static/pkg/windows.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.9
-#      - id: pip-tools-compile
-#        alias: compile-pkg-windows-3.9-zmq-requirements
-#        name: Windows Packaging Py3.9 ZeroMQ Requirements
-#        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.9/windows\.txt))$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.9
-#          - --platform=windows
-#          - --include=requirements/windows.txt
-#          - requirements/static/pkg/windows.in
+      - id: pip-tools-compile
+        alias: compile-pkg-windows-3.9-zmq-requirements
+        name: Windows Packaging Py3.9 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.9/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=windows
+          - --include=requirements/windows.txt
+          - requirements/static/pkg/windows.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.10
+      # There's no pywin32 package for Py3.10 yet
 #      - id: pip-tools-compile
 #        alias: compile-pkg-windows-3.10-zmq-requirements
 #        name: Windows Packaging Py3.10 ZeroMQ Requirements
@@ -343,7 +340,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-crypto-py3.5-requirements
         name: Linux CI Py3.5 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.5/linux-crypto\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -355,7 +352,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-crypto-py3.6-requirements
         name: Linux CI Py3.6 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.6/linux-crypto\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -367,7 +364,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-crypto-py3.7-requirements
         name: Linux CI Py3.7 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.7/linux-crypto\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -379,7 +376,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-crypto-py3.8-requirements
         name: Linux CI Py3.8 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.8/linux-crypto\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -391,7 +388,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-linux-crypto-py3.9-requirements
         name: Linux CI Py3.9 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.9/linux-crypto\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -404,6 +401,7 @@ repos:
         alias: compile-ci-linux-crypto-py3.10-requirements
         name: Linux CI Py3.10 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.10/linux-crypto\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -472,7 +470,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-freebsd-crypto-py3.7-requirements
         name: FreeBSD CI Py3.7 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.7/freebsd-crypto\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -484,7 +482,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-freebsd-crypto-py3.8-requirements
         name: FreeBSD CI Py3.8 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.8/freebsd-crypto\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -496,7 +494,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-freebsd-crypto-py3.9-requirements
         name: FreeBSD CI Py3.9 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.9/freebsd-crypto\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -509,6 +507,7 @@ repos:
         alias: compile-ci-freebsd-crypto-py3.10-requirements
         name: FreeBSD CI Py3.10 Crypto Requirements
         files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.10/freebsd-crypto\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -581,7 +580,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-darwin-crypto-py3.7-requirements
         name: Darwin CI Py3.7 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.7/darwin-crypto\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -593,7 +592,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-darwin-crypto-py3.8-requirements
         name: Darwin CI Py3.8 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.8/darwin-crypto\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -605,7 +604,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-darwin-crypto-py3.9-requirements
         name: Darwin CI Py3.9 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.9/darwin-crypto\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -617,7 +616,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-darwin-crypto-py3.10-requirements
         name: Darwin CI Py3.10 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.10/darwin-crypto\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -625,7 +624,6 @@ repos:
           - --platform=darwin
           - --out-prefix=darwin
           - requirements/static/ci/crypto.in
-
 
       - id: pip-tools-compile
         alias: compile-ci-windows-py3.7-zmq-requirements
@@ -641,37 +639,35 @@ repos:
           - --include=requirements/static/ci/common.in
           - requirements/static/ci/windows.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-ci-windows-py3.8-zmq-requirements
-#        name: Windows CI Py3.8 ZeroMQ Requirements
-#        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.8/windows\.txt))$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.8
-#          - --platform=windows
-#          - --include=requirements/static/pkg/py{py_version}/windows.txt
-#          - --include=requirements/pytest.txt
-#          - --include=requirements/static/ci/common.in
-#          - requirements/static/ci/windows.in
+      - id: pip-tools-compile
+        alias: compile-ci-windows-py3.8-zmq-requirements
+        name: Windows CI Py3.8 ZeroMQ Requirements
+        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.8/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=windows
+          - --include=requirements/static/pkg/py{py_version}/windows.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
+          - requirements/static/ci/windows.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.9
-#      - id: pip-tools-compile
-#        alias: compile-ci-windows-py3.9-zmq-requirements
-#        name: Windows CI Py3.9 ZeroMQ Requirements
-#        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.9/windows\.txt))$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.9
-#          - --platform=windows
-#          - --include=requirements/static/pkg/py{py_version}/windows.txt
-#          - --include=requirements/pytest.txt
-#          - --include=requirements/static/ci/common.in
-#          - requirements/static/ci/windows.in
+      - id: pip-tools-compile
+        alias: compile-ci-windows-py3.9-zmq-requirements
+        name: Windows CI Py3.9 ZeroMQ Requirements
+        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.9/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=windows
+          - --include=requirements/static/pkg/py{py_version}/windows.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
+          - requirements/static/ci/windows.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.10
+      # There's no pywin32 package for Py3.10 yet
 #      - id: pip-tools-compile
 #        alias: compile-ci-windows-py3.10-zmq-requirements
 #        name: Windows CI Py3.10 ZeroMQ Requirements
@@ -687,9 +683,21 @@ repos:
 #          - requirements/static/ci/windows.in
 
       - id: pip-tools-compile
+        alias: compile-ci-windows-crypto-py3.6-requirements
+        name: Windows CI Py3.6 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.6/windows-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=windows
+          - --out-prefix=windows
+          - requirements/static/ci/crypto.in
+
+      - id: pip-tools-compile
         alias: compile-ci-windows-crypto-py3.7-requirements
         name: Windows CI Py3.7 Crypto Requirements
-        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.7/windows-crypto\.txt))$
         pass_filenames: false
         args:
           - -v
@@ -698,37 +706,35 @@ repos:
           - --out-prefix=windows
           - requirements/static/ci/crypto.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-ci-windows-crypto-py3.8-requirements
-#        name: Windows CI Py3.8 Crypto Requirements
-#        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.8
-#          - --platform=windows
-#          - --out-prefix=windows
-#          - requirements/static/ci/crypto.in
+      - id: pip-tools-compile
+        alias: compile-ci-windows-crypto-py3.8-requirements
+        name: Windows CI Py3.8 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.8/windows-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=windows
+          - --out-prefix=windows
+          - requirements/static/ci/crypto.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-ci-windows-crypto-py3.9-requirements
-#        name: Windows CI Py3.9 Crypto Requirements
-#        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.9
-#          - --platform=windows
-#          - --out-prefix=windows
-#          - requirements/static/ci/crypto.in
+      - id: pip-tools-compile
+        alias: compile-ci-windows-crypto-py3.9-requirements
+        name: Windows CI Py3.9 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.9/windows-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=windows
+          - --out-prefix=windows
+          - requirements/static/ci/crypto.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.10
+      # There's no pywin32 package for Py3.10 yet
 #      - id: pip-tools-compile
 #        alias: compile-ci-windows-crypto-py3.10-requirements
 #        name: Windows CI Py3.10 Crypto Requirements
-#        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+#        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.10/windows-crypto\.txt))$
 #        pass_filenames: false
 #        args:
 #          - -v
@@ -736,7 +742,7 @@ repos:
 #          - --platform=windows
 #          - --out-prefix=windows
 #          - requirements/static/ci/crypto.in
-
+#
   # <---- CI Requirements --------------------------------------------------------------------------------------------
 
 
@@ -744,7 +750,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-cloud-py3.5-requirements
         name: Cloud CI Py3.5 Requirements
-        files: ^requirements/(static/ci/cloud\.in)$
+        files: ^requirements/static/ci/(cloud\.in|py3\.5/cloud\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -754,7 +760,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-cloud-py3.6-requirements
         name: Cloud CI Py3.6 Requirements
-        files: ^requirements/(static/ci/cloud\.in)$
+        files: ^requirements/static/ci/(cloud\.in|py3\.6/cloud\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -764,7 +770,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-cloud-py3.7-requirements
         name: Cloud CI Py3.7 Requirements
-        files: ^requirements/(static/ci/cloud\.in)$
+        files: ^requirements/static/ci/(cloud\.in|py3\.7/cloud\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -774,7 +780,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-cloud-py3.8-requirements
         name: Cloud CI Py3.8 Requirements
-        files: ^requirements/(static/ci/cloud\.in)$
+        files: ^requirements/static/ci/(cloud\.in|py3\.8/cloud\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -784,7 +790,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-cloud-py3.9-requirements
         name: Cloud CI Py3.9 Requirements
-        files: ^requirements/(static/ci/cloud\.in)$
+        files: ^requirements/static/ci/(cloud\.in|py3\.9/cloud\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -794,7 +800,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-cloud-py3.10-requirements
         name: Cloud CI Py3.10 Requirements
-        files: ^requirements/(static/ci/cloud\.in)$
+        files: ^requirements/static/ci/(cloud\.in|py3\.10/cloud\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -881,7 +887,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-lint-py3.5-requirements
         name: Lint CI Py3.5 Requirements
-        files: ^requirements/static/ci/lint\.in$
+        files: ^requirements/static/ci/(lint\.in|py3\.5/lint\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -892,7 +898,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-lint-py3.6-requirements
         name: Lint CI Py3.6 Requirements
-        files: ^requirements/static/ci/lint\.in$
+        files: ^requirements/static/ci/(lint\.in|py3\.6/lint\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -903,7 +909,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-lint-py3.7-requirements
         name: Lint CI Py3.7 Requirements
-        files: ^requirements/static/ci/lint\.in$
+        files: ^requirements/static/ci/(lint\.in|py3\.7/lint\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -914,7 +920,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-lint-py3.8-requirements
         name: Lint CI Py3.8 Requirements
-        files: ^requirements/static/ci/lint\.in$
+        files: ^requirements/static/ci/(lint\.in|py3\.8/lint\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -925,7 +931,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-lint-py3.9-requirements
         name: Lint CI Py3.9 Requirements
-        files: ^requirements/static/ci/lint\.in$
+        files: ^requirements/static/ci/(lint\.in|py3\.9/lint\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -936,7 +942,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-lint-py3.10-requirements
         name: Lint CI Py3.10 Requirements
-        files: ^requirements/static/ci/lint\.in$
+        files: ^requirements/static/ci/(lint\.in|py3\.10/lint\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -950,7 +956,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-changelog-py3.5-requirements
         name: Changelog CI Py3.5 Requirements
-        files: ^requirements/static/ci/changelog\.in$
+        files: ^requirements/static/ci/(changelog\.in|py3\.5/changelog\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -961,7 +967,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-changelog-py3.6-requirements
         name: Changelog CI Py3.6 Requirements
-        files: ^requirements/static/ci/changelog\.in$
+        files: ^requirements/static/ci/(changelog\.in|py3\.6/changelog\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -972,7 +978,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-changelog-py3.7-requirements
         name: Changelog CI Py3.7 Requirements
-        files: ^requirements/static/ci/changelog\.in$
+        files: ^requirements/static/ci/(changelog\.in|py3\.7/changelog\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -983,7 +989,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-changelog-py3.8-requirements
         name: Changelog CI Py3.8 Requirements
-        files: ^requirements/static/ci/changelog\.in$
+        files: ^requirements/static/ci/(changelog\.in|py3\.8/changelog\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -994,7 +1000,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-changelog-py3.9-requirements
         name: Changelog CI Py3.9 Requirements
-        files: ^requirements/static/ci/changelog\.in$
+        files: ^requirements/static/ci/(changelog\.in|py3\.9/changelog\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -1005,7 +1011,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-changelog-py3.10-requirements
         name: Changelog CI Py3.10 Requirements
-        files: ^requirements/static/ci/changelog\.in$
+        files: ^requirements/static/ci/(changelog\.in|py3\.10/changelog\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -1107,11 +1113,27 @@ repos:
 
   - repo: https://github.com/s0undt3ch/salt-rewrite
     # Automatically rewrite code with known rules
-    rev: 1.0.0
+    rev: 1.3.2
     hooks:
       - id: salt-rewrite
+        alias: rewrite-docstrings
+        name: Salt docstrings auto-fixes
+        files: ^salt/.*\.py$
+        args: [--silent, -F, fix_docstrings]
+        exclude: >
+            (?x)^(
+                salt/ext/.*
+            )$
+
+  - repo: https://github.com/s0undt3ch/salt-rewrite
+    # Automatically rewrite code with known rules
+    rev: 1.3.2
+    hooks:
+      - id: salt-rewrite
+        alias: rewrite-tests
+        name: Rewrite Salt's Test Suite
         files: ^tests/.*\.py$
-        args: [-E, fix_asserts]
+        args: [--silent, -E, fix_asserts, -E, fix_docstrings]
 
   - repo: https://github.com/timothycrosley/isort
     rev: "1e78a9acf3110e1f9721feb591f89a451fc9876a"
@@ -1128,7 +1150,7 @@ repos:
             )$
 
   - repo: https://github.com/psf/black
-    rev: 19.10b0
+    rev: 21.7b0
     hooks:
       - id: black
         # This tells pre-commit not to pass files to black.
@@ -1140,23 +1162,14 @@ repos:
                 tests/kitchen/.*
             )$
 
-  - repo: https://github.com/myint/rstcheck
-    # This, for now, is meant to run when locally committing code and will be disabled(skipped) when we run pre-commit
-    # against all codebase to avoid MASSIVE code churn. This way, we do it in smaller chunks, a few at a time.
-    rev: 3f92957
-    hooks:
-      - id: rstcheck
-        name: Check reST files using rstcheck
-        args: [--report=warning]
-        additional_dependencies: [sphinx]
-
   - repo: https://github.com/asottile/blacken-docs
-    rev: v1.7.0
+    rev: v1.10.0
     hooks:
       - id: blacken-docs
         args: [--skip-errors]
         files: ^doc/.*\.rst
-        additional_dependencies: [black==19.10b0]
+        additional_dependencies: [black==21.7b0]
+
   # <---- Code Formatting --------------------------------------------------------------------------------------------
 
   # ----- Security -------------------------------------------------------------------------------------------------->
@@ -1186,7 +1199,7 @@ repos:
 
   # ----- Pre-Commit ------------------------------------------------------------------------------------------------>
   - repo: https://github.com/saltstack/invoke-pre-commit
-    rev: v1.5.0
+    rev: v1.9.0
     hooks:
       - id: invoke
         alias: check-docs
@@ -1202,7 +1215,7 @@ repos:
           - msgpack
 
   - repo: https://github.com/saltstack/invoke-pre-commit
-    rev: v1.5.0
+    rev: v1.9.0
     hooks:
       - id: invoke
         alias: check-filemap
@@ -1211,6 +1224,71 @@ repos:
         pass_filenames: false
         args:
           - filemap.check
+        additional_dependencies:
+          - blessings
+          - pyyaml
+          - distro
+          - jinja2
+          - msgpack
+
+  - repo: https://github.com/saltstack/invoke-pre-commit
+    rev: v1.9.0
+    hooks:
+      - id: invoke
+        alias: loader-check-virtual
+        name: Check loader modules __virtual__
+        files: salt/.*\.py$
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+            )$
+        args:
+          - loader.check-virtual
+        additional_dependencies:
+          - blessings
+          - pyyaml
+          - distro
+          - jinja2
+          - msgpack
+
+  - repo: https://github.com/saltstack/invoke-pre-commit
+    rev: v1.9.0
+    hooks:
+      - id: invoke
+        alias: check-docstrings
+        name: Check docstrings
+        files: salt/.*\.py$
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+            )$
+        args:
+          - docstrings.check
+        additional_dependencies:
+          - blessings
+          - pyyaml
+          - distro
+          - jinja2
+          - msgpack
+
+  - repo: https://github.com/saltstack/invoke-pre-commit
+    rev: v1.9.0
+    hooks:
+      - id: invoke
+        alias: check-known-missing-docstrings
+        name: Check Known Missing Docstrings
+        stages: [manual]
+        files: salt/.*\.py$
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+            )$
+        args:
+          - docstrings.check
+          - --error-on-known-failures
         additional_dependencies:
           - blessings
           - pyyaml

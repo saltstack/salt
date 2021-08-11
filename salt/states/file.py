@@ -311,6 +311,7 @@ import salt.utils.versions
 from salt.exceptions import CommandExecutionError
 from salt.serializers import DeserializationError
 from salt.state import get_accumulator_dir as _get_accumulator_dir
+from salt.utils.odict import OrderedDict
 
 if salt.utils.platform.is_windows():
     import salt.utils.win_dacl
@@ -663,6 +664,12 @@ def _clean_dir(root, keep, exclude_pat):
     Clean out all of the files and directories in a directory (root) while
     preserving the files in a list (keep) and part of exclude_pat
     """
+    case_keep = None
+    if salt.utils.files.case_insensitive_filesystem():
+        # Create a case-sensitive dict before doing comparisons
+        # if file system is case sensitive
+        case_keep = keep
+
     root = os.path.normcase(root)
     real_keep = _find_keep_files(root, keep)
     removed = set()
@@ -675,6 +682,14 @@ def _clean_dir(root, keep, exclude_pat):
                 os.path.relpath(nfn, root), None, exclude_pat
             ):
                 return
+            # Before we can accurately assess the removal of a file, we must
+            # check for systems with case sensitive files. If we originally
+            # meant to keep a file, but due to case sensitivity python would
+            # otherwise remove the file, check against the original list.
+            if case_keep:
+                for item in case_keep:
+                    if item.casefold() == nfn.casefold():
+                        return
             removed.add(nfn)
             if not __opts__["test"]:
                 try:
@@ -964,25 +979,23 @@ def _symlink_check(name, target, force, user, group, win_owner):
                 changes["ownership"] = "{}:{}".format(*_get_symlink_ownership(name))
                 msg += (
                     ", but the ownership of the symlink would be changed "
-                    "from {2}:{3} to {0}:{1}"
-                ).format(user, group, *_get_symlink_ownership(name))
+                    "from {2}:{3} to {0}:{1}".format(
+                        user, group, *_get_symlink_ownership(name)
+                    )
+                )
             return result, msg, changes
     else:
         if force:
             return (
                 None,
-                (
-                    "The file or directory {} is set for removal to "
-                    "make way for a new symlink targeting {}".format(name, target)
-                ),
+                "The file or directory {} is set for removal to "
+                "make way for a new symlink targeting {}".format(name, target),
                 changes,
             )
         return (
             False,
-            (
-                "File or directory exists where the symlink {} "
-                "should be. Did you mean to use force?".format(name)
-            ),
+            "File or directory exists where the symlink {} "
+            "should be. Did you mean to use force?".format(name),
             changes,
         )
 
@@ -1059,7 +1072,7 @@ def _test_owner(kwargs, user=None):
         return user
     if "owner" in kwargs:
         log.warning(
-            'Use of argument owner found, "owner" is invalid, please ' 'use "user"'
+            'Use of argument owner found, "owner" is invalid, please use "user"'
         )
         return kwargs["owner"]
 
@@ -1240,25 +1253,21 @@ def _shortcut_check(
                 changes["ownership"] = "{}".format(_get_shortcut_ownership(name))
                 msg += (
                     ", but the ownership of the shortcut would be changed "
-                    "from {1} to {0}"
-                ).format(user, _get_shortcut_ownership(name))
+                    "from {1} to {0}".format(user, _get_shortcut_ownership(name))
+                )
             return result, msg, changes
     else:
         if force:
             return (
                 None,
-                (
-                    'The link or directory "{}" is set for removal to '
-                    'make way for a new shortcut targeting "{}"'.format(name, target)
-                ),
+                'The link or directory "{}" is set for removal to '
+                'make way for a new shortcut targeting "{}"'.format(name, target),
                 changes,
             )
         return (
             False,
-            (
-                'Link or directory exists where the shortcut "{}" '
-                "should be. Did you mean to use force?".format(name)
-            ),
+            'Link or directory exists where the shortcut "{}" '
+            "should be. Did you mean to use force?".format(name),
             changes,
         )
 
@@ -1453,7 +1462,7 @@ def hardlink(
         # Otherwise throw an error
         else:
             return _error(
-                ret, ("File exists where the hard link {} should be".format(name))
+                ret, "File exists where the hard link {} should be".format(name)
             )
 
     # If the file is a hard link, then we can simply rewrite its target since
@@ -1464,9 +1473,8 @@ def hardlink(
         # except for let the user know that this has already happened.
         if _hardlink_same(name, target):
             ret["result"] = True
-            ret["comment"] = (
-                "Target of hard link {} is already pointing "
-                "to {}".format(name, target)
+            ret["comment"] = "Target of hard link {} is already pointing to {}".format(
+                name, target
             )
             return ret
 
@@ -1480,7 +1488,7 @@ def hardlink(
         # Or not...
         except CommandExecutionError as E:
             ret["result"] = False
-            ret["comment"] = "Unable to set target of hard link {} -> " "{}: {}".format(
+            ret["comment"] = "Unable to set target of hard link {} -> {}: {}".format(
                 name, target, E
             )
             return ret
@@ -1498,7 +1506,7 @@ def hardlink(
         # Or not...
         except CommandExecutionError as E:
             ret["result"] = False
-            ret["comment"] = "Unable to create new hard link {} -> " "{}: {}".format(
+            ret["comment"] = "Unable to create new hard link {} -> {}: {}".format(
                 name, target, E
             )
             return ret
@@ -1712,7 +1720,7 @@ def symlink(
                     return _error(ret, "Drive {} is not mapped".format(exc.message))
         else:
             if __opts__["test"]:
-                tcomment += "\nDirectory {} for symlink is not present" "".format(
+                tcomment += "\nDirectory {} for symlink is not present".format(
                     os.path.dirname(name)
                 )
             else:
@@ -1740,38 +1748,38 @@ def symlink(
             if _check_symlink_ownership(name, user, group, win_owner):
                 # The link looks good!
                 if salt.utils.platform.is_windows():
-                    ret["comment"] = "Symlink {} is present and owned by {}" "".format(
+                    ret["comment"] = "Symlink {} is present and owned by {}".format(
                         name, win_owner
                     )
                 else:
-                    ret["comment"] = (
-                        "Symlink {} is present and owned by "
-                        "{}:{}".format(name, user, group)
+                    ret["comment"] = "Symlink {} is present and owned by {}:{}".format(
+                        name, user, group
                     )
             else:
                 if _set_symlink_ownership(name, user, group, win_owner):
                     if salt.utils.platform.is_windows():
-                        ret["comment"] = "Set ownership of symlink {} to " "{}".format(
+                        ret["comment"] = "Set ownership of symlink {} to {}".format(
                             name, win_owner
                         )
                         ret["changes"]["ownership"] = win_owner
                     else:
-                        ret["comment"] = (
-                            "Set ownership of symlink {} to "
-                            "{}:{}".format(name, user, group)
+                        ret["comment"] = "Set ownership of symlink {} to {}:{}".format(
+                            name, user, group
                         )
                         ret["changes"]["ownership"] = "{}:{}".format(user, group)
                 else:
                     ret["result"] = False
                     if salt.utils.platform.is_windows():
-                        ret["comment"] += (
-                            "Failed to set ownership of symlink "
-                            "{} to {}".format(name, win_owner)
+                        ret[
+                            "comment"
+                        ] += "Failed to set ownership of symlink {} to {}".format(
+                            name, win_owner
                         )
                     else:
-                        ret["comment"] += (
-                            "Failed to set ownership of symlink {} to "
-                            "{}:{}".format(name, user, group)
+                        ret[
+                            "comment"
+                        ] += "Failed to set ownership of symlink {} to {}:{}".format(
+                            name, user, group
                         )
             return ret
 
@@ -1786,11 +1794,8 @@ def symlink(
                 else:
                     return _error(
                         ret,
-                        (
-                            (
-                                "Backupname must be an absolute path "
-                                "or a file name: {}"
-                            ).format(backupname)
+                        "Backupname must be an absolute path or a file name: {}".format(
+                            backupname
                         ),
                     )
             # Make a backup first
@@ -1798,12 +1803,8 @@ def symlink(
                 if not force:
                     return _error(
                         ret,
-                        (
-                            (
-                                "Symlink & backup dest exists and Force not set."
-                                " {} -> {} - backup: {}"
-                            ).format(name, target, backupname)
-                        ),
+                        "Symlink & backup dest exists and Force not set. {} -> {} -"
+                        " backup: {}".format(name, target, backupname),
                     )
                 else:
                     __salt__["file.remove"](backupname)
@@ -1819,9 +1820,8 @@ def symlink(
                 )
                 return _error(
                     ret,
-                    (
-                        "Unable to rename {} to backup {} -> "
-                        ": {}".format(name, backupname, exc)
+                    "Unable to rename {} to backup {} -> : {}".format(
+                        name, backupname, exc
                     ),
                 )
         elif force:
@@ -1842,11 +1842,7 @@ def symlink(
             )
             return _error(
                 ret,
-                (
-                    "{} exists where the symlink {} should be".format(
-                        fs_entry_type, name
-                    )
-                ),
+                "{} exists where the symlink {} should be".format(fs_entry_type, name),
             )
 
     if not os.path.exists(name):
@@ -1855,20 +1851,20 @@ def symlink(
             __salt__["file.symlink"](target, name)
         except OSError as exc:
             ret["result"] = False
-            ret["comment"] = "Unable to create new symlink {} -> " "{}: {}".format(
+            ret["comment"] = "Unable to create new symlink {} -> {}: {}".format(
                 name, target, exc
             )
             return ret
         else:
-            ret["comment"] = "Created new symlink {} -> " "{}".format(name, target)
+            ret["comment"] = "Created new symlink {} -> {}".format(name, target)
             ret["changes"]["new"] = name
 
         if not _check_symlink_ownership(name, user, group, win_owner):
             if not _set_symlink_ownership(name, user, group, win_owner):
                 ret["result"] = False
-                ret[
-                    "comment"
-                ] += ", but was unable to set ownership to " "{}:{}".format(user, group)
+                ret["comment"] += ", but was unable to set ownership to {}:{}".format(
+                    user, group
+                )
     return ret
 
 
@@ -2919,9 +2915,9 @@ def managed(
     if not create:
         if not os.path.isfile(name):
             # Don't create a file that is not already present
-            ret["comment"] = (
-                "File {} is not present and is not set for " "creation"
-            ).format(name)
+            ret[
+                "comment"
+            ] = "File {} is not present and is not set for creation".format(name)
             return ret
     u_check = _check_user(user, group)
     if u_check:
@@ -2984,10 +2980,9 @@ def managed(
             else:
                 ret["comment"] = "File {} not updated".format(name)
         elif not ret["changes"] and ret["result"]:
-            ret["comment"] = (
-                "File {} exists with proper permissions. "
-                "No changes made.".format(name)
-            )
+            ret[
+                "comment"
+            ] = "File {} exists with proper permissions. No changes made.".format(name)
         return ret
 
     accum_data, _ = _load_accumulators()
@@ -3572,10 +3567,8 @@ def directory(
                 if not force:
                     return _error(
                         ret,
-                        (
-                            ("File exists where the backup target {} should go").format(
-                                backupname
-                            )
+                        "File exists where the backup target {} should go".format(
+                            backupname
                         ),
                     )
                 else:
@@ -3750,10 +3743,9 @@ def directory(
                 # As above with user, we need to make sure group exists.
                 if isinstance(gid, str):
                     ret["result"] = False
-                    ret["comment"] = (
-                        "Failed to enforce group ownership "
-                        "for group {}".format(group)
-                    )
+                    ret[
+                        "comment"
+                    ] = "Failed to enforce group ownership for group {}".format(group)
             else:
                 ret["result"] = False
                 ret["comment"] = (
@@ -4151,7 +4143,7 @@ def recurse(
         if not precheck.startswith("salt://"):
             return _error(
                 ret,
-                ("Invalid source '{}' " "(must be a salt:// URI)".format(precheck)),
+                "Invalid source '{}' (must be a salt:// URI)".format(precheck),
             )
 
     # Select the first source in source_list that exists
@@ -4221,13 +4213,13 @@ def recurse(
         if clean and os.path.exists(path) and os.path.isdir(path) and replace:
             _ret = {"name": name, "changes": {}, "result": True, "comment": ""}
             if __opts__["test"]:
-                _ret["comment"] = "Replacing directory {} with a " "file".format(path)
+                _ret["comment"] = "Replacing directory {} with a file".format(path)
                 _ret["result"] = None
                 merge_ret(path, _ret)
                 return
             else:
                 __salt__["file.remove"](path)
-                _ret["changes"] = {"diff": "Replaced directory with a " "new file"}
+                _ret["changes"] = {"diff": "Replaced directory with a new file"}
                 merge_ret(path, _ret)
 
         # Conflicts can occur if some kwargs are passed in here
@@ -5241,7 +5233,8 @@ def keyvalue(
         if not key_values:
             msg = "is empty"
         return _error(
-            ret, "file.keyvalue key and value not supplied and key_values " + msg,
+            ret,
+            "file.keyvalue key and value not supplied and key_values " + msg,
         )
 
     # try to open the file and only return a comment if ignore_if_missing is
@@ -5753,10 +5746,9 @@ def blockreplace(
         )
     except Exception as exc:  # pylint: disable=broad-except
         log.exception("Encountered error managing block")
-        ret["comment"] = (
-            "Encountered error managing block: {}. "
-            "See the log for details.".format(exc)
-        )
+        ret[
+            "comment"
+        ] = "Encountered error managing block: {}. See the log for details.".format(exc)
         return ret
 
     if changes:
@@ -6712,8 +6704,9 @@ def patch(
     for deprecated_arg in ("hash", "dry_run_first"):
         if deprecated_arg in kwargs:
             ret.setdefault("warnings", []).append(
-                "The '{}' argument is no longer used and has been "
-                "ignored.".format(deprecated_arg)
+                "The '{}' argument is no longer used and has been ignored.".format(
+                    deprecated_arg
+                )
             )
 
     if reject_file is not None:
@@ -7187,8 +7180,7 @@ def copy_(
             except OSError:
                 return _error(
                     ret,
-                    'Failed to delete "{}" in preparation for '
-                    "forced move".format(name),
+                    'Failed to delete "{}" in preparation for forced move'.format(name),
                 )
 
     if __opts__["test"]:
@@ -7198,17 +7190,16 @@ def copy_(
             )
             ret["result"] = None
         else:
-            ret["comment"] = (
-                'The target file "{}" exists and will not be '
-                "overwritten".format(name)
-            )
+            ret[
+                "comment"
+            ] = 'The target file "{}" exists and will not be overwritten'.format(name)
             ret["result"] = True
         return ret
 
     if not changed:
         ret[
             "comment"
-        ] = 'The target file "{}" exists and will not be ' "overwritten".format(name)
+        ] = 'The target file "{}" exists and will not be overwritten'.format(name)
         ret["result"] = True
         return ret
 
@@ -7279,17 +7270,16 @@ def rename(name, source, force=False, makedirs=False, **kwargs):
         return _error(ret, "Specified file {} is not an absolute path".format(name))
 
     if not os.path.lexists(source):
-        ret["comment"] = (
-            'Source file "{}" has already been moved out of ' "place"
-        ).format(source)
+        ret["comment"] = 'Source file "{}" has already been moved out of place'.format(
+            source
+        )
         return ret
 
     if os.path.lexists(source) and os.path.lexists(name):
         if not force:
-            ret["comment"] = (
-                'The target file "{}" exists and will not be '
-                "overwritten".format(name)
-            )
+            ret[
+                "comment"
+            ] = 'The target file "{}" exists and will not be overwritten'.format(name)
             return ret
         elif not __opts__["test"]:
             # Remove the destination to prevent problems later
@@ -7298,8 +7288,7 @@ def rename(name, source, force=False, makedirs=False, **kwargs):
             except OSError:
                 return _error(
                     ret,
-                    'Failed to delete "{}" in preparation for '
-                    "forced move".format(name),
+                    'Failed to delete "{}" in preparation for forced move'.format(name),
                 )
 
     if __opts__["test"]:
@@ -7418,13 +7407,16 @@ def accumulated(name, filename, text, **kwargs):
     if name not in accum_deps[filename]:
         accum_deps[filename][name] = []
     for accumulator in deps:
-        accum_deps[filename][name].extend(accumulator.values())
+        if isinstance(accumulator, (dict, OrderedDict)):
+            accum_deps[filename][name].extend(accumulator.values())
+        else:
+            accum_deps[filename][name].extend(accumulator)
     if name not in accum_data[filename]:
         accum_data[filename][name] = []
     for chunk in text:
         if chunk not in accum_data[filename][name]:
             accum_data[filename][name].append(chunk)
-            ret["comment"] = "Accumulator {} for file {} " "was charged by text".format(
+            ret["comment"] = "Accumulator {} for file {} was charged by text".format(
                 name, filename
             )
     _persist_accummulators(accum_data, accum_deps)
@@ -7655,9 +7647,9 @@ def serialize(
     if not create:
         if not os.path.isfile(name):
             # Don't create a file that is not already present
-            ret["comment"] = (
-                "File {} is not present and is not set for " "creation"
-            ).format(name)
+            ret[
+                "comment"
+            ] = "File {} is not present and is not set for creation".format(name)
             return ret
 
     formatter = kwargs.pop("formatter", None)
@@ -7712,8 +7704,10 @@ def serialize(
             if deserializer_name not in __serializers__:
                 return {
                     "changes": {},
-                    "comment": "merge_if_exists is not supported for the {} serializer".format(
-                        serializer
+                    "comment": (
+                        "merge_if_exists is not supported for the {} serializer".format(
+                            serializer
+                        )
                     ),
                     "name": name,
                     "result": False,
@@ -7933,9 +7927,10 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode="0600"):
     elif ntype == "b":
         # Check for file existence
         if __salt__["file.file_exists"](name):
-            ret["comment"] = (
-                "File {} exists and is not a block device. Refusing to "
-                "continue".format(name)
+            ret[
+                "comment"
+            ] = "File {} exists and is not a block device. Refusing to continue".format(
+                name
             )
 
         # Check if it is a block device
@@ -7967,9 +7962,10 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode="0600"):
     elif ntype == "p":
         # Check for file existence
         if __salt__["file.file_exists"](name):
-            ret["comment"] = (
-                "File {} exists and is not a fifo pipe. Refusing to "
-                "continue".format(name)
+            ret[
+                "comment"
+            ] = "File {} exists and is not a fifo pipe. Refusing to continue".format(
+                name
             )
 
         # Check if it is a fifo
@@ -8092,11 +8088,11 @@ def decode(
 
     if not (encoded_data or contents_pillar):
         raise CommandExecutionError(
-            "Specify either the 'encoded_data' or " "'contents_pillar' argument."
+            "Specify either the 'encoded_data' or 'contents_pillar' argument."
         )
     elif encoded_data and contents_pillar:
         raise CommandExecutionError(
-            "Specify only one 'encoded_data' or " "'contents_pillar' argument."
+            "Specify only one 'encoded_data' or 'contents_pillar' argument."
         )
     elif encoded_data:
         content = encoded_data
@@ -8289,10 +8285,8 @@ def shortcut(
                 if not force:
                     return _error(
                         ret,
-                        (
-                            ("File exists where the backup target {} should go").format(
-                                backupname
-                            )
+                        "File exists where the backup target {} should go".format(
+                            backupname
                         ),
                     )
                 else:
@@ -8307,7 +8301,7 @@ def shortcut(
                 else:
                     return _error(
                         ret,
-                        ("Directory does not exist for" ' backup at "{}"').format(
+                        'Directory does not exist for backup at "{}"'.format(
                             os.path.dirname(backupname)
                         ),
                     )
@@ -8322,11 +8316,8 @@ def shortcut(
             # Otherwise throw an error
             return _error(
                 ret,
-                (
-                    (
-                        "Directory or symlink exists where the"
-                        ' shortcut "{}" should be'
-                    ).format(name)
+                'Directory or symlink exists where the shortcut "{}" should be'.format(
+                    name
                 ),
             )
 
@@ -8356,20 +8347,21 @@ def shortcut(
             else:
                 if _check_shortcut_ownership(name, user):
                     # The shortcut looks good!
-                    ret["comment"] = "Shortcut {} is present and owned by " "{}".format(
+                    ret["comment"] = "Shortcut {} is present and owned by {}".format(
                         name, user
                     )
                 else:
                     if _set_shortcut_ownership(name, user):
-                        ret["comment"] = "Set ownership of shortcut {} to " "{}".format(
+                        ret["comment"] = "Set ownership of shortcut {} to {}".format(
                             name, user
                         )
                         ret["changes"]["ownership"] = "{}".format(user)
                     else:
                         ret["result"] = False
-                        ret["comment"] += (
-                            "Failed to set ownership of shortcut {} to "
-                            "{}".format(name, user)
+                        ret[
+                            "comment"
+                        ] += "Failed to set ownership of shortcut {} to {}".format(
+                            name, user
                         )
                 return ret
 
@@ -8388,20 +8380,20 @@ def shortcut(
                 scut.Save()
             except (AttributeError, pywintypes.com_error) as exc:
                 ret["result"] = False
-                ret["comment"] = "Unable to create new shortcut {} -> " "{}: {}".format(
+                ret["comment"] = "Unable to create new shortcut {} -> {}: {}".format(
                     name, target, exc
                 )
                 return ret
             else:
-                ret["comment"] = "Created new shortcut {} -> " "{}".format(name, target)
+                ret["comment"] = "Created new shortcut {} -> {}".format(name, target)
                 ret["changes"]["new"] = name
 
             if not _check_shortcut_ownership(name, user):
                 if not _set_shortcut_ownership(name, user):
                     ret["result"] = False
-                    ret[
-                        "comment"
-                    ] += ", but was unable to set ownership to " "{}".format(user)
+                    ret["comment"] += ", but was unable to set ownership to {}".format(
+                        user
+                    )
     return ret
 
 
@@ -8550,9 +8542,10 @@ def cached(
                 )
                 if local_hash == source_sum["hsum"]:
                     ret["result"] = True
-                    ret["comment"] = (
-                        "File {} is present on the minion and has hash "
-                        "{}".format(full_path, local_hash)
+                    ret[
+                        "comment"
+                    ] = "File {} is present on the minion and has hash {}".format(
+                        full_path, local_hash
                     )
                 else:
                     ret["comment"] = (
@@ -8634,9 +8627,10 @@ def cached(
             return ret
 
     if not local_copy:
-        ret["comment"] = (
-            "Failed to cache {}, check minion log for more "
-            "information".format(salt.utils.url.redact_http_basic_auth(name))
+        ret[
+            "comment"
+        ] = "Failed to cache {}, check minion log for more information".format(
+            salt.utils.url.redact_http_basic_auth(name)
         )
         return ret
 

@@ -105,8 +105,9 @@ def _has_required_moto():
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_moto() is False,
-    "The moto module must be >= to {} for "
-    "PY2 or {} for PY3.".format(required_moto, required_moto_py3),
+    "The moto module must be >= to {} for PY2 or {} for PY3.".format(
+        required_moto, required_moto_py3
+    ),
 )
 class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
     """

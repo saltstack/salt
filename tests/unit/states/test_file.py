@@ -822,7 +822,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             os.path, "isfile", mock_f
         ):
 
-            expected = "Target of hard link {} is already pointing " "to {}".format(
+            expected = "Target of hard link {} is already pointing to {}".format(
                 name, target
             )
             ret = return_val(result=True, comment=expected, name=name)
@@ -867,7 +867,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             os.path, "isfile", mock_f
         ):
 
-            expected = "Unable to set target of hard link {} -> " "{}: {}".format(
+            expected = "Unable to set target of hard link {} -> {}: {}".format(
                 name, target, ""
             )
             ret = return_val(result=False, comment=expected, name=name)
@@ -912,7 +912,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             os.path, "isfile", mock_f
         ):
 
-            expected = "Unable to create new hard link {} -> " "{}: {}".format(
+            expected = "Unable to create new hard link {} -> {}: {}".format(
                 name, target, ""
             )
             ret = return_val(result=False, comment=expected, name=name)
@@ -959,7 +959,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             os.path, "isfile", mock_t
         ):
 
-            expected = "Unable to create new hard link {} -> " "{}: {}".format(
+            expected = "Unable to create new hard link {} -> {}: {}".format(
                 name, target, ""
             )
             changes = dict(forced="File for hard link was forcibly replaced")
@@ -1272,9 +1272,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 self.assertDictEqual(filestate.managed(""), ret)
 
                 with patch.object(os.path, "isfile", mock_f):
-                    comt = (
-                        "File {} is not present and is not set for "
-                        "creation".format(name)
+                    comt = "File {} is not present and is not set for creation".format(
+                        name
                     )
                     ret.update({"comment": comt, "name": name, "result": True})
                     self.assertDictEqual(filestate.managed(name, create=False), ret)
@@ -1282,11 +1281,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 # Group argument is ignored on Windows systems. Group is set to
                 # user
                 if salt.utils.platform.is_windows():
-                    comt = "User salt is not available Group salt" " is not available"
+                    comt = "User salt is not available Group salt is not available"
                 else:
-                    comt = (
-                        "User salt is not available Group saltstack" " is not available"
-                    )
+                    comt = "User salt is not available Group saltstack is not available"
                 ret.update({"comment": comt, "result": False})
                 self.assertDictEqual(
                     filestate.managed(name, user=user, group=group), ret
@@ -1589,7 +1586,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             if salt.utils.platform.is_windows():
                 comt = ""
             else:
-                comt = "User salt is not available Group saltstack" " is not available"
+                comt = "User salt is not available Group saltstack is not available"
             ret.update({"comment": comt, "name": name})
             self.assertDictEqual(filestate.directory(name, user=user, group=group), ret)
 
@@ -1607,7 +1604,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     MagicMock(side_effect=[True, True, False, True, True, True, False]),
                 ):
                     with patch.object(os.path, "lexists", mock_t):
-                        comt = "File exists where the backup target" " A should go"
+                        comt = "File exists where the backup target A should go"
                         ret.update({"comment": comt})
                         self.assertDictEqual(
                             filestate.directory(
@@ -1635,7 +1632,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 with patch.object(os.path, "isdir", mock_f):
                     with patch.dict(filestate.__opts__, {"test": True}):
                         if salt.utils.platform.is_windows():
-                            comt = 'The directory "{}" will be changed' "".format(name)
+                            comt = 'The directory "{}" will be changed'.format(name)
                         else:
                             comt = (
                                 "The following files will be changed:\n{}:"
@@ -1725,10 +1722,12 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         ret = {
                             "name": name,
                             "result": False,
-                            "comment": 'Must not specify "recurse" '
-                            'options "ignore_files" and '
-                            '"ignore_dirs" at the same '
-                            "time.",
+                            "comment": (
+                                'Must not specify "recurse" '
+                                'options "ignore_files" and '
+                                '"ignore_dirs" at the same '
+                                "time."
+                            ),
                             "changes": {},
                         }
                         with patch.dict(
@@ -1829,9 +1828,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             # Group argument is ignored on Windows systems. Group is set to user
             if salt.utils.platform.is_windows():
-                comt = "User salt is not available Group salt" " is not available"
+                comt = "User salt is not available Group salt is not available"
             else:
-                comt = "User salt is not available Group saltstack" " is not available"
+                comt = "User salt is not available Group saltstack is not available"
             ret.update({"comment": comt})
             self.assertDictEqual(
                 filestate.recurse(name, source, user=user, group=group), ret
@@ -2104,9 +2103,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 "file.prepend": mock_t,
             },
         ):
-            comt = (
-                "The following files will be changed:\n/tmp/etc:" " directory - new\n"
-            )
+            comt = "The following files will be changed:\n/tmp/etc: directory - new\n"
             changes = {"/tmp/etc": {"directory": "new"}}
             if salt.utils.platform.is_windows():
                 comt = 'The directory "c:\\tmp\\etc" will be changed'
@@ -2246,9 +2243,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     # Group argument is ignored on Windows systems. Group is set
                     # to user
                     if salt.utils.platform.is_windows():
-                        comt = (
-                            "User salt is not available Group salt" " is not available"
-                        )
+                        comt = "User salt is not available Group salt is not available"
                     else:
                         comt = (
                             "User salt is not available Group saltstack"
@@ -2260,8 +2255,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     )
 
                     comt1 = (
-                        'Failed to delete "{}" in preparation for'
-                        " forced move".format(name)
+                        'Failed to delete "{}" in preparation for forced move'.format(
+                            name
+                        )
                     )
                     comt2 = (
                         'The target file "{}" exists and will not be '
@@ -2297,7 +2293,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                 )
 
                             with patch.dict(filestate.__opts__, {"test": False}):
-                                comt = "The target directory /tmp is" " not present"
+                                comt = "The target directory /tmp is not present"
                                 ret.update({"comment": comt, "result": False})
                                 self.assertDictEqual(
                                     filestate.copy_(name, source, preserve=True), ret
@@ -2331,7 +2327,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         mock_lex = MagicMock(return_value=False)
         with patch.object(os.path, "isabs", mock_t):
             with patch.object(os.path, "lexists", mock_lex):
-                comt = 'Source file "{}" has already been moved out of ' "place".format(
+                comt = 'Source file "{}" has already been moved out of place'.format(
                     source
                 )
                 ret.update({"comment": comt, "result": True})
@@ -2340,9 +2336,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         mock_lex = MagicMock(side_effect=[True, True, True])
         with patch.object(os.path, "isabs", mock_t):
             with patch.object(os.path, "lexists", mock_lex):
-                comt = (
-                    'The target file "{}" exists and will not be '
-                    "overwritten".format(name)
+                comt = 'The target file "{}" exists and will not be overwritten'.format(
+                    name
                 )
                 ret.update({"comment": comt, "result": True})
                 self.assertDictEqual(filestate.rename(name, source), ret)
@@ -2353,8 +2348,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             with patch.object(os.path, "lexists", mock_lex):
                 with patch.dict(filestate.__opts__, {"test": False}):
                     comt = (
-                        'Failed to delete "{}" in preparation for '
-                        "forced move".format(name)
+                        'Failed to delete "{}" in preparation for forced move'.format(
+                            name
+                        )
                     )
                     with patch.dict(filestate.__salt__, {"file.remove": mock_rem}):
                         ret.update({"name": name, "comment": comt, "result": False})
@@ -2465,7 +2461,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     "__id__": "ID",
                 },
             ):
-                comt = "Accumulator {} for file {} " "was charged by text".format(
+                comt = "Accumulator {} for file {} was charged by text".format(
                     name, filename
                 )
                 ret.update({"comment": comt, "name": name, "result": True})
@@ -2488,9 +2484,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             mock_t = MagicMock(return_value=True)
             mock_f = MagicMock(return_value=False)
             with patch.object(os.path, "isfile", mock_f):
-                comt = "File {} is not present and is not set for " "creation".format(
-                    name
-                )
+                comt = "File {} is not present and is not set for creation".format(name)
                 ret.update({"comment": comt, "name": name, "result": True})
                 self.assertDictEqual(filestate.serialize(name, create=False), ret)
 
@@ -2764,14 +2758,16 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 }
                 if test:
                     expected_ret["result"] = None
-                    expected_ret["comment"] = (
-                        "{} backups would have been removed from {}.\n"
-                        "".format(len(deleted_files), fake_name)
+                    expected_ret[
+                        "comment"
+                    ] = "{} backups would have been removed from {}.\n".format(
+                        len(deleted_files), fake_name
                     )
                 else:
-                    expected_ret["comment"] = (
-                        "{} backups were removed from {}.\n"
-                        "".format(len(deleted_files), fake_name)
+                    expected_ret[
+                        "comment"
+                    ] = "{} backups were removed from {}.\n".format(
+                        len(deleted_files), fake_name
                     )
                     mock_remove.assert_has_calls(
                         [call(os.path.join(fake_name, x)) for x in deleted_files],
@@ -2871,7 +2867,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(
             ret["comment"],
-            "file.keyvalue key and value not supplied and key_values is not a dictionary",
+            "file.keyvalue key and value not supplied and key_values is not a"
+            " dictionary",
         )
         with salt.utils.files.fopen(fpath, "r") as fp_:
             f_contents = fp_.read()
@@ -2898,7 +2895,7 @@ class TestFindKeepFiles(TestCase):
     def test__find_keep_files_win32(self):
         """
         Test _find_keep_files. The `_find_keep_files` function is only called by
-        _clean_dir, so case doesn't matter. Should return all lower case.
+        _clean_dir.
         """
         keep = filestate._find_keep_files(
             "c:\\test\\parent_folder",
@@ -2915,6 +2912,44 @@ class TestFindKeepFiles(TestCase):
             "c:\\test\\parent_folder\\meh-2.txt",
         ]
         actual = sorted(list(keep))
+        self.assertListEqual(actual, expected)
+
+    @pytest.mark.skip_unless_on_windows
+    def test__clean_dir_win32(self):
+        """
+        Test _clean_dir to ensure that regardless of case, we keep all files
+        requested and do not delete any. Therefore, the expected list should
+        be empty for this test.
+        """
+        keep = filestate._clean_dir(
+            "c:\\test\\parent_folder",
+            [
+                "C:\\test\\parent_folder\\meh-1.txt",
+                "C:\\Test\\Parent_folder\\Meh-2.txt",
+            ],
+            exclude_pat=None,
+        )
+        actual = sorted(list(keep))
+        expected = []
+        self.assertListEqual(actual, expected)
+
+    @pytest.mark.skip_unless_on_darwin
+    def test__find_keep_files_darwin(self):
+        """
+        Test _clean_dir to ensure that regardless of case, we keep all files
+        requested and do not delete any. Therefore, the expected list should
+        be empty for this test.
+        """
+        keep = filestate._clean_dir(
+            "/test/parent_folder",
+            [
+                "/test/folder/parent_folder/meh-1.txt",
+                "/Test/folder/Parent_Folder/Meh-2.txt",
+            ],
+            exclude_pat=None,
+        )
+        actual = sorted(list(keep))
+        expected = []
         self.assertListEqual(actual, expected)
 
 

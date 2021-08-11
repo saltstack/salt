@@ -126,9 +126,7 @@ class TextFormat:
             nuanced_text = TextFormat(x=29, bg_x=71)
 
             magenta_on_green = TextFormat('magenta', 'bg_green')
-            print(
-                '{0}Can you read this?{1}'
-                ).format(magenta_on_green, TextFormat('reset'))
+            print('{}Can you read this?{}'.format(magenta_on_green, TextFormat('reset')))
         """
         self.codes = [codes[attr.lower()] for attr in attrs if isinstance(attr, str)]
 

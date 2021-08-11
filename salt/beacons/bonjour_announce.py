@@ -55,15 +55,12 @@ def validate(config):
     list(map(_config.update, config))
 
     if not isinstance(config, list):
-        return False, ("Configuration for bonjour_announce beacon must be a list.")
+        return False, "Configuration for bonjour_announce beacon must be a list."
 
     elif not all(x in _config for x in ("servicetype", "port", "txt")):
         return (
             False,
-            (
-                "Configuration for bonjour_announce beacon "
-                "must contain servicetype, port and txt items."
-            ),
+            "Configuration for bonjour_announce beacon must contain servicetype, port and txt items.",
         )
     return True, "Valid beacon configuration."
 

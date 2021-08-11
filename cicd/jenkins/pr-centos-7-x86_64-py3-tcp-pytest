@@ -1,7 +1,6 @@
 @Library('salt@master-1.11') _
 
 runTestSuite(
-    ami_image_id: 'ami-05764f27cdf8f99e0',
     concurrent_builds: 1,
     distro_name: 'centos',
     distro_version: '7',
@@ -11,7 +10,7 @@ runTestSuite(
     nox_env_name: 'pytest-tcp',
     nox_passthrough_opts: '--ssh-tests',
     python_version: 'py3',
-    testrun_timeout: 6,
+    testrun_timeout: 8,
     use_spot_instances: true,
 )
 
