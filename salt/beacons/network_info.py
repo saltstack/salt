@@ -66,7 +66,7 @@ def validate(config):
 
     # Configuration for load beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for network_info beacon must be a list.")
+        return False, "Configuration for network_info beacon must be a list."
     else:
 
         _config = {}
@@ -76,16 +76,14 @@ def validate(config):
             if not isinstance(_config["interfaces"][item], dict):
                 return (
                     False,
-                    (
-                        "Configuration for network_info beacon must "
-                        "be a list of dictionaries."
-                    ),
+                    "Configuration for network_info beacon must "
+                    "be a list of dictionaries.",
                 )
             else:
                 if not any(j in VALID_ITEMS for j in _config["interfaces"][item]):
                     return (
                         False,
-                        ("Invalid configuration item in Beacon configuration."),
+                        "Invalid configuration item in Beacon configuration.",
                     )
     return True, "Valid beacon configuration"
 

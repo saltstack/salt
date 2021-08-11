@@ -230,9 +230,10 @@ def zone_present(
                 if registration_virtual_networks and not isinstance(
                     registration_virtual_networks, list
                 ):
-                    ret[
-                        "comment"
-                    ] = "registration_virtual_networks must be supplied as a list of VNET ID paths!"
+                    ret["comment"] = (
+                        "registration_virtual_networks must be supplied as a list of"
+                        " VNET ID paths!"
+                    )
                     return ret
                 reg_vnets = zone.get("registration_virtual_networks", [])
                 remote_reg_vnets = sorted(
@@ -251,9 +252,10 @@ def zone_present(
                 if resolution_virtual_networks and not isinstance(
                     resolution_virtual_networks, list
                 ):
-                    ret[
-                        "comment"
-                    ] = "resolution_virtual_networks must be supplied as a list of VNET ID paths!"
+                    ret["comment"] = (
+                        "resolution_virtual_networks must be supplied as a list of VNET"
+                        " ID paths!"
+                    )
                     return ret
                 res_vnets = zone.get("resolution_virtual_networks", [])
                 remote_res_vnets = sorted(
@@ -575,10 +577,9 @@ def record_set_present(
                             ret["changes"] = {"new": {record_str: record}}
                 elif record_str[-1] == "s":
                     if not isinstance(record, list):
-                        ret[
-                            "comment"
-                        ] = "{} record information must be specified as a list of dictionaries!".format(
-                            record_str
+                        ret["comment"] = (
+                            "{} record information must be specified as a list of"
+                            " dictionaries!".format(record_str)
                         )
                         return ret
                     local, remote = [

@@ -568,11 +568,15 @@ def test_show():
         "foo-doc": {
             "1.0.5-3ubuntu4": {
                 "Architecture": "all",
-                "Description": "Silly documentation for a silly package (1.0 release cycle)",
+                "Description": (
+                    "Silly documentation for a silly package (1.0 release cycle)"
+                ),
             },
             "1.0.4-2ubuntu1": {
                 "Architecture": "all",
-                "Description": "Silly documentation for a silly package (1.0 release cycle)",
+                "Description": (
+                    "Silly documentation for a silly package (1.0 release cycle)"
+                ),
             },
         },
     }
@@ -675,10 +679,13 @@ def test_mod_repo_match():
             with patch("salt.modules.aptpkg.refresh_db", MagicMock(return_value={})):
                 with patch("salt.utils.data.is_true", MagicMock(return_value=True)):
                     with patch(
-                        "salt.modules.aptpkg._check_apt", MagicMock(return_value=True),
+                        "salt.modules.aptpkg._check_apt",
+                        MagicMock(return_value=True),
                     ):
                         with patch(
-                            "salt.modules.aptpkg.sourceslist", MagicMock(), create=True,
+                            "salt.modules.aptpkg.sourceslist",
+                            MagicMock(),
+                            create=True,
                         ):
                             with patch(
                                 "salt.modules.aptpkg.sourceslist.SourcesList",
@@ -697,7 +704,10 @@ def test_mod_repo_match():
                                         )
                                     ),
                                 ):
-                                    source_line_no_slash = "deb http://cdn-aws.deb.debian.org/debian stretch main"
+                                    source_line_no_slash = (
+                                        "deb http://cdn-aws.deb.debian.org/debian"
+                                        " stretch main"
+                                    )
                                     repo = aptpkg.mod_repo(
                                         source_line_no_slash, enabled=False
                                     )
@@ -898,7 +908,8 @@ def test_list_pkgs():
         aptpkg.__salt__,
         {"cmd.run_stdout": MagicMock(return_value=os.linesep.join(apt_out))},
     ), patch.dict(aptpkg.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
-        aptpkg.__salt__, {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
+        aptpkg.__salt__,
+        {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
     ), patch.dict(
         aptpkg.__salt__, {"pkg_resource.sort_pkglist": pkg_resource.sort_pkglist}
     ):
@@ -946,7 +957,8 @@ def test_list_pkgs_no_context():
         aptpkg.__salt__,
         {"cmd.run_stdout": MagicMock(return_value=os.linesep.join(apt_out))},
     ), patch.dict(aptpkg.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
-        aptpkg.__salt__, {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
+        aptpkg.__salt__,
+        {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
     ), patch.dict(
         aptpkg.__salt__, {"pkg_resource.sort_pkglist": pkg_resource.sort_pkglist}
     ), patch.object(

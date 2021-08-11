@@ -57,9 +57,11 @@ class DataTestCase(TestCase):
     def test_mysql_to_dict(self):
         test_mysql_output = [
             "+----+------+-----------+------+---------+------+-------+------------------+",
-            "| Id | User | Host      | db   | Command | Time | State | Info             |",
+            "| Id | User | Host      | db   | Command | Time | State | Info         "
+            "    |",
             "+----+------+-----------+------+---------+------+-------+------------------+",
-            "|  7 | root | localhost | NULL | Query   |    0 | init  | show processlist |",
+            "|  7 | root | localhost | NULL | Query   |    0 | init  | show"
+            " processlist |",
             "+----+------+-----------+------+---------+------+-------+------------------+",
         ]
 
@@ -222,7 +224,9 @@ class DataTestCase(TestCase):
         self.assertEqual(
             "it worked",
             salt.utils.data.traverse_dict_and_list(
-                {"foo": {1234: "it worked"}}, "foo:1234", "it didn't work",
+                {"foo": {1234: "it worked"}},
+                "foo:1234",
+                "it didn't work",
             ),
         )
         # Make sure that we properly return the default value when the initial
@@ -231,7 +235,9 @@ class DataTestCase(TestCase):
         self.assertEqual(
             "default",
             salt.utils.data.traverse_dict_and_list(
-                {"foo": {"baz": "didn't work"}}, "foo:bar", "default",
+                {"foo": {"baz": "didn't work"}},
+                "foo:bar",
+                "default",
             ),
         )
 
@@ -495,7 +501,11 @@ class DataTestCase(TestCase):
         # Test binary blob
         self.assertEqual(salt.utils.data.decode(BYTES, keep=True, to_str=True), BYTES)
         self.assertRaises(
-            UnicodeDecodeError, salt.utils.data.decode, BYTES, keep=False, to_str=True,
+            UnicodeDecodeError,
+            salt.utils.data.decode,
+            BYTES,
+            keep=False,
+            to_str=True,
         )
 
     def test_decode_fallback(self):

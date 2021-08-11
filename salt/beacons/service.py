@@ -18,30 +18,26 @@ def validate(config):
     """
     # Configuration for service beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for service beacon must be a list.")
+        return False, "Configuration for service beacon must be a list."
     else:
         _config = {}
         list(map(_config.update, config))
 
         if "services" not in _config:
-            return False, ("Configuration for service beacon requires services.")
+            return False, "Configuration for service beacon requires services."
         else:
             if not isinstance(_config["services"], dict):
                 return (
                     False,
-                    (
-                        "Services configuration item for service beacon must "
-                        "be a dictionary."
-                    ),
+                    "Services configuration item for service beacon must "
+                    "be a dictionary.",
                 )
             for config_item in _config["services"]:
                 if not isinstance(_config["services"][config_item], dict):
                     return (
                         False,
-                        (
-                            "Configuration for service beacon must "
-                            "be a list of dictionaries."
-                        ),
+                        "Configuration for service beacon must "
+                        "be a list of dictionaries.",
                     )
 
     return True, "Valid beacon configuration"

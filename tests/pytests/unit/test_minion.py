@@ -291,9 +291,11 @@ def test_handle_decoded_payload_jid_queue_addition():
     jid isn't already present in the jid_queue.
     """
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
-        "salt.utils.process.SignalHandlingProcess.start", MagicMock(return_value=True),
+        "salt.utils.process.SignalHandlingProcess.start",
+        MagicMock(return_value=True),
     ), patch(
-        "salt.utils.process.SignalHandlingProcess.join", MagicMock(return_value=True),
+        "salt.utils.process.SignalHandlingProcess.join",
+        MagicMock(return_value=True),
     ):
         mock_jid = 11111
         mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
@@ -327,9 +329,11 @@ def test_handle_decoded_payload_jid_queue_reduced_minion_jid_queue_hwm():
     minion's jid_queue high water mark (minion_jid_queue_hwm) is hit.
     """
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
-        "salt.utils.process.SignalHandlingProcess.start", MagicMock(return_value=True),
+        "salt.utils.process.SignalHandlingProcess.start",
+        MagicMock(return_value=True),
     ), patch(
-        "salt.utils.process.SignalHandlingProcess.join", MagicMock(return_value=True),
+        "salt.utils.process.SignalHandlingProcess.join",
+        MagicMock(return_value=True),
     ):
         mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         mock_opts["minion_jid_queue_hwm"] = 2
@@ -362,9 +366,11 @@ def test_process_count_max():
     as per process_count_max.
     """
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
-        "salt.utils.process.SignalHandlingProcess.start", MagicMock(return_value=True),
+        "salt.utils.process.SignalHandlingProcess.start",
+        MagicMock(return_value=True),
     ), patch(
-        "salt.utils.process.SignalHandlingProcess.join", MagicMock(return_value=True),
+        "salt.utils.process.SignalHandlingProcess.join",
+        MagicMock(return_value=True),
     ), patch(
         "salt.utils.minion.running", MagicMock(return_value=[])
     ), patch(
@@ -428,9 +434,11 @@ def test_beacons_before_connect():
         "salt.minion.Minion.sync_connect_master",
         MagicMock(side_effect=RuntimeError("stop execution")),
     ), patch(
-        "salt.utils.process.SignalHandlingProcess.start", MagicMock(return_value=True),
+        "salt.utils.process.SignalHandlingProcess.start",
+        MagicMock(return_value=True),
     ), patch(
-        "salt.utils.process.SignalHandlingProcess.join", MagicMock(return_value=True),
+        "salt.utils.process.SignalHandlingProcess.join",
+        MagicMock(return_value=True),
     ):
         mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         mock_opts["beacons_before_connect"] = True
@@ -460,9 +468,11 @@ def test_scheduler_before_connect():
         "salt.minion.Minion.sync_connect_master",
         MagicMock(side_effect=RuntimeError("stop execution")),
     ), patch(
-        "salt.utils.process.SignalHandlingProcess.start", MagicMock(return_value=True),
+        "salt.utils.process.SignalHandlingProcess.start",
+        MagicMock(return_value=True),
     ), patch(
-        "salt.utils.process.SignalHandlingProcess.join", MagicMock(return_value=True),
+        "salt.utils.process.SignalHandlingProcess.join",
+        MagicMock(return_value=True),
     ):
         mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         mock_opts["scheduler_before_connect"] = True
@@ -488,14 +498,17 @@ def test_minion_module_refresh():
     because destroy method was already called.
     """
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
-        "salt.utils.process.SignalHandlingProcess.start", MagicMock(return_value=True),
+        "salt.utils.process.SignalHandlingProcess.start",
+        MagicMock(return_value=True),
     ), patch(
-        "salt.utils.process.SignalHandlingProcess.join", MagicMock(return_value=True),
+        "salt.utils.process.SignalHandlingProcess.join",
+        MagicMock(return_value=True),
     ):
         try:
             mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
             minion = salt.minion.Minion(
-                mock_opts, io_loop=salt.ext.tornado.ioloop.IOLoop(),
+                mock_opts,
+                io_loop=salt.ext.tornado.ioloop.IOLoop(),
             )
             minion.schedule = salt.utils.schedule.Schedule(mock_opts, {}, returners={})
             assert hasattr(minion, "schedule")
@@ -512,14 +525,17 @@ def test_minion_module_refresh_beacons_refresh():
     minion object has a beacons attribute with beacons.
     """
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
-        "salt.utils.process.SignalHandlingProcess.start", MagicMock(return_value=True),
+        "salt.utils.process.SignalHandlingProcess.start",
+        MagicMock(return_value=True),
     ), patch(
-        "salt.utils.process.SignalHandlingProcess.join", MagicMock(return_value=True),
+        "salt.utils.process.SignalHandlingProcess.join",
+        MagicMock(return_value=True),
     ):
         try:
             mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
             minion = salt.minion.Minion(
-                mock_opts, io_loop=salt.ext.tornado.ioloop.IOLoop(),
+                mock_opts,
+                io_loop=salt.ext.tornado.ioloop.IOLoop(),
             )
             minion.schedule = salt.utils.schedule.Schedule(mock_opts, {}, returners={})
             assert not hasattr(minion, "beacons")
@@ -538,9 +554,11 @@ def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodic_call
         "salt.minion.Minion.sync_connect_master",
         MagicMock(side_effect=RuntimeError("stop execution")),
     ), patch(
-        "salt.utils.process.SignalHandlingProcess.start", MagicMock(return_value=True),
+        "salt.utils.process.SignalHandlingProcess.start",
+        MagicMock(return_value=True),
     ), patch(
-        "salt.utils.process.SignalHandlingProcess.join", MagicMock(return_value=True),
+        "salt.utils.process.SignalHandlingProcess.join",
+        MagicMock(return_value=True),
     ):
         mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         mock_opts["ping_interval"] = 10
@@ -720,7 +738,10 @@ def test_minion_manage_schedule():
 
                 minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
                 minion.schedule = salt.utils.schedule.Schedule(
-                    mock_opts, mock_functions, returners={}, new_instance=True,
+                    mock_opts,
+                    mock_functions,
+                    returners={},
+                    new_instance=True,
                 )
 
                 minion.opts["foo"] = "bar"

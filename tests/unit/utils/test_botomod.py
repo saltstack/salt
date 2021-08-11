@@ -182,8 +182,9 @@ class BotoUtilsCacheIdTestCase(BotoUtilsTestCaseBase):
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}".format(required_boto_version),
+    "The boto module must be greater than or equal to version {}".format(
+        required_boto_version
+    ),
 )
 class BotoUtilsGetConnTestCase(BotoUtilsTestCaseBase):
     @mock_ec2
@@ -224,8 +225,9 @@ class BotoUtilsGetConnTestCase(BotoUtilsTestCaseBase):
 @skipIf(HAS_BOTO is False, "The boto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}".format(required_boto_version),
+    "The boto module must be greater than or equal to version {}".format(
+        required_boto_version
+    ),
 )
 class BotoUtilsGetErrorTestCase(BotoUtilsTestCaseBase):
     def test_error_message(self):
@@ -264,14 +266,16 @@ class BotoUtilsGetErrorTestCase(BotoUtilsTestCaseBase):
 @skipIf(HAS_BOTO is False, "The boto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}".format(required_boto_version),
+    "The boto module must be greater than or equal to version {}".format(
+        required_boto_version
+    ),
 )
 @skipIf(HAS_BOTO3 is False, "The boto3 module must be installed.")
 @skipIf(
     _has_required_boto3() is False,
-    "The boto3 module must be greater than"
-    " or equal to version {}".format(required_boto3_version),
+    "The boto3 module must be greater than or equal to version {}".format(
+        required_boto3_version
+    ),
 )
 class BotoBoto3CacheContextCollisionTest(BotoUtilsTestCaseBase):
     def test_context_conflict_between_boto_and_boto3_utils(self):

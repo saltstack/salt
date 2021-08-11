@@ -479,7 +479,8 @@ class SaltEvent:
                 self.pending_events.append(evt)
             else:
                 log.trace(
-                    "get_event() discarding cached event that no longer has any subscriptions = %s",
+                    "get_event() discarding cached event that no longer has any"
+                    " subscriptions = %s",
                     evt,
                 )
         return ret
@@ -1191,7 +1192,9 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
             )
 
             self.puller = salt.transport.ipc.IPCMessageServer(
-                epull_uri, io_loop=self.io_loop, payload_handler=self.handle_publish,
+                epull_uri,
+                io_loop=self.io_loop,
+                payload_handler=self.handle_publish,
             )
 
             # Start the master event publisher
@@ -1322,7 +1325,7 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
                 self.minion.returners[event_return](self.event_queue)
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
-                    "Could not store events - returner '%s' raised " "exception: %s",
+                    "Could not store events - returner '%s' raised exception: %s",
                     event_return,
                     exc,
                 )
@@ -1334,7 +1337,7 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
                     )
         else:
             log.error(
-                "Could not store return for event(s) - returner " "'%s' not found.",
+                "Could not store return for event(s) - returner '%s' not found.",
                 event_return,
             )
 

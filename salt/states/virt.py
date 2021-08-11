@@ -2401,9 +2401,10 @@ def volume_defined(
             vol_infos.get("format") != format and format is not None
         ):
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "A volume with the same name but different backing store or format is existing"
+            ret["comment"] = (
+                "A volume with the same name but different backing store or format is"
+                " existing"
+            )
             return ret
 
         # otherwise assume the volume has already been defined

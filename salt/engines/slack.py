@@ -284,7 +284,8 @@ class SlackClient:
                 ret_groups[name]["targets"].update(config.get("targets", {}))
             except (IndexError, AttributeError):
                 log.warning(
-                    "Couldn't use group %s. Check that targets is a dictionary and not a list",
+                    "Couldn't use group %s. Check that targets is a dictionary and not"
+                    " a list",
                     name,
                 )
 
@@ -516,9 +517,7 @@ class SlackClient:
                     )
                     user_id = m_data["message"]["user"]
                 elif "comment" in m_data and "user" in m_data["comment"]:
-                    log.debug(
-                        "Comment was added, " "so we look for user in " "the comment."
-                    )
+                    log.debug("Comment was added, so we look for user in the comment.")
                     user_id = m_data["comment"]["user"]
             else:
                 user_id = m_data.get("user")
@@ -581,13 +580,13 @@ class SlackClient:
                     loaded_groups = self.get_config_groups(groups, groups_pillar_name)
                     if not data.get("user_name"):
                         log.error(
-                            "The user %s can not be looked up via slack. What has happened here?",
+                            "The user %s can not be looked up via slack. What has"
+                            " happened here?",
                             m_data.get("user"),
                         )
                         channel.send_message(
-                            "The user {} can not be looked up via slack.  Not running {}".format(
-                                data["user_id"], msg_text
-                            )
+                            "The user {} can not be looked up via slack.  Not"
+                            " running {}".format(data["user_id"], msg_text)
                         )
                         yield {"message_data": m_data}
                         continue
@@ -696,7 +695,9 @@ class SlackClient:
             except (StopIteration, AttributeError):
                 outputter = None
             return salt.output.string_format(
-                {x: y["return"] for x, y in data.items()}, out=outputter, opts=__opts__,
+                {x: y["return"] for x, y in data.items()},
+                out=outputter,
+                opts=__opts__,
             )
         except Exception as exc:  # pylint: disable=broad-except
             import pprint
@@ -826,11 +827,13 @@ class SlackClient:
                     this_job = outstanding[jid]
                     channel = self.sc.server.channels.find(this_job["channel"])
                     return_text = self.format_return_text(result, function)
-                    return_prefix = "@{}'s job `{}` (id: {}) (target: {}) returned".format(
-                        this_job["user_name"],
-                        this_job["cmdline"],
-                        jid,
-                        this_job["target"],
+                    return_prefix = (
+                        "@{}'s job `{}` (id: {}) (target: {}) returned".format(
+                            this_job["user_name"],
+                            this_job["cmdline"],
+                            jid,
+                            this_job["target"],
+                        )
                     )
                     channel.send_message(return_prefix)
                     ts = time.time()
@@ -901,7 +904,11 @@ class SlackClient:
             # according to https://github.com/saltstack/salt-api/issues/164, tgt_type has changed to expr_form
             with salt.client.LocalClient() as local:
                 job_id = local.cmd_async(
-                    str(target), cmd, arg=args, kwarg=kwargs, tgt_type=str(tgt_type),
+                    str(target),
+                    cmd,
+                    arg=args,
+                    kwarg=kwargs,
+                    tgt_type=str(tgt_type),
                 )
             log.info("ret from local.cmd_async is %s", job_id)
         return job_id

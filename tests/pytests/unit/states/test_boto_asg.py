@@ -73,7 +73,8 @@ def test_present():
                 boto_asg.__salt__, {"config.option": MagicMock(return_value={})}
             ):
                 with patch.dict(
-                    boto_asg.__utils__, {"boto3.ordered": MagicMock(return_value="")},
+                    boto_asg.__utils__,
+                    {"boto3.ordered": MagicMock(return_value="")},
                 ):
                     comt = "Autoscale group present. "
                     ret.update({"comment": comt, "result": True})

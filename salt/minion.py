@@ -147,8 +147,10 @@ def resolve_dns(opts, fallback=True):
 
                     msg = (
                         "Master hostname: '{}' not found or not responsive. "
-                        "Retrying in {} seconds"
-                    ).format(opts["master"], opts["retry_dns"])
+                        "Retrying in {} seconds".format(
+                            opts["master"], opts["retry_dns"]
+                        )
+                    )
                     if salt.log.setup.is_console_configured():
                         log.error(msg)
                     else:
@@ -173,13 +175,16 @@ def resolve_dns(opts, fallback=True):
                 master = unknown_str
             if opts.get("__role") == "syndic":
                 err = (
-                    "Master address: '{}' could not be resolved. Invalid or unresolveable address. "
-                    "Set 'syndic_master' value in minion config.".format(master)
+                    "Master address: '{}' could not be resolved. Invalid or"
+                    " unresolveable address. Set 'syndic_master' value in minion"
+                    " config.".format(master)
                 )
             else:
                 err = (
-                    "Master address: '{}' could not be resolved. Invalid or unresolveable address. "
-                    "Set 'master' value in minion config.".format(master)
+                    "Master address: '{}' could not be resolved. Invalid or"
+                    " unresolveable address. Set 'master' value in minion config.".format(
+                        master
+                    )
                 )
             log.error(err)
             raise SaltSystemExit(code=42, msg=err)
@@ -209,7 +214,8 @@ def resolve_dns(opts, fallback=True):
                 log.debug("Using %s as source IP address", ret["source_ip"])
             else:
                 log.warning(
-                    "The interface %s is down so it cannot be used as source to connect to the Master",
+                    "The interface %s is down so it cannot be used as source to connect"
+                    " to the Master",
                     opts["source_interface_name"],
                 )
         else:
@@ -584,8 +590,9 @@ class MinionBase:
 
                     if opts["master_shuffle"]:
                         log.warning(
-                            "Use of 'master_shuffle' detected. 'master_shuffle' is deprecated in favor "
-                            "of 'random_master'. Please update your minion config file."
+                            "Use of 'master_shuffle' detected. 'master_shuffle' is"
+                            " deprecated in favor of 'random_master'. Please update"
+                            " your minion config file."
                         )
                         opts["random_master"] = opts["master_shuffle"]
 
@@ -629,7 +636,8 @@ class MinionBase:
                             opts["master"] = opts["master_list"]
                 else:
                     log.error(
-                        "master_type set to 'failover' but 'master' is not of type list but of type %s",
+                        "master_type set to 'failover' but 'master' is not of type list"
+                        " but of type %s",
                         type(opts["master"]),
                     )
                     sys.exit(salt.defaults.exitcodes.EX_GENERIC)
@@ -637,8 +645,9 @@ class MinionBase:
                 # See issue 21082 for details
                 if opts["retry_dns"] and opts["master_type"] == "failover":
                     log.critical(
-                        "'master_type' set to 'failover' but 'retry_dns' is not 0. "
-                        "Setting 'retry_dns' to 0 to failover to the next master on DNS errors."
+                        "'master_type' set to 'failover' but 'retry_dns' is not 0."
+                        " Setting 'retry_dns' to 0 to failover to the next master on"
+                        " DNS errors."
                     )
                     opts["retry_dns"] = 0
             else:
@@ -740,14 +749,15 @@ class MinionBase:
                         last_exc = exc
                         if exc.strerror.startswith("Could not access"):
                             log.info(
-                                "Failed to initiate connection with Master %s: check ownership/permissions. "
-                                "Error message: %s",
+                                "Failed to initiate connection with Master %s: check"
+                                " ownership/permissions. Error message: %s",
                                 opts["master"],
                                 exc,
                             )
                         else:
                             log.info(
-                                "Master %s could not be reached, trying next master (if any)",
+                                "Master %s could not be reached, trying next master (if"
+                                " any)",
                                 opts["master"],
                             )
                         pub_channel.close()
@@ -777,7 +787,8 @@ class MinionBase:
         else:
             if opts["random_master"]:
                 log.warning(
-                    "random_master is True but there is only one master specified. Ignoring."
+                    "random_master is True but there is only one master specified."
+                    " Ignoring."
                 )
             pub_channel = None
             while True:
@@ -1042,7 +1053,8 @@ class MinionManager(MinionBase):
     def _bind(self):
         # start up the event publisher, so we can see events during startup
         self.event_publisher = salt.utils.event.AsyncEventPublisher(
-            self.opts, io_loop=self.io_loop,
+            self.opts,
+            io_loop=self.io_loop,
         )
         self.event = salt.utils.event.get_event(
             "minion", opts=self.opts, io_loop=self.io_loop
@@ -1145,8 +1157,10 @@ class MinionManager(MinionBase):
                 yield salt.ext.tornado.gen.sleep(auth_wait)  # TODO: log?
             except SaltMasterUnresolvableError:
                 err = (
-                    "Master address: '{}' could not be resolved. Invalid or unresolveable address. "
-                    "Set 'master' value in minion config.".format(minion.opts["master"])
+                    "Master address: '{}' could not be resolved. Invalid or"
+                    " unresolveable address. Set 'master' value in minion config.".format(
+                        minion.opts["master"]
+                    )
                 )
                 log.error(err)
                 break
@@ -1550,7 +1564,11 @@ class Minion(MinionBase):
             )
         else:
             functions = salt.loader.minion_mods(
-                opts, utils=self.utils, notify=notify, proxy=proxy, context=context,
+                opts,
+                utils=self.utils,
+                notify=notify,
+                proxy=proxy,
+                context=context,
             )
         returners = salt.loader.returners(opts, functions, proxy=proxy, context=context)
         errors = {}
@@ -1644,7 +1662,8 @@ class Minion(MinionBase):
                 self._send_req_sync(load, timeout)
             except salt.exceptions.SaltReqTimeoutError:
                 log.info(
-                    "fire_master failed: master could not be contacted. Request timed out."
+                    "fire_master failed: master could not be contacted. Request timed"
+                    " out."
                 )
                 return False
             except Exception:  # pylint: disable=broad-except
@@ -1655,7 +1674,8 @@ class Minion(MinionBase):
 
                 def handle_timeout(*_):
                     log.info(
-                        "fire_master failed: master could not be contacted. Request timed out."
+                        "fire_master failed: master could not be contacted. Request"
+                        " timed out."
                     )
                     return True
 
@@ -1711,7 +1731,8 @@ class Minion(MinionBase):
             process_count = len(salt.utils.minion.running(self.opts))
             while process_count >= process_count_max:
                 log.warning(
-                    "Maximum number of processes reached while executing jid %s, waiting...",
+                    "Maximum number of processes reached while executing jid %s,"
+                    " waiting...",
                     data["jid"],
                 )
                 yield salt.ext.tornado.gen.sleep(10)
@@ -3008,7 +3029,8 @@ class Minion(MinionBase):
         if name in self.periodic_callbacks:
             return False
         self.periodic_callbacks[name] = salt.ext.tornado.ioloop.PeriodicCallback(
-            method, interval * 1000,
+            method,
+            interval * 1000,
         )
         self.periodic_callbacks[name].start()
         return True
@@ -3578,7 +3600,8 @@ class SyndicManager(MinionBase):
 
         # forward events every syndic_event_forward_timeout
         self.forward_events = salt.ext.tornado.ioloop.PeriodicCallback(
-            self._forward_events, self.opts["syndic_event_forward_timeout"] * 1000,
+            self._forward_events,
+            self.opts["syndic_event_forward_timeout"] * 1000,
         )
         self.forward_events.start()
 
@@ -3715,7 +3738,8 @@ def _metaproxy_call(opts, fn_name):
     except KeyError:
         metaproxy_name = "proxy"
         log.debug(
-            "No metaproxy key found in opts for id %s. Defaulting to standard proxy minion",
+            "No metaproxy key found in opts for id %s. Defaulting to standard proxy"
+            " minion",
             opts["id"],
         )
 
@@ -3820,8 +3844,10 @@ class SProxyMinion(SMinion):
             errmsg = (
                 'No "proxy" configuration key found in pillar or opts '
                 "dictionaries for id {id}. Check your pillar/options "
-                "configuration and contents. Salt-proxy aborted."
-            ).format(id=self.opts["id"])
+                "configuration and contents. Salt-proxy aborted.".format(
+                    id=self.opts["id"]
+                )
+            )
             log.error(errmsg)
             self._running = False
             raise SaltSystemExit(code=salt.defaults.exitcodes.EX_GENERIC, msg=errmsg)
@@ -3843,7 +3869,10 @@ class SProxyMinion(SMinion):
         self.matchers = salt.loader.matchers(self.opts)
         self.functions["sys.reload_modules"] = self.gen_modules
         self.executors = salt.loader.executors(
-            self.opts, functions=self.functions, proxy=self.proxy, context=context,
+            self.opts,
+            functions=self.functions,
+            proxy=self.proxy,
+            context=context,
         )
 
         fq_proxyname = self.opts["proxy"]["proxytype"]

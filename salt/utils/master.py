@@ -217,9 +217,7 @@ class MasterPillarUtil:
         grains = {minion_id: {} for minion_id in minion_ids}
         pillars = grains.copy()
         if not self.opts.get("minion_data_cache", False):
-            log.debug(
-                "Skipping cached data because minion_data_cache is not " "enabled."
-            )
+            log.debug("Skipping cached data because minion_data_cache is not enabled.")
             return grains, pillars
         if not minion_ids:
             minion_ids = self.cache.list("minions")
@@ -229,7 +227,8 @@ class MasterPillarUtil:
             mdata = self.cache.fetch("minions/{}".format(minion_id), "data")
             if not isinstance(mdata, dict):
                 log.warning(
-                    "cache.fetch should always return a dict. ReturnedType: %s, MinionId: %s",
+                    "cache.fetch should always return a dict. ReturnedType: %s,"
+                    " MinionId: %s",
                     type(mdata).__name__,
                     minion_id,
                 )
