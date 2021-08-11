@@ -1,0 +1,1 @@
+Fix xen._get_vm() to not break silently when a VM and a template on XenServer have the same name.

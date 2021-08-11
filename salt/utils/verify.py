@@ -177,8 +177,9 @@ def _get_pwnam(user):
     try:
         return pwd.getpwnam(user)
     except KeyError:
-        msg = "Failed to prepare the Salt environment for user {}. The user is not available.".format(
-            user
+        msg = (
+            "Failed to prepare the Salt environment for user {}. The user is not"
+            " available.".format(user)
         )
         if is_console_configured():
             log.critical(msg)
@@ -483,8 +484,8 @@ def check_max_open_files(opts):
         msg += (
             "According to the system's hard limit, there's still a "
             "margin of {} to raise the salt's max_open_files "
-            "setting. "
-        ).format(mof_h - mof_c)
+            "setting. ".format(mof_h - mof_c)
+        )
 
     msg += "Please consider raising this value."
     log.log(level=level, msg=msg)
@@ -508,7 +509,8 @@ def _realpath_windows(path):
     for part in path.split(os.path.sep):
         if base != "":
             try:
-                part = os.readlink(os.path.sep.join([base, part]))
+                # Need to use salt.utils.path.readlink as it handles junctions
+                part = salt.utils.path.readlink(os.path.sep.join([base, part]))
                 base = os.path.abspath(part)
             except OSError:
                 base = os.path.abspath(os.path.sep.join([base, part]))
@@ -657,7 +659,7 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
                 dacl.save(path, True)
 
             except CommandExecutionError:
-                msg = "Unable to securely set the permissions of " '"{}".'.format(path)
+                msg = 'Unable to securely set the permissions of "{}".'.format(path)
                 if is_console_configured():
                     log.critical(msg)
                 else:

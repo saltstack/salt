@@ -6,13 +6,9 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import Python libs
 import re
 
-# Import salt libs
 import salt.modules.mdadm_raid as mdadm
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -114,13 +110,19 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
         Test for mdadm_raid.examine
         """
         mock = MagicMock(
-            return_value="ARRAY /dev/md/pool metadata=1.2 UUID=567da122:fb8e445e:55b853e0:81bd0a3e name=positron:pool"
+            return_value=(
+                "ARRAY /dev/md/pool metadata=1.2"
+                " UUID=567da122:fb8e445e:55b853e0:81bd0a3e name=positron:pool"
+            )
         )
         with patch.dict(mdadm.__salt__, {"cmd.run_stdout": mock}):
             self.assertEqual(
                 mdadm.examine("/dev/md0"),
                 {
-                    "ARRAY /dev/md/pool metadata": "1.2 UUID=567da122:fb8e445e:55b853e0:81bd0a3e name=positron:pool"
+                    "ARRAY /dev/md/pool metadata": (
+                        "1.2 UUID=567da122:fb8e445e:55b853e0:81bd0a3e"
+                        " name=positron:pool"
+                    )
                 },
             )
             mock.assert_called_with(
@@ -141,9 +143,11 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
     def test_device_match_regex_pattern(self):
         assert re.match(
             mdadm._VOL_REGEX_PATTERN_MATCH.format("/dev/md/1"),
-            "ARRAY /dev/md/1  metadata=1.2 UUID=51f245bc:a1402c8a:2d598e79:589c07cf name=tst-ob-001:1",
+            "ARRAY /dev/md/1  metadata=1.2 UUID=51f245bc:a1402c8a:2d598e79:589c07cf"
+            " name=tst-ob-001:1",
         )
         assert not re.match(
             mdadm._VOL_REGEX_PATTERN_MATCH.format("/dev/md/1"),
-            "ARRAY /dev/md/10  metadata=1.2 UUID=51f245bc:a1402c8a:2d598e79:589c07cf name=tst-ob-001:1",
+            "ARRAY /dev/md/10  metadata=1.2 UUID=51f245bc:a1402c8a:2d598e79:589c07cf"
+            " name=tst-ob-001:1",
         )

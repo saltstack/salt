@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 unittests for yaml outputter
 """
 
-# Import Python Libs
-from __future__ import absolute_import
 
-# Import Salt Libs
 import salt.output.yaml_out as yaml
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase

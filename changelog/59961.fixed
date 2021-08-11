@@ -1,0 +1,1 @@
+Add back support to load old entrypoints by iterating instead of type checking

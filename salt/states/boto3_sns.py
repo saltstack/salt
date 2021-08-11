@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage SNS Topics
 =================
@@ -62,14 +61,12 @@ Passing in a profile
                 keyid: GKTADJGHEIQSXMKKRBJ08H
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
 import re
 
 import salt.utils.json
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -138,11 +135,11 @@ def topic_present(
     something_changed = False
     current = __salt__["boto3_sns.describe_topic"](name, region, key, keyid, profile)
     if current:
-        ret["comment"] = "AWS SNS topic {0} present.".format(name)
+        ret["comment"] = "AWS SNS topic {} present.".format(name)
         TopicArn = current["TopicArn"]
     else:
         if __opts__["test"]:
-            ret["comment"] = "AWS SNS topic {0} would be created.".format(name)
+            ret["comment"] = "AWS SNS topic {} would be created.".format(name)
             ret["result"] = None
             return ret
         else:
@@ -150,12 +147,12 @@ def topic_present(
                 name, region=region, key=key, keyid=keyid, profile=profile
             )
             if TopicArn:
-                ret["comment"] = "AWS SNS topic {0} created with ARN {1}.".format(
+                ret["comment"] = "AWS SNS topic {} created with ARN {}.".format(
                     name, TopicArn
                 )
                 something_changed = True
             else:
-                ret["comment"] = "Failed to create AWS SNS topic {0}".format(name)
+                ret["comment"] = "Failed to create AWS SNS topic {}".format(name)
                 log.error(ret["comment"])
                 ret["result"] = False
                 return ret
@@ -177,15 +174,13 @@ def topic_present(
         if _json_objs_equal(want_val, curr_val):
             continue
         if __opts__["test"]:
-            ret["comment"] += "  Attribute {0} would be updated on topic {1}.".format(
+            ret["comment"] += "  Attribute {} would be updated on topic {}.".format(
                 attr, TopicArn
             )
             ret["result"] = None
             continue
         want_val = (
-            want_val
-            if isinstance(want_val, six.string_types)
-            else salt.utils.json.dumps(want_val)
+            want_val if isinstance(want_val, str) else salt.utils.json.dumps(want_val)
         )
         if __salt__["boto3_sns.set_topic_attributes"](
             TopicArn,
@@ -196,12 +191,12 @@ def topic_present(
             keyid=keyid,
             profile=profile,
         ):
-            ret["comment"] += "  Attribute {0} set to {1} on topic {2}.".format(
+            ret["comment"] += "  Attribute {} set to {} on topic {}.".format(
                 attr, want_val, TopicArn
             )
             something_changed = True
         else:
-            ret["comment"] += "  Failed to update {0} on topic {1}.".format(
+            ret["comment"] += "  Failed to update {} on topic {}.".format(
                 attr, TopicArn
             )
             ret["result"] = False
@@ -241,7 +236,7 @@ def topic_present(
         prot = sub["Protocol"]
         endp = sub["Endpoint"]
         if __opts__["test"]:
-            msg = " Subscription {0}:{1} would be set on topic {2}.".format(
+            msg = " Subscription {}:{} would be set on topic {}.".format(
                 prot, endp, TopicArn
             )
             ret["comment"] += msg
@@ -251,11 +246,11 @@ def topic_present(
             TopicArn, prot, endp, region=region, key=key, keyid=keyid, profile=profile
         )
         if subbed:
-            msg = " Subscription {0}:{1} set on topic {2}.".format(prot, endp, TopicArn)
+            msg = " Subscription {}:{} set on topic {}.".format(prot, endp, TopicArn)
             ret["comment"] += msg
             something_changed = True
         else:
-            msg = " Failed to set subscription {0}:{1} on topic {2}.".format(
+            msg = " Failed to set subscription {}:{} on topic {}.".format(
                 prot, endp, TopicArn
             )
             ret["comment"] += msg
@@ -263,7 +258,7 @@ def topic_present(
             return ret
     for sub in unsubscribe:
         if __opts__["test"]:
-            msg = "  Subscription {0} would be removed from topic {1}.".format(
+            msg = "  Subscription {} would be removed from topic {}.".format(
                 sub, TopicArn
             )
             ret["comment"] += msg
@@ -273,12 +268,12 @@ def topic_present(
             sub, region=region, key=key, keyid=keyid, profile=profile
         )
         if unsubbed:
-            ret["comment"] += "  Subscription {0} removed from topic {1}.".format(
+            ret["comment"] += "  Subscription {} removed from topic {}.".format(
                 sub, TopicArn
             )
             something_changed = True
         else:
-            msg = "  Failed to remove subscription {0} from topic {1}.".format(
+            msg = "  Failed to remove subscription {} from topic {}.".format(
                 sub, TopicArn
             )
             ret["comment"] += msg
@@ -323,13 +318,13 @@ def topic_absent(
     something_changed = False
     current = __salt__["boto3_sns.describe_topic"](name, region, key, keyid, profile)
     if not current:
-        ret["comment"] = "AWS SNS topic {0} absent.".format(name)
+        ret["comment"] = "AWS SNS topic {} absent.".format(name)
     else:
         TopicArn = current["TopicArn"]
         if __opts__["test"]:
-            ret["comment"] = "AWS SNS topic {0} would be removed.".format(TopicArn)
+            ret["comment"] = "AWS SNS topic {} would be removed.".format(TopicArn)
             if unsubscribe:
-                ret["comment"] += "  {0} subscription(s) would be removed.".format(
+                ret["comment"] += "  {} subscription(s) would be removed.".format(
                     len(current["Subscriptions"])
                 )
             ret["result"] = None
@@ -339,8 +334,7 @@ def topic_absent(
                 if sub["SubscriptionArn"] == "PendingConfirmation":
                     # The API won't let you delete subscriptions in pending status...
                     log.warning(
-                        "Ignoring PendingConfirmation subscription %s %s on "
-                        "topic %s",
+                        "Ignoring PendingConfirmation subscription %s %s on topic %s",
                         sub["Protocol"],
                         sub["Endpoint"],
                         sub["TopicArn"],
@@ -358,7 +352,7 @@ def topic_absent(
                 else:
                     ret[
                         "comment"
-                    ] = "Failed to delete subscription {0} for SNS topic {1}".format(
+                    ] = "Failed to delete subscription {} for SNS topic {}".format(
                         sub, TopicArn
                     )
                     ret["result"] = False
@@ -366,15 +360,15 @@ def topic_absent(
         if not __salt__["boto3_sns.delete_topic"](
             TopicArn, region=region, key=key, keyid=keyid, profile=profile
         ):
-            ret["comment"] = "Failed to delete SNS topic {0}".format(TopicArn)
+            ret["comment"] = "Failed to delete SNS topic {}".format(TopicArn)
             log.error(ret["comment"])
             ret["result"] = False
         else:
-            ret["comment"] = "AWS SNS topic {0} deleted.".format(TopicArn)
+            ret["comment"] = "AWS SNS topic {} deleted.".format(TopicArn)
             if unsubscribe:
                 ret["comment"] += "  ".join(
                     [
-                        "Subscription {0} deleted".format(s)
+                        "Subscription {} deleted".format(s)
                         for s in current["Subscriptions"]
                     ]
                 )
@@ -390,9 +384,9 @@ def topic_absent(
 
 def _json_objs_equal(left, right):
     left = __utils__["boto3.ordered"](
-        salt.utils.json.loads(left) if isinstance(left, six.string_types) else left
+        salt.utils.json.loads(left) if isinstance(left, str) else left
     )
     right = __utils__["boto3.ordered"](
-        salt.utils.json.loads(right) if isinstance(right, six.string_types) else right
+        salt.utils.json.loads(right) if isinstance(right, str) else right
     )
     return left == right

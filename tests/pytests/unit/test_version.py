@@ -8,7 +8,12 @@ import re
 
 import pytest
 import salt.version
-from salt.version import SaltStackVersion, system_information, versions_report
+from salt.version import (
+    SaltStackVersion,
+    SaltVersionsInfo,
+    system_information,
+    versions_report,
+)
 from tests.support.mock import MagicMock, patch
 
 STRIP_INITIAL_NON_NUMBERS_REGEX = re.compile(r"(?:[^\d]+)?(?P<vs>.*)")
@@ -366,7 +371,8 @@ def test_bugfix_string():
         ),
         (
             (2019, 2, 3, None, "nb", 20201214, 0, None),
-            "<SaltStackVersion name='Fluorine' major=2019 minor=2 bugfix=3 nb=20201214>",
+            "<SaltStackVersion name='Fluorine' major=2019 minor=2 bugfix=3"
+            " nb=20201214>",
         ),
     ],
 )
@@ -376,6 +382,28 @@ def test_version_repr(version_tuple, expected):
     and new versioning scheme
     """
     assert repr(SaltStackVersion(*version_tuple)) == expected
+
+
+def test_previous_and_next_releases():
+    with patch.multiple(
+        SaltVersionsInfo,
+        _previous_release=None,
+        _next_release=None,
+        _current_release=SaltVersionsInfo.CALIFORNIUM,
+    ):
+        assert SaltVersionsInfo.current_release() == SaltVersionsInfo.CALIFORNIUM
+        assert SaltVersionsInfo.next_release() == SaltVersionsInfo.EINSTEINIUM
+        assert SaltVersionsInfo.previous_release() == SaltVersionsInfo.BERKELIUM
+
+    with patch.multiple(
+        SaltVersionsInfo,
+        _previous_release=None,
+        _next_release=None,
+        _current_release=SaltVersionsInfo.NEPTUNIUM,
+    ):
+        assert SaltVersionsInfo.current_release() == SaltVersionsInfo.NEPTUNIUM
+        assert SaltVersionsInfo.next_release() == SaltVersionsInfo.PLUTONIUM
+        assert SaltVersionsInfo.previous_release() == SaltVersionsInfo.URANIUM
 
 
 @pytest.mark.skip_unless_on_linux
@@ -440,7 +468,8 @@ def test_system_version_osx():
     """
 
     with patch(
-        "platform.mac_ver", MagicMock(return_value=("10.15.2", ("", "", ""), "x86_64")),
+        "platform.mac_ver",
+        MagicMock(return_value=("10.15.2", ("", "", ""), "x86_64")),
     ):
         versions = [item for item in system_information()]
         version = ("version", "10.15.2 x86_64")

@@ -38,7 +38,6 @@ import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # do not remove, used in imported file.py functions
-from salt.ext import six
 from salt.modules.file import check_hash  # pylint: disable=W0611
 from salt.modules.file import (
     HASHES,

@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
 import salt.states.hg as hg
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -18,7 +12,7 @@ from tests.support.unit import TestCase
 
 class HgTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Validate the svn state
+    Validate the svn state
     """
 
     def setup_loader_modules(self):
@@ -26,8 +20,8 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_latest(self):
         """
-            Test to Make sure the repository is cloned to
-            the given directory and is up to date
+        Test to Make sure the repository is cloned to
+        the given directory and is up to date
         """
         ret = {"changes": {}, "comment": "", "name": "salt", "result": True}
         mock = MagicMock(return_value=True)
@@ -52,7 +46,7 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_latest_update_changes(self):
         """
-            Test to make sure we don't update even if we have changes
+        Test to make sure we don't update even if we have changes
         """
         ret = {"changes": {}, "comment": "", "name": "salt", "result": True}
         revision_mock = MagicMock(return_value="abcdef")
@@ -79,11 +73,14 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_latest_no_update_changes(self):
         """
-            Test to make sure we don't update even if we have changes
+        Test to make sure we don't update even if we have changes
         """
         ret = {
             "changes": {},
-            "comment": "Update is probably required but update_head=False so we will skip updating.",
+            "comment": (
+                "Update is probably required but update_head=False so we will skip"
+                " updating."
+            ),
             "name": "salt",
             "result": True,
         }
@@ -111,8 +108,8 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_latest_no_update_no_changes(self):
         """
-            Test to Make sure the repository is cloned to
-            the given directory and is up to date
+        Test to Make sure the repository is cloned to
+        the given directory and is up to date
         """
         ret = {
             "changes": {},

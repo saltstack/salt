@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 State management of a java keystore
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -23,9 +20,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        (
-            "Cannot load the {0} state module: "
-            "keystore execution module not found".format(__virtualname__)
+        "Cannot load the {} state module: keystore execution module not found".format(
+            __virtualname__
         ),
     )
 
@@ -112,11 +108,11 @@ def managed(name, passphrase, entries, force_remove=False):
             if __opts__["test"]:
                 ret["result"] = None
                 if existing_entry:
-                    ret["comment"] += "Alias {0} would have been updated\n".format(
+                    ret["comment"] += "Alias {} would have been updated\n".format(
                         entry["alias"]
                     )
                 else:
-                    ret["comment"] += "Alias {0} would have been added\n".format(
+                    ret["comment"] += "Alias {} would have been added\n".format(
                         entry["alias"]
                     )
             else:
@@ -133,7 +129,7 @@ def managed(name, passphrase, entries, force_remove=False):
                     )
                     if result:
                         ret["changes"][entry["alias"]] = "Updated"
-                        ret["comment"] += "Alias {0} updated.\n".format(entry["alias"])
+                        ret["comment"] += "Alias {} updated.\n".format(entry["alias"])
                 else:
                     result = __salt__["keystore.add"](
                         entry["alias"],
@@ -144,7 +140,7 @@ def managed(name, passphrase, entries, force_remove=False):
                     )
                     if result:
                         ret["changes"][entry["alias"]] = "Added"
-                        ret["comment"] += "Alias {0} added.\n".format(entry["alias"])
+                        ret["comment"] += "Alias {} added.\n".format(entry["alias"])
 
     if force_remove:
         # Determine which aliases need to be removed
@@ -152,12 +148,12 @@ def managed(name, passphrase, entries, force_remove=False):
         log.debug("Will remove: %s", remove_list)
         for alias_name in remove_list:
             if __opts__["test"]:
-                ret["comment"] += "Alias {0} would have been removed".format(alias_name)
+                ret["comment"] += "Alias {} would have been removed".format(alias_name)
                 ret["result"] = None
             else:
                 __salt__["keystore.remove"](alias_name, name, passphrase)
                 ret["changes"][alias_name] = "Removed"
-                ret["comment"] += "Alias {0} removed.\n".format(alias_name)
+                ret["comment"] += "Alias {} removed.\n".format(alias_name)
 
     if not ret["changes"] and not ret["comment"]:
         ret["comment"] = "No changes made.\n"

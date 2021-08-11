@@ -53,8 +53,10 @@ class VirtualEnv:
         self.test.assertEqual(
             ret["retcode"],
             0,
-            msg="Expected 'retcode' key did not match. Full return dictionary:\n{}".format(
-                pprint.pformat(ret)
+            msg=(
+                "Expected 'retcode' key did not match. Full return dictionary:\n{}".format(
+                    pprint.pformat(ret)
+                )
             ),
         )
 
@@ -270,8 +272,10 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(
             ret["retcode"],
             0,
-            msg="Expected 'retcode' key did not match. Full return dictionary:\n{}".format(
-                pprint.pformat(ret)
+            msg=(
+                "Expected 'retcode' key did not match. Full return dictionary:\n{}".format(
+                    pprint.pformat(ret)
+                )
             ),
         )
 
@@ -338,10 +342,14 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             # Make sure we're calling a virtualenv and python
             # program that the user has access too.
             venv_kwargs["venv_bin"] = self._win_user_where(
-                username, "PassWord1!", "virtualenv",
+                username,
+                "PassWord1!",
+                "virtualenv",
             )
             venv_kwargs["python"] = self._win_user_where(
-                username, "PassWord1!", "python",
+                username,
+                "PassWord1!",
+                "python",
             )
         else:
             uid = self.run_function("file.user_to_uid", [username])
@@ -353,8 +361,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         )
         if venv_create.get("retcode", 1) > 0:
             self.skipTest(
-                "Failed to create testcase virtual environment: {}"
-                "".format(venv_create)
+                "Failed to create testcase virtual environment: {}".format(venv_create)
             )
 
         # pip install passing the package name in `name`
@@ -400,10 +407,14 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             # Make sure we're calling a virtualenv and python
             # program that the user has access too.
             venv_kwargs["venv_bin"] = self._win_user_where(
-                username, "PassWord1!", "virtualenv",
+                username,
+                "PassWord1!",
+                "virtualenv",
             )
             venv_kwargs["python"] = self._win_user_where(
-                username, "PassWord1!", "python",
+                username,
+                "PassWord1!",
+                "python",
             )
         else:
             uid = self.run_function("file.user_to_uid", [username])
@@ -415,8 +426,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         )
         if venv_create.get("retcode", 1) > 0:
             self.skipTest(
-                "failed to create testcase virtual environment: {}"
-                "".format(venv_create)
+                "failed to create testcase virtual environment: {}".format(venv_create)
             )
 
         # pip install using a requirements file
@@ -470,8 +480,10 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(
             ret["retcode"],
             0,
-            msg="Expected 'retcode' key did not match. Full return dictionary:\n{}".format(
-                pprint.pformat(ret)
+            msg=(
+                "Expected 'retcode' key did not match. Full return dictionary:\n{}".format(
+                    pprint.pformat(ret)
+                )
             ),
         )
 
@@ -493,9 +505,8 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
         if not isinstance(ret, dict):
             self.fail(
-                "The 'pip.install' command did not return the excepted dictionary. Output:\n{}".format(
-                    ret
-                )
+                "The 'pip.install' command did not return the excepted dictionary."
+                " Output:\n{}".format(ret)
             )
 
         self.assertEqual(ret["retcode"], 0)
@@ -513,9 +524,8 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
         if not isinstance(ret, dict):
             self.fail(
-                "The 'pip.install' command did not return the excepted dictionary. Output:\n{}".format(
-                    ret
-                )
+                "The 'pip.install' command did not return the excepted dictionary."
+                " Output:\n{}".format(ret)
             )
 
         self.assertSaltTrueReturn(ret)
@@ -669,7 +679,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 if ret[key].get("name", "") != "carbon < 1.3":
                     continue
                 self.assertEqual(
-                    ret[key]["comment"], ("All packages were successfully installed")
+                    ret[key]["comment"], "All packages were successfully installed"
                 )
                 break
             else:
