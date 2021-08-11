@@ -792,6 +792,8 @@ def case_sensitive_filesystem(path=None):
     Returns:
         bool: Flag to indicate case sensitivity
 
+    .. versionadded:: 3004
+
     """
     with tempfile.NamedTemporaryFile(prefix="TmP", dir=path, delete=True) as tmp_file:
         return os.path.exists(tmp_file.name.lower())

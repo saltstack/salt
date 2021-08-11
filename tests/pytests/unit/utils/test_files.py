@@ -145,3 +145,30 @@ def test_case_sensitive_filesystem_true():
     with patch("salt.utils.files.case_sensitive_filesystem", return_value=True):
         result = salt.utils.files.case_sensitive_filesystem()
         assert result is True
+
+
+@pytest.mark.skip_unless_on_windows(reason="System is not Windows")
+def test_case_sensitive_filesystem_win():
+    """
+    Test case sensitivity on Windows.
+    """
+    result = salt.utils.files.case_sensitive_filesystem()
+    assert result is True
+
+
+@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+def test_case_sensitive_filesystem_lin():
+    """
+    Test case sensitivity on Linux.
+    """
+    result = salt.utils.files.case_sensitive_filesystem()
+    assert result is False
+
+
+@pytest.mark.skip_unless_on_darwin(reason="System is not Darwin")
+def test_case_sensitive_filesystem_dar():
+    """
+    Test case sensitivity on Darwin.
+    """
+    result = salt.utils.files.case_sensitive_filesystem()
+    assert result is True
