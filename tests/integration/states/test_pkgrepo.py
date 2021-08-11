@@ -7,10 +7,11 @@ import os
 import pytest
 import salt.utils.files
 import salt.utils.platform
+from saltfactories.utils.tempfiles import temp_file
 from tests.support.case import ModuleCase
 from tests.support.helpers import requires_system_grains, runs_on
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.pytest.helpers import temp_state_file
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 
@@ -336,7 +337,9 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
             remove_apt_list_file,
             "/etc/apt/sources.list.d/99-salt-archive-ubuntu-focal-backports.list",
         )
-        with temp_state_file("multiple-comps-repos.sls", state_file):
+        with temp_file(
+            "multiple-comps-repos.sls", state_file, RUNTIME_VARS.TMP_BASEENV_STATE_TREE
+        ):
             ret = self.run_function("state.sls", ["multiple-comps-repos"])
             for state_run in ret.values():
                 # On the first run, we must have changes

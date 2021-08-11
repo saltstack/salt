@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     salt._logging.handlers
     ~~~~~~~~~~~~~~~~~~~~~~
@@ -6,18 +5,15 @@
     Salt's logging handlers
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
 import logging.handlers
+import queue
 import sys
 from collections import deque
 
-# Import salt libs
 from salt._logging.mixins import ExcInfoOnLogLevelFormatMixin, NewStyleClassMixin
-from salt.ext.six.moves import queue  # pylint: disable=import-error,no-name-in-module
 
 # from salt.utils.versions import warn_until_date
 
@@ -48,7 +44,7 @@ class TemporaryLoggingHandler(logging.NullHandler):
         #    '{{date}}.'.format(name=__name__)
         # )
         self.__max_queue_size = max_queue_size
-        super(TemporaryLoggingHandler, self).__init__(level=level)
+        super().__init__(level=level)
         self.__messages = deque(maxlen=max_queue_size)
 
     def handle(self, record):
@@ -117,7 +113,7 @@ class SysLogHandler(
                 del exc_type, exc, exc_traceback
 
         if not handled:
-            super(SysLogHandler, self).handleError(record)
+            super().handleError(record)
 
 
 class RotatingFileHandler(
@@ -152,7 +148,7 @@ class RotatingFileHandler(
                 ):
                     if self.level <= logging.WARNING:
                         sys.stderr.write(
-                            '[WARNING ] Unable to rotate the log file "{0}" '
+                            '[WARNING ] Unable to rotate the log file "{}" '
                             "because it is in use\n".format(self.baseFilename)
                         )
                     handled = True
@@ -162,7 +158,7 @@ class RotatingFileHandler(
                 del exc_type, exc, exc_traceback
 
         if not handled:
-            super(RotatingFileHandler, self).handleError(record)
+            super().handleError(record)
 
 
 class WatchedFileHandler(
@@ -217,7 +213,7 @@ if sys.version_info < (3, 2):
             except queue.Full:
                 sys.stderr.write(
                     "[WARNING ] Message queue is full, "
-                    'unable to write "{0}" to log'.format(record)
+                    'unable to write "{}" to log'.format(record)
                 )
 
         def prepare(self, record):
@@ -266,7 +262,7 @@ elif sys.version_info < (3, 7):
         ExcInfoOnLogLevelFormatMixin, logging.handlers.QueueHandler
     ):  # pylint: disable=no-member,inconsistent-mro
         def __init__(self, queue):  # pylint: disable=useless-super-delegation
-            super(QueueHandler, self).__init__(queue)
+            super().__init__(queue)
             # warn_until_date(
             #    '20220101',
             #    'Please stop using \'{name}.QueueHandler\' and instead '
@@ -325,7 +321,7 @@ else:
         ExcInfoOnLogLevelFormatMixin, logging.handlers.QueueHandler
     ):  # pylint: disable=no-member,inconsistent-mro
         def __init__(self, queue):  # pylint: disable=useless-super-delegation
-            super(QueueHandler, self).__init__(queue)
+            super().__init__(queue)
             # warn_until_date(
             #    '20220101',
             #    'Please stop using \'{name}.QueueHandler\' and instead '
@@ -347,5 +343,5 @@ else:
             except queue.Full:
                 sys.stderr.write(
                     "[WARNING ] Message queue is full, "
-                    'unable to write "{0}" to log.\n'.format(record)
+                    'unable to write "{}" to log.\n'.format(record)
                 )

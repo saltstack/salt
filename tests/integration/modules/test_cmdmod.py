@@ -498,7 +498,7 @@ class CMDModuleTest(ModuleCase):
             ).splitlines()
         self.assertIn("USER={}".format(self.runas_usr), out)
 
-    @pytest.mark.skip_if_binaries_missing("sleep", message="sleep cmd not installed")
+    @pytest.mark.skip_if_binaries_missing("sleep", reason="sleep cmd not installed")
     def test_timeout(self):
         """
         cmd.run trigger timeout
@@ -508,7 +508,7 @@ class CMDModuleTest(ModuleCase):
         )
         self.assertTrue("Timed out" in out)
 
-    @pytest.mark.skip_if_binaries_missing("sleep", message="sleep cmd not installed")
+    @pytest.mark.skip_if_binaries_missing("sleep", reason="sleep cmd not installed")
     def test_timeout_success(self):
         """
         cmd.run sufficient timeout to succeed
@@ -588,8 +588,9 @@ class CMDModuleTest(ModuleCase):
         Ensure that powershell processes inline script in args
         """
         val = "i like cheese"
-        args = '-SecureString (ConvertTo-SecureString -String "{}" -AsPlainText -Force) -ErrorAction Stop'.format(
-            val
+        args = (
+            '-SecureString (ConvertTo-SecureString -String "{}" -AsPlainText -Force)'
+            " -ErrorAction Stop".format(val)
         )
         script = "salt://issue-56195/test.ps1"
         ret = self.run_function("cmd.script", [script], args=args, shell="powershell")
@@ -604,8 +605,9 @@ class CMDModuleTest(ModuleCase):
         core
         """
         val = "i like cheese"
-        args = '-SecureString (ConvertTo-SecureString -String "{}" -AsPlainText -Force) -ErrorAction Stop'.format(
-            val
+        args = (
+            '-SecureString (ConvertTo-SecureString -String "{}" -AsPlainText -Force)'
+            " -ErrorAction Stop".format(val)
         )
         script = "salt://issue-56195/test.ps1"
         ret = self.run_function("cmd.script", [script], args=args, shell="pwsh")

@@ -1,7 +1,4 @@
-# coding: utf-8
-
 # Python libs
-from __future__ import absolute_import
 
 import datetime
 import logging
@@ -38,21 +35,28 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def test_validate_empty_config(self, *args, **kwargs):
         ret = telegram_bot_msg.validate(None)
         self.assertEqual(
-            ret, (False, ("Configuration for telegram_bot_msg beacon must be a list.")),
+            ret,
+            (False, "Configuration for telegram_bot_msg beacon must be a list."),
         )
 
     def test_validate_missing_accept_from_config(self, *args, **kwargs):
         ret = telegram_bot_msg.validate([{"token": "bcd"}])
         self.assertEqual(
             ret,
-            (False, ("Not all required configuration for telegram_bot_msg are set."),),
+            (
+                False,
+                "Not all required configuration for telegram_bot_msg are set.",
+            ),
         )
 
     def test_validate_missing_token_config(self, *args, **kwargs):
         ret = telegram_bot_msg.validate([{"accept_from": []}])
         self.assertEqual(
             ret,
-            (False, ("Not all required configuration for telegram_bot_msg are set."),),
+            (
+                False,
+                "Not all required configuration for telegram_bot_msg are set.",
+            ),
         )
 
     def test_validate_config_not_list_in_accept_from(self, *args, **kwargs):
@@ -63,11 +67,9 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret,
             (
                 False,
-                (
-                    "Configuration for telegram_bot_msg, "
-                    "accept_from must be a list of "
-                    "usernames."
-                ),
+                "Configuration for telegram_bot_msg, "
+                "accept_from must be a list of "
+                "usernames.",
             ),
         )
 
@@ -97,7 +99,7 @@ class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
             inst = MagicMock(name="telegram.Bot()")
             telegram_api.Bot = MagicMock(name="telegram", return_value=inst)
 
-            log.debug("telegram {}".format(telegram))
+            log.debug("telegram %s", telegram)
             username = "different_user"
             user = telegram.user.User(id=1, first_name="", username=username)
             chat = telegram.chat.Chat(1, "private", username=username)

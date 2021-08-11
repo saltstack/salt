@@ -24,7 +24,6 @@ import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.url
 from salt.exceptions import SaltClientError
-from salt.ext import six
 from salt.template import compile_template
 
 # Even though dictupdate is imported, invoking salt.utils.dictupdate.merge here
@@ -168,7 +167,7 @@ class RemotePillarMixin:
         if "pass_to_ext_pillars" in opts:
             if not isinstance(opts["pass_to_ext_pillars"], list):
                 log.exception("'pass_to_ext_pillars' config is malformed.")
-                raise SaltClientError("'pass_to_ext_pillars' config is " "malformed.")
+                raise SaltClientError("'pass_to_ext_pillars' config is malformed.")
             for key in opts["pass_to_ext_pillars"]:
                 salt.utils.dictupdate.update(
                     extra_data,
@@ -240,16 +239,17 @@ class AsyncRemotePillar(RemotePillarMixin):
             load["ext"] = self.ext
         try:
             ret_pillar = yield self.channel.crypted_transfer_decode_dictentry(
-                load, dictkey="pillar",
+                load,
+                dictkey="pillar",
             )
         except Exception:  # pylint: disable=broad-except
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
 
         if not isinstance(ret_pillar, dict):
-            msg = (
-                "Got a bad pillar from master, type {}, expecting dict: " "{}"
-            ).format(type(ret_pillar).__name__, ret_pillar)
+            msg = "Got a bad pillar from master, type {}, expecting dict: {}".format(
+                type(ret_pillar).__name__, ret_pillar
+            )
             log.error(msg)
             # raise an exception! Pillar isn't empty, we can't sync it!
             raise SaltClientError(msg)
@@ -327,7 +327,8 @@ class RemotePillar(RemotePillarMixin):
         if self.ext:
             load["ext"] = self.ext
         ret_pillar = self.channel.crypted_transfer_decode_dictentry(
-            load, dictkey="pillar",
+            load,
+            dictkey="pillar",
         )
 
         if not isinstance(ret_pillar, dict):
@@ -628,7 +629,8 @@ class Pillar:
                 opts["pillar_roots"][env] = opts["pillar_roots"].pop("__env__")
             else:
                 log.debug(
-                    "pillar_roots __env__ ignored (environment '%s' found in pillar_roots)",
+                    "pillar_roots __env__ ignored (environment '%s' found in"
+                    " pillar_roots)",
                     env,
                 )
                 opts["pillar_roots"].pop("__env__")
@@ -723,9 +725,9 @@ class Pillar:
                         )
                     except Exception as exc:  # pylint: disable=broad-except
                         errors.append(
-                            (
-                                "Rendering Top file {} failed, render error" ":\n{}"
-                            ).format(sls, exc)
+                            "Rendering Top file {} failed, render error:\n{}".format(
+                                sls, exc
+                            )
                         )
                     done[saltenv].append(sls)
             for saltenv in pops:
@@ -819,7 +821,9 @@ class Pillar:
                     continue
             for match, data in body.items():
                 if self.matchers["confirm_top.confirm_top"](
-                    match, data, self.opts.get("nodegroups", {}),
+                    match,
+                    data,
+                    self.opts.get("nodegroups", {}),
                 ):
                     if saltenv not in matches:
                         matches[saltenv] = env_matches = []
@@ -843,7 +847,7 @@ class Pillar:
         if not fn_:
             if sls in self.ignored_pillars.get(saltenv, []):
                 log.debug(
-                    "Skipping ignored and missing SLS '%s' in " "environment '%s'",
+                    "Skipping ignored and missing SLS '%s' in environment '%s'",
                     sls,
                     saltenv,
                 )
@@ -851,14 +855,13 @@ class Pillar:
             elif self.opts["pillar_roots"].get(saltenv):
                 msg = (
                     "Specified SLS '{}' in environment '{}' is not"
-                    " available on the salt master"
-                ).format(sls, saltenv)
+                    " available on the salt master".format(sls, saltenv)
+                )
                 log.error(msg)
                 errors.append(msg)
             else:
-                msg = (
-                    "Specified SLS '{}' in environment '{}' was not "
-                    "found. ".format(sls, saltenv)
+                msg = "Specified SLS '{}' in environment '{}' was not found. ".format(
+                    sls, saltenv
                 )
                 if self.opts.get("__git_pillar", False) is True:
                     msg += (
@@ -940,13 +943,16 @@ class Pillar:
                                     else:
                                         include_parts = sls.split(".")[:-1]
                                     sub_sls = ".".join(include_parts + [sub_sls[1:]])
-                                matches = fnmatch.filter(self.avail[saltenv], sub_sls,)
+                                matches = fnmatch.filter(
+                                    self.avail[saltenv],
+                                    sub_sls,
+                                )
                                 matched_pstates.extend(matches)
                             except KeyError:
                                 errors.extend(
                                     [
-                                        "No matching pillar environment for environment "
-                                        "'{}' found".format(saltenv)
+                                        "No matching pillar environment for environment"
+                                        " '{}' found".format(saltenv)
                                     ]
                                 )
                                 matched_pstates = [sub_sls]
@@ -1151,7 +1157,10 @@ class Pillar:
                     ext = self._external_pillar_data(pillar, val, key)
                 except Exception as exc:  # pylint: disable=broad-except
                     errors.append(
-                        "Failed to load ext_pillar {}: {}".format(key, exc.__str__(),)
+                        "Failed to load ext_pillar {}: {}".format(
+                            key,
+                            exc.__str__(),
+                        )
                     )
                     log.error(
                         "Exception caught loading ext_pillar '%s':\n%s",

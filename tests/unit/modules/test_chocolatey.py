@@ -1,19 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Test for the chocolatey module
 """
 
-# Import Python libs
-from __future__ import absolute_import
 
 import os
 
-# Import Salt Libs
 import salt.modules.chocolatey as chocolatey
 import salt.utils
 import salt.utils.platform
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf

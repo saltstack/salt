@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage S3 Resources
 ===================
@@ -49,15 +48,11 @@ config:
 :depends: boto3
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import difflib
 import logging
 
-# Import Salt libs
-import salt.ext.six as six
 import salt.utils.hashutils
 
 log = logging.getLogger(__name__)
@@ -179,10 +174,10 @@ def object_present(
     __utils__["dictupdate.update"](combined_extra_args, extra_args)
     if combined_extra_args:
         supported_args = STORED_EXTRA_ARGS | UPLOAD_ONLY_EXTRA_ARGS
-        combined_extra_args_keys = frozenset(six.iterkeys(combined_extra_args))
+        combined_extra_args_keys = frozenset(combined_extra_args.keys())
         extra_keys = combined_extra_args_keys - supported_args
         if extra_keys:
-            msg = "extra_args keys {0} are not supported".format(extra_keys)
+            msg = "extra_args keys {} are not supported".format(extra_keys)
             return {"error": msg}
 
     # Get the hash of the local file
@@ -190,14 +185,20 @@ def object_present(
         hash_type = __opts__["hash_type"]
     try:
         digest = salt.utils.hashutils.get_hash(source, form=hash_type)
-    except IOError as e:
+    except OSError as e:
         ret["result"] = False
-        ret["comment"] = "Could not read local file {0}: {1}".format(source, e,)
+        ret["comment"] = "Could not read local file {}: {}".format(
+            source,
+            e,
+        )
         return ret
     except ValueError as e:
         # Invalid hash type exception from get_hash
         ret["result"] = False
-        ret["comment"] = "Could not hash local file {0}: {1}".format(source, e,)
+        ret["comment"] = "Could not hash local file {}: {}".format(
+            source,
+            e,
+        )
         return ret
 
     HASH_METADATA_KEY = "salt_managed_content_hash"
@@ -207,25 +208,23 @@ def object_present(
         if combined_extra_args["Metadata"][HASH_METADATA_KEY] != digest:
             ret["result"] = False
             ret["comment"] = (
-                "Salt uses the {0} metadata key internally,"
-                "do not pass it to the boto_s3.object_present state."
-            ).format(HASH_METADATA_KEY)
+                "Salt uses the {} metadata key internally,"
+                "do not pass it to the boto_s3.object_present state.".format(
+                    HASH_METADATA_KEY
+                )
+            )
             return ret
     combined_extra_args["Metadata"][HASH_METADATA_KEY] = digest
     # Remove upload-only keys from full set of extra_args
     # to create desired dict for comparisons
-    desired_metadata = dict(
-        (k, v)
-        for k, v in six.iteritems(combined_extra_args)
-        if k not in UPLOAD_ONLY_EXTRA_ARGS
-    )
+    desired_metadata = {
+        k: v for k, v in combined_extra_args.items() if k not in UPLOAD_ONLY_EXTRA_ARGS
+    }
 
     # Some args (SSE-C, RequestPayer) must also be passed to get_metadata
-    metadata_extra_args = dict(
-        (k, v)
-        for k, v in six.iteritems(combined_extra_args)
-        if k in GET_METADATA_EXTRA_ARGS
-    )
+    metadata_extra_args = {
+        k: v for k, v in combined_extra_args.items() if k in GET_METADATA_EXTRA_ARGS
+    }
     r = __salt__["boto_s3.get_object_metadata"](
         name,
         extra_args=metadata_extra_args,
@@ -236,7 +235,9 @@ def object_present(
     )
     if "error" in r:
         ret["result"] = False
-        ret["comment"] = "Failed to check if S3 object exists: {0}.".format(r["error"],)
+        ret["comment"] = "Failed to check if S3 object exists: {}.".format(
+            r["error"],
+        )
         return ret
 
     if r["result"]:
@@ -245,14 +246,14 @@ def object_present(
         # so we can combine both checks into one
         # Only check metadata keys specified by the user,
         # ignore other fields that have been set
-        s3_metadata = dict(
-            (k, r["result"][k])
+        s3_metadata = {
+            k: r["result"][k]
             for k in STORED_EXTRA_ARGS
             if k in desired_metadata and k in r["result"]
-        )
+        }
         if s3_metadata == desired_metadata:
             ret["result"] = True
-            ret["comment"] = "S3 object {0} is present.".format(name)
+            ret["comment"] = "S3 object {} is present.".format(name)
             return ret
         action = "update"
     else:
@@ -276,8 +277,8 @@ def object_present(
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "S3 object {0} set to be {1}d.".format(name, action)
-        ret["comment"] += "\nChanges:\n{0}".format(changes_diff)
+        ret["comment"] = "S3 object {} set to be {}d.".format(name, action)
+        ret["comment"] += "\nChanges:\n{}".format(changes_diff)
         ret["changes"] = {"diff": changes_diff}
         return ret
 
@@ -293,11 +294,14 @@ def object_present(
 
     if "error" in r:
         ret["result"] = False
-        ret["comment"] = "Failed to {0} S3 object: {1}.".format(action, r["error"],)
+        ret["comment"] = "Failed to {} S3 object: {}.".format(
+            action,
+            r["error"],
+        )
         return ret
 
     ret["result"] = True
-    ret["comment"] = "S3 object {0} {1}d.".format(name, action)
-    ret["comment"] += "\nChanges:\n{0}".format(changes_diff)
+    ret["comment"] = "S3 object {} {}d.".format(name, action)
+    ret["comment"] += "\nChanges:\n{}".format(changes_diff)
     ret["changes"] = {"diff": changes_diff}
     return ret

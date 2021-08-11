@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Execute a command and read the output as JSON. The JSON data is then directly overlaid onto the minion's Pillar data.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
-# Import Salt libs
 import salt.utils.json
 
 # Don't "fix" the above docstring to put it on two lines, as the sphinx

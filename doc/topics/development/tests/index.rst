@@ -276,7 +276,7 @@ command would be:
 
 .. code-block:: bash
 
-    nox -e 'runtests-zeromq-3(coverage=False)' -- --run-destuctive
+    nox -e 'runtests-zeromq-3(coverage=False)' -- --run-destructive
 
 
 Running Cloud Provider Tests

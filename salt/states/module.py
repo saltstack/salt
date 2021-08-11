@@ -305,7 +305,6 @@ import salt.utils.args
 import salt.utils.functools
 import salt.utils.jid
 from salt.exceptions import SaltInvocationError
-from salt.ext.six.moves import range
 from salt.utils.decorators import with_deprecated
 
 
@@ -400,15 +399,13 @@ def run(**kwargs):
         ret["comment"] = " ".join(
             [
                 missing
-                and "Unavailable function{plr}: "
-                "{func}.".format(
+                and "Unavailable function{plr}: {func}.".format(
                     plr=(len(missing) > 1 or ""), func=(", ".join(missing) or "")
                 )
                 or "",
                 tests
-                and "Function{plr} {func} to be "
-                "executed.".format(
-                    plr=(len(tests) > 1 or ""), func=(", ".join(tests)) or ""
+                and "Function{plr} {func} to be executed.".format(
+                    plr=(len(tests) > 1 or ""), func=", ".join(tests) or ""
                 )
                 or "",
             ]

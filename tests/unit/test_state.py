@@ -14,10 +14,10 @@ import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 from salt.utils.decorators import state as statedecorators
 from salt.utils.odict import OrderedDict
+from saltfactories.utils.tempfiles import temp_file
 from tests.support.helpers import with_tempfile
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.pytest.helpers import temp_state_file
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
@@ -654,9 +654,11 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             "__run_num__": 0,
             "__sls__": "demo.download",
             "changes": {},
-            "comment": "['unless condition is true']  The state would be retried every 5 "
-            "seconds (with a splay of up to 0 seconds) a maximum of 5 times or "
-            "until a result of True is returned",
+            "comment": (
+                "['unless condition is true']  The state would be retried every 5 "
+                "seconds (with a splay of up to 0 seconds) a maximum of 5 times or "
+                "until a result of True is returned"
+            ),
             "name": "/tmp/saltstack.README.rst",
             "result": True,
             "skip_watch": True,
@@ -848,31 +850,19 @@ class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         matches = self.highstate.matches_whitelist(matches, "state2,state3")
         self.assertEqual(matches, {"env": ["state2", "state3"]})
 
-    def test_show_state_usage(self):
-        # monkey patch sub methods
-        self.highstate.avail = {"base": ["state.a", "state.b", "state.c"]}
+    def test_compile_state_usage(self):
+        top = temp_file("top.sls", "base: {'*': [foo]}", self.state_tree_dir)
+        used_state = temp_file("foo.sls", "foo: test.nop", self.state_tree_dir)
+        unused_state = temp_file("bar.sls", "bar: test.nop", self.state_tree_dir)
 
-        def verify_tops(*args, **kwargs):
-            return []
+        with top, used_state, unused_state:
+            state_usage_dict = self.highstate.compile_state_usage()
 
-        def get_top(*args, **kwargs):
-            return None
-
-        def top_matches(*args, **kwargs):
-            return {"base": ["state.a", "state.b"]}
-
-        self.highstate.verify_tops = verify_tops
-        self.highstate.get_top = get_top
-        self.highstate.top_matches = top_matches
-
-        # get compile_state_usage() result
-        state_usage_dict = self.highstate.compile_state_usage()
-
-        self.assertEqual(state_usage_dict["base"]["count_unused"], 1)
-        self.assertEqual(state_usage_dict["base"]["count_used"], 2)
-        self.assertEqual(state_usage_dict["base"]["count_all"], 3)
-        self.assertEqual(state_usage_dict["base"]["used"], ["state.a", "state.b"])
-        self.assertEqual(state_usage_dict["base"]["unused"], ["state.c"])
+            self.assertEqual(state_usage_dict["base"]["count_unused"], 2)
+            self.assertEqual(state_usage_dict["base"]["count_used"], 1)
+            self.assertEqual(state_usage_dict["base"]["count_all"], 3)
+            self.assertEqual(state_usage_dict["base"]["used"], ["foo"])
+            self.assertEqual(state_usage_dict["base"]["unused"], ["bar", "top"])
 
     def test_find_sls_ids_with_exclude(self):
         """
@@ -950,9 +940,9 @@ class MultiEnvHighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             RUNTIME_VARS.TMP
         )
 
-        with temp_state_file(
-            "{}/top.sls".format(self.base_state_tree_dir), top_sls
-        ), temp_state_file("{}/core.sls".format(self.base_state_tree_dir), core_state):
+        with temp_file("top.sls", top_sls, self.base_state_tree_dir), temp_file(
+            "core.sls", core_state, self.base_state_tree_dir
+        ):
             # list_states not called yet
             self.assertEqual(self.highstate.avail._filled, False)
             self.assertEqual(self.highstate.avail._avail, {"base": None})
@@ -978,9 +968,9 @@ class MultiEnvHighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             RUNTIME_VARS.TMP
         )
 
-        with temp_state_file(
-            "{}/top.sls".format(self.base_state_tree_dir), top_sls
-        ), temp_state_file("{}/core.sls".format(self.base_state_tree_dir), core_state):
+        with temp_file("top.sls", top_sls, self.base_state_tree_dir), temp_file(
+            "core.sls", core_state, self.base_state_tree_dir
+        ):
             # list_states not called yet
             self.assertEqual(self.highstate.avail._filled, False)
             self.assertEqual(self.highstate.avail._avail, {"base": None})
@@ -1008,9 +998,9 @@ class MultiEnvHighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             RUNTIME_VARS.TMP
         )
 
-        with temp_state_file(
-            "{}/top.sls".format(self.base_state_tree_dir), top_sls
-        ), temp_state_file("{}/core.sls".format(self.base_state_tree_dir), core_state):
+        with temp_file("top.sls", top_sls, self.base_state_tree_dir), temp_file(
+            "core.sls", core_state, self.base_state_tree_dir
+        ):
             # list_states not called yet
             self.assertEqual(self.highstate.avail._filled, False)
             self.assertEqual(self.highstate.avail._avail, {"base": None})
@@ -1062,8 +1052,8 @@ class StateReturnsTestCase(TestCase):
         data = {"arbitrary": "data", "changes": {}}
         out = statedecorators.OutputUnifier("content_check")(lambda: data)()
         assert (
-            " The following keys were not present in the state return: name, result, comment"
-            in out["comment"]
+            " The following keys were not present in the state return: name, result,"
+            " comment" in out["comment"]
         )
         assert not out["result"]
 
@@ -1161,8 +1151,8 @@ class SubStateReturnsTestCase(TestCase):
         data = {"sub_state_run": [{"arbitrary": "data", "changes": {}}]}
         out = statedecorators.OutputUnifier("content_check")(lambda: data)()
         assert (
-            " The following keys were not present in the state return: name, result, comment"
-            in out["sub_state_run"][0]["comment"]
+            " The following keys were not present in the state return: name, result,"
+            " comment" in out["sub_state_run"][0]["comment"]
         )
         assert not out["sub_state_run"][0]["result"]
 

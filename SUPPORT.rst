@@ -2,11 +2,11 @@ Get SaltStack Support and Help
 ==============================
 
 **IRC Chat** - Join the vibrant, helpful and positive SaltStack chat room in
-Freenode at #salt. There is no need to introduce yourself, or ask permission to
-join in, just help and be helped! Make sure to wait for an answer, sometimes it
-may take a few moments for someone to reply.
+LiberaChat at #salt. There is no need to introduce yourself, or ask permission
+to join in, just help and be helped! Make sure to wait for an answer, sometimes
+it may take a few moments for someone to reply.
 
-`<http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83>`_
+`<https://web.libera.chat/#salt>`_
 
 **SaltStack Slack** - Alongside IRC is our SaltStack Community Slack for the
 SaltStack Working groups. Use the following link to request an invitation.

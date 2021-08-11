@@ -184,11 +184,7 @@ class BuildoutTestCase(Base):
         ret2 = buildout._salt_callback(callback2)(2, b=6)
         self.assertEqual(ret2["status"], False)
         self.assertTrue(ret2["logs_by_level"]["error"][0].startswith("Traceback"))
-        self.assertTrue(
-            "We did not get any "
-            "expectable answer "
-            "from buildout" in ret2["comment"]
-        )
+        self.assertTrue("Unexpected response from buildout" in ret2["comment"])
         self.assertEqual(ret2["out"], None)
         for l in buildout.LOG.levels:
             self.assertTrue(0 == len(buildout.LOG.by_level[l]))
@@ -360,7 +356,8 @@ class BuildoutOnlineTestCase(Base):
                 "/d/distribute/distribute-0.6.43.tar.gz"
             )
             download_to(
-                url, os.path.join(cls.ppy_dis, "distribute-0.6.43.tar.gz"),
+                url,
+                os.path.join(cls.ppy_dis, "distribute-0.6.43.tar.gz"),
             )
 
             subprocess.check_call(
@@ -453,7 +450,8 @@ class BuildoutOnlineTestCase(Base):
     def test_run_buildout(self):
         if salt.modules.virtualenv_mod.virtualenv_ver(self.ppy_st) >= (20, 0, 0):
             self.skipTest(
-                "Skiping until upstream resolved https://github.com/pypa/virtualenv/issues/1715"
+                "Skiping until upstream resolved"
+                " https://github.com/pypa/virtualenv/issues/1715"
             )
 
         b_dir = os.path.join(self.tdir, "b")
@@ -468,7 +466,8 @@ class BuildoutOnlineTestCase(Base):
     def test_buildout(self):
         if salt.modules.virtualenv_mod.virtualenv_ver(self.ppy_st) >= (20, 0, 0):
             self.skipTest(
-                "Skiping until upstream resolved https://github.com/pypa/virtualenv/issues/1715"
+                "Skiping until upstream resolved"
+                " https://github.com/pypa/virtualenv/issues/1715"
             )
 
         b_dir = os.path.join(self.tdir, "b")

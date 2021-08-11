@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for managing JBoss AS 7 through the CLI interface.
 
@@ -22,18 +21,12 @@ Example:
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
 
-# Import Salt libs
 import salt.utils.dictdiffer as dictdiffer
 from salt.exceptions import SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -59,7 +52,7 @@ def status(jboss_config, host=None, server_config=None):
 
         salt '*' jboss7.status '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}'
 
-       """
+    """
     log.debug("======================== MODULE FUNCTION: jboss7.status")
     if host is None and server_config is None:
         operation = ":read-attribute(name=server-state)"
@@ -69,7 +62,8 @@ def status(jboss_config, host=None, server_config=None):
         )
     else:
         raise SaltInvocationError(
-            "Invalid parameters. Must either pass both host and server_config or neither"
+            "Invalid parameters. Must either pass both host and server_config or"
+            " neither"
         )
     return __salt__["jboss7_cli.run_operation"](
         jboss_config, operation, fail_on_error=False, retries=0
@@ -92,7 +86,7 @@ def stop_server(jboss_config, host=None):
 
         salt '*' jboss7.stop_server '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}'
 
-       """
+    """
     log.debug("======================== MODULE FUNCTION: jboss7.stop_server")
     if host is None:
         operation = ":shutdown"
@@ -131,7 +125,7 @@ def reload_(jboss_config, host=None):
 
         salt '*' jboss7.reload '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}'
 
-       """
+    """
     log.debug("======================== MODULE FUNCTION: jboss7.reload")
     if host is None:
         operation = ":reload"
@@ -185,7 +179,8 @@ def create_datasource(jboss_config, name, datasource_properties, profile=None):
         salt '*' jboss7.create_datasource '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' 'my_datasource' '{"driver-name": "mysql", "connection-url": "jdbc:mysql://localhost:3306/sampleDatabase", "jndi-name": "java:jboss/datasources/sampleDS", "user-name": "sampleuser", "password": "secret", "min-pool-size": 3, "use-java-context": True}'
     """
     log.debug(
-        "======================== MODULE FUNCTION: jboss7.create_datasource, name=%s, profile=%s",
+        "======================== MODULE FUNCTION: jboss7.create_datasource, name=%s,"
+        " profile=%s",
         name,
         profile,
     )
@@ -210,7 +205,7 @@ def create_datasource(jboss_config, name, datasource_properties, profile=None):
 def __get_properties_assignment_string(datasource_properties, ds_resource_description):
     assignment_strings = []
     ds_attributes = ds_resource_description["attributes"]
-    for key, val in six.iteritems(datasource_properties):
+    for key, val in datasource_properties.items():
         assignment_strings.append(
             __get_single_assignment_string(key, val, ds_attributes)
         )
@@ -219,7 +214,7 @@ def __get_properties_assignment_string(datasource_properties, ds_resource_descri
 
 
 def __get_single_assignment_string(key, val, ds_attributes):
-    return "{0}={1}".format(key, __format_value(key, val, ds_attributes))
+    return "{}={}".format(key, __format_value(key, val, ds_attributes))
 
 
 def __format_value(key, value, ds_attributes):
@@ -234,16 +229,16 @@ def __format_value(key, value, ds_attributes):
                 return "false"
         else:
             raise Exception(
-                "Don't know how to convert {0} to BOOLEAN type".format(value)
+                "Don't know how to convert {} to BOOLEAN type".format(value)
             )
 
     elif type_ == "INT":
-        return six.text_type(value)
+        return str(value)
     elif type_ == "STRING":
-        return '"{0}"'.format(value)
+        return '"{}"'.format(value)
     else:
         raise Exception(
-            "Don't know how to format value {0} of type {1}".format(value, type_)
+            "Don't know how to format value {} of type {}".format(value, type_)
         )
 
 
@@ -276,7 +271,8 @@ def update_datasource(jboss_config, name, new_properties, profile=None):
 
     """
     log.debug(
-        "======================== MODULE FUNCTION: jboss7.update_datasource, name=%s, profile=%s",
+        "======================== MODULE FUNCTION: jboss7.update_datasource, name=%s,"
+        " profile=%s",
         name,
         profile,
     )
@@ -297,10 +293,10 @@ def update_datasource(jboss_config, name, new_properties, profile=None):
             )
             if not update_result["success"]:
                 ret["result"] = False
-                ret["comment"] = ret["comment"] + (
-                    "Could not update datasource property {0} with value {1},\n stdout: {2}\n".format(
-                        key, new_properties[key], update_result["stdout"]
-                    )
+                ret["comment"] = ret[
+                    "comment"
+                ] + "Could not update datasource property {} with value {},\n stdout: {}\n".format(
+                    key, new_properties[key], update_result["stdout"]
                 )
 
     return ret
@@ -308,13 +304,16 @@ def update_datasource(jboss_config, name, new_properties, profile=None):
 
 def __get_datasource_resource_description(jboss_config, name, profile=None):
     log.debug(
-        "======================== MODULE FUNCTION: jboss7.__get_datasource_resource_description, name=%s, profile=%s",
+        "======================== MODULE FUNCTION:"
+        " jboss7.__get_datasource_resource_description, name=%s, profile=%s",
         name,
         profile,
     )
 
-    operation = '/subsystem=datasources/data-source="{name}":read-resource-description'.format(
-        name=name
+    operation = (
+        '/subsystem=datasources/data-source="{name}":read-resource-description'.format(
+            name=name
+        )
     )
     if profile is not None:
         operation = '/profile="{profile}"'.format(profile=profile) + operation
@@ -339,7 +338,7 @@ def read_datasource(jboss_config, name, profile=None):
     .. code-block:: bash
 
         salt '*' jboss7.read_datasource '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}'
-       """
+    """
     log.debug(
         "======================== MODULE FUNCTION: jboss7.read_datasource, name=%s",
         name,
@@ -370,13 +369,17 @@ def create_simple_binding(jboss_config, binding_name, value, profile=None):
                 my_binding_name my_binding_value
        """
     log.debug(
-        "======================== MODULE FUNCTION: jboss7.create_simple_binding, binding_name=%s, value=%s, profile=%s",
+        "======================== MODULE FUNCTION: jboss7.create_simple_binding,"
+        " binding_name=%s, value=%s, profile=%s",
         binding_name,
         value,
         profile,
     )
-    operation = '/subsystem=naming/binding="{binding_name}":add(binding-type=simple, value="{value}")'.format(
-        binding_name=binding_name, value=__escape_binding_value(value)
+    operation = (
+        '/subsystem=naming/binding="{binding_name}":add(binding-type=simple,'
+        ' value="{value}")'.format(
+            binding_name=binding_name, value=__escape_binding_value(value)
+        )
     )
     if profile is not None:
         operation = '/profile="{profile}"'.format(profile=profile) + operation
@@ -401,15 +404,19 @@ def update_simple_binding(jboss_config, binding_name, value, profile=None):
     .. code-block:: bash
 
         salt '*' jboss7.update_simple_binding '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_binding_name my_binding_value
-       """
+    """
     log.debug(
-        "======================== MODULE FUNCTION: jboss7.update_simple_binding, binding_name=%s, value=%s, profile=%s",
+        "======================== MODULE FUNCTION: jboss7.update_simple_binding,"
+        " binding_name=%s, value=%s, profile=%s",
         binding_name,
         value,
         profile,
     )
-    operation = '/subsystem=naming/binding="{binding_name}":write-attribute(name=value, value="{value}")'.format(
-        binding_name=binding_name, value=__escape_binding_value(value)
+    operation = (
+        '/subsystem=naming/binding="{binding_name}":write-attribute(name=value,'
+        ' value="{value}")'.format(
+            binding_name=binding_name, value=__escape_binding_value(value)
+        )
     )
     if profile is not None:
         operation = '/profile="{profile}"'.format(profile=profile) + operation
@@ -432,7 +439,7 @@ def read_simple_binding(jboss_config, binding_name, profile=None):
         .. code-block:: bash
 
         salt '*' jboss7.read_simple_binding '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_binding_name
-       """
+    """
     log.debug(
         "======================== MODULE FUNCTION: jboss7.read_simple_binding, %s",
         binding_name,
@@ -454,7 +461,8 @@ def __update_datasource_property(
     jboss_config, datasource_name, name, value, ds_attributes, profile=None
 ):
     log.debug(
-        "======================== MODULE FUNCTION: jboss7.__update_datasource_property, datasource_name=%s, name=%s, value=%s, profile=%s",
+        "======================== MODULE FUNCTION: jboss7.__update_datasource_property,"
+        " datasource_name=%s, name=%s, value=%s, profile=%s",
         datasource_name,
         name,
         value,
@@ -509,9 +517,10 @@ def remove_datasource(jboss_config, name, profile=None):
     .. code-block:: bash
 
         salt '*' jboss7.remove_datasource '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_datasource_name
-       """
+    """
     log.debug(
-        "======================== MODULE FUNCTION: jboss7.remove_datasource, name=%s, profile=%s",
+        "======================== MODULE FUNCTION: jboss7.remove_datasource, name=%s,"
+        " profile=%s",
         name,
         profile,
     )
@@ -539,7 +548,7 @@ def deploy(jboss_config, source_file):
     .. code-block:: bash
 
         salt '*' jboss7.deploy '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' /opt/deploy_files/my_deploy
-       """
+    """
     log.debug(
         "======================== MODULE FUNCTION: jboss7.deploy, source_file=%s",
         source_file,
@@ -563,7 +572,7 @@ def list_deployments(jboss_config):
 
          salt '*' jboss7.list_deployments '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}'
 
-       """
+    """
     log.debug("======================== MODULE FUNCTION: jboss7.list_deployments")
     command_result = __salt__["jboss7_cli.run_command"](jboss_config, "deploy")
     deployments = []
@@ -587,7 +596,7 @@ def undeploy(jboss_config, deployment):
     .. code-block:: bash
 
         salt '*' jboss7.undeploy '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_deployment
-       """
+    """
     log.debug(
         "======================== MODULE FUNCTION: jboss7.undeploy, deployment=%s",
         deployment,
