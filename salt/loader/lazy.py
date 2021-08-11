@@ -158,6 +158,26 @@ class LoadedMod:
         return attr
 
 
+class LazyLoaderAttrDict(salt.utils.odict.OrderedDict):
+    def __getattr__(self, key):
+        try:
+            # Return if it's a know class attribute
+            return super().__getattr__(key)
+        except AttributeError as exc:
+            # Let's try returning the key from this dictionary
+            try:
+                return self[key]
+            except KeyError:
+                raise exc
+
+    def __hasattr__(self, key):
+        if super().__hasattr__(key):
+            # Return True if it's a know class attribute
+            return True
+        # Let's try checking the key from this dictionary
+        return key in self
+
+
 class LazyLoader(salt.utils.lazy.LazyDict):
     """
     A pseduo-dictionary which has a set of keys which are the
@@ -187,7 +207,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         - singletons (per tag)
     """
 
-    mod_dict_class = salt.utils.odict.OrderedDict
+    mod_dict_class = LazyLoaderAttrDict
 
     def __init__(
         self,
@@ -915,9 +935,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # If we had another module by the same virtual name, we should put any
         # new functions under the existing dictionary.
         mod_names = [module_name] + list(virtual_aliases)
-        mod_dict = {
-            x: self.loaded_modules.get(x, self.mod_dict_class()) for x in mod_names
-        }
+        mod_dict = self.mod_dict_class()
+        for name in mod_names:
+            mod_dict[name] = self.loaded_modules.get(name) or self.mod_dict_class()
 
         for attr in getattr(mod, "__load__", dir(mod)):
             if attr.startswith("_"):
@@ -945,7 +965,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 if full_funcname not in self._dict:
                     self._dict[full_funcname] = func
                 if funcname not in mod_dict[tgt_mod]:
-                    setattr(mod_dict[tgt_mod], funcname, func)
                     mod_dict[tgt_mod][funcname] = func
                     self._apply_outputter(func, mod)
 
