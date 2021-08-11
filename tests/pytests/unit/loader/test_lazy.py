@@ -78,12 +78,18 @@ def test_loaders_create_named_loader_contexts(loader_dir):
     opts = {"optimization_order": [0, 1, 2]}
     loader_1 = salt.loader.lazy.LazyLoader([loader_dir], opts)
     mod = loader_1.mod_a
-    assert isinstance(mod.mod, dict)
+    assert isinstance(mod.mod, str)
     func = mod.set_context
     assert isinstance(func, salt.loader.lazy.LoadedFunc)
     module_name = func.func.__module__
     module = sys.modules[module_name]
     assert isinstance(module.__context__, salt.loader.context.NamedLoaderContext)
+    wrapped_module_name = func.__module__
+    wrapped_module = sys.modules[wrapped_module_name]
+    assert isinstance(
+        wrapped_module.__context__, salt.loader.context.NamedLoaderContext
+    )
+    assert module is wrapped_module
 
 
 def test_loaders_convert_context_to_values(loader_dir):
