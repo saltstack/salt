@@ -33,13 +33,13 @@ def validate(config):
     """
     # Configuration for swapusage beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for swapusage beacon must be a list.")
+        return False, "Configuration for swapusage beacon must be a list."
     else:
         _config = {}
         list(map(_config.update, config))
 
         if "percent" not in _config:
-            return False, ("Configuration for swapusage beacon requires percent.")
+            return False, "Configuration for swapusage beacon requires percent."
 
     return True, "Valid beacon configuration"
 

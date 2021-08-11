@@ -18,7 +18,7 @@ class IscsiGrainsTestCase(TestCase):
     def test_windows_iscsi_iqn_grains(self):
         cmd_run_mock = MagicMock(
             return_value={
-                "stdout": "iSCSINodeName\n" "iqn.1991-05.com.microsoft:simon-x1\n"
+                "stdout": "iSCSINodeName\niqn.1991-05.com.microsoft:simon-x1\n"
             }
         )
         _grains = {}

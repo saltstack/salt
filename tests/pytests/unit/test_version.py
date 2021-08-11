@@ -371,7 +371,8 @@ def test_bugfix_string():
         ),
         (
             (2019, 2, 3, None, "nb", 20201214, 0, None),
-            "<SaltStackVersion name='Fluorine' major=2019 minor=2 bugfix=3 nb=20201214>",
+            "<SaltStackVersion name='Fluorine' major=2019 minor=2 bugfix=3"
+            " nb=20201214>",
         ),
     ],
 )
@@ -467,7 +468,8 @@ def test_system_version_osx():
     """
 
     with patch(
-        "platform.mac_ver", MagicMock(return_value=("10.15.2", ("", "", ""), "x86_64")),
+        "platform.mac_ver",
+        MagicMock(return_value=("10.15.2", ("", "", ""), "x86_64")),
     ):
         versions = [item for item in system_information()]
         version = ("version", "10.15.2 x86_64")

@@ -105,7 +105,11 @@ def cache_grain_data(id_minion):
             "selinux": {"enabled": False, "enforced": "Disabled"},
             "systemd": {
                 "version": "219",
-                "features": "+PAM +AUDIT +SELINUX +IMA -APPARMOR +SMACK +SYSVINIT +UTMP +LIBCRYPTSETUP +GCRYPT +GNUTLS +ACL +XZ +LZ4 -SECCOMP +BLKID +ELFUTILS +KMOD +IDN",
+                "features": (
+                    "+PAM +AUDIT +SELINUX +IMA -APPARMOR +SMACK +SYSVINIT +UTMP"
+                    " +LIBCRYPTSETUP +GCRYPT +GNUTLS +ACL +XZ +LZ4 -SECCOMP +BLKID"
+                    " +ELFUTILS +KMOD +IDN"
+                ),
             },
             "init": "systemd",
             "lsb_distrib_id": "CentOS Linux",

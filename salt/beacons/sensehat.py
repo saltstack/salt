@@ -24,13 +24,13 @@ def validate(config):
     """
     # Configuration for sensehat beacon should be a list
     if not isinstance(config, list):
-        return False, ("Configuration for sensehat beacon must be a list.")
+        return False, "Configuration for sensehat beacon must be a list."
     else:
         _config = {}
         list(map(_config.update, config))
 
         if "sensors" not in _config:
-            return False, ("Configuration for sensehat beacon requires sensors.")
+            return False, "Configuration for sensehat beacon requires sensors."
 
     return True, "Valid beacon configuration"
 

@@ -126,7 +126,10 @@ def setenv(
                     permanent_key = "Environment"
                     if permanent == "HKLM":
                         permanent_hive = "HKLM"
-                        permanent_key = r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
+                        permanent_key = (
+                            r"SYSTEM\CurrentControlSet\Control\Session"
+                            r" Manager\Environment"
+                        )
 
                     out = __utils__["reg.read_value"](
                         permanent_hive, permanent_key, _norm_key(key)

@@ -47,10 +47,13 @@ def policy_set():
         computer_policy = {
             "Point and Print Restrictions": {
                 "Users can only point and print to these servers": True,
-                "Enter fully qualified server names separated by "
-                "semicolons": "fakeserver1;fakeserver2",
+                "Enter fully qualified server names separated by semicolons": (
+                    "fakeserver1;fakeserver2"
+                ),
                 "Users can only point and print to machines in their forest": True,
-                "When installing drivers for a new connection": "Show warning and elevation prompt",
+                "When installing drivers for a new connection": (
+                    "Show warning and elevation prompt"
+                ),
                 "When updating drivers for an existing connection": "Show warning only",
             }
         }
@@ -145,10 +148,13 @@ def test_current_element_naming_style(policy_clear):
     computer_policy = {
         "Point and Print Restrictions": {
             "Users can only point and print to these servers": True,
-            "Enter fully qualified server names separated by "
-            "semicolons": "fakeserver1;fakeserver2",
+            "Enter fully qualified server names separated by semicolons": (
+                "fakeserver1;fakeserver2"
+            ),
             "Users can only point and print to machines in their forest": True,
-            "When installing drivers for a new connection": "Show warning and elevation prompt",
+            "When installing drivers for a new connection": (
+                "Show warning and elevation prompt"
+            ),
             "When updating drivers for an existing connection": "Show warning only",
         }
     }
@@ -157,9 +163,12 @@ def test_current_element_naming_style(policy_clear):
         result = win_lgpo._convert_to_unicode(result)
     expected = {
         "Point and Print Restrictions": {
-            "Enter fully qualified server names separated by "
-            "semicolons": "fakeserver1;fakeserver2",
-            "When installing drivers for a new connection": "Show warning and elevation prompt",
+            "Enter fully qualified server names separated by semicolons": (
+                "fakeserver1;fakeserver2"
+            ),
+            "When installing drivers for a new connection": (
+                "Show warning and elevation prompt"
+            ),
             "Users can only point and print to machines in their forest": True,
             "Users can only point and print to these servers": True,
             "When updating drivers for an existing connection": "Show warning only",
@@ -179,11 +188,14 @@ def test_old_element_naming_style(policy_clear):
     computer_policy = {
         "Point and Print Restrictions": {
             "Users can only point and print to these servers": True,
-            "Enter fully qualified server names separated by "
-            "semicolons": "fakeserver1;fakeserver2",
+            "Enter fully qualified server names separated by semicolons": (
+                "fakeserver1;fakeserver2"
+            ),
             "Users can only point and print to machines in their forest": True,
             # Here's the old one
-            "Security Prompts: When installing drivers for a new connection": "Show warning and elevation prompt",
+            "Security Prompts: When installing drivers for a new connection": (
+                "Show warning and elevation prompt"
+            ),
             "When updating drivers for an existing connection": "Show warning only",
         }
     }
@@ -192,9 +204,12 @@ def test_old_element_naming_style(policy_clear):
         result = win_lgpo.set_(name="test_state", computer_policy=computer_policy)
     expected = {
         "Point and Print Restrictions": {
-            "Enter fully qualified server names separated by "
-            "semicolons": "fakeserver1;fakeserver2",
-            "When installing drivers for a new connection": "Show warning and elevation prompt",
+            "Enter fully qualified server names separated by semicolons": (
+                "fakeserver1;fakeserver2"
+            ),
+            "When installing drivers for a new connection": (
+                "Show warning and elevation prompt"
+            ),
             "Users can only point and print to machines in their forest": True,
             "Users can only point and print to these servers": True,
             "When updating drivers for an existing connection": "Show warning only",
@@ -202,11 +217,10 @@ def test_old_element_naming_style(policy_clear):
     }
     assert result["changes"]["new"]["Computer Configuration"] == expected
     expected = (
-        "The LGPO module changed the way it gets policy element names.\n"
-        '"Security Prompts: When installing drivers for a new connection" is no longer valid.\n'
-        'Please use "When installing drivers for a new connection" instead.\n'
-        "The following policies changed:\n"
-        "Point and Print Restrictions"
+        'The LGPO module changed the way it gets policy element names.\n"Security'
+        ' Prompts: When installing drivers for a new connection" is no longer'
+        ' valid.\nPlease use "When installing drivers for a new connection"'
+        " instead.\nThe following policies changed:\nPoint and Print Restrictions"
     )
     assert result["comment"] == expected
 
@@ -226,8 +240,10 @@ def test_invalid_elements():
         result = win_lgpo.set_(name="test_state", computer_policy=computer_policy)
     expected = {
         "changes": {},
-        "comment": "Invalid element name: Invalid element squidward\n"
-        "Invalid element name: Invalid element spongebob",
+        "comment": (
+            "Invalid element name: Invalid element squidward\n"
+            "Invalid element name: Invalid element spongebob"
+        ),
         "name": "test_state",
         "result": False,
     }
@@ -247,10 +263,13 @@ def test_current_element_naming_style_true(policy_set):
     computer_policy = {
         "Point and Print Restrictions": {
             "Users can only point and print to these servers": True,
-            "Enter fully qualified server names separated by "
-            "semicolons": "fakeserver1;fakeserver2",
+            "Enter fully qualified server names separated by semicolons": (
+                "fakeserver1;fakeserver2"
+            ),
             "Users can only point and print to machines in their forest": True,
-            "When installing drivers for a new connection": "Show warning and elevation prompt",
+            "When installing drivers for a new connection": (
+                "Show warning and elevation prompt"
+            ),
             "When updating drivers for an existing connection": "Show warning only",
         }
     }
@@ -276,11 +295,14 @@ def test_old_element_naming_style_true(policy_set):
     computer_policy = {
         "Point and Print Restrictions": {
             "Users can only point and print to these servers": True,
-            "Enter fully qualified server names separated by "
-            "semicolons": "fakeserver1;fakeserver2",
+            "Enter fully qualified server names separated by semicolons": (
+                "fakeserver1;fakeserver2"
+            ),
             "Users can only point and print to machines in their forest": True,
             # Here's the old one
-            "Security Prompts: When installing drivers for a new connection": "Show warning and elevation prompt",
+            "Security Prompts: When installing drivers for a new connection": (
+                "Show warning and elevation prompt"
+            ),
             "When updating drivers for an existing connection": "Show warning only",
         }
     }
@@ -288,10 +310,12 @@ def test_old_element_naming_style_true(policy_set):
         result = win_lgpo.set_(name="test_state", computer_policy=computer_policy)
     expected = {
         "changes": {},
-        "comment": "The LGPO module changed the way it gets policy element names.\n"
-        '"Security Prompts: When installing drivers for a new connection" is no longer valid.\n'
-        'Please use "When installing drivers for a new connection" instead.\n'
-        "All specified policies are properly configured",
+        "comment": (
+            'The LGPO module changed the way it gets policy element names.\n"Security'
+            ' Prompts: When installing drivers for a new connection" is no longer'
+            ' valid.\nPlease use "When installing drivers for a new connection"'
+            " instead.\nAll specified policies are properly configured"
+        ),
     }
     assert result["changes"] == expected["changes"]
     assert result["result"]
@@ -313,8 +337,10 @@ def test_invalid_elements_true():
         result = win_lgpo.set_(name="test_state", computer_policy=computer_policy)
     expected = {
         "changes": {},
-        "comment": "Invalid element name: Invalid element squidward\n"
-        "Invalid element name: Invalid element spongebob",
+        "comment": (
+            "Invalid element name: Invalid element squidward\n"
+            "Invalid element name: Invalid element spongebob"
+        ),
         "name": "test_state",
         "result": False,
     }

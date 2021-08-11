@@ -227,7 +227,7 @@ def returner(ret):
         raise
     except Exception as e:  # pylint: disable=broad-except
         log.critical(
-            "Unexpected error while inserting minion ID into the minions " "table: %s",
+            "Unexpected error while inserting minion ID into the minions table: %s",
             e,
         )
         raise

@@ -85,7 +85,9 @@ def start(name="all", user=None, conf_file=None, bin_env=None):
     if name.endswith(":*"):
         name = name[:-1]
     ret = __salt__["cmd.run_all"](
-        _ctl_cmd("start", name, conf_file, bin_env), runas=user, python_shell=False,
+        _ctl_cmd("start", name, conf_file, bin_env),
+        runas=user,
+        python_shell=False,
     )
     return _get_return(ret)
 
@@ -113,7 +115,9 @@ def restart(name="all", user=None, conf_file=None, bin_env=None):
     if name.endswith(":*"):
         name = name[:-1]
     ret = __salt__["cmd.run_all"](
-        _ctl_cmd("restart", name, conf_file, bin_env), runas=user, python_shell=False,
+        _ctl_cmd("restart", name, conf_file, bin_env),
+        runas=user,
+        python_shell=False,
     )
     return _get_return(ret)
 
@@ -141,7 +145,9 @@ def stop(name="all", user=None, conf_file=None, bin_env=None):
     if name.endswith(":*"):
         name = name[:-1]
     ret = __salt__["cmd.run_all"](
-        _ctl_cmd("stop", name, conf_file, bin_env), runas=user, python_shell=False,
+        _ctl_cmd("stop", name, conf_file, bin_env),
+        runas=user,
+        python_shell=False,
     )
     return _get_return(ret)
 
@@ -169,7 +175,9 @@ def add(name, user=None, conf_file=None, bin_env=None):
     elif name.endswith(":*"):
         name = name[:-2]
     ret = __salt__["cmd.run_all"](
-        _ctl_cmd("add", name, conf_file, bin_env), runas=user, python_shell=False,
+        _ctl_cmd("add", name, conf_file, bin_env),
+        runas=user,
+        python_shell=False,
     )
     return _get_return(ret)
 
@@ -197,7 +205,9 @@ def remove(name, user=None, conf_file=None, bin_env=None):
     elif name.endswith(":*"):
         name = name[:-2]
     ret = __salt__["cmd.run_all"](
-        _ctl_cmd("remove", name, conf_file, bin_env), runas=user, python_shell=False,
+        _ctl_cmd("remove", name, conf_file, bin_env),
+        runas=user,
+        python_shell=False,
     )
     return _get_return(ret)
 
@@ -221,7 +231,9 @@ def reread(user=None, conf_file=None, bin_env=None):
         salt '*' supervisord.reread
     """
     ret = __salt__["cmd.run_all"](
-        _ctl_cmd("reread", None, conf_file, bin_env), runas=user, python_shell=False,
+        _ctl_cmd("reread", None, conf_file, bin_env),
+        runas=user,
+        python_shell=False,
     )
     return _get_return(ret)
 
@@ -255,7 +267,9 @@ def update(user=None, conf_file=None, bin_env=None, name=None):
             name = name[:-2]
 
     ret = __salt__["cmd.run_all"](
-        _ctl_cmd("update", name, conf_file, bin_env), runas=user, python_shell=False,
+        _ctl_cmd("update", name, conf_file, bin_env),
+        runas=user,
+        python_shell=False,
     )
     return _get_return(ret)
 
@@ -307,7 +321,9 @@ def status_raw(name=None, user=None, conf_file=None, bin_env=None):
         salt '*' supervisord.status_raw
     """
     ret = __salt__["cmd.run_all"](
-        _ctl_cmd("status", name, conf_file, bin_env), runas=user, python_shell=False,
+        _ctl_cmd("status", name, conf_file, bin_env),
+        runas=user,
+        python_shell=False,
     )
     return _get_return(ret)
 
@@ -331,7 +347,9 @@ def custom(command, user=None, conf_file=None, bin_env=None):
         salt '*' supervisord.custom "mstop '*gunicorn*'"
     """
     ret = __salt__["cmd.run_all"](
-        _ctl_cmd(command, None, conf_file, bin_env), runas=user, python_shell=False,
+        _ctl_cmd(command, None, conf_file, bin_env),
+        runas=user,
+        python_shell=False,
     )
     return _get_return(ret)
 

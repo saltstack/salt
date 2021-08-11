@@ -577,14 +577,14 @@ def set_(
                         "\n".join(policy_changes)
                     )
                 else:
-                    msg = (
-                        "The following policies are in the correct "
-                        "state:\n{}".format("\n".join(policy_changes))
+                    msg = "The following policies are in the correct state:\n{}".format(
+                        "\n".join(policy_changes)
                     )
             else:
                 msg = (
-                    "Errors occurred while attempting to configure "
-                    "policies: {}".format(_ret)
+                    "Errors occurred while attempting to configure policies: {}".format(
+                        _ret
+                    )
                 )
                 ret["result"] = False
             deprecation_comments.append(msg)

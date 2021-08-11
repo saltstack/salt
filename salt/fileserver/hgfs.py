@@ -293,7 +293,7 @@ def init():
             _failhard()
         except Exception as exc:  # pylint: disable=broad-except
             log.error(
-                "Exception '%s' encountered while initializing hgfs " "remote %s",
+                "Exception '%s' encountered while initializing hgfs remote %s",
                 exc,
                 repo_url,
             )

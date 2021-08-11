@@ -107,14 +107,20 @@ def _get_asam_configuration(driver_url=""):
                     "platform_edit_url": "{}://{}:{}/config/PlatformEdit.html".format(
                         protocol, asam_server, port
                     ),
-                    "platform_config_url": "{}://{}:{}/config/PlatformConfig.html".format(
-                        protocol, asam_server, port
+                    "platform_config_url": (
+                        "{}://{}:{}/config/PlatformConfig.html".format(
+                            protocol, asam_server, port
+                        )
                     ),
-                    "platformset_edit_url": "{}://{}:{}/config/PlatformSetEdit.html".format(
-                        protocol, asam_server, port
+                    "platformset_edit_url": (
+                        "{}://{}:{}/config/PlatformSetEdit.html".format(
+                            protocol, asam_server, port
+                        )
                     ),
-                    "platformset_config_url": "{}://{}:{}/config/PlatformSetConfig.html".format(
-                        protocol, asam_server, port
+                    "platformset_config_url": (
+                        "{}://{}:{}/config/PlatformSetConfig.html".format(
+                            protocol, asam_server, port
+                        )
                     ),
                     "username": username,
                     "password": password,
