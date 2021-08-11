@@ -161,7 +161,8 @@ def test_init_client(master_config):
     Tests that the _init_client places the correct information in __context__
     """
     with patch.dict(
-        mysql_cache.__opts__, {"mysql.max_allowed_packet": 100000},
+        mysql_cache.__opts__,
+        {"mysql.max_allowed_packet": 100000},
     ):
         with patch.object(mysql_cache, "_create_table") as mock_create_table:
             mysql_cache._init_client()
