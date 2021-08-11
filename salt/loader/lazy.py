@@ -184,26 +184,6 @@ class LoadedMod:
         )
 
 
-class LazyLoaderAttrDict(salt.utils.odict.OrderedDict):
-    def __getattr__(self, key):
-        try:
-            # Return if it's a know class attribute
-            return super().__getattr__(key)
-        except AttributeError as exc:
-            # Let's try returning the key from this dictionary
-            try:
-                return self[key]
-            except KeyError:
-                raise exc
-
-    def __hasattr__(self, key):
-        if super().__hasattr__(key):
-            # Return True if it's a know class attribute
-            return True
-        # Let's try checking the key from this dictionary
-        return key in self
-
-
 class LazyLoader(salt.utils.lazy.LazyDict):
     """
     A pseduo-dictionary which has a set of keys which are the
@@ -233,7 +213,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         - singletons (per tag)
     """
 
-    mod_dict_class = LazyLoaderAttrDict
+    mod_dict_class = salt.utils.odict.OrderedDict
 
     def __init__(
         self,
@@ -300,7 +280,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         # names of modules that we don't have (errors, __virtual__, etc.)
         self.missing_modules = {}  # mapping of name -> error
-        self.loaded_modules = {}  # mapping of module_name -> dict_of_functions
+        self.loaded_modules = set()
         self.loaded_files = set()  # TODO: just remove them from file_mapping?
         self.static_modules = static_modules if static_modules else []
 
@@ -574,7 +554,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             super().clear()  # clear the lazy loader
             self.loaded_files = set()
             self.missing_modules = {}
-            self.loaded_modules = {}
+            self.loaded_modules = set()
             # if we have been loaded before, lets clear the file mapping since
             # we obviously want a re-do
             if hasattr(self, "opts"):
@@ -966,9 +946,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # If we had another module by the same virtual name, we should put any
         # new functions under the existing dictionary.
         mod_names = [module_name] + list(virtual_aliases)
-        mod_dict = self.mod_dict_class()
-        for name in mod_names:
-            mod_dict[name] = self.loaded_modules.get(name) or self.mod_dict_class()
 
         for attr in getattr(mod, "__load__", dir(mod)):
             if attr.startswith("_"):
@@ -995,9 +972,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 # Careful not to overwrite existing (higher priority) functions
                 if full_funcname not in self._dict:
                     self._dict[full_funcname] = func
-                if funcname not in mod_dict[tgt_mod]:
-                    mod_dict[tgt_mod][funcname] = func
                     self._apply_outputter(func, mod)
+                self.loaded_modules.add(tgt_mod)
 
         # enforce depends
         try:
@@ -1008,8 +984,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 exc,
             )
 
-        for tgt_mod in mod_names:
-            self.loaded_modules[tgt_mod] = mod_dict[tgt_mod]
         return True
 
     def _load(self, key):
