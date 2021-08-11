@@ -155,7 +155,7 @@ independent   family                       probe_family"""
             # Test if 'file' parameter is set.
             self.assertEqual(openscap.xccdf(), "A File must be defined!")
 
-        # Test resulsts with upload successful upload
+        # Test results with successful upload
         with patch.object(
             openscap, "_has_operation", MagicMock(return_value=True)
         ), patch.object(
@@ -179,7 +179,7 @@ independent   family                       probe_family"""
 
             # Test a Normal run with successful upload
             self.assertEqual(
-                openscap.xccdf(_file, _operation, **_kwargs),
+                openscap.xccdf(file=_file, operation=_operation, **_kwargs),
                 {
                     "success": True,
                     "upload_dir": "/tmp/rand/path",
@@ -190,13 +190,13 @@ independent   family                       probe_family"""
 
             # Test a SCAP Fail, which prevents the Upload
             self.assertEqual(
-                openscap.xccdf(_file, _operation, **_kwargs),
+                openscap.xccdf(file=_file, operation=_operation, **_kwargs),
                 {"success": False, "upload_dir": None, "error": None, "returncode": 1},
             )
 
             # Test a SCAP Success with failed checks and successful Upload
             self.assertEqual(
-                openscap.xccdf(_file, _operation, **_kwargs),
+                openscap.xccdf(file=_file, operation=_operation, **_kwargs),
                 {
                     "success": True,
                     "upload_dir": "/tmp/rand/path",
@@ -226,18 +226,18 @@ independent   family                       probe_family"""
 
             # Test a Normal run with failed upload
             self.assertEqual(
-                openscap.xccdf(_file, _operation, **_kwargs),
+                openscap.xccdf(file=_file, operation=_operation, **_kwargs),
                 {"success": True, "upload_dir": None, "error": None, "returncode": 0},
             )
 
             # Test a Failing OpenSCAP run with failed upload (Gets disabled)
             self.assertEqual(
-                openscap.xccdf(_file, _operation, **_kwargs),
+                openscap.xccdf(file=_file, operation=_operation, **_kwargs),
                 {"success": False, "upload_dir": None, "error": None, "returncode": 1},
             )
 
             # Test a SCAP Success with failed checks and failed Upload
             self.assertEqual(
-                openscap.xccdf(_file, _operation, **_kwargs),
+                openscap.xccdf(file=_file, operation=_operation, **_kwargs),
                 {"success": True, "upload_dir": None, "error": None, "returncode": 2},
             )
