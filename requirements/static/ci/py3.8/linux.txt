@@ -788,7 +788,7 @@ python-gnupg==0.4.4
     # via -r requirements/static/pkg/py3.8/linux.txt
 python-jose[cryptography]==3.2.0
     # via moto
-python-telegram-bot==13.7
+python-telegram-bot==13.7 ; python_version > "3.5"
     # via -r requirements/static/ci/linux.in
 pytz==2020.1
     # via
