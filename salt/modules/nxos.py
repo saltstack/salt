@@ -219,7 +219,9 @@ def cmd(command, *args, **kwargs):
         salt '*' nxos.cmd show_run
         salt '*' nxos.cmd check_password username=admin password='$5$lkjsdfoi$blahblahblah' encrypted=True
     """
-    warn_until("Phosphorus", "'nxos.cmd COMMAND' is deprecated in favor of 'nxos.COMMAND'")
+    warn_until(
+        "Phosphorus", "'nxos.cmd COMMAND' is deprecated in favor of 'nxos.COMMAND'"
+    )
 
     for k in list(kwargs):
         if k.startswith("__pub_"):
@@ -450,7 +452,9 @@ def system_info(**kwargs):
 
         salt '*' nxos.system_info
     """
-    warn_until("Phosphorus", "'nxos.system_info' is deprecated in favor of 'nxos.grains'")
+    warn_until(
+        "Phosphorus", "'nxos.system_info' is deprecated in favor of 'nxos.grains'"
+    )
     return salt.utils.nxos.system_info(show_ver(**kwargs))["nxos"]
 
 
