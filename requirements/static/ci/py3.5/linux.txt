@@ -18,6 +18,8 @@ apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 appdirs==1.4.4
     # via virtualenv
+apscheduler==3.6.3
+    # via python-telegram-bot
 argh==0.26.2
     # via watchdog
 asn1crypto==1.3.0
@@ -368,6 +370,7 @@ certifi==2020.6.20
     #   -r requirements/static/pkg/py3.5/linux.txt
     #   kubernetes
     #   msrest
+    #   python-telegram-bot
     #   requests
 certvalidator==0.11.1
     # via vcert
@@ -420,10 +423,13 @@ cryptography==3.0
     #   paramiko
     #   pyopenssl
     #   python-jose
+    #   python-telegram-bot
     #   sshpubkeys
     #   vcert
 decorator==4.4.2
-    # via networkx
+    # via
+    #   networkx
+    #   python-telegram-bot
 distlib==0.3.0
     # via virtualenv
 distro==1.5.0
@@ -773,12 +779,17 @@ python-gnupg==0.4.4
     # via -r requirements/static/pkg/py3.5/linux.txt
 python-jose[cryptography]==3.2.0
     # via moto
+python-telegram-bot==13.1
+    # via -r requirements/static/ci/linux.in
 pytz==2020.1
     # via
     #   -r requirements/static/pkg/py3.5/linux.txt
+    #   apscheduler
     #   moto
+    #   python-telegram-bot
     #   tempora
     #   twilio
+    #   tzlocal
 pyvmomi==6.7.1.2018.12
     # via
     #   -r requirements/static/ci/common.in
@@ -840,6 +851,7 @@ setproctitle==1.1.10
 six==1.16.0
     # via
     #   -r requirements/static/pkg/py3.5/linux.txt
+    #   apscheduler
     #   aws-sam-translator
     #   bcrypt
     #   cassandra-driver
@@ -888,8 +900,6 @@ strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in
 suds-jurko==0.6
     # via vsphere-automation-sdk
-telegram==0.0.1
-    # via -r requirements/static/ci/linux.in
 tempora==1.14.1
     # via
     #   -r requirements/static/pkg/py3.5/linux.txt
@@ -904,10 +914,14 @@ toml==0.10.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest
+tornado==6.1
+    # via python-telegram-bot
 transitions==0.8.1
     # via junos-eznc
 twilio==6.63.0
     # via -r requirements/static/ci/linux.in
+tzlocal==2.1
+    # via apscheduler
 urllib3==1.26.6
     # via
     #   -r requirements/static/pkg/py3.5/linux.txt
