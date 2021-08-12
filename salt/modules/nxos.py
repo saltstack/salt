@@ -94,6 +94,7 @@ import salt.utils.platform
 from salt.exceptions import CommandExecutionError, NxosError, SaltInvocationError
 from salt.utils.args import clean_kwargs
 from salt.utils.pycrypto import gen_hash
+from salt.utils.versions import warn_until
 
 __virtualname__ = "nxos"
 
@@ -218,6 +219,7 @@ def cmd(command, *args, **kwargs):
         salt '*' nxos.cmd show_run
         salt '*' nxos.cmd check_password username=admin password='$5$lkjsdfoi$blahblahblah' encrypted=True
     """
+    warn_until("Phosphorus", "'nxos.cmd COMMAND' is deprecated in favor of 'nxos.COMMAND'")
 
     for k in list(kwargs):
         if k.startswith("__pub_"):
@@ -380,6 +382,11 @@ def show(commands, raw_text=True, **kwargs):
         salt '*' nxos.show 'show bgp sessions ; show processes' raw_text=False
         salt 'regular-minion' nxos.show 'show interfaces' host=sw01.example.com username=test password=test
     """
+    warn_until(
+        "Phosphorus",
+        "'nxos.show commands' is deprecated in favor of 'nxos.sendline commands'",
+    )
+
     if not isinstance(raw_text, bool):
         msg = """
         INPUT ERROR: Second argument 'raw_text' must be either True or False
@@ -443,6 +450,7 @@ def system_info(**kwargs):
 
         salt '*' nxos.system_info
     """
+    warn_until("Phosphorus", "'nxos.system_info' is deprecated in favor of 'nxos.grains'")
     return salt.utils.nxos.system_info(show_ver(**kwargs))["nxos"]
 
 
@@ -468,6 +476,11 @@ def add_config(lines, **kwargs):
     .. note::
         For more than one config added per command, lines should be a list.
     """
+    warn_until(
+        "Phosphorus",
+        "'nxos.add_config lines' is deprecated in favor of 'nxos.config commands'",
+    )
+
     kwargs = clean_kwargs(**kwargs)
     return config(lines, **kwargs)
 
