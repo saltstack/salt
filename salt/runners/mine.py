@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 A runner to access data from the salt mine
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python Libs
 import logging
 
-# Import salt libs
 import salt.daemons.masterapi
 
 log = logging.getLevelName(__name__)

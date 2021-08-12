@@ -43,13 +43,16 @@ class IPCTester:
     @server.default
     def _server_default(self):
         return salt.transport.ipc.IPCMessageServer(
-            self.socket_path, io_loop=self.io_loop, payload_handler=self.handle_payload,
+            self.socket_path,
+            io_loop=self.io_loop,
+            payload_handler=self.handle_payload,
         )
 
     @client.default
     def _client_default(self):
         return salt.transport.ipc.IPCMessageClient(
-            self.socket_path, io_loop=self.io_loop,
+            self.socket_path,
+            io_loop=self.io_loop,
         )
 
     async def handle_payload(self, payload, reply_func):

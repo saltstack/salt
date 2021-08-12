@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 tISM - the Immutable Secrets Manager SDB Module
 
@@ -28,17 +27,12 @@ configuration.
       token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbiI6MSwiZXhwIjoxNTg1MTExNDYwLCJqdGkiOiI3NnA5cWNiMWdtdmw4Iiwia2V5cyI6WyJBTEwiXX0.RtAhG6Uorf5xnSf4Ya_GwJnoHkCsql4r1_hiOeDSLzo
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.utils.http as http
-
-# Import Salt libs
 import salt.utils.json
 from salt.exceptions import SaltConfigurationError
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -65,7 +59,9 @@ def get(key, service=None, profile=None):  # pylint: disable=W0613
     request = {"token": profile["token"], "encsecret": key}
 
     result = http.query(
-        profile["url"], method="POST", data=salt.utils.json.dumps(request),
+        profile["url"],
+        method="POST",
+        data=salt.utils.json.dumps(request),
     )
 
     decrypted = result.get("body")
@@ -75,6 +71,6 @@ def get(key, service=None, profile=None):  # pylint: disable=W0613
             "tism.get sdb decryption request failed with error %s",
             result.get("error", "unknown"),
         )
-        return "ERROR" + six.text_type(result.get("status", "unknown"))
+        return "ERROR" + str(result.get("status", "unknown"))
 
     return decrypted

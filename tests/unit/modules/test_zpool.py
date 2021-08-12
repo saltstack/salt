@@ -96,7 +96,8 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             [
                 "  pool: mypool",
                 " state: ONLINE",
-                "  scan: scrub repaired 0 in 0h6m with 0 errors on Mon Dec 21 02:06:17 2015",
+                "  scan: scrub repaired 0 in 0h6m with 0 errors on Mon Dec 21 02:06:17"
+                " 2015",
                 "config:",
                 "",
                 "\tNAME        STATE     READ WRITE CKSUM",
@@ -126,7 +127,8 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             [
                 "  pool: mypool",
                 " state: ONLINE",
-                "  scan: scrub repaired 0 in 0h6m with 0 errors on Mon Dec 21 02:06:17 2015",
+                "  scan: scrub repaired 0 in 0h6m with 0 errors on Mon Dec 21 02:06:17"
+                " 2015",
                 "config:",
                 "",
                 "\tNAME        STATE     READ WRITE CKSUM",
@@ -458,7 +460,8 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                     ("split", False),
                     (
                         "error",
-                        "Unable to split datapool: Source pool must be composed only of mirrors",
+                        "Unable to split datapool: Source pool must be composed only of"
+                        " mirrors",
                     ),
                 ]
             )
@@ -551,7 +554,9 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                     ("labelcleared", False),
                     (
                         "error",
-                        "use 'force=True' to override the following error:\n/dev/rdsk/c0t0d0 is a member of exported pool \"mypool\"",
+                        "use 'force=True' to override the following"
+                        " error:\n/dev/rdsk/c0t0d0 is a member of exported pool"
+                        ' "mypool"',
                     ),
                 ]
             )
@@ -582,9 +587,10 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         """
         ret = {}
         ret["stdout"] = ""
-        ret[
-            "stderr"
-        ] = "/vdisks/disk0: initialized 10424320 of 67108864 bytes: No space left on device"
+        ret["stderr"] = (
+            "/vdisks/disk0: initialized 10424320 of 67108864 bytes: No space left on"
+            " device"
+        )
         ret["retcode"] = 1
         mock_cmd = MagicMock(return_value=ret)
 
@@ -601,7 +607,8 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                             [
                                 (
                                     "/vdisks/disk0",
-                                    " initialized 10424320 of 67108864 bytes: No space left on device",
+                                    " initialized 10424320 of 67108864 bytes: No space"
+                                    " left on device",
                                 ),
                             ]
                         ),
@@ -674,7 +681,8 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         ret["stderr"] = "\n".join(
             [
                 "cannot import 'mypool': a pool with that name already exists",
-                "use the form 'zpool import <pool | id> <newpool>' to give it a new name",
+                "use the form 'zpool import <pool | id> <newpool>' to give it a new"
+                " name",
             ]
         )
         ret["retcode"] = 1
@@ -689,7 +697,9 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                     ("imported", False),
                     (
                         "error",
-                        "cannot import 'mypool': a pool with that name already exists\nuse the form 'zpool import <pool | id> <newpool>' to give it a new name",
+                        "cannot import 'mypool': a pool with that name already"
+                        " exists\nuse the form 'zpool import <pool | id> <newpool>' to"
+                        " give it a new name",
                     ),
                 ]
             )
@@ -942,7 +952,8 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             [
                 "History for 'mypool':",
                 "2018-01-18.16:56:12 zpool create -f mypool /dev/rdsk/c0t0d0",
-                "2018-01-19.16:01:55 zpool attach -f mypool /dev/rdsk/c0t0d0 /dev/rdsk/c0t0d1",
+                "2018-01-19.16:01:55 zpool attach -f mypool /dev/rdsk/c0t0d0"
+                " /dev/rdsk/c0t0d1",
             ]
         )
         ret["stderr"] = ""
@@ -965,7 +976,8 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                                 ),
                                 (
                                     "2018-01-19.16:01:55",
-                                    "zpool attach -f mypool /dev/rdsk/c0t0d0 /dev/rdsk/c0t0d1",
+                                    "zpool attach -f mypool /dev/rdsk/c0t0d0"
+                                    " /dev/rdsk/c0t0d1",
                                 ),
                             ]
                         ),
@@ -1047,7 +1059,8 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                     ("cleared", False),
                     (
                         "error",
-                        "cannot clear errors for /dev/rdsk/c0t0d0: no such device in pool",
+                        "cannot clear errors for /dev/rdsk/c0t0d0: no such device in"
+                        " pool",
                     ),
                 ]
             )

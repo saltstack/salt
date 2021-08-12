@@ -118,10 +118,7 @@ def validate(config):
             if not isinstance(_config["files"], dict):
                 return (
                     False,
-                    (
-                        "Configuration for inotify beacon invalid, "
-                        "files must be a dict."
-                    ),
+                    "Configuration for inotify beacon invalid, files must be a dict.",
                 )
 
             for path in _config.get("files"):
@@ -129,10 +126,8 @@ def validate(config):
                 if not isinstance(_config["files"][path], dict):
                     return (
                         False,
-                        (
-                            "Configuration for inotify beacon must "
-                            "be a list of dictionaries."
-                        ),
+                        "Configuration for inotify beacon must be a list of"
+                        " dictionaries.",
                     )
                 else:
                     if not any(
@@ -141,49 +136,38 @@ def validate(config):
                     ):
                         return (
                             False,
-                            (
-                                "Configuration for inotify beacon must "
-                                "contain mask, recurse or auto_add items."
-                            ),
+                            "Configuration for inotify beacon must contain mask,"
+                            " recurse or auto_add items.",
                         )
 
                     if "auto_add" in _config["files"][path]:
                         if not isinstance(_config["files"][path]["auto_add"], bool):
                             return (
                                 False,
-                                (
-                                    "Configuration for inotify beacon "
-                                    "auto_add must be boolean."
-                                ),
+                                "Configuration for inotify beacon auto_add must be"
+                                " boolean.",
                             )
 
                     if "recurse" in _config["files"][path]:
                         if not isinstance(_config["files"][path]["recurse"], bool):
                             return (
                                 False,
-                                (
-                                    "Configuration for inotify beacon "
-                                    "recurse must be boolean."
-                                ),
+                                "Configuration for inotify beacon recurse must be"
+                                " boolean.",
                             )
 
                     if "mask" in _config["files"][path]:
                         if not isinstance(_config["files"][path]["mask"], list):
                             return (
                                 False,
-                                (
-                                    "Configuration for inotify beacon "
-                                    "mask must be list."
-                                ),
+                                "Configuration for inotify beacon mask must be list.",
                             )
                         for mask in _config["files"][path]["mask"]:
                             if mask not in VALID_MASK:
                                 return (
                                     False,
-                                    (
-                                        "Configuration for inotify beacon "
-                                        "invalid mask option {}.".format(mask)
-                                    ),
+                                    "Configuration for inotify beacon invalid mask"
+                                    " option {}.".format(mask),
                                 )
     return True, "Valid beacon configuration"
 
@@ -326,7 +310,7 @@ def beacon(config):
                 r_mask = 0
                 for sub in mask:
                     r_mask |= _get_mask(sub)
-            elif isinstance(mask, salt.ext.six.binary_type):
+            elif isinstance(mask, bytes):
                 r_mask = _get_mask(mask)
             else:
                 r_mask = mask

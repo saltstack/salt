@@ -223,7 +223,10 @@ class SSH:
         if not salt.utils.path.which("ssh"):
             raise salt.exceptions.SaltSystemExit(
                 code=-1,
-                msg="No ssh binary found in path -- ssh must be installed for salt-ssh to run. Exiting.",
+                msg=(
+                    "No ssh binary found in path -- ssh must be installed for salt-ssh"
+                    " to run. Exiting."
+                ),
             )
         self.opts["_ssh_version"] = ssh_version()
         self.tgt_type = (
@@ -260,11 +263,12 @@ class SSH:
                     salt.client.ssh.shell.gen_key(priv)
                 except OSError:
                     raise salt.exceptions.SaltClientError(
-                        "salt-ssh could not be run because it could not generate keys.\n\n"
-                        "You can probably resolve this by executing this script with "
-                        "increased permissions via sudo or by running as root.\n"
-                        "You could also use the '-c' option to supply a configuration "
-                        "directory that you have permissions to read and write to."
+                        "salt-ssh could not be run because it could not generate"
+                        " keys.\n\nYou can probably resolve this by executing this"
+                        " script with increased permissions via sudo or by running as"
+                        " root.\nYou could also use the '-c' option to supply a"
+                        " configuration directory that you have permissions to read and"
+                        " write to."
                     )
         self.defaults = {
             "user": self.opts.get(
@@ -386,9 +390,8 @@ class SSH:
             if self.__parsed_rosters[self.ROSTER_UPDATE_FLAG]:
                 with salt.utils.files.fopen(roster_file, "a") as roster_fp:
                     roster_fp.write(
-                        '# Automatically added by "{s_user}" at {s_time}\n{hostname}:\n    host: '
-                        "{hostname}\n    user: {user}"
-                        "\n    passwd: {passwd}\n".format(
+                        '# Automatically added by "{s_user}" at {s_time}\n{hostname}:\n'
+                        "    host: {hostname}\n    user: {user}\n    passwd: {passwd}\n".format(
                             s_user=getpass.getuser(),
                             s_time=datetime.datetime.utcnow().isoformat(),
                             hostname=self.opts.get("tgt", ""),
@@ -397,12 +400,12 @@ class SSH:
                         )
                     )
                 log.info(
-                    "The host {} has been added to the roster {}".format(
-                        self.opts.get("tgt", ""), roster_file
-                    )
+                    "The host %s has been added to the roster %s",
+                    self.opts.get("tgt", ""),
+                    roster_file,
                 )
         else:
-            log.error("Unable to update roster {}: access denied".format(roster_file))
+            log.error("Unable to update roster %s: access denied", roster_file)
 
     def _update_targets(self):
         """
@@ -455,10 +458,8 @@ class SSH:
             target = self.targets[host]
             # permission denied, attempt to auto deploy ssh key
             print(
-                (
-                    "Permission denied for host {}, do you want to deploy "
-                    "the salt-ssh key? (password required):"
-                ).format(host)
+                "Permission denied for host {}, do you want to deploy "
+                "the salt-ssh key? (password required):".format(host)
             )
             deploy = input("[Y/n] ")
             if deploy.startswith(("n", "N")):
@@ -581,7 +582,10 @@ class SSH:
                 if self.targets[host].get("winrm") and not HAS_WINSHELL:
                     returned.add(host)
                     rets.add(host)
-                    log_msg = "Please contact sales@saltstack.com for access to the enterprise saltwinshell module."
+                    log_msg = (
+                        "Please contact sales@saltstack.com for access to the"
+                        " enterprise saltwinshell module."
+                    )
                     log.debug(log_msg)
                     no_ret = {
                         "fun_args": [],
@@ -633,8 +637,8 @@ class SSH:
                         if host not in returned:
                             error = (
                                 "Target '{}' did not return any data, "
-                                "probably due to an error."
-                            ).format(host)
+                                "probably due to an error.".format(host)
+                            )
                             ret = {"id": host, "ret": error}
                             log.error(error)
                             yield {ret["id"]: ret["ret"]}
@@ -771,11 +775,11 @@ class SSH:
                     jid, job_load
                 )
         except Exception as exc:  # pylint: disable=broad-except
-            log.exception(exc)
             log.error(
                 "Could not save load with returner %s: %s",
                 self.opts["master_job_cache"],
                 exc,
+                exc_info=True,
             )
 
         if self.opts.get("verbose"):
@@ -1016,7 +1020,8 @@ class Single:
         Deploy salt-thin
         """
         self.shell.send(
-            self.thin, os.path.join(self.thin_dir, "salt-thin.tgz"),
+            self.thin,
+            os.path.join(self.thin_dir, "salt-thin.tgz"),
         )
         self.deploy_ext()
         return True
@@ -1027,7 +1032,8 @@ class Single:
         """
         if self.mods.get("file"):
             self.shell.send(
-                self.mods["file"], os.path.join(self.thin_dir, "salt-ext_mods.tgz"),
+                self.mods["file"],
+                os.path.join(self.thin_dir, "salt-ext_mods.tgz"),
             )
         return True
 
@@ -1048,29 +1054,22 @@ class Single:
         if self.ssh_pre_flight:
             if not self.opts.get("ssh_run_pre_flight", False) and self.check_thin_dir():
                 log.info(
-                    "{} thin dir already exists. Not running ssh_pre_flight script".format(
-                        self.thin_dir
-                    )
+                    "%s thin dir already exists. Not running ssh_pre_flight script",
+                    self.thin_dir,
                 )
             elif not os.path.exists(self.ssh_pre_flight):
                 log.error(
-                    "The ssh_pre_flight script {} does not exist".format(
-                        self.ssh_pre_flight
-                    )
+                    "The ssh_pre_flight script %s does not exist", self.ssh_pre_flight
                 )
             else:
                 stdout, stderr, retcode = self.run_ssh_pre_flight()
                 if retcode != 0:
                     log.error(
-                        "Error running ssh_pre_flight script {}".format(
-                            self.ssh_pre_file
-                        )
+                        "Error running ssh_pre_flight script %s", self.ssh_pre_file
                     )
                     return stdout, stderr, retcode
                 log.info(
-                    "Successfully ran the ssh_pre_flight script: {}".format(
-                        self.ssh_pre_file
-                    )
+                    "Successfully ran the ssh_pre_flight script: %s", self.ssh_pre_file
                 )
 
         if self.opts.get("raw_shell", False):
@@ -1523,7 +1522,7 @@ ARGS = {arguments}\n'''.format(
             return None
 
         perm_error_fmt = (
-            "Permissions problem, target user may need " "to be root or use sudo:\n {0}"
+            "Permissions problem, target user may need to be root or use sudo:\n {0}"
         )
 
         errors = [

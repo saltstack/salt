@@ -15,15 +15,11 @@ Library for interacting with Slack API
           api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
 """
 
+import http.client
 import logging
+import urllib.parse
 
-import salt.ext.six.moves.http_client
-
-# pylint: enable=import-error,no-name-in-module
 import salt.utils.http
-
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 
 log = logging.getLogger(__name__)
 
@@ -67,9 +63,9 @@ def query(
             return ret
 
     api_url = "https://slack.com"
-    base_url = _urljoin(api_url, "/api/")
+    base_url = urllib.parse.urljoin(api_url, "/api/")
     path = slack_functions.get(function).get("request")
-    url = _urljoin(base_url, path, False)
+    url = urllib.parse.urljoin(base_url, path, False)
 
     if not isinstance(args, dict):
         query_params = {}
@@ -101,7 +97,7 @@ def query(
         opts=opts,
     )
 
-    if result.get("status", None) == salt.ext.six.moves.http_client.OK:
+    if result.get("status", None) == http.client.OK:
         _result = result["dict"]
         response = slack_functions.get(function).get("response")
         if "error" in _result:
@@ -110,7 +106,7 @@ def query(
             return ret
         ret["message"] = _result.get(response)
         return ret
-    elif result.get("status", None) == salt.ext.six.moves.http_client.NO_CONTENT:
+    elif result.get("status", None) == http.client.NO_CONTENT:
         return True
     else:
         log.debug(url)

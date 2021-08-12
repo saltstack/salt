@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Provide token storage in Redis cluster.
 
@@ -15,14 +13,12 @@ Default values for these configs are as follow:
 :depends:   - redis-py-cluster Python package
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import hashlib
 import logging
 import os
 
 import salt.payload
-from salt.ext import six
 
 try:
     import rediscluster
@@ -79,10 +75,10 @@ def mk_token(opts, tdata):
     if not redis_client:
         return {}
     hash_type = getattr(hashlib, opts.get("hash_type", "md5"))
-    tok = six.text_type(hash_type(os.urandom(512)).hexdigest())
+    tok = str(hash_type(os.urandom(512)).hexdigest())
     try:
         while redis_client.get(tok) is not None:
-            tok = six.text_type(hash_type(os.urandom(512)).hexdigest())
+            tok = str(hash_type(os.urandom(512)).hexdigest())
     except Exception as err:  # pylint: disable=broad-except
         log.warning(
             "Authentication failure: cannot get token %s from redis: %s", tok, err

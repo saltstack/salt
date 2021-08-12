@@ -40,7 +40,6 @@ import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.ext.six.moves import range
 from salt.utils.network import _get_interfaces
 
 
@@ -78,7 +77,7 @@ if salt.utils.platform.is_windows():
         HAS_WMI = True
     except ImportError:
         log.exception(
-            "Unable to import Python wmi module, some core grains " "will be missing"
+            "Unable to import Python wmi module, some core grains will be missing"
         )
 
 
@@ -1059,7 +1058,8 @@ def _virtual(osdata):
                 # Some firmwares provide non-valid 'product_name'
                 # files, ignore them
                 log.debug(
-                    "The content in /sys/devices/virtual/dmi/id/product_name is not valid"
+                    "The content in /sys/devices/virtual/dmi/id/product_name is not"
+                    " valid"
                 )
             except OSError:
                 pass
@@ -1320,7 +1320,8 @@ def _clean_value(key, val):
     else:
         # map unspecified, undefined, unknown & whatever to None
         if re.search(r"to be filled", val, flags=re.IGNORECASE) or re.search(
-            r"un(known|specified)|no(t|ne)? (asset|provided|defined|available|present|specified)",
+            r"un(known|specified)|no(t|ne)?"
+            r" (asset|provided|defined|available|present|specified)",
             val,
             flags=re.IGNORECASE,
         ):
@@ -2390,7 +2391,8 @@ def hostname():
     # Otherwise we would stacktrace below
     if __FQDN__ is None:  # still!
         log.error(
-            "Having trouble getting a hostname.  Does this machine have its hostname and domain set properly?"
+            "Having trouble getting a hostname.  Does this machine have its hostname"
+            " and domain set properly?"
         )
         __FQDN__ = "localhost.localdomain"
 
@@ -2426,7 +2428,11 @@ def fqdns():
     if __opts__.get(
         "enable_fqdns_grains",
         False
-        if salt.utils.platform.is_windows() or salt.utils.platform.is_proxy()
+        if salt.utils.platform.is_windows()
+        or salt.utils.platform.is_proxy()
+        or salt.utils.platform.is_sunos()
+        or salt.utils.platform.is_aix()
+        or salt.utils.platform.is_junos()
         else True,
     ):
         opt = __salt__["network.fqdns"]()
@@ -2745,7 +2751,8 @@ def _hw_data(osdata):
                     # Some firmwares provide non-valid 'product_name'
                     # files, ignore them
                     log.debug(
-                        "The content in /sys/devices/virtual/dmi/id/product_name is not valid"
+                        "The content in /sys/devices/virtual/dmi/id/product_name is not"
+                        " valid"
                     )
                 except OSError as err:
                     # PermissionError is new to Python 3, but corresponds to the EACESS and
@@ -2885,7 +2892,7 @@ def _hw_data(osdata):
             re.compile(r) for r in [r"(?im)^\s*Domain\s+UUID:\s*(\S+)"]  # virtinfo
         ]
 
-        manufacture_regexes = [
+        manufacturer_regexes = [
             re.compile(r)
             for r in [r"(?im)^\s*System\s+Configuration:\s*(.*)(?=sun)"]  # prtdiag
         ]
@@ -2954,10 +2961,12 @@ def _hw_data(osdata):
                 grains["uuid"] = res.group(1).strip().replace("'", "")
                 break
 
-        for regex in manufacture_regexes:
+        for regex in manufacturer_regexes:
             res = regex.search(data)
             if res and len(res.groups()) >= 1:
-                grains["manufacture"] = res.group(1).strip().replace("'", "")
+                grains["manufacturer"] = res.group(1).strip().replace("'", "")
+                # Remove manufacture in Sulfur: salt.utils.versions.warn_until("Sulfur")
+                grains["manufacture"] = grains["manufacturer"]
                 break
 
         for regex in product_regexes:

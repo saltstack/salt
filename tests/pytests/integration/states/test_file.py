@@ -200,8 +200,107 @@ def test_issue_50221(
         assert target_path.read_text().replace("\r\n", "\n") == expected_content
 
 
+def test_issue_60426(
+    salt_master,
+    salt_call_cli,
+    pillar_tree,
+    tmp_path,
+    salt_minion,
+):
+    target_path = tmp_path / "/etc/foo/bar"
+    jinja_name = "foo_bar"
+    jinja_contents = (
+        "{% for item in accumulator['accumulated configstuff'] %}{{ item }}{% endfor %}"
+    )
+
+    sls_name = "issue-60426"
+    sls_contents = """
+    configuration file:
+      file.managed:
+        - name: {target_path}
+        - source: salt://foo_bar.jinja
+        - template: jinja
+        - makedirs: True
+
+    accumulated configstuff:
+      file.accumulated:
+        - filename: {target_path}
+        - text:
+          - some
+          - good
+          - stuff
+        - watch_in:
+          - configuration file
+    """.format(
+        target_path=target_path
+    )
+
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_name), sls_contents
+    )
+
+    jinja_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.jinja".format(jinja_name), jinja_contents
+    )
+
+    with sls_tempfile, jinja_tempfile:
+        ret = salt_call_cli.run("state.apply", sls_name)
+        assert ret.exitcode == 0
+        assert ret.json
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is True
+        # Check to make sure the file was created
+        assert target_path.is_file()
+        # The type of new line, ie, `\n` vs `\r\n` is not important
+        assert target_path.read_text() == "somegoodstuff"
+
+    sls_name = "issue-60426"
+    sls_contents = """
+    configuration file:
+      file.managed:
+        - name: {target_path}
+        - source: salt://foo_bar.jinja
+        - template: jinja
+        - makedirs: True
+
+    accumulated configstuff:
+      file.accumulated:
+        - filename: {target_path}
+        - text:
+          - some
+          - good
+          - stuff
+        - watch_in:
+          - file: configuration file
+    """.format(
+        target_path=target_path
+    )
+
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_name), sls_contents
+    )
+
+    jinja_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.jinja".format(jinja_name), jinja_contents
+    )
+
+    with sls_tempfile, jinja_tempfile:
+        ret = salt_call_cli.run("state.apply", sls_name)
+        assert ret.exitcode == 0
+        assert ret.json
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is True
+        # Check to make sure the file was created
+        assert target_path.is_file()
+        # The type of new line, ie, `\n` vs `\r\n` is not important
+        assert target_path.read_text() == "somegoodstuff"
+
+
 def test_issue_60203(
-    salt_master, salt_call_cli, tmp_path, salt_minion,
+    salt_master,
+    salt_call_cli,
+    tmp_path,
+    salt_minion,
 ):
     target_path = tmp_path / "issue-60203-target.txt"
     sls_name = "issue-60203"
@@ -236,7 +335,7 @@ def test_issue_60203(
             ]["comment"]
         )
         assert (
-            "<redacted>"
+            "/files/test.tar.gz.sha256"
             in ret.json[
                 "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
             ]["comment"]

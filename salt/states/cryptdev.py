@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Opening of Encrypted Devices
 ============================
@@ -28,7 +27,6 @@ Ensure that an encrypted device is mapped with the `mapped` function:
 
 .. versionadded:: 2018.3.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -130,15 +128,15 @@ def mapped(
         )
         if crypttab_result:
             if crypttab_result == "new":
-                ret["changes"]["crypttab"] = "Entry added in {0}".format(config)
+                ret["changes"]["crypttab"] = "Entry added in {}".format(config)
 
             if crypttab_result == "change":
-                ret["changes"]["crypttab"] = "Existing entry in {0} changed".format(
+                ret["changes"]["crypttab"] = "Existing entry in {} changed".format(
                     config
                 )
 
         else:
-            ret["changes"]["crypttab"] = "Unable to set entry in {0}".format(config)
+            ret["changes"]["crypttab"] = "Unable to set entry in {}".format(config)
             ret["result"] = False
 
     return ret
@@ -185,10 +183,10 @@ def unmapped(name, config="/etc/crypttab", persist=True, immediate=False):
         crypttab_result = __salt__["cryptdev.rm_crypttab"](name, config=config)
         if crypttab_result:
             if crypttab_result == "change":
-                ret["changes"]["crypttab"] = "Entry removed from {0}".format(config)
+                ret["changes"]["crypttab"] = "Entry removed from {}".format(config)
 
         else:
-            ret["changes"]["crypttab"] = "Unable to remove entry in {0}".format(config)
+            ret["changes"]["crypttab"] = "Unable to remove entry in {}".format(config)
             ret["result"] = False
 
     return ret
