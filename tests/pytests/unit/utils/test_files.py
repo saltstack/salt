@@ -31,6 +31,7 @@ def test_safe_rm_exceptions():
 
 
 def test_safe_walk_symlink_recursion(tmp_path):
+    tmp_path = str(tmp_path)
     if os.stat(tmp_path).st_ino == 0:
         pytest.xfail(reason="inodes not supported in {}".format(tmp_path))
     os.mkdir(os.path.join(tmp_path, "fax"))
