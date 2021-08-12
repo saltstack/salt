@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-# Majority of code shamelessly stolen from
-# http://www.v13.gr/blog/?p=303
+# Majority of code shamelessly stolen from http://www.v13.gr/blog/?p=303
 """
 Authenticate via a PKI certificate.
 
@@ -15,15 +13,11 @@ TODO: Add a 'ca_dir' option to configure a directory of CA files, a la Apache.
 
 :depends:    - pyOpenSSL module
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import salt libs
 import salt.utils.files
 
-# Import third party libs
 # pylint: disable=import-error
 try:
     try:

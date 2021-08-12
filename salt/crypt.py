@@ -40,7 +40,6 @@ from salt.exceptions import (
     SaltClientError,
     SaltReqTimeoutError,
 )
-from salt.ext import six
 
 try:
     from M2Crypto import RSA, EVP, BIO
@@ -66,7 +65,7 @@ if not HAS_M2 and not HAS_CRYPTO:
         from Crypto.Cipher import (  # nosec
             AES,
             PKCS1_OAEP,
-            PKCS1_v1_5 as PKCS1_v1_5_CIPHER
+            PKCS1_v1_5 as PKCS1_v1_5_CIPHER,
         )
         from Crypto.Hash import SHA  # nosec
         from Crypto.PublicKey import RSA  # nosec
@@ -190,7 +189,7 @@ def _get_key_with_evict(path, timestamp, passphrase):
     """
     log.debug("salt.crypt._get_key_with_evict: Loading private key")
     if HAS_M2:
-        key = RSA.load_key(path, lambda x: six.b(passphrase))
+        key = RSA.load_key(path, lambda x: bytes(passphrase))
     else:
         with salt.utils.files.fopen(path) as f:
             key = RSA.importKey(f.read(), passphrase)

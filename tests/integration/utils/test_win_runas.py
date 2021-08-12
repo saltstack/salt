@@ -3,8 +3,6 @@ import logging
 import os
 import socket
 import subprocess
-
-# Service manager imports
 import sys
 import textwrap
 import threading

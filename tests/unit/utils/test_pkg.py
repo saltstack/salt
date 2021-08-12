@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.utils.pkg
 from salt.utils.pkg import rpm
 from tests.support.mock import ANY, MagicMock, patch

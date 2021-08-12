@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 External Nodes Classifier
 =========================
@@ -45,14 +44,11 @@ The above essentially is the same as a top.sls containing the following:
         - basepackages
         - database
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 import shlex
 import subprocess
 
-# Import Salt libs
 import salt.utils.platform
 import salt.utils.yaml
 

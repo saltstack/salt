@@ -1,17 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Load up the libvirt keys into Pillar for a given minion if said keys have been
 generated using the libvirt key runner
 
 :depends: certtool
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import os
 import subprocess
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
@@ -48,7 +44,7 @@ def ext_pillar(
             continue
         fn_ = os.path.join(key_dir, key)
         with salt.utils.files.fopen(fn_, "r") as fp_:
-            ret["libvirt.{0}".format(key)] = salt.utils.stringutils.to_unicode(
+            ret["libvirt.{}".format(key)] = salt.utils.stringutils.to_unicode(
                 fp_.read()
             )
     with salt.utils.files.fopen(cacert, "r") as fp_:
@@ -111,9 +107,9 @@ def gen_hyper_keys(
     if not os.path.isfile(srvinfo):
         with salt.utils.files.fopen(srvinfo, "w+") as fp_:
             infodat = salt.utils.stringutils.to_str(
-                "organization = salted\ncn = {0}\ntls_www_server"
+                "organization = salted\ncn = {}\ntls_www_server"
                 "\nencryption_key\nsigning_key"
-                "\ndigitalSignature\nexpiration_days = {1}".format(
+                "\ndigitalSignature\nexpiration_days = {}".format(
                     __grains__["fqdn"], expiration_days
                 )
             )
@@ -147,8 +143,8 @@ def gen_hyper_keys(
     if not os.path.isfile(clientinfo):
         with salt.utils.files.fopen(clientinfo, "w+") as fp_:
             infodat = salt.utils.stringutils.to_str(
-                "country = {0}\nstate = {1}\nlocality = {2}\n"
-                "organization = {3}\ncn = {4}\n"
+                "country = {}\nstate = {}\nlocality = {}\n"
+                "organization = {}\ncn = {}\n"
                 "tls_www_client\nencryption_key\nsigning_key\n"
                 "digitalSignature".format(
                     country, state, locality, organization, __grains__["fqdn"]

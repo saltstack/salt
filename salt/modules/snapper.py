@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module to manage filesystem snapshots with snapper
 
@@ -13,8 +12,6 @@ Module to manage filesystem snapshots with snapper
 :platform:      Linux
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 import difflib
 import logging
 import os
@@ -23,9 +20,6 @@ import time
 
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
-
-# import 3rd party libs
-from salt.ext import six
 
 try:
     from pwd import getpwuid
@@ -148,7 +142,7 @@ def _dbus_exception_to_reason(exc, args):
     """
     error = exc.get_dbus_name()
     if error == "error.unknown_config":
-        return "Unknown configuration '{0}'".format(args["config"])
+        return "Unknown configuration '{}'".format(args["config"])
     elif error == "error.illegal_snapshot":
         return "Invalid snapshot"
     else:
@@ -170,7 +164,7 @@ def list_snapshots(config="root"):
         return [_snapshot_to_data(s) for s in snapshots]
     except dbus.DBusException as exc:
         raise CommandExecutionError(
-            "Error encountered while listing snapshots: {0}".format(
+            "Error encountered while listing snapshots: {}".format(
                 _dbus_exception_to_reason(exc, locals())
             )
         )
@@ -191,7 +185,7 @@ def get_snapshot(number=0, config="root"):
         return _snapshot_to_data(snapshot)
     except dbus.DBusException as exc:
         raise CommandExecutionError(
-            "Error encountered while retrieving snapshot: {0}".format(
+            "Error encountered while retrieving snapshot: {}".format(
                 _dbus_exception_to_reason(exc, locals())
             )
         )
@@ -209,10 +203,10 @@ def list_configs():
     """
     try:
         configs = snapper.ListConfigs()
-        return dict((config[0], config[2]) for config in configs)
+        return {config[0]: config[2] for config in configs}
     except dbus.DBusException as exc:
         raise CommandExecutionError(
-            "Error encountered while listing configurations: {0}".format(
+            "Error encountered while listing configurations: {}".format(
                 _dbus_exception_to_reason(exc, locals())
             )
         )
@@ -242,15 +236,15 @@ def set_config(name="root", **kwargs):
         salt '*' snapper.set_config sync_acl=True
     """
     try:
-        data = dict(
-            (k.upper(), _config_filter(v))
+        data = {
+            k.upper(): _config_filter(v)
             for k, v in kwargs.items()
             if not k.startswith("__")
-        )
+        }
         snapper.SetConfig(name, data)
     except dbus.DBusException as exc:
         raise CommandExecutionError(
-            "Error encountered while setting configuration {0}: {1}".format(
+            "Error encountered while setting configuration {}: {}".format(
                 name, _dbus_exception_to_reason(exc, locals())
             )
         )
@@ -305,7 +299,7 @@ def get_config(name="root"):
         return config
     except dbus.DBusException as exc:
         raise CommandExecutionError(
-            "Error encountered while retrieving configuration: {0}".format(
+            "Error encountered while retrieving configuration: {}".format(
                 _dbus_exception_to_reason(exc, locals())
             )
         )
@@ -340,7 +334,7 @@ def create_config(
 
     def raise_arg_error(argname):
         raise CommandExecutionError(
-            'You must provide a "{0}" for the new configuration'.format(argname)
+            'You must provide a "{}" for the new configuration'.format(argname)
         )
 
     if not name:
@@ -359,7 +353,7 @@ def create_config(
         return get_config(name)
     except dbus.DBusException as exc:
         raise CommandExecutionError(
-            "Error encountered while creating the new configuration: {0}".format(
+            "Error encountered while creating the new configuration: {}".format(
                 _dbus_exception_to_reason(exc, locals())
             )
         )
@@ -414,7 +408,7 @@ def create_snapshot(
 
     jid = kwargs.get("__pub_jid")
     if description is None and jid is not None:
-        description = "salt job {0}".format(jid)
+        description = "salt job {}".format(jid)
 
     if jid is not None:
         userdata["salt_jid"] = jid
@@ -440,11 +434,11 @@ def create_snapshot(
             )
         else:
             raise CommandExecutionError(
-                "Invalid snapshot type '{0}'".format(snapshot_type)
+                "Invalid snapshot type '{}'".format(snapshot_type)
             )
     except dbus.DBusException as exc:
         raise CommandExecutionError(
-            "Error encountered while listing changed files: {0}".format(
+            "Error encountered while listing changed files: {}".format(
                 _dbus_exception_to_reason(exc, locals())
             )
         )
@@ -477,10 +471,10 @@ def delete_snapshot(snapshots_ids=None, config="root"):
             snapshots_ids = [snapshots_ids]
         if not set(snapshots_ids).issubset(set(current_snapshots_ids)):
             raise CommandExecutionError(
-                "Error: Snapshots '{0}' not found".format(
+                "Error: Snapshots '{}' not found".format(
                     ", ".join(
                         [
-                            six.text_type(x)
+                            str(x)
                             for x in set(snapshots_ids).difference(
                                 set(current_snapshots_ids)
                             )
@@ -612,12 +606,12 @@ def run(function, *args, **kwargs):
         salt '*' snapper.run file.append args='["/etc/motd", "some text"]'
     """
     config = kwargs.pop("config", "root")
-    description = kwargs.pop("description", "snapper.run[{0}]".format(function))
+    description = kwargs.pop("description", "snapper.run[{}]".format(function))
     cleanup_algorithm = kwargs.pop("cleanup_algorithm", "number")
     userdata = kwargs.pop("userdata", {})
 
-    func_kwargs = dict((k, v) for k, v in kwargs.items() if not k.startswith("__"))
-    kwargs = dict((k, v) for k, v in kwargs.items() if k.startswith("__"))
+    func_kwargs = {k: v for k, v in kwargs.items() if not k.startswith("__")}
+    kwargs = {k: v for k, v in kwargs.items() if k.startswith("__")}
 
     pre_nr = __salt__["snapper.create_snapshot"](
         config=config,
@@ -629,12 +623,12 @@ def run(function, *args, **kwargs):
     )
 
     if function not in __salt__:
-        raise CommandExecutionError('function "{0}" does not exist'.format(function))
+        raise CommandExecutionError('function "{}" does not exist'.format(function))
 
     try:
         ret = __salt__[function](*args, **func_kwargs)
     except CommandExecutionError as exc:
-        ret = "\n".join([six.text_type(exc), __salt__[function].__doc__])
+        ret = "\n".join([str(exc), __salt__[function].__doc__])
 
     __salt__["snapper.create_snapshot"](
         config=config,
@@ -686,7 +680,7 @@ def status(config="root", num_pre=None, num_post=None):
         return status_ret
     except dbus.DBusException as exc:
         raise CommandExecutionError(
-            "Error encountered while listing changed files: {0}".format(
+            "Error encountered while listing changed files: {}".format(
                 _dbus_exception_to_reason(exc, locals())
             )
         )
@@ -743,11 +737,11 @@ def undo(config="root", files=None, num_pre=None, num_post=None):
     if not requested.issubset(changed):
         raise CommandExecutionError(
             "Given file list contains files that are not present"
-            "in the changed filelist: {0}".format(changed - requested)
+            "in the changed filelist: {}".format(changed - requested)
         )
 
     cmdret = __salt__["cmd.run"](
-        "snapper -c {0} undochange {1}..{2} {3}".format(
+        "snapper -c {} undochange {}..{} {}".format(
             config, pre, post, " ".join(requested)
         )
     )
@@ -761,7 +755,7 @@ def undo(config="root", files=None, num_pre=None, num_post=None):
         return ret
     except ValueError as exc:
         raise CommandExecutionError(
-            "Error while processing Snapper response: {0}".format(cmdret)
+            "Error while processing Snapper response: {}".format(cmdret)
         )
 
 
@@ -779,7 +773,7 @@ def _get_jid_snapshots(jid, config="root"):
     post_snapshot = [x for x in jid_snapshots if x["type"] == "post"]
 
     if not pre_snapshot or not post_snapshot:
-        raise CommandExecutionError("Jid '{0}' snapshots not found".format(jid))
+        raise CommandExecutionError("Jid '{}' snapshots not found".format(jid))
 
     return (pre_snapshot[0]["id"], post_snapshot[0]["id"])
 
@@ -913,7 +907,7 @@ def diff(config="root", filename=None, num_pre=None, num_post=None):
         return files_diff
     except dbus.DBusException as exc:
         raise CommandExecutionError(
-            "Error encountered while showing differences between snapshots: {0}".format(
+            "Error encountered while showing differences between snapshots: {}".format(
                 _dbus_exception_to_reason(exc, locals())
             )
         )
