@@ -280,7 +280,8 @@ def delete(name, **kwargs):
                 res = __salt__["event.fire"](event_data, "manage_schedule")
                 if res:
                     event_ret = event_bus.get_event(
-                        tag="/salt/minion/minion_schedule_delete_complete", wait=30,
+                        tag="/salt/minion/minion_schedule_delete_complete",
+                        wait=30,
                     )
                     if event_ret and event_ret["complete"]:
                         schedule = event_ret["schedule"]
@@ -333,9 +334,10 @@ def build_schedule_item(name, **kwargs):
 
     if time_conflict:
         ret["result"] = False
-        ret[
-            "comment"
-        ] = 'Unable to use "seconds", "minutes", "hours", or "days" with "when" or "cron" options.'
+        ret["comment"] = (
+            'Unable to use "seconds", "minutes", "hours", or "days" with "when" or'
+            ' "cron" options.'
+        )
         return ret
 
     if "when" in kwargs and "cron" in kwargs:
@@ -461,9 +463,10 @@ def add(name, **kwargs):
             time_conflict = True
 
     if time_conflict:
-        ret[
-            "comment"
-        ] = 'Error: Unable to use "seconds", "minutes", "hours", or "days" with "when" or "cron" options.'
+        ret["comment"] = (
+            'Error: Unable to use "seconds", "minutes", "hours", or "days" with "when"'
+            ' or "cron" options.'
+        )
         return ret
 
     if "when" in kwargs and "cron" in kwargs:
@@ -496,7 +499,8 @@ def add(name, **kwargs):
                 )
                 if res:
                     event_ret = event_bus.get_event(
-                        tag="/salt/minion/minion_schedule_add_complete", wait=30,
+                        tag="/salt/minion/minion_schedule_add_complete",
+                        wait=30,
                     )
                     if event_ret and event_ret["complete"]:
                         schedule = event_ret["schedule"]
@@ -534,9 +538,10 @@ def modify(name, **kwargs):
 
     if time_conflict:
         ret["result"] = False
-        ret[
-            "comment"
-        ] = 'Error: Unable to use "seconds", "minutes", "hours", or "days" with "when" option.'
+        ret["comment"] = (
+            'Error: Unable to use "seconds", "minutes", "hours", or "days" with "when"'
+            " option."
+        )
         return ret
 
     if "when" in kwargs and "cron" in kwargs:
@@ -797,7 +802,8 @@ def save(**kwargs):
                 )
                 if res:
                     event_ret = event_bus.get_event(
-                        tag="/salt/minion/minion_schedule_saved", wait=30,
+                        tag="/salt/minion/minion_schedule_saved",
+                        wait=30,
                     )
                     if event_ret and event_ret["complete"]:
                         ret["result"] = True
@@ -836,7 +842,8 @@ def enable(**kwargs):
                 )
                 if res:
                     event_ret = event_bus.get_event(
-                        tag="/salt/minion/minion_schedule_enabled_complete", wait=30,
+                        tag="/salt/minion/minion_schedule_enabled_complete",
+                        wait=30,
                     )
                     if event_ret and event_ret["complete"]:
                         schedule = event_ret["schedule"]
@@ -879,7 +886,8 @@ def disable(**kwargs):
                 )
                 if res:
                     event_ret = event_bus.get_event(
-                        tag="/salt/minion/minion_schedule_disabled_complete", wait=30,
+                        tag="/salt/minion/minion_schedule_disabled_complete",
+                        wait=30,
                     )
                     if event_ret and event_ret["complete"]:
                         schedule = event_ret["schedule"]
@@ -948,7 +956,8 @@ def reload_():
                     ret["result"] = False
             else:
                 ret["comment"].append(
-                    "Failed to reload schedule on minion.  Saved file is empty or invalid."
+                    "Failed to reload schedule on minion.  Saved file is empty or"
+                    " invalid."
                 )
                 ret["result"] = False
         else:
@@ -1262,7 +1271,8 @@ def skip_job(name, current_time, **kwargs):
                 res = __salt__["event.fire"](event_data, "manage_schedule")
                 if res:
                     event_ret = event_bus.get_event(
-                        tag="/salt/minion/minion_schedule_skip_job_complete", wait=30,
+                        tag="/salt/minion/minion_schedule_skip_job_complete",
+                        wait=30,
                     )
                     if event_ret and event_ret["complete"]:
                         schedule = event_ret["schedule"]
@@ -1310,7 +1320,8 @@ def show_next_fire_time(name, **kwargs):
             res = __salt__["event.fire"](event_data, "manage_schedule")
             if res:
                 event_ret = event_bus.get_event(
-                    tag="/salt/minion/minion_schedule_next_fire_time_complete", wait=30,
+                    tag="/salt/minion/minion_schedule_next_fire_time_complete",
+                    wait=30,
                 )
     except KeyError:
         # Effectively a no-op, since we can't really return without an event system

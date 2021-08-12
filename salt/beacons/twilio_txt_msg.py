@@ -34,7 +34,7 @@ def validate(config):
     """
     # Configuration for twilio_txt_msg beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for twilio_txt_msg beacon must be a list.")
+        return False, "Configuration for twilio_txt_msg beacon must be a list."
     else:
         _config = {}
         list(map(_config.update, config))
@@ -44,11 +44,9 @@ def validate(config):
         ):
             return (
                 False,
-                (
-                    "Configuration for twilio_txt_msg beacon "
-                    "must contain account_sid, auth_token "
-                    "and twilio_number items."
-                ),
+                "Configuration for twilio_txt_msg beacon "
+                "must contain account_sid, auth_token "
+                "and twilio_number items.",
             )
     return True, "Valid beacon configuration"
 

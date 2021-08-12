@@ -44,13 +44,16 @@ class IPCTester:
     @subscriber.default
     def _subscriber_default(self):
         return salt.transport.ipc.IPCMessageSubscriber(
-            self.socket_path, io_loop=self.io_loop,
+            self.socket_path,
+            io_loop=self.io_loop,
         )
 
     @publisher.default
     def _publisher_default(self):
         return salt.transport.ipc.IPCMessagePublisher(
-            {"ipc_write_buffer": 0}, self.socket_path, io_loop=self.io_loop,
+            {"ipc_write_buffer": 0},
+            self.socket_path,
+            io_loop=self.io_loop,
         )
 
     async def handle_payload(self, payload, reply_func):

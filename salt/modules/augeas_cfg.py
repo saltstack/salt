@@ -230,10 +230,9 @@ def execute(context=None, lens=None, commands=(), load_path=None):
             # if command.split fails arg will not be set
             if "arg" not in locals():
                 arg = command
-            ret["error"] = (
-                "Invalid formatted command, "
-                "see debug log for details: {}".format(arg)
-            )
+            ret[
+                "error"
+            ] = "Invalid formatted command, see debug log for details: {}".format(arg)
             return ret
 
         args = salt.utils.data.decode(args, to_str=True)
@@ -488,7 +487,7 @@ def ls(path, load_path=None):  # pylint: disable=C0103
     """
 
     def _match(path):
-        """ Internal match function """
+        """Internal match function"""
         try:
             matches = aug.match(salt.utils.stringutils.to_str(path))
         except RuntimeError:

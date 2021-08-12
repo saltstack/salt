@@ -120,7 +120,8 @@ def check_virtual(ctx, files):
                                 errors += 1
                                 exitcode = 1
                                 utils.error(
-                                    'The value of the __virtualname__ attribute, "{}" is not part of {}',
+                                    'The value of the __virtualname__ attribute, "{}"'
+                                    " is not part of {}",
                                     node.value.s,
                                     path.name,
                                 )
@@ -131,8 +132,8 @@ def check_virtual(ctx, files):
             errors += 1
             exitcode = 1
             utils.error(
-                "The salt loader module {} defines a __virtual__() function but does not define a "
-                "__virtualname__ attribute",
+                "The salt loader module {} defines a __virtual__() function but does"
+                " not define a __virtualname__ attribute",
                 path.relative_to(CODE_DIR),
             )
     if exitcode:

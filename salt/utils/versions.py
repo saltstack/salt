@@ -290,8 +290,10 @@ def kwargs_warn_until(
         arg_names = ", ".join("'{}'".format(key) for key in kwargs)
         warn_until(
             version,
-            message="The following parameter(s) have been deprecated and "
-            "will be removed in '{}': {}.".format(version.string, arg_names),
+            message=(
+                "The following parameter(s) have been deprecated and "
+                "will be removed in '{}': {}.".format(version.string, arg_names)
+            ),
             category=category,
             stacklevel=stacklevel,
             _version_info_=_version_.info,
@@ -343,7 +345,7 @@ def compare(ver1="", oper="==", ver2="", cmp_func=None, ignore_epoch=False):
 
     # Check if integer/long
     if not isinstance(cmp_result, numbers.Integral):
-        log.error("The version comparison function did not return an " "integer/long.")
+        log.error("The version comparison function did not return an integer/long.")
         return False
 
     if oper == "!=":

@@ -331,10 +331,10 @@ def test_requisites_require_ordering_and_errors_2(state, state_tree):
           - foobar: W
     """
     errmsg = (
-        "Cannot extend ID 'W' in 'base:requisite'. It is not part of the high state.\n"
-        "This is likely due to a missing include statement or an incorrectly typed ID.\n"
-        "Ensure that a state with an ID of 'W' is available\n"
-        "in environment 'base' and to SLS 'requisite'"
+        "Cannot extend ID 'W' in 'base:requisite'. It is not part of the high"
+        " state.\nThis is likely due to a missing include statement or an incorrectly"
+        " typed ID.\nEnsure that a state with an ID of 'W' is available\nin environment"
+        " 'base' and to SLS 'requisite'"
     )
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
@@ -363,7 +363,10 @@ def test_requisites_require_ordering_and_errors_3(state, state_tree):
       cmd.run:
         - name: echo A first
     """
-    errmsg = 'Cannot extend state foobar for ID A in "base:requisite". It is not part of the high state.'
+    errmsg = (
+        'Cannot extend state foobar for ID A in "base:requisite". It is not part of the'
+        " high state."
+    )
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
         assert isinstance(ret, list)  # Error
@@ -397,7 +400,10 @@ def test_requisites_require_ordering_and_errors_4(state, state_tree):
     # FIXME: Why is require enforcing list syntax while require_in does not?
     # And why preventing it?
     # Currently this state fails, should return C/B/A
-    errmsg = "The require statement in state 'B' in SLS 'requisite' needs to be formed as a list"
+    errmsg = (
+        "The require statement in state 'B' in SLS 'requisite' needs to be formed as a"
+        " list"
+    )
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
         assert isinstance(ret, list)  # Error

@@ -212,7 +212,9 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_tune(self):
         mock = MagicMock(
-            return_value="712971264\n512\n512\n512\n0\n0\n88\n712971264\n365041287168\n512\n512"
+            return_value=(
+                "712971264\n512\n512\n512\n0\n0\n88\n712971264\n365041287168\n512\n512"
+            )
         )
         with patch.dict(disk.__salt__, {"cmd.run": mock}):
             mock_dump = MagicMock(return_value={"retcode": 0, "stdout": ""})

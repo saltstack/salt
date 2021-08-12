@@ -569,7 +569,7 @@ class SaltNova:
                 time.sleep(1)
                 if time.time() - start > timeout:
                     log.error(
-                        "Timed out after %s seconds " "while waiting for data", timeout
+                        "Timed out after %s seconds while waiting for data", timeout
                     )
                     return False
 
@@ -639,7 +639,9 @@ class SaltNova:
         if self.volume_conn is None:
             raise SaltCloudSystemExit("No cinder endpoint available")
 
-        volumes = self.volume_list(search_opts={"display_name": name},)
+        volumes = self.volume_list(
+            search_opts={"display_name": name},
+        )
         volume = volumes[name]
 
         return volume
@@ -705,7 +707,7 @@ class SaltNova:
                 time.sleep(1)
                 if time.time() - start > timeout:
                     log.error(
-                        "Timed out after %d seconds " "while waiting for data", timeout
+                        "Timed out after %d seconds while waiting for data", timeout
                     )
                     return False
 
@@ -736,7 +738,7 @@ class SaltNova:
                 time.sleep(1)
                 if time.time() - start > timeout:
                     log.error(
-                        "Timed out after %s seconds " "while waiting for data", timeout
+                        "Timed out after %s seconds while waiting for data", timeout
                     )
                     return False
 

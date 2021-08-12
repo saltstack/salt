@@ -113,7 +113,8 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret,
             (
                 False,
-                "The time_range parameter for wtmp beacon must contain start & end options.",
+                "The time_range parameter for wtmp beacon must contain start & end"
+                " options.",
             ),
         )
 
@@ -126,7 +127,8 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret,
             (
                 False,
-                "The time_range parameter for wtmp beacon must contain start & end options.",
+                "The time_range parameter for wtmp beacon must contain start & end"
+                " options.",
             ),
         )
 
@@ -139,7 +141,8 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret,
             (
                 False,
-                "The time_range parameter for wtmp beacon must contain start & end options.",
+                "The time_range parameter for wtmp beacon must contain start & end"
+                " options.",
             ),
         )
 
