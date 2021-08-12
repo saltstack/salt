@@ -1,6 +1,7 @@
 # Python libs
 import datetime
 import logging
+import time
 
 import pytest
 
@@ -75,9 +76,10 @@ def test_call_no_updates():
         telegram_api.Bot = MagicMock(name="telegram", return_value=inst)
         inst.get_updates.return_value = []
 
-        ret = telegram_bot_msg.beacon(config)
-        assert ret == (True, "Valid beacon configuration")
+        ret = telegram_bot_msg.validate(config)
+        assert ret == (True, "Valid beacon configuration.")
 
+        ret = telegram_bot_msg.beacon(config)
         telegram_api.Bot.assert_called_once_with(token)
         assert ret == []
 
@@ -92,17 +94,20 @@ def test_call_telegram_return_no_updates_for_user():
 
         log.debug("telegram %s", telegram)
         username = "different_user"
-        user = telegram.user.User(id=1, first_name="", username=username)
+        user = telegram.user.User(id=1, first_name="", username=username, is_bot=True)
         chat = telegram.chat.Chat(1, "private", username=username)
-        date = datetime.datetime(2016, 12, 18, 0, 0)
-        message = telegram.message.Message(1, user, date=date, chat=chat)
+        date = time.mktime(datetime.datetime(2016, 12, 18, 0, 0).timetuple())
+        message = telegram.message.Message(
+            message_id=1, from_user=user, date=date, chat=chat
+        )
         update = telegram.update.Update(update_id=1, message=message)
 
         inst.get_updates.return_value = [update]
 
-        ret = telegram_bot_msg.beacon(config)
-        assert ret == (True, "Valid beacon configuration")
+        ret = telegram_bot_msg.validate(config)
+        assert ret == (True, "Valid beacon configuration.")
 
+        ret = telegram_bot_msg.beacon(config)
         telegram_api.Bot.assert_called_once_with(token)
         assert ret == []
 
@@ -115,17 +120,18 @@ def test_call_telegram_returning_updates():
         inst = MagicMock(name="telegram.Bot()")
         telegram_api.Bot = MagicMock(name="telegram", return_value=inst)
 
-        user = telegram.User(id=1, first_name="", username=username)
+        user = telegram.User(id=1, first_name="", username=username, is_bot=True)
         chat = telegram.Chat(1, "private", username=username)
-        date = datetime.datetime(2016, 12, 18, 0, 0)
-        message = telegram.Message(1, user, date=date, chat=chat)
+        date = time.mktime(datetime.datetime(2016, 12, 18, 0, 0).timetuple())
+        message = telegram.Message(message_id=1, from_user=user, date=date, chat=chat)
         update = telegram.update.Update(update_id=1, message=message)
 
         inst.get_updates.return_value = [update]
 
-        ret = telegram_bot_msg.beacon(config)
-        assert ret == (True, "Valid beacon configuration")
+        ret = telegram_bot_msg.validate(config)
+        assert ret == (True, "Valid beacon configuration.")
 
+        ret = telegram_bot_msg.beacon(config)
         telegram_api.Bot.assert_called_once_with(token)
         assert ret
         assert ret[0]["msgs"][0] == message.to_dict()
