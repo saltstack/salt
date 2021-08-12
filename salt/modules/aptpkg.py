@@ -77,9 +77,7 @@ PKG_ARCH_SEPARATOR = ":"
 
 # Source format for urllib fallback on PPA handling
 LP_SRC_FORMAT = "deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main"
-LP_PVT_SRC_FORMAT = (
-    "deb https://{0}private-ppa.launchpad.net/{1}/{2}/ubuntu" " {3} main"
-)
+LP_PVT_SRC_FORMAT = "deb https://{0}private-ppa.launchpad.net/{1}/{2}/ubuntu {3} main"
 
 _MODIFY_OK = frozenset(["uri", "comps", "architectures", "disabled", "file", "dist"])
 DPKG_ENV_VARS = {
@@ -1263,20 +1261,20 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
         elif salt.utils.data.is_true(state.get("hold", False)):
             if "test" in __opts__ and __opts__["test"]:
                 ret[target].update(result=None)
-                ret[target]["comment"] = "Package {} is set not to be " "held.".format(
+                ret[target]["comment"] = "Package {} is set not to be held.".format(
                     target
                 )
             else:
                 result = set_selections(selection={"install": [target]})
                 ret[target].update(changes=result[target], result=True)
-                ret[target][
-                    "comment"
-                ] = "Package {} is no longer being " "held.".format(target)
+                ret[target]["comment"] = "Package {} is no longer being held.".format(
+                    target
+                )
         else:
             ret[target].update(result=True)
-            ret[target][
-                "comment"
-            ] = "Package {} is already set not to be " "held.".format(target)
+            ret[target]["comment"] = "Package {} is already set not to be held.".format(
+                target
+            )
     return ret
 
 
@@ -1880,7 +1878,7 @@ def del_repo(repo, **kwargs):
                 msg = "Repo '{0}' has been removed from {1}.\n"
                 if count == 0 and "sources.list.d/" in repo_file:
                     if os.path.isfile(repo_file):
-                        msg = "File {1} containing repo '{0}' has been " "removed."
+                        msg = "File {1} containing repo '{0}' has been removed."
                         try:
                             os.remove(repo_file)
                         except OSError:
@@ -2258,8 +2256,7 @@ def mod_repo(repo, saltenv="base", **kwargs):
                     else:
                         if "keyid" not in kwargs:
                             error_str = (
-                                "Private PPAs require a "
-                                "keyid to be specified: {0}/{1}"
+                                "Private PPAs require a keyid to be specified: {0}/{1}"
                             )
                             raise CommandExecutionError(
                                 error_str.format(owner_name, ppa_name)
@@ -2282,8 +2279,9 @@ def mod_repo(repo, saltenv="base", **kwargs):
                 if "ppa_auth" in kwargs:
                     if not launchpad_ppa_info["private"]:
                         raise CommandExecutionError(
-                            "PPA is not private but auth credentials "
-                            "passed: {}".format(repo)
+                            "PPA is not private but auth credentials passed: {}".format(
+                                repo
+                            )
                         )
                 # assign the new repo format to the "repo" variable
                 # so we can fall through to the "normal" mechanism
@@ -2723,7 +2721,7 @@ def set_selections(path=None, selection=None, clear=False, saltenv="base"):
             if not __opts__["test"]:
                 result = _call_apt(cmd, scope=False)
                 if result["retcode"] != 0:
-                    err = "Running dpkg --clear-selections failed: " "{}".format(
+                    err = "Running dpkg --clear-selections failed: {}".format(
                         result["stderr"]
                     )
                     log.error(err)

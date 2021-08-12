@@ -459,8 +459,8 @@ def add_implicit_requires(data):
         for _, rstate, rsid in reqs:
             if T(rsid, rstate) in states_after:
                 raise SaltRenderError(
-                    "State({}) can't require/watch/listen/onchanges/onfail a state({}) defined "
-                    "after it!".format(tag, T(rsid, rstate))
+                    "State({}) can't require/watch/listen/onchanges/onfail a state({})"
+                    " defined after it!".format(tag, T(rsid, rstate))
                 )
 
         reqs = nvlist2(args, REQUIRE_IN)
@@ -469,8 +469,9 @@ def add_implicit_requires(data):
         for _, rstate, rsid in reqs:
             if T(rsid, rstate) in states_before:
                 raise SaltRenderError(
-                    "State({}) can't require_in/watch_in/listen_in/onchanges_in/onfail_in a state({}) "
-                    "defined before it!".format(tag, T(rsid, rstate))
+                    "State({}) can't"
+                    " require_in/watch_in/listen_in/onchanges_in/onfail_in a state({})"
+                    " defined before it!".format(tag, T(rsid, rstate))
                 )
 
         # add a (- state: sid) item, at the beginning of the require of this
@@ -489,8 +490,9 @@ def add_start_state(data, sls):
     start_sid = __opts__["stateconf_start_state"]
     if start_sid in data:
         raise SaltRenderError(
-            "Can't generate start state({})! The same state id already "
-            "exists!".format(start_sid)
+            "Can't generate start state({})! The same state id already exists!".format(
+                start_sid
+            )
         )
     if not data:
         return
@@ -514,8 +516,9 @@ def add_goal_state(data):
     goal_sid = __opts__["stateconf_goal_state"]
     if goal_sid in data:
         raise SaltRenderError(
-            "Can't generate goal state({})! The same state id already "
-            "exists!".format(goal_sid)
+            "Can't generate goal state({})! The same state id already exists!".format(
+                goal_sid
+            )
         )
     else:
         reqlist = []

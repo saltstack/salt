@@ -141,7 +141,8 @@ def __virtual__():
     if not HAS_PYEAPI:
         return (
             False,
-            "The pyeapi execution module requires pyeapi library to be installed: ``pip install pyeapi``",
+            "The pyeapi execution module requires pyeapi library to be installed: ``pip"
+            " install pyeapi``",
         )
     return __virtualname__
 

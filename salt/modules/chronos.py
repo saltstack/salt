@@ -37,7 +37,9 @@ def _jobs():
     Return the currently configured jobs.
     """
     response = salt.utils.http.query(
-        "{}/scheduler/jobs".format(_base_url()), decode_type="json", decode=True,
+        "{}/scheduler/jobs".format(_base_url()),
+        decode_type="json",
+        decode=True,
     )
     jobs = {}
     for job in response["dict"]:
@@ -127,6 +129,7 @@ def rm_job(name):
         salt chronos-minion-id chronos.rm_job my-job
     """
     response = salt.utils.http.query(
-        "{}/scheduler/job/{}".format(_base_url(), name), method="DELETE",
+        "{}/scheduler/job/{}".format(_base_url(), name),
+        method="DELETE",
     )
     return True

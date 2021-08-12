@@ -263,8 +263,9 @@ def put(consul_url=None, token=None, key=None, value=None, **kwargs):
         for _l2 in conflicting_args:
             if _l1 in kwargs and _l2 in kwargs and _l1 != _l2:
                 raise SaltInvocationError(
-                    "Using arguments `{}` and `{}`"
-                    " together is invalid.".format(_l1, _l2)
+                    "Using arguments `{}` and `{}` together is invalid.".format(
+                        _l1, _l2
+                    )
                 )
 
     query_params = {}
@@ -279,21 +280,19 @@ def put(consul_url=None, token=None, key=None, value=None, **kwargs):
     if "cas" in kwargs:
         if _current["res"]:
             if kwargs["cas"] == 0:
-                ret["message"] = "Key {} exists, index " "must be non-zero.".format(key)
+                ret["message"] = "Key {} exists, index must be non-zero.".format(key)
                 ret["res"] = False
                 return ret
 
             if kwargs["cas"] != _current["data"]["ModifyIndex"]:
-                ret["message"] = "Key {} exists, but indexes " "do not match.".format(
-                    key
-                )
+                ret["message"] = "Key {} exists, but indexes do not match.".format(key)
                 ret["res"] = False
                 return ret
             query_params["cas"] = kwargs["cas"]
         else:
             ret[
                 "message"
-            ] = "Key {} does not exists, " "CAS argument can not be used.".format(key)
+            ] = "Key {} does not exists, CAS argument can not be used.".format(key)
             ret["res"] = False
             return ret
 
@@ -587,7 +586,7 @@ def agent_maintenance(consul_url=None, token=None, **kwargs):
     )
     if res["res"]:
         ret["res"] = True
-        ret["message"] = "Agent maintenance mode " "{}ed.".format(kwargs["enable"])
+        ret["message"] = "Agent maintenance mode {}ed.".format(kwargs["enable"])
     else:
         ret["res"] = True
         ret["message"] = "Unable to change maintenance mode for agent."
@@ -1166,10 +1165,10 @@ def agent_service_maintenance(consul_url=None, token=None, serviceid=None, **kwa
 
     if res["res"]:
         ret["res"] = True
-        ret["message"] = "Service {} set in " "maintenance mode.".format(serviceid)
+        ret["message"] = "Service {} set in maintenance mode.".format(serviceid)
     else:
         ret["res"] = False
-        ret["message"] = "Unable to set service " "{} to maintenance mode.".format(
+        ret["message"] = "Unable to set service {} to maintenance mode.".format(
             serviceid
         )
     return ret
@@ -1552,12 +1551,12 @@ def catalog_register(consul_url=None, token=None, **kwargs):
     )
     if res["res"]:
         ret["res"] = True
-        ret["message"] = "Catalog registration " "for {} successful.".format(
+        ret["message"] = "Catalog registration for {} successful.".format(
             kwargs["node"]
         )
     else:
         ret["res"] = False
-        ret["message"] = "Catalog registration " "for {} failed.".format(kwargs["node"])
+        ret["message"] = "Catalog registration for {} failed.".format(kwargs["node"])
     ret["data"] = data
     return ret
 
@@ -1617,7 +1616,7 @@ def catalog_deregister(consul_url=None, token=None, **kwargs):
         ret["message"] = "Catalog item {} removed.".format(kwargs["node"])
     else:
         ret["res"] = False
-        ret["message"] = "Removing Catalog " "item {} failed.".format(kwargs["node"])
+        ret["message"] = "Removing Catalog item {} failed.".format(kwargs["node"])
     return ret
 
 
@@ -2093,7 +2092,7 @@ def acl_create(consul_url=None, token=None, **kwargs):
         ret["message"] = "ACL {} created.".format(kwargs["name"])
     else:
         ret["res"] = False
-        ret["message"] = "Removing Catalog " "item {} failed.".format(kwargs["name"])
+        ret["message"] = "Removing Catalog item {} failed.".format(kwargs["name"])
     return ret
 
 
@@ -2156,7 +2155,7 @@ def acl_update(consul_url=None, token=None, **kwargs):
         ret["message"] = "ACL {} created.".format(kwargs["name"])
     else:
         ret["res"] = False
-        ret["message"] = "Adding ACL " "{} failed.".format(kwargs["name"])
+        ret["message"] = "Adding ACL {} failed.".format(kwargs["name"])
 
     return ret
 
@@ -2201,7 +2200,7 @@ def acl_delete(consul_url=None, token=None, **kwargs):
         ret["message"] = "ACL {} deleted.".format(kwargs["id"])
     else:
         ret["res"] = False
-        ret["message"] = "Removing ACL " "{} failed.".format(kwargs["id"])
+        ret["message"] = "Removing ACL {} failed.".format(kwargs["id"])
 
     return ret
 
@@ -2282,7 +2281,7 @@ def acl_clone(consul_url=None, token=None, **kwargs):
         ret["ID"] = ret["data"]
     else:
         ret["res"] = False
-        ret["message"] = "Cloning ACL" "item {} failed.".format(kwargs["name"])
+        ret["message"] = "Cloning ACL item {} failed.".format(kwargs["name"])
     return ret
 
 
@@ -2382,7 +2381,7 @@ def event_fire(consul_url=None, token=None, name=None, **kwargs):
         ret["data"] = ret["data"]
     else:
         ret["res"] = False
-        ret["message"] = "Cloning ACL" "item {} failed.".format(kwargs["name"])
+        ret["message"] = "Cloning ACL item {} failed.".format(kwargs["name"])
     return ret
 
 

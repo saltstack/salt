@@ -145,6 +145,10 @@ class StateResult:
     def comment(self):
         return self.full_return["comment"]
 
+    @property
+    def warnings(self):
+        return self.full_return.get("warnings") or []
+
     def __eq__(self, value):
         raise RuntimeError(
             "Please assert comparisons with {}.filtered instead".format(
@@ -178,13 +182,15 @@ class StateFunction:
             name = args[0]
         if name is not None and "name" in kwargs:
             raise RuntimeError(
-                "Either pass 'name' as the single argument to the call or remove 'name' as a keyword argument"
+                "Either pass 'name' as the single argument to the call or remove 'name'"
+                " as a keyword argument"
             )
         if name is None:
             name = kwargs.pop("name", None)
         if name is None:
             raise RuntimeError(
-                "'name' was not passed as the single argument to the function nor as a keyword argument"
+                "'name' was not passed as the single argument to the function nor as a"
+                " keyword argument"
             )
         log.info("Calling state.single(%s, name=%s, %s)", self.state_func, name, kwargs)
         result = self.proxy_func(self.state_func, name=name, **kwargs)

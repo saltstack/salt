@@ -31,8 +31,9 @@ def __virtual__():
             return True
     return (
         False,
-        "The bridge execution module failed to load: requires one of the following tool/os"
-        " combinations: ifconfig on FreeBSD/OpenBSD, brctl on Linux or brconfig on NetBSD.",
+        "The bridge execution module failed to load: requires one of the following"
+        " tool/os combinations: ifconfig on FreeBSD/OpenBSD, brctl on Linux or brconfig"
+        " on NetBSD.",
     )
 
 

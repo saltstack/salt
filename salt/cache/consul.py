@@ -94,7 +94,8 @@ def __virtual__():
     except AttributeError:
         return (
             False,
-            "Failed to invoke consul.Consul, please make sure you have python-consul >= 0.2.0 installed",
+            "Failed to invoke consul.Consul, please make sure you have python-consul >="
+            " 0.2.0 installed",
         )
 
     return __virtualname__

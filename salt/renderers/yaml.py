@@ -20,7 +20,7 @@ from yaml.scanner import ScannerError
 log = logging.getLogger(__name__)
 
 _ERROR_MAP = {
-    ("found character '\\t' that cannot " "start any token"): "Illegal tab character"
+    "found character '\\t' that cannot start any token": "Illegal tab character"
 }
 
 

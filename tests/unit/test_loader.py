@@ -20,7 +20,8 @@ import textwrap
 import pytest
 import salt.config
 import salt.loader
-import salt.loader_context
+import salt.loader.context
+import salt.loader.lazy
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
@@ -91,7 +92,7 @@ class LazyLoaderTest(TestCase):
             os.fsync(fh.fileno())
 
         # Invoke the loader
-        self.loader = salt.loader.LazyLoader(
+        self.loader = salt.loader.lazy.LazyLoader(
             [self.module_dir],
             copy.deepcopy(self.opts),
             pack={
@@ -123,7 +124,7 @@ class LazyLoaderTest(TestCase):
         # results in a KeyError, the decorator is broken.
         self.assertTrue(
             isinstance(
-                self.loader[self.module_name + ".loaded"], salt.loader.LoadedFunc,
+                self.loader[self.module_name + ".loaded"], salt.loader.lazy.LoadedFunc
             )
         )
         # Make sure depends correctly kept a function from loading
@@ -208,7 +209,7 @@ class LazyLoaderUtilsTest(TestCase):
             extra_module_dirs=[self.utils_dir],
         )
         self.assertTrue(
-            isinstance(loader[self.module_name + ".run"], salt.loader.LoadedFunc)
+            isinstance(loader[self.module_name + ".run"], salt.loader.lazy.LoadedFunc)
         )
         self.assertTrue(loader[self.module_name + ".run"]())
 
@@ -317,7 +318,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         self.assertEqual(self.loader._dict, {})
         # get something, and make sure its a func
         func = self.loader["test.ping"]
-        with salt.loader_context.loader_context(self.loader):
+        with salt.loader.context.loader_context(self.loader):
             with patch.dict(func.__globals__["__context__"], {"foo": "bar"}):
                 self.assertEqual(
                     self.loader["test.echo"].__globals__["__context__"]["foo"], "bar"
@@ -327,7 +328,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
                 )
 
     def test_globals(self):
-        with salt.loader_context.loader_context(self.loader):
+        with salt.loader.context.loader_context(self.loader):
             func_globals = self.loader["test.ping"].__globals__
             self.assertEqual(
                 func_globals["__grains__"].value(), self.opts.get("grains", {})
@@ -354,7 +355,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
                 self.assertEqual(self.opts[key], val)
 
     def test_pack(self):
-        with salt.loader_context.loader_context(self.loader):
+        with salt.loader.context.loader_context(self.loader):
             self.loader.pack["__foo__"] = "bar"
             func_globals = self.loader["test.ping"].__globals__
             self.assertEqual(func_globals["__foo__"].value(), "bar")
@@ -403,7 +404,7 @@ class LazyLoaderVirtualDisabledTest(TestCase):
     @pytest.mark.slow_test
     def test_virtual(self):
         self.assertTrue(
-            isinstance(self.loader["test_virtual.ping"], salt.loader.LoadedFunc,)
+            isinstance(self.loader["test_virtual.ping"], salt.loader.lazy.LoadedFunc)
         )
 
 
@@ -632,7 +633,7 @@ class LazyLoaderReloadingTest(TestCase):
         self.assertTrue(
             isinstance(
                 self.loader["{}.working_alias".format(self.module_name)],
-                salt.loader.LoadedFunc,
+                salt.loader.lazy.LoadedFunc,
             )
         )
         self.assertTrue(
@@ -643,14 +644,16 @@ class LazyLoaderReloadingTest(TestCase):
 
     @pytest.mark.slow_test
     def test_clear(self):
-        self.assertTrue(isinstance(self.loader["test.ping"], salt.loader.LoadedFunc))
+        self.assertTrue(
+            isinstance(self.loader["test.ping"], salt.loader.lazy.LoadedFunc)
+        )
         self.assertTrue(inspect.isfunction(self.loader["test.ping"].func))
         self.update_module()  # write out out custom module
         self.loader.clear()  # clear the loader dict
 
         # force a load of our module
         self.assertTrue(
-            isinstance(self.loader[self.module_key], salt.loader.LoadedFunc)
+            isinstance(self.loader[self.module_key], salt.loader.lazy.LoadedFunc)
         )
         self.assertTrue(inspect.isfunction(self.loader[self.module_key].func))
 
@@ -666,7 +669,7 @@ class LazyLoaderReloadingTest(TestCase):
 
         self.update_module()
         self.assertTrue(
-            isinstance(self.loader[self.module_key], salt.loader.LoadedFunc)
+            isinstance(self.loader[self.module_key], salt.loader.lazy.LoadedFunc)
         )
         self.assertTrue(inspect.isfunction(self.loader[self.module_key].func))
 
@@ -1299,16 +1302,16 @@ class LoaderMultipleGlobalTest(ModuleCase):
 
         self.loader2.pack["__foo__"] = "bar2"
         func2 = self.loader2["test.ping"]
-        token = salt.loader_context.loader_ctxvar.set(self.loader1)
+        token = salt.loader.context.loader_ctxvar.set(self.loader1)
         try:
             assert func1.__globals__["__foo__"].value() == "bar1"
         finally:
-            salt.loader_context.loader_ctxvar.reset(token)
-        token = salt.loader_context.loader_ctxvar.set(self.loader2)
+            salt.loader.context.loader_ctxvar.reset(token)
+        token = salt.loader.context.loader_ctxvar.set(self.loader2)
         try:
             assert func2.__globals__["__foo__"].value() == "bar2"
         finally:
-            salt.loader_context.loader_ctxvar.reset(token)
+            salt.loader.context.loader_ctxvar.reset(token)
 
 
 class LoaderCleanupTest(ModuleCase):
@@ -1746,7 +1749,7 @@ class LazyLoaderRefreshFileMappingTest(TestCase):
         try:
             loader = self.__init_loader()
             # Don't assert if the current environment has no pyximport
-            if salt.loader.pyximport is not None:
+            if salt.loader.lazy.pyximport is not None:
                 assert ".pyx" in loader.suffix_map
                 assert ".pyx" in loader.suffix_order
         finally:

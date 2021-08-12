@@ -94,6 +94,12 @@ class AuthenticationError(SaltException):
     """
 
 
+class InvalidKeyError(SaltException):
+    """
+    Raised when we encounter an invalid RSA key.
+    """
+
+
 class CommandNotFoundError(SaltException):
     """
     Used in modules or grains when a required binary is not available
@@ -287,7 +293,8 @@ class SaltRenderError(SaltException):
                 self.buffer, self.line_num, marker=marker
             )
             exc_str += "; line {}\n\n{}".format(
-                self.line_num, salt.utils.stringutils.to_unicode(self.context),
+                self.line_num,
+                salt.utils.stringutils.to_unicode(self.context),
             )
         super().__init__(exc_str)
 
