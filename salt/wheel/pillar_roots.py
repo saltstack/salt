@@ -99,7 +99,7 @@ def write(data, path, saltenv="base", index=0):
             index, saltenv
         )
     if os.path.isabs(path):
-        return "The path passed in {} is not relative to the environment " "{}".format(
+        return "The path passed in {} is not relative to the environment {}".format(
             path, saltenv
         )
     roots_dir = __opts__["pillar_roots"][saltenv][index]

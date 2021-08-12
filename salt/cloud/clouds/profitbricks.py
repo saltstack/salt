@@ -258,13 +258,12 @@ def list_images(call=None, kwargs=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The list_images function must be called with " "-f or --function."
+            "The list_images function must be called with -f or --function."
         )
 
     if not version_compatible("4.0"):
         raise SaltCloudNotFound(
-            "The 'image_alias' feature requires the profitbricks "
-            "SDK v4.0.0 or greater."
+            "The 'image_alias' feature requires the profitbricks SDK v4.0.0 or greater."
         )
 
     ret = {}
@@ -506,7 +505,7 @@ def list_datacenters(conn=None, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The list_datacenters function must be called with " "-f or --function."
+            "The list_datacenters function must be called with -f or --function."
         )
 
     datacenters = []
@@ -540,7 +539,7 @@ def list_nodes(conn=None, call=None):
     try:
         nodes = conn.list_servers(datacenter_id=datacenter_id)
     except PBNotFoundError:
-        log.error("Failed to get nodes list " "from datacenter: %s", datacenter_id)
+        log.error("Failed to get nodes list from datacenter: %s", datacenter_id)
         raise
 
     for item in nodes["items"]:
@@ -558,7 +557,7 @@ def list_nodes_full(conn=None, call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes_full function must be called with -f or " "--function."
+            "The list_nodes_full function must be called with -f or --function."
         )
 
     if not conn:
@@ -599,7 +598,7 @@ def reserve_ipblock(call=None, kwargs=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The reserve_ipblock function must be called with -f or " "--function."
+            "The reserve_ipblock function must be called with -f or --function."
         )
 
     conn = get_conn()
@@ -936,7 +935,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](

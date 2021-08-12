@@ -268,7 +268,7 @@ def set_static_ip(iface, addr, gateway=None, append=False):
 
     if append and _find_addr(iface, addr):
         raise CommandExecutionError(
-            "Address '{}' already exists on interface " "'{}'".format(addr, iface)
+            "Address '{}' already exists on interface '{}'".format(addr, iface)
         )
 
     cmd = ["netsh", "interface", "ip"]

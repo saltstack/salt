@@ -265,7 +265,9 @@ def test_volume_attached():
         cloud.__salt__, {"cloud.volume_list": mock_dict, "cloud.action": mock}
     ):
         with patch.object(
-            salt.utils.cloud, "check_name", MagicMock(side_effect=[True, False, True]),
+            salt.utils.cloud,
+            "check_name",
+            MagicMock(side_effect=[True, False, True]),
         ):
             comt = "Invalid characters in name."
             ret.update({"comment": comt})
@@ -334,7 +336,9 @@ def test_volume_detached():
         cloud.__salt__, {"cloud.volume_list": mock_dict, "cloud.action": mock}
     ):
         with patch.object(
-            salt.utils.cloud, "check_name", MagicMock(side_effect=[True, False, True]),
+            salt.utils.cloud,
+            "check_name",
+            MagicMock(side_effect=[True, False, True]),
         ):
             comt = "Invalid characters in name."
             ret.update({"comment": comt})

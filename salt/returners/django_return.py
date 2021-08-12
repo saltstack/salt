@@ -62,8 +62,7 @@ def returner(ret):
 
     for signal in signaled:
         log.debug(
-            "Django returner function 'returner' signaled %s "
-            "which responded with %s",
+            "Django returner function 'returner' signaled %s which responded with %s",
             signal[0],
             signal[1],
         )
@@ -79,8 +78,7 @@ def save_load(jid, load, minions=None):
 
     for signal in signaled:
         log.debug(
-            "Django returner function 'save_load' signaled %s "
-            "which responded with %s",
+            "Django returner function 'save_load' signaled %s which responded with %s",
             signal[0],
             signal[1],
         )

@@ -30,7 +30,7 @@ ARCHES_ALPHA = (
     "alphaev68",
     "alphaev7",
 )
-ARCHES_ARM = ("armv5tel", "armv5tejl", "armv6l", "armv7l")
+ARCHES_ARM = ("armv5tel", "armv5tejl", "armv6l", "armv7l", "aarch64")
 ARCHES_SH = ("sh3", "sh4", "sh4a")
 
 ARCHES = (

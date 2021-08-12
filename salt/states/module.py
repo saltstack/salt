@@ -399,15 +399,13 @@ def run(**kwargs):
         ret["comment"] = " ".join(
             [
                 missing
-                and "Unavailable function{plr}: "
-                "{func}.".format(
+                and "Unavailable function{plr}: {func}.".format(
                     plr=(len(missing) > 1 or ""), func=(", ".join(missing) or "")
                 )
                 or "",
                 tests
-                and "Function{plr} {func} to be "
-                "executed.".format(
-                    plr=(len(tests) > 1 or ""), func=(", ".join(tests)) or ""
+                and "Function{plr} {func} to be executed.".format(
+                    plr=(len(tests) > 1 or ""), func=", ".join(tests) or ""
                 )
                 or "",
             ]

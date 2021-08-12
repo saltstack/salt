@@ -405,7 +405,7 @@ def create_hosted_zone(
     if PrivateZone:
         if not _exactly_one((VPCName, VPCId)):
             raise SaltInvocationError(
-                "Either VPCName or VPCId is required when creating a " "private zone."
+                "Either VPCName or VPCId is required when creating a private zone."
             )
         vpcs = __salt__["boto_vpc.describe_vpcs"](
             vpc_id=VPCId,
@@ -995,7 +995,7 @@ def get_resource_records(
     """
     if not _exactly_one((HostedZoneId, Name)):
         raise SaltInvocationError(
-            "Exactly one of either HostedZoneId or Name must " "be provided."
+            "Exactly one of either HostedZoneId or Name must be provided."
         )
     if Name:
         args = {

@@ -2260,7 +2260,7 @@ def create_attach_volumes(name, kwargs, call=None):
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The create_attach_volumes action must be called with " "-a or --action."
+            "The create_attach_volumes action must be called with -a or --action."
         )
 
     volumes = literal_eval(kwargs["volumes"])
@@ -2294,8 +2294,8 @@ def request_instance(vm_):
     """
     if not GCE_VM_NAME_REGEX.match(vm_["name"]):
         raise SaltCloudSystemExit(
-            "VM names must start with a letter, only contain letters, numbers, or dashes "
-            "and cannot end in a dash."
+            "VM names must start with a letter, only contain letters, numbers, or"
+            " dashes and cannot end in a dash."
         )
 
     try:
