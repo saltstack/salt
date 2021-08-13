@@ -107,7 +107,7 @@ def managed(name, ppa=None, copr=None, **kwargs):
     """
     This state manages software package repositories. Currently, :mod:`yum
     <salt.modules.yumpkg>`, :mod:`apt <salt.modules.aptpkg>`, and :mod:`zypper
-    <salt.modules.zypper>` repositories are supported.
+    <salt.modules.zypperpkg>` repositories are supported.
 
     **YUM/DNF/ZYPPER-BASED SYSTEMS**
 
