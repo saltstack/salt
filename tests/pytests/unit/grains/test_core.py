@@ -13,6 +13,7 @@ from collections import namedtuple
 
 import pytest
 import salt.grains.core as core
+import salt.loader
 import salt.modules.cmdmod
 import salt.modules.network
 import salt.modules.smbios
@@ -82,6 +83,90 @@ def test_parse_etc_os_release(os_release_dir):
         "VERSION_CODENAME": "artful",
         "UBUNTU_CODENAME": "artful",
     }
+
+
+def test_network_grains_cache(tmp_path):
+    call_1 = {
+        "lo": {
+            "up": True,
+            "hwaddr": "00:00:00:00:00:00",
+            "inet": [
+                {
+                    "address": "127.0.0.1",
+                    "netmask": "255.0.0.0",
+                    "broadcast": None,
+                    "label": "lo",
+                }
+            ],
+            "inet6": [],
+        },
+        "wlo1": {
+            "up": True,
+            "hwaddr": "29:9f:9f:e9:67:f4",
+            "inet": [
+                {
+                    "address": "172.16.13.85",
+                    "netmask": "255.255.248.0",
+                    "broadcast": "172.16.15.255",
+                    "label": "wlo1",
+                }
+            ],
+            "inet6": [],
+        },
+    }
+    call_2 = {
+        "lo": {
+            "up": True,
+            "hwaddr": "00:00:00:00:00:00",
+            "inet": [
+                {
+                    "address": "127.0.0.1",
+                    "netmask": "255.0.0.0",
+                    "broadcast": None,
+                    "label": "lo",
+                }
+            ],
+            "inet6": [],
+        },
+        "wlo1": {
+            "up": True,
+            "hwaddr": "29:9f:9f:e9:67:f4",
+            "inet": [
+                {
+                    "address": "172.16.13.86",
+                    "netmask": "255.255.248.0",
+                    "broadcast": "172.16.15.255",
+                    "label": "wlo1",
+                }
+            ],
+            "inet6": [],
+        },
+    }
+    cache_dir = tmp_path / "cache"
+    extmods = tmp_path / "extmods"
+    opts = {
+        "cachedir": str(cache_dir),
+        "extension_modules": str(extmods),
+        "optimization_order": [0],
+    }
+    with patch("salt.utils.network.interfaces") as interfaces:
+        interfaces.side_effect = [call_1, call_2]
+        grains = salt.loader.grain_funcs(opts)
+        assert interfaces.call_count == 0
+        ret = grains["core.ip_interfaces"]()
+        # interfaces has been called
+        assert interfaces.call_count == 1
+        assert ret["ip_interfaces"]["wlo1"] == ["172.16.13.85"]
+        # interfaces has been cached
+        ret = grains["core.ip_interfaces"]()
+        assert interfaces.call_count == 1
+        assert ret["ip_interfaces"]["wlo1"] == ["172.16.13.85"]
+
+        grains = salt.loader.grain_funcs(opts)
+        ret = grains["core.ip_interfaces"]()
+        # A new loader clears the cache and interfaces is called again
+        assert interfaces.call_count == 2
+        assert ret["ip_interfaces"]["wlo1"] == ["172.16.13.86"]
 
 
 @pytest.mark.parametrize(
