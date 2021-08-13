@@ -1,0 +1,1 @@
+Fixes salt-ssh error when targetting IPs or hostnames directly.
