@@ -1,4 +1,7 @@
 """
+tests.pytests.unit.grains.test_core
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     :codeauthor: Erik Johnson <erik@saltstack.com>
     :codeauthor: David Murphy <damurphy@vmware.com>
 """
@@ -86,6 +89,9 @@ def test_parse_etc_os_release(os_release_dir):
 
 
 def test_network_grains_cache(tmp_path):
+    """
+    Network interfaces are cache is cleared by the loader
+    """
     call_1 = {
         "lo": {
             "up": True,
