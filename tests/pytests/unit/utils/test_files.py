@@ -130,24 +130,6 @@ def test_recursive_copy(tmp_path):
     _validate_folder_structure_and_contents(dest, desired_structure)
 
 
-def test_case_sensitive_filesystem_false():
-    """
-    Test case sensitive util.
-    """
-    with patch("salt.utils.files.case_sensitive_filesystem", return_value=False):
-        result = salt.utils.files.case_sensitive_filesystem()
-        assert result is False
-
-
-def test_case_sensitive_filesystem_true():
-    """
-    Test case sensitive util.
-    """
-    with patch("salt.utils.files.case_sensitive_filesystem", return_value=True):
-        result = salt.utils.files.case_sensitive_filesystem()
-        assert result is True
-
-
 @pytest.mark.skip_unless_on_windows(reason="System is not Windows")
 def test_case_sensitive_filesystem_win():
     """
