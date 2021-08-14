@@ -20,29 +20,25 @@ def validate(config):
     """
     # Configuration for service beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for service beacon must be a list.")
+        return False, "Configuration for service beacon must be a list."
     else:
         config = salt.utils.beacons.list_to_dict(config)
 
         if "services" not in config:
-            return False, ("Configuration for service beacon requires services.")
+            return False, "Configuration for service beacon requires services."
         else:
             if not isinstance(config["services"], dict):
                 return (
                     False,
-                    (
-                        "Services configuration item for service beacon must "
-                        "be a dictionary."
-                    ),
+                    "Services configuration item for service beacon must "
+                    "be a dictionary.",
                 )
             for config_item in config["services"]:
                 if not isinstance(config["services"][config_item], dict):
                     return (
                         False,
-                        (
-                            "Configuration for service beacon must "
-                            "be a list of dictionaries."
-                        ),
+                        "Configuration for service beacon must "
+                        "be a list of dictionaries.",
                     )
 
     return True, "Valid beacon configuration"

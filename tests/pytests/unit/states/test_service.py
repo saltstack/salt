@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 
 def func(name):
     """
-        Mock func method
+    Mock func method
     """
     return name
 
@@ -142,19 +142,26 @@ def test_running():
         },
         {
             "changes": "saltstack",
-            "comment": "Started service salt\nService masking not available on this minion",
+            "comment": (
+                "Started service salt\nService masking not available on this minion"
+            ),
             "name": "salt",
             "result": True,
         },
         {
             "changes": "saltstack",
-            "comment": "Started service salt\nService masking not available on this minion",
+            "comment": (
+                "Started service salt\nService masking not available on this minion"
+            ),
             "name": "salt",
             "result": True,
         },
         {
             "changes": {},
-            "comment": "The service salt is disabled but enable is not True. Set enable to True to successfully start the service.",
+            "comment": (
+                "The service salt is disabled but enable is not True. Set enable to"
+                " True to successfully start the service."
+            ),
             "name": "salt",
             "result": False,
         },
@@ -178,7 +185,8 @@ def test_running():
     with patch.object(service, "_available", tmock):
         with patch.dict(service.__opts__, {"test": False}):
             with patch.dict(
-                service.__salt__, {"service.enabled": tmock, "service.status": tmock},
+                service.__salt__,
+                {"service.enabled": tmock, "service.status": tmock},
             ):
                 assert service.running("salt") == ret[1]
 

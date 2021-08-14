@@ -346,12 +346,17 @@ def test_host_present_should_return_True_if_test_and_no_changes():
     add_host_mock = MagicMock(return_value=True)
     rm_host_mock = MagicMock(return_value=True)
     expected = {
-        "comment": "Host {} ({}) already present".format(hostname, ip_list[0],),
+        "comment": "Host {} ({}) already present".format(
+            hostname,
+            ip_list[0],
+        ),
         "changes": {},
         "name": hostname,
         "result": True,
     }
-    list_hosts = MagicMock(return_value={ip_list[0]: {"aliases": [hostname]}},)
+    list_hosts = MagicMock(
+        return_value={ip_list[0]: {"aliases": [hostname]}},
+    )
     with patch.dict(
         host.__salt__,
         {
@@ -372,12 +377,19 @@ def test_host_present_should_return_None_if_test_and_adding():
     expected = {
         "comment": "\n".join(
             ["Host {} ({}) already present", "Host {} ({}) would be added"]
-        ).format(hostname, ip_list[0], hostname, ip_list[1],),
+        ).format(
+            hostname,
+            ip_list[0],
+            hostname,
+            ip_list[1],
+        ),
         "changes": {"added": {ip_list[1]: [hostname]}},
         "name": hostname,
         "result": None,
     }
-    list_hosts = MagicMock(return_value={ip_list[0]: {"aliases": [hostname]}},)
+    list_hosts = MagicMock(
+        return_value={ip_list[0]: {"aliases": [hostname]}},
+    )
     with patch.dict(
         host.__salt__,
         {
@@ -398,7 +410,12 @@ def test_host_present_should_return_None_if_test_and_removing():
     expected = {
         "comment": "\n".join(
             ["Host {} ({}) already present", "Host {} ({}) would be removed"]
-        ).format(hostname, ip_list[0], hostname, ip_list[1],),
+        ).format(
+            hostname,
+            ip_list[0],
+            hostname,
+            ip_list[1],
+        ),
         "changes": {"removed": {ip_list[1]: [hostname]}},
         "name": hostname,
         "result": None,

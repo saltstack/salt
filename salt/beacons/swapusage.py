@@ -35,13 +35,12 @@ def validate(config):
     """
     # Configuration for swapusage beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for swapusage beacon must be a list.")
+        return False, "Configuration for swapusage beacon must be a list."
     else:
         config = salt.utils.beacons.list_to_dict(config)
 
         if "percent" not in config:
-            return False, ("Configuration for swapusage beacon requires percent.")
-
+            return False, "Configuration for swapusage beacon requires percent."
     return True, "Valid beacon configuration"
 
 
@@ -66,7 +65,7 @@ def beacon(config):
 
     current_usage = _current_usage.percent
     monitor_usage = config["percent"]
-    if "%" in monitor_usage:
+    if isinstance(monitor_usage, str) and "%" in monitor_usage:
         monitor_usage = re.sub("%", "", monitor_usage)
     monitor_usage = float(monitor_usage)
     if current_usage >= monitor_usage:

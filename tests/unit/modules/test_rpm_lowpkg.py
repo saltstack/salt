@@ -211,7 +211,8 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(mock_rpmUtils.miscutils.compareEVR.called, True)
         self.assertEqual(
             mock_log.warning.mock_calls[0][1][0],
-            "Please install a package that provides rpm.labelCompare for more accurate version comparisons.",
+            "Please install a package that provides rpm.labelCompare for more accurate"
+            " version comparisons.",
         )
 
     @patch("salt.modules.rpm_lowpkg.HAS_RPM", False)
@@ -231,11 +232,13 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(mock_log.warning.called, True)
             self.assertEqual(
                 mock_log.warning.mock_calls[0][1][0],
-                "Please install a package that provides rpm.labelCompare for more accurate version comparisons.",
+                "Please install a package that provides rpm.labelCompare for more"
+                " accurate version comparisons.",
             )
             self.assertEqual(
                 mock_log.warning.mock_calls[1][1][0],
-                "Installing the rpmdevtools package may surface dev tools in production.",
+                "Installing the rpmdevtools package may surface dev tools in"
+                " production.",
             )
 
     @patch("salt.modules.rpm_lowpkg.HAS_RPM", False)
@@ -254,7 +257,8 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(mock_log.warning.called, True)
         self.assertEqual(
             mock_log.warning.mock_calls[0][1][0],
-            "Please install a package that provides rpm.labelCompare for more accurate version comparisons.",
+            "Please install a package that provides rpm.labelCompare for more accurate"
+            " version comparisons.",
         )
         self.assertEqual(
             mock_log.warning.mock_calls[1][1][0],

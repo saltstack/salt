@@ -142,14 +142,12 @@ def _validate_time_range(trange, status, msg):
 
     if not isinstance(trange, dict):
         status = False
-        msg = "The time_range parameter for " "btmp beacon must " "be a dictionary."
+        msg = "The time_range parameter for btmp beacon must be a dictionary."
 
     if not all(k in trange for k in ("start", "end")):
         status = False
         msg = (
-            "The time_range parameter for "
-            "btmp beacon must contain "
-            "start & end options."
+            "The time_range parameter for btmp beacon must contain start & end options."
         )
 
     return status, msg
@@ -202,14 +200,14 @@ def validate(config):
     # Configuration for load beacon should be a list of dicts
     if not isinstance(config, list):
         vstatus = False
-        vmsg = "Configuration for btmp beacon must " "be a list."
+        vmsg = "Configuration for btmp beacon must be a list."
     else:
         config = salt.utils.beacons.list_to_dict(config)
 
         if "users" in config:
             if not isinstance(config["users"], dict):
                 vstatus = False
-                vmsg = "User configuration for btmp beacon must " "be a dictionary."
+                vmsg = "User configuration for btmp beacon must be a dictionary."
             else:
                 for user in config["users"]:
                     _time_range = config["users"][user].get("time_range", {})
@@ -221,7 +219,7 @@ def validate(config):
         if "groups" in config:
             if not isinstance(config["groups"], dict):
                 vstatus = False
-                vmsg = "Group configuration for btmp beacon must " "be a dictionary."
+                vmsg = "Group configuration for btmp beacon must be a dictionary."
             else:
                 for group in config["groups"]:
                     _time_range = config["groups"][group].get("time_range", {})
@@ -232,7 +230,7 @@ def validate(config):
         if "defaults" in config:
             if not isinstance(config["defaults"], dict):
                 vstatus = False
-                vmsg = "Defaults configuration for btmp beacon must " "be a dictionary."
+                vmsg = "Defaults configuration for btmp beacon must be a dictionary."
             else:
                 _time_range = config["defaults"].get("time_range", {})
                 vstatus, vmsg = _validate_time_range(_time_range, vstatus, vmsg)

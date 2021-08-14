@@ -51,7 +51,10 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
                 "__id__": "vim present",
             },
             "git_|-salt vim plugin updated_|-https://github.com/saltstack/salt-vim.git_|-latest": {
-                "comment": "https://github.com/saltstack/salt-vim.git cloned to /Users/cdalvaro/.vim/pack/git-plugins/start/salt",
+                "comment": (
+                    "https://github.com/saltstack/salt-vim.git cloned to"
+                    " /Users/cdalvaro/.vim/pack/git-plugins/start/salt"
+                ),
                 "name": "https://github.com/saltstack/salt-vim.git",
                 "start_time": "11:00:01.892757",
                 "result": True,
@@ -59,7 +62,10 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
                 "__run_num__": 6,
                 "__sls__": "config.vim",
                 "changes": {
-                    "new": "https://github.com/saltstack/salt-vim.git => /Users/cdalvaro/.vim/pack/git-plugins/start/salt",
+                    "new": (
+                        "https://github.com/saltstack/salt-vim.git =>"
+                        " /Users/cdalvaro/.vim/pack/git-plugins/start/salt"
+                    ),
                     "revision": {
                         "new": "6ca9e3500cc39dd417b411435d58a1b720b331cc",
                         "old": None,
@@ -68,7 +74,10 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
                 "__id__": "salt vim plugin updated",
             },
             "pkg_|-macvim present_|-caskroom/cask/macvim_|-installed": {
-                "comment": "The following packages failed to install/update: caskroom/cask/macvim",
+                "comment": (
+                    "The following packages failed to install/update:"
+                    " caskroom/cask/macvim"
+                ),
                 "name": "caskroom/cask/macvim",
                 "start_time": "10:59:38.111119",
                 "result": False,
@@ -91,7 +100,10 @@ class SlackWebhookReturnerTestCase(TestCase, LoaderModuleMockMixin):
             {
                 "title": "Success: False",
                 "color": "#272727",
-                "text": "Function: state.apply\nFunction Args: ['config.vim']\nJID: 20181227105933129338\nTotal: 4\nDuration: 27.03 secs",
+                "text": (
+                    "Function: state.apply\nFunction Args: ['config.vim']\nJID:"
+                    " 20181227105933129338\nTotal: 4\nDuration: 27.03 secs"
+                ),
                 "author_link": "{}".format(_MINION_NAME),
                 "author_name": "{}".format(_MINION_NAME),
                 "fallback": "{} | Failed".format(_MINION_NAME),

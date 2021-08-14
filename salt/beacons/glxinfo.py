@@ -30,17 +30,14 @@ def validate(config):
     """
     # Configuration for glxinfo beacon should be a dictionary
     if not isinstance(config, list):
-        return False, ("Configuration for glxinfo beacon must be a list.")
+        return False, "Configuration for glxinfo beacon must be a list."
 
     config = salt.utils.beacons.list_to_dict(config)
 
     if "user" not in config:
         return (
             False,
-            (
-                "Configuration for glxinfo beacon must "
-                "include a user as glxinfo is not available to root."
-            ),
+            "Configuration for glxinfo beacon must include a user as glxinfo is not available to root.",
         )
     return True, "Valid beacon configuration"
 

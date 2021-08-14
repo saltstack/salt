@@ -76,7 +76,7 @@ def validate(config):
     Validate the beacon configuration
     """
     if not isinstance(config, list):
-        return False, ("Configuration for network_settings beacon must be a list.")
+        return False, "Configuration for network_settings beacon must be a list."
     else:
         config = salt.utils.beacons.list_to_dict(config)
 
@@ -85,23 +85,18 @@ def validate(config):
             # Old syntax
             return (
                 False,
-                (
-                    "interfaces section for network_settings beacon"
-                    " must be a dictionary."
-                ),
+                "interfaces section for network_settings beacon must be a dictionary.",
             )
 
         for item in interfaces:
             if not isinstance(config["interfaces"][item], dict):
                 return (
                     False,
-                    (
-                        "Interface attributes for network_settings beacon"
-                        " must be a dictionary."
-                    ),
+                    "Interface attributes for network_settings beacon"
+                    " must be a dictionary.",
                 )
             if not all(j in ATTRS for j in config["interfaces"][item]):
-                return False, ("Invalid attributes in beacon configuration.")
+                return False, "Invalid attributes in beacon configuration."
     return True, "Valid beacon configuration"
 
 

@@ -50,12 +50,12 @@ def validate(config):
     """
     # Configuration for log beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for log beacon must be a list.")
+        return False, "Configuration for log beacon must be a list."
 
     config = salt.utils.beacons.list_to_dict(config)
 
     if "file" not in config:
-        return False, ("Configuration for log beacon must contain file option.")
+        return False, "Configuration for log beacon must contain file option."
     return True, "Valid beacon configuration"
 
 

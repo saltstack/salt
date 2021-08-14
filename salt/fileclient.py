@@ -1132,7 +1132,7 @@ class RemoteClient(Client):
         if dest is not None and (os.path.isdir(dest) or dest.endswith(("/", "\\"))):
             dest = os.path.join(dest, os.path.basename(path))
             log.debug(
-                "In saltenv '%s', '%s' is a directory. Changing dest to " "'%s'",
+                "In saltenv '%s', '%s' is a directory. Changing dest to '%s'",
                 saltenv,
                 os.path.dirname(dest),
                 dest,
@@ -1145,7 +1145,7 @@ class RemoteClient(Client):
             rel_path = self._check_proto(path)
 
             log.debug(
-                "In saltenv '%s', looking at rel_path '%s' to resolve " "'%s'",
+                "In saltenv '%s', looking at rel_path '%s' to resolve '%s'",
                 saltenv,
                 rel_path,
                 path,
@@ -1154,7 +1154,7 @@ class RemoteClient(Client):
                 dest2check = cache_dest
 
         log.debug(
-            "In saltenv '%s', ** considering ** path '%s' to resolve " "'%s'",
+            "In saltenv '%s', ** considering ** path '%s' to resolve '%s'",
             saltenv,
             dest2check,
             path,

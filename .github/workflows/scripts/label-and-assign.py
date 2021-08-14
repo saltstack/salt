@@ -42,6 +42,10 @@ def get_triage_next_account(options):
         if previous_account and previous_account.login == last_account_assigned:
             return member
         previous_account = member
+    else:
+        # The previously assigned account is not longer part of the team members
+        # or the team was switched
+        return random.choice(team_members)
 
 
 def label_and_assign_issue(options):
@@ -85,7 +89,6 @@ def main():
 
     if not os.environ.get("GITHUB_TOKEN"):
         parser.exit(status=1, message="GITHUB_TOKEN environment variable not set")
-        sys.exit(1)
     if not os.environ.get("READ_ORG_TOKEN"):
         parser.exit(status=1, message="READ_ORG_TOKEN environment variable not set")
 
@@ -97,6 +100,7 @@ def main():
     )
     if CACHE_FILENAME.parent.is_dir() is False:
         CACHE_FILENAME.parent.mkdir()
+
     try:
         label_and_assign_issue(options)
         parser.exit(0)

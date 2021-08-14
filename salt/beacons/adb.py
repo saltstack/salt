@@ -31,17 +31,17 @@ def validate(config):
     # Configuration for adb beacon should be a dictionary with states array
     if not isinstance(config, list):
         log.info("Configuration for adb beacon must be a list.")
-        return False, ("Configuration for adb beacon must be a list.")
+        return False, "Configuration for adb beacon must be a list."
 
     config = salt.utils.beacons.list_to_dict(config)
 
     if "states" not in config:
         log.info("Configuration for adb beacon must include a states array.")
-        return False, ("Configuration for adb beacon must include a states array.")
+        return False, "Configuration for adb beacon must include a states array."
     else:
         if not isinstance(config["states"], list):
             log.info("Configuration for adb beacon must include a states array.")
-            return False, ("Configuration for adb beacon must include a states array.")
+            return False, "Configuration for adb beacon must include a states array."
         else:
             states = [
                 "offline",
@@ -57,13 +57,12 @@ def validate(config):
             ]
             if any(s not in states for s in config["states"]):
                 log.info(
-                    "Need a one of the following adb " "states: %s", ", ".join(states)
+                    "Need a one of the following adb states: %s", ", ".join(states)
                 )
                 return (
                     False,
-                    (
-                        "Need a one of the following adb "
-                        "states: {}".format(", ".join(states))
+                    "Need a one of the following adb states: {}".format(
+                        ", ".join(states)
                     ),
                 )
     return True, "Valid beacon configuration"

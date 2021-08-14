@@ -56,13 +56,15 @@ def __virtual__():
             return __virtualname__
         return (
             False,
-            "The {} beacon cannot be loaded. The "
-            "'python-dbus' dependency is missing.".format(__virtualname__),
+            "The {} beacon cannot be loaded. The 'python-dbus' dependency is missing.".format(
+                __virtualname__
+            ),
         )
     return (
         False,
-        "The {} beacon cannot be loaded. The "
-        "'python-avahi' dependency is missing.".format(__virtualname__),
+        "The {} beacon cannot be loaded. The 'python-avahi' dependency is missing.".format(
+            __virtualname__
+        ),
     )
 
 
@@ -74,15 +76,12 @@ def validate(config):
     _config = salt.utils.beacons.list_to_dict(config)
 
     if not isinstance(config, list):
-        return False, ("Configuration for avahi_announce beacon must be a list.")
+        return False, "Configuration for avahi_announce beacon must be a list."
 
     elif not all(x in _config for x in ("servicetype", "port", "txt")):
         return (
             False,
-            (
-                "Configuration for avahi_announce beacon "
-                "must contain servicetype, port and txt items."
-            ),
+            "Configuration for avahi_announce beacon must contain servicetype, port and txt items.",
         )
     return True, "Valid beacon configuration."
 

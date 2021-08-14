@@ -36,18 +36,16 @@ def validate(config):
     """
     # Configuration for twilio_txt_msg beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for twilio_txt_msg beacon must be a list.")
+        return False, "Configuration for twilio_txt_msg beacon must be a list."
     else:
         config = salt.utils.beacons.list_to_dict(config)
 
         if not all(x in config for x in ("account_sid", "auth_token", "twilio_number")):
             return (
                 False,
-                (
-                    "Configuration for twilio_txt_msg beacon "
-                    "must contain account_sid, auth_token "
-                    "and twilio_number items."
-                ),
+                "Configuration for twilio_txt_msg beacon "
+                "must contain account_sid, auth_token "
+                "and twilio_number items.",
             )
     return True, "Valid beacon configuration"
 

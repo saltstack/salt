@@ -73,7 +73,8 @@ def __virtual__():
 
     return (
         False,
-        "The linux_acl state cannot be loaded: the getfacl or setfacl binary is not in the path.",
+        "The linux_acl state cannot be loaded: the getfacl or setfacl binary is not in"
+        " the path.",
     )
 
 
@@ -195,8 +196,10 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
                 if __opts__["test"]:
                     ret.update(
                         {
-                            "comment": "Updated permissions will be applied for "
-                            "{}: {} -> {}".format(acl_name, new_perms, perms),
+                            "comment": (
+                                "Updated permissions will be applied for "
+                                "{}: {} -> {}".format(acl_name, new_perms, perms)
+                            ),
                             "result": None,
                             "changes": changes,
                         }
@@ -226,8 +229,9 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
                 except CommandExecutionError as exc:
                     ret.update(
                         {
-                            "comment": "Error updating permissions for "
-                            "{}: {}".format(acl_name, exc.strerror),
+                            "comment": "Error updating permissions for {}: {}".format(
+                                acl_name, exc.strerror
+                            ),
                             "result": False,
                         }
                     )
@@ -239,8 +243,9 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
             if __opts__["test"]:
                 ret.update(
                     {
-                        "comment": "New permissions will be applied for "
-                        "{}: {}".format(acl_name, perms),
+                        "comment": "New permissions will be applied for {}: {}".format(
+                            acl_name, perms
+                        ),
                         "result": None,
                         "changes": changes,
                     }
@@ -265,8 +270,9 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
             except CommandExecutionError as exc:
                 ret.update(
                     {
-                        "comment": "Error updating permissions for {}: "
-                        "{}".format(acl_name, exc.strerror),
+                        "comment": "Error updating permissions for {}: {}".format(
+                            acl_name, exc.strerror
+                        ),
                         "result": False,
                     }
                 )
@@ -490,11 +496,13 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                         if __opts__["test"]:
                             ret.update(
                                 {
-                                    "comment": "Updated permissions will be applied for "
-                                    "{}: {} -> {}".format(
-                                        acl_names,
-                                        str(users[search_name]["octal"]),
-                                        perms,
+                                    "comment": (
+                                        "Updated permissions will be applied for "
+                                        "{}: {} -> {}".format(
+                                            acl_names,
+                                            str(users[search_name]["octal"]),
+                                            perms,
+                                        )
                                     ),
                                     "result": None,
                                     "changes": changes,
@@ -518,8 +526,9 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                                 )
                             ret.update(
                                 {
-                                    "comment": "Updated permissions for "
-                                    "{}".format(acl_names),
+                                    "comment": "Updated permissions for {}".format(
+                                        acl_names
+                                    ),
                                     "result": True,
                                     "changes": changes,
                                 }
@@ -527,8 +536,11 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                         except CommandExecutionError as exc:
                             ret.update(
                                 {
-                                    "comment": "Error updating permissions for "
-                                    "{}: {}".format(acl_names, exc.strerror),
+                                    "comment": (
+                                        "Error updating permissions for {}: {}".format(
+                                            acl_names, exc.strerror
+                                        )
+                                    ),
                                     "result": False,
                                 }
                             )
@@ -544,8 +556,11 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                     if __opts__["test"]:
                         ret.update(
                             {
-                                "comment": "New permissions will be applied for "
-                                "{}: {}".format(acl_names, perms),
+                                "comment": (
+                                    "New permissions will be applied for {}: {}".format(
+                                        acl_names, perms
+                                    )
+                                ),
                                 "result": None,
                                 "changes": changes,
                             }
@@ -570,8 +585,9 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                             )
                         ret.update(
                             {
-                                "comment": "Applied new permissions for "
-                                "{}".format(", ".join(acl_names)),
+                                "comment": "Applied new permissions for {}".format(
+                                    ", ".join(acl_names)
+                                ),
                                 "result": True,
                                 "changes": changes,
                             }
@@ -579,8 +595,11 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                     except CommandExecutionError as exc:
                         ret.update(
                             {
-                                "comment": "Error updating permissions for {}: "
-                                "{}".format(acl_names, exc.strerror),
+                                "comment": (
+                                    "Error updating permissions for {}: {}".format(
+                                        acl_names, exc.strerror
+                                    )
+                                ),
                                 "result": False,
                             }
                         )
@@ -597,8 +616,9 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
             if __opts__["test"]:
                 ret.update(
                     {
-                        "comment": "New permissions will be applied for "
-                        "{}: {}".format(acl_names, perms),
+                        "comment": "New permissions will be applied for {}: {}".format(
+                            acl_names, perms
+                        ),
                         "result": None,
                         "changes": changes,
                     }
@@ -621,8 +641,9 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
                     )
                 ret.update(
                     {
-                        "comment": "Applied new permissions for "
-                        "{}".format(", ".join(acl_names)),
+                        "comment": "Applied new permissions for {}".format(
+                            ", ".join(acl_names)
+                        ),
                         "result": True,
                         "changes": changes,
                     }
@@ -630,8 +651,9 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
             except CommandExecutionError as exc:
                 ret.update(
                     {
-                        "comment": "Error updating permissions for {}: "
-                        "{}".format(acl_names, exc.strerror),
+                        "comment": "Error updating permissions for {}: {}".format(
+                            acl_names, exc.strerror
+                        ),
                         "result": False,
                     }
                 )

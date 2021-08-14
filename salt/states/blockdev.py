@@ -41,9 +41,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        (
-            "Cannot load the {} state module: "
-            "disk execution module not found".format(__virtualname__)
+        "Cannot load the {} state module: disk execution module not found".format(
+            __virtualname__
         ),
     )
 
@@ -79,9 +78,9 @@ def tuned(name, **kwargs):
     }
 
     if not __salt__["file.is_blkdev"]:
-        ret["comment"] = (
-            "Changes to {} cannot be applied. Not a block device. "
-        ).format(name)
+        ret["comment"] = "Changes to {} cannot be applied. Not a block device. ".format(
+            name
+        )
     elif __opts__["test"]:
         ret["comment"] = "Changes to {} will be applied ".format(name)
         ret["result"] = None
@@ -106,9 +105,7 @@ def tuned(name, **kwargs):
                     changeset[key] = "Changed from {} to {}".format(old, new)
         if changes:
             if changeset:
-                ret["comment"] = ("Block device {} " "successfully modified ").format(
-                    name
-                )
+                ret["comment"] = "Block device {} successfully modified ".format(name)
                 ret["changes"] = changeset
             else:
                 ret["comment"] = "Block device {} already in correct state".format(name)

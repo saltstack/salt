@@ -8,8 +8,8 @@ import contextlib
 import copy
 import functools
 import importlib
-import importlib.machinery  # pylint: disable=no-name-in-module,import-error
-import importlib.util  # pylint: disable=no-name-in-module,import-error
+import importlib.machinery
+import importlib.util
 import inspect
 import logging
 import os
@@ -78,7 +78,13 @@ def static_loader(
 ):
     funcs = LazyLoader(
         _module_dirs(
-            opts, ext_type, tag, int_type, ext_dirs, ext_type_dirs, base_path,
+            opts,
+            ext_type,
+            tag,
+            int_type,
+            ext_dirs,
+            ext_type_dirs,
+            base_path,
         ),
         opts,
         tag=tag,
@@ -328,8 +334,10 @@ def raw_mod(opts, name, functions, mod="modules"):
     if name not in loader.file_mapping:
         return {}
 
-    loader._load_module(name)  # load a single module (the one passed in)
-    return dict(loader._dict)  # return a copy of *just* the funcs for `name`
+    # load a single module (the one passed in)
+    loader._load_module(name)
+    # return a copy of *just* the funcs for `name`
+    return dict({x: loader[x] for x in loader._dict})
 
 
 def metaproxy(opts, loaded_base_name=None):
@@ -448,7 +456,10 @@ def tops(opts):
         return {}
     whitelist = list(opts["master_tops"].keys())
     ret = LazyLoader(
-        _module_dirs(opts, "tops", "top"), opts, tag="top", whitelist=whitelist,
+        _module_dirs(opts, "tops", "top"),
+        opts,
+        tag="top",
+        whitelist=whitelist,
     )
     return FilterDictWrapper(ret, ".top")
 
@@ -492,7 +503,11 @@ def serializers(opts):
     :param dict opts: The Salt options dictionary
     :returns: LazyLoader instance, with only serializers present in the keyspace
     """
-    return LazyLoader(_module_dirs(opts, "serializers"), opts, tag="serializers",)
+    return LazyLoader(
+        _module_dirs(opts, "serializers"),
+        opts,
+        tag="serializers",
+    )
 
 
 def eauth_tokens(opts):
@@ -501,7 +516,11 @@ def eauth_tokens(opts):
     :param dict opts: The Salt options dictionary
     :returns: LazyLoader instance, with only token backends present in the keyspace
     """
-    return LazyLoader(_module_dirs(opts, "tokens"), opts, tag="tokens",)
+    return LazyLoader(
+        _module_dirs(opts, "tokens"),
+        opts,
+        tag="tokens",
+    )
 
 
 def auth(opts, whitelist=None):
@@ -663,12 +682,7 @@ def ssh_wrapper(opts, functions=None, context=None):
         ),
         opts,
         tag="wrapper",
-        pack={
-            "__salt__": functions,
-            #        "__grains__": opts.get("grains", {}),
-            #        "__pillar__": opts.get("pillar", {}),
-            "__context__": context,
-        },
+        pack={"__salt__": functions, "__context__": context},
     )
 
 
@@ -693,7 +707,12 @@ def render(opts, functions, states=None, proxy=None, context=None):
     pack["__proxy__"] = proxy
 
     ret = LazyLoader(
-        _module_dirs(opts, "renderers", "render", ext_type_dirs="render_dirs",),
+        _module_dirs(
+            opts,
+            "renderers",
+            "render",
+            ext_type_dirs="render_dirs",
+        ),
         opts,
         tag="render",
         pack=pack,
@@ -727,7 +746,12 @@ def grain_funcs(opts, proxy=None, context=None):
     _utils = utils(opts, proxy=proxy)
     pack = {"__utils__": utils(opts, proxy=proxy), "__context__": context}
     ret = LazyLoader(
-        _module_dirs(opts, "grains", "grain", ext_type_dirs="grains_dirs",),
+        _module_dirs(
+            opts,
+            "grains",
+            "grain",
+            ext_type_dirs="grains_dirs",
+        ),
         opts,
         tag="grains",
         extra_module_dirs=_utils.module_dirs,
@@ -1107,7 +1131,11 @@ def netapi(opts):
     """
     Return the network api functions
     """
-    return LazyLoader(_module_dirs(opts, "netapi"), opts, tag="netapi",)
+    return LazyLoader(
+        _module_dirs(opts, "netapi"),
+        opts,
+        tag="netapi",
+    )
 
 
 def executors(opts, functions=None, context=None, proxy=None):

@@ -666,7 +666,7 @@ example is a state tree of two sls files, one simple and one complicated.
 
         return {
             "set_roles_grains": {
-                "grains.present": [{"name": "roles"}, {"value": list(list_of_roles)},],
+                "grains.present": [{"name": "roles"}, {"value": list(list_of_roles)}],
             },
         }
 

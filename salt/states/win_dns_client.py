@@ -89,9 +89,9 @@ def dns_exists(name, servers=None, interface="Local Area Connection", replace=Fa
                     ret["changes"]["Servers Removed"].append(server)
                 else:
                     if not __salt__["win_dns_client.rm_dns"](server, interface):
-                        ret["comment"] = (
-                            "Failed to remove {} from DNS server list"
-                        ).format(server)
+                        ret[
+                            "comment"
+                        ] = "Failed to remove {} from DNS server list".format(server)
                         ret["result"] = False
                         return ret
                     else:

@@ -44,7 +44,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             "pid": 1,
             "retcode": 0,
             "stderr": "",
-            "stdout": '[{"HotFixID": "KB123456"}, ' '{"HotFixID": "KB123457"}]',
+            "stdout": '[{"HotFixID": "KB123456"}, {"HotFixID": "KB123457"}]',
         }
         mock_all = MagicMock(return_value=ret)
         with patch.dict(win_wusa.__salt__, {"cmd.run_all": mock_all}):
@@ -112,9 +112,8 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             ["wusa.exe", path, "/quiet", "/norestart"], ignore_retcode=True
         )
         self.assertEqual(
-            "{} correctly installed but server reboot is needed to complete installation. Additional info follows:\n\n{}".format(
-                name, retcode
-            ),
+            "{} correctly installed but server reboot is needed to complete"
+            " installation. Additional info follows:\n\n{}".format(name, retcode),
             excinfo.exception.strerror,
         )
 

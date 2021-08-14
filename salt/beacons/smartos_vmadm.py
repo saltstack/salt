@@ -68,7 +68,8 @@ def beacon(config):
 
     # NOTE: lookup current images
     current_vms = __salt__["vmadm.list"](
-        keyed=True, order="uuid,state,alias,hostname,dns_domain",
+        keyed=True,
+        order="uuid,state,alias,hostname,dns_domain",
     )
 
     # NOTE: apply configuration
