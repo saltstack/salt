@@ -944,7 +944,13 @@ def test__connect_mysqldb():
     """
     Test the _connect function in the MySQL module
     """
+    mysqldb_connect_mock = MagicMock(autospec=True, return_value=MockMySQLConnect())
     with patch.dict(mysql.__salt__, {"config.option": MagicMock()}):
-        with patch("MySQLdb.connect", return_value=MockMySQLConnect()):
+        with patch("MySQLdb.connect", mysqldb_connect_mock):
             ret = mysql._connect()
             assert "mysql.error" not in mysql.__context__
+            # If 'use_unicode' is activated here, it would retrieve utf8 strings
+            # as unicode() objects in salt and we do not want that. So it needs
+            # to be False
+            _, connargs = mysqldb_connect_mock.call_args
+            assert connargs["use_unicode"] is False
