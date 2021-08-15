@@ -1,9 +1,6 @@
 """
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-
-    tests.integration.shell.cp
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests.integration.shell.cp
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
 
@@ -13,7 +10,6 @@ import pathlib
 
 import pytest
 import salt.utils.files
-from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
@@ -35,7 +31,7 @@ def dest_testfile():
             dst.unlink()
 
 
-@slowTest
+@pytest.mark.slow_test
 @pytest.mark.windows_whitelisted
 def test_cp_testfile(salt_minion, salt_cp_cli, source_testfile, dest_testfile):
     """

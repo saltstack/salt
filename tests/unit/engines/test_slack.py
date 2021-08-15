@@ -1,16 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 unit tests for the slack engine
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.config
-
-# Import Salt Libs
 import salt.engines.slack as slack
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -44,9 +37,9 @@ class EngineSlackTestCase(TestCase, LoaderModuleMockMixin):
         loaded_groups = {
             "default": {
                 "targets": {},
-                "commands": set(["cmd.run", "test.ping"]),
+                "commands": {"cmd.run", "test.ping"},
                 "default_target": {"tgt_type": "glob", "target": "*"},
-                "users": set(["gareth"]),
+                "users": {"gareth"},
                 "aliases": {
                     "whoami": {"cmd": "cmd.run whoami"},
                     "list_pillar": {"cmd": "pillar.items"},

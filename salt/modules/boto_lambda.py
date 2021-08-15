@@ -87,7 +87,6 @@ import salt.utils.files
 import salt.utils.json
 import salt.utils.versions
 from salt.exceptions import SaltInvocationError
-from salt.ext.six.moves import range  # pylint: disable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -323,7 +322,8 @@ def create_function(
                     == "InvalidParameterValueException"
                 ):
                     log.info(
-                        "Function not created but IAM role may not have propagated, will retry"
+                        "Function not created but IAM role may not have propagated,"
+                        " will retry"
                     )
                     # exponential backoff
                     time.sleep(
@@ -493,7 +493,8 @@ def update_function_config(
                     == "InvalidParameterValueException"
                 ):
                     log.info(
-                        "Function not updated but IAM role may not have propagated, will retry"
+                        "Function not updated but IAM role may not have propagated,"
+                        " will retry"
                     )
                     # exponential backoff
                     time.sleep(
@@ -638,14 +639,12 @@ def add_permission(
         kwargs = {}
         for key in ("SourceArn", "SourceAccount", "Qualifier"):
             if locals()[key] is not None:
-                kwargs[key] = str(
-                    locals()[key]
-                )  # future lint: disable=blacklisted-function
+                kwargs[key] = str(locals()[key])
         conn.add_permission(
             FunctionName=FunctionName,
             StatementId=StatementId,
             Action=Action,
-            Principal=str(Principal),  # future lint: disable=blacklisted-function
+            Principal=str(Principal),
             **kwargs
         )
         return {"updated": True}

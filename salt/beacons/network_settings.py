@@ -1,20 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to monitor network adapter setting changes on Linux
 
 .. versionadded:: 2016.3.0
 
 """
-from __future__ import absolute_import, unicode_literals
 
 import ast
 import logging
 import re
 
 import salt.loader
-from salt.ext.six.moves import map
 
-# Import third party libs
 try:
     from pyroute2 import IPDB
 
@@ -79,7 +75,7 @@ def validate(config):
     Validate the beacon configuration
     """
     if not isinstance(config, list):
-        return False, ("Configuration for network_settings beacon must be a list.")
+        return False, "Configuration for network_settings beacon must be a list."
     else:
         _config = {}
         list(map(_config.update, config))
@@ -89,23 +85,18 @@ def validate(config):
             # Old syntax
             return (
                 False,
-                (
-                    "interfaces section for network_settings beacon"
-                    " must be a dictionary."
-                ),
+                "interfaces section for network_settings beacon must be a dictionary.",
             )
 
         for item in interfaces:
             if not isinstance(_config["interfaces"][item], dict):
                 return (
                     False,
-                    (
-                        "Interface attributes for network_settings beacon"
-                        " must be a dictionary."
-                    ),
+                    "Interface attributes for network_settings beacon"
+                    " must be a dictionary.",
                 )
             if not all(j in ATTRS for j in _config["interfaces"][item]):
-                return False, ("Invalid attributes in beacon configuration.")
+                return False, "Invalid attributes in beacon configuration."
     return True, "Valid beacon configuration"
 
 

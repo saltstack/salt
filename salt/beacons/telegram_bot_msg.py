@@ -1,19 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to emit Telegram messages
 
 Requires the python-telegram-bot library
 
 """
-
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 
-from salt.ext.six.moves import map
-
-# Import 3rd Party libs
 try:
     import telegram
 
@@ -40,7 +32,7 @@ def validate(config):
     Validate the beacon configuration
     """
     if not isinstance(config, list):
-        return False, ("Configuration for telegram_bot_msg beacon must be a list.")
+        return False, "Configuration for telegram_bot_msg beacon must be a list."
 
     _config = {}
     list(map(_config.update, config))
@@ -50,16 +42,14 @@ def validate(config):
     ):
         return (
             False,
-            ("Not all required configuration for telegram_bot_msg are set."),
+            "Not all required configuration for telegram_bot_msg are set.",
         )
 
     if not isinstance(_config.get("accept_from"), list):
         return (
             False,
-            (
-                "Configuration for telegram_bot_msg, "
-                "accept_from must be a list of usernames."
-            ),
+            "Configuration for telegram_bot_msg, "
+            "accept_from must be a list of usernames.",
         )
 
     return True, "Valid beacon configuration."

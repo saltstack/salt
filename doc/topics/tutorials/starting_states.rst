@@ -171,7 +171,7 @@ this:
 So the httpd.conf is just a file in the apache directory, and is referenced
 directly.
 
-.. include:: ../../_incl/_incl/sls_filename_cant_contain_period.rst
+.. include:: ../../_incl/sls_filename_cant_contain_period.rst
 
 But when using more than one single SLS file, more components can be added to
 the toolkit. Consider this SSH example:

@@ -2,11 +2,12 @@ import logging
 import os
 import re
 
+import pytest
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.win_reg as reg
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, random_string
+from tests.support.helpers import random_string
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -71,17 +72,15 @@ class WinLgpoTest(ModuleCase):
         self.assertEqual(
             val["vdata"],
             expected_value_data,
-            "The registry value data {} does not match the expected value {} for policy {}".format(
-                val["vdata"], expected_value_data, policy_name
-            ),
+            "The registry value data {} does not match the expected value {} for"
+            " policy {}".format(val["vdata"], expected_value_data, policy_name),
         )
         if expected_value_type:
             self.assertEqual(
                 val["vtype"],
                 expected_value_type,
-                "The registry value type {} does not match the expected type {} for policy {}".format(
-                    val["vtype"], expected_value_type, policy_name
-                ),
+                "The registry value type {} does not match the expected type {} for"
+                " policy {}".format(val["vtype"], expected_value_type, policy_name),
             )
 
     def _testSeceditPolicy(
@@ -126,9 +125,8 @@ class WinLgpoTest(ModuleCase):
             )
             self.assertIsNotNone(
                 match,
-                'Failed validating policy "{}" configuration, regex "{}" not found in secedit output'.format(
-                    policy_name, expected_regex
-                ),
+                'Failed validating policy "{}" configuration, regex "{}" not found in'
+                " secedit output".format(policy_name, expected_regex),
             )
 
     def _testAdmxPolicy(
@@ -187,9 +185,11 @@ class WinLgpoTest(ModuleCase):
                 match = re.search(expected_regex, lgpo_output, re.IGNORECASE)
                 self.assertIsNotNone(
                     match,
-                    msg='Failed validating policy "{}" configuration, regex '
-                    '"{}" not found in lgpo output:\n{}'
-                    "".format(policy_name, expected_regex, lgpo_output),
+                    msg=(
+                        'Failed validating policy "{}" configuration, regex '
+                        '"{}" not found in lgpo output:\n{}'
+                        "".format(policy_name, expected_regex, lgpo_output)
+                    ),
                 )
             # validate the lgpo also sees the right setting
             this_policy_info = self.run_function(
@@ -261,12 +261,14 @@ class WinLgpoTest(ModuleCase):
                                                 break
                     self.assertTrue(
                         item_correct,
-                        msg='Item "{}" does not have the expected value of "{}"{}'.format(
-                            this_item,
-                            this_val,
-                            ' value found: "{}"'.format(actual_val)
-                            if actual_val
-                            else "",
+                        msg=(
+                            'Item "{}" does not have the expected value of "{}"{}'.format(
+                                this_item,
+                                this_val,
+                                ' value found: "{}"'.format(actual_val)
+                                if actual_val
+                                else "",
+                            )
                         ),
                     )
             else:
@@ -312,7 +314,7 @@ class WinLgpoTest(ModuleCase):
             )
             log.debug("ret from archive.unzip == %s", ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_user_policy_point_and_print_restrictions(self):
         """
         Test setting/unsetting/changing the PointAndPrint_Restrictions user policy
@@ -322,12 +324,18 @@ class WinLgpoTest(ModuleCase):
             r"Control Panel\Printers\Point and Print Restrictions",
             "Disabled",
             [
-                r"User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*Restricted[\s]*DWORD:0",
-                r"User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*TrustedServers[\s]*DELETE",
-                r"User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*ServerList[\s]*DELETE",
-                r"User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*InForest[\s]*DELETE",
-                r"User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*NoWarningNoElevationOnInstall[\s]*DELETE",
-                r"User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*UpdatePromptSettings[\s]*DELETE",
+                r"User[\s]*Software\\Policies\\Microsoft\\Windows"
+                r" NT\\Printers\\PointAndPrint[\s]*Restricted[\s]*DWORD:0",
+                r"User[\s]*Software\\Policies\\Microsoft\\Windows"
+                r" NT\\Printers\\PointAndPrint[\s]*TrustedServers[\s]*DELETE",
+                r"User[\s]*Software\\Policies\\Microsoft\\Windows"
+                r" NT\\Printers\\PointAndPrint[\s]*ServerList[\s]*DELETE",
+                r"User[\s]*Software\\Policies\\Microsoft\\Windows"
+                r" NT\\Printers\\PointAndPrint[\s]*InForest[\s]*DELETE",
+                r"User[\s]*Software\\Policies\\Microsoft\\Windows"
+                r" NT\\Printers\\PointAndPrint[\s]*NoWarningNoElevationOnInstall[\s]*DELETE",
+                r"User[\s]*Software\\Policies\\Microsoft\\Windows"
+                r" NT\\Printers\\PointAndPrint[\s]*UpdatePromptSettings[\s]*DELETE",
             ],
             policy_class="User",
         )
@@ -336,18 +344,28 @@ class WinLgpoTest(ModuleCase):
             r"Point and Print Restrictions",
             {
                 "Users can only point and print to these servers": True,
-                "Enter fully qualified server names separated by semicolons": "fakeserver1;fakeserver2",
+                "Enter fully qualified server names separated by semicolons": (
+                    "fakeserver1;fakeserver2"
+                ),
                 "Users can only point and print to machines in their forest": True,
-                "When installing drivers for a new connection": "Show warning and elevation prompt",
+                "When installing drivers for a new connection": (
+                    "Show warning and elevation prompt"
+                ),
                 "When updating drivers for an existing connection": "Show warning only",
             },
             [
-                r"User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*Restricted[\s]*DWORD:1",
-                r"User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*TrustedServers[\s]*DWORD:1",
-                r"User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*ServerList[\s]*SZ:fakeserver1;fakeserver2",
-                r"User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*InForest[\s]*DWORD:1",
-                r"User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*NoWarningNoElevationOnInstall[\s]*DWORD:0",
-                r"User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*UpdatePromptSettings[\s]*DWORD:1",
+                r"User[\s]*Software\\Policies\\Microsoft\\Windows"
+                r" NT\\Printers\\PointAndPrint[\s]*Restricted[\s]*DWORD:1",
+                r"User[\s]*Software\\Policies\\Microsoft\\Windows"
+                r" NT\\Printers\\PointAndPrint[\s]*TrustedServers[\s]*DWORD:1",
+                r"User[\s]*Software\\Policies\\Microsoft\\Windows"
+                r" NT\\Printers\\PointAndPrint[\s]*ServerList[\s]*SZ:fakeserver1;fakeserver2",
+                r"User[\s]*Software\\Policies\\Microsoft\\Windows"
+                r" NT\\Printers\\PointAndPrint[\s]*InForest[\s]*DWORD:1",
+                r"User[\s]*Software\\Policies\\Microsoft\\Windows"
+                r" NT\\Printers\\PointAndPrint[\s]*NoWarningNoElevationOnInstall[\s]*DWORD:0",
+                r"User[\s]*Software\\Policies\\Microsoft\\Windows"
+                r" NT\\Printers\\PointAndPrint[\s]*UpdatePromptSettings[\s]*DWORD:1",
             ],
             policy_class="User",
         )
@@ -356,12 +374,14 @@ class WinLgpoTest(ModuleCase):
             r"Control Panel\Printers\Point and Print Restrictions",
             "Not Configured",
             [
-                r"; Source file:  c:\\windows\\system32\\grouppolicy\\user\\registry.pol[\s]*; PARSING COMPLETED."
+                r"; Source file: "
+                r" c:\\windows\\system32\\grouppolicy\\user\\registry.pol[\s]*; PARSING"
+                r" COMPLETED."
             ],
             policy_class="User",
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_NTP_Client(self):
         """
         Test setting/unsetting/changing NTP Client policies
@@ -407,11 +427,13 @@ class WinLgpoTest(ModuleCase):
             r"System\Windows Time Service\Time Providers\Configure Windows NTP Client",
             "Not Configured",
             [
-                r"; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED."
+                r"; Source file: "
+                r" c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*;"
+                r" PARSING COMPLETED."
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_RA_Unsolicit(self):
         """
         Test setting/unsetting/changing RA_Unsolicit policy
@@ -423,9 +445,12 @@ class WinLgpoTest(ModuleCase):
             "RA_Unsolicit",
             "Disabled",
             [
-                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicited[\s]*DWORD:0",
-                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicitedFullControl[\s]*DELETE",
-                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*\*[\s]*DELETEALLVALUES",
+                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal"
+                r" Services[\s]*fAllowUnsolicited[\s]*DWORD:0",
+                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal"
+                r" Services[\s]*fAllowUnsolicitedFullControl[\s]*DELETE",
+                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal"
+                r" Services\\RAUnsolicit[\s]*\*[\s]*DELETEALLVALUES",
             ],
         )
         # configure RA_Unsolicit
@@ -433,14 +458,20 @@ class WinLgpoTest(ModuleCase):
         self._testAdmxPolicy(
             "RA_Unsolicit",
             {
-                "Permit remote control of this computer": "Allow helpers to remotely control the computer",
+                "Permit remote control of this computer": (
+                    "Allow helpers to remotely control the computer"
+                ),
                 "Helpers": ["administrators", "user1"],
             },
             [
-                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*user1[\s]*SZ:user1[\s]*",
-                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*administrators[\s]*SZ:administrators[\s]*",
-                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicited[\s]*DWORD:1",
-                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicitedFullControl[\s]*DWORD:1",
+                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal"
+                r" Services\\RAUnsolicit[\s]*user1[\s]*SZ:user1[\s]*",
+                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal"
+                r" Services\\RAUnsolicit[\s]*administrators[\s]*SZ:administrators[\s]*",
+                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal"
+                r" Services[\s]*fAllowUnsolicited[\s]*DWORD:1",
+                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal"
+                r" Services[\s]*fAllowUnsolicitedFullControl[\s]*DWORD:1",
             ],
         )
         # Not Configure RA_Unsolicit
@@ -449,11 +480,13 @@ class WinLgpoTest(ModuleCase):
             "RA_Unsolicit",
             "Not Configured",
             [
-                r"; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED."
+                r"; Source file: "
+                r" c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*;"
+                r" PARSING COMPLETED."
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_Pol_HardenedPaths(self):
         # Disable Pol_HardenedPaths
         log.debug("Attempting to disable Pol_HardenedPaths")
@@ -470,13 +503,17 @@ class WinLgpoTest(ModuleCase):
             "Pol_HardenedPaths",
             {
                 "Hardened UNC Paths": {
-                    r"\\*\NETLOGON": "RequireMutualAuthentication=1, RequireIntegrity=1",
+                    r"\\*\NETLOGON": (
+                        "RequireMutualAuthentication=1, RequireIntegrity=1"
+                    ),
                     r"\\*\SYSVOL": "RequireMutualAuthentication=1, RequireIntegrity=1",
                 }
             },
             [
-                r"Computer[\s]*Software\\policies\\Microsoft\\Windows\\NetworkProvider\\HardenedPaths[\s]*\\\\\*\\NETLOGON[\s]*SZ:RequireMutualAuthentication=1, RequireIntegrity=1[\s]*",
-                r"Computer[\s]*Software\\policies\\Microsoft\\Windows\\NetworkProvider\\HardenedPaths[\s]*\\\\\*\\SYSVOL[\s]*SZ:RequireMutualAuthentication=1, RequireIntegrity=1[\s]*",
+                r"Computer[\s]*Software\\policies\\Microsoft\\Windows\\NetworkProvider\\HardenedPaths[\s]*\\\\\*\\NETLOGON[\s]*SZ:RequireMutualAuthentication=1,"
+                r" RequireIntegrity=1[\s]*",
+                r"Computer[\s]*Software\\policies\\Microsoft\\Windows\\NetworkProvider\\HardenedPaths[\s]*\\\\\*\\SYSVOL[\s]*SZ:RequireMutualAuthentication=1,"
+                r" RequireIntegrity=1[\s]*",
             ],
         )
         # Not Configure Pol_HardenedPaths
@@ -485,11 +522,13 @@ class WinLgpoTest(ModuleCase):
             "Pol_HardenedPaths",
             "Not Configured",
             [
-                r"; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED."
+                r"; Source file: "
+                r" c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*;"
+                r" PARSING COMPLETED."
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_WindowsUpdate(self):
         """
         Test setting/unsetting/changing WindowsUpdate policy
@@ -514,7 +553,9 @@ class WinLgpoTest(ModuleCase):
             if "Configure automatic updating" in item["element_aliases"]:
                 the_policy.update(
                     {
-                        "Configure automatic updating": "4 - Auto download and schedule the install",
+                        "Configure automatic updating": (
+                            "4 - Auto download and schedule the install"
+                        ),
                     }
                 )
                 the_policy_check_enabled.append(
@@ -620,39 +661,48 @@ class WinLgpoTest(ModuleCase):
             r"Windows Components\Windows Update\Configure Automatic Updates",
             "Not Configured",
             [
-                r"; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED."
+                r"; Source file: "
+                r" c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*;"
+                r" PARSING COMPLETED."
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_ClipboardRedirection(self):
         """
         Test setting/unsetting/changing ClipboardRedirection policy
         """
         # Enable/Disable/Not Configured "Do not allow Clipboard redirection"
         self._testAdmxPolicy(
-            r"Windows Components\Remote Desktop Services\Remote Desktop Session Host\Device and Resource Redirection\Do not allow Clipboard redirection",
+            r"Windows Components\Remote Desktop Services\Remote Desktop Session"
+            r" Host\Device and Resource Redirection\Do not allow Clipboard redirection",
             "Enabled",
             [
-                r"Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fDisableClip[\s]*DWORD:1"
+                r"Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal"
+                r" Services[\s]*fDisableClip[\s]*DWORD:1"
             ],
         )
         self._testAdmxPolicy(
-            r"Windows Components\Remote Desktop Services\Remote Desktop Session Host\Device and Resource Redirection\Do not allow Clipboard redirection",
+            r"Windows Components\Remote Desktop Services\Remote Desktop Session"
+            r" Host\Device and Resource Redirection\Do not allow Clipboard redirection",
             "Disabled",
             [
-                r"Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fDisableClip[\s]*DWORD:0"
+                r"Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal"
+                r" Services[\s]*fDisableClip[\s]*DWORD:0"
             ],
         )
         self._testAdmxPolicy(
-            r"Windows Components\Remote Desktop Services\Remote Desktop Session Host\Device and Resource Redirection\Do not allow Clipboard redirection",
+            r"Windows Components\Remote Desktop Services\Remote Desktop Session"
+            r" Host\Device and Resource Redirection\Do not allow Clipboard redirection",
             "Not Configured",
             [
-                r"; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED."
+                r"; Source file: "
+                r" c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*;"
+                r" PARSING COMPLETED."
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_LockoutDuration(self):
         """
         Test setting LockoutDuration
@@ -673,7 +723,7 @@ class WinLgpoTest(ModuleCase):
         # set LockoutDuration zero value, the secedit zero value is -1
         self._testSeceditPolicy("LockoutDuration", 0, [r"^LockoutDuration = -1"])
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_GuestAccountStatus(self):
         """
         Test setting/unsetting/changing GuestAccountStatus
@@ -687,7 +737,7 @@ class WinLgpoTest(ModuleCase):
             "GuestAccountStatus", "Enabled", [r"^EnableGuestAccount = 1"]
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_PasswordComplexity(self):
         """
         Test setting/unsetting/changing PasswordComplexity
@@ -703,7 +753,7 @@ class WinLgpoTest(ModuleCase):
             "PasswordComplexity", "Enabled", [r"^PasswordComplexity = 1"]
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_PasswordLen(self):
         """
         Test setting/unsetting/changing PasswordLength
@@ -715,7 +765,7 @@ class WinLgpoTest(ModuleCase):
         # set MinimumPasswordLength = 0
         self._testSeceditPolicy("MinPasswordLen", 0, [r"^MinimumPasswordLength = 0"])
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_SeNetworkLogonRight(self):
         """
         Test setting/unsetting/changing PasswordLength
@@ -732,21 +782,24 @@ class WinLgpoTest(ModuleCase):
             "SeNetworkLogonRight",
             ["Everyone", "Administrators", "Users", "Backup Operators"],
             [
-                r"^SeNetworkLogonRight = \*S-1-1-0,\*S-1-5-32-544,\*S-1-5-32-545,\*S-1-5-32-551"
+                r"^SeNetworkLogonRight ="
+                r" \*S-1-1-0,\*S-1-5-32-544,\*S-1-5-32-545,\*S-1-5-32-551"
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_multipleAdmxPolicies(self):
         """
         Tests setting several ADMX policies in succession and validating the configuration w/lgop
         """
         # set one policy
         self._testAdmxPolicy(
-            r"Windows Components\Remote Desktop Services\Remote Desktop Session Host\Device and Resource Redirection\Do not allow Clipboard redirection",
+            r"Windows Components\Remote Desktop Services\Remote Desktop Session"
+            r" Host\Device and Resource Redirection\Do not allow Clipboard redirection",
             "Disabled",
             [
-                r"Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fDisableClip[\s]*DWORD:0"
+                r"Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal"
+                r" Services[\s]*fDisableClip[\s]*DWORD:0"
             ],
         )
 
@@ -754,15 +807,22 @@ class WinLgpoTest(ModuleCase):
         self._testAdmxPolicy(
             "RA_Unsolicit",
             {
-                "Permit remote control of this computer": "Allow helpers to remotely control the computer",
+                "Permit remote control of this computer": (
+                    "Allow helpers to remotely control the computer"
+                ),
                 "Helpers": ["administrators", "user1"],
             },
             [
-                r"Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fDisableClip[\s]*DWORD:0",
-                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*user1[\s]*SZ:user1[\s]*",
-                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*administrators[\s]*SZ:administrators[\s]*",
-                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicited[\s]*DWORD:1",
-                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicitedFullControl[\s]*DWORD:1",
+                r"Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal"
+                r" Services[\s]*fDisableClip[\s]*DWORD:0",
+                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal"
+                r" Services\\RAUnsolicit[\s]*user1[\s]*SZ:user1[\s]*",
+                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal"
+                r" Services\\RAUnsolicit[\s]*administrators[\s]*SZ:administrators[\s]*",
+                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal"
+                r" Services[\s]*fAllowUnsolicited[\s]*DWORD:1",
+                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal"
+                r" Services[\s]*fAllowUnsolicitedFullControl[\s]*DWORD:1",
             ],
         )
         # Configure Automatic Updates and validate everything is still okay
@@ -770,11 +830,16 @@ class WinLgpoTest(ModuleCase):
             r"Windows Components\Windows Update\Configure Automatic Updates",
             "Disabled",
             [
-                r"Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fDisableClip[\s]*DWORD:0",
-                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*user1[\s]*SZ:user1[\s]*",
-                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services\\RAUnsolicit[\s]*administrators[\s]*SZ:administrators[\s]*",
-                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicited[\s]*DWORD:1",
-                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal Services[\s]*fAllowUnsolicitedFullControl[\s]*DWORD:1",
+                r"Computer[\s]*Software\\Policies\\Microsoft\\Windows NT\\Terminal"
+                r" Services[\s]*fDisableClip[\s]*DWORD:0",
+                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal"
+                r" Services\\RAUnsolicit[\s]*user1[\s]*SZ:user1[\s]*",
+                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal"
+                r" Services\\RAUnsolicit[\s]*administrators[\s]*SZ:administrators[\s]*",
+                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal"
+                r" Services[\s]*fAllowUnsolicited[\s]*DWORD:1",
+                r"Computer[\s]*Software\\policies\\Microsoft\\Windows NT\\Terminal"
+                r" Services[\s]*fAllowUnsolicitedFullControl[\s]*DWORD:1",
                 r"Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*NoAutoUpdate[\s]*DWORD:1",
                 r"Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AUOptions[\s]*DELETE",
                 r"Computer[\s]*Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU[\s]*AutomaticMaintenanceEnabled[\s]*DELETE",
@@ -784,7 +849,7 @@ class WinLgpoTest(ModuleCase):
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_DisableDomainCreds(self):
         """
         Tests Enable/Disable of DisableDomainCreds policy
@@ -798,7 +863,10 @@ class WinLgpoTest(ModuleCase):
             expected_value_data=1,
         )
         self._testRegistryPolicy(
-            policy_name="Network access: Do not allow storage of passwords and credentials for network authentication",
+            policy_name=(
+                "Network access: Do not allow storage of passwords and credentials for"
+                " network authentication"
+            ),
             policy_config="Disabled",
             registry_value_hive="HKEY_LOCAL_MACHINE",
             registry_value_path="SYSTEM\\CurrentControlSet\\Control\\Lsa",
@@ -806,7 +874,7 @@ class WinLgpoTest(ModuleCase):
             expected_value_data=0,
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_ForceGuest(self):
         """
         Tests changing ForceGuest policy
@@ -828,7 +896,7 @@ class WinLgpoTest(ModuleCase):
             expected_value_data=0,
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_DisableUXWUAccess(self):
         """
         Tests changing DisableUXWUAccess
@@ -838,9 +906,8 @@ class WinLgpoTest(ModuleCase):
         valid_osreleases = ["2016Server"]
         if self.osrelease not in valid_osreleases:
             self.skipTest(
-                "DisableUXWUAccess policy is only applicable if the osrelease grain is {}".format(
-                    " or ".join(valid_osreleases)
-                )
+                "DisableUXWUAccess policy is only applicable if the osrelease grain"
+                " is {}".format(" or ".join(valid_osreleases))
             )
         else:
             self._testAdmxPolicy(
@@ -858,14 +925,17 @@ class WinLgpoTest(ModuleCase):
                 ],
             )
             self._testAdmxPolicy(
-                r"Windows Components\Windows Update\Remove access to use all Windows Update features",
+                r"Windows Components\Windows Update\Remove access to use all Windows"
+                r" Update features",
                 "Not Configured",
                 [
-                    r"; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED."
+                    r"; Source file: "
+                    r" c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*;"
+                    r" PARSING COMPLETED."
                 ],
             )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_Access_data_sources_across_domains(self):
         """
         Tests that a policy that has multiple names
@@ -874,28 +944,34 @@ class WinLgpoTest(ModuleCase):
             r"Access data sources across domains", "Enabled", [], assert_true=False
         )
         self._testAdmxPolicy(
-            r"Windows Components\Internet Explorer\Internet Control Panel\Security Page\Internet Zone\Access data sources across domains",
+            r"Windows Components\Internet Explorer\Internet Control Panel\Security"
+            r" Page\Internet Zone\Access data sources across domains",
             {"Access data sources across domains": "Prompt"},
             [
-                r"Computer[\s]*Software\\Policies\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\Zones\\3[\s]*1406[\s]*DWORD:1"
+                r"Computer[\s]*Software\\Policies\\Microsoft\\Windows\\CurrentVersion\\Internet"
+                r" Settings\\Zones\\3[\s]*1406[\s]*DWORD:1"
             ],
         )
         self._testAdmxPolicy(
-            r"Windows Components\Internet Explorer\Internet Control Panel\Security Page\Internet Zone\Access data sources across domains",
+            r"Windows Components\Internet Explorer\Internet Control Panel\Security"
+            r" Page\Internet Zone\Access data sources across domains",
             {"Access data sources across domains": "Enable"},
             [
-                r"Computer[\s]*Software\\Policies\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\Zones\\3[\s]*1406[\s]*DWORD:0"
+                r"Computer[\s]*Software\\Policies\\Microsoft\\Windows\\CurrentVersion\\Internet"
+                r" Settings\\Zones\\3[\s]*1406[\s]*DWORD:0"
             ],
         )
         self._testAdmxPolicy(
-            r"Windows Components\Internet Explorer\Internet Control Panel\Security Page\Internet Zone\Access data sources across domains",
+            r"Windows Components\Internet Explorer\Internet Control Panel\Security"
+            r" Page\Internet Zone\Access data sources across domains",
             "Disabled",
             [
-                r"Computer[\s]*Software\\Policies\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\Zones\\3[\s]*1406[\s]*DELETE"
+                r"Computer[\s]*Software\\Policies\\Microsoft\\Windows\\CurrentVersion\\Internet"
+                r" Settings\\Zones\\3[\s]*1406[\s]*DELETE"
             ],
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_ActiveHours(self):
         """
         Test configuring the ActiveHours policy, #47784
@@ -944,14 +1020,17 @@ class WinLgpoTest(ModuleCase):
                 ],
             )
             self._testAdmxPolicy(
-                r"Windows Components\Windows Update\Turn off auto-restart for updates during active hours",
+                r"Windows Components\Windows Update\Turn off auto-restart for updates"
+                r" during active hours",
                 "Not Configured",
                 [
-                    r"; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED."
+                    r"; Source file: "
+                    r" c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*;"
+                    r" PARSING COMPLETED."
                 ],
             )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_AllowTelemetry(self):
         """
         Tests that a the AllowTelemetry policy is applied correctly and that it
@@ -1029,7 +1108,7 @@ class WinLgpoTest(ModuleCase):
                     }
                     self.assertDictEqual(result[name]["changes"], expected)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_computer_policy_ScRemoveOption(self):
         """
         Tests changing ScRemoveOption policy
@@ -1063,7 +1142,7 @@ class WinLgpoTest(ModuleCase):
             False,
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_sxs_servicing_policy(self):
         """
         Test setting/unsetting/changing sxs-servicing policy
@@ -1115,7 +1194,9 @@ class WinLgpoTest(ModuleCase):
             "Specify settings for optional component installation and component repair",
             "Not Configured",
             [
-                r"; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED."
+                r"; Source file: "
+                r" c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*;"
+                r" PARSING COMPLETED."
             ],
         )
 

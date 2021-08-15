@@ -1167,7 +1167,7 @@ before execution. The value can be formatted as ``<hash_algorithm>=<hash_sum>``,
 or it can be a URI to a file containing the hash sum.
 
 For a list of supported algorithms, see the `hashlib documentation
-<https://docs.python.org/2/library/hashlib.html>`_.
+<https://docs.python.org/3/library/hashlib.html>`_.
 
 Here's an example using ``source_hash``:
 

@@ -1,19 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to monitor statistics from ethernet adapters
 
 .. versionadded:: 2015.5.0
 """
-
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 
-from salt.ext.six.moves import map
-
-# Import third party libs
-# pylint: disable=import-error
 try:
     import salt.utils.psutil_compat as psutil
 
@@ -21,8 +12,6 @@ try:
 except ImportError:
     HAS_PSUTIL = False
 
-
-# pylint: enable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -77,7 +66,7 @@ def validate(config):
 
     # Configuration for load beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for network_info beacon must be a list.")
+        return False, "Configuration for network_info beacon must be a list."
     else:
 
         _config = {}
@@ -87,16 +76,14 @@ def validate(config):
             if not isinstance(_config["interfaces"][item], dict):
                 return (
                     False,
-                    (
-                        "Configuration for network_info beacon must "
-                        "be a list of dictionaries."
-                    ),
+                    "Configuration for network_info beacon must "
+                    "be a list of dictionaries.",
                 )
             else:
                 if not any(j in VALID_ITEMS for j in _config["interfaces"][item]):
                     return (
                         False,
-                        ("Invalid configuration item in Beacon configuration."),
+                        "Invalid configuration item in Beacon configuration.",
                     )
     return True, "Valid beacon configuration"
 

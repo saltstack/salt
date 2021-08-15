@@ -7,6 +7,7 @@ import shutil
 from datetime import datetime
 
 import msgpack
+import pytest
 import salt.modules.file as filemod
 import salt.serializers.json as jsonserializer
 import salt.serializers.msgpack as msgpackserializer
@@ -20,8 +21,7 @@ import salt.utils.platform
 import salt.utils.win_functions
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import range
-from tests.support.helpers import dedent, destructiveTest, slowTest, with_tempfile
+from tests.support.helpers import dedent, with_tempfile
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -822,7 +822,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             os.path, "isfile", mock_f
         ):
 
-            expected = "Target of hard link {} is already pointing " "to {}".format(
+            expected = "Target of hard link {} is already pointing to {}".format(
                 name, target
             )
             ret = return_val(result=True, comment=expected, name=name)
@@ -867,7 +867,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             os.path, "isfile", mock_f
         ):
 
-            expected = "Unable to set target of hard link {} -> " "{}: {}".format(
+            expected = "Unable to set target of hard link {} -> {}: {}".format(
                 name, target, ""
             )
             ret = return_val(result=False, comment=expected, name=name)
@@ -912,7 +912,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             os.path, "isfile", mock_f
         ):
 
-            expected = "Unable to create new hard link {} -> " "{}: {}".format(
+            expected = "Unable to create new hard link {} -> {}: {}".format(
                 name, target, ""
             )
             ret = return_val(result=False, comment=expected, name=name)
@@ -959,7 +959,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             os.path, "isfile", mock_t
         ):
 
-            expected = "Unable to create new hard link {} -> " "{}: {}".format(
+            expected = "Unable to create new hard link {} -> {}: {}".format(
                 name, target, ""
             )
             changes = dict(forced="File for hard link was forcibly replaced")
@@ -1179,6 +1179,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     "U12",
                     "U12",
                     "U12",
+                    "U12",
                 ]
             )
             mock_gid = MagicMock(
@@ -1199,10 +1200,21 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     "G12",
                     "G12",
                     "G12",
+                    "G12",
                 ]
             )
             mock_if = MagicMock(
-                side_effect=[True, False, False, False, False, False, False, False]
+                side_effect=[
+                    True,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                    False,
+                ]
             )
             if salt.utils.platform.is_windows():
                 mock_ret = MagicMock(return_value=ret)
@@ -1222,11 +1234,13 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     ("", "", True),
                     ("", "", ""),
                     ("", "", ""),
+                    ("", "", ""),
                 ]
             )
             mock_file = MagicMock(
                 side_effect=[
                     CommandExecutionError,
+                    ("", ""),
                     ("", ""),
                     ("", ""),
                     ("", ""),
@@ -1258,9 +1272,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 self.assertDictEqual(filestate.managed(""), ret)
 
                 with patch.object(os.path, "isfile", mock_f):
-                    comt = (
-                        "File {} is not present and is not set for "
-                        "creation".format(name)
+                    comt = "File {} is not present and is not set for creation".format(
+                        name
                     )
                     ret.update({"comment": comt, "name": name, "result": True})
                     self.assertDictEqual(filestate.managed(name, create=False), ret)
@@ -1268,11 +1281,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 # Group argument is ignored on Windows systems. Group is set to
                 # user
                 if salt.utils.platform.is_windows():
-                    comt = "User salt is not available Group salt" " is not available"
+                    comt = "User salt is not available Group salt is not available"
                 else:
-                    comt = (
-                        "User salt is not available Group saltstack" " is not available"
-                    )
+                    comt = "User salt is not available Group saltstack is not available"
                 ret.update({"comment": comt, "result": False})
                 self.assertDictEqual(
                     filestate.managed(name, user=user, group=group), ret
@@ -1459,6 +1470,36 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                             ret,
                                         )
 
+                        # Replace is False, test is True, mode is empty
+                        # should return "File not updated"
+                        #  https://github.com/saltstack/salt/issues/59276
+                        if salt.utils.platform.is_windows():
+                            mock_ret = MagicMock(return_value=ret)
+                        else:
+                            perms = {"luser": user, "lmode": "0644", "lgroup": group}
+                            mock_ret = MagicMock(return_value=(ret, perms))
+                        comt = "File {} not updated".format(name)
+                        with patch.dict(
+                            filestate.__salt__, {"file.check_perms": mock_ret}
+                        ):
+                            with patch.object(os.path, "exists", mock_t):
+                                with patch.dict(filestate.__opts__, {"test": True}):
+                                    ret.update({"comment": comt})
+                                    if salt.utils.platform.is_windows():
+                                        self.assertDictEqual(
+                                            filestate.managed(
+                                                name, user=user, group=group
+                                            ),
+                                            ret,
+                                        )
+                                    else:
+                                        self.assertDictEqual(
+                                            filestate.managed(
+                                                name, user=user, group=group
+                                            ),
+                                            ret,
+                                        )
+
     # 'directory' function tests: 1
 
     def test_directory(self):
@@ -1545,7 +1586,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             if salt.utils.platform.is_windows():
                 comt = ""
             else:
-                comt = "User salt is not available Group saltstack" " is not available"
+                comt = "User salt is not available Group saltstack is not available"
             ret.update({"comment": comt, "name": name})
             self.assertDictEqual(filestate.directory(name, user=user, group=group), ret)
 
@@ -1563,7 +1604,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     MagicMock(side_effect=[True, True, False, True, True, True, False]),
                 ):
                     with patch.object(os.path, "lexists", mock_t):
-                        comt = "File exists where the backup target" " A should go"
+                        comt = "File exists where the backup target A should go"
                         ret.update({"comment": comt})
                         self.assertDictEqual(
                             filestate.directory(
@@ -1591,7 +1632,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 with patch.object(os.path, "isdir", mock_f):
                     with patch.dict(filestate.__opts__, {"test": True}):
                         if salt.utils.platform.is_windows():
-                            comt = 'The directory "{}" will be changed' "".format(name)
+                            comt = 'The directory "{}" will be changed'.format(name)
                         else:
                             comt = (
                                 "The following files will be changed:\n{}:"
@@ -1628,7 +1669,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                 {
                                     "comment": comt,
                                     "result": False,
-                                    "changes": {name: "New Dir"},
+                                    "changes": {name: {"directory": "new"}},
                                 }
                             )
                             self.assertDictEqual(
@@ -1681,10 +1722,12 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                         ret = {
                             "name": name,
                             "result": False,
-                            "comment": 'Must not specify "recurse" '
-                            'options "ignore_files" and '
-                            '"ignore_dirs" at the same '
-                            "time.",
+                            "comment": (
+                                'Must not specify "recurse" '
+                                'options "ignore_files" and '
+                                '"ignore_dirs" at the same '
+                                "time."
+                            ),
                             "changes": {},
                         }
                         with patch.dict(
@@ -1785,9 +1828,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             # Group argument is ignored on Windows systems. Group is set to user
             if salt.utils.platform.is_windows():
-                comt = "User salt is not available Group salt" " is not available"
+                comt = "User salt is not available Group salt is not available"
             else:
-                comt = "User salt is not available Group saltstack" " is not available"
+                comt = "User salt is not available Group saltstack is not available"
             ret.update({"comment": comt})
             self.assertDictEqual(
                 filestate.recurse(name, source, user=user, group=group), ret
@@ -2060,9 +2103,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 "file.prepend": mock_t,
             },
         ):
-            comt = (
-                "The following files will be changed:\n/tmp/etc:" " directory - new\n"
-            )
+            comt = "The following files will be changed:\n/tmp/etc: directory - new\n"
             changes = {"/tmp/etc": {"directory": "new"}}
             if salt.utils.platform.is_windows():
                 comt = 'The directory "c:\\tmp\\etc" will be changed'
@@ -2202,9 +2243,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     # Group argument is ignored on Windows systems. Group is set
                     # to user
                     if salt.utils.platform.is_windows():
-                        comt = (
-                            "User salt is not available Group salt" " is not available"
-                        )
+                        comt = "User salt is not available Group salt is not available"
                     else:
                         comt = (
                             "User salt is not available Group saltstack"
@@ -2216,8 +2255,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     )
 
                     comt1 = (
-                        'Failed to delete "{}" in preparation for'
-                        " forced move".format(name)
+                        'Failed to delete "{}" in preparation for forced move'.format(
+                            name
+                        )
                     )
                     comt2 = (
                         'The target file "{}" exists and will not be '
@@ -2253,7 +2293,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                 )
 
                             with patch.dict(filestate.__opts__, {"test": False}):
-                                comt = "The target directory /tmp is" " not present"
+                                comt = "The target directory /tmp is not present"
                                 ret.update({"comment": comt, "result": False})
                                 self.assertDictEqual(
                                     filestate.copy_(name, source, preserve=True), ret
@@ -2287,7 +2327,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         mock_lex = MagicMock(return_value=False)
         with patch.object(os.path, "isabs", mock_t):
             with patch.object(os.path, "lexists", mock_lex):
-                comt = 'Source file "{}" has already been moved out of ' "place".format(
+                comt = 'Source file "{}" has already been moved out of place'.format(
                     source
                 )
                 ret.update({"comment": comt, "result": True})
@@ -2296,9 +2336,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         mock_lex = MagicMock(side_effect=[True, True, True])
         with patch.object(os.path, "isabs", mock_t):
             with patch.object(os.path, "lexists", mock_lex):
-                comt = (
-                    'The target file "{}" exists and will not be '
-                    "overwritten".format(name)
+                comt = 'The target file "{}" exists and will not be overwritten'.format(
+                    name
                 )
                 ret.update({"comment": comt, "result": True})
                 self.assertDictEqual(filestate.rename(name, source), ret)
@@ -2309,8 +2348,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             with patch.object(os.path, "lexists", mock_lex):
                 with patch.dict(filestate.__opts__, {"test": False}):
                     comt = (
-                        'Failed to delete "{}" in preparation for '
-                        "forced move".format(name)
+                        'Failed to delete "{}" in preparation for forced move'.format(
+                            name
+                        )
                     )
                     with patch.dict(filestate.__salt__, {"file.remove": mock_rem}):
                         ret.update({"name": name, "comment": comt, "result": False})
@@ -2421,7 +2461,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     "__id__": "ID",
                 },
             ):
-                comt = "Accumulator {} for file {} " "was charged by text".format(
+                comt = "Accumulator {} for file {} was charged by text".format(
                     name, filename
                 )
                 ret.update({"comment": comt, "name": name, "result": True})
@@ -2444,9 +2484,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             mock_t = MagicMock(return_value=True)
             mock_f = MagicMock(return_value=False)
             with patch.object(os.path, "isfile", mock_f):
-                comt = "File {} is not present and is not set for " "creation".format(
-                    name
-                )
+                comt = "File {} is not present and is not set for creation".format(name)
                 ret.update({"comment": comt, "name": name, "result": True})
                 self.assertDictEqual(filestate.serialize(name, create=False), ret)
 
@@ -2553,7 +2591,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             self.assertTrue(filestate.mod_run_check_cmd(cmd, filename))
 
     @skipIf(not HAS_DATEUTIL, NO_DATEUTIL_REASON)
-    @slowTest
+    @pytest.mark.slow_test
     def test_retention_schedule(self):
         """
         Test to execute the retention_schedule logic.
@@ -2720,14 +2758,16 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 }
                 if test:
                     expected_ret["result"] = None
-                    expected_ret["comment"] = (
-                        "{} backups would have been removed from {}.\n"
-                        "".format(len(deleted_files), fake_name)
+                    expected_ret[
+                        "comment"
+                    ] = "{} backups would have been removed from {}.\n".format(
+                        len(deleted_files), fake_name
                     )
                 else:
-                    expected_ret["comment"] = (
-                        "{} backups were removed from {}.\n"
-                        "".format(len(deleted_files), fake_name)
+                    expected_ret[
+                        "comment"
+                    ] = "{} backups were removed from {}.\n".format(
+                        len(deleted_files), fake_name
                     )
                     mock_remove.assert_has_calls(
                         [call(os.path.join(fake_name, x)) for x in deleted_files],
@@ -2827,7 +2867,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(
             ret["comment"],
-            "file.keyvalue key and value not supplied and key_values is not a dictionary",
+            "file.keyvalue key and value not supplied and key_values is not a"
+            " dictionary",
         )
         with salt.utils.files.fopen(fpath, "r") as fp_:
             f_contents = fp_.read()
@@ -2974,7 +3015,7 @@ class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {filestate: {"__salt__": {"file.stats": filemod.stats}}}
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @skipIf(salt.utils.platform.is_windows(), "File modes do not exist on windows")
     def test__check_directory(self):
         """

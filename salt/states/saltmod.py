@@ -6,7 +6,7 @@ This state is intended for use from the Salt Master. It provides access to
 sending commands down to minions as well as access to executing master-side
 modules. These state functions wrap Salt's :ref:`Python API <python-api>`.
 
-    .. versionadded: 2016.11.0
+    .. versionadded:: 2016.11.0
 
     Support for masterless minions was added to the ``salt.state`` function,
     so they can run orchestration sls files. This is particularly useful when
@@ -32,7 +32,6 @@ import salt.output
 import salt.syspaths
 import salt.utils.data
 import salt.utils.event
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -88,7 +87,7 @@ def _parallel_map(func, inputs):
         thread.start()
         return thread
 
-    threads = list(six.moves.map(create_thread, six.moves.range(len(inputs))))
+    threads = list(map(create_thread, range(len(inputs))))
     for thread in threads:
         thread.join()
     for error in errors:
@@ -134,7 +133,7 @@ def state(
     tgt
         The target specification for the state run.
 
-        .. versionadded: 2016.11.0
+        .. versionadded:: 2016.11.0
 
         Masterless support: When running on a masterless minion, the ``tgt``
         is ignored and will always be the local minion.
@@ -351,7 +350,7 @@ def state(
         fail_minions = [minion.strip() for minion in fail_minions.split(",")]
     elif not isinstance(fail_minions, list):
         state_ret.setdefault("warnings", []).append(
-            "'fail_minions' needs to be a list or a comma separated " "string. Ignored."
+            "'fail_minions' needs to be a list or a comma separated string. Ignored."
         )
         fail_minions = ()
 
@@ -547,7 +546,7 @@ def function(
         fail_minions = [minion.strip() for minion in fail_minions.split(",")]
     elif not isinstance(fail_minions, list):
         func_ret.setdefault("warnings", []).append(
-            "'fail_minions' needs to be a list or a comma separated " "string. Ignored."
+            "'fail_minions' needs to be a list or a comma separated string. Ignored."
         )
         fail_minions = ()
     for minion, mdata in cmd_ret.items():
@@ -640,70 +639,70 @@ def wait_for_event(name, id_list, event_id="id", timeout=300, node="master"):
         ret["result"] = None
         return ret
 
-    sevent = salt.utils.event.get_event(
+    with salt.utils.event.get_event(
         node, __opts__["sock_dir"], __opts__["transport"], opts=__opts__, listen=True
-    )
+    ) as sevent:
 
-    del_counter = 0
-    starttime = time.time()
-    timelimit = starttime + timeout
-    while True:
-        event = sevent.get_event(full=True)
-        is_timedout = time.time() > timelimit
+        del_counter = 0
+        starttime = time.time()
+        timelimit = starttime + timeout
+        while True:
+            event = sevent.get_event(full=True)
+            is_timedout = time.time() > timelimit
 
-        if event is None and not is_timedout:
-            log.trace("wait_for_event: No event data; waiting.")
-            continue
-        elif event is None and is_timedout:
-            ret["comment"] = "Timeout value reached."
-            return ret
+            if event is None and not is_timedout:
+                log.trace("wait_for_event: No event data; waiting.")
+                continue
+            elif event is None and is_timedout:
+                ret["comment"] = "Timeout value reached."
+                return ret
 
-        if fnmatch.fnmatch(event["tag"], name):
-            val = event["data"].get(event_id)
-            if val is None and "data" in event["data"]:
-                val = event["data"]["data"].get(event_id)
+            if fnmatch.fnmatch(event["tag"], name):
+                val = event["data"].get(event_id)
+                if val is None and "data" in event["data"]:
+                    val = event["data"]["data"].get(event_id)
 
-            if val is not None:
-                try:
-                    val_idx = id_list.index(val)
-                except ValueError:
-                    log.trace(
-                        "wait_for_event: Event identifier '%s' not in "
-                        "id_list; skipping.",
-                        event_id,
-                    )
+                if val is not None:
+                    try:
+                        val_idx = id_list.index(val)
+                    except ValueError:
+                        log.trace(
+                            "wait_for_event: Event identifier '%s' not in "
+                            "id_list; skipping.",
+                            event_id,
+                        )
+                    else:
+                        del id_list[val_idx]
+                        del_counter += 1
+                        minions_seen = ret["changes"].setdefault("minions_seen", [])
+                        minions_seen.append(val)
+
+                        log.debug(
+                            "wait_for_event: Event identifier '%s' removed "
+                            "from id_list; %s items remaining.",
+                            val,
+                            len(id_list),
+                        )
                 else:
-                    del id_list[val_idx]
-                    del_counter += 1
-                    minions_seen = ret["changes"].setdefault("minions_seen", [])
-                    minions_seen.append(val)
-
-                    log.debug(
-                        "wait_for_event: Event identifier '%s' removed "
-                        "from id_list; %s items remaining.",
-                        val,
-                        len(id_list),
+                    log.trace(
+                        "wait_for_event: Event identifier '%s' not in event "
+                        "'%s'; skipping.",
+                        event_id,
+                        event["tag"],
                     )
             else:
-                log.trace(
-                    "wait_for_event: Event identifier '%s' not in event "
-                    "'%s'; skipping.",
-                    event_id,
-                    event["tag"],
+                log.debug("wait_for_event: Skipping unmatched event '%s'", event["tag"])
+
+            if len(id_list) == 0:
+                ret["result"] = True
+                ret["comment"] = "All events seen in {} seconds.".format(
+                    time.time() - starttime
                 )
-        else:
-            log.debug("wait_for_event: Skipping unmatched event '%s'", event["tag"])
+                return ret
 
-        if len(id_list) == 0:
-            ret["result"] = True
-            ret["comment"] = "All events seen in {} seconds.".format(
-                time.time() - starttime
-            )
-            return ret
-
-        if is_timedout:
-            ret["comment"] = "Timeout value reached."
-            return ret
+            if is_timedout:
+                ret["comment"] = "Timeout value reached."
+                return ret
 
 
 def runner(name, **kwargs):
@@ -749,7 +748,8 @@ def runner(name, **kwargs):
     success = out.get("success", True)
     ret = {"name": name, "changes": {"return": runner_return}, "result": success}
     ret["comment"] = "Runner function '{}' {}.".format(
-        name, "executed" if success else "failed",
+        name,
+        "executed" if success else "failed",
     )
 
     ret["__orchestration__"] = True
@@ -763,7 +763,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
     """
     Executes multiple runner modules on the master in parallel.
 
-    .. versionadded:: 2017.x.0 (Nitrogen)
+    .. versionadded:: 2018.3.0
 
     A separate thread is spawned for each runner. This state is intended to be
     used with the orchestrate runner in place of the ``saltmod.runner`` state
@@ -858,8 +858,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
     # time we exctract the actual return value of the runner (saltutil.runner
     # adds some extra information that is not interesting to us).
     outputs = {
-        runner_id: out["return"]
-        for runner_id, out in six.moves.zip(runners.keys(), outputs)
+        runner_id: out["return"] for runner_id, out in zip(runners.keys(), outputs)
     }
 
     # If each of the runners returned its output in the format compatible with
@@ -991,7 +990,8 @@ def wheel(name, **kwargs):
     success = out.get("success", True)
     ret = {"name": name, "changes": {"return": wheel_return}, "result": success}
     ret["comment"] = "Wheel function '{}' {}.".format(
-        name, "executed" if success else "failed",
+        name,
+        "executed" if success else "failed",
     )
 
     ret["__orchestration__"] = True

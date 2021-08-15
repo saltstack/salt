@@ -1,20 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 A simple beacon to watch journald for specific entries
 """
-
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 
-import salt.ext.six
-
-# Import salt libs
 import salt.utils.data
-from salt.ext.six.moves import map
 
-# Import third party libs
 try:
     import systemd.journal  # pylint: disable=no-name-in-module
 
@@ -62,10 +52,8 @@ def validate(config):
             if not isinstance(_config["services"][name], dict):
                 return (
                     False,
-                    (
-                        "Services configuration for journald beacon "
-                        "must be a list of dictionaries."
-                    ),
+                    "Services configuration for journald beacon must be a list of"
+                    " dictionaries.",
                 )
     return True, "Valid beacon configuration"
 
@@ -100,7 +88,7 @@ def beacon(config):
         for name in _config.get("services", {}):
             n_flag = 0
             for key in _config["services"][name]:
-                if isinstance(key, salt.ext.six.string_types):
+                if isinstance(key, str):
                     key = salt.utils.data.decode(key)
                 if key in cur:
                     if _config["services"][name][key] == cur[key]:

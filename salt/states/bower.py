@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Installation of Bower Packages
 ==============================
@@ -30,13 +29,8 @@ Example:
           - npm: bower
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 
 def __virtual__():
@@ -94,10 +88,10 @@ def installed(name, dir, pkgs=None, user=None, env=None):
         installed_pkgs = __salt__["bower.list"](dir=dir, runas=user, env=env)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret["result"] = False
-        ret["comment"] = "Error looking up '{0}': {1}".format(name, err)
+        ret["comment"] = "Error looking up '{}': {}".format(name, err)
         return ret
     else:
-        installed_pkgs = dict((p, info) for p, info in six.iteritems(installed_pkgs))
+        installed_pkgs = {p: info for p, info in installed_pkgs.items()}
 
     pkgs_satisfied = []
     pkgs_to_install = []
@@ -112,7 +106,7 @@ def installed(name, dir, pkgs=None, user=None, env=None):
         if pkg_name in installed_pkgs:
             installed_pkg = installed_pkgs[pkg_name]
             installed_pkg_ver = installed_pkg.get("pkgMeta").get("version")
-            installed_name_ver = "{0}#{1}".format(pkg_name, installed_pkg_ver)
+            installed_name_ver = "{}#{}".format(pkg_name, installed_pkg_ver)
 
             # If given an explicit version check the installed version matches.
             if pkg_ver:
@@ -132,7 +126,7 @@ def installed(name, dir, pkgs=None, user=None, env=None):
         comment_msg = []
         if pkgs_to_install:
             comment_msg.append(
-                "Bower package(s) '{0}' are set to be installed".format(
+                "Bower package(s) '{}' are set to be installed".format(
                     ", ".join(pkgs_to_install)
                 )
             )
@@ -141,7 +135,7 @@ def installed(name, dir, pkgs=None, user=None, env=None):
 
         if pkgs_satisfied:
             comment_msg.append(
-                "Package(s) '{0}' satisfied by {1}".format(
+                "Package(s) '{}' satisfied by {}".format(
                     ", ".join(pkg_list), ", ".join(pkgs_satisfied)
                 )
             )
@@ -151,7 +145,7 @@ def installed(name, dir, pkgs=None, user=None, env=None):
 
     if not pkgs_to_install:
         ret["result"] = True
-        ret["comment"] = "Package(s) '{0}' satisfied by {1}".format(
+        ret["comment"] = "Package(s) '{}' satisfied by {}".format(
             ", ".join(pkg_list), ", ".join(pkgs_satisfied)
         )
         return ret
@@ -173,20 +167,18 @@ def installed(name, dir, pkgs=None, user=None, env=None):
         call = __salt__["bower.install"](**cmd_args)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret["result"] = False
-        ret["comment"] = "Error installing '{0}': {1}".format(", ".join(pkg_list), err)
+        ret["comment"] = "Error installing '{}': {}".format(", ".join(pkg_list), err)
         return ret
 
     if call:
         ret["result"] = True
         ret["changes"] = {"old": [], "new": pkgs_to_install}
-        ret["comment"] = "Package(s) '{0}' successfully installed".format(
+        ret["comment"] = "Package(s) '{}' successfully installed".format(
             ", ".join(pkgs_to_install)
         )
     else:
         ret["result"] = False
-        ret["comment"] = "Could not install package(s) '{0}'".format(
-            ", ".join(pkg_list)
-        )
+        ret["comment"] = "Could not install package(s) '{}'".format(", ".join(pkg_list))
 
     return ret
 
@@ -208,30 +200,30 @@ def removed(name, dir, user=None):
         installed_pkgs = __salt__["bower.list"](dir=dir, runas=user)
     except (CommandExecutionError, CommandNotFoundError) as err:
         ret["result"] = False
-        ret["comment"] = "Error removing '{0}': {1}".format(name, err)
+        ret["comment"] = "Error removing '{}': {}".format(name, err)
         return ret
 
     if name not in installed_pkgs:
         ret["result"] = True
-        ret["comment"] = "Package '{0}' is not installed".format(name)
+        ret["comment"] = "Package '{}' is not installed".format(name)
         return ret
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Package '{0}' is set to be removed".format(name)
+        ret["comment"] = "Package '{}' is set to be removed".format(name)
         return ret
 
     try:
         if __salt__["bower.uninstall"](pkg=name, dir=dir, runas=user):
             ret["result"] = True
             ret["changes"] = {name: "Removed"}
-            ret["comment"] = "Package '{0}' was successfully removed".format(name)
+            ret["comment"] = "Package '{}' was successfully removed".format(name)
         else:
             ret["result"] = False
-            ret["comment"] = "Error removing '{0}'".format(name)
+            ret["comment"] = "Error removing '{}'".format(name)
     except (CommandExecutionError, CommandNotFoundError) as err:
         ret["result"] = False
-        ret["comment"] = "Error removing '{0}': {1}".format(name, err)
+        ret["comment"] = "Error removing '{}': {}".format(name, err)
 
     return ret
 
@@ -250,14 +242,14 @@ def bootstrap(name, user=None):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Directory '{0}' is set to be bootstrapped".format(name)
+        ret["comment"] = "Directory '{}' is set to be bootstrapped".format(name)
         return ret
 
     try:
         call = __salt__["bower.install"](pkg=None, dir=name, runas=user)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret["result"] = False
-        ret["comment"] = "Error bootstrapping '{0}': {1}".format(name, err)
+        ret["comment"] = "Error bootstrapping '{}': {}".format(name, err)
         return ret
 
     if not call:
@@ -288,21 +280,21 @@ def pruned(name, user=None, env=None):
 
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Directory '{0}' is set to be pruned".format(name)
+        ret["comment"] = "Directory '{}' is set to be pruned".format(name)
         return ret
 
     try:
         call = __salt__["bower.prune"](dir=name, runas=user, env=env)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret["result"] = False
-        ret["comment"] = "Error pruning '{0}': {1}".format(name, err)
+        ret["comment"] = "Error pruning '{}': {}".format(name, err)
         return ret
 
     ret["result"] = True
     if call:
-        ret["comment"] = "Directory '{0}' was successfully pruned".format(name)
+        ret["comment"] = "Directory '{}' was successfully pruned".format(name)
         ret["changes"] = {"old": [], "new": call}
     else:
-        ret["comment"] = "No packages were pruned from directory '{0}'".format(name)
+        ret["comment"] = "No packages were pruned from directory '{}'".format(name)
 
     return ret

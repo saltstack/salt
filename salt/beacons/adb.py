@@ -1,18 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to emit adb device state changes for Android devices
 
 .. versionadded:: 2016.3.0
 """
-
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 
-# Salt libs
 import salt.utils.path
-from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 
@@ -37,18 +30,18 @@ def validate(config):
     # Configuration for adb beacon should be a dictionary with states array
     if not isinstance(config, list):
         log.info("Configuration for adb beacon must be a list.")
-        return False, ("Configuration for adb beacon must be a list.")
+        return False, "Configuration for adb beacon must be a list."
 
     _config = {}
     list(map(_config.update, config))
 
     if "states" not in _config:
         log.info("Configuration for adb beacon must include a states array.")
-        return False, ("Configuration for adb beacon must include a states array.")
+        return False, "Configuration for adb beacon must include a states array."
     else:
         if not isinstance(_config["states"], list):
             log.info("Configuration for adb beacon must include a states array.")
-            return False, ("Configuration for adb beacon must include a states array.")
+            return False, "Configuration for adb beacon must include a states array."
         else:
             states = [
                 "offline",
@@ -64,13 +57,12 @@ def validate(config):
             ]
             if any(s not in states for s in _config["states"]):
                 log.info(
-                    "Need a one of the following adb " "states: %s", ", ".join(states)
+                    "Need a one of the following adb states: %s", ", ".join(states)
                 )
                 return (
                     False,
-                    (
-                        "Need a one of the following adb "
-                        "states: {0}".format(", ".join(states))
+                    "Need a one of the following adb states: {}".format(
+                        ", ".join(states)
                     ),
                 )
     return True, "Valid beacon configuration"
@@ -122,7 +114,7 @@ def beacon(config):
 
             if "battery_low" in _config:
                 val = last_state.get(device, {})
-                cmd = "adb -s {0} shell cat /sys/class/power_supply/*/capacity".format(
+                cmd = "adb -s {} shell cat /sys/class/power_supply/*/capacity".format(
                     device
                 )
                 battery_levels = __salt__["cmd.run"](

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to announce via avahi (zeroconf)
 
@@ -11,16 +10,12 @@ Dependencies
 - dbus-python
 
 """
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
 
 import logging
 import time
 
 import salt.utils.stringutils
-from salt.ext.six.moves import map
 
-# Import 3rd Party libs
 try:
     import avahi
 
@@ -60,13 +55,15 @@ def __virtual__():
             return __virtualname__
         return (
             False,
-            "The {0} beacon cannot be loaded. The "
-            "'python-dbus' dependency is missing.".format(__virtualname__),
+            "The {} beacon cannot be loaded. The 'python-dbus' dependency is missing.".format(
+                __virtualname__
+            ),
         )
     return (
         False,
-        "The {0} beacon cannot be loaded. The "
-        "'python-avahi' dependency is missing.".format(__virtualname__),
+        "The {} beacon cannot be loaded. The 'python-avahi' dependency is missing.".format(
+            __virtualname__
+        ),
     )
 
 
@@ -78,15 +75,12 @@ def validate(config):
     list(map(_config.update, config))
 
     if not isinstance(config, list):
-        return False, ("Configuration for avahi_announce beacon must be a list.")
+        return False, "Configuration for avahi_announce beacon must be a list."
 
     elif not all(x in _config for x in ("servicetype", "port", "txt")):
         return (
             False,
-            (
-                "Configuration for avahi_announce beacon "
-                "must contain servicetype, port and txt items."
-            ),
+            "Configuration for avahi_announce beacon must contain servicetype, port and txt items.",
         )
     return True, "Valid beacon configuration."
 

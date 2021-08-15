@@ -1,30 +1,25 @@
 # TODO: Update skipped tests to expect dictionary results from the execution
 #       module functions.
 
-
 import os.path
 import random
 import string
 
-# pylint: disable=3rd-party-module-not-gated
-import pkg_resources
-from pkg_resources import DistributionNotFound
+import pkg_resources  # pylint: disable=3rd-party-module-not-gated
+from pkg_resources import (  # pylint: disable=3rd-party-module-not-gated
+    DistributionNotFound,
+)
 
 import salt.config
 import salt.loader
 import salt.modules.boto_vpc as boto_vpc
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# pylint: disable=import-error
 from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
 from salt.utils.versions import LooseVersion
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
-
-# pylint: enable=3rd-party-module-not-gated
-
 
 # pylint: disable=no-name-in-module,unused-import
 try:
@@ -62,7 +57,7 @@ except ImportError:
         return stub_function
 
 
-# pylint: enable=import-error,no-name-in-module,unused-import
+# pylint: enable=no-name-in-module,unused-import
 
 # the boto_vpc module relies on the connect_to_region() method
 # which was added in boto 2.8.0
@@ -143,8 +138,7 @@ def _has_required_moto():
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}. Installed: {}".format(
+    "The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version() if HAS_BOTO else "None"
     ),
 )
@@ -206,7 +200,7 @@ class BotoVpcTestCaseMixin:
     def _create_subnet(
         self,
         vpc_id,
-        cidr_block="10.0.0.0/25",
+        cidr_block="10.0.0.0/26",
         name=None,
         tags=None,
         availability_zone=None,
@@ -703,8 +697,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}. Installed: {}".format(
+    "The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
@@ -1017,7 +1010,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc = self._create_vpc()
         subnet1 = self._create_subnet(vpc.id)
-        subnet2 = self._create_subnet(vpc.id)
+        subnet2 = self._create_subnet(vpc.id, cidr_block="10.0.0.64/26")
 
         describe_subnet_results = boto_vpc.describe_subnets(
             region=region,
@@ -1040,7 +1033,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc = self._create_vpc()
         self._create_subnet(vpc.id, name="subnet1")
-        self._create_subnet(vpc.id, name="subnet2")
+        self._create_subnet(vpc.id, name="subnet2", cidr_block="10.0.0.64/26")
 
         describe_subnet_results = boto_vpc.describe_subnets(
             region=region,
@@ -1073,8 +1066,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}. Installed: {}".format(
+    "The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
@@ -1142,8 +1134,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}. Installed: {}".format(
+    "The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
@@ -1204,8 +1195,7 @@ class BotoVpcNatGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}. Installed: {}".format(
+    "The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
@@ -1257,8 +1247,7 @@ class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}. Installed: {}".format(
+    "The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
@@ -1478,8 +1467,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}. Installed: {}".format(
+    "The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
@@ -1792,8 +1780,10 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
-        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(
-            vpc.id, subnet.id, **conn_parameters
+        network_acl_creation_and_association_result = (
+            boto_vpc.associate_new_network_acl_to_subnet(
+                vpc.id, subnet.id, **conn_parameters
+            )
         )
 
         self.assertTrue(network_acl_creation_and_association_result)
@@ -1809,8 +1799,10 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
-        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(
-            vpc.id, subnet.id, network_acl_name="test", **conn_parameters
+        network_acl_creation_and_association_result = (
+            boto_vpc.associate_new_network_acl_to_subnet(
+                vpc.id, subnet.id, network_acl_name="test", **conn_parameters
+            )
         )
 
         self.assertTrue(network_acl_creation_and_association_result)
@@ -1826,8 +1818,10 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc = self._create_vpc()
         subnet = self._create_subnet(vpc.id)
 
-        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(
-            vpc.id, subnet.id, tags={"test": "testvalue"}, **conn_parameters
+        network_acl_creation_and_association_result = (
+            boto_vpc.associate_new_network_acl_to_subnet(
+                vpc.id, subnet.id, tags={"test": "testvalue"}, **conn_parameters
+            )
         )
 
         self.assertTrue(network_acl_creation_and_association_result)
@@ -1842,8 +1836,10 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         """
         vpc = self._create_vpc()
 
-        network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(
-            vpc.id, "fake", **conn_parameters
+        network_acl_creation_and_association_result = (
+            boto_vpc.associate_new_network_acl_to_subnet(
+                vpc.id, "fake", **conn_parameters
+            )
         )
 
         self.assertFalse(network_acl_creation_and_association_result)
@@ -1919,8 +1915,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}. Installed: {}".format(
+    "The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )
@@ -2201,8 +2196,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto module must be greater than"
-    " or equal to version {}. Installed: {}".format(
+    "The boto module must be greater than or equal to version {}. Installed: {}".format(
         required_boto_version, _get_boto_version()
     ),
 )

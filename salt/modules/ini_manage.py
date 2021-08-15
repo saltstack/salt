@@ -62,10 +62,12 @@ def set_option(file_name, sections=None, separator="="):
 
     .. code-block:: python
 
-        import salt
-        sc = salt.client.get_local_client()
-        sc.cmd('target', 'ini.set_option',
-               ['path_to_ini_file', '{"section_to_change": {"key": "value"}}'])
+        import salt.client
+        with salt.client.get_local_client() as sc:
+            sc.cmd(
+                'target', 'ini.set_option',
+                ['path_to_ini_file', '{"section_to_change": {"key": "value"}}']
+            )
 
     CLI Example:
 
@@ -90,10 +92,10 @@ def get_option(file_name, section, option, separator="="):
 
     .. code-block:: python
 
-        import salt
-        sc = salt.client.get_local_client()
-        sc.cmd('target', 'ini.get_option',
-               [path_to_ini_file, section_name, option])
+        import salt.client
+        with salt.client.get_local_client() as sc:
+            sc.cmd('target', 'ini.get_option',
+                   [path_to_ini_file, section_name, option])
 
     CLI Example:
 
@@ -149,10 +151,10 @@ def get_section(file_name, section, separator="="):
 
     .. code-block:: python
 
-        import salt
-        sc = salt.client.get_local_client()
-        sc.cmd('target', 'ini.get_section',
-               [path_to_ini_file, section_name])
+        import salt.client
+        with salt.client.get_local_client() as sc:
+            sc.cmd('target', 'ini.get_section',
+                   [path_to_ini_file, section_name])
 
     CLI Example:
 
@@ -177,10 +179,10 @@ def remove_section(file_name, section, separator="="):
 
     .. code-block:: python
 
-        import salt
-        sc = salt.client.get_local_client()
-        sc.cmd('target', 'ini.remove_section',
-               [path_to_ini_file, section_name])
+        import salt.client
+        with  salt.client.get_local_client() as sc:
+            sc.cmd('target', 'ini.remove_section',
+                   [path_to_ini_file, section_name])
 
     CLI Example:
 
@@ -207,10 +209,10 @@ def get_ini(file_name, separator="="):
 
     .. code-block:: python
 
-        import salt
-        sc = salt.client.get_local_client()
-        sc.cmd('target', 'ini.get_ini',
-               [path_to_ini_file])
+        import salt.client
+        with salt.client.giet_local_client() as sc:
+            sc.cmd('target', 'ini.get_ini',
+                   [path_to_ini_file])
 
     CLI Example:
 
@@ -410,9 +412,7 @@ class _Ini(_Section):
     def refresh(self, inicontents=None):
         if inicontents is None:
             if not os.path.exists(self.name):
-                log.trace(
-                    "File {} does not exist and will be created".format(self.name)
-                )
+                log.trace("File %s does not exist and will be created", self.name)
                 return
             try:
                 with salt.utils.files.fopen(self.name) as rfh:
@@ -421,8 +421,7 @@ class _Ini(_Section):
             except OSError as exc:
                 if __opts__["test"] is False:
                     raise CommandExecutionError(
-                        "Unable to open file '{}'. "
-                        "Exception: {}".format(self.name, exc)
+                        "Unable to open file '{}'. Exception: {}".format(self.name, exc)
                     )
         if not inicontents:
             return
@@ -454,7 +453,7 @@ class _Ini(_Section):
                 outfile.writelines(salt.utils.data.encode(ini_gen_list))
         except OSError as exc:
             raise CommandExecutionError(
-                "Unable to write file '{}'. " "Exception: {}".format(self.name, exc)
+                "Unable to write file '{}'. Exception: {}".format(self.name, exc)
             )
 
     @staticmethod

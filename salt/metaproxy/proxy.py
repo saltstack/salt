@@ -51,8 +51,6 @@ from salt.exceptions import (
     SaltInvocationError,
     SaltSystemExit,
 )
-from salt.ext import six
-from salt.ext.six.moves import range
 from salt.minion import ProxyMinion
 from salt.utils.event import tagify
 from salt.utils.process import SignalHandlingProcess, default_signals
@@ -101,15 +99,14 @@ def post_master_init(self, master):
         if "mine_interval" in self.opts["pillar"]:
             self.opts["mine_interval"] = self.opts["pillar"]["mine_interval"]
         if "mine_functions" in self.opts["pillar"]:
-            general_proxy_mines = self.opts.get("mine_functions", [])
+            general_proxy_mines = self.opts.get("mine_functions", {})
             specific_proxy_mines = self.opts["pillar"]["mine_functions"]
             try:
                 self.opts["mine_functions"] = general_proxy_mines + specific_proxy_mines
             except TypeError as terr:
                 log.error(
-                    "Unable to merge mine functions from the pillar in the opts, for proxy {}".format(
-                        self.opts["id"]
-                    )
+                    "Unable to merge mine functions from the pillar in the opts, for proxy %s",
+                    self.opts["id"],
                 )
 
     fq_proxyname = self.opts["proxy"]["proxytype"]
@@ -459,9 +456,8 @@ def thread_return(cls, minion_instance, opts, data):
                 executors = [executors]
             elif not isinstance(executors, list) or not executors:
                 raise SaltInvocationError(
-                    "Wrong executors specification: {}. String or non-empty list expected".format(
-                        executors
-                    )
+                    "Wrong executors specification: {}. String or non-empty list"
+                    " expected".format(executors)
                 )
             if opts.get("sudo_user", "") and executors[-1] != "sudo":
                 executors[-1] = "sudo"  # replace the last one with sudo
@@ -757,8 +753,6 @@ def handle_decoded_payload(self, data):
     differently.
     """
     # Ensure payload is unicode. Disregard failure to decode binary blobs.
-    if six.PY2:
-        data = salt.utils.data.decode(data, keep=True)
     if "user" in data:
         log.info(
             "User %s Executing command %s with jid %s",
@@ -796,9 +790,8 @@ def handle_decoded_payload(self, data):
         process_count = len(salt.utils.minion.running(self.opts))
         while process_count >= process_count_max:
             log.warning(
-                "Maximum number of processes reached while executing jid {}, waiting...".format(
-                    data["jid"]
-                )
+                "Maximum number of processes reached while executing jid %s, waiting...",
+                data["jid"],
             )
             yield salt.ext.tornado.gen.sleep(10)
             process_count = len(salt.utils.minion.running(self.opts))

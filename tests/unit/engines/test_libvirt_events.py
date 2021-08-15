@@ -1,17 +1,11 @@
 """
 unit tests for the libvirt_events engine
 """
-# Import Python libs
 
-# Import Salt Libs
 import salt.engines.libvirt_events as libvirt_events
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
-
-# pylint: disable=protected-access,attribute-defined-outside-init,invalid-name,unused-argument,no-self-use
 
 
 class EngineLibvirtEventTestCase(TestCase, LoaderModuleMockMixin):

@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.modules.disk as disk
 import salt.utils.path
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -218,7 +212,9 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_tune(self):
         mock = MagicMock(
-            return_value="712971264\n512\n512\n512\n0\n0\n88\n712971264\n365041287168\n512\n512"
+            return_value=(
+                "712971264\n512\n512\n512\n0\n0\n88\n712971264\n365041287168\n512\n512"
+            )
         )
         with patch.dict(disk.__salt__, {"cmd.run": mock}):
             mock_dump = MagicMock(return_value={"retcode": 0, "stdout": ""})
@@ -275,7 +271,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         """
         device = "/dev/sdX1"
         fs_type = "ext4"
-        mock = MagicMock(return_value="FSTYPE\n{0}".format(fs_type))
+        mock = MagicMock(return_value="FSTYPE\n{}".format(fs_type))
         with patch.dict(disk.__grains__, {"kernel": "Linux"}), patch.dict(
             disk.__salt__, {"cmd.run": mock}
         ), patch("salt.utils.path.which", MagicMock(return_value=True)):
@@ -292,7 +288,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         ):
             disk.resize2fs(device)
             mock.assert_called_once_with(
-                "resize2fs {0}".format(device), python_shell=False
+                "resize2fs {}".format(device), python_shell=False
             )
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")

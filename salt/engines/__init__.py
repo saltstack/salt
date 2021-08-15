@@ -1,19 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Initialize the engines system. This plugin system allows for
 complex services to be encapsulated within the salt plugin environment
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-import multiprocessing
 
-# Import salt libs
 import salt
 import salt.loader
 import salt.utils.platform
-from salt.utils.process import SignalHandlingProcess
+import salt.utils.process
 
 log = logging.getLogger(__name__)
 
@@ -49,35 +44,38 @@ def start_engines(opts, proc_mgr, proxy=None):
             engine_opts = None
         engine_name = None
         if engine_opts is not None and "engine_module" in engine_opts:
-            fun = "{0}.start".format(engine_opts["engine_module"])
+            fun = "{}.start".format(engine_opts["engine_module"])
             engine_name = engine
             del engine_opts["engine_module"]
         else:
-            fun = "{0}.start".format(engine)
+            fun = "{}.start".format(engine)
         if fun in engines:
             start_func = engines[fun]
             if engine_name:
-                name = "{0}.Engine({1}-{2})".format(
+                name = "{}.Engine({}-{})".format(
                     __name__, start_func.__module__, engine_name
                 )
             else:
-                name = "{0}.Engine({1})".format(__name__, start_func.__module__)
+                name = "{}.Engine({})".format(__name__, start_func.__module__)
             log.info("Starting Engine %s", name)
             proc_mgr.add_process(
-                Engine, args=(opts, fun, engine_opts, funcs, runners, proxy), name=name
+                Engine,
+                args=(name, opts, fun, engine_opts, funcs, runners, proxy),
+                name=name,
             )
 
 
-class Engine(SignalHandlingProcess):
+class Engine(salt.utils.process.SignalHandlingProcess):
     """
     Execute the given engine in a new process
     """
 
-    def __init__(self, opts, fun, config, funcs, runners, proxy, **kwargs):
+    def __init__(self, name, opts, fun, config, funcs, runners, proxy, **kwargs):
         """
         Set up the process executor
         """
-        super(Engine, self).__init__(**kwargs)
+        super().__init__(**kwargs)
+        self.name = name
         self.opts = opts
         self.config = config
         self.fun = fun
@@ -90,6 +88,7 @@ class Engine(SignalHandlingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self.__init__(
+            state["name"],
             state["opts"],
             state["fun"],
             state["config"],
@@ -102,6 +101,7 @@ class Engine(SignalHandlingProcess):
 
     def __getstate__(self):
         return {
+            "name": self.name,
             "opts": self.opts,
             "fun": self.fun,
             "config": self.config,
@@ -116,6 +116,7 @@ class Engine(SignalHandlingProcess):
         """
         Run the master service!
         """
+        salt.utils.process.appendproctitle(self.name)
         self.utils = salt.loader.utils(self.opts, proxy=self.proxy)
         if salt.utils.platform.is_windows():
             # Calculate function references since they can't be pickled.

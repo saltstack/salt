@@ -26,17 +26,12 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 :depends: IPy >= 0.81
 """
 
-# Import python libs
-
 import logging
 import pprint
 import re
 import time
 
-# Import salt cloud libs
 import salt.config as config
-
-# Import salt libs
 import salt.utils.cloud
 import salt.utils.json
 from salt.exceptions import (
@@ -44,9 +39,6 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout,
     SaltCloudSystemExit,
 )
-
-# Import 3rd-party Libs
-from salt.ext.six.moves import range
 
 try:
     import requests
@@ -81,12 +73,19 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
-        __opts__, __active_provider_name__ or __virtualname__, ("user",)
+        __opts__, _get_active_provider_name() or __virtualname__, ("user",)
     )
 
 
@@ -298,6 +297,7 @@ def _lookup_proxmox_task(upid):
 def get_resources_nodes(call=None, resFilter=None):
     """
     Retrieve all hypervisors (nodes) available on this environment
+
     CLI Example:
 
     .. code-block:: bash
@@ -314,7 +314,7 @@ def get_resources_nodes(call=None, resFilter=None):
             ret[name] = resource
 
     if resFilter is not None:
-        log.debug("Filter given: %s, returning requested " "resource: nodes", resFilter)
+        log.debug("Filter given: %s, returning requested resource: nodes", resFilter)
         return ret[resFilter]
 
     log.debug("Filter not given: %s, returning all resource: nodes", ret)
@@ -355,9 +355,7 @@ def get_resources_vms(call=None, resFilter=None, includeConfig=True):
                     )
 
         if time.time() > timeoutTime:
-            raise SaltCloudExecutionTimeout(
-                "FAILED to get the proxmox " "resources vms"
-            )
+            raise SaltCloudExecutionTimeout("FAILED to get the proxmox resources vms")
 
         # Carry on if there wasn't a bad resource return from Proxmox
         if not badResource:
@@ -366,7 +364,7 @@ def get_resources_vms(call=None, resFilter=None, includeConfig=True):
         time.sleep(0.5)
 
     if resFilter is not None:
-        log.debug("Filter given: %s, returning requested " "resource: nodes", resFilter)
+        log.debug("Filter given: %s, returning requested resource: nodes", resFilter)
         return ret[resFilter]
 
     log.debug("Filter not given: %s, returning all resource: nodes", ret)
@@ -520,7 +518,9 @@ def list_nodes_select(call=None):
         salt-cloud -S my-proxmox-config
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full(), __opts__["query.selection"], call,
+        list_nodes_full(),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -566,7 +566,9 @@ def _reconfigure_clone(vm_, vmid):
         if re.match(r"^(ide|sata|scsi)(\d+)$", setting):
             postParams = {setting: vm_[setting]}
             query(
-                "post", "nodes/{}/qemu/{}/config".format(vm_["host"], vmid), postParams,
+                "post",
+                "nodes/{}/qemu/{}/config".format(vm_["host"], vmid),
+                postParams,
             )
 
         elif re.match(r"^net(\d+)$", setting):
@@ -589,7 +591,9 @@ def _reconfigure_clone(vm_, vmid):
             # Convert the dictionary back into a string list
             postParams = {setting: _dictionary_to_stringlist(new_setting)}
             query(
-                "post", "nodes/{}/qemu/{}/config".format(vm_["host"], vmid), postParams,
+                "post",
+                "nodes/{}/qemu/{}/config".format(vm_["host"], vmid),
+                postParams,
             )
 
 
@@ -608,7 +612,10 @@ def create(vm_):
         if (
             vm_["profile"]
             and config.is_profile_configured(
-                __opts__, __active_provider_name__ or "proxmox", vm_["profile"], vm_=vm_
+                __opts__,
+                _get_active_provider_name() or "proxmox",
+                vm_["profile"],
+                vm_=vm_,
             )
             is False
         ):
@@ -699,7 +706,11 @@ def create(vm_):
     ssh_username = config.get_cloud_config_value(
         "ssh_username", vm_, __opts__, default="root"
     )
-    ssh_password = config.get_cloud_config_value("password", vm_, __opts__,)
+    ssh_password = config.get_cloud_config_value(
+        "password",
+        vm_,
+        __opts__,
+    )
 
     ret["ip_address"] = ip_address
     ret["username"] = ssh_username
@@ -790,7 +801,8 @@ def create_node(vm_, newid):
     if vm_["technology"] not in ["qemu", "openvz", "lxc"]:
         # Wrong VM type given
         log.error(
-            "Wrong VM type. Valid options are: qemu, openvz (proxmox3) or lxc (proxmox4)"
+            "Wrong VM type. Valid options are: qemu, openvz (proxmox3) or lxc"
+            " (proxmox4)"
         )
         raise SaltCloudExecutionFailure
 
@@ -947,7 +959,7 @@ def show_instance(name, call=None):
         )
 
     nodes = list_nodes_full()
-    __utils__["cloud.cache_node"](nodes[name], __active_provider_name__, __opts__)
+    __utils__["cloud.cache_node"](nodes[name], _get_active_provider_name(), __opts__)
     return nodes[name]
 
 
@@ -976,8 +988,7 @@ def wait_for_created(upid, timeout=300):
     info = _lookup_proxmox_task(upid)
     if not info:
         log.error(
-            "wait_for_created: No task information "
-            "retrieved based on given criteria."
+            "wait_for_created: No task information retrieved based on given criteria."
         )
         raise SaltCloudExecutionFailure
 
@@ -1030,7 +1041,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](
@@ -1067,7 +1078,7 @@ def destroy(name, call=None):
         )
         if __opts__.get("update_cachedir", False) is True:
             __utils__["cloud.delete_minion_cachedir"](
-                name, __active_provider_name__.split(":")[0], __opts__
+                name, _get_active_provider_name().split(":")[0], __opts__
             )
 
         return {"Destroyed": "{} was destroyed.".format(name)}
