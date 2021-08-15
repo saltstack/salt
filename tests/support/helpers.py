@@ -1799,6 +1799,7 @@ class VirtualEnv:
 class SaltVirtualEnv(VirtualEnv):
     """
     This is a VirtualEnv implementation which has this salt checkout installed in it
+    using static requirements
     """
 
     pip_requirement = attr.ib(default="pip>=20.2.4,<21.2", repr=False)
@@ -1806,7 +1807,14 @@ class SaltVirtualEnv(VirtualEnv):
 
     def _create_virtualenv(self):
         super()._create_virtualenv()
-        self.install("--no-use-pep517", RUNTIME_VARS.CODE_DIR)
+        self.install(RUNTIME_VARS.CODE_DIR)
+
+    def install(self, *args, **kwargs):
+        env = self.environ.copy()
+        env.update(kwargs.pop("env", None) or {})
+        env["USE_STATIC_REQUIREMENTS"] = "1"
+        kwargs["env"] = env
+        return super().install(*args, **kwargs)
 
 
 @contextmanager
