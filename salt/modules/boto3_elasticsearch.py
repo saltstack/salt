@@ -1368,7 +1368,7 @@ def check_upgrade_eligibility(
     if str(elasticsearch_version) not in compatible_versions:
         ret["result"] = True
         ret["response"] = False
-        ret["error"] = 'Desired version "{}" not in compatible versions: {}.' "".format(
+        ret["error"] = 'Desired version "{}" not in compatible versions: {}.'.format(
             elasticsearch_version, compatible_versions
         )
         return ret

@@ -18,7 +18,6 @@ import json
 import logging
 import os
 import re
-import tempfile
 from functools import wraps
 
 import salt.utils.args
@@ -112,59 +111,42 @@ class HandleFileCopy:
                 proxy_hash = __salt__["file.get_hash"](local_cache_path)
                 # check if hash is same, else copy newly
                 if master_hash.get("hsum") == proxy_hash:
-                    # kwargs will have values when path is a template
-                    if self._kwargs:
-                        self._cached_file = salt.utils.files.mkstemp()
-                        # local copy is a template, hence need to render
-                        with salt.utils.files.fopen(self._cached_file, "w") as fp:
-                            template_string = __salt__["slsutil.renderer"](
-                                path=local_cache_path,
-                                default_renderer="jinja",
-                                **self._kwargs
-                            )
-                            fp.write(template_string)
-                        return self._cached_file
-                    else:
-                        return local_cache_path
-                # continue for else part
-            if self._kwargs:
-                self._cached_file = salt.utils.files.mkstemp()
-                __salt__["cp.get_template"](
-                    self._file_path, self._cached_file, **self._kwargs
-                )
-            else:
-                self._cached_folder = tempfile.mkdtemp()
-                log.debug(
-                    "Caching file {} at {}".format(self._file_path, self._cached_folder)
-                )
-                self._cached_file = __salt__["cp.get_file"](
-                    self._file_path, self._cached_folder
-                )
+                    self._cached_file = salt.utils.files.mkstemp()
+                    # local copy is a template, hence need to render
+                    with salt.utils.files.fopen(self._cached_file, "w") as fp:
+                        template_string = __salt__["slsutil.renderer"](
+                            path=local_cache_path,
+                            default_renderer="jinja",
+                            **self._kwargs,
+                        )
+                        fp.write(template_string)
+                    return self._cached_file
+
+            # continue for else part
+            self._cached_file = salt.utils.files.mkstemp()
+            __salt__["cp.get_template"](
+                self._file_path, self._cached_file, **self._kwargs
+            )
             if self._cached_file != "":
                 return self._cached_file
         else:
             # check for local location of file
             if __salt__["file.file_exists"](self._file_path):
-                if self._kwargs:
-                    self._cached_file = salt.utils.files.mkstemp()
-                    with salt.utils.files.fopen(self._cached_file, "w") as fp:
-                        template_string = __salt__["slsutil.renderer"](
-                            path=self._file_path,
-                            default_renderer="jinja",
-                            **self._kwargs
-                        )
-                        fp.write(template_string)
-                    return self._cached_file
-                else:
-                    return self._file_path
+                self._cached_file = salt.utils.files.mkstemp()
+                with salt.utils.files.fopen(self._cached_file, "w") as fp:
+                    template_string = __salt__["slsutil.renderer"](
+                        path=self._file_path, default_renderer="jinja", **self._kwargs
+                    )
+                    fp.write(template_string)
+                return self._cached_file
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         if self._cached_file is not None:
             salt.utils.files.safe_rm(self._cached_file)
-            log.debug("Deleted cached file: {}".format(self._cached_file))
+            log.debug("Deleted cached file: %s", self._cached_file)
         if self._cached_folder is not None:
             __salt__["file.rmdir"](self._cached_folder)
-            log.debug("Deleted cached folder: {}".format(self._cached_folder))
+            log.debug("Deleted cached folder: %s", self._cached_folder)
 
 
 def _timeout_decorator(function):
@@ -243,16 +225,14 @@ def _timeout_decorator_cleankwargs(function):
 def _restart_connection():
     minion_id = __opts__.get("proxyid", "") or __opts__.get("id", "")
     log.info(
-        "Junos exception occurred {} (junos proxy) is down. Restarting.".format(
-            minion_id
-        )
+        "Junos exception occurred %s (junos proxy) is down. Restarting.", minion_id
     )
     __salt__["event.fire_master"](
         {}, "junos/proxy/{}/stop".format(__opts__["proxy"]["host"])
     )
     __proxy__["junos.shutdown"](__opts__)  # safely close connection
     __proxy__["junos.init"](__opts__)  # reopen connection
-    log.debug("Junos exception occurred, restarted {} (junos proxy)!".format(minion_id))
+    log.debug("Junos exception occurred, restarted %s (junos proxy)!", minion_id)
 
 
 @_timeout_decorator_cleankwargs
@@ -400,7 +380,7 @@ def rpc(cmd=None, dest=None, **kwargs):
             log.warning('Filter ignored as it is only used with "get-config" rpc')
 
         if "dest" in op:
-            log.warning("dest in op, rpc may reject this for cmd {}".format(cmd))
+            log.warning("dest in op, rpc may reject this for cmd '%s'", cmd)
 
         try:
             reply = getattr(conn.rpc, cmd.replace("-", "_"))({"format": format_}, **op)
@@ -672,8 +652,10 @@ def rollback(**kwargs):
         ids_passed = ids_passed + 1
 
     if ids_passed > 1:
-        log.warning("junos.rollback called with more than one possible ID.")
-        log.warning("Use only one of the positional argument, `id`, or `d_id` kwargs")
+        log.warning(
+            "junos.rollback called with more than one possible ID. "
+            "Use only one of the positional argument, `id`, or `d_id` kwargs"
+        )
 
     ret = {}
     conn = __proxy__["junos.conn"]()
@@ -707,8 +689,8 @@ def rollback(**kwargs):
                 fp.write(salt.utils.stringutils.to_str(diff))
         else:
             log.info(
-                "No diff between current configuration and \
-                rollbacked configuration, so no diff file created"
+                "No diff between current configuration and "
+                "rollbacked configuration, so no diff file created"
             )
 
     try:
@@ -773,8 +755,10 @@ def diff(**kwargs):
         id_ = kwargs.pop("id", 0)
         ids_passed = ids_passed + 1
     if ids_passed > 1:
-        log.warning("junos.rollback called with more than one possible ID.")
-        log.warning("Use only one of the positional argument, `id`, or `d_id` kwargs")
+        log.warning(
+            "junos.rollback called with more than one possible ID. "
+            "Use only one of the positional argument, `id`, or `d_id` kwargs"
+        )
 
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
@@ -1226,14 +1210,16 @@ def install_config(path=None, **kwargs):
                 elif not check:
                     try:
                         cu.rollback()
-                        ret[
-                            "message"
-                        ] = "Loaded configuration but commit check failed, hence rolling back configuration."
+                        ret["message"] = (
+                            "Loaded configuration but commit check failed, hence"
+                            " rolling back configuration."
+                        )
                     except Exception as exception:  # pylint: disable=broad-except
-                        ret[
-                            "message"
-                        ] = 'Loaded configuration but commit check failed, and exception occurred during rolling back configuration "{}"'.format(
-                            exception
+                        ret["message"] = (
+                            "Loaded configuration but commit check failed, and"
+                            ' exception occurred during rolling back configuration "{}"'.format(
+                                exception
+                            )
                         )
                         _restart_connection()
 
@@ -1241,15 +1227,17 @@ def install_config(path=None, **kwargs):
                 else:
                     try:
                         cu.rollback()
-                        ret[
-                            "message"
-                        ] = "Commit check passed, but skipping commit for dry-run and rolling back configuration."
+                        ret["message"] = (
+                            "Commit check passed, but skipping commit for dry-run and"
+                            " rolling back configuration."
+                        )
                         ret["out"] = True
                     except Exception as exception:  # pylint: disable=broad-except
-                        ret[
-                            "message"
-                        ] = 'Commit check passed, but skipping commit for dry-run andi while rolling back configuration exception occurred "{}"'.format(
-                            exception
+                        ret["message"] = (
+                            "Commit check passed, but skipping commit for dry-run and"
+                            ' while rolling back configuration exception occurred "{}"'.format(
+                                exception
+                            )
                         )
                         ret["out"] = False
                         _restart_connection()
@@ -1261,7 +1249,7 @@ def install_config(path=None, **kwargs):
                 except Exception as exception:  # pylint: disable=broad-except
                     ret[
                         "message"
-                    ] = 'Could not write into diffs_file due to: "{}"'.format(exception)
+                    ] = "Could not write into diffs_file due to: '{}'".format(exception)
                     ret["out"] = False
 
         except ValueError as ex:
@@ -1277,6 +1265,9 @@ def install_config(path=None, **kwargs):
             message = "install_config failed due to timeout error : {}".format(str(ex))
             log.error(message)
             ret["message"] = message
+            ret["out"] = False
+        except Exception as exc:  # pylint: disable=broad-except
+            ret["message"] = "install_config failed due to exception: '{}'".format(exc)
             ret["out"] = False
 
         return ret
@@ -1922,9 +1913,10 @@ def get_table(
                     ret["table"][table]["args"] = args
                     ret["table"][table]["command"] = data.GET_CMD
     except ConnectClosedError:
-        ret["message"] = (
-            "Got ConnectClosedError exception. Connection lost "
-            "with {}".format(str(conn))
+        ret[
+            "message"
+        ] = "Got ConnectClosedError exception. Connection lost with {}".format(
+            str(conn)
         )
         ret["out"] = False
         _restart_connection()
@@ -2311,9 +2303,10 @@ def dir_copy(source, dest, force=False, **kwargs):
         return ret
 
     if not (dest.endswith(":") or dest.startswith("/")):
-        ret[
-            "message"
-        ] = "Destination must be a routing engine reference (e.g. re1:) or a fully qualified path."
+        ret["message"] = (
+            "Destination must be a routing engine reference (e.g. re1:) or a fully"
+            " qualified path."
+        )
         ret["success"] = False
         return ret
 

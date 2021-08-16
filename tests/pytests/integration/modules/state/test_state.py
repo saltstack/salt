@@ -5,6 +5,7 @@ import zipfile
 import pytest
 import salt.utils.files
 import salt.utils.stringutils
+from saltfactories.utils.functional import MultiStateResult
 from tests.support.runtests import RUNTIME_VARS
 
 
@@ -57,7 +58,7 @@ def test_issue_56131(salt_minion, base_env_state_tree_root_dir, tmp_path):
     else:
         pythonpath = os.pathsep.join([str(pip_path_dir)] + pythonpath.split(os.pathsep))
     environ["PYTHONPATH"] = pythonpath
-    salt_call_cli = salt_minion.get_salt_call_cli(environ=environ)
+    salt_call_cli = salt_minion.salt_call_cli(environ=environ)
     extract_path = tmp_path / "issue-56131.txt"
     try:
         assert extract_path.exists() is False
@@ -66,8 +67,8 @@ def test_issue_56131(salt_minion, base_env_state_tree_root_dir, tmp_path):
         ):
             ret = salt_call_cli.run("state.sls", "issue-56131")
             assert ret.exitcode == 0
-            staterun = pytest.helpers.state_return(ret.json)
-            staterun.assert_state_true_return()
+            for state_return in MultiStateResult(ret.json):
+                assert state_return.result is True
             assert extract_path.exists()
     finally:
         zipfile_path.unlink()
@@ -94,8 +95,8 @@ def test_pydsl(salt_call_cli, base_env_state_tree_root_dir, tmp_path):
         ret = salt_call_cli.run("state.sls", "pydsl")
         assert ret.exitcode == 0
         assert ret.json
-        ret = pytest.helpers.state_return(ret.json)
-        ret.assert_state_true_return()
+        for state_return in MultiStateResult(ret.json):
+            assert state_return.result is True
         assert testfile.exists()
 
 

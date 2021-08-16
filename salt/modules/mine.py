@@ -44,8 +44,7 @@ def _auth():
             __context__["auth"] = salt.crypt.SAuth(__opts__)
         except SaltClientError:
             log.error(
-                "Could not authenticate with master."
-                "Mine data will not be transmitted."
+                "Could not authenticate with master. Mine data will not be transmitted."
             )
     return __context__["auth"]
 
@@ -72,8 +71,7 @@ def _mine_get(load, opts):
             load["tok"] = _auth().gen_token(b"salt")
         except AttributeError:
             log.error(
-                "Mine could not authenticate with master. "
-                "Mine could not be retrieved."
+                "Mine could not authenticate with master. Mine could not be retrieved."
             )
             return False
     with salt.transport.client.ReqChannel.factory(opts) as channel:

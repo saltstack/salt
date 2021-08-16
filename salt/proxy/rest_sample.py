@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 This is a simple proxy-minion designed to connect to and communicate with
 the bottle-based web service contained in https://github.com/saltstack/salt-contrib/tree/master/proxyminion_rest_example
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
 import salt.utils.http
@@ -102,8 +99,10 @@ def grains_refresh():
 
 def fns():
     return {
-        "details": "This key is here because a function in "
-        "grains/rest_sample.py called fns() here in the proxymodule."
+        "details": (
+            "This key is here because a function in "
+            "grains/rest_sample.py called fns() here in the proxymodule."
+        )
     }
 
 

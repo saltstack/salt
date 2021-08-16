@@ -289,20 +289,23 @@ class NetapiSSHClientTest(SSHCase):
         self.addCleanup(self.cleanup_file, "aaa")
         self.addCleanup(self.cleanup_file, "aaa.pub")
         self.addCleanup(self.cleanup_dir, "aaa|id>")
-        tgt = "www.zerodayinitiative.com"
-        low = {
-            "roster": "cache",
-            "client": "ssh",
-            "tgt": tgt,
-            "ssh_priv": "aaa|id>{} #".format(path),
-            "fun": "test.ping",
-            "eauth": "auto",
-            "username": "saltdev_auto",
-            "password": "saltdev",
-            "roster_file": self.roster_file,
-            "rosters": self.rosters,
-        }
-        ret = self.netapi.run(low)
+        tgts = ["repo.saltproject.io", "www.zerodayinitiative.com"]
+        for tgt in tgts:
+            low = {
+                "roster": "cache",
+                "client": "ssh",
+                "tgt": tgt,
+                "ssh_priv": "aaa|id>{} #".format(path),
+                "fun": "test.ping",
+                "eauth": "auto",
+                "username": "saltdev_auto",
+                "password": "saltdev",
+                "roster_file": self.roster_file,
+                "rosters": self.rosters,
+            }
+            ret = self.netapi.run(low)
+            if ret.get(tgt):
+                break
         self.assertFalse(ret[tgt]["stdout"])
         self.assertTrue(ret[tgt]["stderr"])
         self.assertFalse(os.path.exists(path))
@@ -446,7 +449,8 @@ class NetapiSSHClientAuthTest(SSHCase):
             else:
                 hashed_password = salt.utils.pycrypto.gen_hash(password=self.USERA_PWD)
             add_pwd = self.mod_case.run_function(
-                "shadow.set_password", [self.USERA, hashed_password],
+                "shadow.set_password",
+                [self.USERA, hashed_password],
             )
             self.assertTrue(add_pwd)
         except AssertionError:

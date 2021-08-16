@@ -34,7 +34,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.win_functions
-import saltfactories.utils.compat
 from salt.serializers import yaml
 from salt.utils.immutabletypes import freeze
 from tests.support.helpers import (
@@ -138,11 +137,13 @@ def pytest_addoption(parser):
         "--from-filenames",
         default=None,
         help=(
-            "Pass a comma-separated list of file paths, and any test module which corresponds to the "
-            "specified file(s) will run. For example, if 'setup.py' was passed, then the corresponding "
-            "test files defined in 'tests/filename_map.yml' would run. Absolute paths are assumed to be "
-            "files containing relative paths, one per line. Providing the paths in a file can help get "
-            "around shell character limits when the list of files is long."
+            "Pass a comma-separated list of file paths, and any test module which"
+            " corresponds to the specified file(s) will run. For example, if 'setup.py'"
+            " was passed, then the corresponding test files defined in"
+            " 'tests/filename_map.yml' would run. Absolute paths are assumed to be"
+            " files containing relative paths, one per line. Providing the paths in a"
+            " file can help get around shell character limits when the list of files is"
+            " long."
         ),
     )
     # Add deprecated CLI flag until we completely switch to PyTest
@@ -154,7 +155,8 @@ def pytest_addoption(parser):
         default="zeromq",
         choices=("zeromq", "tcp"),
         help=(
-            "Select which transport to run the integration tests with, zeromq or tcp. Default: %(default)s"
+            "Select which transport to run the integration tests with, zeromq or tcp."
+            " Default: %(default)s"
         ),
     )
     test_selection_group.addoption(
@@ -163,9 +165,11 @@ def pytest_addoption(parser):
         dest="ssh",
         action="store_true",
         default=False,
-        help="Run salt-ssh tests. These tests will spin up a temporary "
-        "SSH server on your machine. In certain environments, this "
-        "may be insecure! Default: False",
+        help=(
+            "Run salt-ssh tests. These tests will spin up a temporary "
+            "SSH server on your machine. In certain environments, this "
+            "may be insecure! Default: False"
+        ),
     )
     test_selection_group.addoption(
         "--proxy",
@@ -173,10 +177,13 @@ def pytest_addoption(parser):
         dest="proxy",
         action="store_true",
         default=False,
-        help="Run proxy tests",
+        help="Run proxy tests (DEPRECATED)",
     )
     test_selection_group.addoption(
-        "--run-slow", action="store_true", default=False, help="Run slow tests.",
+        "--run-slow",
+        action="store_true",
+        default=False,
+        help="Run slow tests.",
     )
 
     output_options_group = parser.getgroup("Output Options")
@@ -230,11 +237,13 @@ def pytest_configure(config):
     # Expose the markers we use to pytest CLI
     config.addinivalue_line(
         "markers",
-        "requires_salt_modules(*required_module_names): Skip if at least one module is not available.",
+        "requires_salt_modules(*required_module_names): Skip if at least one module is"
+        " not available.",
     )
     config.addinivalue_line(
         "markers",
-        "requires_salt_states(*required_state_names): Skip if at least one state module is not available.",
+        "requires_salt_states(*required_state_names): Skip if at least one state module"
+        " is not available.",
     )
     config.addinivalue_line(
         "markers", "windows_whitelisted: Mark test as whitelisted to run under Windows"
@@ -244,7 +253,8 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         "markers",
-        "slow_test: Mark test as being slow. These tests are skipped by default unless `--run-slow` is passed",
+        "slow_test: Mark test as being slow. These tests are skipped by default unless"
+        " `--run-slow` is passed",
     )
     # "Flag" the slowTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
@@ -284,8 +294,8 @@ def set_max_open_files_limits(min_soft=3072, min_hard=4096):
     # Increase limits
     if set_limits:
         log.debug(
-            " * Max open files settings is too low (soft: %s, hard: %s) for running the tests. "
-            "Trying to raise the limits to soft: %s, hard: %s",
+            " * Max open files settings is too low (soft: %s, hard: %s) for running the"
+            " tests. Trying to raise the limits to soft: %s, hard: %s",
             prev_soft,
             prev_hard,
             soft,
@@ -299,8 +309,8 @@ def set_max_open_files_limits(min_soft=3072, min_hard=4096):
                 resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
         except Exception as err:  # pylint: disable=broad-except
             log.error(
-                "Failed to raise the max open files settings -> %s. Please issue the following command "
-                "on your console: 'ulimit -u %s'",
+                "Failed to raise the max open files settings -> %s. Please issue the"
+                " following command on your console: 'ulimit -u %s'",
                 err,
                 soft,
             )
@@ -320,8 +330,8 @@ def pytest_itemcollected(item):
         # Test is under tests/pytests
         if item.cls and issubclass(item.cls, TestCase):
             pytest.fail(
-                "The tests under {0!r} MUST NOT use unittest's TestCase class or a subclass of it. "
-                "Please move {1!r} outside of {0!r}".format(
+                "The tests under {0!r} MUST NOT use unittest's TestCase class or a"
+                " subclass of it. Please move {1!r} outside of {0!r}".format(
                     str(PYTESTS_DIR.relative_to(CODE_DIR)), item.nodeid
                 )
             )
@@ -329,7 +339,8 @@ def pytest_itemcollected(item):
         # Test is not under tests/pytests
         if not item.cls or (item.cls and not issubclass(item.cls, TestCase)):
             pytest.fail(
-                "The test {!r} appears to be written for pytest but it's not under {!r}. Please move it there.".format(
+                "The test {!r} appears to be written for pytest but it's not under"
+                " {!r}. Please move it there.".format(
                     item.nodeid, str(PYTESTS_DIR.relative_to(CODE_DIR)), pytrace=False
                 )
             )
@@ -382,8 +393,9 @@ def pytest_collection_modifyitems(config, items):
                                             and not request.session.shouldstop
                                         ):
                                             log.debug(
-                                                "The next test item is still under the fixture package path. "
-                                                "Not terminating %s",
+                                                "The next test item is still under the"
+                                                " fixture package path. Not"
+                                                " terminating %s",
                                                 self,
                                             )
                                             return
@@ -465,9 +477,7 @@ def pytest_runtest_setup(item):
         item._skipped_by_mark = True
         pytest.skip(PRE_PYTEST_SKIP_REASON)
 
-    if saltfactories.utils.compat.has_unittest_attr(
-        item, "__slow_test__"
-    ) or item.get_closest_marker("slow_test"):
+    if item.get_closest_marker("slow_test"):
         if item.config.getoption("--run-slow") is False:
             item._skipped_by_mark = True
             pytest.skip("Slow tests are disabled!")
@@ -593,7 +603,8 @@ def groups_collection_modifyitems(config, items):
 
     terminal_reporter = config.pluginmanager.get_plugin("terminalreporter")
     terminal_reporter.write(
-        "Running test group #{} ({} tests)\n".format(group_id, len(items)), yellow=True,
+        "Running test group #{} ({} tests)\n".format(group_id, len(items)),
+        yellow=True,
     )
 
 
@@ -802,11 +813,11 @@ def salt_syndic_master_factory(
         }
     )
 
-    factory = salt_factories.get_salt_master_daemon(
+    factory = salt_factories.salt_master_daemon(
         "syndic_master",
         order_masters=True,
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
+        defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
     return factory
@@ -823,10 +834,10 @@ def salt_syndic_factory(salt_factories, salt_syndic_master_factory):
         opts["transport"] = salt_syndic_master_factory.config["transport"]
         config_defaults["syndic"] = opts
     config_overrides = {"log_level_logfile": "quiet"}
-    factory = salt_syndic_master_factory.get_salt_syndic_daemon(
+    factory = salt_syndic_master_factory.salt_syndic_daemon(
         "syndic",
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
+        defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
     return factory
@@ -935,10 +946,10 @@ def salt_master_factory(
         else:
             shutil.copyfile(source, dest)
 
-    factory = salt_syndic_master_factory.get_salt_master_daemon(
+    factory = salt_syndic_master_factory.salt_master_daemon(
         "master",
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
+        defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
     return factory
@@ -961,13 +972,13 @@ def salt_minion_factory(salt_master_factory):
     virtualenv_binary = get_virtualenv_binary_path()
     if virtualenv_binary:
         config_overrides["venv_bin"] = virtualenv_binary
-    factory = salt_master_factory.get_salt_minion_daemon(
+    factory = salt_master_factory.salt_minion_daemon(
         "minion",
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
+        defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
-    factory.register_after_terminate_callback(
+    factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
     )
     return factory
@@ -992,43 +1003,13 @@ def salt_sub_minion_factory(salt_master_factory):
     virtualenv_binary = get_virtualenv_binary_path()
     if virtualenv_binary:
         config_overrides["venv_bin"] = virtualenv_binary
-    factory = salt_master_factory.get_salt_minion_daemon(
+    factory = salt_master_factory.salt_minion_daemon(
         "sub_minion",
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
+        defaults=config_defaults,
+        overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
-    factory.register_after_terminate_callback(
-        pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
-    )
-    return factory
-
-
-@pytest.fixture(scope="session")
-def salt_proxy_factory(salt_factories, salt_master_factory):
-    proxy_minion_id = "proxytest"
-    root_dir = salt_factories.get_root_dir_for_daemon(proxy_minion_id)
-    conf_dir = root_dir / "conf"
-    conf_dir.mkdir(parents=True, exist_ok=True)
-    RUNTIME_VARS.TMP_PROXY_CONF_DIR = str(conf_dir)
-
-    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "proxy")) as rfh:
-        config_defaults = yaml.deserialize(rfh.read())
-
-    config_defaults["root_dir"] = str(root_dir)
-    config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
-    config_defaults["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
-    config_defaults["transport"] = salt_master_factory.config["transport"]
-
-    config_overrides = {"log_level_logfile": "quiet"}
-
-    factory = salt_master_factory.get_salt_proxy_minion_daemon(
-        proxy_minion_id,
-        config_defaults=config_defaults,
-        config_overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
-    )
-    factory.register_after_terminate_callback(
+    factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
     )
     return factory
@@ -1036,27 +1017,27 @@ def salt_proxy_factory(salt_factories, salt_master_factory):
 
 @pytest.fixture(scope="session")
 def salt_cli(salt_master_factory):
-    return salt_master_factory.get_salt_cli()
+    return salt_master_factory.salt_cli()
 
 
 @pytest.fixture(scope="session")
 def salt_cp_cli(salt_master_factory):
-    return salt_master_factory.get_salt_cp_cli()
+    return salt_master_factory.salt_cp_cli()
 
 
 @pytest.fixture(scope="session")
 def salt_key_cli(salt_master_factory):
-    return salt_master_factory.get_salt_key_cli()
+    return salt_master_factory.salt_key_cli()
 
 
 @pytest.fixture(scope="session")
 def salt_run_cli(salt_master_factory):
-    return salt_master_factory.get_salt_run_cli()
+    return salt_master_factory.salt_run_cli()
 
 
 @pytest.fixture(scope="session")
 def salt_call_cli(salt_minion_factory):
-    return salt_minion_factory.get_salt_call_cli()
+    return salt_minion_factory.salt_call_cli()
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -1140,7 +1121,8 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master):
         "UsePAM": "yes",
     }
     factory = salt_factories.get_sshd_daemon(
-        sshd_config_dict=sshd_config_dict, config_dir=sshd_config_dir,
+        sshd_config_dict=sshd_config_dict,
+        config_dir=sshd_config_dir,
     )
     with factory.started():
         yield factory
@@ -1185,7 +1167,14 @@ def from_filenames_collection_modifyitems(config, items):
         # Don't do anything
         return
 
-    log.info("Calculating test modules to run based on the paths in --from-filenames")
+    terminal_reporter = config.pluginmanager.getplugin("terminalreporter")
+    terminal_reporter.ensure_newline()
+    terminal_reporter.section(
+        "From Filenames(--from-filenames) Test Selection", sep=">"
+    )
+    errors = []
+    test_module_selections = []
+    changed_files_selections = []
     from_filenames_paths = set()
     for path in [path.strip() for path in from_filenames.split(",")]:
         # Make sure that, no matter what kind of path we're passed, Windows or Posix path,
@@ -1194,29 +1183,33 @@ def from_filenames_collection_modifyitems(config, items):
             path.replace("\\", os.sep).replace("/", os.sep)
         )
         if not properly_slashed_path.exists():
-            log.info(
-                "The path %s(%s) passed in --from-filenames does not exist",
-                path,
-                properly_slashed_path,
-            )
+            errors.append("{}: Does not exist".format(properly_slashed_path))
             continue
         if properly_slashed_path.is_absolute():
             # In this case, this path is considered to be a file containing a line separated list
             # of files to consider
-            with salt.utils.files.fopen(str(path)) as rfh:
-                for line in rfh:
-                    line_path = pathlib.Path(
-                        line.strip().replace("\\", os.sep).replace("/", os.sep)
-                    )
-                    if not line_path.exists():
-                        log.info(
-                            "The path %s contained in %s passed in --from-filenames does not exist",
-                            line_path,
-                            properly_slashed_path,
+            contents = properly_slashed_path.read_text()
+            for sep in ("\r\n", "\\r\\n", "\\n"):
+                contents = contents.replace(sep, "\n")
+            for line in contents.split("\n"):
+                line_path = pathlib.Path(
+                    line.strip().replace("\\", os.sep).replace("/", os.sep)
+                )
+                if not line_path.exists():
+                    errors.append(
+                        "{}: Does not exist. Source {}".format(
+                            line_path, properly_slashed_path
                         )
-                        continue
-                    from_filenames_paths.add(line_path)
+                    )
+                    continue
+                changed_files_selections.append(
+                    "{}: Source {}".format(line_path, properly_slashed_path)
+                )
+                from_filenames_paths.add(line_path)
             continue
+        changed_files_selections.append(
+            "{}: Source --from-filenames".format(properly_slashed_path)
+        )
         from_filenames_paths.add(properly_slashed_path)
 
     # Let's start collecting test modules
@@ -1236,10 +1229,16 @@ def from_filenames_collection_modifyitems(config, items):
             if path.name == "conftest.py":
                 # This is not a test module, but consider any test_*.py files in child directories
                 for match in path.parent.rglob("test_*.py"):
+                    test_module_selections.append(
+                        "{}: Source '{}/test_*.py' recursive glob match because '{}' was modified".format(
+                            match, path.parent, path
+                        )
+                    )
                     test_module_paths.add(match)
                 continue
             # Tests in the listing don't require additional matching and will be added to the
             # list of tests to run
+            test_module_selections.append("{}: Source --from-filenames".format(path))
             test_module_paths.add(path)
             continue
         if path.name == "setup.py" or path.as_posix().startswith("salt/"):
@@ -1268,7 +1267,11 @@ def from_filenames_collection_modifyitems(config, items):
             for pattern in glob_patterns:
                 for match in TESTS_DIR.rglob(pattern):
                     relative_path = match.relative_to(CODE_DIR)
-                    log.info("Glob pattern %r matched '%s'", pattern, relative_path)
+                    test_module_selections.append(
+                        "{}: Source '{}' glob pattern match".format(
+                            relative_path, pattern
+                        )
+                    )
                     test_module_paths.add(relative_path)
 
             # Do we have an entry in tests/filename_map.yml
@@ -1280,6 +1283,11 @@ def from_filenames_collection_modifyitems(config, items):
                     if re.match(rule, path.as_posix()):
                         for match in matches:
                             test_module_paths.add(_match_to_test_file(match))
+                            test_module_selections.append(
+                                "{}: Source '{}' regex match from 'tests/filename_map.yml'".format(
+                                    match, rule
+                                )
+                            )
                 elif "*" in rule or "\\" in rule:
                     # Glob matching
                     for filerule in CODE_DIR.glob(rule):
@@ -1289,7 +1297,13 @@ def from_filenames_collection_modifyitems(config, items):
                         if filerule != path:
                             continue
                         for match in matches:
-                            test_module_paths.add(_match_to_test_file(match))
+                            match_path = _match_to_test_file(match)
+                            test_module_selections.append(
+                                "{}: Source '{}' file rule from 'tests/filename_map.yml'".format(
+                                    match_path, filerule
+                                )
+                            )
+                            test_module_paths.add(match_path)
                 else:
                     if path.as_posix() != rule:
                         continue
@@ -1298,15 +1312,34 @@ def from_filenames_collection_modifyitems(config, items):
                     if not filerule.exists():
                         continue
                     for match in matches:
-                        test_module_paths.add(_match_to_test_file(match))
+                        match_path = _match_to_test_file(match)
+                        test_module_selections.append(
+                            "{}: Source '{}' direct file rule from 'tests/filename_map.yml'".format(
+                                match_path, filerule
+                            )
+                        )
+                        test_module_paths.add(match_path)
             continue
         else:
-            log.info("Don't know what to do with path %s", path)
+            errors.append("{}: Don't know what to do with this path".format(path))
 
-    log.info(
-        "Collected the following paths from --from-filenames processing:\n%s",
-        "\n".join(sorted(map(str, test_module_paths))),
+    if errors:
+        terminal_reporter.write("Errors:\n", bold=True)
+        for error in errors:
+            terminal_reporter.write(" * {}\n".format(error))
+    if changed_files_selections:
+        terminal_reporter.write("Changed files collected:\n", bold=True)
+        for selection in changed_files_selections:
+            terminal_reporter.write(" * {}\n".format(selection))
+    if test_module_selections:
+        terminal_reporter.write("Selected test modules:\n", bold=True)
+        for selection in test_module_selections:
+            terminal_reporter.write(" * {}\n".format(selection))
+    terminal_reporter.section(
+        "From Filenames(--from-filenames) Test Selection", sep="<"
     )
+    terminal_reporter.ensure_newline()
+
     selected = []
     deselected = []
     for item in items:

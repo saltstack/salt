@@ -1,18 +1,9 @@
-# -*- coding: utf-8 -*-
-
-# import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import tempfile
 
 import salt.modules.ssh as ssh
-
-# Import Salt Libs
 import salt.utils.files
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -103,7 +94,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
             _fh.write(comment_line)
             # Add empty line for #41335
             _fh.write(empty_line)
-            _fh.write("{0} {1} {2} {3}".format(options, enc, key, email))
+            _fh.write("{} {} {} {}".format(options, enc, key, email))
 
         with patch.dict(ssh.__salt__, {"user.info": MagicMock(return_value={})}):
             with patch(
@@ -125,7 +116,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         key = "abcxyz"
 
         with salt.utils.files.fopen(temp_file.name, "a") as _fh:
-            _fh.write(salt.utils.stringutils.to_str("{0} {1}".format(enc, key)))
+            _fh.write(salt.utils.stringutils.to_str("{} {}".format(enc, key)))
 
         # Replace the simple key from before with the more complicated options + new email
         # Option example is taken from Pull Request #39855
@@ -133,7 +124,8 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
             "no-port-forwarding",
             "no-agent-forwarding",
             "no-X11-forwarding",
-            'command="echo \'Please login as the user "ubuntu" rather than the user "root".\'',
+            'command="echo \'Please login as the user "ubuntu" rather than the user'
+            ' "root".\'',
         ]
         email = "foo@example.com"
 
@@ -156,7 +148,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
             file_txt = salt.utils.stringutils.to_unicode(_fh.read())
             self.assertIn(enc, file_txt)
             self.assertIn(key, file_txt)
-            self.assertIn("{0} ".format(",".join(options)), file_txt)
+            self.assertIn("{} ".format(",".join(options)), file_txt)
             self.assertIn(email, file_txt)
             self.assertIn(empty_line, file_txt)
             self.assertIn(comment_line, file_txt)

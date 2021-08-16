@@ -1,15 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 This state downloads artifacts from artifactory.
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -90,7 +85,7 @@ def downloaded(
     if "test" in __opts__ and __opts__["test"] is True:
         fetch_result = {}
         fetch_result["status"] = True
-        fetch_result["comment"] = "Artifact would be downloaded from URL: {0}".format(
+        fetch_result["comment"] = "Artifact would be downloaded from URL: {}".format(
             artifact["artifactory_url"]
         )
         fetch_result["changes"] = {}
@@ -101,7 +96,7 @@ def downloaded(
             )
         except Exception as exc:  # pylint: disable=broad-except
             ret["result"] = False
-            ret["comment"] = six.text_type(exc)
+            ret["comment"] = str(exc)
             return ret
 
     log.debug("fetch_result = %s", fetch_result)

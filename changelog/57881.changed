@@ -1,0 +1,1 @@
+Parsing Epoch out of version during pkg remove, since yum can't handle that in all of the cases.

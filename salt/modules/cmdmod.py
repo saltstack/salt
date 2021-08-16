@@ -79,9 +79,10 @@ def __virtual__():
 
 
 def _log_cmd(cmd):
-    if isinstance(cmd, str):
-        return cmd.split()[0].strip()
-    return cmd[0].strip()
+    if isinstance(cmd, (tuple, list)):
+        return cmd[0].strip()
+    else:
+        return str(cmd).split()[0].strip()
 
 
 def _check_cb(cb_):
@@ -139,8 +140,7 @@ def _render_cmd(
     # render the path as a template using path_template_engine as the engine
     if template not in salt.utils.templates.TEMPLATE_REGISTRY:
         raise CommandExecutionError(
-            "Attempted to render file paths with unavailable engine "
-            "{}".format(template)
+            "Attempted to render file paths with unavailable engine {}".format(template)
         )
 
     kwargs = {}
@@ -282,6 +282,8 @@ def _run(
     bg=False,
     encoded_cmd=False,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     windows_codepage=65001,
     **kwargs
 ):
@@ -486,10 +488,9 @@ def _run(
             marker = "<<<" + str(uuid.uuid4()) + ">>>"
             marker_b = marker.encode(__salt_system_encoding__)
             py_code = (
-                "import sys, os, itertools; "
-                'sys.stdout.write("' + marker + '"); '
-                'sys.stdout.write("\\0".join(itertools.chain(*os.environ.items()))); '
-                'sys.stdout.write("' + marker + '");'
+                "import sys, os, itertools; sys.stdout.write('{0}''); "
+                "sys.stdout.write('\\0'.join(itertools.chain(*os.environ.items()))); "
+                "sys.stdout.write('{0}');".format(marker)
             )
 
             if use_sudo:
@@ -680,6 +681,17 @@ def _run(
             ]
         except ValueError:
             raise SaltInvocationError("success_retcodes must be a list of integers")
+
+    if success_stdout is None:
+        success_stdout = []
+    else:
+        success_stdout = salt.utils.args.split_input(success_stdout)
+
+    if success_stderr is None:
+        success_stderr = []
+    else:
+        success_stderr = salt.utils.args.split_input(success_stderr)
+
     if not use_vt:
         # This is where the magic happens
         try:
@@ -689,7 +701,9 @@ def _run(
                 proc = salt.utils.timed_subprocess.TimedProc(cmd, **new_kwargs)
             except OSError as exc:
                 msg = "Unable to run command '{}' with the context '{}', reason: {}".format(
-                    cmd if output_loglevel is not None else "REDACTED", new_kwargs, exc
+                    cmd if output_loglevel is not None else "REDACTED",
+                    new_kwargs,
+                    exc,
                 )
                 raise CommandExecutionError(msg)
 
@@ -761,6 +775,11 @@ def _run(
             ret["retcode"] = 0
         ret["stdout"] = out
         ret["stderr"] = err
+        if any(
+            [stdo in ret["stdout"] for stdo in success_stdout]
+            + [stde in ret["stderr"] for stde in success_stderr]
+        ):
+            ret["retcode"] = 0
     else:
         formatted_timeout = ""
         if timeout:
@@ -807,7 +826,7 @@ def _run(
                         else:
                             stderr = ""
                         if timeout and (time.time() > will_timeout):
-                            ret["stderr"] = ("SALT: Timeout after {}s\n{}").format(
+                            ret["stderr"] = "SALT: Timeout after {}s\n{}".format(
                                 timeout, stderr
                             )
                             ret["retcode"] = None
@@ -829,6 +848,11 @@ def _run(
                     ret["stderr"] = stderr
                     ret["retcode"] = proc.exitstatus
                     if ret["retcode"] in success_retcodes:
+                        ret["retcode"] = 0
+                    if any(
+                        [stdo in ret["stdout"] for stdo in success_stdout]
+                        + [stde in ret["stderr"] for stde in success_stderr]
+                    ):
                         ret["retcode"] = 0
                 ret["pid"] = proc.pid
         finally:
@@ -878,6 +902,8 @@ def _run_quiet(
     pillarenv=None,
     pillar_override=None,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
 ):
     """
     Helper for running commands quietly for minion startup
@@ -902,6 +928,8 @@ def _run_quiet(
         pillarenv=pillarenv,
         pillar_override=pillar_override,
         success_retcodes=success_retcodes,
+        success_stdout=success_stdout,
+        success_stderr=success_stderr,
     )["stdout"]
 
 
@@ -922,6 +950,8 @@ def _run_all_quiet(
     pillar_override=None,
     output_encoding=None,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
 ):
 
     """
@@ -952,6 +982,8 @@ def _run_all_quiet(
         pillarenv=pillarenv,
         pillar_override=pillar_override,
         success_retcodes=success_retcodes,
+        success_stdout=success_stdout,
+        success_stderr=success_stderr,
     )
 
 
@@ -983,6 +1015,8 @@ def run(
     raise_err=False,
     prepend_path=None,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     r"""
@@ -1149,12 +1183,26 @@ def run(
         Be absolutely certain that you have sanitized your input prior to using
         python_shell=True
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    :param list success_stdout: This parameter will allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
+
+    :param list success_stderr: This parameter will allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -1234,6 +1282,8 @@ def run(
         password=password,
         encoded_cmd=encoded_cmd,
         success_retcodes=success_retcodes,
+        success_stdout=success_stdout,
+        success_stderr=success_stderr,
         **kwargs
     )
 
@@ -1281,6 +1331,8 @@ def shell(
     password=None,
     prepend_path=None,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -1413,12 +1465,26 @@ def shell(
         processing! Be absolutely sure that you have properly sanitized the
         command passed to this function and do not use untrusted inputs.
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    :param list success_stdout: This parameter will allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
+
+    :param list success_stderr: This parameter will allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -1493,6 +1559,8 @@ def shell(
         bg=bg,
         password=password,
         success_retcodes=success_retcodes,
+        success_stdout=success_stdout,
+        success_stderr=success_stderr,
         **kwargs
     )
 
@@ -1522,6 +1590,8 @@ def run_stdout(
     password=None,
     prepend_path=None,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -1647,12 +1717,26 @@ def run_stdout(
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    :param list success_stdout: This parameter will allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
+
+    :param list success_stderr: This parameter will allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -1707,6 +1791,8 @@ def run_stdout(
         use_vt=use_vt,
         password=password,
         success_retcodes=success_retcodes,
+        success_stdout=success_stdout,
+        success_stderr=success_stderr,
         **kwargs
     )
 
@@ -1738,6 +1824,8 @@ def run_stderr(
     password=None,
     prepend_path=None,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -1863,12 +1951,26 @@ def run_stderr(
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    :param list success_stdout: This parameter will allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
+
+    :param list success_stderr: This parameter will allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -1923,6 +2025,8 @@ def run_stderr(
         saltenv=saltenv,
         password=password,
         success_retcodes=success_retcodes,
+        success_stdout=success_stdout,
+        success_stderr=success_stderr,
         **kwargs
     )
 
@@ -1956,6 +2060,8 @@ def run_all(
     encoded_cmd=False,
     prepend_path=None,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -2122,12 +2228,26 @@ def run_all(
 
         .. versionadded:: 2016.3.6
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    :param list success_stdout: This parameter will allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
+
+    :param list success_stderr: This parameter will allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -2185,6 +2305,8 @@ def run_all(
         password=password,
         encoded_cmd=encoded_cmd,
         success_retcodes=success_retcodes,
+        success_stdout=success_stdout,
+        success_stderr=success_stderr,
         **kwargs
     )
 
@@ -2215,6 +2337,8 @@ def retcode(
     use_vt=False,
     password=None,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -2329,12 +2453,26 @@ def retcode(
     :rtype: None
     :returns: Return Code as an int or None if there was an exception.
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    :param list success_stdout: This parameter will allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
+
+    :param list success_stderr: This parameter will allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -2389,6 +2527,8 @@ def retcode(
         use_vt=use_vt,
         password=password,
         success_retcodes=success_retcodes,
+        success_stdout=success_stdout,
+        success_stderr=success_stderr,
         **kwargs
     )
     return ret["retcode"]
@@ -2415,6 +2555,8 @@ def _retcode_quiet(
     use_vt=False,
     password=None,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -2443,6 +2585,8 @@ def _retcode_quiet(
         use_vt=use_vt,
         password=password,
         success_retcodes=success_retcodes,
+        success_stdout=success_stdout,
+        success_stderr=success_stderr,
         **kwargs
     )
 
@@ -2470,6 +2614,8 @@ def script(
     bg=False,
     password=None,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -2606,12 +2752,26 @@ def script(
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    :param list success_stdout: This parameter will allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
+
+    :param list success_stderr: This parameter will allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -2723,6 +2883,8 @@ def script(
         bg=bg,
         password=password,
         success_retcodes=success_retcodes,
+        success_stdout=success_stdout,
+        success_stderr=success_stderr,
         **kwargs
     )
     _cleanup_tempfile(path)
@@ -2756,6 +2918,8 @@ def script_retcode(
     use_vt=False,
     password=None,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -2865,12 +3029,26 @@ def script_retcode(
     :param bool use_vt: Use VT utils (saltstack) to stream the command output
         more interactively to the console and the logs. This is experimental.
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    :param list success_stdout: This parameter will allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
+
+    :param list success_stderr: This parameter will allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -2919,6 +3097,8 @@ def script_retcode(
         use_vt=use_vt,
         password=password,
         success_retcodes=success_retcodes,
+        success_stdout=success_stdout,
+        success_stderr=success_stderr,
         **kwargs
     )["retcode"]
 
@@ -3016,8 +3196,24 @@ def exec_code_all(lang, code, cwd=None, args=None, **kwargs):
     elif isinstance(args, list):
         cmd += args
 
+    def _cleanup_tempfile(path):
+        try:
+            __salt__["file.remove"](path)
+        except (SaltInvocationError, CommandExecutionError) as exc:
+            log.error(
+                "cmd.exec_code_all: Unable to clean tempfile '%s': %s",
+                path,
+                exc,
+                exc_info_on_loglevel=logging.DEBUG,
+            )
+
+    runas = kwargs.get("runas")
+    if runas is not None:
+        if not salt.utils.platform.is_windows():
+            os.chown(codefile, __salt__["file.user_to_uid"](runas), -1)
+
     ret = run_all(cmd, cwd=cwd, python_shell=False, **kwargs)
-    os.remove(codefile)
+    _cleanup_tempfile(codefile)
     return ret
 
 
@@ -3072,6 +3268,8 @@ def run_chroot(
     use_vt=False,
     bg=False,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -3196,12 +3394,26 @@ def run_chroot(
         Use VT utils (saltstack) to stream the command output more
         interactively to the console and the logs. This is experimental.
 
-    success_retcodes: This parameter will be allow a list of
+    :param success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    :param list success_stdout: This parameter will allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
+
+    :param list success_stderr: This parameter will allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
 
     CLI Example:
 
@@ -3260,6 +3472,8 @@ def run_chroot(
         pillar=kwargs.get("pillar"),
         use_vt=use_vt,
         success_retcodes=success_retcodes,
+        success_stdout=success_stdout,
+        success_stderr=success_stderr,
         bg=bg,
     )
 
@@ -3437,8 +3651,9 @@ def shell_info(shell, list_modules=False):
         pw_keys.sort(key=int)
         if not pw_keys:
             return {
-                "error": "Unable to locate 'powershell' Reason: Cannot be "
-                "found in registry.",
+                "error": (
+                    "Unable to locate 'powershell' Reason: Cannot be found in registry."
+                ),
                 "installed": False,
             }
         for reg_ver in pw_keys:
@@ -3453,8 +3668,9 @@ def shell_info(shell, list_modules=False):
             ):
                 details = salt.utils.win_reg.list_values(
                     hive="HKEY_LOCAL_MACHINE",
-                    key="Software\\Microsoft\\PowerShell\\{}\\"
-                    "PowerShellEngine".format(reg_ver),
+                    key="Software\\Microsoft\\PowerShell\\{}\\PowerShellEngine".format(
+                        reg_ver
+                    ),
                 )
 
                 # reset data, want the newest version details only as powershell
@@ -3487,8 +3703,11 @@ def shell_info(shell, list_modules=False):
     else:
         if shell not in regex_shells:
             return {
-                "error": "Salt does not know how to get the version number for "
-                "{}".format(shell),
+                "error": (
+                    "Salt does not know how to get the version number for {}".format(
+                        shell
+                    )
+                ),
                 "installed": None,
             }
         shell_data = regex_shells[shell]
@@ -3589,6 +3808,8 @@ def powershell(
     depth=None,
     encode_cmd=False,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -3740,12 +3961,26 @@ def powershell(
         where characters may be dropped or incorrectly converted when executed.
         Default is False.
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    :param list success_stdout: This parameter will allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
+
+    :param list success_stderr: This parameter will allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -3823,6 +4058,8 @@ def powershell(
         password=password,
         encoded_cmd=encoded_cmd,
         success_retcodes=success_retcodes,
+        success_stdout=success_stdout,
+        success_stderr=success_stderr,
         **kwargs
     )
 
@@ -3860,6 +4097,8 @@ def powershell_all(
     encode_cmd=False,
     force_list=False,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     """
@@ -4061,12 +4300,26 @@ def powershell_all(
     :param bool force_list: The purpose of this parameter is described in the
         preamble of this function's documentation. Default value is False.
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    :param list success_stdout: This parameter will allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
+
+    :param list success_stderr: This parameter will allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -4157,6 +4410,8 @@ def powershell_all(
         password=password,
         encoded_cmd=encoded_cmd,
         success_retcodes=success_retcodes,
+        success_stdout=success_stdout,
+        success_stderr=success_stderr,
         **kwargs
     )
     stdoutput = response["stdout"]
@@ -4211,6 +4466,8 @@ def run_bg(
     password=None,
     prepend_path=None,
     success_retcodes=None,
+    success_stdout=None,
+    success_stderr=None,
     **kwargs
 ):
     r"""
@@ -4342,12 +4599,26 @@ def run_bg(
         -rf /'.  Be absolutely certain that you have sanitized your input prior
         to using ``python_shell=True``.
 
-    :param list success_retcodes: This parameter will be allow a list of
+    :param list success_retcodes: This parameter will allow a list of
         non-zero return codes that should be considered a success.  If the
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
       .. versionadded:: 2019.2.0
+
+    :param list success_stdout: This parameter will allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
+
+    :param list success_stderr: This parameter will allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 3004
 
     :param bool stdin_raw_newlines: False
         If ``True``, Salt will not automatically convert the characters ``\\n``
@@ -4413,6 +4684,8 @@ def run_bg(
         saltenv=saltenv,
         password=password,
         success_retcodes=success_retcodes,
+        success_stdout=success_stdout,
+        success_stderr=success_stderr,
         **kwargs
     )
 

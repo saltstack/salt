@@ -1,7 +1,4 @@
-# coding: utf-8
-
 # Python libs
-from __future__ import absolute_import
 
 import logging
 
@@ -24,7 +21,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-class MockIPClass(object):
+class MockIPClass:
     def __init__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs

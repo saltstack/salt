@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 Manage PagerDuty escalation policies.
@@ -34,9 +33,6 @@ For example:
                       id:  'bruce+test4@lyft.com'
                   escalation_delay_in_minutes: 15
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -100,7 +96,7 @@ def present(profile="pagerduty", subdomain=None, api_key=None, **kwargs):
                 if schedule:
                     target_id = schedule["schedule"]["id"]
             if target_id is None:
-                raise Exception("unidentified target: {0}".format(target))
+                raise Exception("unidentified target: {}".format(target))
             target["id"] = target_id
 
     r = __salt__["pagerduty_util.resource_present"](
@@ -147,7 +143,7 @@ def _diff(state_data, resource_object):
             else:
                 resource_value = resource_object[k]
         if v != resource_value:
-            objects_differ = "{0} {1} {2}".format(k, v, resource_value)
+            objects_differ = "{} {} {}".format(k, v, resource_value)
             break
 
     if objects_differ:
@@ -160,9 +156,9 @@ def _escalation_rules_to_string(escalation_rules):
     "convert escalation_rules dict to a string for comparison"
     result = ""
     for rule in escalation_rules:
-        result += "escalation_delay_in_minutes: {0} ".format(
+        result += "escalation_delay_in_minutes: {} ".format(
             rule["escalation_delay_in_minutes"]
         )
         for target in rule["targets"]:
-            result += "{0}:{1} ".format(target["type"], target["id"])
+            result += "{}:{} ".format(target["type"], target["id"])
     return result
