@@ -38,7 +38,6 @@ def test_safe_walk_symlink_recursion(tmp_path):
     assert paths == expected
 
 
-
 def test_fopen_with_disallowed_fds():
     """
     This is safe to have as a unit test since we aren't going to actually
