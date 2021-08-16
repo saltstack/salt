@@ -2914,7 +2914,7 @@ class TestFindKeepFiles(TestCase):
         actual = sorted(list(keep))
         self.assertListEqual(actual, expected)
 
-    @pytest.mark.skip_unless_on_windows()
+    @pytest.mark.skip_unless_on_windows
     def test__clean_dir_win32(self):
         """
         Test _clean_dir to ensure that regardless of case, we keep all files
@@ -2933,7 +2933,7 @@ class TestFindKeepFiles(TestCase):
         expected = []
         self.assertListEqual(actual, expected)
 
-    @pytest.mark.skip_unless_on_darwin()
+    @pytest.mark.skip_unless_on_darwin
     def test__find_keep_files_darwin(self):
         """
         Test _clean_dir to ensure that regardless of case, we keep all files

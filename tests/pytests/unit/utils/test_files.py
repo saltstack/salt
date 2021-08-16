@@ -17,23 +17,16 @@ def test_safe_rm():
         assert os_remove_mock.called is True
 
 
-@pytest.mark.skipif(
-    os.path.exists("/tmp/no_way_this_is_a_file_nope.sh"),
-    reason="Test file exists! Skipping safe_rm_exceptions test!",
-)
-def test_safe_rm_exceptions():
-    error = False
-    try:
-        salt.utils.files.safe_rm("/tmp/no_way_this_is_a_file_nope.sh")
-    except OSError:
-        error = True
-    assert error is False
+def test_safe_rm_exceptions(tmp_path):
+    with pytest.raises(OSError):
+        salt.utils.files.safe_rm(str(tmp_path / "no_way_this_is_a_file_nope.sh"))
 
 
 def test_safe_walk_symlink_recursion(tmp_path):
-    tmp_path = str(tmp_path)
-    if os.stat(tmp_path).st_ino == 0:
+    if tmp_path.stat().st_ino == 0:
         pytest.xfail(reason="inodes not supported in {}".format(tmp_path))
+    tmp_path = str(tmp_path)
+
     os.mkdir(os.path.join(tmp_path, "fax"))
     os.makedirs(os.path.join(tmp_path, "foo", "bar"))
     os.symlink(os.path.join("..", ".."), os.path.join(tmp_path, "foo", "bar", "baz"))
@@ -47,15 +40,8 @@ def test_safe_walk_symlink_recursion(tmp_path):
     paths = []
     for root, dirs, names in salt.utils.files.safe_walk(os.path.join(tmp_path, "root")):
         paths.append((root, sorted(dirs), names))
-    if paths != expected:
-        raise AssertionError(
-            "\n".join(
-                ["got:"]
-                + [repr(p) for p in paths]
-                + ["", "expected:"]
-                + [repr(p) for p in expected]
-            )
-        )
+    assert paths == expected
+
 
 
 def test_fopen_with_disallowed_fds():
@@ -130,7 +116,7 @@ def test_recursive_copy(tmp_path):
     _validate_folder_structure_and_contents(dest, desired_structure)
 
 
-@pytest.mark.skip_unless_on_windows(reason="System is not Windows")
+@pytest.mark.skip_unless_on_windows
 def test_case_sensitive_filesystem_win():
     """
     Test case sensitivity on Windows.
@@ -139,7 +125,7 @@ def test_case_sensitive_filesystem_win():
     assert result is True
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_case_sensitive_filesystem_lin():
     """
     Test case sensitivity on Linux.
@@ -148,7 +134,7 @@ def test_case_sensitive_filesystem_lin():
     assert result is False
 
 
-@pytest.mark.skip_unless_on_darwin(reason="System is not Darwin")
+@pytest.mark.skip_unless_on_darwin
 def test_case_sensitive_filesystem_dar():
     """
     Test case sensitivity on Darwin.
