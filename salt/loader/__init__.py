@@ -142,6 +142,7 @@ def _module_dirs(
     ext_dirs=True,
     ext_type_dirs=None,
     base_path=None,
+    load_extensions=True,
 ):
     if tag is None:
         tag = ext_type
@@ -161,7 +162,7 @@ def _module_dirs(
             ext_type_dirs = "{}_dirs".format(tag)
         if ext_type_dirs in opts:
             ext_type_types.extend(opts[ext_type_dirs])
-        if ext_type_dirs:
+        if ext_type_dirs and load_extensions is True:
             for entry_point in entrypoints.iter_entry_points("salt.loader"):
                 with catch_entry_points_exception(entry_point) as ctx:
                     loaded_entry_point = entry_point.load()
@@ -465,7 +466,7 @@ def utils(opts, whitelist=None, context=None, proxy=None, pack_self=None):
     Returns the utility modules
     """
     return LazyLoader(
-        _module_dirs(opts, "utils", ext_type_dirs="utils_dirs"),
+        _module_dirs(opts, "utils", ext_type_dirs="utils_dirs", load_extensions=False),
         opts,
         tag="utils",
         whitelist=whitelist,
