@@ -99,8 +99,10 @@ def grains_refresh():
 
 def fns():
     return {
-        "details": "This key is here because a function in "
-        "grains/rest_sample.py called fns() here in the proxymodule."
+        "details": (
+            "This key is here because a function in "
+            "grains/rest_sample.py called fns() here in the proxymodule."
+        )
     }
 
 

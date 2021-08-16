@@ -55,7 +55,8 @@ def __virtual__():
 
     return (
         False,
-        "The SenseHat execution module cannot be loaded: 'sense_hat' python library unavailable.",
+        "The SenseHat execution module cannot be loaded: 'sense_hat' python library"
+        " unavailable.",
     )
 
 

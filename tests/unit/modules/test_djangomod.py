@@ -137,8 +137,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
                 "settings.py", "runserver", None, None, None, database="something"
             )
             mock.assert_called_once_with(
-                "django-admin.py runserver --settings=settings.py "
-                "--database=something",
+                "django-admin.py runserver --settings=settings.py --database=something",
                 python_shell=False,
                 env=None,
                 runas=None,
@@ -173,7 +172,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(djangomod.__salt__, {"cmd.run": mock}):
             djangomod.syncdb("settings.py", migrate=True)
             mock.assert_called_once_with(
-                "django-admin.py syncdb --settings=settings.py --migrate " "--noinput",
+                "django-admin.py syncdb --settings=settings.py --migrate --noinput",
                 python_shell=False,
                 env=None,
                 runas=None,

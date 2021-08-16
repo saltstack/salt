@@ -384,8 +384,8 @@ def call(payload=None):
             )
         elif str(r["status"]) == "401":
             raise salt.exceptions.CommandExecutionError(
-                "The server cannot process the request because it lacks valid authentication "
-                "credentials for the target resource."
+                "The server cannot process the request because it lacks valid"
+                " authentication credentials for the target resource."
             )
         elif str(r["status"]) == "403":
             raise salt.exceptions.CommandExecutionError(
