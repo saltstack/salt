@@ -82,16 +82,15 @@ advisable as several other applications depend on it, so on older LTS linux
 releases pygit2_ 0.20.3 and libgit2_ 0.20.0 is the recommended combination.
 
 .. warning::
-    pygit2_ is actively developed and `frequently makes
-    non-backwards-compatible API changes <pygit2-version-policy>`_, even in
-    minor releases. It is not uncommon for pygit2_ upgrades to result in errors
-    in Salt. Please take care when upgrading pygit2_, and pay close attention
-    to the changelog_, keeping an eye out for API changes. Errors can be
-    reported on the `SaltStack issue tracker <saltstack-issue-tracker>`_.
+    pygit2_ is actively developed and `frequently makes non-backwards-compatible
+    API changes`_, even in minor releases.  It is not uncommon for pygit2_
+    upgrades to result in errors in Salt. Please take care when upgrading
+    pygit2_, and pay close attention to the changelog_, keeping an eye out for
+    API changes. Errors can be reported on the `SaltStack issue tracker`_.
 
-.. _pygit2-version-policy: http://www.pygit2.org/install.html#version-numbers
-.. _changelog: https://github.com/libgit2/pygit2#changelog
-.. _saltstack-issue-tracker: https://github.com/saltstack/salt/issues
+.. _frequently makes non-backwards-compatible API changes: https://www.pygit2.org/install.html#version-numbers
+.. _changelog: https://github.com/libgit2/pygit2/blob/master/CHANGELOG.rst
+.. _SaltStack issue tracker: https://github.com/saltstack/salt/issues
 .. _pygit2-install-instructions: http://www.pygit2.org/install.html
 .. _libgit2: https://libgit2.org/
 .. _libssh2: https://www.libssh2.org/

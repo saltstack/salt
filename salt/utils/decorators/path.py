@@ -37,7 +37,7 @@ def which_bin(exes):
         def wrapped(*args, **kwargs):
             if salt.utils.path.which_bin(exes) is None:
                 raise CommandNotFoundError(
-                    "None of provided binaries({}) was not found in $PATH.".format(
+                    "None of provided binaries({}) were found in $PATH.".format(
                         ["'{}'".format(exe) for exe in exes]
                     )
                 )
