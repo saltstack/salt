@@ -115,7 +115,7 @@ def beacon(config):
 
                 current_usage = _current_usage.percent
                 monitor_usage = mounts[mount]
-                if "%" in monitor_usage:
+                if isinstance(monitor_usage, str) and "%" in monitor_usage:
                     monitor_usage = re.sub("%", "", monitor_usage)
                 monitor_usage = float(monitor_usage)
                 if current_usage >= monitor_usage:
