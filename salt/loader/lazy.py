@@ -213,7 +213,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         - singletons (per tag)
     """
 
-    mod_dict_class = salt.utils.odict.OrderedDict
+    mod_dict_class = dict
 
     def __init__(
         self,
