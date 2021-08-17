@@ -38,7 +38,7 @@ Step 2 - Install Salt
 
 For this tutorial we will be using Salt Call, which is available in the
 `salt-minion` package, please follow the Salt Installation docs found here:
-https://repo.saltstack.com/
+https://repo.saltproject.io/
 
 Step 3 - Create With Salt States
 ================================
