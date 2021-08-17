@@ -1581,6 +1581,7 @@ _OS_NAME_MAP = {
     "rocky": "Rocky",
     "alibabaclo": "Alinux",
     "mendel": "Mendel",
+    "garuda": "Garuda",
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -1662,6 +1663,7 @@ _OS_FAMILY_MAP = {
     "AstraLinuxSE": "Debian",
     "Alinux": "RedHat",
     "Mendel": "Debian",
+    "garuda": "Arch",
 }
 
 # Matches any possible format:
