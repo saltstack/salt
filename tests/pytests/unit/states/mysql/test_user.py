@@ -59,7 +59,7 @@ def test_present():
         with patch.object(salt.utils.data, "is_true", mock_t):
             comt = "User frank@localhost is already present with passwordless login"
             ret.update({"comment": comt, "result": True})
-            assert mysql_user.present(name) == ret
+            assert mysql_user.present(name, allow_passwordless=True) == ret
 
             with patch.object(mysql_user, "_get_mysql_error", mock_str):
                 ret.update({"comment": "salt", "result": False})

@@ -16,6 +16,8 @@ apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 appdirs==1.4.4
     # via virtualenv
+apscheduler==3.6.3
+    # via python-telegram-bot
 argh==0.26.2
     # via watchdog
 asn1crypto==1.3.0
@@ -111,8 +113,10 @@ botocore==1.20.67
     #   boto3
     #   moto
     #   s3transfer
-cachetools==3.1.0
-    # via google-auth
+cachetools==4.2.2
+    # via
+    #   google-auth
+    #   python-telegram-bot
 cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
 certifi==2020.6.20
@@ -121,6 +125,7 @@ certifi==2020.6.20
     #   -r requirements/static/pkg/py3.7/linux.txt
     #   kubernetes
     #   msrest
+    #   python-telegram-bot
     #   requests
 certvalidator==0.11.1
     # via vcert
@@ -425,7 +430,7 @@ pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and plat
 pyjwt[crypto]==1.7.1
     # via
     #   adal
-    #   msal
+    #   msalr
 pymysql==1.0.2 ; python_version > "3.5"
     # via -r requirements/static/ci/linux.in
 pynacl==1.3.0
@@ -448,7 +453,7 @@ pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
-pytest-salt-factories==0.906.0
+pytest-salt-factories==0.907.0
     # via -r requirements/pytest.txt
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
@@ -479,11 +484,17 @@ python-gnupg==0.4.4
     # via -r requirements/static/pkg/py3.7/linux.txt
 python-jose[cryptography]==3.2.0
     # via moto
+python-telegram-bot==13.7 ; python_version > "3.5"
+    # via -r requirements/static/ci/linux.in
 pytz==2020.1
     # via
     #   -r requirements/static/pkg/py3.7/linux.txt
+    #   apscheduler
     #   moto
+    #   python-telegram-bot
     #   tempora
+    #   twilio
+    #   tzlocal
 pyvmomi==6.7.1.2018.12
     # via
     #   -r requirements/static/ci/common.in
@@ -525,6 +536,7 @@ requests==2.25.1
     #   pyvmomi
     #   requests-oauthlib
     #   responses
+    #   twilio
     #   vapi-runtime
     #   vcert
 responses==0.10.6
@@ -547,6 +559,7 @@ setproctitle==1.1.10
 six==1.16.0
     # via
     #   -r requirements/static/pkg/py3.7/linux.txt
+    #   apscheduler
     #   aws-sam-translator
     #   azure-core
     #   azure-identity
@@ -581,6 +594,7 @@ six==1.16.0
     #   tempora
     #   textfsm
     #   transitions
+    #   twilio
     #   vapi-runtime
     #   vcert
     #   virtualenv
@@ -612,8 +626,14 @@ toml==0.10.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest
+tornado==6.1
+    # via python-telegram-bot
 transitions==0.8.1
     # via junos-eznc
+twilio==6.63.0
+    # via -r requirements/static/ci/linux.in
+tzlocal==2.1
+    # via apscheduler
 urllib3==1.26.6
     # via
     #   -r requirements/static/pkg/py3.7/linux.txt
