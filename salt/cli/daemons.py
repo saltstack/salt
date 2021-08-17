@@ -298,13 +298,13 @@ class Minion(
         if (HAS_PSUTIL and not self.claim_process_responsibility()) or (
             not HAS_PSUTIL and self.check_running()
         ):
-            self.action_log_info("An instance is already running. Exiting")
+            self.action_log_info("An instance is already running. Exiting.")
             self.shutdown(1)
 
         transport = self.config.get("transport").lower()
 
         # TODO: AIO core is separate from transport
-        if transport in ("zeromq", "tcp", "detect"):
+        if transport in ("zeromq", "tcp", "rabbitmq", "detect"):
             # Late import so logging works correctly
             import salt.minion
 
@@ -320,7 +320,7 @@ class Minion(
         else:
             log.error(
                 "The transport '%s' is not supported. Please use one of "
-                "the following: tcp, zeromq, or detect.",
+                "the following: tcp, zeromq, rabbitmq or detect.",
                 transport,
             )
             self.shutdown(1)

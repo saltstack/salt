@@ -39,6 +39,16 @@ def sdb_etcd_port():
 
 
 @pytest.fixture(scope="session")
+def rabbitmq_port():
+    return "5672"
+
+
+@pytest.fixture(scope="session")
+def rabbitmq_management_port():
+    return "15672"
+
+
+@pytest.fixture(scope="session")
 def vault_port():
     return get_unused_localhost_port()
 

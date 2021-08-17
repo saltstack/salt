@@ -6,7 +6,7 @@ def transport_ids(value):
     return "Transport({})".format(value)
 
 
-@pytest.fixture(params=("zeromq", "tcp"), ids=transport_ids)
+@pytest.fixture(params=(["zeromq", "tcp", "rabbitmq"]), ids=transport_ids)
 def transport(request):
     return request.param
 
@@ -18,6 +18,11 @@ def salt_master(salt_factories, transport):
         "auto_accept": True,
         "sign_pub_messages": False,
     }
+
+    if transport == "rabbitmq":
+        config_defaults["transport_rabbitmq_address"] = "localhost"
+        config_defaults["transport_rabbitmq_auth"] = {"username": "user", 'password': "bitnami"}
+
     factory = salt_factories.salt_master_daemon(
         random_string("server-{}-master-".format(transport)),
         defaults=config_defaults,
@@ -35,6 +40,11 @@ def salt_minion(salt_master, transport):
         "auth_tries": 1,
         "master_uri": "tcp://127.0.0.1:{}".format(salt_master.config["ret_port"]),
     }
+
+    if transport == "rabbitmq":
+        config_defaults["transport_rabbitmq_address"] = "localhost"
+        config_defaults["transport_rabbitmq_auth"] = {"username": "user", 'password': "bitnami"}
+
     factory = salt_master.salt_minion_daemon(
         random_string("server-{}-minion-".format(transport)),
         defaults=config_defaults,
