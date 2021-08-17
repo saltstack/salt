@@ -959,7 +959,7 @@ their code to use ``tgt_type``.
 
     >>> import salt.client
     >>> local = salt.client.LocalClient()
-    >>> local.cmd('*', 'cmd.run', ['whoami'], tgt_type='glob')
+    >>> local.cmd("*", "cmd.run", ["whoami"], tgt_type="glob")
     {'jerry': 'root'}
 
 Minion Configuration Deprecated Option

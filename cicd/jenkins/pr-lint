@@ -1,0 +1,6 @@
+@Library('salt@master-1.11') _
+
+runLint(
+    env: env)
+
+// vim: ft=groovy

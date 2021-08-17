@@ -81,7 +81,8 @@ def __virtual__():
             return __virtualname__
     return (
         False,
-        "The rh_ip execution module cannot be loaded: this module is only available on RHEL/Fedora based distributions.",
+        "The rh_ip execution module cannot be loaded: this module is only available on"
+        " RHEL/Fedora based distributions.",
     )
 
 
@@ -248,7 +249,7 @@ def _parse_settings_bond(opts, iface):
         return _parse_settings_bond_3(opts, iface)
     elif opts["mode"] in ("802.3ad", "4"):
         log.info(
-            "Device: %s Bonding Mode: IEEE 802.3ad Dynamic link " "aggregation", iface
+            "Device: %s Bonding Mode: IEEE 802.3ad Dynamic link aggregation", iface
         )
         return _parse_settings_bond_4(opts, iface)
     elif opts["mode"] in ("balance-tlb", "5"):

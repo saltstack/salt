@@ -1,0 +1,2 @@
+Removed the deprecated glance state and execution module in favor of the glance_image
+state module and the glanceng execution module.

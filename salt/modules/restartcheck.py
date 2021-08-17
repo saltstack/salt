@@ -11,7 +11,6 @@ https://packages.debian.org/debian-goodies) and psdel by Sam Morris.
 """
 import os
 import re
-import shlex
 import subprocess
 import sys
 import time
@@ -228,8 +227,8 @@ def _format_output(
 
         if restartable:
             ret += (
-                "Of these, {} seem to contain systemd service definitions or init scripts "
-                "which can be used to restart them:\n".format(len(restartable))
+                "Of these, {} seem to contain systemd service definitions or init"
+                " scripts which can be used to restart them:\n".format(len(restartable))
             )
             for package in restartable:
                 ret += package + ":\n"
@@ -495,23 +494,26 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
     verbose = kwargs.pop("verbose", True)
     timeout = kwargs.pop("timeout", 5)
     if __grains__.get("os_family") == "Debian":
-        cmd_pkg_query = "dpkg-query --listfiles "
+        cmd_pkg_query = ["dpkg-query", "--listfiles"]
         systemd_folder = "/lib/systemd/system/"
         systemd = "/bin/systemd"
         kernel_versions = _kernel_versions_debian()
     elif __grains__.get("os_family") == "RedHat":
-        cmd_pkg_query = "repoquery -l "
+        cmd_pkg_query = ["repoquery", "-l"]
         systemd_folder = "/usr/lib/systemd/system/"
         systemd = "/usr/bin/systemctl"
         kernel_versions = _kernel_versions_redhat()
     elif __grains__.get("os_family") == NILRT_FAMILY_NAME:
-        cmd_pkg_query = "opkg files "
+        cmd_pkg_query = ["opkg", "files"]
         systemd = ""
         kernel_versions = _kernel_versions_nilrt()
     else:
         return {
             "result": False,
-            "comment": "Only available on Debian, Red Hat and NI Linux Real-Time based systems.",
+            "comment": (
+                "Only available on Debian, Red Hat and NI Linux Real-Time based"
+                " systems."
+            ),
         }
 
     # Check kernel versions
@@ -566,8 +568,9 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
         if deleted_file is False:
             return {
                 "result": False,
-                "comment": "Could not get list of processes."
-                " (Do you have root access?)",
+                "comment": (
+                    "Could not get list of processes. (Do you have root access?)"
+                ),
             }
 
         _check_timeout(start_time, timeout)
@@ -613,8 +616,8 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
 
     for package in packages:
         _check_timeout(start_time, timeout)
-        cmd = cmd_pkg_query + package
-        cmd = shlex.split(cmd)
+        cmd = cmd_pkg_query[:]
+        cmd.append(package)
         paths = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 
         while True:

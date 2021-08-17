@@ -32,7 +32,6 @@ import salt.output
 import salt.syspaths
 import salt.utils.data
 import salt.utils.event
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -88,7 +87,7 @@ def _parallel_map(func, inputs):
         thread.start()
         return thread
 
-    threads = list(six.moves.map(create_thread, six.moves.range(len(inputs))))
+    threads = list(map(create_thread, range(len(inputs))))
     for thread in threads:
         thread.join()
     for error in errors:
@@ -351,7 +350,7 @@ def state(
         fail_minions = [minion.strip() for minion in fail_minions.split(",")]
     elif not isinstance(fail_minions, list):
         state_ret.setdefault("warnings", []).append(
-            "'fail_minions' needs to be a list or a comma separated " "string. Ignored."
+            "'fail_minions' needs to be a list or a comma separated string. Ignored."
         )
         fail_minions = ()
 
@@ -547,7 +546,7 @@ def function(
         fail_minions = [minion.strip() for minion in fail_minions.split(",")]
     elif not isinstance(fail_minions, list):
         func_ret.setdefault("warnings", []).append(
-            "'fail_minions' needs to be a list or a comma separated " "string. Ignored."
+            "'fail_minions' needs to be a list or a comma separated string. Ignored."
         )
         fail_minions = ()
     for minion, mdata in cmd_ret.items():
@@ -749,7 +748,8 @@ def runner(name, **kwargs):
     success = out.get("success", True)
     ret = {"name": name, "changes": {"return": runner_return}, "result": success}
     ret["comment"] = "Runner function '{}' {}.".format(
-        name, "executed" if success else "failed",
+        name,
+        "executed" if success else "failed",
     )
 
     ret["__orchestration__"] = True
@@ -858,8 +858,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
     # time we exctract the actual return value of the runner (saltutil.runner
     # adds some extra information that is not interesting to us).
     outputs = {
-        runner_id: out["return"]
-        for runner_id, out in six.moves.zip(runners.keys(), outputs)
+        runner_id: out["return"] for runner_id, out in zip(runners.keys(), outputs)
     }
 
     # If each of the runners returned its output in the format compatible with
@@ -991,7 +990,8 @@ def wheel(name, **kwargs):
     success = out.get("success", True)
     ret = {"name": name, "changes": {"return": wheel_return}, "result": success}
     ret["comment"] = "Wheel function '{}' {}.".format(
-        name, "executed" if success else "failed",
+        name,
+        "executed" if success else "failed",
     )
 
     ret["__orchestration__"] = True

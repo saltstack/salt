@@ -8,7 +8,6 @@ import salt.config
 import salt.loader
 import salt.modules.boto_elb as boto_elb
 import salt.utils.versions
-from salt.ext import six
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -96,9 +95,7 @@ def _has_required_moto():
         )
         if moto_version < salt.utils.versions.LooseVersion(required_moto):
             return False
-        elif six.PY3 and moto_version < salt.utils.versions.LooseVersion(
-            required_moto_py3
-        ):
+        elif moto_version < salt.utils.versions.LooseVersion(required_moto_py3):
             return False
 
     return True
@@ -108,8 +105,9 @@ def _has_required_moto():
 @skipIf(HAS_MOTO is False, "The moto module must be installed.")
 @skipIf(
     _has_required_moto() is False,
-    "The moto module must be >= to {} for "
-    "PY2 or {} for PY3.".format(required_moto, required_moto_py3),
+    "The moto module must be >= to {} for PY2 or {} for PY3.".format(
+        required_moto, required_moto_py3
+    ),
 )
 class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
     """

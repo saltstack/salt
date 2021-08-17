@@ -406,7 +406,8 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             try:
                 mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
                 minion = salt.minion.Minion(
-                    mock_opts, io_loop=salt.ext.tornado.ioloop.IOLoop(),
+                    mock_opts,
+                    io_loop=salt.ext.tornado.ioloop.IOLoop(),
                 )
                 minion.schedule = salt.utils.schedule.Schedule(
                     mock_opts, {}, returners={}
@@ -794,3 +795,12 @@ class MinionAsyncTestCase(
             with self.assertRaises(SaltClientError, msg="No master could be resolved"):
                 minion = salt.minion.Minion(mock_opts)
                 yield minion.connect_master()
+
+
+class MasterMinionTestCase(TestCase):
+    def test_config_cache_path_overrides(self):
+        cachedir = os.path.abspath("/path/to/master/cache")
+        opts = {"cachedir": cachedir, "conf_file": None}
+
+        mminion = salt.minion.MasterMinion(opts)
+        self.assertEqual(mminion.opts["cachedir"], cachedir)

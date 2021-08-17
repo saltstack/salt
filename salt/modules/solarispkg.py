@@ -332,7 +332,7 @@ def install(name=None, sources=None, saltenv="base", **kwargs):
         ``sources`` parameter.
     """
     if salt.utils.data.is_true(kwargs.get("refresh")):
-        log.warning("'refresh' argument not implemented for solarispkg " "module")
+        log.warning("'refresh' argument not implemented for solarispkg module")
 
     # pkgs is not supported, but must be passed here for API compatibility
     pkgs = kwargs.pop("pkgs", None)
@@ -360,7 +360,7 @@ def install(name=None, sources=None, saltenv="base", **kwargs):
         cmd_prefix = ["/usr/sbin/pkgadd", "-n", "-a", adminfile]
 
         # Only makes sense in a global zone but works fine in non-globals.
-        if kwargs.get("current_zone_only") == "True":
+        if kwargs.get("current_zone_only") in (True, "True"):
             cmd_prefix += "-G "
 
         errors = []

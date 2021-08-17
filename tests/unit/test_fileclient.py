@@ -203,8 +203,9 @@ class FileclientCacheTest(
                 path = os.path.join(subdir_abspath, subdir_file)
                 with salt.utils.files.fopen(path, "w") as fp_:
                     fp_.write(
-                        "This is file '{}' in subdir '{} from saltenv "
-                        "'{}'".format(subdir_file, SUBDIR, saltenv)
+                        "This is file '{}' in subdir '{} from saltenv '{}'".format(
+                            subdir_file, SUBDIR, saltenv
+                        )
                     )
 
         # Create the CACHE_ROOT

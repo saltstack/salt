@@ -1,13 +1,7 @@
-# encoding: utf-8
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import hashlib
 import logging
 import os
 
-# Import salt libs
 import salt.auth
 from salt.utils.versions import StrictVersion as _StrictVersion
 
@@ -67,8 +61,8 @@ def get_application(opts):
         token_pattern = r"([0-9A-Fa-f]{{{0}}})".format(
             len(getattr(hashlib, opts.get("hash_type", "md5"))().hexdigest())
         )
-        all_events_pattern = r"/all_events/{0}".format(token_pattern)
-        formatted_events_pattern = r"/formatted_events/{0}".format(token_pattern)
+        all_events_pattern = r"/all_events/{}".format(token_pattern)
+        formatted_events_pattern = r"/formatted_events/{}".format(token_pattern)
         log.debug("All events URL pattern is %s", all_events_pattern)
         paths += [
             # Matches /all_events/[0-9A-Fa-f]{n}
@@ -101,10 +95,8 @@ def start():
 
     if mod_opts["num_processes"] > 1 and mod_opts.get("debug", False) is True:
         raise Exception(
-            (
-                "Tornado's debug implementation is not compatible with multiprocess. "
-                "Either disable debug, or set num_processes to 1."
-            )
+            "Tornado's debug implementation is not compatible with multiprocess. "
+            "Either disable debug, or set num_processes to 1."
         )
 
     # the kwargs for the HTTPServer

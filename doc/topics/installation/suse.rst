@@ -15,7 +15,7 @@ The SaltStack Repository has packages available for the following platforms:
 - openSUSE Leap 15.0, 15.1, 42.2, 42.3
 - openSUSE Tumbleweed
 
-Instructions are at https://repo.saltstack.com/#suse.
+Instructions are at https://repo.saltproject.io/#suse.
 
 Installation from the SUSE Repository
 =====================================

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Generic REST API SDB Module
 
@@ -65,8 +64,6 @@ For instance:
           user: myuser
 """
 
-# import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 

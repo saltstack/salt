@@ -321,7 +321,7 @@ def private_key_managed(
         name, bits=bits, passphrase=passphrase, new=new, overwrite=overwrite
     ):
         file_args["contents"] = __salt__["x509.get_pem_entry"](
-            name, pem_type="RSA PRIVATE KEY"
+            name, pem_type="(?:RSA )?PRIVATE KEY"
         )
     else:
         new_key = True
@@ -399,12 +399,13 @@ def _certificate_info_matches(cert_info, required_cert_info, check_serial=False)
     ignored_keys = [
         "Not Before",
         "Not After",
-        "MD5 Finger Print",
         "SHA1 Finger Print",
         "SHA-256 Finger Print",
         # The integrity of the issuer is checked elsewhere
         "Issuer Public Key",
     ]
+    if __opts__["fips_mode"] is False:
+        ignored_keys.append("MD5 Finger Print")
     for key in ignored_keys:
         cert_info.pop(key, None)
         required_cert_info.pop(key, None)
@@ -540,9 +541,8 @@ def _certificate_is_valid(name, days_remaining, append_certs, **cert_spec):
         if days_remaining != 0 and actual_days_remaining < days_remaining:
             return (
                 False,
-                "Certificate needs renewal: {} days remaining but it needs to be at least {}".format(
-                    actual_days_remaining, days_remaining
-                ),
+                "Certificate needs renewal: {} days remaining but it needs to be at"
+                " least {}".format(actual_days_remaining, days_remaining),
                 cert_info,
             )
 
@@ -690,10 +690,9 @@ def certificate_managed(name, days_remaining=90, append_certs=None, **kwargs):
         __salt__["x509.read_certificate"](contents)
     except salt.exceptions.SaltInvocationError as e:
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "An error occurred creating the certificate {}. The result returned from x509.create_certificate is not a valid PEM file:\n{}".format(
-            name, str(e)
+        ret["comment"] = (
+            "An error occurred creating the certificate {}. The result returned from"
+            " x509.create_certificate is not a valid PEM file:\n{}".format(name, str(e))
         )
         return ret
 
@@ -707,10 +706,11 @@ def certificate_managed(name, days_remaining=90, append_certs=None, **kwargs):
             contents += append_file_contents
         except salt.exceptions.SaltInvocationError as e:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "{} is not a valid certificate file, cannot append it to the certificate {}.\nThe error returned by the x509 module was:\n{}".format(
-                append_file, name, str(e)
+            ret["comment"] = (
+                "{} is not a valid certificate file, cannot append it to the"
+                " certificate {}.\nThe error returned by the x509 module was:\n{}".format(
+                    append_file, name, str(e)
+                )
             )
             return ret
 

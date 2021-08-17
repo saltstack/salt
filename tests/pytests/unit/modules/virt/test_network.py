@@ -19,10 +19,10 @@ def test_gen_xml():
     """
     xml_data = virt._gen_net_xml("network", "main", "bridge", "openvswitch")
     root = ET.fromstring(xml_data)
-    assert "network" == root.find("name").text
-    assert "main" == root.find("bridge").attrib["name"]
-    assert "bridge" == root.find("forward").attrib["mode"]
-    assert "openvswitch" == root.find("virtualport").attrib["type"]
+    assert root.find("name").text == "network"
+    assert root.find("bridge").attrib["name"] == "main"
+    assert root.find("forward").attrib["mode"] == "bridge"
+    assert root.find("virtualport").attrib["type"] == "openvswitch"
 
 
 def test_gen_xml_nat():
@@ -69,9 +69,9 @@ def test_gen_xml_nat():
         mtu=9000,
     )
     root = ET.fromstring(xml_data)
-    assert "network" == root.find("name").text
-    assert "main" == root.find("bridge").attrib["name"]
-    assert "nat" == root.find("forward").attrib["mode"]
+    assert root.find("name").text == "network"
+    assert root.find("bridge").attrib["name"] == "main"
+    assert root.find("forward").attrib["mode"] == "nat"
     expected_ipv4 = ET.fromstring(
         """
         <ip family='ipv4' address='192.168.2.1' prefix='24'>
@@ -85,7 +85,7 @@ def test_gen_xml_nat():
         </ip>
         """
     )
-    assert_xml_equals(expected_ipv4, root.find("./ip[@address='192.168.2.1']"))
+    assert_xml_equals(root.find("./ip[@address='192.168.2.1']"), expected_ipv4)
 
     expected_ipv6 = ET.fromstring(
         """
@@ -97,7 +97,7 @@ def test_gen_xml_nat():
         </ip>
         """
     )
-    assert_xml_equals(expected_ipv6, root.find("./ip[@address='2001:db8:ca2:2::1']"))
+    assert_xml_equals(root.find("./ip[@address='2001:db8:ca2:2::1']"), expected_ipv6)
 
     actual_nat = ET.tostring(xmlutil.strip_spaces(root.find("./forward/nat")))
     expected_nat = strip_xml(
@@ -108,10 +108,10 @@ def test_gen_xml_nat():
         </nat>
         """
     )
-    assert expected_nat == actual_nat
+    assert actual_nat == expected_nat
 
-    assert {"name": "acme.lab", "localOnly": "yes"} == root.find("./domain").attrib
-    assert "9000" == root.find("mtu").get("size")
+    assert root.find("./domain").attrib == {"name": "acme.lab", "localOnly": "yes"}
+    assert root.find("mtu").get("size") == "9000"
 
 
 def test_gen_xml_dns():
@@ -172,7 +172,7 @@ def test_gen_xml_dns():
         </dns>
         """
     )
-    assert_xml_equals(expected_xml, root.find("./dns"))
+    assert_xml_equals(root.find("./dns"), expected_xml)
 
 
 def test_gen_xml_isolated():
@@ -188,12 +188,18 @@ def test_gen_xml_passthrough_interfaces():
     Test the virt._gen_net_xml() function for a passthrough forward mode
     """
     xml_data = virt._gen_net_xml(
-        "network", "virbr0", "passthrough", None, interfaces="eth10 eth11 eth12",
+        "network",
+        "virbr0",
+        "passthrough",
+        None,
+        interfaces="eth10 eth11 eth12",
     )
     root = ET.fromstring(xml_data)
-    assert "passthrough" == root.find("forward").get("mode")
-    assert ["eth10", "eth11", "eth12"] == [
-        n.get("dev") for n in root.findall("forward/interface")
+    assert root.find("forward").get("mode") == "passthrough"
+    assert [n.get("dev") for n in root.findall("forward/interface")] == [
+        "eth10",
+        "eth11",
+        "eth12",
     ]
 
 
@@ -202,7 +208,11 @@ def test_gen_xml_hostdev_addresses():
     Test the virt._gen_net_xml() function for a hostdev forward mode with PCI addresses
     """
     xml_data = virt._gen_net_xml(
-        "network", "virbr0", "hostdev", None, addresses="0000:04:00.1 0000:e3:01.2",
+        "network",
+        "virbr0",
+        "hostdev",
+        None,
+        addresses="0000:04:00.1 0000:e3:01.2",
     )
     root = ET.fromstring(xml_data)
     expected_forward = ET.fromstring(
@@ -213,7 +223,7 @@ def test_gen_xml_hostdev_addresses():
         </forward>
         """
     )
-    assert_xml_equals(expected_forward, root.find("./forward"))
+    assert_xml_equals(root.find("./forward"), expected_forward)
 
 
 def test_gen_xml_hostdev_pf():
@@ -232,7 +242,7 @@ def test_gen_xml_hostdev_pf():
         """
     )
     actual_forward = ET.tostring(xmlutil.strip_spaces(root.find("./forward")))
-    assert expected_forward == actual_forward
+    assert actual_forward == expected_forward
 
 
 def test_gen_xml_openvswitch():
@@ -268,11 +278,12 @@ def test_gen_xml_openvswitch():
         </network>
         """
     )
-    assert_xml_equals(expected_xml, ET.fromstring(xml_data))
+    assert_xml_equals(ET.fromstring(xml_data), expected_xml)
 
 
 @pytest.mark.parametrize(
-    "autostart, start", [(True, True), (False, True), (False, False)],
+    "autostart, start",
+    [(True, True), (False, True), (False, False)],
 )
 def test_define(make_mock_network, autostart, start):
     """
@@ -308,7 +319,7 @@ def test_define(make_mock_network, autostart, start):
         """
     )
     define_mock = virt.libvirt.openAuth().networkDefineXML
-    assert expected_xml == strip_xml(define_mock.call_args[0][0])
+    assert strip_xml(define_mock.call_args[0][0]) == expected_xml
 
     if autostart:
         mock_network.setAutostart.assert_called_with(1)
@@ -364,8 +375,11 @@ def test_update_nat_nochange(make_mock_network):
     define_mock.assert_not_called()
 
 
-@pytest.mark.parametrize("test", [True, False])
-def test_update_nat_change(make_mock_network, test):
+@pytest.mark.parametrize(
+    "test, netmask",
+    [(True, "netmask='255.255.255.0'"), (True, "prefix='24'"), (False, "prefix='24'")],
+)
+def test_update_nat_change(make_mock_network, test, netmask):
     """
     Test updating a NAT network with changes
     """
@@ -378,13 +392,15 @@ def test_update_nat_change(make_mock_network, test):
           <bridge name='virbr0' stp='on' delay='0'/>
           <mac address='52:54:00:cd:49:6b'/>
           <domain name='my.lab' localOnly='yes'/>
-          <ip address='192.168.122.1' netmask='255.255.255.0'>
+          <ip address='192.168.122.1' {}>
             <dhcp>
               <range start='192.168.122.2' end='192.168.122.254'/>
             </dhcp>
           </ip>
         </network>
-        """
+        """.format(
+            netmask
+        )
     )
     assert virt.network_update(
         "default",
@@ -417,7 +433,7 @@ def test_update_nat_change(make_mock_network, test):
             </network>
             """
         )
-        assert expected_xml == strip_xml(define_mock.call_args[0][0])
+        assert strip_xml(define_mock.call_args[0][0]) == expected_xml
 
 
 @pytest.mark.parametrize("change", [True, False], ids=["changed", "unchanged"])
@@ -438,11 +454,14 @@ def test_update_hostdev_pf(make_mock_network, change):
         </network>
         """
     )
-    assert change == virt.network_update(
-        "test-hostdev",
-        None,
-        "hostdev",
-        physical_function="eth0" if not change else "eth1",
+    assert (
+        virt.network_update(
+            "test-hostdev",
+            None,
+            "hostdev",
+            physical_function="eth0" if not change else "eth1",
+        )
+        == change
     )
     define_mock = virt.libvirt.openAuth().networkDefineXML
     if change:

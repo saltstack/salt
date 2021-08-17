@@ -1,21 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 :codeauthor: Shane Lee <slee@saltstack.com>
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import sys
 
 import salt.utils.platform
-
-# Import Salt Libs
 import salt.utils.win_osinfo as win_osinfo
-
-# Import 3rd Party Libs
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
 
@@ -36,7 +26,7 @@ class WinOsInfo(TestCase):
         # Since we can't get the actual value another way, we will just check
         # that it exists and is a number
         self.assertIn("PlatformID", get_info)
-        self.assertTrue(isinstance(get_info["BuildNumber"], six.integer_types))
+        self.assertTrue(isinstance(get_info["BuildNumber"], int))
 
     def test_get_join_info(self):
         join_info = win_osinfo.get_join_info()

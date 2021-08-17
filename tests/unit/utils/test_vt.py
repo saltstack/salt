@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -9,8 +8,6 @@
     VirtualTerminal tests
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import functools
 import io
@@ -20,24 +17,18 @@ import subprocess
 import sys
 import time
 
-# Import Salt libs
 import salt.utils
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.vt
-
-# Import 3rd-party libs
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-
-# Import Salt Testing libs
 from tests.support.paths import CODE_DIR
 from tests.support.unit import TestCase, skipIf
 
 
 def stdout_fileno_available():
     """
-        Tests if sys.stdout.fileno is available in this testing environment
+    Tests if sys.stdout.fileno is available in this testing environment
     """
     try:
         sys.stdout.fileno()
@@ -48,11 +39,11 @@ def stdout_fileno_available():
 
 def fixStdOutErrFileNoIfNeeded(func):
     """
-        Decorator that sets stdout and stderr to their original objects if
-        sys.stdout.fileno() doesn't work and restores them after running the
-        decorated function. This doesn't check if the original objects actually
-        work. If they don't then the test environment is too broken to test
-        the VT.
+    Decorator that sets stdout and stderr to their original objects if
+    sys.stdout.fileno() doesn't work and restores them after running the
+    decorated function. This doesn't check if the original objects actually
+    work. If they don't then the test environment is too broken to test
+    the VT.
     """
 
     @functools.wraps(func)
@@ -97,7 +88,8 @@ class VTTestCase(TestCase):
 
     @skipIf(
         True,
-        "Disabled until we can find out why this kills the tests suite with an exit code of 134",
+        "Disabled until we can find out why this kills the tests suite with an exit"
+        " code of 134",
     )
     def test_issue_10404_ptys_not_released(self):
         n_executions = 15
@@ -116,7 +108,7 @@ class VTTestCase(TestCase):
                 )
                 stdout, _ = proc.communicate()
                 return int(stdout.strip())
-            except (ValueError, OSError, IOError):
+            except (ValueError, OSError):
                 if salt.utils.platform.is_darwin():
                     # We're unable to findout how many PTY's are open
                     self.skipTest(
@@ -131,7 +123,7 @@ class VTTestCase(TestCase):
         for idx in range(0, nr_ptys + n_executions):
             try:
                 with salt.utils.vt.Terminal(
-                    'echo "Run {0}"'.format(idx),
+                    'echo "Run {}"'.format(idx),
                     shell=True,
                     stream_stdout=False,
                     stream_stderr=False,
@@ -140,7 +132,7 @@ class VTTestCase(TestCase):
                 try:
                     if current_pty_count() > (nr_ptys + (n_executions / 2)):
                         self.fail("VT is not cleaning up PTY's")
-                except (ValueError, OSError, IOError):
+                except (ValueError, OSError):
                     self.fail("Unable to find out how many PTY's are open")
             except Exception as exc:  # pylint: disable=broad-except
                 if "out of pty devices" in str(exc):
@@ -153,7 +145,7 @@ class VTTestCase(TestCase):
         for idx in range(0, nr_ptys + n_executions):
             try:
                 terminal = salt.utils.vt.Terminal(
-                    'echo "Run {0}"'.format(idx),
+                    'echo "Run {}"'.format(idx),
                     shell=True,
                     stream_stdout=False,
                     stream_stderr=False,
@@ -162,7 +154,7 @@ class VTTestCase(TestCase):
                 try:
                     if current_pty_count() > (nr_ptys + (n_executions / 2)):
                         self.fail("VT is not cleaning up PTY's")
-                except (ValueError, OSError, IOError):
+                except (ValueError, OSError):
                     self.fail("Unable to find out how many PTY's are open")
             except Exception as exc:  # pylint: disable=broad-except
                 if "out of pty devices" in str(exc):
@@ -276,8 +268,8 @@ class VTTestCase(TestCase):
     @fixStdOutErrFileNoIfNeeded
     def test_split_multibyte_characters_unicode(self):
         """
-            Tests that the vt correctly handles multibyte characters that are
-            split between blocks of transmitted data.
+        Tests that the vt correctly handles multibyte characters that are
+        split between blocks of transmitted data.
         """
         block_size = 1024
         encoding = "utf-8"
@@ -343,9 +335,9 @@ class VTTestCase(TestCase):
     @fixStdOutErrFileNoIfNeeded
     def test_split_multibyte_characters_shiftjis(self):
         """
-            Tests that the vt correctly handles multibyte characters that are
-            split between blocks of transmitted data.
-            Uses shift-jis encoding to make sure code doesn't assume unicode.
+        Tests that the vt correctly handles multibyte characters that are
+        split between blocks of transmitted data.
+        Uses shift-jis encoding to make sure code doesn't assume unicode.
         """
         block_size = 1024
         encoding = "shift-jis"

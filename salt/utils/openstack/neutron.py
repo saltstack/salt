@@ -1,21 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Neutron class
 """
 
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals, with_statement
-
 import logging
 
 import salt.utils.versions
-
-# Import salt libs
 from salt import exceptions
-
-# Import third party libs
-from salt.ext import six
 
 # pylint: disable=import-error
 HAS_NEUTRON = False
@@ -73,7 +64,7 @@ def sanitize_neutronclient(kwargs):
         "auth",
     )
     ret = {}
-    for var in six.iterkeys(kwargs):
+    for var in kwargs.keys():
         if var in variables:
             ret[var] = kwargs[var]
 
@@ -103,11 +94,9 @@ class SaltNeutron(NeutronShell):
         Set up neutron credentials
         """
         salt.utils.versions.warn_until(
-            "Aluminium",
-            (
-                "The neutron module has been deprecated and will be removed in {version}.  "
-                "Please update to using the neutronng module"
-            ),
+            "Sulfur",
+            "The neutron module has been deprecated and will be removed in {version}.  "
+            "Please update to using the neutronng module",
         )
         if not HAS_NEUTRON:
             return None

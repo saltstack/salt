@@ -3,6 +3,8 @@
 """
 
 
+import configparser
+import io
 import os
 from xml.dom import minidom
 
@@ -11,8 +13,6 @@ import salt.modules.zypperpkg as zypper
 import salt.utils.files
 import salt.utils.pkg
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
-from salt.ext.six.moves import configparser
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, patch
 from tests.support.unit import TestCase
@@ -136,7 +136,7 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(zypper.__zypper__.call("foo"), stdout_xml_snippet)
             self.assertEqual(len(sniffer.calls), 1)
 
-            zypper.__zypper__.call("bar")
+            zypper.__zypper__.call("--no-refresh", "bar")
             self.assertEqual(len(sniffer.calls), 2)
             self.assertEqual(
                 sniffer.calls[0]["args"][0],
@@ -189,7 +189,10 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             )
 
         # Test exceptions
-        stdout_xml_snippet = '<?xml version="1.0"?><stream><message type="error">Booya!</message></stream>'
+        stdout_xml_snippet = (
+            '<?xml version="1.0"?><stream><message'
+            ' type="error">Booya!</message></stream>'
+        )
         sniffer = RunSniffer(stdout=stdout_xml_snippet, retcode=1)
         with patch.dict("salt.modules.zypperpkg.__salt__", {"cmd.run_all": sniffer}):
             with self.assertRaisesRegex(
@@ -228,9 +231,8 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         ):
             with self.assertRaisesRegex(
                 CommandExecutionError,
-                "^Zypper command failure: Some handled zypper internal error{}Another zypper internal error$".format(
-                    os.linesep
-                ),
+                "^Zypper command failure: Some handled zypper internal error{}Another"
+                " zypper internal error$".format(os.linesep),
             ):
                 zypper.list_upgrades(refresh=False)
 
@@ -343,7 +345,8 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             "Repository 'openSUSE-Leap-42.1-Update' is up to date.",
             "Retrieving repository 'openSUSE-Leap-42.1-Update-Non-Oss' metadata",
             "Forcing building of repository cache",
-            "Building repository 'openSUSE-Leap-42.1-Update-Non-Oss' cache ..........[done]",
+            "Building repository 'openSUSE-Leap-42.1-Update-Non-Oss' cache"
+            " ..........[done]",
             "Building repository 'salt-dev' cache",
             "All repositories have been refreshed.",
         ]
@@ -380,7 +383,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
             "virgo-dummy": {
                 "build_date": "2015-07-09T10:55:19Z",
                 "vendor": "openSUSE Build Service",
-                "description": "This is the Virgo dummy package used for testing SUSE Manager",
+                "description": (
+                    "This is the Virgo dummy package used for testing SUSE Manager"
+                ),
                 "license": "GPL-2.0",
                 "build_host": "sheep05",
                 "url": "http://www.suse.com",
@@ -391,7 +396,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                 "install_date_time_t": 1456241517,
                 "summary": "Virgo dummy package",
                 "version": "1.0",
-                "signature": "DSA/SHA1, Thu Jul  9 08:55:33 2015, Key ID 27fa41bd8a7c64f9",
+                "signature": (
+                    "DSA/SHA1, Thu Jul  9 08:55:33 2015, Key ID 27fa41bd8a7c64f9"
+                ),
                 "release": "1.1",
                 "group": "Applications/System",
                 "arch": "noarch",
@@ -411,7 +418,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                 "install_date_time_t": 1456241495,
                 "summary": "Secure Sockets and Transport Layer Security",
                 "version": "1.0.1i",
-                "signature": "RSA/SHA256, Wed Nov  4 22:21:34 2015, Key ID 70af9e8139db7c82",
+                "signature": (
+                    "RSA/SHA256, Wed Nov  4 22:21:34 2015, Key ID 70af9e8139db7c82"
+                ),
                 "release": "34.1",
                 "group": "Productivity/Networking/Security",
                 "packager": "https://www.suse.com/",
@@ -462,7 +471,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                 {
                     "build_date": "2015-07-09T10:55:19Z",
                     "vendor": "openSUSE Build Service",
-                    "description": "This is the Virgo dummy package used for testing SUSE Manager",
+                    "description": (
+                        "This is the Virgo dummy package used for testing SUSE Manager"
+                    ),
                     "license": "GPL-2.0",
                     "build_host": "sheep05",
                     "url": "http://www.suse.com",
@@ -473,7 +484,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                     "install_date_time_t": 1456241517,
                     "summary": "Virgo dummy package",
                     "version": "1.0",
-                    "signature": "DSA/SHA1, Thu Jul  9 08:55:33 2015, Key ID 27fa41bd8a7c64f9",
+                    "signature": (
+                        "DSA/SHA1, Thu Jul  9 08:55:33 2015, Key ID 27fa41bd8a7c64f9"
+                    ),
                     "release": "1.1",
                     "group": "Applications/System",
                     "arch": "i686",
@@ -482,7 +495,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                 {
                     "build_date": "2015-07-09T10:15:19Z",
                     "vendor": "openSUSE Build Service",
-                    "description": "This is the Virgo dummy package used for testing SUSE Manager",
+                    "description": (
+                        "This is the Virgo dummy package used for testing SUSE Manager"
+                    ),
                     "license": "GPL-2.0",
                     "build_host": "sheep05",
                     "url": "http://www.suse.com",
@@ -493,7 +508,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                     "install_date_time_t": 14562415127,
                     "summary": "Virgo dummy package",
                     "version": "1.0",
-                    "signature": "DSA/SHA1, Thu Jul  9 08:55:33 2015, Key ID 27fa41bd8a7c64f9",
+                    "signature": (
+                        "DSA/SHA1, Thu Jul  9 08:55:33 2015, Key ID 27fa41bd8a7c64f9"
+                    ),
                     "release": "1.1",
                     "group": "Applications/System",
                     "arch": "x86_64",
@@ -515,7 +532,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                     "install_date_time_t": 1456241495,
                     "summary": "Secure Sockets and Transport Layer Security",
                     "version": "1.0.1i",
-                    "signature": "RSA/SHA256, Wed Nov  4 22:21:34 2015, Key ID 70af9e8139db7c82",
+                    "signature": (
+                        "RSA/SHA256, Wed Nov  4 22:21:34 2015, Key ID 70af9e8139db7c82"
+                    ),
                     "release": "34.1",
                     "group": "Productivity/Networking/Security",
                     "packager": "https://www.suse.com/",
@@ -1516,7 +1535,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         """
         repos_cfg = configparser.ConfigParser()
         for cfg in ["zypper-repo-1.cfg", "zypper-repo-2.cfg"]:
-            repos_cfg.readfp(six.moves.StringIO(get_test_data(cfg)))
+            repos_cfg.readfp(io.StringIO(get_test_data(cfg)))
 
         for alias in repos_cfg.sections():
             r_info = zypper._get_repo_info(alias, repos_cfg=repos_cfg)
