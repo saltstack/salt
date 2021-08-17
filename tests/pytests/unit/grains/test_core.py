@@ -155,8 +155,9 @@ def test_network_grains_cache(tmp_path):
         "extension_modules": str(extmods),
         "optimization_order": [0],
     }
-    with patch("salt.utils.network.interfaces") as interfaces:
-        interfaces.side_effect = [call_1, call_2]
+    with patch(
+        "salt.utils.network.interfaces", side_effect=[call_1, call_2]
+    ) as interfaces:
         grains = salt.loader.grain_funcs(opts)
         assert interfaces.call_count == 0
         ret = grains["core.ip_interfaces"]()

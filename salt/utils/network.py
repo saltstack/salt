@@ -48,6 +48,8 @@ except (ImportError, OSError, AttributeError, TypeError):
 
 
 class Interfaces:
+    __slots__ = ("interfaces",)
+
     def __init__(self, interfaces=None):
         if interfaces is None:
             interfaces = {}
