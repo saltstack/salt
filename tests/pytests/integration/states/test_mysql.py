@@ -203,7 +203,10 @@ def test_user_present_absent_passwordless(salt_cli_wrapper):
     )
 
     ret = salt_cli_wrapper(
-        "state.single", "mysql_user.absent", name="george", host="localhost",
+        "state.single",
+        "mysql_user.absent",
+        name="george",
+        host="localhost",
     )
     state = ret.json["mysql_user_|-george_|-george_|-absent"]
     assert ret.exitcode == 0, ret
@@ -254,7 +257,10 @@ def test_user_present_absent_unixsocket(salt_cli_wrapper, mysql_container):
     )
 
     ret = salt_cli_wrapper(
-        "state.single", "mysql_user.absent", name="george", host="localhost",
+        "state.single",
+        "mysql_user.absent",
+        name="george",
+        host="localhost",
     )
     state = ret.json["mysql_user_|-george_|-george_|-absent"]
     assert ret.exitcode == 0, ret
