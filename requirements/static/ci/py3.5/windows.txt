@@ -103,7 +103,7 @@ rsa==4.0                  # via google-auth
 s3transfer==0.3.3         # via boto3
 sed==0.3.1
 setproctitle==1.1.10
-six==1.15.0
+six==1.16.0
 smmap2==2.0.5
 strict-rfc3339==0.7
 tempora==1.14.1
