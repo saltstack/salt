@@ -210,7 +210,7 @@ def test_publish_to_pubserv_ipc(salt_master, salt_minion):
     """
     opts = dict(salt_master.config.copy(), ipc_mode="ipc", pub_hwm=0)
     with PubServerChannelProcess(opts, salt_minion.config.copy()) as server_channel:
-        send_num = 4
+        send_num = 10000
         expect = []
         for idx in range(send_num):
             expect.append(idx)
@@ -264,7 +264,7 @@ def test_issue_36469_tcp(salt_master, salt_minion):
 
 
 @pytest.mark.skip_on_windows
-#@pytest.mark.slow_test
+@pytest.mark.slow_test
 def test_zeromq_filtering(salt_master, salt_minion):
     """
     Test sending messages to publisher using UDP with zeromq_filtering enabled
