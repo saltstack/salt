@@ -66,7 +66,7 @@ def _mine_send(load, opts):
 
 
 def _mine_get(load, opts):
-    if opts.get("transport", "") in ("zeromq", "tcp"):
+    if opts.get("transport", "") in ("zeromq", "tcp", "rabbitmq"):
         try:
             load["tok"] = _auth().gen_token(b"salt")
         except AttributeError:

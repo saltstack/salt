@@ -143,12 +143,16 @@ class AsyncReqChannel(AsyncChannel):
             import salt.transport.tcp
 
             return salt.transport.tcp.AsyncTCPReqChannel(opts, **kwargs)
+        elif ttype == "rabbitmq":
+            import salt.transport.rabbitmq
+
+            return salt.transport.rabbitmq.AsyncRabbitMQReqChannel(opts, **kwargs)
         elif ttype == "local":
             raise Exception("There's no AsyncLocalChannel implementation yet")
             # import salt.transport.local
             # return salt.transport.local.AsyncLocalChannel(opts, **kwargs)
         else:
-            raise Exception("Channels are only defined for tcp, zeromq, and local")
+            raise Exception("Channels are only defined for tcp, zeromq, rabbitmq and local")
             # return NewKindOfChannel(opts, **kwargs)
 
     def send(self, load, tries=3, timeout=60, raw=False):
@@ -210,12 +214,16 @@ class AsyncPubChannel(AsyncChannel):
             import salt.transport.tcp
 
             return salt.transport.tcp.AsyncTCPPubChannel(opts, **kwargs)
+        elif ttype == "rabbitmq":
+            import salt.transport.rabbitmq
+
+            return salt.transport.rabbitmq.AsyncRabbitMQPubChannel(opts, **kwargs)
         elif ttype == "local":  # TODO:
             raise Exception("There's no AsyncLocalPubChannel implementation yet")
             # import salt.transport.local
             # return salt.transport.local.AsyncLocalPubChannel(opts, **kwargs)
         else:
-            raise Exception("Channels are only defined for tcp, zeromq, and local")
+            raise Exception("Channels are only defined for tcp, zeromq, rabbitmq and local")
             # return NewKindOfChannel(opts, **kwargs)
 
     def connect(self):

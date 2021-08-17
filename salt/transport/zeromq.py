@@ -114,7 +114,7 @@ def _get_master_uri(master_ip, master_port, source_ip=None, source_port=None):
             log.warning("Consider upgrading to pyzmq >= 16.0.1 and libzmq >= 4.1.6")
             log.warning(
                 "Specific source IP / port for connecting to master returner port:"
-                " configuraion ignored"
+                " configuration ignored"
             )
 
     return master_uri
@@ -777,7 +777,7 @@ class ZeroMQReqServerChannel(
 
             self._w_monitor = ZeroMQSocketMonitor(self._socket)
             threading.Thread(target=self._w_monitor.start_poll).start()
-            log.debug("ZMQ monitor has been started started")
+            log.debug("ZMQ monitor has been started")
 
     def post_fork(self, payload_handler, io_loop):
         """
@@ -1078,7 +1078,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                     raise
 
         except KeyboardInterrupt:
-            log.trace("Publish daemon caught Keyboard interupt, tearing down")
+            log.trace("Publish daemon caught Keyboard interrupt, tearing down")
         # Cleanly close the sockets if we're shutting down
         if pub_sock.closed is False:
             pub_sock.close()
@@ -1144,7 +1144,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     def publish(self, load):
         """
         Publish "load" to minions. This send the load to the publisher daemon
-        process with does the actual sending to minions.
+        process which does the actual sending to minions.
 
         :param dict load: A load to be sent across the wire to minions
         """
@@ -1171,7 +1171,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             match_ids = _res["minions"]
 
             log.debug("Publish Side Match: %s", match_ids)
-            # Send list of miions thru so zmq can target them
+            # Send list of minions thru so zmq can target them
             int_payload["topic_lst"] = match_ids
         payload = self.serial.dumps(int_payload)
         log.debug(

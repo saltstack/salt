@@ -200,10 +200,10 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         if self.opts.get("presence_events", False):
             tcp_only = True
             for transport, _ in iter_transport_opts(self.opts):
-                if transport != "tcp":
+                if transport not in ("tcp", "rabbitmq"):  # TODO: RMQ
                     tcp_only = False
             if not tcp_only:
-                # For a TCP only transport, the presence events will be
+                # For a TCP and rabbitmq-only transport, the presence events will be
                 # handled in the transport code.
                 self.presence_events = True
 
@@ -252,7 +252,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         if self.opts["key_cache"] == "sched":
             keys = []
             # TODO DRY from CKMinions
-            if self.opts["transport"] in ("zeromq", "tcp"):
+            if self.opts["transport"] in ("zeromq", "tcp", "rabbitmq"):
                 acc = "minions"
             else:
                 acc = "accepted"
@@ -905,13 +905,10 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         )
 
         req_channels = []
-        tcp_only = True
         for transport, opts in iter_transport_opts(self.opts):
             chan = salt.transport.server.ReqServerChannel.factory(opts)
             chan.pre_fork(self.process_manager)
             req_channels.append(chan)
-            if transport != "tcp":
-                tcp_only = False
 
         kwargs = {}
         if salt.utils.platform.is_windows():

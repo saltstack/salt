@@ -808,7 +808,7 @@ class MinionBase:
                 try:
                     if self.opts["transport"] == "detect":
                         self.opts["detect_mode"] = True
-                        for trans in ("zeromq", "tcp"):
+                        for trans in ("zeromq", "tcp", "rabbitmq"):
                             if trans == "zeromq" and not zmq:
                                 continue
                             self.opts["transport"] = trans
@@ -1448,7 +1448,7 @@ class Minion(MinionBase):
 
         # add master_alive job if enabled
         if (
-            self.opts["transport"] != "tcp"
+            self.opts["transport"] not in ("tcp", "rabbitmq") # TODO: RMQ
             and self.opts["master_alive_interval"] > 0
             and self.connected
         ):
@@ -2741,7 +2741,7 @@ class Minion(MinionBase):
 
                 if self.opts["master_type"] != "failover":
                     # modify the scheduled job to fire on reconnect
-                    if self.opts["transport"] != "tcp":
+                    if self.opts["transport"] not in ("tcp", "rabbitmq"): # TODO: RMQ
                         schedule = {
                             "function": "status.master",
                             "seconds": self.opts["master_alive_interval"],
@@ -2759,7 +2759,7 @@ class Minion(MinionBase):
                         )
                 else:
                     # delete the scheduled job to don't interfere with the failover process
-                    if self.opts["transport"] != "tcp":
+                    if self.opts["transport"] not in ("tcp", "rabbitmq"): # TODO: RMQ
                         self.schedule.delete_job(name=master_event(type="alive"))
 
                     log.info("Trying to tune in to next master from master-list")
@@ -2806,7 +2806,7 @@ class Minion(MinionBase):
                         log.info("Minion is ready to receive requests!")
 
                         # update scheduled job to run with the new master addr
-                        if self.opts["transport"] != "tcp":
+                        if self.opts["transport"] not in ("tcp", "rabbitmq"): # TODO: RMQ
                             schedule = {
                                 "function": "status.master",
                                 "seconds": self.opts["master_alive_interval"],
@@ -2864,7 +2864,7 @@ class Minion(MinionBase):
                 self.connected = True
                 # modify the __master_alive job to only fire,
                 # if the connection is lost again
-                if self.opts["transport"] != "tcp":
+                if self.opts["transport"] not in ("tcp", "rabbitmq"): # TODO: RMQ
                     schedule = {
                         "function": "status.master",
                         "seconds": self.opts["master_alive_interval"],
