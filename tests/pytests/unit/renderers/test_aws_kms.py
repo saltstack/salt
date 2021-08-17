@@ -1,9 +1,6 @@
 """
 Unit tests for AWS KMS Decryption Renderer.
 """
-# pylint: disable=protected-access
-
-
 import pytest
 import salt.exceptions
 import salt.renderers.aws_kms as aws_kms
@@ -72,13 +69,11 @@ def test__cfg_data_key(encrypted_data_key):
     _cfg_data_key returns the aws_kms:data_key from configuration.
     """
     config = {"aws_kms": {"data_key": encrypted_data_key}}
-    with patch.dict(
-        aws_kms.__salt__, {"config.get": config.get}
-    ):  # pylint: disable=no-member
+    with patch.dict(aws_kms.__salt__, {"config.get": config.get}):
         assert (
             aws_kms._cfg_data_key() == encrypted_data_key
         ), "_cfg_data_key did not return the data key configured in __salt__."
-    with patch.dict(aws_kms.__opts__, config):  # pylint: disable=no-member
+    with patch.dict(aws_kms.__opts__, config):
         assert (
             aws_kms._cfg_data_key() == encrypted_data_key
         ), "_cfg_data_key did not return the data key configured in __opts__."
@@ -92,7 +87,7 @@ def test__cfg_data_key_no_key():
     pytest.raises(salt.exceptions.SaltConfigurationError, aws_kms._cfg_data_key)
 
 
-def test__session_profile(aws_profile):  # pylint: disable=no-self-use
+def test__session_profile(aws_profile):
     """
     _session instantiates boto3.Session with the configured profile_name
     """
@@ -122,7 +117,7 @@ def test__session_noregion():
         pytest.raises(salt.exceptions.SaltConfigurationError, aws_kms._session)
 
 
-def test__kms():  # pylint: disable=no-self-use
+def test__kms():
     """
     _kms calls boto3.Session.client with 'kms' as its only argument.
     """
@@ -141,7 +136,7 @@ def test__kms_noregion():
         pytest.raises(salt.exceptions.SaltConfigurationError, aws_kms._kms)
 
 
-def test__api_decrypt(encrypted_data_key):  # pylint: disable=no-self-use
+def test__api_decrypt(encrypted_data_key):
     """
     _api_decrypt_response calls kms.decrypt with the
     configured data key as the CiphertextBlob kwarg.
@@ -151,9 +146,7 @@ def test__api_decrypt(encrypted_data_key):  # pylint: disable=no-self-use
         kms_getter.return_value = kms_client
         with patch.object(aws_kms, "_cfg_data_key", lambda: encrypted_data_key):
             aws_kms._api_decrypt()
-            kms_client.decrypt.assert_called_with(
-                CiphertextBlob=encrypted_data_key
-            )  # pylint: disable=no-member
+            kms_client.decrypt.assert_called_with(CiphertextBlob=encrypted_data_key)
 
 
 def test__api_decrypt_badkey(encrypted_data_key):
@@ -163,11 +156,9 @@ def test__api_decrypt_badkey(encrypted_data_key):
     with an error_code of 'InvalidCiphertextException'.
     """
     kms_client = MagicMock()
-    kms_client.decrypt.side_effect = (
-        botocore.exceptions.ClientError(  # pylint: disable=no-member
-            error_response={"Error": {"Code": "InvalidCiphertextException"}},
-            operation_name="Decrypt",
-        )
+    kms_client.decrypt.side_effect = botocore.exceptions.ClientError(
+        error_response={"Error": {"Code": "InvalidCiphertextException"}},
+        operation_name="Decrypt",
     )
     with patch.object(aws_kms, "_kms") as kms_getter:
         kms_getter.return_value = kms_client
