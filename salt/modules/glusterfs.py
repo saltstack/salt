@@ -51,9 +51,7 @@ def _gluster_output_cleanup(result):
     """
     ret = ""
     for line in result.splitlines():
-        if line.startswith("gluster>"):
-            ret += line[9:].strip()
-        elif line.startswith("Welcome to gluster prompt"):
+        if line.startswith("Welcome to gluster prompt") or line.startswith("gluster>"):
             pass
         else:
             ret += line.strip()
