@@ -4,14 +4,12 @@ import datetime
 import logging
 from uuid import UUID
 
+import pytest
+
 # Salt libs
 import salt.beacons.journald as journald
 import salt.utils.data
-from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import Mock
-
-# Salt testing libs
-from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
@@ -73,44 +71,41 @@ class SystemdJournaldMock(Mock):
 SYSTEMD_MOCK = SystemdJournaldMock()
 
 
-class JournaldBeaconTestCase(TestCase, LoaderModuleMockMixin):
-    """
-    Test case for salt.beacons.journald
-    """
-
-    def setup_loader_modules(self):
-        return {
-            journald: {
-                "__context__": {"systemd.journald": SYSTEMD_MOCK},
-                "__salt__": {},
-            }
+@pytest.fixture
+def configure_loader_modules():
+    return {
+        journald: {
+            "__context__": {"systemd.journald": SYSTEMD_MOCK},
+            "__salt__": {},
         }
+    }
 
-    def test_non_list_config(self):
-        config = {}
 
-        ret = journald.validate(config)
+def test_non_list_config():
+    config = {}
 
-        self.assertEqual(
-            ret, (False, "Configuration for journald beacon must be a list.")
-        )
+    ret = journald.validate(config)
 
-    def test_empty_config(self):
-        config = [{}]
+    assert ret == (False, "Configuration for journald beacon must be a list.")
 
-        ret = journald.validate(config)
 
-        self.assertEqual(ret, (True, "Valid beacon configuration"))
+def test_empty_config():
+    config = [{}]
 
-    def test_journald_match(self):
-        config = [{"services": {"sshd": {"SYSLOG_IDENTIFIER": "sshd", "PRIORITY": 6}}}]
+    ret = journald.validate(config)
 
-        ret = journald.validate(config)
+    assert ret == (True, "Valid beacon configuration")
 
-        self.assertEqual(ret, (True, "Valid beacon configuration"))
 
-        _expected_return = salt.utils.data.simple_types_filter(_STUB_JOURNALD_ENTRY)
-        _expected_return["tag"] = "sshd"
+def test_journald_match():
+    config = [{"services": {"sshd": {"SYSLOG_IDENTIFIER": "sshd", "PRIORITY": 6}}}]
 
-        ret = journald.beacon(config)
-        self.assertEqual(ret, [_expected_return])
+    ret = journald.validate(config)
+
+    assert ret == (True, "Valid beacon configuration")
+
+    _expected_return = salt.utils.data.simple_types_filter(_STUB_JOURNALD_ENTRY)
+    _expected_return["tag"] = "sshd"
+
+    ret = journald.beacon(config)
+    assert ret == [_expected_return]
