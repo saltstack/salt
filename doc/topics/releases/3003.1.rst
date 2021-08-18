@@ -6,11 +6,6 @@ Salt 3003.1 Release Notes
 
 Version 3003.1 is a bug fix release for :ref:`3003 <release-3003>`.
 
-Removed
--------
-
-- Removed support for Ubuntu 16.04 (#59913)
-
 Fixed
 -----
 
