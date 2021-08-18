@@ -109,10 +109,10 @@ try:
     from netaddr import IPNetwork
     from netaddr import IPAddress
 
-    # pylint: disable=unused-import
+    # pylint: disable=unused-import,no-name-in-module
     from napalm.base import helpers as napalm_helpers
 
-    # pylint: enable=unused-import
+    # pylint: enable=unused-import,no-name-in-module
     HAS_NAPALM = True
 except ImportError:
     HAS_NAPALM = False

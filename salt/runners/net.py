@@ -80,7 +80,11 @@ from salt.ext.six.moves import map
 try:
     from netaddr import IPNetwork  # netaddr is already required by napalm
     from netaddr.core import AddrFormatError
+
+    # pylint: disable=no-name-in-module
     from napalm.base import helpers as napalm_helpers
+
+    # pylint: enable=no-name-in-module
 
     HAS_NAPALM = True
 except ImportError:
