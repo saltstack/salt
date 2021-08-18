@@ -1,5 +1,4 @@
-
-import hashlib
+import pytest
 
 import salt.config
 import salt.exceptions
@@ -12,17 +11,17 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 from salt.ext import tornado
-from salt.transport.rabbitmq import AsyncReqMessageClientPool
 from tests.support.mock import MagicMock, call, patch
 
 
+@pytest.mark.xfail(reason="RMQ is POC. Skip RMQ tests until RMQ dependencies are dealt with in the CI/CD pipeline")
 def test_async_req_message_client_pool_send():
     sock_pool_size = 5
     with patch(
         "salt.transport.rabbitmq.AsyncReqMessageClient.__init__",
         MagicMock(return_value=None),
     ):
-        message_client_pool = AsyncReqMessageClientPool(
+        message_client_pool = salt.transport.rabbitmq.AsyncReqMessageClientPool(
             {"sock_pool_size": sock_pool_size}, args=({}, "")
         )
         message_client_pool.message_clients = [
@@ -40,6 +39,7 @@ def test_async_req_message_client_pool_send():
             assert message_client_pool.send() == [1]
 
 
+@pytest.mark.xfail(reason="RMQ is POC. Skip RMQ tests until RMQ dependencies are dealt with in the CI/CD pipeline")
 def test_clear_req_channel_master_uri_override(temp_salt_minion, temp_salt_master):
     """
     ensure master_uri kwarg is respected

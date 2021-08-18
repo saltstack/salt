@@ -12,7 +12,6 @@ import salt.ext.tornado.ioloop
 import salt.log.setup
 import salt.transport.client
 import salt.transport.server
-import salt.transport.rabbitmq
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
