@@ -1225,5 +1225,5 @@ repos:
         name: Run bandit against the test suite
         args: [--silent, -lll, --skip, B701]
         files: ^tests/.*
-        exclude: ^tests/minionswarm\.py
+        exclude: ^tests/(consist|jenkins|minionswarm)\.py
   # <---- Security ---------------------------------------------------------------------------------------------------
