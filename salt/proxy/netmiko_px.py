@@ -190,8 +190,14 @@ import salt.utils.args
 
 try:
     from netmiko import ConnectHandler
-    from netmiko.ssh_exception import NetMikoTimeoutException
-    from netmiko.ssh_exception import NetMikoAuthenticationException
+    try:
+        # netmiko <= v3.4.0
+        from netmiko.ssh_exception import NetMikoTimeoutException
+        from netmiko.ssh_exception import NetMikoAuthenticationException
+    except:
+        # netmiko > v3.4.0 or on develop branch
+        from netmiko import NetMikoTimeoutException
+        from netmiko import NetMikoAuthenticationException
 
     HAS_NETMIKO = True
 except ImportError:
