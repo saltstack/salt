@@ -6,7 +6,13 @@ def transport_ids(value):
     return "Transport({})".format(value)
 
 
-@pytest.fixture(params=(["zeromq", "tcp", "rabbitmq"]), ids=transport_ids)
+@pytest.fixture(params=(["zeromq",
+                         "tcp",
+                         pytest.param("rabbitmq",
+                                      marks=pytest.mark.xfail(reason="RMQ is POC. Skip/fail RMQ tests until "
+                                                                     "RMQ dependencies are dealt with in the CI/CD pipeline."))
+                         ]),
+                ids=transport_ids)
 def transport(request):
     return request.param
 

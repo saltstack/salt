@@ -5,7 +5,11 @@ Integration tests for rabbitmq transport
 import logging
 
 import pytest
-import pika
+
+try:
+    import pika
+except:
+    pass
 
 from tests.support.helpers import runs_on
 
@@ -14,10 +18,10 @@ log = logging.getLogger(__name__)
 pytestmark = [
     #TODO differentiate between OS flavours and instances of docker
     pytest.mark.skip_if_binaries_missing("docker"), # MacOS has "docker desktop" with the 'docker" as cli
+    pytest.mark.xfail(reason="RMQ is POC. Skip RMQ tests until RMQ dependencies are dealt with in the CI/CD pipeline")
 ]
 
 @runs_on(kernel="Darwin")
-@pytest.mark.skip_if_binaries_missing("docker")
 @pytest.fixture(scope="module", autouse=True)
 def rabbitmq_docker_container(salt_call_cli, rabbitmq_port, rabbitmq_management_port):
     container_started = False

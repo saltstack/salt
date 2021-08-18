@@ -200,6 +200,7 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
 
 
 @pytest.mark.slow_test
+@pytest.mark.xfail(reason="RMQ is POC. Skip RMQ tests until RMQ dependencies are dealt with in the CI/CD pipeline")
 def test_publish_to_pubserv_ipc(salt_master, salt_minion):
     """
     Test sending a message to RabbitMQPubServerChannel using IPC transport
