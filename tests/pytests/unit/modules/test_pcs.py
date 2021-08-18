@@ -264,7 +264,8 @@ def test_item_show_set_itemid_constraint():
 
     mock_cmd = MagicMock()
     patch_salt = patch.dict(
-        pcs.__salt__, {"cmd.run_all": mock_cmd, "pkg.version_cmp": MagicMock(1)},
+        pcs.__salt__,
+        {"cmd.run_all": mock_cmd, "pkg.version_cmp": MagicMock(1)},
     )
 
     with patch_salt:
