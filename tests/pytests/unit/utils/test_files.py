@@ -17,6 +17,11 @@ def test_safe_rm():
         assert os_remove_mock.called is True
 
 
+def test_safe_rm_exceptions(tmp_path):
+    assert salt.utils.files.safe_rm(str(
+        tmp_path / "no_way_this_is_a_file_nope.sh")) is None
+
+
 def test_safe_walk_symlink_recursion(tmp_path):
     if tmp_path.stat().st_ino == 0:
         pytest.xfail(reason="inodes not supported in {}".format(tmp_path))
