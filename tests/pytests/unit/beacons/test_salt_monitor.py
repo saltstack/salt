@@ -1,10 +1,7 @@
 # pylint: disable=E8231
 # Salt libs
+import pytest
 import salt.beacons.salt_monitor as salt_monitor
-from tests.support.mixins import LoaderModuleMockMixin
-
-# Salt testing libs
-from tests.support.unit import TestCase
 
 TEST_CONFIG = [
     {
@@ -168,31 +165,29 @@ def mock_test_false():
     return False
 
 
-class SaltBeaconTestCase(TestCase, LoaderModuleMockMixin):
-    """
-    Test case for salt.beacons.salt_monitor
-    """
-
-    def setup_loader_modules(self):
-        return {
-            salt_monitor: {
-                "__salt__": {
-                    "test.ping": mock_test_ping,
-                    "test.version": mock_test_version,
-                    "cmd.run": mock_test,
-                    "test.false": mock_test_false,
-                }
+@pytest.fixture
+def configure_loader_modules():
+    return {
+        salt_monitor: {
+            "__salt__": {
+                "test.ping": mock_test_ping,
+                "test.version": mock_test_version,
+                "cmd.run": mock_test,
+                "test.false": mock_test_false,
             }
         }
+    }
 
-    def test_validate(self):
-        for i, config in enumerate(TEST_CONFIG):
-            valid = salt_monitor.validate(config["config"])
-            self.assertEqual(valid, config["expected_validate"])
 
-    def test_beacon(self):
-        for config in TEST_CONFIG:
-            if config["expected_beacon"] is None:
-                continue
-            events = salt_monitor.beacon(config["config"])
-            self.assertEqual(events, config["expected_beacon"])
+def test_validate():
+    for i, config in enumerate(TEST_CONFIG):
+        valid = salt_monitor.validate(config["config"])
+        assert valid == config["expected_validate"]
+
+
+def test_beacon():
+    for config in TEST_CONFIG:
+        if config["expected_beacon"] is None:
+            continue
+        events = salt_monitor.beacon(config["config"])
+        assert events == config["expected_beacon"]
