@@ -78,15 +78,17 @@ def _get_top_file_envs():
     try:
         return __context__["saltutil._top_file_envs"]
     except KeyError:
-        try:
-            st_ = salt.state.HighState(__opts__, initial_pillar=__pillar__.value())
-            top = st_.get_top()
-            if top:
-                envs = list(st_.top_matches(top).keys()) or "base"
-            else:
-                envs = "base"
-        except SaltRenderError as exc:
-            raise CommandExecutionError("Unable to render top file(s): {}".format(exc))
+        with salt.state.HighState(__opts__, initial_pillar=__pillar__.value()) as st_:
+            try:
+                top = st_.get_top()
+                if top:
+                    envs = list(st_.top_matches(top).keys()) or "base"
+                else:
+                    envs = "base"
+            except SaltRenderError as exc:
+                raise CommandExecutionError(
+                    "Unable to render top file(s): {}".format(exc)
+                )
         __context__["saltutil._top_file_envs"] = envs
         return envs
 
@@ -127,7 +129,7 @@ def update(version=None):
     """
     Update the salt minion from the URL defined in opts['update_url']
     SaltStack, Inc provides the latest builds here:
-    update_url: https://repo.saltstack.com/windows/
+    update_url: https://repo.saltproject.io/windows/
 
     Be aware that as of 2014-8-11 there's a bug in esky such that only the
     latest version available in the update_url can be downloaded and installed.
@@ -1255,8 +1257,7 @@ def clear_cache():
                 os.remove(os.path.join(root, name))
             except OSError as exc:
                 log.error(
-                    "Attempt to clear cache with saltutil.clear_cache "
-                    "FAILED with: %s",
+                    "Attempt to clear cache with saltutil.clear_cache FAILED with: %s",
                     exc,
                 )
                 return False
@@ -1290,7 +1291,8 @@ def clear_job_cache(hours=24):
                     shutil.rmtree(directory)
             except OSError as exc:
                 log.error(
-                    "Attempt to clear cache with saltutil.clear_job_cache FAILED with: %s",
+                    "Attempt to clear cache with saltutil.clear_job_cache FAILED"
+                    " with: %s",
                     exc,
                 )
                 return False
@@ -1422,9 +1424,9 @@ def signal_job(jid, sig):
                 path = os.path.join(__opts__["cachedir"], "proc", str(jid))
                 if os.path.isfile(path):
                     os.remove(path)
-                return (
-                    "Job {} was not running and job data has been " " cleaned up"
-                ).format(jid)
+                return "Job {} was not running and job data has been cleaned up".format(
+                    jid
+                )
     return ""
 
 

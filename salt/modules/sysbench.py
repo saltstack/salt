@@ -1,16 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 The 'sysbench' module is used to analyze the
 performance of the minions, right from the master!
 It measures various system parameters such as
 CPU, Memory, File I/O, Threads and Mutex.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import re
 
 import salt.utils.path
-from salt.ext.six.moves import zip
 
 
 def __virtual__():
@@ -22,7 +19,8 @@ def __virtual__():
         return "sysbench"
     return (
         False,
-        "The sysbench execution module failed to load: the sysbench binary is not in the path.",
+        "The sysbench execution module failed to load: the sysbench binary is not in"
+        " the path.",
     )
 
 
@@ -81,7 +79,7 @@ def cpu():
 
     # Test beings!
     for primes in max_primes:
-        key = "Prime numbers limit: {0}".format(primes)
+        key = "Prime numbers limit: {}".format(primes)
         run_command = test_command.format(primes)
         result = __salt__["cmd.run"](run_command)
         ret_val[key] = _parser(result)
@@ -112,7 +110,7 @@ def threads():
 
     # Test begins!
     for yields, locks in zip(thread_yields, thread_locks):
-        key = "Yields: {0} Locks: {1}".format(yields, locks)
+        key = "Yields: {} Locks: {}".format(yields, locks)
         run_command = test_command.format(yields, locks)
         result = __salt__["cmd.run"](run_command)
         ret_val[key] = _parser(result)
@@ -151,7 +149,7 @@ def mutex():
 
     # Test begins!
     for num, locks, loops in zip(mutex_num, mutex_locks, mutex_loops):
-        key = "Mutex: {0} Locks: {1} Loops: {2}".format(num, locks, loops)
+        key = "Mutex: {} Locks: {} Loops: {}".format(num, locks, loops)
         run_command = test_command.format(num, locks, loops)
         result = __salt__["cmd.run"](run_command)
         ret_val[key] = _parser(result)
@@ -189,7 +187,7 @@ def memory():
     # Test begins!
     for oper in memory_oper:
         for scope in memory_scope:
-            key = "Operation: {0} Scope: {1}".format(oper, scope)
+            key = "Operation: {} Scope: {}".format(oper, scope)
             run_command = test_command.format(oper, scope)
             result = __salt__["cmd.run"](run_command)
             ret_val[key] = _parser(result)
@@ -230,7 +228,7 @@ def fileio():
 
     # Test begins!
     for mode in test_modes:
-        key = "Mode: {0}".format(mode)
+        key = "Mode: {}".format(mode)
 
         # Prepare phase
         run_command = (test_command + "prepare").format(mode)

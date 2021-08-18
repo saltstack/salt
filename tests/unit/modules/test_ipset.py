@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.ipset as ipset
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -124,14 +118,12 @@ class IpsetTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual(
                 ipset.add("set", "entry", packets=0),
-                "Error: Set set not created with \
-counters support",
+                "Error: Set set not created with counters support",
             )
 
             self.assertEqual(
                 ipset.add("set", "entry", comment=0),
-                "Error: Set set not created with \
-comment support",
+                "Error: Set set not created with comment support",
             )
 
         mock = MagicMock(return_value={"Type": "bitmap:ip", "Header": "Header"})

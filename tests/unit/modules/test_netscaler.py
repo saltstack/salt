@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.netscaler as netscaler
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -42,7 +36,7 @@ class MockNSNitroError(Exception):
 
     def __init__(self, message="error"):
         self._message = message
-        super(MockNSNitroError, self).__init__(self.message)
+        super().__init__(self.message)
 
     def _get_message(self):
         """
@@ -59,7 +53,7 @@ class MockNSNitroError(Exception):
     message = property(_get_message, _set_message)
 
 
-class MockNSNitro(object):
+class MockNSNitro:
     """
     Mock NSNitro class
     """
@@ -84,7 +78,7 @@ class MockNSNitro(object):
         return True
 
 
-class MockNSServiceGroup(object):
+class MockNSServiceGroup:
     """
     Mock NSServiceGroup class
     """
@@ -182,7 +176,7 @@ class MockNSServiceGroup(object):
         return bol
 
 
-class MockNSServiceGroupServerBinding(object):
+class MockNSServiceGroupServerBinding:
     """
     Mock NSServiceGroupServerBinding class
     """
@@ -230,7 +224,7 @@ class MockNSServiceGroupServerBinding(object):
         return MockNSServiceGroupServerBinding()
 
 
-class MockNSService(object):
+class MockNSService:
     """
     Mock NSService class
     """
@@ -280,7 +274,7 @@ class MockNSService(object):
         return "UP"
 
 
-class MockNSServer(object):
+class MockNSServer:
     """
     Mock NSServer class
     """
@@ -364,7 +358,7 @@ class MockNSServer(object):
         return "ENABLED"
 
 
-class MockNSLBVServer(object):
+class MockNSLBVServer:
     """
     Mock NSLBVServer class
     """
@@ -443,7 +437,7 @@ class MockNSLBVServer(object):
         return MockNSLBVServer()
 
 
-class MockNSLBVServerServiceGroupBinding(object):
+class MockNSLBVServerServiceGroupBinding:
     """
     Mock NSLBVServerServiceGroupBinding class
     """
@@ -504,7 +498,7 @@ class MockNSLBVServerServiceGroupBinding(object):
         return MockNSLBVServerServiceGroupBinding()
 
 
-class MockNSSSLVServerSSLCertKeyBinding(object):
+class MockNSSSLVServerSSLCertKeyBinding:
     """
     Mock NSSSLVServerSSLCertKeyBinding class
     """

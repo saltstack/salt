@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Create an Event in PagerDuty
 ============================
@@ -17,9 +16,6 @@ runs.
         - service_key: 9abcd123456789efabcde362783cdbaf
         - profile: my-pagerduty-account
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -61,11 +57,14 @@ def create_event(name, details, service_key, profile):
     """
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
     if __opts__["test"]:
-        ret["comment"] = "Need to create event: {0}".format(name)
+        ret["comment"] = "Need to create event: {}".format(name)
         return ret
     __salt__["pagerduty.create_event"](
-        description=name, details=details, service_key=service_key, profile=profile,
+        description=name,
+        details=details,
+        service_key=service_key,
+        profile=profile,
     )
     ret["result"] = True
-    ret["comment"] = "Created event: {0}".format(name)
+    ret["comment"] = "Created event: {}".format(name)
     return ret

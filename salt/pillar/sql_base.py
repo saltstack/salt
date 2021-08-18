@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Retrieve Pillar data by doing a SQL query
 
@@ -168,17 +167,10 @@ More complete example for MySQL (to also show configuration)
             as_list: True
             with_lists: [1,3]
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import abc  # Added in python2.6 so always available
-
-# Import python libs
 import logging
 
-from salt.ext import six
-from salt.ext.six.moves import range
-
-# Import Salt libs
 from salt.utils.odict import OrderedDict
 
 # Please don't strip redundant parentheses from this file.
@@ -196,7 +188,7 @@ def __virtual__():
     return False
 
 
-class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
+class SqlBaseExtPillar(metaclass=abc.ABCMeta):
     """
     This class receives and processes the database rows in a database
     agnostic way.
@@ -255,7 +247,7 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
             x
             for x in qbuffer
             if (
-                (isinstance(x[1], six.string_types) and len(x[1]))
+                (isinstance(x[1], str) and len(x[1]))
                 or (isinstance(x[1], (list, tuple)) and (len(x[1]) > 0) and x[1][0])
                 or (isinstance(x[1], dict) and "query" in x[1] and len(x[1]["query"]))
             )
@@ -270,7 +262,7 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
                 "with_lists": None,
                 "ignore_null": False,
             }
-            if isinstance(qb[1], six.string_types):
+            if isinstance(qb[1], str):
                 defaults["query"] = qb[1]
             elif isinstance(qb[1], (list, tuple)):
                 defaults["query"] = qb[1][0]
@@ -279,9 +271,7 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
                 # May set 'as_list' from qb[1][2].
             else:
                 defaults.update(qb[1])
-                if defaults["with_lists"] and isinstance(
-                    defaults["with_lists"], six.string_types
-                ):
+                if defaults["with_lists"] and isinstance(defaults["with_lists"], str):
                     defaults["with_lists"] = [
                         int(i) for i in defaults["with_lists"].split(",")
                     ]

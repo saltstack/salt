@@ -8,7 +8,7 @@ apache-libcloud==2.5.0
     # via -r requirements/darwin.txt
 certifi==2020.6.20
     # via requests
-cffi==1.12.2
+cffi==1.14.5
     # via cryptography
 chardet==3.0.4
     # via requests
@@ -103,7 +103,7 @@ tempora==1.14.1
     # via portend
 timelib==0.2.5
     # via -r requirements/darwin.txt
-urllib3==1.26.4
+urllib3==1.26.6
     # via requests
 vultr==1.0.1
     # via -r requirements/darwin.txt

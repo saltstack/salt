@@ -509,7 +509,7 @@ def _format_host(host, data, indent_level=1):
 
     if strip_colors:
         host = salt.output.strip_esc_sequence(host)
-    hstrs.insert(0, ("{0}{1}:{2[ENDC]}".format(hcolor, host, colors)))
+    hstrs.insert(0, "{0}{1}:{2[ENDC]}".format(hcolor, host, colors))
     return "\n".join(hstrs), nchanges > 0
 
 

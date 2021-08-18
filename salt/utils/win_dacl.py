@@ -2152,7 +2152,7 @@ def copy_security(
 
     if not security_flags:
         raise SaltInvocationError(
-            "One of copy_owner, copy_group, copy_dacl, or copy_sacl must be " "True"
+            "One of copy_owner, copy_group, copy_dacl, or copy_sacl must be True"
         )
 
     # To set the owner to something other than the logged in user requires
@@ -2241,8 +2241,9 @@ def _check_perms(obj_name, obj_type, new_perms, access_mode, ret, test_mode=Fals
             user_name = get_name(principal=user)
         except CommandExecutionError:
             ret["comment"].append(
-                '{} Perms: User "{}" missing from Target System'
-                "".format(access_mode.capitalize(), user)
+                '{} Perms: User "{}" missing from Target System'.format(
+                    access_mode.capitalize(), user
+                )
             )
             continue
 
@@ -2457,8 +2458,9 @@ def check_perms(
                 except CommandExecutionError:
                     ret["result"] = False
                     ret["comment"].append(
-                        'Failed to set inheritance for "{}" to {}'
-                        "".format(obj_name, inheritance)
+                        'Failed to set inheritance for "{}" to {}'.format(
+                            obj_name, inheritance
+                        )
                     )
 
     # Check reset

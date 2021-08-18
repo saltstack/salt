@@ -1,11 +1,3 @@
-"""
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-
-    tests.integration.shell.call
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-"""
-
 import copy
 import logging
 import os
@@ -14,6 +6,7 @@ import re
 import sys
 
 import pytest
+import salt.defaults.exitcodes
 import salt.utils.files
 import salt.utils.json
 import salt.utils.platform
@@ -304,8 +297,8 @@ def test_syslog_file_not_found(salt_minion, salt_call_cli, tmp_path):
         if sys.version_info >= (3, 5, 4):
             assert ret.exitcode == 0
             assert (
-                "[WARNING ] The log_file does not exist. Logging not setup correctly or syslog service not started."
-                in ret.stderr
+                "[WARNING ] The log_file does not exist. Logging not setup correctly or"
+                " syslog service not started." in ret.stderr
             )
             assert ret.json == "foo", ret
         else:

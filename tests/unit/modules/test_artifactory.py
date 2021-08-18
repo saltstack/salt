@@ -1,12 +1,4 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt libs
 import salt.modules.artifactory as artifactory
-
-# Import Salt testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -312,7 +304,8 @@ class ArtifactoryTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_latest_release_username_password(self):
         with patch(
-            "salt.modules.artifactory.__find_latest_version", return_value="1.1",
+            "salt.modules.artifactory.__find_latest_version",
+            return_value="1.1",
         ), patch(
             "salt.modules.artifactory._get_release_url",
             return_value=(
@@ -383,8 +376,8 @@ class ArtifactoryTestCase(TestCase, LoaderModuleMockMixin):
                     "changes": {},
                     "target_file": target_file,
                     "comment": (
-                        "File {0} already exists, checksum matches with Artifactory.\n"
-                        "Checksum URL: {1}.sha1".format(target_file, artifact_url)
+                        "File {} already exists, checksum matches with Artifactory.\n"
+                        "Checksum URL: {}.sha1".format(target_file, artifact_url)
                     ),
                 }
             with patch(
@@ -399,7 +392,7 @@ class ArtifactoryTestCase(TestCase, LoaderModuleMockMixin):
                     "changes": {},
                     "target_file": target_file,
                     "comment": (
-                        "File {0} already exists, checksum matches with Artifactory.\n"
-                        "Checksum URL: {1}.sha1".format(target_file, artifact_url)
+                        "File {} already exists, checksum matches with Artifactory.\n"
+                        "Checksum URL: {}.sha1".format(target_file, artifact_url)
                     ),
                 }

@@ -84,7 +84,8 @@ class TestEventReturn(AdaptedConfigurationTestCaseMixin, ScriptPathMixin, TestCa
 
                 if b"DeprecationWarning: object() takes no parameters" in out:
                     self.fail(
-                        "'DeprecationWarning: object() takes no parameters' was seen in output"
+                        "'DeprecationWarning: object() takes no parameters' was seen in"
+                        " output"
                     )
 
                 if b"TypeError: object() takes no parameters" in out:

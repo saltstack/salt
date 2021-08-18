@@ -28,7 +28,7 @@ napalm; sys_platform != 'win32' and python_version > '3.6'
 paramiko>=2.1.6; sys_platform != 'win32' and sys_platform != 'darwin'
 passlib>=1.7.2; sys_platform != 'win32'
 pycurl>=7.43.0.5
-pyinotify>=0.9.6; sys_platform != 'win32' and sys_platform != 'darwin'
+pyinotify>=0.9.6; sys_platform != 'win32' and sys_platform != 'darwin' and platform_system != "openbsd"
 python-etcd>0.4.2
 pyvmomi
 requests

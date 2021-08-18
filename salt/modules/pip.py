@@ -104,7 +104,8 @@ __func_alias__ = {"list_": "list"}
 
 VALID_PROTOS = ["http", "https", "ftp", "file"]
 
-rex_pip_chain_read = re.compile(r"-r\s(.*)\n?", re.MULTILINE)
+rex_pip_chain_read = re.compile(r"(?:-r\s|--requirement[=\s])(.*)\n?", re.MULTILINE)
+rex_pip_reqs_comment = re.compile(r"(?:^|\s+)#.*$", re.MULTILINE)
 
 
 def __virtual__():
@@ -186,8 +187,7 @@ def _get_pip_bin(bin_env):
                     return [os.path.normpath(bin_path), "-m", "pip"]
                 else:
                     logger.debug(
-                        "pip: Found python binary by name but it is not "
-                        "executable: %s",
+                        "pip: Found python binary by name but it is not executable: %s",
                         bin_path,
                     )
         raise CommandNotFoundError(
@@ -260,9 +260,9 @@ def _find_req(link):
     logger.info("_find_req -- link = %s", link)
 
     with salt.utils.files.fopen(link) as fh_link:
-        child_links = rex_pip_chain_read.findall(
-            salt.utils.stringutils.to_unicode(fh_link.read())
-        )
+        reqs_content = salt.utils.stringutils.to_unicode(fh_link.read())
+    reqs_content = rex_pip_reqs_comment.sub("", reqs_content)  # remove comments
+    child_links = rex_pip_chain_read.findall(reqs_content)
 
     base_path = os.path.dirname(link)
     child_links = [os.path.join(base_path, d) for d in child_links]
@@ -337,7 +337,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                     current_directory = os.path.abspath(os.curdir)
 
                 logger.info(
-                    "_process_requirements from directory, " "%s -- requirement: %s",
+                    "_process_requirements from directory, %s -- requirement: %s",
                     cwd,
                     requirement,
                 )
@@ -387,7 +387,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                         __salt__["file.copy"](req_file, target_path)
 
                     logger.debug(
-                        "Changing ownership of requirements file '%s' to " "user '%s'",
+                        "Changing ownership of requirements file '%s' to user '%s'",
                         target_path,
                         user,
                     )
@@ -409,9 +409,9 @@ def _format_env_vars(env_vars):
         if isinstance(env_vars, dict):
             for key, val in env_vars.items():
                 if not isinstance(key, str):
-                    key = str(key)  # future lint: disable=blacklisted-function
+                    key = str(key)
                 if not isinstance(val, str):
-                    val = str(val)  # future lint: disable=blacklisted-function
+                    val = str(val)
                 ret[key] = val
         else:
             raise CommandExecutionError(
@@ -806,8 +806,7 @@ def install(
 
     if no_index and (index_url or extra_index_url):
         raise CommandExecutionError(
-            "'no_index' and ('index_url' or 'extra_index_url') are "
-            "mutually exclusive."
+            "'no_index' and ('index_url' or 'extra_index_url') are mutually exclusive."
         )
 
     if index_url:
@@ -1399,7 +1398,7 @@ def list_upgrades(bin_env=None, user=None, cwd=None):
             if match:
                 name, version_ = match.groups()
             else:
-                logger.error("Can't parse line '{}'".format(line))
+                logger.error("Can't parse line %r", line)
                 continue
             packages[name] = version_
 

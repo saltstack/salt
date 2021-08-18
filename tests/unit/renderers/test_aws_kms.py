@@ -1,18 +1,11 @@
-# -*- coding: utf-8 -*-
-
 """
 Unit tests for AWS KMS Decryption Renderer.
 """
 # pylint: disable=protected-access
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.exceptions
 import salt.renderers.aws_kms as aws_kms
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -146,9 +139,11 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
         with an error_code of 'InvalidCiphertextException'.
         """
         kms_client = MagicMock()
-        kms_client.decrypt.side_effect = botocore.exceptions.ClientError(  # pylint: disable=no-member
-            error_response={"Error": {"Code": "InvalidCiphertextException"}},
-            operation_name="Decrypt",
+        kms_client.decrypt.side_effect = (
+            botocore.exceptions.ClientError(  # pylint: disable=no-member
+                error_response={"Error": {"Code": "InvalidCiphertextException"}},
+                operation_name="Decrypt",
+            )
         )
         with patch.object(aws_kms, "_kms") as kms_getter:
             kms_getter.return_value = kms_client

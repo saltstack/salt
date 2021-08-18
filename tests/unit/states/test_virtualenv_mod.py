@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
 import salt.states.virtualenv_mod as virtualenv_mod
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -19,7 +13,7 @@ from tests.support.unit import TestCase
 
 class VirtualenvModTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Validate the virtualenv_mod state
+    Validate the virtualenv_mod state
     """
 
     def setup_loader_modules(self):
@@ -27,7 +21,7 @@ class VirtualenvModTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_managed(self):
         """
-            Test to create a virtualenv and optionally manage it with pip
+        Test to create a virtualenv and optionally manage it with pip
         """
         ret = {"name": "salt", "changes": {}, "result": False, "comment": ""}
         ret.update({"comment": "Virtualenv was not detected on this system"})
@@ -50,7 +44,7 @@ class VirtualenvModTestCase(TestCase, LoaderModuleMockMixin):
         ):
             mock = MagicMock(side_effect=[True, True, True, False, True, True])
             with patch.object(os.path, "exists", mock):
-                ret.update({"comment": "pip requirements file" " 'salt://a' not found"})
+                ret.update({"comment": "pip requirements file 'salt://a' not found"})
                 self.assertDictEqual(
                     virtualenv_mod.managed("salt", None, "salt://a"), ret
                 )
@@ -59,14 +53,14 @@ class VirtualenvModTestCase(TestCase, LoaderModuleMockMixin):
                     ret.update(
                         {
                             "changes": {"cleared_packages": "True", "old": "True"},
-                            "comment": "Virtualenv salt is set to" " be cleared",
+                            "comment": "Virtualenv salt is set to be cleared",
                             "result": None,
                         }
                     )
                     self.assertDictEqual(virtualenv_mod.managed("salt", clear=1), ret)
                     ret.update(
                         {
-                            "comment": "Virtualenv salt is already" " created",
+                            "comment": "Virtualenv salt is already created",
                             "changes": {},
                             "result": True,
                         }
@@ -75,7 +69,7 @@ class VirtualenvModTestCase(TestCase, LoaderModuleMockMixin):
 
                     ret.update(
                         {
-                            "comment": "Virtualenv salt is set to" " be created",
+                            "comment": "Virtualenv salt is set to be created",
                             "result": None,
                         }
                     )
@@ -84,9 +78,11 @@ class VirtualenvModTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(virtualenv_mod.__opts__, {"test": False}):
                     ret.update(
                         {
-                            "comment": "The 'use_wheel' option is"
-                            " only supported in pip between 1.4 and 9.0.3."
-                            " The version of pip detected was 1.1.",
+                            "comment": (
+                                "The 'use_wheel' option is"
+                                " only supported in pip between 1.4 and 9.0.3."
+                                " The version of pip detected was 1.1."
+                            ),
                             "result": False,
                         }
                     )

@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Mike Wiebe <@mikewiebe>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.modules.cp as cp_module
 import salt.modules.file as file_module
@@ -46,7 +44,7 @@ from tests.unit.modules.nxos.nxos_show_run import (
 
 class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
-    """ Test cases for salt.modules.nxos """
+    """Test cases for salt.modules.nxos"""
 
     COPY_RS = "copy running-config startup-config"
 
@@ -59,14 +57,14 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
     @staticmethod
     def test_check_virtual():
 
-        """ UT: nxos module:check_virtual method - return value """
+        """UT: nxos module:check_virtual method - return value"""
 
         result = nxos_module.__virtual__()
         assert "nxos" in result
 
     def test_ping_proxy(self):
 
-        """ UT: nxos module:ping method - proxy """
+        """UT: nxos module:ping method - proxy"""
         with patch("salt.utils.platform.is_proxy", return_value=True, autospec=True):
             with patch.dict(
                 nxos_module.__proxy__, {"nxos.ping": MagicMock(return_value=True)}
@@ -76,7 +74,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_ping_native_minion(self):
 
-        """ UT: nxos module:ping method - proxy """
+        """UT: nxos module:ping method - proxy"""
 
         with patch("salt.utils.platform.is_proxy", return_value=False, autospec=True):
             with patch.dict(
@@ -87,7 +85,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_check_password_return_none(self):
 
-        """ UT: nxos module:check_password method - return None """
+        """UT: nxos module:check_password method - return None"""
 
         username = "admin"
         password = "foo"
@@ -98,7 +96,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_check_password_password_nxos_comment(self):
 
-        """ UT: nxos module:check_password method - password_line has '!' """
+        """UT: nxos module:check_password method - password_line has '!'"""
 
         username = "admin"
         password = "foo"
@@ -113,7 +111,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
     )
     def test_check_password_password_encrypted_false(self):
 
-        """ UT: nxos module:check_password method - password is not encrypted """
+        """UT: nxos module:check_password method - password is not encrypted"""
 
         username = "salt_test"
         password = "foobar123&"
@@ -128,7 +126,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_check_password_password_encrypted_true(self):
 
-        """ UT: nxos module:check_password method - password is encrypted """
+        """UT: nxos module:check_password method - password is encrypted"""
 
         username = "salt_test"
         password = "$5$mkXh6O4T$YUVtA89HbXCnue63kgghPlaqPHyaXhdtxPBbPEHhbRC"
@@ -143,7 +141,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_check_password_password_encrypted_true_negative(self):
 
-        """ UT: nxos module:check_password method - password is not encrypted """
+        """UT: nxos module:check_password method - password is not encrypted"""
 
         username = "salt_test"
         password = "foobar123&"
@@ -156,7 +154,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_check_role_true(self):
 
-        """ UT: nxos module:check_role method - Role configured """
+        """UT: nxos module:check_role method - Role configured"""
 
         username = "salt_test"
         roles = ["network-admin", "dev-ops"]
@@ -167,7 +165,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_check_role_false(self):
 
-        """ UT: nxos module:check_role method - Role not configured """
+        """UT: nxos module:check_role method - Role not configured"""
 
         username = "salt_test"
         roles = ["network-admin", "dev-ops"]
@@ -178,7 +176,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_cmd_any_function(self):
 
-        """ UT: nxos module:cmd method - check_role function """
+        """UT: nxos module:cmd method - check_role function"""
 
         with patch.dict(
             nxos_module.__salt__,
@@ -199,7 +197,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_cmd_function_absent(self):
 
-        """ UT: nxos module:cmd method - non existent function """
+        """UT: nxos module:cmd method - non existent function"""
 
         result = nxos_module.cmd(
             "cool_new_function", "salt_test", "network-admin", encrypted=True
@@ -208,7 +206,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_find_single_match(self):
 
-        """ UT: nxos module:test_find method - Find single match in running config """
+        """UT: nxos module:test_find method - Find single match in running config"""
 
         find_pattern = "^vrf context testing$"
         find_string = "vrf context testing"
@@ -221,7 +219,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_find_multiple_matches(self):
 
-        """ UT: nxos module:test_find method - Find multiple matches in running config """
+        """UT: nxos module:test_find method - Find multiple matches in running config"""
 
         find_pattern = "^no logging.*$"
         find_string = "no logging event link-status enable"
@@ -235,7 +233,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_roles_user_not_configured(self):
 
-        """ UT: nxos module:get_roles method - User not configured """
+        """UT: nxos module:get_roles method - User not configured"""
 
         username = "salt_does_not_exist"
         user_info = ""
@@ -246,7 +244,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_roles_user_configured(self):
 
-        """ UT: nxos module:get_roles method - User configured """
+        """UT: nxos module:get_roles method - User configured"""
 
         username = "salt_test"
         expected_result = ["network-operator", "network-admin", "dev-ops"]
@@ -259,7 +257,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_roles_user_configured_no_role(self):
 
-        """ UT: nxos module:get_roles method - User configured no roles"""
+        """UT: nxos module:get_roles method - User configured no roles"""
 
         username = "salt_test"
 
@@ -270,7 +268,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_user_configured(self):
 
-        """ UT: nxos module:get_user method - User configured """
+        """UT: nxos module:get_user method - User configured"""
 
         username = "salt_test"
         expected_output = n9k_show_running_inc_username_list[0]
@@ -285,7 +283,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_grains(self):
 
-        """ UT: nxos module:grains method """
+        """UT: nxos module:grains method"""
 
         nxos_module.DEVICE_DETAILS["grains_cache"] = {}
         expected_grains = {
@@ -315,7 +313,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_grains_get_cache(self):
 
-        """ UT: nxos module:grains method """
+        """UT: nxos module:grains method"""
 
         expected_grains = {
             "software": {
@@ -345,7 +343,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_grains_refresh(self):
 
-        """ UT: nxos module:grains_refresh method """
+        """UT: nxos module:grains_refresh method"""
 
         expected_grains = {
             "software": {
@@ -367,7 +365,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_system_info(self):
 
-        """ UT: nxos module:system_info method """
+        """UT: nxos module:system_info method"""
 
         expected_grains = {
             "software": {
@@ -396,7 +394,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_sendline_invalid_method(self):
 
-        """ UT: nxos module:sendline method - invalid method """
+        """UT: nxos module:sendline method - invalid method"""
 
         command = "show version"
         method = "invalid"
@@ -408,7 +406,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_sendline_valid_method_proxy(self):
 
-        """ UT: nxos module:sendline method - valid method over proxy """
+        """UT: nxos module:sendline method - valid method over proxy"""
 
         command = "show version"
         method = "cli_show_ascii"
@@ -423,7 +421,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_sendline_valid_method_nxapi_uds(self):
 
-        """ UT: nxos module:sendline method - valid method over nxapi uds """
+        """UT: nxos module:sendline method - valid method over nxapi uds"""
 
         command = "show version"
         method = "cli_show_ascii"
@@ -439,7 +437,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_show_raw_text_invalid(self):
 
-        """ UT: nxos module:show method - invalid argument """
+        """UT: nxos module:show method - invalid argument"""
 
         command = "show version"
         raw_text = "invalid"
@@ -449,7 +447,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_show_raw_text_true(self):
 
-        """ UT: nxos module:show method - raw_test true """
+        """UT: nxos module:show method - raw_test true"""
 
         command = "show version"
         raw_text = True
@@ -462,7 +460,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_show_raw_text_true_multiple_commands(self):
 
-        """ UT: nxos module:show method - raw_test true multiple commands """
+        """UT: nxos module:show method - raw_test true multiple commands"""
 
         command = "show bgp sessions ; show processes"
         raw_text = True
@@ -474,7 +472,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_show_nxapi(self):
 
-        """ UT: nxos module:show method - nxapi returns info as list """
+        """UT: nxos module:show method - nxapi returns info as list"""
 
         command = "show version; show interface eth1/1"
         raw_text = True
@@ -490,7 +488,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_show_nxapi_structured(self):
 
-        """ UT: nxos module:show method - nxapi returns info as list """
+        """UT: nxos module:show method - nxapi returns info as list"""
 
         command = "show version; show interface eth1/1"
         raw_text = False
@@ -506,7 +504,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_show_run(self):
 
-        """ UT: nxos module:show_run method """
+        """UT: nxos module:show_run method"""
 
         expected_output = n9k_show_running_config_list[0]
 
@@ -517,7 +515,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_show_ver(self):
 
-        """ UT: nxos module:show_ver method """
+        """UT: nxos module:show_ver method"""
 
         expected_output = n9k_show_ver_list[0]
 
@@ -528,7 +526,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_add_config(self):
 
-        """ UT: nxos module:add_config method """
+        """UT: nxos module:add_config method"""
 
         expected_output = "COMMAND_LIST: feature bgp"
 
@@ -540,10 +538,14 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_config_commands(self):
 
-        """ UT: nxos module:config method - Using commands arg"""
+        """UT: nxos module:config method - Using commands arg"""
 
         commands = ["no feature ospf", ["no feature ospf"]]
-        expected_output = "COMMAND_LIST: no feature ospf\n\n--- \n+++ \n@@ -19,7 +19,6 @@\n feature bash-shell\n cfs eth distribute\n feature ngmvpn\n-feature ospf\n feature pim\n feature lldp\n \n"
+        expected_output = (
+            "COMMAND_LIST: no feature ospf\n\n--- \n+++ \n@@ -19,7 +19,6 @@\n feature"
+            " bash-shell\n cfs eth distribute\n feature ngmvpn\n-feature ospf\n feature"
+            " pim\n feature lldp\n \n"
+        )
 
         for cmd_set in commands:
             with patch(
@@ -568,10 +570,14 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_config_commands_template_none(self):
 
-        """ UT: nxos module:config method - Template engine is None"""
+        """UT: nxos module:config method - Template engine is None"""
 
         commands = ["no feature ospf", ["no feature ospf"]]
-        expected_output = "COMMAND_LIST: no feature ospf\n\n--- \n+++ \n@@ -19,7 +19,6 @@\n feature bash-shell\n cfs eth distribute\n feature ngmvpn\n-feature ospf\n feature pim\n feature lldp\n \n"
+        expected_output = (
+            "COMMAND_LIST: no feature ospf\n\n--- \n+++ \n@@ -19,7 +19,6 @@\n feature"
+            " bash-shell\n cfs eth distribute\n feature ngmvpn\n-feature ospf\n feature"
+            " pim\n feature lldp\n \n"
+        )
 
         for cmd_set in commands:
             with patch(
@@ -596,10 +602,14 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_config_commands_string(self):
 
-        """ UT: nxos module:config method - Using commands arg and output is string"""
+        """UT: nxos module:config method - Using commands arg and output is string"""
 
         commands = "no feature ospf"
-        expected_output = "COMMAND_LIST: no feature ospf\n\n--- \n+++ \n@@ -19,7 +19,6 @@\n feature bash-shell\n cfs eth distribute\n feature ngmvpn\n-feature ospf\n feature pim\n feature lldp\n \n"
+        expected_output = (
+            "COMMAND_LIST: no feature ospf\n\n--- \n+++ \n@@ -19,7 +19,6 @@\n feature"
+            " bash-shell\n cfs eth distribute\n feature ngmvpn\n-feature ospf\n feature"
+            " pim\n feature lldp\n \n"
+        )
 
         with patch(
             "salt.modules.nxos.show",
@@ -623,10 +633,19 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_config_file(self):
 
-        """ UT: nxos module:config method - Using config_file arg"""
+        """UT: nxos module:config method - Using config_file arg"""
 
         config_file = "salt://bgp_config.txt"
-        expected_output = "COMMAND_LIST: feature bgp ; ! ; router bgp 55 ; address-family ipv4 unicast ; no client-to-client reflection ; additional-paths send\n\n--- \n+++ \n@@ -19,6 +19,7 @@\n feature bash-shell\n cfs eth distribute\n feature ngmvpn\n+feature bgp\n feature pim\n feature lldp\n \n@@ -233,6 +234,10 @@\n line console\n line vty\n boot nxos bootflash:/nxos.9.2.4.bin \n+router bgp 55\n+  address-family ipv4 unicast\n+    no client-to-client reflection\n+    additional-paths send\n \n no logging logfile\n no logging monitor\n"
+        expected_output = (
+            "COMMAND_LIST: feature bgp ; ! ; router bgp 55 ; address-family ipv4"
+            " unicast ; no client-to-client reflection ; additional-paths send\n\n---"
+            " \n+++ \n@@ -19,6 +19,7 @@\n feature bash-shell\n cfs eth distribute\n"
+            " feature ngmvpn\n+feature bgp\n feature pim\n feature lldp\n \n@@ -233,6"
+            " +234,10 @@\n line console\n line vty\n boot nxos"
+            " bootflash:/nxos.9.2.4.bin \n+router bgp 55\n+  address-family ipv4"
+            " unicast\n+    no client-to-client reflection\n+    additional-paths"
+            " send\n \n no logging logfile\n no logging monitor\n"
+        )
 
         with patch(
             "salt.modules.nxos.show",
@@ -654,7 +673,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_config_file_error1(self):
 
-        """ UT: nxos module:config method - Error file not found """
+        """UT: nxos module:config method - Error file not found"""
 
         config_file = "salt://bgp_config.txt"
 
@@ -682,14 +701,19 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_config_nxos_error_ssh(self):
 
-        """ UT: nxos module:config method - nxos device error over ssh transport """
+        """UT: nxos module:config method - nxos device error over ssh transport"""
 
         commands = ["feature bgp", "router bgp 57"]
         config_result = [
             ["feature bgp", "router bgp 57"],
             "bgp instance is already running; Tag is 55",
         ]
-        expected_output = "COMMAND_LIST: feature bgp ; router bgp 57\nbgp instance is already running; Tag is 55\n--- \n+++ \n@@ -19,7 +19,6 @@\n feature bash-shell\n cfs eth distribute\n feature ngmvpn\n-feature ospf\n feature pim\n feature lldp\n \n"
+        expected_output = (
+            "COMMAND_LIST: feature bgp ; router bgp 57\nbgp instance is already"
+            " running; Tag is 55\n--- \n+++ \n@@ -19,7 +19,6 @@\n feature bash-shell\n"
+            " cfs eth distribute\n feature ngmvpn\n-feature ospf\n feature pim\n"
+            " feature lldp\n \n"
+        )
 
         with patch(
             "salt.modules.nxos.show",
@@ -713,7 +737,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_commands_error(self):
 
-        """ UT: nxos module:config method - Mandatory arg commands not specified """
+        """UT: nxos module:config method - Mandatory arg commands not specified"""
 
         commands = None
 
@@ -741,7 +765,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_config_file_error2(self):
 
-        """ UT: nxos module:config method - Mandatory arg config_file not specified """
+        """UT: nxos module:config method - Mandatory arg config_file not specified"""
 
         config_file = None
 
@@ -769,7 +793,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_delete_config(self):
 
-        """ UT: nxos module:delete_config method """
+        """UT: nxos module:delete_config method"""
 
         for lines in ["feature bgp", ["feature bgp"]]:
             with patch("salt.modules.nxos.config", autospec=True):
@@ -779,7 +803,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_remove_user(self):
 
-        """ UT: nxos module:remove_user method """
+        """UT: nxos module:remove_user method"""
 
         with patch("salt.modules.nxos.config", autospec=True):
             result = nxos_module.remove_user("salt_test")
@@ -788,7 +812,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_replace(self):
 
-        """ UT: nxos module:replace method """
+        """UT: nxos module:replace method"""
 
         old_value = "feature bgp"
         new_value = "feature ospf"
@@ -810,7 +834,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_replace_full_match_true(self):
 
-        """ UT: nxos module:replace method - full match true"""
+        """UT: nxos module:replace method - full match true"""
 
         old_value = "feature bgp"
         new_value = "feature ospf"
@@ -832,7 +856,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_replace_no_match(self):
 
-        """ UT: nxos module:replace method - no match """
+        """UT: nxos module:replace method - no match"""
 
         old_value = "feature does_not_exist"
         new_value = "feature ospf"
@@ -854,7 +878,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_save_running_config(self):
 
-        """ UT: nxos module:save_running_config method """
+        """UT: nxos module:save_running_config method"""
 
         with patch(
             "salt.modules.nxos.config", autospec=True, return_value=save_running_config
@@ -864,12 +888,15 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_set_password_enc_false_cs_none(self):
 
-        """ UT: nxos module:set_password method - encrypted False, crypt_salt None """
+        """UT: nxos module:set_password method - encrypted False, crypt_salt None"""
 
         username = "devops"
         password = "test123TMM^&"
         hashed_pass = "$5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2"
-        config_line = "username devops password 5 $5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2"
+        config_line = (
+            "username devops password 5"
+            " $5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2"
+        )
 
         with patch("salt.modules.nxos.get_user", autospec=True):
             with patch(
@@ -886,13 +913,16 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_set_password_enc_false_cs_set(self):
 
-        """ UT: nxos module:set_password method - encrypted False, crypt_salt set """
+        """UT: nxos module:set_password method - encrypted False, crypt_salt set"""
 
         username = "devops"
         password = "test123TMM^&"
         crypt_salt = "ZcZqm15X"
         hashed_pass = "$5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2"
-        config_line = "username devops password 5 $5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2"
+        config_line = (
+            "username devops password 5"
+            " $5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2"
+        )
 
         with patch("salt.modules.nxos.get_user", autospec=True):
             with patch(
@@ -911,7 +941,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_set_password_enc_true(self):
 
-        """ UT: nxos module:set_password method - encrypted True """
+        """UT: nxos module:set_password method - encrypted True"""
 
         username = "devops"
         password = "test123TMM^&"
@@ -935,7 +965,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_set_password_role_none(self):
 
-        """ UT: nxos module:set_password method - role none """
+        """UT: nxos module:set_password method - role none"""
 
         username = "devops"
         password = "test123TMM^&"
@@ -960,7 +990,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_set_password_blowfish_crypt(self):
 
-        """ UT: nxos module:set_password method - role none """
+        """UT: nxos module:set_password method - role none"""
 
         with self.assertRaises(SaltInvocationError):
             nxos_module.set_password(
@@ -969,7 +999,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_set_role(self):
 
-        """ UT: nxos module:save_running_config method """
+        """UT: nxos module:save_running_config method"""
 
         username = "salt_test"
         role = "vdc-admin"
@@ -980,7 +1010,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_unset_role(self):
 
-        """ UT: nxos module:save_running_config method """
+        """UT: nxos module:save_running_config method"""
 
         username = "salt_test"
         role = "vdc-admin"
@@ -991,7 +1021,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_configure_device(self):
 
-        """ UT: nxos module:_configure_device method """
+        """UT: nxos module:_configure_device method"""
 
         with patch("salt.utils.platform.is_proxy", autospec=True, return_value=True):
             with patch.dict(
@@ -1010,7 +1040,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_nxapi_config(self):
 
-        """ UT: nxos module:_nxapi_config method """
+        """UT: nxos module:_nxapi_config method"""
 
         mock_cmd = MagicMock(return_value={"nxos": {"save_config": False}})
         with patch.dict(nxos_module.__salt__, {"config.get": mock_cmd}):
@@ -1024,7 +1054,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_nxapi_config_failure(self):
 
-        """ UT: nxos module:_nxapi_config method """
+        """UT: nxos module:_nxapi_config method"""
 
         side_effect = ["Failure", "saved_data"]
 
@@ -1040,7 +1070,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_nxapi_request_proxy(self):
 
-        """ UT: nxos module:_nxapi_request method - proxy"""
+        """UT: nxos module:_nxapi_request method - proxy"""
 
         with patch("salt.utils.platform.is_proxy", autospec=True, return_value=True):
             mock_request = create_autospec(
@@ -1054,7 +1084,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_nxapi_request_no_proxy(self):
 
-        """ UT: nxos module:_nxapi_request method - no proxy"""
+        """UT: nxos module:_nxapi_request method - no proxy"""
 
         with patch("salt.utils.platform.is_proxy", autospec=True, return_value=False):
             mock_cmd = MagicMock(return_value={"nxos": {"save_config": False}})
