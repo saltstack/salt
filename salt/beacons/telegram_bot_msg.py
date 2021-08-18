@@ -80,7 +80,7 @@ def beacon(config):
     output["msgs"] = []
 
     bot = telegram.Bot(_config["token"])
-    updates = bot.get_updates(limit=100, timeout=0, network_delay=10)
+    updates = bot.get_updates(limit=100, timeout=0)
 
     log.debug("Num updates: %d", len(updates))
     if not updates:
