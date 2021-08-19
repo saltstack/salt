@@ -1663,7 +1663,7 @@ class VirtualEnv:
     venv_dir = attr.ib(converter=_cast_to_pathlib_path)
     env = attr.ib(default=None)
     system_site_packages = attr.ib(default=False)
-    pip_requirement = attr.ib(default="pip", repr=False)
+    pip_requirement = attr.ib(default="pip>=20.2.4,<21.2", repr=False)
     setuptools_requirement = attr.ib(
         default="setuptools!=50.*,!=51.*,!=52.*", repr=False
     )
@@ -1801,9 +1801,6 @@ class SaltVirtualEnv(VirtualEnv):
     This is a VirtualEnv implementation which has this salt checkout installed in it
     using static requirements
     """
-
-    pip_requirement = attr.ib(default="pip>=20.2.4,<21.2", repr=False)
-    upgrade_pip_and_setuptools = attr.ib(init=False, default=False, repr=False)
 
     def _create_virtualenv(self):
         super()._create_virtualenv()
