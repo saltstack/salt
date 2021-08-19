@@ -3,6 +3,7 @@ Module for OpenSCAP Management
 """
 
 
+import os.path
 import shlex
 import shutil
 import tempfile
@@ -18,7 +19,7 @@ from salt.utils.decorators import is_deprecated, with_deprecated
 ArgumentParser = object
 
 try:
-    import argparse  # pylint: disable=minimum-python-version
+    import argparse  # pylint: disable minimum-python-version
 
     ArgumentParser = argparse.ArgumentParser
     HAS_ARGPARSE = True
@@ -61,9 +62,11 @@ _OSCAP_EXIT_CODES_MAP = {
 }
 
 
-def __virtual__():
+def __virtual__() -> bool:
     """
     Only load the module if oscap is installed
+
+    :return: True if Openscap is installed, else False with message
     """
     if not salt.utils.path.which("oscap"):
         return (
@@ -74,24 +77,22 @@ def __virtual__():
     return True
 
 
-def _oscap_cmd():
-    """Return correct command for openscap.
+def _oscap_cmd() -> str:
+    """
+    Return correct command for openscap.
 
-    Returns:
-        string: Path of oscap binary
+    :return: Path of oscap binary
     """
     return salt.utils.path.which("oscap")
 
 
-def _has_operation(module, operation):
-    """Check if the given operation is supported by the module.
+def _has_operation(module: str, operation: str) -> bool:
+    """
+    Check if the given operation is supported by the module.
 
-    Args:
-        module (string): Name of the module.
-        operation (string): Name of the operation
-
-    Returns:
-        boolean: Return true, if the operation is supported. Otherwhise false.
+    :param module: Name of the module.
+    :param operation: Operation to check
+    :return: True if operation is supported by installed oscap version.
     """
 
     cmd = "{} {} -h".format(_oscap_cmd(), module)
@@ -101,14 +102,12 @@ def _has_operation(module, operation):
 
 
 def _has_param(mod_op, param):
-    """Check if the given parameter is supported by the module.
+    """
+    Check if the given parameter is supported by the module and the operation.
 
-    Args:
-        module (string): Name if the Module
-        operation (string): Name of the Modules Operation
-
-    Returns:
-        boolean: Value that determines, if an operation is available inside a module.
+    :param mod_op: Name if the Openscap module operation.
+    :param param: Parameter to check.
+    :return: True, if Parameter is found in operations help page.
     """
 
     cmd = "{} {} -h".format(_oscap_cmd(), mod_op)
@@ -118,14 +117,16 @@ def _has_param(mod_op, param):
 
 
 def _build_cmd(module="", operation="", **kwargs):
-    """Build a well-formed command to execute on the system.
+    """
+    Build a well formed command to execute on the system.
 
-    Args:
-        module (str): Module Name.
-        operation (str): Name of the operation.
-
-    Returns:
-        string: Command
+    :param module: Name of the module, defaults to ""
+    :type module: str, optional
+    :param operation: Operation of the specified module, defaults to ""
+    :type operation: str, optional
+    :raises ArgumentValueError: Raised either if
+    :return: well formed command string
+    :rtype: str
     """
     for ignore in list(_STATE_INTERNAL_KEYWORDS) + ["--upload-to-master"]:
         if ignore in kwargs:
@@ -160,11 +161,8 @@ def _upload_to_master(path):
     """
     Upload given directory to master
 
-    Args:
-        path (string): Path to upload to master
-
-    Returns:
-        boolean: True, if upload was successful.
+    :param path: Path to upload to master
+    :return: True, if upload was successful, else False
     """
     if __salt__["cp.push_dir"](path):
         return True
@@ -175,14 +173,13 @@ def version(*args):
     """
     Show the version of the installed oscap package
 
-    Usage:
+    CLI Example:
 
     .. code-block:: bash
 
         salt '*' oscap.version
 
     :param full: Show full version information output.
-
     :return: a dict with the version information
     """
     cmd = "{} --version".format(_oscap_cmd())
@@ -226,7 +223,7 @@ def version(*args):
         _value = line.split(KEY_RULES[_head]["split_at"])[1]
         _resdict[_head][_key] = _value
 
-    _bin = _oscap_cmd().split("/")[-1]
+    _bin = _oscap_cmd().rsplit("/", maxsplit=1)[-1]
     short_version = {"{}".format(_bin): _prep_version[0].split(" ")[-1]}
     if "full" in args:
         _resdict.update(short_version)
@@ -243,16 +240,16 @@ def xccdf(file="", operation="eval", upload=True, **kwargs):
     It uses ``cp.push_dir`` to upload the generated files to the salt master.
     (defaults to ``/var/cache/salt/master/minions/minion-id/files``)
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' openscap.xccdf file="/usr/share/openscap/scap-yast2sec-xccdf.xml" profile="defautlt"
 
     :param file: Target File to evaluate the system.
     :param operation: (Optional) Operation of ``xccdf`` Module. Defaults to "eval".
     :param upload: Upload results to Master. Defaults to True. It will automatically add and set the parameters 'oval-results', 'report' and, 'results'.
-
     :return: a dict with the execution results.
-
-    CLI Example:
-
-    `` salt '*' openscap.xccdf file="/usr/share/openscap/scap-yast2sec-xccdf.xml" profile="defautlt"``
     """
     if not file:
         return "A File must be defined!"
@@ -292,13 +289,18 @@ def xccdf(file="", operation="eval", upload=True, **kwargs):
 def _xccdf(params):
     """
     Run ``oscap xccdf`` commands on minions.
+
     It uses cp.push_dir to upload the generated files to the salt master
     in the master's minion files cachedir
     (defaults to ``/var/cache/salt/master/minions/minion-id/files``)
     It needs ``file_recv`` set to ``True`` in the master configuration file.
+
     CLI Example:
     .. code-block:: bash
+
         salt '*' openscap.xccdf "eval --profile Default /usr/share/openscap/scap-yast2sec-xccdf.xml"
+
+    :param params: CLI Parameters to pass to oscap.
     """
     params = shlex.split(params)
     policy = params[-1]
@@ -322,12 +324,116 @@ def _xccdf(params):
         tempdir = tempfile.mkdtemp()
         proc = Popen(shlex.split(cmd), stdout=PIPE, stderr=PIPE, cwd=tempdir)
         (stdoutdata, error) = proc.communicate()
-        success = _OSCAP_EXIT_CODES_MAP[proc.returncode]
+        success = _OSCAP_EXIT_CODES_MAP.get(proc.returncode, False)
+        if proc.returncode < 0:
+            error += "\nKilled by signal {}\n".format(proc.returncode).encode("ascii")
         returncode = proc.returncode
         if success:
             __salt__["cp.push_dir"](tempdir)
             shutil.rmtree(tempdir, ignore_errors=True)
             upload_dir = tempdir
+
+    return dict(
+        success=success, upload_dir=upload_dir, error=error, returncode=returncode
+    )
+
+
+def xccdf_eval(xccdffile, ovalfiles=None, **kwargs):
+    """
+    Run ``oscap xccdf eval`` commands on minions.
+
+    It uses cp.push_dir to upload the generated files to the salt master
+    in the master's minion files cachedir
+    (defaults to ``/var/cache/salt/master/minions/minion-id/files``)
+    It needs ``file_recv`` set to ``True`` in the master configuration file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*'  openscap.xccdf_eval /usr/share/openscap/scap-yast2sec-xccdf.xml profile=Default
+
+    :param xccdffile:
+        the path to the xccdf file to evaluate
+    :param ovalfiles:
+        additional oval definition files
+    :param profile:
+        the name of Profile to be evaluated
+    :param rule:
+        the name of a single rule to be evaluated
+    :param oval_results:
+        save OVAL results as well (True or False)
+    :param results:
+        write XCCDF Results into given file
+    :param report:
+        write HTML report into given file
+    :param fetch_remote_resources:
+        download remote content referenced by XCCDF (True or False)
+    :param tailoring_file:
+        use given XCCDF Tailoring file
+    :param tailoring_id:
+        use given DS component as XCCDF Tailoring file
+    :param remediate:
+        automatically execute XCCDF fix elements for failed rules.
+        Use of this option is always at your own risk. (True or False)
+
+    :return: Dict with status of the job and the directory, where the results are uploaded
+    """
+    success = True
+    error = None
+    upload_dir = None
+    returncode = None
+    if not ovalfiles:
+        ovalfiles = []
+
+    cmd_opts = ["oscap", "xccdf", "eval"]
+    if kwargs.get("oval_results"):
+        cmd_opts.append("--oval-results")
+    if "results" in kwargs:
+        cmd_opts.append("--results")
+        cmd_opts.append(kwargs["results"])
+    if "report" in kwargs:
+        cmd_opts.append("--report")
+        cmd_opts.append(kwargs["report"])
+    if "profile" in kwargs:
+        cmd_opts.append("--profile")
+        cmd_opts.append(kwargs["profile"])
+    if "rule" in kwargs:
+        cmd_opts.append("--rule")
+        cmd_opts.append(kwargs["rule"])
+    if "tailoring_file" in kwargs:
+        cmd_opts.append("--tailoring-file")
+        cmd_opts.append(kwargs["tailoring_file"])
+    if "tailoring_id" in kwargs:
+        cmd_opts.append("--tailoring-id")
+        cmd_opts.append(kwargs["tailoring_id"])
+    if kwargs.get("fetch_remote_resources"):
+        cmd_opts.append("--fetch-remote-resources")
+    if kwargs.get("remediate"):
+        cmd_opts.append("--remediate")
+    cmd_opts.append(xccdffile)
+    cmd_opts.extend(ovalfiles)
+
+    if not os.path.exists(xccdffile):
+        success = False
+        error = "XCCDF File '{}' does not exist".format(xccdffile)
+    for ofile in ovalfiles:
+        if success and not os.path.exists(ofile):
+            success = False
+            error = "Oval File '{}' does not exist".format(ofile)
+
+    if success:
+        tempdir = tempfile.mkdtemp()
+        proc = Popen(cmd_opts, stdout=PIPE, stderr=PIPE, cwd=tempdir)
+        (stdoutdata, error) = proc.communicate()
+        success = _OSCAP_EXIT_CODES_MAP.get(proc.returncode, False)
+        if proc.returncode < 0:
+            error += "\nKilled by signal {}\n".format(proc.returncode).encode("ascii")
+        returncode = proc.returncode
+        if success:
+            __salt__["cp.push_dir"](tempdir)
+            upload_dir = tempdir
+        shutil.rmtree(tempdir, ignore_errors=True)
 
     return dict(
         success=success, upload_dir=upload_dir, error=error, returncode=returncode

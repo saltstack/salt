@@ -1,7 +1,9 @@
+import subprocess
+
 import salt.modules.openscap as openscap
 from salt.exceptions import ArgumentValueError
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase
 
 
@@ -10,8 +12,27 @@ class OpenscapTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.module.openscap
     """
 
+    random_temp_dir = "/tmp/unique-name"
+    policy_file = "/usr/share/openscap/policy-file-xccdf.xml"
+
     def setup_loader_modules(self):
         return {openscap: {}}
+
+    def setUp(self):
+        patchers = [
+            patch("salt.modules.openscap.shutil.rmtree", Mock()),
+            patch(
+                "salt.modules.openscap.tempfile.mkdtemp",
+                Mock(return_value=self.random_temp_dir),
+            ),
+            patch("salt.modules.openscap.os.path.exists", Mock(return_value=True)),
+        ]
+        for patcher in patchers:
+            self.apply_patch(patcher)
+
+    def apply_patch(self, patcher):
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_version(self):
         """
@@ -240,4 +261,237 @@ independent   family                       probe_family"""
             self.assertEqual(
                 openscap.xccdf(file=_file, operation=_operation, **_kwargs),
                 {"success": True, "upload_dir": None, "error": None, "returncode": 2},
+            )
+
+    def test_new_openscap_xccdf_eval_success(self):
+        with patch(
+            "salt.modules.openscap.Popen",
+            MagicMock(
+                return_value=Mock(
+                    **{"returncode": 0, "communicate.return_value": ("", "")}
+                )
+            ),
+        ), patch("salt.modules.openscap.__salt__", MagicMock()):
+            response = openscap.xccdf_eval(
+                self.policy_file,
+                profile="Default",
+                oval_results=True,
+                results="results.xml",
+                report="report.html",
+            )
+
+            self.assertEqual(openscap.tempfile.mkdtemp.call_count, 1)
+            expected_cmd = [
+                "oscap",
+                "xccdf",
+                "eval",
+                "--oval-results",
+                "--results",
+                "results.xml",
+                "--report",
+                "report.html",
+                "--profile",
+                "Default",
+                self.policy_file,
+            ]
+            openscap.Popen.assert_called_once_with(
+                expected_cmd,
+                cwd=openscap.tempfile.mkdtemp.return_value,
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+            )
+            openscap.__salt__["cp.push_dir"].assert_called_once_with(
+                self.random_temp_dir
+            )
+            self.assertEqual(openscap.shutil.rmtree.call_count, 1)
+            self.assertEqual(
+                response,
+                {
+                    "upload_dir": self.random_temp_dir,
+                    "error": "",
+                    "success": True,
+                    "returncode": 0,
+                },
+            )
+
+    def test_new_openscap_xccdf_eval_success_with_extra_ovalfiles(self):
+        with patch(
+            "salt.modules.openscap.Popen",
+            MagicMock(
+                return_value=Mock(
+                    **{"returncode": 0, "communicate.return_value": ("", "")}
+                )
+            ),
+        ), patch("salt.modules.openscap.__salt__", MagicMock()):
+            response = openscap.xccdf_eval(
+                self.policy_file,
+                ["/usr/share/xml/another-oval.xml", "/usr/share/xml/oval.xml"],
+                profile="Default",
+                oval_results=True,
+                results="results.xml",
+                report="report.html",
+            )
+
+            self.assertEqual(openscap.tempfile.mkdtemp.call_count, 1)
+            expected_cmd = [
+                "oscap",
+                "xccdf",
+                "eval",
+                "--oval-results",
+                "--results",
+                "results.xml",
+                "--report",
+                "report.html",
+                "--profile",
+                "Default",
+                self.policy_file,
+                "/usr/share/xml/another-oval.xml",
+                "/usr/share/xml/oval.xml",
+            ]
+            openscap.Popen.assert_called_once_with(
+                expected_cmd,
+                cwd=openscap.tempfile.mkdtemp.return_value,
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+            )
+            openscap.__salt__["cp.push_dir"].assert_called_once_with(
+                self.random_temp_dir
+            )
+            self.assertEqual(openscap.shutil.rmtree.call_count, 1)
+            self.assertEqual(
+                response,
+                {
+                    "upload_dir": self.random_temp_dir,
+                    "error": "",
+                    "success": True,
+                    "returncode": 0,
+                },
+            )
+
+    def test_new_openscap_xccdf_eval_success_with_failing_rules(self):
+        with patch(
+            "salt.modules.openscap.Popen",
+            MagicMock(
+                return_value=Mock(
+                    **{"returncode": 2, "communicate.return_value": ("", "some error")}
+                )
+            ),
+        ), patch("salt.modules.openscap.__salt__", MagicMock()):
+            response = openscap.xccdf_eval(
+                self.policy_file,
+                profile="Default",
+                oval_results=True,
+                results="results.xml",
+                report="report.html",
+            )
+
+            self.assertEqual(openscap.tempfile.mkdtemp.call_count, 1)
+            expected_cmd = [
+                "oscap",
+                "xccdf",
+                "eval",
+                "--oval-results",
+                "--results",
+                "results.xml",
+                "--report",
+                "report.html",
+                "--profile",
+                "Default",
+                self.policy_file,
+            ]
+            openscap.Popen.assert_called_once_with(
+                expected_cmd,
+                cwd=openscap.tempfile.mkdtemp.return_value,
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+            )
+            openscap.__salt__["cp.push_dir"].assert_called_once_with(
+                self.random_temp_dir
+            )
+            self.assertEqual(openscap.shutil.rmtree.call_count, 1)
+            self.assertEqual(
+                response,
+                {
+                    "upload_dir": self.random_temp_dir,
+                    "error": "some error",
+                    "success": True,
+                    "returncode": 2,
+                },
+            )
+
+    def test_new_openscap_xccdf_eval_success_ignore_unknown_params(self):
+        with patch(
+            "salt.modules.openscap.Popen",
+            MagicMock(
+                return_value=Mock(
+                    **{"returncode": 2, "communicate.return_value": ("", "some error")}
+                )
+            ),
+        ), patch("salt.modules.openscap.__salt__", MagicMock()):
+            response = openscap.xccdf_eval(
+                "/policy/file",
+                param="Default",
+                profile="Default",
+                oval_results=True,
+                results="results.xml",
+                report="report.html",
+            )
+
+            self.assertEqual(
+                response,
+                {
+                    "upload_dir": self.random_temp_dir,
+                    "error": "some error",
+                    "success": True,
+                    "returncode": 2,
+                },
+            )
+            expected_cmd = [
+                "oscap",
+                "xccdf",
+                "eval",
+                "--oval-results",
+                "--results",
+                "results.xml",
+                "--report",
+                "report.html",
+                "--profile",
+                "Default",
+                "/policy/file",
+            ]
+            openscap.Popen.assert_called_once_with(
+                expected_cmd,
+                cwd=openscap.tempfile.mkdtemp.return_value,
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+            )
+
+    def test_new_openscap_xccdf_eval_evaluation_error(self):
+        with patch(
+            "salt.modules.openscap.Popen",
+            MagicMock(
+                return_value=Mock(
+                    **{
+                        "returncode": 1,
+                        "communicate.return_value": ("", "evaluation error"),
+                    }
+                )
+            ),
+        ):
+            response = openscap.xccdf_eval(
+                self.policy_file,
+                profile="Default",
+                oval_results=True,
+                results="results.xml",
+                report="report.html",
+            )
+
+            self.assertEqual(
+                response,
+                {
+                    "upload_dir": None,
+                    "error": "evaluation error",
+                    "success": False,
+                    "returncode": 1,
+                },
             )
