@@ -1,7 +1,8 @@
+import subprocess
 import salt.modules.openscap as openscap
 from salt.exceptions import ArgumentValueError
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase
 
 
@@ -9,9 +10,27 @@ class OpenscapTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.module.openscap
     """
+    random_temp_dir = "/tmp/unique-name"
+    policy_file = "/usr/share/openscap/policy-file-xccdf.xml"
 
     def setup_loader_modules(self):
         return {openscap: {}}
+
+    def setUp(self):
+        patchers = [
+            patch("salt.modules.openscap.shutil.rmtree", Mock()),
+            patch(
+                "salt.modules.openscap.tempfile.mkdtemp",
+                Mock(return_value=self.random_temp_dir),
+            ),
+            patch("salt.modules.openscap.os.path.exists", Mock(return_value=True)),
+        ]
+        for patcher in patchers:
+            self.apply_patch(patcher)
+
+    def apply_patch(self, patcher):
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_version(self):
         """
@@ -249,7 +268,9 @@ independent   family                       probe_family"""
                 return_value=Mock(
                     **{"returncode": 0, "communicate.return_value": ("", "")}
                 )
-            ),
+            )
+        ), patch(
+            "salt.modules.openscap.__salt__", MagicMock()
         ):
             response = openscap.xccdf_eval(
                 self.policy_file,
@@ -301,6 +322,8 @@ independent   family                       probe_family"""
                     **{"returncode": 0, "communicate.return_value": ("", "")}
                 )
             ),
+        ), patch(
+            "salt.modules.openscap.__salt__", MagicMock()
         ):
             response = openscap.xccdf_eval(
                 self.policy_file,
@@ -355,6 +378,8 @@ independent   family                       probe_family"""
                     **{"returncode": 2, "communicate.return_value": ("", "some error")}
                 )
             ),
+        ), patch(
+            "salt.modules.openscap.__salt__", MagicMock()
         ):
             response = openscap.xccdf_eval(
                 self.policy_file,
@@ -406,6 +431,8 @@ independent   family                       probe_family"""
                     **{"returncode": 2, "communicate.return_value": ("", "some error")}
                 )
             ),
+        ), patch(
+            "salt.modules.openscap.__salt__", MagicMock()
         ):
             response = openscap.xccdf_eval(
                 "/policy/file",
