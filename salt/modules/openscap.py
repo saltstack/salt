@@ -177,9 +177,16 @@ def version(*args):
 
     .. code-block:: bash
 
-        salt '*' oscap.version
+        salt '*' openscap.version
 
     :param full: Show full version information output.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' openscap.version full
+
     :return: a dict with the version information
     """
     cmd = "{} --version".format(_oscap_cmd())
@@ -296,9 +303,10 @@ def _xccdf(params):
     It needs ``file_recv`` set to ``True`` in the master configuration file.
 
     CLI Example:
+
     .. code-block:: bash
 
-        salt '*' openscap.xccdf "eval --profile Default /usr/share/openscap/scap-yast2sec-xccdf.xml"
+        salt '*' openscap.xccdf params="eval --profile Default /usr/share/openscap/scap-yast2sec-xccdf.xml"
 
     :param params: CLI Parameters to pass to oscap.
     """
