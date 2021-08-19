@@ -127,7 +127,7 @@ def _parse_suse_config(path):
     if suse_config:
         for line in suse_config:
             line = line.strip()
-            if len(line) == 0 or line.startswith("!") or line.startswith("#"):
+            if not line or line.startswith("!") or line.startswith("#"):
                 continue
             pair = [p.rstrip() for p in line.split("=", 1)]
             if len(pair) != 2:
@@ -283,7 +283,7 @@ def _parse_settings_miimon(opts, iface):
             try:
                 int(opts[binding])
                 ret.update({binding: opts[binding]})
-            except Exception:  # pylint: disable=broad-except
+            except ValueError:
                 _raise_error_iface(iface, binding, "integer")
 
     if "miimon" in opts and "downdelay" not in opts:
@@ -326,7 +326,7 @@ def _parse_settings_arp(opts, iface):
         try:
             int(opts["arp_interval"])
             ret.update({"arp_interval": opts["arp_interval"]})
-        except Exception:  # pylint: disable=broad-except
+        except ValueError:
             _raise_error_iface(iface, "arp_interval", "integer")
 
         # ARP targets in n.n.n.n form
@@ -455,7 +455,7 @@ def _parse_settings_bond_4(opts, iface):
             try:
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
-            except Exception:  # pylint: disable=broad-except
+            except ValueError:
                 _raise_error_iface(iface, binding, valid)
         else:
             _log_default_iface(iface, binding, _BOND_DEFAULTS[binding])
@@ -886,12 +886,7 @@ def _read_file(path):
     """
     try:
         with salt.utils.files.fopen(path, "rb") as rfh:
-            lines = salt.utils.stringutils.to_unicode(rfh.read()).splitlines()
-            try:
-                lines.remove("")
-            except ValueError:
-                pass
-            return lines
+            return _get_non_blank_lines(salt.utils.stringutils.to_unicode(rfh.read()))
     except Exception:  # pylint: disable=broad-except
         return []  # Return empty list for type consistency
 
@@ -918,7 +913,7 @@ def _write_file_network(data, filename):
         fp_.write(salt.utils.stringutils.to_str(data))
 
 
-def _read_temp(data):
+def _get_non_blank_lines(data):
     lines = data.splitlines()
     try:  # Discard newlines if they exist
         lines.remove("")
@@ -978,11 +973,11 @@ def build_interface(iface, iface_type, enabled, **settings):
         except jinja2.exceptions.TemplateNotFound:
             log.error("Could not load template ifcfg.jinja")
             return ""
-        log.debug("Interface opts: \n %s", opts)
+        log.debug("Interface opts: \n%s", opts)
         ifcfg = template.render(opts)
 
     if settings.get("test"):
-        return _read_temp(ifcfg)
+        return _get_non_blank_lines(ifcfg)
 
     _write_file_iface(iface, ifcfg, _SUSE_NETWORK_SCRIPT_DIR, "ifcfg-{}")
     path = os.path.join(_SUSE_NETWORK_SCRIPT_DIR, "ifcfg-{}".format(iface))
@@ -1005,7 +1000,7 @@ def build_routes(iface, **settings):
     log.debug("Template name: %s", template)
 
     opts = _parse_routes(iface, settings)
-    log.debug("Opts: \n %s", opts)
+    log.debug("Opts: \n%s", opts)
     try:
         template = JINJA.get_template(template)
     except jinja2.exceptions.TemplateNotFound:
@@ -1019,7 +1014,7 @@ def build_routes(iface, **settings):
         routecfg = template.render(routes=opts["routes"], iface=iface)
 
     if settings["test"]:
-        return _read_temp(routecfg)
+        return _get_non_blank_lines(routecfg)
 
     if iface == "routes":
         path = _SUSE_NETWORK_ROUTES_FILE
@@ -1170,7 +1165,7 @@ def build_network_settings(**settings):
     network = template.render(opts)
 
     if settings["test"]:
-        return _read_temp(network)
+        return _get_non_blank_lines(network)
 
     # Write settings
     _write_file_network(network, _SUSE_NETWORK_FILE)
