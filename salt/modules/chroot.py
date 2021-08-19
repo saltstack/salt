@@ -37,6 +37,16 @@ def __virtual__():
 def exist(root):
     """
     Return True if the chroot environment is present.
+
+    root
+        Path to the chroot environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion chroot.exist /chroot
+
     """
     dev = os.path.join(root, "dev")
     proc = os.path.join(root, "proc")
@@ -80,7 +90,7 @@ def in_chroot():
     """
     Return True if the process is inside a chroot jail
 
-    .. versionadded:: TBD
+    .. versionadded:: 3004
 
     CLI Example:
 

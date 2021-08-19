@@ -1,7 +1,7 @@
 """
 Transactional executor module
 
-.. versionadded:: TBD
+.. versionadded:: 3004
 
 """
 
