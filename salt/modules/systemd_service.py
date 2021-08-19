@@ -1464,12 +1464,14 @@ def firstboot(
 
 def offline():
     """
-    .. versionadded:: TBD
+    .. versionadded:: 3004
 
     Check if systemd is working in offline mode, where is not possible
     to talk with PID 1.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt '*' service.offline
 

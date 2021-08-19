@@ -3,6 +3,8 @@
 :maturity:      new
 :depends:       None
 :platform:      Linux
+
+.. versionadded:: 3004
 """
 
 import logging
