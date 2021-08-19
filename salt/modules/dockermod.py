@@ -1980,7 +1980,7 @@ def list_containers(**kwargs):
 
     .. code-block:: bash
 
-        salt myminion docker.inspect_image <image>
+        salt myminion docker.list_containers
     """
     ret = set()
     for item in ps_(all=kwargs.get("all", False)).values():

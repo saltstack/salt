@@ -236,7 +236,7 @@ def pool_present(
         else:
             ret[
                 "comment"
-            ] = "An existing identity pool named {} with id {}will be updated.".format(
+            ] = "An existing identity pool named {} with id {} will be updated.".format(
                 IdentityPoolName, IdentityPoolId
             )
         ret["result"] = None

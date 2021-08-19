@@ -404,8 +404,8 @@ def wait(
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
         .. note::
-            When using environment variables on Window's, case-sensitivity
-            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            When using environment variables on Windows, case-sensitivity
+            matters, i.e. Windows uses `Path` as opposed to `PATH` for other
             systems.
 
     umask
@@ -561,8 +561,8 @@ def wait_script(
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
         .. note::
-            When using environment variables on Window's, case-sensitivity
-            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            When using environment variables on Windows, case-sensitivity
+            matters, i.e. Windows uses `Path` as opposed to `PATH` for other
             systems.
 
     umask
@@ -702,8 +702,8 @@ def run(
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
         .. note::
-            When using environment variables on Window's, case-sensitivity
-            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            When using environment variables on Windows, case-sensitivity
+            matters, i.e. Windows uses `Path` as opposed to `PATH` for other
             systems.
 
     prepend_path
@@ -935,7 +935,7 @@ def script(
 
         .. note::
 
-            For Window's users, specifically Server users, it may be necessary
+            For Windows users, specifically Server users, it may be necessary
             to specify your runas user using the User Logon Name instead of the
             legacy logon name. Traditionally, logons would be in the following
             format.
@@ -1000,8 +1000,8 @@ def script(
                   - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
 
         .. note::
-            When using environment variables on Window's, case-sensitivity
-            matters, i.e. Window's uses `Path` as opposed to `PATH` for other
+            When using environment variables on Windows, case-sensitivity
+            matters, i.e. Windows uses `Path` as opposed to `PATH` for other
             systems.
 
     saltenv : ``base``
