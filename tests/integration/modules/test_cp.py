@@ -234,7 +234,7 @@ class CPModuleTest(ModuleCase):
         """
         cp.get_url with https:// source given
         """
-        self.run_function("cp.get_url", ["https://repo.saltstack.com/index.html", tgt])
+        self.run_function("cp.get_url", ["https://repo.saltproject.io/index.html", tgt])
         with salt.utils.files.fopen(tgt, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
         self.assertIn("Bootstrap", data)
@@ -247,7 +247,9 @@ class CPModuleTest(ModuleCase):
         """
         cp.get_url with https:// source given and destination omitted.
         """
-        ret = self.run_function("cp.get_url", ["https://repo.saltstack.com/index.html"])
+        ret = self.run_function(
+            "cp.get_url", ["https://repo.saltproject.io/index.html"]
+        )
 
         with salt.utils.files.fopen(ret, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
@@ -267,13 +269,13 @@ class CPModuleTest(ModuleCase):
         tgt = None
         while time.time() - start <= timeout:
             ret = self.run_function(
-                "cp.get_url", ["https://repo.saltstack.com/index.html", tgt]
+                "cp.get_url", ["https://repo.saltproject.io/index.html", tgt]
             )
             if ret.find("HTTP 599") == -1:
                 break
             time.sleep(sleep)
         if ret.find("HTTP 599") != -1:
-            raise Exception("https://repo.saltstack.com/index.html returned 599 error")
+            raise Exception("https://repo.saltproject.io/index.html returned 599 error")
         self.assertIn("Bootstrap", ret)
         self.assertIn("Debian", ret)
         self.assertIn("Windows", ret)
@@ -345,7 +347,7 @@ class CPModuleTest(ModuleCase):
         """
         cp.get_file_str with https:// source given
         """
-        src = "https://repo.saltstack.com/index.html"
+        src = "https://repo.saltproject.io/index.html"
         ret = self.run_function("cp.get_file_str", [src])
         self.assertIn("Bootstrap", ret)
         self.assertIn("Debian", ret)

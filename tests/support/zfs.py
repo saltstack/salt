@@ -116,6 +116,8 @@ class ZFSMockData:
             "frag": {"edit": False, "type": "str", "values": "<percent>"},
             "fragmentation": {"edit": False, "type": "str", "values": "<percent>"},
         }
+
+        # fmt: off
         self.pmap_exec_zfs = {
             "retcode": 2,
             "stdout": "",
@@ -134,8 +136,7 @@ class ZFSMockData:
                     "",
                     "        available        NO       NO   <size>",
                     "        clones           NO       NO   <dataset>[,...]",
-                    "        compressratio    NO       NO   <1.00x or higher if"
-                    " compressed>",
+                    "        compressratio    NO       NO   <1.00x or higher if compressed>",
                     "        creation         NO       NO   <date>",
                     "        defer_destroy    NO       NO   yes | no",
                     "        filesystem_count  NO       NO   <count>",
@@ -144,12 +145,10 @@ class ZFSMockData:
                     "        mounted          NO       NO   yes | no",
                     "        origin           NO       NO   <snapshot>",
                     "        receive_resume_token  NO       NO   <string token>",
-                    "        refcompressratio  NO       NO   <1.00x or higher if"
-                    " compressed>",
+                    "        refcompressratio  NO       NO   <1.00x or higher if compressed>",
                     "        referenced       NO       NO   <size>",
                     "        snapshot_count   NO       NO   <count>",
-                    "        type             NO       NO   filesystem | volume |"
-                    " snapshot | bookmark",
+                    "        type             NO       NO   filesystem | volume | snapshot | bookmark",
                     "        used             NO       NO   <size>",
                     "        usedbychildren   NO       NO   <size>",
                     "        usedbydataset    NO       NO   <size>",
@@ -157,21 +156,15 @@ class ZFSMockData:
                     "        usedbysnapshots  NO       NO   <size>",
                     "        userrefs         NO       NO   <count>",
                     "        written          NO       NO   <size>",
-                    "        aclinherit      YES      YES   discard | noallow |"
-                    " restricted | passthrough | passthrough-x",
-                    "        aclmode         YES      YES   discard | groupmask |"
-                    " passthrough | restricted",
+                    "        aclinherit      YES      YES   discard | noallow | restricted | passthrough | passthrough-x",
+                    "        aclmode         YES      YES   discard | groupmask | passthrough | restricted",
                     "        atime           YES      YES   on | off",
                     "        canmount        YES       NO   on | off | noauto",
-                    "        casesensitivity  NO      YES   sensitive | insensitive |"
-                    " mixed",
-                    "        checksum        YES      YES   on | off | fletcher2 |"
-                    " fletcher4 | sha256 | sha512 | skein | edonr",
-                    "        compression     YES      YES   on | off | lzjb | gzip |"
-                    " gzip-[1-9] | zle | lz4",
+                    "        casesensitivity  NO      YES   sensitive | insensitive | mixed",
+                    "        checksum        YES      YES   on | off | fletcher2 | fletcher4 | sha256 | sha512 | skein | edonr",
+                    "        compression     YES      YES   on | off | lzjb | gzip | gzip-[1-9] | zle | lz4",
                     "        copies          YES      YES   1 | 2 | 3",
-                    "        dedup           YES      YES   on | off | verify |"
-                    " sha256[,verify], sha512[,verify], skein[,verify], edonr,verify",
+                    "        dedup           YES      YES   on | off | verify | sha256[,verify], sha512[,verify], skein[,verify], edonr,verify",
                     "        devices         YES      YES   on | off",
                     "        exec            YES      YES   on | off",
                     "        filesystem_limit YES       NO   <count> | none",
@@ -179,8 +172,7 @@ class ZFSMockData:
                     "        mlslabel        YES      YES   <sensitivity label>",
                     "        mountpoint      YES      YES   <path> | legacy | none",
                     "        nbmand          YES      YES   on | off",
-                    "        normalization    NO      YES   none | formC | formD |"
-                    " formKC | formKD",
+                    "        normalization    NO      YES   none | formC | formD | formKC | formKD",
                     "        primarycache    YES      YES   all | none | metadata",
                     "        quota           YES       NO   <size> | none",
                     "        readonly        YES      YES   on | off",
@@ -191,17 +183,13 @@ class ZFSMockData:
                     "        reservation     YES       NO   <size> | none",
                     "        secondarycache  YES      YES   all | none | metadata",
                     "        setuid          YES      YES   on | off",
-                    "        sharenfs        YES      YES   on | off | share(1M)"
-                    " options",
-                    "        sharesmb        YES      YES   on | off | sharemgr(1M)"
-                    " options",
+                    "        sharenfs        YES      YES   on | off | share(1M) options",
+                    "        sharesmb        YES      YES   on | off | sharemgr(1M) options",
                     "        snapdir         YES      YES   hidden | visible",
                     "        snapshot_limit  YES       NO   <count> | none",
-                    "        sync            YES      YES   standard | always |"
-                    " disabled",
+                    "        sync            YES      YES   standard | always | disabled",
                     "        utf8only         NO      YES   on | off",
-                    "        version         YES       NO   1 | 2 | 3 | 4 | 5 |"
-                    " current",
+                    "        version         YES       NO   1 | 2 | 3 | 4 | 5 | current",
                     "        volblocksize     NO      YES   512 to 128k, power of 2",
                     "        volsize         YES       NO   <size>",
                     "        vscan           YES      YES   on | off",
@@ -213,11 +201,9 @@ class ZFSMockData:
                     "        groupquota@...  YES       NO   <size> | none",
                     "        written@<snap>   NO       NO   <size>",
                     "",
-                    "Sizes are specified in bytes with standard units such as K, M, G,"
-                    " etc.",
+                    "Sizes are specified in bytes with standard units such as K, M, G, etc.",
                     "",
-                    "User-defined properties can be specified by using a name"
-                    " containing a colon (:).",
+                    "User-defined properties can be specified by using a name containing a colon (:).",
                     "",
                     "The {user|group}{used|quota}@ properties must be appended with",
                     "a user or group specifier of one of these forms:",
@@ -228,6 +214,7 @@ class ZFSMockData:
                 ]
             ),
         }
+        # fmt: on
         self.pmap_zfs = {
             "origin": {
                 "edit": False,

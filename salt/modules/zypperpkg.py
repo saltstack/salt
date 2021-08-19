@@ -2102,7 +2102,6 @@ def unhold(name=None, pkgs=None, **kwargs):
         A list of packages to unhold.  The ``name`` parameter will be ignored if
         this option is passed.
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -2200,7 +2199,6 @@ def hold(name=None, pkgs=None, **kwargs):
     pkgs
         A list of packages to hold.  The ``name`` parameter will be ignored if
         this option is passed.
-
 
     CLI Example:
 
