@@ -118,25 +118,25 @@ def test_recursive_copy(tmp_path):
 @pytest.mark.skip_unless_on_windows
 def test_case_sensitive_filesystem_win():
     """
-    Test case sensitivity on Windows.
+    Test case insensitivity on Windows.
     """
-    result = salt.utils.files.case_sensitive_filesystem()
+    result = salt.utils.files.case_insensitive_filesystem()
     assert result is True
 
 
 @pytest.mark.skip_unless_on_linux
 def test_case_sensitive_filesystem_lin():
     """
-    Test case sensitivity on Linux.
+    Test case insensitivity on Linux.
     """
-    result = salt.utils.files.case_sensitive_filesystem()
+    result = salt.utils.files.case_insensitive_filesystem()
     assert result is False
 
 
 @pytest.mark.skip_unless_on_darwin
 def test_case_sensitive_filesystem_dar():
     """
-    Test case sensitivity on Darwin.
+    Test case insensitivity on Darwin.
     """
-    result = salt.utils.files.case_sensitive_filesystem()
+    result = salt.utils.files.case_insensitive_filesystem()
     assert result is True

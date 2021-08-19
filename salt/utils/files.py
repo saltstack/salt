@@ -785,12 +785,12 @@ def backup_minion(path, bkroot):
         os.chmod(bkpath, fstat.st_mode)
 
 
-def case_sensitive_filesystem(path=None):
+def case_insensitive_filesystem(path=None):
     """
-    Detect case sensitivity on a system.
+    Detect case insensitivity on a system.
 
     Returns:
-        bool: Flag to indicate case sensitivity
+        bool: Flag to indicate case insensitivity
 
     .. versionadded:: 3004
 
