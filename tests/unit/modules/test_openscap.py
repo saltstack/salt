@@ -64,7 +64,9 @@ OVAL family   OVAL object                  OpenSCAP probe
 (null)        system_info                  probe_system_info
 independent   family                       probe_family"""
 
-        with patch.dict(
+        with patch.object(
+            openscap, "_oscap_cmd", MagicMock(return_value="/usr/lib/oscap")
+        ), patch.dict(
             openscap.__salt__, {"cmd.run": MagicMock(return_value=mocked_oscap_string)}
         ):
             # Test if short output is correct
