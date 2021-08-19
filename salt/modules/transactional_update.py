@@ -1,7 +1,7 @@
 """Transactional update
 ====================
 
-.. versionadded: TBD
+.. versionadded:: 3004
 
 A transactional system, like `MicroOS`_, can present some challenges
 when the user decided to manage it via Salt.
