@@ -33,6 +33,10 @@ def _getargspec(func):
     args, varargs, varkw, defaults, kwonlyargs, _, ann = inspect.getfullargspec(
         func
     )  # pylint: disable=no-member
+    log.trace(f'------------------ salt.args._getargspec: type func {func}, kwonlyargs: {kwonlyargs}   annotations:{ann}')
+    if ann: # A work around for functions with typing annotations see; https://github.com/saltstack/salt/pull/60763#issuecomment-902299650
+        log.warning(f'Function Arg, annotations eg `host: str` ARE NOT SUPPORTED at present salt.args._getargspec: type func {func}, annotations:{ann}')
+        ann={} 
     if kwonlyargs or ann:
         raise ValueError(
             "Function has keyword-only arguments or annotations"
