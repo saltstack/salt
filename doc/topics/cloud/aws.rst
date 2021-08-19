@@ -289,7 +289,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
       image: ami-a73264ce
       size: m1.xlarge
       ssh_username: ec2-user
-      script:  /etc/salt/cloud.deploy.d/user_data.sh
+      script:  /etc/salt/cloud.deploy.d/my_bootstrap.sh
       network_interfaces:
         - DeviceIndex: 0
           PrivateIpAddresses:
