@@ -368,6 +368,7 @@ certifi==2020.6.20
     #   -r requirements/static/pkg/py3.5/linux.txt
     #   kubernetes
     #   msrest
+    #   python-telegram-bot
     #   requests
 certvalidator==0.11.1
     # via vcert
@@ -420,10 +421,13 @@ cryptography==3.0
     #   paramiko
     #   pyopenssl
     #   python-jose
+    #   python-telegram-bot
     #   sshpubkeys
     #   vcert
 decorator==4.4.2
-    # via networkx
+    # via
+    #   networkx
+    #   python-telegram-bot
 distlib==0.3.0
     # via virtualenv
 distro==1.5.0
@@ -718,7 +722,9 @@ pyiface==0.0.11
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via -r requirements/static/ci/common.in
 pyjwt==1.7.1
-    # via adal
+    # via
+    #   adal
+    #   twilio
 pymysql==0.9.3 ; python_version <= "3.5"
     # via -r requirements/static/ci/linux.in
 pynacl==1.3.0
@@ -771,11 +777,14 @@ python-gnupg==0.4.4
     # via -r requirements/static/pkg/py3.5/linux.txt
 python-jose[cryptography]==3.2.0
     # via moto
+python-telegram-bot==12.8 ; python_version <= "3.5"
+    # via -r requirements/static/ci/linux.in
 pytz==2020.1
     # via
     #   -r requirements/static/pkg/py3.5/linux.txt
     #   moto
     #   tempora
+    #   twilio
 pyvmomi==6.7.1.2018.12
     # via
     #   -r requirements/static/ci/common.in
@@ -817,6 +826,7 @@ requests==2.25.1
     #   pyvmomi
     #   requests-oauthlib
     #   responses
+    #   twilio
     #   vapi-runtime
     #   vcert
 responses==0.10.6
@@ -869,6 +879,7 @@ six==1.16.0
     #   tempora
     #   textfsm
     #   transitions
+    #   twilio
     #   vapi-runtime
     #   vcert
     #   virtualenv
@@ -897,8 +908,12 @@ toml==0.10.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest
+tornado==6.1
+    # via python-telegram-bot
 transitions==0.8.1
     # via junos-eznc
+twilio==6.63.0
+    # via -r requirements/static/ci/linux.in
 urllib3==1.26.6
     # via
     #   -r requirements/static/pkg/py3.5/linux.txt
