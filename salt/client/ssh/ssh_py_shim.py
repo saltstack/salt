@@ -242,7 +242,7 @@ def get_executable():
         stdout, _ = subprocess.Popen(
             [
                 py_cmd,
-                "-c"
+                "-c",
                 "import sys; sys.stdout.write('%s:%s' % (sys.version_info[0], sys.version_info[1]))",
             ],
             stdout=subprocess.PIPE,
