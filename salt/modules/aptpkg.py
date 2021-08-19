@@ -2522,6 +2522,12 @@ def expand_repo_def(**kwargs):
 
     This is designed to be called from pkgrepo states and will have little use
     being called on the CLI.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.expand_repo_def <repo>
     """
     if "repo" not in kwargs:
         raise SaltInvocationError("missing 'repo' argument")

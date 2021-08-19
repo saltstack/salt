@@ -783,7 +783,7 @@ def migrated(name, keys=True, drop=False, method_=None, **kwargs):
     r"""Migrate a repository from one directory to another, including the
     GPG keys if requested
 
-    .. versionadded:: TBD
+    .. versionadded:: 3004
 
     name
         Directory were to migrate the repositories. For example, if we

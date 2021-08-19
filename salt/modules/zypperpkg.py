@@ -3119,7 +3119,7 @@ def add_repo_key(path=None, text=None, root=None, saltenv="base", **kwargs):
 def del_repo_key(keyid, root=None, **kwargs):
     """Remove a key from the key storage
 
-    .. versionadded:: TBD
+    .. versionadded:: 3004
 
     keyid
         key identificatior
