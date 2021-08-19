@@ -336,6 +336,7 @@ def _xccdf(params):
         success=success, upload_dir=upload_dir, error=error, returncode=returncode
     )
 
+
 def xccdf_eval(xccdffile, ovalfiles=None, **kwargs):
     """
     Run ``oscap xccdf eval`` commands on minions.
