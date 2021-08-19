@@ -4316,7 +4316,9 @@ def source_list(source, source_hash, saltenv):
                         ret = (single_src, single_hash)
                         break
                 elif proto.startswith("http") or proto == "ftp":
-                    query_res = salt.utils.http.query(single_src, method="HEAD")
+                    query_res = salt.utils.http.query(
+                        single_src, method="HEAD", decode_body=False
+                    )
                     if "error" not in query_res:
                         ret = (single_src, single_hash)
                         break
@@ -4360,7 +4362,9 @@ def source_list(source, source_hash, saltenv):
                     ret = (single, source_hash)
                     break
                 elif proto.startswith("http") or proto == "ftp":
-                    query_res = salt.utils.http.query(single, method="HEAD")
+                    query_res = salt.utils.http.query(
+                        single, method="HEAD", decode_body=False
+                    )
                     if "error" not in query_res:
                         ret = (single, source_hash)
                         break
