@@ -42,76 +42,76 @@ def test_build_interface():
 
         with patch.dict(
             suse_ip.__salt__, {"network.interfaces": lambda: {"eth": True}}
+        ), pytest.raises(AttributeError):
+            suse_ip.build_interface(
+                "iface",
+                "eth",
+                True,
+                netmask="255.255.255.255",
+                prefix=32,
+                test=True,
+            )
+            suse_ip.build_interface(
+                "iface",
+                "eth",
+                True,
+                ipaddrs=["A"],
+                test=True,
+            )
+            suse_ip.build_interface(
+                "iface",
+                "eth",
+                True,
+                ipv6addrs=["A"],
+                test=True,
+            )
+
+    with patch.object(suse_ip, "_raise_error_iface", return_value=None), patch.object(
+        suse_ip, "_parse_settings_bond", MagicMock()
+    ):
+        mock = jinja2.exceptions.TemplateNotFound("foo")
+        with patch.object(
+            jinja2.Environment,
+            "get_template",
+            MagicMock(side_effect=mock),
         ):
-            with pytest.raises(AttributeError):
-                suse_ip.build_interface(
-                    "iface",
-                    "eth",
-                    True,
-                    netmask="255.255.255.255",
-                    prefix=32,
-                    test=True,
-                )
-                suse_ip.build_interface(
-                    "iface",
-                    "eth",
-                    True,
-                    ipaddrs=["A"],
-                    test=True,
-                )
-                suse_ip.build_interface(
-                    "iface",
-                    "eth",
-                    True,
-                    ipv6addrs=["A"],
-                    test=True,
-                )
+            assert suse_ip.build_interface("iface", "vlan", True) == ""
 
-    with patch.object(suse_ip, "_raise_error_iface", return_value=None):
-        with patch.object(suse_ip, "_parse_settings_bond", MagicMock()):
-            mock = jinja2.exceptions.TemplateNotFound("foo")
-            with patch.object(
-                jinja2.Environment,
-                "get_template",
-                MagicMock(side_effect=mock),
+        with patch.object(suse_ip, "_get_non_blank_lines", return_value="A"), patch.object(
+            jinja2.Environment, "get_template", MagicMock()
+        ):
+            assert (
+                suse_ip.build_interface("iface", "vlan", True, test="A") == "A"
+            )
+
+            with patch.object(suse_ip, "_write_file_iface", return_value=None), patch.object(
+                os.path, "join", return_value="A"
+            ), patch.object(
+                suse_ip, "_read_file", return_value="A"
             ):
-                assert suse_ip.build_interface("iface", "vlan", True) == ""
-
-            with patch.object(suse_ip, "_read_temp", return_value="A"):
-                with patch.object(jinja2.Environment, "get_template", MagicMock()):
+                assert (
+                    suse_ip.build_interface("iface", "vlan", True) == "A"
+                )
+                with patch.dict(
+                    suse_ip.__salt__,
+                    {"network.interfaces": lambda: {"eth": True}},
+                ):
                     assert (
-                        suse_ip.build_interface("iface", "vlan", True, test="A") == "A"
+                        suse_ip.build_interface(
+                            "iface",
+                            "eth",
+                            True,
+                            ipaddrs=["127.0.0.1/8"],
+                        ) == "A"
                     )
-
-                    with patch.object(suse_ip, "_write_file_iface", return_value=None):
-                        with patch.object(os.path, "join", return_value="A"):
-                            with patch.object(suse_ip, "_read_file", return_value="A"):
-                                assert (
-                                    suse_ip.build_interface("iface", "vlan", True)
-                                    == "A"
-                                )
-                                with patch.dict(
-                                    suse_ip.__salt__,
-                                    {"network.interfaces": lambda: {"eth": True}},
-                                ):
-                                    assert (
-                                        suse_ip.build_interface(
-                                            "iface",
-                                            "eth",
-                                            True,
-                                            ipaddrs=["127.0.0.1/8"],
-                                        )
-                                        == "A"
-                                    )
-                                    assert (
-                                        suse_ip.build_interface(
-                                            "iface",
-                                            "eth",
-                                            True,
-                                            ipv6addrs=["fc00::1/128"],
-                                        )
-                                        == "A"
-                                    )
+                    assert (
+                        suse_ip.build_interface(
+                            "iface",
+                            "eth",
+                            True,
+                            ipv6addrs=["fc00::1/128"],
+                        ) == "A"
+                    )
 
 
 def test_build_routes():
@@ -126,15 +126,14 @@ def test_build_routes():
             assert suse_ip.build_routes("iface") == ""
 
         with patch.object(jinja2.Environment, "get_template", MagicMock()):
-            with patch.object(suse_ip, "_read_temp", return_value=["A"]):
+            with patch.object(suse_ip, "_get_non_blank_lines", return_value=["A"]):
                 assert suse_ip.build_routes("i", test="t") == ["A"]
 
             with patch.object(suse_ip, "_read_file", return_value=["A"]):
-                with patch.object(os.path, "join", return_value="A"):
-                    with patch.object(
-                        suse_ip, "_write_file_network", return_value=None
-                    ):
-                        assert suse_ip.build_routes("i", test=None) == ["A"]
+                with patch.object(os.path, "join", return_value="A"), patch.object(
+                    suse_ip, "_write_file_network", return_value=None
+                ):
+                    assert suse_ip.build_routes("i", test=None) == ["A"]
 
 
 def test_down():
@@ -151,9 +150,10 @@ def test_get_interface():
     """
     Test to return the contents of an interface script
     """
-    with patch.object(os.path, "join", return_value="A"):
-        with patch.object(suse_ip, "_read_file", return_value="A"):
-            assert suse_ip.get_interface("iface") == "A"
+    with patch.object(os.path, "join", return_value="A"), patch.object(
+        suse_ip, "_read_file", return_value="A"
+    ):
+        assert suse_ip.get_interface("iface") == "A"
 
 
 def test__parse_settings_eth_hwaddr_and_macaddr():
@@ -224,8 +224,9 @@ def test_get_routes():
     """
     Test to return the contents of the interface routes script.
     """
-    with patch.object(os.path, "join", return_value="A"):
-        with patch.object(suse_ip, "_read_file", return_value=["A"]):
+    with patch.object(os.path, "join", return_value="A"), patch.object(
+        suse_ip, "_read_file", return_value=["A"]
+    ):
             assert suse_ip.get_routes("iface") == ["A"]
 
 
@@ -249,27 +250,30 @@ def test_build_network_settings():
     """
     Test to build the global network script.
     """
-    with patch.object(suse_ip, "_parse_suse_config", MagicMock()):
-        with patch.object(suse_ip, "_parse_network_settings", MagicMock()):
+    with patch.object(suse_ip, "_parse_suse_config", MagicMock()), patch.object(
+        suse_ip, "_parse_network_settings", MagicMock()
+    ):
 
-            mock = jinja2.exceptions.TemplateNotFound("foo")
+        mock = jinja2.exceptions.TemplateNotFound("foo")
+        with patch.object(
+            jinja2.Environment, "get_template", MagicMock(side_effect=mock)
+        ):
+            assert suse_ip.build_network_settings() == ""
+
+        with patch.object(jinja2.Environment, "get_template", MagicMock()), patch.object(
+            suse_ip, "_get_non_blank_lines", return_value="A"
+        ):
+            assert suse_ip.build_network_settings(test="t") == "A"
+
             with patch.object(
-                jinja2.Environment, "get_template", MagicMock(side_effect=mock)
+                suse_ip, "_write_file_network", return_value=None
             ):
-                assert suse_ip.build_network_settings() == ""
-
-            with patch.object(jinja2.Environment, "get_template", MagicMock()):
-                with patch.object(suse_ip, "_read_temp", return_value="A"):
-                    assert suse_ip.build_network_settings(test="t") == "A"
-
-                    with patch.object(
-                        suse_ip, "_write_file_network", return_value=None
-                    ):
-                        with patch.object(suse_ip, "_read_file", return_value="A"):
-                            cmd_run = MagicMock()
-                            with patch.dict(suse_ip.__salt__, {"cmd.run": cmd_run}):
-                                assert suse_ip.build_network_settings(test=None) == "A"
-                                cmd_run.assert_called_once_with("netconfig update -f")
+                cmd_run = MagicMock()
+                with patch.object(suse_ip, "_read_file", return_value="A"), patch.dict(
+                    suse_ip.__salt__, {"cmd.run": cmd_run}
+                ):
+                    assert suse_ip.build_network_settings(test=None) == "A"
+                    cmd_run.assert_called_once_with("netconfig update -f")
 
 
 def _check_common_opts_bond(lines):
