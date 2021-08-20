@@ -2895,7 +2895,7 @@ class TestFindKeepFiles(TestCase):
     def test__find_keep_files_win32(self):
         """
         Test _find_keep_files. The `_find_keep_files` function is only called by
-        _clean_dir, so case doesn't matter. Should return all lower case.
+        _clean_dir.
         """
         keep = filestate._find_keep_files(
             "c:\\test\\parent_folder",
@@ -2912,6 +2912,44 @@ class TestFindKeepFiles(TestCase):
             "c:\\test\\parent_folder\\meh-2.txt",
         ]
         actual = sorted(list(keep))
+        self.assertListEqual(actual, expected)
+
+    @pytest.mark.skip_unless_on_windows
+    def test__clean_dir_win32(self):
+        """
+        Test _clean_dir to ensure that regardless of case, we keep all files
+        requested and do not delete any. Therefore, the expected list should
+        be empty for this test.
+        """
+        keep = filestate._clean_dir(
+            "c:\\test\\parent_folder",
+            [
+                "C:\\test\\parent_folder\\meh-1.txt",
+                "C:\\Test\\Parent_folder\\Meh-2.txt",
+            ],
+            exclude_pat=None,
+        )
+        actual = sorted(list(keep))
+        expected = []
+        self.assertListEqual(actual, expected)
+
+    @pytest.mark.skip_unless_on_darwin
+    def test__find_keep_files_darwin(self):
+        """
+        Test _clean_dir to ensure that regardless of case, we keep all files
+        requested and do not delete any. Therefore, the expected list should
+        be empty for this test.
+        """
+        keep = filestate._clean_dir(
+            "/test/parent_folder",
+            [
+                "/test/folder/parent_folder/meh-1.txt",
+                "/Test/folder/Parent_Folder/Meh-2.txt",
+            ],
+            exclude_pat=None,
+        )
+        actual = sorted(list(keep))
+        expected = []
         self.assertListEqual(actual, expected)
 
 
