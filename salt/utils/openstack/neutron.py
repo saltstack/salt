@@ -95,17 +95,15 @@ class SaltNeutron(NeutronShell):
         """
         salt.utils.versions.warn_until(
             "Sulfur",
-            (
-                "The neutron module has been deprecated and will be removed in {version}."
-                "This includes"
-                "* salt.utils.openstack.neutron"
-                "* salt.modules.neutron"
-                "* salt.pillar.neutron"
-                "Please migrate to neutronng."
-                "salt.modules.neutron -> salt.modules.neutronng"
-                "salt.pillar.neutron -> salt.pillar.neutronng"
-                "Please update to using the neutronng module"
-            ),
+            "The neutron module has been deprecated and will be removed in {version}.\n"
+            "This includes\n"
+            "* salt.utils.openstack.neutron\n"
+            "* salt.modules.neutron\n"
+            "* salt.pillar.neutron\n"
+            "Please migrate to neutronng.\n"
+            "salt.modules.neutron -> salt.modules.neutronng\n"
+            "salt.pillar.neutron -> salt.pillar.neutronng\n"
+            "Please update to using the neutronng module",
         )
         if not HAS_NEUTRON:
             return None
