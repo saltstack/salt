@@ -7,7 +7,7 @@ import salt.modules.rpm_lowpkg as rpm
 import salt.modules.yumpkg as yumpkg
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from tests.support.mock import MagicMock, Mock, call, patch
+from tests.support.mock import MagicMock, Mock, call, mock_open, patch
 
 try:
     import pytest
@@ -1847,6 +1847,48 @@ def test_get_repo_with_non_existent_repo(list_repos_var):
     with patch_list_repos:
         ret = yumpkg.get_repo(repo, **kwargs)
     assert ret == expected, ret
+
+
+def test_get_repo_keys():
+    salt_mock = {"lowpkg.list_gpg_keys": MagicMock(return_value=True)}
+    with patch.dict(yumpkg.__salt__, salt_mock):
+        assert yumpkg.get_repo_keys(info=True, root="/mnt")
+        salt_mock["lowpkg.list_gpg_keys"].assert_called_once_with(True, "/mnt")
+
+
+def test_add_repo_key_fail():
+    with pytest.raises(SaltInvocationError):
+        yumpkg.add_repo_key()
+
+    with pytest.raises(SaltInvocationError):
+        yumpkg.add_repo_key(path="path", text="text")
+
+
+def test_add_repo_key_path():
+    salt_mock = {
+        "cp.cache_file": MagicMock(return_value="path"),
+        "lowpkg.import_gpg_key": MagicMock(return_value=True),
+    }
+    with patch("salt.utils.files.fopen", mock_open(read_data="text")), patch.dict(
+        yumpkg.__salt__, salt_mock
+    ):
+        assert yumpkg.add_repo_key(path="path", root="/mnt")
+        salt_mock["cp.cache_file"].assert_called_once_with("path", "base")
+        salt_mock["lowpkg.import_gpg_key"].assert_called_once_with("text", "/mnt")
+
+
+def test_add_repo_key_text():
+    salt_mock = {"lowpkg.import_gpg_key": MagicMock(return_value=True)}
+    with patch.dict(yumpkg.__salt__, salt_mock):
+        assert yumpkg.add_repo_key(text="text", root="/mnt")
+        salt_mock["lowpkg.import_gpg_key"].assert_called_once_with("text", "/mnt")
+
+
+def test_del_repo_key():
+    salt_mock = {"lowpkg.remove_gpg_key": MagicMock(return_value=True)}
+    with patch.dict(yumpkg.__salt__, salt_mock):
+        assert yumpkg.del_repo_key(keyid="keyid", root="/mnt")
+        salt_mock["lowpkg.remove_gpg_key"].assert_called_once_with("keyid", "/mnt")
 
 
 def test_pkg_update_dnf():
