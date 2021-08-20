@@ -51,10 +51,10 @@ class Caller:
             ttype = opts["pillar"]["master"]["transport"]
 
         # switch on available ttypes
-        if ttype in ("zeromq", "tcp", "detect"):
+        if ttype in ("zeromq", "tcp", "rabbitmq", "detect"):
             return ZeroMQCaller(opts, **kwargs)
         else:
-            raise Exception("Callers are only defined for ZeroMQ and TCP")
+            raise Exception("Callers are only defined for ZeroMQ, TCP and RabbitMQ")
             # return NewKindOfCaller(opts, **kwargs)
 
 

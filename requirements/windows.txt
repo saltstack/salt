@@ -1,6 +1,7 @@
 # Windows source distribution requirements
 
 -r zeromq.txt
+-r rabbitmq.txt
 
 pywin32>=301
 wmi>=1.5.1

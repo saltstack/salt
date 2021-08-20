@@ -185,10 +185,10 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         if self.opts.get("presence_events", False):
             tcp_only = True
             for transport, _ in iter_transport_opts(self.opts):
-                if transport != "tcp":
+                if transport not in ("tcp", "rabbitmq"):  # TODO: RMQ
                     tcp_only = False
             if not tcp_only:
-                # For a TCP only transport, the presence events will be
+                # For a TCP and rabbitmq-only transport, the presence events will be
                 # handled in the transport code.
                 self.presence_events = True
 
@@ -237,7 +237,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         if self.opts["key_cache"] == "sched":
             keys = []
             # TODO DRY from CKMinions
-            if self.opts["transport"] in ("zeromq", "tcp"):
+            if self.opts["transport"] in ("zeromq", "tcp", "rabbitmq"):
                 acc = "minions"
             else:
                 acc = "accepted"
@@ -852,13 +852,10 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         )
 
         req_channels = []
-        tcp_only = True
         for transport, opts in iter_transport_opts(self.opts):
             chan = salt.transport.server.ReqServerChannel.factory(opts)
             chan.pre_fork(self.process_manager)
             req_channels.append(chan)
-            if transport != "tcp":
-                tcp_only = False
 
         kwargs = {}
         if salt.utils.platform.is_windows():
@@ -972,7 +969,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             pass
 
     @salt.ext.tornado.gen.coroutine
-    def _handle_payload(self, payload):
+    def _handle_payload(self, payload, *optional_message_properties):
         """
         The _handle_payload method is the key method used to figure out what
         needs to be done with communication to the server
@@ -992,10 +989,11 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                   'user': 'root'}}
 
         :param dict payload: The payload route to the appropriate handler
+        :param optional additional metadata that accompanies the payload, e.g. transport-specific stuff
         """
         key = payload["enc"]
         load = payload["load"]
-        ret = {"aes": self._handle_aes, "clear": self._handle_clear}[key](load)
+        ret = {"aes": self._handle_aes, "clear": self._handle_clear}[key](load, *optional_message_properties)
         raise salt.ext.tornado.gen.Return(ret)
 
     def _post_stats(self, start, cmd):
@@ -1020,11 +1018,12 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             self.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
             self.stat_clock = end
 
-    def _handle_clear(self, load):
+    def _handle_clear(self, load, *optional_load_properties):
         """
         Process a cleartext command
 
         :param dict load: Cleartext payload
+        :param optional additional metadata that accompanies the payload, e.g. transport-specific stuff
         :return: The result of passing the load to a function in ClearFuncs corresponding to
                  the command specified in the load's 'cmd' key.
         """
@@ -1036,16 +1035,17 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         if self.opts["master_stats"]:
             start = time.time()
             self.stats[cmd]["runs"] += 1
-        ret = method(load), {"fun": "send_clear"}
+        ret = method(load, *optional_load_properties), {"fun": "send_clear"}
         if self.opts["master_stats"]:
             self._post_stats(start, cmd)
         return ret
 
-    def _handle_aes(self, data):
+    def _handle_aes(self, data, *optional_load_properties):
         """
         Process a command sent via an AES key
 
         :param str load: Encrypted payload
+        :param optional additional metadata that accompanies the payload, e.g. transport-specific stuff
         :return: The result of passing the load to a function in AESFuncs corresponding to
                  the command specified in the load's 'cmd' key.
         """
@@ -2112,7 +2112,7 @@ class ClearFuncs(TransportMethods):
             return False
         return self.loadauth.get_tok(clear_load["token"])
 
-    def publish(self, clear_load):
+    def publish(self, clear_load, *optional_transport_args):
         """
         This method sends out publications to the minions, it can only be used
         by the LocalClient.
@@ -2238,7 +2238,7 @@ class ClearFuncs(TransportMethods):
 
         # Send it!
         self._send_ssh_pub(payload, ssh_minions=ssh_minions)
-        self._send_pub(payload)
+        self._send_pub(payload, *optional_transport_args)
 
         return {
             "enc": "clear",
@@ -2287,13 +2287,13 @@ class ClearFuncs(TransportMethods):
             return {"error": msg}
         return jid
 
-    def _send_pub(self, load):
+    def _send_pub(self, load, *optional_transport_args):
         """
         Take a load and send it across the network to connected minions
         """
         for transport, opts in iter_transport_opts(self.opts):
             chan = salt.transport.server.PubServerChannel.factory(opts)
-            chan.publish(load)
+            chan.publish(load, *optional_transport_args)
 
     @property
     def ssh_client(self):

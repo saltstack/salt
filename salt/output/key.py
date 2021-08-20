@@ -22,7 +22,7 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     ident = 0
     if __opts__.get("__multi_key"):
         ident = 4
-    if __opts__["transport"] in ("zeromq", "tcp"):
+    if __opts__["transport"] in ("zeromq", "tcp", "rabbitmq"):
         acc = "minions"
         pend = "minions_pre"
         den = "minions_denied"
