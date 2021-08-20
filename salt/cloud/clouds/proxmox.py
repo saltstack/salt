@@ -425,6 +425,7 @@ def avail_images(call=None, location=None):
     .. code-block:: bash
 
         salt-cloud --list-images my-proxmox-config
+        salt-cloud --list-images my-proxmox-config --location local
     """
     if call == "action":
         raise SaltCloudSystemExit(
@@ -433,7 +434,7 @@ def avail_images(call=None, location=None):
         )
 
     if location is None:
-        locations = "local"
+        location = "local"
 
     ret = {}
     for host_name, host_details in avail_locations().items():
