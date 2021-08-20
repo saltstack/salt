@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import binascii
 import ctypes
 import hashlib
@@ -11,7 +6,6 @@ import multiprocessing
 import os
 import shutil
 
-# Import Salt Libs
 import salt.crypt
 import salt.ext.tornado.gen
 import salt.master
@@ -22,9 +16,6 @@ import salt.utils.files
 import salt.utils.minions
 import salt.utils.stringutils
 import salt.utils.verify
-
-# Import Third Party Libs
-from salt.ext import six
 from salt.utils.cache import CacheCli
 
 try:
@@ -36,14 +27,14 @@ except ImportError:
     try:
         from Cryptodome.Cipher import PKCS1_OAEP
     except ImportError:
-        from Crypto.Cipher import PKCS1_OAEP
+        from Crypto.Cipher import PKCS1_OAEP  # nosec
 
 
 log = logging.getLogger(__name__)
 
 
 # TODO: rename
-class AESPubClientMixin(object):
+class AESPubClientMixin:
     def _verify_master_signature(self, payload):
         if self.opts.get("sign_pub_messages"):
             if not payload.get("sig", False):
@@ -76,7 +67,7 @@ class AESPubClientMixin(object):
 
 
 # TODO: rename?
-class AESReqServerMixin(object):
+class AESReqServerMixin:
     """
     Mixin to house all of the master-side auth crypto
     """
@@ -134,13 +125,12 @@ class AESReqServerMixin(object):
             pub = salt.crypt.get_rsa_pub_key(pubfn)
         except (ValueError, IndexError, TypeError):
             return self.crypticle.dumps({})
-        except IOError:
+        except OSError:
             log.error("AES key not found")
             return {"error": "AES key not found"}
 
         pret = {}
-        if not six.PY2:
-            key = salt.utils.stringutils.to_bytes(key)
+        key = salt.utils.stringutils.to_bytes(key)
         if HAS_M2:
             pret["key"] = pub.public_encrypt(key, RSA.pkcs1_oaep_padding)
         else:
@@ -215,9 +205,9 @@ class AESReqServerMixin(object):
                 # connected must be allowed for the mine, highstate, etc.
                 if load["id"] not in minions:
                     msg = (
-                        "Too many minions connected (max_minions={0}). "
+                        "Too many minions connected (max_minions={}). "
                         "Rejecting connection from id "
-                        "{1}".format(self.opts["max_minions"], load["id"])
+                        "{}".format(self.opts["max_minions"], load["id"])
                     )
                     log.info(msg)
                     eload = {
@@ -335,7 +325,7 @@ class AESReqServerMixin(object):
                 # rejected dir.
                 try:
                     shutil.move(pubfn_pend, pubfn_rejected)
-                except (IOError, OSError):
+                except OSError:
                     pass
                 log.info(
                     "Pending public key for %s rejected via " "autoreject_file",
@@ -447,7 +437,7 @@ class AESReqServerMixin(object):
                 with salt.utils.files.fopen(pubfn, "w+") as fp_:
                     fp_.write(load["pub"])
             elif not load["pub"]:
-                log.error("Public key is empty: {0}".format(load["id"]))
+                log.error("Public key is empty: {}".format(load["id"]))
                 return {"enc": "clear", "load": {"ret": False}}
 
         pub = None
@@ -506,7 +496,7 @@ class AESReqServerMixin(object):
                         )
                     else:
                         mtoken = mcipher.decrypt(load["token"])
-                    aes = "{0}_|-{1}".format(
+                    aes = "{}_|-{}".format(
                         salt.master.SMaster.secrets["aes"]["secret"].value, mtoken
                     )
                 except Exception:  # pylint: disable=broad-except

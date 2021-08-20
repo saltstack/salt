@@ -18,7 +18,7 @@ pygments==2.4.2           # via sphinx
 pyparsing==2.4.0          # via packaging
 pytz==2019.1              # via babel
 requests==2.22.0          # via sphinx
-six==1.15.0               # via packaging
+six==1.16.0               # via packaging
 snowballstemmer==1.2.1    # via sphinx
 sphinx==3.0.4
 sphinxcontrib-applehelp==1.0.1  # via sphinx
