@@ -160,6 +160,12 @@ In the unfortunate event that you share information beyond what is permitted by 
 
 Send new membership requests to [salt-packagers](https://groups.google.com/forum/#!forum/salt-packagers). In the body of your request please specify how you qualify for membership and fulfill each criterion listed in the Membership Criteria section above.
 
+## Confidentiality, integrity and availability
+
+We consider vulnerabilities leading to the compromise of data confidentiality, elevation of privilege, or integrity to be our highest priority concerns. Availability, in particular in areas relating to DoS and resource exhaustion, is also a serious security concern. The Salt Project Security Team takes all vulnerabilities, potential vulnerabilities, and suspected vulnerabilities seriously and will investigate them in an urgent and expeditious manner.
+
+Note that we do not currently consider the default settings for Salt to be secure-by-default. It is necessary for operators to explicitly configure settings, role based access control, and other resource related features in Salt to provide a hardened Salt environment. We will not act on any security disclosure that relates to a lack of safe defaults. Over time, we will work towards improved safe-by-default configuration, taking into account backwards compatibility.
+
 ## Guidance on Salt and security best practices
 
 Reference the following documentation to ensure Salt best practices are being
