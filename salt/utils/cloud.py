@@ -1491,7 +1491,7 @@ def deploy_script(
                 "hostname": host,
                 "port": port,
                 "username": username,
-                "ssh_timeout": ssh_timeout,
+                "timeout": ssh_timeout,
                 "display_ssh_output": display_ssh_output,
                 "sudo_password": sudo_password,
                 "sftp": opts.get("use_sftp", False),
