@@ -7,6 +7,24 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+Salt 3001.8 (2021-08-20)
+========================
+
+Fixed
+-----
+
+- Verify the owner of an existing config before trusting it during install. If the owner cannot be verified, back it up and use defaults. (CVE-2021-22004)
+
+
+Security
+--------
+
+- Fix the CVE-2021-31607 vulnerability
+
+  Additionally, an audit and a tool was put in place, ``bandit``, to address similar issues througout the code base, and prevent them. (CVE-2021-31607)
+- Ensure that sourced file is cached using its hash name (cve-2021-21996)
+
+
 Salt 3001.7 (2021-03-10)
 ========================
 
