@@ -66,23 +66,45 @@ xJLUpltwXLZSrJEXYjtJtnh0om71NXes0OyWE1cL4+U6WA9Hho6xedjk2bai
 -----END PGP PUBLIC KEY BLOCK-----
 ```
 
-The SaltStack Security Team is available at saltproject-security.pdl@broadcom.com for
-security-related bug reports or questions.
+## Reporting a Vulnerability - Private Disclosure Process
+
+The Salt Project Security Team is available at
+saltproject-security.pdl@broadcom.com for security-related bug reports or
+questions. Emails will be addressed within 3 business days.
 
 We request the disclosure of any security-related bugs or issues be reported
 non-publicly until such time as the issue can be resolved and a security-fix
 release can be prepared. At that time we will release the fix and make a public
 announcement with upgrade instructions and download locations.
 
+**IMPORTANT: Do not file public issues on GitHub for security vulnerabilities**
+
+## Proposed Email Content
+
+Provide a descriptive subject line and in the body of the email include the following information:
+
+* Basic identity information, such as your name and your affiliation or company.
+* Detailed steps to reproduce the vulnerability  (POC scripts, screenshots, and logs are all helpful to us).
+* Description of the effects of the vulnerability on Salt and the related hardware and software configurations, so that the VMware Security Team can reproduce it.
+* How the vulnerability affects Salt usage and an estimation of the attack surface, if there is one.
+* List other projects or dependencies that were used in conjunction with Salt to produce the vulnerability.
+
+
+## When to report a vulnerability
+
+* When you think Salt has a potential security vulnerability.
+* When you suspect a potential vulnerability but you are unsure that it impacts Salt.
+* When you know of or suspect a potential vulnerability on another project that is used by Salt.
+
 ## Security response procedure
 
-SaltStack takes security and the trust of our customers and users very
+We take security and the trust of our customers and users very
 seriously. Our disclosure policy is intended to resolve security issues as
 quickly and safely as is possible.
 
 1.  A security report sent to saltproject-security.pdl@broadcom.com is assigned to a team
     member. This person is the primary contact for questions and will
-    coordinate the fix, release, and announcement.
+    coordinate the fix, release, and announcement. 
 
 2.  The reported issue is reproduced and confirmed. A list of affected projects
     and releases is made.
@@ -104,8 +126,39 @@ quickly and safely as is possible.
 
 ## Receiving security announcements
 
-The fastest place to receive security announcements is via the [salt-announce](https://groups.google.com/forum/#!forum/salt-announce)
-mailing list. This list is low-traffic.
+Keep an eye on the [Salt Project Security Announcements](https://saltproject.io/security-announcements/) landing page. Salt Project recommends subscribing to the [Salt Project Security RSS feed](https://saltproject.io/feed/?post_type=security) to receive notification when new information is available regarding security announcements.
+
+Other channels to receive security announcements include the [Salt Community mailing list](https://groups.google.com/forum/#!forum/salt-users) and the [Salt Project Community Slack](https://join.slack.com/t/saltstackcommunity/shared_invite/zt-3av8jjyf-oBQ2M0vhXOhJpNpRkPWBvg).
+
+## Early Disclosure to [salt-packagers](https://groups.google.com/forum/#!forum/salt-packagers) 
+
+The private list is intended to be used primarily to provide actionable information to multiple distributor projects at once. This list is not intended to inform individuals about security issues.
+
+## Membership Criteria
+
+To be eligible to join the [salt-packagers](https://groups.google.com/forum/#!forum/salt-packagers) mailing list, you should:
+
+1. Be an active distributor of Salt.
+2. Have a user base that is not limited to your own organization.
+3. Have a publicly verifiable track record up to the present day of fixing security issues.
+4. Not be a downstream or rebuild of another distributor.
+5. Be a participant and active contributor in the Salt community.
+6. Accept the Embargo Policy that is outlined below.
+7. Have someone who is already on the list vouch for the person requesting membership on behalf of your distribution.
+
+**The terms and conditions of the Embargo Policy apply to all members of this mailing list. A request for membership represents your acceptance to the terms and conditions of the Embargo Policy.**
+
+## Embargo Policy
+
+The information that members receive on the [salt-packagers](https://groups.google.com/forum/#!forum/salt-packagers) mailing list must not be made public, shared, or even hinted at anywhere beyond those who need to know within your specific team, unless you receive explicit approval to do so from the VMware Security Team. This remains true until the public disclosure date/time agreed upon by the list. Members of the list and others cannot use the information for any reason other than to get the issue fixed for your respective distribution's users.
+
+Before you share any information from the list with members of your team who are required to fix the issue, these team members must agree to the same terms, and only be provided with information on a need-to-know basis.
+
+In the unfortunate event that you share information beyond what is permitted by this policy, you must urgently inform the Salt Project Security Team (security@saltstack.com) of exactly what information was leaked and to whom. If you continue to leak information and break the policy outlined here, you will be permanently removed from the list.
+
+## Requesting to Join
+
+Send new membership requests to [salt-packagers](https://groups.google.com/forum/#!forum/salt-packagers). In the body of your request please specify how you qualify for membership and fulfill each criterion listed in the Membership Criteria section above.
 
 ## Guidance on Salt and security best practices
 
