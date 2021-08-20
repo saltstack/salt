@@ -19,8 +19,8 @@ from __future__ import absolute_import, print_function
 
 import logging
 import os
+import subprocess
 import sys
-from subprocess import PIPE, STDOUT, Popen
 
 import salt.utils.crypt
 import salt.utils.files
@@ -36,8 +36,6 @@ from salt.modules.inspectlib.entities import (
     PackageCfgFile,
     PayloadFile,
 )
-
-# Import Salt Libs
 from salt.modules.inspectlib.exceptions import InspectorSnapshotException
 
 try:
@@ -94,11 +92,11 @@ class Inspector(EnvLoader):
         """
         Call an external system command.
         """
-        return Popen(
+        return subprocess.Popen(
             [command] + list(params),
-            stdout=PIPE,
-            stdin=PIPE,
-            stderr=STDOUT,
+            stdout=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             env=env or os.environ,
         ).communicate(input=input)
 
@@ -499,14 +497,19 @@ class Inspector(EnvLoader):
 
         self._prepare_full_scan(**kwargs)
 
-        os.system(
-            "nice -{0} python {1} {2} {3} {4} & > /dev/null".format(
-                priority,
+        subprocess.run(
+            [
+                "nice",
+                "-{}".format(priority),
+                "python",
                 __file__,
                 os.path.dirname(self.pidfile),
                 os.path.dirname(self.dbfile),
                 mode,
-            )
+            ],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
 
     def export(self, description, local=False, path="/tmp", format="qcow2"):

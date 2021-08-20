@@ -1061,9 +1061,7 @@ class WindowsUpdateAgent(object):
 
         try:
             log.debug(cmd)
-            p = subprocess.Popen(
-                cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-            )
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             return p.communicate()
 
         except (OSError, IOError) as exc:

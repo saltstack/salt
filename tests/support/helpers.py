@@ -1721,6 +1721,7 @@ class VirtualEnv(object):
         sminion.functions.virtualenv.create(
             self.venv_dir, python=self._get_real_python()
         )
+        self.install("-U", "pip>=20.2.4,<21.2", "setuptools!=50.*,!=51.*,!=52.*")
 
 
 @contextmanager

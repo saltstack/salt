@@ -120,7 +120,15 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             except AttributeError:
                 # We're running off of the system python
                 pass
-        return self.run_function("virtualenv.create", [path], **kwargs)
+        # python = kwargs["python"]
+        try:
+            return self.run_function("virtualenv.create", [path], **kwargs)
+        finally:
+            self.run_function(
+                "pip.install",
+                pkgs=["pip>=20.2.4,<21.2", "setuptools!=50.*,!=51.*,!=52.*"],
+                upgrade=True,
+            )
 
     @slowTest
     def test_pip_installed_removed(self):

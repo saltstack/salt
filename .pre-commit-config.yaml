@@ -4,7 +4,7 @@ default_language_version:
 exclude: ^(doc/_static/.*|doc/_themes/.*)$
 repos:
   - repo: https://github.com/saltstack/pip-tools-compile-impersonate
-    rev: master
+    rev: dff9089c1003af49665064067ff63c75b9b69dcd
     hooks:
 
       - id: pip-tools-compile
@@ -785,3 +785,28 @@ repos:
           - invoke-pre-commit
           - --
           - filemap.check
+
+  # ----- Security -------------------------------------------------------------------------------------------------->
+  - repo: https://github.com/PyCQA/bandit
+    rev: "1.7.0"
+    hooks:
+      - id: bandit
+        alias: bandit-salt
+        name: Run bandit against Salt
+        args: [--silent, -lll, --skip, B701]
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+                tests/.*
+            )$
+  - repo: https://github.com/PyCQA/bandit
+    rev: "1.7.0"
+    hooks:
+      - id: bandit
+        alias: bandit-tests
+        name: Run bandit against the test suite
+        args: [--silent, -lll, --skip, B701]
+        files: ^tests/.*
+        exclude: ^tests/(consist|jenkins|minionswarm)\.py
+  # <---- Security ---------------------------------------------------------------------------------------------------

@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 
 try:
-    import Crypto.Random
+    import Crypto.Random  # nosec
 
     HAS_CRYPTO = True
 except ImportError:

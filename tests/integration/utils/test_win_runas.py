@@ -366,8 +366,14 @@ class RunAsTest(ModuleCase):
         with salt.utils.files.fopen(RUNAS_PATH, "w") as fp:
             fp.write(runaspy)
         ret = subprocess.call(
-            "cmd.exe /C winrs /r:{} python {}".format(self.hostname, RUNAS_PATH),
-            shell=True,
+            [
+                "cmd.exe",
+                "/C",
+                "winrs",
+                "/r:{}".format(self.hostname),
+                "python",
+                RUNAS_PATH,
+            ]
         )
         self.assertEqual(ret, 1)
 
@@ -388,8 +394,14 @@ class RunAsTest(ModuleCase):
         with salt.utils.files.fopen(RUNAS_PATH, "w") as fp:
             fp.write(runaspy)
         ret = subprocess.call(
-            "cmd.exe /C winrs /r:{} python {}".format(self.hostname, RUNAS_PATH),
-            shell=True,
+            [
+                "cmd.exe",
+                "/C",
+                "winrs",
+                "/r:{}".format(self.hostname),
+                "python",
+                RUNAS_PATH,
+            ]
         )
         self.assertEqual(ret, 1)
 
@@ -415,8 +427,14 @@ class RunAsTest(ModuleCase):
         with salt.utils.files.fopen(RUNAS_PATH, "w") as fp:
             fp.write(runaspy)
         ret = subprocess.call(
-            "cmd.exe /C winrs /r:{} python {}".format(self.hostname, RUNAS_PATH),
-            shell=True,
+            [
+                "cmd.exe",
+                "/C",
+                "winrs",
+                "/r:{}".format(self.hostname),
+                "python",
+                RUNAS_PATH,
+            ]
         )
         self.assertEqual(ret, 0)
 
@@ -441,8 +459,14 @@ class RunAsTest(ModuleCase):
         with salt.utils.files.fopen(RUNAS_PATH, "w") as fp:
             fp.write(runaspy)
         ret = subprocess.call(
-            "cmd.exe /C winrs /r:{} python {}".format(self.hostname, RUNAS_PATH),
-            shell=True,
+            [
+                "cmd.exe",
+                "/C",
+                "winrs",
+                "/r:{}".format(self.hostname),
+                "python",
+                RUNAS_PATH,
+            ]
         )
         self.assertEqual(ret, 0)
 
@@ -457,8 +481,14 @@ class RunAsTest(ModuleCase):
         with salt.utils.files.fopen(RUNAS_PATH, "w") as fp:
             fp.write(runaspy)
         ret = subprocess.call(
-            "cmd.exe /C winrs /r:{} python {}".format(self.hostname, RUNAS_PATH),
-            shell=True,
+            [
+                "cmd.exe",
+                "/C",
+                "winrs",
+                "/r:{}".format(self.hostname),
+                "python",
+                RUNAS_PATH,
+            ]
         )
         self.assertEqual(ret, 0)
 
@@ -473,8 +503,14 @@ class RunAsTest(ModuleCase):
         with salt.utils.files.fopen(RUNAS_PATH, "w") as fp:
             fp.write(runaspy)
         ret = subprocess.call(
-            "cmd.exe /C winrs /r:{} python {}".format(self.hostname, RUNAS_PATH),
-            shell=True,
+            [
+                "cmd.exe",
+                "/C",
+                "winrs",
+                "/r:{}".format(self.hostname),
+                "python",
+                RUNAS_PATH,
+            ]
         )
         self.assertEqual(ret, 1)
 
@@ -489,8 +525,14 @@ class RunAsTest(ModuleCase):
         with salt.utils.files.fopen(RUNAS_PATH, "w") as fp:
             fp.write(runaspy)
         ret = subprocess.call(
-            "cmd.exe /C winrs /r:{} python {}".format(self.hostname, RUNAS_PATH),
-            shell=True,
+            [
+                "cmd.exe",
+                "/C",
+                "winrs",
+                "/r:{}".format(self.hostname),
+                "python",
+                RUNAS_PATH,
+            ]
         )
         self.assertEqual(ret, 1)
 
@@ -498,7 +540,6 @@ class RunAsTest(ModuleCase):
         "test-runas", on_existing="delete", delete=True, password=PASSWORD
     )
     def test_runas_powershell_remoting(self, username):
-        psrp_wrap = "powershell Invoke-Command -ComputerName {} -ScriptBlock {{ {} }}"
         runaspy = textwrap.dedent(
             """
         import sys
@@ -512,15 +553,22 @@ class RunAsTest(ModuleCase):
         )
         with salt.utils.files.fopen(RUNAS_PATH, "w") as fp:
             fp.write(runaspy)
-        cmd = "python.exe {}".format(RUNAS_PATH)
-        ret = subprocess.call(psrp_wrap.format(self.hostname, cmd), shell=True)
+        ret = subprocess.call(
+            [
+                "powershell",
+                "Invoke-Command",
+                "-ComputerName",
+                self.hostname,
+                "-ScriptBlock",
+                "{{ python.exe {} }}".format(RUNAS_PATH),
+            ]
+        )
         self.assertEqual(ret, 1)
 
     @with_system_user(
         "test-runas", on_existing="delete", delete=True, password=PASSWORD
     )
     def test_runas_powershell_remoting_no_pass(self, username):
-        psrp_wrap = "powershell Invoke-Command -ComputerName {} -ScriptBlock {{ {} }}"
         runaspy = textwrap.dedent(
             """
         import sys
@@ -533,8 +581,16 @@ class RunAsTest(ModuleCase):
         )
         with salt.utils.files.fopen(RUNAS_PATH, "w") as fp:
             fp.write(runaspy)
-        cmd = "python.exe {}".format(RUNAS_PATH)
-        ret = subprocess.call(psrp_wrap.format(self.hostname, cmd), shell=True)
+        ret = subprocess.call(
+            [
+                "powershell",
+                "Invoke-Command",
+                "-ComputerName",
+                self.hostname,
+                "-ScriptBlock",
+                "{{ python.exe {} }}".format(RUNAS_PATH),
+            ]
+        )
         self.assertEqual(ret, 1)
 
     @with_system_user(
@@ -561,7 +617,7 @@ class RunAsTest(ModuleCase):
         with salt.utils.files.fopen(RUNAS_PATH, "w") as fp:
             fp.write(runaspy)
         cmd = "python.exe {}; exit $LASTEXITCODE".format(RUNAS_PATH)
-        ret = subprocess.call(psrp_wrap.format(self.hostname, cmd), shell=True)
+        ret = subprocess.call(psrp_wrap.format(self.hostname, cmd), shell=True)  # nosec
         self.assertEqual(ret, 0)
 
     @with_system_user(
@@ -586,7 +642,7 @@ class RunAsTest(ModuleCase):
         with salt.utils.files.fopen(RUNAS_PATH, "w") as fp:
             fp.write(runaspy)
         cmd = "python.exe {}; exit $LASTEXITCODE".format(RUNAS_PATH)
-        ret = subprocess.call(psrp_wrap.format(self.hostname, cmd), shell=True)
+        ret = subprocess.call(psrp_wrap.format(self.hostname, cmd), shell=True)  # nosec
         self.assertEqual(ret, 0)
 
     @with_system_user(
@@ -599,8 +655,7 @@ class RunAsTest(ModuleCase):
         runaspy = SERVICE_SOURCE.format(repr(RUNAS_OUT), username, PASSWORD)
         with io.open(RUNAS_PATH, "w", encoding="utf-8") as fp:
             fp.write(runaspy)
-        cmd = "python.exe {}".format(RUNAS_PATH)
-        ret = subprocess.call(cmd, shell=True)
+        ret = subprocess.call(["python.exe", RUNAS_PATH])
         self.assertEqual(ret, 0)
         win32serviceutil.StartService("test service")
         wait_for_service("test service")
@@ -618,8 +673,7 @@ class RunAsTest(ModuleCase):
         runaspy = SERVICE_SOURCE.format(repr(RUNAS_OUT), username, "")
         with io.open(RUNAS_PATH, "w", encoding="utf-8") as fp:
             fp.write(runaspy)
-        cmd = "python.exe {}".format(RUNAS_PATH)
-        ret = subprocess.call(cmd, shell=True)
+        ret = subprocess.call(["python.exe", RUNAS_PATH])
         self.assertEqual(ret, 0)
         win32serviceutil.StartService("test service")
         wait_for_service("test service")
@@ -641,8 +695,7 @@ class RunAsTest(ModuleCase):
         runaspy = SERVICE_SOURCE.format(repr(RUNAS_OUT), username, PASSWORD)
         with io.open(RUNAS_PATH, "w", encoding="utf-8") as fp:
             fp.write(runaspy)
-        cmd = "python.exe {}".format(RUNAS_PATH)
-        ret = subprocess.call(cmd, shell=True)
+        ret = subprocess.call(["python.exe", RUNAS_PATH])
         self.assertEqual(ret, 0)
         win32serviceutil.StartService("test service")
         wait_for_service("test service")
@@ -664,8 +717,7 @@ class RunAsTest(ModuleCase):
         runaspy = SERVICE_SOURCE.format(repr(RUNAS_OUT), username, "")
         with io.open(RUNAS_PATH, "w", encoding="utf-8") as fp:
             fp.write(runaspy)
-        cmd = "python.exe {}".format(RUNAS_PATH)
-        ret = subprocess.call(cmd, shell=True)
+        ret = subprocess.call(["python.exe", RUNAS_PATH])
         self.assertEqual(ret, 0)
         win32serviceutil.StartService("test service")
         wait_for_service("test service")
@@ -680,8 +732,7 @@ class RunAsTest(ModuleCase):
         runaspy = SERVICE_SOURCE.format(repr(RUNAS_OUT), "SYSTEM", "")
         with io.open(RUNAS_PATH, "w", encoding="utf-8") as fp:
             fp.write(runaspy)
-        cmd = "python.exe {}".format(RUNAS_PATH)
-        ret = subprocess.call(cmd, shell=True)
+        ret = subprocess.call(["python.exe", RUNAS_PATH])
         self.assertEqual(ret, 0)
         win32serviceutil.StartService("test service")
         wait_for_service("test service")
