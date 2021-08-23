@@ -64,6 +64,41 @@ LIBCLOUD_FUNCS_NOT_SUPPORTED = (
     "proxmox.avail_sizes",
 )
 
+SALT_INTERNAL_LOADERS_PATHS = (
+    str(SALT_BASE_PATH / "auth"),
+    str(SALT_BASE_PATH / "beacons"),
+    str(SALT_BASE_PATH / "cache"),
+    str(SALT_BASE_PATH / "client" / "ssh" / "wrapper"),
+    str(SALT_BASE_PATH / "cloud" / "clouds"),
+    str(SALT_BASE_PATH / "engines"),
+    str(SALT_BASE_PATH / "executors"),
+    str(SALT_BASE_PATH / "fileserver"),
+    str(SALT_BASE_PATH / "grains"),
+    str(SALT_BASE_PATH / "log" / "handlers"),
+    str(SALT_BASE_PATH / "matchers"),
+    str(SALT_BASE_PATH / "metaproxy"),
+    str(SALT_BASE_PATH / "modules"),
+    str(SALT_BASE_PATH / "netapi"),
+    str(SALT_BASE_PATH / "output"),
+    str(SALT_BASE_PATH / "pillar"),
+    str(SALT_BASE_PATH / "proxy"),
+    str(SALT_BASE_PATH / "queues"),
+    str(SALT_BASE_PATH / "renderers"),
+    str(SALT_BASE_PATH / "returners"),
+    str(SALT_BASE_PATH / "roster"),
+    str(SALT_BASE_PATH / "runners"),
+    str(SALT_BASE_PATH / "sdb"),
+    str(SALT_BASE_PATH / "serializers"),
+    str(SALT_BASE_PATH / "spm" / "pkgdb"),
+    str(SALT_BASE_PATH / "spm" / "pkgfiles"),
+    str(SALT_BASE_PATH / "states"),
+    str(SALT_BASE_PATH / "thorium"),
+    str(SALT_BASE_PATH / "tokens"),
+    str(SALT_BASE_PATH / "tops"),
+    str(SALT_BASE_PATH / "utils"),
+    str(SALT_BASE_PATH / "wheel"),
+)
+
 
 def static_loader(
     opts,
@@ -110,8 +145,15 @@ def _module_dirs(
 ):
     if tag is None:
         tag = ext_type
-    sys_types = os.path.join(base_path or SALT_BASE_PATH, int_type or ext_type)
+    sys_types = os.path.join(base_path or str(SALT_BASE_PATH), int_type or ext_type)
     ext_types = os.path.join(opts["extension_modules"], ext_type)
+
+    if not sys_types.startswith(SALT_INTERNAL_LOADERS_PATHS):
+        raise RuntimeError(
+            "{!r} is not considered a salt internal loader path. If this "
+            "is a new loader being added, please also add it to "
+            "{}.SALT_INTERNAL_LOADERS_PATHS.".format(sys_types, __name__)
+        )
 
     ext_type_types = []
     if ext_dirs:
@@ -662,7 +704,7 @@ def log_handlers(opts):
             opts,
             "log_handlers",
             int_type="handlers",
-            base_path=os.path.join(SALT_BASE_PATH, "log"),
+            base_path=str(SALT_BASE_PATH / "log"),
         ),
         opts,
         tag="log_handlers",
@@ -678,7 +720,7 @@ def ssh_wrapper(opts, functions=None, context=None):
         _module_dirs(
             opts,
             "wrapper",
-            base_path=os.path.join(SALT_BASE_PATH, os.path.join("client", "ssh")),
+            base_path=str(SALT_BASE_PATH / "client" / "ssh"),
         ),
         opts,
         tag="wrapper",
@@ -1010,7 +1052,7 @@ def call(fun, **kwargs):
     dirs = kwargs.get("dirs", [])
 
     funcs = LazyLoader(
-        [os.path.join(SALT_BASE_PATH, "modules")] + dirs,
+        [str(SALT_BASE_PATH / "modules")] + dirs,
         None,
         tag="modules",
         virtual_enable=False,
@@ -1077,7 +1119,7 @@ def pkgdb(opts):
     .. versionadded:: 2015.8.0
     """
     return LazyLoader(
-        _module_dirs(opts, "pkgdb", base_path=os.path.join(SALT_BASE_PATH, "spm")),
+        _module_dirs(opts, "pkgdb", base_path=str(SALT_BASE_PATH / "spm")),
         opts,
         tag="pkgdb",
     )
@@ -1090,7 +1132,7 @@ def pkgfiles(opts):
     .. versionadded:: 2015.8.0
     """
     return LazyLoader(
-        _module_dirs(opts, "pkgfiles", base_path=os.path.join(SALT_BASE_PATH, "spm")),
+        _module_dirs(opts, "pkgfiles", base_path=str(SALT_BASE_PATH / "spm")),
         opts,
         tag="pkgfiles",
     )
@@ -1100,7 +1142,7 @@ def clouds(opts):
     """
     Return the cloud functions
     """
-    _utils = salt.loader.utils(opts)
+    _utils = utils(opts)
     # Let's bring __active_provider_name__, defaulting to None, to all cloud
     # drivers. This will get temporarily updated/overridden with a context
     # manager when needed.
@@ -1109,7 +1151,7 @@ def clouds(opts):
             opts,
             "clouds",
             "cloud",
-            base_path=os.path.join(SALT_BASE_PATH, "cloud"),
+            base_path=str(SALT_BASE_PATH / "cloud"),
             int_type="clouds",
         ),
         opts,

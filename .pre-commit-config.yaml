@@ -1113,11 +1113,27 @@ repos:
 
   - repo: https://github.com/s0undt3ch/salt-rewrite
     # Automatically rewrite code with known rules
-    rev: 1.0.0
+    rev: 1.3.2
     hooks:
       - id: salt-rewrite
+        alias: rewrite-docstrings
+        name: Salt docstrings auto-fixes
+        files: ^salt/.*\.py$
+        args: [--silent, -F, fix_docstrings]
+        exclude: >
+            (?x)^(
+                salt/ext/.*
+            )$
+
+  - repo: https://github.com/s0undt3ch/salt-rewrite
+    # Automatically rewrite code with known rules
+    rev: 1.3.2
+    hooks:
+      - id: salt-rewrite
+        alias: rewrite-tests
+        name: Rewrite Salt's Test Suite
         files: ^tests/.*\.py$
-        args: [-E, fix_asserts]
+        args: [--silent, -E, fix_asserts, -E, fix_docstrings]
 
   - repo: https://github.com/timothycrosley/isort
     rev: "1e78a9acf3110e1f9721feb591f89a451fc9876a"
@@ -1183,7 +1199,7 @@ repos:
 
   # ----- Pre-Commit ------------------------------------------------------------------------------------------------>
   - repo: https://github.com/saltstack/invoke-pre-commit
-    rev: v1.5.0
+    rev: v1.9.0
     hooks:
       - id: invoke
         alias: check-docs
@@ -1199,7 +1215,7 @@ repos:
           - msgpack
 
   - repo: https://github.com/saltstack/invoke-pre-commit
-    rev: v1.5.0
+    rev: v1.9.0
     hooks:
       - id: invoke
         alias: check-filemap
@@ -1208,6 +1224,71 @@ repos:
         pass_filenames: false
         args:
           - filemap.check
+        additional_dependencies:
+          - blessings
+          - pyyaml
+          - distro
+          - jinja2
+          - msgpack
+
+  - repo: https://github.com/saltstack/invoke-pre-commit
+    rev: v1.9.0
+    hooks:
+      - id: invoke
+        alias: loader-check-virtual
+        name: Check loader modules __virtual__
+        files: salt/.*\.py$
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+            )$
+        args:
+          - loader.check-virtual
+        additional_dependencies:
+          - blessings
+          - pyyaml
+          - distro
+          - jinja2
+          - msgpack
+
+  - repo: https://github.com/saltstack/invoke-pre-commit
+    rev: v1.9.0
+    hooks:
+      - id: invoke
+        alias: check-docstrings
+        name: Check docstrings
+        files: salt/.*\.py$
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+            )$
+        args:
+          - docstrings.check
+        additional_dependencies:
+          - blessings
+          - pyyaml
+          - distro
+          - jinja2
+          - msgpack
+
+  - repo: https://github.com/saltstack/invoke-pre-commit
+    rev: v1.9.0
+    hooks:
+      - id: invoke
+        alias: check-known-missing-docstrings
+        name: Check Known Missing Docstrings
+        stages: [manual]
+        files: salt/.*\.py$
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+            )$
+        args:
+          - docstrings.check
+          - --error-on-known-failures
         additional_dependencies:
           - blessings
           - pyyaml
