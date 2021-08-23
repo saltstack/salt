@@ -43,7 +43,7 @@ def test__find_keep_files_win32():
 
 
 @pytest.mark.skip_unless_on_windows(reason="Do not run except on Windows")
-def test__clean_dir_win32(self):
+def test__clean_dir_win32():
     """
     Test _clean_dir to ensure that regardless of case, we keep all files
     requested and do not delete any. Therefore, the expected list should
@@ -59,11 +59,11 @@ def test__clean_dir_win32(self):
     )
     actual = sorted(list(keep))
     expected = []
-    self.assertListEqual(actual, expected)
+    assert actual == expected
 
 
 @pytest.mark.skip_unless_on_darwin(reason="Do not run except on OS X")
-def test__find_keep_files_darwin(self):
+def test__find_keep_files_darwin():
     """
     Test _clean_dir to ensure that regardless of case, we keep all files
     requested and do not delete any. Therefore, the expected list should
@@ -79,4 +79,4 @@ def test__find_keep_files_darwin(self):
     )
     actual = sorted(list(keep))
     expected = []
-    self.assertListEqual(actual, expected)
+    assert actual == expected
