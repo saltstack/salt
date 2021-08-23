@@ -1,12 +1,12 @@
-import contextvars
 import copy
 import functools
 import importlib
-import importlib.machinery  # pylint: disable=no-name-in-module,import-error
-import importlib.util  # pylint: disable=no-name-in-module,import-error
+import importlib.machinery
+import importlib.util
 import inspect
 import logging
 import os
+import pathlib
 import re
 import sys
 import tempfile
@@ -35,6 +35,15 @@ import salt.utils.stringutils
 import salt.utils.versions
 from salt.utils.decorators import Depends
 
+try:
+    # Try the stdlib C extension first
+    import _contextvars as contextvars
+except ImportError:
+    # Py<3.7
+    import contextvars
+
+log = logging.getLogger(__name__)
+
 # pylint: disable=no-member
 MODULE_KIND_SOURCE = 1
 MODULE_KIND_COMPILED = 2
@@ -55,14 +64,12 @@ MODULE_KIND_MAP = {
 # pylint: enable=no-member
 
 
-SALT_BASE_PATH = os.path.abspath(salt.syspaths.INSTALL_DIR)
+SALT_BASE_PATH = pathlib.Path(salt.syspaths.INSTALL_DIR).resolve()
 LOADED_BASE_NAME = "salt.loaded"
 PY3_PRE_EXT = re.compile(r"\.cpython-{}{}(\.opt-[1-9])?".format(*sys.version_info[:2]))
 
 # Will be set to pyximport module at runtime if cython is enabled in config.
 pyximport = None
-
-log = logging.getLogger(__name__)
 
 
 def _generate_module(name):
@@ -77,7 +84,7 @@ def _generate_module(name):
 
 
 def _mod_type(module_path):
-    if module_path.startswith(SALT_BASE_PATH):
+    if module_path.startswith(str(SALT_BASE_PATH)):
         return "int"
     return "ext"
 
