@@ -71,7 +71,9 @@ msgpack==1.0.2
 portend==2.6
     # via cherrypy
 psutil==5.8.0
-    # via -r requirements/windows.txt
+    # via
+    #   -r requirements/base.txt
+    #   -r requirements/windows.txt
 pyasn1==0.4.8
     # via -r requirements/windows.txt
 pycparser==2.20
