@@ -14,7 +14,6 @@ Security
 --------
 
 - Fix the CVE-2021-31607 vulnerability
-
   Additionally, an audit and a tool was put in place, ``bandit``, to address similar issues througout the code base, and prevent them. (CVE-2021-31607)
 - Ensure that sourced file is cached using its hash name (cve-2021-21996)
 
