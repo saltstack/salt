@@ -52,6 +52,7 @@ Namespaced tag
 import atexit
 import contextlib
 import datetime
+import errno
 import fnmatch
 import hashlib
 import logging
@@ -367,8 +368,18 @@ class SaltEvent:
                 try:
                     self.subscriber.connect(timeout=timeout)
                     self.cpub = True
-                except Exception:  # pylint: disable=broad-except
-                    pass
+                except tornado.iostream.StreamClosedError:
+                    log.error("Encountered StreamClosedException")
+                except OSError as exc:
+                    if exc.errno != errno.ENOENT:
+                        raise
+                    log.error("Error opening stream, file does not exist")
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.info(
+                        "An exception occurred connecting publisher: %s",
+                        exc,
+                        exc_info_on_loglevel=logging.DEBUG,
+                    )
         else:
             if self.subscriber is None:
                 self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
@@ -412,8 +423,12 @@ class SaltEvent:
                 try:
                     self.pusher.connect(timeout=timeout)
                     self.cpush = True
-                except Exception:  # pylint: disable=broad-except
-                    pass
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.error(
+                        "Unable to connect pusher: %s",
+                        exc,
+                        exc_info_on_loglevel=logging.DEBUG,
+                    )
         else:
             if self.pusher is None:
                 self.pusher = salt.transport.ipc.IPCMessageClient(
@@ -816,8 +831,12 @@ class SaltEvent:
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 try:
                     self.pusher.send(msg)
-                except Exception as ex:  # pylint: disable=broad-except
-                    log.debug(ex)
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.debug(
+                        "Publisher send failed with exception: %s",
+                        ex,
+                        exc_info_on_loglevel=logging.DEBUG,
+                    )
                     raise
         else:
             self.io_loop.spawn_callback(self.pusher.send, msg)
@@ -886,7 +905,12 @@ class SaltEvent:
                         data,
                         tagify([load["jid"], "sub", load["id"], "error", fun], "job"),
                     )
-        except Exception:  # pylint: disable=broad-except
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error(
+                "Event iteration failed with exception: %s",
+                exc,
+                exc_info_on_loglevel=logging.DEBUG,
+            )
             pass
 
     def fire_ret_load(self, load):
