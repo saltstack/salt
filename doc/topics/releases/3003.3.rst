@@ -4,6 +4,9 @@
 Salt 3003.3 (2021-08-20)
 ========================
 
+Version 3003.3 is a CVE security fix release for :ref:`3003 <release-3003>`.
+
+
 Fixed
 -----
 
