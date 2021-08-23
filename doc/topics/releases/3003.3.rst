@@ -15,5 +15,3 @@ Security
 
 - Verify the owner of an existing config before trusting it during install. If the owner cannot be verified, back it up and use defaults. (CVE-2021-22004)
 - Ensure that sourced file is cached using its hash name (cve-2021-21996)
-
-
