@@ -4,7 +4,7 @@
 Salt 3001.8 (2021-08-20)
 ========================
 
-Version 3001.8 is a bug fix release for :ref:`3001 <release-3001>`.
+Version 3001.8 is a CVE security fix release for :ref:`3001 <release-3001>`.
 
 
 Fixed

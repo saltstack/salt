@@ -4,6 +4,9 @@
 Salt 3002.7 (2021-08-20)
 ========================
 
+Version 3002.7 is a CVE security fix release for :ref:`3002 <release-3002>`.
+
+
 Fixed
 -----
 
