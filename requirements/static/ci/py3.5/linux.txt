@@ -16,8 +16,6 @@ ansible==3.4.0
     # via -r requirements/static/ci/linux.in
 apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-appdirs==1.4.4
-    # via virtualenv
 argh==0.26.2
     # via watchdog
 asn1crypto==1.3.0
@@ -336,6 +334,8 @@ azure-storage-queue==1.4.0
     # via azure
 azure==4.0.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
+backports.entry-points-selectable==1.1.0
+    # via virtualenv
 backports.functools-lru-cache==1.5
     # via
     #   -r requirements/static/pkg/py3.5/linux.txt
@@ -428,7 +428,7 @@ decorator==4.4.2
     # via
     #   networkx
     #   python-telegram-bot
-distlib==0.3.0
+distlib==0.3.2
     # via virtualenv
 distro==1.5.0
     # via -r requirements/static/pkg/py3.5/linux.txt
@@ -474,6 +474,7 @@ immutables==0.14
     #   contextvars
 importlib-metadata==0.23
     # via
+    #   backports.entry-points-selectable
     #   importlib-resources
     #   jsonpickle
     #   jsonschema
@@ -688,6 +689,8 @@ pathlib2==2.3.5
     # via pytest
 pathtools==0.1.2
     # via watchdog
+platformdirs==2.0.2
+    # via virtualenv
 pluggy==0.13.0
     # via pytest
 portend==2.4
@@ -945,7 +948,7 @@ vapi-runtime==2.19.0
     #   vsphere-automation-sdk
 vcert==0.7.3 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-virtualenv==20.0.20
+virtualenv==20.7.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
