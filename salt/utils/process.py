@@ -686,7 +686,7 @@ class ProcessManager:
         Check the children once
         """
         if self._restart_processes is True:
-            for pid, mapping in self._process_map.items():
+            for pid, mapping in self._process_map.copy().items():
                 if not mapping["Process"].is_alive():
                     log.trace("Process restart of %s", pid)
                     self.restart_process(pid)

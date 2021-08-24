@@ -1390,7 +1390,12 @@ def hardlink(
         group = user
 
     if group is None:
-        group = __salt__["file.gid_to_group"](__salt__["user.info"](user).get("gid", 0))
+        if "user.info" in __salt__:
+            group = __salt__["file.gid_to_group"](
+                __salt__["user.info"](user).get("gid", 0)
+            )
+        else:
+            group = user
 
     preflight_errors = []
     uid = __salt__["file.user_to_uid"](user)
@@ -1650,7 +1655,12 @@ def symlink(
         group = user
 
     if group is None:
-        group = __salt__["file.gid_to_group"](__salt__["user.info"](user).get("gid", 0))
+        if "user.info" in __salt__:
+            group = __salt__["file.gid_to_group"](
+                __salt__["user.info"](user).get("gid", 0)
+            )
+        else:
+            group = user
 
     preflight_errors = []
     if salt.utils.platform.is_windows():
@@ -7145,9 +7155,12 @@ def copy_(
             group = user
 
         if group is None:
-            group = __salt__["file.gid_to_group"](
-                __salt__["user.info"](user).get("gid", 0)
-            )
+            if "user.info" in __salt__:
+                group = __salt__["file.gid_to_group"](
+                    __salt__["user.info"](user).get("gid", 0)
+                )
+            else:
+                group = user
 
         u_check = _check_user(user, group)
         if u_check:
@@ -7231,9 +7244,14 @@ def copy_(
         if not preserve:
             if salt.utils.platform.is_windows():
                 # TODO: Add the other win_* parameters to this function
-                ret = __salt__["file.check_perms"](path=name, ret=ret, owner=user)
+                check_ret = __salt__["file.check_perms"](path=name, ret=ret, owner=user)
             else:
-                __salt__["file.check_perms"](name, ret, user, group, mode)
+                check_ret, perms = __salt__["file.check_perms"](
+                    name, ret, user, group, mode
+                )
+            if not check_ret["result"]:
+                ret["result"] = check_ret["result"]
+                ret["comment"] = check_ret["comment"]
     except OSError:
         return _error(ret, 'Failed to copy "{}" to "{}"'.format(source, name))
     return ret
