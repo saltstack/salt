@@ -16,7 +16,6 @@ ioloop>=0.1a0
 libnacl>=1.8.0
 lxml>=4.6.3
 mako>=1.1.4
-psutil>=5.8.0
 pyasn1>=0.4.8
 pycparser>=2.20
 pycurl>=7.43.0.5  # PyCurl does not provide a whl file for newer versions
