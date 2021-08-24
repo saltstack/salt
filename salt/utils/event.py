@@ -368,7 +368,7 @@ class SaltEvent:
                 try:
                     self.subscriber.connect(timeout=timeout)
                     self.cpub = True
-                except tornado.iostream.StreamClosedError:
+                except salt.ext.tornado.iostream.StreamClosedError:
                     log.error("Encountered StreamClosedException")
                 except OSError as exc:
                     if exc.errno != errno.ENOENT:
@@ -834,7 +834,7 @@ class SaltEvent:
                 except Exception as exc:  # pylint: disable=broad-except
                     log.debug(
                         "Publisher send failed with exception: %s",
-                        ex,
+                        exc,
                         exc_info_on_loglevel=logging.DEBUG,
                     )
                     raise
@@ -911,7 +911,6 @@ class SaltEvent:
                 exc,
                 exc_info_on_loglevel=logging.DEBUG,
             )
-            pass
 
     def fire_ret_load(self, load):
         """
