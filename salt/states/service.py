@@ -969,22 +969,22 @@ def mod_watch(
         This state exists to support special handling of the ``watch``
         :ref:`requisite <requisites>`. It should not be called directly.
 
-        Parameters for this function should be set by the watching service.
-        (i.e. ``service.running``)
+        Parameters for this function should be set by the watching service
+        (e.g. ``service.running``).
 
     name
-        The name of the init or rc script used to manage the service
+        The name of the service to control.
 
     sfun
         The original function which triggered the mod_watch call
         (`service.running`, for example).
 
     sig
-        The string to search for when looking for the service process with ps
+        The string to search for when looking for the service process with ps.
 
     reload
-        When set, reload the service instead of restarting it.
-        (i.e. ``service nginx reload``)
+        When set, reload the service instead of restarting it
+        (e.g. ``service nginx reload``).
 
     full_restart
         Perform a full stop/start of a service by passing ``--full-restart``.
@@ -992,10 +992,10 @@ def mod_watch(
         :py:func:`service modules <salt.modules.service>`.
 
     force
-        Use service.force_reload instead of reload (needs reload to be set to True)
+        Use service.force_reload instead of reload (needs reload to be set to True).
 
     init_delay
-        Add a sleep command (in seconds) before the service is restarted/reloaded
+        Add a sleep command (in seconds) before the service is restarted/reloaded.
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     past_participle = None
