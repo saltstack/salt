@@ -22,7 +22,7 @@ Function Get-Settings {
         # Location where the files are kept
         $Settings = @{
             "SrcDir"       = "$env:SrcDir"
-            "SaltRepo"     = "https://repo.saltstack.com/windows/dependencies"
+            "SaltRepo"     = "https://repo.saltproject.io/windows/dependencies"
             "SaltDir"      = "C:\salt"
             "PyVerMajor"   = "$env:PyVerMajor"
             "PyVerMinor"   = "$env:PyVerMinor"

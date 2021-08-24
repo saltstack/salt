@@ -785,6 +785,20 @@ def backup_minion(path, bkroot):
         os.chmod(bkpath, fstat.st_mode)
 
 
+def case_insensitive_filesystem(path=None):
+    """
+    Detect case insensitivity on a system.
+
+    Returns:
+        bool: Flag to indicate case insensitivity
+
+    .. versionadded:: 3004
+
+    """
+    with tempfile.NamedTemporaryFile(prefix="TmP", dir=path, delete=True) as tmp_file:
+        return os.path.exists(tmp_file.name.lower())
+
+
 def get_encoding(path):
     """
     Detect a file's encoding using the following:

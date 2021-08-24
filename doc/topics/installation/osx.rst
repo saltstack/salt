@@ -15,10 +15,10 @@ corresponding md5 file.
 
 .. note::
     - `Earlier builds from supported branches
-      <https://repo.saltstack.com/osx/>`__
+      <https://repo.saltproject.io/osx/>`__
 
     - `Archived builds from unsupported branches
-      <https://archive.repo.saltstack.com/osx/>`__
+      <https://archive.repo.saltproject.io/osx/>`__
 
 Installation from Homebrew
 ==========================
