@@ -657,7 +657,7 @@ def dacl(obj_name=None, obj_type="file"):
                         win32security.ACL_REVISION_DS,
                         # Some types don't support propagation
                         # May need to use 0x0000 instead of None
-                        self.ace_prop.get(self.dacl_type, {}).get(applies_to),
+                        0,
                         perm_flag,
                         sid,
                     )
