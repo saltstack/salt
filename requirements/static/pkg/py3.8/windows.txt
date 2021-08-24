@@ -34,6 +34,8 @@ idna==2.8
     # via requests
 immutables==0.15
     # via contextvars
+importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
+    # via -r requirements/base.txt
 ioloop==0.1a0
     # via -r requirements/windows.txt
 jaraco.classes==3.2.1
@@ -132,6 +134,8 @@ wmi==1.5.1
     # via -r requirements/windows.txt
 zc.lockfile==2.0
     # via cherrypy
+zipp==3.5.0
+    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
