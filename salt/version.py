@@ -721,7 +721,9 @@ def dependency_information(include_salt_cloud=False):
     ]
 
     if include_salt_cloud:
-        libs.append(("Apache Libcloud", "libcloud", "__version__"),)
+        libs.append(
+            ("Apache Libcloud", "libcloud", "__version__"),
+        )
 
     for name, imp, attr in libs:
         if imp is None:

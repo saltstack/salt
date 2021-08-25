@@ -322,7 +322,8 @@ def create_function(
                     == "InvalidParameterValueException"
                 ):
                     log.info(
-                        "Function not created but IAM role may not have propagated, will retry"
+                        "Function not created but IAM role may not have propagated,"
+                        " will retry"
                     )
                     # exponential backoff
                     time.sleep(
@@ -492,7 +493,8 @@ def update_function_config(
                     == "InvalidParameterValueException"
                 ):
                     log.info(
-                        "Function not updated but IAM role may not have propagated, will retry"
+                        "Function not updated but IAM role may not have propagated,"
+                        " will retry"
                     )
                     # exponential backoff
                     time.sleep(

@@ -104,7 +104,7 @@ def _get_system():
     2) From environment (PUREFA_IP and PUREFA_API)
     3) From the pillar (PUREFA_IP and PUREFA_API)
 
-  """
+    """
     agent = {
         "base": USER_AGENT_BASE,
         "class": __name__,

@@ -198,9 +198,8 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
                     raise ConstructorError(
                         "while constructing a mapping",
                         node.start_mark,
-                        "expected a mapping or list of mappings for merging, but found {}".format(
-                            value_node.id
-                        ),
+                        "expected a mapping or list of mappings for merging, but"
+                        " found {}".format(value_node.id),
                         value_node.start_mark,
                     )
             elif key_node.tag == "tag:yaml.org,2002:value":

@@ -27,7 +27,10 @@ class SwarmCallTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.run_function("swarm.swarm_init", ["127.0.0.1", "0.0.0.0", False])
         ret = self.run_function("swarm.swarm_init", ["127.0.0.1", "0.0.0.0", False])
         expected = {
-            "Comment": 'This node is already part of a swarm. Use "docker swarm leave" to leave this swarm and join another one.',
+            "Comment": (
+                'This node is already part of a swarm. Use "docker swarm leave" to'
+                " leave this swarm and join another one."
+            ),
             "result": False,
         }
         self.assertEqual(expected, ret)

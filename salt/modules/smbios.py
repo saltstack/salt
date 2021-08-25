@@ -29,7 +29,8 @@ def __virtual__():
     """
     return (
         bool(salt.utils.path.which_bin(["dmidecode", "smbios"])),
-        "The smbios execution module failed to load: neither dmidecode nor smbios in the path.",
+        "The smbios execution module failed to load: neither dmidecode nor smbios in"
+        " the path.",
     )
 
 
@@ -317,7 +318,8 @@ def _dmi_isclean(key, val):
         return not re.search(
             r"to be filled", val, flags=re.IGNORECASE
         ) and not re.search(
-            r"un(known|specified)|no(t|ne)? (asset|provided|defined|available|present|specified)",
+            r"un(known|specified)|no(t|ne)?"
+            r" (asset|provided|defined|available|present|specified)",
             val,
             flags=re.IGNORECASE,
         )

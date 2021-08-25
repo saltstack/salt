@@ -68,9 +68,8 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(linux_acl.__salt__, {"acl.getfacl": mock}):
             # Update - test=True
             with patch.dict(linux_acl.__opts__, {"test": True}):
-                comt = (
-                    "Updated permissions will be applied for {}: r-x -> {}"
-                    "".format(acl_name, perms)
+                comt = "Updated permissions will be applied for {}: r-x -> {}".format(
+                    acl_name, perms
                 )
                 ret = {
                     "name": name,
@@ -207,8 +206,9 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
                 # Update - test=True
                 with patch.dict(linux_acl.__opts__, {"test": True}):
                     comt = (
-                        "Updated permissions will be applied for {}: rwx -> {}"
-                        "".format(acl_name, perms)
+                        "Updated permissions will be applied for {}: rwx -> {}".format(
+                            acl_name, perms
+                        )
                     )
                     ret = {
                         "name": name,

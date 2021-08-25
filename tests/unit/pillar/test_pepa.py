@@ -9,7 +9,6 @@ except ImportError:
 
 class PepaPillarTestCase(TestCase):
     def test_repeated_keys(self):
-        # fmt: off
         expected_result = {
             "foo": {
                 "bar": {
@@ -18,10 +17,11 @@ class PepaPillarTestCase(TestCase):
                 },
             },
         }
-        data = OrderedDict([
-            ('foo..bar..foo', True),
-            ('foo..bar..baz', True),
-        ])
-        # fmt: on
+        data = OrderedDict(
+            [
+                ("foo..bar..foo", True),
+                ("foo..bar..baz", True),
+            ]
+        )
         result = pepa.key_value_to_tree(data)
         self.assertDictEqual(result, expected_result)

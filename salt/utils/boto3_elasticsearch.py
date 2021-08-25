@@ -94,6 +94,7 @@ def __virtual__():
     return salt.utils.versions.check_boto_reqs(check_boto=False)
 
 
+@salt.utils.decorators.is_deprecated(globals(), "Sulfur")
 def get_waiter(client, waiter=None, waiter_config=None):
     """
     Gets a botocore waiter using either one of the preconfigured models by name
@@ -119,6 +120,7 @@ def get_waiter(client, waiter=None, waiter_config=None):
     return botocore.waiter.create_waiter_with_client(waiter, waiter_model, client)
 
 
+@salt.utils.decorators.is_deprecated(globals(), "Sulfur")
 def list_waiters():
     """
     Lists the builtin waiter configuration names.

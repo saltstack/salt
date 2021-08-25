@@ -331,8 +331,9 @@ def set_pidfile(pidfile, user):
         # groups = [g.gr_gid for g in grp.getgrall() if user in g.gr_mem]
     except (KeyError, IndexError):
         sys.stderr.write(
-            "Failed to set the pid to user: {}. The user is not "
-            "available.\n".format(user)
+            "Failed to set the pid to user: {}. The user is not available.\n".format(
+                user
+            )
         )
         sys.exit(salt.defaults.exitcodes.EX_NOUSER)
 
@@ -542,7 +543,10 @@ class ProcessManager:
         # create a nicer name for the debug log
         if name is None:
             if isinstance(tgt, types.FunctionType):
-                name = "{}.{}".format(tgt.__module__, tgt.__name__,)
+                name = "{}.{}".format(
+                    tgt.__module__,
+                    tgt.__name__,
+                )
             else:
                 name = "{}{}.{}".format(
                     tgt.__module__,
@@ -682,7 +686,7 @@ class ProcessManager:
         Check the children once
         """
         if self._restart_processes is True:
-            for pid, mapping in self._process_map.items():
+            for pid, mapping in self._process_map.copy().items():
                 if not mapping["Process"].is_alive():
                     log.trace("Process restart of %s", pid)
                     self.restart_process(pid)
@@ -998,9 +1002,10 @@ class SignalHandlingMultiprocessingProcess(SignalHandlingProcess):
     def __init__(self, *args, **kwargs):
         salt.utils.versions.warn_until_date(
             "20220101",
-            "Please stop using '{name}.SignalHandlingMultiprocessingProcess' and instead use "
-            "'{name}.SignalHandlingProcess'. '{name}.SignalHandlingMultiprocessingProcess' "
-            "will go away after {{date}}.".format(name=__name__),
+            "Please stop using '{name}.SignalHandlingMultiprocessingProcess' and"
+            " instead use '{name}.SignalHandlingProcess'."
+            " '{name}.SignalHandlingMultiprocessingProcess' will go away after"
+            " {{date}}.".format(name=__name__),
             stacklevel=3,
         )
         super().__init__(*args, **kwargs)

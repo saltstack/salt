@@ -10,7 +10,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_add_capability(self):
         """
-            Test installing a capability with DISM
+        Test installing a capability with DISM
         """
         mock = MagicMock()
         with patch.dict(dism.__salt__, {"cmd.run_all": mock}):
@@ -29,7 +29,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_add_capability_with_extras(self):
         """
-            Test installing a capability with DISM
+        Test installing a capability with DISM
         """
         mock = MagicMock()
         with patch.dict(dism.__salt__, {"cmd.run_all": mock}):
@@ -50,7 +50,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_remove_capability(self):
         """
-            Test uninstalling a capability with DISM
+        Test uninstalling a capability with DISM
         """
         mock = MagicMock()
         with patch.dict(dism.__salt__, {"cmd.run_all": mock}):
@@ -69,7 +69,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_capabilities(self):
         """
-            Test getting all the capabilities
+        Test getting all the capabilities
         """
         capabilties = (
             "Capability Identity : Capa1\r\n State : Installed\r\n"
@@ -87,7 +87,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_installed_capabilities(self):
         """
-            Test getting all the installed capabilities
+        Test getting all the installed capabilities
         """
         capabilties = (
             "Capability Identity : Capa1\r\n State : Installed\r\n"
@@ -105,7 +105,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_available_capabilities(self):
         """
-            Test getting all the available capabilities
+        Test getting all the available capabilities
         """
         capabilties = (
             "Capability Identity : Capa1\r\n State : Installed\r\n"
@@ -123,7 +123,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_add_feature(self):
         """
-            Test installing a feature with DISM
+        Test installing a feature with DISM
         """
         mock = MagicMock()
         with patch.dict(dism.__salt__, {"cmd.run_all": mock}):
@@ -141,7 +141,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_add_feature_with_extras(self):
         """
-            Test installing a feature with DISM
+        Test installing a feature with DISM
         """
         mock = MagicMock()
         with patch.dict(dism.__salt__, {"cmd.run_all": mock}):
@@ -163,7 +163,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_remove_feature(self):
         """
-            Test uninstalling a capability with DISM
+        Test uninstalling a capability with DISM
         """
         mock = MagicMock()
         with patch.dict(dism.__salt__, {"cmd.run_all": mock}):
@@ -181,7 +181,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_remove_feature_with_extras(self):
         """
-            Test uninstalling a capability with DISM
+        Test uninstalling a capability with DISM
         """
         mock = MagicMock()
         with patch.dict(dism.__salt__, {"cmd.run_all": mock}):
@@ -200,7 +200,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_features(self):
         """
-            Test getting all the features
+        Test getting all the features
         """
         features = (
             "Feature Name : Capa1\r\n State : Enabled\r\n"
@@ -217,7 +217,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_installed_features(self):
         """
-            Test getting all the installed features
+        Test getting all the installed features
         """
         features = (
             "Feature Name : Capa1\r\n State : Enabled\r\n"
@@ -234,7 +234,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_available_features(self):
         """
-            Test getting all the available features
+        Test getting all the available features
         """
         features = (
             "Feature Name : Capa1\r\n State : Enabled\r\n"
@@ -251,7 +251,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_add_package(self):
         """
-            Test installing a package with DISM
+        Test installing a package with DISM
         """
         mock = MagicMock()
         with patch.dict(dism.__salt__, {"cmd.run_all": mock}):
@@ -269,7 +269,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_add_package_with_extras(self):
         """
-            Test installing a package with DISM
+        Test installing a package with DISM
         """
         mock = MagicMock()
         with patch.dict(dism.__salt__, {"cmd.run_all": mock}):
@@ -289,7 +289,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_remove_package(self):
         """
-            Test uninstalling a package with DISM
+        Test uninstalling a package with DISM
         """
         mock = MagicMock()
         with patch.dict(dism.__salt__, {"cmd.run_all": mock}):
@@ -307,7 +307,7 @@ class WinDismTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_installed_packages(self):
         """
-            Test getting all the installed features
+        Test getting all the installed features
         """
         features = (
             "Package Identity : Capa1\r\n State : Installed\r\n"
