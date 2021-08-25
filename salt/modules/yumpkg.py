@@ -2043,6 +2043,8 @@ def update(
     See :py:func:`pkg.upgrade <salt.modules.yumpkg.upgrade>` for
     further documentation.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' pkg.update
@@ -3433,7 +3435,6 @@ def services_need_restart(**kwargs):
     package manager. It might be needed to restart them.
 
     Requires systemd.
-
 
     CLI Examples:
 

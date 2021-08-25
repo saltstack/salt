@@ -664,6 +664,12 @@ def _clean_dir(root, keep, exclude_pat):
     Clean out all of the files and directories in a directory (root) while
     preserving the files in a list (keep) and part of exclude_pat
     """
+    case_keep = None
+    if salt.utils.files.case_insensitive_filesystem():
+        # Create a case-sensitive dict before doing comparisons
+        # if file system is case sensitive
+        case_keep = keep
+
     root = os.path.normcase(root)
     real_keep = _find_keep_files(root, keep)
     removed = set()
@@ -676,6 +682,14 @@ def _clean_dir(root, keep, exclude_pat):
                 os.path.relpath(nfn, root), None, exclude_pat
             ):
                 return
+            # Before we can accurately assess the removal of a file, we must
+            # check for systems with case sensitive files. If we originally
+            # meant to keep a file, but due to case sensitivity python would
+            # otherwise remove the file, check against the original list.
+            if case_keep:
+                for item in case_keep:
+                    if item.casefold() == nfn.casefold():
+                        return
             removed.add(nfn)
             if not __opts__["test"]:
                 try:
@@ -1376,7 +1390,12 @@ def hardlink(
         group = user
 
     if group is None:
-        group = __salt__["file.gid_to_group"](__salt__["user.info"](user).get("gid", 0))
+        if "user.info" in __salt__:
+            group = __salt__["file.gid_to_group"](
+                __salt__["user.info"](user).get("gid", 0)
+            )
+        else:
+            group = user
 
     preflight_errors = []
     uid = __salt__["file.user_to_uid"](user)
@@ -1636,7 +1655,12 @@ def symlink(
         group = user
 
     if group is None:
-        group = __salt__["file.gid_to_group"](__salt__["user.info"](user).get("gid", 0))
+        if "user.info" in __salt__:
+            group = __salt__["file.gid_to_group"](
+                __salt__["user.info"](user).get("gid", 0)
+            )
+        else:
+            group = user
 
     preflight_errors = []
     if salt.utils.platform.is_windows():
@@ -7131,9 +7155,12 @@ def copy_(
             group = user
 
         if group is None:
-            group = __salt__["file.gid_to_group"](
-                __salt__["user.info"](user).get("gid", 0)
-            )
+            if "user.info" in __salt__:
+                group = __salt__["file.gid_to_group"](
+                    __salt__["user.info"](user).get("gid", 0)
+                )
+            else:
+                group = user
 
         u_check = _check_user(user, group)
         if u_check:
@@ -7217,9 +7244,14 @@ def copy_(
         if not preserve:
             if salt.utils.platform.is_windows():
                 # TODO: Add the other win_* parameters to this function
-                ret = __salt__["file.check_perms"](path=name, ret=ret, owner=user)
+                check_ret = __salt__["file.check_perms"](path=name, ret=ret, owner=user)
             else:
-                __salt__["file.check_perms"](name, ret, user, group, mode)
+                check_ret, perms = __salt__["file.check_perms"](
+                    name, ret, user, group, mode
+                )
+            if not check_ret["result"]:
+                ret["result"] = check_ret["result"]
+                ret["comment"] = check_ret["comment"]
     except OSError:
         return _error(ret, 'Failed to copy "{}" to "{}"'.format(source, name))
     return ret
