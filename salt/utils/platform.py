@@ -40,7 +40,7 @@ def is_proxy():
         #
         # Add '--proxyid' or '--proxyid=...' in sys.argv so that salt-call
         # is seen as a proxy minion
-        if "proxy" in main.__file__ or any(
+        if "proxy" in os.path.split(main.__file__)[1] or any(
             arg for arg in sys.argv if arg.startswith("--proxyid")
         ):
             ret = True
