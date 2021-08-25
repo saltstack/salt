@@ -59,6 +59,14 @@ log = logging.getLogger(__name__)
 
 
 def post_master_init(self, master):
+    """
+    Function to finish init after a deltaproxy proxy
+    minion has finished connecting to a master.
+
+    This is primarily loading modules, pillars, etc. (since they need
+    to know which master they connected to)
+    """
+
     if self.connected:
         self.opts["pillar"] = yield salt.pillar.get_async_pillar(
             self.opts,
@@ -459,7 +467,12 @@ def post_master_init(self, master):
 
 
 def target(cls, minion_instance, opts, data, connected):
+    """
+    Handle targeting of the minion.
 
+    Calling _thread_multi_return or _thread_return
+    depending on a single or multiple commands.
+    """
     log.debug(
         "Deltaproxy minion_instance %s(ID: %s). Target: %s",
         minion_instance,
@@ -852,6 +865,10 @@ def thread_multi_return(cls, minion_instance, opts, data):
 
 
 def handle_payload(self, payload):
+    """
+    Verify the publication and then pass
+    the payload along to _handle_decoded_payload.
+    """
     if payload is not None and payload["enc"] == "aes":
         # First handle payload for the "control" proxy
         if self._target_load(payload["load"]):
@@ -952,7 +969,9 @@ def handle_decoded_payload(self, data):
 
 
 def target_load(self, load):
-    # Verify that the publication is valid
+    """
+    Verify that the publication is valid.
+    """
     for key in ("tgt", "jid", "fun", "arg"):
         if key not in load:
             return False
