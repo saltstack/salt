@@ -12,24 +12,13 @@ if sys.version_info >= (3, 10):
 
     USE_IMPORTLIB_METADATA_STDLIB = True
 else:
-    if sys.version_info >= (3, 6):
-        # importlib_metadata available for python version lower than 3.6 do not
-        # include the functionality we need.
-        try:
-            import importlib_metadata
+    try:
+        from salt._compat import importlib_metadata
 
-            importlib_metadata_version = [
-                int(part)
-                for part in importlib_metadata.version("importlib_metadata").split(".")
-                if part.isdigit()
-            ]
-            if tuple(importlib_metadata_version) >= (3, 3, 0):
-                # Version 3.3.0 of importlib_metadata includes a fix which allows us to
-                # get the distribution of a loaded entry-point
-                USE_IMPORTLIB_METADATA = True
-        except ImportError:
-            # We don't have importlib_metadata but USE_IMPORTLIB_METADATA is set to false by default
-            pass
+        USE_IMPORTLIB_METADATA = True
+    except ImportError:
+        # We don't have importlib_metadata but USE_IMPORTLIB_METADATA is set to false by default
+        pass
 
 if not USE_IMPORTLIB_METADATA_STDLIB and not USE_IMPORTLIB_METADATA:
     # Try to use pkg_resources
