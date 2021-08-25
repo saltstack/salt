@@ -5,4 +5,3 @@ MarkupSafe
 requests>=1.0.0
 distro>=1.0.1
 contextvars
-importlib_metadata>=3.3.0; python_version >= '3.6' and python_version < '3.10'
