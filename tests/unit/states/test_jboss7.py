@@ -673,7 +673,9 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
         datasource_properties = {
             "driver - name": "h2",
             "connection - url": "jdbc:sqlserver://127.0.0.1:1433;DatabaseName=test_s2",
-            "jndi - name": "java:/home/ch44d/Desktop/sqljdbc_7.4/enu/mssql-jdbc-7.4.1.jre8.jar",
+            "jndi - name": (
+                "java:/home/ch44d/Desktop/sqljdbc_7.4/enu/mssql-jdbc-7.4.1.jre8.jar"
+            ),
             "user - name": "user",
             "password": "user",
             "use - java - context": True,
@@ -716,7 +718,9 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
         datasource_properties = {
             "driver - name": "h2",
             "connection - url": "jdbc:sqlserver://127.0.0.1:1433;DatabaseName=test_s2",
-            "jndi - name": "java:/home/ch44d/Desktop/sqljdbc_7.4/enu/mssql-jdbc-7.4.1.jre8.jar",
+            "jndi - name": (
+                "java:/home/ch44d/Desktop/sqljdbc_7.4/enu/mssql-jdbc-7.4.1.jre8.jar"
+            ),
             "user - name": "user",
             "password": "user",
             "use - java - context": True,

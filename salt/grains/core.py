@@ -40,7 +40,7 @@ import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.utils.network import _get_interfaces
+from salt.utils.network import _clear_interfaces, _get_interfaces
 
 
 # rewrite distro.linux_distribution to allow best=True kwarg in version(), needed to get the minor version numbers in CentOS
@@ -50,6 +50,10 @@ def _linux_distribution():
         distro.version(best=True),
         distro.codename(),
     )
+
+
+def __init__(opts):
+    _clear_interfaces()
 
 
 try:
@@ -77,7 +81,7 @@ if salt.utils.platform.is_windows():
         HAS_WMI = True
     except ImportError:
         log.exception(
-            "Unable to import Python wmi module, some core grains " "will be missing"
+            "Unable to import Python wmi module, some core grains will be missing"
         )
 
 
@@ -1058,7 +1062,8 @@ def _virtual(osdata):
                 # Some firmwares provide non-valid 'product_name'
                 # files, ignore them
                 log.debug(
-                    "The content in /sys/devices/virtual/dmi/id/product_name is not valid"
+                    "The content in /sys/devices/virtual/dmi/id/product_name is not"
+                    " valid"
                 )
             except OSError:
                 pass
@@ -1319,7 +1324,8 @@ def _clean_value(key, val):
     else:
         # map unspecified, undefined, unknown & whatever to None
         if re.search(r"to be filled", val, flags=re.IGNORECASE) or re.search(
-            r"un(known|specified)|no(t|ne)? (asset|provided|defined|available|present|specified)",
+            r"un(known|specified)|no(t|ne)?"
+            r" (asset|provided|defined|available|present|specified)",
             val,
             flags=re.IGNORECASE,
         ):
@@ -2389,7 +2395,8 @@ def hostname():
     # Otherwise we would stacktrace below
     if __FQDN__ is None:  # still!
         log.error(
-            "Having trouble getting a hostname.  Does this machine have its hostname and domain set properly?"
+            "Having trouble getting a hostname.  Does this machine have its hostname"
+            " and domain set properly?"
         )
         __FQDN__ = "localhost.localdomain"
 
@@ -2748,7 +2755,8 @@ def _hw_data(osdata):
                     # Some firmwares provide non-valid 'product_name'
                     # files, ignore them
                     log.debug(
-                        "The content in /sys/devices/virtual/dmi/id/product_name is not valid"
+                        "The content in /sys/devices/virtual/dmi/id/product_name is not"
+                        " valid"
                     )
                 except OSError as err:
                     # PermissionError is new to Python 3, but corresponds to the EACESS and

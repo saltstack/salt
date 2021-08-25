@@ -64,6 +64,41 @@ LIBCLOUD_FUNCS_NOT_SUPPORTED = (
     "proxmox.avail_sizes",
 )
 
+SALT_INTERNAL_LOADERS_PATHS = (
+    str(SALT_BASE_PATH / "auth"),
+    str(SALT_BASE_PATH / "beacons"),
+    str(SALT_BASE_PATH / "cache"),
+    str(SALT_BASE_PATH / "client" / "ssh" / "wrapper"),
+    str(SALT_BASE_PATH / "cloud" / "clouds"),
+    str(SALT_BASE_PATH / "engines"),
+    str(SALT_BASE_PATH / "executors"),
+    str(SALT_BASE_PATH / "fileserver"),
+    str(SALT_BASE_PATH / "grains"),
+    str(SALT_BASE_PATH / "log" / "handlers"),
+    str(SALT_BASE_PATH / "matchers"),
+    str(SALT_BASE_PATH / "metaproxy"),
+    str(SALT_BASE_PATH / "modules"),
+    str(SALT_BASE_PATH / "netapi"),
+    str(SALT_BASE_PATH / "output"),
+    str(SALT_BASE_PATH / "pillar"),
+    str(SALT_BASE_PATH / "proxy"),
+    str(SALT_BASE_PATH / "queues"),
+    str(SALT_BASE_PATH / "renderers"),
+    str(SALT_BASE_PATH / "returners"),
+    str(SALT_BASE_PATH / "roster"),
+    str(SALT_BASE_PATH / "runners"),
+    str(SALT_BASE_PATH / "sdb"),
+    str(SALT_BASE_PATH / "serializers"),
+    str(SALT_BASE_PATH / "spm" / "pkgdb"),
+    str(SALT_BASE_PATH / "spm" / "pkgfiles"),
+    str(SALT_BASE_PATH / "states"),
+    str(SALT_BASE_PATH / "thorium"),
+    str(SALT_BASE_PATH / "tokens"),
+    str(SALT_BASE_PATH / "tops"),
+    str(SALT_BASE_PATH / "utils"),
+    str(SALT_BASE_PATH / "wheel"),
+)
+
 
 def static_loader(
     opts,
@@ -78,7 +113,13 @@ def static_loader(
 ):
     funcs = LazyLoader(
         _module_dirs(
-            opts, ext_type, tag, int_type, ext_dirs, ext_type_dirs, base_path,
+            opts,
+            ext_type,
+            tag,
+            int_type,
+            ext_dirs,
+            ext_type_dirs,
+            base_path,
         ),
         opts,
         tag=tag,
@@ -104,8 +145,15 @@ def _module_dirs(
 ):
     if tag is None:
         tag = ext_type
-    sys_types = os.path.join(base_path or SALT_BASE_PATH, int_type or ext_type)
+    sys_types = os.path.join(base_path or str(SALT_BASE_PATH), int_type or ext_type)
     ext_types = os.path.join(opts["extension_modules"], ext_type)
+
+    if not sys_types.startswith(SALT_INTERNAL_LOADERS_PATHS):
+        raise RuntimeError(
+            "{!r} is not considered a salt internal loader path. If this "
+            "is a new loader being added, please also add it to "
+            "{}.SALT_INTERNAL_LOADERS_PATHS.".format(sys_types, __name__)
+        )
 
     ext_type_types = []
     if ext_dirs:
@@ -328,8 +376,10 @@ def raw_mod(opts, name, functions, mod="modules"):
     if name not in loader.file_mapping:
         return {}
 
-    loader._load_module(name)  # load a single module (the one passed in)
-    return dict(loader._dict)  # return a copy of *just* the funcs for `name`
+    # load a single module (the one passed in)
+    loader._load_module(name)
+    # return a copy of *just* the funcs for `name`
+    return dict({x: loader[x] for x in loader._dict})
 
 
 def metaproxy(opts, loaded_base_name=None):
@@ -448,7 +498,10 @@ def tops(opts):
         return {}
     whitelist = list(opts["master_tops"].keys())
     ret = LazyLoader(
-        _module_dirs(opts, "tops", "top"), opts, tag="top", whitelist=whitelist,
+        _module_dirs(opts, "tops", "top"),
+        opts,
+        tag="top",
+        whitelist=whitelist,
     )
     return FilterDictWrapper(ret, ".top")
 
@@ -492,7 +545,11 @@ def serializers(opts):
     :param dict opts: The Salt options dictionary
     :returns: LazyLoader instance, with only serializers present in the keyspace
     """
-    return LazyLoader(_module_dirs(opts, "serializers"), opts, tag="serializers",)
+    return LazyLoader(
+        _module_dirs(opts, "serializers"),
+        opts,
+        tag="serializers",
+    )
 
 
 def eauth_tokens(opts):
@@ -501,7 +558,11 @@ def eauth_tokens(opts):
     :param dict opts: The Salt options dictionary
     :returns: LazyLoader instance, with only token backends present in the keyspace
     """
-    return LazyLoader(_module_dirs(opts, "tokens"), opts, tag="tokens",)
+    return LazyLoader(
+        _module_dirs(opts, "tokens"),
+        opts,
+        tag="tokens",
+    )
 
 
 def auth(opts, whitelist=None):
@@ -643,7 +704,7 @@ def log_handlers(opts):
             opts,
             "log_handlers",
             int_type="handlers",
-            base_path=os.path.join(SALT_BASE_PATH, "log"),
+            base_path=str(SALT_BASE_PATH / "log"),
         ),
         opts,
         tag="log_handlers",
@@ -659,7 +720,7 @@ def ssh_wrapper(opts, functions=None, context=None):
         _module_dirs(
             opts,
             "wrapper",
-            base_path=os.path.join(SALT_BASE_PATH, os.path.join("client", "ssh")),
+            base_path=str(SALT_BASE_PATH / "client" / "ssh"),
         ),
         opts,
         tag="wrapper",
@@ -688,7 +749,12 @@ def render(opts, functions, states=None, proxy=None, context=None):
     pack["__proxy__"] = proxy
 
     ret = LazyLoader(
-        _module_dirs(opts, "renderers", "render", ext_type_dirs="render_dirs",),
+        _module_dirs(
+            opts,
+            "renderers",
+            "render",
+            ext_type_dirs="render_dirs",
+        ),
         opts,
         tag="render",
         pack=pack,
@@ -722,7 +788,12 @@ def grain_funcs(opts, proxy=None, context=None):
     _utils = utils(opts, proxy=proxy)
     pack = {"__utils__": utils(opts, proxy=proxy), "__context__": context}
     ret = LazyLoader(
-        _module_dirs(opts, "grains", "grain", ext_type_dirs="grains_dirs",),
+        _module_dirs(
+            opts,
+            "grains",
+            "grain",
+            ext_type_dirs="grains_dirs",
+        ),
         opts,
         tag="grains",
         extra_module_dirs=_utils.module_dirs,
@@ -981,7 +1052,7 @@ def call(fun, **kwargs):
     dirs = kwargs.get("dirs", [])
 
     funcs = LazyLoader(
-        [os.path.join(SALT_BASE_PATH, "modules")] + dirs,
+        [str(SALT_BASE_PATH / "modules")] + dirs,
         None,
         tag="modules",
         virtual_enable=False,
@@ -1048,7 +1119,7 @@ def pkgdb(opts):
     .. versionadded:: 2015.8.0
     """
     return LazyLoader(
-        _module_dirs(opts, "pkgdb", base_path=os.path.join(SALT_BASE_PATH, "spm")),
+        _module_dirs(opts, "pkgdb", base_path=str(SALT_BASE_PATH / "spm")),
         opts,
         tag="pkgdb",
     )
@@ -1061,7 +1132,7 @@ def pkgfiles(opts):
     .. versionadded:: 2015.8.0
     """
     return LazyLoader(
-        _module_dirs(opts, "pkgfiles", base_path=os.path.join(SALT_BASE_PATH, "spm")),
+        _module_dirs(opts, "pkgfiles", base_path=str(SALT_BASE_PATH / "spm")),
         opts,
         tag="pkgfiles",
     )
@@ -1071,7 +1142,7 @@ def clouds(opts):
     """
     Return the cloud functions
     """
-    _utils = salt.loader.utils(opts)
+    _utils = utils(opts)
     # Let's bring __active_provider_name__, defaulting to None, to all cloud
     # drivers. This will get temporarily updated/overridden with a context
     # manager when needed.
@@ -1080,7 +1151,7 @@ def clouds(opts):
             opts,
             "clouds",
             "cloud",
-            base_path=os.path.join(SALT_BASE_PATH, "cloud"),
+            base_path=str(SALT_BASE_PATH / "cloud"),
             int_type="clouds",
         ),
         opts,
@@ -1102,7 +1173,11 @@ def netapi(opts):
     """
     Return the network api functions
     """
-    return LazyLoader(_module_dirs(opts, "netapi"), opts, tag="netapi",)
+    return LazyLoader(
+        _module_dirs(opts, "netapi"),
+        opts,
+        tag="netapi",
+    )
 
 
 def executors(opts, functions=None, context=None, proxy=None):

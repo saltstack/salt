@@ -328,7 +328,7 @@ def init(opts):
     DETAILS["proxytype"] = proxy_conf["proxytype"]
     if ("host" not in proxy_conf) and ("vcenter" not in proxy_conf):
         log.critical(
-            "Neither 'host' nor 'vcenter' keys found in pillar " "for this proxy."
+            "Neither 'host' nor 'vcenter' keys found in pillar for this proxy."
         )
         return False
     if "host" in proxy_conf:
@@ -372,7 +372,7 @@ def init(opts):
 
         if mechanism == "userpass":
             if "username" not in proxy_conf:
-                log.critical("No 'username' key found in pillar for this " "proxy.")
+                log.critical("No 'username' key found in pillar for this proxy.")
                 return False
             if "passwords" not in proxy_conf and len(proxy_conf["passwords"]) > 0:
 

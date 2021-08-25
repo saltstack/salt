@@ -66,7 +66,8 @@ def rabbitmq_container(request, salt_factories, modules):
     rabbitmq_image = request.param
 
     combo = RabbitMQCombo(
-        rabbitmq_name=rabbitmq_image.name, rabbitmq_version=rabbitmq_image.tag,
+        rabbitmq_name=rabbitmq_image.name,
+        rabbitmq_version=rabbitmq_image.tag,
     )
     container = salt_factories.get_container(
         rabbitmq_image.container_id,

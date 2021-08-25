@@ -264,7 +264,7 @@ class SaltLoggingClass(
         # If both exc_info and exc_info_on_loglevel are both passed, let's fail
         if exc_info and exc_info_on_loglevel:
             raise LoggingRuntimeError(
-                "Only one of 'exc_info' and 'exc_info_on_loglevel' is " "permitted"
+                "Only one of 'exc_info' and 'exc_info_on_loglevel' is permitted"
             )
         if exc_info_on_loglevel is not None:
             if isinstance(exc_info_on_loglevel, str):

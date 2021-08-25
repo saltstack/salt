@@ -115,14 +115,14 @@ class PostgresLsClusterTestCase(TestCase, LoaderModuleMockMixin):
         self.maxDiff = None
         self.assertDictEqual(
             {
-                ("8.4/main"): {
+                "8.4/main": {
                     "port": 5432,
                     "status": "online",
                     "user": "postgres",
                     "datadir": "/srv/8.4/main",
                     "log": "/var/log/postgresql/postgresql-8.4-main.log",
                 },
-                ("9.1/main"): {
+                "9.1/main": {
                     "port": 5433,
                     "status": "online",
                     "user": "postgres",

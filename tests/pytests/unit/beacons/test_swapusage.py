@@ -19,7 +19,12 @@ def configure_loader_modules():
 @pytest.fixture
 def stub_swap_usage():
     return namedtuple("sswap", "total used free percent sin sout")(
-        17179865088, 1674412032, 15505453056, 9.7, 1572110336, 3880046592,
+        17179865088,
+        1674412032,
+        15505453056,
+        9.7,
+        1572110336,
+        3880046592,
     )
 
 
@@ -49,7 +54,7 @@ def test_swapusage_match(stub_swap_usage):
         assert ret == [{"swapusage": 9.7}]
 
         # Test without the percent
-        config = [{"percent": "9"}, {"interval": 30}]
+        config = [{"percent": 9}, {"interval": 30}]
 
         ret = swapusage.validate(config)
         assert ret == (True, "Valid beacon configuration")

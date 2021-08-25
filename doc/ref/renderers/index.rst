@@ -82,7 +82,7 @@ to install a package:
         """
         return {
             "include": ["python"],
-            "python-foo": {"pkg.installed": [{"version": "1.5-1.el7"},]},
+            "python-foo": {"pkg.installed": [{"version": "1.5-1.el7"}]},
         }
 
 This would be equivalent to the following:

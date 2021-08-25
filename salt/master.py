@@ -309,7 +309,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             self.rotate = now
             if self.opts.get("ping_on_rotate"):
                 # Ping all minions to get them to pick up the new key
-                log.debug("Pinging all connected minions " "due to key rotation")
+                log.debug("Pinging all connected minions due to key rotation")
                 salt.utils.master.ping_all_connected_minions(self.opts)
 
     def handle_git_pillar(self):
@@ -376,7 +376,8 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
         self.__init__(
-            state["opts"], log_queue=state["log_queue"],
+            state["opts"],
+            log_queue=state["log_queue"],
         )
 
     def __getstate__(self):
@@ -473,8 +474,7 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
         condition = threading.Condition()
         while time.time() - start < timeout:
             log.debug(
-                "Performing fileserver updates for items with an update "
-                "interval of %d",
+                "Performing fileserver updates for items with an update interval of %d",
                 interval,
             )
             cls._do_update(backends)
@@ -508,7 +508,8 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
 
         for interval in self.buckets:
             self.update_threads[interval] = threading.Thread(
-                target=self.update, args=(interval, self.buckets[interval]),
+                target=self.update,
+                args=(interval, self.buckets[interval]),
             )
             self.update_threads[interval].start()
 
@@ -800,7 +801,8 @@ class Master(SMaster):
                     log.error("Unable to load SSDP: asynchronous IO is not available.")
                     if sys.version_info.major == 2:
                         log.error(
-                            'You are using Python 2, please install "trollius" module to enable SSDP discovery.'
+                            'You are using Python 2, please install "trollius" module'
+                            " to enable SSDP discovery."
                         )
 
         # Install the SIGINT/SIGTERM handlers if not done so far
@@ -1155,7 +1157,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                     os.nice(-1 * self.opts["req_server_niceness"])
                 else:
                     log.error(
-                        "%s unable to decrement niceness for MWorker, not running as root",
+                        "%s unable to decrement niceness for MWorker, not running as"
+                        " root",
                         self.name,
                     )
                     enforce_mworker_niceness = False
@@ -1169,7 +1172,10 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                 )
                 os.nice(self.opts["mworker_niceness"])
 
-        self.clear_funcs = ClearFuncs(self.opts, self.key,)
+        self.clear_funcs = ClearFuncs(
+            self.opts,
+            self.key,
+        )
         self.aes_funcs = AESFuncs(self.opts)
         salt.utils.crypt.reinit_crypto()
         self.__bind()
@@ -1726,7 +1732,8 @@ class AESFuncs(TransportMethods):
                     return False
                 else:
                     log.info(
-                        "But 'drop_message_signature_fail' is disabled, so message is still accepted."
+                        "But 'drop_message_signature_fail' is disabled, so message is"
+                        " still accepted."
                     )
             load["sig"] = sig
 
@@ -2037,8 +2044,10 @@ class ClearFuncs(TransportMethods):
                 return {
                     "error": {
                         "name": err_name,
-                        "message": 'Authentication failure of type "{}" occurred for '
-                        "user {}.".format(auth_type, username),
+                        "message": (
+                            'Authentication failure of type "{}" occurred for '
+                            "user {}.".format(auth_type, username)
+                        ),
                     }
                 }
             elif isinstance(runner_check, dict) and "error" in runner_check:
@@ -2100,8 +2109,10 @@ class ClearFuncs(TransportMethods):
                 return {
                     "error": {
                         "name": err_name,
-                        "message": 'Authentication failure of type "{}" occurred for '
-                        "user {}.".format(auth_type, username),
+                        "message": (
+                            'Authentication failure of type "{}" occurred for '
+                            "user {}.".format(auth_type, username)
+                        ),
                     }
                 }
             elif isinstance(wheel_check, dict) and "error" in wheel_check:
@@ -2140,7 +2151,9 @@ class ClearFuncs(TransportMethods):
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Exception occurred while introspecting %s: %s", fun, exc)
             data["return"] = "Exception occurred in wheel {}: {}: {}".format(
-                fun, exc.__class__.__name__, exc,
+                fun,
+                exc.__class__.__name__,
+                exc,
             )
             data["success"] = False
             self.event.fire_event(data, tagify([jid, "ret"], "wheel"))
@@ -2277,8 +2290,10 @@ class ClearFuncs(TransportMethods):
                     "load": {
                         "jid": None,
                         "minions": minions,
-                        "error": "Master could not resolve minions for target {}".format(
-                            clear_load["tgt"]
+                        "error": (
+                            "Master could not resolve minions for target {}".format(
+                                clear_load["tgt"]
+                            )
                         ),
                     },
                 }

@@ -107,7 +107,7 @@ def _get_session_python_version_info(session):
             session._runner.global_config.install_only = False
             session_py_version = session.run(
                 "python",
-                "-c"
+                "-c",
                 'import sys; sys.stdout.write("{}.{}.{}".format(*sys.version_info))',
                 silent=True,
                 log=False,
@@ -133,7 +133,7 @@ def _get_session_python_site_packages_dir(session):
             session._runner.global_config.install_only = False
             site_packages_dir = session.run(
                 "python",
-                "-c"
+                "-c",
                 "import sys; from distutils.sysconfig import get_python_lib; sys.stdout.write(get_python_lib())",
                 silent=True,
                 log=False,
@@ -314,8 +314,8 @@ def _install_requirements(
 
     if EXTRA_REQUIREMENTS_INSTALL:
         session.log(
-            "Installing the following extra requirements because the EXTRA_REQUIREMENTS_INSTALL environment variable "
-            "was set: %s",
+            "Installing the following extra requirements because the"
+            " EXTRA_REQUIREMENTS_INSTALL environment variable was set: %s",
             EXTRA_REQUIREMENTS_INSTALL,
         )
         # We pass --constraint in this step because in case any of these extra dependencies has a requirement
@@ -1060,11 +1060,13 @@ def invoke(session):
     Run invoke tasks
     """
     if _upgrade_pip_setuptools_and_wheel(session):
+        _install_requirements(session, "zeromq")
         requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "invoke.txt"
         )
         install_command = ["--progress-bar=off", "-r", requirements_file]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
     cmd = ["inv"]
     files = []
 

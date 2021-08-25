@@ -34,7 +34,7 @@ try:
     else:
         TWILIO_5 = True
         from twilio.rest import TwilioRestClient
-        from twilio import TwilioRestException
+        from twilio import TwilioRestException  # pylint: disable=no-name-in-module
     HAS_LIBS = True
 except ImportError:
     pass
@@ -53,7 +53,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The twilio_notify execution module failed to load: the twilio python library is not installed.",
+        "The twilio_notify execution module failed to load: the twilio python library"
+        " is not installed.",
     )
 
 
@@ -63,7 +64,8 @@ def _get_twilio(profile):
     """
     creds = __salt__["config.option"](profile)
     client = TwilioRestClient(
-        creds.get("twilio.account_sid"), creds.get("twilio.auth_token"),
+        creds.get("twilio.account_sid"),
+        creds.get("twilio.auth_token"),
     )
 
     return client

@@ -44,7 +44,11 @@ class TestSaltAPIHandler(SaltnadoIntegrationTestsBase):
         """
         Test the root path which returns the list of clients we support
         """
-        response = self.fetch("/", connect_timeout=30, request_timeout=30,)
+        response = self.fetch(
+            "/",
+            connect_timeout=30,
+            request_timeout=30,
+        )
         self.assertEqual(response.code, 200)
         response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(
@@ -153,7 +157,8 @@ class TestSaltAPIHandler(SaltnadoIntegrationTestsBase):
         self.assertEqual(
             response_obj["return"],
             [
-                "No minions matched the target. No command was sent, no jid was assigned."
+                "No minions matched the target. No command was sent, no jid was"
+                " assigned."
             ],
         )
 
