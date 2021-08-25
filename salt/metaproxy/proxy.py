@@ -315,10 +315,10 @@ def post_master_init(self, master):
 
 def target(cls, minion_instance, opts, data, connected):
     """
-    Handle targeting of  the minion
+    Handle targeting of the minion.
 
     Calling _thread_multi_return or _thread_return
-    depending on a single or multiple commands
+    depending on a single or multiple commands.
     """
     if not minion_instance:
         minion_instance = cls(opts)
@@ -746,9 +746,8 @@ def thread_multi_return(cls, minion_instance, opts, data):
 
 def handle_payload(self, payload):
     """
-    Handle the payload
-    Verify the publication
-    And then pass along to _handle_decoded_payload
+    Verify the publication and then pass
+    the payload along to _handle_decoded_payload.
     """
     if payload is not None and payload["enc"] == "aes":
         if self._target_load(payload["load"]):
@@ -851,7 +850,7 @@ def handle_decoded_payload(self, data):
 
 def target_load(self, load):
     """
-    Verify that the publication is valid
+    Verify that the publication is valid.
     """
     if "tgt" not in load or "jid" not in load or "fun" not in load or "arg" not in load:
         return False

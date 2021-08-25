@@ -468,10 +468,10 @@ def post_master_init(self, master):
 
 def target(cls, minion_instance, opts, data, connected):
     """
-    Handle targeting of  the minion
+    Handle targeting of the minion.
 
     Calling _thread_multi_return or _thread_return
-    depending on a single or multiple commands
+    depending on a single or multiple commands.
     """
     log.debug(
         "Deltaproxy minion_instance %s(ID: %s). Target: %s",
@@ -866,8 +866,8 @@ def thread_multi_return(cls, minion_instance, opts, data):
 
 def handle_payload(self, payload):
     """
-    Verify the publication
-    And then pass along to _handle_decoded_payload
+    Verify the publication and then pass
+    the payload along to _handle_decoded_payload.
     """
     if payload is not None and payload["enc"] == "aes":
         # First handle payload for the "control" proxy
@@ -970,7 +970,7 @@ def handle_decoded_payload(self, data):
 
 def target_load(self, load):
     """
-    Verify that the publication is valid
+    Verify that the publication is valid.
     """
     for key in ("tgt", "jid", "fun", "arg"):
         if key not in load:
