@@ -102,3 +102,42 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(
                 fhr.read(), "ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {}\n".format(username)
             )
+
+    @pytest.mark.destructive_test
+    @with_system_user("issue_60769", on_existing="delete", delete=True)
+    @pytest.mark.slow_test
+    @pytest.mark.skip_if_not_root
+    def test_issue_60769_behavior_using_source_and_options(self, username=None):
+        userdetails = self.run_function("user.info", [username])
+        user_ssh_dir = os.path.join(userdetails["home"], ".ssh")
+        authorized_keys_file = os.path.join(user_ssh_dir, "authorized_keys")
+        pub_key_file = "issue_60769.id_rsa.pub"
+
+        # create a prepared authorized_keys file with option
+        try:
+            os.mkdir(user_ssh_dir)
+        except FileExistsError:
+            print("folder {} already exists".format(user_ssh_dir))
+        with salt.utils.files.fopen(authorized_keys_file, "w") as authf:
+            authf.write("no-pty ssh-rsa AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY== root\n")
+
+        # define a public key file to be used as source argument
+        with salt.utils.files.fopen(
+            os.path.join(RUNTIME_VARS.TMP_STATE_TREE, pub_key_file), "w"
+        ) as pubf:
+            pubf.write("ssh-rsa AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY== root\n")
+
+        ret = self.run_state(
+            "ssh_auth.present",
+            name="Setup Keys With Options",
+            source="salt://{}".format(pub_key_file),
+            enc="ssh-rsa",
+            options=["no-pty"],
+            user=username,
+            test=True,
+        )
+        self.assertSaltTrueReturn(ret)
+        self.assertInSaltComment(
+            "All host keys in file salt://issue_60769.id_rsa.pub are already present",
+            ret,
+        )
