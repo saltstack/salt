@@ -34,7 +34,7 @@ try:
     else:
         TWILIO_5 = True
         from twilio.rest import TwilioRestClient
-        from twilio import TwilioRestException
+        from twilio import TwilioRestException  # pylint: disable=no-name-in-module
     HAS_LIBS = True
 except ImportError:
     pass

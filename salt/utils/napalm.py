@@ -45,7 +45,7 @@ try:
     # try importing ConnectionClosedException
     # from napalm-base
     # this exception has been introduced only in version 0.24.0
-    from napalm_base.exceptions import ConnectionClosedException
+    from napalm.base.exceptions import ConnectionClosedException
 
     HAS_CONN_CLOSED_EXC_CLASS = True
 except ImportError:
