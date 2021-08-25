@@ -59,6 +59,14 @@ log = logging.getLogger(__name__)
 
 
 def post_master_init(self, master):
+    """
+    Function to finish init after a proxy
+    minion has finished connecting to a master.
+
+    This is primarily loading modules, pillars, etc. (since they need
+    to know which master they connected to)
+    """
+
     log.debug("subclassed LazyLoaded _post_master_init")
     if self.connected:
         self.opts["master"] = master
@@ -306,7 +314,12 @@ def post_master_init(self, master):
 
 
 def target(cls, minion_instance, opts, data, connected):
+    """
+    Handle targeting of  the minion
 
+    Calling _thread_multi_return or _thread_return
+    depending on a single or multiple commands
+    """
     if not minion_instance:
         minion_instance = cls(opts)
         minion_instance.connected = connected
@@ -732,6 +745,11 @@ def thread_multi_return(cls, minion_instance, opts, data):
 
 
 def handle_payload(self, payload):
+    """
+    Handle the payload
+    Verify the publication
+    And then pass along to _handle_decoded_payload
+    """
     if payload is not None and payload["enc"] == "aes":
         if self._target_load(payload["load"]):
 
@@ -832,7 +850,9 @@ def handle_decoded_payload(self, data):
 
 
 def target_load(self, load):
-    # Verify that the publication is valid
+    """
+    Verify that the publication is valid
+    """
     if "tgt" not in load or "jid" not in load or "fun" not in load or "arg" not in load:
         return False
     # Verify that the publication applies to this minion
