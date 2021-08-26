@@ -77,7 +77,7 @@ Options
 .. option:: --batch-safe-limit=BATCH_SAFE_LIMIT
 
    Execute the salt job in batch mode if the job would have executed
-   on more than this many minions.
+   on at least this many minions.
 
 .. option:: --batch-safe-size=BATCH_SAFE_SIZE
 

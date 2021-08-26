@@ -2213,7 +2213,7 @@ class SaltCMDOptionParser(
             type=int,
             help=(
                 "Execute the salt job in batch mode if the job would have "
-                "executed on more than this many minions."
+                "executed on at least this many minions."
             ),
         )
         self.add_option(
