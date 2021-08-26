@@ -246,7 +246,7 @@ def get_error(e):
 
 
 @salt.utils.decorators.is_deprecated(
-    globals(), "Phosphorus", with_successor="salt.utils.data.exactly_n"
+    globals(), "Sulfur", with_successor="salt.utils.data.exactly_n"
 )
 def exactly_n(l, n=1):
     """
@@ -258,7 +258,7 @@ def exactly_n(l, n=1):
 
 
 @salt.utils.decorators.is_deprecated(
-    globals(), "Phosphorus", with_successor="salt.utils.data.exactly_one"
+    globals(), "Sulfur", with_successor="salt.utils.data.exactly_one"
 )
 def exactly_one(l):
     return exactly_n(l)
