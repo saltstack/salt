@@ -255,7 +255,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
                 fp.write(b"\x9c")
 
             with patch(
-                "salt.fileserver.reap_fileserver_cache_dir", 
+                "salt.fileserver.reap_fileserver_cache_dir",
                 MagicMock(return_value=True)
             ), patch(
                 "salt.fileserver.generate_mtime_map",
