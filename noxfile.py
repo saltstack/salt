@@ -300,6 +300,12 @@ def _install_requirements(
     if not _upgrade_pip_setuptools_and_wheel(session):
         return
 
+
+def _install_requirements(
+    session, transport, *extra_requirements, requirements_type="ci"
+):
+    _upgrade_pip_setuptools_and_wheel(session)
+
     # Install requirements
     requirements_file = _get_pip_requirements_file(
         session, transport, requirements_type=requirements_type

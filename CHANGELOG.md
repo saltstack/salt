@@ -8,6 +8,7 @@ Versions are `MAJOR.PATCH`.
 # Changelog
 
 Salt 3003.1 (2021-06-08)
+Salt 3003.2 (2021-07-29)
 ========================
 
 Fixed
@@ -15,6 +16,22 @@ Fixed
 
 - Import salt.utils.azurearm instead of using __utils__ from loader in azure cloud.  This fixes an issue where __utils__ would become unavailable when we are using the ThreadPool in azurearm. (#59744)
 - Use contextvars libary from site-packages if it is intalled. Fixes salt ssh for targets with python <=3.6 (#59942)
+- Periodically restart the fileserver update process to avoid leaks (#50313)
+- Add ssh_timeout to kwargs in deploy_script (#59901)
+- Update the external ipaddress to the latest 3.9.5 version which has some security fixes. Updating the compat.p to use the vendored version if the python version is below 3.9.5 and only run the test_ipaddress.py tests if below 3.9.5. (#60168)
+- Use the right crypto libary for salt.utils.crypt.reinit_crypto (#60215)
+- Stop SSH from hanging if connection is lost. Also added args to customize grace period. (#60216)
+- Improve reliability of Terminal class (#60504)
+- Ignore configuration for 'enable_fqdns_grains' for AIX, Solaris and Juniper, assume False (#60529)
+
+
+Salt 3003.1 (2021-06-08)
+========================
+
+Removed
+-------
+
+- Removed support for Ubuntu 16.04 (#59913)
 
 Fixed
 -----
