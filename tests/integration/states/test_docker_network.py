@@ -151,6 +151,10 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
     @container_name
     @with_network(create=False)
     @pytest.mark.slow_test
+    @pytest.mark.skipif(
+        salt.utils.platform.is_photonos() is True,
+        reason="Skip on PhotonOS.  No busybox available.",
+    )
     def test_absent_with_disconnected_container(self, net, container_name):
         self.assertSaltTrueReturn(
             self.run_state(
@@ -193,6 +197,10 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
     @container_name
     @with_network(create=False)
     @pytest.mark.slow_test
+    @pytest.mark.skipif(
+        salt.utils.platform.is_photonos() is True,
+        reason="Skip on PhotonOS.  No busybox available.",
+    )
     def test_present_with_containers(self, net, container_name):
         ret = self.run_state(
             "docker_network.present", name=net.name, containers=[container_name]
@@ -248,6 +256,10 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
     @container_name
     @with_network(create=False)
     @pytest.mark.slow_test
+    @pytest.mark.skipif(
+        salt.utils.platform.is_photonos() is True,
+        reason="Skip on PhotonOS.  No busybox available.",
+    )
     def test_present_with_reconnect(self, net, container_name):
         """
         Test reconnecting with containers not passed to state
@@ -257,6 +269,10 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
     @container_name
     @with_network(create=False)
     @pytest.mark.slow_test
+    @pytest.mark.skipif(
+        salt.utils.platform.is_photonos() is True,
+        reason="Skip on PhotonOS.  No busybox available.",
+    )
     def test_present_with_no_reconnect(self, net, container_name):
         """
         Test reconnecting with containers not passed to state

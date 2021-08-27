@@ -42,6 +42,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             cls._WILDCARDS_SUPPORTED = True
         elif grains["os"] == "Amazon":
             cls._PKG_TARGETS = ["lynx", "gnuplot"]
+        elif grains["os"] == "VMware Photon OS":
+            cls._PKG_TARGETS = ["less", "zsh-html"]
         elif grains["os_family"] == "RedHat":
             cls._PKG_TARGETS = ["units", "zsh-html"]
             cls._WILDCARDS_SUPPORTED = True
@@ -649,6 +651,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state("pkg.removed", name=target)
         self.assertSaltTrueReturn(ret)
 
+    @not_runs_on(os="VMware Photon OS")
     @pytest.mark.requires_salt_modules(
         "pkg.hold", "pkg.unhold", "pkg.version", "pkg.list_pkgs"
     )

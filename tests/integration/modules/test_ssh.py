@@ -128,6 +128,9 @@ class SSHModuleTest(ModuleCase):
             )
 
     @pytest.mark.slow_test
+    @pytest.mark.skipif(
+        salt.utils.platform.is_photonos() is True, reason="Skip on PhotonOS"
+    )
     def test_recv_known_host_entries(self):
         """
         Check that known host information is returned from remote host
