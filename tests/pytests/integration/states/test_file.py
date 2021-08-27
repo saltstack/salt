@@ -4,8 +4,18 @@ Tests for the file state
 import logging
 
 import pytest
+import os
+import re
+import salt.utils.path
+import salt.utils.files
 
 log = logging.getLogger(__name__)
+
+
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.windows_whitelisted,
+]
 
 
 @pytest.fixture(scope="module")
@@ -43,7 +53,7 @@ def pillar_tree(salt_master, salt_minion, salt_call_cli):
         assert ret.json is True
 
 
-@pytest.mark.slow_test
+@pytest.mark.skip_on_windows
 def test_verify_ssl_skip_verify_false(
     salt_master, salt_call_cli, tmpdir, ssl_webserver
 ):
@@ -87,7 +97,6 @@ def test_verify_ssl_skip_verify_false(
         }
 
 
-@pytest.mark.windows_whitelisted
 def test_contents_pillar_with_pillar_list(
     salt_master, salt_call_cli, pillar_tree, tmp_path
 ):
@@ -118,7 +127,6 @@ def test_contents_pillar_with_pillar_list(
         assert target_path.is_file()
 
 
-@pytest.mark.windows_whitelisted
 def test_managed_file_with_pillar_sls(
     salt_master, salt_call_cli, pillar_tree, tmp_path
 ):
@@ -156,7 +164,6 @@ def test_managed_file_with_pillar_sls(
         assert target_path.is_file()
 
 
-@pytest.mark.windows_whitelisted
 def test_issue_50221(
     salt_master,
     salt_call_cli,
@@ -346,3 +353,665 @@ def test_issue_60203(
                 "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
             ]["comment"]
         )
+
+
+@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+def test_patch_single_file(salt_master, salt_call_cli, tmp_path):
+    """
+    Test file.patch using a patch applied to a single file
+    """
+    name_file = tmp_path / "name_file.txt"
+    source_file = tmp_path / "source_file.patch"
+    name_file_contents = """
+    salt
+    patch
+    file
+    """
+    source_file_contents = """
+    1,3c1,5
+    < salt
+    < patch
+    < file
+    ---
+    > salt
+    > will
+    > patch
+    > this
+    > file
+    """
+    sls_name = "test_patch"
+    sls_contents = """
+    do-patch:
+      file.patch:
+        - name: {name_file}
+        - source: {source_file}
+    """.format(
+        name_file=name_file, source_file=source_file
+    )
+
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_name), sls_contents
+    )
+
+    name_tempfile = pytest.helpers.temp_file(name_file, name_file_contents)
+    source_tempfile = pytest.helpers.temp_file(source_file, source_file_contents)
+
+    with sls_tempfile, name_tempfile, source_tempfile:
+        # Store the original contents and make sure they change
+        old_contents = name_file.read_text()
+        ret = salt_call_cli.run("state.apply", sls_name)
+        # Check to make sure the patch was applied okay
+        assert ret.exitcode == 0
+        # Check the content of the patched file to make sure its changed
+        assert old_contents != name_file.read_text()
+
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is True
+        assert state_run["comment"] == "Patch successfully applied"
+
+        # Re-run the state, should succeed and there should be a message about
+        # a partially-applied hunk.
+        ret = salt_call_cli.run("state.apply", sls_name)
+        assert ret.exitcode == 0
+        assert ret.json
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is True
+        assert state_run["comment"] == "Patch was already applied"
+        assert state_run["changes"] == {}
+
+
+@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+def test_patch_directory(salt_master, salt_call_cli, tmp_path):
+    """
+    Test file.patch using a patch applied to a directory, with changes
+    spanning multiple files.
+    """
+    numbers_file_contents = """
+    one
+    two
+    three
+    
+    1
+    2
+    3
+    """
+    math_file_contents = """
+    Five plus five is ten
+    
+    Four squared is sixteen
+    """
+    # Create a new unpatched set of files
+    all_patch = "salt://" + "patches/" + "all.patch"
+
+    base_dir = tmp_path
+    os.makedirs(os.path.join(base_dir, "foo", "bar"))
+    numbers_file = os.path.join(base_dir, "foo", "numbers.txt")
+    math_file = os.path.join(base_dir, "foo", "bar", "math.txt")
+
+    numbers_tempfile = pytest.helpers.temp_file(numbers_file, numbers_file_contents)
+    math_tempfile = pytest.helpers.temp_file(math_file, math_file_contents)
+
+    sls_name = "test_patch"
+    sls_contents = """
+        do-patch:
+          file.patch:
+            - name: {base_dir}
+            - source: {all_patch}
+            - strip: 1
+        """.format(
+        base_dir=base_dir, all_patch=all_patch
+    )
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_name), sls_contents
+    )
+
+    with sls_tempfile, numbers_tempfile, math_tempfile:
+        # Run the state file
+        ret = salt_call_cli.run("state.apply", sls_name)
+        assert ret.exitcode == 0
+        assert ret.json
+        # Check to make sure the patch was applied okay
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is True
+        assert state_run["comment"] == "Patch successfully applied"
+
+        # Re-run the state, should succeed and there should be a message about
+        # a partially-applied hunk.
+        ret = salt_call_cli.run("state.apply", sls_name)
+        assert ret.exitcode == 0
+        assert ret.json
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is True
+        assert state_run["comment"] == "Patch was already applied"
+        assert state_run["changes"] == {}
+
+
+@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+def test_patch_strip_parsing(salt_master, salt_call_cli, tmp_path):
+    """
+    Test that we successfuly parse -p/--strip when included in the options
+    """
+    numbers_file_contents = """
+    one
+    two
+    three
+
+    1
+    2
+    3
+    """
+    math_file_contents = """
+    Five plus five is ten
+
+    Four squared is sixteen
+    """
+    # Create a new unpatched set of files
+    all_patch = "salt://" + "patches/" + "all.patch"
+
+    base_dir = tmp_path
+    os.makedirs(os.path.join(base_dir, "foo", "bar"))
+    numbers_file = os.path.join(base_dir, "foo", "numbers.txt")
+    math_file = os.path.join(base_dir, "foo", "bar", "math.txt")
+
+    numbers_tempfile = pytest.helpers.temp_file(numbers_file, numbers_file_contents)
+    math_tempfile = pytest.helpers.temp_file(math_file, math_file_contents)
+
+    sls_name = "test_patch"
+    sls_contents = """
+        do-patch:
+          file.patch:
+            - name: {base_dir}
+            - source: {all_patch}
+            - options: "-p1"
+        """.format(
+        base_dir=base_dir, all_patch=all_patch
+    )
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_name), sls_contents
+    )
+
+    sls_name = "test_patch_strip"
+    sls_contents = """
+        do-patch:
+          file.patch:
+            - name: {base_dir}
+            - source: {all_patch}
+            - strip: 1
+        """.format(
+        base_dir=base_dir, all_patch=all_patch
+    )
+    sls_patch_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_name), sls_contents
+    )
+
+    with sls_tempfile, sls_patch_tempfile, numbers_tempfile, math_tempfile:
+        # Run the state using -p1
+        ret = salt_call_cli.run("state.apply", "test_patch")
+        assert ret.exitcode == 0
+        assert ret.json
+
+        # Check to make sure the patch was applied okay
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is True
+        assert state_run["comment"] == "Patch successfully applied"
+
+        # Re-run the state using --strip=1
+        ret = salt_call_cli.run("state.apply", "test_patch_strip")
+        assert ret.exitcode == 0
+        assert ret.json
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is True
+        assert state_run["comment"] == "Patch was already applied"
+        assert state_run["changes"] == {}
+
+
+@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+def test_patch_saltenv(salt_master, salt_call_cli, tmp_path):
+    """
+    Test that we attempt to download the patch from a non-base saltenv
+    """
+    # This state will fail because we don't have a patch file in that
+    # environment, but that is OK, we just want to test that we're looking
+    # in an environment other than base.
+    math_file_contents = """
+    Five plus five is ten
+
+    Four squared is sixteen
+    """
+    # Create a new unpatched set of files
+    math_patch = "salt://" + "patches/" + "math.patch"
+
+    base_dir = tmp_path
+    os.makedirs(os.path.join(base_dir, "foo", "bar"))
+    math_file = os.path.join(base_dir, "foo", "bar", "math.txt")
+
+    math_tempfile = pytest.helpers.temp_file(math_file, math_file_contents)
+
+    sls_name = "test_patch"
+    sls_contents = """
+        do-patch:
+          file.patch:
+            - name: {math_file}
+            - source: {math_patch}
+            - saltenv: "prod"
+        """.format(
+        math_file=math_file, math_patch=math_patch
+    )
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_name), sls_contents
+    )
+
+    with sls_tempfile, math_tempfile:
+        ret = salt_call_cli.run("state.apply", "test_patch")
+        assert ret.exitcode == 1
+        assert ret.json
+
+        # Check to make sure the patch was applied okay
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is False
+        assert state_run[
+            "comment"
+        ] == "Source file {} not found in saltenv 'prod'".format(math_patch)
+
+
+@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+def test_patch_single_file_failure(salt_master, salt_call_cli, tmp_path):
+    """
+    Test file.patch using a patch applied to a single file. This tests a
+    failed patch.
+    """
+    numbers_file_contents = """
+    one
+    two
+    three
+
+    1
+    2
+    3
+    """
+    math_file_contents = """
+    Five plus five is ten
+
+    Four squared is sixteen
+    """
+    # Create a new unpatched set of files
+    numbers_patch = "salt://" + "patches/" + "numbers.patch"
+
+    base_dir = tmp_path
+    os.makedirs(os.path.join(base_dir, "foo", "bar"))
+    numbers_file = os.path.join(base_dir, "foo", "numbers.txt")
+    math_file = os.path.join(base_dir, "foo", "bar", "math.txt")
+    reject_file = os.path.join(base_dir, "reject.txt")
+
+    numbers_tempfile = pytest.helpers.temp_file(numbers_file, numbers_file_contents)
+    math_tempfile = pytest.helpers.temp_file(math_file, math_file_contents)
+    reject_tempfile = pytest.helpers.temp_file(reject_file)
+
+    sls_patch_name = "test_patch"
+    sls_patch_contents = """
+        do-patch:
+          file.patch:
+            - name: {numbers_file}
+            - source: {numbers_patch}
+        """.format(
+        numbers_file=numbers_file, numbers_patch=numbers_patch
+    )
+    sls_patch_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_patch_name), sls_patch_contents
+    )
+
+    sls_patch_reject_name = "test_patch_reject"
+    sls_patch_reject_contents = """
+        do-patch:
+          file.patch:
+            - name: {numbers_file}
+            - source: {numbers_patch}
+            - reject_file: {reject_file}
+            - strip: 1
+        """.format(
+        numbers_file=numbers_file, numbers_patch=numbers_patch, reject_file=reject_file
+    )
+    sls_patch_reject_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_patch_reject_name), sls_patch_reject_contents
+    )
+
+    with sls_patch_tempfile, sls_patch_reject_tempfile, numbers_tempfile, math_tempfile, reject_tempfile:
+        # Empty the file to ensure that the patch doesn't apply cleanly
+        with salt.utils.files.fopen(numbers_file, "w"):
+            pass
+
+        ret = salt_call_cli.run("state.apply", sls_patch_name)
+        assert ret.exitcode == 1
+        assert ret.json
+        # Check to make sure the patch was applied okay
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is False
+        assert "Patch would not apply cleanly" in state_run["comment"]
+
+        # Test the reject_file option and ensure that the rejects are written
+        # to the path specified.
+        ret = salt_call_cli.run("state.apply", sls_patch_reject_name)
+        assert ret.exitcode == 1
+        assert ret.json
+
+        state_run = next(iter(ret.json.values()))
+        assert "Patch would not apply cleanly" in state_run["comment"]
+        assert (
+            re.match(
+                state_run["comment"], "saving rejects to (file )?{}".format(reject_file)
+            )
+            is None
+        )
+
+
+@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+def test_patch_directory_failure(salt_master, salt_call_cli, tmp_path):
+    """
+    Test file.patch using a patch applied to a directory, with changes
+    spanning multiple files.
+    """
+    numbers_file_contents = """
+    one
+    two
+    three
+
+    1
+    2
+    3
+    """
+    math_file_contents = """
+    Five plus five is ten
+
+    Four squared is sixteen
+    """
+    # Create a new unpatched set of files
+    all_patch = "salt://" + "patches/" + "all.patch"
+
+    base_dir = tmp_path
+    os.makedirs(os.path.join(base_dir, "foo", "bar"))
+    numbers_file = os.path.join(base_dir, "foo", "numbers.txt")
+    math_file = os.path.join(base_dir, "foo", "bar", "math.txt")
+    reject_file = os.path.join(base_dir, "reject.txt")
+
+    numbers_tempfile = pytest.helpers.temp_file(numbers_file, numbers_file_contents)
+    math_tempfile = pytest.helpers.temp_file(math_file, math_file_contents)
+    reject_tempfile = pytest.helpers.temp_file(reject_file)
+
+    sls_patch_name = "test_patch"
+    sls_patch_contents = """
+        do-patch:
+          file.patch:
+            - name: {base_dir}
+            - source: {all_patch}
+            - strip: 1
+        """.format(
+        base_dir=base_dir, all_patch=all_patch
+    )
+    sls_patch_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_patch_name), sls_patch_contents
+    )
+
+    sls_patch_reject_name = "test_patch_reject"
+    sls_patch_reject_contents = """
+        do-patch:
+          file.patch:
+            - name: {base_dir}
+            - source: {all_patch}
+            - reject_file: {reject_file}
+            - strip: 1
+        """.format(
+        base_dir=base_dir, all_patch=all_patch, reject_file=reject_file
+    )
+    sls_patch_reject_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_patch_reject_name), sls_patch_reject_contents
+    )
+
+    with sls_patch_tempfile, sls_patch_reject_tempfile, numbers_tempfile, math_tempfile, reject_tempfile:
+        # Empty the file to ensure that the patch doesn't apply cleanly
+        with salt.utils.files.fopen(math_file, "w"):
+            pass
+
+        ret = salt_call_cli.run("state.apply", sls_patch_name)
+        assert ret.exitcode == 1
+        assert ret.json
+        # Check to make sure the patch was applied okay
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is False
+        assert "Patch would not apply cleanly" in state_run["comment"]
+
+        # Test the reject_file option and ensure that the rejects are written
+        # to the path specified.
+        ret = salt_call_cli.run("state.apply", sls_patch_reject_name)
+        assert ret.exitcode == 1
+        assert ret.json
+
+        state_run = next(iter(ret.json.values()))
+        assert "Patch would not apply cleanly" in state_run["comment"]
+        assert (
+            re.match(
+                state_run["comment"], "saving rejects to (file )?{}".format(reject_file)
+            )
+            is None
+        )
+
+
+@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+def test_patch_single_file_template(salt_master, salt_call_cli, tmp_path):
+    """
+    Test file.patch using a patch applied to a single file, with jinja
+    templating applied to the patch file.
+    """
+    numbers_file_contents = """
+    one
+    two
+    three
+
+    1
+    2
+    3
+    """
+    # Create a new unpatched set of files
+    numbers_patch_template = "salt://" + "patches/" + "numbers.patch" + ".jinja"
+    context = {"two": "two", "ten": 10}
+
+    base_dir = tmp_path
+    os.makedirs(os.path.join(base_dir, "foo", "bar"))
+    numbers_file = os.path.join(base_dir, "foo", "numbers.txt")
+
+    numbers_tempfile = pytest.helpers.temp_file(numbers_file, numbers_file_contents)
+
+    sls_name = "test_patch"
+    sls_contents = """
+        do-patch:
+          file.patch:
+            - name: {numbers_file}
+            - source: {numbers_patch_template}
+            - template: "jinja"
+            - context: {context}
+        """.format(
+        numbers_file=numbers_file,
+        numbers_patch_template=numbers_patch_template,
+        context=context,
+    )
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_name), sls_contents
+    )
+
+    with sls_tempfile, numbers_tempfile:
+        ret = salt_call_cli.run("state.apply", sls_name)
+        assert ret.exitcode == 0
+        assert ret.json
+
+        # Check to make sure the patch was applied okay
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is True
+        assert state_run["comment"] == "Patch successfully applied"
+
+        # Re-run the state, should succeed and there should be a message about
+        # a partially-applied hunk.
+        ret = salt_call_cli.run("state.apply", sls_name)
+        assert ret.exitcode == 0
+        assert ret.json
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is True
+        assert state_run["comment"] == "Patch was already applied"
+        assert state_run["changes"] == {}
+
+
+@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+def test_patch_directory_template(salt_master, salt_call_cli, tmp_path):
+    """
+    Test file.patch using a patch applied to a directory, with changes
+    spanning multiple files, and with jinja templating applied to the patch
+    file.
+    """
+    numbers_file_contents = """
+    one
+    two
+    three
+
+    1
+    2
+    3
+    """
+    math_file_contents = """
+    Five plus five is ten
+
+    Four squared is sixteen
+    """
+    # Create a new unpatched set of files
+    base_dir = tmp_path
+    os.makedirs(os.path.join(base_dir, "foo", "bar"))
+    numbers_file = os.path.join(base_dir, "foo", "numbers.txt")
+    math_file = os.path.join(base_dir, "foo", "bar", "math.txt")
+    all_patch_template = "salt://" + "patches/" + "all.patch" + ".jinja"
+    context = {"two": "two", "ten": 10}
+
+    numbers_tempfile = pytest.helpers.temp_file(numbers_file, numbers_file_contents)
+    math_tempfile = pytest.helpers.temp_file(math_file, math_file_contents)
+
+    sls_name = "test_patch"
+    sls_contents = """
+        do-patch:
+          file.patch:
+            - name: {base_dir}
+            - source: {all_patch_template}
+            - template: "jinja"
+            - context: {context}
+        """.format(
+        base_dir=base_dir, all_patch_template=all_patch_template, context=context
+    )
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_name), sls_contents
+    )
+
+    with sls_tempfile, numbers_tempfile, math_tempfile:
+        ret = salt_call_cli.run("state.apply", sls_name)
+        print(ret.json)
+        assert ret.exitcode == 0
+        assert ret.json
+
+        # Check to make sure the patch was applied okay
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is True
+        assert state_run["comment"] == "Patch was already applied"
+
+        # Re-run the state, should succeed and there should be a message about
+        # a partially-applied hunk.
+        ret = salt_call_cli.run("state.apply", sls_name)
+        assert ret.exitcode == 0
+        assert ret.json
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is True
+        assert state_run["comment"] == "Patch was already applied"
+        assert state_run["changes"] == {}
+
+
+@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+def test_patch_test_mode(salt_master, salt_call_cli, tmp_path):
+    """
+    Test file.patch using test=True
+    """
+    numbers_file_contents = """
+    one
+    two
+    three
+
+    1
+    2
+    3
+    """
+    # Create a new unpatched set of files
+    numbers_patch = "salt://" + "patches/" + "numbers.patch"
+
+    base_dir = tmp_path
+    os.makedirs(os.path.join(base_dir, "foo", "bar"))
+    numbers_file = os.path.join(base_dir, "foo", "numbers.txt")
+    numbers_tempfile = pytest.helpers.temp_file(numbers_file, numbers_file_contents)
+
+    sls_patch_name = "test_patch"
+    sls_patch_contents = """
+        do-patch:
+          file.patch:
+            - name: {numbers_file}
+            - source: {numbers_patch}
+        """.format(
+        numbers_file=numbers_file, numbers_patch=numbers_patch
+    )
+    sls_patch_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_patch_name), sls_patch_contents
+    )
+
+    with sls_patch_tempfile, numbers_tempfile:
+        # Test application with test=True mode
+        ret = salt_call_cli.run("state.apply", sls_patch_name, test=True)
+        print(ret.json)
+        assert ret.exitcode == 0
+        assert ret.json
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is None
+        assert state_run["comment"] == "The patch would be applied"
+
+        # Apply the patch for real. We'll then be able to test below that we
+        # exit with a True rather than a None result if test=True is used on an
+        # already-applied patch.
+        ret = salt_call_cli.run("state.apply", "test_patch")
+        print(ret.json)
+        assert ret.exitcode == 0
+        assert ret.json
+
+        # Check to make sure the patch was applied okay
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is True
+        assert state_run["comment"] == "Patch successfully applied"
+
+        # Run again with test=True. Since the pre-check happens before we do
+        # the __opts__['test'] check, we should exit with a True result just
+        # the same as if we try to run this state on an already-patched file
+        # *without* test=True.
+        ret = salt_call_cli.run("state.apply", sls_patch_name, test=True)
+        assert ret.exitcode == 0
+        assert ret.json
+
+        # Check to make sure the patch was applied okay
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is True
+        assert state_run["comment"] == "Patch was already applied"
+
+        # Empty the file to ensure that the patch doesn't apply cleanly
+        with salt.utils.files.fopen(numbers_file, "w"):
+            pass
+
+        # Run again with test=True. Similar to the above run, we are testing
+        # that we return before we reach the __opts__['test'] check. In this
+        # case we should return a False result because we should already know
+        # by this point that the patch will not apply cleanly.
+        ret = salt_call_cli.run("state.apply", sls_patch_name, test=True)
+        print(ret.json)
+        assert ret.exitcode == 1
+        assert ret.json
+
+        # Check to make sure the patch was applied okay
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is False
+        assert "Patch would not apply cleanly" in state_run["comment"]
