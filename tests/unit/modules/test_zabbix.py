@@ -1204,8 +1204,9 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         module_return = {"hostids": [10258]}
         query_return = {"jsonrpc": "2.0", "result": {"hostids": [10258]}, "id": 0}
-        mock__query = MagicMock(return_value=query_return)
-        with patch.object(zabbix, "_query", mock__query):
+        with patch.object(
+            zabbix, "_query", autospec=True, return_value=query_return
+        ) as mock__query:
             with patch.object(zabbix, "_login", return_value=CONN_ARGS):
                 self.assertEqual(
                     zabbix.host_inventory_set(
@@ -1238,8 +1239,9 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         module_return = {"hostids": [10258]}
         query_return = {"jsonrpc": "2.0", "result": {"hostids": [10258]}, "id": 0}
-        mock__query = MagicMock(return_value=query_return)
-        with patch.object(zabbix, "_query", mock__query):
+        with patch.object(
+            zabbix, "_query", autospec=True, return_value=query_return
+        ) as mock__query:
             with patch.object(zabbix, "_login", return_value=CONN_ARGS):
                 self.assertEqual(
                     zabbix.host_inventory_set(
