@@ -2,12 +2,12 @@
 Tests for the file state
 """
 import logging
-
-import pytest
 import os
 import re
-import salt.utils.path
+
+import pytest
 import salt.utils.files
+import salt.utils.path
 
 log = logging.getLogger(__name__)
 
