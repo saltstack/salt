@@ -313,16 +313,20 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @pytest.mark.requires_salt_modules("pkg.version", "pkg.info_installed")
     @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
     @runs_on(kernel="linux")
+    @requires_system_grains
     @not_runs_on(os="Amazon")
     @pytest.mark.slow_test
-    def test_pkg_009_latest_with_epoch(self):
+    def test_pkg_009_latest_with_epoch(self, grains=None):
         """
         This tests for the following issue:
         https://github.com/saltstack/salt/issues/31014
 
         This is a destructive test as it installs a package
         """
-        package = "bash-completion"
+        if grains["os"] == "VMware Photon OS":
+            package = "wget"
+        else:
+            package = "bash-completion"
         pkgquery = "version"
 
         ret = self.run_state("pkg.installed", name=package, refresh=False)
