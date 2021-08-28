@@ -161,6 +161,9 @@ class NetapiClientTest(TestCase):
             ret = self.netapi.run(low)
 
 
+@pytest.mark.skipif(
+    salt.utils.platform.is_photonos() is True, reason="Skip on PhotonOS"
+)
 @pytest.mark.requires_sshd_server
 class NetapiSSHClientTest(SSHCase):
     eauth_creds = {
@@ -419,6 +422,9 @@ class NetapiSSHClientTest(SSHCase):
         self.assertFalse(os.path.exists(path))
 
 
+@pytest.mark.skipif(
+    salt.utils.platform.is_photonos() is True, reason="Skip on PhotonOS"
+)
 @pytest.mark.requires_sshd_server
 class NetapiSSHClientAuthTest(SSHCase):
 
