@@ -20,6 +20,9 @@ from tests.support.unit import TestCase, skipIf
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.skipif(
+    salt.utils.platform.is_photonos() is True, reason="Skip on PhotonOS"
+)
 @pytest.mark.usefixtures("salt_master", "salt_sub_minion")
 class NetapiClientTest(TestCase):
     eauth_creds = {

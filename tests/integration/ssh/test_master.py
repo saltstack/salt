@@ -3,12 +3,16 @@ Simple Smoke Tests for Connected SSH minions
 """
 
 import pytest
+import salt.utils.platform
 from saltfactories.utils.tempfiles import temp_file
 from tests.support.case import SSHCase
 from tests.support.helpers import requires_system_grains
 from tests.support.runtests import RUNTIME_VARS
 
 
+@pytest.mark.skipif(
+    salt.utils.platform.is_photonos() is True, reason="Skip on PhotonOS"
+)
 class SSHMasterTestCase(SSHCase):
     """
     Test ssh master functionality

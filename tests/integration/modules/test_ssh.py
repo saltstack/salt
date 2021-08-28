@@ -216,6 +216,9 @@ class SSHModuleTest(ModuleCase):
         self.assertEqual(ret, "add")
 
     @pytest.mark.slow_test
+    @pytest.mark.skipif(
+        salt.utils.platform.is_photonos() is True, reason="Skip on PhotonOS"
+    )
     def test_set_known_host(self):
         """
         ssh.set_known_host
