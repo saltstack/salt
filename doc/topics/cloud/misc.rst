@@ -64,6 +64,8 @@ The available options for this setting are:
     grains
     states
     all
+    
+Do not use this feature until https://github.com/saltstack/salt/pull/58394 is merged and released.
 
 
 Setting Up New Salt Masters
