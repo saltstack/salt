@@ -12,6 +12,7 @@
 !define PRODUCT_UNINST_KEY_OTHER "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME_OTHER}"
 !define PRODUCT_UNINST_ROOT_KEY "HKLM"
 !define OUTFILE "Salt-Minion-${PRODUCT_VERSION}-Py${PYTHON_VERSION}-${CPUARCH}-Setup.exe"
+!define /date TIME_STAMP "%Y-%m-%d-%H-%M-%S"
 
 # Import Libraries
 !include "MUI2.nsh"
@@ -663,7 +664,6 @@ FunctionEnd
 
 
 # Time Stamp Definition
-!define /date TIME_STAMP "%Y-%m-%d-%H-%M-%S"
 Function BackupExistingConfig
 
     ${If} $ExistingConfigFound == 1                     # If existing config found
@@ -1060,22 +1060,53 @@ Function getExistingMinionConfig
     ${EndIf}
 
     check_owner:
-        # We need to verify the owner of an existing config
-        # Salt will set the owner of the C:\salt directory to the Administrators
-        # Group (S-1-5-32-544). An unprivileged user cannot cannot set the owner
-        # by default. If the owner is Administrators, then we will trust it.
-        # Otherwise,
+        # We need to verify the owner of the config directory (C:\salt\conf) to
+        # ensure the config has not been modified by an unknown user. The
+        # permissions and ownership of the directories is determined by the
+        # installer used to install Salt. The NullSoft installer requests Admin
+        # privileges so all directories are created with the Administrators
+        # Group (S-1-5-32-544) as the owner. The MSI installer, however, runs in
+        # the context of the Windows Installer service (msiserver), therefore
+        # all directories are created with the Local System account (S-1-5-18)
+        # as the owner.
+        #
+        # When Salt is launched it sets the root_dir (C:\salt) permissions as
+        # follows:
+        # - Owner: Administrators
+        # - Allow Perms:
+        #   - Owner: Full Control
+        #   - System: Full Control
+        #   - Administrators: Full Control
+        #
+        # The conf_dir (C:\salt\conf) inherits Allow/Deny permissions from the
+        # parent, but NOT Ownership. The owner will be the Administrators Group
+        # if it was installed via NullSoft or the Local System account if it was
+        # installed via the MSI. Therefore valid owners for the conf_dir are
+        # both the Administrators group and the Local System account.
+        #
+        # An unprivileged account cannot change the owner of a directory by
+        # default. So, if the owner of the conf_dir is either the Administrators
+        # group or the Local System account, then we will trust it. Otherwise,
+        # we will display an option to abort the installation or to backup the
+        # untrusted config directory and continue with the default config. If
+        # running the install with the silent option (/S) it will backup the
+        # untrusted config directory and continue with the default config.
+
         AccessControl::GetFileOwner /SID "$INSTDIR\conf"
         Pop $0
-        StrCmp $0 "S-1-5-32-544" correct_owner
+
+        # Check for valid SIDs
+        StrCmp $0 "S-1-5-32-544" correct_owner  # Administrators Group (NullSoft)
+        StrCmp $0 "S-1-5-18" correct_owner      # Local System (MSI)
         MessageBox MB_YESNO "Insecure config found at $INSTDIR\conf. If you \
-            continue, the config directory will be renamed to $INSTDIR\conf.insecure. \
+            continue, the config directory will be renamed to \
+            $INSTDIR\conf.insecure and the default config will be used. \
             Continue?" /SD IDYES IDYES insecure_config
             Abort
 
     insecure_config:
         # Backing up insecure config
-        Rename "$INSTDIR\conf" "$INSTDIR\conf.insecure"
+        Rename "$INSTDIR\conf" "$INSTDIR\conf.insecure-${TIME_STAMP}"
         Goto confReallyNotFound
 
     correct_owner:
