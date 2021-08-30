@@ -256,10 +256,10 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
 
             with patch(
                 "salt.fileserver.reap_fileserver_cache_dir",
-                MagicMock(return_value=True)
+                MagicMock(return_value=True),
             ), patch(
                 "salt.fileserver.generate_mtime_map",
-                MagicMock(return_value=new_mtime_map)
+                MagicMock(return_value=new_mtime_map),
             ), patch.dict(
                 roots.__opts__,
                 {"fileserver_events": False, "cachedir": tmpdirname},
