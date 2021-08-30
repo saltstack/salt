@@ -144,7 +144,10 @@ def test_user_present_nondefault(grains, modules, states, username, user_home):
 @pytest.mark.skip_on_windows(reason="windows minion does not support 'usergroup'")
 def test_user_present_usergroup_false(modules, states, username, group_1, user_home):
     ret = states.user.present(
-        name=username, gid=group_1.info.gid, usergroup=False, home=str(user_home),
+        name=username,
+        gid=group_1.info.gid,
+        usergroup=False,
+        home=str(user_home),
     )
     assert ret.result is True
 
@@ -161,7 +164,10 @@ def test_user_present_usergroup_false(modules, states, username, group_1, user_h
 @pytest.mark.skip_on_windows(reason="windows minion does not support 'usergroup'")
 def test_user_present_usergroup_true(modules, states, username, user_home, group_1):
     ret = states.user.present(
-        name=username, gid=group_1.info.gid, usergroup=True, home=str(user_home),
+        name=username,
+        gid=group_1.info.gid,
+        usergroup=True,
+        home=str(user_home),
     )
     assert ret.result is True
 

@@ -30,11 +30,21 @@ def _init_db(newdb=None):
 def _complex_db():
     return {
         "dnfoo": {
-            "attrfoo1": OrderedSet((b"valfoo1.1", b"valfoo1.2",)),
+            "attrfoo1": OrderedSet(
+                (
+                    b"valfoo1.1",
+                    b"valfoo1.2",
+                )
+            ),
             "attrfoo2": OrderedSet((b"valfoo2.1",)),
         },
         "dnbar": {
-            "attrbar1": OrderedSet((b"valbar1.1", b"valbar1.2",)),
+            "attrbar1": OrderedSet(
+                (
+                    b"valbar1.1",
+                    b"valbar1.2",
+                )
+            ),
             "attrbar2": OrderedSet((b"valbar2.1",)),
         },
     }

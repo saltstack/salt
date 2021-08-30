@@ -80,7 +80,9 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(
             self.cmd.get_last_command(),
-            '/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect --controller="123.234.345.456:9999" --user="jbossadm" --password="jbossadm" --command="some cli operation"',
+            "/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect"
+            ' --controller="123.234.345.456:9999" --user="jbossadm"'
+            ' --password="jbossadm" --command="some cli operation"',
         )
 
     def test_controller_without_authentication(self):
@@ -92,7 +94,8 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(
             self.cmd.get_last_command(),
-            '/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect --controller="123.234.345.456:9999" --command="some cli operation"',
+            "/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect"
+            ' --controller="123.234.345.456:9999" --command="some cli operation"',
         )
 
     def test_operation_execution(self):
@@ -101,7 +104,9 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(
             self.cmd.get_last_command(),
-            r'/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect --controller="123.234.345.456:9999" --user="jbossadm" --password="jbossadm" --command="sample_operation"',
+            r"/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect"
+            r' --controller="123.234.345.456:9999" --user="jbossadm"'
+            r' --password="jbossadm" --command="sample_operation"',
         )
 
     def test_handling_jboss_error(self):
@@ -446,12 +451,19 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(conn_url_attributes["restart-required"], "no-services")
 
     def test_escaping_operation_with_backslashes_and_quotes(self):
-        operation = r'/subsystem=naming/binding="java:/sampleapp/web-module/ldap/username":add(binding-type=simple, value="DOMAIN\\\\user")'
+        operation = (
+            r'/subsystem=naming/binding="java:/sampleapp/web-module/ldap/username":add(binding-type=simple,'
+            r' value="DOMAIN\\\\user")'
+        )
         jboss7_cli.run_operation(self.jboss_config, operation)
 
         self.assertEqual(
             self.cmd.get_last_command(),
-            r'/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect --controller="123.234.345.456:9999" --user="jbossadm" --password="jbossadm" --command="/subsystem=naming/binding=\"java:/sampleapp/web-module/ldap/username\":add(binding-type=simple, value=\"DOMAIN\\\\\\\\user\")"',
+            r"/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect"
+            r' --controller="123.234.345.456:9999" --user="jbossadm"'
+            r' --password="jbossadm"'
+            r' --command="/subsystem=naming/binding=\"java:/sampleapp/web-module/ldap/username\":add(binding-type=simple,'
+            r' value=\"DOMAIN\\\\\\\\user\")"',
         )
 
     def test_run_operation_wflyctl_error(self):

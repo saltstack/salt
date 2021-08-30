@@ -268,8 +268,9 @@ def _ensure_systemd(version):
 
     if installed < version:
         raise CommandExecutionError(
-            "This function requires systemd >= {} "
-            "(Detected version: {}).".format(version, installed)
+            "This function requires systemd >= {} (Detected version: {}).".format(
+                version, installed
+            )
         )
 
 

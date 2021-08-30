@@ -482,7 +482,8 @@ def create(path, docker_compose):
     else:
         return __standardize_result(
             False,
-            "Creating a docker-compose project failed, you must send a valid docker-compose file",
+            "Creating a docker-compose project failed, you must send a valid"
+            " docker-compose file",
             None,
             None,
         )

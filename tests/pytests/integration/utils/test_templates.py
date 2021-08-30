@@ -7,7 +7,9 @@ import pytest
 
 
 def test_issue_60083(
-    salt_call_cli, tmp_path, base_env_state_tree_root_dir,
+    salt_call_cli,
+    tmp_path,
+    base_env_state_tree_root_dir,
 ):
     """
     Validate that we can serialize pillars to json in states.

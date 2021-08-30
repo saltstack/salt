@@ -43,7 +43,10 @@ log = logging.getLogger(__name__)
 _DFLT_LOG_DATEFMT = "%H:%M:%S"
 _DFLT_LOG_DATEFMT_LOGFILE = "%Y-%m-%d %H:%M:%S"
 _DFLT_LOG_FMT_CONSOLE = "[%(levelname)-8s] %(message)s"
-_DFLT_LOG_FMT_LOGFILE = "%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(levelname)-8s][%(process)d] %(message)s"
+_DFLT_LOG_FMT_LOGFILE = (
+    "%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(levelname)-8s][%(process)d]"
+    " %(message)s"
+)
 _DFLT_LOG_FMT_JID = "[JID: %(jid)s]"
 _DFLT_REFSPECS = ["+refs/heads/*:refs/remotes/origin/*", "+refs/tags/*:refs/tags/*"]
 DEFAULT_INTERVAL = 60
@@ -1734,7 +1737,7 @@ def _validate_pillar_roots(pillar_roots):
     """
     if not isinstance(pillar_roots, dict):
         log.warning(
-            "The pillar_roots parameter is not properly formatted," " using defaults"
+            "The pillar_roots parameter is not properly formatted, using defaults"
         )
         return {"base": _expand_glob_path([salt.syspaths.BASE_PILLAR_ROOTS_DIR])}
     return _normalize_roots(pillar_roots)
@@ -1747,7 +1750,7 @@ def _validate_file_roots(file_roots):
     """
     if not isinstance(file_roots, dict):
         log.warning(
-            "The file_roots parameter is not properly formatted," " using defaults"
+            "The file_roots parameter is not properly formatted, using defaults"
         )
         return {"base": _expand_glob_path([salt.syspaths.BASE_FILE_ROOTS_DIR])}
     return _normalize_roots(file_roots)
@@ -1966,7 +1969,7 @@ def _absolute_path(path, relative_to=None):
         _abspath = os.path.join(relative_to, path)
         if os.path.isfile(_abspath):
             log.debug(
-                "Relative path '%s' converted to existing absolute path " "'%s'",
+                "Relative path '%s' converted to existing absolute path '%s'",
                 path,
                 _abspath,
             )
@@ -2571,7 +2574,7 @@ def cloud_config(
 
     if providers_config_path is not None and providers_config is not None:
         raise salt.exceptions.SaltCloudConfigError(
-            "Only pass `providers_config` or `providers_config_path`, " "not both."
+            "Only pass `providers_config` or `providers_config_path`, not both."
         )
     elif providers_config_path is None and providers_config is None:
         providers_config_path = overrides.get(
@@ -3451,7 +3454,7 @@ def call_id_function(opts):
                 type(newid),
             )
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
-        log.info("Evaluated minion ID from module: %s", mod_fun)
+        log.info("Evaluated minion ID from module: %s %s", mod_fun, newid)
         return newid
     except TypeError:
         log.error(
@@ -3576,7 +3579,8 @@ def _update_ssl_config(opts):
             or not hasattr(ssl, val)
         ):
             message = "SSL option '{}' must be set to one of the following values: '{}'.".format(
-                key, "', '".join([val for val in dir(ssl) if val.startswith(prefix)])
+                key,
+                "', '".join([val for val in dir(ssl) if val.startswith(prefix)]),
             )
             log.error(message)
             raise salt.exceptions.SaltConfigurationError(message)

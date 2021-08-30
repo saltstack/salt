@@ -187,7 +187,7 @@ def get_connection(
             region, aws_access_key_id=keyid, aws_secret_access_key=key
         )
         if conn is None:
-            raise SaltInvocationError('Region "{}" is not ' "valid.".format(region))
+            raise SaltInvocationError('Region "{}" is not valid.'.format(region))
     except boto.exception.NoAuthHandlerFound:
         raise SaltInvocationError(
             "No authentication credentials found when "

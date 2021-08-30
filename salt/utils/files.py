@@ -751,7 +751,7 @@ def human_size_to_bytes(human_size):
     match = re.match(r"^(\d+)([KMGTP])?$", human_size_str)
     if not match:
         raise ValueError(
-            "Size must be all digits, with an optional unit type " "(K, M, G, T, or P)"
+            "Size must be all digits, with an optional unit type (K, M, G, T, or P)"
         )
     size_num = int(match.group(1))
     unit_multiplier = 1024 ** size_exp_map.get(match.group(2), 0)
@@ -783,6 +783,20 @@ def backup_minion(path, bkroot):
     if not salt.utils.platform.is_windows():
         os.chown(bkpath, fstat.st_uid, fstat.st_gid)
         os.chmod(bkpath, fstat.st_mode)
+
+
+def case_insensitive_filesystem(path=None):
+    """
+    Detect case insensitivity on a system.
+
+    Returns:
+        bool: Flag to indicate case insensitivity
+
+    .. versionadded:: 3004
+
+    """
+    with tempfile.NamedTemporaryFile(prefix="TmP", dir=path, delete=True) as tmp_file:
+        return os.path.exists(tmp_file.name.lower())
 
 
 def get_encoding(path):

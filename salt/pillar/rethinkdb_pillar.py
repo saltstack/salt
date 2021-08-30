@@ -155,7 +155,7 @@ def ext_pillar(
         # Return nothing if multiple documents are found for a minion
         if len(data.items) > 1:
             log.error(
-                "ext_pillar.rethinkdb: ambiguous documents found for " "minion %s",
+                "ext_pillar.rethinkdb: ambiguous documents found for minion %s",
                 minion_id,
             )
             return {}

@@ -105,7 +105,7 @@ pytz==2020.1
     #   tempora
 pyyaml==5.4.1
     # via -r requirements/static/pkg/py3.10/linux.txt
-pyzmq==19.0.2 ; python_version >= "3.9"
+pyzmq==21.0.2 ; python_version >= "3.9"
     # via -r requirements/static/pkg/py3.10/linux.txt
 requests==2.25.1
     # via
@@ -145,7 +145,7 @@ tempora==1.14.1
     #   portend
 timelib==0.2.5
     # via -r requirements/static/pkg/py3.10/linux.txt
-urllib3==1.26.4
+urllib3==1.26.6
     # via
     #   -r requirements/static/pkg/py3.10/linux.txt
     #   requests
