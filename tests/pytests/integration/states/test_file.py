@@ -425,6 +425,7 @@ def _check_minimum_version(salt_call_cli, minimum_patch_ver):
         )
 
 
+@pytest.mark.skip_unless_on_windows
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
 def test_patch_single_file(salt_master, salt_call_cli, tmp_path, min_patch_ver):
     """
@@ -488,6 +489,7 @@ def test_patch_single_file(salt_master, salt_call_cli, tmp_path, min_patch_ver):
         assert state_run["changes"] == {}
 
 
+@pytest.mark.skip_unless_on_windows
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
 def test_patch_directory(
     salt_master, salt_call_cli, tmp_path, content, all_patch_file, min_patch_ver
@@ -555,6 +557,7 @@ def test_patch_directory(
         assert state_run["changes"] == {}
 
 
+@pytest.mark.skip_unless_on_windows
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
 def test_patch_strip_parsing(
     salt_master, salt_call_cli, tmp_path, content, all_patch_file, min_patch_ver
@@ -621,6 +624,7 @@ def test_patch_strip_parsing(
         assert state_run["changes"] == {}
 
 
+@pytest.mark.skip_unless_on_windows
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
 def test_patch_saltenv(
     salt_master, salt_call_cli, tmp_path, content, math_patch_file, min_patch_ver
@@ -666,6 +670,7 @@ def test_patch_saltenv(
         ] == "Source file {} not found in saltenv 'prod'".format(math_patch_file)
 
 
+@pytest.mark.skip_unless_on_windows
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
 def test_patch_single_file_failure(
     salt_master, salt_call_cli, tmp_path, content, numbers_patch_file, min_patch_ver
@@ -745,6 +750,7 @@ def test_patch_single_file_failure(
         )
 
 
+@pytest.mark.skip_unless_on_windows
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
 def test_patch_directory_failure(
     salt_master, salt_call_cli, tmp_path, content, all_patch_file, min_patch_ver
@@ -823,6 +829,7 @@ def test_patch_directory_failure(
         )
 
 
+@pytest.mark.skip_unless_on_windows
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
 def test_patch_single_file_template(
     salt_master,
@@ -884,6 +891,7 @@ def test_patch_single_file_template(
         assert state_run["changes"] == {}
 
 
+@pytest.mark.skip_unless_on_windows
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
 def test_patch_directory_template(
     salt_master,
@@ -945,6 +953,7 @@ def test_patch_directory_template(
         assert state_run["changes"] == {}
 
 
+@pytest.mark.skip_unless_on_windows
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
 def test_patch_test_mode(
     salt_master, salt_call_cli, tmp_path, content, numbers_patch_file, min_patch_ver
