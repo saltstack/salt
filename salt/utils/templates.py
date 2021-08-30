@@ -495,9 +495,10 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 SLS_ENCODING,
             )
             decoded_context[key] = salt.utils.data.decode(value)
+
+    jinja_env.globals.update(decoded_context)
     try:
         template = jinja_env.from_string(tmplstr)
-        template.globals.update(decoded_context)
         output = template.render(**decoded_context)
     except jinja2.exceptions.UndefinedError as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])
