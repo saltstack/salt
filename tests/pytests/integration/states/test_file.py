@@ -36,13 +36,15 @@ def content():
     1
     2
     3
-    """)
+    """
+    )
     math_file_contents = textwrap.dedent(
         """\
     Five plus five is ten
 
     Four squared is sixteen
-    """)
+    """
+    )
     return numbers_file_contents, math_file_contents
 
 
@@ -417,8 +419,10 @@ def _check_minimum_version(salt_call_cli, minimum_patch_ver):
     version = salt_call_cli.run("--local", "cmd.run", "patch --version")
     version = version.json.split()[2]
     if _LooseVersion(version) < _LooseVersion(minimum_patch_ver):
-        pytest.xfail("Minimum version of patch not found,"
-                     " expecting {}, found {}".format(minimum_patch_ver, version))
+        pytest.xfail(
+            "Minimum version of patch not found,"
+            " expecting {}, found {}".format(minimum_patch_ver, version)
+        )
 
 
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
@@ -485,7 +489,9 @@ def test_patch_single_file(salt_master, salt_call_cli, tmp_path, min_patch_ver):
 
 
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
-def test_patch_directory(salt_master, salt_call_cli, tmp_path, content, all_patch_file, min_patch_ver):
+def test_patch_directory(
+    salt_master, salt_call_cli, tmp_path, content, all_patch_file, min_patch_ver
+):
     """
     Test file.patch using a patch applied to a directory, with changes
     spanning multiple files.
@@ -550,7 +556,9 @@ def test_patch_directory(salt_master, salt_call_cli, tmp_path, content, all_patc
 
 
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
-def test_patch_strip_parsing(salt_master, salt_call_cli, tmp_path, content, all_patch_file, min_patch_ver):
+def test_patch_strip_parsing(
+    salt_master, salt_call_cli, tmp_path, content, all_patch_file, min_patch_ver
+):
     """
     Test that we successfuly parse -p/--strip when included in the options
     """
@@ -614,7 +622,9 @@ def test_patch_strip_parsing(salt_master, salt_call_cli, tmp_path, content, all_
 
 
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
-def test_patch_saltenv(salt_master, salt_call_cli, tmp_path, content, math_patch_file, min_patch_ver):
+def test_patch_saltenv(
+    salt_master, salt_call_cli, tmp_path, content, math_patch_file, min_patch_ver
+):
     """
     Test that we attempt to download the patch from a non-base saltenv
     """
@@ -657,7 +667,9 @@ def test_patch_saltenv(salt_master, salt_call_cli, tmp_path, content, math_patch
 
 
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
-def test_patch_single_file_failure(salt_master, salt_call_cli, tmp_path, content, numbers_patch_file, min_patch_ver):
+def test_patch_single_file_failure(
+    salt_master, salt_call_cli, tmp_path, content, numbers_patch_file, min_patch_ver
+):
     """
     Test file.patch using a patch applied to a single file. This tests a
     failed patch.
@@ -696,7 +708,9 @@ def test_patch_single_file_failure(salt_master, salt_call_cli, tmp_path, content
             - reject_file: {reject_file}
             - strip: 1
         """.format(
-        numbers_file=numbers_file, numbers_patch=numbers_patch_file, reject_file=reject_file
+        numbers_file=numbers_file,
+        numbers_patch=numbers_patch_file,
+        reject_file=reject_file,
     )
     sls_patch_reject_tempfile = salt_master.state_tree.base.temp_file(
         "{}.sls".format(sls_patch_reject_name), sls_patch_reject_contents
@@ -732,7 +746,9 @@ def test_patch_single_file_failure(salt_master, salt_call_cli, tmp_path, content
 
 
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
-def test_patch_directory_failure(salt_master, salt_call_cli, tmp_path, content, all_patch_file, min_patch_ver):
+def test_patch_directory_failure(
+    salt_master, salt_call_cli, tmp_path, content, all_patch_file, min_patch_ver
+):
     """
     Test file.patch using a patch applied to a directory, with changes
     spanning multiple files.
@@ -808,7 +824,15 @@ def test_patch_directory_failure(salt_master, salt_call_cli, tmp_path, content, 
 
 
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
-def test_patch_single_file_template(salt_master, salt_call_cli, tmp_path, context, content, numbers_patch_template, min_patch_ver):
+def test_patch_single_file_template(
+    salt_master,
+    salt_call_cli,
+    tmp_path,
+    context,
+    content,
+    numbers_patch_template,
+    min_patch_ver,
+):
     """
     Test file.patch using a patch applied to a single file, with jinja
     templating applied to the patch file.
@@ -861,7 +885,15 @@ def test_patch_single_file_template(salt_master, salt_call_cli, tmp_path, contex
 
 
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
-def test_patch_directory_template(salt_master, salt_call_cli, tmp_path, context, content, all_patch_template, min_patch_ver):
+def test_patch_directory_template(
+    salt_master,
+    salt_call_cli,
+    tmp_path,
+    context,
+    content,
+    all_patch_template,
+    min_patch_ver,
+):
     """
     Test file.patch using a patch applied to a directory, with changes
     spanning multiple files, and with jinja templating applied to the patch
@@ -914,7 +946,9 @@ def test_patch_directory_template(salt_master, salt_call_cli, tmp_path, context,
 
 
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
-def test_patch_test_mode(salt_master, salt_call_cli, tmp_path, content, numbers_patch_file, min_patch_ver):
+def test_patch_test_mode(
+    salt_master, salt_call_cli, tmp_path, content, numbers_patch_file, min_patch_ver
+):
     """
     Test file.patch using test=True
     """
