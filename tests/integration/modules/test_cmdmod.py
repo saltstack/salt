@@ -275,6 +275,7 @@ class CMDModuleTest(ModuleCase):
                 ret = self.run_function("cmd.tty", [tty, "apply salt liberally"])
                 self.assertTrue("Success" in ret)
 
+    @pytest.mark.skip_if_windows
     @pytest.mark.skip_if_binaries_missing("which")
     def test_which(self):
         """
@@ -286,6 +287,7 @@ class CMDModuleTest(ModuleCase):
         self.assertIsInstance(cmd_run, str)
         self.assertEqual(cmd_which.rstrip(), cmd_run.rstrip())
 
+    @pytest.mark.skip_if_windows
     @pytest.mark.skip_if_binaries_missing("which")
     def test_which_bin(self):
         """
