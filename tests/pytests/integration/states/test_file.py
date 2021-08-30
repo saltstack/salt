@@ -18,6 +18,30 @@ pytestmark = [
 ]
 
 
+@pytest.fixture
+def context():
+    return {"two": "two", "ten": 10}
+
+
+@pytest.fixture
+def content():
+    numbers_file_contents = """
+    one
+    two
+    three
+
+    1
+    2
+    3
+    """
+    math_file_contents = """
+    Five plus five is ten
+
+    Four squared is sixteen
+    """
+    return numbers_file_contents, math_file_contents
+
+
 @pytest.fixture(scope="module")
 def pillar_tree(salt_master, salt_minion, salt_call_cli):
     top_file = """
@@ -398,12 +422,9 @@ def test_patch_single_file(salt_master, salt_call_cli, tmp_path):
 
     with sls_tempfile, name_tempfile, source_tempfile:
         # Store the original contents and make sure they change
-        old_contents = name_file.read_text()
         ret = salt_call_cli.run("state.apply", sls_name)
         # Check to make sure the patch was applied okay
         assert ret.exitcode == 0
-        # Check the content of the patched file to make sure its changed
-        assert old_contents != name_file.read_text()
 
         state_run = next(iter(ret.json.values()))
         assert state_run["result"] is True
@@ -420,8 +441,33 @@ def test_patch_single_file(salt_master, salt_call_cli, tmp_path):
         assert state_run["changes"] == {}
 
 
+@pytest.fixture
+def all_patch_file():
+    return os.path.join("salt://", "patches/", "all.patch")
+
+
+@pytest.fixture
+def numbers_patch_file():
+    return os.path.join("salt://", "patches/", "numbers.patch")
+
+
+@pytest.fixture
+def math_patch_file():
+    return os.path.join("salt://", "patches/", "math.patch")
+
+
+@pytest.fixture
+def numbers_patch_template():
+    return os.path.join("salt://", "patches/", "numbers.patch.jinja")
+
+
+@pytest.fixture
+def all_patch_template():
+    return os.path.join("salt://", "patches/", "all.patch.jinja")
+
+
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
-def test_patch_directory(salt_master, salt_call_cli, tmp_path):
+def test_patch_directory(salt_master, salt_call_cli, tmp_path, content, all_patch_file):
     """
     Test file.patch using a patch applied to a directory, with changes
     spanning multiple files.
@@ -441,15 +487,13 @@ def test_patch_directory(salt_master, salt_call_cli, tmp_path):
     Four squared is sixteen
     """
     # Create a new unpatched set of files
-    all_patch = "salt://" + "patches/" + "all.patch"
-
-    base_dir = tmp_path
+    base_dir = str(tmp_path)
     os.makedirs(os.path.join(base_dir, "foo", "bar"))
     numbers_file = os.path.join(base_dir, "foo", "numbers.txt")
     math_file = os.path.join(base_dir, "foo", "bar", "math.txt")
 
-    numbers_tempfile = pytest.helpers.temp_file(numbers_file, numbers_file_contents)
-    math_tempfile = pytest.helpers.temp_file(math_file, math_file_contents)
+    numbers_tempfile = pytest.helpers.temp_file(numbers_file, content[0])
+    math_tempfile = pytest.helpers.temp_file(math_file, content[1])
 
     sls_name = "test_patch"
     sls_contents = """
@@ -459,7 +503,7 @@ def test_patch_directory(salt_master, salt_call_cli, tmp_path):
             - source: {all_patch}
             - strip: 1
         """.format(
-        base_dir=base_dir, all_patch=all_patch
+        base_dir=base_dir, all_patch=all_patch_file
     )
     sls_tempfile = salt_master.state_tree.base.temp_file(
         "{}.sls".format(sls_name), sls_contents
@@ -487,34 +531,18 @@ def test_patch_directory(salt_master, salt_call_cli, tmp_path):
 
 
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
-def test_patch_strip_parsing(salt_master, salt_call_cli, tmp_path):
+def test_patch_strip_parsing(salt_master, salt_call_cli, tmp_path, content, all_patch_file):
     """
     Test that we successfuly parse -p/--strip when included in the options
     """
-    numbers_file_contents = """
-    one
-    two
-    three
-
-    1
-    2
-    3
-    """
-    math_file_contents = """
-    Five plus five is ten
-
-    Four squared is sixteen
-    """
     # Create a new unpatched set of files
-    all_patch = "salt://" + "patches/" + "all.patch"
-
-    base_dir = tmp_path
+    base_dir = str(tmp_path)
     os.makedirs(os.path.join(base_dir, "foo", "bar"))
     numbers_file = os.path.join(base_dir, "foo", "numbers.txt")
     math_file = os.path.join(base_dir, "foo", "bar", "math.txt")
 
-    numbers_tempfile = pytest.helpers.temp_file(numbers_file, numbers_file_contents)
-    math_tempfile = pytest.helpers.temp_file(math_file, math_file_contents)
+    numbers_tempfile = pytest.helpers.temp_file(numbers_file, content[0])
+    math_tempfile = pytest.helpers.temp_file(math_file, content[1])
 
     sls_name = "test_patch"
     sls_contents = """
@@ -524,7 +552,7 @@ def test_patch_strip_parsing(salt_master, salt_call_cli, tmp_path):
             - source: {all_patch}
             - options: "-p1"
         """.format(
-        base_dir=base_dir, all_patch=all_patch
+        base_dir=base_dir, all_patch=all_patch_file
     )
     sls_tempfile = salt_master.state_tree.base.temp_file(
         "{}.sls".format(sls_name), sls_contents
@@ -538,7 +566,7 @@ def test_patch_strip_parsing(salt_master, salt_call_cli, tmp_path):
             - source: {all_patch}
             - strip: 1
         """.format(
-        base_dir=base_dir, all_patch=all_patch
+        base_dir=base_dir, all_patch=all_patch_file
     )
     sls_patch_tempfile = salt_master.state_tree.base.temp_file(
         "{}.sls".format(sls_name), sls_contents
@@ -566,26 +594,19 @@ def test_patch_strip_parsing(salt_master, salt_call_cli, tmp_path):
 
 
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
-def test_patch_saltenv(salt_master, salt_call_cli, tmp_path):
+def test_patch_saltenv(salt_master, salt_call_cli, tmp_path, content, math_patch_file):
     """
     Test that we attempt to download the patch from a non-base saltenv
     """
     # This state will fail because we don't have a patch file in that
     # environment, but that is OK, we just want to test that we're looking
     # in an environment other than base.
-    math_file_contents = """
-    Five plus five is ten
-
-    Four squared is sixteen
-    """
     # Create a new unpatched set of files
-    math_patch = "salt://" + "patches/" + "math.patch"
-
-    base_dir = tmp_path
+    base_dir = str(tmp_path)
     os.makedirs(os.path.join(base_dir, "foo", "bar"))
     math_file = os.path.join(base_dir, "foo", "bar", "math.txt")
 
-    math_tempfile = pytest.helpers.temp_file(math_file, math_file_contents)
+    math_tempfile = pytest.helpers.temp_file(math_file, content[1])
 
     sls_name = "test_patch"
     sls_contents = """
@@ -595,7 +616,7 @@ def test_patch_saltenv(salt_master, salt_call_cli, tmp_path):
             - source: {math_patch}
             - saltenv: "prod"
         """.format(
-        math_file=math_file, math_patch=math_patch
+        math_file=math_file, math_patch=math_patch_file
     )
     sls_tempfile = salt_master.state_tree.base.temp_file(
         "{}.sls".format(sls_name), sls_contents
@@ -611,40 +632,24 @@ def test_patch_saltenv(salt_master, salt_call_cli, tmp_path):
         assert state_run["result"] is False
         assert state_run[
             "comment"
-        ] == "Source file {} not found in saltenv 'prod'".format(math_patch)
+        ] == "Source file {} not found in saltenv 'prod'".format(math_patch_file)
 
 
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
-def test_patch_single_file_failure(salt_master, salt_call_cli, tmp_path):
+def test_patch_single_file_failure(salt_master, salt_call_cli, tmp_path, content, numbers_patch_file):
     """
     Test file.patch using a patch applied to a single file. This tests a
     failed patch.
     """
-    numbers_file_contents = """
-    one
-    two
-    three
-
-    1
-    2
-    3
-    """
-    math_file_contents = """
-    Five plus five is ten
-
-    Four squared is sixteen
-    """
     # Create a new unpatched set of files
-    numbers_patch = "salt://" + "patches/" + "numbers.patch"
-
-    base_dir = tmp_path
+    base_dir = str(tmp_path)
     os.makedirs(os.path.join(base_dir, "foo", "bar"))
     numbers_file = os.path.join(base_dir, "foo", "numbers.txt")
     math_file = os.path.join(base_dir, "foo", "bar", "math.txt")
     reject_file = os.path.join(base_dir, "reject.txt")
 
-    numbers_tempfile = pytest.helpers.temp_file(numbers_file, numbers_file_contents)
-    math_tempfile = pytest.helpers.temp_file(math_file, math_file_contents)
+    numbers_tempfile = pytest.helpers.temp_file(numbers_file, content[0])
+    math_tempfile = pytest.helpers.temp_file(math_file, content[1])
     reject_tempfile = pytest.helpers.temp_file(reject_file)
 
     sls_patch_name = "test_patch"
@@ -654,7 +659,7 @@ def test_patch_single_file_failure(salt_master, salt_call_cli, tmp_path):
             - name: {numbers_file}
             - source: {numbers_patch}
         """.format(
-        numbers_file=numbers_file, numbers_patch=numbers_patch
+        numbers_file=numbers_file, numbers_patch=numbers_patch_file
     )
     sls_patch_tempfile = salt_master.state_tree.base.temp_file(
         "{}.sls".format(sls_patch_name), sls_patch_contents
@@ -669,7 +674,7 @@ def test_patch_single_file_failure(salt_master, salt_call_cli, tmp_path):
             - reject_file: {reject_file}
             - strip: 1
         """.format(
-        numbers_file=numbers_file, numbers_patch=numbers_patch, reject_file=reject_file
+        numbers_file=numbers_file, numbers_patch=numbers_patch_file, reject_file=reject_file
     )
     sls_patch_reject_tempfile = salt_master.state_tree.base.temp_file(
         "{}.sls".format(sls_patch_reject_name), sls_patch_reject_contents
@@ -705,36 +710,20 @@ def test_patch_single_file_failure(salt_master, salt_call_cli, tmp_path):
 
 
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
-def test_patch_directory_failure(salt_master, salt_call_cli, tmp_path):
+def test_patch_directory_failure(salt_master, salt_call_cli, tmp_path, content, all_patch_file):
     """
     Test file.patch using a patch applied to a directory, with changes
     spanning multiple files.
     """
-    numbers_file_contents = """
-    one
-    two
-    three
-
-    1
-    2
-    3
-    """
-    math_file_contents = """
-    Five plus five is ten
-
-    Four squared is sixteen
-    """
     # Create a new unpatched set of files
-    all_patch = "salt://" + "patches/" + "all.patch"
-
-    base_dir = tmp_path
+    base_dir = str(tmp_path)
     os.makedirs(os.path.join(base_dir, "foo", "bar"))
     numbers_file = os.path.join(base_dir, "foo", "numbers.txt")
     math_file = os.path.join(base_dir, "foo", "bar", "math.txt")
     reject_file = os.path.join(base_dir, "reject.txt")
 
-    numbers_tempfile = pytest.helpers.temp_file(numbers_file, numbers_file_contents)
-    math_tempfile = pytest.helpers.temp_file(math_file, math_file_contents)
+    numbers_tempfile = pytest.helpers.temp_file(numbers_file, content[0])
+    math_tempfile = pytest.helpers.temp_file(math_file, content[1])
     reject_tempfile = pytest.helpers.temp_file(reject_file)
 
     sls_patch_name = "test_patch"
@@ -745,7 +734,7 @@ def test_patch_directory_failure(salt_master, salt_call_cli, tmp_path):
             - source: {all_patch}
             - strip: 1
         """.format(
-        base_dir=base_dir, all_patch=all_patch
+        base_dir=base_dir, all_patch=all_patch_file
     )
     sls_patch_tempfile = salt_master.state_tree.base.temp_file(
         "{}.sls".format(sls_patch_name), sls_patch_contents
@@ -760,7 +749,7 @@ def test_patch_directory_failure(salt_master, salt_call_cli, tmp_path):
             - reject_file: {reject_file}
             - strip: 1
         """.format(
-        base_dir=base_dir, all_patch=all_patch, reject_file=reject_file
+        base_dir=base_dir, all_patch=all_patch_file, reject_file=reject_file
     )
     sls_patch_reject_tempfile = salt_master.state_tree.base.temp_file(
         "{}.sls".format(sls_patch_reject_name), sls_patch_reject_contents
@@ -796,29 +785,18 @@ def test_patch_directory_failure(salt_master, salt_call_cli, tmp_path):
 
 
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
-def test_patch_single_file_template(salt_master, salt_call_cli, tmp_path):
+def test_patch_single_file_template(salt_master, salt_call_cli, tmp_path, context, content, numbers_patch_template):
     """
     Test file.patch using a patch applied to a single file, with jinja
     templating applied to the patch file.
     """
-    numbers_file_contents = """
-    one
-    two
-    three
-
-    1
-    2
-    3
-    """
     # Create a new unpatched set of files
-    numbers_patch_template = "salt://" + "patches/" + "numbers.patch" + ".jinja"
-    context = {"two": "two", "ten": 10}
 
-    base_dir = tmp_path
+    base_dir = str(tmp_path)
     os.makedirs(os.path.join(base_dir, "foo", "bar"))
     numbers_file = os.path.join(base_dir, "foo", "numbers.txt")
 
-    numbers_tempfile = pytest.helpers.temp_file(numbers_file, numbers_file_contents)
+    numbers_tempfile = pytest.helpers.temp_file(numbers_file, content[0])
 
     sls_name = "test_patch"
     sls_contents = """
@@ -859,36 +837,20 @@ def test_patch_single_file_template(salt_master, salt_call_cli, tmp_path):
 
 
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
-def test_patch_directory_template(salt_master, salt_call_cli, tmp_path):
+def test_patch_directory_template(salt_master, salt_call_cli, tmp_path, context, content, all_patch_template):
     """
     Test file.patch using a patch applied to a directory, with changes
     spanning multiple files, and with jinja templating applied to the patch
     file.
     """
-    numbers_file_contents = """
-    one
-    two
-    three
-
-    1
-    2
-    3
-    """
-    math_file_contents = """
-    Five plus five is ten
-
-    Four squared is sixteen
-    """
     # Create a new unpatched set of files
-    base_dir = tmp_path
+    base_dir = str(tmp_path)
     os.makedirs(os.path.join(base_dir, "foo", "bar"))
     numbers_file = os.path.join(base_dir, "foo", "numbers.txt")
     math_file = os.path.join(base_dir, "foo", "bar", "math.txt")
-    all_patch_template = "salt://" + "patches/" + "all.patch" + ".jinja"
-    context = {"two": "two", "ten": 10}
 
-    numbers_tempfile = pytest.helpers.temp_file(numbers_file, numbers_file_contents)
-    math_tempfile = pytest.helpers.temp_file(math_file, math_file_contents)
+    numbers_tempfile = pytest.helpers.temp_file(numbers_file, content[0])
+    math_tempfile = pytest.helpers.temp_file(math_file, content[1])
 
     sls_name = "test_patch"
     sls_contents = """
@@ -907,7 +869,6 @@ def test_patch_directory_template(salt_master, salt_call_cli, tmp_path):
 
     with sls_tempfile, numbers_tempfile, math_tempfile:
         ret = salt_call_cli.run("state.apply", sls_name)
-        print(ret.json)
         assert ret.exitcode == 0
         assert ret.json
 
@@ -928,26 +889,15 @@ def test_patch_directory_template(salt_master, salt_call_cli, tmp_path):
 
 
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
-def test_patch_test_mode(salt_master, salt_call_cli, tmp_path):
+def test_patch_test_mode(salt_master, salt_call_cli, tmp_path, content, numbers_patch_file):
     """
     Test file.patch using test=True
     """
-    numbers_file_contents = """
-    one
-    two
-    three
-
-    1
-    2
-    3
-    """
     # Create a new unpatched set of files
-    numbers_patch = "salt://" + "patches/" + "numbers.patch"
-
-    base_dir = tmp_path
+    base_dir = str(tmp_path)
     os.makedirs(os.path.join(base_dir, "foo", "bar"))
     numbers_file = os.path.join(base_dir, "foo", "numbers.txt")
-    numbers_tempfile = pytest.helpers.temp_file(numbers_file, numbers_file_contents)
+    numbers_tempfile = pytest.helpers.temp_file(numbers_file, content[0])
 
     sls_patch_name = "test_patch"
     sls_patch_contents = """
@@ -956,7 +906,7 @@ def test_patch_test_mode(salt_master, salt_call_cli, tmp_path):
             - name: {numbers_file}
             - source: {numbers_patch}
         """.format(
-        numbers_file=numbers_file, numbers_patch=numbers_patch
+        numbers_file=numbers_file, numbers_patch=numbers_patch_file
     )
     sls_patch_tempfile = salt_master.state_tree.base.temp_file(
         "{}.sls".format(sls_patch_name), sls_patch_contents
@@ -965,7 +915,6 @@ def test_patch_test_mode(salt_master, salt_call_cli, tmp_path):
     with sls_patch_tempfile, numbers_tempfile:
         # Test application with test=True mode
         ret = salt_call_cli.run("state.apply", sls_patch_name, test=True)
-        print(ret.json)
         assert ret.exitcode == 0
         assert ret.json
         state_run = next(iter(ret.json.values()))
@@ -976,7 +925,6 @@ def test_patch_test_mode(salt_master, salt_call_cli, tmp_path):
         # exit with a True rather than a None result if test=True is used on an
         # already-applied patch.
         ret = salt_call_cli.run("state.apply", "test_patch")
-        print(ret.json)
         assert ret.exitcode == 0
         assert ret.json
 
@@ -1007,7 +955,6 @@ def test_patch_test_mode(salt_master, salt_call_cli, tmp_path):
         # case we should return a False result because we should already know
         # by this point that the patch will not apply cleanly.
         ret = salt_call_cli.run("state.apply", sls_patch_name, test=True)
-        print(ret.json)
         assert ret.exitcode == 1
         assert ret.json
 
