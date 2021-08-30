@@ -174,7 +174,10 @@ def _call_apt(args, scope=True, **kwargs):
 
     cmd_ret = __salt__["cmd.run_all"](cmd, **params)
     count = 0
-    while ("Could not get lock" in cmd_ret.get("stderr", "") or "dpkg frontend lock is locked" in cmd_ret.get("stderr", "")) and count < 20:
+    while (
+        "Could not get lock" in cmd_ret.get("stderr", "")
+        or "dpkg frontend lock is locked" in cmd_ret.get("stderr", "")
+    ) and count < 20:
         count += 1
         log.warning("Waiting for dpkg lock release: retrying... %s/20", count)
         time.sleep(2 ** count)
