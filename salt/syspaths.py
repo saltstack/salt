@@ -107,17 +107,17 @@ def _get_windows_root_dir():
     # If this key does not exist, then salt was not installed using the
     # new method installer. Could be pip or setup.py or an older version of the
     # installer.
-    log.debug("Failed to get ROOT_DIR from registry. {}".format(root_dir["comment"]))
+    log.debug("Failed to get ROOT_DIR from registry. %s", root_dir["comment"])
     # Check for C:\salt\conf
     old_root = "\\".join([os.environ["SystemDrive"], "salt", "conf"])
     dflt_root = os.path.join(os.environ["ProgramData"], "Salt Project", "salt")
     if os.path.isdir(old_root):
         # If the old config location is present use it
-        log.debug("ROOT_DIR: {}".format(os.path.dirname(old_root)))
+        log.debug("ROOT_DIR: %s", os.path.dirname(old_root))
         return os.path.dirname(old_root)
     else:
         # If not, then default to ProgramData
-        log.debug("ROOT_DIR: {}".format(dflt_root))
+        log.debug("ROOT_DIR: %s", dflt_root)
         return dflt_root
 
 
