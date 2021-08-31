@@ -1825,7 +1825,7 @@ Function parseInstallerCommandLineSwitches
         FileWrite $0 "$\t$\t$\ta timestamp and a .bak extension. That includes$\n"
         FileWrite $0 "$\t$\t$\tthe minion file and the minion.d directory$\n"
         FileWrite $0 "$\n"
-        FileWrite $0 "/install-location=$\tSpecify the installation location for the Salt binaries.$\n"
+        FileWrite $0 "/install-dir=$\tSpecify the installation location for the Salt binaries.$\n"
         FileWrite $0 "$\t$\t$\tThis will be ignored for existing installations.$\n"
         FileWrite $0 "$\n"
         FileWrite $0 "/move-config$\t$\tIf config is found at C:\salt it will be moved to %ProgramData%$\n"
@@ -1842,7 +1842,7 @@ Function parseInstallerCommandLineSwitches
         FileWrite $0 "$\n"
         FileWrite $0 "$\t$EXEFILE /S /minion-name=myminion /master=master.mydomain.com /start-minion-delayed$\n"
         FileWrite $0 "$\n"
-        FileWrite $0 "$\t$EXEFILE /S /minion-name=myminion /master=master.mydomain.com /install-location=$\"C:\Software\salt$\"$\n"
+        FileWrite $0 "$\t$EXEFILE /S /minion-name=myminion /master=master.mydomain.com /install-dir=$\"C:\Software\salt$\"$\n"
         FileWrite $0 "$\n"
         FileWrite $0 "===============================================================================$\n"
         FileWrite $0 "$\n"
@@ -1928,7 +1928,7 @@ Function parseInstallerCommandLineSwitches
 
     # Set Install Location
     ClearErrors
-    ${GetOptions} $R0 "/install-location=" $R1
+    ${GetOptions} $R0 "/install-dir=" $R1
     ${IfNot} $R1 == ""
         # A Custom Location was passed, set it
         StrCpy $CustomLocation $R1
