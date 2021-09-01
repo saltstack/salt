@@ -16,12 +16,12 @@ See example config below.
     beacons:
       salt_monitor:
         - salt_fun:
-        - slsutil.renderer:
-            args:
-              - salt://states/apache.sls
-            kwargs:
-              - default_renderer: jinja
-        - test.ping
+          - slsutil.renderer:
+              args:
+                - salt://states/apache.sls
+              kwargs:
+                - default_renderer: jinja
+          - test.ping
         - interval: 3600 # seconds
 """
 import salt.utils.beacons
