@@ -432,8 +432,9 @@ def test_patch_single_file(salt_master, salt_call_cli, tmp_path, min_patch_ver):
     Test file.patch using a patch applied to a single file
     """
     _check_minimum_version(salt_call_cli, min_patch_ver)
-    name_file = (tmp_path / "name_file.txt").resolve()
-    source_file = (tmp_path / "source_file.patch").resolve()
+    resolved_path = tmp_path.resolve()
+    name_file = (resolved_path / "name_file.txt")
+    source_file = (resolved_path / "source_file.patch")
     name_file_contents = """
     salt
     patch
