@@ -434,13 +434,13 @@ def _check_minimum_version(salt_call_cli, minimum_patch_ver):
 
 @pytest.mark.skip_unless_on_windows
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
-def test_patch_single_file(salt_call_cli, tmp_path, min_patch_ver, patch_file_dest):
+def test_patch_single_file(salt_call_cli, min_patch_ver, patch_file_dest):
     """
     Test file.patch using a patch applied to a single file
     """
     _check_minimum_version(salt_call_cli, min_patch_ver)
-    name_file = (tmp_path / "name_file.txt")
-    source_file = (tmp_path / "source_file.patch")
+    name_file = patch_file_dest / "name_file.txt"
+    source_file = patch_file_dest / "source_file.patch"
     name_file_contents = """
     salt
     patch
@@ -467,8 +467,8 @@ def test_patch_single_file(salt_call_cli, tmp_path, min_patch_ver, patch_file_de
         name_file=name_file, source_file=source_file
     )
     sls_temp = temp_file("test_patch.sls", sls_contents, patch_file_dest)
-    name_temp = temp_file(name_file, name_file_contents)
-    source_temp = temp_file(source_file, source_file_contents)
+    name_temp = temp_file("name_file.txt", name_file_contents, patch_file_dest)
+    source_temp = temp_file("source_file.patch", source_file_contents, patch_file_dest)
 
     with sls_temp, name_temp, source_temp:
         # Store the original contents and make sure they change
