@@ -1594,24 +1594,24 @@ def symlink(
         The default mode for new files and directories corresponds umask of salt
         process. For existing files and directories it's not enforced.
 
-    win_owner : None
+    win_owner
         The owner of the symlink and directories if ``makedirs`` is True. If
         this is not passed, ``user`` will be used. If ``user`` is not passed,
         the account under which Salt is running will be used.
 
         .. versionadded:: 2017.7.7
 
-    win_perms : None
+    win_perms
         A dictionary containing permissions to grant
 
         .. versionadded:: 2017.7.7
 
-    win_deny_perms : None
+    win_deny_perms
         A dictionary containing permissions to deny
 
         .. versionadded:: 2017.7.7
 
-    win_inheritance : None
+    win_inheritance
         True to inherit permissions from parent, otherwise False
 
         .. versionadded:: 2017.7.7
@@ -2311,7 +2311,7 @@ def managed(
 
         .. versionadded:: 2016.3.5
 
-    keep_source : True
+    keep_source
         Set to ``False`` to discard the cached copy of the source file once the
         state completes. This can be useful for larger files to keep them from
         taking up space in minion cache. However, keep in mind that discarding
@@ -2375,7 +2375,7 @@ def managed(
         - :mod:`py<salt.renderers.py>`
         - :mod:`wempy<salt.renderers.wempy>`
 
-    makedirs : False
+    makedirs
         If set to ``True``, then the parent directories will be created to
         facilitate the creation of the named file. If ``False``, and the parent
         directory of the destination file doesn't exist, the state will fail.
@@ -2389,7 +2389,7 @@ def managed(
         The default mode for new files and directories corresponds umask of salt
         process. For existing files and directories it's not enforced.
 
-    replace : True
+    replace
         If set to ``False`` and the file already exists, the file will not be
         modified even if changes would otherwise be made. Permissions and
         ownership will still be enforced, however.
@@ -2408,7 +2408,7 @@ def managed(
         Output a unified diff of the old file and the new file. If ``False``
         return a boolean if any changes were made.
 
-    create : True
+    create
         If set to ``False``, then the file will only be managed if the file
         already exists on the system.
 
@@ -2515,7 +2515,7 @@ def managed(
 
             salt '*' grains.set motd 'Welcome! This system is managed by Salt.'
 
-    contents_newline : True
+    contents_newline
         .. versionadded:: 2014.7.0
         .. versionchanged:: 2015.8.4
             This option is now ignored if the contents being deployed contain
@@ -2544,20 +2544,20 @@ def managed(
 
         .. versionadded:: 2017.7.0
 
-    encoding_errors : 'strict'
+    encoding_errors
         Error encoding scheme. Default is ```'strict'```.
         See https://docs.python.org/2/library/codecs.html#codec-base-classes
         for the list of available schemes.
 
         .. versionadded:: 2017.7.0
 
-    allow_empty : True
+    allow_empty
         .. versionadded:: 2015.8.4
 
         If set to ``False``, then the state will fail if the contents specified
         by ``contents_pillar`` or ``contents_grains`` are empty.
 
-    follow_symlinks : True
+    follow_symlinks
         .. versionadded:: 2014.7.0
 
         If the desired path is a symlink follow it and make changes to the
@@ -2627,14 +2627,14 @@ def managed(
                   - 'exec salt-minion'
                 - check_cmd: init-checkconf -f
 
-    skip_verify : False
+    skip_verify
         If ``True``, hash verification of remote file sources (``http://``,
         ``https://``, ``ftp://``) will be skipped, and the ``source_hash``
         argument will be ignored.
 
         .. versionadded:: 2016.3.0
 
-    selinux : None
+    selinux
         Allows setting the selinux user, role, type, and range of a managed file
 
         .. code-block:: yaml
@@ -2650,14 +2650,14 @@ def managed(
 
         .. versionadded:: 3000
 
-    win_owner : None
+    win_owner
         The owner of the directory. If this is not passed, user will be used. If
         user is not passed, the account under which Salt is running will be
         used.
 
         .. versionadded:: 2017.7.0
 
-    win_perms : None
+    win_perms
         A dictionary containing permissions to grant and their propagation. For
         example: ``{'Administrators': {'perms': 'full_control'}}`` Can be a
         single basic perm or a list of advanced perms. ``perms`` must be
@@ -2665,7 +2665,7 @@ def managed(
 
         .. versionadded:: 2017.7.0
 
-    win_deny_perms : None
+    win_deny_perms
         A dictionary containing permissions to deny and their propagation. For
         example: ``{'Administrators': {'perms': 'full_control'}}`` Can be a
         single basic perm or a list of advanced perms. ``perms`` must be
@@ -2673,13 +2673,13 @@ def managed(
 
         .. versionadded:: 2017.7.0
 
-    win_inheritance : True
+    win_inheritance
         True to inherit permissions from the parent directory, False not to
         inherit permission.
 
         .. versionadded:: 2017.7.0
 
-    win_perms_reset : False
+    win_perms_reset
         If ``True`` the existing DACL will be cleared and replaced with the
         settings defined in this function. If ``False``, new entries will be
         appended to the existing DACL. Default is ``False``.
@@ -3401,7 +3401,7 @@ def directory(
         When 'clean' is set to True, exclude this pattern from removal list
         and preserve in the destination.
 
-    follow_symlinks : False
+    follow_symlinks
         If the desired path is a symlink (or ``recurse`` is defined and a
         symlink is encountered while recursing), follow it and check the
         permissions of the directory/file to which the symlink points.
@@ -3430,7 +3430,7 @@ def directory(
 
         .. versionadded:: 2014.7.0
 
-    allow_symlink : True
+    allow_symlink
         If allow_symlink is True and the specified path is a symlink, it will be
         allowed to remain if it points to a directory. If allow_symlink is False
         then the state will fail, unless force is also set to True, in which case
@@ -3439,19 +3439,19 @@ def directory(
 
         .. versionadded:: 2014.7.0
 
-    children_only : False
+    children_only
         If children_only is True the base of a path is excluded when performing
         a recursive operation. In case of /path/to/base, base will be ignored
         while all of /path/to/base/* are still operated on.
 
-    win_owner : None
+    win_owner
         The owner of the directory. If this is not passed, user will be used. If
         user is not passed, the account under which Salt is running will be
         used.
 
         .. versionadded:: 2017.7.0
 
-    win_perms : None
+    win_perms
         A dictionary containing permissions to grant and their propagation. For
         example: ``{'Administrators': {'perms': 'full_control', 'applies_to':
         'this_folder_only'}}`` Can be a single basic perm or a list of advanced
@@ -3460,7 +3460,7 @@ def directory(
 
         .. versionadded:: 2017.7.0
 
-    win_deny_perms : None
+    win_deny_perms
         A dictionary containing permissions to deny and their propagation. For
         example: ``{'Administrators': {'perms': 'full_control', 'applies_to':
         'this_folder_only'}}`` Can be a single basic perm or a list of advanced
@@ -3468,13 +3468,13 @@ def directory(
 
         .. versionadded:: 2017.7.0
 
-    win_inheritance : True
+    win_inheritance
         True to inherit permissions from the parent directory, False not to
         inherit permission.
 
         .. versionadded:: 2017.7.0
 
-    win_perms_reset : False
+    win_perms_reset
         If ``True`` the existing DACL will be cleared and replaced with the
         settings defined in this function. If ``False``, new entries will be
         appended to the existing DACL. Default is ``False``.
@@ -3898,7 +3898,7 @@ def recurse(
         located on the master in the directory named spam, and is called eggs,
         the source string is salt://spam/eggs
 
-    keep_source : True
+    keep_source
         Set to ``False`` to discard the cached copy of the source file once the
         state completes. This can be useful for larger files to keep them from
         taking up space in minion cache. However, keep in mind that discarding
@@ -3973,7 +3973,7 @@ def recurse(
 
             The template option is required when recursively applying templates.
 
-    replace : True
+    replace
         If set to ``False`` and the file already exists, the file will not be
         modified even if changes would otherwise be made. Permissions and
         ownership will still be enforced, however.
@@ -4064,24 +4064,24 @@ def recurse(
         recursively removed so that symlink creation can proceed. This
         option is usually not needed except in special circumstances.
 
-    win_owner : None
+    win_owner
         The owner of the symlink and directories if ``makedirs`` is True. If
         this is not passed, ``user`` will be used. If ``user`` is not passed,
         the account under which Salt is running will be used.
 
         .. versionadded:: 2017.7.7
 
-    win_perms : None
+    win_perms
         A dictionary containing permissions to grant
 
         .. versionadded:: 2017.7.7
 
-    win_deny_perms : None
+    win_deny_perms
         A dictionary containing permissions to deny
 
         .. versionadded:: 2017.7.7
 
-    win_inheritance : None
+    win_inheritance
         True to inherit permissions from parent, otherwise False
 
         .. versionadded:: 2017.7.7
@@ -4963,13 +4963,13 @@ def replace(
         specified which will read the entire file into memory before
         processing.
 
-    append_if_not_found : False
+    append_if_not_found
         If set to ``True``, and pattern is not found, then the content will be
         appended to the file.
 
         .. versionadded:: 2014.7.0
 
-    prepend_if_not_found : False
+    prepend_if_not_found
         If set to ``True`` and pattern is not found, then the content will be
         prepended to the file.
 
@@ -4986,7 +4986,7 @@ def replace(
         The file extension to use for a backup of the file before editing. Set
         to ``False`` to skip making a backup.
 
-    show_changes : True
+    show_changes
         Output a unified diff of the old file and the new file. If ``False``
         return a boolean if any changes were made. Returns a boolean or a
         string.
@@ -4997,14 +4997,14 @@ def replace(
             diff. This may not normally be a concern, but could impact
             performance if used with large files.
 
-    ignore_if_missing : False
+    ignore_if_missing
         .. versionadded:: 2016.3.4
 
         Controls what to do if the file is missing. If set to ``False``, the
         state will display an error raised by the execution module. If set to
         ``True``, the state will simply report no changes.
 
-    backslash_literal : False
+    backslash_literal
         .. versionadded:: 2016.11.7
 
         Interpret backslashes as literal backslashes for the repl and not
@@ -5136,24 +5136,24 @@ def keyvalue(
         Dictionary of key / value pairs to search for and ensure values for.
         Used to specify multiple key / values at once.
 
-    separator : "="
+    separator
         Separator which separates key from value.
 
-    append_if_not_found : False
+    append_if_not_found
         Append the key/value to the end of the file if not found. Note that this
         takes precedence over ``prepend_if_not_found``.
 
-    prepend_if_not_found : False
+    prepend_if_not_found
         Prepend the key/value to the beginning of the file if not found. Note
         that ``append_if_not_found`` takes precedence.
 
-    show_changes : True
+    show_changes
         Show a diff of the resulting removals and inserts.
 
-    ignore_if_missing : False
+    ignore_if_missing
         Return with success even if the file is not found (or not readable).
 
-    count : 1
+    count
         Number of occurrences to allow (and correct), default is 1. Set to -1 to
         replace all, or set to 0 to remove all lines with this key regardsless
         of its value.
@@ -5163,7 +5163,7 @@ def keyvalue(
         A count of -1 will only replace all occurrences that are currently
         uncommented already. Lines commented out will be left alone.
 
-    uncomment : None
+    uncomment
         Disregard and remove supplied leading characters when finding keys. When
         set to None, lines that are commented out are left for what they are.
 
@@ -5171,11 +5171,11 @@ def keyvalue(
         The argument to ``uncomment`` is not a prefix string. Rather; it is a
         set of characters, each of which are stripped.
 
-    key_ignore_case : False
+    key_ignore_case
         Keys are matched case insensitively. When a value is changed the matched
         key is kept as-is.
 
-    value_ignore_case : False
+    value_ignore_case
         Values are checked case insensitively, trying to set e.g. 'Yes' while
         the current value is 'yes', will not result in changes when
         ``value_ignore_case`` is set to True.
@@ -5580,7 +5580,7 @@ def blockreplace(
         See the ``source_hash`` parameter description for :mod:`file.managed
         <salt.states.file.managed>` function for more details and examples.
 
-    template : jinja
+    template
         Templating engine to be used to render the downloaded file. The
         following engines are supported:
 
@@ -5597,11 +5597,11 @@ def blockreplace(
     defaults
         Default context passed to the template
 
-    append_if_not_found : False
+    append_if_not_found
         If markers are not found and this option is set to ``True``, the
         content block will be appended to the file.
 
-    prepend_if_not_found : False
+    prepend_if_not_found
         If markers are not found and this option is set to ``True``, the
         content block will be prepended to the file.
 
@@ -5621,11 +5621,11 @@ def blockreplace(
         The file extension to use for a backup of the file if any edit is made.
         Set this to ``False`` to skip making a backup.
 
-    dry_run : False
+    dry_run
         If ``True``, do not make any edits to the file and simply return the
         changes that *would* be made.
 
-    show_changes : True
+    show_changes
         Controls how changes are presented. If ``True``, the ``Changes``
         section of the state return will contain a unified diff of the changes
         made. If False, then it will contain a boolean (``True`` if any changes
@@ -5789,10 +5789,10 @@ def comment(name, regex, char="#", backup=".bak"):
         (e.g., the pattern ``^foo$`` will be rewritten as ``^(foo)$``)
         Note that you _need_ the leading ^, otherwise each time you run
         highstate, another comment char will be inserted.
-    char : ``#``
+    char
         The character to be inserted at the beginning of a line in order to
         comment it out
-    backup : ``.bak``
+    backup
         The file will be backed up before edit with this file extension
 
         .. warning::
@@ -5886,9 +5886,9 @@ def uncomment(name, regex, char="#", backup=".bak"):
         between comment() and uncomment()).  The regex will be searched for
         from the beginning of the line, ignoring leading spaces (we prepend
         '^[ \\t]*')
-    char : ``#``
+    char
         The character to remove in order to uncomment a line
-    backup : ``.bak``
+    backup
         The file will be backed up before edit with this file extension;
 
         .. warning::
@@ -7496,7 +7496,7 @@ def serialize(
 
         .. versionadded:: 2017.7.0
 
-    encoding_errors : 'strict'
+    encoding_errors
         Error encoding scheme. Default is ```'strict'```.
         See https://docs.python.org/2/library/codecs.html#codec-base-classes
         for the list of available schemes.
@@ -8064,9 +8064,9 @@ def decode(
         <salt.modules.hashutil.base64_encodefile>` function can load encoded
         content into Pillar. Either this option or ``encoded_data`` must be
         specified.
-    encoding_type : ``base64``
+    encoding_type
         The type of encoding.
-    checksum : ``md5``
+    checksum
         The hashing algorithm to use to generate checksums. Wraps the
         :py:func:`hashutil.digest <salt.modules.hashutil.digest>` execution
         function.

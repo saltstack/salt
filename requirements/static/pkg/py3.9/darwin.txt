@@ -36,6 +36,8 @@ idna==2.8
     #   requests
 immutables==0.15
     # via contextvars
+importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
+    # via -r requirements/darwin.txt
 jaraco.functools==2.0
     # via
     #   cheroot
@@ -109,6 +111,8 @@ vultr==1.0.1
     # via -r requirements/darwin.txt
 zc.lockfile==2.0
     # via cherrypy
+zipp==3.5.0
+    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

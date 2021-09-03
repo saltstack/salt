@@ -40,7 +40,7 @@ import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.utils.network import _get_interfaces
+from salt.utils.network import _clear_interfaces, _get_interfaces
 
 
 # rewrite distro.linux_distribution to allow best=True kwarg in version(), needed to get the minor version numbers in CentOS
@@ -50,6 +50,10 @@ def _linux_distribution():
         distro.version(best=True),
         distro.codename(),
     )
+
+
+def __init__(opts):
+    _clear_interfaces()
 
 
 try:
