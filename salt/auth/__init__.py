@@ -535,7 +535,9 @@ class Resolver:
             )
             print(
                 "Available eauth types: {}".format(
-                    ", ".join([k[:-5] for k in self.auth if k.endswith(".auth")])
+                    ", ".join(
+                        sorted([k[:-5] for k in self.auth if k.endswith(".auth")])
+                    )
                 )
             )
             return ret

@@ -3,8 +3,8 @@ import os
 import shutil
 import subprocess
 import tempfile
-from urllib.error import URLError
-from urllib.request import urlopen
+import urllib.error
+import urllib.request
 
 import pytest
 import salt.modules.cmdmod as cmd
@@ -34,8 +34,13 @@ log = logging.getLogger(__name__)
 
 
 def download_to(url, dest):
+    req = urllib.request.Request(url)
+    req.add_header(
+        "User-Agent",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36",
+    )
     with salt.utils.files.fopen(dest, "wb") as fic:
-        fic.write(urlopen(url, timeout=10).read())
+        fic.write(urllib.request.urlopen(req, timeout=10).read())
 
 
 class Base(TestCase, LoaderModuleMockMixin):
@@ -63,8 +68,8 @@ class Base(TestCase, LoaderModuleMockMixin):
             dest = os.path.join(cls.rdir, "{}_bootstrap.py".format(idx))
             try:
                 download_to(url, dest)
-            except URLError:
-                log.debug("Failed to download %s", url)
+            except urllib.error.URLError as exc:
+                log.debug("Failed to download %s: %s", url, exc)
         # creating a new setuptools install
         cls.ppy_st = os.path.join(cls.rdir, "psetuptools")
         if salt.utils.platform.is_windows():
