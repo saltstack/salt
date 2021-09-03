@@ -255,18 +255,14 @@ class LDAPTestCase(TestCase, LoaderModuleMockMixin):
         expected_db = copy.deepcopy(init_db)
         for dn, attrs in add_items.items():
             for attr, vals in attrs.items():
-                log.debug("=== attr %s vals %s ===", attrs, vals)
                 vals = [to_bytes(val) for val in vals]
 
-                vals.extend(old.get(dn).get(attr, OrderedSet()))
+                vals.extend(old.get(dn, {}).get(attr, OrderedSet()))
                 vals.sort()
 
                 if vals:
-                    log.debug("=== vals %s is valid ===", vals)
                     new.setdefault(dn, {})[attr] = list(OrderedSet(vals))
                     expected_db.setdefault(dn, {})[attr] = OrderedSet(vals)
-                    log.debug("=== new %s ===", new)
-                    log.debug("=== expected_db %s ===", expected_db)
                 elif dn in expected_db:
                     new[dn].pop(attr, None)
                     expected_db[dn].pop(attr, None)
