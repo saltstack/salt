@@ -500,7 +500,6 @@ def test_patch_single_file(salt_call_cli, min_patch_ver, patch_file_dest):
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
 def test_patch_directory(
     salt_call_cli,
-    tmp_path,
     content,
     all_patch_file,
     min_patch_ver,
@@ -526,10 +525,9 @@ def test_patch_directory(
     """
     _check_minimum_version(salt_call_cli, min_patch_ver)
     # Create a new unpatched set of files
-    base_dir = str(tmp_path)
-    os.makedirs(os.path.join(base_dir, "foo", "bar"))
-    numbers_file = os.path.join(base_dir, "foo", "numbers.txt")
-    math_file = os.path.join(base_dir, "foo", "bar", "math.txt")
+    os.makedirs(patch_file_dest / "foo" / "bar")
+    numbers_file = patch_file_dest / "foo" / "numbers.txt"
+    math_file = patch_file_dest / "foo" / "bar" / "math.txt"
 
     sls_contents = """
         do-patch:
@@ -538,12 +536,12 @@ def test_patch_directory(
             - source: {all_patch}
             - strip: 1
         """.format(
-        base_dir=base_dir, all_patch=all_patch_file
+        base_dir=patch_file_dest, all_patch=all_patch_file
     )
 
     sls_tempfile = temp_file("test_patch.sls", sls_contents, patch_file_dest)
-    numbers_tempfile = temp_file(numbers_file, content[0])
-    math_tempfile = temp_file(math_file, content[1])
+    numbers_tempfile = temp_file(numbers_file, content[0], patch_file_dest)
+    math_tempfile = temp_file(math_file, content[1], patch_file_dest)
 
     with sls_tempfile, numbers_tempfile, math_tempfile:
         # Run the state file
@@ -570,7 +568,6 @@ def test_patch_directory(
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
 def test_patch_strip_parsing(
     salt_call_cli,
-    tmp_path,
     content,
     all_patch_file,
     min_patch_ver,
@@ -581,10 +578,9 @@ def test_patch_strip_parsing(
     """
     _check_minimum_version(salt_call_cli, min_patch_ver)
     # Create a new unpatched set of files
-    base_dir = str(tmp_path)
-    os.makedirs(os.path.join(base_dir, "foo", "bar"))
-    numbers_file = os.path.join(base_dir, "foo", "numbers.txt")
-    math_file = os.path.join(base_dir, "foo", "bar", "math.txt")
+    os.makedirs(patch_file_dest / "foo" / "bar")
+    numbers_file = patch_file_dest / "foo" / "numbers.txt"
+    math_file = patch_file_dest / "foo" / "bar" / "math.txt"
 
     sls_contents = """
         do-patch:
@@ -593,7 +589,7 @@ def test_patch_strip_parsing(
             - source: {all_patch}
             - options: "-p1"
         """.format(
-        base_dir=base_dir, all_patch=all_patch_file
+        base_dir=patch_file_dest, all_patch=all_patch_file
     )
 
     sls_patch_contents = """
@@ -603,13 +599,13 @@ def test_patch_strip_parsing(
             - source: {all_patch}
             - strip: 1
         """.format(
-        base_dir=base_dir, all_patch=all_patch_file
+        base_dir=patch_file_dest, all_patch=all_patch_file
     )
 
     sls_tempfile = temp_file("test_patch.sls", sls_contents, patch_file_dest)
     sls_patch_tempfile = temp_file("test_patch_strip.sls", sls_patch_contents, patch_file_dest)
-    numbers_tempfile = temp_file(numbers_file, content[0])
-    math_tempfile = temp_file(math_file, content[1])
+    numbers_tempfile = temp_file(numbers_file, content[0], patch_file_dest)
+    math_tempfile = temp_file(math_file, content[1], patch_file_dest)
 
     with sls_tempfile, sls_patch_tempfile, numbers_tempfile, math_tempfile:
         # Run the state using -p1
@@ -636,7 +632,6 @@ def test_patch_strip_parsing(
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
 def test_patch_saltenv(
     salt_call_cli,
-    tmp_path,
     content,
     math_patch_file,
     min_patch_ver,
@@ -650,9 +645,8 @@ def test_patch_saltenv(
     # in an environment other than base.
     _check_minimum_version(salt_call_cli, min_patch_ver)
     # Create a new unpatched set of files
-    base_dir = str(tmp_path)
-    os.makedirs(os.path.join(base_dir, "foo", "bar"))
-    math_file = os.path.join(base_dir, "foo", "bar", "math.txt")
+    os.makedirs(patch_file_dest / "foo" / "bar")
+    math_file = patch_file_dest / "foo" / "bar" / "math.txt"
 
     sls_contents = """
         do-patch:
@@ -664,7 +658,7 @@ def test_patch_saltenv(
         math_file=math_file, math_patch=math_patch_file
     )
     sls_tempfile = temp_file("test_patch.sls", sls_contents, patch_file_dest)
-    math_tempfile = temp_file(math_file, content[1])
+    math_tempfile = temp_file(math_file, content[1], patch_file_dest)
 
     with sls_tempfile, math_tempfile:
         ret = salt_call_cli.run("state.apply", "test_patch")
@@ -683,7 +677,6 @@ def test_patch_saltenv(
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
 def test_patch_single_file_failure(
     salt_call_cli,
-    tmp_path,
     content,
     numbers_patch_file,
     min_patch_ver,
@@ -695,11 +688,10 @@ def test_patch_single_file_failure(
     """
     _check_minimum_version(salt_call_cli, min_patch_ver)
     # Create a new unpatched set of files
-    base_dir = str(tmp_path)
-    os.makedirs(os.path.join(base_dir, "foo", "bar"))
-    numbers_file = os.path.join(base_dir, "foo", "numbers.txt")
-    math_file = os.path.join(base_dir, "foo", "bar", "math.txt")
-    reject_file = os.path.join(base_dir, "reject.txt")
+    os.makedirs(patch_file_dest / "foo" / "bar")
+    numbers_file = patch_file_dest / "foo" / "numbers.txt"
+    math_file = patch_file_dest / "foo" / "bar" / "math.txt"
+    reject_file = patch_file_dest / "reject.txt"
 
     sls_patch_contents = """
         do-patch:
@@ -721,13 +713,14 @@ def test_patch_single_file_failure(
         numbers_patch=numbers_patch_file,
         reject_file=reject_file,
     )
-    sls_patch_tempfile = temp_file("test_patch.sls", sls_patch_contents, patch_file_dest)
-    sls_patch_reject_tempfile = temp_file("test_patch_reject.sls", sls_patch_reject_contents, patch_file_dest)
-    numbers_tempfile = temp_file(numbers_file, content[0])
-    math_tempfile = temp_file(math_file, content[1])
-    reject_tempfile = temp_file(reject_file)
 
-    with sls_patch_tempfile, sls_patch_reject_tempfile, numbers_tempfile, math_tempfile, reject_tempfile:
+    sls_tempfile = temp_file("test_patch.sls", sls_patch_contents, patch_file_dest)
+    sls_reject_tempfile = temp_file("test_patch_reject.sls", sls_patch_reject_contents, patch_file_dest)
+    numbers_tempfile = temp_file(numbers_file, content[0], patch_file_dest)
+    math_tempfile = temp_file(math_file, content[1], patch_file_dest)
+    reject_tempfile = temp_file("reject.txt", "", patch_file_dest)
+
+    with sls_tempfile, sls_reject_tempfile, numbers_tempfile, math_tempfile, reject_tempfile:
         # Empty the file to ensure that the patch doesn't apply cleanly
         with salt.utils.files.fopen(numbers_file, "w"):
             pass
@@ -760,7 +753,6 @@ def test_patch_single_file_failure(
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
 def test_patch_directory_failure(
     salt_call_cli,
-    tmp_path,
     content,
     all_patch_file,
     min_patch_ver,
@@ -772,11 +764,10 @@ def test_patch_directory_failure(
     """
     _check_minimum_version(salt_call_cli, min_patch_ver)
     # Create a new unpatched set of files
-    base_dir = str(tmp_path)
-    os.makedirs(os.path.join(base_dir, "foo", "bar"))
-    numbers_file = os.path.join(base_dir, "foo", "numbers.txt")
-    math_file = os.path.join(base_dir, "foo", "bar", "math.txt")
-    reject_file = os.path.join(base_dir, "reject.txt")
+    os.makedirs(patch_file_dest / "foo" / "bar")
+    numbers_file = patch_file_dest / "foo" / "numbers.txt"
+    math_file = patch_file_dest / "foo" / "bar" / "math.txt"
+    reject_file = patch_file_dest / "reject.txt"
 
     sls_patch_contents = """
         do-patch:
@@ -785,7 +776,7 @@ def test_patch_directory_failure(
             - source: {all_patch}
             - strip: 1
         """.format(
-        base_dir=base_dir, all_patch=all_patch_file
+        base_dir=patch_file_dest, all_patch=all_patch_file
     )
     sls_patch_reject_contents = """
         do-patch:
@@ -795,17 +786,16 @@ def test_patch_directory_failure(
             - reject_file: {reject_file}
             - strip: 1
         """.format(
-        base_dir=base_dir, all_patch=all_patch_file, reject_file=reject_file
+        base_dir=patch_file_dest, all_patch=all_patch_file, reject_file=reject_file
     )
+    sls_tempfile = temp_file("test_patch.sls", sls_patch_contents, patch_file_dest)
+    sls_reject_tempfile = temp_file("test_patch_reject.sls", sls_patch_reject_contents, patch_file_dest)
 
-    sls_patch_tempfile = temp_file("test_patch.sls", sls_patch_contents, patch_file_dest)
-    sls_patch_reject_tempfile = temp_file("test_patch_reject.sls", sls_patch_reject_contents, patch_file_dest)
+    numbers_tempfile = temp_file(numbers_file, content[0], patch_file_dest)
+    math_tempfile = temp_file(math_file, content[1], patch_file_dest)
+    reject_tempfile = temp_file("reject.txt", "", patch_file_dest)
 
-    numbers_tempfile = temp_file(numbers_file, content[0])
-    math_tempfile = temp_file(math_file, content[1])
-    reject_tempfile = temp_file(reject_file)
-
-    with sls_patch_tempfile, sls_patch_reject_tempfile, numbers_tempfile, math_tempfile, reject_tempfile:
+    with sls_tempfile, sls_reject_tempfile, numbers_tempfile, math_tempfile, reject_tempfile:
         # Empty the file to ensure that the patch doesn't apply cleanly
         with salt.utils.files.fopen(math_file, "w"):
             pass
@@ -838,7 +828,6 @@ def test_patch_directory_failure(
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
 def test_patch_single_file_template(
     salt_call_cli,
-    tmp_path,
     context,
     content,
     numbers_patch_template,
@@ -852,9 +841,8 @@ def test_patch_single_file_template(
     # Create a new unpatched set of files
     _check_minimum_version(salt_call_cli, min_patch_ver)
 
-    base_dir = str(tmp_path)
-    os.makedirs(os.path.join(base_dir, "foo", "bar"))
-    numbers_file = os.path.join(base_dir, "foo", "numbers.txt")
+    os.makedirs(patch_file_dest / "foo" / "bar", exist_ok=True)
+    numbers_file = patch_file_dest / "foo" / "numbers.txt"
 
     sls_contents = """
         do-patch:
@@ -869,8 +857,8 @@ def test_patch_single_file_template(
         context=context,
     )
 
-    sls_tempfile = temp_file( "test_patch.sls", sls_contents, patch_file_dest)
-    numbers_tempfile = temp_file(numbers_file, content[0])
+    sls_tempfile = temp_file("test_patch.sls", sls_contents, patch_file_dest)
+    numbers_tempfile = temp_file(numbers_file, content[0], patch_file_dest)
 
     with sls_tempfile, numbers_tempfile:
         ret = salt_call_cli.run("state.apply", "test_patch")
@@ -897,7 +885,6 @@ def test_patch_single_file_template(
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
 def test_patch_directory_template(
     salt_call_cli,
-    tmp_path,
     context,
     content,
     all_patch_template,
@@ -911,10 +898,9 @@ def test_patch_directory_template(
     """
     # Create a new unpatched set of files
     _check_minimum_version(salt_call_cli, min_patch_ver)
-    base_dir = str(tmp_path)
-    os.makedirs(os.path.join(base_dir, "foo", "bar"))
-    numbers_file = os.path.join(base_dir, "foo", "numbers.txt")
-    math_file = os.path.join(base_dir, "foo", "bar", "math.txt")
+    os.makedirs(patch_file_dest / "foo" / "bar", exist_ok=True)
+    numbers_file = patch_file_dest / "foo" / "numbers.txt"
+    math_file = patch_file_dest / "foo" / "bar" / "math.txt"
 
     sls_contents = """
         do-patch:
@@ -924,12 +910,12 @@ def test_patch_directory_template(
             - template: "jinja"
             - context: {context}
         """.format(
-        base_dir=base_dir, all_patch_template=all_patch_template, context=context
+        base_dir=patch_file_dest, all_patch_template=all_patch_template, context=context
     )
 
     sls_tempfile = temp_file("test_patch.sls", sls_contents, patch_file_dest)
-    numbers_tempfile = temp_file(numbers_file, content[0])
-    math_tempfile = temp_file(math_file, content[1])
+    numbers_tempfile = temp_file(numbers_file, content[0], patch_file_dest)
+    math_tempfile = temp_file(math_file, content[1], patch_file_dest)
 
     with sls_tempfile, numbers_tempfile, math_tempfile:
         ret = salt_call_cli.run("state.apply", "test_patch")
@@ -956,7 +942,6 @@ def test_patch_directory_template(
 @pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
 def test_patch_test_mode(
     salt_call_cli,
-    tmp_path,
     content,
     numbers_patch_file,
     min_patch_ver,
@@ -967,9 +952,8 @@ def test_patch_test_mode(
     """
     _check_minimum_version(salt_call_cli, min_patch_ver)
     # Create a new unpatched set of files
-    base_dir = str(tmp_path)
-    os.makedirs(os.path.join(base_dir, "foo", "bar"))
-    numbers_file = os.path.join(base_dir, "foo", "numbers.txt")
+    os.makedirs(patch_file_dest / "foo" / "bar")
+    numbers_file = patch_file_dest / "foo" / "numbers.txt"
 
     sls_patch_contents = """
         do-patch:
@@ -981,7 +965,7 @@ def test_patch_test_mode(
     )
 
     sls_patch_tempfile = temp_file("test_patch.sls", sls_patch_contents, patch_file_dest)
-    numbers_tempfile = temp_file(numbers_file, content[0])
+    numbers_tempfile = temp_file(numbers_file, content[0], patch_file_dest)
 
     with sls_patch_tempfile, numbers_tempfile:
         # Test application with test=True mode
