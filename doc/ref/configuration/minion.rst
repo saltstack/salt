@@ -177,7 +177,7 @@ The type of the :conf_minion:`master` variable. Can be ``str``, ``failover``,
 
     master_type: str
 
-If this optioni is ``str`` (default), multiple hot masters are configured.    
+If this option is ``str`` (default), multiple hot masters are configured.    
 Minions can connect to multiple masters simultaneously (all master are "hot").
 
 .. code-block:: yaml
