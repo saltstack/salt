@@ -3,9 +3,9 @@ Tests for the file state
 """
 import logging
 import os
+import pathlib
 import re
 import textwrap
-import pathlib
 
 import pytest
 import salt.utils.files
@@ -603,7 +603,9 @@ def test_patch_strip_parsing(
     )
 
     sls_tempfile = temp_file("test_patch.sls", sls_contents, patch_file_dest)
-    sls_patch_tempfile = temp_file("test_patch_strip.sls", sls_patch_contents, patch_file_dest)
+    sls_patch_tempfile = temp_file(
+        "test_patch_strip.sls", sls_patch_contents, patch_file_dest
+    )
     numbers_tempfile = temp_file(numbers_file, content[0], patch_file_dest)
     math_tempfile = temp_file(math_file, content[1], patch_file_dest)
 
@@ -715,7 +717,9 @@ def test_patch_single_file_failure(
     )
 
     sls_tempfile = temp_file("test_patch.sls", sls_patch_contents, patch_file_dest)
-    sls_reject_tempfile = temp_file("test_patch_reject.sls", sls_patch_reject_contents, patch_file_dest)
+    sls_reject_tempfile = temp_file(
+        "test_patch_reject.sls", sls_patch_reject_contents, patch_file_dest
+    )
     numbers_tempfile = temp_file(numbers_file, content[0], patch_file_dest)
     math_tempfile = temp_file(math_file, content[1], patch_file_dest)
     reject_tempfile = temp_file("reject.txt", "", patch_file_dest)
@@ -789,7 +793,9 @@ def test_patch_directory_failure(
         base_dir=patch_file_dest, all_patch=all_patch_file, reject_file=reject_file
     )
     sls_tempfile = temp_file("test_patch.sls", sls_patch_contents, patch_file_dest)
-    sls_reject_tempfile = temp_file("test_patch_reject.sls", sls_patch_reject_contents, patch_file_dest)
+    sls_reject_tempfile = temp_file(
+        "test_patch_reject.sls", sls_patch_reject_contents, patch_file_dest
+    )
 
     numbers_tempfile = temp_file(numbers_file, content[0], patch_file_dest)
     math_tempfile = temp_file(math_file, content[1], patch_file_dest)
@@ -964,7 +970,9 @@ def test_patch_test_mode(
         numbers_file=numbers_file, numbers_patch=numbers_patch_file
     )
 
-    sls_patch_tempfile = temp_file("test_patch.sls", sls_patch_contents, patch_file_dest)
+    sls_patch_tempfile = temp_file(
+        "test_patch.sls", sls_patch_contents, patch_file_dest
+    )
     numbers_tempfile = temp_file(numbers_file, content[0], patch_file_dest)
 
     with sls_patch_tempfile, numbers_tempfile:
