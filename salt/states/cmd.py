@@ -667,7 +667,7 @@ def run(
         will run inside a chroot
 
     runas
-        The user name / uid to run the command as
+        The user name (or uid) to run the command as
 
     shell
         The shell to use for execution, defaults to the shell grain
