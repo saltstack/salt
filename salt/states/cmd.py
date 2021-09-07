@@ -624,7 +624,6 @@ def run(
     cwd=None,
     root=None,
     runas=None,
-    group=None,
     shell=None,
     env=None,
     prepend_path=None,
@@ -644,6 +643,17 @@ def run(
     Run a command if certain circumstances are met.  Use ``cmd.wait`` if you
     want to use the ``watch`` requisite.
 
+    .. note::
+
+       The ``**kwargs`` of ``cmd.run`` are passed down to one of the following
+       exec modules:
+
+       * ``cmdmod.run_all``: If used with default ``runas``
+       * ``cmdmod.run_chroot``: If used with non-``root`` value for ``runas``
+
+       For more information on what args are available for either of these,
+       refer to the :ref:`cmdmod documentation <cmdmod-module>`.
+
     name
         The command to execute, remember that the command will execute with the
         path and permissions of the salt-minion.
@@ -658,9 +668,6 @@ def run(
 
     runas
         The user name / uid to run the command as
-
-    group
-        The group name / gid to run the command as
 
     shell
         The shell to use for execution, defaults to the shell grain
