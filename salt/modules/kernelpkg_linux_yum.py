@@ -39,6 +39,7 @@ def __virtual__():
         return __virtualname__
     elif __grains__.get("os", "").lower() in (
         "amazon",
+        "rocky",
         "xcp",
         "xenserver",
         "virtuozzolinux",

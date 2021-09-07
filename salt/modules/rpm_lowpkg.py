@@ -55,7 +55,7 @@ def __virtual__():
             " grains.",
         )
 
-    enabled = ("amazon", "xcp", "xenserver", "virtuozzolinux")
+    enabled = ("amazon", "rocky", "xcp", "xenserver", "virtuozzolinux")
 
     if os_family in ["redhat", "suse"] or os_grain in enabled:
         return __virtualname__
