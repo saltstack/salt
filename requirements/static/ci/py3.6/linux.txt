@@ -4,7 +4,7 @@
 #
 #    pip-compile --output-file=requirements/static/ci/py3.6/linux.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/git-sources.txt requirements/static/ci/linux.in requirements/static/pkg/py3.6/linux.txt
 #
---extra-index-url https://cdn.githubraw.com/saltstack/vsphere-automation-sdk-python/master/lib/
+--extra-index-url https://saltstack.gitlab.io/open/cicd/vsphere-automation-sdk-python/
 
 adal==1.2.3
     # via
@@ -16,8 +16,6 @@ ansible==3.4.0
     # via -r requirements/static/ci/linux.in
 apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-appdirs==1.4.4
-    # via virtualenv
 apscheduler==3.6.3
     # via python-telegram-bot
 argh==0.26.2
@@ -338,6 +336,8 @@ azure-storage-queue==1.4.0
     # via azure
 azure==4.0.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
+backports.entry-points-selectable==1.1.0
+    # via virtualenv
 backports.functools-lru-cache==1.5
     # via
     #   -r requirements/static/pkg/py3.6/linux.txt
@@ -429,7 +429,7 @@ cryptography==3.3.2
     #   vcert
 decorator==4.4.2
     # via networkx
-distlib==0.3.0
+distlib==0.3.2
     # via virtualenv
 distro==1.5.0
     # via -r requirements/static/pkg/py3.6/linux.txt
@@ -473,8 +473,10 @@ immutables==0.14
     # via
     #   -r requirements/static/pkg/py3.6/linux.txt
     #   contextvars
-importlib-metadata==0.23
+importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
     # via
+    #   -r requirements/static/pkg/py3.6/linux.txt
+    #   backports.entry-points-selectable
     #   importlib-resources
     #   jsonpickle
     #   jsonschema
@@ -557,7 +559,6 @@ more-itertools==5.0.0
     #   cherrypy
     #   jaraco.functools
     #   moto
-    #   zipp
 moto==1.3.16
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
@@ -687,6 +688,8 @@ passlib==1.7.2 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 pathtools==0.1.2
     # via watchdog
+platformdirs==2.2.0
+    # via virtualenv
 pluggy==0.13.0
     # via pytest
 portend==2.4
@@ -916,6 +919,10 @@ transitions==0.8.1
     # via junos-eznc
 twilio==6.63.0
     # via -r requirements/static/ci/linux.in
+typing-extensions==3.10.0.0
+    # via
+    #   -r requirements/static/pkg/py3.6/linux.txt
+    #   importlib-metadata
 tzlocal==2.1
     # via apscheduler
 urllib3==1.26.6
@@ -949,7 +956,7 @@ vapi-runtime==2.19.0
     #   vsphere-automation-sdk
 vcert==0.7.3 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-virtualenv==20.0.20
+virtualenv==20.7.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
@@ -977,8 +984,9 @@ zc.lockfile==1.4
     # via
     #   -r requirements/static/pkg/py3.6/linux.txt
     #   cherrypy
-zipp==0.6.0
+zipp==3.5.0
     # via
+    #   -r requirements/static/pkg/py3.6/linux.txt
     #   importlib-metadata
     #   importlib-resources
     #   moto

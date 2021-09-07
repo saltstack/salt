@@ -4,7 +4,7 @@
 #
 #    pip-compile --output-file=requirements/static/ci/py3.9/linux.txt requirements/pytest.txt requirements/static/ci/common.in requirements/static/ci/git-sources.txt requirements/static/ci/linux.in requirements/static/pkg/py3.9/linux.txt
 #
---extra-index-url https://cdn.githubraw.com/saltstack/vsphere-automation-sdk-python/master/lib/
+--extra-index-url https://saltstack.gitlab.io/open/cicd/vsphere-automation-sdk-python/
 
 adal==1.2.3
     # via
@@ -16,8 +16,6 @@ ansible==3.4.0
     # via -r requirements/static/ci/linux.in
 apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-appdirs==1.4.4
-    # via virtualenv
 apscheduler==3.6.3
     # via python-telegram-bot
 argh==0.26.2
@@ -338,6 +336,8 @@ azure-storage-queue==1.4.0
     # via azure
 azure==4.0.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
+backports.entry-points-selectable==1.1.0
+    # via virtualenv
 backports.functools-lru-cache==1.5
     # via
     #   -r requirements/static/pkg/py3.9/linux.txt
@@ -434,7 +434,7 @@ cryptography==3.3.2
     #   vcert
 decorator==4.4.2
     # via networkx
-distlib==0.3.0
+distlib==0.3.2
     # via virtualenv
 distro==1.5.0
     # via -r requirements/static/pkg/py3.9/linux.txt
@@ -481,6 +481,8 @@ immutables==0.15
     # via
     #   -r requirements/static/pkg/py3.9/linux.txt
     #   contextvars
+importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
+    # via -r requirements/static/pkg/py3.9/linux.txt
 iniconfig==1.0.1
     # via pytest
 ipaddress==1.0.22
@@ -697,6 +699,8 @@ passlib==1.7.2 ; sys_platform != "win32"
     #   ciscoconfparse
 pathtools==0.1.2
     # via watchdog
+platformdirs==2.2.0
+    # via virtualenv
 pluggy==0.13.0
     # via pytest
 portend==2.4
@@ -817,7 +821,7 @@ pyyaml==5.4.1
     #   napalm
     #   watchdog
     #   yamlordereddictloader
-pyzmq==19.0.2 ; python_version >= "3.9"
+pyzmq==21.0.2 ; python_version >= "3.9"
     # via
     #   -r requirements/static/pkg/py3.9/linux.txt
     #   pytest-salt-factories
@@ -971,7 +975,7 @@ vapi-runtime==2.19.0
     #   vsphere-automation-sdk
 vcert==0.7.3 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-virtualenv==20.0.20
+virtualenv==20.7.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
@@ -999,8 +1003,11 @@ zc.lockfile==1.4
     # via
     #   -r requirements/static/pkg/py3.9/linux.txt
     #   cherrypy
-zipp==3.4.0
-    # via moto
+zipp==3.5.0
+    # via
+    #   -r requirements/static/pkg/py3.9/linux.txt
+    #   importlib-metadata
+    #   moto
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
