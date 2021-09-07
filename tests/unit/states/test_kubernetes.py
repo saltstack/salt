@@ -5,17 +5,18 @@
 import base64
 from contextlib import contextmanager
 
+import pytest
+import salt.modules.kubernetesmod as kubernetesmod
+import salt.states.kubernetes as kubernetes
 import salt.utils.stringutils
-from salt.states import kubernetes
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
-@skipIf(
-    kubernetes is False,
-    "Probably Kubernetes client lib is not installed.                              "
-    " Skipping test_kubernetes.py",
+@pytest.mark.skipif(
+    kubernetesmod.HAS_LIBS is False,
+    reason="Probably Kubernetes client lib is not installed. Skipping test_kubernetes.py",
 )
 class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
     """
