@@ -10,7 +10,6 @@ import salt.utils.stringutils
 from saltfactories.utils.processes import ProcessResult
 
 pytestmark = [
-    pytest.mark.windows_whitelisted,
     pytest.mark.skip_if_binaries_missing("gpg"),
 ]
 
