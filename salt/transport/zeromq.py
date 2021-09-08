@@ -138,18 +138,6 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         "close",
     ]
 
-    @classmethod
-    def force_close_all_instances(cls):
-        """
-        Will force close all instances
-
-        ZMQ can hang on quit if left to deconstruct on its own.
-        This because is deconstructs out of order.
-
-        :return: None
-        """
-        pass
-
     def __init__(self, opts, **kwargs):
         self.opts = dict(opts)
         self.ttype = "zeromq"
