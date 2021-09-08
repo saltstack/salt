@@ -441,11 +441,6 @@ def salt_call():
     """
     import salt.cli.call
 
-    try:
-        from salt.transport import zeromq
-    except ImportError:
-        zeromq = None
-
     if "" in sys.path:
         sys.path.remove("")
     client = salt.cli.call.SaltCall()
