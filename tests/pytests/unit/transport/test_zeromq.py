@@ -67,23 +67,6 @@ def test_master_uri():
         ) == "tcp://0.0.0.0:{};{}:{}".format(s_port, m_ip, m_port)
 
 
-def test_force_close_all_instances():
-    zmq1 = MagicMock()
-    zmq2 = MagicMock()
-    zmq3 = MagicMock()
-    zmq_objects = {"zmq": {"1": zmq1, "2": zmq2}, "other_zmq": {"3": zmq3}}
-
-    with patch("salt.transport.zeromq.AsyncZeroMQReqChannel.instance_map", zmq_objects):
-        salt.transport.zeromq.AsyncZeroMQReqChannel.force_close_all_instances()
-
-        assert zmq1.mock_calls == [call.close()]
-        assert zmq2.mock_calls == [call.close()]
-        assert zmq3.mock_calls == [call.close()]
-
-        # check if instance map changed
-        assert zmq_objects is salt.transport.zeromq.AsyncZeroMQReqChannel.instance_map
-
-
 def test_async_req_message_client_pool_send():
     sock_pool_size = 5
     with patch(
