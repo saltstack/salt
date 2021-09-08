@@ -122,7 +122,16 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
             )
         )
 
-        expected = {'Not Inherited': {'Backup Operators': {'grant': {'applies to': 'This key and subkeys', 'permissions': 'Full Control'}}}}
+        expected = {
+            "Not Inherited": {
+                "Backup Operators": {
+                    "grant": {
+                        "applies to": "This key and subkeys",
+                        "permissions": "Full Control",
+                    }
+                }
+            }
+        }
         self.assertEqual(
             win_dacl.get_permissions(
                 obj_name=self.obj_name,
@@ -485,7 +494,16 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
                 protected=None,
             )
         )
-        expected = {'Not Inherited': {'Backup Operators': {'grant': {'applies to': 'This folder only', 'permissions': 'Full control'}}}}
+        expected = {
+            "Not Inherited": {
+                "Backup Operators": {
+                    "grant": {
+                        "applies to": "This folder only",
+                        "permissions": "Full control",
+                    }
+                }
+            }
+        }
         self.assertEqual(
             win_dacl.get_permissions(
                 obj_name=self.obj_name,
@@ -511,7 +529,16 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
                 protected=None,
             )
         )
-        expected = {'Not Inherited': {'Backup Operators': {'grant': {'applies to': 'This folder only', 'permissions': 'Full control'}}}}
+        expected = {
+            "Not Inherited": {
+                "Backup Operators": {
+                    "grant": {
+                        "applies to": "This folder only",
+                        "permissions": "Full control",
+                    }
+                }
+            }
+        }
         self.assertEqual(
             win_dacl.get_permissions(
                 obj_name=self.obj_name,
@@ -671,14 +698,13 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
         self.assertDictEqual(result, expected)
 
         expected = {
-            'Not Inherited': {
-                'Backup Operators': {
-                    'deny': {
-                        'applies to': 'This folder only',
-                        'permissions': ['Delete']},
-                    'grant': {
-                        'applies to': 'This folder only',
-                        'permissions': 'Read'}
+            "Not Inherited": {
+                "Backup Operators": {
+                    "deny": {
+                        "applies to": "This folder only",
+                        "permissions": ["Delete"],
+                    },
+                    "grant": {"applies to": "This folder only", "permissions": "Read"},
                 }
             }
         }
@@ -688,9 +714,25 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
                 obj_name=self.obj_name,
                 principal="Backup Operators",
                 obj_type=self.obj_type,
-            ), expected)
+            ),
+            expected,
+        )
 
-        expected = {'Not Inherited': {'NETWORK SERVICE': {'deny': {'applies to': 'This folder only', 'permissions': ['Change permissions', 'Create files / write data', 'Delete', 'Write attributes']}}}}
+        expected = {
+            "Not Inherited": {
+                "NETWORK SERVICE": {
+                    "deny": {
+                        "applies to": "This folder only",
+                        "permissions": [
+                            "Change permissions",
+                            "Create files / write data",
+                            "Delete",
+                            "Write attributes",
+                        ],
+                    }
+                }
+            }
+        }
         self.assertDictEqual(
             win_dacl.get_permissions(
                 obj_name=self.obj_name,
