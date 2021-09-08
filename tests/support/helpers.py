@@ -1706,6 +1706,11 @@ class VirtualEnv:
     def install(self, *args, **kwargs):
         return self.run(self.venv_python, "-m", "pip", "install", *args, **kwargs)
 
+    def uninstall(self, *args, **kwargs):
+        return self.run(
+            self.venv_python, "-m", "pip", "uninstall", "-y", *args, **kwargs
+        )
+
     def run(self, *args, **kwargs):
         check = kwargs.pop("check", True)
         kwargs.setdefault("cwd", str(self.venv_dir))
