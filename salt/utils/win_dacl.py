@@ -361,16 +361,16 @@ def flags(instantiated=True):
         ace_prop = {
             "file": {
                 # for report
-                0x0000: "Not Inherited (file)",
+                None: "Not Inherited (file)",
+                0x0000: "This folder only",
                 0x0001: "This folder and files",
                 0x0002: "This folder and subfolders",
                 0x0003: "This folder, subfolders and files",
-                0x0006: "This folder only",
                 0x0009: "Files only",
                 0x000A: "Subfolders only",
                 0x000B: "Subfolders and files only",
                 # for setting
-                "this_folder_only": 0x0006,
+                "this_folder_only": 0x0000,
                 "this_folder_subfolders_files": 0x0003,
                 "this_folder_subfolders": 0x0002,
                 "this_folder_files": 0x0001,
@@ -657,7 +657,7 @@ def dacl(obj_name=None, obj_type="file"):
                         win32security.ACL_REVISION_DS,
                         # Some types don't support propagation
                         # May need to use 0x0000 instead of None
-                        0,
+                        self.ace_prop.get(self.dacl_type, {}).get(applies_to),
                         perm_flag,
                         sid,
                     )
