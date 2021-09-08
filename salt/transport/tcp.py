@@ -13,7 +13,6 @@ import threading
 import time
 import traceback
 import urllib.parse
-import weakref
 
 import salt.crypt
 import salt.exceptions
@@ -211,8 +210,6 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         "close",
     ]
 
-
-    @classmethod
     def __init__(self, opts, **kwargs):
         self.opts = dict(opts)
 
