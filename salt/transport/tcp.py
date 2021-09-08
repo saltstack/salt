@@ -250,38 +250,12 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     def close(self):
         if self._closing:
             return
-
-        if self._refcount > 1:
-            # Decrease refcount
-            with self._refcount_lock:
-                self._refcount -= 1
-            log.debug(
-                "This is not the last %s instance. Not closing yet.",
-                self.__class__.__name__,
-            )
-            return
-
         log.debug("Closing %s instance", self.__class__.__name__)
         self._closing = True
         self.message_client.close()
 
-        # Remove the entry from the instance map so that a closed entry may not
-        # be reused.
-        # This forces this operation even if the reference count of the entry
-        # has not yet gone to zero.
-        if self.io_loop in self.__class__.instance_map:
-            loop_instance_map = self.__class__.instance_map[self.io_loop]
-            if self._instance_key in loop_instance_map:
-                del loop_instance_map[self._instance_key]
-            if not loop_instance_map:
-                del self.__class__.instance_map[self.io_loop]
-
     # pylint: disable=W1701
     def __del__(self):
-        with self._refcount_lock:
-            # Make sure we actually close no matter if something
-            # went wrong with our ref counting
-            self._refcount = 1
         try:
             self.close()
         except OSError as exc:
