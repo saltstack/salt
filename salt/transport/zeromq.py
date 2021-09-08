@@ -1,7 +1,6 @@
 """
 Zeromq transport classes
 """
-import copy
 import errno
 import hashlib
 import logging
@@ -9,7 +8,6 @@ import os
 import signal
 import sys
 import threading
-import weakref
 from random import randint
 
 import salt.auth
