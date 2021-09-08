@@ -5,8 +5,6 @@
     Utilities that can only be used on a salt master.
 
 """
-
-
 import logging
 import os
 import signal
@@ -217,9 +215,7 @@ class MasterPillarUtil:
         grains = {minion_id: {} for minion_id in minion_ids}
         pillars = grains.copy()
         if not self.opts.get("minion_data_cache", False):
-            log.debug(
-                "Skipping cached data because minion_data_cache is not " "enabled."
-            )
+            log.debug("Skipping cached data because minion_data_cache is not enabled.")
             return grains, pillars
         if not minion_ids:
             minion_ids = self.cache.list("minions")
@@ -229,7 +225,8 @@ class MasterPillarUtil:
             mdata = self.cache.fetch("minions/{}".format(minion_id), "data")
             if not isinstance(mdata, dict):
                 log.warning(
-                    "cache.fetch should always return a dict. ReturnedType: %s, MinionId: %s",
+                    "cache.fetch should always return a dict. ReturnedType: %s,"
+                    " MinionId: %s",
                     type(mdata).__name__,
                     minion_id,
                 )
@@ -596,23 +593,6 @@ class CacheWorker(Process):
         super().__init__(**kwargs)
         self.opts = opts
 
-    # __setstate__ and __getstate__ are only used on Windows.
-    # We do this so that __init__ will be invoked on Windows in the child
-    # process so that a register_after_fork() equivalent will work on Windows.
-    def __setstate__(self, state):
-        self.__init__(
-            state["opts"],
-            log_queue=state["log_queue"],
-            log_queue_level=state["log_queue_level"],
-        )
-
-    def __getstate__(self):
-        return {
-            "opts": self.opts,
-            "log_queue": self.log_queue,
-            "log_queue_level": self.log_queue_level,
-        }
-
     def run(self):
         """
         Gather currently connected minions and update the cache
@@ -657,23 +637,6 @@ class ConnectedCache(Process):
         self.timer = CacheTimer(self.opts, self.timer_stop)
         self.timer.start()
         self.running = True
-
-    # __setstate__ and __getstate__ are only used on Windows.
-    # We do this so that __init__ will be invoked on Windows in the child
-    # process so that a register_after_fork() equivalent will work on Windows.
-    def __setstate__(self, state):
-        self.__init__(
-            state["opts"],
-            log_queue=state["log_queue"],
-            log_queue_level=state["log_queue_level"],
-        )
-
-    def __getstate__(self):
-        return {
-            "opts": self.opts,
-            "log_queue": self.log_queue,
-            "log_queue_level": self.log_queue_level,
-        }
 
     def signal_handler(self, sig, frame):
         """

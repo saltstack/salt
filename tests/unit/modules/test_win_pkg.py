@@ -292,7 +292,10 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
-        err_msg = "Error: [Errno 11001] getaddrinfo failed reading https://repo.test.com/runme.exe"
+        err_msg = (
+            "Error: [Errno 11001] getaddrinfo failed reading"
+            " https://repo.test.com/runme.exe"
+        )
         mock_none = MagicMock(return_value=None)
         mock_minion_error = MagicMock(side_effect=MinionError(err_msg))
         mock_parse = MagicMock(return_value=[{"firebox": "3.03"}, None])
@@ -308,10 +311,13 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                 "cp.cache_file": mock_minion_error,
             },
         ):
-            ret = win_pkg.install(name="firebox", version="3.03",)
+            ret = win_pkg.install(
+                name="firebox",
+                version="3.03",
+            )
             expected = (
-                "Failed to cache https://repo.test.com/runme.exe\n"
-                "Error: [Errno 11001] getaddrinfo failed reading https://repo.test.com/runme.exe"
+                "Failed to cache https://repo.test.com/runme.exe\nError: [Errno 11001]"
+                " getaddrinfo failed reading https://repo.test.com/runme.exe"
             )
 
             self.assertEqual(ret, expected)
@@ -349,7 +355,10 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                 "cp.cache_file": mock_minion_error,
             },
         ):
-            ret = win_pkg.install(name="firebox", version="3.03",)
+            ret = win_pkg.install(
+                name="firebox",
+                version="3.03",
+            )
             expected = (
                 "Failed to cache salt://software/runme.exe\n"
                 "Error: [Errno 1] failed reading salt://software/runme.exe"
@@ -384,9 +393,13 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
         ), patch.object(
             win_pkg, "_get_package_info", MagicMock(return_value=ret__get_package_info)
         ), patch.dict(
-            win_pkg.__salt__, {"cp.cache_dir": mock_minion_error},
+            win_pkg.__salt__,
+            {"cp.cache_dir": mock_minion_error},
         ):
-            ret = win_pkg.install(name="firebox", version="3.03",)
+            ret = win_pkg.install(
+                name="firebox",
+                version="3.03",
+            )
             expected = (
                 "Failed to cache salt://software\n"
                 "Error: [Errno 1] failed reading salt://software"

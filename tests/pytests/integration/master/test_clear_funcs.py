@@ -130,9 +130,8 @@ def test_pub_not_allowed(
                 break
             if time.time() > stop_time:
                 pytest.fail(
-                    "Took more than {} seconds to confirm the presence of {!r} in the logs".format(
-                        timeout, expected_log_message
-                    )
+                    "Took more than {} seconds to confirm the presence of {!r} in the"
+                    " logs".format(timeout, expected_log_message)
                 )
             for record in caplog.records:
                 if record in seen_records:

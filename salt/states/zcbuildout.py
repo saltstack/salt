@@ -52,7 +52,7 @@ def __virtual__():
     return (False, "buildout module could not be loaded")
 
 
-INVALID_RESPONSE = "We did not get any expectable answer from docker"
+INVALID_RESPONSE = "Unexpected response from docker"
 VALID_RESPONSE = ""
 NOTSET = object()
 MAPPING_CACHE = {}
@@ -209,7 +209,7 @@ def installed(
     output_loglevel = kwargs.get("output_loglevel", None)
     if output_loglevel and not loglevel:
         log.warning(
-            "Passing 'output_loglevel' is deprecated," " please use loglevel instead"
+            "Passing 'output_loglevel' is deprecated, please use loglevel instead"
         )
     try:
         test_release = int(test_release)

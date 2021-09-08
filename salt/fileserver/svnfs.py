@@ -109,7 +109,7 @@ def _rev(repo):
         repo_info = dict(CLIENT.info(repo["repo"]).items())
     except (pysvn._pysvn.ClientError, TypeError, KeyError, AttributeError) as exc:
         log.error(
-            "Error retrieving revision ID for svnfs remote %s " "(cachedir: %s): %s",
+            "Error retrieving revision ID for svnfs remote %s (cachedir: %s): %s",
             repo["url"],
             repo["repo"],
             exc,

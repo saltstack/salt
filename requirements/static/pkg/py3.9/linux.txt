@@ -28,6 +28,8 @@ idna==2.8
     # via requests
 immutables==0.15
     # via contextvars
+importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
+    # via -r requirements/static/pkg/linux.in
 jaraco.functools==2.0
     # via tempora
 jinja2==2.11.3
@@ -60,7 +62,7 @@ pytz==2020.1
     # via tempora
 pyyaml==5.4.1
     # via -r requirements/base.txt
-pyzmq==19.0.2 ; python_version >= "3.9"
+pyzmq==21.0.2 ; python_version >= "3.9"
     # via -r requirements/zeromq.txt
 requests==2.25.1
     # via -r requirements/base.txt
@@ -79,10 +81,12 @@ tempora==1.14.1
     # via portend
 timelib==0.2.5
     # via -r requirements/static/pkg/linux.in
-urllib3==1.26.4
+urllib3==1.26.6
     # via requests
 zc.lockfile==1.4
     # via cherrypy
+zipp==3.5.0
+    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

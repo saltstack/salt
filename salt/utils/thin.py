@@ -287,9 +287,7 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
             continue
 
         if not salt.utils.path.which(py_ver):
-            log.error(
-                "{} does not exist. Could not auto detect dependencies".format(py_ver)
-            )
+            log.error("%s does not exist. Could not auto detect dependencies", py_ver)
             return {}
         py_shell_cmd = [py_ver, "-c", "import {0}; print({0}.__file__)".format(mod)]
         cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE)
@@ -298,9 +296,9 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
 
         if not stdout or not os.path.exists(mod_file):
             log.error(
-                "Could not auto detect file location for module {} for python version {}".format(
-                    mod, py_ver
-                )
+                "Could not auto detect file location for module %s for python version %s",
+                mod,
+                py_ver,
             )
             continue
 
@@ -453,16 +451,16 @@ def get_tops(extra_mods="", so_mods=""):
                 else:
                     tops.append(os.path.join(moddir, base + ".py"))
             except ImportError as err:
-                log.exception(err)
-                log.error('Unable to import extra-module "%s"', mod)
+                log.error(
+                    'Unable to import extra-module "%s": %s', mod, err, exc_info=True
+                )
 
     for mod in [m for m in so_mods.split(",") if m]:
         try:
             locals()[mod] = __import__(mod)
             tops.append(locals()[mod].__file__)
         except ImportError as err:
-            log.exception(err)
-            log.error('Unable to import so-module "%s"', mod)
+            log.error('Unable to import so-module "%s"', mod, exc_info=True)
 
     return tops
 
@@ -608,7 +606,8 @@ def gen_thin(
     if python2_bin != "python2" or python3_bin != "python3":
         salt.utils.versions.warn_until(
             "Silicon",
-            "python2_bin and python3_bin are no longer used, please update your call to gen_thin",
+            "python2_bin and python3_bin are no longer used, please update your call to"
+            " gen_thin",
         )
     if sys.version_info < (3,):
         raise salt.exceptions.SaltSystemExit(
@@ -807,7 +806,8 @@ def gen_min(
     if python2_bin != "python2" or python3_bin != "python3":
         salt.utils.versions.warn_until(
             "Silicon",
-            "python2_bin and python3_bin are no longer used, please update your call to gen_min",
+            "python2_bin and python3_bin are no longer used, please update your call to"
+            " gen_min",
         )
     mindir = os.path.join(cachedir, "min")
     if not os.path.isdir(mindir):

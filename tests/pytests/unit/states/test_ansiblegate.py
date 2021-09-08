@@ -63,7 +63,8 @@ def test_ansible_playbooks_states_failed(playbooks_examples_dir):
             "py2hosts": {
                 "yum": {
                     "centos7-host1.tf.local": [
-                        "No package matching 'rsyndc' found available, installed or updated"
+                        "No package matching 'rsyndc' found available, installed or"
+                        " updated"
                     ]
                 }
             }

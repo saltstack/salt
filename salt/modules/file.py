@@ -28,7 +28,7 @@ import time
 import urllib.parse
 from collections import namedtuple
 from collections.abc import Iterable, Mapping
-from functools import reduce  # pylint: disable=redefined-builtin
+from functools import reduce
 
 import salt.utils.args
 import salt.utils.atomicfile
@@ -174,7 +174,8 @@ def _chattr_version():
     cmd = [tune2fs]
     result = __salt__["cmd.run"](cmd, ignore_retcode=True, python_shell=False)
     match = re.search(
-        r"tune2fs (?P<version>[0-9\.]+)", salt.utils.stringutils.to_str(result),
+        r"tune2fs (?P<version>[0-9\.]+)",
+        salt.utils.stringutils.to_str(result),
     )
     if match is None:
         version = None
@@ -587,7 +588,8 @@ def _cmp_attrs(path, attrs):
         new.add("e")
 
     return AttrChanges(
-        added="".join(new - old) or None, removed="".join(old - new) or None,
+        added="".join(new - old) or None,
+        removed="".join(old - new) or None,
     )
 
 
@@ -1542,7 +1544,7 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
                     found = True
     except OSError as exc:
         raise CommandExecutionError(
-            "Unable to open file '{}'. " "Exception: {}".format(path, exc)
+            "Unable to open file '{}'. Exception: {}".format(path, exc)
         )
 
     # We've searched the whole file. If we didn't find anything, return False
@@ -1687,7 +1689,7 @@ def _mkstemp_copy(path, preserve_inode=True):
         temp_file = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX)
     except OSError as exc:
         raise CommandExecutionError(
-            "Unable to create temp file. " "Exception: {}".format(exc)
+            "Unable to create temp file. Exception: {}".format(exc)
         )
     # use `copy` to preserve the inode of the
     # original file, and thus preserve hardlinks
@@ -1699,18 +1701,18 @@ def _mkstemp_copy(path, preserve_inode=True):
             shutil.copy2(path, temp_file)
         except OSError as exc:
             raise CommandExecutionError(
-                "Unable to copy file '{}' to the "
-                "temp file '{}'. "
-                "Exception: {}".format(path, temp_file, exc)
+                "Unable to copy file '{}' to the temp file '{}'. Exception: {}".format(
+                    path, temp_file, exc
+                )
             )
     else:
         try:
             shutil.move(path, temp_file)
         except OSError as exc:
             raise CommandExecutionError(
-                "Unable to move file '{}' to the "
-                "temp file '{}'. "
-                "Exception: {}".format(path, temp_file, exc)
+                "Unable to move file '{}' to the temp file '{}'. Exception: {}".format(
+                    path, temp_file, exc
+                )
             )
 
     return temp_file
@@ -2594,7 +2596,7 @@ def replace(
 
     except OSError as exc:
         raise CommandExecutionError(
-            "Unable to open file '{}'. " "Exception: {}".format(path, exc)
+            "Unable to open file '{}'. Exception: {}".format(path, exc)
         )
     finally:
         if r_data and isinstance(r_data, mmap.mmap):
@@ -2707,8 +2709,7 @@ def replace(
             os.remove(temp_file)
         except OSError as exc:
             raise CommandExecutionError(
-                "Unable to delete temp file '{}'. "
-                "Exception: {}".format(temp_file, exc)
+                "Unable to delete temp file '{}'. Exception: {}".format(temp_file, exc)
             )
 
     if not dry_run and not salt.utils.platform.is_windows():
@@ -3182,8 +3183,7 @@ def patch(originalfile, patchfile, options="", dry_run=False):
     patchpath = salt.utils.path.which("patch")
     if not patchpath:
         raise CommandExecutionError(
-            "patch executable not found. Is the distribution's patch "
-            "package installed?"
+            "patch executable not found. Is the distribution's patch package installed?"
         )
 
     cmd = [patchpath]
@@ -3795,7 +3795,8 @@ def copy(src, dst, recurse=False, remove_existing=False):
         if (os.path.exists(dst) and os.path.isdir(dst)) or os.path.isdir(src):
             if not recurse:
                 raise SaltInvocationError(
-                    "Cannot copy overwriting a directory without recurse flag set to true!"
+                    "Cannot copy overwriting a directory without recurse flag set to"
+                    " true!"
                 )
             if remove_existing:
                 if os.path.exists(dst):
@@ -4315,7 +4316,9 @@ def source_list(source, source_hash, saltenv):
                         ret = (single_src, single_hash)
                         break
                 elif proto.startswith("http") or proto == "ftp":
-                    query_res = salt.utils.http.query(single_src, method="HEAD")
+                    query_res = salt.utils.http.query(
+                        single_src, method="HEAD", decode_body=False
+                    )
                     if "error" not in query_res:
                         ret = (single_src, single_hash)
                         break
@@ -4359,7 +4362,9 @@ def source_list(source, source_hash, saltenv):
                     ret = (single, source_hash)
                     break
                 elif proto.startswith("http") or proto == "ftp":
-                    query_res = salt.utils.http.query(single, method="HEAD")
+                    query_res = salt.utils.http.query(
+                        single, method="HEAD", decode_body=False
+                    )
                     if "error" not in query_res:
                         ret = (single, source_hash)
                         break
@@ -4424,7 +4429,7 @@ def apply_template_on_contents(contents, template, context, defaults, saltenv):
     else:
         ret = {}
         ret["result"] = False
-        ret["comment"] = ("Specified template format {} is not supported").format(
+        ret["comment"] = "Specified template format {} is not supported".format(
             template
         )
         return ret
@@ -4648,7 +4653,7 @@ def get_managed(
                 return (
                     sfn,
                     {},
-                    ("Specified template format {} is not supported").format(template),
+                    "Specified template format {} is not supported".format(template),
                 )
 
             if data["result"]:
@@ -4895,7 +4900,7 @@ def extract_hash(
 
     if partial:
         log.debug(
-            "file.extract_hash: Returning the partially identified %s hash " "'%s'",
+            "file.extract_hash: Returning the partially identified %s hash '%s'",
             partial["hash_type"],
             partial["hsum"],
         )
@@ -5072,11 +5077,15 @@ def check_perms(
                 else:
                     if diff_attrs.added:
                         chattr(
-                            name, operator="add", attributes=diff_attrs.added,
+                            name,
+                            operator="add",
+                            attributes=diff_attrs.added,
                         )
                     if diff_attrs.removed:
                         chattr(
-                            name, operator="remove", attributes=diff_attrs.removed,
+                            name,
+                            operator="remove",
+                            attributes=diff_attrs.removed,
                         )
                     cmp_attrs = _cmp_attrs(name, attrs)
                     if any(attr for attr in cmp_attrs):
@@ -5101,9 +5110,11 @@ def check_perms(
                 current_serange,
             ) = get_selinux_context(name).split(":")
             log.debug(
-                "Current selinux context user:{} role:{} type:{} range:{}".format(
-                    current_seuser, current_serole, current_setype, current_serange
-                )
+                "Current selinux context user:%s role:%s type:%s range:%s",
+                current_seuser,
+                current_serole,
+                current_setype,
+                current_serange,
             )
         except ValueError:
             log.error("Unable to get current selinux attributes")
@@ -5172,7 +5183,7 @@ def check_perms(
                             range=requested_serange,
                             persist=True,
                         )
-                        log.debug("selinux set result: {}".format(result))
+                        log.debug("selinux set result: %s", result)
                         (
                             current_seuser,
                             current_serole,
@@ -5395,10 +5406,14 @@ def check_managed_changes(
             __clean_tmp(sfn)
             return False, comments
         if sfn and source and keep_mode:
-            if urllib.parse.urlparse(source).scheme in (
-                "salt",
-                "file",
-            ) or source.startswith("/"):
+            if (
+                urllib.parse.urlparse(source).scheme
+                in (
+                    "salt",
+                    "file",
+                )
+                or source.startswith("/")
+            ):
                 try:
                     mode = __salt__["cp.stat_file"](source, saltenv=saltenv, octal=True)
                 except Exception as exc:  # pylint: disable=broad-except
@@ -5614,9 +5629,11 @@ def check_file_meta(
                     current_serange,
                 ) = get_selinux_context(name).split(":")
                 log.debug(
-                    "Current selinux context user:{} role:{} type:{} range:{}".format(
-                        current_seuser, current_serole, current_setype, current_serange
-                    )
+                    "Current selinux context user:%s role:%s type:%s range:%s",
+                    current_seuser,
+                    current_serole,
+                    current_setype,
+                    current_serange,
                 )
             except ValueError as exc:
                 log.error("Unable to get current selinux attributes")
@@ -6853,22 +6870,20 @@ def restore_backup(path, backup_id):
     except ValueError:
         return ret
     except KeyError:
-        ret["comment"] = "backup_id '{}' does not exist for " "{}".format(
-            backup_id, path
-        )
+        ret["comment"] = "backup_id '{}' does not exist for {}".format(backup_id, path)
         return ret
 
     salt.utils.files.backup_minion(path, _get_bkroot())
     try:
         shutil.copyfile(backup["Location"], path)
     except OSError as exc:
-        ret["comment"] = "Unable to restore {} to {}: " "{}".format(
+        ret["comment"] = "Unable to restore {} to {}: {}".format(
             backup["Location"], path, exc
         )
         return ret
     else:
         ret["result"] = True
-        ret["comment"] = "Successfully restored {} to " "{}".format(
+        ret["comment"] = "Successfully restored {} to {}".format(
             backup["Location"], path
         )
 
@@ -6914,9 +6929,7 @@ def delete_backup(path, backup_id):
     except ValueError:
         return ret
     except KeyError:
-        ret["comment"] = "backup_id '{}' does not exist for " "{}".format(
-            backup_id, path
-        )
+        ret["comment"] = "backup_id '{}' does not exist for {}".format(backup_id, path)
         return ret
 
     try:

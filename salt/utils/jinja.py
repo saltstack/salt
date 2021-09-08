@@ -148,7 +148,7 @@ class SaltCacheLoader(BaseLoader):
                     'Relative path "%s" cannot be resolved without an environment',
                     template,
                 )
-                raise TemplateNotFound
+                raise TemplateNotFound(template)
             base_path = environment.globals["tpldir"]
             _template = os.path.normpath("/".join((base_path, _template)))
             if _template.split("/", 1)[0] == "..":
@@ -1083,9 +1083,10 @@ class SerializerExtension(Extension):
 
     def _profile_end(self, label, source, previous_time):
         log.profile(
-            "Time (in seconds) to render {} '{}': {}".format(
-                source, label, time.time() - previous_time
-            )
+            "Time (in seconds) to render %s '%s': %s",
+            source,
+            label,
+            time.time() - previous_time,
         )
 
     def _parse_profile_block(self, parser, label, source, body, lineno):

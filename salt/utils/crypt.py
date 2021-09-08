@@ -68,8 +68,9 @@ def decrypt(
     try:
         if valid_rend and rend not in valid_rend:
             raise SaltInvocationError(
-                "'{}' is not a valid decryption renderer. Valid choices "
-                "are: {}".format(rend, ", ".join(valid_rend))
+                "'{}' is not a valid decryption renderer. Valid choices are: {}".format(
+                    rend, ", ".join(valid_rend)
+                )
             )
     except TypeError as exc:
         # SaltInvocationError inherits TypeError, so check for it first and

@@ -279,7 +279,7 @@ def find_credentials():
         return DETAILS["username"], password
     # We've reached the end of the list without successfully authenticating.
     raise excs.VMwareConnectionError(
-        "Cannot complete login due to " "incorrect credentials."
+        "Cannot complete login due to incorrect credentials."
     )
 
 

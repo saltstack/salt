@@ -12,8 +12,6 @@ apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.7/darwin.txt
-appdirs==1.4.3
-    # via virtualenv
 argh==0.26.2
     # via watchdog
 asn1crypto==1.3.0
@@ -327,6 +325,8 @@ azure-storage-queue==1.4.0
     # via azure
 azure==4.0.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
+backports.entry-points-selectable==1.1.0
+    # via virtualenv
 bcrypt==3.1.6
     # via paramiko
 boto3==1.17.67 ; python_version >= "3.6"
@@ -358,7 +358,7 @@ certifi==2020.6.20
     #   requests
 certvalidator==0.11.1
     # via vcert
-cffi==1.12.2
+cffi==1.14.5
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.7/darwin.txt
@@ -415,7 +415,7 @@ cryptography==3.3.2
     #   vcert
 decorator==4.4.2
     # via networkx
-distlib==0.3.0
+distlib==0.3.2
     # via virtualenv
 distro==1.5.0
     # via -r requirements/static/pkg/py3.7/darwin.txt
@@ -466,8 +466,10 @@ immutables==0.15
     # via
     #   -r requirements/static/pkg/py3.7/darwin.txt
     #   contextvars
-importlib-metadata==0.23
+importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
     # via
+    #   -r requirements/static/pkg/py3.7/darwin.txt
+    #   backports.entry-points-selectable
     #   jsonpickle
     #   jsonschema
     #   pluggy
@@ -548,7 +550,6 @@ more-itertools==8.2.0
     #   cherrypy
     #   jaraco.functools
     #   moto
-    #   zipp
 moto==1.3.16
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
@@ -681,6 +682,8 @@ passlib==1.7.2 ; sys_platform != "win32"
     #   ciscoconfparse
 pathtools==0.1.2
     # via watchdog
+platformdirs==2.2.0
+    # via virtualenv
 pluggy==0.13.1
     # via pytest
 portend==2.6
@@ -733,7 +736,7 @@ pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
-pytest-salt-factories==0.906.0
+pytest-salt-factories==0.907.0
     # via -r requirements/pytest.txt
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
@@ -895,7 +898,11 @@ toml==0.10.2
     #   pytest
 transitions==0.8.1
     # via junos-eznc
-urllib3==1.26.4
+typing-extensions==3.10.0.0
+    # via
+    #   -r requirements/static/pkg/py3.7/darwin.txt
+    #   importlib-metadata
+urllib3==1.26.6
     # via
     #   -r requirements/static/pkg/py3.7/darwin.txt
     #   botocore
@@ -904,7 +911,7 @@ urllib3==1.26.4
     #   requests
 vcert==0.7.3 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-virtualenv==20.0.20
+virtualenv==20.7.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest-salt-factories
@@ -930,8 +937,9 @@ zc.lockfile==2.0
     # via
     #   -r requirements/static/pkg/py3.7/darwin.txt
     #   cherrypy
-zipp==0.6.0
+zipp==3.5.0
     # via
+    #   -r requirements/static/pkg/py3.7/darwin.txt
     #   importlib-metadata
     #   moto
 

@@ -276,7 +276,8 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
                         "package:bash",
                         "revision:",
                         "architecture:amd64",
-                        "maintainer:Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>",
+                        "maintainer:Ubuntu Developers"
+                        " <ubuntu-devel-discuss@lists.ubuntu.com>",
                         "summary:",
                         "source:bash",
                         "version:4.4.18-2ubuntu1",
@@ -291,14 +292,20 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
                         "status:ii ",
                         "======",
                         "description:GNU Bourne Again SHell",
-                        " Bash is an sh-compatible command language interpreter that executes",
-                        " commands read from the standard input or from a file.  Bash also",
-                        " incorporates useful features from the Korn and C shells (ksh and csh).",
+                        " Bash is an sh-compatible command language interpreter that"
+                        " executes",
+                        " commands read from the standard input or from a file.  Bash"
+                        " also",
+                        " incorporates useful features from the Korn and C shells (ksh"
+                        " and csh).",
                         " .",
-                        " Bash is ultimately intended to be a conformant implementation of the",
-                        " IEEE POSIX Shell and Tools specification (IEEE Working Group 1003.2).",
+                        " Bash is ultimately intended to be a conformant implementation"
+                        " of the",
+                        " IEEE POSIX Shell and Tools specification (IEEE Working Group"
+                        " 1003.2).",
                         " .",
-                        " The Programmable Completion Code, by Ian Macdonald, is now found in",
+                        " The Programmable Completion Code, by Ian Macdonald, is now"
+                        " found in",
                         " the bash-completion package.",
                         "------",
                     ]
@@ -321,20 +328,27 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
                         "description": os.linesep.join(
                             [
                                 "GNU Bourne Again SHell",
-                                " Bash is an sh-compatible command language interpreter that executes",
-                                " commands read from the standard input or from a file.  Bash also",
-                                " incorporates useful features from the Korn and C shells (ksh and csh).",
+                                " Bash is an sh-compatible command language interpreter"
+                                " that executes",
+                                " commands read from the standard input or from a file."
+                                "  Bash also",
+                                " incorporates useful features from the Korn and C"
+                                " shells (ksh and csh).",
                                 " .",
-                                " Bash is ultimately intended to be a conformant implementation of the",
-                                " IEEE POSIX Shell and Tools specification (IEEE Working Group 1003.2).",
+                                " Bash is ultimately intended to be a conformant"
+                                " implementation of the",
+                                " IEEE POSIX Shell and Tools specification (IEEE"
+                                " Working Group 1003.2).",
                                 " .",
-                                " The Programmable Completion Code, by Ian Macdonald, is now found in",
+                                " The Programmable Completion Code, by Ian Macdonald,"
+                                " is now found in",
                                 " the bash-completion package." + os.linesep,
                             ]
                         ),
                         "homepage": "http://tiswww.case.edu/php/chet/bash/bashtop.html",
-                        "maintainer": "Ubuntu Developers "
-                        "<ubuntu-devel-discuss@lists.ubuntu.com>",
+                        "maintainer": (
+                            "Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>"
+                        ),
                         "package": "bash",
                         "section": "shells",
                         "source": "bash",

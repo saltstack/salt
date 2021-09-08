@@ -235,7 +235,10 @@ def uptime():
             raise CommandExecutionError("Cannot find kern.boottime system parameter")
         data = bt_data.split("{")[-1].split("}")[0].strip().replace(" ", "")
         uptime = {
-            k: int(v,) for k, v in [p.strip().split("=") for p in data.split(",")]
+            k: int(
+                v,
+            )
+            for k, v in [p.strip().split("=") for p in data.split(",")]
         }
         seconds = int(curr_seconds - uptime["sec"])
     elif salt.utils.platform.is_aix():
@@ -1793,9 +1796,9 @@ def proxy_reconnect(proxy_name, opts=None):
         # especially
         minion_id = opts.get("proxyid", "") or opts.get("id", "")
         log.info(
-            "{} ({} proxy) is rebooting or shutting down. Don't probe connection.".format(
-                minion_id, proxy_name
-            )
+            "%s (%s proxy) is rebooting or shutting down. Don't probe connection.",
+            minion_id,
+            proxy_name,
         )
         return True
 

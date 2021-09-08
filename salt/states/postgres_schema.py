@@ -66,8 +66,7 @@ def present(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Schema {} is already present in "
-        "database {}".format(name, dbname),
+        "comment": "Schema {} is already present in database {}".format(name, dbname),
     }
 
     db_args = {
@@ -152,13 +151,12 @@ def absent(
     if __salt__["postgres.schema_exists"](dbname, name, **db_args):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = (
-                "Schema {} is set to be removed"
-                " from database {}".format(name, dbname)
+            ret["comment"] = "Schema {} is set to be removed from database {}".format(
+                name, dbname
             )
             return ret
         elif __salt__["postgres.schema_remove"](dbname, name, **db_args):
-            ret["comment"] = "Schema {} has been removed" " from database {}".format(
+            ret["comment"] = "Schema {} has been removed from database {}".format(
                 name, dbname
             )
             ret["changes"][name] = "Absent"
@@ -168,9 +166,10 @@ def absent(
             ret["comment"] = "Schema {} failed to be removed".format(name)
             return ret
     else:
-        ret["comment"] = (
-            "Schema {} is not present in database {},"
-            " so it cannot be removed".format(name, dbname)
+        ret[
+            "comment"
+        ] = "Schema {} is not present in database {}, so it cannot be removed".format(
+            name, dbname
         )
 
     return ret

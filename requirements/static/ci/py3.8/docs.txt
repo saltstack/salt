@@ -54,6 +54,8 @@ immutables==0.15
     # via
     #   -r requirements/static/pkg/py3.8/linux.txt
     #   contextvars
+importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
+    # via -r requirements/static/pkg/py3.8/linux.txt
 jaraco.functools==2.0
     # via
     #   -r requirements/static/pkg/py3.8/linux.txt
@@ -145,7 +147,7 @@ tempora==1.14.1
     #   portend
 timelib==0.2.5
     # via -r requirements/static/pkg/py3.8/linux.txt
-urllib3==1.26.4
+urllib3==1.26.6
     # via
     #   -r requirements/static/pkg/py3.8/linux.txt
     #   requests
@@ -153,6 +155,10 @@ zc.lockfile==1.4
     # via
     #   -r requirements/static/pkg/py3.8/linux.txt
     #   cherrypy
+zipp==3.5.0
+    # via
+    #   -r requirements/static/pkg/py3.8/linux.txt
+    #   importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

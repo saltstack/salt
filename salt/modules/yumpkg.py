@@ -2043,6 +2043,8 @@ def update(
     See :py:func:`pkg.upgrade <salt.modules.yumpkg.upgrade>` for
     further documentation.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' pkg.update
@@ -3377,9 +3379,9 @@ def _get_patches(installed_only=False):
 
     if parsing_errors:
         log.warning(
-            "Skipped some unexpected output while running '{}' to list patches. Please check output".format(
-                " ".join(cmd)
-            )
+            "Skipped some unexpected output while running '%s' to list "
+            "patches. Please check output",
+            " ".join(cmd),
         )
 
     if installed_only:
@@ -3433,7 +3435,6 @@ def services_need_restart(**kwargs):
     package manager. It might be needed to restart them.
 
     Requires systemd.
-
 
     CLI Examples:
 

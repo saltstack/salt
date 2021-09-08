@@ -52,8 +52,7 @@ class KapacitorTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(kapacitor.__salt__, {"cmd.run_all": cmd_mock}):
             kapacitor.define_task("taskname", "/tmp/script.tick", dbrps=["db.rp"])
         cmd_mock.assert_called_once_with(
-            "kapacitor define taskname "
-            "-tick /tmp/script.tick -type stream -dbrp db.rp",
+            "kapacitor define taskname -tick /tmp/script.tick -type stream -dbrp db.rp",
             env=self.__class__.env,
         )
 

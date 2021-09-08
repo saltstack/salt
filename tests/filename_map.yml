@@ -1,9 +1,8 @@
 '*':
-  - pytests.integration.modules.test_sysmod
+  - pytests.unit.utils.test_versions
   - unit.test_module_names
   - unit.test_virtualname
   - unit.utils.test_doc
-  - unit.utils.test_versions
 
 setup.py:
   - pytests.scenarios.setup.test_man
@@ -17,7 +16,7 @@ salt/modules/(apkpkg|aptpkg|ebuildpkg|dpkg_lowpkg|freebsdpkg|mac_brew_pkg|mac_po
 
 salt/modules/(mac_user|useradd|pw_user|solaris_user|win_useradd)\.py:
   - pytests.unit.states.test_user
-  - integration.states.test_user
+  - pytests.functional.states.test_user
 
 salt/modules/(aix_group|groupadd|mac_group|pw_group|solaris_group|win_groupadd)\.py:
   - unit.states.test_group
@@ -45,7 +44,7 @@ salt/modules/augeas_cfg.py:
 
 salt/modules/cp.py:
   - unit.modules.test_file
-  - unit.states.test_file
+  - pytests.unit.states.file.test_copy
   - integration.modules.test_file
   - integration.states.test_file
 
@@ -186,7 +185,7 @@ salt/(client/ssh/.+|cli/ssh\.py):
 salt/config/*:
   - unit.test_config
 
-salt/loader.py:
+salt/loader/*:
   - integration.loader.test_ext_grains
   - integration.loader.test_ext_modules
   - pytests.functional.test_loader
