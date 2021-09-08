@@ -213,13 +213,6 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
 
 
     @classmethod
-    def force_close_all_instances(cls):
-        """
-        Will force close all instances
-        :return: None
-        """
-        pass
-
     def __init__(self, opts, **kwargs):
         self.opts = dict(opts)
 
