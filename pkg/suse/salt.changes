@@ -190,7 +190,7 @@ Wed Sep 23 18:06:52 UTC 2015 - aboe76@gmail.com
 - New Major release 2015.8.0
 
   for more details:
-  http://docs.saltstack.com/en/latest/topics/releases/2015.8.0.html
+  https://docs.saltproject.io/en/latest/topics/releases/2015.8.0.html
 
 - Cleaned the spec file with spec-cleaner
 - Added the use-salt-user-for-master.patch see README.SUSE
@@ -237,7 +237,7 @@ Wed Jul  8 08:47:32 UTC 2015 - aboe76@gmail.com
 - New Bugfix release 2015.5.3
 
   for more details:
-  http://docs.saltstack.com/en/latest/topics/releases/2015.5.3.html
+  https://docs.saltproject.io/en/latest/topics/releases/2015.5.3.html
 
 -------------------------------------------------------------------
 Thu Jun  4 19:46:19 UTC 2015 - aboe76@gmail.com
@@ -245,7 +245,7 @@ Thu Jun  4 19:46:19 UTC 2015 - aboe76@gmail.com
 - New Bugfix release 2015.5.2
   
   for more details:
-  http://docs.saltstack.com/en/latest/topics/releases/2015.5.2.html
+  https://docs.saltproject.io/en/latest/topics/releases/2015.5.2.html
 
 -------------------------------------------------------------------
 Sat May 23 18:31:44 UTC 2015 - aboe76@gmail.com
@@ -255,7 +255,7 @@ Sat May 23 18:31:44 UTC 2015 - aboe76@gmail.com
   Please update any calls to this function in the cloud runner.
 
   for more details:
-  http://docs.saltstack.com/en/latest/topics/releases/2015.5.1.html
+  https://docs.saltproject.io/en/latest/topics/releases/2015.5.1.html
 
 -------------------------------------------------------------------
 Fri May 15 21:04:44 UTC 2015 - aboe76@gmail.com
@@ -283,7 +283,7 @@ Wed May  6 20:33:53 UTC 2015 - aboe76@gmail.com
   python_shell=False.
 
   For all details see
-   http://docs.saltstack.com/en/latest/topics/releases/2015.5.0.html
+   https://docs.saltproject.io/en/latest/topics/releases/2015.5.0.html
 - RPM Package changes:
 - add some versions to the buildrequires to match the 2
   requirements files from the tarball
@@ -469,7 +469,7 @@ Mon Nov  3 21:35:31 UTC 2014 - aboe76@gmail.com
 - Removed Patch disable-service-py-for-suse-family.patch already fixed in this package
 - Removed Patch allow-systemd-units-no-unit-files.patch already fixed in this package
 - Removed Patch allow-systemd-parameterized-services.patch already fixed in this package
-- More information at: http://docs.saltstack.com/en/latest/topics/releases/2014.7.0.html
+- More information at: https://docs.saltproject.io/en/latest/topics/releases/2014.7.0.html
 - SALT SSH ENHANCEMENTS:
   + Support for Fileserver Backends
   + Support for Saltfile
@@ -1111,7 +1111,7 @@ Fri Aug  2 05:36:08 UTC 2013 - aboe76@gmail.com
   - module networking hwaddr renamed to be in line with other modules
   - fixed traceback in bridge.show
   - fixed ssh know_hosts and auth.present output.
-  for more information: http://docs.saltstack.com/topics/releases/0.16.2.html
+  for more information: https://docs.saltproject.io/topics/releases/0.16.2.html
 
 -------------------------------------------------------------------
 Mon Jul 29 20:11:14 UTC 2013 - aboe76@gmail.com
@@ -1149,7 +1149,7 @@ Tue Jul  2 04:55:21 UTC 2013 - aboe76@gmail.com
   - Multi Targets for pkg.removed, pgk.purged States
   - Random Times in cron states
   - Confirmation Prompt on Key acceptance on master
-- full changelog details: http://docs.saltstack.com/topics/releases/0.16.0.html
+- full changelog details: https://docs.saltproject.io/topics/releases/0.16.0.html
 -------------------------------------------------------------------
 Sat Jun 22 05:31:10 UTC 2013 - aboe76@gmail.com
 
@@ -1164,7 +1164,7 @@ Sat Jun 22 05:31:10 UTC 2013 - aboe76@gmail.com
   - Multi Targets for pkg.removed, pgk.purged States
   - Random Times in cron states
   - Confirmation Prompt on Key acceptance on master
-- full changelog details: http://docs.saltstack.com/topics/releases/0.16.0.html
+- full changelog details: https://docs.saltproject.io/topics/releases/0.16.0.html
 
 -------------------------------------------------------------------
 Wed Jun 12 20:48:36 UTC 2013 - aboe76@gmail.com
@@ -1243,7 +1243,7 @@ Sat May  4 08:16:27 UTC 2013 - aboe76@gmail.com
   - Pillar error reporting
   - Cached State Data
   - Monitoring states
-- Read http://docs.saltstack.com/topics/releases/0.15.0.html for more information
+- Read https://docs.saltproject.io/topics/releases/0.15.0.html for more information
 - improved init files overwrite with /etc/default/salt
 
 -------------------------------------------------------------------
