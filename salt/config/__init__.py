@@ -683,7 +683,7 @@ VALID_OPTS = immutabletypes.freeze(
         "minion_data_cache": bool,
         # The number of seconds between AES key rotations on the master
         "publish_session": int,
-        # Defines a salt reactor. See http://docs.saltstack.com/en/latest/topics/reactor/
+        # Defines a salt reactor. See https://docs.saltproject.io/en/latest/topics/reactor/
         "reactor": list,
         # The TTL for the cache of the reactor configuration
         "reactor_refresh_interval": int,
@@ -691,14 +691,14 @@ VALID_OPTS = immutabletypes.freeze(
         "reactor_worker_threads": int,
         # The queue size for workers in the reactor
         "reactor_worker_hwm": int,
-        # Defines engines. See https://docs.saltstack.com/en/latest/topics/engines/
+        # Defines engines. See https://docs.saltproject.io/en/latest/topics/engines/
         "engines": list,
         # Whether or not to store runner returns in the job cache
         "runner_returns": bool,
         "serial": str,
         "search": str,
         # A compound target definition.
-        # See: http://docs.saltstack.com/en/latest/topics/targeting/nodegroups.html
+        # See: https://docs.saltproject.io/en/latest/topics/targeting/nodegroups.html
         "nodegroups": (dict, list),
         # List-only nodegroups for salt-ssh. Each group must be formed as either a
         # comma-separated list, or a YAML list.

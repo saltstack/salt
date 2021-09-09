@@ -422,7 +422,7 @@ Changelog for v2017.7.5..v2017.7.6
 
   * b6da600fff Initialize __context__ retcode for functions handled via schedule util module
 
-* **ISSUE** `#47264`_: (`jf`_) doc: https://docs.saltstack.com/en/latest/ref/modules/all/salt.modules.grains.html#salt.modules.grains.delval s/of pass/or pass/ (refs: `#47371`_)
+* **ISSUE** `#47264`_: (`jf`_) doc: https://docs.saltproject.io/en/latest/ref/modules/all/salt.modules.grains.html#salt.modules.grains.delval s/of pass/or pass/ (refs: `#47371`_)
 
 * **PR** `#47371`_: (`rallytime`_) Fix "of pass" typo in grains.delval docs: change to "or pass"
   @ *2018-04-30 18:18:46 UTC*

@@ -132,7 +132,7 @@ class OptionParser(optparse.OptionParser):
 
     epilog = (
         'You can find additional help about %prog issuing "man %prog" '
-        "or on http://docs.saltstack.com"
+        "or on https://docs.saltproject.io"
     )
     description = None
 
@@ -1897,7 +1897,7 @@ class CloudCredentialsMixIn(metaclass=MixInMeta):
         if self.options.set_password:
             raise RuntimeError(
                 "This functionality is not supported; please see the keyring module at"
-                " http://docs.saltstack.com/en/latest/topics/sdb/"
+                " https://docs.saltproject.io/en/latest/topics/sdb/"
             )
 
 

@@ -48,7 +48,7 @@ Tested on:
 """
 
 # TODO: look at event descriptions here:
-#       https://docs.saltstack.com/en/latest/topics/cloud/reactor.html
+#       https://docs.saltproject.io/en/latest/topics/cloud/reactor.html
 # TODO: support reboot? salt-cloud -a reboot vm1 vm2 vm2
 # TODO: by using metadata tags in the libvirt XML we could make provider only
 #       manage domains that we actually created
