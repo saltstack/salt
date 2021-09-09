@@ -15,7 +15,7 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 from salt.transport.zeromq import AsyncReqMessageClientPool
-from tests.support.mock import MagicMock, call, patch
+from tests.support.mock import MagicMock, patch
 
 
 def test_master_uri():
