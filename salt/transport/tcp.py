@@ -212,6 +212,8 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
 
     def __init__(self, opts, **kwargs):
         self.opts = dict(opts)
+        if "master_uri" in kwargs:
+            self.opts["master_uri"] = kwargs["master_uri"]
 
         self.serial = salt.payload.Serial(self.opts)
 
