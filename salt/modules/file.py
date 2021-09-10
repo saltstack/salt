@@ -3175,15 +3175,13 @@ def patch(originalfile, patchfile, options="", dry_run=False):
         Options to pass to patch.
 
     .. note::
-        Windows now supports this as of 3004. In order to use this
-        function in Windows, select the "Use Git and optional Unix
-        tools from the Command Prompt" option when installing Git.
-        This will put all the Unix commands in your system Path to
-        allow patch to be used.
+        Windows now supports using patch as of 3004.
 
-        If you already have git-for-windows installed, check if
-        Git\\usr\\bin\\ is in your system path. The patch.exe binary
-        is typically found within this folder from Git.
+        In order to use this function in Windows, please install the
+        patch binary through your own means and ensure it's found
+        in the system Path. If installing through git-for-windows,
+        please select the optional "Use Git and optional Unix tools
+        from the Command Prompt" option when installing Git.
 
     CLI Example:
 
@@ -3195,16 +3193,9 @@ def patch(originalfile, patchfile, options="", dry_run=False):
     """
     patchpath = salt.utils.path.which("patch")
     if not patchpath:
-        if salt.utils.platform.is_windows():
-            raise CommandExecutionError(
-                "Please check your git-for-windows installation "
-                "to ensure Git\\usr\\bin\\ is found in your "
-                "system Path variable."
-            )
-        else:
-            raise CommandExecutionError(
-                "patch executable not found. Is the distribution's patch package installed?"
-            )
+        raise CommandExecutionError(
+            "patch executable not found. Is the distribution's patch package installed?"
+        )
 
     cmd = [patchpath]
     cmd.extend(salt.utils.args.shlex_split(options))
