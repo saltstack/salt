@@ -1714,6 +1714,7 @@ def install(
 def upgrade(
     refresh=True,
     dryrun=False,
+    downloadonly=False,
     dist_upgrade=False,
     fromrepo=None,
     novendorchange=False,
@@ -1750,6 +1751,9 @@ def upgrade(
 
     dist_upgrade
         Perform a system dist-upgrade. Default: False
+        
+    downloadonly
+        Only download packages, don't install them. Default: False
 
     fromrepo
         Specify a list of package repositories to upgrade from. Default: None
@@ -1794,6 +1798,9 @@ def upgrade(
 
     if dryrun:
         cmd_update.append("--dry-run")
+        
+    if downloadonly:
+        cmd_update.append("--download-only")
 
     if fromrepo:
         if isinstance(fromrepo, str):
