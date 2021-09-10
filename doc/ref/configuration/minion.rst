@@ -2876,7 +2876,7 @@ Default: ``False``
 
 Enables verification of the master-public-signature returned by the master in
 auth-replies. Please see the tutorial on how to configure this properly
-`Multimaster-PKI with Failover Tutorial <http://docs.saltstack.com/en/latest/topics/tutorials/multimaster_pki.html>`_
+`Multimaster-PKI with Failover Tutorial <https://docs.saltproject.io/en/latest/topics/tutorials/multimaster_pki.html>`_
 
 .. versionadded:: 2014.7.0
 
