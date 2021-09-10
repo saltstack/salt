@@ -891,6 +891,31 @@ def test_rocky_8_os_grains(os_release_dir):
 
 
 @pytest.mark.skip_unless_on_linux
+def test_garuda_os_grains(os_release_dir):
+    """
+    Test if OS grains are parsed correctly on Garuda.
+    """
+
+    _os_release_map = {
+        "os_release_file": {
+            "NAME": "Garuda",
+            "PRETTY_NAME": "Garuda Linux",
+            "ID": "garuda",
+        },
+        "_linux_distribution": ("garuda", "", ""),
+    }
+
+    expectation = {
+        "os": "Garuda",
+        "os_family": "Arch",
+        "oscodename": "Garuda Linux",
+        "osfullname": "Garuda",
+        "osrelease": "",
+    }
+    _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
 def test_mendel_os_grains(os_release_dir):
     """
     Test if OS grains are parsed correctly in Mendel Linux

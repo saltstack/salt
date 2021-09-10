@@ -1638,6 +1638,7 @@ _OS_FAMILY_MAP = {
     "Arch ARM": "Arch",
     "Manjaro": "Arch",
     "Antergos": "Arch",
+    "Garuda": "Arch",
     "ALT": "RedHat",
     "Trisquel": "Debian",
     "GCEL": "Debian",
