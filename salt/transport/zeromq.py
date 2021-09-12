@@ -33,7 +33,7 @@ import zmq.error
 import zmq.eventloop.ioloop
 import zmq.eventloop.zmqstream
 from salt._compat import ipaddress
-from salt.exceptions import SaltException, SaltReqTimeoutError
+from salt.exceptions import SaltReqTimeoutError
 from salt.utils.zeromq import LIBZMQ_VERSION_INFO, ZMQ_VERSION_INFO, zmq
 
 try:
@@ -43,17 +43,6 @@ try:
 except ImportError:
     HAS_ZMQ_MONITOR = False
 
-
-try:
-    from M2Crypto import RSA
-
-    HAS_M2 = True
-except ImportError:
-    HAS_M2 = False
-    try:
-        from Cryptodome.Cipher import PKCS1_OAEP
-    except ImportError:
-        from Crypto.Cipher import PKCS1_OAEP  # nosec
 
 log = logging.getLogger(__name__)
 
@@ -116,210 +105,6 @@ def _get_master_uri(master_ip, master_port, source_ip=None, source_port=None):
             )
 
     return master_uri
-
-
-class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
-    """
-    Encapsulate sending routines to ZeroMQ.
-
-    ZMQ Channels default to 'crypt=aes'
-    """
-
-    async_methods = [
-        "crypted_transfer_decode_dictentry",
-        "_crypted_transfer",
-        "_do_transfer",
-        "_uncrypted_transfer",
-        "send",
-    ]
-    close_methods = [
-        "close",
-    ]
-
-    def __init__(self, opts, **kwargs):
-        self.opts = dict(opts)
-        self.ttype = "zeromq"
-
-        # crypt defaults to 'aes'
-        self.crypt = kwargs.get("crypt", "aes")
-
-        if "master_uri" in kwargs:
-            self.opts["master_uri"] = kwargs["master_uri"]
-
-        self._io_loop = kwargs.get("io_loop")
-        if self._io_loop is None:
-            self._io_loop = salt.ext.tornado.ioloop.IOLoop.current()
-
-        if self.crypt != "clear":
-            # we don't need to worry about auth as a kwarg, since its a singleton
-            self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self._io_loop)
-        log.debug(
-            "Connecting the Minion to the Master URI (for the return server): %s",
-            self.master_uri,
-        )
-        self.message_client = AsyncReqMessageClientPool(
-            self.opts,
-            args=(
-                self.opts,
-                self.master_uri,
-            ),
-            kwargs={"io_loop": self._io_loop},
-        )
-        self._closing = False
-
-    def close(self):
-        """
-        Since the message_client creates sockets and assigns them to the IOLoop we have to
-        specifically destroy them, since we aren't the only ones with references to the FDs
-        """
-        if self._closing:
-            return
-        log.debug("Closing %s instance", self.__class__.__name__)
-        self._closing = True
-        if hasattr(self, "message_client"):
-            self.message_client.close()
-
-    # pylint: disable=W1701
-    def __del__(self):
-        try:
-            self.close()
-        except OSError as exc:
-            if exc.errno != errno.EBADF:
-                # If its not a bad file descriptor error, raise
-                raise
-
-    # pylint: enable=W1701
-
-    @property
-    def master_uri(self):
-        if "master_uri" in self.opts:
-            return self.opts["master_uri"]
-
-        # if by chance master_uri is not there..
-        if "master_ip" in self.opts:
-            return _get_master_uri(
-                self.opts["master_ip"],
-                self.opts["master_port"],
-                source_ip=self.opts.get("source_ip"),
-                source_port=self.opts.get("source_ret_port"),
-            )
-
-        # if we've reached here something is very abnormal
-        raise SaltException("ReqChannel: missing master_uri/master_ip in self.opts")
-
-    def _package_load(self, load):
-        return {
-            "enc": self.crypt,
-            "load": load,
-        }
-
-    @salt.ext.tornado.gen.coroutine
-    def crypted_transfer_decode_dictentry(
-        self, load, dictkey=None, tries=3, timeout=60
-    ):
-        if not self.auth.authenticated:
-            # Return control back to the caller, continue when authentication succeeds
-            yield self.auth.authenticate()
-        # Return control to the caller. When send() completes, resume by populating ret with the Future.result
-        ret = yield self.message_client.send(
-            self._package_load(self.auth.crypticle.dumps(load)),
-            timeout=timeout,
-            tries=tries,
-        )
-        key = self.auth.get_keys()
-        if "key" not in ret:
-            # Reauth in the case our key is deleted on the master side.
-            yield self.auth.authenticate()
-            ret = yield self.message_client.send(
-                self._package_load(self.auth.crypticle.dumps(load)),
-                timeout=timeout,
-                tries=tries,
-            )
-        if HAS_M2:
-            aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
-        else:
-            cipher = PKCS1_OAEP.new(key)
-            aes = cipher.decrypt(ret["key"])
-        pcrypt = salt.crypt.Crypticle(self.opts, aes)
-        data = pcrypt.loads(ret[dictkey])
-        data = salt.transport.frame.decode_embedded_strs(data)
-        raise salt.ext.tornado.gen.Return(data)
-
-    @salt.ext.tornado.gen.coroutine
-    def _crypted_transfer(self, load, tries=3, timeout=60, raw=False):
-        """
-        Send a load across the wire, with encryption
-
-        In case of authentication errors, try to renegotiate authentication
-        and retry the method.
-
-        Indeed, we can fail too early in case of a master restart during a
-        minion state execution call
-
-        :param dict load: A load to send across the wire
-        :param int tries: The number of times to make before failure
-        :param int timeout: The number of seconds on a response before failing
-        """
-
-        @salt.ext.tornado.gen.coroutine
-        def _do_transfer():
-            # Yield control to the caller. When send() completes, resume by populating data with the Future.result
-            data = yield self.message_client.send(
-                self._package_load(self.auth.crypticle.dumps(load)),
-                timeout=timeout,
-                tries=tries,
-            )
-            # we may not have always data
-            # as for example for saltcall ret submission, this is a blind
-            # communication, we do not subscribe to return events, we just
-            # upload the results to the master
-            if data:
-                data = self.auth.crypticle.loads(data, raw)
-            if not raw:
-                data = salt.transport.frame.decode_embedded_strs(data)
-            raise salt.ext.tornado.gen.Return(data)
-
-        if not self.auth.authenticated:
-            # Return control back to the caller, resume when authentication succeeds
-            yield self.auth.authenticate()
-        try:
-            # We did not get data back the first time. Retry.
-            ret = yield _do_transfer()
-        except salt.crypt.AuthenticationError:
-            # If auth error, return control back to the caller, continue when authentication succeeds
-            yield self.auth.authenticate()
-            ret = yield _do_transfer()
-        raise salt.ext.tornado.gen.Return(ret)
-
-    @salt.ext.tornado.gen.coroutine
-    def _uncrypted_transfer(self, load, tries=3, timeout=60):
-        """
-        Send a load across the wire in cleartext
-
-        :param dict load: A load to send across the wire
-        :param int tries: The number of times to make before failure
-        :param int timeout: The number of seconds on a response before failing
-        """
-        ret = yield self.message_client.send(
-            self._package_load(load),
-            timeout=timeout,
-            tries=tries,
-        )
-
-        raise salt.ext.tornado.gen.Return(ret)
-
-    @salt.ext.tornado.gen.coroutine
-    def send(self, load, tries=3, timeout=60, raw=False):
-        """
-        Send a request, return a future which will complete when we send the message
-        """
-        if self.crypt == "clear":
-            ret = yield self._uncrypted_transfer(load, tries=tries, timeout=timeout)
-        else:
-            ret = yield self._crypted_transfer(
-                load, tries=tries, timeout=timeout, raw=raw
-            )
-        raise salt.ext.tornado.gen.Return(ret)
 
 
 class AsyncZeroMQPubChannel(
@@ -1349,3 +1134,19 @@ class ZeroMQSocketMonitor:
             self._monitor_stream.close()
             self._monitor_stream = None
         log.trace("Event monitor done!")
+
+
+class ZeroMQReqChannel:
+    ttype = "zeromq"
+
+    def __init__(self, opts, master_uri, io_loop):
+        self.opts = opts
+        self.master_uri = master_uri
+        self.message_client = AsyncReqMessageClientPool(
+            self.opts,
+            args=(
+                self.opts,
+                self.master_uri,
+            ),
+            kwargs={"io_loop": io_loop},
+        )
