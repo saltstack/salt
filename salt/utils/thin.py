@@ -29,6 +29,21 @@ import salt.utils.stringutils
 import salt.version
 import yaml
 
+try:
+    import m2crypto
+
+    crypt = m2crypto
+except ImportError:
+    try:
+        import Cryptodome
+
+        crypt = Cryptodome
+    except ImportError:
+        import Crypto
+
+        crypt = Crypto
+
+
 # This is needed until we drop support for python 3.6
 has_immutables = False
 try:
@@ -425,6 +440,7 @@ def get_tops(extra_mods="", so_mods=""):
         ssl_match_hostname,
         markupsafe,
         backports_abc,
+        crypt,
     ]
     modules = find_site_modules("contextvars")
     if modules:

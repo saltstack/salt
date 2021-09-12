@@ -10,13 +10,14 @@ import salt.exceptions
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.log.setup
+import salt.master
 import salt.transport.client
 import salt.transport.server
 import salt.transport.zeromq
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
-import zmq.eventloop.ioloop
+import zmq
 from saltfactories.utils.processes import terminate_process
 from tests.support.mock import MagicMock, patch
 
@@ -51,7 +52,6 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         sock.setsockopt(zmq.SUBSCRIBE, b"")
         sock.connect(self.pub_uri)
         last_msg = time.time()
-        crypticle = salt.crypt.Crypticle(self.minion_config, self.aes_key)
         self.started.set()
         while True:
             curr_time = time.time()
@@ -62,11 +62,10 @@ class Collector(salt.utils.process.SignalHandlingProcess):
             try:
                 payload = sock.recv(zmq.NOBLOCK)
             except zmq.ZMQError:
-                time.sleep(0.01)
+                time.sleep(0.1)
             else:
                 try:
-                    serial_payload = salt.payload.loads(payload)
-                    payload = crypticle.loads(serial_payload["load"])
+                    payload = salt.payload.loads(payload)
                     if "start" in payload:
                         self.running.set()
                         continue
