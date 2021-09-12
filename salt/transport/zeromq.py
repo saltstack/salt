@@ -10,8 +10,6 @@ import sys
 import threading
 from random import randint
 
-import salt.auth
-import salt.crypt
 import salt.ext.tornado
 import salt.ext.tornado.concurrent
 import salt.ext.tornado.gen
@@ -19,16 +17,13 @@ import salt.ext.tornado.ioloop
 import salt.log.setup
 import salt.payload
 import salt.transport.client
-import salt.transport.mixins.auth
 import salt.transport.server
-import salt.utils.event
 import salt.utils.files
 import salt.utils.minions
 import salt.utils.process
 import salt.utils.stringutils
-import salt.utils.verify
-import salt.utils.versions
 import salt.utils.zeromq
+import zmq.asyncio
 import zmq.error
 import zmq.eventloop.ioloop
 import zmq.eventloop.zmqstream
@@ -107,38 +102,24 @@ def _get_master_uri(master_ip, master_port, source_ip=None, source_port=None):
     return master_uri
 
 
-class AsyncZeroMQPubChannel(
-    salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.AsyncPubChannel
-):
+class AsyncZeroMQPubChannel:
     """
     A transport channel backed by ZeroMQ for a Salt Publisher to use to
     publish commands to connected minions
     """
 
-    async_methods = [
-        "connect",
-        "_decode_messages",
-    ]
-    close_methods = [
-        "close",
-    ]
+    ttype = "zeromq"
 
-    def __init__(self, opts, **kwargs):
+    def __init__(self, opts, io_loop, **kwargs):
         self.opts = opts
-        self.ttype = "zeromq"
-        self.io_loop = kwargs.get("io_loop")
-        self._closing = False
-
-        if self.io_loop is None:
-            self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
-
+        self.serial = salt.payload.Serial(self.opts)
+        self.io_loop = io_loop
         self.hexid = hashlib.sha1(
             salt.utils.stringutils.to_bytes(self.opts["id"])
         ).hexdigest()
-        self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
+        self._closing = False
         self.context = zmq.Context()
         self._socket = self.context.socket(zmq.SUB)
-
         if self.opts["zmq_filtering"]:
             # TODO: constants file for "broadcast"
             self._socket.setsockopt(zmq.SUBSCRIBE, b"broadcast")
@@ -207,9 +188,7 @@ class AsyncZeroMQPubChannel(
     def close(self):
         if self._closing is True:
             return
-
         self._closing = True
-
         if hasattr(self, "_monitor") and self._monitor is not None:
             self._monitor.stop()
             self._monitor = None
@@ -233,22 +212,15 @@ class AsyncZeroMQPubChannel(
 
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
     @salt.ext.tornado.gen.coroutine
-    def connect(self):
-        if not self.auth.authenticated:
-            yield self.auth.authenticate()
-
-        # if this is changed from the default, we assume it was intentional
-        if int(self.opts.get("publish_port", 4506)) != 4506:
-            self.publish_port = self.opts.get("publish_port")
-        # else take the relayed publish_port master reports
-        else:
-            self.publish_port = self.auth.creds["publish_port"]
-
+    def connect(self, publish_port, connect_callback=None, disconnect_callback=None):
+        self.publish_port = publish_port
         log.debug(
             "Connecting the Minion to the Master publish port, using the URI: %s",
             self.master_pub,
         )
+        log.error("PubChannel %s", self.master_pub)
         self._socket.connect(self.master_pub)
+        connect_callback(True)
 
     @property
     def master_pub(self):
@@ -294,8 +266,7 @@ class AsyncZeroMQPubChannel(
             )
         # Yield control back to the caller. When the payload has been decoded, assign
         # the decoded payload to 'ret' and resume operation
-        ret = yield self._decode_payload(payload)
-        raise salt.ext.tornado.gen.Return(ret)
+        raise salt.ext.tornado.gen.Return(payload)
 
     @property
     def stream(self):
@@ -314,23 +285,16 @@ class AsyncZeroMQPubChannel(
 
         :param func callback: A function which should be called when data is received
         """
-        if callback is None:
-            return self.stream.on_recv(None)
+        return self.stream.on_recv(callback)
 
-        @salt.ext.tornado.gen.coroutine
-        def wrap_callback(messages):
-            payload = yield self._decode_messages(messages)
-            if payload is not None:
-                callback(payload)
-
-        return self.stream.on_recv(wrap_callback)
+    @salt.ext.tornado.gen.coroutine
+    def send(self, msg):
+        self.stream.send(msg, noblock=True)
 
 
-class ZeroMQReqServerChannel(
-    salt.transport.mixins.auth.AESReqServerMixin, salt.transport.server.ReqServerChannel
-):
+class ZeroMQReqServerChannel:
     def __init__(self, opts):
-        salt.transport.server.ReqServerChannel.__init__(self, opts)
+        self.opts = opts
         self._closing = False
         self._monitor = None
         self._w_monitor = None
@@ -368,7 +332,9 @@ class ZeroMQReqServerChannel(
             )
 
         log.info("Setting up the master communication server")
+        log.error("ReqServer clients %s", self.uri)
         self.clients.bind(self.uri)
+        log.error("ReqServer workers %s", self.w_uri)
         self.workers.bind(self.w_uri)
 
         while True:
@@ -414,7 +380,6 @@ class ZeroMQReqServerChannel(
 
         :param func process_manager: An instance of salt.utils.process.ProcessManager
         """
-        salt.transport.mixins.auth.AESReqServerMixin.pre_fork(self, process_manager)
         process_manager.add_process(self.zmq_device, name="MWorkerQueue")
 
     def _start_zmq_monitor(self):
@@ -427,13 +392,11 @@ class ZeroMQReqServerChannel(
 
         if HAS_ZMQ_MONITOR and self.opts["zmq_monitor"]:
             log.debug("Starting ZMQ monitor")
-            import threading
-
             self._w_monitor = ZeroMQSocketMonitor(self._socket)
             threading.Thread(target=self._w_monitor.start_poll).start()
             log.debug("ZMQ monitor has been started started")
 
-    def post_fork(self, payload_handler, io_loop):
+    def post_fork(self, message_handler, io_loop):
         """
         After forking we need to create all of the local sockets to listen to the
         router
@@ -442,9 +405,7 @@ class ZeroMQReqServerChannel(
                                      they are picked up off the wire
         :param IOLoop io_loop: An instance of a Tornado IOLoop, to handle event scheduling
         """
-        self.payload_handler = payload_handler
-        self.io_loop = io_loop
-
+        self.serial = salt.payload.Serial(self.opts)
         self.context = zmq.Context(1)
         self._socket = self.context.socket(zmq.REP)
         self._start_zmq_monitor()
@@ -459,103 +420,8 @@ class ZeroMQReqServerChannel(
             )
         log.info("Worker binding to socket %s", self.w_uri)
         self._socket.connect(self.w_uri)
-
-        salt.transport.mixins.auth.AESReqServerMixin.post_fork(
-            self, payload_handler, io_loop
-        )
-
-        self.stream = zmq.eventloop.zmqstream.ZMQStream(
-            self._socket, io_loop=self.io_loop
-        )
-        self.stream.on_recv_stream(self.handle_message)
-
-    @salt.ext.tornado.gen.coroutine
-    def handle_message(self, stream, payload):
-        """
-        Handle incoming messages from underlying TCP streams
-
-        :stream ZMQStream stream: A ZeroMQ stream.
-        See http://zeromq.github.io/pyzmq/api/generated/zmq.eventloop.zmqstream.html
-
-        :param dict payload: A payload to process
-        """
-        try:
-            payload = salt.payload.loads(payload[0])
-            payload = self._decode_payload(payload)
-        except Exception as exc:  # pylint: disable=broad-except
-            exc_type = type(exc).__name__
-            if exc_type == "AuthenticationError":
-                log.debug(
-                    "Minion failed to auth to master. Since the payload is "
-                    "encrypted, it is not known which minion failed to "
-                    "authenticate. It is likely that this is a transient "
-                    "failure due to the master rotating its public key."
-                )
-            else:
-                log.error("Bad load from minion: %s: %s", exc_type, exc)
-            stream.send(salt.payload.dumps("bad load"))
-            raise salt.ext.tornado.gen.Return()
-
-        # TODO helper functions to normalize payload?
-        if not isinstance(payload, dict) or not isinstance(payload.get("load"), dict):
-            log.error(
-                "payload and load must be a dict. Payload was: %s and load was %s",
-                payload,
-                payload.get("load"),
-            )
-            stream.send(salt.payload.dumps("payload and load must be a dict"))
-            raise salt.ext.tornado.gen.Return()
-
-        try:
-            id_ = payload["load"].get("id", "")
-            if "\0" in id_:
-                log.error("Payload contains an id with a null byte: %s", payload)
-                stream.send(salt.payload.dumps("bad load: id contains a null byte"))
-                raise salt.ext.tornado.gen.Return()
-        except TypeError:
-            log.error("Payload contains non-string id: %s", payload)
-            stream.send(
-                salt.payload.dumps("bad load: id {} is not a string".format(id_))
-            )
-            raise salt.ext.tornado.gen.Return()
-
-        # intercept the "_auth" commands, since the main daemon shouldn't know
-        # anything about our key auth
-        if payload["enc"] == "clear" and payload.get("load", {}).get("cmd") == "_auth":
-            stream.send(salt.payload.dumps(self._auth(payload["load"])))
-            raise salt.ext.tornado.gen.Return()
-
-        # TODO: test
-        try:
-            # Take the payload_handler function that was registered when we created the channel
-            # and call it, returning control to the caller until it completes
-            ret, req_opts = yield self.payload_handler(payload)
-        except Exception as e:  # pylint: disable=broad-except
-            # always attempt to return an error to the minion
-            stream.send("Some exception handling minion payload")
-            log.error("Some exception handling a payload from minion", exc_info=True)
-            raise salt.ext.tornado.gen.Return()
-
-        req_fun = req_opts.get("fun", "send")
-        if req_fun == "send_clear":
-            stream.send(salt.payload.dumps(ret))
-        elif req_fun == "send":
-            stream.send(salt.payload.dumps(self.crypticle.dumps(ret)))
-        elif req_fun == "send_private":
-            stream.send(
-                salt.payload.dumps(
-                    self._encrypt_private(
-                        ret,
-                        req_opts["key"],
-                        req_opts["tgt"],
-                    )
-                )
-            )
-        else:
-            log.error("Unknown req_fun %s", req_fun)
-            # always attempt to return an error to the minion
-            stream.send("Server-side exception handling payload")
-        raise salt.ext.tornado.gen.Return()
+        self.stream = zmq.eventloop.zmqstream.ZMQStream(self._socket, io_loop=io_loop)
+        self.stream.on_recv_stream(message_handler)
 
     def __setup_signals(self):
         signal.signal(signal.SIGINT, self._handle_signals)
@@ -571,6 +437,22 @@ class ZeroMQReqServerChannel(
         log.debug(msg)
         self.close()
         sys.exit(salt.defaults.exitcodes.EX_OK)
+
+    def wrap_stream(self, stream):
+        class Stream:
+            def __init__(self, stream, serial):
+                self.stream = stream
+                self.serial = serial
+
+            @salt.ext.tornado.gen.coroutine
+            def send(self, payload, header=None):
+                self.stream.send(self.serial.dumps(payload))
+
+        return Stream(stream, self.serial)
+
+    def decode_payload(self, payload):
+        payload = self.serial.loads(payload[0])
+        return payload
 
 
 def _set_tcp_keepalive(zmq_socket, opts):
@@ -597,251 +479,12 @@ def _set_tcp_keepalive(zmq_socket, opts):
             zmq_socket.setsockopt(zmq.TCP_KEEPALIVE_INTVL, opts["tcp_keepalive_intvl"])
 
 
-class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
-    """
-    Encapsulate synchronous operations for a publisher channel
-    """
-
-    _sock_data = threading.local()
-
-    def __init__(self, opts):
-        self.opts = opts
-        self.ckminions = salt.utils.minions.CkMinions(self.opts)
-
-    def connect(self):
-        return salt.ext.tornado.gen.sleep(5)
-
-    def _publish_daemon(self, log_queue=None):
-        """
-        Bind to the interface specified in the configuration file
-        """
-        if self.opts["pub_server_niceness"] and not salt.utils.platform.is_windows():
-            log.info(
-                "setting Publish daemon niceness to %i",
-                self.opts["pub_server_niceness"],
-            )
-            os.nice(self.opts["pub_server_niceness"])
-
-        if log_queue:
-            salt.log.setup.set_multiprocessing_logging_queue(log_queue)
-            salt.log.setup.setup_multiprocessing_logging(log_queue)
-
-        # Set up the context
-        context = zmq.Context(1)
-        # Prepare minion publish socket
-        pub_sock = context.socket(zmq.PUB)
-        _set_tcp_keepalive(pub_sock, self.opts)
-        # if 2.1 >= zmq < 3.0, we only have one HWM setting
-        try:
-            pub_sock.setsockopt(zmq.HWM, self.opts.get("pub_hwm", 1000))
-        # in zmq >= 3.0, there are separate send and receive HWM settings
-        except AttributeError:
-            # Set the High Water Marks. For more information on HWM, see:
-            # http://api.zeromq.org/4-1:zmq-setsockopt
-            pub_sock.setsockopt(zmq.SNDHWM, self.opts.get("pub_hwm", 1000))
-            pub_sock.setsockopt(zmq.RCVHWM, self.opts.get("pub_hwm", 1000))
-        if self.opts["ipv6"] is True and hasattr(zmq, "IPV4ONLY"):
-            # IPv6 sockets work for both IPv6 and IPv4 addresses
-            pub_sock.setsockopt(zmq.IPV4ONLY, 0)
-        pub_sock.setsockopt(zmq.BACKLOG, self.opts.get("zmq_backlog", 1000))
-        pub_sock.setsockopt(zmq.LINGER, -1)
-        pub_uri = "tcp://{interface}:{publish_port}".format(**self.opts)
-        # Prepare minion pull socket
-        pull_sock = context.socket(zmq.PULL)
-        pull_sock.setsockopt(zmq.LINGER, -1)
-
-        if self.opts.get("ipc_mode", "") == "tcp":
-            pull_uri = "tcp://127.0.0.1:{}".format(
-                self.opts.get("tcp_master_publish_pull", 4514)
-            )
-        else:
-            pull_uri = "ipc://{}".format(
-                os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
-            )
-        salt.utils.zeromq.check_ipc_path_max_len(pull_uri)
-
-        # Start the minion command publisher
-        log.info("Starting the Salt Publisher on %s", pub_uri)
-        pub_sock.bind(pub_uri)
-
-        # Securely create socket
-        log.info("Starting the Salt Puller on %s", pull_uri)
-        with salt.utils.files.set_umask(0o177):
-            pull_sock.bind(pull_uri)
-
-        try:
-            while True:
-                # Catch and handle EINTR from when this process is sent
-                # SIGUSR1 gracefully so we don't choke and die horribly
-                try:
-                    log.debug("Publish daemon getting data from puller %s", pull_uri)
-                    package = pull_sock.recv()
-                    log.debug("Publish daemon received payload. size=%d", len(package))
-
-                    unpacked_package = salt.payload.unpackage(package)
-                    unpacked_package = salt.transport.frame.decode_embedded_strs(
-                        unpacked_package
-                    )
-                    payload = unpacked_package["payload"]
-                    log.trace("Accepted unpacked package from puller")
-                    if self.opts["zmq_filtering"]:
-                        # if you have a specific topic list, use that
-                        if "topic_lst" in unpacked_package:
-                            for topic in unpacked_package["topic_lst"]:
-                                log.trace(
-                                    "Sending filtered data over publisher %s", pub_uri
-                                )
-                                # zmq filters are substring match, hash the topic
-                                # to avoid collisions
-                                htopic = salt.utils.stringutils.to_bytes(
-                                    hashlib.sha1(
-                                        salt.utils.stringutils.to_bytes(topic)
-                                    ).hexdigest()
-                                )
-                                pub_sock.send(htopic, flags=zmq.SNDMORE)
-                                pub_sock.send(payload)
-                                log.trace("Filtered data has been sent")
-
-                            # Syndic broadcast
-                            if self.opts.get("order_masters"):
-                                log.trace("Sending filtered data to syndic")
-                                pub_sock.send(b"syndic", flags=zmq.SNDMORE)
-                                pub_sock.send(payload)
-                                log.trace("Filtered data has been sent to syndic")
-                        # otherwise its a broadcast
-                        else:
-                            # TODO: constants file for "broadcast"
-                            log.trace(
-                                "Sending broadcasted data over publisher %s", pub_uri
-                            )
-                            pub_sock.send(b"broadcast", flags=zmq.SNDMORE)
-                            pub_sock.send(payload)
-                            log.trace("Broadcasted data has been sent")
-                    else:
-                        log.trace(
-                            "Sending ZMQ-unfiltered data over publisher %s", pub_uri
-                        )
-                        pub_sock.send(payload)
-                        log.trace("Unfiltered data has been sent")
-                except zmq.ZMQError as exc:
-                    if exc.errno == errno.EINTR:
-                        continue
-                    raise
-
-        except KeyboardInterrupt:
-            log.trace("Publish daemon caught Keyboard interupt, tearing down")
-        # Cleanly close the sockets if we're shutting down
-        if pub_sock.closed is False:
-            pub_sock.close()
-        if pull_sock.closed is False:
-            pull_sock.close()
-        if context.closed is False:
-            context.term()
-
-    def pre_fork(self, process_manager, kwargs=None):
-        """
-        Do anything necessary pre-fork. Since this is on the master side this will
-        primarily be used to create IPC channels and create our daemon process to
-        do the actual publishing
-
-        :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
-        """
-        process_manager.add_process(
-            self._publish_daemon, kwargs=kwargs, name=self.__class__.__name__
-        )
-
-    @property
-    def pub_sock(self):
-        """
-        This thread's zmq publisher socket. This socket is stored on the class
-        so that multiple instantiations in the same thread will re-use a single
-        zmq socket.
-        """
-        try:
-            return self._sock_data.sock
-        except AttributeError:
-            pass
-
-    def pub_connect(self):
-        """
-        Create and connect this thread's zmq socket. If a publisher socket
-        already exists "pub_close" is called before creating and connecting a
-        new socket.
-        """
-        if self.pub_sock:
-            self.pub_close()
-        ctx = zmq.Context.instance()
-        self._sock_data.sock = ctx.socket(zmq.PUSH)
-        self.pub_sock.setsockopt(zmq.LINGER, -1)
-        if self.opts.get("ipc_mode", "") == "tcp":
-            pull_uri = "tcp://127.0.0.1:{}".format(
-                self.opts.get("tcp_master_publish_pull", 4514)
-            )
-        else:
-            pull_uri = "ipc://{}".format(
-                os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
-            )
-        log.debug("Connecting to pub server: %s", pull_uri)
-        self.pub_sock.connect(pull_uri)
-        return self._sock_data.sock
-
-    def pub_close(self):
-        """
-        Disconnect an existing publisher socket and remove it from the local
-        thread's cache.
-        """
-        if hasattr(self._sock_data, "sock"):
-            self._sock_data.sock.close()
-            delattr(self._sock_data, "sock")
-
-    def publish(self, load):
-        """
-        Publish "load" to minions. This send the load to the publisher daemon
-        process with does the actual sending to minions.
-
-        :param dict load: A load to be sent across the wire to minions
-        """
-        payload = {"enc": "aes"}
-        crypticle = salt.crypt.Crypticle(
-            self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
-        )
-        payload["load"] = crypticle.dumps(load)
-        if self.opts["sign_pub_messages"]:
-            master_pem_path = os.path.join(self.opts["pki_dir"], "master.pem")
-            log.debug("Signing data packet")
-            payload["sig"] = salt.crypt.sign_message(master_pem_path, payload["load"])
-        int_payload = {"payload": salt.payload.dumps(payload)}
-
-        # add some targeting stuff for lists only (for now)
-        if load["tgt_type"] == "list":
-            int_payload["topic_lst"] = load["tgt"]
-
-        # If zmq_filtering is enabled, target matching has to happen master side
-        match_targets = ["pcre", "glob", "list"]
-        if self.opts["zmq_filtering"] and load["tgt_type"] in match_targets:
-            # Fetch a list of minions that match
-            _res = self.ckminions.check_minions(load["tgt"], tgt_type=load["tgt_type"])
-            match_ids = _res["minions"]
-
-            log.debug("Publish Side Match: %s", match_ids)
-            # Send list of miions thru so zmq can target them
-            int_payload["topic_lst"] = match_ids
-        payload = salt.payload.dumps(int_payload)
-        log.debug(
-            "Sending payload to publish daemon. jid=%s size=%d",
-            load.get("jid", None),
-            len(payload),
-        )
-        if not self.pub_sock:
-            self.pub_connect()
-        self.pub_sock.send(payload)
-        log.debug("Sent payload to publish daemon.")
-
-
 class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
     """
     Wrapper class of AsyncReqMessageClientPool to avoid blocking waiting while writing data to socket.
     """
+
+    ttype = "zeromq"
 
     def __init__(self, opts, args=None, kwargs=None):
         self._closing = False
@@ -1136,6 +779,247 @@ class ZeroMQSocketMonitor:
         log.trace("Event monitor done!")
 
 
+class ZeroMQPubServerChannel:
+    """
+    Encapsulate synchronous operations for a publisher channel
+    """
+
+    _sock_data = threading.local()
+
+    def __init__(self, opts):
+        self.opts = opts
+        self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
+        self.ckminions = salt.utils.minions.CkMinions(self.opts)
+
+    def connect(self):
+        return salt.ext.tornado.gen.sleep(5)
+
+    def publish_daemon(self, publish_payload, *args, **kwargs):
+        """
+        Bind to the interface specified in the configuration file
+        """
+        context = zmq.Context(1)
+        ioloop = salt.ext.tornado.ioloop.IOLoop()
+        ioloop.make_current()
+        # Set up the context
+        @salt.ext.tornado.gen.coroutine
+        def daemon():
+            pub_sock = context.socket(zmq.PUB)
+            monitor = ZeroMQSocketMonitor(pub_sock)
+            monitor.start_io_loop(ioloop)
+            _set_tcp_keepalive(pub_sock, self.opts)
+            self.dpub_sock = pub_sock = zmq.eventloop.zmqstream.ZMQStream(pub_sock)
+            # if 2.1 >= zmq < 3.0, we only have one HWM setting
+            try:
+                pub_sock.setsockopt(zmq.HWM, self.opts.get("pub_hwm", 1000))
+            # in zmq >= 3.0, there are separate send and receive HWM settings
+            except AttributeError:
+                # Set the High Water Marks. For more information on HWM, see:
+                # http://api.zeromq.org/4-1:zmq-setsockopt
+                pub_sock.setsockopt(zmq.SNDHWM, self.opts.get("pub_hwm", 1000))
+                pub_sock.setsockopt(zmq.RCVHWM, self.opts.get("pub_hwm", 1000))
+            if self.opts["ipv6"] is True and hasattr(zmq, "IPV4ONLY"):
+                # IPv6 sockets work for both IPv6 and IPv4 addresses
+                pub_sock.setsockopt(zmq.IPV4ONLY, 0)
+            pub_sock.setsockopt(zmq.BACKLOG, self.opts.get("zmq_backlog", 1000))
+            pub_sock.setsockopt(zmq.LINGER, -1)
+            pub_uri = "tcp://{interface}:{publish_port}".format(**self.opts)
+            # Prepare minion pull socket
+            pull_sock = context.socket(zmq.PULL)
+            pull_sock = zmq.eventloop.zmqstream.ZMQStream(pull_sock)
+            pull_sock.setsockopt(zmq.LINGER, -1)
+
+            if self.opts.get("ipc_mode", "") == "tcp":
+                pull_uri = "tcp://127.0.0.1:{}".format(
+                    self.opts.get("tcp_master_publish_pull", 4514)
+                )
+            else:
+                pull_uri = "ipc://{}".format(
+                    os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
+                )
+            salt.utils.zeromq.check_ipc_path_max_len(pull_uri)
+            # Start the minion command publisher
+            log.info("Starting the Salt Publisher on %s", pub_uri)
+            log.error("PubSever pub_sock %s", pub_uri)
+            pub_sock.bind(pub_uri)
+            log.error("PubSever pull_sock %s", pull_uri)
+
+            # Securely create socket
+            log.info("Starting the Salt Puller on %s", pull_uri)
+            with salt.utils.files.set_umask(0o177):
+                pull_sock.bind(pull_uri)
+
+            @salt.ext.tornado.gen.coroutine
+            def on_recv(packages):
+                for package in packages:
+                    payload = self.serial.loads(package)
+                    yield publish_payload(payload)
+
+            pull_sock.on_recv(on_recv)
+            # try:
+            #    while True:
+            #        # Catch and handle EINTR from when this process is sent
+            #        # SIGUSR1 gracefully so we don't choke and die horribly
+            #        try:
+            #            log.debug("Publish daemon getting data from puller %s", pull_uri)
+            #            package = yield pull_sock.recv()
+            #            payload = self.serial.loads(package)
+            #            #unpacked_package = salt.payload.unpackage(package)
+            #            #unpacked_package = salt.transport.frame.decode_embedded_strs(
+            #            #    unpacked_package
+            #            #)
+            #            yield publish_payload(payload)
+            #        except zmq.ZMQError as exc:
+            #            if exc.errno == errno.EINTR:
+            #                continue
+            #            raise
+
+            # except KeyboardInterrupt:
+            #    log.trace("Publish daemon caught Keyboard interupt, tearing down")
+            ## Cleanly close the sockets if we're shutting down
+            # if pub_sock.closed is False:
+            #    pub_sock.close()
+            # if pull_sock.closed is False:
+            #    pull_sock.close()
+            # if context.closed is False:
+            #    context.term()
+
+        ioloop.add_callback(daemon)
+        ioloop.start()
+        context.term()
+
+    @salt.ext.tornado.gen.coroutine
+    def publish_payload(self, unpacked_package):
+        # XXX: Sort this out
+        if "payload" in unpacked_package:
+            payload = unpacked_package["payload"]
+        else:
+            payload = self.serial.dumps(unpacked_package)
+        if self.opts["zmq_filtering"]:
+            # if you have a specific topic list, use that
+            if "topic_lst" in unpacked_package:
+                for topic in unpacked_package["topic_lst"]:
+                    # log.trace(
+                    #    "Sending filtered data over publisher %s", pub_uri
+                    # )
+                    # zmq filters are substring match, hash the topic
+                    # to avoid collisions
+                    htopic = salt.utils.stringutils.to_bytes(
+                        hashlib.sha1(salt.utils.stringutils.to_bytes(topic)).hexdigest()
+                    )
+                    yield self.dpub_sock.send(htopic, flags=zmq.SNDMORE)
+                    yield self.dpub_sock.send(payload)
+                    log.trace("Filtered data has been sent")
+
+                # Syndic broadcast
+                if self.opts.get("order_masters"):
+                    log.trace("Sending filtered data to syndic")
+                    yield self.dpub_sock.send(b"syndic", flags=zmq.SNDMORE)
+                    yield self.dpub_sock.send(payload)
+                    log.trace("Filtered data has been sent to syndic")
+            # otherwise its a broadcast
+            else:
+                # TODO: constants file for "broadcast"
+                # log.trace(
+                #    "Sending broadcasted data over publisher %s", pub_uri
+                # )
+                yield self.dpub_sock.send(b"broadcast", flags=zmq.SNDMORE)
+                yield self.dpub_sock.send(payload)
+                log.trace("Broadcasted data has been sent")
+        else:
+            # log.trace(
+            #    "Sending ZMQ-unfiltered data over publisher %s", pub_uri
+            # )
+            # yield self.dpub_sock.send(b"", flags=zmq.SNDMORE)
+            yield self.dpub_sock.send(payload)
+            print("unfiltered sent {}".format(repr(payload)))
+            log.trace("Unfiltered data has been sent")
+
+    def pre_fork(self, process_manager, kwargs=None):
+        """
+        Do anything necessary pre-fork. Since this is on the master side this will
+        primarily be used to create IPC channels and create our daemon process to
+        do the actual publishing
+
+        :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
+        """
+        process_manager.add_process(
+            self.publish_daemon, args=(self.publish_payload,), kwargs=kwargs
+        )
+
+    @property
+    def pub_sock(self):
+        """
+        This thread's zmq publisher socket. This socket is stored on the class
+        so that multiple instantiations in the same thread will re-use a single
+        zmq socket.
+        """
+        try:
+            return self._sock_data.sock
+        except AttributeError:
+            pass
+
+    def pub_connect(self):
+        """
+        Create and connect this thread's zmq socket. If a publisher socket
+        already exists "pub_close" is called before creating and connecting a
+        new socket.
+        """
+        if self.pub_sock:
+            self.pub_close()
+        ctx = zmq.Context.instance()
+        self._sock_data.sock = ctx.socket(zmq.PUSH)
+        self.pub_sock.setsockopt(zmq.LINGER, -1)
+        if self.opts.get("ipc_mode", "") == "tcp":
+            pull_uri = "tcp://127.0.0.1:{}".format(
+                self.opts.get("tcp_master_publish_pull", 4514)
+            )
+        else:
+            pull_uri = "ipc://{}".format(
+                os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
+            )
+        log.debug("Connecting to pub server: %s", pull_uri)
+        self.pub_sock.connect(pull_uri)
+        return self._sock_data.sock
+
+    def pub_close(self):
+        """
+        Disconnect an existing publisher socket and remove it from the local
+        thread's cache.
+        """
+        if hasattr(self._sock_data, "sock"):
+            self._sock_data.sock.close()
+            delattr(self._sock_data, "sock")
+
+    def publish(self, int_payload):
+        """
+        Publish "load" to minions. This send the load to the publisher daemon
+        process with does the actual sending to minions.
+
+        :param dict load: A load to be sent across the wire to minions
+        """
+        payload = self.serial.dumps(int_payload)
+        if not self.pub_sock:
+            self.pub_connect()
+        self.pub_sock.send(payload)
+        log.debug("Sent payload to publish daemon.")
+
+    def publish_filters(self, payload, tgt_type, tgt, ckminions):
+        payload = {"payload": self.serial.dumps(payload)}
+        match_targets = ["pcre", "glob", "list"]
+        # TODO: Some of this is happening in the server's pubish method. This
+        # needs to be sorted out between TCP and ZMQ, maybe make a method on
+        # each class to handle this the way it's needed for the implimentation.
+        if self.opts["zmq_filtering"] and tgt_type in match_targets:
+            # Fetch a list of minions that match
+            _res = self.ckminions.check_minions(tgt, tgt_type=tgt_type)
+            match_ids = _res["minions"]
+            log.debug("Publish Side Match: %s", match_ids)
+            # Send list of miions thru so zmq can target them
+            payload["topic_lst"] = match_ids
+        return payload
+
+
 class ZeroMQReqChannel:
     ttype = "zeromq"
 
@@ -1150,3 +1034,11 @@ class ZeroMQReqChannel:
             ),
             kwargs={"io_loop": io_loop},
         )
+
+    @salt.ext.tornado.gen.coroutine
+    def send(self, message, **kwargs):
+        ret = yield self.message_client.send(message, **kwargs)
+        raise salt.ext.tornado.gen.Return(ret)
+
+    def close(self):
+        self.message_client.close()
