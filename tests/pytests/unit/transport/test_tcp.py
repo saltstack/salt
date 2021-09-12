@@ -175,7 +175,8 @@ async def test_async_tcp_pub_channel_connect_publish_port(
         acceptance_wait_time=5,
         acceptance_wait_time_max=5,
     )
-    channel = salt.transport.tcp.AsyncTCPPubChannel(opts)
+    ioloop = salt.ext.tornado.ioloop.IOLoop.current()
+    channel = salt.transport.tcp.AsyncTCPPubChannel(opts, ioloop)
     patch_auth = MagicMock(return_value=True)
     patch_client_pool = MagicMock(spec=salt.transport.tcp.SaltMessageClientPool)
     with patch("salt.crypt.AsyncAuth.gen_token", patch_auth), patch(
