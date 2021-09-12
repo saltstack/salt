@@ -40,17 +40,6 @@ import salt.utils.versions
 from salt.exceptions import SaltClientError, SaltReqTimeoutError
 from salt.transport import iter_transport_opts
 
-try:
-    from M2Crypto import RSA
-
-    HAS_M2 = True
-except ImportError:
-    HAS_M2 = False
-    try:
-        from Cryptodome.Cipher import PKCS1_OAEP
-    except ImportError:
-        from Crypto.Cipher import PKCS1_OAEP  # nosec
-
 if salt.utils.platform.is_windows():
     USE_LOAD_BALANCER = True
 else:
@@ -192,166 +181,6 @@ if USE_LOAD_BALANCER:
                     raise
 
 
-# TODO: move serial down into message library
-class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
-    """
-    Encapsulate sending routines to tcp.
-
-    Note: this class returns a singleton
-    """
-
-    async_methods = [
-        "crypted_transfer_decode_dictentry",
-        "_crypted_transfer",
-        "_uncrypted_transfer",
-        "send",
-    ]
-    close_methods = [
-        "close",
-    ]
-
-    def __init__(self, opts, **kwargs):
-        self.opts = dict(opts)
-        if "master_uri" in kwargs:
-            self.opts["master_uri"] = kwargs["master_uri"]
-
-        # crypt defaults to 'aes'
-        self.crypt = kwargs.get("crypt", "aes")
-
-        self.io_loop = kwargs.get("io_loop") or salt.ext.tornado.ioloop.IOLoop.current()
-
-        if self.crypt != "clear":
-            self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
-
-        resolver = kwargs.get("resolver")
-
-        parse = urllib.parse.urlparse(self.opts["master_uri"])
-        master_host, master_port = parse.netloc.rsplit(":", 1)
-        self.master_addr = (master_host, int(master_port))
-        self._closing = False
-        self.message_client = SaltMessageClientPool(
-            self.opts,
-            args=(
-                self.opts,
-                master_host,
-                int(master_port),
-            ),
-            kwargs={
-                "io_loop": self.io_loop,
-                "resolver": resolver,
-                "source_ip": self.opts.get("source_ip"),
-                "source_port": self.opts.get("source_ret_port"),
-            },
-        )
-
-    def close(self):
-        if self._closing:
-            return
-        log.debug("Closing %s instance", self.__class__.__name__)
-        self._closing = True
-        self.message_client.close()
-
-    # pylint: disable=W1701
-    def __del__(self):
-        try:
-            self.close()
-        except OSError as exc:
-            if exc.errno != errno.EBADF:
-                # If its not a bad file descriptor error, raise
-                raise
-
-    # pylint: enable=W1701
-
-    def _package_load(self, load):
-        return {
-            "enc": self.crypt,
-            "load": load,
-        }
-
-    @salt.ext.tornado.gen.coroutine
-    def crypted_transfer_decode_dictentry(
-        self, load, dictkey=None, tries=3, timeout=60
-    ):
-        if not self.auth.authenticated:
-            yield self.auth.authenticate()
-        ret = yield self.message_client.send(
-            self._package_load(self.auth.crypticle.dumps(load)),
-            timeout=timeout,
-            tries=tries,
-        )
-        key = self.auth.get_keys()
-        if HAS_M2:
-            aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
-        else:
-            cipher = PKCS1_OAEP.new(key)
-            aes = cipher.decrypt(ret["key"])
-        pcrypt = salt.crypt.Crypticle(self.opts, aes)
-        data = pcrypt.loads(ret[dictkey])
-        data = salt.transport.frame.decode_embedded_strs(data)
-        raise salt.ext.tornado.gen.Return(data)
-
-    @salt.ext.tornado.gen.coroutine
-    def _crypted_transfer(self, load, tries=3, timeout=60):
-        """
-        In case of authentication errors, try to renegotiate authentication
-        and retry the method.
-        Indeed, we can fail too early in case of a master restart during a
-        minion state execution call
-        """
-
-        @salt.ext.tornado.gen.coroutine
-        def _do_transfer():
-            data = yield self.message_client.send(
-                self._package_load(self.auth.crypticle.dumps(load)),
-                timeout=timeout,
-                tries=tries,
-            )
-            # we may not have always data
-            # as for example for saltcall ret submission, this is a blind
-            # communication, we do not subscribe to return events, we just
-            # upload the results to the master
-            if data:
-                data = self.auth.crypticle.loads(data)
-                data = salt.transport.frame.decode_embedded_strs(data)
-            raise salt.ext.tornado.gen.Return(data)
-
-        if not self.auth.authenticated:
-            yield self.auth.authenticate()
-        try:
-            ret = yield _do_transfer()
-            raise salt.ext.tornado.gen.Return(ret)
-        except salt.crypt.AuthenticationError:
-            yield self.auth.authenticate()
-            ret = yield _do_transfer()
-            raise salt.ext.tornado.gen.Return(ret)
-
-    @salt.ext.tornado.gen.coroutine
-    def _uncrypted_transfer(self, load, tries=3, timeout=60):
-        ret = yield self.message_client.send(
-            self._package_load(load),
-            timeout=timeout,
-            tries=tries,
-        )
-
-        raise salt.ext.tornado.gen.Return(ret)
-
-    @salt.ext.tornado.gen.coroutine
-    def send(self, load, tries=3, timeout=60, raw=False):
-        """
-        Send a request, return a future which will complete when we send the message
-        """
-        try:
-            if self.crypt == "clear":
-                ret = yield self._uncrypted_transfer(load, tries=tries, timeout=timeout)
-            else:
-                ret = yield self._crypted_transfer(load, tries=tries, timeout=timeout)
-        except salt.ext.tornado.iostream.StreamClosedError:
-            # Convert to 'SaltClientError' so that clients can handle this
-            # exception more appropriately.
-            raise SaltClientError("Connection to master lost")
-        raise salt.ext.tornado.gen.Return(ret)
-
-
 class AsyncTCPPubChannel(
     salt.transport.mixins.auth.AESPubClientMixin, salt.transport.client.AsyncPubChannel
 ):
@@ -461,7 +290,7 @@ class AsyncTCPPubChannel(
                 "tag": tag,
             }
             req_channel = salt.utils.asynchronous.SyncWrapper(
-                AsyncTCPReqChannel,
+                TCPReqChannel,
                 (self.opts,),
                 loop_kwarg="io_loop",
             )
@@ -1682,3 +1511,43 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
                 int_payload["topic_lst"] = load["tgt"]
         # Send it over IPC!
         pub_sock.send(int_payload)
+
+
+class TCPReqChannel:
+    ttype = "tcp"
+    _resolver_configured = False
+
+    @classmethod
+    def _config_resolver(cls, num_threads=10):
+        import salt.ext.tornado.netutil
+
+        salt.ext.tornado.netutil.Resolver.configure(
+            "salt.ext.tornado.netutil.ThreadedResolver", num_threads=num_threads
+        )
+        cls._resolver_configured = True
+
+    def __init__(self, opts, master_uri, io_loop, **kwargs):
+        self.opts = opts
+        self.master_uri = master_uri
+        self.io_loop = io_loop
+        if not self._resolver_configured:
+            # TODO: add opt to specify number of resolver threads
+            self._config_resolver()
+        parse = urllib.parse.urlparse(self.opts["master_uri"])
+        master_host, master_port = parse.netloc.rsplit(":", 1)
+        master_addr = (master_host, int(master_port))
+        resolver = kwargs.get("resolver")
+        self.message_client = salt.transport.tcp.SaltMessageClientPool(
+            opts,
+            args=(
+                opts,
+                master_host,
+                int(master_port),
+            ),
+            kwargs={
+                "io_loop": io_loop,
+                "resolver": resolver,
+                "source_ip": opts.get("source_ip"),
+                "source_port": opts.get("source_ret_port"),
+            },
+        )
