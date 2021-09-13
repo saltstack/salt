@@ -1456,4 +1456,4 @@ Fixed
 ## [2019.2.1] - 2019-09-25 [YANKED]
 
 
-- See [old release notes](https://docs.saltstack.com/en/latest/topics/releases/2019.2.1.html)
+- See [old release notes](https://docs.saltproject.io/en/latest/topics/releases/2019.2.1.html)
