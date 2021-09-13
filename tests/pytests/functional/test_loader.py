@@ -155,7 +155,7 @@ def test_utils_loader_does_not_load_extensions(
     sys.version_info < (3, 6),
     reason="importlib-metadata>=3.3.0 does not exist for Py3.5",
 )
-def test_extension_discovery_without_reload_with_importlib_metadata(
+def test_extension_discovery_without_reload_with_importlib_metadata_installed(
     venv, salt_extension, salt_minion_factory
 ):
     # Install our extension into the virtualenv
@@ -207,7 +207,6 @@ def test_extension_discovery_without_reload_with_importlib_metadata(
     assert ret.exitcode == 0
     installed_packages = venv.get_installed_packages()
     assert salt_extension.name in installed_packages
-    assert "Using pkg_resources to load entry points" not in ret.stderr
 
     loader_functions = json.loads(ret.stdout)
 
@@ -219,11 +218,7 @@ def test_extension_discovery_without_reload_with_importlib_metadata(
     assert "foobar.echo2" in loader_functions
 
 
-@pytest.mark.skipif(
-    sys.version_info > (3, 6),
-    reason="Reloading with pkg_resources is only available on Py3.5",
-)
-def test_extension_discovery_without_reload_with_pkg_resources(
+def test_extension_discovery_without_reload_with_bundled_importlib_metadata(
     venv, salt_extension, salt_minion_factory
 ):
     # Install our extension into the virtualenv
@@ -278,7 +273,6 @@ def test_extension_discovery_without_reload_with_pkg_resources(
     assert ret.exitcode == 0
     installed_packages = venv.get_installed_packages()
     assert salt_extension.name in installed_packages
-    assert "Using pkg_resources to load entry points" in ret.stderr
 
     loader_functions = json.loads(ret.stdout)
 

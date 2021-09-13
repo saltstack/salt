@@ -52,6 +52,13 @@ from itertools import starmap
 from typing import Any, List, Optional, TypeVar, Union
 
 
+if sys.version_info < (3, 6):
+    class ModuleNotFoundError(ImportError):
+        """
+        Define the ModuleNotFoundError exception which is only available on Py3.6+
+        """
+
+
 __all__ = [
     'Distribution',
     'DistributionFinder',
@@ -110,7 +117,7 @@ class EntryPoint(
     following the attr, and following any extras.
     """
 
-    dist: Optional['Distribution'] = None
+    dist = None  # type: Optional['Distribution']
 
     def load(self):
         """Load the entry point from its definition. If only a module
@@ -285,6 +292,9 @@ class Distribution:
         """Search the meta_path for resolvers."""
         declared = (
             getattr(finder, 'find_distributions', None) for finder in sys.meta_path
+            # Explicitly ignore finders installed from the importlib_metadata package, if available,
+            # because we're running from our bundled importlib_metadata
+            if getattr(finder, "__module__", None) != "importlib_metadata"
         )
         return filter(None, declared)
 
