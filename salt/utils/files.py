@@ -377,6 +377,9 @@ def fopen(*args, **kwargs):
 
     if not binary and not kwargs.get("newline", None):
         kwargs["newline"] = ""
+        
+    if 'mode' in kwargs and 'b' in kwargs["mode"]:
+        kwargs["buffering"] = 0
 
     f_handle = open(*args, **kwargs)  # pylint: disable=resource-leakage
 
