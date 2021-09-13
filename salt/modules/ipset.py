@@ -280,8 +280,8 @@ def version():
         salt '*' ipset.version
 
     """
-    cmd = "{} --version".format(_ipset_cmd())
-    out = __salt__["cmd.run"](cmd).split()
+    cmd = [_ipset_cmd(), "--version"]
+    out = __salt__["cmd.run"](cmd, python_shell=False).split()
     return out[1]
 
 
@@ -318,21 +318,21 @@ def new_set(name=None, set_type=None, family="ipv4", comment=False, **kwargs):
         if item not in kwargs:
             return "Error: {} is a required argument".format(item)
 
-    cmd = "{} create {} {}".format(_ipset_cmd(), name, set_type)
+    cmd = [_ipset_cmd(), "create", name, set_type]
 
     for item in _CREATE_OPTIONS[set_type]:
         if item in kwargs:
             if item in _CREATE_OPTIONS_WITHOUT_VALUE:
-                cmd = "{} {} ".format(cmd, item)
+                cmd.append(item)
             else:
-                cmd = "{} {} {} ".format(cmd, item, kwargs[item])
+                cmd.extend([item, kwargs[item]])
 
     # Family only valid for certain set types
     if "family" in _CREATE_OPTIONS[set_type]:
-        cmd = "{} family {}".format(cmd, ipset_family)
+        cmd.extend(["family", cmd, ipset_family])
 
     if comment:
-        cmd = "{} comment".format(cmd)
+        cmd.append("comment")
 
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
@@ -360,7 +360,7 @@ def delete_set(name=None, family="ipv4"):
     if not name:
         return "Error: Set needs to be specified"
 
-    cmd = "{} destroy {}".format(_ipset_cmd(), name)
+    cmd = [_ipset_cmd(), "destroy", name]
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
     if not out:
@@ -398,7 +398,7 @@ def rename_set(name=None, new_set=None, family="ipv4"):
     if settype:
         return "Error: New Set already exists"
 
-    cmd = "{} rename {} {}".format(_ipset_cmd(), name, new_set)
+    cmd = [_ipset_cmd(), "rename", name, new_set]
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
     if not out:
@@ -419,7 +419,7 @@ def list_sets(family="ipv4"):
         salt '*' ipset.list_sets
 
     """
-    cmd = "{} list -t".format(_ipset_cmd())
+    cmd = [_ipset_cmd(), "list", "-t"]
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
     _tmp = out.split("\n")
@@ -483,7 +483,7 @@ def add(name=None, entry=None, family="ipv4", **kwargs):
 
     settype = setinfo["Type"]
 
-    cmd = "{}".format(entry)
+    cmd = [_ipset_cmd(), "add", "-exist", name, entry]
 
     if "timeout" in kwargs:
         if "timeout" not in setinfo["Header"]:
@@ -505,14 +505,13 @@ def add(name=None, entry=None, family="ipv4", **kwargs):
 
     for item in _ADD_OPTIONS[settype]:
         if item in kwargs:
-            cmd = "{} {} {}".format(cmd, item, kwargs[item])
+            cmd.extend([item, kwargs[item]])
 
     current_members = _find_set_members(name)
-    if cmd in current_members:
-        return "Warn: Entry {} already exists in set {}".format(cmd, name)
+    if entry in current_members:
+        return "Warn: Entry {} already exists in set {}".format(entry, name)
 
     # Using -exist to ensure entries are updated if the comment changes
-    cmd = "{} add -exist {} {}".format(_ipset_cmd(), name, cmd)
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
     if not out:
@@ -541,7 +540,7 @@ def delete(name=None, entry=None, family="ipv4", **kwargs):
     if not settype:
         return "Error: Set {} does not exist".format(name)
 
-    cmd = "{} del {} {}".format(_ipset_cmd(), name, entry)
+    cmd = [_ipset_cmd(), "del", name, entry]
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
     if not out:
@@ -625,7 +624,7 @@ def test(name=None, entry=None, family="ipv4", **kwargs):
     if not settype:
         return "Error: Set {} does not exist".format(name)
 
-    cmd = "{} test {} {}".format(_ipset_cmd(), name, entry)
+    cmd = [_ipset_cmd(), "test", name, entry]
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if out["retcode"] > 0:
@@ -654,11 +653,9 @@ def flush(name=None, family="ipv4"):
         salt '*' ipset.flush set
     """
 
-    ipset_family = _IPSET_FAMILIES[family]
+    cmd = [_ipset_cmd(), "flush"]
     if name:
-        cmd = "{} flush {}".format(_ipset_cmd(), name)
-    else:
-        cmd = "{} flush".format(_ipset_cmd())
+        cmd.append(name)
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
     return not out
@@ -669,7 +666,7 @@ def _find_set_members(name):
     Return list of members for a set
     """
 
-    cmd = "{} list {}".format(_ipset_cmd(), name)
+    cmd = [_ipset_cmd(), "list", name]
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if out["retcode"] > 0:
@@ -692,7 +689,7 @@ def _find_set_info(name):
     Return information about the set
     """
 
-    cmd = "{} list -t {}".format(_ipset_cmd(), name)
+    cmd = [_ipset_cmd(), "list", "-t", name]
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if out["retcode"] > 0:
@@ -813,8 +810,8 @@ def _compare_member_parts(member_part, entry_part):
 
 
 def _is_network(o):
-    return isinstance(o, ipaddress.IPv4Network) or isinstance(o, ipaddress.IPv6Network)
+    return isinstance(o, (ipaddress.IPv4Network, ipaddress.IPv6Network))
 
 
 def _is_address(o):
-    return isinstance(o, ipaddress.IPv4Address) or isinstance(o, ipaddress.IPv6Address)
+    return isinstance(o, (ipaddress.IPv4Address, ipaddress.IPv6Address))
