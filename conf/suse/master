@@ -934,7 +934,7 @@ syndic_user: salt
 # configuration options to fully understand the tunable parameters and their implications.
 #
 # Note: setting ``pillar_cache: True`` has no effect on targeting Minions with Pillars.
-# See https://docs.saltstack.com/en/latest/topics/targeting/pillar.html
+# See https://docs.saltproject.io/en/latest/topics/targeting/pillar.html
 #pillar_cache: False
 
 # If and only if a master has set ``pillar_cache: True``, the cache TTL controls the amount

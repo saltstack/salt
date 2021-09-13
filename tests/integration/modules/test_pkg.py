@@ -109,11 +109,11 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                     grains["osmajorrelease"]
                 )
                 baseurl = (
-                    "http://repo.saltstack.com/yum/redhat/{}/x86_64/latest/".format(
+                    "http://repo.saltproject.io/py3/redhat/{}/x86_64/latest/".format(
                         grains["osmajorrelease"]
                     )
                 )
-                gpgkey = "https://repo.saltstack.com/yum/rhel{}/SALTSTACK-GPG-KEY.pub".format(
+                gpgkey = "https://repo.saltproject.io/py3/redhat/{}/x86_64/latest/SALTSTACK-GPG-KEY.pub".format(
                     grains["osmajorrelease"]
                 )
                 gpgcheck = 1

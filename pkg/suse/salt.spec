@@ -198,7 +198,7 @@ Group:          Documentation/HTML
 Requires:       %{name} = %{version}
 
 %description doc
-This contains the documentation of salt, it is an offline version of http://docs.saltstack.com.
+This contains the documentation of salt, it is an offline version of https://docs.saltproject.io.
 %endif
 
 %package master
