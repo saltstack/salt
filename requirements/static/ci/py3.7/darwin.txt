@@ -855,7 +855,7 @@ six==1.16.0
     #   websocket-client
 smmap==3.0.2
     # via gitdb
-sqlparse==0.4.1
+sqlparse==0.4.2
     # via -r requirements/static/ci/common.in
 sshpubkeys==3.1.0
     # via moto
