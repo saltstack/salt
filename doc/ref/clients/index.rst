@@ -23,7 +23,7 @@ client is detailed below.
     Salt's `netapi module`_ provides access to Salt externally via a REST interface.
     Review the `netapi module`_ documentation for more information.
 
-.. _`netapi module`: http://docs.saltstack.com/en/latest/topics/netapi/index.html
+.. _`netapi module`: https://docs.saltproject.io/en/latest/topics/netapi/index.html
 
 Salt's ``opts`` dictionary
 ==========================
