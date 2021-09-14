@@ -10,12 +10,20 @@ import salt.exceptions
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.log.setup
+import salt.master
 import salt.transport.client
 import salt.transport.server
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 from saltfactories.utils.processes import terminate_process
+
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.xfail(
+        reason="RMQ is POC. Skip RMQ tests until RMQ dependencies are dealt with in the CI/CD pipeline"
+    ),
+]
 
 log = logging.getLogger(__name__)
 
@@ -24,9 +32,8 @@ class Collector(salt.utils.process.SignalHandlingProcess):
     """
     A process for collecting published events
     """
-    def __init__(
-        self, minion_config, pub_uri, aes_key, timeout=30
-    ):
+
+    def __init__(self, minion_config, pub_uri, aes_key, timeout=30):
         super().__init__()
         self.minion_config = minion_config
         self.pub_uri = pub_uri
@@ -41,12 +48,15 @@ class Collector(salt.utils.process.SignalHandlingProcess):
 
     def run(self):
         # receive
-        rmq_connection_wrapper = salt.transport.rabbitmq.RMQBlockingConnectionWrapper(self.minion_config)
+        from salt.transport import rabbitmq
 
-        """
-        Gather results until then number of seconds specified by timeout passes
-        without receiving a message
-        """
+        rmq_connection_wrapper = rabbitmq.RMQBlockingConnectionWrapper(
+            self.minion_config, queue_name="minion_consumer_queue"
+        )
+
+        # Gather results until then number of seconds specified by timeout passes
+        # without receiving a message
+
         last_msg = time.time()
         serial = salt.payload.Serial(self.minion_config)
         crypticle = salt.crypt.Crypticle(self.minion_config, self.aes_key)
@@ -64,7 +74,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
             else:
                 try:
                     serial_payload = serial.loads(payload)
-                    serial_payload = serial.loads(serial_payload['payload'])
+                    serial_payload = serial.loads(serial_payload["payload"])
                     payload = crypticle.loads(serial_payload["load"])
                     if "start" in payload:
                         self.running.set()
@@ -103,6 +113,7 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
     """
     Publisher
     """
+
     def __init__(self, master_config, minion_config, **collector_kwargs):
         super().__init__()
         self._closing = False
@@ -127,9 +138,9 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
 
     def run(self):
         salt.master.SMaster.secrets["aes"] = {"secret": self.aes_key}
-        pub_server_channel = salt.transport.rabbitmq.RabbitMQPubServerChannel(
-            self.master_config
-        )
+        from salt.transport import rabbitmq
+
+        pub_server_channel = rabbitmq.RabbitMQPubServerChannel(self.master_config)
         pub_server_channel.pre_fork(
             self.process_manager,
             kwargs={"log_queue": salt.log.setup.get_multiprocessing_logging_queue()},
@@ -198,8 +209,6 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         log.info("The PubServerChannelProcess has terminated")
 
 
-@pytest.mark.slow_test
-@pytest.mark.xfail(reason="RMQ is POC. Skip RMQ tests until RMQ dependencies are dealt with in the CI/CD pipeline")
 def test_publish_to_pubserv_ipc(salt_master, salt_minion):
     """
     Test sending a message to RabbitMQPubServerChannel using IPC transport
@@ -213,9 +222,8 @@ def test_publish_to_pubserv_ipc(salt_master, salt_minion):
         for idx in range(send_num):
             expect.append(idx)
             load = {"tgt_type": "glob", "tgt": "*", "jid": idx}
-            server_channel.publish(load) # publish N messages
+            server_channel.publish(load)  # publish N messages
     results = server_channel.collector.results
     assert len(results) == send_num, "{} != {}, difference: {}".format(
         len(results), send_num, set(expect).difference(results)
     )
-

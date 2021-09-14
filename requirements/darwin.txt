@@ -1,7 +1,6 @@
 # Darwin source distribution requirements
 
 -r zeromq.txt
--r rabbitmq.txt
 -r pyobjc.txt
 
 apache-libcloud>=2.4.0

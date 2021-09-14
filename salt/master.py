@@ -969,7 +969,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             pass
 
     @salt.ext.tornado.gen.coroutine
-    def _handle_payload(self, payload, *optional_message_properties):
+    def _handle_payload(self, payload, **optional_message_properties):
         """
         The _handle_payload method is the key method used to figure out what
         needs to be done with communication to the server
@@ -989,11 +989,13 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                   'user': 'root'}}
 
         :param dict payload: The payload route to the appropriate handler
-        :param optional additional metadata that accompanies the payload, e.g. transport-specific stuff
+        :param optional_message_properties additional metadata that accompanies the payload, e.g. transport-specific stuff
         """
         key = payload["enc"]
         load = payload["load"]
-        ret = {"aes": self._handle_aes, "clear": self._handle_clear}[key](load, *optional_message_properties)
+        ret = {"aes": self._handle_aes, "clear": self._handle_clear}[key](
+            load, **optional_message_properties
+        )
         raise salt.ext.tornado.gen.Return(ret)
 
     def _post_stats(self, start, cmd):
@@ -1018,7 +1020,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             self.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
             self.stat_clock = end
 
-    def _handle_clear(self, load, *optional_load_properties):
+    def _handle_clear(self, load, **optional_load_properties):
         """
         Process a cleartext command
 
@@ -1035,12 +1037,12 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         if self.opts["master_stats"]:
             start = time.time()
             self.stats[cmd]["runs"] += 1
-        ret = method(load, *optional_load_properties), {"fun": "send_clear"}
+        ret = method(load, **optional_load_properties), {"fun": "send_clear"}
         if self.opts["master_stats"]:
             self._post_stats(start, cmd)
         return ret
 
-    def _handle_aes(self, data, *optional_load_properties):
+    def _handle_aes(self, data, **optional_load_properties):
         """
         Process a command sent via an AES key
 
@@ -2112,7 +2114,7 @@ class ClearFuncs(TransportMethods):
             return False
         return self.loadauth.get_tok(clear_load["token"])
 
-    def publish(self, clear_load, *optional_transport_args):
+    def publish(self, clear_load, **optional_transport_args):
         """
         This method sends out publications to the minions, it can only be used
         by the LocalClient.
@@ -2170,7 +2172,7 @@ class ClearFuncs(TransportMethods):
                 }
             }
 
-        # All Token, Eauth, and non-root users must pass the authorization check
+        # All Token, Auth, and non-root users must pass the authorization check
         if auth_type != "user" or (auth_type == "user" and auth_list):
             # Authorize the request
             authorized = self.ckminions.auth_check(
@@ -2238,7 +2240,7 @@ class ClearFuncs(TransportMethods):
 
         # Send it!
         self._send_ssh_pub(payload, ssh_minions=ssh_minions)
-        self._send_pub(payload, *optional_transport_args)
+        self._send_pub(payload, **optional_transport_args)
 
         return {
             "enc": "clear",
@@ -2287,13 +2289,13 @@ class ClearFuncs(TransportMethods):
             return {"error": msg}
         return jid
 
-    def _send_pub(self, load, *optional_transport_args):
+    def _send_pub(self, load, **optional_transport_args):
         """
         Take a load and send it across the network to connected minions
         """
         for transport, opts in iter_transport_opts(self.opts):
             chan = salt.transport.server.PubServerChannel.factory(opts)
-            chan.publish(load, *optional_transport_args)
+            chan.publish(load, **optional_transport_args)
 
     @property
     def ssh_client(self):

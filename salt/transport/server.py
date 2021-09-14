@@ -42,8 +42,11 @@ class ReqServerChannel:
 
             return salt.transport.rabbitmq.RabbitMQReqServerChannel(opts)
         else:
-            raise Exception("Channels are only defined for ZeroMQ, TCP or RabbitMQ")
-            # return NewKindOfChannel(opts, **kwargs)
+            raise Exception(
+                "Channel {!r} is undefined. Possible channels are zeromq, tcp, or rabbitmq".format(
+                    ttype
+                )
+            )
 
     def pre_fork(self, process_manager):
         """
@@ -103,7 +106,7 @@ class PubServerChannel:
         do the actual publishing
         """
 
-    def publish(self, load):
+    def publish(self, load, **optional_transport_args):
         """
         Publish "load" to minions
         """

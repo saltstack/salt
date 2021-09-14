@@ -10,6 +10,7 @@ import salt.exceptions
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.log.setup
+import salt.master
 import salt.transport.client
 import salt.transport.server
 import salt.utils.platform
@@ -17,7 +18,12 @@ import salt.utils.process
 import salt.utils.stringutils
 from saltfactories.utils.processes import terminate_process
 
-from salt.ext import tornado
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.xfail(
+        reason="RMQ is POC. Skip RMQ tests until RMQ dependencies are dealt with in the CI/CD pipeline"
+    ),
+]
 
 log = logging.getLogger(__name__)
 
@@ -26,9 +32,8 @@ class Collector(salt.utils.process.SignalHandlingProcess):
     """
     A process for collecting published events
     """
-    def __init__(
-        self, minion_config, pub_uri, aes_key, timeout=30
-    ):
+
+    def __init__(self, minion_config, pub_uri, aes_key, timeout=30):
         super().__init__()
         self.minion_config = minion_config
         self.pub_uri = pub_uri
@@ -41,20 +46,19 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         self.started = multiprocessing.Event()
         self.running = multiprocessing.Event()
         self.last_message_timestamp = time.time()
+        self._rmq_connection_wrapper = None
 
     def run(self):
         # receive
-        io_loop = tornado.ioloop.IOLoop.instance()
+        io_loop = salt.ext.tornado.ioloop.IOLoop.instance()
 
-        """
-        Gather results until then number of seconds specified by timeout passes
-        without receiving a message
-        """
+        # Gather results until then number of seconds specified by timeout passes
+        # without receiving a message
         serial = salt.payload.Serial(self.minion_config)
         crypticle = salt.crypt.Crypticle(self.minion_config, self.aes_key)
         self.started.set()
 
-        def callback(payload):
+        def callback(payload, _):
             curr_time = time.time()
             if time.time() > self.hard_timeout:
                 io_loop.stop()
@@ -64,7 +68,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                 return
             try:
                 serial_payload = serial.loads(payload)
-                serial_payload = serial.loads(serial_payload['payload'])
+                serial_payload = serial.loads(serial_payload["payload"])
                 payload = crypticle.loads(serial_payload["load"])
                 if "start" in payload:
                     self.running.set()
@@ -77,11 +81,16 @@ class Collector(salt.utils.process.SignalHandlingProcess):
             except salt.exceptions.SaltDeserializationError:
                 log.exception("Failed to deserialize...")
 
-        rmq_connection_wrapper = salt.transport.rabbitmq.RMQNonBlockingConnectionWrapper(
+        from salt.transport import rabbitmq
+
+        self._rmq_connection_wrapper = rabbitmq.RMQNonBlockingConnectionWrapper(
             self.minion_config,
             io_loop=io_loop,
-            timeout=self.hard_timeout)
-        rmq_connection_wrapper.register_message_callback(callback)
+            timeout=self.hard_timeout,
+            queue_name="minion_consumer_queue",
+        )
+        self._rmq_connection_wrapper.register_message_callback(callback)
+        self._rmq_connection_wrapper.connect()
 
         io_loop.start()
 
@@ -111,6 +120,7 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
     """
     Publisher
     """
+
     def __init__(self, master_config, minion_config, **collector_kwargs):
         super().__init__()
         self._closing = False
@@ -135,9 +145,9 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
 
     def run(self):
         salt.master.SMaster.secrets["aes"] = {"secret": self.aes_key}
-        pub_server_channel = salt.transport.rabbitmq.RabbitMQPubServerChannel(
-            self.master_config
-        )
+        from salt.transport import rabbitmq
+
+        pub_server_channel = rabbitmq.RabbitMQPubServerChannel(self.master_config)
         pub_server_channel.pre_fork(
             self.process_manager,
             kwargs={"log_queue": salt.log.setup.get_multiprocessing_logging_queue()},
@@ -180,6 +190,7 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self.start()
         self.collector.__enter__()
         attempts = 30
+        # signal for the collector to start
         while attempts > 0:
             self.publish({"tgt_type": "glob", "tgt": "*", "jid": -1, "start": True})
             if self.collector.running.wait(1) is True:
@@ -206,24 +217,47 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         log.info("The PubServerChannelProcess has terminated")
 
 
-@pytest.mark.slow_test
-@pytest.mark.xfail(reason="RMQ is POC. Skip RMQ tests until RMQ dependencies are dealt with in the CI/CD pipeline")
 def test_publish_to_pubserv_ipc_async_collector(salt_master, salt_minion):
     """
     Test sending a message to RabbitMQPubServerChannel using IPC transport
     To start rmq container: "docker run  --name rabbitmq -p 5672:5672 -p 15672:15672 bitnami/rabbitmq"
     """
     opts = dict(salt_master.config.copy(), ipc_mode="ipc", pub_hwm=0)
-    # this starts the receiver that blocks
     with PubServerChannelProcess(opts, salt_minion.config.copy()) as server_channel:
         send_num = 4
         expect = []
         for idx in range(send_num):
             expect.append(idx)
             load = {"tgt_type": "glob", "tgt": "*", "jid": idx}
-            server_channel.publish(load) # publish N messages
+            server_channel.publish(load)  # publish N messages
     results = server_channel.collector.results
     assert len(results) == send_num, "{} != {}, difference: {}".format(
         len(results), send_num, set(expect).difference(results)
     )
 
+
+def test_rmq_connection_recovery(salt_master, salt_minion, rabbitmq_container):
+    """
+    Test sending a message to RabbitMQPubServerChannel using IPC transport
+    To start rmq container: "docker run  --name rabbitmq -p 5672:5672 -p 15672:15672 bitnami/rabbitmq"
+    Assert that severed connection to RMQ broker are recovered and no messages are lost
+    """
+    opts = dict(salt_master.config.copy(), ipc_mode="ipc", pub_hwm=0)
+    with PubServerChannelProcess(opts, salt_minion.config.copy()) as server_channel:
+        send_num = 5
+        expect = []
+
+        for idx in range(send_num):
+            if idx == 3:
+                # force-close all connections and then observe connection recovery
+                ret = rabbitmq_container.run(
+                    'rabbitmqctl close_all_connections "Force-closing from a test."'
+                )
+                assert ret.exitcode == 0
+            expect.append(idx)
+            load = {"tgt_type": "glob", "tgt": "*", "jid": idx}
+            server_channel.publish(load)  # publish N messages
+    results = server_channel.collector.results
+    assert len(results) == send_num, "{} != {}, difference: {}".format(
+        len(results), send_num, set(expect).difference(results)
+    )

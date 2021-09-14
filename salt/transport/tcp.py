@@ -1724,7 +1724,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         """
         process_manager.add_process(self._publish_daemon, kwargs=kwargs)
 
-    def publish(self, load, *optional_transport_args):
+    def publish(self, load, **optional_transport_args):
         """
         Publish "load" to minions
         """

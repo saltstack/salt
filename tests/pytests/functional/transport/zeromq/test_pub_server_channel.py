@@ -26,14 +26,14 @@ log = logging.getLogger(__name__)
 
 class Collector(salt.utils.process.SignalHandlingProcess):
     def __init__(
-        self, minion_config, pub_uri, aes_key, timeout=30, zmq_filtering=False
+        self, minion_config, pub_uri, aes_key, message_timeout=30, zmq_filtering=False
     ):
         super().__init__()
         self.minion_config = minion_config
         self.pub_uri = pub_uri
         self.aes_key = aes_key
-        self.timeout = timeout
-        self.hard_timeout = time.time() + timeout + 30
+        self.timeout = message_timeout
+        self.hard_test_timeout = time.time() + message_timeout + 30
         self.manager = multiprocessing.Manager()
         self.results = self.manager.list()
         self.zmq_filtering = zmq_filtering
@@ -57,7 +57,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         self.started.set()
         while True:
             curr_time = time.time()
-            if time.time() > self.hard_timeout:
+            if time.time() > self.hard_test_timeout:
                 break
             if curr_time - last_msg >= self.timeout:
                 break
@@ -91,7 +91,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
 
     def __exit__(self, *args):
         # Wait until we either processed all expected messages or we reach the hard timeout
-        join_secs = self.hard_timeout - time.time()
+        join_secs = self.hard_test_timeout - time.time()
         log.info("Waiting at most %s seconds before exiting the collector", join_secs)
         self.join(join_secs)
         self.terminate()

@@ -73,7 +73,7 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
             self.process_manager = None
 
     @salt.ext.tornado.gen.coroutine
-    def _handle_payload(self, payload):
+    def _handle_payload(self, payload, **optional_message_properties):
         if self.req_channel_crypt == "clear":
             raise salt.ext.tornado.gen.Return((payload, {"fun": "send_clear"}))
         raise salt.ext.tornado.gen.Return((payload, {"fun": "send"}))

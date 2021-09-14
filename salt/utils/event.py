@@ -1015,7 +1015,7 @@ class MinionEvent(SaltEvent):
     """
     Warning! Use the get_event function or the code will not be
     RAET compatible
-    Create a master event management object
+    Create a minion event management object
     """
 
     def __init__(self, opts, listen=True, io_loop=None, raise_errors=False):
@@ -1102,6 +1102,8 @@ class AsyncEventPublisher:
         self.puller = salt.transport.ipc.IPCMessageServer(
             epull_uri, io_loop=self.io_loop, payload_handler=self.handle_publish
         )
+
+
 
         log.info("Starting pull socket on %s", epull_uri)
         with salt.utils.files.set_umask(0o177):

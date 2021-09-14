@@ -40,11 +40,13 @@ def sdb_etcd_port():
 
 @pytest.fixture(scope="session")
 def rabbitmq_port():
+    # TODO: use dynamic/unallocated ports when rabbit is part of the CICD pipeline
     return "5672"
 
 
 @pytest.fixture(scope="session")
 def rabbitmq_management_port():
+    # TODO: use dynamic/unallocated ports when rabbit is part of the CICD pipeline
     return "15672"
 
 

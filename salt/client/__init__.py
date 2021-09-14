@@ -408,6 +408,7 @@ class LocalClient:
             raise
         except Exception as general_exception:  # pylint: disable=broad-except
             # Convert to generic client error and pass along message
+            log.exception("Error publishing command to minions")
             raise SaltClientError(general_exception)
 
         return self._check_pub_data(pub_data, listen=listen)
@@ -1874,7 +1875,7 @@ class LocalClient:
                 A set, the targets that the tgt passed should match.
         """
         # Make sure the publisher is running by checking the unix socket
-        if self.opts.get("ipc_mode", "") != "tcp" and not os.path.exists(
+        if self.opts.get("ipc_mode", "") == "zeromq" and not os.path.exists(
             os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
         ):
             log.error(

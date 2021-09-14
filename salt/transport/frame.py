@@ -82,7 +82,7 @@ def _decode_embedded_dict(src):
 
 def decode_embedded_strs(src):
     """
-    Convert enbedded bytes to strings if possible.
+    Convert embedded bytes to strings if possible.
     This is necessary because Python 3 makes a distinction
     between these types.
 

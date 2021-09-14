@@ -877,9 +877,9 @@ class ZeroMQReqServerChannel(
             # and call it, returning control to the caller until it completes
             ret, req_opts = yield self.payload_handler(payload)
         except Exception as e:  # pylint: disable=broad-except
+            log.error("Some exception handling a payload from minion", exc_info=True)
             # always attempt to return an error to the minion
             stream.send("Some exception handling minion payload")
-            log.error("Some exception handling a payload from minion", exc_info=True)
             raise salt.ext.tornado.gen.Return()
 
         req_fun = req_opts.get("fun", "send")
@@ -1141,7 +1141,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             self._sock_data.sock.close()
             delattr(self._sock_data, "sock")
 
-    def publish(self, load, *optional_transport_args):
+    def publish(self, load, **optional_transport_args):
         """
         Publish "load" to minions. This send the load to the publisher daemon
         process which does the actual sending to minions.
