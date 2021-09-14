@@ -3,11 +3,9 @@ import salt.modules.opkg as opkg
 from tests.support.mock import patch
 
 
-@pytest.fixture(autouse=True)
-def setup_loader():
-    setup_loader_modules = {opkg: {}}
-    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-        yield loader_mock
+@pytest.fixture
+def configure_loader_modules():
+    return {opkg: {}}
 
 
 def test_when_os_is_NILinuxRT_and_creation_of_RESTART_CHECK_STATE_PATH_fails_virtual_should_be_False():

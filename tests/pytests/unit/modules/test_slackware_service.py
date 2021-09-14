@@ -9,6 +9,11 @@ from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
+def configure_loader_modules():
+    return {slackware_service: {}}
+
+
+@pytest.fixture
 def mocked_rcd():
     glob_output = [
         "/etc/rc.d/rc.S",  # system rc file
@@ -37,13 +42,6 @@ def mocked_rcd():
     os_access_mock = patch("os.access", autospec=True, side_effect=access_output)
 
     return glob_mock, os_path_exists_mock, os_access_mock
-
-
-@pytest.fixture(autouse=True)
-def setup_loader():
-    setup_loader_modules = {slackware_service: {}}
-    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-        yield loader_mock
 
 
 def test_get_all_rc_services_minus_system_and_config_files(mocked_rcd):

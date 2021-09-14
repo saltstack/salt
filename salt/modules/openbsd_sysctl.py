@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Module for viewing and modifying OpenBSD sysctl parameters
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import re
@@ -11,9 +9,6 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-
-# Import salt libs
-from salt.ext import six
 
 # Define the module's virtual name
 __virtualname__ = "sysctl"
@@ -35,6 +30,9 @@ def __virtual__():
 def show(config_file=False):
     """
     Return a list of sysctl parameters for this minion
+
+    config: Pull the data from the system configuration file
+        instead of the live data.
 
     CLI Example:
 
@@ -63,7 +61,7 @@ def get(name):
 
         salt '*' sysctl.get hw.physmem
     """
-    cmd = "sysctl -n {0}".format(name)
+    cmd = "sysctl -n {}".format(name)
     out = __salt__["cmd.run"](cmd)
     return out
 
@@ -79,7 +77,7 @@ def assign(name, value):
         salt '*' sysctl.assign net.inet.ip.forwarding 1
     """
     ret = {}
-    cmd = 'sysctl {0}="{1}"'.format(name, value)
+    cmd = 'sysctl {}="{}"'.format(name, value)
     data = __salt__["cmd.run_all"](cmd)
 
     # Certain values cannot be set from this console, at the current
@@ -89,7 +87,7 @@ def assign(name, value):
         re.match(r"^sysctl:.*: Operation not permitted$", data["stderr"])
         or data["retcode"] != 0
     ):
-        raise CommandExecutionError("sysctl failed: {0}".format(data["stderr"]))
+        raise CommandExecutionError("sysctl failed: {}".format(data["stderr"]))
     new_name, new_value = data["stdout"].split(":", 1)
     ret[new_name] = new_value.split(" -> ")[-1]
     return ret
@@ -107,21 +105,21 @@ def persist(name, value, config="/etc/sysctl.conf"):
     """
     nlines = []
     edited = False
-    value = six.text_type(value)
+    value = str(value)
 
     # create /etc/sysctl.conf if not present
     if not os.path.isfile(config):
         try:
             with salt.utils.files.fopen(config, "w+"):
                 pass
-        except (IOError, OSError):
+        except OSError:
             msg = "Could not create {0}"
             raise CommandExecutionError(msg.format(config))
 
     with salt.utils.files.fopen(config, "r") as ifile:
         for line in ifile:
             line = salt.utils.stringutils.to_unicode(line)
-            if not line.startswith("{0}=".format(name)):
+            if not line.startswith("{}=".format(name)):
                 nlines.append(line)
                 continue
             else:
@@ -135,11 +133,11 @@ def persist(name, value, config="/etc/sysctl.conf"):
                     rest = rest[len(rest_v) :]
                 if rest_v == value:
                     return "Already set"
-                new_line = "{0}={1}{2}".format(key, value, rest)
+                new_line = "{}={}{}".format(key, value, rest)
                 nlines.append(new_line)
                 edited = True
     if not edited:
-        nlines.append("{0}={1}\n".format(name, value))
+        nlines.append("{}={}\n".format(name, value))
     with salt.utils.files.fopen(config, "wb") as ofile:
         ofile.writelines(salt.utils.data.encode(nlines))
 

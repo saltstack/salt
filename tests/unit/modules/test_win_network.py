@@ -2,15 +2,10 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
 import socket
 
 import salt.modules.win_network as win_network
-
-# Import Salt Libs
 import salt.utils.network
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase, skipIf

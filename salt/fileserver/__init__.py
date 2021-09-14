@@ -17,7 +17,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.url
 import salt.utils.versions
-from salt.ext import six
 from salt.utils.args import get_function_argspec as _argspec
 from salt.utils.decorators import ensure_unicode_args
 
@@ -132,7 +131,7 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                             current_time,
                             file_mtime,
                         )
-                        age = 0
+                        age = -1
                     else:
                         age = current_time - file_mtime
                 else:

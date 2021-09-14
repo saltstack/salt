@@ -401,7 +401,10 @@ class _vfstab_entry:
         "opts",
     )
     # NOTE: weird formatting to match default spacing on Solaris
-    vfstab_format = "{device:<11} {device_fsck:<3} {name:<19} {fstype:<8} {pass_fsck:<3} {mount_at_boot:<6} {opts}\n"
+    vfstab_format = (
+        "{device:<11} {device_fsck:<3} {name:<19} {fstype:<8} {pass_fsck:<3}"
+        " {mount_at_boot:<6} {opts}\n"
+    )
 
     @classmethod
     def dict_from_line(cls, line):
@@ -904,7 +907,8 @@ def set_vfstab(
     **kwargs
 ):
     """
-    ..verionadded:: 2016.3.2
+    .. versionadded:: 2016.3.2
+
     Verify that this mount is represented in the fstab, change the mount
     to match the data passed, or add the mount if it is not present.
 
@@ -1152,8 +1156,7 @@ def set_automaster(
                         comps[2] = device_fmt
                     if change:
                         log.debug(
-                            "auto_master entry for mount point %s needs to be "
-                            "updated",
+                            "auto_master entry for mount point %s needs to be updated",
                             name,
                         )
                         newline = "{}\t{}\t{}\n".format(name, type_opts, device_fmt)
@@ -1365,6 +1368,7 @@ def umount(name, device=None, user=None, util="mount"):
         salt '*' mount.umount /mnt/foo
 
     .. versionadded:: 2015.5.0
+
     .. code-block:: bash
 
         salt '*' mount.umount /mnt/foo /dev/xvdc1

@@ -184,9 +184,7 @@ a return like::
 .. |406| replace:: requested Content-Type not available
 .. |500| replace:: internal server error
 """
-# Import Python libs
 
-# pylint: disable=import-error
 import cgi
 import fnmatch
 import logging
@@ -196,8 +194,6 @@ from copy import copy
 
 import salt.auth
 import salt.client
-
-# salt imports
 import salt.ext.tornado.escape
 import salt.ext.tornado.gen
 import salt.ext.tornado.httpserver
@@ -210,7 +206,6 @@ import salt.utils.event
 import salt.utils.json
 import salt.utils.minions
 import salt.utils.yaml
-import salt.utils.zeromq
 from salt.exceptions import (
     AuthenticationError,
     AuthorizationError,
@@ -219,10 +214,6 @@ from salt.exceptions import (
 from salt.ext.tornado.concurrent import Future
 from salt.utils.event import tagify
 
-# pylint: enable=import-error
-
-
-salt.utils.zeromq.install_zmq()
 _json = salt.utils.json.import_json()
 log = logging.getLogger(__name__)
 
@@ -435,7 +426,8 @@ class BaseSaltAPIHandler(salt.ext.tornado.web.RequestHandler):  # pylint: disabl
         if not hasattr(self.application, "event_listener"):
             log.debug("init a listener")
             self.application.event_listener = EventListener(
-                self.application.mod_opts, self.application.opts,
+                self.application.mod_opts,
+                self.application.opts,
             )
 
         if not hasattr(self, "saltclients"):
@@ -1017,7 +1009,8 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                 except Exception:  # pylint: disable=broad-except
                     pass
             raise salt.ext.tornado.gen.Return(
-                "No minions matched the target. No command was sent, no jid was assigned."
+                "No minions matched the target. No command was sent, no jid was"
+                " assigned."
             )
 
         # get_event for missing minion
@@ -1611,9 +1604,7 @@ class EventsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
             try:
                 event = yield self.application.event_listener.get_event(self)
                 self.write("tag: {}\n".format(event.get("tag", "")))
-                self.write(
-                    "data: {}\n\n".format(_json_dumps(event))
-                )  # future lint: disable=blacklisted-function
+                self.write("data: {}\n\n".format(_json_dumps(event)))
                 self.flush()
             except TimeoutException:
                 break

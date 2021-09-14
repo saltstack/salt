@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 r"""
 Manage the Windows registry
 ===========================
@@ -69,9 +68,7 @@ Value:
 - Each value name has a corresponding value
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
 import salt.utils.stringutils
@@ -98,8 +95,7 @@ def __virtual__():
     if "reg.delete_value" not in __utils__:
         return (
             False,
-            "reg state module failed to load: "
-            "missing util function: reg.delete_value",
+            "reg state module failed to load: missing util function: reg.delete_value",
         )
 
     if "reg.delete_key_recursive" not in __utils__:
@@ -411,7 +407,7 @@ def present(
     # If so, check perms
     # We check `vdata` and `success` because `vdata` can be None
     if vdata_decoded == reg_current["vdata"] and reg_current["success"]:
-        ret["comment"] = "{0} in {1} is already present" "".format(
+        ret["comment"] = "{} in {} is already present".format(
             salt.utils.stringutils.to_unicode(vname, "utf-8") if vname else "(Default)",
             salt.utils.stringutils.to_unicode(name, "utf-8"),
         )
@@ -427,8 +423,8 @@ def present(
         )
 
     add_change = {
-        "Key": r"{0}\{1}".format(hive, key),
-        "Entry": "{0}".format(
+        "Key": r"{}\{}".format(hive, key),
+        "Entry": "{}".format(
             salt.utils.stringutils.to_unicode(vname, "utf-8") if vname else "(Default)"
         ),
         "Value": vdata_decoded,
@@ -455,10 +451,10 @@ def present(
 
     if not ret["result"]:
         ret["changes"] = {}
-        ret["comment"] = r"Failed to add {0} to {1}\{2}".format(vname, hive, key)
+        ret["comment"] = r"Failed to add {} to {}\{}".format(vname, hive, key)
     else:
         ret["changes"] = {"reg": {"Added": add_change}}
-        ret["comment"] = r"Added {0} to {1}\{2}".format(vname, hive, key)
+        ret["comment"] = r"Added {} to {}\{}".format(vname, hive, key)
 
     if ret["result"]:
         ret = __utils__["dacl.check_perms"](
@@ -525,12 +521,12 @@ def absent(name, vname=None, use_32bit_registry=False):
         hive=hive, key=key, vname=vname, use_32bit_registry=use_32bit_registry
     )
     if not reg_check["success"] or reg_check["vdata"] == "(value not set)":
-        ret["comment"] = "{0} is already absent".format(name)
+        ret["comment"] = "{} is already absent".format(name)
         return ret
 
     remove_change = {
-        "Key": r"{0}\{1}".format(hive, key),
-        "Entry": "{0}".format(vname if vname else "(Default)"),
+        "Key": r"{}\{}".format(hive, key),
+        "Entry": "{}".format(vname if vname else "(Default)"),
     }
 
     # Check for test option
@@ -545,10 +541,10 @@ def absent(name, vname=None, use_32bit_registry=False):
     )
     if not ret["result"]:
         ret["changes"] = {}
-        ret["comment"] = r"Failed to remove {0} from {1}".format(key, hive)
+        ret["comment"] = r"Failed to remove {} from {}".format(key, hive)
     else:
         ret["changes"] = {"reg": {"Removed": remove_change}}
-        ret["comment"] = r"Removed {0} from {1}".format(key, hive)
+        ret["comment"] = r"Removed {} from {}".format(key, hive)
 
     return ret
 
@@ -578,7 +574,6 @@ def key_absent(name, use_32bit_registry=False):
     Returns:
         dict: A dictionary showing the results of the registry operation.
 
-
     CLI Example:
 
         The following example will delete the ``SOFTWARE\DeleteMe`` key in the
@@ -603,10 +598,10 @@ def key_absent(name, use_32bit_registry=False):
     if not __utils__["reg.read_value"](
         hive=hive, key=key, use_32bit_registry=use_32bit_registry
     )["success"]:
-        ret["comment"] = "{0} is already absent".format(name)
+        ret["comment"] = "{} is already absent".format(name)
         return ret
 
-    ret["changes"] = {"reg": {"Removed": {"Key": r"{0}\{1}".format(hive, key)}}}
+    ret["changes"] = {"reg": {"Removed": {"Key": r"{}\{}".format(hive, key)}}}
 
     # Check for test option
     if __opts__["test"]:
@@ -622,6 +617,6 @@ def key_absent(name, use_32bit_registry=False):
     )["success"]:
         ret["result"] = False
         ret["changes"] = {}
-        ret["comment"] = "Failed to remove registry key {0}".format(name)
+        ret["comment"] = "Failed to remove registry key {}".format(name)
 
     return ret

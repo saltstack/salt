@@ -1,0 +1,13 @@
+.. _release-3001-2:
+
+=========================
+Salt 3001.2 Release Notes
+=========================
+
+Version 3001.2 is a CVE fix release for :ref:`3001 <release-3001>`.
+
+Fixed
+-----
+
+- Prevent shell injections in netapi ssh client (cve-2020-16846)
+- Prevent creating world readable private keys with the tls execution module. (cve-2020-17490)

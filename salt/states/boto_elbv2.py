@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage AWS Application Load Balancer
 
@@ -34,15 +33,8 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         region: us-east-1
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
-
-# Import Python Libs
 import logging
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -115,7 +107,8 @@ def create_target_group(
     returns
         (bool) - True on success, False on failure.
 
-    CLI example:
+    CLI Example:
+
     .. code-block:: yaml
 
         create-target:
@@ -129,11 +122,11 @@ def create_target_group(
 
     if __salt__["boto_elbv2.target_group_exists"](name, region, key, keyid, profile):
         ret["result"] = True
-        ret["comment"] = "Target Group {0} already exists".format(name)
+        ret["comment"] = "Target Group {} already exists".format(name)
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Target Group {0} will be created".format(name)
+        ret["comment"] = "Target Group {} will be created".format(name)
         return ret
 
     state = __salt__["boto_elbv2.create_target_group"](
@@ -158,10 +151,10 @@ def create_target_group(
     if state:
         ret["changes"]["target_group"] = name
         ret["result"] = True
-        ret["comment"] = "Target Group {0} created".format(name)
+        ret["comment"] = "Target Group {} created".format(name)
     else:
         ret["result"] = False
-        ret["comment"] = "Target Group {0} creation failed".format(name)
+        ret["comment"] = "Target Group {} creation failed".format(name)
     return ret
 
 
@@ -175,7 +168,7 @@ def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
     returns
         (bool) - True on success, False on failure.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -192,11 +185,11 @@ def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
         name, region, key, keyid, profile
     ):
         ret["result"] = True
-        ret["comment"] = "Target Group {0} does not exists".format(name)
+        ret["comment"] = "Target Group {} does not exists".format(name)
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Target Group {0} will be deleted".format(name)
+        ret["comment"] = "Target Group {} will be deleted".format(name)
         return ret
 
     state = __salt__["boto_elbv2.delete_target_group"](
@@ -206,10 +199,10 @@ def delete_target_group(name, region=None, key=None, keyid=None, profile=None):
     if state:
         ret["result"] = True
         ret["changes"]["target_group"] = name
-        ret["comment"] = "Target Group {0} deleted".format(name)
+        ret["comment"] = "Target Group {} deleted".format(name)
     else:
         ret["result"] = False
-        ret["comment"] = "Target Group {0} deletion failed".format(name)
+        ret["comment"] = "Target Group {} deletion failed".format(name)
     return ret
 
 
@@ -247,14 +240,14 @@ def targets_registered(
         changes = False
         newhealth_mock = copy.copy(health)
 
-        if isinstance(targets, six.string_types):
+        if isinstance(targets, str):
             targets = [targets]
 
         for target in targets:
             if target in health and health.get(target) != "draining":
                 ret["comment"] = ret[
                     "comment"
-                ] + "Target/s {0} already registered and is {1}.\n".format(
+                ] + "Target/s {} already registered and is {}.\n".format(
                     target, health[target]
                 )
                 ret["result"] = True
@@ -275,27 +268,27 @@ def targets_registered(
                         changes = True
                         ret["result"] = True
                     else:
-                        ret[
-                            "comment"
-                        ] = "Target Group {0} failed to add targets".format(name)
+                        ret["comment"] = "Target Group {} failed to add targets".format(
+                            name
+                        )
                         failure = True
         if failure:
             ret["result"] = False
         if changes:
             ret["changes"]["old"] = health
             if __opts__["test"]:
-                ret["comment"] = "Target Group {0} would be changed".format(name)
+                ret["comment"] = "Target Group {} would be changed".format(name)
                 ret["result"] = None
                 ret["changes"]["new"] = newhealth_mock
             else:
-                ret["comment"] = "Target Group {0} has been changed".format(name)
+                ret["comment"] = "Target Group {} has been changed".format(name)
                 newhealth = __salt__["boto_elbv2.describe_target_health"](
                     name, region=region, key=key, keyid=keyid, profile=profile
                 )
                 ret["changes"]["new"] = newhealth
         return ret
     else:
-        ret["comment"] = "Could not find target group {0}".format(name)
+        ret["comment"] = "Could not find target group {}".format(name)
     return ret
 
 
@@ -311,7 +304,7 @@ def targets_deregistered(
     targets
         A list of target IDs or a string of a single target registered to the target group to be removed
 
-    .. versionadded:: Unknown
+    .. versionadded:: 2017.7.0
 
     .. code-block:: yaml
 
@@ -330,13 +323,13 @@ def targets_deregistered(
         failure = False
         changes = False
         newhealth_mock = copy.copy(health)
-        if isinstance(targets, six.string_types):
+        if isinstance(targets, str):
             targets = [targets]
         for target in targets:
             if target not in health or health.get(target) == "draining":
                 ret["comment"] = ret[
                     "comment"
-                ] + "Target/s {0} already deregistered\n".format(target)
+                ] + "Target/s {} already deregistered\n".format(target)
                 ret["result"] = True
             else:
                 if __opts__["test"]:
@@ -357,23 +350,23 @@ def targets_deregistered(
                     else:
                         ret[
                             "comment"
-                        ] = "Target Group {0} failed to remove targets".format(name)
+                        ] = "Target Group {} failed to remove targets".format(name)
                         failure = True
         if failure:
             ret["result"] = False
         if changes:
             ret["changes"]["old"] = health
             if __opts__["test"]:
-                ret["comment"] = "Target Group {0} would be changed".format(name)
+                ret["comment"] = "Target Group {} would be changed".format(name)
                 ret["result"] = None
                 ret["changes"]["new"] = newhealth_mock
             else:
-                ret["comment"] = "Target Group {0} has been changed".format(name)
+                ret["comment"] = "Target Group {} has been changed".format(name)
                 newhealth = __salt__["boto_elbv2.describe_target_health"](
                     name, region=region, key=key, keyid=keyid, profile=profile
                 )
                 ret["changes"]["new"] = newhealth
         return ret
     else:
-        ret["comment"] = "Could not find target group {0}".format(name)
+        ret["comment"] = "Could not find target group {}".format(name)
     return ret

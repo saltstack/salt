@@ -1,0 +1,16 @@
+{% macro chardev(dev) -%}
+  {% if dev.type == "unix" -%}
+  <source mode="bind" path="{{ dev.path }}"/>
+  {% elif dev.type in ["udp", "tcp"] -%}
+  <source mode="bind" host="{{ dev.get('host', '0.0.0.0') }}" service="{{ dev.port }}"
+    {% if dev.get('tls') is not none %}tls="{{'yes' if dev.tls else 'no'}}"{% endif %}/>
+  {% elif dev.type in ["pipe", "dev", "pty", "file"] and dev.path -%}
+  <source path="{{ dev.path }}"/>
+  {%- endif %}
+  {% if dev.type == "tcp" -%}
+  <protocol type="{{ dev.protocol }}"/>
+  {%- endif %}
+  {% if "target_port" in dev or "target_type" in dev -%}
+  <target port="{{ dev.get('target_port', 0) }}" {% if dev.target_type %}type="{{ dev.target_type }}"{% endif %}/>
+  {%- endif %}
+{%- endmacro %}

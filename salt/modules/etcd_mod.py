@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Execution module to work with etcd
 
@@ -37,18 +36,9 @@ or clusters are available.
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import third party libs
-try:
-    import salt.utils.etcd_util  # pylint: disable=W0611
-
-    HAS_LIBS = True
-except ImportError:
-    HAS_LIBS = False
+import salt.utils.etcd_util
 
 __virtualname__ = "etcd"
 
@@ -64,7 +54,7 @@ def __virtual__():
     """
     Only return if python-etcd is installed
     """
-    if HAS_LIBS:
+    if salt.utils.etcd_util.HAS_LIBS:
         return __virtualname__
     return (
         False,
@@ -205,7 +195,6 @@ def ls_(path="/", profile=None, **kwargs):
 
     CLI Example:
 
-
     .. code-block:: bash
 
         salt myminion etcd.ls /path/to/dir/
@@ -225,7 +214,6 @@ def rm_(key, recurse=False, profile=None, **kwargs):
 
     CLI Example:
 
-
     .. code-block:: bash
 
         salt myminion etcd.rm /path/to/key
@@ -244,7 +232,6 @@ def tree(path="/", profile=None, **kwargs):
     Recurse through etcd and return all values.  Returns None on failure.
 
     CLI Example:
-
 
     .. code-block:: bash
 

@@ -1,5 +1,5 @@
-salt.beacons.avahi_announce module
-====================================
+salt.beacons.avahi_announce
+===========================
 
 .. automodule:: salt.beacons.avahi_announce
     :members:

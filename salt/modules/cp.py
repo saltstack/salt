@@ -7,7 +7,7 @@ import errno
 import fnmatch
 import logging
 import os
-from urllib.parse import urlparse
+import urllib.parse
 
 import salt.crypt
 import salt.fileclient
@@ -179,8 +179,7 @@ def _render_filenames(path, dest, saltenv, template, **kw):
     # render the path as a template using path_template_engine as the engine
     if template not in salt.utils.templates.TEMPLATE_REGISTRY:
         raise CommandExecutionError(
-            "Attempted to render file paths with unavailable engine "
-            "{}".format(template)
+            "Attempted to render file paths with unavailable engine {}".format(template)
         )
 
     kwargs = {}
@@ -472,7 +471,9 @@ def cache_file(path, saltenv="base", source_hash=None, verify_ssl=True):
 
     contextkey = "{}_|-{}_|-{}".format("cp.cache_file", path, saltenv)
 
-    path_is_remote = urlparse(path).scheme in salt.utils.files.REMOTE_PROTOS
+    path_is_remote = (
+        urllib.parse.urlparse(path).scheme in salt.utils.files.REMOTE_PROTOS
+    )
     try:
         if path_is_remote and contextkey in __context__:
             # Prevent multiple caches in the same salt run. Affects remote URLs
@@ -508,7 +509,7 @@ def cache_file(path, saltenv="base", source_hash=None, verify_ssl=True):
 
 def cache_dest(url, saltenv="base"):
     """
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     Returns the expected cache path for the file, if cached using
     :py:func:`cp.cache_file <salt.modules.cp.cache_file>`.
@@ -593,7 +594,6 @@ def cache_dir(
             excluded from the subset of files defined by ``include_pat``.
 
         .. versionadded:: 2014.7.0
-
 
     CLI Examples:
 

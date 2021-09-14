@@ -414,7 +414,8 @@ def _make_regex(pem_type):
     return re.compile(
         r"\s*(?P<pem_header>-----BEGIN {0}-----)\s+"
         r"(?:(?P<proc_type>Proc-Type: 4,ENCRYPTED)\s*)?"
-        r"(?:(?P<dek_info>DEK-Info: (?:DES-[3A-Z\-]+,[0-9A-F]{{16}}|[0-9A-Z\-]+,[0-9A-F]{{32}}))\s*)?"
+        r"(?:(?P<dek_info>DEK-Info:"
+        r" (?:DES-[3A-Z\-]+,[0-9A-F]{{16}}|[0-9A-Z\-]+,[0-9A-F]{{32}}))\s*)?"
         r"(?P<pem_body>.+?)\s+(?P<pem_footer>"
         r"-----END {0}-----)\s*".format(pem_type),
         re.DOTALL,
@@ -486,7 +487,7 @@ def get_pem_entry(text, pem_type=None):
 
     errmsg = "PEM text not valid:\n{}".format(text)
     if pem_type:
-        errmsg = "PEM does not contain a single entry of type {}:\n" "{}".format(
+        errmsg = "PEM does not contain a single entry of type {}:\n{}".format(
             pem_type, text
         )
 
@@ -568,7 +569,6 @@ def read_certificate(certificate):
         "Key Size": cert.get_pubkey().size() * 8,
         "Serial Number": _dec2hex(cert.get_serial_number()),
         "SHA-256 Finger Print": _pretty_hex(cert.get_fingerprint(md="sha256")),
-        "MD5 Finger Print": _pretty_hex(cert.get_fingerprint(md="md5")),
         "SHA1 Finger Print": _pretty_hex(cert.get_fingerprint(md="sha1")),
         "Subject": _parse_subject(cert.get_subject()),
         "Subject Hash": _dec2hex(cert.get_subject().as_hash()),
@@ -580,7 +580,8 @@ def read_certificate(certificate):
         "Not After": cert.get_not_after().get_datetime().strftime("%Y-%m-%d %H:%M:%S"),
         "Public Key": get_public_key(cert),
     }
-
+    if __opts__["fips_mode"] is False:
+        ret["MD5 Finger Print"] = _pretty_hex(cert.get_fingerprint(md="md5"))
     exts = OrderedDict()
     for ext_index in range(0, cert.get_ext_count()):
         ext = cert.get_ext_at(ext_index)
@@ -1033,7 +1034,8 @@ def create_crl(
         crltext = crl.export(**export_kwargs)
     except (TypeError, ValueError):
         log.warning(
-            "Error signing crl with specified digest. Are you using pyopenssl 0.15 or newer? The default md5 digest will be used."
+            "Error signing crl with specified digest. Are you using "
+            "pyopenssl 0.15 or newer? The default md5 digest will be used."
         )
         export_kwargs.pop("digest", None)
         crltext = crl.export(**export_kwargs)
@@ -1626,7 +1628,7 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
             name=extname, value=extval, critical=critical, issuer=issuer
         )
         if not ext.x509_ext:
-            log.info("Invalid X509v3 Extension. {}: {}".format(extname, extval))
+            log.info("Invalid X509v3 Extension. %s: %s", extname, extval)
             continue
 
         cert.add_ext(ext)
@@ -1647,8 +1649,7 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
         public_key=signing_cert,
     ):
         raise salt.exceptions.SaltInvocationError(
-            "signing_private_key: {} "
-            "does no match signing_cert: {}".format(
+            "signing_private_key: {} does no match signing_cert: {}".format(
                 kwargs["signing_private_key"], kwargs.get("signing_cert", "")
             )
         )
@@ -1734,7 +1735,9 @@ def create_csr(path=None, text=False, **kwargs):
     if "private_key" not in kwargs and "public_key" in kwargs:
         kwargs["private_key"] = kwargs["public_key"]
         log.warning(
-            "OpenSSL no longer allows working with non-signed CSRs. A private_key must be specified. Attempting to use public_key as private_key"
+            "OpenSSL no longer allows working with non-signed CSRs. "
+            "A private_key must be specified. Attempting to use public_key "
+            "as private_key"
         )
 
     if "private_key" not in kwargs:
@@ -1788,7 +1791,7 @@ def create_csr(path=None, text=False, **kwargs):
             name=extname, value=extval, critical=critical, issuer=issuer
         )
         if not ext.x509_ext:
-            log.info("Invalid X509v3 Extension. {}: {}".format(extname, extval))
+            log.info("Invalid X509v3 Extension. %s: %s", extname, extval)
             continue
 
         extstack.push(ext)

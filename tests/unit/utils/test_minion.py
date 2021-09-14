@@ -1,12 +1,7 @@
-# Import python libs
-
 import logging
 
-# Import Salt Libs
 import salt.utils.minion
 from tests.support.mock import MagicMock, mock_open, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)

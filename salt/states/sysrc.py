@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 State to work with sysrc
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import 3rd-party libs
-from salt.ext import six
 
 # define the module's virtual name
 __virtualname__ = "sysrc"
@@ -51,14 +45,14 @@ def managed(name, value, **kwargs):
     # Check the current state
     current_state = __salt__["sysrc.get"](name=name, **kwargs)
     if current_state is not None:
-        for rcname, rcdict in six.iteritems(current_state):
+        for rcname, rcdict in current_state.items():
             if rcdict[name] == value:
                 ret["result"] = True
-                ret["comment"] = "{0} is already set to the desired value.".format(name)
+                ret["comment"] = "{} is already set to the desired value.".format(name)
                 return ret
 
     if __opts__["test"] is True:
-        ret["comment"] = 'The value of "{0}" will be changed!'.format(name)
+        ret["comment"] = 'The value of "{}" will be changed!'.format(name)
         ret["changes"] = {
             "old": current_state,
             "new": name + " = " + value + " will be set.",
@@ -71,7 +65,7 @@ def managed(name, value, **kwargs):
 
     new_state = __salt__["sysrc.set"](name=name, value=value, **kwargs)
 
-    ret["comment"] = 'The value of "{0}" was changed!'.format(name)
+    ret["comment"] = 'The value of "{}" was changed!'.format(name)
 
     ret["changes"] = {"old": current_state, "new": new_state}
 
@@ -98,14 +92,14 @@ def absent(name, **kwargs):
     current_state = __salt__["sysrc.get"](name=name, **kwargs)
     if current_state is None:
         ret["result"] = True
-        ret["comment"] = '"{0}" is already absent.'.format(name)
+        ret["comment"] = '"{}" is already absent.'.format(name)
         return ret
 
     if __opts__["test"] is True:
-        ret["comment"] = '"{0}" will be removed!'.format(name)
+        ret["comment"] = '"{}" will be removed!'.format(name)
         ret["changes"] = {
             "old": current_state,
-            "new": '"{0}" will be removed.'.format(name),
+            "new": '"{}" will be removed.'.format(name),
         }
 
         # When test=true return none
@@ -115,7 +109,7 @@ def absent(name, **kwargs):
 
     new_state = __salt__["sysrc.remove"](name=name, **kwargs)
 
-    ret["comment"] = '"{0}" was removed!'.format(name)
+    ret["comment"] = '"{}" was removed!'.format(name)
 
     ret["changes"] = {"old": current_state, "new": new_state}
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Query and modify an LDAP database (alternative interface)
 =========================================================
@@ -11,13 +10,10 @@ This is an alternative to the ``ldap`` interface provided by the
 :depends: - ``ldap`` Python module
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-import sys
 
 import salt.utils.data
-from salt.ext import six
 
 available_backends = set()
 try:
@@ -50,17 +46,13 @@ class LDAPError(Exception):
     """
 
     def __init__(self, message, cause=None):
-        super(LDAPError, self).__init__(message)
+        super().__init__(message)
         self.cause = cause
 
 
 def _convert_exception(e):
     """Convert an ldap backend exception to an LDAPError and raise it."""
-    args = ("exception in ldap backend: {0}".format(repr(e)), e)
-    if six.PY2:
-        six.reraise(LDAPError, args, sys.exc_info()[2])
-    else:
-        six.raise_from(LDAPError(*args), e)
+    raise LDAPError("exception in ldap backend: {!r}".format(e), e) from e
 
 
 def _bind(l, bind=None):
@@ -98,10 +90,10 @@ def _format_unicode_password(pwd):
     :returns:
         A unicode string
     """
-    return '"{0}"'.format(pwd).encode("utf-16-le")
+    return '"{}"'.format(pwd).encode("utf-16-le")
 
 
-class _connect_ctx(object):
+class _connect_ctx:
     def __init__(self, c):
         self.c = c
 
@@ -254,7 +246,7 @@ def connect(connect_spec=None):
         This object should be used as a context manager.  It is safe
         to nest ``with`` statements.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -274,7 +266,7 @@ def connect(connect_spec=None):
     if backend_name not in available_backends:
         raise ValueError(
             "unsupported backend or required Python module"
-            + " unavailable: {0}".format(backend_name)
+            + " unavailable: {}".format(backend_name)
         )
     url = connect_spec.get("url", "ldapi:///")
     try:
@@ -286,7 +278,7 @@ def connect(connect_spec=None):
         if tls is None:
             tls = {}
         vars = {}
-        for k, v in six.iteritems(tls):
+        for k, v in tls.items():
             if k in ("starttls", "newctx"):
                 vars[k] = True
             elif k in ("crlcheck", "require_cert"):
@@ -306,7 +298,7 @@ def connect(connect_spec=None):
         opts = connect_spec.get("opts", None)
         if opts is None:
             opts = {}
-        for k, v in six.iteritems(opts):
+        for k, v in opts.items():
             opt = getattr(ldap, "OPT_" + k.upper())
             l.set_option(opt, v)
 
@@ -361,7 +353,7 @@ def search(
         dict that maps each of the matching attribute names to a list
         of its values.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -402,7 +394,7 @@ def add(connect_spec, dn, attributes):
     :returns:
         ``True`` if successful, raises an exception otherwise.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -418,12 +410,9 @@ def add(connect_spec, dn, attributes):
     # convert the "iterable of values" to lists in case that's what
     # addModlist() expects (also to ensure that the caller's objects
     # are not modified)
-    attributes = dict(
-        (
-            (attr, salt.utils.data.encode(list(vals)))
-            for attr, vals in six.iteritems(attributes)
-        )
-    )
+    attributes = {
+        attr: salt.utils.data.encode(list(vals)) for attr, vals in attributes.items()
+    }
     log.info("adding entry: dn: %s attributes: %s", repr(dn), repr(attributes))
 
     if "unicodePwd" in attributes:
@@ -452,7 +441,7 @@ def delete(connect_spec, dn):
     :returns:
         ``True`` if successful, raises an exception otherwise.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -507,7 +496,7 @@ def modify(connect_spec, dn, directives):
     :returns:
         ``True`` if successful, raises an exception otherwise.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -578,7 +567,7 @@ def change(connect_spec, dn, before, after):
     :returns:
         ``True`` if successful, raises an exception otherwise.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -595,18 +584,8 @@ def change(connect_spec, dn, before, after):
     # convert the "iterable of values" to lists in case that's what
     # modifyModlist() expects (also to ensure that the caller's dicts
     # are not modified)
-    before = dict(
-        (
-            (attr, salt.utils.data.encode(list(vals)))
-            for attr, vals in six.iteritems(before)
-        )
-    )
-    after = dict(
-        (
-            (attr, salt.utils.data.encode(list(vals)))
-            for attr, vals in six.iteritems(after)
-        )
-    )
+    before = {attr: salt.utils.data.encode(list(vals)) for attr, vals in before.items()}
+    after = {attr: salt.utils.data.encode(list(vals)) for attr, vals in after.items()}
 
     if "unicodePwd" in after:
         after["unicodePwd"] = [_format_unicode_password(x) for x in after["unicodePwd"]]

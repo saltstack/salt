@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for Firing Events via PagerDuty
 
@@ -16,15 +15,10 @@ Module for Firing Events via PagerDuty
             pagerduty.api_key: F3Rbyjbve43rfFWf2214
             pagerduty.subdomain: mysubdomain
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.utils.functools
 import salt.utils.json
 import salt.utils.pagerduty
-
-# Import 3rd-party libs
-from salt.ext import six
 
 
 def __virtual__():
@@ -40,6 +34,8 @@ def list_services(profile=None, api_key=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion pagerduty.list_services my-pagerduty-account
     """
     return salt.utils.pagerduty.list_items(
@@ -52,6 +48,8 @@ def list_incidents(profile=None, api_key=None):
     List incidents belonging to this account
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion pagerduty.list_incidents my-pagerduty-account
     """
@@ -66,6 +64,8 @@ def list_users(profile=None, api_key=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion pagerduty.list_users my-pagerduty-account
     """
     return salt.utils.pagerduty.list_items(
@@ -79,6 +79,8 @@ def list_schedules(profile=None, api_key=None):
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt myminion pagerduty.list_schedules my-pagerduty-account
     """
     return salt.utils.pagerduty.list_items(
@@ -91,6 +93,8 @@ def list_windows(profile=None, api_key=None):
     List maintenance windows belonging to this account
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion pagerduty.list_windows my-pagerduty-account
         salt myminion pagerduty.list_maintenance_windows my-pagerduty-account
@@ -115,6 +119,8 @@ def list_policies(profile=None, api_key=None):
     List escalation policies belonging to this account
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt myminion pagerduty.list_policies my-pagerduty-account
         salt myminion pagerduty.list_escalation_policies my-pagerduty-account
@@ -164,9 +170,9 @@ def create_event(
     """
     trigger_url = "https://events.pagerduty.com/generic/2010-04-15/create_event.json"
 
-    if isinstance(details, six.string_types):
+    if isinstance(details, str):
         details = salt.utils.yaml.safe_load(details)
-        if isinstance(details, six.string_types):
+        if isinstance(details, str):
             details = {"details": details}
 
     ret = salt.utils.json.loads(

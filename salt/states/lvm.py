@@ -21,10 +21,8 @@ A state module to manage LVMs
         - stripesize: 8K
 """
 
-# Import python libs
 import os
 
-# Import salt libs
 import salt.utils.path
 
 
@@ -39,13 +37,20 @@ def __virtual__():
 
 def _convert_to_mb(size):
 
-    size = str(size)
-    unit = size[-1:].lower()
+    str_size = str(size).lower()
+    unit = str_size[-1:]
     if unit.isdigit():
         unit = "m"
+    elif unit == "b":
+        unit = str_size[-2:-1]
+        str_size = str_size[:-2]
     else:
-        size = size[:-1]
-    size = int(size)
+        str_size = str_size[:-1]
+
+    if str_size[-1:].isdigit():
+        size = int(str_size)
+    else:
+        raise salt.exceptions.ArgumentValueError("Size {} is invalid.".format(size))
 
     if unit == "s":
         target_size = size / 2048
@@ -228,7 +233,7 @@ def lv_present(
     **kwargs
 ):
     """
-    Create a new Logical Volume
+    Ensure that a Logical Volume is present, creating it if absent.
 
     name
         The name of the Logical Volume
@@ -237,10 +242,14 @@ def lv_present(
         The name of the Volume Group on which the Logical Volume resides
 
     size
-        The size of the Logical Volume
+        The size of the Logical Volume in megabytes, or use a suffix
+        such as S, M, G, T, P for 512 byte sectors, megabytes, gigabytes
+        or terabytes respectively. The suffix is case insensitive.
 
     extents
-        The number of logical extents to allocate
+        The number of logical extents allocated to the Logical Volume
+        It can be a percentage allowed by lvcreate's syntax, in this case
+        it will set the Logical Volume initial size and won't be resized.
 
     snapshot
         The name of the snapshot
@@ -252,7 +261,7 @@ def lv_present(
         Any supported options to lvcreate. See
         :mod:`linux_lvm <salt.modules.linux_lvm>` for more details.
 
-    .. versionadded:: to_complete
+    .. versionadded:: 2016.11.0
 
     thinvolume
         Logical Volume is thinly provisioned
@@ -265,7 +274,7 @@ def lv_present(
     force
         Assume yes to all prompts
 
-    .. versionadded:: to_complete
+    .. versionadded:: 3002.0
 
     resizefs
         Use fsadm to resize the logical volume filesystem if needed
@@ -277,6 +286,9 @@ def lv_present(
         ret["comment"] = "Only one of extents or size can be specified."
         ret["result"] = False
         return ret
+
+    if size:
+        size_mb = _convert_to_mb(size)
 
     _snapshot = None
 
@@ -321,16 +333,23 @@ def lv_present(
                 ret["result"] = False
     else:
         ret["comment"] = "Logical Volume {} already present".format(name)
+
         if size or extents:
             old_extents = int(lv_info["Current Logical Extents Associated"])
             old_size_mb = _convert_to_mb(lv_info["Logical Volume Size"] + "s")
             if size:
-                size_mb = _convert_to_mb(size)
                 extents = old_extents
             else:
+                # ignore percentage "extents" if the logical volume already exists
+                if "%" in str(extents):
+                    ret[
+                        "comment"
+                    ] = "Logical Volume {} already present, {} won't be resized.".format(
+                        name, extents
+                    )
+                    extents = old_extents
                 size_mb = old_size_mb
 
-            # This is here waiting a change in lvm.lvresize backend
             if force is False and (size_mb < old_size_mb or extents < old_extents):
                 ret[
                     "comment"

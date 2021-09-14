@@ -85,7 +85,7 @@ def _install_signal_handlers(client):
 
     if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
         # No custom signal handling was added, install our own
-        signal.signal(signal.SIGINT, functools.partial(_handle_signals, client))
+        signal.signal(signal.SIGTERM, functools.partial(_handle_signals, client))
 
 
 def salt_master():
@@ -301,7 +301,12 @@ def proxy_minion_process(queue):
         proxyminion = salt.cli.daemons.ProxyMinion()
         proxyminion.start()
         # pylint: disable=broad-except
-    except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit,) as exc:
+    except (
+        Exception,
+        SaltClientError,
+        SaltReqTimeoutError,
+        SaltSystemExit,
+    ) as exc:
         # pylint: enable=broad-except
         log.error("Proxy Minion failed to start: ", exc_info=True)
         restart = True

@@ -1,19 +1,13 @@
-# -*- coding: utf-8 -*-
 """
     tests.unit.returners.cassandra_cql_test
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import ssl
 
-# Import salt libs
 import salt.modules.cassandra_cql as cassandra_cql
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -28,7 +22,8 @@ except ImportError:
 
 @skipIf(
     not HAS_CASSANDRA,
-    "Please install the cassandra datastax driver to run cassandra_cql module unit tests.",
+    "Please install the cassandra datastax driver to run cassandra_cql module unit"
+    " tests.",
 )
 class CassandraCQLReturnerTestCase(TestCase, LoaderModuleMockMixin):
     """
