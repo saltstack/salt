@@ -22,22 +22,23 @@ def __virtual__():
         return "hadoop"
     return (
         False,
-        "The hadoop execution module cannot be loaded: hadoop or hdfs binary not in path.",
+        "The hadoop execution module cannot be loaded: hadoop or hdfs binary not in"
+        " path.",
     )
 
 
 def _hadoop_cmd(module, command, *args):
     """
-       Hadoop/hdfs command wrapper
+    Hadoop/hdfs command wrapper
 
-       As Hadoop command has been deprecated this module will default
-       to use hdfs command and fall back to hadoop if it is not found
+    As Hadoop command has been deprecated this module will default
+    to use hdfs command and fall back to hadoop if it is not found
 
-       In order to prevent random execution the module name is checked
+    In order to prevent random execution the module name is checked
 
-       Follows hadoop command template:
-          hadoop module -command args
-       E.g.: hadoop dfs -ls /
+    Follows hadoop command template:
+       hadoop module -command args
+    E.g.: hadoop dfs -ls /
     """
     tool = "hadoop"
     if salt.utils.path.which("hdfs"):
@@ -111,7 +112,10 @@ def dfsadmin_report(arg=None):
         if arg in ["live", "dead", "decommissioning"]:
             return _hadoop_cmd("dfsadmin", "report", arg)
         else:
-            return "Error: the arg is wrong, it must be in ['live', 'dead', 'decommissioning']"
+            return (
+                "Error: the arg is wrong, it must be in ['live', 'dead',"
+                " 'decommissioning']"
+            )
     else:
         return _hadoop_cmd("dfsadmin", "report")
 

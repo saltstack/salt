@@ -126,31 +126,35 @@ secrets:
 GPG_PILLAR_ENCRYPTED = {
     "secrets": {
         "vault": {
-            "foo": "-----BEGIN PGP MESSAGE-----\n"
-            "\n"
-            "hQEMAw2B674HRhwSAQgAhTrN8NizwUv/VunVrqa4/X8t6EUulrnhKcSeb8sZS4th\n"
-            "W1Qz3K2NjL4lkUHCQHKZVx/VoZY7zsddBIFvvoGGfj8+2wjkEDwFmFjGE4DEsS74\n"
-            "ZLRFIFJC1iB/O0AiQ+oU745skQkU6OEKxqavmKMrKo3rvJ8ZCXDC470+i2/Hqrp7\n"
-            "+KWGmaDOO422JaSKRm5D9bQZr9oX7KqnrPG9I1+UbJyQSJdsdtquPWmeIpamEVHb\n"
-            "VMDNQRjSezZ1yKC4kCWm3YQbBF76qTHzG1VlLF5qOzuGI9VkyvlMaLfMibriqY73\n"
-            "zBbPzf6Bkp2+Y9qyzuveYMmwS4sEOuZL/PetqisWe9JGAWD/O+slQ2KRu9hNww06\n"
-            "KMDPJRdyj5bRuBVE4hHkkP23KrYr7SuhW2vpe7O/MvWEJ9uDNegpMLhTWruGngJh\n"
-            "iFndxegN9w==\n"
-            "=bAuo\n"
-            "-----END PGP MESSAGE-----\n",
+            "foo": (
+                "-----BEGIN PGP MESSAGE-----\n"
+                "\n"
+                "hQEMAw2B674HRhwSAQgAhTrN8NizwUv/VunVrqa4/X8t6EUulrnhKcSeb8sZS4th\n"
+                "W1Qz3K2NjL4lkUHCQHKZVx/VoZY7zsddBIFvvoGGfj8+2wjkEDwFmFjGE4DEsS74\n"
+                "ZLRFIFJC1iB/O0AiQ+oU745skQkU6OEKxqavmKMrKo3rvJ8ZCXDC470+i2/Hqrp7\n"
+                "+KWGmaDOO422JaSKRm5D9bQZr9oX7KqnrPG9I1+UbJyQSJdsdtquPWmeIpamEVHb\n"
+                "VMDNQRjSezZ1yKC4kCWm3YQbBF76qTHzG1VlLF5qOzuGI9VkyvlMaLfMibriqY73\n"
+                "zBbPzf6Bkp2+Y9qyzuveYMmwS4sEOuZL/PetqisWe9JGAWD/O+slQ2KRu9hNww06\n"
+                "KMDPJRdyj5bRuBVE4hHkkP23KrYr7SuhW2vpe7O/MvWEJ9uDNegpMLhTWruGngJh\n"
+                "iFndxegN9w==\n"
+                "=bAuo\n"
+                "-----END PGP MESSAGE-----\n"
+            ),
             "bar": "this was unencrypted already",
-            "baz": "-----BEGIN PGP MESSAGE-----\n"
-            "\n"
-            "hQEMAw2B674HRhwSAQf+Ne+IfsP2IcPDrUWct8sTJrga47jQvlPCmO+7zJjOVcqz\n"
-            "gLjUKvMajrbI/jorBWxyAbF+5E7WdG9WHHVnuoywsyTB9rbmzuPqYCJCe+ZVyqWf\n"
-            "9qgJ+oUjcvYIFmH3h7H68ldqbxaAUkAOQbTRHdr253wwaTIC91ZeX0SCj64HfTg7\n"
-            "Izwk383CRWonEktXJpientApQFSUWNeLUWagEr/YPNFA3vzpPF5/Ia9X8/z/6oO2\n"
-            "q+D5W5mVsns3i2HHbg2A8Y+pm4TWnH6mTSh/gdxPqssi9qIrzGQ6H1tEoFFOEq1V\n"
-            "kJBe0izlfudqMq62XswzuRB4CYT5Iqw1c97T+1RqENJCASG0Wz8AGhinTdlU5iQl\n"
-            "JkLKqBxcBz4L70LYWyHhYwYROJWjHgKAywX5T67ftq0wi8APuZl9olnOkwSK+wrY\n"
-            "1OZi\n"
-            "=7epf\n"
-            "-----END PGP MESSAGE-----\n",
+            "baz": (
+                "-----BEGIN PGP MESSAGE-----\n"
+                "\n"
+                "hQEMAw2B674HRhwSAQf+Ne+IfsP2IcPDrUWct8sTJrga47jQvlPCmO+7zJjOVcqz\n"
+                "gLjUKvMajrbI/jorBWxyAbF+5E7WdG9WHHVnuoywsyTB9rbmzuPqYCJCe+ZVyqWf\n"
+                "9qgJ+oUjcvYIFmH3h7H68ldqbxaAUkAOQbTRHdr253wwaTIC91ZeX0SCj64HfTg7\n"
+                "Izwk383CRWonEktXJpientApQFSUWNeLUWagEr/YPNFA3vzpPF5/Ia9X8/z/6oO2\n"
+                "q+D5W5mVsns3i2HHbg2A8Y+pm4TWnH6mTSh/gdxPqssi9qIrzGQ6H1tEoFFOEq1V\n"
+                "kJBe0izlfudqMq62XswzuRB4CYT5Iqw1c97T+1RqENJCASG0Wz8AGhinTdlU5iQl\n"
+                "JkLKqBxcBz4L70LYWyHhYwYROJWjHgKAywX5T67ftq0wi8APuZl9olnOkwSK+wrY\n"
+                "1OZi\n"
+                "=7epf\n"
+                "-----END PGP MESSAGE-----\n"
+            ),
             "qux": [
                 "foo",
                 "bar",
@@ -348,7 +352,8 @@ def test_decrypt_pillar_missing_renderer(salt_master, grains):
     ret = pillar_obj.compile_pillar()
     expected = copy.deepcopy(GPG_PILLAR_ENCRYPTED)
     expected["_errors"] = [
-        "Failed to decrypt pillar key 'secrets:vault': Decryption renderer 'asdf' is not available"
+        "Failed to decrypt pillar key 'secrets:vault': Decryption renderer 'asdf' is"
+        " not available"
     ]
     assert ret["_errors"] == expected["_errors"]
     assert ret["secrets"]["vault"]["foo"] == expected["secrets"]["vault"]["foo"]
@@ -378,8 +383,8 @@ def test_decrypt_pillar_invalid_renderer(salt_master, grains):
     ret = pillar_obj.compile_pillar()
     expected = copy.deepcopy(GPG_PILLAR_ENCRYPTED)
     expected["_errors"] = [
-        "Failed to decrypt pillar key 'secrets:vault': 'gpg' is not a valid decryption renderer. "
-        "Valid choices are: foo, bar"
+        "Failed to decrypt pillar key 'secrets:vault': 'gpg' is not a valid decryption"
+        " renderer. Valid choices are: foo, bar"
     ]
     assert ret["_errors"] == expected["_errors"]
     assert ret["secrets"]["vault"]["foo"] == expected["secrets"]["vault"]["foo"]

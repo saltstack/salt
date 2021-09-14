@@ -93,8 +93,8 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertIsInstance(
                     ret,
                     dict,
-                    "The 'pkg.get_repo' command did not return the excepted dictionary. "
-                    "Output:\n{}".format(ret),
+                    "The 'pkg.get_repo' command did not return the excepted dictionary."
+                    " Output:\n{}".format(ret),
                 )
                 self.assertEqual(
                     ret["uri"],
@@ -108,10 +108,12 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 name = "SaltStack repo for RHEL/CentOS {}".format(
                     grains["osmajorrelease"]
                 )
-                baseurl = "http://repo.saltstack.com/yum/redhat/{}/x86_64/latest/".format(
-                    grains["osmajorrelease"]
+                baseurl = (
+                    "http://repo.saltproject.io/py3/redhat/{}/x86_64/latest/".format(
+                        grains["osmajorrelease"]
+                    )
                 )
-                gpgkey = "https://repo.saltstack.com/yum/rhel{}/SALTSTACK-GPG-KEY.pub".format(
+                gpgkey = "https://repo.saltproject.io/py3/redhat/{}/x86_64/latest/SALTSTACK-GPG-KEY.pub".format(
                     grains["osmajorrelease"]
                 )
                 gpgcheck = 1
@@ -414,7 +416,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             if not isinstance(ret, dict):
                 if ret.startswith("ERROR"):
                     self.skipTest(
-                        "Could not install older {} to complete " "test.".format(target)
+                        "Could not install older {} to complete test.".format(target)
                     )
 
             # Run a system upgrade, which should catch the fact that the
@@ -442,7 +444,8 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     @pytest.mark.destructive_test
     @skipIf(
         salt.utils.platform.is_darwin(),
-        "The jenkins user is equivalent to root on mac, causing the test to be unrunnable",
+        "The jenkins user is equivalent to root on mac, causing the test to be"
+        " unrunnable",
     )
     @pytest.mark.requires_salt_modules("pkg.remove", "pkg.latest_version")
     @requires_system_grains

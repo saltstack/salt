@@ -81,7 +81,8 @@ def __virtual__():
         return "solr"
     return (
         False,
-        "The solr execution module failed to load: requires both the solr and apache-solr binaries in the path.",
+        "The solr execution module failed to load: requires both the solr and"
+        " apache-solr binaries in the path.",
     )
 
 

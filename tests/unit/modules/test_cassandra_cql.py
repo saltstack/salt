@@ -22,7 +22,8 @@ except ImportError:
 
 @skipIf(
     not HAS_CASSANDRA,
-    "Please install the cassandra datastax driver to run cassandra_cql module unit tests.",
+    "Please install the cassandra datastax driver to run cassandra_cql module unit"
+    " tests.",
 )
 class CassandraCQLReturnerTestCase(TestCase, LoaderModuleMockMixin):
     """

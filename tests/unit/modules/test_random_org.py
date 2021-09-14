@@ -79,7 +79,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
 
         ret4 = {
             "message": (
-                "Minimum argument must be between -1,000,000,000" " and 1,000,000,000"
+                "Minimum argument must be between -1,000,000,000 and 1,000,000,000"
             ),
             "res": False,
         }
@@ -92,7 +92,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
 
         ret5 = {
             "message": (
-                "Maximum argument must be between -1,000,000,000" " and 1,000,000,000"
+                "Maximum argument must be between -1,000,000,000 and 1,000,000,000"
             ),
             "res": False,
         }
@@ -209,7 +209,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         ret3 = {
-            "message": ("Number of decimal fractions must be" " between 1 and 10000"),
+            "message": "Number of decimal fractions must be between 1 and 10000",
             "res": False,
         }
         self.assertDictEqual(
@@ -267,7 +267,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         ret3 = {
-            "message": ("Number of decimal fractions must be" " between 1 and 10000"),
+            "message": "Number of decimal fractions must be between 1 and 10000",
             "res": False,
         }
         self.assertDictEqual(
@@ -283,9 +283,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         ret4 = {
-            "message": (
-                "The distribution's mean must be between" " -1000000 and 1000000"
-            ),
+            "message": "The distribution's mean must be between -1000000 and 1000000",
             "res": False,
         }
         self.assertDictEqual(
@@ -320,7 +318,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
         )
 
         ret6 = {
-            "message": ("The number of significant digits must be" " between 2 and 20"),
+            "message": "The number of significant digits must be between 2 and 20",
             "res": False,
         }
         self.assertDictEqual(

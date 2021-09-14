@@ -311,7 +311,9 @@ except (ImportError, AttributeError):
 
 
 class DefaultOrderedDict(OrderedDict):
-    "Dictionary that remembers insertion order and "
+    """
+    Dictionary that remembers insertion order
+    """
 
     def __init__(self, default_factory=None, *a, **kw):
         if default_factory is not None and not isinstance(default_factory, Callable):

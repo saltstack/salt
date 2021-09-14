@@ -20,7 +20,7 @@ from tests.unit.modules.nxos.nxos_platform import NXOSPlatform
 
 class N3KPlatform(NXOSPlatform):
 
-    """ Cisco Systems N3K Platform Unit Test Object """
+    """Cisco Systems N3K Platform Unit Test Object"""
 
     chassis = "Nexus 3172 Chassis"
 

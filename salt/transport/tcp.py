@@ -12,7 +12,7 @@ import socket
 import threading
 import time
 import traceback
-import urllib.parse as urlparse
+import urllib.parse
 import weakref
 
 import salt.crypt
@@ -149,26 +149,6 @@ if USE_LOAD_BALANCER:
             self.socket_queue = socket_queue
             self._socket = None
 
-        # __setstate__ and __getstate__ are only used on Windows.
-        # We do this so that __init__ will be invoked on Windows in the child
-        # process so that a register_after_fork() equivalent will work on
-        # Windows.
-        def __setstate__(self, state):
-            self.__init__(
-                state["opts"],
-                state["socket_queue"],
-                log_queue=state["log_queue"],
-                log_queue_level=state["log_queue_level"],
-            )
-
-        def __getstate__(self):
-            return {
-                "opts": self.opts,
-                "socket_queue": self.socket_queue,
-                "log_queue": self.log_queue,
-                "log_queue_level": self.log_queue_level,
-            }
-
         def close(self):
             if self._socket is not None:
                 self._socket.shutdown(socket.SHUT_RDWR)
@@ -304,13 +284,17 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
 
         resolver = kwargs.get("resolver")
 
-        parse = urlparse.urlparse(self.opts["master_uri"])
+        parse = urllib.parse.urlparse(self.opts["master_uri"])
         master_host, master_port = parse.netloc.rsplit(":", 1)
         self.master_addr = (master_host, int(master_port))
         self._closing = False
         self.message_client = SaltMessageClientPool(
             self.opts,
-            args=(self.opts, master_host, int(master_port),),
+            args=(
+                self.opts,
+                master_host,
+                int(master_port),
+            ),
             kwargs={
                 "io_loop": self.io_loop,
                 "resolver": resolver,
@@ -429,7 +413,9 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     @salt.ext.tornado.gen.coroutine
     def _uncrypted_transfer(self, load, tries=3, timeout=60):
         ret = yield self.message_client.send(
-            self._package_load(load), timeout=timeout, tries=tries,
+            self._package_load(load),
+            timeout=timeout,
+            tries=tries,
         )
 
         raise salt.ext.tornado.gen.Return(ret)
@@ -563,13 +549,16 @@ class AsyncTCPPubChannel(
                 "tag": tag,
             }
             req_channel = salt.utils.asynchronous.SyncWrapper(
-                AsyncTCPReqChannel, (self.opts,), loop_kwarg="io_loop",
+                AsyncTCPReqChannel,
+                (self.opts,),
+                loop_kwarg="io_loop",
             )
             try:
                 req_channel.send(load, timeout=60)
             except salt.exceptions.SaltReqTimeoutError:
                 log.info(
-                    "fire_master failed: master could not be contacted. Request timed out."
+                    "fire_master failed: master could not be contacted. Request timed"
+                    " out."
                 )
             except Exception:  # pylint: disable=broad-except
                 log.info("fire_master failed: %s", traceback.format_exc())
@@ -833,7 +822,11 @@ class TCPReqServerChannel(
             elif req_fun == "send_private":
                 stream.write(
                     salt.transport.frame.frame_msg(
-                        self._encrypt_private(ret, req_opts["key"], req_opts["tgt"],),
+                        self._encrypt_private(
+                            ret,
+                            req_opts["key"],
+                            req_opts["tgt"],
+                        ),
                         header=header,
                     )
                 )
@@ -1210,7 +1203,8 @@ class SaltMessageClient:
                         }
                     else:
                         log.warning(
-                            "If you need a certain source IP/port, consider upgrading Tornado >= 4.5"
+                            "If you need a certain source IP/port, consider upgrading"
+                            " Tornado >= 4.5"
                         )
                 with salt.utils.asynchronous.current_ioloop(self.io_loop):
                     self._stream = yield self._tcp_client.connect(
@@ -1220,7 +1214,8 @@ class SaltMessageClient:
                 break
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
-                    "TCP Message Client encountered an exception while connecting to %s:%s: %r, will reconnect in %d seconds",
+                    "TCP Message Client encountered an exception while connecting to"
+                    " %s:%s: %r, will reconnect in %d seconds",
                     self.host,
                     self.port,
                     exc,
@@ -1261,7 +1256,8 @@ class SaltMessageClient:
                                 self.io_loop.spawn_callback(self._on_recv, header, body)
                             else:
                                 log.error(
-                                    "Got response for message_id %s that we are not tracking",
+                                    "Got response for message_id %s that we are not"
+                                    " tracking",
                                     message_id,
                                 )
                 except salt.ext.tornado.iostream.StreamClosedError as e:
@@ -1385,7 +1381,10 @@ class SaltMessageClient:
                         future.tries,
                     )
                     self.send(
-                        msg, timeout=future.timeout, tries=future.tries, future=future,
+                        msg,
+                        timeout=future.timeout,
+                        tries=future.tries,
+                        future=future,
                     )
 
                 else:
@@ -1699,7 +1698,9 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
             pull_uri = os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
 
         pull_sock = salt.transport.ipc.IPCMessageServer(
-            pull_uri, io_loop=self.io_loop, payload_handler=pub_server.publish_payload,
+            pull_uri,
+            io_loop=self.io_loop,
+            payload_handler=pub_server.publish_payload,
         )
 
         # Securely create socket
@@ -1745,7 +1746,9 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         # TODO: switch to the actual asynchronous interface
         # pub_sock = salt.transport.ipc.IPCMessageClient(self.opts, io_loop=self.io_loop)
         pub_sock = salt.utils.asynchronous.SyncWrapper(
-            salt.transport.ipc.IPCMessageClient, (pull_uri,), loop_kwarg="io_loop",
+            salt.transport.ipc.IPCMessageClient,
+            (pull_uri,),
+            loop_kwarg="io_loop",
         )
         pub_sock.connect()
 

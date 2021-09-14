@@ -1,3 +1,4 @@
+import imp
 import logging
 import sys
 import types
@@ -11,24 +12,13 @@ if sys.version_info >= (3, 10):
 
     USE_IMPORTLIB_METADATA_STDLIB = True
 else:
-    if sys.version_info >= (3, 6):
-        # importlib_metadata available for python version lower than 3.6 do not
-        # include the functionality we need.
-        try:
-            import importlib_metadata
+    try:
+        from salt._compat import importlib_metadata
 
-            importlib_metadata_version = [
-                int(part)
-                for part in importlib_metadata.version("importlib_metadata").split(".")
-                if part.isdigit()
-            ]
-            if tuple(importlib_metadata_version) >= (3, 3, 0):
-                # Version 3.3.0 of importlib_metadata includes a fix which allows us to
-                # get the distribution of a loaded entry-point
-                USE_IMPORTLIB_METADATA = True
-        except ImportError:
-            # We don't have importlib_metadata but USE_IMPORTLIB_METADATA is set to false by default
-            pass
+        USE_IMPORTLIB_METADATA = True
+    except ImportError:
+        # We don't have importlib_metadata but USE_IMPORTLIB_METADATA is set to false by default
+        pass
 
 if not USE_IMPORTLIB_METADATA_STDLIB and not USE_IMPORTLIB_METADATA:
     # Try to use pkg_resources
@@ -53,6 +43,32 @@ def iter_entry_points(group, name=None):
         log.debug("Using importlib_metadata to load entry points")
         entry_points = importlib_metadata.entry_points()
     elif USE_PKG_RESOURCES:
+        # We have to reload pkg_resources because it caches information and extensions installed while
+        # salt is running are not discovered until a python process restart, or, us reloading pkg_resources
+        if "pkg_resources" in sys.modules:
+            # This is really weird, but it's because of the following traceback seen during CI testing
+            #  Traceback (most recent call last):
+            #    File "/tmp/kitchen/testing/salt/utils/parsers.py", line 210, in parse_args
+            #      mixin_after_parsed_func(self)
+            #    File "/tmp/kitchen/testing/salt/utils/parsers.py", line 880, in __setup_extended_logging
+            #      log.setup_extended_logging(self.config)
+            #    File "/tmp/kitchen/testing/salt/log/setup.py", line 414, in setup_extended_logging
+            #      providers = salt.loader.log_handlers(opts)
+            #    File "/tmp/kitchen/testing/salt/loader.py", line 674, in log_handlers
+            #      base_path=os.path.join(SALT_BASE_PATH, "log"),
+            #    File "/tmp/kitchen/testing/salt/loader.py", line 145, in _module_dirs
+            #      for entry_point in entrypoints.iter_entry_points("salt.loader"):
+            #    File "/tmp/kitchen/testing/salt/utils/entrypoints.py", line 59, in iter_entry_points
+            #      imp.reload(pkg_resources)
+            #    File "/usr/lib/python3.7/imp.py", line 314, in reload
+            #      return importlib.reload(module)
+            #    File "/usr/lib/python3.7/importlib/__init__.py", line 148, in reload
+            #      raise ImportError(msg.format(name), name=name)
+            #  ImportError: module pkg_resources not in sys.modules
+
+            # Lets re-inject it into sys.modules since we have a reference to the module
+            sys.modules["pkg_resources"] = pkg_resources
+        imp.reload(pkg_resources)
         log.debug("Using pkg_resources to load entry points")
         entry_points_listing = list(pkg_resources.iter_entry_points(group, name=name))
     else:
@@ -73,7 +89,8 @@ def iter_entry_points(group, name=None):
 def name_and_version_from_entry_point(entry_point):
     if USE_IMPORTLIB_METADATA_STDLIB or USE_IMPORTLIB_METADATA:
         return types.SimpleNamespace(
-            name=entry_point.dist.metadata["name"], version=entry_point.dist.version,
+            name=entry_point.dist.metadata["name"],
+            version=entry_point.dist.version,
         )
     elif USE_PKG_RESOURCES:
         return types.SimpleNamespace(

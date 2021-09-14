@@ -56,7 +56,7 @@ class WinFunctionsTestCase(TestCase):
     @skipIf(not salt.utils.platform.is_windows(), "WinDLL only available on Windows")
     def test_broadcast_setting_change(self):
         """
-            Test to rehash the Environment variables
+        Test to rehash the Environment variables
         """
         self.assertTrue(win_functions.broadcast_setting_change())
 

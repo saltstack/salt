@@ -22,7 +22,8 @@ class JBoss7TestCase(TestCase, LoaderModuleMockMixin):
 
         self.org_run_operation.assert_called_with(
             self.jboss_config,
-            '/subsystem=naming/binding="java:global/env":add(binding-type=simple, value="DEV")',
+            '/subsystem=naming/binding="java:global/env":add(binding-type=simple,'
+            ' value="DEV")',
         )
 
     def test_create_simple_binding_with_backslash(self):
@@ -30,7 +31,8 @@ class JBoss7TestCase(TestCase, LoaderModuleMockMixin):
 
         self.org_run_operation.assert_called_with(
             self.jboss_config,
-            r'/subsystem=naming/binding="java:global/env":add(binding-type=simple, value="DEV\\\\2")',
+            r'/subsystem=naming/binding="java:global/env":add(binding-type=simple,'
+            r' value="DEV\\\\2")',
         )
 
     def test_update_binding(self):
@@ -38,7 +40,8 @@ class JBoss7TestCase(TestCase, LoaderModuleMockMixin):
 
         self.org_run_operation.assert_called_with(
             self.jboss_config,
-            '/subsystem=naming/binding="java:global/env":write-attribute(name=value, value="INT")',
+            '/subsystem=naming/binding="java:global/env":write-attribute(name=value,'
+            ' value="INT")',
         )
 
     def test_update_binding_with_backslash(self):
@@ -46,7 +49,8 @@ class JBoss7TestCase(TestCase, LoaderModuleMockMixin):
 
         self.org_run_operation.assert_called_with(
             self.jboss_config,
-            r'/subsystem=naming/binding="java:global/env":write-attribute(name=value, value="INT\\\\2")',
+            r'/subsystem=naming/binding="java:global/env":write-attribute(name=value,'
+            r' value="INT\\\\2")',
         )
 
     def test_read_binding(self):
