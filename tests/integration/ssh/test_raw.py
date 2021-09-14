@@ -1,18 +1,15 @@
 import pytest
-import salt.utils.platform
-import timeout_decorator
 from tests.support.case import SSHCase
-from tests.support.unit import skipIf
 
 
-@skipIf(salt.utils.platform.is_windows(), "salt-ssh not available on Windows")
+@pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows")
 class SSHRawTest(SSHCase):
     """
     testing salt-ssh with raw calls
     """
 
     @pytest.mark.slow_test
-    @timeout_decorator.timeout(60, use_signals=False)
+    @pytest.mark.timeout(timeout=60, method="thread")
     def test_ssh_raw(self):
         """
         test salt-ssh with -r argument

@@ -291,6 +291,8 @@ pytest-tempdir==2019.10.12
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
+pytest-timeout==1.4.2
+    # via -r requirements/pytest.txt
 pytest==6.1.2
     # via
     #   -r requirements/pytest.txt
@@ -298,6 +300,7 @@ pytest==6.1.2
     #   pytest-salt-factories
     #   pytest-subtests
     #   pytest-tempdir
+    #   pytest-timeout
 python-dateutil==2.8.1
     # via
     #   -r requirements/static/pkg/py3.7/windows.txt
@@ -408,8 +411,6 @@ tempora==1.14.1
     #   portend
 timelib==0.2.5
     # via -r requirements/static/pkg/py3.7/windows.txt
-timeout-decorator==0.5.0
-    # via -r requirements/static/ci/common.in
 toml==0.10.2
     # via
     #   -r requirements/static/ci/common.in
