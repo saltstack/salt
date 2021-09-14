@@ -1,5 +1,6 @@
 import pytest
 import salt.utils.platform
+import timeout_decorator
 from tests.support.case import SSHCase
 from tests.support.unit import skipIf
 
@@ -11,10 +12,11 @@ class SSHRawTest(SSHCase):
     """
 
     @pytest.mark.slow_test
+    @timeout_decorator.timeout(60, use_signals=False)
     def test_ssh_raw(self):
         """
         test salt-ssh with -r argument
         """
-        msg = "running raw msg"
+        msg = "password: foo"
         ret = self.run_function("echo {}".format(msg), raw=True)
         self.assertEqual(ret["stdout"], msg + "\n")
