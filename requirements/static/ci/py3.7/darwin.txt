@@ -892,6 +892,8 @@ textfsm==1.1.0
     #   ntc-templates
 timelib==0.2.5
     # via -r requirements/static/pkg/py3.7/darwin.txt
+timeout-decorator==0.5.0
+    # via -r requirements/static/ci/common.in
 toml==0.10.2
     # via
     #   -r requirements/static/ci/common.in
