@@ -86,7 +86,13 @@ elif build_type == "next":
     search_cx = "011515552685726825874:ht0p8miksrm"  # latest
 elif build_type == "previous":
     release = previous_release
-    if release.startswith("3003"):
+    if release.startswith("3006"):
+        search_cx = "2e4374de8af93a7b1"  # 3006
+    elif release.startswith("3005"):
+        search_cx = "57b1006b37edd9e79"  # 3005
+    elif release.startswith("3004"):
+        search_cx = "23cd7068705804111"  # 3004
+    elif release.startswith("3003"):
         search_cx = "a70a1a73eef62aecd"  # 3003
     elif release.startswith("3002"):
         search_cx = "5026f4f2af0bdbe2d"  # 3002
