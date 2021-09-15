@@ -1,0 +1,2 @@
+Fixing the state aggregation system to properly handle requisities.
+Fixing pkg state to exclude packages from aggregation if the hold attribute is in the state.

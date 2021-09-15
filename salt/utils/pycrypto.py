@@ -6,6 +6,7 @@ import random
 import re
 import string
 
+import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -47,15 +48,20 @@ def secure_password(length=20, use_random=True):
         pw = ""
         while len(pw) < length:
             if HAS_RANDOM and use_random:
+                encoding = None
+                if salt.utils.platform.is_windows():
+                    encoding = "UTF-8"
                 while True:
                     try:
-                        char = salt.utils.stringutils.to_str(get_random_bytes(1))
+                        char = salt.utils.stringutils.to_str(
+                            get_random_bytes(1), encoding=encoding
+                        )
                         break
                     except UnicodeDecodeError:
                         continue
                 pw += re.sub(
-                    salt.utils.stringutils.to_str(r"[\W_]"),
-                    "",  # future lint: disable=blacklisted-function
+                    salt.utils.stringutils.to_str(r"[\W_]", encoding=encoding),
+                    "",
                     char,
                 )
             else:

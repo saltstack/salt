@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Use Consul K/V as a Pillar source with values parsed as YAML
 
@@ -135,9 +134,7 @@ This behavior can be disabled by setting ``expand_keys`` to ``false``.
       - consul: my_consul_config expand_keys=false
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import re
 
@@ -146,12 +143,13 @@ import salt.utils.yaml
 from salt.exceptions import CommandExecutionError
 from salt.utils.dictupdate import update as dict_merge
 
-# Import third party libs
 try:
     import consul
 
     if not hasattr(consul, "__version__"):
-        consul.__version__ = "0.1"  # Some packages has no version, and so this pillar crashes on access to it.
+        consul.__version__ = (  # Some packages has no version, and so this pillar crashes on access to it.
+            "0.1"
+        )
 except ImportError:
     consul = None
 
@@ -186,7 +184,7 @@ def ext_pillar(minion_id, pillar, conf):  # pylint: disable=W0613
         if minion_id not in minions:
             return {}
 
-    root_re = re.compile("(?<!_)root=(\S*)")  # pylint: disable=W1401
+    root_re = re.compile(r"(?<!_)root=(\S*)")  # pylint: disable=W1401
     match = root_re.search(temp)
     if match:
         opts["root"] = match.group(1).rstrip("/")
@@ -194,7 +192,7 @@ def ext_pillar(minion_id, pillar, conf):  # pylint: disable=W0613
     else:
         opts["root"] = ""
 
-    pillar_root_re = re.compile("pillar_root=(\S*)")  # pylint: disable=W1401
+    pillar_root_re = re.compile(r"pillar_root=(\S*)")  # pylint: disable=W1401
     match = pillar_root_re.search(temp)
     if match:
         opts["pillar_root"] = match.group(1).rstrip("/")
@@ -202,7 +200,7 @@ def ext_pillar(minion_id, pillar, conf):  # pylint: disable=W0613
     else:
         opts["pillar_root"] = ""
 
-    profile_re = re.compile("(?:profile=)?(\S+)")  # pylint: disable=W1401
+    profile_re = re.compile(r"(?:profile=)?(\S+)")  # pylint: disable=W1401
     match = profile_re.search(temp)
     if match:
         opts["profile"] = match.group(1)

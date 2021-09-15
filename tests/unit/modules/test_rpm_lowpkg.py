@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import
 
-# Import Salt Libs
 import salt.modules.rpm_lowpkg as rpm
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -217,7 +211,8 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(mock_rpmUtils.miscutils.compareEVR.called, True)
         self.assertEqual(
             mock_log.warning.mock_calls[0][1][0],
-            "Please install a package that provides rpm.labelCompare for more accurate version comparisons.",
+            "Please install a package that provides rpm.labelCompare for more accurate"
+            " version comparisons.",
         )
 
     @patch("salt.modules.rpm_lowpkg.HAS_RPM", False)
@@ -237,11 +232,13 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(mock_log.warning.called, True)
             self.assertEqual(
                 mock_log.warning.mock_calls[0][1][0],
-                "Please install a package that provides rpm.labelCompare for more accurate version comparisons.",
+                "Please install a package that provides rpm.labelCompare for more"
+                " accurate version comparisons.",
             )
             self.assertEqual(
                 mock_log.warning.mock_calls[1][1][0],
-                "Installing the rpmdevtools package may surface dev tools in production.",
+                "Installing the rpmdevtools package may surface dev tools in"
+                " production.",
             )
 
     @patch("salt.modules.rpm_lowpkg.HAS_RPM", False)
@@ -260,7 +257,8 @@ class RpmTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(mock_log.warning.called, True)
         self.assertEqual(
             mock_log.warning.mock_calls[0][1][0],
-            "Please install a package that provides rpm.labelCompare for more accurate version comparisons.",
+            "Please install a package that provides rpm.labelCompare for more accurate"
+            " version comparisons.",
         )
         self.assertEqual(
             mock_log.warning.mock_calls[1][1][0],

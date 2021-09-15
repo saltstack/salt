@@ -92,8 +92,10 @@ import time
 import salt.utils.event as event
 
 try:
-    from twisted.internet.protocol import DatagramProtocol
-    from twisted.internet import reactor, threads
+    from twisted.internet.protocol import (  # pylint: disable=no-name-in-module
+        DatagramProtocol,
+    )
+    from twisted.internet import reactor, threads  # pylint: disable=no-name-in-module
     from pyparsing import (
         Word,
         alphas,
@@ -275,19 +277,18 @@ class _SyslogServerFactory(DatagramProtocol):
             self.title = topics
             if len(topics) < 2 or topics[0] != "jnpr" or topics[1] != "syslog":
                 log.debug(
-                    'The topic specified in configuration should start with \
-                    "jnpr/syslog". Using the default topic.'
+                    "The topic specified in configuration should start with "
+                    '"jnpr/syslog". Using the default topic.'
                 )
                 self.title = ["jnpr", "syslog", "hostname", "event"]
             else:
                 for i in range(2, len(topics)):
                     if topics[i] not in data:
                         log.debug(
-                            "Please check the topic specified. \
-                              Only the following keywords can be specified \
-                               in the topic: hostip, priority, severity, \
-                                facility, timestamp, hostname, daemon, pid, \
-                                 message, event. Using the default topic."
+                            "Please check the topic specified. Only the following "
+                            "keywords can be specified in the topic: hostip, priority, "
+                            "severity, facility, timestamp, hostname, daemon, pid, "
+                            "message, event. Using the default topic."
                         )
                         self.title = ["jnpr", "syslog", "hostname", "event"]
                         break
@@ -337,8 +338,8 @@ class _SyslogServerFactory(DatagramProtocol):
                     raise Exception("Arguments in config not specified properly")
             else:
                 raise Exception(
-                    "Please check the arguments given to junos engine in the\
-                     configuration file"
+                    "Please check the arguments given to junos engine in the "
+                    "configuration file"
                 )
 
         if send_this_event:

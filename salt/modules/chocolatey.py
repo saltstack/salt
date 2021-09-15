@@ -44,8 +44,7 @@ def __virtual__():
     if __grains__["osrelease"] in ("XP", "2003Server"):
         return (
             False,
-            "Cannot load module chocolatey: Chocolatey requires "
-            "Windows Vista or later",
+            "Cannot load module chocolatey: Chocolatey requires Windows Vista or later",
         )
 
     return __virtualname__
@@ -248,7 +247,7 @@ def bootstrap(force=False, source=None):
                 log.debug("Downloading PowerShell...")
                 __salt__["cp.get_url"](path=url, dest=dest)
             except MinionError:
-                err = "Failed to download PowerShell KB for {}" "".format(
+                err = "Failed to download PowerShell KB for {}".format(
                     __grains__["osrelease"]
                 )
                 if source:
@@ -312,9 +311,9 @@ def bootstrap(force=False, source=None):
 
     # Download Chocolatey installer
     try:
-        log.debug("Downloading Chocolatey: {}".format(os.path.basename(url)))
+        log.debug("Downloading Chocolatey: %s", os.path.basename(url))
         script = __salt__["cp.get_url"](path=url, dest=dest)
-        log.debug("Script: {}".format(script))
+        log.debug("Script: %s", script)
     except MinionError:
         err = "Failed to download Chocolatey Installer"
         if source:
@@ -323,7 +322,7 @@ def bootstrap(force=False, source=None):
 
     # If this is a nupkg download we need to unzip it first
     if os.path.splitext(os.path.basename(dest))[1] == ".nupkg":
-        log.debug("Unzipping Chocolatey: {}".format(dest))
+        log.debug("Unzipping Chocolatey: %s", dest)
         __salt__["archive.unzip"](
             zip_file=dest,
             dest=os.path.join(os.path.dirname(dest), "chocolatey"),
@@ -335,11 +334,11 @@ def bootstrap(force=False, source=None):
 
     if not os.path.exists(script):
         raise CommandExecutionError(
-            "Failed to find Chocolatey installation " "script: {}".format(script)
+            "Failed to find Chocolatey installation script: {}".format(script)
         )
 
     # Run the Chocolatey bootstrap
-    log.debug("Installing Chocolatey: {}".format(script))
+    log.debug("Installing Chocolatey: %s", script)
     result = __salt__["cmd.script"](
         script, cwd=os.path.dirname(script), shell="powershell", python_shell=True
     )
@@ -375,7 +374,7 @@ def unbootstrap():
     choco_dir = os.environ.get("ChocolateyInstall", False)
     if choco_dir:
         if os.path.exists(choco_dir):
-            log.debug("Removing Chocolatey directory: {}".format(choco_dir))
+            log.debug("Removing Chocolatey directory: %s", choco_dir)
             __salt__["file.remove"](path=choco_dir, force=True)
             removed.append("Removed Directory: {}".format(choco_dir))
     else:
@@ -385,14 +384,14 @@ def unbootstrap():
         ]
         for path in known_paths:
             if os.path.exists(path):
-                log.debug("Removing Chocolatey directory: {}".format(path))
+                log.debug("Removing Chocolatey directory: %s", path)
                 __salt__["file.remove"](path=path, force=True)
                 removed.append("Removed Directory: {}".format(path))
 
     # Delete all Chocolatey environment variables
     for env_var in __salt__["environ.items"]():
         if env_var.lower().startswith("chocolatey"):
-            log.debug("Removing Chocolatey environment variable: {}" "".format(env_var))
+            log.debug("Removing Chocolatey environment variable: %s", env_var)
             __salt__["environ.setval"](
                 key=env_var, val=False, false_unsets=True, permanent="HKLM"
             )
@@ -404,7 +403,7 @@ def unbootstrap():
     # Remove Chocolatey from the path:
     for path in __salt__["win_path.get_path"]():
         if "chocolatey" in path.lower():
-            log.debug("Removing Chocolatey path item: {}" "".format(path))
+            log.debug("Removing Chocolatey path item: %s", path)
             __salt__["win_path.remove"](path=path, rehash=True)
             removed.append("Removed Path Item: {}".format(path))
 

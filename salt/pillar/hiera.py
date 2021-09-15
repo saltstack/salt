@@ -1,19 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Use hiera data as a Pillar source
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import salt libs
 import salt.utils.path
 import salt.utils.yaml
-
-# Import 3rd-party libs
-from salt.ext import six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -32,10 +25,10 @@ def ext_pillar(
     """
     Execute hiera and return the data
     """
-    cmd = "hiera -c {0}".format(conf)
-    for key, val in six.iteritems(__grains__):
-        if isinstance(val, six.string_types):
-            cmd += " {0}='{1}'".format(key, val)
+    cmd = "hiera -c {}".format(conf)
+    for key, val in __grains__.items():
+        if isinstance(val, str):
+            cmd += " {}='{}'".format(key, val)
     try:
         data = salt.utils.yaml.safe_load(__salt__["cmd.run"](cmd))
     except Exception:  # pylint: disable=broad-except

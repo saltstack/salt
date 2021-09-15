@@ -12,14 +12,13 @@ import gc
 # import sys  # Use if sys is commented out below
 import logging
 
-import salt.loader_context
+import salt.loader.context
 import salt.log
 import salt.transport.frame
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.msgpack
 import salt.utils.stringutils
 from salt.exceptions import SaltDeserializationError, SaltReqTimeoutError
-from salt.ext import six
 from salt.utils.data import CaseInsensitiveDict
 
 try:
@@ -121,7 +120,7 @@ class Serial:
                     ret = salt.utils.msgpack.loads(msg, **loads_kwargs)
             else:
                 ret = salt.utils.msgpack.loads(msg, **loads_kwargs)
-            if six.PY3 and encoding is None and not raw:
+            if encoding is None and not raw:
                 ret = salt.transport.frame.decode_embedded_strs(ret)
         except Exception as exc:  # pylint: disable=broad-except
             log.critical(
@@ -133,12 +132,9 @@ class Serial:
             )
             log.debug("Msgpack deserialization failure on message: %s", msg)
             gc.collect()
-            raise six.raise_from(
-                SaltDeserializationError(
-                    "Could not deserialize msgpack message." " See log for more info."
-                ),
-                exc,
-            )
+
+            exc_msg = "Could not deserialize msgpack message. See log for more info."
+            raise SaltDeserializationError(exc_msg) from exc
         finally:
             gc.enable()
         return ret
@@ -340,8 +336,9 @@ class SREQ:
             if tried >= tries:
                 self.clear_socket()
                 raise SaltReqTimeoutError(
-                    "SaltReqTimeoutError: after {} seconds, ran {} "
-                    "tries".format(timeout * tried, tried)
+                    "SaltReqTimeoutError: after {} seconds, ran {} tries".format(
+                        timeout * tried, tried
+                    )
                 )
         return self.serial.loads(self.socket.recv())
 
