@@ -666,8 +666,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 break
             else:
                 raise Exception("Expected state did not run")
-            # Run the state again. Now the already installed message should
-            # appear
+            # Run the state again. Now the already installed message should appear
             ret = self.run_function("state.sls", mods="issue-46127-pip-env-vars")
             self.assertSaltTrueReturn(ret)
             # We cannot use assertInSaltComment here because we need to skip
