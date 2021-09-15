@@ -488,7 +488,7 @@ def _run(
             marker = "<<<" + str(uuid.uuid4()) + ">>>"
             marker_b = marker.encode(__salt_system_encoding__)
             py_code = (
-                "import sys, os, itertools; sys.stdout.write('{0}''); "
+                "import sys, os, itertools; sys.stdout.write('{0}'); "
                 "sys.stdout.write('\\0'.join(itertools.chain(*os.environ.items()))); "
                 "sys.stdout.write('{0}');".format(marker)
             )

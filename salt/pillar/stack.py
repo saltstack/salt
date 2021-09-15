@@ -40,7 +40,7 @@ Installing the PillarStack ``ext_pillar`` is as simple as dropping the
 ``stack.py`` file in the ``<extension_modules>/pillar`` directory (no external
 python module required), given that ``extension_modules`` is set in your
 salt-master configuration, see:
-http://docs.saltstack.com/en/latest/ref/configuration/master.html#extension-modules
+https://docs.saltproject.io/en/latest/ref/configuration/master.html#extension-modules
 
 Configuration in Salt
 ---------------------
