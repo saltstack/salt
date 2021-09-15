@@ -89,8 +89,6 @@ def _get_top_file_envs():
                 raise CommandExecutionError(
                     "Unable to render top file(s): {}".format(exc)
                 )
-            finally:
-                st_.client.destroy()
         __context__["saltutil._top_file_envs"] = envs
         return envs
 
