@@ -1060,11 +1060,13 @@ def invoke(session):
     Run invoke tasks
     """
     if _upgrade_pip_setuptools_and_wheel(session):
+        _install_requirements(session, "zeromq")
         requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "invoke.txt"
         )
         install_command = ["--progress-bar=off", "-r", requirements_file]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
     cmd = ["inv"]
     files = []
 

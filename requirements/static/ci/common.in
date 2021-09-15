@@ -37,7 +37,7 @@ sqlparse
 strict_rfc3339>=0.7
 toml
 vcert~=0.7.0; sys_platform != 'win32'
-virtualenv>=20.0.2
+virtualenv>=20.3.0
 watchdog>=0.9.0
 # Available template libraries that can be used
 genshi>=0.7.3

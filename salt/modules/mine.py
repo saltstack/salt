@@ -128,7 +128,7 @@ def update(clear=False, mine_functions=None):
     :param dict mine_functions:
         Update (or clear, see ``clear``) the mine data on these functions only.
         This will need to have the structure as defined on
-        https://docs.saltstack.com/en/latest/topics/mine/index.html#mine-functions
+        https://docs.saltproject.io/en/latest/topics/mine/index.html#mine-functions
 
         This feature can be used when updating the mine for functions
         that require a refresh at different intervals than the rest of

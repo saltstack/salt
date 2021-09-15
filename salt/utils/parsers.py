@@ -132,7 +132,7 @@ class OptionParser(optparse.OptionParser):
 
     epilog = (
         'You can find additional help about %prog issuing "man %prog" '
-        "or on http://docs.saltstack.com"
+        "or on https://docs.saltproject.io"
     )
     description = None
 
@@ -1897,7 +1897,7 @@ class CloudCredentialsMixIn(metaclass=MixInMeta):
         if self.options.set_password:
             raise RuntimeError(
                 "This functionality is not supported; please see the keyring module at"
-                " http://docs.saltstack.com/en/latest/topics/sdb/"
+                " https://docs.saltproject.io/en/latest/topics/sdb/"
             )
 
 
@@ -2213,7 +2213,7 @@ class SaltCMDOptionParser(
             type=int,
             help=(
                 "Execute the salt job in batch mode if the job would have "
-                "executed on more than this many minions."
+                "executed on at least this many minions."
             ),
         )
         self.add_option(

@@ -1,7 +1,7 @@
 """
 Routines to set up a minion
 """
-
+import binascii
 import contextlib
 import copy
 import functools
@@ -10,14 +10,12 @@ import multiprocessing
 import os
 import random
 import signal
+import stat
 import sys
 import threading
 import time
 import traceback
 import types
-from binascii import crc32
-from random import randint, shuffle
-from stat import S_IMODE
 
 import salt
 import salt.beacons
@@ -102,7 +100,6 @@ try:
     HAS_WIN_FUNCTIONS = True
 except ImportError:
     HAS_WIN_FUNCTIONS = False
-# pylint: enable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -306,7 +303,7 @@ def get_proc_dir(cachedir, **kwargs):
     # if mode is not an empty dict then we have an explicit
     # dir mode. So lets check if mode needs to be changed.
     if mode:
-        mode_part = S_IMODE(d_stat.st_mode)
+        mode_part = stat.S_IMODE(d_stat.st_mode)
         if mode_part != mode["mode"]:
             os.chmod(fn_, (d_stat.st_mode ^ mode_part) | mode["mode"])
 
@@ -565,7 +562,7 @@ class MinionBase:
                         master_len = len(opts["master"])
                         if master_len > 1:
                             secondary_masters = opts["master"][1:]
-                            master_idx = crc32(opts["id"]) % master_len
+                            master_idx = binascii.crc32(opts["id"]) % master_len
                             try:
                                 preferred_masters = opts["master"]
                                 preferred_masters[0] = opts["master"][master_idx]
@@ -680,10 +677,10 @@ class MinionBase:
                 # master_failback is only used when master_type is set to failover
                 if opts["master_type"] == "failover" and opts["master_failback"]:
                     secondary_masters = opts["local_masters"][1:]
-                    shuffle(secondary_masters)
+                    random.shuffle(secondary_masters)
                     opts["local_masters"][1:] = secondary_masters
                 else:
-                    shuffle(opts["local_masters"])
+                    random.shuffle(opts["local_masters"])
 
             # This sits outside of the connection loop below because it needs to set
             # up a list of master URIs regardless of which masters are available
@@ -892,7 +889,7 @@ class MinionBase:
         msg = "Minion return retry timer set to %s seconds"
         if self.opts.get("return_retry_timer_max"):
             try:
-                random_retry = randint(
+                random_retry = random.randint(
                     self.opts["return_retry_timer"], self.opts["return_retry_timer_max"]
                 )
                 retry_msg = msg % random_retry
@@ -1755,9 +1752,7 @@ class Minion(MinionBase):
                     name="ProcessPayload",
                     args=(instance, self.opts, data, self.connected),
                 )
-                process._after_fork_methods.append(
-                    (salt.utils.crypt.reinit_crypto, [], {})
-                )
+                process.register_after_fork_method(salt.utils.crypt.reinit_crypto)
         else:
             process = threading.Thread(
                 target=self._target,
@@ -3555,7 +3550,7 @@ class SyndicManager(MinionBase):
         """
         masters = list(self._syndics.keys())
         if self.opts["syndic_failover"] == "random":
-            shuffle(masters)
+            random.shuffle(masters)
         if master_id not in self._syndics:
             master_id = masters.pop(0)
         else:
