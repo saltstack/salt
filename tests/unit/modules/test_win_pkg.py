@@ -406,7 +406,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
             )
             expected = {
                 "firebox": {
-                    "unable to cache": "Failed to cache salt://software\n"
+                    "failed to cache": "Failed to cache salt://software\n"
                     "Error: [Errno 1] failed reading salt://software"
                 }
             }
@@ -451,7 +451,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
             ret = win_pkg.remove(name="firebox")
             expected = {
                 "firebox": {
-                    "unable to cache": "Failed to cache salt://software\n"
+                    "failed to cache": "Failed to cache salt://software\n"
                     "Error: [Errno 1] failed reading salt://software"
                 }
             }
