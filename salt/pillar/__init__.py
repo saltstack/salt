@@ -2,11 +2,9 @@
 Render the pillar data
 """
 
-
 import collections
 import copy
 import fnmatch
-import inspect
 import logging
 import os
 import sys
@@ -629,8 +627,7 @@ class Pillar:
                 opts["pillar_roots"][env] = opts["pillar_roots"].pop("__env__")
             else:
                 log.debug(
-                    "pillar_roots __env__ ignored (environment '%s' found in"
-                    " pillar_roots)",
+                    "pillar_roots __env__ ignored (environment '%s' found in pillar_roots)",
                     env,
                 )
                 opts["pillar_roots"].pop("__env__")
