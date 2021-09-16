@@ -2037,10 +2037,10 @@ def ip_networks(interface=None, include_loopback=False, verbose=False):
 
     .. code-block:: bash
 
-        salt '*' network.list_networks
-        salt '*' network.list_networks interface=docker0
-        salt '*' network.list_networks interface=docker0,enp*
-        salt '*' network.list_networks interface=eth*
+        salt '*' network.ip_networks
+        salt '*' network.ip_networks interface=docker0
+        salt '*' network.ip_networks interface=docker0,enp*
+        salt '*' network.ip_networks interface=eth*
     """
     return __utils__["network.ip_networks"](
         interface=interface, include_loopback=include_loopback, verbose=verbose
@@ -2062,10 +2062,10 @@ def ip_networks6(interface=None, include_loopback=False, verbose=False):
 
     .. code-block:: bash
 
-        salt '*' network.list_networks6
-        salt '*' network.list_networks6 interface=docker0
-        salt '*' network.list_networks6 interface=docker0,enp*
-        salt '*' network.list_networks6 interface=eth*
+        salt '*' network.ip_networks6
+        salt '*' network.ip_networks6 interface=docker0
+        salt '*' network.ip_networks6 interface=docker0,enp*
+        salt '*' network.ip_networks6 interface=eth*
     """
     return __utils__["network.ip_networks6"](
         interface=interface, include_loopback=include_loopback, verbose=verbose
