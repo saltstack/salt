@@ -466,6 +466,7 @@ def install(
     cache_dir=None,
     no_binary=None,
     disable_version_check=False,
+    freeze_command=None,
     **kwargs
 ):
     """
@@ -654,6 +655,11 @@ def install(
 
             If unsupported options are passed here that are not supported in a
             minion's version of pip, a `No such option error` will be thrown.
+
+    freeze_command
+        Command used to get list of python packages.
+        In Conda environment this should be something like `/opt/conda/bin/pip3 list --export`
+        instead of default `pip freeze`
 
     Will be translated into the following pip command:
 
@@ -1167,7 +1173,7 @@ def uninstall(
                     pass
 
 
-def freeze(bin_env=None, user=None, cwd=None, use_vt=False, env_vars=None, **kwargs):
+def freeze(bin_env=None, user=None, cwd=None, use_vt=False, env_vars=None, freeze_command=None, **kwargs):
     """
     Return a list of installed packages either globally or in the specified
     virtualenv
@@ -1214,6 +1220,9 @@ def freeze(bin_env=None, user=None, cwd=None, use_vt=False, env_vars=None, **kwa
     else:
         cmd.append("--all")
 
+    if freeze_command:
+       cmd = freeze_command.split()
+
     cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt, python_shell=False)
     if kwargs:
         cmd_kwargs.update(**kwargs)
@@ -1229,7 +1238,7 @@ def freeze(bin_env=None, user=None, cwd=None, use_vt=False, env_vars=None, **kwa
     return result["stdout"].splitlines()
 
 
-def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwargs):
+def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, freeze_command=None, **kwargs):
     """
     Filter list of installed apps from ``freeze`` and check to see if
     ``prefix`` exists in the list of packages installed.
@@ -1256,7 +1265,7 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
         packages["pip"] = version(bin_env, cwd)
 
     for line in freeze(
-        bin_env=bin_env, user=user, cwd=cwd, env_vars=env_vars, **kwargs
+        bin_env=bin_env, user=user, cwd=cwd, env_vars=env_vars, freeze_command=freeze_command, **kwargs
     ):
         if line.startswith("-f") or line.startswith("#"):
             # ignore -f line as it contains --find-links directory
@@ -1282,6 +1291,9 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
         elif len(line.split("==")) >= 2:
             name = line.split("==")[0]
             version_ = line.split("==")[1]
+        elif len(line.split("=")) >= 2:
+            name = line.split("=")[0]
+            version_ = line.split("=")[1]
         else:
             logger.error("Can't parse line '%s'", line)
             continue
@@ -1417,7 +1429,7 @@ def list_upgrades(bin_env=None, user=None, cwd=None):
     return packages
 
 
-def is_installed(pkgname=None, bin_env=None, user=None, cwd=None):
+def is_installed(pkgname=None, bin_env=None, user=None, cwd=None, freeze_command=None):
     """
     .. versionadded:: 2018.3.0
 
@@ -1439,7 +1451,7 @@ def is_installed(pkgname=None, bin_env=None, user=None, cwd=None):
     """
 
     cwd = _pip_bin_env(cwd, bin_env)
-    for line in freeze(bin_env=bin_env, user=user, cwd=cwd):
+    for line in freeze(bin_env=bin_env, user=user, cwd=cwd, freeze_command=freeze_command):
         if line.startswith("-f") or line.startswith("#"):
             # ignore -f line as it contains --find-links directory
             # ignore comment lines
