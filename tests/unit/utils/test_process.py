@@ -161,6 +161,7 @@ class TestProcessManager(TestCase):
                 process_manager.stop_restarting()
                 process_manager.kill_children()
 
+    @skipIf(sys.version_info < (2, 7), "Needs > Py 2.7 due to bug in stdlib")
     @incr
     def test_counter(self):
         counter = multiprocessing.Value("i", 0)
@@ -256,7 +257,7 @@ class TestProcessCallbacks(TestCase):
     def test_callbacks(self):
         "Validate Process call after fork and finalize methods"
         teardown_to_mock = "salt.log.setup.shutdown_multiprocessing_logging"
-        log_to_mock = "salt.log.setup.setup_multiprocessing_logging"
+        log_to_mock = "salt.utils.process.Process._setup_process_logging"
         with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
             evt = multiprocessing.Event()
             proc = salt.utils.process.Process(target=self.process_target, args=(evt,))
@@ -277,7 +278,7 @@ class TestProcessCallbacks(TestCase):
                 self.evt.set()
 
         teardown_to_mock = "salt.log.setup.shutdown_multiprocessing_logging"
-        log_to_mock = "salt.log.setup.setup_multiprocessing_logging"
+        log_to_mock = "salt.utils.process.Process._setup_process_logging"
         with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
             proc = MyProcess()
             proc.run()
@@ -286,7 +287,6 @@ class TestProcessCallbacks(TestCase):
         mb.assert_called()
 
 
-@skipIf(not HAS_PSUTIL, "Missing psutil")
 class TestSignalHandlingProcess(TestCase):
     @classmethod
     def Process(cls, pid):
@@ -432,7 +432,7 @@ class TestSignalHandlingProcessCallbacks(TestCase):
         "Validate SignalHandlingProcess call after fork and finalize methods"
 
         teardown_to_mock = "salt.log.setup.shutdown_multiprocessing_logging"
-        log_to_mock = "salt.log.setup.setup_multiprocessing_logging"
+        log_to_mock = "salt.utils.process.Process._setup_process_logging"
         sig_to_mock = "salt.utils.process.SignalHandlingProcess._setup_signals"
         # Mock _setup_signals so we do not register one for this process.
         evt = multiprocessing.Event()
@@ -458,7 +458,7 @@ class TestSignalHandlingProcessCallbacks(TestCase):
                 self.evt.set()
 
         teardown_to_mock = "salt.log.setup.shutdown_multiprocessing_logging"
-        log_to_mock = "salt.log.setup.setup_multiprocessing_logging"
+        log_to_mock = "salt.utils.process.Process._setup_process_logging"
         sig_to_mock = "salt.utils.process.SignalHandlingProcess._setup_signals"
         # Mock _setup_signals so we do not register one for this process.
         with patch(sig_to_mock):
@@ -782,16 +782,17 @@ class TestGetProcessInfo(TestCase):
             self.assertIsNone(salt.utils.process.get_process_info(pid))
 
 
-@skipIf(not HAS_PSUTIL, "Missing psutil")
 class TestClaimMantleOfResponsibility(TestCase):
     def setUp(self):
         handle, self.cmor_test_file_path = tempfile.mkstemp()
         os.close(handle)
         self.addCleanup(os.unlink, self.cmor_test_file_path)
 
+    @skipIf(HAS_PSUTIL, "Has psutil")
     def test_simple_claim_no_psutil(self):
         salt.utils.process.claim_mantle_of_responsibility(self.cmor_test_file_path)
 
+    @skipIf(not HAS_PSUTIL, "Missing psutil")
     def test_simple_claim(self):
         for _ in range(5):
             self.assertTrue(
@@ -800,6 +801,7 @@ class TestClaimMantleOfResponsibility(TestCase):
                 )
             )
 
+    @skipIf(not HAS_PSUTIL, "Missing psutil")
     def test_multiple_processes(self):
         with CMORProcessHelper(self.cmor_test_file_path) as p1:
             self.assertTrue(p1.claim())
@@ -826,18 +828,19 @@ class TestClaimMantleOfResponsibility(TestCase):
         )
 
 
-@skipIf(not HAS_PSUTIL, "Missing psutil")
 class TestCheckMantleOfResponsibility(TestCase):
     def setUp(self):
         handle, self.cmor_test_file_path = tempfile.mkstemp()
         os.close(handle)
         self.addCleanup(os.unlink, self.cmor_test_file_path)
 
+    @skipIf(HAS_PSUTIL, "Has psutil")
     def test_simple_claim_no_psutil(self):
         self.assertIsNone(
             salt.utils.process.check_mantle_of_responsibility(self.cmor_test_file_path)
         )
 
+    @skipIf(not HAS_PSUTIL, "Missing psutil")
     def test_simple_claim(self):
         self.assertIsNone(
             salt.utils.process.check_mantle_of_responsibility(self.cmor_test_file_path)
@@ -849,6 +852,7 @@ class TestCheckMantleOfResponsibility(TestCase):
             salt.utils.process.check_mantle_of_responsibility(self.cmor_test_file_path),
         )
 
+    @skipIf(not HAS_PSUTIL, "Missing psutil")
     def test_multiple_processes(self):
         self.assertIsNone(
             salt.utils.process.check_mantle_of_responsibility(self.cmor_test_file_path)

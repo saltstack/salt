@@ -1,6 +1,8 @@
 """
 Functions for daemonizing and otherwise modifying running processes
 """
+
+
 import contextlib
 import copy
 import errno
@@ -27,9 +29,11 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.versions
 from salt.ext.tornado import gen
+from salt.log.mixins import NewStyleClassMixIn
 
 log = logging.getLogger(__name__)
 
+# pylint: disable=import-error
 HAS_PSUTIL = False
 try:
     import psutil
@@ -820,114 +824,36 @@ class ProcessManager:
                 )
 
 
-class Process(multiprocessing.Process):
-    """
-    Salt relies on this custom implementation of :py:class:`~multiprocessing.Process` to
-    simplify/automate some common procedures, for example, logging in the new process is
-    configured for "free" for every new process.
-    This is most important in platforms which default to ``spawn` instead of ``fork`` for
-    new processes.
-
-    This is achieved by some dunder methods in the class:
-
-    * ``__new__``:
-
-        This method ensures that any arguments and/or keyword arguments that are passed to
-        ``__init__`` are captured.
-
-        By having this information captured, we can define ``__setstate__`` and ``__getstate__``
-        to automatically take care of reconstructing the object state on spawned processes.
-
-    * ``__getstate__``:
-
-        This method should return a dictionary which will be used as the ``state`` argument to
-        :py:method:`salt.utils.process.Process.__setstate__`.
-        Usually, when subclassing, this method does not need to be implemented, however,
-        if implemented, `super()` **must** be called.
-
-    * ``__setstate__``:
-
-        This method reconstructs the object on the spawned process.
-        The ``state`` argument is constructed by the
-        :py:method:`salt.utils.process.Process.__getstate__` method.
-        Usually, when subclassing, this method does not need to be implemented, however,
-        if implemented, `super()` **must** be called.
-
-
-    An example of where ``__setstate__`` and ``__getstate__`` needed to be subclassed can be
-    seen in :py:class:`salt.master.MWorker`.
-
-    The gist of it is something like, if there are internal attributes which need to maintain
-    their state on spawned processes, then, subclasses must implement ``__getstate__`` and
-    ``__setstate__`` to ensure that.
-
-
-    For example:
-
-
-    .. code-block:: python
-
-        import salt.utils.process
-
-        class MyCustomProcess(salt.utils.process.Process):
-
-            def __init__(self, opts, **kwargs):
-                super().__init__(**kwargs)
-                self.opts = opts
-
-                # This attribute, counter, should only start at 0 on the initial(parent) process.
-                # Any child processes, need to carry the current value of the counter(instead of
-                # starting at zero).
-                self.counter = 0
-
-            def __getstate__(self):
-                state = super().__getstate__()
-                state.update(
-                    {
-                        "counter": self.counter,
-                    }
-                )
-                return state
-
-            def __setstate__(self, state):
-                super().__setstate__(state)
-                self.counter = state["counter"]
-    """
-
-    def __new__(cls, *args, **kwargs):
-        """
-        This method ensures that any arguments and/or keyword arguments that are passed to
-        ``__init__`` are captured.
-
-        By having this information captured, we can define ``__setstate__`` and ``__getstate__``
-        to automatically take care of object pickling which is required for platforms that
-        spawn processes instead of forking them.
-        """
-        # We implement __new__ because we want to capture the passed in *args and **kwargs
-        # in order to remove the need for each class to implement __getstate__ and __setstate__
-        # which is required on spawning platforms
-        instance = super().__new__(cls)
-        instance._after_fork_methods = []
-        instance._finalize_methods = []
-
-        if salt.utils.platform.spawning_platform():
-            # On spawning platforms, subclasses should call super if they define
-            # __setstate__ and/or __getstate__
-            instance._args_for_getstate = copy.copy(args)
-            instance._kwargs_for_getstate = copy.copy(kwargs)
-        return instance
-
+class Process(multiprocessing.Process, NewStyleClassMixIn):
     def __init__(self, *args, **kwargs):
         log_queue = kwargs.pop("log_queue", None)
         log_queue_level = kwargs.pop("log_queue_level", None)
         super().__init__(*args, **kwargs)
+        if salt.utils.platform.is_windows():
+            # On Windows, subclasses should call super if they define
+            # __setstate__ and/or __getstate__
+            self._args_for_getstate = copy.copy(args)
+            self._kwargs_for_getstate = copy.copy(kwargs)
         self.log_queue = log_queue
         if self.log_queue is None:
             self.log_queue = salt.log.setup.get_multiprocessing_logging_queue()
+        else:
+            # Set the logging queue so that it can be retrieved later with
+            # salt.log.setup.get_multiprocessing_logging_queue().
+            salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
 
         self.log_queue_level = log_queue_level
         if self.log_queue_level is None:
             self.log_queue_level = salt.log.setup.get_multiprocessing_logging_level()
+        else:
+            salt.log.setup.set_multiprocessing_logging_level(self.log_queue_level)
+
+        self._after_fork_methods = [
+            (Process._setup_process_logging, [self], {}),
+        ]
+        self._finalize_methods = [
+            (salt.log.setup.shutdown_multiprocessing_logging, [], {})
+        ]
 
         # Because we need to enforce our after fork and finalize routines,
         # we must wrap this class run method to allow for these extra steps
@@ -938,31 +864,16 @@ class Process(multiprocessing.Process):
         # overriding run from the subclass here
         setattr(self, "run", self.__decorate_run(self.run))
 
-    # __setstate__ and __getstate__ are only used on spawning platforms.
+    # __setstate__ and __getstate__ are only used on Windows.
     def __setstate__(self, state):
-        """
-        This method reconstructs the object on the spawned process.
-        The ``state`` argument is constructed by :py:method:`salt.utils.process.Process.__getstate__`.
-
-        Usually, when subclassing, this method does not need to be implemented, however,
-        if implemented, `super()` **must** be called.
-        """
         args = state["args"]
         kwargs = state["kwargs"]
         # This will invoke __init__ of the most derived class.
         self.__init__(*args, **kwargs)
-        for (function, args, kwargs) in state["after_fork_methods"]:
-            self.register_after_fork_method(function, *args, **kwargs)
-        for (function, args, kwargs) in state["finalize_methods"]:
-            self.register_finalize_method(function, *args, **kwargs)
+        self._after_fork_methods = self._after_fork_methods
+        self._finalize_methods = self._finalize_methods
 
     def __getstate__(self):
-        """
-        This method should return a dictionary which will be used as the ``state`` argument to
-        :py:method:`salt.utils.process.Process.__setstate__`.
-        Usually, when subclassing, this method does not need to be implemented, however,
-        if implemented, `super()` **must** be called.
-        """
         args = self._args_for_getstate
         kwargs = self._kwargs_for_getstate
         if "log_queue" not in kwargs:
@@ -972,18 +883,21 @@ class Process(multiprocessing.Process):
         return {
             "args": args,
             "kwargs": kwargs,
-            "after_fork_methods": self._after_fork_methods,
-            "finalize_methods": self._finalize_methods,
+            "_after_fork_methods": self._after_fork_methods,
+            "_finalize_methods": self._finalize_methods,
         }
+
+    def join(self, *args, **kwargs):  # pylint: disable=arguments-differ
+        super().join(*args, **kwargs)
+        self._after_fork_methods = None
+        self._finalize_methods = None
+
+    def _setup_process_logging(self):
+        salt.log.setup.setup_multiprocessing_logging(self.log_queue)
 
     def __decorate_run(self, run_func):
         @functools.wraps(run_func)
         def wrapped_run_func():
-            # Static after fork method, always needs to happen first
-            salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
-            salt.log.setup.set_multiprocessing_logging_level(self.log_queue_level)
-            salt.log.setup.setup_multiprocessing_logging(self.log_queue)
-
             for method, args, kwargs in self._after_fork_methods:
                 method(*args, **kwargs)
             try:
@@ -991,7 +905,7 @@ class Process(multiprocessing.Process):
             except SystemExit:  # pylint: disable=try-except-raise
                 # These are handled by multiprocessing.Process._bootstrap()
                 raise
-            except Exception:  # pylint: disable=broad-except
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error(
                     "An un-handled exception from the multiprocessing process "
                     "'%s' was caught:\n",
@@ -1003,30 +917,10 @@ class Process(multiprocessing.Process):
                 # it above.
                 raise
             finally:
-                try:
-                    for method, args, kwargs in self._finalize_methods:
-                        method(*args, **kwargs)
-                finally:
-                    # Static finalize method, should always run last
-                    salt.log.setup.shutdown_multiprocessing_logging()
+                for method, args, kwargs in self._finalize_methods:
+                    method(*args, **kwargs)
 
         return wrapped_run_func
-
-    def register_after_fork_method(self, function, *args, **kwargs):
-        """
-        Register a function to run after the process has forked
-        """
-        after_fork_method_tuple = (function, args, kwargs)
-        if after_fork_method_tuple not in self._after_fork_methods:
-            self._after_fork_methods.append(after_fork_method_tuple)
-
-    def register_finalize_method(self, function, *args, **kwargs):
-        """
-        Register a function to run as process terminates
-        """
-        finalize_method_tuple = (function, args, kwargs)
-        if finalize_method_tuple not in self._finalize_methods:
-            self._finalize_methods.append(finalize_method_tuple)
 
 
 class MultiprocessingProcess(Process):
@@ -1049,7 +943,9 @@ class SignalHandlingProcess(Process):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._signal_handled = multiprocessing.Event()
-        self.register_after_fork_method(SignalHandlingProcess._setup_signals, self)
+        self._after_fork_methods.append(
+            (SignalHandlingProcess._setup_signals, [self], {})
+        )
 
     def signal_handled(self):
         return self._signal_handled.is_set()
