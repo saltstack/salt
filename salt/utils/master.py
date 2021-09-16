@@ -5,6 +5,8 @@
     Utilities that can only be used on a salt master.
 
 """
+
+
 import logging
 import os
 import signal
@@ -593,6 +595,23 @@ class CacheWorker(Process):
         super().__init__(**kwargs)
         self.opts = opts
 
+    # __setstate__ and __getstate__ are only used on Windows.
+    # We do this so that __init__ will be invoked on Windows in the child
+    # process so that a register_after_fork() equivalent will work on Windows.
+    def __setstate__(self, state):
+        self.__init__(
+            state["opts"],
+            log_queue=state["log_queue"],
+            log_queue_level=state["log_queue_level"],
+        )
+
+    def __getstate__(self):
+        return {
+            "opts": self.opts,
+            "log_queue": self.log_queue,
+            "log_queue_level": self.log_queue_level,
+        }
+
     def run(self):
         """
         Gather currently connected minions and update the cache
@@ -637,6 +656,23 @@ class ConnectedCache(Process):
         self.timer = CacheTimer(self.opts, self.timer_stop)
         self.timer.start()
         self.running = True
+
+    # __setstate__ and __getstate__ are only used on Windows.
+    # We do this so that __init__ will be invoked on Windows in the child
+    # process so that a register_after_fork() equivalent will work on Windows.
+    def __setstate__(self, state):
+        self.__init__(
+            state["opts"],
+            log_queue=state["log_queue"],
+            log_queue_level=state["log_queue_level"],
+        )
+
+    def __getstate__(self):
+        return {
+            "opts": self.opts,
+            "log_queue": self.log_queue,
+            "log_queue_level": self.log_queue_level,
+        }
 
     def signal_handler(self, sig, frame):
         """
