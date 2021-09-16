@@ -1452,7 +1452,7 @@ def _get_cached_pkg(
         # Run the installer directly (not hosted on salt:, https:, etc.)
         cached_pkg = installer
     # Fix non-windows slashes
-    cached_pkg.replace("/", "\\")
+    cached_pkg = cached_pkg.replace("/", "\\")
     return cached_pkg, None
 
 

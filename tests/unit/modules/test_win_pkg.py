@@ -315,10 +315,12 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                 name="firebox",
                 version="3.03",
             )
-            expected = (
-                "Failed to cache https://repo.test.com/runme.exe\nError: [Errno 11001]"
-                " getaddrinfo failed reading https://repo.test.com/runme.exe"
-            )
+            expected = {
+                "firebox": {
+                    "unable to cache": "Failed to cache https://repo.test.com/runme.exe\nError: [Errno 11001]"
+                    " getaddrinfo failed reading https://repo.test.com/runme.exe"
+                }
+            }
 
             self.assertEqual(ret, expected)
 
@@ -359,10 +361,12 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                 name="firebox",
                 version="3.03",
             )
-            expected = (
-                "Failed to cache salt://software/runme.exe\n"
-                "Error: [Errno 1] failed reading salt://software/runme.exe"
-            )
+            expected = {
+                "firebox": {
+                    "unable to cache": "Failed to cache salt://software/runme.exe\n"
+                    "Error: [Errno 1] failed reading salt://software/runme.exe"
+                }
+            }
 
             self.assertEqual(ret, expected)
 
@@ -400,10 +404,12 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                 name="firebox",
                 version="3.03",
             )
-            expected = (
-                "Failed to cache salt://software\n"
-                "Error: [Errno 1] failed reading salt://software"
-            )
+            expected = {
+                "firebox": {
+                    "unable to cache": "Failed to cache salt://software\n"
+                    "Error: [Errno 1] failed reading salt://software"
+                }
+            }
 
             self.assertEqual(ret, expected)
 
@@ -443,10 +449,12 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
             },
         ):
             ret = win_pkg.remove(name="firebox")
-            expected = (
-                "Failed to cache salt://software\n"
-                "Error: [Errno 1] failed reading salt://software"
-            )
+            expected = {
+                "firebox": {
+                    "unable to cache": "Failed to cache salt://software\n"
+                    "Error: [Errno 1] failed reading salt://software"
+                }
+            }
 
             self.assertEqual(ret, expected)
 
@@ -487,9 +495,11 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
             },
         ):
             ret = win_pkg.remove(name="firebox")
-            expected = (
-                "Failed to cache salt://software/runme.exe\n"
-                "Error: [Errno 1] failed reading salt://software/runme.exe"
-            )
+            expected = {
+                "firebox": {
+                    "unable to cache": "Failed to cache salt://software/runme.exe\n"
+                    "Error: [Errno 1] failed reading salt://software/runme.exe"
+                }
+            }
 
             self.assertEqual(ret, expected)
