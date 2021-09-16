@@ -1886,7 +1886,7 @@ Default: ``False``
 
 Sign the master auth-replies with a cryptographic signature of the master's
 public key. Please see the tutorial how to use these settings in the
-`Multimaster-PKI with Failover Tutorial <http://docs.saltstack.com/en/latest/topics/tutorials/multimaster_pki.html>`_
+`Multimaster-PKI with Failover Tutorial <https://docs.saltproject.io/en/latest/topics/tutorials/multimaster_pki.html>`_
 
 .. code-block:: yaml
 

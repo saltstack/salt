@@ -214,6 +214,9 @@ If Exist "%BinDir%\libs\_tkinter.lib" del /Q "%BinDir%\libs\_tkinter.lib" 1>nul
 If Exist "%BinDir%\NEWS.txt"   del /Q "%BinDir%\NEWS.txt"   1>nul
 If Exist "%BinDir%\README.txt" del /Q "%BinDir%\README.txt" 1>nul
 
+:: Delete Unneeded Python Libraries
+If Exist "%BinDir%\Lib\site-packages\pythonwin" rd /S /Q "%BinDir%\Lib\site-packages\pythonwin"
+
 :: Delete Non-Windows Modules
 If Exist "%BinDir%\Lib\site-packages\salt\modules\acme.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\acme.*" 1>nul
