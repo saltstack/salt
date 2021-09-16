@@ -2350,4 +2350,3 @@ def compare_versions(ver1="", oper="==", ver2=""):
         ver2 = "0.0.0.0.0"
 
     return salt.utils.versions.compare(ver1, oper, ver2, ignore_epoch=True)
- 
