@@ -1,5 +1,7 @@
+import functools
 import logging
 import sys
+import time
 import types
 
 if sys.version_info >= (3, 10):
@@ -20,6 +22,32 @@ else:
 log = logging.getLogger(__name__)
 
 
+def timed_lru_cache(timeout_seconds, *, maxsize=256, typed=False):
+    """
+    This decorator is the same in behavior as functools.lru_cache with the
+    exception that it times out after the provided ``timeout_seconds``
+    """
+
+    def _wrapper(f):
+        # Apply @lru_cache to f
+        f = functools.lru_cache(maxsize=maxsize, typed=typed)(f)
+        f.delta = timeout_seconds
+        f.expiration = time.monotonic() + f.delta
+
+        @functools.wraps(f)
+        def _wrapped(*args, **kwargs):
+            now = time.monotonic()
+            if now >= f.expiration:
+                f.cache_clear()
+                f.expiration = now + f.delta
+            return f(*args, **kwargs)
+
+        return _wrapped
+
+    return _wrapper
+
+
+@timed_lru_cache(timeout_seconds=0.2)
 def iter_entry_points(group, name=None):
     entry_points_listing = []
     if USE_IMPORTLIB_METADATA_STDLIB:
