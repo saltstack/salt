@@ -126,39 +126,27 @@ class LoadedFunc:
       - Makes sure functions are called with the correct loader's context.
       - Provides access to a wrapped func's __global__ attribute
 
-    :param func str: The function name to wrap
-    :param LazyLoader loader: The loader instance to use in the context when the wrapped callable is called.
+    :param func callable: The callable to wrap.
+    :param dict loader: The loader to use in the context when the wrapped callable is called.
     """
 
-    def __init__(self, name, loader):
-        self.name = name
+    def __init__(self, func, loader):
+        self.func = func
         self.loader = loader
-        functools.update_wrapper(self, self.func)
-
-    @property
-    def func(self):
-        return self.loader._dict[self.name]
+        functools.update_wrapper(self, func)
 
     def __getattr__(self, name):
         return getattr(self.func, name)
 
     def __call__(self, *args, **kwargs):
-        run_func = self.func
         if self.loader.inject_globals:
-            run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
+            run_func = global_injector_decorator(self.loader.inject_globals)(self.func)
+        else:
+            run_func = self.func
         return self.loader.run(run_func, *args, **kwargs)
-
-    def __repr__(self):
-        return "<{} name={!r}>".format(self.__class__.__name__, self.name)
 
 
 class LoadedMod:
-    """
-    This class is used as a proxy to a loaded module
-    """
-
-    __slots__ = ("mod", "loader")
-
     def __init__(self, mod, loader):
         """
         Return the wrapped func's globals via this object's __globals__
@@ -171,17 +159,10 @@ class LoadedMod:
         """
         Run the wrapped function in the loader's context.
         """
-        try:
-            return self.loader["{}.{}".format(self.mod, name)]
-        except KeyError:
-            raise AttributeError(
-                "No attribute by the name of {} was found on {}".format(name, self.mod)
-            )
-
-    def __repr__(self):
-        return "<{} module='{}.{}'>".format(
-            self.__class__.__name__, self.loader.loaded_base_name, self.mod
-        )
+        attr = getattr(self.mod, name)
+        if inspect.isfunction(attr) or inspect.ismethod(attr):
+            return LoadedFunc(attr, self.loader)
+        return attr
 
 
 class LazyLoaderAttrDict(salt.utils.odict.OrderedDict):
@@ -351,8 +332,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Override the __getitem__ in order to decorate the returned function if we need
         to last-minute inject globals
         """
-        super().__getitem__(item)  # try to get the item from the dictionary
-        return LoadedFunc(item, self)
+        func = super().__getitem__(item)
+        return LoadedFunc(func, self)
 
     def __getattr__(self, mod_name):
         """
@@ -377,14 +358,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 if self._load_module(name) and mod_name in self.loaded_modules:
                     break
         if mod_name in self.loaded_modules:
-            return LoadedMod(mod_name, self)
+            return LoadedMod(self.loaded_modules[mod_name], self)
         else:
             raise AttributeError(mod_name)
-
-    def __repr__(self):
-        return "<{} module='{}.{}'>".format(
-            self.__class__.__name__, self.loaded_base_name, self.tag
-        )
 
     def missing_fun_string(self, function_name):
         """
