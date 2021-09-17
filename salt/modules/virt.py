@@ -5477,145 +5477,12 @@ def define_vol_xml_path(path, pool=None, **kwargs):
         return False
 
 
-def migrate_non_shared(vm_, target, ssh=False, **kwargs):
-    """
-    Attempt to execute non-shared storage "all" migration
-
-    :param vm_: domain name
-    :param target: target libvirt host name
-    :param ssh: True to connect over ssh
-
-        .. deprecated:: 3002
-
-    :param kwargs:
-        - live:           Use live migration. Default value is True.
-        - persistent:     Leave the domain persistent on destination host.
-                          Default value is True.
-        - undefinesource: Undefine the domain on the source host.
-                          Default value is True.
-        - offline:        If set to True it will migrate the domain definition
-                          without starting the domain on destination and without
-                          stopping it on source host. Default value is False.
-        - max_bandwidth:  The maximum bandwidth (in MiB/s) that will be used.
-        - max_downtime:   Set maximum tolerable downtime for live-migration.
-                          The value represents a number of milliseconds the guest
-                          is allowed to be down at the end of live migration.
-        - parallel_connections: Specify a number of parallel network connections
-                          to be used to send memory pages to the destination host.
-        - compressed:      Activate compression.
-        - comp_methods:    A comma-separated list of compression methods. Supported
-                           methods are "mt" and "xbzrle" and can be  used in any
-                           combination. QEMU defaults to "xbzrle".
-        - comp_mt_level:   Set compression level. Values are in range from 0 to 9,
-                           where 1 is maximum speed and 9 is  maximum compression.
-        - comp_mt_threads: Set number of compress threads on source host.
-        - comp_mt_dthreads: Set number of decompress threads on target host.
-        - comp_xbzrle_cache: Set the size of page cache for xbzrle compression in bytes.
-        - postcopy:        Enable the use of post-copy migration.
-        - postcopy_bandwidth: The maximum bandwidth allowed in post-copy phase. (MiB/s)
-        - username:       Username to connect with target host
-        - password:       Password to connect with target host
-
-        .. versionadded:: 3002
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.migrate_non_shared <vm name> <target hypervisor>
-
-    A tunnel data migration can be performed by setting this in the
-    configuration:
-
-    .. code-block:: yaml
-
-        virt:
-            tunnel: True
-
-    For more details on tunnelled data migrations, report to
-    https://libvirt.org/migration.html#transporttunnel
-    """
-    salt.utils.versions.warn_until(
-        "Silicon",
-        "The 'migrate_non_shared' feature has been deprecated. "
-        "Use 'migrate' with copy_storage='all' instead.",
-    )
-    return migrate(vm_, target, ssh, copy_storage="all", **kwargs)
-
-
-def migrate_non_shared_inc(vm_, target, ssh=False, **kwargs):
-    """
-    Attempt to execute non-shared storage "inc" migration
-
-    :param vm_: domain name
-    :param target: target libvirt host name
-    :param ssh: True to connect over ssh
-
-        .. deprecated:: 3002
-
-    :param kwargs:
-        - live:           Use live migration. Default value is True.
-        - persistent:     Leave the domain persistent on destination host.
-                          Default value is True.
-        - undefinesource: Undefine the domain on the source host.
-                          Default value is True.
-        - offline:        If set to True it will migrate the domain definition
-                          without starting the domain on destination and without
-                          stopping it on source host. Default value is False.
-        - max_bandwidth:  The maximum bandwidth (in MiB/s) that will be used.
-        - max_downtime:   Set maximum tolerable downtime for live-migration.
-                          The value represents a number of milliseconds the guest
-                          is allowed to be down at the end of live migration.
-        - parallel_connections: Specify a number of parallel network connections
-                          to be used to send memory pages to the destination host.
-        - compressed:      Activate compression.
-        - comp_methods:    A comma-separated list of compression methods. Supported
-                           methods are "mt" and "xbzrle" and can be  used in any
-                           combination. QEMU defaults to "xbzrle".
-        - comp_mt_level:   Set compression level. Values are in range from 0 to 9,
-                           where 1 is maximum speed and 9 is  maximum compression.
-        - comp_mt_threads: Set number of compress threads on source host.
-        - comp_mt_dthreads: Set number of decompress threads on target host.
-        - comp_xbzrle_cache: Set the size of page cache for xbzrle compression in bytes.
-        - postcopy:        Enable the use of post-copy migration.
-        - postcopy_bandwidth: The maximum bandwidth allowed in post-copy phase. (MiB/s)
-        - username:       Username to connect with target host
-        - password:       Password to connect with target host
-
-        .. versionadded:: 3002
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.migrate_non_shared_inc <vm name> <target hypervisor>
-
-    A tunnel data migration can be performed by setting this in the
-    configuration:
-
-    .. code-block:: yaml
-
-        virt:
-            tunnel: True
-
-    For more details on tunnelled data migrations, report to
-    https://libvirt.org/migration.html#transporttunnel
-    """
-    salt.utils.versions.warn_until(
-        "Silicon",
-        "The 'migrate_non_shared_inc' feature has been deprecated. "
-        "Use 'migrate' with copy_storage='inc' instead.",
-    )
-    return migrate(vm_, target, ssh, copy_storage="inc", **kwargs)
-
-
-def migrate(vm_, target, ssh=False, **kwargs):
+def migrate(vm_, target, **kwargs):
     """
     Shared storage migration
 
     :param vm_: domain name
     :param target: target libvirt URI or host name
-    :param ssh: True to connect over ssh
 
        .. deprecated:: 3002
 
@@ -5673,21 +5540,11 @@ def migrate(vm_, target, ssh=False, **kwargs):
     https://libvirt.org/migration.html#transporttunnel
     """
 
-    if ssh:
-        salt.utils.versions.warn_until(
-            "Silicon",
-            "The 'ssh' argument has been deprecated and "
-            "will be removed in a future release. "
-            "Use libvirt URI string 'target' instead.",
-        )
-
     conn = __get_conn()
     dom = _get_domain(conn, vm_)
 
     if not urllib.parse.urlparse(target).scheme:
         proto = "qemu"
-        if ssh:
-            proto += "+ssh"
         dst_uri = "{}://{}/system".format(proto, target)
     else:
         dst_uri = target
