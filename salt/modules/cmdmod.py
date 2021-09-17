@@ -434,7 +434,7 @@ def _run(
             cmd = " ".join(map(_cmd_quote, cmd))
 
         # Ensure directory is correct before running command
-        cmd = "cd -- {dir} && {{ {cmd}\n }}".format(dir=_cmd_quote(cwd), cmd=cmd)
+        cmd = "cd -- {dir} && {{ {cmd}; }}".format(dir=_cmd_quote(cwd), cmd=cmd)
 
         # Ensure environment is correct for a newly logged-in user by running
         # the command under the user's login shell
