@@ -47,7 +47,7 @@ def timed_lru_cache(timeout_seconds, *, maxsize=256, typed=False):
     return _wrapper
 
 
-@timed_lru_cache(timeout_seconds=0.2)
+@timed_lru_cache(timeout_seconds=0.5)
 def iter_entry_points(group, name=None):
     entry_points_listing = []
     if USE_IMPORTLIB_METADATA_STDLIB:
