@@ -1663,7 +1663,7 @@ _OS_FAMILY_MAP = {
     "AstraLinuxSE": "Debian",
     "Alinux": "RedHat",
     "Mendel": "Debian",
-    "garuda": "Arch",
+    "Garuda": "Arch",
 }
 
 # Matches any possible format:
