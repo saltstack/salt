@@ -41,7 +41,7 @@ from ._compat import (
     NullFinder,
     PyPy_repr,
     install,
-    Protocol,
+    # Protocol,
 )
 
 from configparser import ConfigParser
@@ -49,7 +49,7 @@ from contextlib import suppress
 from importlib import import_module
 from importlib.abc import MetaPathFinder
 from itertools import starmap
-from typing import Any, List, Optional, TypeVar, Union
+#from typing import Any, List, Optional, TypeVar, Union
 
 
 if sys.version_info < (3, 6):
@@ -205,20 +205,36 @@ class FileHash:
         return '<FileHash mode: {} value: {}>'.format(self.mode, self.value)
 
 
-_T = TypeVar("_T")
+# _T = TypeVar("_T")
+#
+#
+# class PackageMetadata(Protocol):
+#     def __len__(self) -> int:
+#         ...  # pragma: no cover
+#
+#     def __contains__(self, item: str) -> bool:
+#         ...  # pragma: no cover
+#
+#     def __getitem__(self, key: str) -> str:
+#         ...  # pragma: no cover
+#
+#     def get_all(self, name: str, failobj: _T = ...) -> Union[List[Any], _T]:
+#         """
+#         Return all values associated with a possibly multi-valued key.
+#         """
 
 
-class PackageMetadata(Protocol):
-    def __len__(self) -> int:
+class PackageMetadata:
+    def __len__(self):
         ...  # pragma: no cover
 
-    def __contains__(self, item: str) -> bool:
+    def __contains__(self, str):
         ...  # pragma: no cover
 
-    def __getitem__(self, key: str) -> str:
+    def __getitem__(self, str):
         ...  # pragma: no cover
 
-    def get_all(self, name: str, failobj: _T = ...) -> Union[List[Any], _T]:
+    def get_all(self, str, failobj=...):
         """
         Return all values associated with a possibly multi-valued key.
         """
@@ -310,8 +326,25 @@ class Distribution:
         )
         return PathDistribution(zipp.Path(meta.build_as_zip(builder)))
 
+#     @property
+#     def metadata(self) -> PackageMetadata:
+#         """Return the parsed metadata for this Distribution.
+#
+#         The returned object will have keys that name the various bits of
+#         metadata.  See PEP 566 for details.
+#         """
+#         text = (
+#             self.read_text('METADATA')
+#             or self.read_text('PKG-INFO')
+#             # This last clause is here to support old egg-info files.  Its
+#             # effect is to just end up using the PathDistribution's self._path
+#             # (which points to the egg-info file) attribute unchanged.
+#             or self.read_text('')
+#         )
+#         return email.message_from_string(text)
+
     @property
-    def metadata(self) -> PackageMetadata:
+    def metadata(self):
         """Return the parsed metadata for this Distribution.
 
         The returned object will have keys that name the various bits of
@@ -647,7 +680,16 @@ def distributions(**kwargs):
     return Distribution.discover(**kwargs)
 
 
-def metadata(distribution_name) -> PackageMetadata:
+# def metadata(distribution_name) -> PackageMetadata:
+#     """Get the metadata for the named package.
+#
+#     :param distribution_name: The name of the distribution package to query.
+#     :return: A PackageMetadata containing the parsed metadata.
+#     """
+#     return Distribution.from_name(distribution_name).metadata
+
+
+def metadata(distribution_name):
     """Get the metadata for the named package.
 
     :param distribution_name: The name of the distribution package to query.
