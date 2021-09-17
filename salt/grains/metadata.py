@@ -61,7 +61,10 @@ def _search(prefix="latest/"):
             # (gtmanfred) The first level should have a forward slash since
             # they have stuff underneath. This will not be doubled up though,
             # because lines ending with a slash are checked first.
-            ret[line] = _search(prefix=os.path.join(prefix, line + "/"))
+            try:
+                ret[line] = _search(prefix=os.path.join(prefix, line + "/"))
+            except UnicodeDecodeError:
+                continue
         elif line.endswith(("dynamic", "meta-data")):
             ret[line] = _search(prefix=os.path.join(prefix, line))
         elif "=" in line:
