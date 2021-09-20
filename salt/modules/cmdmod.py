@@ -434,23 +434,27 @@ def _run(
             cmd = " ".join(map(_cmd_quote, cmd))
 
         # Ensure directory is correct before running command
-        cmd = "cd -- {dir} && {{ {cmd}\n }}".format(dir=_cmd_quote(cwd), cmd=cmd)
+        cmd = "cd -- {dir} && {{ {cmd}; }}".format(dir=_cmd_quote(cwd), cmd=cmd)
 
         # Ensure environment is correct for a newly logged-in user by running
-        # the command under bash as a login shell
+        # the command under the user's login shell
         try:
+            valid_shells = shells()
             user_shell = __salt__["user.info"](runas)["shell"]
-            if re.search("bash$", user_shell):
-                cmd = "{shell} -l -c {cmd}".format(
-                    shell=user_shell, cmd=_cmd_quote(cmd)
+
+            if user_shell not in valid_shells:
+                raise CommandExecutionError(
+                    "Shell '{}' for '{}' is not valid".format(user_shell, runas)
                 )
+
+            cmd = "{shell} -l -c {cmd}".format(shell=user_shell, cmd=_cmd_quote(cmd))
         except KeyError:
             pass
 
         # Ensure the login is simulated correctly (note: su runs sh, not bash,
         # which causes the environment to be initialised incorrectly, which is
         # fixed by the previous line of code)
-        cmd = "su -l {} -c {}".format(_cmd_quote(runas), _cmd_quote(cmd))
+        cmd = "sudo -i -n -H -u {} -- {}".format(_cmd_quote(runas), cmd)
 
         # Set runas to None, because if you try to run `su -l` after changing
         # user, su will prompt for the password of the user and cause salt to
