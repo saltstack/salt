@@ -5484,8 +5484,6 @@ def migrate(vm_, target, **kwargs):
     :param vm_: domain name
     :param target: target libvirt URI or host name
 
-       .. deprecated:: 3002
-
     :param kwargs:
         - live:            Use live migration. Default value is True.
         - persistent:      Leave the domain persistent on destination host.
