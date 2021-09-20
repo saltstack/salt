@@ -126,27 +126,39 @@ class LoadedFunc:
       - Makes sure functions are called with the correct loader's context.
       - Provides access to a wrapped func's __global__ attribute
 
-    :param func callable: The callable to wrap.
-    :param dict loader: The loader to use in the context when the wrapped callable is called.
+    :param func str: The function name to wrap
+    :param LazyLoader loader: The loader instance to use in the context when the wrapped callable is called.
     """
 
-    def __init__(self, func, loader):
-        self.func = func
+    def __init__(self, name, loader):
+        self.name = name
         self.loader = loader
-        functools.update_wrapper(self, func)
+        functools.update_wrapper(self, self.func)
+
+    @property
+    def func(self):
+        return self.loader._dict[self.name]
 
     def __getattr__(self, name):
         return getattr(self.func, name)
 
     def __call__(self, *args, **kwargs):
+        run_func = self.func
         if self.loader.inject_globals:
-            run_func = global_injector_decorator(self.loader.inject_globals)(self.func)
-        else:
-            run_func = self.func
+            run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
         return self.loader.run(run_func, *args, **kwargs)
+
+    def __repr__(self):
+        return "<{} name={!r}>".format(self.__class__.__name__, self.name)
 
 
 class LoadedMod:
+    """
+    This class is used as a proxy to a loaded module
+    """
+
+    __slots__ = ("mod", "loader")
+
     def __init__(self, mod, loader):
         """
         Return the wrapped func's globals via this object's __globals__
@@ -159,10 +171,17 @@ class LoadedMod:
         """
         Run the wrapped function in the loader's context.
         """
-        attr = getattr(self.mod, name)
-        if inspect.isfunction(attr) or inspect.ismethod(attr):
-            return LoadedFunc(attr, self.loader)
-        return attr
+        try:
+            return self.loader["{}.{}".format(self.mod, name)]
+        except KeyError:
+            raise AttributeError(
+                "No attribute by the name of {} was found on {}".format(name, self.mod)
+            )
+
+    def __repr__(self):
+        return "<{} module='{}.{}'>".format(
+            self.__class__.__name__, self.loader.loaded_base_name, self.mod
+        )
 
 
 class LazyLoader(salt.utils.lazy.LazyDict):
@@ -194,7 +213,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         - singletons (per tag)
     """
 
-    mod_dict_class = salt.utils.odict.OrderedDict
+    mod_dict_class = dict
 
     def __init__(
         self,
@@ -261,7 +280,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         # names of modules that we don't have (errors, __virtual__, etc.)
         self.missing_modules = {}  # mapping of name -> error
-        self.loaded_modules = {}  # mapping of module_name -> dict_of_functions
+        self.loaded_modules = set()
         self.loaded_files = set()  # TODO: just remove them from file_mapping?
         self.static_modules = static_modules if static_modules else []
 
@@ -312,8 +331,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Override the __getitem__ in order to decorate the returned function if we need
         to last-minute inject globals
         """
-        func = super().__getitem__(item)
-        return LoadedFunc(func, self)
+        super().__getitem__(item)  # try to get the item from the dictionary
+        return LoadedFunc(item, self)
 
     def __getattr__(self, mod_name):
         """
@@ -338,9 +357,14 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 if self._load_module(name) and mod_name in self.loaded_modules:
                     break
         if mod_name in self.loaded_modules:
-            return LoadedMod(self.loaded_modules[mod_name], self)
+            return LoadedMod(mod_name, self)
         else:
             raise AttributeError(mod_name)
+
+    def __repr__(self):
+        return "<{} module='{}.{}'>".format(
+            self.__class__.__name__, self.loaded_base_name, self.tag
+        )
 
     def missing_fun_string(self, function_name):
         """
@@ -530,7 +554,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             super().clear()  # clear the lazy loader
             self.loaded_files = set()
             self.missing_modules = {}
-            self.loaded_modules = {}
+            self.loaded_modules = set()
             # if we have been loaded before, lets clear the file mapping since
             # we obviously want a re-do
             if hasattr(self, "opts"):
@@ -819,6 +843,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         # pack whatever other globals we were asked to
         for p_name, p_value in self.pack.items():
+            if p_name == "__opts__":
+                continue
             mod_named_context = getattr(mod, p_name, None)
             if hasattr(mod_named_context, "default"):
                 default = copy.deepcopy(mod_named_context.default)
@@ -922,9 +948,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # If we had another module by the same virtual name, we should put any
         # new functions under the existing dictionary.
         mod_names = [module_name] + list(virtual_aliases)
-        mod_dict = {
-            x: self.loaded_modules.get(x, self.mod_dict_class()) for x in mod_names
-        }
 
         for attr in getattr(mod, "__load__", dir(mod)):
             if attr.startswith("_"):
@@ -951,10 +974,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 # Careful not to overwrite existing (higher priority) functions
                 if full_funcname not in self._dict:
                     self._dict[full_funcname] = func
-                if funcname not in mod_dict[tgt_mod]:
-                    setattr(mod_dict[tgt_mod], funcname, func)
-                    mod_dict[tgt_mod][funcname] = func
                     self._apply_outputter(func, mod)
+                self.loaded_modules.add(tgt_mod)
 
         # enforce depends
         try:
@@ -965,8 +986,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 exc,
             )
 
-        for tgt_mod in mod_names:
-            self.loaded_modules[tgt_mod] = mod_dict[tgt_mod]
         return True
 
     def _load(self, key):

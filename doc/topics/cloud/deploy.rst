@@ -135,7 +135,7 @@ This is currently considered to be experimental functionality, and may not work
 well with all cloud hosts. If you experience problems with Salt Cloud hanging
 after Salt is deployed, consider using Startup States instead:
 
-http://docs.saltstack.com/ref/states/startup.html
+https://docs.saltproject.io/ref/states/startup.html
 
 
 Skipping the Deploy Script
