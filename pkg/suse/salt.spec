@@ -479,7 +479,7 @@ install -Dpm 0644  pkg/suse/salt.SuSEfirewall2 %{buildroot}%{_sysconfdir}/syscon
 install -Dpm 0644 pkg/salt.bash %{buildroot}%{_sysconfdir}/bash_completion.d/salt
 %endif
 %if %{with zsh_completion}
-install -Dpm 0644 pkg/zsh_completion.zsh %{buildroot}%{_sysconfdir}/zsh_completion.d/salt
+install -Dpm 0644 pkg/salt.zsh %{buildroot}%{_sysconfdir}/zsh_completion.d/salt
 %endif
 
 %if %{with fish_completion}
