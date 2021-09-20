@@ -5,7 +5,7 @@
 import textwrap
 
 import salt.utils.files
-from salt.utils.yamlloader import SaltYamlSafeLoader
+from salt.utils.yamlloader import SaltYamlSafeLoader, yaml
 from tests.support.mock import mock_open, patch
 from tests.support.unit import TestCase
 from yaml.constructor import ConstructorError
@@ -133,3 +133,7 @@ class YamlLoaderTestCase(TestCase):
             ),
             {"foo": {"b": {"foo": "bar", "one": 1, "list": [1, "two", 3]}}},
         )
+
+    def test_not_yaml_monkey_patching(self):
+        if hasattr(yaml, "CSafeLoader"):
+            assert yaml.SafeLoader != yaml.CSafeLoader

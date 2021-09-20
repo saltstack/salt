@@ -5,20 +5,10 @@ plugin interfaces used by Salt.
 """
 
 import contextlib
-import copy
-import functools
-import importlib
-import importlib.machinery
-import importlib.util
-import inspect
 import logging
 import os
 import re
-import sys
-import tempfile
-import threading
 import time
-import traceback
 import types
 
 import salt.config
@@ -40,16 +30,8 @@ import salt.utils.versions
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils import entrypoints
-from salt.utils.decorators import Depends
 
 from .lazy import SALT_BASE_PATH, FilterDictWrapper, LazyLoader
-
-try:
-    # Try the stdlib C extension first
-    import _contextvars as contextvars
-except ImportError:
-    # Py<3.7
-    import contextvars
 
 log = logging.getLogger(__name__)
 
@@ -142,6 +124,7 @@ def _module_dirs(
     ext_dirs=True,
     ext_type_dirs=None,
     base_path=None,
+    load_extensions=True,
 ):
     if tag is None:
         tag = ext_type
@@ -161,7 +144,7 @@ def _module_dirs(
             ext_type_dirs = "{}_dirs".format(tag)
         if ext_type_dirs in opts:
             ext_type_types.extend(opts[ext_type_dirs])
-        if ext_type_dirs:
+        if ext_type_dirs and load_extensions is True:
             for entry_point in entrypoints.iter_entry_points("salt.loader"):
                 with catch_entry_points_exception(entry_point) as ctx:
                     loaded_entry_point = entry_point.load()
@@ -460,12 +443,12 @@ def returners(opts, functions, whitelist=None, context=None, proxy=None):
     )
 
 
-def utils(opts, whitelist=None, context=None, proxy=proxy, pack_self=None):
+def utils(opts, whitelist=None, context=None, proxy=None, pack_self=None):
     """
     Returns the utility modules
     """
     return LazyLoader(
-        _module_dirs(opts, "utils", ext_type_dirs="utils_dirs"),
+        _module_dirs(opts, "utils", ext_type_dirs="utils_dirs", load_extensions=False),
         opts,
         tag="utils",
         whitelist=whitelist,
