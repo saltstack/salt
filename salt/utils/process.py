@@ -819,6 +819,14 @@ class ProcessManager:
                     "zombie processes behind"
                 )
 
+    def terminate(self):
+        """
+        Properly terminate this process manager instance
+        """
+        self.stop_restarting()
+        self.send_signal_to_processes(signal.SIGTERM)
+        self.kill_children()
+
 
 class Process(multiprocessing.Process):
     """
