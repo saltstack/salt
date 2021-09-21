@@ -47,7 +47,7 @@ Next some Salt States are needed, for this example a very basic state which
 installs `vim` is used, but anything Salt States can do can be done here,
 please see the Salt States Introduction Tutorial to learn more about Salt
 States:
-https://docs.saltstack.com/en/stage/getstarted/config/
+https://docs.saltproject.io/en/stage/getstarted/config/
 
 For this tutorial, simply create a small state file in `/srv/salt/vim.sls`:
 
