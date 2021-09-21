@@ -15,6 +15,12 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.unit import skipIf
 
 
+@pytest.fixture(scope="module", autouse=True)
+def salt_api_account(salt_api_account_factory):
+    with salt_api_account_factory as account:
+        yield account
+
+
 class SaltnadoIntegrationTestsBase(
     AsyncHTTPTestCase, AdaptedConfigurationTestCaseMixin
 ):
