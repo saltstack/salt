@@ -250,57 +250,92 @@ def test_version_cmp_rpm_all_libraries(rpm_lib):
         assert 1 == rpm.version_cmp("3:2.9.1-8.el7.4", "3:2.9.1-7.el7.4")
 
 
-@patch("salt.modules.rpm_lowpkg.HAS_RPM", True)
-@patch("salt.modules.rpm_lowpkg.rpm.labelCompare", return_value=-1)
-@patch("salt.modules.rpm_lowpkg.log")
-def test_version_cmp_rpm(mock_log, mock_labelCompare):
+def test_version_cmp_rpm():
     """
     Test package version if RPM-Python is installed
 
     :return:
     """
-    assert -1 == rpm.version_cmp("1", "2")
-    assert not mock_log.warning.called
-    assert mock_labelCompare.called
+    mock_label = MagicMock(return_value=-1)
+    mock_log = MagicMock()
+    patch_label = patch("salt.modules.rpm_lowpkg.rpm.labelCompare", mock_label)
+    patch_log = patch("salt.modules.rpm_lowpkg.log", mock_log)
+    patch_rpm = patch("salt.modules.rpm_lowpkg.HAS_RPM", True)
+    with patch_label, patch_rpm, patch_log:
+        assert -1 == rpm.version_cmp("1", "2")
+        assert not mock_log.warning.called
+        assert mock_label.called
 
 
-@patch("salt.modules.rpm_lowpkg.HAS_RPM", False)
-@patch("salt.modules.rpm_lowpkg.HAS_RPMUTILS", True)
-@patch("salt.modules.rpm_lowpkg.HAS_PY_RPM", False)
-@patch("salt.modules.rpm_lowpkg.rpmUtils", create=True)
-@patch("salt.modules.rpm_lowpkg.log")
-def test_version_cmp_rpmutils(mock_log, mock_rpmUtils):
+def test_version_cmp_rpmutils():
     """
     Test package version if rpmUtils.miscutils called
 
     :return:
     """
+    mock_log = MagicMock()
+    mock_rpmUtils = MagicMock()
     mock_rpmUtils.miscutils = MagicMock()
     mock_rpmUtils.miscutils.compareEVR = MagicMock(return_value=-1)
-    assert -1 == rpm.version_cmp("1", "2")
-    assert mock_log.warning.called
-    assert mock_rpmUtils.miscutils.compareEVR.called
-    assert (
-        mock_log.warning.mock_calls[0][1][0]
-        == "Please install a package that provides rpm.labelCompare for more accurate version comparisons."
-    )
+    patch_utils = patch("salt.modules.rpm_lowpkg.rpmUtils", mock_rpmUtils, create=True)
+    patch_rpm = patch("salt.modules.rpm_lowpkg.HAS_RPM", False)
+    patch_utils_lib = patch("salt.modules.rpm_lowpkg.HAS_RPMUTILS", True)
+    patch_py_rpm = patch("salt.modules.rpm_lowpkg.HAS_PY_RPM", False)
+    patch_log = patch("salt.modules.rpm_lowpkg.log", mock_log)
+
+    with patch_utils, patch_rpm, patch_py_rpm, patch_utils_lib, patch_log:
+        assert -1 == rpm.version_cmp("1", "2")
+        assert mock_log.warning.called
+        assert mock_rpmUtils.miscutils.compareEVR.called
 
 
-@patch("salt.modules.rpm_lowpkg.HAS_RPM", False)
-@patch("salt.modules.rpm_lowpkg.HAS_RPMUTILS", False)
-@patch("salt.modules.rpm_lowpkg.HAS_PY_RPM", False)
-@patch("salt.utils.path.which", return_value=True)
-@patch("salt.modules.rpm_lowpkg.log")
-def test_version_cmp_rpmdev_vercmp(mock_log, mock_which):
+def test_version_cmp_rpmdev_vercmp():
     """
     Test package version if rpmdev-vercmp is installed
 
     :return:
     """
     mock__salt__ = MagicMock(return_value={"retcode": 12})
-    with patch.dict(rpm.__salt__, {"cmd.run_all": mock__salt__}):
+    mock_log = MagicMock()
+    patch_rpm = patch("salt.modules.rpm_lowpkg.HAS_RPM", False)
+    patch_rpmutils = patch("salt.modules.rpm_lowpkg.HAS_RPMUTILS", False)
+    patch_py_rpm = patch("salt.modules.rpm_lowpkg.HAS_PY_RPM", False)
+    patch_which = patch("salt.utils.path.which", return_value=True)
+    patch_log = patch("salt.modules.rpm_lowpkg.log", mock_log)
+
+    with patch_rpm, patch_rpmutils, patch_py_rpm, patch_which, patch_log:
+        with patch.dict(rpm.__salt__, {"cmd.run_all": mock__salt__}):
+            assert -1 == rpm.version_cmp("1", "2")
+            assert mock__salt__.called
+            assert mock_log.warning.called
+            assert (
+                mock_log.warning.mock_calls[0][1][0]
+                == "Please install a package that provides rpm.labelCompare for more accurate version comparisons."
+            )
+            assert (
+                mock_log.warning.mock_calls[1][1][0]
+                == "Installing the rpmdevtools package may surface dev tools in production."
+            )
+
+
+def test_version_cmp_python():
+    """
+    Test package version if falling back to python
+
+    :return:
+    """
+    mock_log = MagicMock()
+    patch_rpm = patch("salt.modules.rpm_lowpkg.HAS_RPM", False)
+    patch_rpmutils = patch("salt.modules.rpm_lowpkg.HAS_RPMUTILS", False)
+    mock_version_cmp = MagicMock(return_value=-1)
+    patch_py_rpm = patch("salt.modules.rpm_lowpkg.HAS_PY_RPM", False)
+    patch_cmp = patch("salt.utils.versions.version_cmp", mock_version_cmp)
+    patch_which = patch("salt.utils.path.which", return_value=False)
+    patch_log = patch("salt.modules.rpm_lowpkg.log", mock_log)
+
+    with patch_rpm, patch_rpmutils, patch_py_rpm, patch_cmp, patch_which, patch_log:
         assert -1 == rpm.version_cmp("1", "2")
-        assert mock__salt__.called
+        assert mock_version_cmp.called
         assert mock_log.warning.called
         assert (
             mock_log.warning.mock_calls[0][1][0]
@@ -308,30 +343,5 @@ def test_version_cmp_rpmdev_vercmp(mock_log, mock_which):
         )
         assert (
             mock_log.warning.mock_calls[1][1][0]
-            == "Installing the rpmdevtools package may surface dev tools in production."
+            == "Falling back on salt.utils.versions.version_cmp() for version comparisons"
         )
-
-
-@patch("salt.modules.rpm_lowpkg.HAS_RPM", False)
-@patch("salt.modules.rpm_lowpkg.HAS_RPMUTILS", False)
-@patch("salt.modules.rpm_lowpkg.HAS_PY_RPM", False)
-@patch("salt.utils.versions.version_cmp", return_value=-1)
-@patch("salt.utils.path.which", return_value=False)
-@patch("salt.modules.rpm_lowpkg.log")
-def test_version_cmp_python(mock_log, mock_which, mock_version_cmp):
-    """
-    Test package version if falling back to python
-
-    :return:
-    """
-    assert -1 == rpm.version_cmp("1", "2")
-    assert mock_version_cmp.called
-    assert mock_log.warning.called
-    assert (
-        mock_log.warning.mock_calls[0][1][0]
-        == "Please install a package that provides rpm.labelCompare for more accurate version comparisons."
-    )
-    assert (
-        mock_log.warning.mock_calls[1][1][0]
-        == "Falling back on salt.utils.versions.version_cmp() for version comparisons"
-    )
