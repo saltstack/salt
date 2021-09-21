@@ -7,7 +7,8 @@ from tests.support.unit import TestCase
 
 
 @pytest.mark.skipif(
-    salt.utils.platform.is_photonos(), "Hash type md4 is unsupported on Photon OS"
+    salt.utils.platform.is_photonos(),
+    reason="Hash type md4 is unsupported on Photon OS",
 )
 class PdbeditTestCase(TestCase, LoaderModuleMockMixin):
     """
