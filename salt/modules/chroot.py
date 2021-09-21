@@ -242,7 +242,11 @@ def _create_and_execute_salt_state(root, chunks, file_refs, test, hash_type):
     # Create the tar containing the state pkg and relevant files.
     salt.client.ssh.wrapper.state._cleanup_slsmod_low_data(chunks)
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-        salt.fileclient.get_file_client(__opts__), chunks, file_refs, __pillar__.value(), root
+        salt.fileclient.get_file_client(__opts__),
+        chunks,
+        file_refs,
+        __pillar__.value(),
+        root,
     )
     trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, hash_type)
 
