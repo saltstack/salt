@@ -1412,12 +1412,12 @@ def host_inventory_get(hostids, **connection_args):
 
     .. versionadded:: 2019.2.0
 
-    :param hostids: Return only host interfaces used by the given hosts.
+    :param hostids: ID of the host to query
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-    :return: Array with host interfaces details, False if no convenient host interfaces found or on failure.
+    :return: Array with host inventory fields, populated or not, False if host inventory is disabled or on failure.
 
     CLI Example:
 
@@ -1437,7 +1437,7 @@ def host_inventory_get(hostids, **connection_args):
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
             return (
                 ret["result"][0]["inventory"]
-                if len(ret["result"][0]["inventory"]) > 0
+                if ret["result"] and ret["result"][0]["inventory"]
                 else False
             )
         else:
@@ -1478,8 +1478,10 @@ def host_inventory_set(hostid, **connection_args):
 
             if connection_args.get("clear_old"):
                 clear_old = True
-
             connection_args.pop("clear_old", None)
+
+            inventory_mode = connection_args.pop("inventory_mode", "0")
+
             inventory_params = dict(_params_extend(params, **connection_args))
             for key in inventory_params:
                 params.pop(key, None)
@@ -1492,7 +1494,7 @@ def host_inventory_set(hostid, **connection_args):
                 ret = _query(method, params, conn_args["url"], conn_args["auth"])
 
             # Set inventory mode to manual in order to submit inventory data
-            params["inventory_mode"] = "0"
+            params["inventory_mode"] = inventory_mode
             params["inventory"] = inventory_params
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
             return ret["result"]
