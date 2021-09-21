@@ -107,7 +107,7 @@ class AsyncPubChannelTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         cls.server_channel.close()
         cls.stop.set()
         cls.server_thread.join()
-        cls.process_manager.kill_children()
+        cls.process_manager.terminate()
         del cls.req_server_channel
 
     def setUp(self):
