@@ -231,7 +231,17 @@ salt/netapi/rest_cherrypy/*:
   - integration.netapi.test_client
 
 salt/netapi/rest_tornado/*:
-  - unit.netapi.test_rest_tornado
+  - pytests.functional.netapi.rest_tornado.test_auth_handler
+  - pytests.functional.netapi.rest_tornado.test_base_api_handler
+  - pytests.functional.netapi.rest_tornado.test_event_listener
+  - pytests.functional.netapi.rest_tornado.test_utils
+  - pytests.functional.netapi.rest_tornado.test_webhooks_handler
+  - pytests.functional.netapi.rest_tornado.test_websockets_handler
+  - pytests.integration.netapi.rest_tornado.test_events_api_handler
+  - pytests.integration.netapi.rest_tornado.test_jobs_api_handler
+  - pytests.integration.netapi.rest_tornado.test_minions_api_handler
+  - pytests.integration.netapi.rest_tornado.test_root_handler
+  - pytests.integration.netapi.rest_tornado.test_run_api_handler
   - integration.netapi.rest_tornado.test_app
   - integration.netapi.test_client
 
