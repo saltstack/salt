@@ -819,6 +819,14 @@ class ProcessManager:
                     "zombie processes behind"
                 )
 
+    def terminate(self):
+        """
+        Properly terminate this process manager instance
+        """
+        self.stop_restarting()
+        self.send_signal_to_processes(signal.SIGTERM)
+        self.kill_children()
+
 
 class Process(multiprocessing.Process):
     """
@@ -980,12 +988,40 @@ class Process(multiprocessing.Process):
         @functools.wraps(run_func)
         def wrapped_run_func():
             # Static after fork method, always needs to happen first
-            salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
-            salt.log.setup.set_multiprocessing_logging_level(self.log_queue_level)
-            salt.log.setup.setup_multiprocessing_logging(self.log_queue)
+            try:
+                salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "Failed to run salt.log.setup.set_multiprocessing_logging_queue() on %s",
+                    self,
+                )
+            try:
+                salt.log.setup.set_multiprocessing_logging_level(self.log_queue_level)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "Failed to run salt.log.setup.set_multiprocessing_logging_level() on %s",
+                    self,
+                )
+            try:
+                salt.log.setup.setup_multiprocessing_logging(self.log_queue)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "Failed to run salt.log.setup.setup_multiprocessing_logging() on %s",
+                    self,
+                )
 
             for method, args, kwargs in self._after_fork_methods:
-                method(*args, **kwargs)
+                try:
+                    method(*args, **kwargs)
+                except Exception:  # pylint: disable=broad-except
+                    log.exception(
+                        "Failed to run after fork callback on %s; method=%r; args=%r; and kwargs=%r",
+                        self,
+                        method,
+                        args,
+                        kwargs,
+                    )
+                    continue
             try:
                 return run_func()
             except SystemExit:  # pylint: disable=try-except-raise
@@ -1005,10 +1041,26 @@ class Process(multiprocessing.Process):
             finally:
                 try:
                     for method, args, kwargs in self._finalize_methods:
-                        method(*args, **kwargs)
+                        try:
+                            method(*args, **kwargs)
+                        except Exception:  # pylint: disable=broad-except
+                            log.exception(
+                                "Failed to run finalize callback on %s; method=%r; args=%r; and kwargs=%r",
+                                self,
+                                method,
+                                args,
+                                kwargs,
+                            )
+                            continue
                 finally:
                     # Static finalize method, should always run last
-                    salt.log.setup.shutdown_multiprocessing_logging()
+                    try:
+                        salt.log.setup.shutdown_multiprocessing_logging()
+                    except Exception:  # pylint: disable=broad-except
+                        log.exception(
+                            "Failed to run salt.log.setup.shutdown_multiprocessing_logging() on %s",
+                            self,
+                        )
 
         return wrapped_run_func
 
