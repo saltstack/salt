@@ -147,6 +147,22 @@ directly.
         - query: "SELECT json_pillar FROM pillars WHERE minion_id = %s"
           as_json: True
 
+The processed JSON entries are recursively merged in a single dictionary.
+Additionnaly if `as_list` is set to `True` the lists will be merged in case of collision.
+
+For instance the following rows:
+
+    {"a": {"b": [1, 2]}, "c": 3}
+    {"a": {"b": [1, 3]}, "d": 4}
+
+will result in the following pillar with `as_list=False`
+
+    {"a": {"b": [1, 3], "c": 3, "d": 4}
+
+and in with `as_list=True`
+
+    {"a": {"b": [1, 2, 3], "c": 3, "d": 4}
+
 Finally, if you pass the queries in via a mapping, the key will be the
 first level name where as passing them in as a list will place them in the
 root.  This isolates the query results into their own subtrees.
@@ -182,6 +198,7 @@ More complete example for MySQL (to also show configuration)
 import abc  # Added in python2.6 so always available
 import logging
 
+from salt.utils.dictupdate import update
 from salt.utils.odict import OrderedDict
 
 # Please don't strip redundant parentheses from this file.
@@ -331,7 +348,7 @@ class SqlBaseExtPillar(metaclass=abc.ABCMeta):
             # We have just one field without any key, assume returned row is already a dict
             # aka JSON storage
             if self.as_json and self.num_fields == 1:
-                crd.update(ret)
+                crd = update(crd, ret[0], merge_lists=self.as_list)
                 continue
 
             # Walk and create dicts above the final layer
