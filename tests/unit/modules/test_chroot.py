@@ -27,6 +27,7 @@
 
 import sys
 
+import salt.loader.context
 import salt.modules.chroot as chroot
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
@@ -42,7 +43,17 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
     """
 
     def setup_loader_modules(self):
-        return {chroot: {"__salt__": {}, "__utils__": {}, "__opts__": {"cachedir": ""}}}
+        loader_context = salt.loader.context.LoaderContext()
+        return {
+            chroot: {
+                "__salt__": {},
+                "__utils__": {},
+                "__opts__": {"cachedir": ""},
+                "__pillar__": salt.loader.context.NamedLoaderContext(
+                    "__pillar__", loader_context, {}
+                ),
+            }
+        }
 
     @patch("os.path.isdir")
     def test_exist(self, isdir):
