@@ -200,6 +200,7 @@ def present(host, groups, interfaces, **kwargs):
 
     # Ensure groups are all groupid
     groupids = []
+    groupid_dic = []
     for group in groups:
         if isinstance(group, str):
             groupid = __salt__["zabbix.hostgroup_get"](name=group, **connection_args)
@@ -210,6 +211,7 @@ def present(host, groups, interfaces, **kwargs):
                 return ret
         else:
             groupids.append(group)
+            groupid_dic.append({"groupid": group})
     groups = groupids
 
     # Get and validate proxyid
@@ -423,7 +425,7 @@ def present(host, groups, interfaces, **kwargs):
                     error.append(hostupdate["error"])
             if update_hostgroups:
                 hostupdate = __salt__["zabbix.host_update"](
-                    hostid, groups=groups, **connection_args
+                    hostid, groups=groupid_dic, **connection_args
                 )
                 ret["changes"]["groups"] = str(groups)
                 if "error" in hostupdate:
