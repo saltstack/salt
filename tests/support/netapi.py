@@ -50,7 +50,7 @@ class TestsHttpClient:
 
 
 @attr.s
-class TestsHttpServer:
+class TestsTornadoHttpServer:
     io_loop = attr.ib(repr=False)
     app = attr.ib()
     protocol = attr.ib(default="http", repr=False)
@@ -105,22 +105,18 @@ def load_auth(client_config):
 
 
 def auth_creds():
-    return (
-        ("username", "saltdev_api"),
-        ("password", "saltdev"),
-        ("eauth", "auto"),
-    )
+    return {
+        "username": "saltdev_api",
+        "password": "saltdev",
+        "eauth": "auto",
+    }
 
 
-def auth_creds_dict():
-    return dict(auth_creds())
-
-
-def auth_token(load_auth, auth_creds_dict):
+def auth_token(load_auth, auth_creds):
     """
     Mint and return a valid token for auth_creds
     """
-    return load_auth.mk_token(auth_creds_dict)
+    return load_auth.mk_token(auth_creds)
 
 
 def build_tornado_app(

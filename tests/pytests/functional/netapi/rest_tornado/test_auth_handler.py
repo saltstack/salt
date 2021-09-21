@@ -24,7 +24,7 @@ async def test_get(http_client):
 
 
 async def test_login(
-    http_client, content_type_map, auth_creds, auth_creds_dict, subtests, client_config
+    http_client, content_type_map, auth_creds, subtests, client_config
 ):
     """
     Test valid logins
@@ -43,19 +43,17 @@ async def test_login(
         token = response_obj["token"]
         assert "session_id={}".format(token) in cookies
         perms = response_obj["perms"]
-        perms_config = client_config["external_auth"]["auto"][
-            auth_creds_dict["username"]
-        ]
+        perms_config = client_config["external_auth"]["auto"][auth_creds["username"]]
         assert set(perms) == set(perms_config)
         assert "token" in response_obj  # TODO: verify that its valid?
-        assert response_obj["user"] == auth_creds_dict["username"]
-        assert response_obj["eauth"] == auth_creds_dict["eauth"]
+        assert response_obj["user"] == auth_creds["username"]
+        assert response_obj["eauth"] == auth_creds["eauth"]
 
     with subtests.test("Test in JSON"):
         response = await http_client.fetch(
             "/login",
             method="POST",
-            body=salt.utils.json.dumps(auth_creds_dict),
+            body=salt.utils.json.dumps(auth_creds),
             headers={"Content-Type": content_type_map["json"]},
         )
 
@@ -65,19 +63,17 @@ async def test_login(
         token = response_obj["token"]
         assert "session_id={}".format(token) in cookies
         perms = response_obj["perms"]
-        perms_config = client_config["external_auth"]["auto"][
-            auth_creds_dict["username"]
-        ]
+        perms_config = client_config["external_auth"]["auto"][auth_creds["username"]]
         assert set(perms) == set(perms_config)
         assert "token" in response_obj  # TODO: verify that its valid?
-        assert response_obj["user"] == auth_creds_dict["username"]
-        assert response_obj["eauth"] == auth_creds_dict["eauth"]
+        assert response_obj["user"] == auth_creds["username"]
+        assert response_obj["eauth"] == auth_creds["eauth"]
 
     with subtests.test("Test in YAML"):
         response = await http_client.fetch(
             "/login",
             method="POST",
-            body=salt.utils.yaml.safe_dump(auth_creds_dict),
+            body=salt.utils.yaml.safe_dump(auth_creds),
             headers={"Content-Type": content_type_map["yaml"]},
         )
 
@@ -87,21 +83,19 @@ async def test_login(
         token = response_obj["token"]
         assert "session_id={}".format(token) in cookies
         perms = response_obj["perms"]
-        perms_config = client_config["external_auth"]["auto"][
-            auth_creds_dict["username"]
-        ]
+        perms_config = client_config["external_auth"]["auto"][auth_creds["username"]]
         assert set(perms) == set(perms_config)
         assert "token" in response_obj  # TODO: verify that its valid?
-        assert response_obj["user"] == auth_creds_dict["username"]
-        assert response_obj["eauth"] == auth_creds_dict["eauth"]
+        assert response_obj["user"] == auth_creds["username"]
+        assert response_obj["eauth"] == auth_creds["eauth"]
 
 
-async def test_login_missing_password(http_client, auth_creds_dict, content_type_map):
+async def test_login_missing_password(http_client, auth_creds, content_type_map):
     """
     Test logins with bad/missing passwords
     """
     bad_creds = []
-    for key, val in auth_creds_dict.items():
+    for key, val in auth_creds.items():
         if key == "password":
             continue
         bad_creds.append((key, val))
@@ -116,12 +110,12 @@ async def test_login_missing_password(http_client, auth_creds_dict, content_type
     assert exc.value.code == 400
 
 
-async def test_login_bad_creds(http_client, content_type_map, auth_creds_dict):
+async def test_login_bad_creds(http_client, content_type_map, auth_creds):
     """
     Test logins with bad/missing passwords
     """
     bad_creds = []
-    for key, val in auth_creds_dict.items():
+    for key, val in auth_creds.items():
         if key == "username":
             val = val + "foo"
         if key == "eauth":
