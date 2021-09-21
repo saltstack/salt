@@ -4,7 +4,6 @@ pygit2<1.1.0; python_version <= '3.8'
 pygit2>=1.4.0; python_version > '3.8'
 pymysql==0.9.3; python_version <= '3.5'
 pymysql>=1.0.2; python_version > '3.5'
-rpm-vercmp
 ansible
 twilio
 python-telegram-bot==12.8; python_version <= '3.5'
