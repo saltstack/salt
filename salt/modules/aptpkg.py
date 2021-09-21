@@ -156,7 +156,7 @@ if not HAS_APT:
 
             repo_line = repo_line + [self.uri, self.dist, " ".join(self.comps)]
             if self.comment:
-                repo_line.append("# {}".format(self.comment))
+                repo_line.append("#{}".format(self.comment))
             repo_line.append("\n")
             return " ".join(repo_line)
 
@@ -2436,6 +2436,7 @@ def mod_repo(repo, saltenv="base", **kwargs):
             "Error: repo '{}' not a well formatted definition".format(repo)
         )
 
+    full_comp_list = {comp.strip() for comp in repo_comps}
     no_proxy = __salt__["config.option"]("no_proxy")
 
     if "keyid" in kwargs:
@@ -2515,8 +2516,9 @@ def mod_repo(repo, saltenv="base", **kwargs):
 
     if "comps" in kwargs:
         kwargs["comps"] = [comp.strip() for comp in kwargs["comps"].split(",")]
+        full_comp_list |= set(kwargs["comps"])
     else:
-        kwargs["comps"] = [comp.strip() for comp in repo_comps]
+        kwargs["comps"] = list(full_comp_list)
 
     if "architectures" in kwargs:
         kwargs["architectures"] = kwargs["architectures"].split(",")
@@ -2544,9 +2546,12 @@ def mod_repo(repo, saltenv="base", **kwargs):
         kw_matches = source.dist == kw_dist and source.type == kw_type
 
         if repo_matches or kw_matches:
-            if repo_comps == source.comps:
-                mod_source = source
+            for comp in full_comp_list:
+                if comp in getattr(source, "comps", []):
+                    mod_source = source
             if not source.comps:
+                mod_source = source
+            if kwargs["architectures"] != source.architectures:
                 mod_source = source
             if mod_source:
                 break

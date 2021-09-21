@@ -41,14 +41,16 @@ def configure_loader_modules(minion_opts):
 
 @pytest.fixture()
 def revert_repo_file(tmp_path):
-    repo_file = pathlib.Path("/etc") / "apt" / "sources.list"
-    backup = tmp_path / "repo_backup"
-    # make copy of repo file
-    shutil.copy(str(repo_file), str(backup))
-    yield
-    # revert repo file
-    shutil.copy(str(backup), str(repo_file))
-    aptpkg.refresh_db()
+    try:
+        repo_file = pathlib.Path("/etc") / "apt" / "sources.list"
+        backup = tmp_path / "repo_backup"
+        # make copy of repo file
+        shutil.copy(str(repo_file), str(backup))
+        yield
+    finally:
+        # revert repo file
+        shutil.copy(str(backup), str(repo_file))
+        aptpkg.refresh_db()
 
 
 def get_current_repo(multiple_comps=False):
@@ -63,7 +65,7 @@ def get_current_repo(multiple_comps=False):
         for line in fp:
             if line.startswith("#"):
                 continue
-            if "ubuntu.com" in line:
+            if "ubuntu.com" in line or "debian.org" in line:
                 test_repo = line.strip()
                 comps = test_repo.split()[3:]
                 if multiple_comps:
@@ -106,7 +108,7 @@ def test_get_repos():
     """
     test_repo, comps = get_current_repo()
     if not test_repo:
-        pytest.skip("Did not detect an ubuntu repo")
+        pytest.skip("Did not detect an apt repo")
     exp_ret = test_repo.split()
     ret = aptpkg.get_repo(repo=test_repo)
     assert ret["type"] == exp_ret[0]
@@ -144,6 +146,7 @@ def test_get_repos_doesnot_exist():
         assert not ret
 
 
+@pytest.mark.skip_if_binaries_missing("apt-add-repository")
 @pytest.mark.destructive_test
 def test_del_repo(revert_repo_file):
     """
@@ -152,15 +155,11 @@ def test_del_repo(revert_repo_file):
     is returned when it no longer exists.
     """
     test_repo, comps = get_current_repo()
-    try:
+    ret = aptpkg.del_repo(repo=test_repo)
+    assert "Repo '{}' has been removed".format(test_repo)
+    with pytest.raises(salt.exceptions.CommandExecutionError) as exc:
         ret = aptpkg.del_repo(repo=test_repo)
-        assert "Repo '{}' has been removed".format(test_repo)
-        with pytest.raises(salt.exceptions.CommandExecutionError) as exc:
-            ret = aptpkg.del_repo(repo=test_repo)
-        assert "Repo {} doesn't exist".format(test_repo) in exc.value.message
-    finally:
-        # add the repository back
-        cmd.run(["add-apt-repository", test_repo])
+    assert "Repo {} doesn't exist".format(test_repo) in exc.value.message
 
 
 def test_expand_repo_def():
@@ -182,7 +181,8 @@ def test_expand_repo_def():
         assert pathlib.Path(ret["file"]).is_file()
         assert ret["dist"] in ret["line"]
         if isinstance(ret["comps"], list):
-            assert " ".join(ret["comps"]) in ret["line"]
+            for comp in ret["comps"]:
+                assert comp in ret["line"]
         else:
             assert ret["comps"] in ret["line"]
 
@@ -198,7 +198,7 @@ def test_mod_repo(revert_repo_file):
         ret = aptpkg.mod_repo(repo=test_repo, comments=msg)
     assert sorted(ret[list(ret.keys())[0]]["comps"]) == sorted(comps)
     ret = file.grep("/etc/apt/sources.list", msg)
-    assert "# {}".format(msg) in ret["stdout"]
+    assert "#{}".format(msg) in ret["stdout"]
 
 
 @pytest.mark.destructive_test
@@ -213,4 +213,6 @@ def test_mod_repo_no_file(tmp_path, revert_repo_file):
         ret = aptpkg.mod_repo(repo=test_repo, file=test_file)
     with salt.utils.files.fopen(test_file, "r") as fp:
         ret = fp.read()
-    assert ret.strip() == test_repo
+    assert test_repo.split()[1] in ret.strip()
+    for comp in comps:
+        assert comp in ret
