@@ -2,6 +2,7 @@
 Test the ssh_auth states
 """
 
+import logging
 import os
 
 import pytest
@@ -10,6 +11,9 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import with_system_user
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
+
+# Setup logging
+log = logging.getLogger(__name__)
 
 
 class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
@@ -117,7 +121,7 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
         try:
             os.mkdir(user_ssh_dir)
         except FileExistsError:
-            print("folder {} already exists".format(user_ssh_dir))
+            log.debug("folder %s already exists", user_ssh_dir)
         with salt.utils.files.fopen(authorized_keys_file, "w") as authf:
             authf.write("no-pty ssh-rsa AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY== root\n")
 
