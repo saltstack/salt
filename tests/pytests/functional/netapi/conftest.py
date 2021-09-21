@@ -34,9 +34,19 @@ def load_auth(client_config):
     return netapi.load_auth(client_config)
 
 
+@pytest.fixture(scope="package")
+def salt_netapi_account(salt_netapi_account_factory):
+    with salt_netapi_account_factory as account:
+        yield account
+
+
 @pytest.fixture
-def auth_creds():
-    return netapi.auth_creds()
+def auth_creds(salt_netapi_account):
+    return {
+        "username": salt_netapi_account.username,
+        "password": salt_netapi_account.password,
+        "eauth": "auto",
+    }
 
 
 @pytest.fixture

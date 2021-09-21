@@ -21,9 +21,30 @@ from pytestshellutils.utils import ports
 from salt.serializers import yaml
 from saltfactories.utils import random_string
 from tests.support.helpers import get_virtualenv_binary_path
+from tests.support.pytest.helpers import TestAccount
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="session")
+def salt_auth_account_1_factory():
+    return TestAccount(username="saltdev-auth-1")
+
+
+@pytest.fixture(scope="session")
+def salt_auth_account_2_factory():
+    return TestAccount(username="saltdev-auth-2", group_name="saltops")
+
+
+@pytest.fixture(scope="session")
+def salt_netapi_account_factory():
+    return TestAccount(username="saltdev-netapi")
+
+
+@pytest.fixture(scope="session")
+def salt_eauth_account_factory():
+    return TestAccount(username="saltdev-eauth")
 
 
 @pytest.fixture(scope="session")
@@ -99,6 +120,11 @@ def salt_master_factory(
     vault_port,
     reactor_event,
     master_id,
+    salt_auth_account_1_factory,
+    salt_auth_account_2_factory,
+    salt_netapi_account_factory,
+    salt_eauth_account_factory,
+    salt_auto_account_factory,
 ):
     root_dir = salt_factories.get_root_dir_for_daemon(master_id)
     conf_dir = root_dir / "conf"
@@ -172,6 +198,22 @@ def salt_master_factory(
         }
     )
     config_overrides["pillar_opts"] = True
+    config_overrides["external_auth"] = {
+        "pam": {
+            salt_auth_account_1_factory.username: ["test.*"],
+            "{}%".format(salt_auth_account_2_factory.group_name): [
+                "@wheel",
+                "@runner",
+                "test.*",
+            ],
+            salt_netapi_account_factory.username: ["@wheel", "@runner", "test.*"],
+            salt_eauth_account_factory.username: ["@wheel", "@runner", "test.*"],
+        },
+        "auto": {
+            salt_netapi_account_factory.username: ["@wheel", "@runner", "test.*"],
+            salt_auto_account_factory.username: ["@wheel", "@runner", "test.*"],
+        },
+    }
 
     # We need to copy the extension modules into the new master root_dir or
     # it will be prefixed by it

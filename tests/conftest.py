@@ -941,6 +941,8 @@ def salt_master_factory(
     prod_env_state_tree_root_dir,
     prod_env_pillar_tree_root_dir,
     ext_pillar_file_tree_root_dir,
+    salt_api_account_factory,
+    salt_auto_account_factory,
 ):
     root_dir = salt_factories.get_root_dir_for_daemon("master")
     conf_dir = root_dir / "conf"
@@ -978,6 +980,17 @@ def salt_master_factory(
         }
     )
     config_overrides["pillar_opts"] = True
+    config_overrides["external_auth"] = {
+        "auto": {
+            salt_api_account_factory.username: [
+                "@wheel",
+                "@runner",
+                "test.*",
+                "grains.*",
+            ],
+            salt_auto_account_factory.username: ["@wheel", "@runner", "test.*"],
+        }
+    }
 
     # We need to copy the extension modules into the new master root_dir or
     # it will be prefixed by it
@@ -1531,6 +1544,16 @@ def _disable_salt_logging():
     salt._logging.set_logging_options_dict(logging_config)
     # Run the test suite
     yield
+
+
+@pytest.fixture(scope="session")
+def salt_api_account_factory():
+    return TestAccount(username="saltdev_api", password="saltdev")
+
+
+@pytest.fixture(scope="session")
+def salt_auto_account_factory():
+    return TestAccount(username="saltdev_auto", password="saltdev")
 
 
 # <---- Custom Fixtures ----------------------------------------------------------------------------------------------

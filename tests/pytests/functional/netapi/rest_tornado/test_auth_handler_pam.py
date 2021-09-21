@@ -12,21 +12,10 @@ pytestmark = [
 ]
 
 
-@pytest.fixture(scope="module")
-def netapi_account():
-    with pytest.helpers.create_account(
-        username="saltdev-netapi", password="saltdev"
-    ) as account:
-        yield account
-
-
 @pytest.fixture
-def auth_creds(netapi_account):
-    return {
-        "username": netapi_account.username,
-        "password": netapi_account.password,
-        "eauth": "pam",
-    }
+def auth_creds(auth_creds):
+    auth_creds["eauth"] = "pam"
+    return auth_creds
 
 
 @pytest.fixture

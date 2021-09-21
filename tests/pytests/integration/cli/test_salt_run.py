@@ -12,15 +12,6 @@ pytestmark = [
     pytest.mark.windows_whitelisted,
 ]
 
-USERA = "saltdev-runner"
-USERA_PWD = "saltdev"
-
-
-@pytest.fixture(scope="module")
-def saltdev_account():
-    with pytest.helpers.create_account(username="saltdev-runner") as account:
-        yield account
-
 
 @pytest.fixture
 def salt_run_cli(salt_master):
@@ -82,7 +73,7 @@ def test_exit_status_correct_usage(salt_run_cli):
 @pytest.mark.skip_if_not_root
 @pytest.mark.parametrize("flag", ["--auth", "--eauth", "--external-auth", "-a"])
 @pytest.mark.skip_on_windows(reason="PAM is not supported on Windows")
-def test_salt_run_with_eauth_all_args(salt_run_cli, saltdev_account, flag):
+def test_salt_run_with_eauth_all_args(salt_run_cli, salt_eauth_account, flag):
     """
     test salt-run with eauth
     tests all eauth args
@@ -91,9 +82,9 @@ def test_salt_run_with_eauth_all_args(salt_run_cli, saltdev_account, flag):
         flag,
         "pam",
         "--username",
-        saltdev_account.username,
+        salt_eauth_account.username,
         "--password",
-        saltdev_account.password,
+        salt_eauth_account.password,
         "test.arg",
         "arg",
         kwarg="kwarg1",
@@ -107,7 +98,7 @@ def test_salt_run_with_eauth_all_args(salt_run_cli, saltdev_account, flag):
 
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_on_windows(reason="PAM is not supported on Windows")
-def test_salt_run_with_eauth_bad_passwd(salt_run_cli, saltdev_account):
+def test_salt_run_with_eauth_bad_passwd(salt_run_cli, salt_eauth_account):
     """
     test salt-run with eauth and bad password
     """
@@ -115,7 +106,7 @@ def test_salt_run_with_eauth_bad_passwd(salt_run_cli, saltdev_account):
         "-a",
         "pam",
         "--username",
-        saltdev_account.username,
+        salt_eauth_account.username,
         "--password",
         "wrongpassword",
         "test.arg",
@@ -125,13 +116,13 @@ def test_salt_run_with_eauth_bad_passwd(salt_run_cli, saltdev_account):
     assert (
         ret.stdout
         == 'Authentication failure of type "eauth" occurred for user {}.'.format(
-            saltdev_account.username
+            salt_eauth_account.username
         )
     )
 
 
 @pytest.mark.skip_if_not_root
-def test_salt_run_with_wrong_eauth(salt_run_cli, saltdev_account):
+def test_salt_run_with_wrong_eauth(salt_run_cli, salt_eauth_account):
     """
     test salt-run with wrong eauth parameter
     """
@@ -139,9 +130,9 @@ def test_salt_run_with_wrong_eauth(salt_run_cli, saltdev_account):
         "-a",
         "wrongeauth",
         "--username",
-        saltdev_account.username,
+        salt_eauth_account.username,
         "--password",
-        saltdev_account.password,
+        salt_eauth_account.password,
         "test.arg",
         "arg",
         kwarg="kwarg1",

@@ -4,6 +4,12 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.unit import TestCase
 
 
+@pytest.fixture(scope="module", autouse=True)
+def salt_auto_account(salt_auto_account_factory):
+    with salt_auto_account_factory as account:
+        yield account
+
+
 @pytest.mark.windows_whitelisted
 class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
     # This is really an integration test since it needs a salt-master running
