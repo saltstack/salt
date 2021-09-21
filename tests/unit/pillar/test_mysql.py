@@ -899,22 +899,3 @@ class MysqlPillarTestCase(TestCase):
                         raise ValueError("Unexpected value {}".format(len(x[0][0])))
             else:
                 raise ValueError("Unexpected value {}".format(x))
-
-    def test_303_process_results_as_json(self):
-        """
-        Validates merging of dict values returned from JSON datatype.
-        """
-        return_data = mysql.MySQLExtPillar()
-        return_data.as_list = False
-        return_data.as_json = True
-        return_data.with_lists = None
-        return_data.enter_root(None)
-        return_data.process_fields(["json_data"], 0)
-        test_dicts = [
-            {"a": 1},
-            {"b": [2, 3]},
-            {"c": {"d": [4, 5], "e": 6}},
-            {"f": [{"g": 7, "h": "test"}]},
-        ]
-        return_data.process_results(test_dicts)
-        self.assertEqual(test_dicts, return_data.result)
