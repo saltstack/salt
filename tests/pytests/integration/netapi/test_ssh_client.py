@@ -42,10 +42,14 @@ def webserver_handler(webserver):
 
 
 @pytest.fixture(scope="module")
-def saltdev_account():
-    with pytest.helpers.create_account(
-        username="saltdev-auth", password="saltdev"
-    ) as account:
+def salt_auth_account_1(salt_auth_account_1_factory):
+    with salt_auth_account_1_factory as account:
+        yield account
+
+
+@pytest.fixture(scope="module")
+def salt_auto_account(salt_auto_account_factory):
+    with salt_auto_account_factory as account:
         yield account
 
 
@@ -112,7 +116,9 @@ def test_ssh_authenticated_raw_shell_disabled(client, tmp_path):
     assert badfile.exists() is False
 
 
-def test_shell_inject_ssh_priv(client, salt_ssh_roster_file, rosters_dir, tmp_path):
+def test_shell_inject_ssh_priv(
+    client, salt_ssh_roster_file, rosters_dir, tmp_path, salt_auto_account
+):
     """
     Verify CVE-2020-16846 for ssh_priv variable
     """
@@ -127,8 +133,8 @@ def test_shell_inject_ssh_priv(client, salt_ssh_roster_file, rosters_dir, tmp_pa
             "ssh_priv": "aaa|id>{} #".format(path),
             "fun": "test.ping",
             "eauth": "auto",
-            "username": "saltdev_auto",
-            "password": "saltdev",
+            "username": salt_auto_account.username,
+            "password": salt_auto_account.password,
             "roster_file": str(salt_ssh_roster_file),
             "rosters": [rosters_dir],
         }
@@ -140,7 +146,7 @@ def test_shell_inject_ssh_priv(client, salt_ssh_roster_file, rosters_dir, tmp_pa
     assert ret[tgt]["stderr"]
 
 
-def test_shell_inject_tgt(client, salt_ssh_roster_file, tmp_path):
+def test_shell_inject_tgt(client, salt_ssh_roster_file, tmp_path, salt_auto_account):
     """
     Verify CVE-2020-16846 for tgt variable
     """
@@ -154,8 +160,8 @@ def test_shell_inject_tgt(client, salt_ssh_roster_file, tmp_path):
         "rosters": "/",
         "fun": "test.ping",
         "eauth": "auto",
-        "username": "saltdev_auto",
-        "password": "saltdev",
+        "username": salt_auto_account.username,
+        "password": salt_auto_account.password,
         "ignore_host_keys": True,
     }
     ret = client.run(low)
@@ -164,7 +170,9 @@ def test_shell_inject_tgt(client, salt_ssh_roster_file, tmp_path):
     assert ret["127.0.0.1"]["stderr"]
 
 
-def test_shell_inject_ssh_options(client, salt_ssh_roster_file, tmp_path):
+def test_shell_inject_ssh_options(
+    client, salt_ssh_roster_file, tmp_path, salt_auto_account
+):
     """
     Verify CVE-2020-16846 for ssh_options
     """
@@ -177,8 +185,8 @@ def test_shell_inject_ssh_options(client, salt_ssh_roster_file, tmp_path):
         "renderer": "jinja|yaml",
         "fun": "test.ping",
         "eauth": "auto",
-        "username": "saltdev_auto",
-        "password": "saltdev",
+        "username": salt_auto_account.username,
+        "password": salt_auto_account.password,
         "roster_file": str(salt_ssh_roster_file),
         "rosters": "/",
         "ssh_options": ["|id>{} #".format(path), "lol"],
@@ -189,7 +197,9 @@ def test_shell_inject_ssh_options(client, salt_ssh_roster_file, tmp_path):
     assert ret["127.0.0.1"]["stderr"]
 
 
-def test_shell_inject_ssh_port(client, salt_ssh_roster_file, tmp_path):
+def test_shell_inject_ssh_port(
+    client, salt_ssh_roster_file, tmp_path, salt_auto_account
+):
     """
     Verify CVE-2020-16846 for ssh_port variable
     """
@@ -202,8 +212,8 @@ def test_shell_inject_ssh_port(client, salt_ssh_roster_file, tmp_path):
         "renderer": "jinja|yaml",
         "fun": "test.ping",
         "eauth": "auto",
-        "username": "saltdev_auto",
-        "password": "saltdev",
+        "username": salt_auto_account.username,
+        "password": salt_auto_account.password,
         "roster_file": str(salt_ssh_roster_file),
         "rosters": "/",
         "ssh_port": "hhhhh|id>{} #".format(path),
@@ -215,7 +225,9 @@ def test_shell_inject_ssh_port(client, salt_ssh_roster_file, tmp_path):
     assert ret["127.0.0.1"]["stderr"]
 
 
-def test_shell_inject_remote_port_forwards(client, salt_ssh_roster_file, tmp_path):
+def test_shell_inject_remote_port_forwards(
+    client, salt_ssh_roster_file, tmp_path, salt_auto_account
+):
     """
     Verify CVE-2020-16846 for remote_port_forwards variable
     """
@@ -231,8 +243,8 @@ def test_shell_inject_remote_port_forwards(client, salt_ssh_roster_file, tmp_pat
         "rosters": "/",
         "ssh_remote_port_forwards": "hhhhh|id>{} #, lol".format(path),
         "eauth": "auto",
-        "username": "saltdev_auto",
-        "password": "saltdev",
+        "username": salt_auto_account.username,
+        "password": salt_auto_account.password,
         "ignore_host_keys": True,
     }
     ret = client.run(low)
@@ -241,7 +253,7 @@ def test_shell_inject_remote_port_forwards(client, salt_ssh_roster_file, tmp_pat
     assert ret["127.0.0.1"]["stderr"]
 
 
-def test_extra_mods(client, ssh_priv_key, rosters_dir, tmp_path, saltdev_account):
+def test_extra_mods(client, ssh_priv_key, rosters_dir, tmp_path, salt_auth_account_1):
     """
     validate input from extra_mods
     """
@@ -254,8 +266,8 @@ def test_extra_mods(client, ssh_priv_key, rosters_dir, tmp_path, saltdev_account
         "rosters": [rosters_dir],
         "ssh_priv": ssh_priv_key,
         "eauth": "pam",
-        "username": saltdev_account.username,
-        "password": saltdev_account.password,
+        "username": salt_auth_account_1.username,
+        "password": salt_auth_account_1.password,
         "regen_thin": True,
         "thin_extra_mods": "';touch {};'".format(path),
     }
@@ -286,7 +298,7 @@ def test_ssh_auth_bypass(client, salt_ssh_roster_file):
         client.run(low)
 
 
-def test_ssh_auth_valid(client, ssh_priv_key, rosters_dir, saltdev_account):
+def test_ssh_auth_valid(client, ssh_priv_key, rosters_dir, salt_auth_account_1):
     """
     CVE-2020-25592 - Valid eauth works as expected.
     """
@@ -298,8 +310,8 @@ def test_ssh_auth_valid(client, ssh_priv_key, rosters_dir, saltdev_account):
         "rosters": [rosters_dir],
         "ssh_priv": ssh_priv_key,
         "eauth": "pam",
-        "username": saltdev_account.username,
-        "password": saltdev_account.password,
+        "username": salt_auth_account_1.username,
+        "password": salt_auth_account_1.password,
     }
     ret = client.run(low)
     assert "localhost" in ret
@@ -307,7 +319,7 @@ def test_ssh_auth_valid(client, ssh_priv_key, rosters_dir, saltdev_account):
     assert ret["localhost"]["return"] is True
 
 
-def test_ssh_auth_invalid(client, rosters_dir, ssh_priv_key, saltdev_account):
+def test_ssh_auth_invalid(client, rosters_dir, ssh_priv_key, salt_auth_account_1):
     """
     CVE-2020-25592 - Wrong password raises exception.
     """
@@ -319,14 +331,14 @@ def test_ssh_auth_invalid(client, rosters_dir, ssh_priv_key, saltdev_account):
         "rosters": [rosters_dir],
         "ssh_priv": ssh_priv_key,
         "eauth": "pam",
-        "username": saltdev_account.username,
+        "username": salt_auth_account_1.username,
         "password": "notvalidpassword",
     }
     with pytest.raises(EauthAuthenticationError):
         client.run(low)
 
 
-def test_ssh_auth_invalid_acl(client, rosters_dir, ssh_priv_key, saltdev_account):
+def test_ssh_auth_invalid_acl(client, rosters_dir, ssh_priv_key, salt_auth_account_1):
     """
     CVE-2020-25592 - Eauth ACL enforced.
     """
@@ -339,21 +351,21 @@ def test_ssh_auth_invalid_acl(client, rosters_dir, ssh_priv_key, saltdev_account
         "rosters": [rosters_dir],
         "ssh_priv": ssh_priv_key,
         "eauth": "pam",
-        "username": saltdev_account.username,
+        "username": salt_auth_account_1.username,
         "password": "notvalidpassword",
     }
     with pytest.raises(EauthAuthenticationError):
         client.run(low)
 
 
-def test_ssh_auth_token(client, rosters_dir, ssh_priv_key, saltdev_account):
+def test_ssh_auth_token(client, rosters_dir, ssh_priv_key, salt_auth_account_1):
     """
     CVE-2020-25592 - Eauth tokens work as expected.
     """
     low = {
         "eauth": "pam",
-        "username": saltdev_account.username,
-        "password": saltdev_account.password,
+        "username": salt_auth_account_1.username,
+        "password": salt_auth_account_1.password,
     }
     ret = client.loadauth.mk_token(low)
     assert "token" in ret
@@ -375,14 +387,14 @@ def test_ssh_auth_token(client, rosters_dir, ssh_priv_key, saltdev_account):
 
 
 def test_ssh_cve_2021_3197_a(
-    client, rosters_dir, ssh_priv_key, saltdev_account, tmp_path
+    client, rosters_dir, ssh_priv_key, salt_auth_account_1, tmp_path
 ):
     exploited_path = tmp_path / "exploited"
     assert exploited_path.exists() is False
     low = {
         "eauth": "auto",
-        "username": saltdev_account.username,
-        "password": saltdev_account.password,
+        "username": salt_auth_account_1.username,
+        "password": salt_auth_account_1.password,
         "client": "ssh",
         "tgt": "localhost",
         "fun": "test.ping",
@@ -398,14 +410,14 @@ def test_ssh_cve_2021_3197_a(
 
 
 def test_ssh_cve_2021_3197_b(
-    client, rosters_dir, ssh_priv_key, saltdev_account, tmp_path
+    client, rosters_dir, ssh_priv_key, salt_auth_account_1, tmp_path
 ):
     exploited_path = tmp_path / "exploited"
     assert exploited_path.exists() is False
     low = {
         "eauth": "auto",
-        "username": saltdev_account.username,
-        "password": saltdev_account.password,
+        "username": salt_auth_account_1.username,
+        "password": salt_auth_account_1.password,
         "client": "ssh",
         "tgt": "localhost",
         "fun": "test.ping",

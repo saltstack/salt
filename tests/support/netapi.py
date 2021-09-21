@@ -104,14 +104,6 @@ def load_auth(client_config):
     return salt.auth.LoadAuth(client_config)
 
 
-def auth_creds():
-    return {
-        "username": "saltdev_api",
-        "password": "saltdev",
-        "eauth": "auto",
-    }
-
-
 def auth_token(load_auth, auth_creds):
     """
     Mint and return a valid token for auth_creds
