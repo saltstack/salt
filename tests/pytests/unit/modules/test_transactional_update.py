@@ -1,6 +1,7 @@
 import sys
 
 import pytest
+import salt.loader.context
 import salt.modules.state as statemod
 import salt.modules.transactional_update as tu
 from salt.exceptions import CommandExecutionError
@@ -13,8 +14,15 @@ pytestmark = [
 
 @pytest.fixture
 def configure_loader_modules():
+    loader_context = salt.loader.context.LoaderContext()
     return {
-        tu: {"__salt__": {}, "__utils__": {}},
+        tu: {
+            "__salt__": {},
+            "__utils__": {},
+            "__pillar__": salt.loader.context.NamedLoaderContext(
+                "__pillar__", loader_context, {}
+            ),
+        },
         statemod: {"__salt__": {}, "__context__": {}},
     }
 
