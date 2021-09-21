@@ -180,6 +180,25 @@ Now before each commit, it will ensure that your code at least *looks*
 right before you open a pull request. And with that step, it’s time to
 start hacking on Salt!
 
+.. _imagemagick-setup:
+
+``imagemagick`` Setup
+~~~~~~~~~~~~~~~~~~~~~
+
+One last prerequisite is to have ``imagemagick`` installed, as it is required
+by Sphinx for generating the HTML documentation.
+
+::
+
+   # On Mac, via homebrew
+   brew install imagemagick
+
+::
+
+   # Example Linux installation: Debian-based
+   sudo apt install imagemagick
+
+
 Salt Issues
 -----------
 
@@ -273,8 +292,10 @@ Documentation
 ~~~~~~~~~~~~~
 
 Salt uses both docstrings, as well as normal reStructuredText files in
-the ``salt/doc`` folder for documentation. Since we use nox, you can
-build your docs and view them in your browser with this one-liner:
+the ``salt/doc`` folder for documentation. Sphinx is used to generate the
+documentation, and does require :ref:`setting up imagemagick on your OS.<imagemagick-setup>`
+Since we use ``nox``, you can build your docs and view them in your browser
+with this one-liner:
 
 ::
 
