@@ -206,6 +206,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
+        session.error("Could not find a windows requirements file for {}".format(pydir))
     elif IS_DARWIN:
         if crypto is None:
             _requirements_file = os.path.join(
@@ -227,6 +228,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
+        session.error("Could not find a darwin requirements file for {}".format(pydir))
     elif IS_FREEBSD:
         if crypto is None:
             _requirements_file = os.path.join(
@@ -248,6 +250,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
+        session.error("Could not find a freebsd requirements file for {}".format(pydir))
     else:
         _install_system_packages(session)
         if crypto is None:
@@ -270,6 +273,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
+        session.error("Could not find a linux requirements file for {}".format(pydir))
 
 
 def _upgrade_pip_setuptools_and_wheel(session):
@@ -713,7 +717,6 @@ def pytest_cloud(session, coverage):
     """
     # Install requirements
     if _upgrade_pip_setuptools_and_wheel(session):
-        _install_requirements(session, "zeromq")
         requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "cloud.txt"
         )
@@ -848,7 +851,6 @@ class Tee:
 
 def _lint(session, rcfile, flags, paths, tee_output=True):
     if _upgrade_pip_setuptools_and_wheel(session):
-        _install_requirements(session, "zeromq")
         requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "lint.txt"
         )
