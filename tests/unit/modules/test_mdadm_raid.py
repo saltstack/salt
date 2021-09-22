@@ -33,7 +33,7 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual("salt", ret)
 
-            self.assert_called_once(mock)
+            mock.assert_called_once()
 
             args, kwargs = mock.call_args
             # expected cmd is
@@ -69,7 +69,7 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertEqual("salt", ret)
 
-            self.assert_called_once(mock)
+            mock.assert_called_once()
 
             args, kwargs = mock.call_args
             self.assertEqual(

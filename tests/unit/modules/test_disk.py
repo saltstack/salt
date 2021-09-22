@@ -222,7 +222,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                 kwargs = {"read-ahead": 512, "filesystem-read-ahead": 1024}
                 disk.tune("/dev/sda", **kwargs)
 
-                self.assert_called_once(mock)
+                mock.assert_called_once()
 
                 args, kwargs = mock.call_args
 
