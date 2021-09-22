@@ -93,12 +93,9 @@ def minion_process():
     Start a minion process
     """
     import salt.utils.platform
-    import salt.utils.process
     import salt.cli.daemons
 
     # salt_minion spawns this function in a new process
-
-    salt.utils.process.appendproctitle("KeepAlive")
 
     def handle_hup(manager, sig, frame):
         manager.minion.reload()
@@ -202,7 +199,7 @@ def salt_minion():
     prev_sigterm_handler = signal.getsignal(signal.SIGTERM)
     while True:
         try:
-            process = multiprocessing.Process(target=minion_process)
+            process = multiprocessing.Process(target=minion_process, name="KeepAlive")
             process.start()
             signal.signal(
                 signal.SIGTERM,
@@ -348,7 +345,9 @@ def salt_proxy():
             proxyminion = salt.cli.daemons.ProxyMinion()
             proxyminion.start()
             return
-        process = multiprocessing.Process(target=proxy_minion_process, args=(queue,))
+        process = multiprocessing.Process(
+            target=proxy_minion_process, args=(queue,), name="ProxyMinion"
+        )
         process.start()
         try:
             process.join()
