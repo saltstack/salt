@@ -505,9 +505,7 @@ def thread_return(cls, minion_instance, opts, data):
         # Reconfigure multiprocessing logging after daemonizing
         salt.log.setup.setup_multiprocessing_logging()
 
-    salt.utils.process.appendproctitle(
-        "{}._thread_return {}".format(cls.__name__, data["jid"])
-    )
+    salt.utils.process.appendproctitle("{}._thread_return".format(cls.__name__))
 
     sdata = {"pid": os.getpid()}
     sdata.update(data)
@@ -755,9 +753,7 @@ def thread_multi_return(cls, minion_instance, opts, data):
         # Reconfigure multiprocessing logging after daemonizing
         salt.log.setup.setup_multiprocessing_logging()
 
-    salt.utils.process.appendproctitle(
-        "{}._thread_multi_return {}".format(cls.__name__, data["jid"])
-    )
+    salt.utils.process.appendproctitle("{}._thread_multi_return".format(cls.__name__))
 
     sdata = {"pid": os.getpid()}
     sdata.update(data)
@@ -944,19 +940,22 @@ def handle_decoded_payload(self, data):
     # side.
     instance = self
     multiprocessing_enabled = self.opts.get("multiprocessing", True)
+    name = "ProcessPayload(jid={})".format(data["jid"])
     if multiprocessing_enabled:
         if sys.platform.startswith("win"):
             # let python reconstruct the minion on the other side if we"re
             # running on windows
             instance = None
         process = SignalHandlingProcess(
-            target=target, args=(self, instance, instance.opts, data, self.connected)
+            target=target,
+            args=(self, instance, instance.opts, data, self.connected),
+            name=name,
         )
     else:
         process = threading.Thread(
             target=target,
             args=(self, instance, instance.opts, data, self.connected),
-            name=data["jid"],
+            name=name,
         )
 
     process.start()
