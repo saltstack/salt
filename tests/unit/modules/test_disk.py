@@ -1,8 +1,9 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
+import sys
 
-
+import pytest
 import salt.modules.disk as disk
 import salt.utils.path
 import salt.utils.platform
@@ -210,6 +211,9 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             disk.wipe("/dev/sda")
             mock.assert_called_once_with("wipefs -a /dev/sda", python_shell=False)
 
+    @pytest.mark.skipif(
+        sys.version_info < (3, 6), reason="Py3.5 dictionaries are not ordered"
+    )
     def test_tune(self):
         mock = MagicMock(
             return_value=(
@@ -222,19 +226,9 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                 kwargs = {"read-ahead": 512, "filesystem-read-ahead": 1024}
                 disk.tune("/dev/sda", **kwargs)
 
-                self.assert_called_once(mock)
-
-                args, kwargs = mock.call_args
-
-                # Assert called once with either 'blockdev --setra 512 --setfra 512 /dev/sda' or
-                # 'blockdev --setfra 512 --setra 512 /dev/sda' and python_shell=False kwarg.
-                self.assertEqual(len(args), 1)
-                self.assertTrue(args[0].startswith("blockdev "))
-                self.assertTrue(args[0].endswith(" /dev/sda"))
-                self.assertIn(" --setra 512 ", args[0])
-                self.assertIn(" --setfra 1024 ", args[0])
-                self.assertEqual(len(args[0].split()), 6)
-                self.assertEqual(kwargs, {"python_shell": False})
+                mock.assert_called_with(
+                    "blockdev --setra 512 --setfra 1024 /dev/sda", python_shell=False
+                )
 
     def test_format(self):
         """
