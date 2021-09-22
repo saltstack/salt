@@ -813,13 +813,14 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-cloud-py3.5-requirements
         name: Cloud CI Py3.5 Requirements
-        files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(cloud\.in|py3\.5/cloud\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/(cloud\.in|py3\.5/cloud\.txt)))$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.5
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
           - --include=requirements/static/pkg/linux.in
           - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/cloud.in
@@ -827,13 +828,14 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-cloud-py3.6-requirements
         name: Cloud CI Py3.6 Requirements
-        files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(cloud\.in|py3\.6/cloud\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/(cloud\.in|py3\.6/cloud\.txt)))$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.6
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
           - --include=requirements/static/pkg/linux.in
           - --pip-args=--constraint=requirements/static/pkg/py{py_version}/linux.txt
           - requirements/static/ci/cloud.in
@@ -841,13 +843,14 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-cloud-py3.7-requirements
         name: Cloud CI Py3.7 Requirements
-        files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(cloud\.in|py3\.7/cloud\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/(cloud\.in|py3\.7/cloud\.txt)))$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.7
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
           - --include=requirements/static/pkg/linux.in
           - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/cloud.in
@@ -855,13 +858,14 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-cloud-py3.8-requirements
         name: Cloud CI Py3.8 Requirements
-        files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(cloud\.in|py3\.8/cloud\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/(cloud\.in|py3\.8/cloud\.txt)))$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.8
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
           - --include=requirements/static/pkg/linux.in
           - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/cloud.in
@@ -869,13 +873,14 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-cloud-py3.9-requirements
         name: Cloud CI Py3.9 Requirements
-        files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(cloud\.in|py3\.9/cloud\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/(cloud\.in|py3\.9/cloud\.txt)))$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.9
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
           - --include=requirements/static/pkg/linux.in
           - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/cloud.in
@@ -883,13 +888,14 @@ repos:
       - id: pip-tools-compile
         alias: compile-ci-cloud-py3.10-requirements
         name: Cloud CI Py3.10 Requirements
-        files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(cloud\.in|py3\.10/cloud\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/(cloud\.in|py3\.10/cloud\.txt)))$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.10
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
           - --include=requirements/static/pkg/linux.in
           - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/cloud.in
@@ -1424,6 +1430,9 @@ repos:
           - -e
           - lint-salt-pre-commit
           - --
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
 
   - repo: https://github.com/saltstack/mirrors-nox
     rev: v2020.8.22
@@ -1436,4 +1445,7 @@ repos:
           - -e
           - lint-tests-pre-commit
           - --
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
   # <---- Pre-Commit -------------------------------------------------------------------------------------------------

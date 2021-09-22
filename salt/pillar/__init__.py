@@ -2,11 +2,9 @@
 Render the pillar data
 """
 
-
 import collections
 import copy
 import fnmatch
-import inspect
 import logging
 import os
 import sys
@@ -629,8 +627,7 @@ class Pillar:
                 opts["pillar_roots"][env] = opts["pillar_roots"].pop("__env__")
             else:
                 log.debug(
-                    "pillar_roots __env__ ignored (environment '%s' found in"
-                    " pillar_roots)",
+                    "pillar_roots __env__ ignored (environment '%s' found in pillar_roots)",
                     env,
                 )
                 opts["pillar_roots"].pop("__env__")
@@ -640,9 +637,9 @@ class Pillar:
         """
         Pull the file server environments out of the master options
         """
-        envs = {"base"}
+        envs = ["base"]
         if "pillar_roots" in self.opts:
-            envs.update(list(self.opts["pillar_roots"]))
+            envs.extend([x for x in list(self.opts["pillar_roots"]) if x not in envs])
         return envs
 
     def get_tops(self):
