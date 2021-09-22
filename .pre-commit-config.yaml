@@ -899,7 +899,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.6 Requirements
-        files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(linux\.in|common\.in|docs\.in|py3\.6/linux\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -910,13 +910,14 @@ repos:
           - --include=requirements/static/pkg/linux.in
           - --include=requirements/static/ci/linux.in
           - --include=requirements/static/ci/common.in
+          - --include=requirements/static/pkg/py{py_version}/linux.txt
           - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.7 Requirements
-        files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(linux\.in|common\.in|docs\.in|py3\.7/linux\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -927,13 +928,14 @@ repos:
           - --include=requirements/static/pkg/linux.in
           - --include=requirements/static/ci/linux.in
           - --include=requirements/static/ci/common.in
+          - --include=requirements/static/pkg/py{py_version}/linux.txt
           - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.8 Requirements
-        files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(linux\.in|common\.in|docs\.in|py3\.8/linux\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -944,13 +946,14 @@ repos:
           - --include=requirements/static/pkg/linux.in
           - --include=requirements/static/ci/linux.in
           - --include=requirements/static/ci/common.in
+          - --include=requirements/static/pkg/py{py_version}/linux.txt
           - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.9 Requirements
-        files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(linux\.in|common\.in|docs\.in|py3\.9/linux\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -961,6 +964,7 @@ repos:
           - --include=requirements/static/pkg/linux.in
           - --include=requirements/static/ci/linux.in
           - --include=requirements/static/ci/common.in
+          - --include=requirements/static/pkg/py{py_version}/linux.txt
           - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 
