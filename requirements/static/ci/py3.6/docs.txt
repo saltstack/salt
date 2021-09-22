@@ -666,9 +666,7 @@ platformdirs==2.2.0
 portend==2.4
     # via cherrypy
 psutil==5.8.0
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/static/pkg/linux.in
+    # via -r requirements/base.txt
 pyasn1-modules==0.2.8
     # via google-auth
 pyasn1==0.4.8

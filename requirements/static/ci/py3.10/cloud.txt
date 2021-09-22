@@ -91,7 +91,6 @@ profitbricks==4.1.3
 psutil==5.8.0
     # via
     #   -r requirements/base.txt
-    #   -r requirements/static/pkg/linux.in
     #   pytest-salt-factories
 py==1.10.0
     # via pytest
