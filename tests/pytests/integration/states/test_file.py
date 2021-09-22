@@ -471,8 +471,12 @@ def test_patch_single_file(salt_call_cli, min_patch_ver, patch_file_dest):
         name_file=name_file, source_file=source_file
     )
     sls_temp = pytest.helpers.temp_file("test_patch.sls", sls_contents, patch_file_dest)
-    name_temp = pytest.helpers.temp_file("name_file.txt", name_file_contents, patch_file_dest)
-    source_temp = pytest.helpers.temp_file("source_file.patch", source_file_contents, patch_file_dest)
+    name_temp = pytest.helpers.temp_file(
+        "name_file.txt", name_file_contents, patch_file_dest
+    )
+    source_temp = pytest.helpers.temp_file(
+        "source_file.patch", source_file_contents, patch_file_dest
+    )
 
     with sls_temp, name_temp, source_temp:
         # Store the original contents and make sure they change
@@ -538,8 +542,12 @@ def test_patch_directory(
         base_dir=patch_file_dest, all_patch=all_patch_file
     )
 
-    sls_tempfile = pytest.helpers.temp_file("test_patch.sls", sls_contents, patch_file_dest)
-    numbers_tempfile = pytest.helpers.temp_file(numbers_file, content[0], patch_file_dest)
+    sls_tempfile = pytest.helpers.temp_file(
+        "test_patch.sls", sls_contents, patch_file_dest
+    )
+    numbers_tempfile = pytest.helpers.temp_file(
+        numbers_file, content[0], patch_file_dest
+    )
     math_tempfile = pytest.helpers.temp_file(math_file, content[1], patch_file_dest)
 
     with sls_tempfile, numbers_tempfile, math_tempfile:
@@ -601,11 +609,15 @@ def test_patch_strip_parsing(
         base_dir=patch_file_dest, all_patch=all_patch_file
     )
 
-    sls_tempfile = pytest.helpers.temp_file("test_patch.sls", sls_contents, patch_file_dest)
+    sls_tempfile = pytest.helpers.temp_file(
+        "test_patch.sls", sls_contents, patch_file_dest
+    )
     sls_patch_tempfile = pytest.helpers.temp_file(
         "test_patch_strip.sls", sls_patch_contents, patch_file_dest
     )
-    numbers_tempfile = pytest.helpers.temp_file(numbers_file, content[0], patch_file_dest)
+    numbers_tempfile = pytest.helpers.temp_file(
+        numbers_file, content[0], patch_file_dest
+    )
     math_tempfile = pytest.helpers.temp_file(math_file, content[1], patch_file_dest)
 
     with sls_tempfile, sls_patch_tempfile, numbers_tempfile, math_tempfile:
@@ -658,7 +670,9 @@ def test_patch_saltenv(
         """.format(
         math_file=math_file, math_patch=math_patch_file
     )
-    sls_tempfile = pytest.helpers.temp_file("test_patch.sls", sls_contents, patch_file_dest)
+    sls_tempfile = pytest.helpers.temp_file(
+        "test_patch.sls", sls_contents, patch_file_dest
+    )
     math_tempfile = pytest.helpers.temp_file(math_file, content[1], patch_file_dest)
 
     with sls_tempfile, math_tempfile:
@@ -715,11 +729,15 @@ def test_patch_single_file_failure(
         reject_file=reject_file,
     )
 
-    sls_tempfile = pytest.helpers.temp_file("test_patch.sls", sls_patch_contents, patch_file_dest)
+    sls_tempfile = pytest.helpers.temp_file(
+        "test_patch.sls", sls_patch_contents, patch_file_dest
+    )
     sls_reject_tempfile = pytest.helpers.temp_file(
         "test_patch_reject.sls", sls_patch_reject_contents, patch_file_dest
     )
-    numbers_tempfile = pytest.helpers.temp_file(numbers_file, content[0], patch_file_dest)
+    numbers_tempfile = pytest.helpers.temp_file(
+        numbers_file, content[0], patch_file_dest
+    )
     math_tempfile = pytest.helpers.temp_file(math_file, content[1], patch_file_dest)
     reject_tempfile = pytest.helpers.temp_file("reject.txt", "", patch_file_dest)
 
@@ -791,12 +809,16 @@ def test_patch_directory_failure(
         """.format(
         base_dir=patch_file_dest, all_patch=all_patch_file, reject_file=reject_file
     )
-    sls_tempfile = pytest.helpers.temp_file("test_patch.sls", sls_patch_contents, patch_file_dest)
+    sls_tempfile = pytest.helpers.temp_file(
+        "test_patch.sls", sls_patch_contents, patch_file_dest
+    )
     sls_reject_tempfile = pytest.helpers.temp_file(
         "test_patch_reject.sls", sls_patch_reject_contents, patch_file_dest
     )
 
-    numbers_tempfile = pytest.helpers.temp_file(numbers_file, content[0], patch_file_dest)
+    numbers_tempfile = pytest.helpers.temp_file(
+        numbers_file, content[0], patch_file_dest
+    )
     math_tempfile = pytest.helpers.temp_file(math_file, content[1], patch_file_dest)
     reject_tempfile = pytest.helpers.temp_file("reject.txt", "", patch_file_dest)
 
@@ -862,8 +884,12 @@ def test_patch_single_file_template(
         context=context,
     )
 
-    sls_tempfile = pytest.helpers.temp_file("test_patch.sls", sls_contents, patch_file_dest)
-    numbers_tempfile = pytest.helpers.temp_file(numbers_file, content[0], patch_file_dest)
+    sls_tempfile = pytest.helpers.temp_file(
+        "test_patch.sls", sls_contents, patch_file_dest
+    )
+    numbers_tempfile = pytest.helpers.temp_file(
+        numbers_file, content[0], patch_file_dest
+    )
 
     with sls_tempfile, numbers_tempfile:
         ret = salt_call_cli.run("state.apply", "test_patch")
@@ -918,8 +944,12 @@ def test_patch_directory_template(
         base_dir=patch_file_dest, all_patch_template=all_patch_template, context=context
     )
 
-    sls_tempfile = pytest.helpers.temp_file("test_patch.sls", sls_contents, patch_file_dest)
-    numbers_tempfile = pytest.helpers.temp_file(numbers_file, content[0], patch_file_dest)
+    sls_tempfile = pytest.helpers.temp_file(
+        "test_patch.sls", sls_contents, patch_file_dest
+    )
+    numbers_tempfile = pytest.helpers.temp_file(
+        numbers_file, content[0], patch_file_dest
+    )
     math_tempfile = pytest.helpers.temp_file(math_file, content[1], patch_file_dest)
 
     with sls_tempfile, numbers_tempfile, math_tempfile:
@@ -972,7 +1002,9 @@ def test_patch_test_mode(
     sls_patch_tempfile = pytest.helpers.temp_file(
         "test_patch.sls", sls_patch_contents, patch_file_dest
     )
-    numbers_tempfile = pytest.helpers.temp_file(numbers_file, content[0], patch_file_dest)
+    numbers_tempfile = pytest.helpers.temp_file(
+        numbers_file, content[0], patch_file_dest
+    )
 
     with sls_patch_tempfile, numbers_tempfile:
         # Test application with test=True mode
