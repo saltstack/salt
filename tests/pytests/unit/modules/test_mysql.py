@@ -11,7 +11,7 @@ import logging
 
 import pytest
 import salt.modules.mysql as mysql
-from tests.support.mock import MagicMock, call, mock_open, patch
+from tests.support.mock import ANY, MagicMock, call, mock_open, patch
 
 try:
     import pymysql
@@ -947,10 +947,21 @@ def test__connect_mysqldb():
     mysqldb_connect_mock = MagicMock(autospec=True, return_value=MockMySQLConnect())
     with patch.dict(mysql.__salt__, {"config.option": MagicMock()}):
         with patch("MySQLdb.connect", mysqldb_connect_mock):
-            ret = mysql._connect()
+            mysql._connect()
             assert "mysql.error" not in mysql.__context__
             # If 'use_unicode' is activated here, it would retrieve utf8 strings
             # as unicode() objects in salt and we do not want that. So it needs
             # to be False
-            _, connargs = mysqldb_connect_mock.call_args
-            assert connargs["use_unicode"] is False
+            mysqldb_connect_mock.assert_called_once_with(
+                charset=ANY,
+                conv=ANY,
+                db=ANY,
+                host=ANY,
+                passwd=ANY,
+                port=ANY,
+                read_default_file=ANY,
+                read_default_group=ANY,
+                unix_socket=ANY,
+                use_unicode=False,
+                user=ANY,
+            )
