@@ -6917,8 +6917,8 @@ def patch(
             # patch exits with a status of 1 if some hunks cannot be applied
             # patch exits with a status of 2 if something else went wrong
             # www.gnu.org/software/diffutils/manual/html_node/patch-Messages.html
-            if pre_check["retcode"] == 2 and pre_check["stderr"]:
-                ret["comment"] = pre_check["stderr"]
+            if pre_check["retcode"] == 1 or pre_check["retcode"] == 2:
+                ret["comment"] = pre_check["stderr"] or "Unable to apply patch"
                 ret["result"] = False
                 return ret
             if already_applied:
