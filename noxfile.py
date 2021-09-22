@@ -276,7 +276,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         session.error("Could not find a linux requirements file for {}".format(pydir))
 
 
-def _upgrade_pip_setuptools_and_wheel(session):
+def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
     if SKIP_REQUIREMENTS_INSTALL:
         session.log(
             "Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ"
@@ -289,11 +289,16 @@ def _upgrade_pip_setuptools_and_wheel(session):
         "pip",
         "install",
         "--progress-bar=off",
-        "-U",
-        "pip>=20.2.4,<21.2",
-        "setuptools!=50.*,!=51.*,!=52.*",
-        "wheel",
     ]
+    if upgrade:
+        install_command.append("-U")
+    install_command.extend(
+        [
+            "pip>=20.2.4,<21.2",
+            "setuptools!=50.*,!=51.*,!=52.*",
+            "wheel",
+        ]
+    )
     session.run(*install_command, silent=PIP_INSTALL_SILENT)
     return True
 
@@ -855,8 +860,10 @@ class Tee:
         return self._first.fileno()
 
 
-def _lint(session, rcfile, flags, paths, tee_output=True):
-    if _upgrade_pip_setuptools_and_wheel(session):
+def _lint(
+    session, rcfile, flags, paths, tee_output=True, upgrade_setuptools_and_pip=True
+):
+    if _upgrade_pip_setuptools_and_wheel(session, upgrade=upgrade_setuptools_and_pip):
         requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "lint.txt"
         )
@@ -930,7 +937,14 @@ def _lint_pre_commit(session, rcfile, flags, paths):
             interpreter=session._runner.func.python,
             reuse_existing=True,
         )
-    _lint(session, rcfile, flags, paths, tee_output=False)
+    _lint(
+        session,
+        rcfile,
+        flags,
+        paths,
+        tee_output=False,
+        upgrade_setuptools_and_pip=False,
+    )
 
 
 @nox.session(python="3")
