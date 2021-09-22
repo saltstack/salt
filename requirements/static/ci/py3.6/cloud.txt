@@ -49,9 +49,12 @@ six==1.16.0
     #   pypsexec
     #   pywinrm
     #   smbprotocol
+    #   virtualenv
 smbprotocol==0.1.1
     # via pypsexec
 urllib3==1.26.4
     # via requests
+virtualenv==20.8.0
+    # via pytest-salt-factories
 xmltodict==0.12.0
     # via pywinrm
