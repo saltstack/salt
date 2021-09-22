@@ -1,7 +1,6 @@
 import ctypes
 import logging
 import multiprocessing
-import signal
 import time
 from concurrent.futures.thread import ThreadPoolExecutor
 
@@ -158,10 +157,8 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self._closing = True
         if self.process_manager is None:
             return
-        self.process_manager.stop_restarting()
-        self.process_manager.send_signal_to_processes(signal.SIGTERM)
+        self.process_manager.terminate()
         self.pub_server_channel.pub_close()
-        self.process_manager.kill_children()
         # Really terminate any process still left behind
         for pid in self.process_manager._process_map:
             terminate_process(pid=pid, kill_children=True, slow_stop=False)
