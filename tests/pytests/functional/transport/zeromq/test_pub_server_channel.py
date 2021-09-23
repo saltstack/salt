@@ -139,7 +139,7 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
             while True:
                 payload = self.queue.get()
                 if payload is None:
-                    log.debug("We received the stop sentinal")
+                    log.debug("We received the stop sentinel")
                     break
                 self.pub_server_channel.publish(payload)
         except KeyboardInterrupt:
