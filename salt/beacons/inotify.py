@@ -45,7 +45,7 @@ def __virtual__():
     if HAS_PYINOTIFY:
         return __virtualname__
     err_msg = "pyinotify library is missing"
-    log.error("Unable to load inotify beacon: {}".format(err_msg))
+    log.error("Unable to load inotify beacon: %s", err_msg)
     return False, err_msg
 
 
