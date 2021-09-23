@@ -1,4 +1,4 @@
-General improvements on the "ansiblegate" module: 
+General improvements on the "ansiblegate" module:
 * Add "ansible.targets" method to gather Ansible inventory
 * Add "ansible.discover_playbooks" method to help collecting playbooks
 * Fix crash when running Ansible playbooks if ansible-playbook CLI output is not the expected JSON.

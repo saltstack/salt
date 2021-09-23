@@ -1,13 +1,14 @@
 # Author: Bo Maryniuk <bo@suse.de>
 
+import os
+
 import pytest
-import salt.modules.ansiblegate as ansiblegate
-import salt.utils.json
 import salt.config
 import salt.loader
+import salt.modules.ansiblegate as ansiblegate
+import salt.utils.json
 from tests.support.mock import ANY, MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-
 
 pytestmark = [
     pytest.mark.skip_on_windows(reason="Not supported on Windows"),

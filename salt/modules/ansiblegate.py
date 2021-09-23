@@ -17,6 +17,7 @@ any Ansible module to respond.
 import fnmatch
 import json
 import logging
+import os
 import subprocess
 import sys
 from tempfile import NamedTemporaryFile
