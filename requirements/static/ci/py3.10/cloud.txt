@@ -148,6 +148,8 @@ requests==2.25.1
     #   profitbricks
     #   pywinrm
     #   requests-ntlm
+rpm-vercmp==0.1.2
+    # via -r requirements/static/pkg/linux.in
 setproctitle==1.2.2
     # via -r requirements/static/pkg/linux.in
 six==1.16.0

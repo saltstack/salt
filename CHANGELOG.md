@@ -7,6 +7,37 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+Salt 3003.3 (2021-08-20)
+========================
+
+Fixed
+-----
+
+- Fix issue introduced in https://github.com/saltstack/salt/pull/59648 (#60046)
+
+
+Security
+--------
+
+- Verify the owner of an existing config before trusting it during install. If the owner cannot be verified, back it up and use defaults. (CVE-2021-22004)
+- Ensure that sourced file is cached using its hash name (cve-2021-21996)
+
+
+Salt 3003.2 (2021-07-29)
+========================
+
+Fixed
+-----
+
+- Periodically restart the fileserver update process to avoid leaks (#50313)
+- Add ssh_timeout to kwargs in deploy_script (#59901)
+- Update the external ipaddress to the latest 3.9.5 version which has some security fixes. Updating the compat.p to use the vendored version if the python version is below 3.9.5 and only run the test_ipaddress.py tests if below 3.9.5. (#60168)
+- Use the right crypto libary for salt.utils.crypt.reinit_crypto (#60215)
+- Stop SSH from hanging if connection is lost. Also added args to customize grace period. (#60216)
+- Improve reliability of Terminal class (#60504)
+- Ignore configuration for 'enable_fqdns_grains' for AIX, Solaris and Juniper, assume False (#60529)
+
+
 Salt 3003.1 (2021-06-08)
 ========================
 
@@ -196,6 +227,21 @@ Added
   metadata for a package by extracting library requirement information from the
   binary ELF files in the package. (#59569)
 
+Salt 3002.7 (2021-08-20)
+========================
+
+Fixed
+-----
+
+- Verify the owner of an existing config before trusting it during install. If the owner cannot be verified, back it up and use defaults. (CVE-2021-22004)
+
+
+Security
+--------
+
+- Fix the CVE-2021-31607 vulnerability
+  Additionally, an audit and a tool was put in place, ``bandit``, to address similar issues througout the code base, and prevent them. (CVE-2021-31607)
+- Ensure that sourced file is cached using its hash name (cve-2021-21996)
 
 Salt 3002.6 (2021-03-10)
 ========================
@@ -525,6 +571,25 @@ Added
   `enable_slsvars_fixes` to enable fixes to tpldir, tplfile and sls_path.
   This flag will be deprecated in the Phosphorus release when this functionality
   becomes the default. (#58652)
+
+Salt 3001.8 (2021-08-20)
+========================
+
+Version 3001.8 is a bug fix release for :ref:`3001 <release-3001>`.
+
+
+Fixed
+-----
+
+- Verify the owner of an existing config before trusting it during install. If the owner cannot be verified, back it up and use defaults. (CVE-2021-22004)
+
+
+Security
+--------
+
+- Fix the CVE-2021-31607 vulnerability
+  Additionally, an audit and a tool was put in place, ``bandit``, to address similar issues througout the code base, and prevent them. (CVE-2021-31607)
+- Ensure that sourced file is cached using its hash name (cve-2021-21996)
 
 Salt 3001.7 (2021-03-10)
 ========================
