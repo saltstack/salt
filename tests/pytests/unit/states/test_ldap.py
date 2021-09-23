@@ -119,17 +119,14 @@ class LdapDB:
         return {dn: {attr: list(d[dn][attr]) for attr in d[dn]} for dn in d}
 
 
-@pytest.fixture(scope="module")
-def db(init_db=None):
-    ldapdb = LdapDB()
-    if init_db is None:
-        ldapdb.db = {}
-    return ldapdb
+@pytest.fixture
+def db():
+    return LdapDB()
 
 
-@pytest.fixture(scope="module")
-def complex_db():
-    return {
+@pytest.fixture
+def complex_db(db):
+    db.db = {
         "dnfoo": {
             "attrfoo1": OrderedSet(
                 (
@@ -149,11 +146,12 @@ def complex_db():
             "attrbar2": OrderedSet((b"valbar2.1",)),
         },
     }
+    return db
 
 
-@pytest.fixture(scope="module")
-def no_change_complex_db():
-    return {
+@pytest.fixture
+def no_change_complex_db(db):
+    db.db = {
         "dnfoo": {
             "attrfoo1": OrderedSet(
                 (
@@ -173,6 +171,7 @@ def no_change_complex_db():
             "attrbar2": OrderedSet((b"valbar2.1",)),
         },
     }
+    return db
 
 
 class _dummy_ctx:
@@ -371,66 +370,47 @@ def test_managed_add_entry(db):
     _test_helper_success_add(db, {"dummydn": {"foo": ["bar", "baz"]}})
 
 
-def test_managed_add_attr(db, complex_db):
-    db.db = complex_db
-
-    _test_helper_success_add(db, {"dnfoo": {"attrfoo1": ["valfoo1.3"]}})
-
-    _test_helper_success_add(db, {"dnfoo": {"attrfoo4": ["valfoo4.1"]}})
+def test_managed_add_attr(complex_db):
+    _test_helper_success_add(complex_db, {"dnfoo": {"attrfoo1": ["valfoo1.3"]}})
+    _test_helper_success_add(complex_db, {"dnfoo": {"attrfoo4": ["valfoo4.1"]}})
 
 
-def test_managed_replace_attr(db, complex_db):
-    db.db = complex_db
-
-    _test_helper_success(db, {"dnfoo": {"attrfoo3": ["valfoo3.1"]}})
+def test_managed_replace_attr(complex_db):
+    _test_helper_success(complex_db, {"dnfoo": {"attrfoo3": ["valfoo3.1"]}})
 
 
-def test_managed_simplereplace(db, complex_db):
-    db.db = complex_db
-
-    _test_helper_success(db, {"dnfoo": {"attrfoo1": ["valfoo1.3"]}})
+def test_managed_simplereplace(complex_db):
+    _test_helper_success(complex_db, {"dnfoo": {"attrfoo1": ["valfoo1.3"]}})
 
 
-def test_managed_deleteattr(db, complex_db):
-    db.db = complex_db
-
-    _test_helper_success(db, {"dnfoo": {"attrfoo1": []}})
+def test_managed_deleteattr(complex_db):
+    _test_helper_success(complex_db, {"dnfoo": {"attrfoo1": []}})
 
 
-def test_managed_deletenonexistattr(db, no_change_complex_db):
-    db.db = no_change_complex_db
-
-    _test_helper_nochange(db, {"dnfoo": {"dummyattr": []}})
+def test_managed_deletenonexistattr(no_change_complex_db):
+    _test_helper_nochange(no_change_complex_db, {"dnfoo": {"dummyattr": []}})
 
 
-def test_managed_deleteentry(db, complex_db):
-    db.db = complex_db
-
-    _test_helper_success(db, {"dnfoo": {}}, True)
+def test_managed_deleteentry(complex_db):
+    _test_helper_success(complex_db, {"dnfoo": {}}, True)
 
 
-def test_managed_deletenonexistentry(db, no_change_complex_db):
-    db.db = no_change_complex_db
-
-    _test_helper_nochange(db, {"dummydn": {}}, True)
+def test_managed_deletenonexistentry(no_change_complex_db):
+    _test_helper_nochange(no_change_complex_db, {"dummydn": {}}, True)
 
 
-def test_managed_deletenonexistattrinnonexistentry(db, no_change_complex_db):
-    db.db = no_change_complex_db
-
-    _test_helper_nochange(db, {"dummydn": {"dummyattr": []}})
+def test_managed_deletenonexistattrinnonexistentry(no_change_complex_db):
+    _test_helper_nochange(no_change_complex_db, {"dummydn": {"dummyattr": []}})
 
 
-def test_managed_add_attr_delete_others(db, complex_db):
-    db.db = complex_db
-
-    _test_helper_success(db, {"dnfoo": {"dummyattr": ["dummyval"]}}, True)
+def test_managed_add_attr_delete_others(complex_db):
+    _test_helper_success(complex_db, {"dnfoo": {"dummyattr": ["dummyval"]}}, True)
 
 
-def test_managed_no_net_change(db, no_change_complex_db):
-    db.db = no_change_complex_db
-
-    _test_helper_nochange(db, {"dnfoo": {"attrfoo1": ["valfoo1.1", "valfoo1.2"]}})
+def test_managed_no_net_change(no_change_complex_db):
+    _test_helper_nochange(
+        no_change_complex_db, {"dnfoo": {"attrfoo1": ["valfoo1.1", "valfoo1.2"]}}
+    )
 
 
 def test_managed_repeated_values(db):
