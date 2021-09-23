@@ -309,6 +309,13 @@ def _install_requirements(
     if not _upgrade_pip_setuptools_and_wheel(session):
         return
 
+
+def _install_requirements(
+    session, transport, *extra_requirements, requirements_type="ci"
+):
+    if not _upgrade_pip_setuptools_and_wheel(session):
+        return False
+
     # Install requirements
     requirements_file = _get_pip_requirements_file(
         session, transport, requirements_type=requirements_type
@@ -332,6 +339,8 @@ def _install_requirements(
         install_command = ["--progress-bar=off", "--constraint", requirements_file]
         install_command += EXTRA_REQUIREMENTS_INSTALL.split()
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
+    return True
 
 
 def _run_with_coverage(session, *test_cmd, env=None):
@@ -527,26 +536,26 @@ def pytest_parametrized(session, coverage, transport, crypto):
     DO NOT CALL THIS NOX SESSION DIRECTLY
     """
     # Install requirements
-    _install_requirements(session, transport)
+    if _install_requirements(session, transport):
 
-    if crypto:
-        session.run(
-            "pip",
-            "uninstall",
-            "-y",
-            "m2crypto",
-            "pycrypto",
-            "pycryptodome",
-            "pycryptodomex",
-            silent=True,
-        )
-        install_command = [
-            "--progress-bar=off",
-            "--constraint",
-            _get_pip_requirements_file(session, transport, crypto=True),
-        ]
-        install_command.append(crypto)
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+        if crypto:
+            session.run(
+                "pip",
+                "uninstall",
+                "-y",
+                "m2crypto",
+                "pycrypto",
+                "pycryptodome",
+                "pycryptodomex",
+                silent=True,
+            )
+            install_command = [
+                "--progress-bar=off",
+                "--constraint",
+                _get_pip_requirements_file(session, transport, crypto=True),
+            ]
+            install_command.append(crypto)
+            session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
         "--rootdir",
