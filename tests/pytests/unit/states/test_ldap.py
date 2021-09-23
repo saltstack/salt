@@ -8,25 +8,151 @@ I'm leaving it for now, but this should really be gutted and replaced
 with something sensible.
 """
 import copy
+import logging
 
+import attr
 import pytest
 import salt.states.ldap
 from salt.utils.oset import OrderedSet
 from salt.utils.stringutils import to_bytes
 
+log = logging.getLogger(__name__)
+
+
 # emulates the LDAP database.  each key is the DN of an entry and it
 # maps to a dict which maps attribute names to sets of values.
-db = {}
+@attr.s
+class LdapDB:
+    db = attr.ib(init=False, default=attr.Factory(dict))
+
+    def dummy_connect(self, connect_spec):
+        return _dummy_ctx()
+
+    def dummy_search(self, connect_spec, base, scope):
+        if base not in self.db:
+            return {}
+        return {
+            base: {
+                attr: list(self.db[base][attr])
+                for attr in self.db[base]
+                if len(self.db[base][attr])
+            }
+        }
+
+    def dummy_add(self, connect_spec, dn, attributes):
+        assert dn not in self.db
+        assert attributes
+        self.db[dn] = {}
+        for attr, vals in attributes.items():
+            assert vals
+            self.db[dn][attr] = OrderedSet(vals)
+        return True
+
+    def dummy_delete(self, connect_spec, dn):
+        assert dn in self.db
+        del self.db[dn]
+        return True
+
+    def dummy_change(self, connect_spec, dn, before, after):
+        assert before != after
+        assert before
+        assert after
+        assert dn in self.db
+        e = self.db[dn]
+        assert e == before
+        all_attrs = OrderedSet()
+        all_attrs.update(before)
+        all_attrs.update(after)
+        directives = []
+        for attr in all_attrs:
+            if attr not in before:
+                assert attr in after
+                assert after[attr]
+                directives.append(("add", attr, after[attr]))
+            elif attr not in after:
+                assert attr in before
+                assert before[attr]
+                directives.append(("delete", attr, ()))
+            else:
+                assert before[attr]
+                assert after[attr]
+                to_del = before[attr] - after[attr]
+                if to_del:
+                    directives.append(("delete", attr, to_del))
+                to_add = after[attr] - before[attr]
+                if to_add:
+                    directives.append(("add", attr, to_add))
+        return self.dummy_modify(connect_spec, dn, directives)
+
+    def dummy_modify(self, connect_spec, dn, directives):
+        assert dn in self.db
+        e = self.db[dn]
+        for op, attr, vals in directives:
+            if op == "add":
+                assert vals
+                existing_vals = e.setdefault(attr, OrderedSet())
+                for val in vals:
+                    assert val not in existing_vals
+                    existing_vals.add(val)
+            elif op == "delete":
+                assert attr in e
+                existing_vals = e[attr]
+                assert existing_vals
+                if not vals:
+                    del e[attr]
+                    continue
+                for val in vals:
+                    assert val in existing_vals
+                    existing_vals.remove(val)
+                if not existing_vals:
+                    del e[attr]
+            elif op == "replace":
+                e.pop(attr, None)
+                e[attr] = OrderedSet(vals)
+            else:
+                raise ValueError()
+        return True
+
+    def dump_db(self, d=None):
+        if d is None:
+            d = self.db
+        return {dn: {attr: list(d[dn][attr]) for attr in d[dn]} for dn in d}
 
 
-def _init_db(newdb=None):
-    if newdb is None:
-        newdb = {}
-    global db
-    db = newdb
+@pytest.fixture(scope="module")
+def db(init_db=None):
+    ldapdb = LdapDB()
+    if init_db is None:
+        ldapdb.db = {}
+    return ldapdb
 
 
-def _complex_db():
+@pytest.fixture(scope="module")
+def complex_db():
+    return {
+        "dnfoo": {
+            "attrfoo1": OrderedSet(
+                (
+                    b"valfoo1.1",
+                    b"valfoo1.2",
+                )
+            ),
+            "attrfoo2": OrderedSet((b"valfoo2.1",)),
+        },
+        "dnbar": {
+            "attrbar1": OrderedSet(
+                (
+                    b"valbar1.1",
+                    b"valbar1.2",
+                )
+            ),
+            "attrbar2": OrderedSet((b"valbar2.1",)),
+        },
+    }
+
+
+@pytest.fixture(scope="module")
+def no_change_complex_db():
     return {
         "dnfoo": {
             "attrfoo1": OrderedSet(
@@ -60,115 +186,23 @@ class _dummy_ctx:
         pass
 
 
-def _dummy_connect(connect_spec):
-    return _dummy_ctx()
-
-
-def _dummy_search(connect_spec, base, scope):
-    if base not in db:
-        return {}
-    return {
-        base: {attr: list(db[base][attr]) for attr in db[base] if len(db[base][attr])}
-    }
-
-
-def _dummy_add(connect_spec, dn, attributes):
-    assert dn not in db
-    assert attributes
-    db[dn] = {}
-    for attr, vals in attributes.items():
-        assert vals
-        db[dn][attr] = OrderedSet(vals)
-    return True
-
-
-def _dummy_delete(connect_spec, dn):
-    assert dn in db
-    del db[dn]
-    return True
-
-
-def _dummy_change(connect_spec, dn, before, after):
-    assert before != after
-    assert before
-    assert after
-    assert dn in db
-    e = db[dn]
-    assert e == before
-    all_attrs = OrderedSet()
-    all_attrs.update(before)
-    all_attrs.update(after)
-    directives = []
-    for attr in all_attrs:
-        if attr not in before:
-            assert attr in after
-            assert after[attr]
-            directives.append(("add", attr, after[attr]))
-        elif attr not in after:
-            assert attr in before
-            assert before[attr]
-            directives.append(("delete", attr, ()))
-        else:
-            assert before[attr]
-            assert after[attr]
-            to_del = before[attr] - after[attr]
-            if to_del:
-                directives.append(("delete", attr, to_del))
-            to_add = after[attr] - before[attr]
-            if to_add:
-                directives.append(("add", attr, to_add))
-    return _dummy_modify(connect_spec, dn, directives)
-
-
-def _dummy_modify(connect_spec, dn, directives):
-    assert dn in db
-    e = db[dn]
-    for op, attr, vals in directives:
-        if op == "add":
-            assert vals
-            existing_vals = e.setdefault(attr, OrderedSet())
-            for val in vals:
-                assert val not in existing_vals
-                existing_vals.add(val)
-        elif op == "delete":
-            assert attr in e
-            existing_vals = e[attr]
-            assert existing_vals
-            if not vals:
-                del e[attr]
-                continue
-            for val in vals:
-                assert val in existing_vals
-                existing_vals.remove(val)
-            if not existing_vals:
-                del e[attr]
-        elif op == "replace":
-            e.pop(attr, None)
-            e[attr] = OrderedSet(vals)
-        else:
-            raise ValueError()
-    return True
-
-
-def _dump_db(d=None):
-    if d is None:
-        d = db
-    return {dn: {attr: list(d[dn][attr]) for attr in d[dn]} for dn in d}
-
-
 @pytest.fixture
-def configure_loader_modules():
-    salt_dunder = {}
-    for fname in ("connect", "search", "add", "delete", "change", "modify"):
-        salt_dunder["ldap3.{}".format(fname)] = globals()["_dummy_" + fname]
+def configure_loader_modules(db):
+    salt_dunder = {
+        "ldap3.connect": db.dummy_connect,
+        "ldap3.search": db.dummy_search,
+        "ldap3.add": db.dummy_add,
+        "ldap3.delete": db.dummy_delete,
+        "ldap3.change": db.dummy_change,
+        "ldap3.modify": db.dummy_modify,
+    }
     return {salt.states.ldap: {"__opts__": {"test": False}, "__salt__": salt_dunder}}
 
 
 def _test_helper(init_db, expected_ret, replace, delete_others=False):
-    _init_db(copy.deepcopy(init_db))
-    old = _dump_db()
-    new = _dump_db()
-    expected_db = copy.deepcopy(init_db)
+    old = init_db.dump_db()
+    new = init_db.dump_db()
+    expected_db = copy.deepcopy(init_db.db)
     for dn, attrs in replace.items():
         for attr, vals in attrs.items():
             vals = [to_bytes(val) for val in vals]
@@ -230,26 +264,25 @@ def _test_helper(init_db, expected_ret, replace, delete_others=False):
     ]
     actual = salt.states.ldap.managed(name, entries)
     assert expected_ret == actual
-    assert expected_db == db
+    assert expected_db == init_db.db
 
 
-def _test_helper_success(init_db, replace, delete_others=False):
-    _test_helper(init_db, {}, replace, delete_others)
+def _test_helper_success(db, replace, delete_others=False):
+    _test_helper(db, {}, replace, delete_others)
 
 
-def _test_helper_nochange(init_db, replace, delete_others=False):
+def _test_helper_nochange(db, replace, delete_others=False):
     expected = {
         "changes": {},
         "comment": "LDAP entries already set",
     }
-    _test_helper(init_db, expected, replace, delete_others)
+    _test_helper(db, expected, replace, delete_others)
 
 
-def _test_helper_add(init_db, expected_ret, add_items, delete_others=False):
-    _init_db(copy.deepcopy(init_db))
-    old = _dump_db()
-    new = _dump_db()
-    expected_db = copy.deepcopy(init_db)
+def _test_helper_add(db, expected_ret, add_items, delete_others=False):
+    old = db.dump_db()
+    new = db.dump_db()
+    expected_db = copy.deepcopy(db.db)
     for dn, attrs in add_items.items():
         for attr, vals in attrs.items():
             vals = [to_bytes(val) for val in vals]
@@ -315,15 +348,14 @@ def _test_helper_add(init_db, expected_ret, add_items, delete_others=False):
     ]
     actual = salt.states.ldap.managed(name, entries)
     assert expected_ret == actual
-    assert expected_db == db
+    assert expected_db == db.db
 
 
-def _test_helper_success_add(init_db, add_items, delete_others=False):
-    _test_helper_add(init_db, {}, add_items, delete_others)
+def _test_helper_success_add(db, add_items, delete_others=False):
+    _test_helper_add(db, {}, add_items, delete_others)
 
 
-def test_managed_empty():
-    _init_db()
+def test_managed_empty(db):
     name = "ldapi:///"
     expected = {
         "name": name,
@@ -335,53 +367,71 @@ def test_managed_empty():
     assert expected == actual
 
 
-def test_managed_add_entry():
-    _test_helper_success_add({}, {"dummydn": {"foo": ["bar", "baz"]}})
+def test_managed_add_entry(db):
+    _test_helper_success_add(db, {"dummydn": {"foo": ["bar", "baz"]}})
 
 
-def test_managed_add_attr():
-    _test_helper_success_add(_complex_db(), {"dnfoo": {"attrfoo1": ["valfoo1.3"]}})
+def test_managed_add_attr(db, complex_db):
+    db.db = complex_db
 
-    _test_helper_success_add(_complex_db(), {"dnfoo": {"attrfoo4": ["valfoo4.1"]}})
+    _test_helper_success_add(db, {"dnfoo": {"attrfoo1": ["valfoo1.3"]}})
 
-
-def test_managed_replace_attr():
-    _test_helper_success(_complex_db(), {"dnfoo": {"attrfoo3": ["valfoo3.1"]}})
+    _test_helper_success_add(db, {"dnfoo": {"attrfoo4": ["valfoo4.1"]}})
 
 
-def test_managed_simplereplace():
-    _test_helper_success(_complex_db(), {"dnfoo": {"attrfoo1": ["valfoo1.3"]}})
+def test_managed_replace_attr(db, complex_db):
+    db.db = complex_db
+
+    _test_helper_success(db, {"dnfoo": {"attrfoo3": ["valfoo3.1"]}})
 
 
-def test_managed_deleteattr():
-    _test_helper_success(_complex_db(), {"dnfoo": {"attrfoo1": []}})
+def test_managed_simplereplace(db, complex_db):
+    db.db = complex_db
+
+    _test_helper_success(db, {"dnfoo": {"attrfoo1": ["valfoo1.3"]}})
 
 
-def test_managed_deletenonexistattr():
-    _test_helper_nochange(_complex_db(), {"dnfoo": {"dummyattr": []}})
+def test_managed_deleteattr(db, complex_db):
+    db.db = complex_db
+
+    _test_helper_success(db, {"dnfoo": {"attrfoo1": []}})
 
 
-def test_managed_deleteentry():
-    _test_helper_success(_complex_db(), {"dnfoo": {}}, True)
+def test_managed_deletenonexistattr(db, no_change_complex_db):
+    db.db = no_change_complex_db
+
+    _test_helper_nochange(db, {"dnfoo": {"dummyattr": []}})
 
 
-def test_managed_deletenonexistentry():
-    _test_helper_nochange(_complex_db(), {"dummydn": {}}, True)
+def test_managed_deleteentry(db, complex_db):
+    db.db = complex_db
+
+    _test_helper_success(db, {"dnfoo": {}}, True)
 
 
-def test_managed_deletenonexistattrinnonexistentry():
-    _test_helper_nochange(_complex_db(), {"dummydn": {"dummyattr": []}})
+def test_managed_deletenonexistentry(db, no_change_complex_db):
+    db.db = no_change_complex_db
+
+    _test_helper_nochange(db, {"dummydn": {}}, True)
 
 
-def test_managed_add_attr_delete_others():
-    _test_helper_success(_complex_db(), {"dnfoo": {"dummyattr": ["dummyval"]}}, True)
+def test_managed_deletenonexistattrinnonexistentry(db, no_change_complex_db):
+    db.db = no_change_complex_db
+
+    _test_helper_nochange(db, {"dummydn": {"dummyattr": []}})
 
 
-def test_managed_no_net_change():
-    _test_helper_nochange(
-        _complex_db(), {"dnfoo": {"attrfoo1": ["valfoo1.1", "valfoo1.2"]}}
-    )
+def test_managed_add_attr_delete_others(db, complex_db):
+    db.db = complex_db
+
+    _test_helper_success(db, {"dnfoo": {"dummyattr": ["dummyval"]}}, True)
 
 
-def test_managed_repeated_values():
-    _test_helper_success({}, {"dummydn": {"dummyattr": ["dummyval", "dummyval"]}})
+def test_managed_no_net_change(db, no_change_complex_db):
+    db.db = no_change_complex_db
+
+    _test_helper_nochange(db, {"dnfoo": {"attrfoo1": ["valfoo1.1", "valfoo1.2"]}})
+
+
+def test_managed_repeated_values(db):
+    _test_helper_success(db, {"dummydn": {"dummyattr": ["dummyval", "dummyval"]}})
