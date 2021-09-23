@@ -729,10 +729,15 @@ def pytest_cloud(session, coverage):
     """
     pytest cloud tests session
     """
+    pydir = _get_pydir(session)
+    if pydir == "py3.5":
+        session.error(
+            "Due to conflicting and unsupported requirements the cloud tests only run on Py3.6+"
+        )
     # Install requirements
     if _upgrade_pip_setuptools_and_wheel(session):
         requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "cloud.txt"
+            "requirements", "static", "ci", pydir, "cloud.txt"
         )
 
         install_command = ["--progress-bar=off", "-r", requirements_file]
