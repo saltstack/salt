@@ -511,10 +511,10 @@ def _explore_path(path, playbook_extension, hosts_filename, syntax_check):
     ret = {}
 
     if not os.path.isabs(path):
-        log.error("The given path is not an absolute path: {}".format(path))
+        log.error("The given path is not an absolute path: %s", path)
         return ret
     if not os.path.isdir(path):
-        log.error("The given path is not a directory: {}".format(path))
+        log.error("The given path is not a directory: %s", path)
         return ret
 
     try:
