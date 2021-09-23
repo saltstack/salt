@@ -121,7 +121,7 @@ def pytest_tempdir_basename():
     """
     Return the temporary directory basename for the salt test suite.
     """
-    return "salt-tests-tmpdir"
+    return "stsuite"
 
 
 # <---- PyTest Tempdir Plugin Hooks ----------------------------------------------------------------------------------
