@@ -172,7 +172,7 @@ def update():
                         mtime_map_path,
                         line,
                     )
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         pass
 
     # compare the maps, set changed to the return value

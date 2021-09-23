@@ -944,7 +944,8 @@ def test__connect_mysqldb():
     """
     Test the _connect function in the MySQL module
     """
+    mysqldb_connect_mock = MagicMock(autospec=True, return_value=MockMySQLConnect())
     with patch.dict(mysql.__salt__, {"config.option": MagicMock()}):
-        with patch("MySQLdb.connect", return_value=MockMySQLConnect()):
-            ret = mysql._connect()
+        with patch("MySQLdb.connect", mysqldb_connect_mock):
+            mysql._connect()
             assert "mysql.error" not in mysql.__context__
