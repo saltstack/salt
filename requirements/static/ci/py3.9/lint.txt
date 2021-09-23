@@ -337,8 +337,6 @@ botocore==1.21.27
     #   boto3
     #   moto
     #   s3transfer
-cached-property==1.5.2
-    # via pygit2
 cachetools==4.2.2
     # via
     #   google-auth

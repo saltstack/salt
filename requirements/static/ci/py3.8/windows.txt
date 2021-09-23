@@ -218,7 +218,7 @@ portend==2.6
     # via cherrypy
 psutil==5.8.0
     # via
-    #   -r requirements/windows.txt
+    #   -r requirements/base.txt
     #   pytest-salt-factories
 py==1.9.0
     # via pytest
