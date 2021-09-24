@@ -136,7 +136,7 @@ if not HAS_APT:
             self.architectures = []
             self.file = file
             if not self.file:
-                self.file = str(pathlib.Path("/etc/") / "apt" / "sources.list")
+                self.file = str(pathlib.Path(os.sep, "etc", "apt", "sources.list"))
             self.edit = False
             self._parse_sources(line)
 
@@ -195,8 +195,8 @@ if not HAS_APT:
         def __init__(self):
             self.list = []
             self.files = [
-                pathlib.Path("/etc") / "apt" / "sources.list",
-                pathlib.Path("/etc") / "apt" / "sources.list.d",
+                pathlib.Path(os.sep, "etc", "apt", "sources.list"),
+                pathlib.Path(os.sep, "etc", "apt", "sources.list.d"),
             ]
             for file in self.files:
                 if file.is_dir():
