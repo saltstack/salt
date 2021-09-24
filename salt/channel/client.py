@@ -4,6 +4,7 @@ Encapsulate the different transports available to Salt.
 This includes client side transport, for the ReqServer and the Publisher
 """
 
+
 import logging
 import os
 import time
@@ -499,7 +500,6 @@ class AsyncPubChannel:
         def _do_transfer():
             msg = self._package_load(self.auth.crypticle.dumps(load))
             package = salt.transport.frame.frame_msg(msg, header=None)
-            # yield self.message_client.write_to_stream(package)
             yield self.transport.send(package)
 
             raise salt.ext.tornado.gen.Return(True)
@@ -555,9 +555,9 @@ class AsyncPubChannel:
                     "data": data,
                     "tag": tag,
                 }
-                req_channel = ReqChannel(self.opts)
+                req_channel = AsyncReqChannel.factory(self.opts)
                 try:
-                    req_channel.send(load, timeout=60)
+                    yield req_channel.send(load, timeout=60)
                 except salt.exceptions.SaltReqTimeoutError:
                     log.info(
                         "fire_master failed: master could not be contacted. Request timed"

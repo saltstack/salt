@@ -470,6 +470,8 @@ class SSHThinTestCase(TestCase):
         ]
         if salt.utils.thin.has_immutables:
             base_tops.extend(["immutables"])
+        if thin.crypt:
+            base_tops.append(thin.crypt.__name__)
         tops = []
         for top in thin.get_tops(extra_mods="foo,bar"):
             if top.find("/") != -1:
@@ -567,6 +569,8 @@ class SSHThinTestCase(TestCase):
         ]
         if salt.utils.thin.has_immutables:
             base_tops.extend(["immutables"])
+        if thin.crypt:
+            base_tops.append(thin.crypt.__name__)
         libs = salt.utils.thin.find_site_modules("contextvars")
         foo = {"__file__": os.sep + os.path.join("custom", "foo", "__init__.py")}
         bar = {"__file__": os.sep + os.path.join("custom", "bar")}
@@ -672,6 +676,8 @@ class SSHThinTestCase(TestCase):
         ]
         if salt.utils.thin.has_immutables:
             base_tops.extend(["immutables"])
+        if thin.crypt:
+            base_tops.append(thin.crypt.__name__)
         libs = salt.utils.thin.find_site_modules("contextvars")
         with patch("salt.utils.thin.find_site_modules", MagicMock(side_effect=[libs])):
             with patch(

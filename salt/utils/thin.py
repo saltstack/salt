@@ -39,9 +39,12 @@ except ImportError:
 
         crypt = Cryptodome
     except ImportError:
-        import Crypto
+        try:
+            import Crypto
 
-        crypt = Crypto
+            crypt = Crypto
+        except ImportError:
+            crypt = None
 
 
 # This is needed until we drop support for python 3.6
@@ -440,8 +443,9 @@ def get_tops(extra_mods="", so_mods=""):
         ssl_match_hostname,
         markupsafe,
         backports_abc,
-        crypt,
     ]
+    if crypt:
+        mods.append(crypt)
     modules = find_site_modules("contextvars")
     if modules:
         contextvars = modules[0]
