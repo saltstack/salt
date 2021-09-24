@@ -47,7 +47,7 @@ class ProxyMinionTestCase(TestCase):
         ):
             try:
                 ret = proxy_minion._post_master_init("dummy_master")
-                self.assert_called_once(salt.minion._metaproxy_call)
+                salt.minion._metaproxy_call.assert_called_once()
             finally:
                 proxy_minion.destroy()
 
@@ -75,7 +75,7 @@ class ProxyMinionTestCase(TestCase):
             try:
                 ret = proxy_minion._handle_decoded_payload(mock_data).result()
                 self.assertEqual(proxy_minion.jid_queue, mock_jid_queue)
-                self.assert_called_once(salt.minion._metaproxy_call)
+                salt.minion._metaproxy_call.assert_called_once()
             finally:
                 proxy_minion.destroy()
 
@@ -103,7 +103,7 @@ class ProxyMinionTestCase(TestCase):
             try:
                 ret = proxy_minion._handle_decoded_payload(mock_data).result()
                 self.assertEqual(proxy_minion.jid_queue, mock_jid_queue)
-                self.assert_called_once(mock_metaproxy_call)
+                mock_metaproxy_call.assert_called_once()
             finally:
                 proxy_minion.destroy()
 

@@ -1,0 +1,1 @@
+Fixed zabbix_host.present to not overwrite inventory_mode to "manual" everytime inventory is updated.
