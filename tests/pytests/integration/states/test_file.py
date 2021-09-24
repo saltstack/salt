@@ -4,6 +4,7 @@ Tests for the file state
 import logging
 
 import pytest
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
 
@@ -76,6 +77,10 @@ def test_verify_ssl_skip_verify_false(
         )
 
     # test when verify_ssl is False
+    if salt.utils.platform.is_photonos():
+        check_mode = "0640"
+    else:
+        check_mode = "0644"
     with salt_master.state_tree.base.temp_file(
         "verify_ssl.sls", false_content
     ) as sfpath:
@@ -83,7 +88,7 @@ def test_verify_ssl_skip_verify_false(
         assert ret.exitcode == 0
         assert ret.json[next(iter(ret.json))]["changes"] == {
             "diff": "New file",
-            "mode": "0644",
+            "mode": check_mode,
         }
 
 
