@@ -6,6 +6,7 @@ centos-8-x86_64: ami-0d482e88fbf35072c
 centosstream-8-x86_64: ami-02fc0a57f9b1fa4ed
 debian-10-amd64: ami-0eb32b3297dc438d0
 debian-11-amd64: ami-08bf6df84b4488e8a
+debian-11-arm64: ami-085ff5dc42735c52e
 debian-9-amd64: ami-033ed8f0f55cad1e0
 fedora-33-x86_64: ami-0759e7f36c946c8a9
 fedora-34-x86_64: ami-0eb0a8e46caef07e8
