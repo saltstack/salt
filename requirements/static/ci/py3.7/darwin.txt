@@ -680,7 +680,7 @@ portend==2.6
     # via cherrypy
 psutil==5.8.0
     # via
-    #   -r requirements/darwin.txt
+    #   -r requirements/base.txt
     #   pytest-salt-factories
 py==1.10.0
     # via pytest
