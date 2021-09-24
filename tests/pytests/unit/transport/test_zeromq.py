@@ -11,10 +11,10 @@ import salt.ext.tornado.ioloop
 import salt.log.setup
 import salt.transport.client
 import salt.transport.server
+import salt.transport.zeromq
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
-from salt.transport.zeromq import AsyncReqMessageClientPool
 from tests.support.mock import MagicMock, patch
 
 
@@ -67,30 +67,6 @@ def test_master_uri():
         ) == "tcp://0.0.0.0:{};{}:{}".format(s_port, m_ip, m_port)
 
 
-def test_async_req_message_client_pool_send():
-    sock_pool_size = 5
-    with patch(
-        "salt.transport.zeromq.AsyncReqMessageClient.__init__",
-        MagicMock(return_value=None),
-    ):
-        message_client_pool = AsyncReqMessageClientPool(
-            {"sock_pool_size": sock_pool_size}, args=({}, "")
-        )
-        message_client_pool.message_clients = [
-            MagicMock() for _ in range(sock_pool_size)
-        ]
-        for message_client_mock in message_client_pool.message_clients:
-            message_client_mock.send_queue = [0, 0, 0]
-            message_client_mock.send.return_value = []
-
-        with message_client_pool:
-            assert message_client_pool.send() == []
-
-            message_client_pool.message_clients[2].send_queue = [0]
-            message_client_pool.message_clients[2].send.return_value = [1]
-            assert message_client_pool.send() == [1]
-
-
 def test_clear_req_channel_master_uri_override(temp_salt_minion, temp_salt_master):
     """
     ensure master_uri kwarg is respected
@@ -137,15 +113,13 @@ def test_zeromq_async_pub_channel_publish_port(temp_salt_master):
         sign_pub_messages=False,
     )
     opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
-
-    channel = salt.transport.zeromq.AsyncZeroMQPubChannel(opts)
+    ioloop = salt.ext.tornado.ioloop.IOLoop()
+    channel = salt.transport.zeromq.AsyncZeroMQPubChannel(opts, ioloop)
     with channel:
         patch_socket = MagicMock(return_value=True)
         patch_auth = MagicMock(return_value=True)
-        with patch.object(channel, "_socket", patch_socket), patch.object(
-            channel, "auth", patch_auth
-        ):
-            channel.connect()
+        with patch.object(channel, "_socket", patch_socket):
+            channel.connect(455505)
     assert str(opts["publish_port"]) in patch_socket.mock_calls[0][1][0]
 
 
@@ -181,7 +155,8 @@ def test_zeromq_async_pub_channel_filtering_decode_message_no_match(
     )
     opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
 
-    channel = salt.transport.zeromq.AsyncZeroMQPubChannel(opts)
+    ioloop = salt.ext.tornado.ioloop.IOLoop()
+    channel = salt.transport.zeromq.AsyncZeroMQPubChannel(opts, ioloop)
     with channel:
         with patch(
             "salt.crypt.AsyncAuth.crypticle",
@@ -227,7 +202,8 @@ def test_zeromq_async_pub_channel_filtering_decode_message(
     )
     opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
 
-    channel = salt.transport.zeromq.AsyncZeroMQPubChannel(opts)
+    ioloop = salt.ext.tornado.ioloop.IOLoop()
+    channel = salt.transport.zeromq.AsyncZeroMQPubChannel(opts, ioloop)
     with channel:
         with patch(
             "salt.crypt.AsyncAuth.crypticle",
