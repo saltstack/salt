@@ -891,7 +891,7 @@ def aws_encode(x):
         )
         raise CommandExecutionError(e)
     log.debug("AWS-encoded result for %s: %s", x, ret)
-    return ret
+    return ret.decode("utf-8")
 
 
 def _aws_encode_changebatch(o):
@@ -949,7 +949,11 @@ def _aws_decode(x):
     """
     if "\\" in x:
         return x.decode("unicode_escape")
-    return x.decode("idna")
+
+    if type(x) == bytes:
+        return x.decode("idna")
+
+    return x
 
 
 def _hexReplace(x):
