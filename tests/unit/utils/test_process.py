@@ -98,25 +98,17 @@ class TestProcessManager(TestCase):
         Make sure that the process is alive 2s later
         """
         process_manager = salt.utils.process.ProcessManager()
+        self.addCleanup(process_manager.terminate)
         process_manager.add_process(self.spin_basic)
         initial_pid = next(iter(process_manager._process_map.keys()))
         time.sleep(2)
         process_manager.check_children()
-        try:
-            assert initial_pid == next(iter(process_manager._process_map.keys()))
-        finally:
-            process_manager.stop_restarting()
-            process_manager.kill_children()
-            time.sleep(0.5)
-            # Are there child processes still running?
-            if process_manager._process_map.keys():
-                process_manager.send_signal_to_processes(signal.SIGKILL)
-                process_manager.stop_restarting()
-                process_manager.kill_children()
+        assert initial_pid == next(iter(process_manager._process_map.keys()))
 
     @spin
     def test_kill(self):
         process_manager = salt.utils.process.ProcessManager()
+        self.addCleanup(process_manager.terminate)
         process_manager.add_process(self.spin_kill)
         initial_pid = next(iter(process_manager._process_map.keys()))
         # kill the child
@@ -127,17 +119,7 @@ class TestProcessManager(TestCase):
         # give the OS time to give the signal...
         time.sleep(0.1)
         process_manager.check_children()
-        try:
-            assert initial_pid != next(iter(process_manager._process_map.keys()))
-        finally:
-            process_manager.stop_restarting()
-            process_manager.kill_children()
-            time.sleep(0.5)
-            # Are there child processes still running?
-            if process_manager._process_map.keys():
-                process_manager.send_signal_to_processes(signal.SIGKILL)
-                process_manager.stop_restarting()
-                process_manager.kill_children()
+        assert initial_pid != next(iter(process_manager._process_map.keys()))
 
     @die
     def test_restarting(self):
@@ -145,42 +127,24 @@ class TestProcessManager(TestCase):
         Make sure that the process is alive 2s later
         """
         process_manager = salt.utils.process.ProcessManager()
+        self.addCleanup(process_manager.terminate)
         process_manager.add_process(self.die_restarting)
         initial_pid = next(iter(process_manager._process_map.keys()))
         time.sleep(2)
         process_manager.check_children()
-        try:
-            assert initial_pid != next(iter(process_manager._process_map.keys()))
-        finally:
-            process_manager.stop_restarting()
-            process_manager.kill_children()
-            time.sleep(0.5)
-            # Are there child processes still running?
-            if process_manager._process_map.keys():
-                process_manager.send_signal_to_processes(signal.SIGKILL)
-                process_manager.stop_restarting()
-                process_manager.kill_children()
+        assert initial_pid != next(iter(process_manager._process_map.keys()))
 
     @incr
     def test_counter(self):
         counter = multiprocessing.Value("i", 0)
         process_manager = salt.utils.process.ProcessManager()
+        self.addCleanup(process_manager.terminate)
         process_manager.add_process(self.incr_counter, args=(counter, 2))
         time.sleep(1)
         process_manager.check_children()
         time.sleep(1)
         # we should have had 2 processes go at it
-        try:
-            assert counter.value == 4
-        finally:
-            process_manager.stop_restarting()
-            process_manager.kill_children()
-            time.sleep(0.5)
-            # Are there child processes still running?
-            if process_manager._process_map.keys():
-                process_manager.send_signal_to_processes(signal.SIGKILL)
-                process_manager.stop_restarting()
-                process_manager.kill_children()
+        assert counter.value == 4
 
 
 class TestThreadPool(TestCase):

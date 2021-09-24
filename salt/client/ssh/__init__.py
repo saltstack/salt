@@ -11,6 +11,7 @@ import hashlib
 import logging
 import multiprocessing
 import os
+import queue
 import re
 import subprocess
 import sys
@@ -313,8 +314,6 @@ class SSH:
             self.opts["cachedir"],
             extra_mods=self.opts.get("thin_extra_mods"),
             overwrite=self.opts["regen_thin"],
-            python2_bin=self.opts["python2_bin"],
-            python3_bin=self.opts["python3_bin"],
             extended_cfg=self.opts.get("ssh_ext_alternatives"),
         )
         self.mods = mod_data(self.fsclient)
@@ -614,11 +613,7 @@ class SSH:
                 if "id" in ret:
                     returned.add(ret["id"])
                     yield {ret["id"]: ret["ret"]}
-            except Exception:  # pylint: disable=broad-except
-                # This bare exception is here to catch spurious exceptions
-                # thrown by que.get during healthy operation. Please do not
-                # worry about this bare exception, it is entirely here to
-                # control program flow.
+            except queue.Empty:
                 pass
             for host in running:
                 if not running[host]["thread"].is_alive():
@@ -631,7 +626,7 @@ class SSH:
                                 if "id" in ret:
                                     returned.add(ret["id"])
                                     yield {ret["id"]: ret["ret"]}
-                        except Exception:  # pylint: disable=broad-except
+                        except queue.Empty:
                             pass
 
                         if host not in returned:

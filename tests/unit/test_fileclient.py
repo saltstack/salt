@@ -63,6 +63,24 @@ class FileclientTestCase(TestCase):
                     ) as c_ref_itr:
                         assert c_ref_itr == "/__test__/files/base/testfile"
 
+    def test_cache_extrn_path_valid(self):
+        """
+        Tests for extrn_filepath for a given url
+        """
+        file_name = "http://localhost:8000/test/location/src/dev/usr/file"
+
+        ret = fileclient.Client(self.opts)._extrn_path(file_name, "base")
+        assert ret == os.path.join("__test__", "extrn_files", "base", ret)
+
+    def test_cache_extrn_path_invalid(self):
+        """
+        Tests for extrn_filepath for a given url
+        """
+        file_name = "http://localhost:8000/../../../../../usr/bin/bad"
+
+        ret = fileclient.Client(self.opts)._extrn_path(file_name, "base")
+        assert ret == "Invalid path"
+
     def test_extrn_path_with_long_filename(self):
         safe_file_name = os.path.split(
             fileclient.Client(self.opts)._extrn_path(
