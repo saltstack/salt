@@ -131,8 +131,6 @@ class Serial:
                 exc,
             )
             log.debug("Msgpack deserialization failure on message: %s", msg)
-            gc.collect()
-
             exc_msg = "Could not deserialize msgpack message. See log for more info."
             raise SaltDeserializationError(exc_msg) from exc
         finally:
