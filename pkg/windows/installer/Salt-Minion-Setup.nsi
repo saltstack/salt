@@ -408,10 +408,13 @@ Function pageMinionConfig_Leave
 
     ${If} $MoveExistingConfig == 1
 
+        # This makes the $APPDATA variable point to the ProgramData folder instead
+        # of the current user's roaming AppData folder
+        SetShellVarContext all
+
         # Get directory status
         ${DirState} "$APPDATA\Salt Project\Salt" $R0  # 0=Empty, 1=full, -1=Not Found
-        StrCmp $R0 "-1" move_files  # If directory not present, move files
-        StrCmp $R0 "0" move_files  # If directory empty, move files
+        StrCmp $R0 "1" 0 move_files  # Move files if directory empty or missing
         MessageBox MB_OKCANCEL \
             "The $APPDATA\Salt Project\Salt directory is not empty.$\n\
             These files will need to be moved manually." \
@@ -827,96 +830,12 @@ Function getExistingInstallation
         ${EndIf}
     ${EndIf}
 
-    # Check for existing new method installation
+    # Check for existing new method installation from registry
     # Look for `install_dir` in HKLM\SOFTWARE\Salt Project\Salt
     ReadRegStr $R0 HKLM "SOFTWARE\Salt Project\Salt" "install_dir"
     StrCmp $R0 "" checkOldInstallation
     StrCpy $ExistingInstallation 1
-    # Set INSTDIR
-    StrCpy $INSTDIR $R0
-    # Set RootDir, if defined
-    ReadRegStr $R0 HKLM "SOFTWARE\Salt Project\Salt" "root_dir"
-    StrCmp $R0 "" finished
-    StrCpy $RootDir $R0
-    Goto finished
-
-    # Check for existing old method installation
-    # Look for `python.exe` in C:\salt\bin
-    checkOldInstallation:
-    IfFileExists "C:\salt\bin\python.exe" 0 newInstallation
-    StrCpy $ExistingInstallation 1
-    StrCpy $INSTDIR "C:\salt"
-    StrCpy $RootDir "C:\salt"
-    Goto finished
-
-    # This is a new installation
-    # Check if custom location was passed via command line
-    newInstallation:
-    ${IfNot} $CustomLocation == ""
-        StrCpy $INSTDIR $CustomLocation
-    ${EndIf}
-
-    finished:
-        SetRegView 32  # View the 32 bit portion of the registry
-
-FunctionEnd
-
-Function getExistingInstallation
-    # Try to detect an existing installation. There are three possible scenarios
-    # 1. Existing New Method Installation
-    # 2. Existing Old Method Installation
-    # 3. New Installation
-    # The results of this function will determine if the user is allowed to set
-    # the install location in the GUI. If there is an existing installation
-    # present, the location picker will be grayed out
-    # This function also sets the RootDir and INSTDIR variables used by the
-    # installer.
-
-    # Reset ExistingInstallation
-    StrCpy $ExistingInstallation 0
-
-    # Get ProgramFiles
-    # Use RunningX64 here to get the Architecture for the system running the
-    # installer. CPUARCH is defined when the installer is built and is based on
-    # the machine that built the installer, not the target system
-    # There are 3 scenarios here:
-    ${If} ${RunningX64}
-        ${If} ${CPUARCH} == "AMD64"
-            # 64 bit Salt on 64 bit system (C:\Program Files)
-            StrCpy $INSTDIR "$ProgramFiles64\Salt Project\Salt"
-        ${Else}
-            # 32 bit Salt on 64 bit system (C:\Program Files (x86))
-            StrCpy $INSTDIR "$ProgramFiles32\Salt Project\Salt"
-        ${EndIf}
-    ${Else}
-        # 32 bit Salt on 32 bit system (C:\Program Files)
-        StrCpy $INSTDIR "$ProgramFiles\Salt Project\Salt"
-    ${EndIf}
-
-    # This makes the $APPDATA variable point to the ProgramData folder instead
-    # of the current user's roaming AppData folder
-    SetShellVarContext all
-
-    # Set default location of for salt config
-    StrCpy $RootDir "$APPDATA\Salt Project\Salt"
-
-    # The NSIS installer is a 32bit application and will use the WOW6432Node in
-    # the registry by default. We need to look in the 64 bit location on 64 bit
-    # systems
-    ${If} ${RunningX64}
-        # This would only apply if we are installing the 64 bit version of Salt
-        ${If} ${CPUARCH} == "AMD64"
-            # https://nsis.sourceforge.io/Docs/Chapter4.html#setregview
-            SetRegView 64  # View the 64 bit portion of the registry
-        ${EndIf}
-    ${EndIf}
-
-    # Check for existing new method installation
-    # Look for `install_dir` in HKLM\SOFTWARE\Salt Project\Salt
-    ReadRegStr $R0 HKLM "SOFTWARE\Salt Project\Salt" "install_dir"
-    StrCmp $R0 "" checkOldInstallation
-    StrCpy $ExistingInstallation 1
-    # Set INSTDIR
+    # Set INSTDIR to the location in the registry
     StrCpy $INSTDIR $R0
     # Set RootDir, if defined
     ReadRegStr $R0 HKLM "SOFTWARE\Salt Project\Salt" "root_dir"
@@ -1027,8 +946,38 @@ Section -Post
     ${EndIf}
 
     # Write Salt Configuration Registry Entries
-    WriteRegStr HKLM "SOFTWARE\Salt Project\Salt" "install_dir" "$INSTDIR"
-    WriteRegStr HKLM "SOFTWARE\Salt Project\Salt" "root_dir" "$RootDir"
+    # We want to write EXPAND_SZ string types to allow us to use environment
+    # variables. It's OK to use EXPAND_SZ even if you don't use an environment
+    # variable so we'll just do that whether it's new location or old.
+
+    # Set the current setting for INSTDIR... we'll only change it if it contains
+    # Program Files
+    StrCpy $RegInstDir $INSTDIR
+
+    checkProgramFiles32:
+    ${StrContains} $0 "Program Files (x86)" $INSTDIR
+    StrCmp $0 "" checkProgramFiles
+        StrCpy $RegInstDir "%ProgramFiles(x86)%\Salt Project\Salt"
+
+    checkProgramFiles:
+    ${StrContains} $0 "Program Files" $INSTDIR
+    StrCmp $0 "" checkProgramData
+        StrCpy $RegInstDir "%ProgramFiles%\Salt Project\Salt"
+
+    checkProgramData:
+    # Set the current setting for RootDir. we'll only change it if it contains
+    # ProgramData
+    StrCpy $RegRootDir $RootDir
+
+    ${StrContains} $0 "ProgramData" $INSTDIR
+    StrCmp $0 "" writeRegExpand
+        StrCpy $RegRootDir "%ProgramData%\Salt Project\Salt"
+
+    writeRegExpand:
+        WriteRegExpandStr HKLM "SOFTWARE\Salt Project\Salt" "install_dir" "$RegInstDir"
+        WriteRegExpandStr HKLM "SOFTWARE\Salt Project\Salt" "root_dir" "$RegRootDir"
+
+    # Puts the nullsoft installer back to its default
     SetRegView 32  # Set it back to the 32 bit portion of the registry
 
     # Register the Salt-Minion Service
@@ -1053,6 +1002,11 @@ Section -Post
         ${Case} "Default Config"
             # If this is the default config, we move it and update it
             StrCpy $switch_overwrite 1
+
+            # This makes the $APPDATA variable point to the ProgramData folder instead
+            # of the current user's roaming AppData folder
+            SetShellVarContext all
+
             !insertmacro MoveFolder "$INSTDIR\conf" "$APPDATA\Salt Project\Salt\conf" "*.*"
             Call updateMinionConfig
             ${Break}
