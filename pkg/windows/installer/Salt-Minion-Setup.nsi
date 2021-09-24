@@ -140,6 +140,7 @@ Var DeleteRootDir
 Var ConfigWriteMinion
 Var ConfigWriteMaster
 # For new method installation
+Var RegInstDir
 Var RootDir
 Var SysDrive
 Var ExistingInstallation
