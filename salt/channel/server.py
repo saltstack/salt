@@ -4,6 +4,7 @@ Encapsulate the different transports available to Salt.
 This includes server side transport, for the ReqServer and the Publisher
 """
 
+
 import binascii
 import ctypes
 import hashlib
@@ -11,13 +12,13 @@ import logging
 import multiprocessing
 import os
 import shutil
-import threading
 
 import salt.crypt
 import salt.ext.tornado.gen
 import salt.master
 import salt.payload
 import salt.transport.frame
+import salt.utils.channel
 import salt.utils.event
 import salt.utils.files
 import salt.utils.minions
@@ -115,6 +116,7 @@ class ReqServerChannel:
         self.io_loop = io_loop
         self.transport.post_fork(self.handle_message, io_loop)
         import salt.master
+
         self.serial = salt.payload.Serial(self.opts)
         self.crypticle = salt.crypt.Crypticle(
             self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
@@ -655,8 +657,6 @@ class PubServerChannel:
     Factory class to create subscription channels to the master's Publisher
     """
 
-    _sock_data = threading.local()
-
     @classmethod
     def factory(cls, opts, **kwargs):
         # Default to ZeroMQ for now
@@ -667,6 +667,18 @@ class PubServerChannel:
             ttype = opts["transport"]
         elif "transport" in opts.get("pillar", {}).get("master", {}):
             ttype = opts["pillar"]["master"]["transport"]
+
+        presence_events = False
+        if opts.get("presence_events", False):
+            tcp_only = True
+            for transport, _ in salt.utils.channel.iter_transport_opts(opts):
+                if transport != "tcp":
+                    tcp_only = False
+            if tcp_only:
+                # Only when the transport is TCP only, the presence events will
+                # be handled here. Otherwise, it will be handled in the
+                # 'Maintenance' process.
+                presence_events = True
 
         # switch on available ttypes
         if ttype == "zeromq":
@@ -683,16 +695,16 @@ class PubServerChannel:
             transport = salt.transport.local.LocalPubServerChannel(opts, **kwargs)
         else:
             raise Exception("Channels are only defined for ZeroMQ and TCP")
-            # return NewKindOfChannel(opts, **kwargs)
-        return cls(opts, transport)
+        return cls(opts, transport, presence_events=presence_events)
 
-    def __init__(self, opts, transport):
+    def __init__(self, opts, transport, presence_events=False):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
         self.transport = transport
         self.aes_funcs = salt.master.AESFuncs(self.opts)
         self.present = {}
+        self.presence_events = presence_events
         self.event = salt.utils.event.get_event("master", opts=self.opts, listen=False)
 
     def close(self):
@@ -796,18 +808,20 @@ class PubServerChannel:
                 )
 
     @salt.ext.tornado.gen.coroutine
-    def publish_payload(self, package, *args):
-        # unpacked_package = salt.payload.unpackage(package)
-        # unpacked_package = salt.transport.frame.decode_embedded_strs(
-        #    unpacked_package
-        # )
-        ret = yield self.transport.publish_payload(package)
+    def publish_payload(self, unpacked_package, *args):
+        try:
+            payload = self.serial.loads(unpacked_package["payload"])
+        except KeyError:
+            log.error("Invalid package %r", unpacked_package)
+            raise
+        if "topic_lst" in unpacked_package:
+            topic_list = unpacked_package["topic_lst"]
+            ret = yield self.transport.publish_payload(payload, topic_list)
+        else:
+            ret = yield self.transport.publish_payload(payload)
         raise salt.ext.tornado.gen.Return(ret)
 
-    def publish(self, load):
-        """
-        Publish "load" to minions
-        """
+    def wrap_payload(self, load):
         payload = {"enc": "aes"}
         crypticle = salt.crypt.Crypticle(
             self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
@@ -817,14 +831,33 @@ class PubServerChannel:
             master_pem_path = os.path.join(self.opts["pki_dir"], "master.pem")
             log.debug("Signing data packet")
             payload["sig"] = salt.crypt.sign_message(master_pem_path, payload["load"])
+        int_payload = {"payload": self.serial.dumps(payload)}
+        # add some targeting stuff for lists only (for now)
+        if load["tgt_type"] == "list":
+            int_payload["topic_lst"] = load["tgt"]
+        # If topics are upported, target matching has to happen master side
+        match_targets = ["pcre", "glob", "list"]
+        if self.transport.topic_support and load["tgt_type"] in match_targets:
+            if isinstance(load["tgt"], str):
+                # Fetch a list of minions that match
+                _res = self.ckminions.check_minions(
+                    load["tgt"], tgt_type=load["tgt_type"]
+                )
+                match_ids = _res["minions"]
+                log.debug("Publish Side Match: %s", match_ids)
+                # Send list of miions thru so zmq can target them
+                int_payload["topic_lst"] = match_ids
+            else:
+                int_payload["topic_lst"] = load["tgt"]
+        return int_payload
 
-        # XXX: These implimentations vary slightly, condense them and add tests
-        int_payload = self.transport.publish_filters(
-            payload, load["tgt_type"], load["tgt"], self.ckminions
-        )
+    def publish(self, load):
+        """
+        Publish "load" to minions
+        """
+        payload = self.wrap_payload(load)
         log.debug(
-            "Sending payload to publish daemon. jid=%s size=%d",
+            "Sending payload to publish daemon. jid=%s",
             load.get("jid", None),
-            len(payload),
         )
-        self.transport.publish(int_payload)
+        self.transport.publish(payload)
