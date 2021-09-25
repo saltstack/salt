@@ -12,7 +12,7 @@ alabaster==0.7.12
     # via sphinx
 ansible-core==2.11.4
     # via ansible
-ansible==4.4.0
+ansible==4.2.0
     # via -r requirements/static/ci/linux.in
 apache-libcloud==3.3.1 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
