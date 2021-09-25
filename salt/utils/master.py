@@ -165,7 +165,6 @@ class MasterPillarUtil:
             )
         else:
             self.opts = opts
-        self.serial = salt.payload
         self.tgt = tgt
         self.tgt_type = tgt_type
         self.saltenv = saltenv
@@ -555,7 +554,6 @@ class CacheTimer(Thread):
         self.opts = opts
         self.stopped = event
         self.daemon = True
-        self.serial = salt.payload
         self.timer_sock = os.path.join(self.opts["sock_dir"], "con_timer.ipc")
 
     def run(self):
@@ -571,7 +569,7 @@ class CacheTimer(Thread):
         count = 0
         log.debug("ConCache-Timer started")
         while not self.stopped.wait(1):
-            socket.send(self.serial.dumps(count))
+            socket.send(salt.payload.dumps(count))
 
             count += 1
             if count >= 60:

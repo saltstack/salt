@@ -9,7 +9,6 @@ import collections.abc
 import datetime
 import gc
 
-
 # import sys  # Use if sys is commented out below
 import logging
 
@@ -239,8 +238,9 @@ class Serial:
     def __init__(self, *args, **kwargs):
         salt.utils.versions.warn_until(
             "Chlorine",
-            "The `salt.payload.Serial` class has been depricated, "
-            "please use `salt.payload.loads` and `salt.payload.dumps`",
+            "The `salt.payload.Serial` class has been deprecated, "
+            "and is set to be removed in {version}. "
+            "Please use `salt.payload.loads` and `salt.payload.dumps`.",
         )
 
     loads = staticmethod(loads)

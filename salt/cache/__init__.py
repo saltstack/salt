@@ -71,13 +71,12 @@ class Cache:
         else:
             self.cachedir = cachedir
         self.driver = opts.get("cache", salt.config.DEFAULT_MASTER_OPTS["cache"])
-        self.serial = salt.payload
         self._modules = None
         self._kwargs = kwargs
         self._kwargs["cachedir"] = self.cachedir
 
     def __lazy_init(self):
-        self._modules = salt.loader.cache(self.opts, self.serial)
+        self._modules = salt.loader.cache(self.opts, salt.payload)
         fun = "{}.init_kwargs".format(self.driver)
         if fun in self.modules:
             self._kwargs = self.modules[fun](self._kwargs)
