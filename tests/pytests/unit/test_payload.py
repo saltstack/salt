@@ -5,16 +5,12 @@
 
 import copy
 import datetime
-import errno
 import logging
-import time
 
-import pytest
 import salt.exceptions
 import salt.payload
 from salt.utils import immutabletypes
 from salt.utils.odict import OrderedDict
-from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
 
