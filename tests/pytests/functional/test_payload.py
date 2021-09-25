@@ -47,7 +47,6 @@ class EchoServer:
             try:
                 #  Wait for next request from client
                 message = socket.recv(zmq.NOBLOCK)
-                print("GOT MSG {!r}".format(message))
                 msg_deserialized = salt.payload.loads(message)
                 log.info("Echo server received message: %s", msg_deserialized)
                 if isinstance(msg_deserialized["load"], dict) and msg_deserialized[
@@ -105,7 +104,7 @@ def test_timeout(sreq, echo_server):
     # client-side timeout
     start = time.time()
     # This is a try/except instead of an assertRaises because of a possible
-    # subtle bug in zmq wherein a timeout=0 actually exceutes a single poll
+    # subtle bug in zmq wherein a timeout=0 actually executes a single poll
     # before the timeout is reached.
     log.info("Sending tries=0, timeout=0")
     try:
