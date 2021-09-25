@@ -351,7 +351,7 @@ class AsyncZeroMQPubChannel(
             salt.utils.stringutils.to_bytes(self.opts["id"])
         ).hexdigest()
         self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
-        self.serial = salt.payload.Serial(self.opts)
+        self.serial = salt.payload
         self.context = zmq.Context()
         self._socket = self.context.socket(zmq.SUB)
 
@@ -823,7 +823,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
 
     def __init__(self, opts):
         self.opts = opts
-        self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
+        self.serial = salt.payload
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
 
     def connect(self):
@@ -1113,7 +1113,7 @@ class AsyncReqMessageClient:
         else:
             self.io_loop = io_loop
 
-        self.serial = salt.payload.Serial(self.opts)
+        self.serial = salt.payload
         self.context = zmq.Context()
 
         # wire up sockets

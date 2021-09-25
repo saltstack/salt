@@ -3473,7 +3473,7 @@ class BaseHighState:
         self.opts = self.__gen_opts(opts)
         self.iorder = 10000
         self.avail = self.__gather_avail()
-        self.serial = salt.payload.Serial(self.opts)
+        self.serial = salt.payload
         self.building_highstate = OrderedDict()
 
     def __gather_avail(self):
@@ -4765,7 +4765,7 @@ class RemoteHighState:
     def __init__(self, opts, grains):
         self.opts = opts
         self.grains = grains
-        self.serial = salt.payload.Serial(self.opts)
+        self.serial = salt.payload
         # self.auth = salt.crypt.SAuth(opts)
         self.channel = salt.transport.client.ReqChannel.factory(self.opts["master_uri"])
         self._closing = False

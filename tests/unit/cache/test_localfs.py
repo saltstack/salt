@@ -102,7 +102,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
         # Use the helper function to create the cache file using localfs.store()
-        self._create_tmp_cache_file(tmp_dir, salt.payload.Serial(self))
+        self._create_tmp_cache_file(tmp_dir, salt.payload)
 
         # Read in the contents of the key.p file and assert "payload data" was written
         with salt.utils.files.fopen(tmp_dir + "/bank/key.p", "rb") as fh_:
@@ -137,15 +137,12 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         # Create a temporary cache dir
         tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
-        # Create a new serializer object to use in function patches
-        serializer = salt.payload.Serial(self)
-
         # Use the helper function to create the cache file using localfs.store()
-        self._create_tmp_cache_file(tmp_dir, serializer)
+        self._create_tmp_cache_file(tmp_dir, salt.paylaod)
 
         # Now fetch the data from the new cache key file
         with patch.dict(localfs.__opts__, {"cachedir": tmp_dir}):
-            with patch.dict(localfs.__context__, {"serial": serializer}):
+            with patch.dict(localfs.__context__, {"serial": salt.payload}):
                 self.assertIn(
                     "payload data",
                     localfs.fetch(bank="bank", key="key", cachedir=tmp_dir),
@@ -180,7 +177,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
         # Use the helper function to create the cache file using localfs.store()
-        self._create_tmp_cache_file(tmp_dir, salt.payload.Serial(self))
+        self._create_tmp_cache_file(tmp_dir, salt.payload)
 
         with patch("os.path.join", MagicMock(return_value=tmp_dir + "/bank/key.p")):
             self.assertIsInstance(
@@ -215,7 +212,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
             tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
             # Use the helper function to create the cache file using localfs.store()
-            self._create_tmp_cache_file(tmp_dir, salt.payload.Serial(self))
+            self._create_tmp_cache_file(tmp_dir, salt.payload)
 
             # Now test the return of the flush function
             with patch.dict(localfs.__opts__, {"cachedir": tmp_dir}):
@@ -263,7 +260,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
         # Use the helper function to create the cache file using localfs.store()
-        self._create_tmp_cache_file(tmp_dir, salt.payload.Serial(self))
+        self._create_tmp_cache_file(tmp_dir, salt.payload)
 
         # Now test the return of the ls function
         with patch.dict(localfs.__opts__, {"cachedir": tmp_dir}):
@@ -280,7 +277,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
         # Use the helper function to create the cache file using localfs.store()
-        self._create_tmp_cache_file(tmp_dir, salt.payload.Serial(self))
+        self._create_tmp_cache_file(tmp_dir, salt.payload)
 
         # Now test the return of the contains function when key=None
         with patch.dict(localfs.__opts__, {"cachedir": tmp_dir}):
@@ -305,9 +302,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
 
         self.addCleanup(shutil.rmtree, tmp_dir)
         with patch.dict(localfs.__opts__, {"cachedir": tmp_dir}):
-            with patch.dict(
-                localfs.__context__, {"serial": salt.payload.Serial("msgpack")}
-            ):
+            with patch.dict(localfs.__context__, {"serial": salt.payload}):
                 localfs.store(bank, key, data, tmp_dir)
 
                 actual = localfs.fetch(bank, key, tmp_dir)

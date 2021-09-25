@@ -184,7 +184,7 @@ class CacheCli:
         Sets up the zmq-connection to the ConCache
         """
         self.opts = opts
-        self.serial = salt.payload.Serial(self.opts.get("serial", ""))
+        self.serial = salt.payload
         self.cache_sock = os.path.join(self.opts["sock_dir"], "con_cache.ipc")
         self.cache_upd_sock = os.path.join(self.opts["sock_dir"], "con_upd.ipc")
 
@@ -282,7 +282,7 @@ class ContextCache:
         """
         self.opts = opts
         self.cache_path = os.path.join(opts["cachedir"], "context", "{}.p".format(name))
-        self.serial = salt.payload.Serial(self.opts)
+        self.serial = salt.payload
 
     def cache_context(self, context):
         """

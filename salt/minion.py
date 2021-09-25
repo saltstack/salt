@@ -1797,7 +1797,7 @@ class Minion(MinionBase):
                 minion_instance.function_errors = function_errors
                 minion_instance.executors = executors
             if not hasattr(minion_instance, "serial"):
-                minion_instance.serial = salt.payload.Serial(opts)
+                minion_instance.serial = salt.payload
             if not hasattr(minion_instance, "proc_dir"):
                 uid = salt.utils.user.get_uid(user=opts.get("user", None))
                 minion_instance.proc_dir = get_proc_dir(opts["cachedir"], uid=uid)
@@ -2927,7 +2927,7 @@ class Minion(MinionBase):
                 self.function_errors,
                 self.executors,
             ) = self._load_modules()
-            self.serial = salt.payload.Serial(self.opts)
+            self.serial = salt.payload
             self.mod_opts = self._prep_mod_opts()
             #            self.matcher = Matcher(self.opts, self.functions)
             self.matchers = salt.loader.matchers(self.opts)

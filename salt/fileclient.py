@@ -84,7 +84,6 @@ class Client:
     def __init__(self, opts):
         self.opts = opts
         self.utils = salt.loader.utils(self.opts)
-        self.serial = salt.payload.Serial(self.opts)
 
     # Add __setstate__ and __getstate__ so that the object may be
     # deep copied. It normally can't be deep copied because its

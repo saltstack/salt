@@ -823,10 +823,9 @@ def _load_cached_grains(opts, cfn):
 
     log.debug("Retrieving grains from cache")
     try:
-        serial = salt.payload.Serial(opts)
         with salt.utils.files.fopen(cfn, "rb") as fp_:
             cached_grains = salt.utils.data.decode(
-                serial.load(fp_), preserve_tuples=True
+                salt.payload.load(fp_), preserve_tuples=True
             )
         if not cached_grains:
             log.debug("Cached grains are empty, cache might be corrupted. Refreshing.")
@@ -1005,8 +1004,7 @@ def grains(opts, force_refresh=False, proxy=None, context=None):
                     salt.modules.cmdmod._run_quiet('attrib -R "{}"'.format(cfn))
                 with salt.utils.files.fopen(cfn, "w+b") as fp_:
                     try:
-                        serial = salt.payload.Serial(opts)
-                        serial.dump(grains_data, fp_)
+                        salt.payload.dump(grains_data, fp_)
                     except TypeError as e:
                         log.error("Failed to serialize grains cache: %s", e)
                         raise  # re-throw for cleanup

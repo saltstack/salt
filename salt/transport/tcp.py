@@ -215,7 +215,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         if "master_uri" in kwargs:
             self.opts["master_uri"] = kwargs["master_uri"]
 
-        self.serial = salt.payload.Serial(self.opts)
+        self.serial = salt.payload
 
         # crypt defaults to 'aes'
         self.crypt = kwargs.get("crypt", "aes")
@@ -369,7 +369,7 @@ class AsyncTCPPubChannel(
     def __init__(self, opts, **kwargs):
         self.opts = opts
 
-        self.serial = salt.payload.Serial(self.opts)
+        self.serial = salt.payload
 
         self.crypt = kwargs.get("crypt", "aes")
         self.io_loop = kwargs.get("io_loop") or salt.ext.tornado.ioloop.IOLoop.current()
@@ -638,7 +638,7 @@ class TCPReqServerChannel(
 
         self.payload_handler = payload_handler
         self.io_loop = io_loop
-        self.serial = salt.payload.Serial(self.opts)
+        self.serial = salt.payload
         with salt.utils.asynchronous.current_ioloop(self.io_loop):
             if USE_LOAD_BALANCER:
                 self.req_server = LoadBalancerWorker(
@@ -1568,7 +1568,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
 
     def __init__(self, opts):
         self.opts = opts
-        self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
+        self.serial = salt.payload
         self.ckminions = salt.utils.minions.CkMinions(opts)
         self.io_loop = None
 
