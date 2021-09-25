@@ -137,11 +137,10 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
 
         # Now fetch the data from the new cache key file
         with patch.dict(localfs.__opts__, {"cachedir": tmp_dir}):
-            with patch.dict(localfs.__context__, {"serial": salt.payload}):
-                self.assertIn(
-                    "payload data",
-                    localfs.fetch(bank="bank", key="key", cachedir=tmp_dir),
-                )
+            self.assertIn(
+                "payload data",
+                localfs.fetch(bank="bank", key="key", cachedir=tmp_dir),
+            )
 
     # 'updated' function tests: 3
 
@@ -297,9 +296,8 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
 
         self.addCleanup(shutil.rmtree, tmp_dir)
         with patch.dict(localfs.__opts__, {"cachedir": tmp_dir}):
-            with patch.dict(localfs.__context__, {"serial": salt.payload}):
-                localfs.store(bank, key, data, tmp_dir)
+            localfs.store(bank, key, data, tmp_dir)
 
-                actual = localfs.fetch(bank, key, tmp_dir)
+            actual = localfs.fetch(bank, key, tmp_dir)
 
         self.assertEqual(data, actual)
