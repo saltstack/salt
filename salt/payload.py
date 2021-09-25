@@ -208,24 +208,24 @@ def dumps(msg, use_bin_type=False):
         )
 
 
-def load(self, fn_):
+def load(fn_):
     """
     Run the correct serialization to load a file
     """
     data = fn_.read()
     fn_.close()
     if data:
-        return self.loads(data, encoding="utf-8")
+        return loads(data, encoding="utf-8")
 
 
-def dump(self, msg, fn_):
+def dump(msg, fn_):
     """
     Serialize the correct data into the named file object
     """
     # When using Python 3, write files in such a way
     # that the 'bytes' and 'str' types are distinguishable
     # by using "use_bin_type=True".
-    fn_.write(self.dumps(msg, use_bin_type=True))
+    fn_.write(dumps(msg, use_bin_type=True))
     fn_.close()
 
 
