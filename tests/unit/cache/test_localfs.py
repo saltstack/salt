@@ -25,17 +25,16 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {localfs: {}}
 
-    def _create_tmp_cache_file(self, tmp_dir, serializer):
+    def _create_tmp_cache_file(self, tmp_dir):
         """
         Helper function that creates a temporary cache file using localfs.store. This
         is to used to create DRY unit tests for the localfs cache.
         """
         self.addCleanup(shutil.rmtree, tmp_dir)
         with patch.dict(localfs.__opts__, {"cachedir": tmp_dir}):
-            with patch.dict(localfs.__context__, {"serial": serializer}):
-                localfs.store(
-                    bank="bank", key="key", data="payload data", cachedir=tmp_dir
-                )
+            localfs.store(
+                bank="bank", key="key", data="payload data", cachedir=tmp_dir
+            )
 
     # 'store' function tests: 5
 
@@ -102,7 +101,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
         # Use the helper function to create the cache file using localfs.store()
-        self._create_tmp_cache_file(tmp_dir, salt.payload)
+        self._create_tmp_cache_file(tmp_dir)
 
         # Read in the contents of the key.p file and assert "payload data" was written
         with salt.utils.files.fopen(tmp_dir + "/bank/key.p", "rb") as fh_:
@@ -138,7 +137,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
         # Use the helper function to create the cache file using localfs.store()
-        self._create_tmp_cache_file(tmp_dir, salt.payload)
+        self._create_tmp_cache_file(tmp_dir)
 
         # Now fetch the data from the new cache key file
         with patch.dict(localfs.__opts__, {"cachedir": tmp_dir}):
@@ -177,7 +176,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
         # Use the helper function to create the cache file using localfs.store()
-        self._create_tmp_cache_file(tmp_dir, salt.payload)
+        self._create_tmp_cache_file(tmp_dir)
 
         with patch("os.path.join", MagicMock(return_value=tmp_dir + "/bank/key.p")):
             self.assertIsInstance(
@@ -212,7 +211,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
             tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
             # Use the helper function to create the cache file using localfs.store()
-            self._create_tmp_cache_file(tmp_dir, salt.payload)
+            self._create_tmp_cache_file(tmp_dir)
 
             # Now test the return of the flush function
             with patch.dict(localfs.__opts__, {"cachedir": tmp_dir}):
@@ -260,7 +259,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
         # Use the helper function to create the cache file using localfs.store()
-        self._create_tmp_cache_file(tmp_dir, salt.payload)
+        self._create_tmp_cache_file(tmp_dir)
 
         # Now test the return of the ls function
         with patch.dict(localfs.__opts__, {"cachedir": tmp_dir}):
@@ -277,7 +276,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
         # Use the helper function to create the cache file using localfs.store()
-        self._create_tmp_cache_file(tmp_dir, salt.payload)
+        self._create_tmp_cache_file(tmp_dir)
 
         # Now test the return of the contains function when key=None
         with patch.dict(localfs.__opts__, {"cachedir": tmp_dir}):
