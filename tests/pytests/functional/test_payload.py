@@ -21,17 +21,17 @@ class EchoServer:
         self.thread_running = threading.Event()
         self.thread_running.set()
         self.port = port
-        self.echo_server = threading.Thread(
+        self.thread = threading.Thread(
             target=self.echo_server, args=(port, self.thread_running)
         )
 
     def start(self):
-        self.echo_server.start()
+        self.thread.start()
         time.sleep(1)
 
     def stop(self):
         self.thread_running.clear()
-        self.echo_server.join()
+        self.thread.join()
 
     @staticmethod
     def echo_server(port, event):
@@ -91,14 +91,13 @@ def test_send_auto(sreq, echo_server):
     # check that the load always gets passed
     assert sreq.send_auto({"load": "foo"}) == {"load": "foo", "enc": "clear"}
 
+
 @pytest.mark.slow_test
 def test_send(sreq, echo_server):
     assert sreq.send("clear", "foo") == {"enc": "clear", "load": "foo"}
 
 
-@pytest.mark.skip(
-    "Disabled until we can figure out how to make this more reliable."
-)
+@pytest.mark.skip("Disabled until we can figure out how to make this more reliable.")
 def test_timeout(sreq, echo_server):
     """
     Test SREQ Timeouts
@@ -118,14 +117,14 @@ def test_timeout(sreq, echo_server):
     # server-side timeout
     log.info("Sending tries=1, timeout=1")
     start = time.time()
-    with self.assertRaises(salt.exceptions.SaltReqTimeoutError):
+    with pytest.raises(salt.exceptions.SaltReqTimeoutError):
         sreq.send("clear", {"sleep": 2}, tries=1, timeout=1)
     assert time.time() - start >= 1  # ensure we actually tried once (1s)
 
     # server-side timeout with retries
     log.info("Sending tries=2, timeout=1")
     start = time.time()
-    with self.assertRaises(salt.exceptions.SaltReqTimeoutError):
+    with pytest.raises(salt.exceptions.SaltReqTimeoutError):
         sreq.send("clear", {"sleep": 2}, tries=2, timeout=1)
     assert time.time() - start >= 2  # ensure we actually tried twice (2s)
 
