@@ -54,7 +54,6 @@ def test_store(master_config):
         with patch.dict(
             mysql_cache.__context__,
             {
-                "serial": salt.payload,
                 "mysql_table_name": "salt",
                 "mysql_client": mock_connect_client,
             },
@@ -116,7 +115,6 @@ def test_fetch(master_config):
                 mysql_cache.__context__,
                 {
                     "mysql_client": mock_connection,
-                    "serial": salt.payload,
                     "mysql_table_name": "salt",
                 },
             ):
@@ -209,7 +207,6 @@ def test_create_table(master_config):
     with patch.dict(
         mysql_cache.__context__,
         {
-            "serial": salt.payload,
             "mysql_table_name": "salt",
             "mysql_client": mock_connect_client,
             "mysql_kwargs": {"db": "salt_cache"},
