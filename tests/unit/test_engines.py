@@ -36,6 +36,8 @@ class EngineTestCase(TestCase, LoaderModuleMockMixin):
         ]
 
         process_manager = salt.utils.process.ProcessManager()
+        self.addCleanup(process_manager.stop_restarting)
+        self.addCleanup(process_manager.kill_children)
         with patch.dict(engines.__opts__, mock_opts):
             salt.engines.start_engines(mock_opts, process_manager)
             process_map = process_manager._process_map

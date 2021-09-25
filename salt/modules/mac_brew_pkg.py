@@ -110,8 +110,15 @@ def _call_brew(*cmd, failhard=True):
     """
     user = __salt__["file.get_user"](_homebrew_bin())
     runas = user if user != __opts__["user"] else None
+    _cmd = []
+    if runas:
+        _cmd = ["sudo -i -n -H -u {} -- ".format(runas)]
+    _cmd = _cmd + [salt.utils.path.which("brew")] + list(cmd)
+    _cmd = " ".join(_cmd)
+
+    runas = None
     result = __salt__["cmd.run_all"](
-        [salt.utils.path.which("brew")] + list(cmd),
+        cmd=_cmd,
         runas=runas,
         output_loglevel="trace",
         python_shell=False,

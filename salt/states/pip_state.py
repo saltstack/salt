@@ -317,12 +317,12 @@ def _check_if_installed(
                 extra_index_url=extra_index_url,
             )
             desired_version = ""
-            if any(version_spec):
+            if any(version_spec) and available_versions:
                 for version in reversed(available_versions):
                     if _fulfills_version_spec(version, version_spec):
                         desired_version = version
                         break
-            else:
+            elif available_versions:
                 desired_version = available_versions[-1]
             if not desired_version:
                 ret["result"] = True
