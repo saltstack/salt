@@ -1178,7 +1178,7 @@ def executors(opts, functions=None, context=None, proxy=None):
     )
 
 
-def cache(opts, serial):
+def cache(opts):
     """
     Returns the returner modules
     """
@@ -1186,7 +1186,6 @@ def cache(opts, serial):
         _module_dirs(opts, "cache", "cache"),
         opts,
         tag="cache",
-        pack={"__context__": {"serial": serial}},
     )
 
 

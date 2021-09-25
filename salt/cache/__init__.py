@@ -40,12 +40,6 @@ class Cache:
         The name of the cache driver to use. This is the name of the python
         module of the `salt.cache` package. Default is `localfs`.
 
-    :param serial:
-        The module of `salt.serializers` package that should be used by the cache
-        driver to store data.
-        If a driver can't use a specific module or uses specific objects storage
-        it can ignore this parameter.
-
     Terminology.
 
     Salt cache subsystem is organized as a tree with nodes and leafs like a
@@ -142,7 +136,7 @@ class Cache:
 
         :param data:
             The data which will be stored in the cache. This data should be
-            in a format which can be serialized by msgpack/json/yaml/etc.
+            in a format which can be serialized by msgpack.
 
         :raises SaltCacheError:
             Raises an exception if cache driver detected an error accessing data
