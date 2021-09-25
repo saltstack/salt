@@ -49,14 +49,12 @@ def test_store(master_config):
     Tests that the store function writes the data to the serializer for storage.
     """
 
-    serializer = salt.payload.Serial(master_config)
-
     mock_connect_client = MagicMock()
     with patch.object(mysql_cache, "_init_client") as mock_init_client:
         with patch.dict(
             mysql_cache.__context__,
             {
-                "serial": serializer,
+                "serial": salt.payload,
                 "mysql_table_name": "salt",
                 "mysql_client": mock_connect_client,
             },
@@ -107,7 +105,6 @@ def test_fetch(master_config):
     """
     Tests that the fetch function reads the data from the serializer for storage.
     """
-    serializer = salt.payload.Serial(master_config)
 
     with patch.object(mysql_cache, "_init_client") as mock_init_client:
         with patch("MySQLdb.connect") as mock_connect:
@@ -119,7 +116,7 @@ def test_fetch(master_config):
                 mysql_cache.__context__,
                 {
                     "mysql_client": mock_connection,
-                    "serial": serializer,
+                    "serial": salt.payload,
                     "mysql_table_name": "salt",
                 },
             ):
@@ -208,13 +205,11 @@ def test_create_table(master_config):
     Tests that the _create_table
     """
 
-    serializer = salt.payload.Serial(master_config)
-
     mock_connect_client = MagicMock()
     with patch.dict(
         mysql_cache.__context__,
         {
-            "serial": serializer,
+            "serial": salt.payload,
             "mysql_table_name": "salt",
             "mysql_client": mock_connect_client,
             "mysql_kwargs": {"db": "salt_cache"},
