@@ -479,9 +479,6 @@ def target(cls, minion_instance, opts, data, connected):
         opts["id"],
     )
 
-    if not hasattr(minion_instance, "serial"):
-        minion_instance.serial = salt.payload
-
     if not hasattr(minion_instance, "proc_dir"):
         uid = salt.utils.user.get_uid(user=opts.get("user", None))
         minion_instance.proc_dir = salt.minion.get_proc_dir(opts["cachedir"], uid=uid)
@@ -516,7 +513,7 @@ def thread_return(cls, minion_instance, opts, data):
     sdata.update(data)
     log.info("Starting a new job with PID %s", sdata["pid"])
     with salt.utils.files.fopen(fn_, "w+b") as fp_:
-        fp_.write(minion_instance.serial.dumps(sdata))
+        fp_.write(salt.payload.dumps(sdata))
     ret = {"success": False}
     function_name = data["fun"]
     executors = (
@@ -766,7 +763,7 @@ def thread_multi_return(cls, minion_instance, opts, data):
     sdata.update(data)
     log.info("Starting a new job with PID %s", sdata["pid"])
     with salt.utils.files.fopen(fn_, "w+b") as fp_:
-        fp_.write(minion_instance.serial.dumps(sdata))
+        fp_.write(salt.payload.dumps(sdata))
 
     multifunc_ordered = opts.get("multifunc_ordered", False)
     num_funcs = len(data["fun"])
