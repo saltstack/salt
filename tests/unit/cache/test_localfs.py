@@ -1,8 +1,6 @@
 """
 unit tests for the localfs cache
 """
-
-
 import errno
 import shutil
 import tempfile
@@ -32,9 +30,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         """
         self.addCleanup(shutil.rmtree, tmp_dir)
         with patch.dict(localfs.__opts__, {"cachedir": tmp_dir}):
-            localfs.store(
-                bank="bank", key="key", data="payload data", cachedir=tmp_dir
-            )
+            localfs.store(bank="bank", key="key", data="payload data", cachedir=tmp_dir)
 
     # 'store' function tests: 5
 
