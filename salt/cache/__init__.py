@@ -10,7 +10,6 @@ import time
 
 import salt.config
 import salt.loader
-import salt.payload
 import salt.syspaths
 from salt.utils.odict import OrderedDict
 
@@ -70,7 +69,7 @@ class Cache:
         self._kwargs["cachedir"] = self.cachedir
 
     def __lazy_init(self):
-        self._modules = salt.loader.cache(self.opts, salt.payload)
+        self._modules = salt.loader.cache(self.opts)
         fun = "{}.init_kwargs".format(self.driver)
         if fun in self.modules:
             self._kwargs = self.modules[fun](self._kwargs)
