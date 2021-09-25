@@ -215,7 +215,7 @@ class LocalClient:
                     c_path,
                 )
             self.opts = salt.config.client_config(c_path)
-        self.serial = salt.payload.Serial(self.opts)
+        self.serial = salt.payload
         self.salt_user = salt.utils.user.get_specific_user()
         self.skip_perm_errors = skip_perm_errors
         self.key = self.__read_master_key()

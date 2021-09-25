@@ -188,7 +188,7 @@ def post_master_init(self, master):
 
     self.opts["grains"] = salt.loader.grains(self.opts, proxy=self.proxy)
 
-    self.serial = salt.payload.Serial(self.opts)
+    self.serial = salt.payload
     self.mod_opts = self._prep_mod_opts()
     self.matchers = salt.loader.matchers(self.opts)
     self.beacons = salt.beacons.Beacon(self.opts, self.functions)
@@ -481,7 +481,7 @@ def target(cls, minion_instance, opts, data, connected):
     )
 
     if not hasattr(minion_instance, "serial"):
-        minion_instance.serial = salt.payload.Serial(opts)
+        minion_instance.serial = salt.payload
 
     if not hasattr(minion_instance, "proc_dir"):
         uid = salt.utils.user.get_uid(user=opts.get("user", None))

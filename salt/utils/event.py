@@ -227,7 +227,7 @@ class SaltEvent:
                                is destroyed. This is useful when using event
                                loops from within third party asynchronous code
         """
-        self.serial = salt.payload.Serial({"serial": "msgpack"})
+        self.serial = salt.payload
         self.keep_loop = keep_loop
         if io_loop is not None:
             self.io_loop = io_loop
@@ -453,7 +453,7 @@ class SaltEvent:
     @classmethod
     def unpack(cls, raw, serial=None):
         if serial is None:
-            serial = salt.payload.Serial({"serial": "msgpack"})
+            serial = salt.payload
 
         mtag, sep, mdata = raw.partition(
             salt.utils.stringutils.to_bytes(TAGEND)

@@ -51,7 +51,6 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         sock.setsockopt(zmq.SUBSCRIBE, b"")
         sock.connect(self.pub_uri)
         last_msg = time.time()
-        serial = salt.payload.Serial(self.minion_config)
         crypticle = salt.crypt.Crypticle(self.minion_config, self.aes_key)
         self.started.set()
         while True:
@@ -66,7 +65,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                 time.sleep(0.01)
             else:
                 try:
-                    serial_payload = serial.loads(payload)
+                    serial_payload = salt.payload.loads(payload)
                     payload = crypticle.loads(serial_payload["load"])
                     if "start" in payload:
                         self.running.set()

@@ -69,7 +69,7 @@ class BaseCaller:
         """
         self.opts = opts
         self.opts["caller"] = True
-        self.serial = salt.payload.Serial(self.opts)
+        self.serial = salt.payload
         # Handle this here so other deeper code which might
         # be imported as part of the salt api doesn't do  a
         # nasty sys.exit() and tick off our developer users

@@ -10,8 +10,8 @@ import time
 
 import salt.config
 import salt.loader
+import salt.payload
 import salt.syspaths
-from salt.payload import Serial
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ class Cache:
     Salt cache subsystem is organized as a tree with nodes and leafs like a
     filesystem. Cache consists of banks. Each bank can contain a number of
     keys. Each key can contain a dict or any other object serializable with
-    `salt.payload.Serial`. I.e. any data object in the cache can be
+    `salt.payload`. I.e. any data object in the cache can be
     addressed by the path to the bank and the key name:
         bank: 'minions/alpha'
         key:  'data'
@@ -71,7 +71,7 @@ class Cache:
         else:
             self.cachedir = cachedir
         self.driver = opts.get("cache", salt.config.DEFAULT_MASTER_OPTS["cache"])
-        self.serial = Serial(opts)
+        self.serial = salt.payload
         self._modules = None
         self._kwargs = kwargs
         self._kwargs["cachedir"] = self.cachedir

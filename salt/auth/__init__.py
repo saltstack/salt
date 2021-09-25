@@ -58,7 +58,7 @@ class LoadAuth:
     def __init__(self, opts, ckminions=None):
         self.opts = opts
         self.max_fail = 1.0
-        self.serial = salt.payload.Serial(opts)
+        self.serial = salt.payload
         self.auth = salt.loader.auth(opts)
         self.tokens = salt.loader.eauth_tokens(opts)
         self.ckminions = ckminions or salt.utils.minions.CkMinions(opts)
