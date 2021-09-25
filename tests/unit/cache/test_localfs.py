@@ -138,7 +138,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
         # Use the helper function to create the cache file using localfs.store()
-        self._create_tmp_cache_file(tmp_dir, salt.paylaod)
+        self._create_tmp_cache_file(tmp_dir, salt.payload)
 
         # Now fetch the data from the new cache key file
         with patch.dict(localfs.__opts__, {"cachedir": tmp_dir}):
