@@ -728,7 +728,7 @@ class ConnectedCache(Process):
 
             # check for next cache-request
             if socks.get(creq_in) == zmq.POLLIN:
-                msg = serial.loads(creq_in.recv())
+                msg = salt.payload.loads(creq_in.recv())
                 log.debug("ConCache Received request: %s", msg)
 
                 # requests to the minion list are send as str's
