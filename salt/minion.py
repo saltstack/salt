@@ -2927,7 +2927,6 @@ class Minion(MinionBase):
                 self.function_errors,
                 self.executors,
             ) = self._load_modules()
-            self.serial = salt.payload
             self.mod_opts = self._prep_mod_opts()
             #            self.matcher = Matcher(self.opts, self.functions)
             self.matchers = salt.loader.matchers(self.opts)

@@ -215,8 +215,6 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         if "master_uri" in kwargs:
             self.opts["master_uri"] = kwargs["master_uri"]
 
-        self.serial = salt.payload
-
         # crypt defaults to 'aes'
         self.crypt = kwargs.get("crypt", "aes")
 
@@ -368,9 +366,6 @@ class AsyncTCPPubChannel(
 
     def __init__(self, opts, **kwargs):
         self.opts = opts
-
-        self.serial = salt.payload
-
         self.crypt = kwargs.get("crypt", "aes")
         self.io_loop = kwargs.get("io_loop") or salt.ext.tornado.ioloop.IOLoop.current()
         self.connected = False
@@ -638,7 +633,6 @@ class TCPReqServerChannel(
 
         self.payload_handler = payload_handler
         self.io_loop = io_loop
-        self.serial = salt.payload
         with salt.utils.asynchronous.current_ioloop(self.io_loop):
             if USE_LOAD_BALANCER:
                 self.req_server = LoadBalancerWorker(
@@ -693,12 +687,12 @@ class TCPReqServerChannel(
                 id_ = payload["load"].get("id", "")
                 if "\0" in id_:
                     log.error("Payload contains an id with a null byte: %s", payload)
-                    stream.send(self.serial.dumps("bad load: id contains a null byte"))
+                    stream.send(salt.payload.dumps("bad load: id contains a null byte"))
                     raise salt.ext.tornado.gen.Return()
             except TypeError:
                 log.error("Payload contains non-string id: %s", payload)
                 stream.send(
-                    self.serial.dumps("bad load: id {} is not a string".format(id_))
+                    salt.payload.dumps("bad load: id {} is not a string".format(id_))
                 )
                 raise salt.ext.tornado.gen.Return()
 
@@ -1568,7 +1562,6 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
 
     def __init__(self, opts):
         self.opts = opts
-        self.serial = salt.payload
         self.ckminions = salt.utils.minions.CkMinions(opts)
         self.io_loop = None
 
@@ -1669,7 +1662,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         )
         pub_sock.connect()
 
-        int_payload = {"payload": self.serial.dumps(payload)}
+        int_payload = {"payload": salt.payload.dumps(payload)}
 
         # add some targeting stuff for lists only (for now)
         if load["tgt_type"] == "list" and not self.opts.get("order_masters", False):

@@ -15,21 +15,21 @@ from salt.utils.odict import OrderedDict
 log = logging.getLogger(__name__)
 
 
-def assertNoOrderedDict(data):
+def assert_no_ordered_dict(data):
     if isinstance(data, OrderedDict):
         raise AssertionError("Found an ordered dictionary")
     if isinstance(data, dict):
         for value in data.values():
-            assertNoOrderedDict(value)
+            assert_no_ordered_dict(value)
     elif isinstance(data, (list, tuple)):
         for chunk in data:
-            assertNoOrderedDict(chunk)
+            assert_no_ordered_dict(chunk)
 
 
 def test_list_nested_odicts():
     idata = {"pillar": [OrderedDict(environment="dev")]}
     odata = salt.payload.loads(salt.payload.dumps(idata.copy()))
-    assertNoOrderedDict(odata)
+    assert_no_ordered_dict(odata)
     assert idata == odata
 
 
@@ -52,7 +52,6 @@ def test_verylong_dump_load():
     """
     Test verylong encoder/decoder
     """
-    payload = salt.payload.Serial("msgpack")
     idata = {"jid": 20180227140750302662}
     sdata = salt.payload.dumps(idata.copy())
     odata = salt.payload.loads(sdata)

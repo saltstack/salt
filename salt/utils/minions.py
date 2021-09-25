@@ -209,7 +209,6 @@ class CkMinions:
 
     def __init__(self, opts):
         self.opts = opts
-        self.serial = salt.payload
         self.cache = salt.cache.factory(opts)
         # TODO: this is actually an *auth* check
         if self.opts.get("transport", "zeromq") in ("zeromq", "tcp"):
@@ -270,7 +269,7 @@ class CkMinions:
             if self.opts["key_cache"] and os.path.exists(pki_cache_fn):
                 log.debug("Returning cached minion list")
                 with salt.utils.files.fopen(pki_cache_fn, mode="rb") as fn_:
-                    return self.serial.load(fn_)
+                    return salt.payload.load(fn_)
             else:
                 for fn_ in salt.utils.data.sorted_ignorecase(
                     os.listdir(os.path.join(self.opts["pki_dir"], self.acc))
