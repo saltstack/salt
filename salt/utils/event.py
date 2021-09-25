@@ -148,7 +148,7 @@ def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=Fal
     Return an event object suitable for the named transport
     """
     # TODO: AIO core is separate from transport
-    if opts["transport"] in ("zeromq", "tcp", "detect"):
+    if opts["transport"] in ("zeromq", "tcp", "rabbitmq", "detect"):
         return MasterEvent(
             sock_dir, opts, listen=listen, io_loop=io_loop, raise_errors=raise_errors
         )
@@ -386,7 +386,7 @@ class SaltEvent:
                     self.puburi, io_loop=self.io_loop
                 )
 
-            # For the asynchronous case, the connect will be defered to when
+            # For the asynchronous case, the connect will be deferred to when
             # set_event_handler() is invoked.
             self.cpub = True
         return self.cpub
@@ -1038,7 +1038,7 @@ class MinionEvent(SaltEvent):
     """
     Warning! Use the get_event function or the code will not be
     RAET compatible
-    Create a master event management object
+    Create a minion event management object
     """
 
     def __init__(self, opts, listen=True, io_loop=None, raise_errors=False):
@@ -1125,6 +1125,8 @@ class AsyncEventPublisher:
         self.puller = salt.transport.ipc.IPCMessageServer(
             epull_uri, io_loop=self.io_loop, payload_handler=self.handle_publish
         )
+
+
 
         log.info("Starting pull socket on %s", epull_uri)
         with salt.utils.files.set_umask(0o177):

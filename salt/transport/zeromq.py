@@ -112,7 +112,7 @@ def _get_master_uri(master_ip, master_port, source_ip=None, source_port=None):
             log.warning("Consider upgrading to pyzmq >= 16.0.1 and libzmq >= 4.1.6")
             log.warning(
                 "Specific source IP / port for connecting to master returner port:"
-                " configuraion ignored"
+                " configuration ignored"
             )
 
     return master_uri
@@ -648,7 +648,7 @@ class ZeroMQReqServerChannel(
 
             self._w_monitor = ZeroMQSocketMonitor(self._socket)
             threading.Thread(target=self._w_monitor.start_poll).start()
-            log.debug("ZMQ monitor has been started started")
+            log.debug("ZMQ monitor has been started")
 
     def post_fork(self, payload_handler, io_loop):
         """
@@ -748,9 +748,9 @@ class ZeroMQReqServerChannel(
             # and call it, returning control to the caller until it completes
             ret, req_opts = yield self.payload_handler(payload)
         except Exception as e:  # pylint: disable=broad-except
+            log.error("Some exception handling a payload from minion", exc_info=True)
             # always attempt to return an error to the minion
             stream.send("Some exception handling minion payload")
-            log.error("Some exception handling a payload from minion", exc_info=True)
             raise salt.ext.tornado.gen.Return()
 
         req_fun = req_opts.get("fun", "send")
@@ -949,7 +949,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                     raise
 
         except KeyboardInterrupt:
-            log.trace("Publish daemon caught Keyboard interupt, tearing down")
+            log.trace("Publish daemon caught Keyboard interrupt, tearing down")
         # Cleanly close the sockets if we're shutting down
         if pub_sock.closed is False:
             pub_sock.close()
@@ -1012,10 +1012,10 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             self._sock_data.sock.close()
             delattr(self._sock_data, "sock")
 
-    def publish(self, load):
+    def publish(self, load, **optional_transport_args):
         """
         Publish "load" to minions. This send the load to the publisher daemon
-        process with does the actual sending to minions.
+        process which does the actual sending to minions.
 
         :param dict load: A load to be sent across the wire to minions
         """
@@ -1042,7 +1042,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             match_ids = _res["minions"]
 
             log.debug("Publish Side Match: %s", match_ids)
-            # Send list of miions thru so zmq can target them
+            # Send list of minions thru so zmq can target them
             int_payload["topic_lst"] = match_ids
         payload = self.serial.dumps(int_payload)
         log.debug(
