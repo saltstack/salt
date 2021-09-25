@@ -377,7 +377,7 @@ class EventListener:
         """
         Callback for events on the event sub socket
         """
-        mtag, data = self.event.unpack(raw, self.event.serial)
+        mtag, data = self.event.unpack(raw)
 
         # see if we have any futures that need this info:
         for (tag, matcher), futures in self.tag_map.items():
