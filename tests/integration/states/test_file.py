@@ -4939,6 +4939,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertIn("Patch would not apply cleanly", ret["comment"])
         if IS_WINDOWS:
             reject_file = reject_file.replace("\\", "\\\\")
+            reject_file = "'{}'".format(reject_file)
         self.assertRegex(
             ret["comment"], "saving rejects to (file )?{}".format(reject_file)
         )
@@ -4977,6 +4978,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertIn("Patch would not apply cleanly", ret["comment"])
         if IS_WINDOWS:
             reject_file = reject_file.replace("\\", "\\\\")
+            reject_file = "'{}'".format(reject_file)
         self.assertRegex(
             ret["comment"], "saving rejects to (file )?{}".format(reject_file)
         )
