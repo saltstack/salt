@@ -507,20 +507,6 @@ def test_patch_directory(
     Test file.patch using a patch applied to a directory, with changes
     spanning multiple files.
     """
-    numbers_file_contents = """
-    one
-    two
-    three
-    
-    1
-    2
-    3
-    """
-    math_file_contents = """
-    Five plus five is ten
-    
-    Four squared is sixteen
-    """
     _check_minimum_version(salt_call_cli, min_patch_ver)
     # Create a new unpatched set of files
     os.makedirs(patch_file_dest / "foo" / "bar")
