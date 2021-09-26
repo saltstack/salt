@@ -11,7 +11,6 @@ from saltfactories.utils.processes import ProcessResult
 
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("gpg"),
-    pytest.mark.windows_whitelisted,
 ]
 
 log = logging.getLogger(__name__)
