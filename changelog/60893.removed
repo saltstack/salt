@@ -1,1 +1,0 @@
-Removed deprecated virt.migrate_non_shared, virt.migrate_non_shared_inc, ssh from virt.migrate, and python2/python3 args from salt.utils.thin.gen_min and .gen_thin
