@@ -11,9 +11,9 @@ import os
 import signal
 import sys
 import threading
+import time
 import weakref
 from typing import Any, Callable
-from uuid import uuid4
 
 # pylint: disable=3rd-party-module-not-gated
 import pika
@@ -37,7 +37,9 @@ import salt.utils.verify
 import salt.utils.versions
 import salt.utils.zeromq
 from pika import BasicProperties, SelectConnection
+from pika.exceptions import ChannelClosedByBroker
 from pika.exchange_type import ExchangeType
+from pika.spec import PERSISTENT_DELIVERY_MODE
 from salt.exceptions import SaltException, SaltReqTimeoutError
 from salt.ext import tornado
 
@@ -72,29 +74,11 @@ def _get_master_uri(master_ip, master_port):
 
 
 class RMQConnectionWrapperBase:
-    def __init__(self, opts, queue_name=None):
+    def __init__(self, opts, **kwargs):
         self._opts = opts
+        self._validate_set_broker_topology(self._opts, **kwargs)
 
-        # rmq broker address
-        self._host = (
-            self._opts["transport_rabbitmq_address"]
-            if "transport_rabbitmq_address" in self._opts
-            else "localhost"
-        )
-        if not self._host:
-            raise ValueError("Host must be set")
-
-        # rmq broker credentials (TODO: support other types of auth. eventually)
-        creds_key = "transport_rabbitmq_auth"
-        if creds_key not in self._opts:
-            raise KeyError("Missing key {!r}".format(creds_key))
-        creds = self._opts[creds_key]
-
-        if "username" not in creds and "password" not in creds:
-            raise KeyError("username or password must be set")
-        self._creds = pika.PlainCredentials(creds["username"], creds["password"])
-
-        # TODO: think about abetter way to generate queue names
+        # TODO: think about a better way to generate queue names
         # each possibly running on different machine
         master_port = (
             self._opts["master_port"]
@@ -104,21 +88,142 @@ class RMQConnectionWrapperBase:
         if not master_port:
             raise KeyError("master_port must be set")
 
-        self._queue_name = (
-            queue_name
-            if queue_name
-            else "master_consumer_{}_{}".format(self._host, master_port)
-        )
-
-        # set up exchange for message broadcast
-        self._fanout_exchange_name = self.queue_name
         self._connection = None
         self._channel = None
         self._closing = False
 
+    def _validate_set_broker_topology(self, opts, **kwargs):
+        """
+        Validate broker topology and set private variables. For example:
+            {
+                "transport: rabbitmq",
+                "transport_rabbitmq_address": "localhost",
+                "transport_rabbitmq_auth": { "username": "user", "password": "bitnami"},
+                "transport_rabbitmq_vhost": "/",
+                "transport_rabbitmq_create_topology_ondemand": "True",
+                "transport_rabbitmq_publisher_exchange_name":" "exchange_to_publish_messages",
+                "transport_rabbitmq_consumer_exchange_name": "exchange_to_bind_queue_to_receive_messages_from",
+                "transport_rabbitmq_consumer_queue_name": "queue_to_consume_messages_from",
+
+                "transport_rabbitmq_consumer_queue_declare_arguments": "",
+                "transport_rabbitmq_publisher_exchange_declare_arguments": ""
+                "transport_rabbitmq_consumer_exchange_declare_arguments": ""
+            }
+        """
+
+        # rmq broker address
+        self._host = (
+            opts["transport_rabbitmq_address"]
+            if "transport_rabbitmq_address" in opts
+            else "localhost"
+        )
+        if not self._host:
+            raise ValueError("Host must be set")
+
+        # rmq broker credentials (TODO: support other types of auth. eventually)
+        creds_key = "transport_rabbitmq_auth"
+        if creds_key not in opts:
+            raise KeyError("Missing key {!r}".format(creds_key))
+        creds = opts[creds_key]
+
+        if "username" not in creds and "password" not in creds:
+            raise KeyError("username or password must be set")
+        self._creds = pika.PlainCredentials(creds["username"], creds["password"])
+
+        # rmq broker vhost
+        vhost_key = "transport_rabbitmq_vhost"
+        if vhost_key not in opts:
+            raise KeyError("Missing key {!r}".format(vhost_key))
+        self._vhost = opts[vhost_key]
+
+        # optionally create the RMQ topology if instructed
+        # some use cases require topology creation out-of-band with permissions
+        # rmq consumer queue arguments
+        create_topology_key = "transport_rabbitmq_create_topology_ondemand"
+        self._create_topology_ondemand = (
+            kwargs.get(create_topology_key, False)
+            if create_topology_key in kwargs
+            else opts.get(create_topology_key, False)
+        )
+
+        # publisher exchange name
+        publisher_exchange_name_key = "transport_rabbitmq_publisher_exchange_name"
+        if (
+            publisher_exchange_name_key not in opts
+            and publisher_exchange_name_key not in kwargs
+        ):
+            raise KeyError(
+                "Missing configuration key {!r}".format(publisher_exchange_name_key)
+            )
+        self._publisher_exchange_name = (
+            kwargs.get(publisher_exchange_name_key)
+            if publisher_exchange_name_key in kwargs
+            else opts[publisher_exchange_name_key]
+        )
+
+        # consumer exchange name
+        consumer_exchange_name_key = "transport_rabbitmq_consumer_exchange_name"
+        if (
+            consumer_exchange_name_key not in opts
+            and consumer_exchange_name_key not in kwargs
+        ):
+            raise KeyError(
+                "Missing configuration key {!r}".format(consumer_exchange_name_key)
+            )
+        self._consumer_exchange_name = (
+            kwargs.get(consumer_exchange_name_key)
+            if consumer_exchange_name_key in kwargs
+            else opts[consumer_exchange_name_key]
+        )
+
+        # consumer queue name
+        consumer_queue_name_key = "transport_rabbitmq_consumer_queue_name"
+        if (
+            consumer_queue_name_key not in opts
+            and consumer_queue_name_key not in kwargs
+        ):
+            raise KeyError(
+                "Missing configuration key {!r}".format(consumer_queue_name_key)
+            )
+        self._consumer_queue_name = (
+            kwargs.get(consumer_queue_name_key)
+            if consumer_queue_name_key in kwargs
+            else opts[consumer_queue_name_key]
+        )
+
+        # rmq consumer exchange arguments when declaring exchanges
+        consumer_exchange_declare_arguments_key = (
+            "transport_rabbitmq_consumer_exchange_declare_arguments"
+        )
+        self._consumer_exchange_declare_arguments = (
+            kwargs.get(consumer_exchange_declare_arguments_key)
+            if consumer_exchange_declare_arguments_key in kwargs
+            else opts.get(consumer_exchange_declare_arguments_key, None)
+        )
+
+        # rmq consumer queue arguments when declaring queues
+        consumer_queue_declare_arguments_key = (
+            "transport_rabbitmq_consumer_queue_declare_arguments"
+        )
+        self._consumer_queue_declare_arguments = (
+            kwargs.get(consumer_queue_declare_arguments_key)
+            if consumer_queue_declare_arguments_key in kwargs
+            else opts.get(consumer_queue_declare_arguments_key, None)
+        )
+
+        # rmq publisher exchange arguments when declaring exchanges
+        publisher_exchange_declare_arguments_key = (
+            "transport_rabbitmq_publisher_exchange_declare_arguments"
+        )
+        self._publisher_exchange_declare_arguments = (
+            kwargs.get(publisher_exchange_declare_arguments_key)
+            if publisher_exchange_declare_arguments_key in kwargs
+            else opts.get(publisher_exchange_declare_arguments_key, None)
+        )
+
     @property
     def queue_name(self):
-        return self._queue_name
+        return self._consumer_queue_name
 
     def close(self):
         if not self._closing:
@@ -147,45 +252,88 @@ class RMQBlockingConnectionWrapper(RMQConnectionWrapperBase):
     Not thread safe.
     """
 
-    def __init__(self, opts, queue_name=None):
-        super().__init__(opts, queue_name=queue_name)
+    def __init__(self, opts, **kwargs):
+        super().__init__(opts, **kwargs)
 
-        self._connect(self._host, self._creds)
+        self._connect(self._host, self._creds, self._vhost)
 
-        # set up exchange for message broadcast
-        self._fanout_exchange_name = self.queue_name
-        self._channel.exchange_declare(
-            exchange=self._fanout_exchange_name, exchange_type=ExchangeType.fanout
-        )
+        if self._create_topology_ondemand:
+            try:
+                self._create_topology()
+            except:
+                log.exception("Exception when creating RMQ topology.")
+                raise
+        else:
+            log.info("Skipping rmq topology creation.")
 
-    def _connect(self, host, creds):
+    def _connect(self, host, creds, vhost):
+        log.debug("Connecting to host [%s] and vhost [%s]", host, vhost)
         self._connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=host, credentials=creds)
+            pika.ConnectionParameters(host=host, credentials=creds, virtual_host=vhost)
         )
         self._channel = self._connection.channel()
+
+    def _create_topology(self):
+        ret = self._channel.exchange_declare(
+            exchange=self._publisher_exchange_name,
+            exchange_type=ExchangeType.fanout,
+            durable=True,
+            arguments=self._publisher_exchange_declare_arguments,
+        )
+        log.info(
+            "declared publisher exchange: %s",
+            self._publisher_exchange_name,
+        )
+
+        ret = self._channel.exchange_declare(
+            exchange=self._consumer_exchange_name,
+            exchange_type=ExchangeType.fanout,
+            durable=True,
+            arguments=self._consumer_exchange_declare_arguments,
+        )
+        log.info(
+            "declared consumer exchange: %s",
+            self._consumer_exchange_name,
+        )
+
+        ret = self._channel.queue_declare(
+            self._consumer_queue_name,
+            durable=True,
+            arguments=self._consumer_queue_declare_arguments,  # expire the quorum queue if unused
+        )
+        log.info(
+            "declared queue: %s",
+            self._consumer_queue_name,
+        )
+
+        log.info(
+            "Binding queue [%s] to exchange [%s]",
+            self._consumer_queue_name,
+            self._consumer_exchange_name,
+        )
+        ret = self._channel.queue_bind(
+            self._consumer_queue_name,
+            self._consumer_exchange_name,
+            routing_key=self._consumer_queue_name,
+        )
 
     def publish(
         self,
         payload,
-        queue_name=None,
+        exchange_name=None,
+        routing_key="",  # must be a string
         reply_queue_name=None,
-        correlation_id=None,
-        auto_delete_queue=False,
-        broadcast=True,
     ):
         """
-        Publishes ``payload`` to the specified ``queue_name`` (via direct exchange or via fanout/broadcast),
-        passes along optional name of the reply queue in message metadata. Non-blocking.
+        Publishes ``payload`` to the specified ``exchange_name`` (via direct exchange or via fanout/broadcast) with
+        ``routing_key``, passes along optional name of the reply queue in message metadata. Non-blocking.
         Recover from connection failure (with a retry).
-        Alternatively, broadcasts the ``payload`` to all bound queues (via fanout exchange).
 
-        :param correlation_id: correlation_id (used for the RPC pattern in conjunction with reply queue)
+        :param reply_queue_name: optional reply queue name
         :param payload: message body
-        :param queue_name: queue name
-        :param reply_queue_name: optional name of the reply queue
-        :param auto_delete_queue: set the type of queue to "auto_delete"
+        :param exchange_name: exchange name
+        :param routing_key: optional name of the routing key, exchange specific
         (it will be deleted when the last consumer disappears)
-        :param broadcast: whether to broadcast via fanout exchange
         :return:
         """
         while (
@@ -194,12 +342,13 @@ class RMQBlockingConnectionWrapper(RMQConnectionWrapperBase):
             try:
                 self._publish(
                     payload,
-                    queue_name=queue_name,
+                    exchange_name=exchange_name
+                    if exchange_name
+                    else self._publisher_exchange_name,
+                    routing_key=routing_key,
                     reply_queue_name=reply_queue_name,
-                    correlation_id=correlation_id,
-                    auto_delete_queue=auto_delete_queue,
-                    broadcast=broadcast,
                 )
+
                 break
 
             except pika.exceptions.ConnectionClosedByBroker:
@@ -207,93 +356,67 @@ class RMQBlockingConnectionWrapper(RMQConnectionWrapperBase):
                 # as a result of "rabbitmqtl" cli call. Attempt to reconnect anyway.
                 log.exception("Connection exception when publishing.")
                 log.info("Attempting to re-establish RMQ connection.")
-                self._connect(self._host, self._creds)
+                self._connect(self._host, self._creds, self._vhost)
             except pika.exceptions.ChannelWrongStateError:
                 # Note: RabbitMQ uses heartbeats to detect and close "dead" connections and to prevent network devices
                 # (firewalls etc.) from terminating "idle" connections.
                 # From version 3.5.5 on, the default timeout is set to 60 seconds
                 log.exception("Channel exception when publishing.")
                 log.info("Attempting to re-establish RMQ connection.")
-                self._connect(self._host, self._creds)
+                self._connect(self._host, self._creds, self._vhost)
 
     def _publish(
         self,
         payload,
-        queue_name=None,
+        exchange_name=None,
+        routing_key=None,
         reply_queue_name=None,
-        correlation_id=None,
-        auto_delete_queue=False,
-        broadcast=True,
     ):
         """
         Publishes ``payload`` to the specified ``queue_name`` (via direct exchange or via fanout/broadcast),
         passes along optional name of the reply queue in message metadata. Non-blocking.
         Alternatively, broadcasts the ``payload`` to all bound queues (via fanout exchange).
 
-        :param correlation_id: correlation_id (used for the RPC pattern in conjunction with reply queue)
         :param payload: message body
-        :param queue_name: queue name
+        :param exchange_name: exchange name
+        :param routing_key: and exchange-specific routing key
         :param reply_queue_name: optional name of the reply queue
-        :param auto_delete_queue: set the type of queue to "auto_delete"
-        (it will be deleted when the last consumer disappears)
-        :param broadcast: whether to broadcast via fanout exchange
         :return:
         """
-
-        publish_queue_name = queue_name if queue_name else self.queue_name
-
-        # See https://www.rabbitmq.com/tutorials/amqp-concepts.html
-        exchange = self._fanout_exchange_name if broadcast else ""
-
-        # For the IPC pattern, set up the "reply-to" header and "correlation_id"
         properties = pika.BasicProperties()
         properties.reply_to = reply_queue_name if reply_queue_name else None
-        properties.correlation_id = correlation_id if correlation_id else uuid4().hex
         properties.app_id = str(threading.get_ident())  # use this for tracing
+        # enable perisistent message delivery
+        # see https://www.rabbitmq.com/confirms.html#publisher-confirms and
+        # https://kousiknath.medium.com/dabbling-around-rabbit-mq-persistence-durability-message-routing-f4efc696098c
+        properties.delivery_mode = PERSISTENT_DELIVERY_MODE
 
         log.info(
-            "Sending payload to queue [%s] via exchange [%s]: %s. Payload properties: %s",
-            publish_queue_name,
-            exchange,
+            "Sending payload to exchange [%s]: %s. Payload properties: %s",
+            exchange_name,
             payload,
             properties,
         )
 
         try:
-            # TODO: consider different queue types (durable, quorum, etc.)
-            self._channel.queue_declare(
-                publish_queue_name, auto_delete=auto_delete_queue
-            )
-            log.info(
-                "declared queue: %s with auto_delete=%s",
-                publish_queue_name,
-                auto_delete_queue,
-            )
-
-            if broadcast:
-                log.info(
-                    "Binding queue [%s] to exchange [%s]", publish_queue_name, exchange
-                )
-                self._channel.queue_bind(
-                    publish_queue_name, exchange, routing_key=publish_queue_name
-                )
             self._channel.basic_publish(
-                exchange=exchange,
-                routing_key=publish_queue_name,
+                exchange=exchange_name,
+                routing_key=routing_key,
                 body=payload,
-                properties=properties,
-            )  # add reply queue to the properties
+                properties=properties,  # added reply queue to the properties
+                mandatory=True,
+            )
             log.info(
-                "Sent payload to queue [%s] via exchange [%s]: [%s]",
-                publish_queue_name,
-                exchange,
+                "Sent payload to exchange [%s] with routing_key [%s]: [%s]",
+                exchange_name,
+                routing_key,
                 payload,
             )
         except:
             log.exception(
-                "Error publishing to queue [%s] via exchange [%s]",
-                publish_queue_name,
-                exchange,
+                "Error publishing to exchange [%s] with routing_key [%s]",
+                exchange_name,
+                routing_key,
             )
             raise
 
@@ -304,26 +427,22 @@ class RMQBlockingConnectionWrapper(RMQConnectionWrapperBase):
         :param properties: payload properties/metadata
         :return:
         """
-        reply_queue_name = properties.reply_to
+        reply_to = properties.reply_to
 
-        if not reply_queue_name:
+        if not reply_to:
             raise ValueError("properties.reply_to must be set")
 
         log.info(
-            "Sending reply payload on queue [%s]: %s. Payload properties: %s",
-            reply_queue_name,
+            "Sending reply payload with reply_to [%s]: %s. Payload properties: %s",
+            reply_to,
             payload,
             properties,
         )
 
-        # publish reply on a queue that will be deleted after consumer cancels or disconnects
-        # do not broadcast replies
-        # TODO: look into queue types (durable, quorum, etc.)
         self.publish(
             payload,
-            queue_name=reply_queue_name,
-            auto_delete_queue=True,
-            broadcast=False,
+            exchange_name="",  # ExchangeType.direct,  # use the default exchange for replies
+            routing_key=reply_to,
         )
 
     def consume(self, queue_name=None, timeout=60):
@@ -335,9 +454,7 @@ class RMQBlockingConnectionWrapper(RMQConnectionWrapperBase):
         """
         log.info("Consuming payload on queue [%s]", queue_name)
 
-        queue_name = queue_name or self.queue_name
-        self._channel.queue_declare(queue_name)
-        log.info("declared queue: %s", queue_name)
+        queue_name = queue_name or self._consumer_queue_name
         (method, properties, body) = next(
             self._channel.consume(
                 queue=queue_name, inactivity_timeout=timeout, auto_ack=True
@@ -345,20 +462,17 @@ class RMQBlockingConnectionWrapper(RMQConnectionWrapperBase):
         )
         return body
 
-    def consume_reply(self, callback, reply_queue_name=None, timeout=60):
+    def register_reply_callback(self, callback, reply_queue_name=None):
         """
-        Blocks until reply is received on the reply queue and processes it in a ``callback``
+        Registers RPC reply callback
         :param callback:
         :param reply_queue_name:
-        :param timeout
         :return:
         """
-        self._channel.queue_declare(queue=reply_queue_name, auto_delete=True)
-        log.info("declared queue: %s with auto_delete=True", reply_queue_name)
 
         def _callback(ch, method, properties, body):
             log.info(
-                "Received reply on queue [%s]: %s. Payload properties: %s",
+                "Received reply on queue [%s]: %s. Reply payload properties: %s",
                 reply_queue_name,
                 body,
                 properties,
@@ -367,59 +481,24 @@ class RMQBlockingConnectionWrapper(RMQConnectionWrapperBase):
             log.info("Processed callback for reply on queue [%s]", reply_queue_name)
 
             # Stop consuming so that auto_delete queue will be deleted
-            # TODO: explicitly acknowledge response after processing callback instead of relying on "auto_ack"
             self._channel.stop_consuming()
             log.info("Done consuming reply on queue [%s]", reply_queue_name)
 
-        # blocking call with a callback
-        log.info("Starting consuming reply on queue [%s]", reply_queue_name)
+        log.info("Starting basic_consume reply on queue [%s]", reply_queue_name)
 
-        # TODO: reconsider auto_ack
         consumer_tag = self._channel.basic_consume(
             queue=reply_queue_name, on_message_callback=_callback, auto_ack=True
         )
-        self._channel.start_consuming()  # a blocking call
 
-    def blocking_consume(self, callback, timeout=None):
+        log.info("Started basic_consume reply on queue [%s]", reply_queue_name)
+
+    def start_consuming(self):
         """
-        Blocks until message is available (pushed by the broker) and process it with ``callback``
-        :param callback:
-        :param timeout:
+        Blocks and dispatches callbacks configured by ``self._channel.basic_consume()``
         :return:
         """
-        self._channel.queue_declare(queue=self.queue_name, auto_delete=False)
-        log.info("declared queue: %s with auto_delete=False", self.queue_name)
-
-        def _callback(ch, method, properties, body):
-            log.info(
-                "Received on queue [%s] %s. Payload properties: [%s]",
-                self.queue_name,
-                body,
-                properties,
-            )
-
-            callback(
-                payload=body, message_properties=properties, rmq_connection_wrapper=self
-            )
-
-        # TODO: reconsider auto_ack
-        self._channel.basic_consume(
-            self.queue_name, on_message_callback=_callback, auto_ack=True
-        )
-
-        try:
-            log.info("Starting consuming on queue [%s]", self.queue_name)
-            self._channel.start_consuming()  # a blocking call
-        except KeyboardInterrupt:
-            self.stop_blocking_consume()
-            self._connection.close()
-        except:
-            log.exception("Error consuming on queue [%s]", self.queue_name)
-            raise
-
-    def stop_blocking_consume(self):
-        log.info("Stopping consuming on queue [%s]", self.queue_name)
-        self._channel.stop_consuming()
+        # a blocking call until self._channel.stop_consuming() is called
+        self._channel.start_consuming()
 
 
 class RMQNonBlockingConnectionWrapper(RMQConnectionWrapperBase):
@@ -431,27 +510,25 @@ class RMQNonBlockingConnectionWrapper(RMQConnectionWrapperBase):
     TODO: implement event-based connection recovery and error handling (see rabbitmq docs for examples).
     """
 
-    def __init__(self, opts, io_loop=None, queue_name=None, timeout=60):
-        super().__init__(opts, queue_name=queue_name)
+    def __init__(self, opts, io_loop=None, **kwargs):
+        super().__init__(opts, **kwargs)
 
         self._io_loop = io_loop or tornado.ioloop.IOLoop.instance()
         self._io_loop.make_current()
 
         self._channel = None
-        self._timeout = timeout
         self._callback = None
-
-        # set up exchange for message broadcast
-        self._fanout_exchange_name = self.queue_name
 
     def connect(self):
         """
 
         :return:
         """
+        log.debug("Connecting to host [%s] and vhost [%s]", self._host, self._vhost)
+
         self._connection = SelectConnection(
             parameters=pika.ConnectionParameters(
-                host=self._host, credentials=self._creds
+                host=self._host, credentials=self._creds, virtual_host=self._vhost
             ),
             on_open_callback=self._on_connection_open,
             on_open_error_callback=self._on_connection_error,
@@ -466,6 +543,7 @@ class RMQNonBlockingConnectionWrapper(RMQConnectionWrapperBase):
         """
         connection.add_on_close_callback(self._on_connection_closed)
         self._channel = connection.channel(on_open_callback=self._on_channel_open)
+        self._channel.add_on_close_callback(self._on_channel_closed)
 
     def _on_connection_error(self, connection, exception):
         """
@@ -486,8 +564,26 @@ class RMQNonBlockingConnectionWrapper(RMQConnectionWrapperBase):
             connection.
 
         """
-        log.info("Connection closed for reason [%s]", reason)
-        self._reconnect()
+        log.warning("Connection closed for reason [%s]", reason)
+        if isinstance(reason, ChannelClosedByBroker):
+            if reason.reply_code == 404:
+                log.warning("Not recovering from 404. Make sure RMQ topology exists.")
+                raise reason
+            else:
+                self._reconnect()
+
+    def _on_channel_closed(self, channel, reason):
+        log.warning("Channel closed for reason [%s]", reason)
+        if isinstance(reason, ChannelClosedByBroker):
+            if reason.reply_code == 404:
+                log.warning("Not recovering from 404. Make sure RMQ topology exists.")
+                raise reason
+            else:
+                self._reconnect()
+        else:
+            log.warning(
+                "Not attempting to recover. Channel likely closed for legitimate reasons."
+            )
 
     def _reconnect(self):
         """Will be invoked by the IOLoop timer if the connection is
@@ -501,6 +597,8 @@ class RMQNonBlockingConnectionWrapper(RMQConnectionWrapperBase):
         if not self._closing:
             # Create a new connection
             log.info("Reconnecting...")
+            # sleep for a bit so that if for some reason we get into a reconnect loop we won't kill the system
+            time.sleep(2)
             self.connect()
 
     def _on_channel_open(self, channel):
@@ -509,19 +607,27 @@ class RMQNonBlockingConnectionWrapper(RMQConnectionWrapperBase):
         :param channel:
         :return:
         """
-        self._channel.exchange_declare(
-            exchange=self._fanout_exchange_name,
-            exchange_type=ExchangeType.fanout,
-            callback=self.on_exchange_declare,
-        )
+        if self._create_topology_ondemand:
+            self._channel.exchange_declare(
+                exchange=self._publisher_exchange_name,
+                exchange_type=ExchangeType.fanout,
+                durable=True,
+                callback=self._on_exchange_declared,
+            )
+        else:
+            log.info("Skipping rmq topology creation.")
+            self._start_consuming(method=None)
 
-    def on_exchange_declare(self, method):
+    def _on_exchange_declared(self, method):
         """Invoked by pika when RabbitMQ has finished the Exchange.Declare RPC
         command.
         """
-        log.info("Exchange declared: %s", self._fanout_exchange_name)
+        log.info("Exchange declared: %s", self._publisher_exchange_name)
         self._channel.queue_declare(
-            queue=self.queue_name, callback=self._on_queue_declared
+            queue=self._consumer_queue_name,
+            durable=True,
+            arguments=self._consumer_queue_declare_arguments,
+            callback=self._on_queue_declared,
         )
 
     def _on_queue_declared(self, method):
@@ -534,19 +640,19 @@ class RMQNonBlockingConnectionWrapper(RMQConnectionWrapperBase):
 
         self._channel.queue_bind(
             method.method.queue,
-            self._fanout_exchange_name,
-            routing_key=self.queue_name,
-            callback=self._on_queue_bind,
+            self._consumer_exchange_name,
+            routing_key=method.method.queue,
+            callback=self._start_consuming,
         )
 
-    def _on_queue_bind(self, method):
+    def _start_consuming(self, method):
         """
         Invoked by pika when queue bound successfully. Set up consumer message callback as well.
         :param method:
         :return:
         """
 
-        log.info("Queue bound [%s]", self.queue_name)
+        log.info("Starting consuming on queue [%s]", self.queue_name)
 
         def _callback_wrapper(channel, method, properties, payload):
             if self._callback:
@@ -569,74 +675,54 @@ class RMQNonBlockingConnectionWrapper(RMQConnectionWrapperBase):
     def publish(
         self,
         payload,
-        queue_name=None,
-        reply_queue_name=None,
-        correlation_id=None,
-        auto_delete_queue=False,
-        broadcast=True,
+        exchange_name=None,
+        routing_key=None,
     ):
         """
-        Publishes ``payload`` with thr routing key ``queue_name`` (via direct exchange or via fanout/broadcast),
+        Publishes ``payload`` with the routing key ``queue_name`` (via direct exchange or via fanout/broadcast),
         passes along optional name of the reply queue in message metadata. Non-blocking.
         Alternatively, broadcasts the ``payload`` to all bound queues (via fanout exchange).
-        :param correlation_id: correlation_id (used for the RPC pattern in conjunction with reply queue)
         :param payload: message body
-        :param queue_name: queue name
-        :param reply_queue_name: optional name of the reply queue
-        :param auto_delete_queue: set the type of queue to "auto_delete"
-        (it will be deleted when the last consumer disappears)
-        :param broadcast: whether to broadcast via fanout exchange
+        :param routing_key: routing key
+        :param exchange_name: exchange name to publish to
         :return:
         """
 
-        publish_queue_name = queue_name if queue_name else self.queue_name
-
-        # See https://www.rabbitmq.com/tutorials/amqp-concepts.html
-        exchange = self._fanout_exchange_name if broadcast else ""
-
-        # For the IPC pattern, set up the "reply-to" header and "correlation_id"
         properties = pika.BasicProperties()
-        properties.reply_to = reply_queue_name if reply_queue_name else None
-        properties.correlation_id = correlation_id if correlation_id else uuid4().hex
+        properties.reply_to = routing_key if routing_key else None
         properties.app_id = str(threading.get_ident())  # use this for tracing
+        # enable persistent message delivery
+        # see https://www.rabbitmq.com/confirms.html#publisher-confirms and
+        # https://kousiknath.medium.com/dabbling-around-rabbit-mq-persistence-durability-message-routing-f4efc696098c
+        properties.delivery_mode = PERSISTENT_DELIVERY_MODE
 
         log.info(
-            "Sending payload to queue [%s] via exchange [%s]: %s. Payload properties: %s",
-            publish_queue_name,
-            exchange,
+            "Sending payload to exchange [%s] with routing key [%s]: %s. Payload properties: %s",
+            exchange_name,
+            routing_key,
             payload,
             properties,
         )
 
         try:
-            # TODO: consider different queue types (durable, quorum, etc.)
-            res = yield self._async_queue_declare(
-                publish_queue_name, auto_delete_queue=auto_delete_queue
-            )
-
-            if broadcast:
-                log.info(
-                    "Binding queue [%s] to exchange [%s]", publish_queue_name, exchange
-                )
-                res = yield self._async_queue_bind(publish_queue_name, exchange)
-
             self._channel.basic_publish(
-                exchange=exchange,
-                routing_key=publish_queue_name,
+                exchange=exchange_name,
+                routing_key=routing_key,
                 body=payload,
                 properties=properties,
-            )  # add reply queue to the properties
+                mandatory=True,  # see https://www.rabbitmq.com/confirms.html#publisher-confirms
+            )
+
             log.info(
-                "Sent payload to queue [%s] via exchange [%s]: %s",
-                publish_queue_name,
-                exchange,
+                "Sent payload to exchange [%s] with routing key [%s]: %s",
+                exchange_name,
+                routing_key,
                 payload,
             )
         except:
             log.exception(
-                "Error publishing to queue [%s] via exchange [%s]",
-                publish_queue_name,
-                exchange,
+                "Error publishing to exchange [%s]",
+                exchange_name,
             )
             raise
 
@@ -648,48 +734,44 @@ class RMQNonBlockingConnectionWrapper(RMQConnectionWrapperBase):
         :param properties: payload properties/metadata
         :return:
         """
-        reply_queue_name = properties.reply_to
+        routing_key = properties.reply_to
 
-        if not reply_queue_name:
+        if not routing_key:
             raise ValueError("properties.reply_to must be set")
 
         log.info(
-            "Sending reply payload on queue [%s]: %s. Payload properties: %s",
-            reply_queue_name,
+            "Sending reply payload to direct exchange with routing key [%s]: %s. Payload properties: %s",
+            routing_key,
             payload,
             properties,
         )
 
         # publish reply on a queue that will be deleted after consumer cancels or disconnects
         # do not broadcast replies
-        # TODO: look into queue types (durable, quorum, etc.)
-
         self.publish(
             payload,
-            queue_name=reply_queue_name,
-            auto_delete_queue=True,
-            broadcast=False,
+            exchange_name="",  # ExchangeType.direct,  # use the default exchange for replies
+            routing_key=routing_key,
         )
 
     @salt.ext.tornado.gen.coroutine
-    def _async_queue_bind(self, publish_queue_name: str, exchange: str):
+    def _async_queue_bind(self, queue_name: str, exchange: str):
         future = salt.ext.tornado.concurrent.Future()
 
         def callback(method):
             log.info("bound queue: %s to exchange: %s", method.method.queue, exchange)
             future.set_result(method)
 
-        # TODO: consider different queue types (durable, quorum, etc.)
         res = self._channel.queue_bind(
-            publish_queue_name,
+            queue_name,
             exchange,
-            routing_key=publish_queue_name,
+            routing_key=queue_name,
             callback=callback,
         )
         return future
 
     @salt.ext.tornado.gen.coroutine
-    def _async_queue_declare(self, publish_queue_name: str, auto_delete_queue: bool):
+    def _async_queue_declare(self, queue_name: str):
         future = salt.ext.tornado.concurrent.Future()
 
         def callback(method):
@@ -699,9 +781,11 @@ class RMQNonBlockingConnectionWrapper(RMQConnectionWrapperBase):
         if not self._channel:
             raise ValueError("_channel must be set")
 
-        # TODO: consider different queue types (durable, quorum, etc.)
         res = self._channel.queue_declare(
-            publish_queue_name, auto_delete=auto_delete_queue, callback=callback
+            queue_name,
+            durable=True,
+            arguments=self._consumer_queue_declare_arguments,
+            callback=callback,
         )
         return future
 
@@ -1066,7 +1150,11 @@ class AsyncRabbitMQPubChannel(
         self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
         self.serial = salt.payload.Serial(self.opts)
         self._rmq_non_blocking_connection_wrapper = RMQNonBlockingConnectionWrapper(
-            self.opts, io_loop=self.io_loop, queue_name="minion_consumer_queue"
+            self.opts,
+            io_loop=self.io_loop,
+            transport_rabbitmq_consumer_queue_name="salt_minion_command_queue",
+            transport_rabbitmq_publisher_exchange_name="salt_minion_command_exchange",
+            transport_rabbitmq_consumer_exchange_name="salt_minion_command_exchange",
         )
         self._rmq_non_blocking_connection_wrapper.connect()
 
@@ -1371,8 +1459,11 @@ class RabbitMQPubServerChannel(salt.transport.server.PubServerChannel):
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
 
         self._rmq_blocking_connection_wrapper = RMQBlockingConnectionWrapper(
-            opts, queue_name="minion_consumer_queue"
-        )  # RMQBlockingConnectionWrapper(opts, queue_name="minion_consumer_queue")
+            opts,
+            transport_rabbitmq_consumer_queue_name="salt_minion_command_queue",
+            transport_rabbitmq_publisher_exchange_name="salt_minion_command_exchange",
+            transport_rabbitmq_consumer_exchange_name="salt_minion_command_exchange",
+        )
 
     def connect(self):
         return salt.ext.tornado.gen.sleep(5)  # TODO: why is this here?
@@ -1450,9 +1541,6 @@ class RabbitMQPubServerChannel(salt.transport.server.PubServerChannel):
         self._rmq_blocking_connection_wrapper.publish(
             payload,
             reply_queue_name=message_properties.reply_to
-            if message_properties
-            else None,
-            correlation_id=message_properties.correlation_id
             if message_properties
             else None,
         )
@@ -1560,16 +1648,19 @@ class AsyncReqMessageClient:
                     data = self.serial.loads(msg)
                     future.set_result(data)
 
-            # send message
-            message_correlation_id = (
-                uuid4().hex
-            )  # TODO: optimize this to use a combination of hostname/port
+            # send message and consume reply; callback must be configured first when using amq.rabbitmq.reply-to pattern
+            # See https://www.rabbitmq.com/direct-reply-to.html
+            self._rmq_blocking_connection_wrapper.register_reply_callback(
+                mark_future, reply_queue_name="amq.rabbitmq.reply-to"
+            )
+
             self._rmq_blocking_connection_wrapper.publish(
-                message, reply_queue_name=message_correlation_id
+                message,
+                # Use a special reserved direct-rely queue. See https://www.rabbitmq.com/direct-reply-to.html
+                reply_queue_name="amq.rabbitmq.reply-to",
             )
-            self._rmq_blocking_connection_wrapper.consume_reply(
-                mark_future, reply_queue_name=message_correlation_id
-            )
+
+            self._rmq_blocking_connection_wrapper.start_consuming()
 
             try:
                 ret = yield future

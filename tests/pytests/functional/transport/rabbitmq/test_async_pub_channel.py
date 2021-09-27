@@ -87,7 +87,9 @@ class Collector(salt.utils.process.SignalHandlingProcess):
             self.minion_config,
             io_loop=io_loop,
             timeout=self.hard_timeout,
-            queue_name="minion_consumer_queue",
+            transport_rabbitmq_consumer_queue_name="salt_minion_command_queue",
+            transport_rabbitmq_publisher_exchange_name="salt_minion_command_exchange",
+            transport_rabbitmq_consumer_exchange_name="salt_minion_command_exchange",
         )
         self._rmq_connection_wrapper.register_message_callback(callback)
         self._rmq_connection_wrapper.connect()

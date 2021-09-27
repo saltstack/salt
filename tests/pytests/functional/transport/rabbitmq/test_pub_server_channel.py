@@ -51,7 +51,10 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         from salt.transport import rabbitmq
 
         rmq_connection_wrapper = rabbitmq.RMQBlockingConnectionWrapper(
-            self.minion_config, queue_name="minion_consumer_queue"
+            self.minion_config,
+            transport_rabbitmq_consumer_queue_name="salt_minion_command_queue",
+            transport_rabbitmq_publisher_exchange_name="salt_minion_command_exchange",
+            transport_rabbitmq_consumer_exchange_name="salt_minion_command_exchange",
         )
 
         # Gather results until then number of seconds specified by timeout passes
