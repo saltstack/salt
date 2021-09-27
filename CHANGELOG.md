@@ -25,6 +25,7 @@ Deprecated
 
 - utils/boto3_elasticsearch is no longer needed (#59882)
 - Changed "manufacture" grain to "manufacturer" for Solaris on SPARC to unify the name across all platforms. The old "manufacture" grain is now deprecated and will be removed in Sulfur (#60511)
+- Deprecate `salt.payload.Serial` (#60953)
 
 
 Changed
@@ -154,7 +155,6 @@ Fixed
 - Ensure all data that is being passed along to LDAP is in an OrderedSet and contains bytes. (#60760)
 - Update the AWS API version so VMs spun up by salt-cloud where the VPC has it enabled to assign ipv6 addresses by default, actually get ipv6 addresses assigned by default. (#60804)
 - Remove un-needed singletons from tranports (#60851)
-- Deprecate `salt.payload.Serial` (#60953)
 
 
 Added
