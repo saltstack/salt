@@ -237,30 +237,19 @@ class MockSerial:
     Mock Class
     """
 
-    def __init__(self):
-        pass
-
-    class Serial:
+    @staticmethod
+    def load(data):
         """
-        Mock Serial class
+        Mock load method
         """
+        return {"A": "B"}
 
-        def __init__(self, data):
-            pass
-
-        @staticmethod
-        def load(data):
-            """
-            Mock load method
-            """
-            return {"A": "B"}
-
-        @staticmethod
-        def dump(data, data1):
-            """
-            Mock dump method
-            """
-            return True
+    @staticmethod
+    def dump(data, data1):
+        """
+        Mock dump method
+        """
+        return True
 
 
 class MockTarFile:
@@ -838,10 +827,10 @@ def test_check_request():
     with patch("salt.modules.state.salt.payload", MockSerial):
         mock = MagicMock(side_effect=[True, True, False])
         with patch.object(os.path, "isfile", mock):
-            with patch("salt.utils.files.fopen", mock_open()):
+            with patch("salt.utils.files.fopen", mock_open(b"")):
                 assert state.check_request() == {"A": "B"}
 
-            with patch("salt.utils.files.fopen", mock_open()):
+            with patch("salt.utils.files.fopen", mock_open("")):
                 assert state.check_request("A") == "B"
 
             assert state.check_request() == {}
