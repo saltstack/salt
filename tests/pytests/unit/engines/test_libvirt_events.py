@@ -13,9 +13,7 @@ def configure_loader_modules():
 
 @pytest.fixture
 def mock_libvirt():
-    try:
-        patcher = patch("salt.engines.libvirt_events.libvirt")
-        mock_libvirt = patcher.start()
+    with patch("salt.engines.libvirt_events.libvirt") as mock_libvirt:
         mock_libvirt.getVersion.return_value = 2000000
         mock_libvirt.virEventRunDefaultImpl.return_value = -1  # Don't loop for ever
         mock_libvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE = 0
@@ -25,74 +23,70 @@ def mock_libvirt():
         mock_libvirt.VIR_NODE_DEVICE_EVENT_ID_LIFECYCLE = 0
         mock_libvirt.VIR_NODE_DEVICE_EVENT_ID_UPDATE = 1
         yield mock_libvirt
-    finally:
-        patcher.stop()
 
 
-@patch(
-    "salt.engines.libvirt_events.libvirt",
-    VIR_PREFIX_NONE=0,
-    VIR_PREFIX_ONE=1,
-    VIR_PREFIX_TWO=2,
-    VIR_PREFIX_SUB_FOO=0,
-    VIR_PREFIX_SUB_BAR=1,
-    VIR_PREFIX_SUB_FOOBAR=2,
-)
-def test_get_libvirt_enum_string_subprefix(libvirt_mock):
+def test_get_libvirt_enum_string_subprefix(mock_libvirt):
     """
     Make sure the libvirt enum value to string works reliably with
     elements with a sub prefix, eg VIR_PREFIX_SUB_* in this case.
     """
     # Test case with a sub prefix
+    mock_libvirt.VIR_PREFIX_NONE = 0
+    mock_libvirt.VIR_PREFIX_ONE = 1
+    mock_libvirt.VIR_PREFIX_TWO = 2
+    mock_libvirt.VIR_PREFIX_SUB_FOO = 0
+    mock_libvirt.VIR_PREFIX_SUB_BAR = 1
+    mock_libvirt.VIR_PREFIX_SUB_FOOBAR = 2
 
     assert libvirt_events._get_libvirt_enum_string("VIR_PREFIX_", 2) == "two"
 
 
-@patch("salt.engines.libvirt_events.libvirt", VIR_PREFIX_FOO=0, VIR_PREFIX_BAR_FOO=1)
-def test_get_libvirt_enum_string_underscores(libvirt_mock):
+def test_get_libvirt_enum_string_underscores(mock_libvirt):
     """
     Make sure the libvirt enum value to string works reliably and items
     with an underscore aren't confused with sub prefixes.
     """
+    mock_libvirt.VIR_PREFIX_FOO = 0
+    mock_libvirt.VIR_PREFIX_BAR_FOO = 1
+
     assert libvirt_events._get_libvirt_enum_string("VIR_PREFIX_", 1) == "bar foo"
 
 
-@patch(
-    "salt.engines.libvirt_events.libvirt",
-    VIR_DOMAIN_EVENT_CRASHED_PANICKED=0,
-    VIR_DOMAIN_EVENT_DEFINED=0,
-    VIR_DOMAIN_EVENT_UNDEFINED=1,
-    VIR_DOMAIN_EVENT_CRASHED=2,
-    VIR_DOMAIN_EVENT_DEFINED_ADDED=0,
-    VIR_DOMAIN_EVENT_DEFINED_UPDATED=1,
-)
-def test_get_domain_event_detail(libvirt_mock):
+def test_get_domain_event_detail(mock_libvirt):
     """
     Test get_domain_event_detail function
     """
+    mock_libvirt.VIR_DOMAIN_EVENT_CRASHED_PANICKED = 0
+    mock_libvirt.VIR_DOMAIN_EVENT_DEFINED = 0
+    mock_libvirt.VIR_DOMAIN_EVENT_UNDEFINED = 1
+    mock_libvirt.VIR_DOMAIN_EVENT_CRASHED = 2
+    mock_libvirt.VIR_DOMAIN_EVENT_DEFINED_ADDED = 0
+    mock_libvirt.VIR_DOMAIN_EVENT_DEFINED_UPDATED = 1
+
     assert libvirt_events._get_domain_event_detail(1, 2) == ("undefined", "unknown")
     assert libvirt_events._get_domain_event_detail(0, 1) == ("defined", "updated")
     assert libvirt_events._get_domain_event_detail(4, 2) == ("unknown", "unknown")
 
 
-@patch("salt.engines.libvirt_events.libvirt", VIR_NETWORK_EVENT_ID_LIFECYCLE=1000)
-def test_event_register(libvirt_mock):
+def test_event_register(mock_libvirt):
     """
     Test that the libvirt_events engine actually registers events catch them and cleans
     before leaving the place.
     """
+    mock_libvirt.VIR_NETWORK_EVENT_ID_LIFECYCLE = 1000
+
     mock_cnx = MagicMock()
-    libvirt_mock.openReadOnly.return_value = mock_cnx
+    mock_libvirt.openReadOnly.return_value = mock_cnx
 
     # Don't loop for ever
-    libvirt_mock.virEventRunDefaultImpl.return_value = -1
+    mock_libvirt.virEventRunDefaultImpl.return_value = -1
 
     mock_cnx.networkEventRegisterAny.return_value = 10000
 
     libvirt_events.start("test:///", "test/prefix")
 
     # Check that the connection has been opened
-    libvirt_mock.openReadOnly.assert_called_once_with("test:///")
+    mock_libvirt.openReadOnly.assert_called_once_with("test:///")
 
     # Check that the connection has been closed
     mock_cnx.close.assert_called_once()
@@ -100,37 +94,37 @@ def test_event_register(libvirt_mock):
     # Check events registration and deregistration
     mock_cnx.domainEventRegisterAny.assert_any_call(
         None,
-        libvirt_mock.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
+        mock_libvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
         libvirt_events._domain_event_lifecycle_cb,
         {"prefix": "test/prefix", "object": "domain", "event": "lifecycle"},
     )
     mock_cnx.networkEventRegisterAny.assert_any_call(
         None,
-        libvirt_mock.VIR_NETWORK_EVENT_ID_LIFECYCLE,
+        mock_libvirt.VIR_NETWORK_EVENT_ID_LIFECYCLE,
         libvirt_events._network_event_lifecycle_cb,
         {"prefix": "test/prefix", "object": "network", "event": "lifecycle"},
     )
     mock_cnx.storagePoolEventRegisterAny.assert_any_call(
         None,
-        libvirt_mock.VIR_STORAGE_POOL_EVENT_ID_LIFECYCLE,
+        mock_libvirt.VIR_STORAGE_POOL_EVENT_ID_LIFECYCLE,
         libvirt_events._pool_event_lifecycle_cb,
         {"prefix": "test/prefix", "object": "pool", "event": "lifecycle"},
     )
     mock_cnx.storagePoolEventRegisterAny.assert_any_call(
         None,
-        libvirt_mock.VIR_STORAGE_POOL_EVENT_ID_REFRESH,
+        mock_libvirt.VIR_STORAGE_POOL_EVENT_ID_REFRESH,
         libvirt_events._pool_event_refresh_cb,
         {"prefix": "test/prefix", "object": "pool", "event": "refresh"},
     )
     mock_cnx.nodeDeviceEventRegisterAny.assert_any_call(
         None,
-        libvirt_mock.VIR_NODE_DEVICE_EVENT_ID_LIFECYCLE,
+        mock_libvirt.VIR_NODE_DEVICE_EVENT_ID_LIFECYCLE,
         libvirt_events._nodedev_event_lifecycle_cb,
         {"prefix": "test/prefix", "object": "nodedev", "event": "lifecycle"},
     )
     mock_cnx.nodeDeviceEventRegisterAny.assert_any_call(
         None,
-        libvirt_mock.VIR_NODE_DEVICE_EVENT_ID_UPDATE,
+        mock_libvirt.VIR_NODE_DEVICE_EVENT_ID_UPDATE,
         libvirt_events._nodedev_event_update_cb,
         {"prefix": "test/prefix", "object": "nodedev", "event": "update"},
     )
