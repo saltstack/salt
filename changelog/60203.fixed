@@ -1,1 +1,0 @@
-Redact the username and password when something goes wrong when using an HTTP source and we raise an exception.
