@@ -1,1 +1,0 @@
-Make all platforms have psutils. This prevents a minion from starting if an instance is all ready running.

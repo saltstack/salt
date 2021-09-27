@@ -1,1 +1,0 @@
-Fixing file.accumulated handling of dependencies when the state_id is used instead of {function: state_id} format.

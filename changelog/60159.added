@@ -1,2 +1,0 @@
-Added functions to slsutil execution module to test if files exist in the state tree
-Added funtion to slsutil execution module to search for a file by walking up the state tree
