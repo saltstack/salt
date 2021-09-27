@@ -29,6 +29,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
+import salt.utils.verify
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
 from salt.ext.tornado.httputil import (
@@ -83,7 +84,6 @@ class Client:
     def __init__(self, opts):
         self.opts = opts
         self.utils = salt.loader.utils(self.opts)
-        self.serial = salt.payload.Serial(self.opts)
 
     # Add __setstate__ and __getstate__ so that the object may be
     # deep copied. It normally can't be deep copied because its
@@ -853,6 +853,12 @@ class Client:
             file_name = "-".join([url_data.path, url_data.query])
         else:
             file_name = url_data.path
+
+        # clean_path returns an empty string if the check fails
+        root_path = salt.utils.path.join(cachedir, "extrn_files", saltenv, netloc)
+        new_path = os.path.sep.join([root_path, file_name])
+        if not salt.utils.verify.clean_path(root_path, new_path, subdir=True):
+            return "Invalid path"
 
         if len(file_name) > MAX_FILENAME_LENGTH:
             file_name = salt.utils.hashutils.sha256_digest(file_name)

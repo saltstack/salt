@@ -34,7 +34,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 DEFAULT_LOCATION = "us-east-1"
-DEFAULT_AWS_API_VERSION = "2014-10-01"
+DEFAULT_AWS_API_VERSION = "2016-11-15"
 AWS_RETRY_CODES = [
     "RequestLimitExceeded",
     "InsufficientInstanceCapacity",
