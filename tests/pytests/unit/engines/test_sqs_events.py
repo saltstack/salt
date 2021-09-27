@@ -19,12 +19,8 @@ def configure_loader_modules():
 
 @pytest.fixture
 def mock_sqs():
-    try:
-        patcher = patch("salt.engines.sqs_events.boto.sqs")
-        mock_sqs = patcher.start()
+    with patch("salt.engines.sqs_events.boto.sqs") as mock_sqs:
         yield mock_sqs
-    finally:
-        patcher.stop()
 
 
 def sample_msg():
