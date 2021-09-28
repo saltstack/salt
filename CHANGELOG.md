@@ -7,8 +7,9 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
-Salt 3004 (2021-09-27)
+Salt 3004 (2021-09-28)
 ======================
+
 
 Removed
 -------
@@ -41,6 +42,7 @@ Changed
 Fixed
 -----
 
+- Redirect imports of ``salt.ext.six`` to ``six`` (#60966)
 - Surface strerror to user state instead of returning false (#20789)
 - Fixing _get_envs() to preserve the order of pillar_roots. _get_envs() returned pillar_roots in a non-deterministic order. (#24501)
 - Fixes salt-cloud `KeyError` that occurs when there exists any subnets with no tags when profiles use `subnetname` (#44330)
