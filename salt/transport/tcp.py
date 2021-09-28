@@ -861,7 +861,6 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
         self._closing = False
         self.clients = set()
         self.presence_events = False
-        self.serial = salt.payload.Serial({})
         if presence_callback:
             self.presence_callback = presence_callback
         else:

@@ -411,7 +411,6 @@ class AsyncPubChannel:
     def __init__(self, opts, transport, auth, io_loop=None):
         self.opts = opts
         self.io_loop = io_loop
-        self.serial = salt.payload.Serial(self.opts)
         self.auth = auth
         self.tok = self.auth.gen_token(b"salt")
         self.transport = transport
