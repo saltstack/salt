@@ -1,1 +1,0 @@
-Redirect imports of ``salt.ext.six`` to ``six``
