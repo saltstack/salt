@@ -107,7 +107,6 @@ class AsyncZeroMQPubChannel:
 
     def __init__(self, opts, io_loop, **kwargs):
         self.opts = opts
-        self.serial = salt.payload.Serial(self.opts)
         self.io_loop = io_loop
         self.hexid = hashlib.sha1(
             salt.utils.stringutils.to_bytes(self.opts["id"])
@@ -400,7 +399,6 @@ class ZeroMQReqServerChannel:
                                      they are picked up off the wire
         :param IOLoop io_loop: An instance of a Tornado IOLoop, to handle event scheduling
         """
-        self.serial = salt.payload.Serial(self.opts)
         self.context = zmq.Context(1)
         self._socket = self.context.socket(zmq.REP)
         self._start_zmq_monitor()
@@ -435,18 +433,17 @@ class ZeroMQReqServerChannel:
 
     def wrap_stream(self, stream):
         class Stream:
-            def __init__(self, stream, serial):
+            def __init__(self, stream):
                 self.stream = stream
-                self.serial = serial
 
             @salt.ext.tornado.gen.coroutine
             def send(self, payload, header=None):
-                self.stream.send(self.serial.dumps(payload))
+                self.stream.send(salt.payload.dumps(payload))
 
-        return Stream(stream, self.serial)
+        return Stream(stream)
 
     def decode_payload(self, payload):
-        payload = self.serial.loads(payload[0])
+        payload = salt.payload.loads(payload[0])
         return payload
 
 
@@ -678,7 +675,7 @@ class AsyncReqMessageClient:
 
         def mark_future(msg):
             if not future.done():
-                data = self.serial.loads(msg[0])
+                data = salt.payload.loads(msg[0])
                 future.set_result(data)
                 self.send_future_map.pop(message)
 
@@ -759,7 +756,6 @@ class ZeroMQPubServerChannel:
 
     def __init__(self, opts):
         self.opts = opts
-        self.serial = salt.payload.Serial(self.opts)
 
     def connect(self):
         return salt.ext.tornado.gen.sleep(5)
@@ -808,7 +804,7 @@ class ZeroMQPubServerChannel:
         @salt.ext.tornado.gen.coroutine
         def on_recv(packages):
             for package in packages:
-                payload = self.serial.loads(package)
+                payload = salt.payload.loads(package)
                 yield publish_payload(payload)
 
         pull_sock.on_recv(on_recv)
@@ -835,7 +831,7 @@ class ZeroMQPubServerChannel:
 
     @salt.ext.tornado.gen.coroutine
     def publish_payload(self, payload, topic_list=None):
-        payload = self.serial.dumps(payload)
+        payload = salt.payload.dumps(payload)
         if self.opts["zmq_filtering"]:
             if topic_list:
                 for topic in topic_list:
@@ -931,7 +927,7 @@ class ZeroMQPubServerChannel:
         """
         if not self.pub_sock:
             self.pub_connect()
-        serialized = self.serial.dumps(payload)
+        serialized = salt.payload.dumps(payload)
         self.pub_sock.send(serialized)
         log.debug("Sent payload to publish daemon.")
 
