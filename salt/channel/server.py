@@ -117,7 +117,6 @@ class ReqServerChannel:
         self.transport.post_fork(self.handle_message, io_loop)
         import salt.master
 
-        self.serial = salt.payload.Serial(self.opts)
         self.crypticle = salt.crypt.Crypticle(
             self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
         )
@@ -699,7 +698,6 @@ class PubServerChannel:
 
     def __init__(self, opts, transport, presence_events=False):
         self.opts = opts
-        self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
         self.transport = transport
         self.aes_funcs = salt.master.AESFuncs(self.opts)
@@ -810,7 +808,7 @@ class PubServerChannel:
     @salt.ext.tornado.gen.coroutine
     def publish_payload(self, unpacked_package, *args):
         try:
-            payload = self.serial.loads(unpacked_package["payload"])
+            payload = salt.payload.loads(unpacked_package["payload"])
         except KeyError:
             log.error("Invalid package %r", unpacked_package)
             raise
@@ -831,7 +829,7 @@ class PubServerChannel:
             master_pem_path = os.path.join(self.opts["pki_dir"], "master.pem")
             log.debug("Signing data packet")
             payload["sig"] = salt.crypt.sign_message(master_pem_path, payload["load"])
-        int_payload = {"payload": self.serial.dumps(payload)}
+        int_payload = {"payload": salt.payload.dumps(payload)}
         # add some targeting stuff for lists only (for now)
         if load["tgt_type"] == "list":
             int_payload["topic_lst"] = load["tgt"]
