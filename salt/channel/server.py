@@ -705,6 +705,21 @@ class PubServerChannel:
         self.presence_events = presence_events
         self.event = salt.utils.event.get_event("master", opts=self.opts, listen=False)
 
+    def __getstate__(self):
+        return {
+            "opts": self.opts,
+            "transport": self.transport,
+            "presence_events": self.presence_events,
+        }
+
+    def __setstate__(self, state):
+        self.opts = state["opts"]
+        self.state = state["presence_events"]
+        self.transport = state["transport"]
+        self.event = salt.utils.event.get_event("master", opts=self.opts, listen=False)
+        self.ckminions = salt.utils.minions.CkMinions(self.opts)
+        self.present = {}
+
     def close(self):
         self.transport.close()
         if self.event is not None:
