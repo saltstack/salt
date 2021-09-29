@@ -1,14 +1,19 @@
 """
 :codeauthor: Thayne Harbaugh (tharbaug@adobe.com)
 """
-
 import logging
 import os
 import shutil
+import signal
+import subprocess
+import sys
+import tempfile
+import time
 
 import pytest
 import salt.defaults.exitcodes
 import salt.utils.path
+from saltfactories.utils.processes import ProcessResult
 
 log = logging.getLogger(__name__)
 
@@ -124,3 +129,81 @@ def test_exit_status_correct_usage(salt_cli, salt_minion):
     """
     ret = salt_cli.run("test.ping", minion_tgt=salt_minion.id)
     assert ret.exitcode == salt.defaults.exitcodes.EX_OK, ret
+
+
+@pytest.mark.slow_test
+@pytest.mark.skip_on_windows(reason="Windows does not support SIGINT")
+def test_interrupt_on_long_running_job(salt_cli, salt_master, salt_minion):
+    """
+    Ensure that a call to ``salt`` that is taking too long, when a user
+    hits CTRL-C, that the JID is printed to the console.
+
+    Refer to https://github.com/saltstack/salt/issues/60963 for more details
+    """
+    ret = salt_cli.run("test.sleep", "1", minion_tgt=salt_minion.id)
+    assert ret.exitcode == 0
+    assert ret.json is True
+    terminal_stdout = tempfile.SpooledTemporaryFile(512000, buffering=0)
+    terminal_stderr = tempfile.SpooledTemporaryFile(512000, buffering=0)
+    cmdline = [
+        sys.executable,
+        salt_cli.get_script_path(),
+        "--config-dir={}".format(salt_master.config_dir),
+        salt_minion.id,
+        "test.sleep",
+        "30",
+    ]
+    proc = subprocess.Popen(
+        cmdline,
+        shell=False,
+        stdout=terminal_stdout,
+        stderr=terminal_stderr,
+        universal_newlines=True,
+    )
+    try:
+        # Make sure it actually starts
+        proc.wait(1)
+    except subprocess.TimeoutExpired:
+        pass
+    else:
+        pytest.fail("The test process failed to start")
+
+    time.sleep(2)
+    # Send CTRL-C to the process
+    proc.send_signal(signal.SIGINT)
+    with proc:
+        # Wait for the process to terminate, to avoid zombies.
+        # Shouldn't really take the 30 seconds
+        proc.wait(30)
+        # poll the terminal so the right returncode is set on the popen object
+        proc.poll()
+        # This call shouldn't really be necessary
+        proc.communicate()
+
+    terminal_stdout.flush()
+    terminal_stdout.seek(0)
+    if sys.version_info < (3, 6):  # pragma: no cover
+        stdout = proc._translate_newlines(
+            terminal_stdout.read(), __salt_system_encoding__
+        )
+    else:
+        stdout = proc._translate_newlines(
+            terminal_stdout.read(), __salt_system_encoding__, sys.stdout.errors
+        )
+    terminal_stdout.close()
+
+    terminal_stderr.flush()
+    terminal_stderr.seek(0)
+    if sys.version_info < (3, 6):  # pragma: no cover
+        stderr = proc._translate_newlines(
+            terminal_stderr.read(), __salt_system_encoding__
+        )
+    else:
+        stderr = proc._translate_newlines(
+            terminal_stderr.read(), __salt_system_encoding__, sys.stderr.errors
+        )
+    terminal_stderr.close()
+    ret = ProcessResult(proc.returncode, stdout, stderr, cmdline=proc.args)
+    log.debug(ret)
+    assert "Exiting gracefully on Ctrl-c" in ret.stderr
+    assert "This job's jid is" in ret.stderr
