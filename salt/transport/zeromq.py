@@ -571,44 +571,6 @@ class AsyncReqMessageClient:
             self.socket, io_loop=self.io_loop
         )
 
-    @salt.ext.tornado.gen.coroutine
-    def _internal_send_recv(self):
-        while len(self.send_queue) > 0:
-            message = self.send_queue[0]
-            future = self.send_future_map.get(message, None)
-            if future is None:
-                # Timedout
-                del self.send_queue[0]
-                continue
-
-            # send
-            def mark_future(msg):
-                if not future.done():
-                    data = salt.payload.loads(msg[0])
-                    future.set_result(data)
-
-            self.stream.on_recv(mark_future)
-            self.stream.send(message)
-
-            try:
-                ret = yield future
-            except Exception as err:  # pylint: disable=broad-except
-                log.debug("Re-init ZMQ socket: %s", err)
-                self._init_socket()  # re-init the zmq socket (no other way in zmq)
-                del self.send_queue[0]
-                continue
-            del self.send_queue[0]
-            self.send_future_map.pop(message, None)
-            self.remove_message_timeout(message)
-
-    def remove_message_timeout(self, message):
-        if message not in self.send_timeout_map:
-            return
-        timeout = self.send_timeout_map.pop(message, None)
-        if timeout is not None:
-            # Hasn't been already timedout
-            self.io_loop.remove_timeout(timeout)
-
     def timeout_message(self, message):
         """
         Handle a message timeout by removing it from the sending queue
@@ -669,9 +631,6 @@ class AsyncReqMessageClient:
             send_timeout = self.io_loop.call_later(
                 timeout, self.timeout_message, message
             )
-
-        if len(self.send_queue) == 0:
-            self.io_loop.spawn_callback(self._internal_send_recv)
 
         def mark_future(msg):
             if not future.done():
