@@ -307,7 +307,6 @@ class SSH:
                 "/var/tmp", ".{}".format(uuid.uuid4().hex[:6])
             )
             self.opts["ssh_wipe"] = "True"
-        self.serial = salt.payload.Serial(opts)
         self.returners = salt.loader.returners(self.opts, {})
         self.fsclient = salt.fileclient.FSClient(self.opts)
         self.thin = salt.utils.thin.gen_thin(
@@ -956,7 +955,6 @@ class Single:
         self.minion_config = salt.serializers.yaml.serialize(self.minion_opts)
         self.target = kwargs
         self.target.update(args)
-        self.serial = salt.payload.Serial(opts)
         self.wfuncs = salt.loader.ssh_wrapper(opts, None, self.context)
         self.shell = salt.client.ssh.shell.gen_shell(opts, **args)
         if self.winrm:
@@ -1174,10 +1172,10 @@ class Single:
             }
             if data_cache:
                 with salt.utils.files.fopen(datap, "w+b") as fp_:
-                    fp_.write(self.serial.dumps(data))
+                    fp_.write(salt.payload.dumps(data))
         if not data and data_cache:
             with salt.utils.files.fopen(datap, "rb") as fp_:
-                data = self.serial.load(fp_)
+                data = salt.payload.load(fp_)
         opts = data.get("opts", {})
         opts["grains"] = data.get("grains")
 
