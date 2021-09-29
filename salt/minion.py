@@ -2482,6 +2482,7 @@ class Minion(MinionBase):
                 self.opts["id"],
                 self.opts["saltenv"],
                 pillarenv=self.opts.get("pillarenv"),
+                clean_cache=True,
             )
             try:
                 new_pillar = yield async_pillar.compile_pillar()
