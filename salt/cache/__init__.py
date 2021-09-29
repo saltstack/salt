@@ -11,7 +11,6 @@ import time
 import salt.config
 import salt.loader
 import salt.syspaths
-from salt.payload import Serial
 from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
@@ -40,18 +39,12 @@ class Cache:
         The name of the cache driver to use. This is the name of the python
         module of the `salt.cache` package. Default is `localfs`.
 
-    :param serial:
-        The module of `salt.serializers` package that should be used by the cache
-        driver to store data.
-        If a driver can't use a specific module or uses specific objects storage
-        it can ignore this parameter.
-
     Terminology.
 
     Salt cache subsystem is organized as a tree with nodes and leafs like a
     filesystem. Cache consists of banks. Each bank can contain a number of
     keys. Each key can contain a dict or any other object serializable with
-    `salt.payload.Serial`. I.e. any data object in the cache can be
+    `salt.payload`. I.e. any data object in the cache can be
     addressed by the path to the bank and the key name:
         bank: 'minions/alpha'
         key:  'data'
@@ -71,13 +64,12 @@ class Cache:
         else:
             self.cachedir = cachedir
         self.driver = opts.get("cache", salt.config.DEFAULT_MASTER_OPTS["cache"])
-        self.serial = Serial(opts)
         self._modules = None
         self._kwargs = kwargs
         self._kwargs["cachedir"] = self.cachedir
 
     def __lazy_init(self):
-        self._modules = salt.loader.cache(self.opts, self.serial)
+        self._modules = salt.loader.cache(self.opts)
         fun = "{}.init_kwargs".format(self.driver)
         if fun in self.modules:
             self._kwargs = self.modules[fun](self._kwargs)
@@ -143,7 +135,7 @@ class Cache:
 
         :param data:
             The data which will be stored in the cache. This data should be
-            in a format which can be serialized by msgpack/json/yaml/etc.
+            in a format which can be serialized by msgpack.
 
         :raises SaltCacheError:
             Raises an exception if cache driver detected an error accessing data

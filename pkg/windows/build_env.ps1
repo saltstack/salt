@@ -259,6 +259,27 @@ If ( (Test-Path "$($ini[$bitPaths]['NSISPluginsDirA'])\AccessControl.dll") -and 
 }
 
 #------------------------------------------------------------------------------
+# Check for installation of the MoveFileFolder Library for NSIS
+#------------------------------------------------------------------------------
+Write-Output " - Checking for MoveFileFolder Library installation . . ."
+If ( Test-Path "$($ini[$bitPaths]['NSISDir'])\Include\MoveFileFolder.nsh" ) {
+    # Found MoveFileFolder Library for NSIS, do nothing
+    Write-Output " - MoveFileFolder Library for NSIS Found . . ."
+} Else {
+    # MoveFileFolder Library for NSIS not found, install
+    Write-Output " - MoveFileFolder Library for NSIS Not Found . . ."
+    Write-Output " - Downloading $($ini['Prerequisites']['NSISLibMoveFileFolder']) . . ."
+    $file = "$($ini['Prerequisites']['NSISLibMoveFileFolder'])"
+    $url  = "$($ini['Settings']['SaltRepo'])/$file"
+    $file = "$($ini['Settings']['DownloadDir'])\$file"
+    DownloadFileWithProgress $url $file
+
+    # Move libary to the include directory
+    Write-Output " - Copying library to include directory . . ."
+    Move-Item "$file" "$( $ini[$bitPaths]['NSISDir'] )\Include\MoveFileFolder.nsh" -Force
+}
+
+#------------------------------------------------------------------------------
 # Check for installation of Microsoft Visual Studio 2015 Build Tools
 #------------------------------------------------------------------------------
 Write-Output " - Checking for Microsoft Visual Studio 2015 Build Tools installation . . ."

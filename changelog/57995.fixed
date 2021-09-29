@@ -1,1 +1,0 @@
-Do not monkey patch yaml loaders: Prevent breaking Ansible filter modules
