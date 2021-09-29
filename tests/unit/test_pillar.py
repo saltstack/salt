@@ -1098,8 +1098,9 @@ class RemotePillarTestCase(TestCase):
 
     def setUp(self):
         self.grains = {}
+        self.tmp_pki = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.opts = {
-            "pki_dir": "/tmp",
+            "pki_dir": self.tmp_pki,
             "id": "minion",
             "master_uri": "tcp://127.0.0.1:4505",
             "__role": "minion",
@@ -1111,7 +1112,7 @@ class RemotePillarTestCase(TestCase):
         }
 
     def tearDown(self):
-        for attr in ("grains", "opts"):
+        for attr in ("grains", "tmp_pki", "opts"):
             try:
                 delattr(self, attr)
             except AttributeError:
@@ -1130,7 +1131,7 @@ class RemotePillarTestCase(TestCase):
 
     def test_multiple_keys_in_opts_added_to_pillar(self):
         opts = {
-            "pki_dir": "/tmp",
+            "pki_dir": self.tmp_pki,
             "id": "minion",
             "master_uri": "tcp://127.0.0.1:4505",
             "__role": "minion",
@@ -1187,7 +1188,7 @@ class RemotePillarTestCase(TestCase):
 
     def test_pillar_send_extra_minion_data_from_config(self):
         opts = {
-            "pki_dir": "/tmp",
+            "pki_dir": self.tmp_pki,
             "id": "minion",
             "master_uri": "tcp://127.0.0.1:4505",
             "__role": "minion",
@@ -1235,7 +1236,7 @@ class RemotePillarTestCase(TestCase):
         """
         mocked_minion = MagicMock()
         opts = {
-            "pki_dir": "/tmp",
+            "pki_dir": self.tmp_pki,
             "id": "minion",
             "master_uri": "tcp://127.0.0.1:4505",
             "__role": "minion",
@@ -1257,9 +1258,10 @@ class AsyncRemotePillarTestCase(TestCase):
 
     def setUp(self):
         self.grains = {}
+        self.tmp_pki = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
     def tearDown(self):
-        for attr in ("grains",):
+        for attr in ("grains", "tmp_pki"):
             try:
                 delattr(self, attr)
             except AttributeError:
@@ -1277,7 +1279,7 @@ class AsyncRemotePillarTestCase(TestCase):
 
     def test_pillar_send_extra_minion_data_from_config(self):
         opts = {
-            "pki_dir": "/tmp",
+            "pki_dir": self.tmp_pki,
             "id": "minion",
             "master_uri": "tcp://127.0.0.1:4505",
             "__role": "minion",
