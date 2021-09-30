@@ -201,18 +201,28 @@ def test_macro_additional_log_for_generalexc(
 {{ mymacro() }}
 """
 
+    macrogeneral_contents = """{% macro mymacro() -%}
+{{ 1/0 }}
+{%- endmacro %}
+"""
+
     with pytest.helpers.temp_file(
         "hello_import_generalerror", directory=template_dir, contents=contents
     ) as hello_import_generalerror:
-        with patch.object(
-            SaltCacheLoader, "file_client", MagicMock(return_value=mock_file_client)
-        ):
-            with salt.utils.files.fopen(hello_import_generalerror) as fp_:
-                with pytest.raises(SaltRenderError, match=expected):
-                    render_jinja_tmpl(
-                        salt.utils.stringutils.to_unicode(fp_.read()),
-                        dict(opts=minion_opts, saltenv="test", salt=local_salt),
-                    )
+        with pytest.helpers.temp_file(
+            "macrogeneral",
+            directory=template_dir,
+            contents=macrogeneral_contents,
+        ) as macrogeneral:
+            with patch.object(
+                SaltCacheLoader, "file_client", MagicMock(return_value=mock_file_client)
+            ):
+                with salt.utils.files.fopen(hello_import_generalerror) as fp_:
+                    with pytest.raises(SaltRenderError, match=expected):
+                        render_jinja_tmpl(
+                            salt.utils.stringutils.to_unicode(fp_.read()),
+                            dict(opts=minion_opts, saltenv="test", salt=local_salt),
+                        )
 
 
 def test_macro_additional_log_for_undefined(
@@ -234,18 +244,28 @@ def test_macro_additional_log_for_undefined(
 {{ mymacro() }}
 """
 
+    macroundefined_contents = """{% macro mymacro() -%}
+{{b.greetee}} <-- error is here
+{%- endmacro %}
+"""
+
     with pytest.helpers.temp_file(
         "hello_import_undefined", directory=template_dir, contents=contents
     ) as hello_import_undefined:
-        with patch.object(
-            SaltCacheLoader, "file_client", MagicMock(return_value=mock_file_client)
-        ):
-            with salt.utils.files.fopen(hello_import_undefined) as fp_:
-                with pytest.raises(SaltRenderError, match=expected):
-                    render_jinja_tmpl(
-                        salt.utils.stringutils.to_unicode(fp_.read()),
-                        dict(opts=minion_opts, saltenv="test", salt=local_salt),
-                    )
+        with pytest.helpers.temp_file(
+            "macroundefined",
+            directory=template_dir,
+            contents=macroundefined_contents,
+        ) as macroundefined:
+            with patch.object(
+                SaltCacheLoader, "file_client", MagicMock(return_value=mock_file_client)
+            ):
+                with salt.utils.files.fopen(hello_import_undefined) as fp_:
+                    with pytest.raises(SaltRenderError, match=expected):
+                        render_jinja_tmpl(
+                            salt.utils.stringutils.to_unicode(fp_.read()),
+                            dict(opts=minion_opts, saltenv="test", salt=local_salt),
+                        )
 
 
 def test_macro_additional_log_syntaxerror(
@@ -459,7 +479,7 @@ def test_render_with_utf8_syntax_error(minion_opts, local_salt):
 def test_render_with_undefined_variable(minion_opts, local_salt):
     template = "hello\n\n{{ foo }}\n\nfoo"
     expected = r"Jinja variable \'foo\' is undefined"
-    with pytest.raises(SaltRenderError, expected):
+    with pytest.raises(SaltRenderError, match=expected):
         render_jinja_tmpl(
             template,
             dict(opts=minion_opts, saltenv="test", salt=local_salt),
@@ -469,7 +489,7 @@ def test_render_with_undefined_variable(minion_opts, local_salt):
 def test_render_with_undefined_variable_utf8(minion_opts, local_salt):
     template = "hello\xed\x95\x9c\n\n{{ foo }}\n\nfoo"
     expected = r"Jinja variable \'foo\' is undefined"
-    with pytest.raises(SaltRenderError, expected):
+    with pytest.raises(SaltRenderError, match=expected):
         render_jinja_tmpl(
             template,
             dict(opts=minion_opts, saltenv="test", salt=local_salt),
@@ -479,7 +499,7 @@ def test_render_with_undefined_variable_utf8(minion_opts, local_salt):
 def test_render_with_undefined_variable_unicode(minion_opts, local_salt):
     template = "hello한\n\n{{ foo }}\n\nfoo"
     expected = r"Jinja variable \'foo\' is undefined"
-    with pytest.raises(SaltRenderError, expected):
+    with pytest.raises(SaltRenderError, match=expected):
         render_jinja_tmpl(
             template,
             dict(opts=minion_opts, saltenv="test", salt=local_salt),
