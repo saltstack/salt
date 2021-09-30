@@ -61,8 +61,8 @@ def minion_opts(tmpdir):
             "file_client": "local",
             "file_ignore_regex": None,
             "file_ignore_glob": None,
-            "file_roots": {"test": [tmpdir.join("templates/files/test").strpath]},
-            "pillar_roots": {"test": [tmpdir.join("templates/files/test").strpath]},
+            "file_roots": {"test": [tmpdir.join("files/test").strpath]},
+            "pillar_roots": {"test": [tmpdir.join("files/test").strpath]},
             "fileserver_backend": ["roots"],
             "hash_type": "md5",
             "extension_modules": os.path.join(
@@ -80,26 +80,24 @@ def local_salt():
 
 @pytest.fixture
 def template_dir(tmpdir):
-    templates_dir = tmpdir.mkdir("templates").mkdir("files").mkdir("test")
+    templates_dir = tmpdir.mkdir("files").mkdir("test")
     return str(templates_dir)
 
 
 @pytest.fixture
 def non_ascii(template_dir):
-    contents = """
-Assunção
+    contents = """Assunção
 """
 
     with pytest.helpers.temp_file(
-        "macro", directory=template_dir, contents=contents
+        "non_ascii", directory=template_dir, contents=contents
     ) as non_ascii_filename:
         yield non_ascii_filename
 
 
 @pytest.fixture
 def macro_template(template_dir):
-    contents = """
-# macro
+    contents = """# macro
 {% macro mymacro(greeting, greetee='world') -%}
 {{ greeting ~ ' ' ~ greetee }} !
 {%- endmacro %}
@@ -113,8 +111,7 @@ def macro_template(template_dir):
 
 @pytest.fixture
 def hello_import(macro_template, template_dir):
-    contents = """
-{% from 'macro' import mymacro -%}
+    contents = """{% from 'macro' import mymacro -%}
 {% from 'macro' import mymacro -%}
 {{ mymacro('Hey') ~ mymacro(a|default('a'), b|default('b')) }}
 """
@@ -186,7 +183,7 @@ def test_saltenv(minion_opts, local_salt, mock_file_client, hello_import):
 
 
 def test_macro_additional_log_for_generalexc(
-    minion_opts, local_salt, hello_import, mock_file_client
+    minion_opts, local_salt, hello_import, mock_file_client, template_dir
 ):
     """
     If we failed in a macro because of e.g. a TypeError, get
@@ -218,7 +215,9 @@ def test_macro_additional_log_for_generalexc(
                     )
 
 
-def test_macro_additional_log_for_undefined(minion_opts, local_salt, mock_file_client):
+def test_macro_additional_log_for_undefined(
+    minion_opts, local_salt, mock_file_client, template_dir
+):
     """
     If we failed in a macro because of undefined variables, get
     more output from trace.
@@ -230,19 +229,28 @@ def test_macro_additional_log_for_undefined(minion_opts, local_salt, mock_file_c
 \{\{b.greetee\}\} <-- error is here    <======================
 \{%- endmacro %\}
 ---"""
-    filename = os.path.join(template_dir, "hello_import_undefined")
-    with patch.object(
-        SaltCacheLoader, "file_client", MagicMock(return_value=mock_file_client)
-    ):
-        with salt.utils.files.fopen(filename) as fp_:
-            with pytest.raises(SaltRenderError, match=expected):
-                render_jinja_tmpl(
-                    salt.utils.stringutils.to_unicode(fp_.read()),
-                    dict(opts=minion_opts, saltenv="test", salt=local_salt),
-                )
+
+    contents = """{% from 'macroundefined' import mymacro -%}
+{{ mymacro() }}
+"""
+
+    with pytest.helpers.temp_file(
+        "hello_import_undefined", directory=template_dir, contents=contents
+    ) as hello_import_undefined:
+        with patch.object(
+            SaltCacheLoader, "file_client", MagicMock(return_value=mock_file_client)
+        ):
+            with salt.utils.files.fopen(hello_import_undefined) as fp_:
+                with pytest.raises(SaltRenderError, match=expected):
+                    render_jinja_tmpl(
+                        salt.utils.stringutils.to_unicode(fp_.read()),
+                        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+                    )
 
 
-def test_macro_additional_log_syntaxerror(minion_opts, local_salt, mock_file_client):
+def test_macro_additional_log_syntaxerror(
+    minion_opts, local_salt, mock_file_client, template_dir
+):
     """
     If  we failed in a macro, get more output from trace.
     """
@@ -254,20 +262,36 @@ def test_macro_additional_log_syntaxerror(minion_opts, local_salt, mock_file_cli
 \{\{ greeting ~ ' ' ~ greetee \}\} !
 \{%- endmacro %\}
 ---.*"""
-    filename = os.path.join(template_dir, "hello_import_error")
-    with patch.object(
-        SaltCacheLoader, "file_client", MagicMock(return_value=mock_file_client)
-    ):
-        with salt.utils.files.fopen(filename) as fp_:
-            with pytest.raises(SaltRenderError, match=expected):
-                render_jinja_tmpl(
-                    salt.utils.stringutils.to_unicode(fp_.read()),
-                    dict(opts=minion_opts, saltenv="test", salt=local_salt),
-                )
+
+    macroerror_contents = """# macro
+{% macro mymacro(greeting, greetee='world') -} <-- error is here
+{{ greeting ~ ' ' ~ greetee }} !
+{%- endmacro %}
+"""
+
+    contents = """{% from 'macroerror' import mymacro -%}
+{{ mymacro('Hey') ~ mymacro(a|default('a'), b|default('b')) }}
+"""
+
+    with pytest.helpers.temp_file(
+        "hello_import_error", directory=template_dir, contents=contents
+    ) as hello_import_error:
+        with pytest.helpers.temp_file(
+            "macroerror", directory=template_dir, contents=macroerror_contents
+        ) as macroerror:
+            with patch.object(
+                SaltCacheLoader, "file_client", MagicMock(return_value=mock_file_client)
+            ):
+                with salt.utils.files.fopen(hello_import_error) as fp_:
+                    with pytest.raises(SaltRenderError, match=expected):
+                        render_jinja_tmpl(
+                            salt.utils.stringutils.to_unicode(fp_.read()),
+                            dict(opts=minion_opts, saltenv="test", salt=local_salt),
+                        )
 
 
 def test_non_ascii_encoding(
-    tmpdir, minion_opts, local_salt, mock_file_client, hello_import, non_ascii
+    minion_opts, local_salt, mock_file_client, non_ascii, hello_import
 ):
     with patch.object(
         SaltCacheLoader, "file_client", MagicMock(return_value=mock_file_client)
@@ -277,7 +301,7 @@ def test_non_ascii_encoding(
                 salt.utils.stringutils.to_unicode(fp_.read()),
                 dict(
                     opts={
-                        "cachedir": tmpdir,
+                        "cachedir": minion_opts["cachedir"],
                         "file_client": "remote",
                         "file_roots": minion_opts["file_roots"],
                         "pillar_roots": minion_opts["pillar_roots"],
@@ -298,7 +322,7 @@ def test_non_ascii_encoding(
                 salt.utils.stringutils.to_unicode(fp_.read(), "utf-8"),
                 dict(
                     opts={
-                        "cachedir": tmpdir,
+                        "cachedir": minion_opts["cachedir"],
                         "file_client": "remote",
                         "file_roots": minion_opts["file_roots"],
                         "pillar_roots": minion_opts["pillar_roots"],
@@ -462,7 +486,7 @@ def test_render_with_undefined_variable_unicode(minion_opts, local_salt):
         )
 
 
-def test_relative_include(minion_opts, local_salt, hello_import):
+def test_relative_include(minion_opts, local_salt, template_dir, hello_import):
     template = "{% include './hello_import' %}"
     expected = "Hey world !a b !"
     with salt.utils.files.fopen(hello_import) as fp_:
