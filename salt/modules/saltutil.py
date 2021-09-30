@@ -1362,7 +1362,6 @@ def find_cached_job(jid):
 
         salt '*' saltutil.find_cached_job <job id>
     """
-    serial = salt.payload.Serial(__opts__)
     proc_dir = os.path.join(__opts__["cachedir"], "minion_jobs")
     job_dir = os.path.join(proc_dir, str(jid))
     if not os.path.isdir(job_dir):
@@ -1378,7 +1377,7 @@ def find_cached_job(jid):
         buf = fp_.read()
     if buf:
         try:
-            data = serial.loads(buf)
+            data = salt.payload.loads(buf)
         except NameError:
             # msgpack error in salt-ssh
             pass

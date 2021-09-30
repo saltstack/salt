@@ -1,1 +1,0 @@
-Allowed zabbix_host.present to do partial updates of inventory, also don't erase everything if inventory is missing in state definition.

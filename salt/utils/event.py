@@ -227,7 +227,6 @@ class SaltEvent:
                                is destroyed. This is useful when using event
                                loops from within third party asynchronous code
         """
-        self.serial = salt.payload.Serial({"serial": "msgpack"})
         self.keep_loop = keep_loop
         if io_loop is not None:
             self.io_loop = io_loop
@@ -451,15 +450,12 @@ class SaltEvent:
         self.cpush = False
 
     @classmethod
-    def unpack(cls, raw, serial=None):
-        if serial is None:
-            serial = salt.payload.Serial({"serial": "msgpack"})
-
+    def unpack(cls, raw):
         mtag, sep, mdata = raw.partition(
             salt.utils.stringutils.to_bytes(TAGEND)
         )  # split tag from data
         mtag = salt.utils.stringutils.to_str(mtag)
-        data = serial.loads(mdata, encoding="utf-8")
+        data = salt.payload.loads(mdata, encoding="utf-8")
         return mtag, data
 
     def _get_match_func(self, match_type=None):
@@ -572,7 +568,7 @@ class SaltEvent:
                 raw = self.subscriber.read(timeout=wait)
                 if raw is None:
                     break
-                mtag, data = self.unpack(raw, self.serial)
+                mtag, data = self.unpack(raw)
                 ret = {"data": data, "tag": mtag}
             except KeyboardInterrupt:
                 return {"tag": "salt/event/exit", "data": {}}
@@ -695,7 +691,7 @@ class SaltEvent:
         raw = self.subscriber._read(timeout=0)
         if raw is None:
             return None
-        mtag, data = self.unpack(raw, self.serial)
+        mtag, data = self.unpack(raw)
         return {"data": data, "tag": mtag}
 
     def get_event_block(self):
@@ -711,7 +707,7 @@ class SaltEvent:
         raw = self.subscriber._read(timeout=None)
         if raw is None:
             return None
-        mtag, data = self.unpack(raw, self.serial)
+        mtag, data = self.unpack(raw)
         return {"data": data, "tag": mtag}
 
     def iter_events(self, tag="", full=False, match_type=None, auto_reconnect=False):
@@ -758,7 +754,7 @@ class SaltEvent:
         # it is safe to change the wire protocol. The mechanism
         # that sends events from minion to master is outside this
         # file.
-        dump_data = self.serial.dumps(data, use_bin_type=True)
+        dump_data = salt.payload.dumps(data, use_bin_type=True)
 
         serialized_data = salt.utils.dicttrim.trim_dict(
             dump_data,
@@ -810,7 +806,7 @@ class SaltEvent:
         # it is safe to change the wire protocol. The mechanism
         # that sends events from minion to master is outside this
         # file.
-        dump_data = self.serial.dumps(data, use_bin_type=True)
+        dump_data = salt.payload.dumps(data, use_bin_type=True)
 
         serialized_data = salt.utils.dicttrim.trim_dict(
             dump_data,
