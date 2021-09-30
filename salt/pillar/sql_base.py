@@ -174,6 +174,9 @@ It is capable of handling single rows or multiple rows per minion.
 
 Configuration of the connection depends on the adapter in use.
 
+.. versionadded:: 3005
+   The *as_json* parameter.
+
 More complete example for MySQL (to also show configuration)
 ============================================================
 
