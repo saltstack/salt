@@ -1,28 +1,7 @@
 """
 Tests for salt.utils.jinja
 """
-
-import os
-
 import pytest
-import salt.config
-import salt.loader
-
-# dateutils is needed so that the strftime jinja filter is loaded
-import salt.utils.dateutils  # pylint: disable=unused-import
-import salt.utils.files
-import salt.utils.json
-import salt.utils.stringutils
-import salt.utils.yaml
-
-try:
-    import timelib  # pylint: disable=W0611
-
-    HAS_TIMELIB = True
-except ImportError:
-    HAS_TIMELIB = False
-
-BLINESEP = salt.utils.stringutils.to_bytes(os.linesep)
 
 
 class MockFileClient:
@@ -46,21 +25,34 @@ def mock_file_client(loader=None):
     return MockFileClient(loader)
 
 
-def _setup_test_dir(src_dir, test_dir):
-    os.makedirs(test_dir)
-    salt.utils.files.recursive_copy(src_dir, test_dir)
-    filename = os.path.join(test_dir, "non_ascii")
-    with salt.utils.files.fopen(filename, "wb") as fp:
-        fp.write(b"Assun\xc3\xa7\xc3\xa3o" + BLINESEP)
-    filename = os.path.join(test_dir, "hello_simple")
-    with salt.utils.files.fopen(filename, "wb") as fp:
-        fp.write(b"world" + BLINESEP)
-    filename = os.path.join(test_dir, "hello_import")
-    lines = [
-        r"{% from 'macro' import mymacro -%}",
-        r"{% from 'macro' import mymacro -%}",
-        r"{{ mymacro('Hey') ~ mymacro(a|default('a'), b|default('b')) }}",
-    ]
-    with salt.utils.files.fopen(filename, "wb") as fp:
-        for line in lines:
-            fp.write(line.encode("utf-8") + BLINESEP)
+@pytest.fixture
+def template_dir(tmpdir):
+    templates_dir = tmpdir.mkdir("files").mkdir("test")
+    return templates_dir
+
+
+@pytest.fixture
+def hello_import(macro_template, template_dir):
+    contents = """{% from 'macro' import mymacro -%}
+{% from 'macro' import mymacro -%}
+{{ mymacro('Hey') ~ mymacro(a|default('a'), b|default('b')) }}
+"""
+
+    with pytest.helpers.temp_file(
+        "hello_import", directory=template_dir, contents=contents
+    ) as hello_import_filename:
+        yield hello_import_filename
+
+
+@pytest.fixture
+def macro_template(template_dir):
+    contents = """# macro
+{% macro mymacro(greeting, greetee='world') -%}
+{{ greeting ~ ' ' ~ greetee }} !
+{%- endmacro %}
+"""
+
+    with pytest.helpers.temp_file(
+        "macro", directory=template_dir.strpath, contents=contents
+    ) as macro_filename:
+        yield macro_filename

@@ -16,8 +16,6 @@ import salt.utils.stringutils
 import salt.utils.yaml
 from salt.utils.templates import render_jinja_tmpl
 
-BLINESEP = salt.utils.stringutils.to_bytes(os.linesep)
-
 
 @pytest.fixture
 def minion_opts(tmpdir):
