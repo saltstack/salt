@@ -95,8 +95,8 @@ def test_fallback(minion_opts, local_salt, template_dir):
 
     with pytest.helpers.temp_file(
         "hello_simple", directory=template_dir.strpath, contents="world\n"
-    ) as fn_:
-        with salt.utils.files.fopen(fn_) as fp_:
+    ) as hello_simple:
+        with salt.utils.files.fopen(str(hello_simple)) as fp_:
             out = render_jinja_tmpl(
                 salt.utils.stringutils.to_unicode(fp_.read()),
                 dict(opts=minion_opts, saltenv="test", salt=local_salt),
@@ -109,7 +109,7 @@ def test_fallback_noloader(minion_opts, local_salt, hello_import):
     A Template with a filesystem loader is returned as fallback
     if the file is not contained in the searchpath
     """
-    with salt.utils.files.fopen(hello_import) as fp_:
+    with salt.utils.files.fopen(str(hello_import)) as fp_:
         out = render_jinja_tmpl(
             salt.utils.stringutils.to_unicode(fp_.read()),
             dict(opts=minion_opts, saltenv="test", salt=local_salt),
@@ -132,7 +132,7 @@ def test_saltenv(minion_opts, local_salt, mock_file_client, hello_import):
         "pillar_roots": minion_opts["pillar_roots"],
     }
     with patch.object(SaltCacheLoader, "file_client", MagicMock(return_value=fc)):
-        with salt.utils.files.fopen(hello_import) as fp_:
+        with salt.utils.files.fopen(str(hello_import)) as fp_:
             out = render_jinja_tmpl(
                 salt.utils.stringutils.to_unicode(fp_.read()),
                 dict(
@@ -182,7 +182,7 @@ def test_macro_additional_log_for_generalexc(
             with patch.object(
                 SaltCacheLoader, "file_client", MagicMock(return_value=mock_file_client)
             ):
-                with salt.utils.files.fopen(hello_import_generalerror) as fp_:
+                with salt.utils.files.fopen(str(hello_import_generalerror)) as fp_:
                     with pytest.raises(SaltRenderError, match=expected):
                         render_jinja_tmpl(
                             salt.utils.stringutils.to_unicode(fp_.read()),
@@ -225,7 +225,7 @@ def test_macro_additional_log_for_undefined(
             with patch.object(
                 SaltCacheLoader, "file_client", MagicMock(return_value=mock_file_client)
             ):
-                with salt.utils.files.fopen(hello_import_undefined) as fp_:
+                with salt.utils.files.fopen(str(hello_import_undefined)) as fp_:
                     with pytest.raises(SaltRenderError, match=expected):
                         render_jinja_tmpl(
                             salt.utils.stringutils.to_unicode(fp_.read()),
@@ -267,7 +267,7 @@ def test_macro_additional_log_syntaxerror(
             with patch.object(
                 SaltCacheLoader, "file_client", MagicMock(return_value=mock_file_client)
             ):
-                with salt.utils.files.fopen(hello_import_error) as fp_:
+                with salt.utils.files.fopen(str(hello_import_error)) as fp_:
                     with pytest.raises(SaltRenderError, match=expected):
                         render_jinja_tmpl(
                             salt.utils.stringutils.to_unicode(fp_.read()),
@@ -281,7 +281,7 @@ def test_non_ascii_encoding(
     with patch.object(
         SaltCacheLoader, "file_client", MagicMock(return_value=mock_file_client)
     ):
-        with salt.utils.files.fopen(hello_import) as fp_:
+        with salt.utils.files.fopen(str(hello_import)) as fp_:
             out = render_jinja_tmpl(
                 salt.utils.stringutils.to_unicode(fp_.read()),
                 dict(
@@ -302,7 +302,7 @@ def test_non_ascii_encoding(
         )
         assert mock_file_client.requests[0]["path"] == "salt://macro"
 
-        with salt.utils.files.fopen(non_ascii, "rb") as fp_:
+        with salt.utils.files.fopen(str(non_ascii), "rb") as fp_:
             out = render_jinja_tmpl(
                 salt.utils.stringutils.to_unicode(fp_.read(), "utf-8"),
                 dict(
@@ -474,7 +474,7 @@ def test_render_with_undefined_variable_unicode(minion_opts, local_salt):
 def test_relative_include(minion_opts, local_salt, template_dir, hello_import):
     template = "{% include './hello_import' %}"
     expected = "Hey world !a b !"
-    with salt.utils.files.fopen(hello_import) as fp_:
+    with salt.utils.files.fopen(str(hello_import)) as fp_:
         out = render_jinja_tmpl(
             template,
             dict(
