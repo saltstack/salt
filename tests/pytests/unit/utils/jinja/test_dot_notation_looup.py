@@ -14,13 +14,6 @@ import salt.utils.yaml
 from salt.utils.jinja import SaltCacheLoader
 from tests.support.mock import Mock, patch
 
-try:
-    import timelib  # pylint: disable=W0611
-
-    HAS_TIMELIB = True
-except ImportError:
-    HAS_TIMELIB = False
-
 
 def render(tmpl_str, context=None):
     functions = {

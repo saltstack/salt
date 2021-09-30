@@ -4,7 +4,6 @@ Tests for salt.utils.jinja
 
 import copy
 import os
-import tempfile
 
 import pytest
 import salt.config
@@ -20,15 +19,6 @@ from jinja2 import Environment, exceptions
 from salt.utils.jinja import SaltCacheLoader
 from tests.support.mock import Mock, patch
 
-try:
-    import timelib  # pylint: disable=W0611
-
-    HAS_TIMELIB = True
-except ImportError:
-    HAS_TIMELIB = False
-
-BLINESEP = salt.utils.stringutils.to_bytes(os.linesep)
-
 
 @pytest.fixture
 def minion_opts(tmpdir):
@@ -36,9 +26,9 @@ def minion_opts(tmpdir):
     _opts.update(
         {
             "file_buffer_size": 1048576,
-            "cachedir": tmpdir,
-            "file_roots": {"test": [tmpdir.join("templates").strpath]},
-            "pillar_roots": {"test": [tmpdir.join("templates").strpath]},
+            "cachedir": tmpdir.strpath,
+            "file_roots": {"test": [tmpdir.join("files/test").strpath]},
+            "pillar_roots": {"test": [tmpdir.join("files/test").strpath]},
             "extension_modules": os.path.join(
                 os.path.dirname(os.path.abspath(__file__)), "extmods"
             ),
@@ -48,9 +38,67 @@ def minion_opts(tmpdir):
 
 
 @pytest.fixture
-def template_dir(tmpdir):
-    templates_dir = tmpdir.mkdir("templates").mkdir("files").mkdir("test")
-    return str(templates_dir)
+def hello_simple(template_dir):
+    contents = """world
+"""
+
+    with pytest.helpers.temp_file(
+        "hello_simple", directory=template_dir.strpath, contents=contents
+    ) as hello_simple_filename:
+        yield hello_simple_filename
+
+
+@pytest.fixture
+def hello_include(template_dir):
+    contents = """{% include 'hello_import' -%}"""
+
+    with pytest.helpers.temp_file(
+        "hello_include", directory=template_dir.strpath, contents=contents
+    ) as hello_include_filename:
+        yield hello_include_filename
+
+
+@pytest.fixture
+def relative_dir(template_dir):
+    relative_dir = template_dir.mkdir("relative")
+    return relative_dir
+
+
+@pytest.fixture
+def relative_rhello(relative_dir):
+    contents = """{% from './rmacro' import rmacro with context -%}
+{{ rmacro('Hey') ~ rmacro(a|default('a'), b|default('b')) }}
+"""
+
+    with pytest.helpers.temp_file(
+        "rhello", directory=relative_dir.strpath, contents=contents
+    ) as relative_rhello:
+        yield relative_rhello
+
+
+@pytest.fixture
+def relative_rmacro(relative_dir):
+    contents = """{% from '../macro' import mymacro with context %}
+{% macro rmacro(greeting, greetee='world') -%}
+{{ mymacro(greeting, greetee) }}
+{%- endmacro %}
+"""
+
+    with pytest.helpers.temp_file(
+        "rmacro", directory=relative_dir.strpath, contents=contents
+    ) as relative_rmacro:
+        yield relative_rmacro
+
+
+@pytest.fixture
+def relative_rescape(relative_dir):
+    contents = """{% import '../../rescape' as xfail -%}
+"""
+
+    with pytest.helpers.temp_file(
+        "rescape", directory=relative_dir.strpath, contents=contents
+    ) as relative_rescape:
+        yield relative_rescape
 
 
 @pytest.fixture
@@ -61,8 +109,7 @@ def get_loader(mock_file_client, minion_opts):
         """
         if opts is None:
             opts = minion_opts
-        with patch.object(SaltCacheLoader, "file_client", mock_file_client):
-            loader = SaltCacheLoader(opts, saltenv)
+        loader = SaltCacheLoader(opts, saltenv, _file_client=mock_file_client)
         # Create a mock file client and attach it to the loader
         return loader
 
@@ -78,18 +125,17 @@ def get_test_saltenv(get_loader):
     return loader._file_client, jinja
 
 
-def test_searchpath(minion_opts, get_loader):
+def test_searchpath(minion_opts, get_loader, tmpdir):
     """
     The searchpath is based on the cachedir option and the saltenv parameter
     """
-    tmp = tempfile.gettempdir()
     opts = copy.deepcopy(minion_opts)
-    opts.update({"cachedir": tmp})
+    opts.update({"cachedir": tmpdir.strpath})
     loader = get_loader(opts=minion_opts, saltenv="test")
-    assert loader.searchpath == [os.path.join(tmp, "files", "test")]
+    assert loader.searchpath == [tmpdir.join("files/test").strpath]
 
 
-def test_mockclient(minion_opts, template_dir, get_loader):
+def test_mockclient(minion_opts, template_dir, hello_simple, get_loader):
     """
     A MockFileClient is used that records all file requests normally sent
     to the master.
@@ -99,14 +145,13 @@ def test_mockclient(minion_opts, template_dir, get_loader):
     assert len(res) == 3
     # res[0] on Windows is unicode and use os.linesep so it works cross OS
     assert str(res[0]) == "world" + os.linesep
-    tmpl_dir = os.path.join(template_dir, "hello_simple")
-    assert res[1] == tmpl_dir
+    assert res[1] == str(hello_simple)
     assert res[2](), "Template up to date?"
     assert loader._file_client.requests
     assert loader._file_client.requests[0]["path"] == "salt://hello_simple"
 
 
-def test_import(get_loader):
+def test_import(get_loader, hello_import):
     """
     You can import and use macros from other files
     """
@@ -118,7 +163,9 @@ def test_import(get_loader):
     assert fc.requests[1]["path"] == "salt://macro"
 
 
-def test_relative_import(get_loader):
+def test_relative_import(
+    get_loader, relative_rhello, relative_rmacro, relative_rescape, macro_template
+):
     """
     You can import using relative paths
     issue-13889
@@ -136,7 +183,7 @@ def test_relative_import(get_loader):
     pytest.raises(exceptions.TemplateNotFound, template.render)
 
 
-def test_include(get_loader):
+def test_include(get_loader, hello_include, hello_import):
     """
     You can also include a template that imports and uses macros
     """
@@ -149,7 +196,7 @@ def test_include(get_loader):
     assert fc.requests[2]["path"] == "salt://macro"
 
 
-def test_include_context(get_loader):
+def test_include_context(get_loader, hello_include, hello_import):
     """
     Context variables are passes to the included template by default.
     """
@@ -168,7 +215,7 @@ def test_cached_file_client(get_loader, minion_opts):
     assert loader_a._file_client is loader_b._file_client
 
 
-def test_file_client_kwarg(mock_file_client):
+def test_file_client_kwarg(minion_opts, mock_file_client):
     """
     A file client can be passed to SaltCacheLoader overriding the any
     cached file client
@@ -177,7 +224,7 @@ def test_file_client_kwarg(mock_file_client):
     assert loader._file_client is mock_file_client
 
 
-def test_cache_loader_shutdown(mock_file_client):
+def test_cache_loader_shutdown(minion_opts, mock_file_client):
     """
     The shudown method can be called without raising an exception when the
     file_client does not have a destroy method

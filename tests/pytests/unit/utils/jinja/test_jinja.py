@@ -1,29 +1,9 @@
 """
 Tests for salt.utils.jinja
 """
-
-import os
-
-import salt.config
-import salt.loader
-
-# dateutils is needed so that the strftime jinja filter is loaded
 import salt.utils.dateutils  # pylint: disable=unused-import
-import salt.utils.files
-import salt.utils.json
-import salt.utils.stringutils
-import salt.utils.yaml
 from jinja2 import Markup
 from salt.utils.jinja import indent, tojson
-
-try:
-    import timelib  # pylint: disable=W0611
-
-    HAS_TIMELIB = True
-except ImportError:
-    HAS_TIMELIB = False
-
-BLINESEP = salt.utils.stringutils.to_bytes(os.linesep)
 
 
 def test_tojson():
