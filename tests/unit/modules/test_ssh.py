@@ -69,7 +69,12 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         self.user_info_mock = {"home": "/dev/null"}
         valid_key = "AAAAI3NrLXNzaC1lZDI1NTE5LWNlcnQtdjAxQG9wZW5zc2guY29tAAAAIPMSTMKuDdipIQl8IA3UXl5WHYcIyF2tfwrri/Wd/oV3AAAAIKuzsywoer6Y7oYtLXse/TKjVqqKjEpUq+4zMkQ9FEwJAAAABHNzaDoAAAAAAAAAAAAAAAEAAAARbWF4QHNjaHUgdXNlciBrZXkAAAAHAAAAA21heAAAAABgGcIwAAAAAHLlxlwAAAAAAAAAggAAABVwZXJtaXQtWDExLWZvcndhcmRpbmcAAAAAAAAAF3Blcm1pdC1hZ2VudC1mb3J3YXJkaW5nAAAAAAAAABZwZXJtaXQtcG9ydC1mb3J3YXJkaW5nAAAAAAAAAApwZXJtaXQtcHR5AAAAAAAAAA5wZXJtaXQtdXNlci1yYwAAAAAAAAAAAAAAMwAAAAtzc2gtZWQyNTUxOQAAACDI8h3vsne8ZtyH7JRHmkImHXQciefsH4e99ka3HJzKPQAAAFMAAAALc3NoLWVkMjU1MTkAAABAHzruY+hPXK2ONt9d2XFUttvdSR7dW9Yy7stru4zopgUbo0CjTlKyogb7PiRryt5JExT1Wkux1q3oBtyvSdG+Cw=="
         # we expect 'fail', but not 'Invalid public key'
-        self.assertEqual(ssh.set_auth_key("user", valid_key, enc="sk-ssh-ed25519-cert-v01@openssh.com"), "fail")
+        self.assertEqual(
+            ssh.set_auth_key(
+                "user", valid_key, enc="sk-ssh-ed25519-cert-v01@openssh.com"
+            ),
+            "fail",
+        )
 
     def test_replace_auth_key(self):
         """
@@ -195,7 +200,9 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
             # the initial key must have been replaced and no longer present
             self.assertNotIn("\n{} {}\n".format(enc, key), file_txt)
             # the new key must be present
-            self.assertIn("{} {} {} {}".format(",".join(options), enc, key, email), file_txt)
+            self.assertIn(
+                "{} {} {} {}".format(",".join(options), enc, key, email), file_txt
+            )
             self.assertIn(empty_line, file_txt)
             self.assertIn(comment_line, file_txt)
 
@@ -207,27 +214,37 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         temp_file = tempfile.NamedTemporaryFile(delete=False, mode="w+")
         temp_file.close()
 
-        options='command="echo command"'
+        options = 'command="echo command"'
         enc = "sk-ssh-ed25519-cert-v01@openssh.com"
         key = "abcxyz"
         email = "foo@example.com"
 
         with salt.utils.files.fopen(temp_file.name, "w") as _fh:
-            _fh.write(salt.utils.stringutils.to_str("{} {} {} {}".format(options, enc, key, email)))
+            _fh.write(
+                salt.utils.stringutils.to_str(
+                    "{} {} {} {}".format(options, enc, key, email)
+                )
+            )
 
         with patch.dict(ssh.__salt__, {"user.info": MagicMock(return_value={})}):
-            with patch("salt.modules.ssh._get_config_file",
+            with patch(
+                "salt.modules.ssh._get_config_file",
                 MagicMock(return_value=temp_file.name),
             ):
-                with patch("salt.modules.ssh.auth_keys",
-                        MagicMock(return_value=salt.utils.files.fopen(
-                            temp_file.name, "r").read()),
+                with patch(
+                    "salt.modules.ssh.auth_keys",
+                    MagicMock(
+                        return_value=salt.utils.files.fopen(temp_file.name, "r").read()
+                    ),
                 ):
-                    self.assertEqual(ssh.rm_auth_key(
-                        "foo",
-                        "{}".format(key),
-                        config=temp_file.name,
-                    ), "Key removed")
+                    self.assertEqual(
+                        ssh.rm_auth_key(
+                            "foo",
+                            "{}".format(key),
+                            config=temp_file.name,
+                        ),
+                        "Key removed",
+                    )
 
         # Assert that the key was removed
         with salt.utils.files.fopen(temp_file.name) as _fh:
