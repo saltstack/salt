@@ -357,6 +357,7 @@ class TCPReqServerChannel:
 
         payload_handler: function to call with your payloads
         """
+        self.message_handler = message_handler
 
         with salt.utils.asynchronous.current_ioloop(io_loop):
             if USE_LOAD_BALANCER:
@@ -375,12 +376,18 @@ class TCPReqServerChannel:
                         (self.opts["interface"], int(self.opts["ret_port"]))
                     )
                 self.req_server = SaltMessageServer(
-                    message_handler,
+                    self.handle_message,
                     ssl_options=self.opts.get("ssl"),
                     io_loop=io_loop,
                 )
                 self.req_server.add_socket(self._socket)
                 self._socket.listen(self.backlog)
+
+    @salt.ext.tornado.gen.coroutine
+    def handle_message(self, stream, payload, header=None):
+        stream = self.wrap_stream(stream)
+        payload = self.decode_payload(payload)
+        yield self.message_handler(payload, send_reply=stream.send, header=header)
 
     def wrap_stream(self, stream):
         class Stream:

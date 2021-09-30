@@ -106,28 +106,24 @@ class ReqServerChannel:
         and call payload_handler. You will also be passed io_loop, for all of your
         asynchronous needs
         """
+        import salt.master
+
         if self.opts["pub_server_niceness"] and not salt.utils.platform.is_windows():
             log.info(
                 "setting Publish daemon niceness to %i",
                 self.opts["pub_server_niceness"],
             )
             os.nice(self.opts["pub_server_niceness"])
-        self.payload_handler = payload_handler
         self.io_loop = io_loop
-        self.transport.post_fork(self.handle_message, io_loop)
-        import salt.master
-
         self.crypticle = salt.crypt.Crypticle(
             self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
         )
-
         # other things needed for _auth
         # Create the event manager
         self.event = salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
         )
         self.auto_key = salt.daemons.masterapi.AutoKey(self.opts)
-
         # only create a con_cache-client if the con_cache is active
         if self.opts["con_cache"]:
             self.cache_cli = CacheCli(self.opts)
@@ -135,14 +131,13 @@ class ReqServerChannel:
             self.cache_cli = False
             # Make an minion checker object
             self.ckminions = salt.utils.minions.CkMinions(self.opts)
-
         self.master_key = salt.crypt.MasterKeys(self.opts)
+        self.payload_handler = payload_handler
+        self.transport.post_fork(self.handle_message, io_loop)
 
     @salt.ext.tornado.gen.coroutine
-    def handle_message(self, stream, payload, header=None):
-        stream = self.transport.wrap_stream(stream)
+    def handle_message(self, payload, send_reply=None, header=None):
         try:
-            payload = self.transport.decode_payload(payload)
             payload = self._decode_payload(payload)
         except Exception as exc:  # pylint: disable=broad-except
             exc_type = type(exc).__name__
@@ -155,7 +150,7 @@ class ReqServerChannel:
                 )
             else:
                 log.error("Bad load from minion: %s: %s", exc_type, exc)
-            yield stream.send("bad load", header)
+            yield send_reply("bad load", header)
             raise salt.ext.tornado.gen.Return()
 
         # TODO helper functions to normalize payload?
@@ -165,24 +160,24 @@ class ReqServerChannel:
                 payload,
                 payload.get("load"),
             )
-            yield stream.send("payload and load must be a dict", header)
+            yield send_reply("payload and load must be a dict", header)
             raise salt.ext.tornado.gen.Return()
 
         try:
             id_ = payload["load"].get("id", "")
             if "\0" in id_:
                 log.error("Payload contains an id with a null byte: %s", payload)
-                stream.send("bad load: id contains a null byte", header)
+                yield send_reply("bad load: id contains a null byte", header)
                 raise salt.ext.tornado.gen.Return()
         except TypeError:
             log.error("Payload contains non-string id: %s", payload)
-            stream.send("bad load: id {} is not a string".format(id_), header)
+            yield send_reply("bad load: id {} is not a string".format(id_), header)
             raise salt.ext.tornado.gen.Return()
 
         # intercept the "_auth" commands, since the main daemon shouldn't know
         # anything about our key auth
         if payload["enc"] == "clear" and payload.get("load", {}).get("cmd") == "_auth":
-            stream.send(self._auth(payload["load"]), header)
+            yield send_reply(self._auth(payload["load"]), header)
             raise salt.ext.tornado.gen.Return()
 
         # TODO: test
@@ -192,17 +187,17 @@ class ReqServerChannel:
             ret, req_opts = yield self.payload_handler(payload)
         except Exception as e:  # pylint: disable=broad-except
             # always attempt to return an error to the minion
-            stream.send("Some exception handling minion payload", header)
+            yield send_reply("Some exception handling minion payload", header)
             log.error("Some exception handling a payload from minion", exc_info=True)
             raise salt.ext.tornado.gen.Return()
 
         req_fun = req_opts.get("fun", "send")
         if req_fun == "send_clear":
-            stream.send(ret, header)
+            yield send_reply(ret, header)
         elif req_fun == "send":
-            stream.send(self.crypticle.dumps(ret), header)
+            yield send_reply(self.crypticle.dumps(ret), header)
         elif req_fun == "send_private":
-            stream.send(
+            yield send_reply(
                 self._encrypt_private(
                     ret,
                     req_opts["key"],
@@ -213,7 +208,7 @@ class ReqServerChannel:
         else:
             log.error("Unknown req_fun %s", req_fun)
             # always attempt to return an error to the minion
-            stream.send("Server-side exception handling payload", header)
+            yield send_reply("Server-side exception handling payload", header)
         raise salt.ext.tornado.gen.Return()
 
     def _encrypt_private(self, ret, dictkey, target):

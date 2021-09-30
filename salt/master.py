@@ -18,6 +18,7 @@ import time
 
 import salt.acl
 import salt.auth
+import salt.channel.server
 import salt.client
 import salt.client.ssh.client
 import salt.crypt
@@ -34,7 +35,6 @@ import salt.pillar
 import salt.runner
 import salt.serializers.msgpack
 import salt.state
-import salt.transport.server
 import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.crypt
@@ -675,7 +675,7 @@ class Master(SMaster):
             log.info("Creating master publisher process")
             log_queue = salt.log.setup.get_multiprocessing_logging_queue()
             for _, opts in iter_transport_opts(self.opts):
-                chan = salt.transport.server.PubServerChannel.factory(opts)
+                chan = salt.channel.server.PubServerChannel.factory(opts)
                 chan.pre_fork(self.process_manager, kwargs={"log_queue": log_queue})
                 pub_channels.append(chan)
 
@@ -856,7 +856,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         req_channels = []
         tcp_only = True
         for transport, opts in iter_transport_opts(self.opts):
-            chan = salt.transport.server.ReqServerChannel.factory(opts)
+            chan = salt.channel.server.ReqServerChannel.factory(opts)
             chan.pre_fork(self.process_manager)
             req_channels.append(chan)
             if transport != "tcp":
@@ -2295,7 +2295,7 @@ class ClearFuncs(TransportMethods):
         Take a load and send it across the network to connected minions
         """
         for transport, opts in iter_transport_opts(self.opts):
-            chan = salt.transport.server.PubServerChannel.factory(opts)
+            chan = salt.channel.server.PubServerChannel.factory(opts)
             chan.publish(load)
 
     @property
