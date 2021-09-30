@@ -414,7 +414,14 @@ class ZeroMQReqServerChannel:
         log.info("Worker binding to socket %s", self.w_uri)
         self._socket.connect(self.w_uri)
         self.stream = zmq.eventloop.zmqstream.ZMQStream(self._socket, io_loop=io_loop)
-        self.stream.on_recv_stream(message_handler)
+        self.message_handler = message_handler
+        self.stream.on_recv_stream(self.handle_message)
+
+    @salt.ext.tornado.gen.coroutine
+    def handle_message(self, stream, payload, header=None):
+        stream = self.wrap_stream(stream)
+        payload = self.decode_payload(payload)
+        self.message_handler(payload, send_reply=stream.send, header=header)
 
     def __setup_signals(self):
         signal.signal(signal.SIGINT, self._handle_signals)
@@ -508,7 +515,7 @@ class AsyncReqMessageClient:
         # mapping of message -> future
         self.send_future_map = {}
 
-        self.send_timeout_map = {}  # message -> timeout
+        # self.send_timeout_map = {}  # message -> timeout
         self._closing = False
 
     # TODO: timeout all in-flight sessions, or error
@@ -565,7 +572,7 @@ class AsyncReqMessageClient:
             elif hasattr(zmq, "IPV4ONLY"):
                 self.socket.setsockopt(zmq.IPV4ONLY, 0)
         self.socket.linger = self.linger
-        log.debug("Trying to connect to: %s", self.addr)
+        log.debug("**** Trying to connect to: %s", self.addr)
         self.socket.connect(self.addr)
         self.stream = zmq.eventloop.zmqstream.ZMQStream(
             self.socket, io_loop=self.io_loop
@@ -582,7 +589,6 @@ class AsyncReqMessageClient:
         # In a race condition the message might have been sent by the time
         # we're timing it out. Make sure the future is not None
         if future is not None:
-            del self.send_timeout_map[message]
             if future.attempts < future.tries:
                 future.attempts += 1
                 log.debug(
@@ -726,8 +732,8 @@ class ZeroMQPubServerChannel:
         """
         ioloop = salt.ext.tornado.ioloop.IOLoop()
         ioloop.make_current()
-
-        context = zmq.Context(1)
+        self.io_loop = ioloop
+        context = self.context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUB)
         monitor = ZeroMQSocketMonitor(pub_sock)
         monitor.start_io_loop(ioloop)
@@ -770,7 +776,8 @@ class ZeroMQPubServerChannel:
         try:
             ioloop.start()
         finally:
-            context.term()
+            pub_sock.close()
+            pull_sock.close()
 
     @property
     def pull_uri(self):
@@ -893,6 +900,9 @@ class ZeroMQPubServerChannel:
     @property
     def topic_support(self):
         return self.opts.get("zmq_filtering", False)
+
+    def close(self):
+        self.pub_close()
 
 
 class ZeroMQReqChannel:
