@@ -32,8 +32,6 @@ try:
 except ImportError:
     HAS_TIMELIB = False
 
-BLINESEP = salt.utils.stringutils.to_bytes(os.linesep)
-
 
 class MockFileClient:
     """
@@ -79,47 +77,14 @@ def local_salt():
 
 
 @pytest.fixture
-def template_dir(tmpdir):
-    templates_dir = tmpdir.mkdir("files").mkdir("test")
-    return str(templates_dir)
-
-
-@pytest.fixture
 def non_ascii(template_dir):
     contents = """Assunção
 """
 
     with pytest.helpers.temp_file(
-        "non_ascii", directory=template_dir, contents=contents
+        "non_ascii", directory=template_dir.strpath, contents=contents
     ) as non_ascii_filename:
         yield non_ascii_filename
-
-
-@pytest.fixture
-def macro_template(template_dir):
-    contents = """# macro
-{% macro mymacro(greeting, greetee='world') -%}
-{{ greeting ~ ' ' ~ greetee }} !
-{%- endmacro %}
-"""
-
-    with pytest.helpers.temp_file(
-        "macro", directory=template_dir, contents=contents
-    ) as macro_filename:
-        yield macro_filename
-
-
-@pytest.fixture
-def hello_import(macro_template, template_dir):
-    contents = """{% from 'macro' import mymacro -%}
-{% from 'macro' import mymacro -%}
-{{ mymacro('Hey') ~ mymacro(a|default('a'), b|default('b')) }}
-"""
-
-    with pytest.helpers.temp_file(
-        "hello_import", directory=template_dir, contents=contents
-    ) as hello_import_filename:
-        yield hello_import_filename
 
 
 def test_fallback(minion_opts, local_salt, template_dir):
@@ -129,7 +94,7 @@ def test_fallback(minion_opts, local_salt, template_dir):
     """
 
     with pytest.helpers.temp_file(
-        "hello_simple", directory=template_dir, contents="world\n"
+        "hello_simple", directory=template_dir.strpath, contents="world\n"
     ) as fn_:
         with salt.utils.files.fopen(fn_) as fp_:
             out = render_jinja_tmpl(
@@ -211,7 +176,7 @@ def test_macro_additional_log_for_generalexc(
     ) as hello_import_generalerror:
         with pytest.helpers.temp_file(
             "macrogeneral",
-            directory=template_dir,
+            directory=template_dir.strpath,
             contents=macrogeneral_contents,
         ) as macrogeneral:
             with patch.object(
@@ -254,7 +219,7 @@ def test_macro_additional_log_for_undefined(
     ) as hello_import_undefined:
         with pytest.helpers.temp_file(
             "macroundefined",
-            directory=template_dir,
+            directory=template_dir.strpath,
             contents=macroundefined_contents,
         ) as macroundefined:
             with patch.object(
@@ -294,10 +259,10 @@ def test_macro_additional_log_syntaxerror(
 """
 
     with pytest.helpers.temp_file(
-        "hello_import_error", directory=template_dir, contents=contents
+        "hello_import_error", directory=template_dir.strpath, contents=contents
     ) as hello_import_error:
         with pytest.helpers.temp_file(
-            "macroerror", directory=template_dir, contents=macroerror_contents
+            "macroerror", directory=template_dir.strpath, contents=macroerror_contents
         ) as macroerror:
             with patch.object(
                 SaltCacheLoader, "file_client", MagicMock(return_value=mock_file_client)
@@ -516,7 +481,7 @@ def test_relative_include(minion_opts, local_salt, template_dir, hello_import):
                 opts=minion_opts,
                 saltenv="test",
                 salt=local_salt,
-                tpldir=template_dir,
+                tpldir=template_dir.strpath,
             ),
         )
     assert out == expected
