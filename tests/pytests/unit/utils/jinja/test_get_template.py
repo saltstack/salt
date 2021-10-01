@@ -78,13 +78,13 @@ def local_salt():
 
 @pytest.fixture
 def non_ascii(template_dir):
-    contents = """Assunção
-"""
+    contents = b"""Assun\xc3\xa7\xc3\xa3o""" + salt.utils.stringutils.to_bytes(
+        os.linesep
+    )
 
-    with pytest.helpers.temp_file(
-        "non_ascii", directory=template_dir.strpath, contents=contents
-    ) as non_ascii_filename:
-        yield non_ascii_filename
+    non_ascii_file = template_dir.join("non-ascii")
+    non_ascii_file.write_binary(contents, ensure=True)
+    return non_ascii_file
 
 
 def test_fallback(minion_opts, local_salt, template_dir):
