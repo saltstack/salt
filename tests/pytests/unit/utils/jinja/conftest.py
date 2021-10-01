@@ -26,8 +26,9 @@ def mock_file_client(loader=None):
 
 
 @pytest.fixture
-def template_dir(tmpdir):
-    templates_dir = tmpdir.mkdir("files").mkdir("test")
+def template_dir(tmp_path):
+    templates_dir = tmp_path / "files" / "test"
+    templates_dir.mkdir(parents=True, exist_ok=True)
     return templates_dir
 
 
@@ -53,6 +54,6 @@ def macro_template(template_dir):
 """
 
     with pytest.helpers.temp_file(
-        "macro", directory=template_dir.strpath, contents=contents
+        "macro", directory=template_dir, contents=contents
     ) as macro_filename:
         yield macro_filename
