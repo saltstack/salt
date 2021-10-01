@@ -99,7 +99,6 @@ def _add(app, endpoint, payload):
         log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
         return False
 
-
 def slugify(value):
     """'
     Slugify given value.
@@ -724,6 +723,7 @@ def create_interface(
         salt myminion netbox.create_interface edge_router ae13 description="Core uplink"
     """
     nb_device = get_("dcim", "devices", name=device_name)
+
     if not nb_device:
         return False
     if lag_parent:
@@ -913,55 +913,215 @@ def get_ipaddresses(device_name=None, **kwargs):
     return filter_("ipam", "ip-addresses", device_id=netbox_device["id"], **kwargs)
 
 
-def create_ipaddress(ip_address, family, device=None, interface=None):
+def create_ipaddress(
+        address,
+        vrf=None,
+        tenant=None,
+        status=None,
+        role=None,
+        device=None,
+        virtual_machine=None,
+        interface=None,
+        cluster=None,
+        nat_inside=None,
+        dns_name=None,
+        description=None,
+        fail_on_unassigned_address=False
+    ):
     """
-    .. versionadded:: 2019.2.0
+        .. versionadded:: 2019.2.0
+        .. versionchanged:: TBD
 
-    Add an IP address, and optionally attach it to an interface.
+        Create an IP Address in Netbox and assign it to a device or
+        virtual machine.
 
-    ip_address
-        The IP address and CIDR, e.g., ``192.168.1.1/24``
-    family
-        Integer of IP family, e.g., ``4``
-    device
-        The name of the device to attach IP to, e.g., ``edge_router``
-    interface
-        The name of the interface to attach IP to, e.g., ``ae13``
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion netbox.create_ipaddress 192.168.1.1/24 4 device=edge_router interface=ae13
+        address
+            IPv4 or IPv6 address (with mask)
+        vrf : None
+            The VRF where the address resides.
+        tenant : None
+            The tenant the address belongs to.
+        status: None
+            The status of the address. Should be one of:
+            - active (Default)
+            - reserved
+            - deprecated
+            - dhcp
+            - slaac
+        role : None
+            The role of the address. When set, should be one of:
+            - loopback
+            - secondary
+            - anycast
+            - vip
+            - vrrp
+            - hsrp
+            - glbp
+            - carp
+        device : None
+            Assign the address to this device. This kwarg is mutual exclusive with
+            the kwarg "virtual_machine".
+        virtual_machine: None
+            Assign the address to this virtual machine. this kwarg is mutual exclusive
+            with the kwarg "device",
+        cluster : None
+            In addition to "virtual_machine" users can also supply a "cluster" to
+            specificly target a single virtual machine.
+        nat_inside : None
+            # TODO: How to tell this in a more eloquent way.
+            Specify an IP Address where the new newly created ip address acts as
+            the mask in network masquarading.
+        dns_name : None
+            The dns name given to this IP Address.
+        description : None
+            A description for this IP Address
+        fail_on_unassigned_address : bool
+            Fail when trying to create an IP Address that is already defined but
+            not yet assigned to a device or virtual machine.
+            Set this option to ``False`` to overwrite the currently defined IP Address
+            with arguments suplied to this execution module.
     """
-    nb_addr = None
-    payload = {"family": family, "address": ip_address}
-    if interface and device:
-        nb_device = get_("dcim", "devices", name=device)
-        if not nb_device:
+    # Check if address is already defined in netbox.
+    # If so:
+    #   - see if it is assigned to an object -> Error
+    #   - see if user wants to fail on already defined addreses -> Error
+    nb_addr = _get(
+        "ipam",
+        "ip-addresses",
+        auth_required=True,
+        address=address,
+        vrf=vrf,
+    )
+    if nb_addr:
+        msg="Address {} is already defined".format(address)
+        log.warning(msg)
+        if nb_addr['assigned_object']:
+            msg="Address {} is already assigned to a {} with id {}".format(
+                address,
+                nb_addr['assigned_object_type'],
+                nb_addr['assigned_object_id']
+            )
+            log.error(msg)
             return False
-        nb_interface = get_(
-            "dcim", "interfaces", device_id=nb_device["id"], name=interface
-        )
-        if not nb_interface:
+        if fail_on_unassigned_address:
+            log.error("fail_on_unassigned_address is set to true")
             return False
-        nb_addr = get_(
-            "ipam",
-            "ip-addresses",
-            q=ip_address,
-            interface_id=nb_interface["id"],
-            family=family,
-        )
-        if nb_addr:
-            log.error(nb_addr)
+
+    # Fetch the specified vm or device and store it in nb_object:
+    app = ""
+    endpoint = ""
+    search_kwargs = {}
+    # check not working in both entered screnario
+    if not (device or virtual_machine):
+        log.error("Either device or virtual_machine must be supplied.")
+        return False
+
+    if device:
+        app = "dcim"
+        endpoint = "devices"
+        search_kwargs['name'] = device
+        search_kwargs['tenant'] = tenant
+    if virtual_machine:
+        app = "virtualization"
+        endpoint = "virtual_machines"
+        search_kwargs['name'] = virtual_machine
+        search_kwargs['tenant'] = tenant
+        search_kwargs['cluster'] = cluster
+
+    nb_object = get_(app, endpoint, **search_kwargs)
+    if not nb_object:
+        log.error("No device or virtual_machine found.")
+        return False
+
+    # Fetch the specified interface name from nb_object and
+    # store it in nb_object_iface
+    search_kwargs={'name': interface}
+    if device:
+        search_kwargs['device_id'] = nb_object['id']
+    elif virtual_machine:
+        search_kwargs['virtual_machine_id'] = nb_object['id']
+    nb_object_iface = get_(app, "interfaces", **search_kwargs)
+    if not nb_object_iface:
+        msg = "No interface {} found for {}".format(interface, nb_object['name'])
+        log.error(msg)
+        return False
+
+    # Construct the configuration for the interface.
+    payload = {}
+    payload['address'] = address
+    if vrf:
+        nb_vrf = get_("ipam", "vrfs", name=vrf)
+        if not nb_vrf:
+            log.error('No such vrf: {}'.format(vrf))
             return False
-        else:
-            payload["interface"] = nb_interface["id"]
-    ipaddr = _add("ipam", "ip-addresses", payload)
-    if ipaddr:
-        return {"ipam": {"ip-addresses": payload}}
+        payload['vrf'] = nb_vrf['id']
+    if tenant:
+        # note "q=tenant" "name=" seems buggy in pynetbox
+        nb_tenant = get_("tenancy", "tenants", q=tenant)
+        if not nb_tenant:
+            log.error('No such tenant: {}'.format(tenant))
+            return False
+        payload['tenant'] = nb_tenant['id']
+    if status:
+        valid_options = ['active', 'reserved', 'deprecated', 'dhcp', 'slaac']
+        if status not in valid_options:
+            log.error('No such status {}, choose one of {}'.format(
+                status,
+                valid_options
+                ))
+            return False
+        payload['status'] = status
+    if role:
+        valid_options = [
+            'loopback',
+            'secondary',
+            'anycast',
+            'vip',
+            'vrrp',
+            'hsrp',
+            'glbp',
+            'carp',
+        ]
+        if role not in valid_options:
+            log.error('No such role {}, choose one of {}'.format(role, valid_options))
+            return False
+        payload['role'] = role
+    if nat_inside:
+        nb_inside_addr = get_("ipam", "ip-addresses", address=nat_inside)
+        if not nb_inside_addr:
+            log.error(
+                'IP address {} not found as nat inside address'.format(nat_inside)
+            )
+            return False
+        payload['nat_inside'] = nb_inside_addr['id']
+    if dns_name:
+        payload['dns_name'] = dns_name
+    if description:
+        payload['description'] = description
+    if device:
+        payload['assigned_object_type'] = 'dcim.interface'
+        payload['assigned_object_id'] = nb_object['id']
+    if virtual_machine:
+        payload['assigned_object_type'] = 'virtualization.vminterface'
+        payload['assigned_object_id'] = nb_object_iface['id']
+
+    # If we didn't found a nb_addr in the beginning of this function, create one
+    if not nb_addr:
+        _add("ipam","ip-addresses", payload)
     else:
-        return ipaddr
+        for k, v in payload.items():
+            setattr(nb_addr, k, v)
+        nb_addr.save()
+
+    # Fetch the address object from netbox and return it.
+    nb_addr = get_(
+        "ipam",
+        "ip-addresses",
+        address=address,
+        vrf=vrf,
+    )
+    return nb_addr
+
 
 
 def delete_ipaddress(ipaddr_id):
@@ -1177,3 +1337,217 @@ def create_circuit_termination(
             }
         else:
             return circuit_termination
+
+def create_virtual_machine(
+        name,
+        cluster,
+        status=None,
+        role=None,
+        tenant=None,
+        platform=None,
+        vcpus=None,
+        memory=None,
+        disk=None,
+        comments=None
+    ):
+    """
+    .. versionadded:: TBD
+
+    Create a new device with a name, role, model, manufacturer and site.
+    All these components need to be already in Netbox.
+
+    name
+        The name of the virtual_machine, e.g., ``gibson01``
+    cluster
+        Name of the cluster id, e.g., ``oVirt SuperCluster``
+    status : None
+        Status of the virtual_machine, e.g., ``staged``
+        Must be one of:
+            * active (Default)
+            * offline
+            * planned
+            * staged
+            * failed
+            * decommissioning
+    role : None
+        Virtual Machine Role, e.g., ``Gibson``
+    tenant : None
+        Name of the tenant the virtual machine belongs to.
+    platform : None
+        Name of the platform running on the virtual machine, e.g., ``OS/2 Warp``
+    vcpus : None
+        Number of virtual cpu's assigned to the virtual machine, e.g., ``8``
+    memory : None
+        Amount of memory in MB assigned to the virtual machine, e.g., ``4096``
+    disk : None
+        Amount of disk space assigned to the virtual machine in GB, e.g., ``500``
+    comments : None
+        Commentary for the virtual machine, e.g., ``Located near the pool on the roof. Tell him about the pool, kate.``
+
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion netbox.create_virtual_machine gibson01 "ovirt SuperCluster"
+    """
+    additional_payload = {}
+
+    try:
+        nb_cluster = get_("virtualization", "clusters", name=cluster)
+        if not nb_cluster:
+            return False
+        valid_status_types = ['offline', 'active', 'planned', 'staged', 'failed', 'decommissioning']
+        if status in valid_status_types:
+            additional_payload['status'] = status
+        elif status:
+            log.error('Illegal status type: "{}". Allowed status types: {}'.format(status, valid_status_types))
+            return False
+        if role:
+            nb_vm_role = get_("dcim", "device_roles", name=role)
+            if not nb_vm_role:
+                log.error('Could not retrieve role "{}"'.format(role))
+                return False
+            additional_payload['role'] = nb_vm_role['id']
+        if tenant:
+            nb_tenant = get_("tenancy", "tenants", name=tenant)
+            if not nb_tenant:
+                log.error('Could not retrieve tenant "{}"'.format(tenant))
+                return False
+            additional_payload['tenant'] = nb_tenant['id']
+        if vcpus:
+            additional_payload['vcpus'] = vcpus
+        if memory:
+            additional_payload['memory'] = memory
+        if disk:
+            additional_payload['disk'] = disk
+        if comments:
+            additional_payload['comments'] = comments
+
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        return False
+
+    payload = {
+        "name": name,
+        "display_name": name,
+        "slug": slugify(name),
+        "cluster": nb_cluster["id"],
+    }
+
+    payload.update(additional_payload)
+
+    new_vm = _add("virtualization", "virtual_machines", payload)
+    if new_vm:
+        return {"virtualization": {"virtual_machine": payload}}
+    else:
+        return False
+
+def create_virtual_machine_interface(
+            name,
+            vm_name,
+            cluster=None,
+            tenant=None,
+            enabled=True,
+            parent=None,
+            mtu=None,
+            mac_address=None,
+            description=None,
+            mode=None,
+            untagged_vlan=None,
+            tagged_vlans=None,
+            ):
+    """
+    .. versionadded:: TBD
+
+    Create a new interface assigned to a virtual_machine.
+
+    name
+        The name of the interface, e.g., ``eth0``
+    vm_name
+        Name of the virtual_machine the interface belongs to, ``gibson01``
+    cluster : None
+        The name of the virtualization cluster where the virtual machine resides, e.g., ``oVirt - Cluster3``
+        TODO: bug in pynetbox API?: cannot filter by cluster.
+    tenant : None
+        The name of the tenant the virtual_machine belongs to, e.g., ``cyberdelia``
+        note: This MUST be given as lowercase.
+    parent: None
+        The parent interface this interface belongs to, e.g., ``eth0``
+    mtu : None
+        MTU size of the interface. e.g., ``9000``
+    mac_address : None
+        The MAC Address of the interface. e.g., ``00:11:22:33:44:55``
+    description : None
+        A description for the interface. e.g., ``It's a privilege not a right.``
+    mode : None
+        The mode of the interface, when set, must be one of "access", "tagged", "tagged-all".
+    untagged_vlan : None
+        The untagged VLAN assigned to this interface. Specify VLAN by vlan number.
+    tagged_vlans : None
+        The tagged VLAN's assigned to this interface. Specify VLAN's as a list of vlan numbers.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion netbox.create_virtual_machine_interface eth0 gibson01
+    """
+
+    try:
+        nb_vm = get_(
+                "virtualization",
+                "virtual_machines",
+                name=vm_name,
+                tenant=tenant,
+                cluster=cluster
+            )
+
+        if not nb_vm:
+            log.error('No Virtual Machine found named {} filtered by tenant {} and cluster {}'.format(vm_name, tenant, cluster))
+            return False
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        return False
+
+    optional_payload = {}
+
+    if mtu:
+        optional_payload['mtu'] = mtu
+    if description:
+        optional_payload['description'] = description
+    if mac_address:
+        optional_payload['mac_address'] = mac_address
+    if parent:
+        parent_iface = get_("virtualization", "interfaces", name=parent, virtual_machine_id=nb_vm['id'])
+        optional_payload['parent'] = parent_iface['id']
+    if not enabled:
+        optional_payload['enabled'] = False
+    if mode in ['access', 'tagged', 'tagged-all']:
+        optional_payload['mode'] = mode
+    elif mode:
+        log.error('Illegal mode, must be one of "access", tagged", "tagged-all".')
+    if untagged_vlan:
+        vlan = get_('ipam', 'vlans', vid=untagged_vlan )
+        optional_payload['untagged_vlan'] = vlan['id']
+    if tagged_vlans:
+        vlan_ids = []
+        for vlan in tagged_vlans:
+            vlan = get_('ipam', 'vlans', vid=vlan)
+            vlan_ids.append(vlan['id'])
+
+        optional_payload['tagged_vlans'] = vlan_ids
+
+    payload = {
+        "name": name,
+        "mtu": mtu,
+        "virtual_machine": nb_vm['id'],
+    }
+
+    payload.update(optional_payload)
+
+    new_vm = _add("virtualization", "interfaces", payload)
+    if new_vm:
+        return {"virtualization": {"interfaces": payload}}
+    else:
+        return False
