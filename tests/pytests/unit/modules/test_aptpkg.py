@@ -20,7 +20,7 @@ from salt.exceptions import (
     CommandNotFoundError,
     SaltInvocationError,
 )
-from tests.support.mock import MagicMock, Mock, call, patch
+from tests.support.mock import MagicMock, Mock, call, mock_open, patch
 
 try:
     from aptsources import sourceslist  # pylint: disable=unused-import
@@ -1108,3 +1108,50 @@ SERVICE:cups-daemon,390,/usr/sbin/cupsd
             "cups-daemon",
             "rsyslog",
         ]
+
+
+def test_sourceslist_multiple_comps():
+    """
+    Test SourcesList when repo has multiple comps
+    """
+    repo_line = "deb http://archive.ubuntu.com/ubuntu/ focal-updates main restricted"
+    with patch.object(aptpkg, "HAS_APT", return_value=True):
+        with patch("salt.utils.files.fopen", mock_open(read_data=repo_line)):
+            with patch("pathlib.Path.is_file", side_effect=[True, False]):
+                sources = aptpkg.SourcesList()
+                for source in sources:
+                    assert source.type == "deb"
+                    assert source.uri == "http://archive.ubuntu.com/ubuntu/"
+                    assert source.comps == ["main", "restricted"]
+                    assert source.dist == "focal-updates"
+
+
+@pytest.mark.parametrize(
+    "repo_line",
+    [
+        "deb [ arch=amd64 ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+        "deb [arch=amd64 ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+        "deb [arch=amd64 test=one ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+        "deb [arch=amd64,armel test=one ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+        "deb [ arch=amd64,armel test=one ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+        "deb [ arch=amd64,armel test=one] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+        "deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+    ],
+)
+def test_sourceslist_architectures(repo_line):
+    """
+    Test SourcesList when architectures is in repo
+    """
+    with patch.object(aptpkg, "HAS_APT", return_value=True):
+        with patch("salt.utils.files.fopen", mock_open(read_data=repo_line)):
+            with patch("pathlib.Path.is_file", side_effect=[True, False]):
+                sources = aptpkg.SourcesList()
+                for source in sources:
+                    assert source.type == "deb"
+                    assert source.uri == "http://archive.ubuntu.com/ubuntu/"
+                    assert source.comps == ["main", "restricted"]
+                    assert source.dist == "focal-updates"
+                    if "," in repo_line:
+                        assert source.architectures == ["amd64", "armel"]
+                    else:
+                        assert source.architectures == ["amd64"]

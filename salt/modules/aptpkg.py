@@ -175,13 +175,12 @@ if not HAS_APT:
             if repo_line[0] not in ["deb", "deb-src", "rpm", "rpm-src"]:
                 self.invalid = True
                 return False
-            self.architectures = []
             if repo_line[1].startswith("["):
                 opts = re.search(r"\[.*\]", self.line).group(0).strip("[]")
-                repo_line = [x for x in repo_line if x.strip("[]")]
+                repo_line = [x.strip("[]") for x in repo_line if x.strip("[]")]
                 for opt in opts.split():
                     if opt.startswith("arch"):
-                        self.architectures = opt.split("=", 1)[1]
+                        self.architectures.extend(opt.split("=", 1)[1].split(","))
                     try:
                         repo_line.pop(repo_line.index(opt))
                     except ValueError:
