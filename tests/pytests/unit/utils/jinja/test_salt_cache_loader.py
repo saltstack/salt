@@ -21,14 +21,14 @@ from tests.support.mock import Mock, patch
 
 
 @pytest.fixture
-def minion_opts(tmpdir):
+def minion_opts(tmp_path):
     _opts = salt.config.DEFAULT_MINION_OPTS.copy()
     _opts.update(
         {
             "file_buffer_size": 1048576,
-            "cachedir": tmpdir.strpath,
-            "file_roots": {"test": [tmpdir.join("files/test").strpath]},
-            "pillar_roots": {"test": [tmpdir.join("files/test").strpath]},
+            "cachedir": str(tmp_path),
+            "file_roots": {"test": [str(tmp_path / "files" / "test")]},
+            "pillar_roots": {"test": [str(tmp_path / "files" / "test")]},
             "extension_modules": os.path.join(
                 os.path.dirname(os.path.abspath(__file__)), "extmods"
             ),
@@ -43,7 +43,7 @@ def hello_simple(template_dir):
 """
 
     with pytest.helpers.temp_file(
-        "hello_simple", directory=template_dir.strpath, contents=contents
+        "hello_simple", directory=template_dir, contents=contents
     ) as hello_simple_filename:
         yield hello_simple_filename
 
@@ -53,14 +53,15 @@ def hello_include(template_dir):
     contents = """{% include 'hello_import' -%}"""
 
     with pytest.helpers.temp_file(
-        "hello_include", directory=template_dir.strpath, contents=contents
+        "hello_include", directory=template_dir, contents=contents
     ) as hello_include_filename:
         yield hello_include_filename
 
 
 @pytest.fixture
 def relative_dir(template_dir):
-    relative_dir = template_dir.mkdir("relative")
+    relative_dir = template_dir / "relative"
+    relative_dir.mkdir()
     return relative_dir
 
 
@@ -71,7 +72,7 @@ def relative_rhello(relative_dir):
 """
 
     with pytest.helpers.temp_file(
-        "rhello", directory=relative_dir.strpath, contents=contents
+        "rhello", directory=relative_dir, contents=contents
     ) as relative_rhello:
         yield relative_rhello
 
@@ -85,7 +86,7 @@ def relative_rmacro(relative_dir):
 """
 
     with pytest.helpers.temp_file(
-        "rmacro", directory=relative_dir.strpath, contents=contents
+        "rmacro", directory=relative_dir, contents=contents
     ) as relative_rmacro:
         yield relative_rmacro
 
@@ -96,7 +97,7 @@ def relative_rescape(relative_dir):
 """
 
     with pytest.helpers.temp_file(
-        "rescape", directory=relative_dir.strpath, contents=contents
+        "rescape", directory=relative_dir, contents=contents
     ) as relative_rescape:
         yield relative_rescape
 
@@ -125,14 +126,14 @@ def get_test_saltenv(get_loader):
     return loader._file_client, jinja
 
 
-def test_searchpath(minion_opts, get_loader, tmpdir):
+def test_searchpath(minion_opts, get_loader, tmp_path):
     """
     The searchpath is based on the cachedir option and the saltenv parameter
     """
     opts = copy.deepcopy(minion_opts)
-    opts.update({"cachedir": tmpdir.strpath})
+    opts.update({"cachedir": str(tmp_path)})
     loader = get_loader(opts=minion_opts, saltenv="test")
-    assert loader.searchpath == [tmpdir.join("files/test").strpath]
+    assert loader.searchpath == [str(tmp_path / "files" / "test")]
 
 
 def test_mockclient(minion_opts, template_dir, hello_simple, get_loader):
