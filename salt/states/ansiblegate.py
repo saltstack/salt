@@ -185,19 +185,13 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
             name, rundir=rundir, check=True, diff=True, **ansible_kwargs
         )
         if all(
-            not check["changed"]
-            and not check["failures"]
-            and not check["unreachable"]
-            and not check["skipped"]
+            not check["changed"] and not check["failures"] and not check["unreachable"]
             for check in checks["stats"].values()
         ):
             ret["comment"] = "No changes to be made from playbook {}".format(name)
             ret["result"] = True
         elif any(
-            check["changed"]
-            and not check["failures"]
-            and not check["unreachable"]
-            and not check["skipped"]
+            check["changed"] and not check["failures"] and not check["unreachable"]
             for check in checks["stats"].values()
         ):
             ret["comment"] = "Changes will be made from playbook {}".format(name)
@@ -214,10 +208,7 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
             name, rundir=rundir, diff=True, **ansible_kwargs
         )
         if all(
-            not check["changed"]
-            and not check["failures"]
-            and not check["unreachable"]
-            and not check["skipped"]
+            not check["changed"] and not check["failures"] and not check["unreachable"]
             for check in results["stats"].values()
         ):
             ret["comment"] = "No changes to be made from playbook {}".format(name)
@@ -226,9 +217,7 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
         else:
             ret["changes"] = _changes(results)
             ret["result"] = all(
-                not check["failures"]
-                and not check["unreachable"]
-                and not check["skipped"]
+                not check["failures"] and not check["unreachable"]
                 for check in results["stats"].values()
             )
             if ret["result"]:
