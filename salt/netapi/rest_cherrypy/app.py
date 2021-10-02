@@ -966,8 +966,18 @@ def urlencoded_processor(entity):
         urlencoded = urlencoded.decode("utf-8")
     except (UnicodeDecodeError, AttributeError):
         pass
+    logger.debug("Raw request body: %s", urlencoded)
     cherrypy.serving.request.raw_body = urlencoded
-    cherrypy.serving.request.unserialized_data = dict(parse_qsl(urlencoded))
+    unserialized_data = {}
+    for key, val in parse_qsl(urlencoded):
+        unserialized_data.setdefault(key, []).append(val)
+    for key, val in unserialized_data.items():
+        if len(val) == 1:
+            unserialized_data[key] = val[0]
+        if len(val) == 0:
+            unserialized_data[key] = ""
+    cherrypy.serving.request.unserialized_data = unserialized_data
+    logger.debug("Unserialized request data: %s", unserialized_data)
 
 
 @process_request_body
