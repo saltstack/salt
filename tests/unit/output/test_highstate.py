@@ -220,3 +220,102 @@ class JsonNestedTestCase(TestCase, LoaderModuleMockMixin):
         self.assertIn("              Succeeded: 2 (changed=1)", ret)
         self.assertIn("              Failed:    0", ret)
         self.assertIn("              Total states run:     2", ret)
+
+
+class HighstatePercentTestCase(TestCase, LoaderModuleMockMixin):
+    """
+    Test cases for salt.output.highstate with state_output_pct set to True
+    """
+
+    def setup_loader_modules(self):
+        return {
+            highstate: {
+                "__opts__": {
+                    "extension_modules": "",
+                    "optimization_order": [0, 1, 2],
+                    "color": False,
+                    "state_output_pct": True,
+                }
+            }
+        }
+
+    def setUp(self):
+        self.data = {
+            "data": {
+                "master": {
+                    "salt_|-call_sleep_state_|-call_sleep_state_|-state": {
+                        "__id__": "call_sleep_state",
+                        "__jid__": "20170418153529810135",
+                        "__run_num__": 0,
+                        "__sls__": "orch.simple",
+                        "changes": {
+                            "out": "highstate",
+                            "ret": {
+                                "minion": {
+                                    "module_|-simple-ping_|-test.ping_|-run": {
+                                        "__id__": "simple-ping",
+                                        "__run_num__": 0,
+                                        "__sls__": "simple-ping",
+                                        "changes": {"ret": True},
+                                        "comment": "Module function test.ping executed",
+                                        "duration": 56.179,
+                                        "name": "test.ping",
+                                        "result": True,
+                                        "start_time": "15:35:31.282099",
+                                    }
+                                },
+                                "sub_minion": {
+                                    "module_|-simple-ping_|-test.ping_|-run": {
+                                        "__id__": "simple-ping",
+                                        "__run_num__": 0,
+                                        "__sls__": "simple-ping",
+                                        "changes": {"ret": True},
+                                        "comment": "Module function test.ping executed",
+                                        "duration": 54.103,
+                                        "name": "test.ping",
+                                        "result": True,
+                                        "start_time": "15:35:31.005606",
+                                    }
+                                },
+                            },
+                        },
+                        "comment": (
+                            "States ran successfully. Updating sub_minion, minion."
+                        ),
+                        "duration": 1638.047,
+                        "name": "call_sleep_state",
+                        "result": True,
+                        "start_time": "15:35:29.762657",
+                    },
+                    "salt_|-cmd_run_example_|-cmd.run_|-function": {
+                        "__id__": "cmd_run_example",
+                        "__jid__": "20200411195112288850",
+                        "__run_num__": 1,
+                        "__sls__": "orch.simple",
+                        "changes": {
+                            "out": "highstate",
+                            "ret": {"minion": "file1\nfile2\nfile3"},
+                        },
+                        "comment": (
+                            "Function ran successfully. Function cmd.run ran on minion."
+                        ),
+                        "duration": 412.397,
+                        "name": "cmd.run",
+                        "result": True,
+                        "start_time": "21:51:12.185868",
+                    },
+                }
+            },
+            "outputter": "highstate",
+            "retcode": 0,
+        }
+        self.addCleanup(delattr, self, "data")
+
+    def test_default_output(self):
+        ret = highstate.output(self.data)
+        self.assertIn("Succeeded: 1 (changed=1)", ret)
+        self.assertIn("Failed:    0", ret)
+        self.assertIn("Success %: 100.0", ret)
+        self.assertIn("Failure %: 0.0", ret)
+        self.assertIn("Total states run:     1", ret)
+        self.assertIn("                  file2", ret)
