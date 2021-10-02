@@ -1,0 +1,1 @@
+fixed issue where multiple args to netapi were not preserved
