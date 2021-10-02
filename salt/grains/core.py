@@ -1117,6 +1117,8 @@ def _virtual(osdata):
                 grains["virtual"] = "OpenStack"
             if maker.startswith("Bochs"):
                 grains["virtual"] = "kvm"
+            if maker.startswith("Amazon EC2"):
+                grains["virtual"] = "Nitro"
         if sysctl:
             hv_vendor = __salt__["cmd.run"]("{} -n hw.hv_vendor".format(sysctl))
             model = __salt__["cmd.run"]("{} -n hw.model".format(sysctl))
