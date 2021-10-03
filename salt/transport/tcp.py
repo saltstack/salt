@@ -198,7 +198,7 @@ class ResolverMixin:
             self._config_resolver()
 
 
-class AsyncTCPPubChannel(ResolverMixin):
+class TCPPubClient(ResolverMixin):
     async_methods = [
         "send_id",
         "connect_callback",
@@ -276,7 +276,7 @@ class AsyncTCPPubChannel(ResolverMixin):
         self.close()
 
 
-class TCPReqServerChannel:
+class TCPReqServer(salt.transport.base.RequestServer):
 
     # TODO: opts!
     backlog = 5
@@ -320,14 +320,14 @@ class TCPReqServerChannel:
                 )
             self.req_server = None
 
-    # pylint: disable=W1701
-    def __del__(self):
-        self.close()
+    ## pylint: disable=W1701
+    # def __del__(self):
+    #    self.close()
 
-    # pylint: enable=W1701
+    ## pylint: enable=W1701
 
-    def __enter__(self):
-        return self
+    # def __enter__(self):
+    #    return self
 
     def __exit__(self, *args):
         self.close()
@@ -363,7 +363,7 @@ class TCPReqServerChannel:
             if USE_LOAD_BALANCER:
                 self.req_server = LoadBalancerWorker(
                     self.socket_queue,
-                    message_handler,
+                    self.handle_message,
                     ssl_options=self.opts.get("ssl"),
                 )
             else:
@@ -385,22 +385,9 @@ class TCPReqServerChannel:
 
     @salt.ext.tornado.gen.coroutine
     def handle_message(self, stream, payload, header=None):
-        stream = self.wrap_stream(stream)
         payload = self.decode_payload(payload)
-        yield self.message_handler(payload, send_reply=stream.send, header=header)
-
-    def wrap_stream(self, stream):
-        class Stream:
-            def __init__(self, stream):
-                self.stream = stream
-
-            @salt.ext.tornado.gen.coroutine
-            def send(self, payload, header=None):
-                self.stream.write(
-                    salt.transport.frame.frame_msg(payload, header=header)
-                )
-
-        return Stream(stream)
+        reply = yield self.message_handler(payload)
+        stream.write(salt.transport.frame.frame_msg(reply, header=header))
 
     def decode_payload(self, payload):
         return payload
@@ -444,7 +431,7 @@ class SaltMessageServer(salt.ext.tornado.tcpserver.TCPServer):
             log.trace("req client disconnected %s", address)
             self.remove_client((stream, address))
         except Exception as e:  # pylint: disable=broad-except
-            log.trace("other master-side exception: %s", e)
+            log.trace("other master-side exception: %s", e, exc_info=True)
             self.remove_client((stream, address))
             stream.close()
 
@@ -960,7 +947,7 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
         log.trace("TCP PubServer finished publishing payload")
 
 
-class TCPPubServerChannel:
+class TCPPublishServer(salt.transport.base.PublishServer):
     # TODO: opts!
     # Based on default used in salt.ext.tornado.netutil.bind_sockets()
     backlog = 128
@@ -1070,14 +1057,14 @@ class TCPPubServerChannel:
         pub_sock.send(payload)
 
 
-class TCPReqChannel(ResolverMixin):
+class TCPReqClient(ResolverMixin):
 
     ttype = "tcp"
 
-    def __init__(self, opts, master_uri, io_loop, **kwargs):
+    def __init__(self, opts, io_loop, **kwargs):
         super().__init__()
         self.opts = opts
-        self.master_uri = master_uri
+        # self.master_uri = master_uri
         self.io_loop = io_loop
         parse = urllib.parse.urlparse(self.opts["master_uri"])
         master_host, master_port = parse.netloc.rsplit(":", 1)

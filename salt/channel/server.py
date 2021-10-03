@@ -49,36 +49,13 @@ class ReqServerChannel:
 
     @classmethod
     def factory(cls, opts, **kwargs):
-        # Default to ZeroMQ for now
-        ttype = "zeromq"
-
-        # determine the ttype
-        if "transport" in opts:
-            ttype = opts["transport"]
-        elif "transport" in opts.get("pillar", {}).get("master", {}):
-            ttype = opts["pillar"]["master"]["transport"]
-
-        # switch on available ttypes
-        if ttype == "zeromq":
-            import salt.transport.zeromq
-
-            transport = salt.transport.zeromq.ZeroMQReqServerChannel(opts)
-        elif ttype == "tcp":
-            import salt.transport.tcp
-
-            transport = salt.transport.tcp.TCPReqServerChannel(opts)
-        elif ttype == "local":
-            import salt.transport.local
-
-            transport = salt.transport.local.LocalServerChannel(opts)
-        else:
-            raise Exception("Channels are only defined for ZeroMQ and TCP")
-            # return NewKindOfChannel(opts, **kwargs)
+        transport = salt.transport.request_server(opts, **kwargs)
         return cls(opts, transport)
 
     def __init__(self, opts, transport):
         self.opts = opts
         self.transport = transport
+        self.event = None
 
     def pre_fork(self, process_manager):
         """
@@ -136,7 +113,7 @@ class ReqServerChannel:
         self.transport.post_fork(self.handle_message, io_loop)
 
     @salt.ext.tornado.gen.coroutine
-    def handle_message(self, payload, send_reply=None, header=None):
+    def handle_message(self, payload):
         try:
             payload = self._decode_payload(payload)
         except Exception as exc:  # pylint: disable=broad-except
@@ -150,8 +127,7 @@ class ReqServerChannel:
                 )
             else:
                 log.error("Bad load from minion: %s: %s", exc_type, exc)
-            yield send_reply("bad load", header)
-            raise salt.ext.tornado.gen.Return()
+            raise salt.ext.tornado.gen.Return("bad load")
 
         # TODO helper functions to normalize payload?
         if not isinstance(payload, dict) or not isinstance(payload.get("load"), dict):
@@ -160,25 +136,23 @@ class ReqServerChannel:
                 payload,
                 payload.get("load"),
             )
-            yield send_reply("payload and load must be a dict", header)
-            raise salt.ext.tornado.gen.Return()
+            raise salt.ext.tornado.gen.Return("payload and load must be a dict")
 
         try:
             id_ = payload["load"].get("id", "")
             if "\0" in id_:
                 log.error("Payload contains an id with a null byte: %s", payload)
-                yield send_reply("bad load: id contains a null byte", header)
-                raise salt.ext.tornado.gen.Return()
+                raise salt.ext.tornado.gen.Return("bad load: id contains a null byte")
         except TypeError:
             log.error("Payload contains non-string id: %s", payload)
-            yield send_reply("bad load: id {} is not a string".format(id_), header)
-            raise salt.ext.tornado.gen.Return()
+            raise salt.ext.tornado.gen.Return(
+                "bad load: id {} is not a string".format(id_)
+            )
 
         # intercept the "_auth" commands, since the main daemon shouldn't know
         # anything about our key auth
         if payload["enc"] == "clear" and payload.get("load", {}).get("cmd") == "_auth":
-            yield send_reply(self._auth(payload["load"]), header)
-            raise salt.ext.tornado.gen.Return()
+            raise salt.ext.tornado.gen.Return(self._auth(payload["load"]))
 
         # TODO: test
         try:
@@ -187,29 +161,25 @@ class ReqServerChannel:
             ret, req_opts = yield self.payload_handler(payload)
         except Exception as e:  # pylint: disable=broad-except
             # always attempt to return an error to the minion
-            yield send_reply("Some exception handling minion payload", header)
             log.error("Some exception handling a payload from minion", exc_info=True)
-            raise salt.ext.tornado.gen.Return()
+            raise salt.ext.tornado.gen.Return("Some exception handling minion payload")
 
         req_fun = req_opts.get("fun", "send")
         if req_fun == "send_clear":
-            yield send_reply(ret, header)
+            raise salt.ext.tornado.gen.Return(ret)
         elif req_fun == "send":
-            yield send_reply(self.crypticle.dumps(ret), header)
+            raise salt.ext.tornado.gen.Return(self.crypticle.dumps(ret))
         elif req_fun == "send_private":
-            yield send_reply(
+            raise salt.ext.tornado.gen.Return(
                 self._encrypt_private(
                     ret,
                     req_opts["key"],
                     req_opts["tgt"],
                 ),
-                header,
             )
-        else:
-            log.error("Unknown req_fun %s", req_fun)
-            # always attempt to return an error to the minion
-            yield send_reply("Server-side exception handling payload", header)
-        raise salt.ext.tornado.gen.Return()
+        log.error("Unknown req_fun %s", req_fun)
+        # always attempt to return an error to the minion
+        salt.ext.tornado.Return("Server-side exception handling payload")
 
     def _encrypt_private(self, ret, dictkey, target):
         """
@@ -643,7 +613,9 @@ class ReqServerChannel:
         return ret
 
     def close(self):
-        return self.transport.close()
+        self.transport.close()
+        if self.event is not None:
+            self.event.destroy()
 
 
 class PubServerChannel:
@@ -653,15 +625,6 @@ class PubServerChannel:
 
     @classmethod
     def factory(cls, opts, **kwargs):
-        # Default to ZeroMQ for now
-        ttype = "zeromq"
-
-        # determine the ttype
-        if "transport" in opts:
-            ttype = opts["transport"]
-        elif "transport" in opts.get("pillar", {}).get("master", {}):
-            ttype = opts["pillar"]["master"]["transport"]
-
         presence_events = False
         if opts.get("presence_events", False):
             tcp_only = True
@@ -673,22 +636,7 @@ class PubServerChannel:
                 # be handled here. Otherwise, it will be handled in the
                 # 'Maintenance' process.
                 presence_events = True
-
-        # switch on available ttypes
-        if ttype == "zeromq":
-            import salt.transport.zeromq
-
-            transport = salt.transport.zeromq.ZeroMQPubServerChannel(opts, **kwargs)
-        elif ttype == "tcp":
-            import salt.transport.tcp
-
-            transport = salt.transport.tcp.TCPPubServerChannel(opts)
-        elif ttype == "local":  # TODO:
-            import salt.transport.local
-
-            transport = salt.transport.local.LocalPubServerChannel(opts, **kwargs)
-        else:
-            raise Exception("Channels are only defined for ZeroMQ and TCP")
+        transport = salt.transport.publish_server(opts, **kwargs)
         return cls(opts, transport, presence_events=presence_events)
 
     def __init__(self, opts, transport, presence_events=False):
