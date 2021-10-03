@@ -121,7 +121,7 @@ class RequestClient:
     """
 
     @salt.ext.tornado.gen.coroutine
-    def send(self, load, tries=3, timeout=60, raw=False):
+    def send(self, load, tries=3, timeout=60):
         """
         Send a request message and return the reply from the server.
         """

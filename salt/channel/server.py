@@ -49,6 +49,8 @@ class ReqServerChannel:
 
     @classmethod
     def factory(cls, opts, **kwargs):
+        if "master_uri" in kwargs:
+            opts["master_uri"] = kwargs["master_uri"]
         transport = salt.transport.request_server(opts, **kwargs)
         return cls(opts, transport)
 
@@ -625,6 +627,8 @@ class PubServerChannel:
 
     @classmethod
     def factory(cls, opts, **kwargs):
+        if "master_uri" in kwargs:
+            opts["master_uri"] = kwargs["master_uri"]
         presence_events = False
         if opts.get("presence_events", False):
             tcp_only = True

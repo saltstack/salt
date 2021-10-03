@@ -24,7 +24,7 @@ import salt.utils.zeromq
 import zmq.error
 import zmq.eventloop.zmqstream
 from salt._compat import ipaddress
-from salt.exceptions import SaltReqTimeoutError, SaltException
+from salt.exceptions import SaltException, SaltReqTimeoutError
 from salt.utils.zeromq import LIBZMQ_VERSION_INFO, ZMQ_VERSION_INFO, zmq
 
 try:
@@ -598,9 +598,7 @@ class AsyncReqMessageClient:
                 future.set_exception(SaltReqTimeoutError("Message timed out"))
 
     @salt.ext.tornado.gen.coroutine
-    def send(
-        self, message, timeout=None, tries=3, future=None, callback=None, raw=False
-    ):
+    def send(self, message, timeout=None, tries=3, future=None, callback=None):
         """
         Return a future which will be completed when the message has a response
         """
@@ -716,7 +714,13 @@ class PublishServer(salt.transport.base.PublishServer):
     def connect(self):
         return salt.ext.tornado.gen.sleep(5)
 
-    def publish_daemon(self, publish_payload, presence_callback=None, remove_presence_callback=None, **kwargs):
+    def publish_daemon(
+        self,
+        publish_payload,
+        presence_callback=None,
+        remove_presence_callback=None,
+        **kwargs
+    ):
         """
         This method represents the Publish Daemon process. It is intended to be
         run inn a thread or process as it creates and runs an it's own ioloop.
@@ -916,7 +920,7 @@ class RequestClient(salt.transport.base.RequestClient):
         )
 
     @salt.ext.tornado.gen.coroutine
-    def send(self, load, tries=3, timeout=60, raw=False):
+    def send(self, load, tries=3, timeout=60):
         ret = yield self.message_client.send(load, tries=tries, timeout=timeout)
         raise salt.ext.tornado.gen.Return(ret)
 
