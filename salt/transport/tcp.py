@@ -954,6 +954,7 @@ class TCPPublishServer(salt.transport.base.PublishServer):
 
     def __init__(self, opts):
         self.opts = opts
+        self.pub_pock = None
 
     @property
     def topic_support(self):
@@ -1040,7 +1041,7 @@ class TCPPublishServer(salt.transport.base.PublishServer):
         ret = yield self.pub_server.publish_payload(payload, *args)
         raise salt.ext.tornado.gen.Return(ret)
 
-    def publish(self, payload):
+    def publish(self, payload, **kwargs):
         """
         Publish "load" to minions
         """
@@ -1048,13 +1049,19 @@ class TCPPublishServer(salt.transport.base.PublishServer):
             pull_uri = int(self.opts.get("tcp_master_publish_pull", 4514))
         else:
             pull_uri = os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
-        pub_sock = salt.utils.asynchronous.SyncWrapper(
-            salt.transport.ipc.IPCMessageClient,
-            (pull_uri,),
-            loop_kwarg="io_loop",
-        )
-        pub_sock.connect()
-        pub_sock.send(payload)
+        if not self.pub_sock:
+            self.pub_sock = salt.utils.asynchronous.SyncWrapper(
+                salt.transport.ipc.IPCMessageClient,
+                (pull_uri,),
+                loop_kwarg="io_loop",
+            )
+            self.pub_sock.connect()
+        self.pub_sock.send(payload)
+
+    def close(self):
+        if self.pub_sock:
+            self.pub_sock.close()
+            self.pub_sock = None
 
 
 class TCPReqClient(ResolverMixin):
