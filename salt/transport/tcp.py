@@ -954,7 +954,7 @@ class TCPPublishServer(salt.transport.base.PublishServer):
 
     def __init__(self, opts):
         self.opts = opts
-        self.pub_pock = None
+        self.pub_sock = None
 
     @property
     def topic_support(self):
