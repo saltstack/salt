@@ -92,7 +92,7 @@ def test_clear_req_channel_master_uri_override(temp_salt_minion, temp_salt_maste
     with salt.transport.client.ReqChannel.factory(
         opts, master_uri=master_uri
     ) as channel:
-        assert "localhost" in channel.master_uri
+        assert "127.0.0.1" in channel.transport.message_client.addr
 
 
 def test_zeromq_async_pub_channel_publish_port(temp_salt_master):
@@ -114,12 +114,12 @@ def test_zeromq_async_pub_channel_publish_port(temp_salt_master):
     )
     opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
     ioloop = salt.ext.tornado.ioloop.IOLoop()
-    channel = salt.transport.zeromq.AsyncZeroMQPubChannel(opts, ioloop)
-    with channel:
+    transport = salt.transport.zeromq.PublishClient(opts, ioloop)
+    with transport:
         patch_socket = MagicMock(return_value=True)
         patch_auth = MagicMock(return_value=True)
-        with patch.object(channel, "_socket", patch_socket):
-            channel.connect(455505)
+        with patch.object(transport, "_socket", patch_socket):
+            transport.connect(455505)
     assert str(opts["publish_port"]) in patch_socket.mock_calls[0][1][0]
 
 
@@ -127,7 +127,7 @@ def test_zeromq_async_pub_channel_filtering_decode_message_no_match(
     temp_salt_master,
 ):
     """
-    test AsyncZeroMQPubChannel _decode_messages when
+    test zeromq PublishClient _decode_messages when
     zmq_filtering enabled and minion does not match
     """
     message = [
@@ -156,7 +156,7 @@ def test_zeromq_async_pub_channel_filtering_decode_message_no_match(
     opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
 
     ioloop = salt.ext.tornado.ioloop.IOLoop()
-    channel = salt.transport.zeromq.AsyncZeroMQPubChannel(opts, ioloop)
+    channel = salt.transport.zeromq.PublishClient(opts, ioloop)
     with channel:
         with patch(
             "salt.crypt.AsyncAuth.crypticle",
@@ -170,7 +170,7 @@ def test_zeromq_async_pub_channel_filtering_decode_message(
     temp_salt_master, temp_salt_minion
 ):
     """
-    test AsyncZeroMQPubChannel _decode_messages when zmq_filtered enabled
+    test AsyncZeroMQPublishClient _decode_messages when zmq_filtered enabled
     """
     minion_hexid = salt.utils.stringutils.to_bytes(
         hashlib.sha1(salt.utils.stringutils.to_bytes(temp_salt_minion.id)).hexdigest()
@@ -203,7 +203,7 @@ def test_zeromq_async_pub_channel_filtering_decode_message(
     opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
 
     ioloop = salt.ext.tornado.ioloop.IOLoop()
-    channel = salt.transport.zeromq.AsyncZeroMQPubChannel(opts, ioloop)
+    channel = salt.transport.zeromq.PublishClient(opts, ioloop)
     with channel:
         with patch(
             "salt.crypt.AsyncAuth.crypticle",
