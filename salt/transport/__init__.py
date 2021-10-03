@@ -6,6 +6,13 @@ Encapsulate the different transports available to Salt.
 import logging
 import warnings
 
+from salt.transport.base import (
+    publish_client,
+    publish_server,
+    request_client,
+    request_server,
+)
+
 log = logging.getLogger(__name__)
 
 # Suppress warnings when running with a very old pyzmq. This can be removed

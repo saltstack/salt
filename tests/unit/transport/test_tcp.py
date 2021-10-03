@@ -30,7 +30,7 @@ log = logging.getLogger(__name__)
 
 
 @skipIf(True, "Skip until we can devote time to fix this test")
-class AsyncPubChannelTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
+class AsyncPubServerTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
     """
     Tests around the publish system
     """
