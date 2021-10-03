@@ -100,7 +100,7 @@ def test_pub_server_channel_with_zmq_transport(io_loop, configs, process_manager
         io_loop.stop()
 
     try:
-        io_loop.add_callback(doit, pub_channel, server_channel)
+        io_loop.add_callback(doit, pub_channel, server_channel, received)
         io_loop.start()
         assert len(received) == 1
     finally:
