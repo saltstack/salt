@@ -1,4 +1,3 @@
-import ctypes
 import logging
 import multiprocessing
 import time
@@ -25,13 +24,10 @@ log = logging.getLogger(__name__)
 
 
 class Collector(salt.utils.process.SignalHandlingProcess):
-    def __init__(
-        self, minion_config, pub_uri, aes_key, timeout=30, zmq_filtering=False
-    ):
+    def __init__(self, minion_config, pub_uri, timeout=30, zmq_filtering=False):
         super().__init__()
         self.minion_config = minion_config
         self.pub_uri = pub_uri
-        self.aes_key = aes_key
         self.timeout = timeout
         self.hard_timeout = time.time() + timeout + 30
         self.manager = multiprocessing.Manager()
@@ -107,14 +103,10 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self.master_config = master_config
         self.minion_config = minion_config
         self.collector_kwargs = collector_kwargs
-        self.aes_key = multiprocessing.Array(
-            ctypes.c_char,
-            salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
-        )
         self.process_manager = salt.utils.process.ProcessManager(
             name="ZMQ-PubServer-ProcessManager"
         )
-        self.pub_server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(
+        self.pub_server_channel = salt.transport.zeromq.PublishServer(
             self.master_config
         )
         self.pub_server_channel.pre_fork(
@@ -125,14 +117,10 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self.queue = multiprocessing.Queue()
         self.stopped = multiprocessing.Event()
         self.collector = Collector(
-            self.minion_config,
-            self.pub_uri,
-            self.aes_key.value,
-            **self.collector_kwargs
+            self.minion_config, self.pub_uri, **self.collector_kwargs
         )
 
     def run(self):
-        salt.master.SMaster.secrets["aes"] = {"secret": self.aes_key}
         try:
             while True:
                 payload = self.queue.get()
