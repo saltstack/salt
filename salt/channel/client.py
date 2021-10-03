@@ -10,6 +10,7 @@ import os
 import time
 
 import salt.crypt
+import salt.exceptions
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.payload
@@ -19,7 +20,6 @@ import salt.utils.files
 import salt.utils.minions
 import salt.utils.stringutils
 import salt.utils.verify
-from salt.exceptions import SaltClientError, SaltException
 from salt.utils.asynchronous import SyncWrapper
 
 try:
@@ -161,24 +161,7 @@ class AsyncReqChannel:
         else:
             auth = None
 
-        if "master_uri" in kwargs:
-            opts["master_uri"] = kwargs["master_uri"]
-        master_uri = cls.get_master_uri(opts)
-
-        # log.error("AsyncReqChannel connects to %s", master_uri)
-        # switch on available ttypes
-        if ttype == "zeromq":
-            import salt.transport.zeromq
-
-            transport = salt.transport.zeromq.ZeroMQReqChannel(
-                opts, master_uri, io_loop
-            )
-        elif ttype == "tcp":
-            import salt.transport.tcp
-
-            transport = salt.transport.tcp.TCPReqChannel(opts, master_uri, io_loop)
-        else:
-            raise Exception("Channels are only defined for tcp, zeromq")
+        transport = salt.transport.request_client(opts, io_loop)
         return cls(opts, transport, auth)
 
     def __init__(self, opts, transport, auth, **kwargs):
@@ -301,28 +284,6 @@ class AsyncReqChannel:
             )
         raise salt.ext.tornado.gen.Return(ret)
 
-    @classmethod
-    def get_master_uri(cls, opts):
-        if "master_uri" in opts:
-            return opts["master_uri"]
-
-        # TODO: Make sure we don't need this anymore
-        # if by chance master_uri is not there..
-        # if "master_ip" in opts:
-        #    return _get_master_uri(
-        #        opts["master_ip"],
-        #        opts["master_port"],
-        #        source_ip=opts.get("source_ip"),
-        #        source_port=opts.get("source_ret_port"),
-        #    )
-
-        # if we've reached here something is very abnormal
-        raise SaltException("ReqChannel: missing master_uri/master_ip in self.opts")
-
-    @property
-    def master_uri(self):
-        return self.get_master_uri(self.opts)
-
     def close(self):
         """
         Since the message_client creates sockets and assigns them to the IOLoop we have to
@@ -332,8 +293,7 @@ class AsyncReqChannel:
             return
         log.debug("Closing %s instance", self.__class__.__name__)
         self._closing = True
-        if hasattr(self.transport, "message_client"):
-            self.transport.close()
+        self.transport.close()
 
     def __enter__(self):
         return self
@@ -369,10 +329,6 @@ class AsyncPubChannel:
         elif "transport" in opts.get("pillar", {}).get("master", {}):
             ttype = opts["pillar"]["master"]["transport"]
 
-        if "master_uri" in kwargs:
-            opts["master_uri"] = kwargs["master_uri"]
-        # master_uri = cls.get_master_uri(opts)
-
         # switch on available ttypes
         if ttype == "detect":
             opts["detect_mode"] = True
@@ -383,29 +339,7 @@ class AsyncPubChannel:
             io_loop = salt.ext.tornado.ioloop.IOLoop.current()
 
         auth = salt.crypt.AsyncAuth(opts, io_loop=io_loop)
-        #    if int(opts.get("publish_port", 4506)) != 4506:
-        #        publish_port = opts.get("publish_port")
-        #    # else take the relayed publish_port master reports
-        #    else:
-        #        publish_port = auth.creds["publish_port"]
-
-        if ttype == "zeromq":
-            import salt.transport.zeromq
-
-            transport = salt.transport.zeromq.AsyncZeroMQPubChannel(opts, io_loop)
-        elif ttype == "tcp":
-            import salt.transport.tcp
-
-            transport = salt.transport.tcp.AsyncTCPPubChannel(
-                opts, io_loop
-            )  # , **kwargs)
-        elif ttype == "local":  # TODO:
-            raise Exception("There's no AsyncLocalPubChannel implementation yet")
-            # import salt.transport.local
-            # return salt.transport.local.AsyncLocalPubChannel(opts, **kwargs)
-        else:
-            raise Exception("Channels are only defined for tcp, zeromq, and local")
-            # return NewKindOfChannel(opts, **kwargs)
+        transport = salt.transport.publish_client(opts, io_loop)
         return cls(opts, transport, auth, io_loop)
 
     def __init__(self, opts, transport, auth, io_loop=None):
@@ -450,7 +384,7 @@ class AsyncPubChannel:
             raise
         except Exception as exc:  # pylint: disable=broad-except
             if "-|RETRY|-" not in str(exc):
-                raise SaltClientError(
+                raise salt.exceptions.SaltClientError(
                     "Unable to sign_in to master: {}".format(exc)
                 )  # TODO: better error message
 
@@ -512,7 +446,7 @@ class AsyncPubChannel:
                 try:
                     yield self.auth.authenticate()
                     break
-                except SaltClientError as exc:
+                except salt.exceptions.SaltClientError as exc:
                     log.debug(exc)
                     count += 1
         try:

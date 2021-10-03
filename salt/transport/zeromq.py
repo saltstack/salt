@@ -16,6 +16,7 @@ import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.log.setup
 import salt.payload
+import salt.transport.base
 import salt.utils.files
 import salt.utils.process
 import salt.utils.stringutils
@@ -23,7 +24,7 @@ import salt.utils.zeromq
 import zmq.error
 import zmq.eventloop.zmqstream
 from salt._compat import ipaddress
-from salt.exceptions import SaltReqTimeoutError
+from salt.exceptions import SaltReqTimeoutError, SaltException
 from salt.utils.zeromq import LIBZMQ_VERSION_INFO, ZMQ_VERSION_INFO, zmq
 
 try:
@@ -97,7 +98,7 @@ def _get_master_uri(master_ip, master_port, source_ip=None, source_port=None):
     return master_uri
 
 
-class AsyncZeroMQPubChannel:
+class PublishClient(salt.transport.base.PublishClient):
     """
     A transport channel backed by ZeroMQ for a Salt Publisher to use to
     publish commands to connected minions
@@ -193,10 +194,6 @@ class AsyncZeroMQPubChannel:
         if hasattr(self, "context") and self.context.closed is False:
             self.context.term()
 
-    # pylint: disable=W1701
-    def __del__(self):
-        self.close()
-
     # pylint: enable=W1701
     def __enter__(self):
         return self
@@ -286,7 +283,7 @@ class AsyncZeroMQPubChannel:
         self.stream.send(msg, noblock=True)
 
 
-class ZeroMQReqServerChannel:
+class RequestServer(salt.transport.base.RequestServer):
     def __init__(self, opts):
         self.opts = opts
         self._closing = False
@@ -298,16 +295,16 @@ class ZeroMQReqServerChannel:
         Multiprocessing target for the zmq queue device
         """
         self.__setup_signals()
-        self.context = zmq.Context(self.opts["worker_threads"])
+        context = zmq.Context(self.opts["worker_threads"])
         # Prepare the zeromq sockets
         self.uri = "tcp://{interface}:{ret_port}".format(**self.opts)
-        self.clients = self.context.socket(zmq.ROUTER)
+        self.clients = context.socket(zmq.ROUTER)
         if self.opts["ipv6"] is True and hasattr(zmq, "IPV4ONLY"):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self.clients.setsockopt(zmq.IPV4ONLY, 0)
         self.clients.setsockopt(zmq.BACKLOG, self.opts.get("zmq_backlog", 1000))
         self._start_zmq_monitor()
-        self.workers = self.context.socket(zmq.DEALER)
+        self.workers = context.socket(zmq.DEALER)
 
         if self.opts["mworker_queue_niceness"] and not salt.utils.platform.is_windows():
             log.info(
@@ -342,6 +339,7 @@ class ZeroMQReqServerChannel:
                 raise
             except (KeyboardInterrupt, SystemExit):
                 break
+        context.term()
 
     def close(self):
         """
@@ -399,8 +397,8 @@ class ZeroMQReqServerChannel:
                                      they are picked up off the wire
         :param IOLoop io_loop: An instance of a Tornado IOLoop, to handle event scheduling
         """
-        self.context = zmq.Context(1)
-        self._socket = self.context.socket(zmq.REP)
+        context = zmq.Context(1)
+        self._socket = context.socket(zmq.REP)
         self._start_zmq_monitor()
 
         if self.opts.get("ipc_mode", "") == "tcp":
@@ -418,10 +416,14 @@ class ZeroMQReqServerChannel:
         self.stream.on_recv_stream(self.handle_message)
 
     @salt.ext.tornado.gen.coroutine
-    def handle_message(self, stream, payload, header=None):
-        stream = self.wrap_stream(stream)
+    def handle_message(self, stream, payload):
         payload = self.decode_payload(payload)
-        self.message_handler(payload, send_reply=stream.send, header=header)
+        # XXX: Is header really needed?
+        reply = yield self.message_handler(payload)
+        self.stream.send(self.encode_payload(reply))
+
+    def encode_payload(self, payload):
+        return salt.payload.dumps(payload)
 
     def __setup_signals(self):
         signal.signal(signal.SIGINT, self._handle_signals)
@@ -437,17 +439,6 @@ class ZeroMQReqServerChannel:
         log.debug(msg)
         self.close()
         sys.exit(salt.defaults.exitcodes.EX_OK)
-
-    def wrap_stream(self, stream):
-        class Stream:
-            def __init__(self, stream):
-                self.stream = stream
-
-            @salt.ext.tornado.gen.coroutine
-            def send(self, payload, header=None):
-                self.stream.send(salt.payload.dumps(payload))
-
-        return Stream(stream)
 
     def decode_payload(self, payload):
         payload = salt.payload.loads(payload[0])
@@ -712,7 +703,7 @@ class ZeroMQSocketMonitor:
         log.trace("Event monitor done!")
 
 
-class ZeroMQPubServerChannel:
+class PublishServer(salt.transport.base.PublishServer):
     """
     Encapsulate synchronous operations for a publisher channel
     """
@@ -725,7 +716,7 @@ class ZeroMQPubServerChannel:
     def connect(self):
         return salt.ext.tornado.gen.sleep(5)
 
-    def publish_daemon(self, publish_payload, *args, **kwargs):
+    def publish_daemon(self, publish_payload, presence_callback=None, remove_presence_callback=None, **kwargs):
         """
         This method represents the Publish Daemon process. It is intended to be
         run inn a thread or process as it creates and runs an it's own ioloop.
@@ -884,7 +875,7 @@ class ZeroMQPubServerChannel:
             self._sock_data.sock.close()
             delattr(self._sock_data, "sock")
 
-    def publish(self, payload):
+    def publish(self, payload, **kwargs):
         """
         Publish "load" to minions. This send the load to the publisher daemon
         process with does the actual sending to minions.
@@ -904,23 +895,44 @@ class ZeroMQPubServerChannel:
     def close(self):
         self.pub_close()
 
+    def __enter__(self):
+        return self
 
-class ZeroMQReqChannel:
+    def __exit__(self, *args, **kwargs):
+        self.close()
+
+
+class RequestClient(salt.transport.base.RequestClient):
+
     ttype = "zeromq"
 
-    def __init__(self, opts, master_uri, io_loop):
+    def __init__(self, opts, io_loop):
         self.opts = opts
-        self.master_uri = master_uri
+        master_uri = self.get_master_uri(opts)
         self.message_client = AsyncReqMessageClient(
             self.opts,
-            self.master_uri,
+            master_uri,
             io_loop=io_loop,
         )
 
     @salt.ext.tornado.gen.coroutine
-    def send(self, message, **kwargs):
-        ret = yield self.message_client.send(message, **kwargs)
+    def send(self, load, tries=3, timeout=60, raw=False):
+        ret = yield self.message_client.send(load, tries=tries, timeout=timeout)
         raise salt.ext.tornado.gen.Return(ret)
 
     def close(self):
         self.message_client.close()
+
+    @staticmethod
+    def get_master_uri(opts):
+        if "master_uri" in opts:
+            return opts["master_uri"]
+        if "master_ip" in opts:
+            return _get_master_uri(
+                opts["master_ip"],
+                opts["master_port"],
+                source_ip=opts.get("source_ip"),
+                source_port=opts.get("source_ret_port"),
+            )
+        # if we've reached here something is very abnormal
+        raise SaltException("ReqChannel: missing master_uri/master_ip in self.opts")
