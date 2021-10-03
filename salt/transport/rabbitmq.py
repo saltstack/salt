@@ -968,7 +968,7 @@ class AsyncRabbitMQReqClient(salt.transport.base.RequestClient):
         raise salt.ext.tornado.gen.Return(ret)
 
     @salt.ext.tornado.gen.coroutine
-    def send(self, load, tries=3, timeout=60, raw=False):
+    def send(self, load, tries=3, timeout=60):
         """
         Send a request, return a future which will complete when we send the message
         """
@@ -1100,7 +1100,9 @@ class RabbitMQReqServerChannel(salt.transport.RequestServer):
         rmq_connection_wrapper = self._rmq_nonblocking_connection_wrapper
         payload = self.decode_payload(payload)
         reply = yield self.message_handler(payload)
-        rmq_connection_wrapper.publish_reply(self.encode_payload(reply), message_properties)
+        rmq_connection_wrapper.publish_reply(
+            self.encode_payload(reply), message_properties
+        )
 
 
 class RabbitMQPubServerChannel(salt.transport.base.PublishServer):
@@ -1234,9 +1236,7 @@ class AsyncReqMessageClient:
                 future.set_exception(SaltReqTimeoutError("Message timed out"))
 
     @salt.ext.tornado.gen.coroutine
-    def send(
-        self, message, timeout=None, tries=3, future=None, callback=None, raw=False
-    ):
+    def send(self, message, timeout=None, tries=3, future=None, callback=None):
         """
         Return a future which will be completed when the message has a response
         """
