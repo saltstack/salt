@@ -117,7 +117,7 @@ class AsyncReqChannel:
         elif "transport" in opts.get("pillar", {}).get("master", {}):
             ttype = opts["pillar"]["master"]["transport"]
 
-        if "master_uri" in kwargs:
+        if "master_uri" not in opts and "master_uri" in kwargs:
             opts["master_uri"] = kwargs["master_uri"]
         io_loop = kwargs.get("io_loop")
         if io_loop is None:
@@ -298,7 +298,7 @@ class AsyncPubChannel:
         elif "transport" in opts.get("pillar", {}).get("master", {}):
             ttype = opts["pillar"]["master"]["transport"]
 
-        if "master_uri" in kwargs:
+        if "master_uri" not in opts and "master_uri" in kwargs:
             opts["master_uri"] = kwargs["master_uri"]
 
         # switch on available ttypes
