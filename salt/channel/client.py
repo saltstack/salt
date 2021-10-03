@@ -56,33 +56,6 @@ class ReqChannel:
             loop_kwarg="io_loop",
         )
 
-    def close(self):
-        """
-        Close the channel
-        """
-        raise NotImplementedError()
-
-    def send(self, load, tries=3, timeout=60, raw=False):
-        """
-        Send "load" to the master.
-        """
-        raise NotImplementedError()
-
-    def crypted_transfer_decode_dictentry(
-        self, load, dictkey=None, tries=3, timeout=60
-    ):
-        """
-        Send "load" to the master in a way that the load is only readable by
-        the minion and the master (not other minions etc.)
-        """
-        raise NotImplementedError()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        self.close()
-
 
 class PushChannel:
     """
@@ -97,12 +70,6 @@ class PushChannel:
             kwargs,
             loop_kwarg="io_loop",
         )
-
-    def send(self, load, tries=3, timeout=60):
-        """
-        Send load across IPC push
-        """
-        raise NotImplementedError()
 
 
 class PullChannel:
@@ -150,6 +117,8 @@ class AsyncReqChannel:
         elif "transport" in opts.get("pillar", {}).get("master", {}):
             ttype = opts["pillar"]["master"]["transport"]
 
+        if "master_uri" in kwargs:
+            opts["master_uri"] = kwargs["master_uri"]
         io_loop = kwargs.get("io_loop")
         if io_loop is None:
             io_loop = salt.ext.tornado.ioloop.IOLoop.current()
@@ -328,6 +297,9 @@ class AsyncPubChannel:
             ttype = opts["transport"]
         elif "transport" in opts.get("pillar", {}).get("master", {}):
             ttype = opts["pillar"]["master"]["transport"]
+
+        if "master_uri" in kwargs:
+            opts["master_uri"] = kwargs["master_uri"]
 
         # switch on available ttypes
         if ttype == "detect":
