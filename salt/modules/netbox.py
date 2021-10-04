@@ -193,6 +193,36 @@ def get_(app, endpoint, id=None, **kwargs):
         )
     )
 
+def exists(app, endpoint, id=None, **kwargs):
+    """
+    Check if an item exists in NetBox.
+    app
+        String of netbox app, e.g., ``dcim``, ``circuits``, ``ipam``
+    endpoint
+        String of app endpoint, e.g., ``sites``, ``regions``, ``devices``
+
+    Returns a bool
+
+    To check an item based on ID.
+
+    .. code-block:: bash
+
+        salt myminion netbox.exists dcim devices id=123
+
+    Or using named arguments that correspond with accepted filters on
+    the NetBox endpoint.
+
+    .. code-block:: bash
+
+        salt myminion netbox.exists dcim devices name=my-router
+
+    """
+    result = get_(app, endpoint,id=id, **kwargs)
+    if result:
+        return True
+    else:
+        return False
+
 
 def create_manufacturer(name):
     """
@@ -1550,3 +1580,38 @@ def create_virtual_machine_interface(
         return {"virtualization": {"interfaces": payload}}
     else:
         return False
+
+def update_virtual_machine(name, **kwargs):
+    """
+    .. versionadded:: 2019.2.0
+
+    Add attributes to an existing device, identified by name.
+
+    name
+        The name of the virtual_machine, e.g., ``gibson01``
+    kwargs
+       Arguments to change in device, e.g., ``comments=This is a payphone.... Don't ask.``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion netbox.update_virtual_machine gibson01 comments="This is a payphone..... Don't ask."
+    """
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+    nb_virtual_machine = _get("virtualization", "virtual_machines", auth_required=True, name=name)
+    for k, v in kwargs.items():
+        setattr(nb_virtual_machine, k, v)
+    try:
+        nb_virtual_machine.save()
+        x = get_(
+            'virtualization',
+            'virtual_machines',
+            name=name
+        )
+        return x
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        return False
+
+
