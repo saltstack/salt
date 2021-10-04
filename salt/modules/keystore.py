@@ -1,5 +1,8 @@
 """
 Module to interact with keystores
+
+:depends: pyjks
+:depends: pyOpenSSL
 """
 
 
@@ -7,6 +10,7 @@ import logging
 import os
 from datetime import datetime
 
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -39,15 +43,15 @@ def _parse_cert(alias, public_cert, return_cert=False):
     ASN1 = OpenSSL.crypto.FILETYPE_ASN1
     PEM = OpenSSL.crypto.FILETYPE_PEM
     cert_data = {}
-    sha1 = public_cert.digest(b"sha1")
+    sha1 = public_cert.digest("sha1")
 
     cert_pem = OpenSSL.crypto.dump_certificate(PEM, public_cert)
     raw_until = public_cert.get_notAfter()
-    date_until = datetime.strptime(raw_until, "%Y%m%d%H%M%SZ")
+    date_until = datetime.strptime(salt.utils.stringutils.to_str(raw_until), "%Y%m%d%H%M%SZ")
     string_until = date_until.strftime("%B %d %Y")
 
     raw_start = public_cert.get_notBefore()
-    date_start = datetime.strptime(raw_start, "%Y%m%d%H%M%SZ")
+    date_start = datetime.strptime(salt.utils.stringutils.to_str(raw_start), "%Y%m%d%H%M%SZ")
     string_start = date_start.strftime("%B %d %Y")
 
     if return_cert:
@@ -91,6 +95,8 @@ def list(keystore, passphrase, alias=None, return_cert=False):
     keystore = jks.KeyStore.load(keystore, passphrase)
 
     if alias:
+        # jks always lowercases the alias, so we need to make sure we do the same for comparison
+        alias = alias.lower()
         # If alias is given, look it up and build expected data structure
         entry_value = keystore.entries.get(alias)
         if entry_value:
@@ -113,7 +119,7 @@ def list(keystore, passphrase, alias=None, return_cert=False):
                 )
 
             # Detect if ASN1 binary, otherwise assume PEM
-            if "\x30" in cert_result[0]:
+            if 0x30 == cert_result[0]:
                 public_cert = OpenSSL.crypto.load_certificate(ASN1, cert_result)
             else:
                 public_cert = OpenSSL.crypto.load_certificate(PEM, cert_result)
@@ -149,7 +155,11 @@ def add(name, keystore, passphrase, certificate, private_key=None):
     if os.path.isfile(keystore):
         keystore_object = jks.KeyStore.load(keystore, passphrase)
         for alias, loaded_cert in keystore_object.entries.items():
-            certs_list.append(loaded_cert)
+            # We can't have duplicate aliases, so lets go ahead and replace the existing one
+            # If we do something else, like raise an error, then re-running the same state will always fail
+            # the jks library will raise an exception if we define duplicates
+            if name.lower() != alias:
+                certs_list.append(loaded_cert)
 
     try:
         cert_string = __salt__["x509.get_pem_entry"](certificate)
@@ -195,7 +205,7 @@ def remove(name, keystore, passphrase):
     certs_list = []
     keystore_object = jks.KeyStore.load(keystore, passphrase)
     for alias, loaded_cert in keystore_object.entries.items():
-        if name not in alias:
+        if name.lower() not in alias:
             certs_list.append(loaded_cert)
 
     if len(keystore_object.entries) != len(certs_list):

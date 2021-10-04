@@ -1,10 +1,15 @@
 """
 State management of a java keystore
+
+:depends: pyjks
+:depends: pyOpenSSL
 """
 
 
 import logging
 import os
+
+import salt.utils.stringutils
 
 __virtualname__ = "keystore"
 
@@ -38,7 +43,8 @@ def managed(name, passphrase, entries, force_remove=False):
 
     entries
         A list containing an alias, certificate, and optional private_key.
-        The certificate and private_key can be a file or a string
+        The certificate and private_key can be a file or a string.
+        Note that the underlying pyjks library will force all aliases to lowercase so `myalias` and `MyAlias` are the same and the last one defined will be what ends up in the keystore
 
         .. code-block:: yaml
 
@@ -101,7 +107,8 @@ def managed(name, passphrase, entries, force_remove=False):
                 new_sha1 = __salt__["x509.read_certificate"](entry["certificate"])[
                     "SHA1 Finger Print"
                 ]
-                if existing_sha1 == new_sha1:
+                # make sure we are comparing apples to apples
+                if salt.utils.stringutils.to_bytes(existing_sha1) == salt.utils.stringutils.to_bytes(new_sha1):
                     update_entry = False
 
         if update_entry:
