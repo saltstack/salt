@@ -1,0 +1,4 @@
+* Fixes a byte encoding issue when trying to detect ASN1 vs PEM encoded certificates/keys
+* Corrects a few other locations where bytes were incorrectly used instead of str
+* Fixes an issue where mixed-case alias names wouldn't properly be managed due to the underlying library forcing them to lowercase.
+* Updates the documentation to identify dependencies
