@@ -9,6 +9,7 @@ separate file, for convenience of development.
 """
 from __future__ import absolute_import, print_function
 
+import fcntl
 import hashlib
 import os
 import shutil
@@ -279,6 +280,14 @@ def main(argv):  # pylint: disable=W0613
     """
     Main program body
     """
+    try:
+        # Create lock file with the name of saltdir and .lock extension
+        # The lock file is used to prevent simultaneous state applies
+        # Each next session will wait for the lock to be released
+        lock_fh = open("{0}.lock".format(OPTIONS.saltdir), "w")
+        fcntl.flock(lock_fh, fcntl.LOCK_EX)
+    except (IOError, OSError):
+        pass
     thin_path = os.path.join(OPTIONS.saltdir, THIN_ARCHIVE)
     if os.path.isfile(thin_path):
         if OPTIONS.checksum != get_hash(thin_path, OPTIONS.hashfunc):
@@ -402,6 +411,11 @@ def main(argv):  # pylint: disable=W0613
         shutil.rmtree(OPTIONS.saltdir)
     else:
         retcode = subprocess.call(salt_argv)
+    if OPTIONS.wipe_state_file:
+        try:
+            os.remove(os.path.join(OPTIONS.saltdir, OPTIONS.wipe_state_file))
+        except OSError:
+            pass
     if OPTIONS.cmd_umask is not None:
         os.umask(old_umask)  # pylint: disable=blacklisted-function
     return retcode

@@ -47,17 +47,19 @@ def _ssh_state(chunks, st_kwargs, kwargs, test=False):
         st_kwargs["id_"],
     )
     trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, __opts__["hash_type"])
-    cmd = "state.pkg {}/salt_state.tgz test={} pkg_sum={} hash_type={}".format(
-        __opts__["thin_dir"], test, trans_tar_sum, __opts__["hash_type"]
+    trans_tar_name = "salt_state_{}.tgz".format(trans_tar_sum)
+    cmd = "state.pkg {}/{} test={} pkg_sum={} hash_type={}".format(
+        __opts__["thin_dir"], trans_tar_name, test, trans_tar_sum, __opts__["hash_type"]
     )
     single = salt.client.ssh.Single(
         __opts__,
         cmd,
         fsclient=__context__["fileclient"],
         minion_opts=__salt__.minion_opts,
+        wipe_state_file=trans_tar_name,
         **st_kwargs
     )
-    single.shell.send(trans_tar, "{}/salt_state.tgz".format(__opts__["thin_dir"]))
+    single.shell.send(trans_tar, "{}/{}".format(__opts__["thin_dir"], trans_tar_name))
     stdout, stderr, _ = single.cmd_block()
 
     # Clean up our tar
@@ -224,17 +226,19 @@ def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
             roster_grains,
         )
         trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, opts["hash_type"])
-        cmd = "state.pkg {}/salt_state.tgz test={} pkg_sum={} hash_type={}".format(
-            opts["thin_dir"], test, trans_tar_sum, opts["hash_type"]
+        trans_tar_name = "salt_state_{}.tgz".format(trans_tar_sum)
+        cmd = "state.pkg {}/{} test={} pkg_sum={} hash_type={}".format(
+            opts["thin_dir"], trans_tar_name, test, trans_tar_sum, opts["hash_type"]
         )
         single = salt.client.ssh.Single(
             opts,
             cmd,
             fsclient=__context__["fileclient"],
             minion_opts=__salt__.minion_opts,
+            wipe_state_file=trans_tar_name,
             **st_kwargs
         )
-        single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
+        single.shell.send(trans_tar, "{}/{}".format(opts["thin_dir"], trans_tar_name))
         stdout, stderr, _ = single.cmd_block()
 
         # Clean up our tar
@@ -368,17 +372,19 @@ def low(data, **kwargs):
             roster_grains,
         )
         trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, __opts__["hash_type"])
-        cmd = "state.pkg {}/salt_state.tgz pkg_sum={} hash_type={}".format(
-            __opts__["thin_dir"], trans_tar_sum, __opts__["hash_type"]
+        trans_tar_name = "salt_state_{}.tgz".format(trans_tar_sum)
+        cmd = "state.pkg {}/{} pkg_sum={} hash_type={}".format(
+            __opts__["thin_dir"], trans_tar_name, trans_tar_sum, __opts__["hash_type"]
         )
         single = salt.client.ssh.Single(
             __opts__,
             cmd,
             fsclient=__context__["fileclient"],
             minion_opts=__salt__.minion_opts,
+            wipe_state_file=trans_tar_name,
             **st_kwargs
         )
-        single.shell.send(trans_tar, "{}/salt_state.tgz".format(__opts__["thin_dir"]))
+        single.shell.send(trans_tar, "{}/{}".format(__opts__["thin_dir"], trans_tar_name))
         stdout, stderr, _ = single.cmd_block()
 
         # Clean up our tar
@@ -454,17 +460,19 @@ def high(data, **kwargs):
             roster_grains,
         )
         trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, opts["hash_type"])
-        cmd = "state.pkg {}/salt_state.tgz pkg_sum={} hash_type={}".format(
-            opts["thin_dir"], trans_tar_sum, opts["hash_type"]
+        trans_tar_name = "salt_state_{}.tgz".format(trans_tar_sum)
+        cmd = "state.pkg {}/{} pkg_sum={} hash_type={}".format(
+            opts["thin_dir"], trans_tar_name, trans_tar_sum, opts["hash_type"]
         )
         single = salt.client.ssh.Single(
             opts,
             cmd,
             fsclient=__context__["fileclient"],
             minion_opts=__salt__.minion_opts,
+            wipe_state_file=trans_tar_name,
             **st_kwargs
         )
-        single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
+        single.shell.send(trans_tar, "{}/{}".format(opts["thin_dir"], trans_tar_name))
         stdout, stderr, _ = single.cmd_block()
 
         # Clean up our tar
@@ -692,17 +700,19 @@ def highstate(test=None, **kwargs):
             roster_grains,
         )
         trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, opts["hash_type"])
-        cmd = "state.pkg {}/salt_state.tgz test={} pkg_sum={} hash_type={}".format(
-            opts["thin_dir"], test, trans_tar_sum, opts["hash_type"]
+        trans_tar_name = "salt_state_{}.tgz".format(trans_tar_sum)
+        cmd = "state.pkg {}/{} test={} pkg_sum={} hash_type={}".format(
+            opts["thin_dir"], trans_tar_name, test, trans_tar_sum, opts["hash_type"]
         )
         single = salt.client.ssh.Single(
             opts,
             cmd,
             fsclient=__context__["fileclient"],
             minion_opts=__salt__.minion_opts,
+            wipe_state_file=trans_tar_name,
             **st_kwargs
         )
-        single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
+        single.shell.send(trans_tar, "{}/{}".format(opts["thin_dir"], trans_tar_name))
         stdout, stderr, _ = single.cmd_block()
 
         # Clean up our tar
@@ -769,17 +779,19 @@ def top(topfn, test=None, **kwargs):
             roster_grains,
         )
         trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, opts["hash_type"])
-        cmd = "state.pkg {}/salt_state.tgz test={} pkg_sum={} hash_type={}".format(
-            opts["thin_dir"], test, trans_tar_sum, opts["hash_type"]
+        trans_tar_name = "salt_state_{}.tgz".format(trans_tar_sum)
+        cmd = "state.pkg {}/{} test={} pkg_sum={} hash_type={}".format(
+            opts["thin_dir"], trans_tar_name, test, trans_tar_sum, opts["hash_type"]
         )
         single = salt.client.ssh.Single(
             opts,
             cmd,
             fsclient=__context__["fileclient"],
             minion_opts=__salt__.minion_opts,
+            wipe_state_file=trans_tar_name,
             **st_kwargs
         )
-        single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
+        single.shell.send(trans_tar, "{}/{}".format(opts["thin_dir"], trans_tar_name))
         stdout, stderr, _ = single.cmd_block()
 
         # Clean up our tar
@@ -1113,9 +1125,11 @@ def single(fun, name, test=None, **kwargs):
     # Create a hash so we can verify the tar on the target system
     trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, opts["hash_type"])
 
+    trans_tar_name = "salt_state_{}.tgz".format(trans_tar_sum)
+
     # We use state.pkg to execute the "state package"
-    cmd = "state.pkg {}/salt_state.tgz test={} pkg_sum={} hash_type={}".format(
-        opts["thin_dir"], test, trans_tar_sum, opts["hash_type"]
+    cmd = "state.pkg {}/{} test={} pkg_sum={} hash_type={}".format(
+        opts["thin_dir"], trans_tar_name, test, trans_tar_sum, opts["hash_type"]
     )
 
     # Create a salt-ssh Single object to actually do the ssh work
@@ -1124,11 +1138,12 @@ def single(fun, name, test=None, **kwargs):
         cmd,
         fsclient=__context__["fileclient"],
         minion_opts=__salt__.minion_opts,
+        wipe_state_file=trans_tar_name,
         **st_kwargs
     )
 
     # Copy the tar down
-    single.shell.send(trans_tar, "{}/salt_state.tgz".format(opts["thin_dir"]))
+    single.shell.send(trans_tar, "{}/{}".format(opts["thin_dir"], trans_tar_name))
 
     # Run the state.pkg command on the target
     stdout, stderr, _ = single.cmd_block()

@@ -131,6 +131,10 @@ DEBUG="{{DEBUG}}"
 if [ -n "$DEBUG" ]
     then set -x
 fi
+SALTDIR="{{SALTDIR}}"
+if [ -n "$SALTDIR" ]
+    then find "$SALTDIR" -name 'salt_state*.tgz' -mtime +1 -delete 2>/dev/null || true
+fi
 SET_PATH="{{SET_PATH}}"
 if [ -n "$SET_PATH" ]
     then export PATH={{SET_PATH}}
@@ -146,6 +150,8 @@ elif [ "$SUDO" ] && [ -n "$SUDO_USER" ]
 then SUDO="sudo "
 fi
 EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
+SSH_PY_CODE='import base64;
+exec(base64.b64decode("""{{SSH_PY_CODE}}""").decode("utf-8"))'
 PYTHON_CMDS="python3 python27 python2.7 python26 python2.6 python2 python"
 for py_cmd in $PYTHON_CMDS
 do
@@ -166,13 +172,9 @@ do
             exec $SUDO PATH=$PATH LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
                      MANPATH=$MANPATH XDG_DATA_DIRS=$XDG_DATA_DIRS \
                      PKG_CONFIG_PATH=$PKG_CONFIG_PATH \
-                     "$py_cmd_path" -c \
-                   'import base64;
-                   exec(base64.b64decode("""{{SSH_PY_CODE}}""").decode("utf-8"))'
+                     "$py_cmd_path" -c "$SSH_PY_CODE"
         else
-            exec $SUDO "$py_cmd_path" -c \
-                   'import base64;
-                   exec(base64.b64decode("""{{SSH_PY_CODE}}""").decode("utf-8"))'
+            exec $SUDO "$py_cmd_path" -c "$SSH_PY_CODE"
         fi
         exit 0
     else
@@ -883,6 +885,9 @@ class Single:
             self.wipe = False
         else:
             self.wipe = bool(self.opts.get("ssh_wipe"))
+        self.wipe_state_file = ""
+        if kwargs.get("wipe_state_file"):
+            self.wipe_state_file = kwargs["wipe_state_file"]
         if kwargs.get("thin_dir"):
             self.thin_dir = kwargs["thin_dir"]
         elif self.winrm:
@@ -1289,6 +1294,7 @@ OPTIONS.hashfunc = '{hashfunc}'
 OPTIONS.version = '{version}'
 OPTIONS.ext_mods = '{ext_mods}'
 OPTIONS.wipe = {wipe}
+OPTIONS.wipe_state_file = '{wipe_state_file}'
 OPTIONS.tty = {tty}
 OPTIONS.cmd_umask = {cmd_umask}
 OPTIONS.code_checksum = {code_checksum}
@@ -1301,6 +1307,7 @@ ARGS = {arguments}\n'''.format(
             version=salt.version.__version__,
             ext_mods=self.mods.get("version", ""),
             wipe=self.wipe,
+            wipe_state_file=self.wipe_state_file,
             tty=self.tty,
             cmd_umask=self.cmd_umask,
             code_checksum=thin_code_digest,
@@ -1316,6 +1323,7 @@ ARGS = {arguments}\n'''.format(
                 SSH_PY_CODE=py_code_enc,
                 HOST_PY_MAJOR=sys.version_info[0],
                 SET_PATH=self.set_path,
+                SALTDIR=self.thin_dir,
             )
         else:
             cmd = saltwinshell.gen_shim(py_code_enc)
