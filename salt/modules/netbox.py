@@ -1011,10 +1011,6 @@ def create_ipaddress(
     app = ""
     endpoint = ""
     search_kwargs = {}
-    # check not working in both entered screnario
-    if not (device or virtual_machine):
-        log.error("Either device or virtual_machine must be supplied.")
-        return False
 
     if device:
         app = "dcim"
@@ -1028,23 +1024,28 @@ def create_ipaddress(
         search_kwargs['tenant'] = tenant
         search_kwargs['cluster'] = cluster
 
-    nb_object = get_(app, endpoint, **search_kwargs)
-    if not nb_object:
-        log.error("No device or virtual_machine found.")
-        return False
+    if device or virtual_machine:
+        if not interface:
+            log.error("Interface is mandatory when specifying device or virtual_machine")
+            return False
 
-    # Fetch the specified interface name from nb_object and
-    # store it in nb_object_iface
-    search_kwargs={'name': interface}
-    if device:
-        search_kwargs['device_id'] = nb_object['id']
-    elif virtual_machine:
-        search_kwargs['virtual_machine_id'] = nb_object['id']
-    nb_object_iface = get_(app, "interfaces", **search_kwargs)
-    if not nb_object_iface:
-        msg = "No interface {} found for {}".format(interface, nb_object['name'])
-        log.error(msg)
-        return False
+        nb_object = get_(app, endpoint, **search_kwargs)
+        if not nb_object:
+            log.error("No device or virtual_machine found.")
+            return False
+
+        # Fetch the specified interface name from nb_object and
+        # store it in nb_object_iface
+        search_kwargs={'name': interface}
+        if device:
+            search_kwargs['device_id'] = nb_object['id']
+        elif virtual_machine:
+            search_kwargs['virtual_machine_id'] = nb_object['id']
+        nb_object_iface = get_(app, "interfaces", **search_kwargs)
+        if not nb_object_iface:
+            msg = "No interface {} found for {}".format(interface, nb_object['name'])
+            log.error(msg)
+            return False
 
     # Construct the configuration for the interface.
     payload = {}
@@ -1121,8 +1122,6 @@ def create_ipaddress(
         vrf=vrf,
     )
     return nb_addr
-
-
 
 def delete_ipaddress(ipaddr_id):
     """
