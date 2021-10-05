@@ -1110,6 +1110,9 @@ SERVICE:cups-daemon,390,/usr/sbin/cupsd
         ]
 
 
+@pytest.mark.skipif(
+    HAS_APTSOURCES is True, reason="Only run test with python3-apt library is missing."
+)
 def test_sourceslist_multiple_comps():
     """
     Test SourcesList when repo has multiple comps
@@ -1126,6 +1129,9 @@ def test_sourceslist_multiple_comps():
                     assert source.dist == "focal-updates"
 
 
+@pytest.mark.skipif(
+    HAS_APTSOURCES is True, reason="Only run test with python3-apt library is missing."
+)
 @pytest.mark.parametrize(
     "repo_line",
     [
@@ -1142,16 +1148,15 @@ def test_sourceslist_architectures(repo_line):
     """
     Test SourcesList when architectures is in repo
     """
-    with patch.object(aptpkg, "HAS_APT", return_value=True):
-        with patch("salt.utils.files.fopen", mock_open(read_data=repo_line)):
-            with patch("pathlib.Path.is_file", side_effect=[True, False]):
-                sources = aptpkg.SourcesList()
-                for source in sources:
-                    assert source.type == "deb"
-                    assert source.uri == "http://archive.ubuntu.com/ubuntu/"
-                    assert source.comps == ["main", "restricted"]
-                    assert source.dist == "focal-updates"
-                    if "," in repo_line:
-                        assert source.architectures == ["amd64", "armel"]
-                    else:
-                        assert source.architectures == ["amd64"]
+    with patch("salt.utils.files.fopen", mock_open(read_data=repo_line)):
+        with patch("pathlib.Path.is_file", side_effect=[True, False]):
+            sources = aptpkg.SourcesList()
+            for source in sources:
+                assert source.type == "deb"
+                assert source.uri == "http://archive.ubuntu.com/ubuntu/"
+                assert source.comps == ["main", "restricted"]
+                assert source.dist == "focal-updates"
+                if "," in repo_line:
+                    assert source.architectures == ["amd64", "armel"]
+                else:
+                    assert source.architectures == ["amd64"]
