@@ -340,7 +340,9 @@ def test_issue_6912_wrong_owner(tmp_path, create_virtualenv, modules, states):
 
 
 @pytest.mark.destructive_test
-@pytest.skip(salt.utils.platform.is_darwin() is True, reason="Test is flaky on macosx")
+@pytest.mark.skipif(
+    salt.utils.platform.is_darwin() is True, reason="Test is flaky on macosx"
+)
 @pytest.mark.slow_test
 @pytest.mark.skip_if_not_root
 def test_issue_6912_wrong_owner_requirements_file(
