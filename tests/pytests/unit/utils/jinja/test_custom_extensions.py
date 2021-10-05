@@ -203,7 +203,7 @@ def test_load_tag():
 def test_load_json():
     env = Environment(extensions=[SerializerExtension])
     rendered = env.from_string(
-        '{% set document = \'{"foo": "it works"}\'|load_json %}{{ document.foo }}'
+        """{% set document = '{"foo": "it works"}'|load_json %}{{ document.foo }}"""
     ).render()
     assert rendered == "it works"
 
@@ -259,9 +259,9 @@ def test_profile():
 
     source = (
         "{%- profile as 'profile test' %}"
-        + "{% set var = 'val' %}"
-        + "{%- endprofile %}"
-        + "{{ var }}"
+        "{% set var = 'val' %}"
+        "{%- endprofile %}"
+        "{{ var }}"
     )
 
     rendered = env.from_string(source).render()
@@ -750,7 +750,8 @@ def test_network_size(minion_opts, local_salt):
 
 
 @pytest.mark.requires_network
-def test_http_query(minion_opts, local_salt):
+@pytest.mark.parametrize("backend", ["requests", "tornado", "urllib2"])
+def test_http_query(minion_opts, local_salt, backend):
     """
     Test the `http_query` Jinja filter.
     """
@@ -760,30 +761,25 @@ def test_http_query(minion_opts, local_salt):
         "http://google.com",
         "http://duckduckgo.com",
     )
-    for backend in ("requests", "tornado", "urllib2"):
-        rendered = render_jinja_tmpl(
-            "{{ '"
-            + random.choice(urls)
-            + "' | http_query(backend='"
-            + backend
-            + "') }}",
-            dict(opts=minion_opts, saltenv="test", salt=local_salt),
-        )
-        assert isinstance(rendered, str), "Failed with rendered template: {}".format(
-            rendered
-        )
-        dict_reply = ast.literal_eval(rendered)
-        assert isinstance(dict_reply, dict), "Failed with rendered template: {}".format(
-            rendered
-        )
-        assert (
-            "body" in dict_reply
-        ), "'body' not found in request response({}). Rendered template: {!r}".format(
-            dict_reply, rendered
-        )
-        assert isinstance(
-            dict_reply["body"], str
-        ), "Failed with rendered template: {}".format(rendered)
+    rendered = render_jinja_tmpl(
+        "{{ '" + random.choice(urls) + "' | http_query(backend='" + backend + "') }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert isinstance(rendered, str), "Failed with rendered template: {}".format(
+        rendered
+    )
+    dict_reply = ast.literal_eval(rendered)
+    assert isinstance(dict_reply, dict), "Failed with rendered template: {}".format(
+        rendered
+    )
+    assert (
+        "body" in dict_reply
+    ), "'body' not found in request response({}). Rendered template: {!r}".format(
+        dict_reply, rendered
+    )
+    assert isinstance(
+        dict_reply["body"], str
+    ), "Failed with rendered template: {}".format(rendered)
 
 
 def test_to_bool(minion_opts, local_salt):
@@ -1074,15 +1070,3 @@ def test_json_query(minion_opts, local_salt):
         dict(opts=minion_opts, saltenv="test", salt=local_salt),
     )
     assert rendered == "2"
-
-
-# def test_print():
-#     env = Environment(extensions=[SerializerExtension])
-#     source = '{% import_yaml "toto.foo" as docu %}'
-#     name, filename = None, '<filename>'
-#     parsed = env._parse(source, name, filename)
-#     print parsed
-#     print
-#     compiled = env._generate(parsed, name, filename)
-#     print compiled
-#     return

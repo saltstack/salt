@@ -325,53 +325,54 @@ def test_non_ascii_encoding(
 @pytest.mark.skipif(
     HAS_TIMELIB is False, reason="The `timelib` library is not installed."
 )
-def test_strftime(minion_opts, local_salt):
+@pytest.mark.parametrize(
+    "data_object",
+    [
+        datetime.datetime(2002, 12, 25, 12, 00, 00, 00),
+        "2002/12/25",
+        1040814000,
+        "1040814000",
+    ],
+)
+def test_strftime(minion_opts, local_salt, data_object):
     response = render_jinja_tmpl(
         '{{ "2002/12/25"|strftime }}',
         dict(opts=minion_opts, saltenv="test", salt=local_salt),
     )
     assert response == "2002-12-25"
 
-    objects = (
-        datetime.datetime(2002, 12, 25, 12, 00, 00, 00),
-        "2002/12/25",
-        1040814000,
-        "1040814000",
+    response = render_jinja_tmpl(
+        "{{ object|strftime }}",
+        dict(
+            object=data_object,
+            opts=minion_opts,
+            saltenv="test",
+            salt=local_salt,
+        ),
     )
+    assert response == "2002-12-25"
 
-    for object in objects:
-        response = render_jinja_tmpl(
-            "{{ object|strftime }}",
-            dict(
-                object=object,
-                opts=minion_opts,
-                saltenv="test",
-                salt=local_salt,
-            ),
-        )
-        assert response == "2002-12-25"
+    response = render_jinja_tmpl(
+        '{{ object|strftime("%b %d, %Y") }}',
+        dict(
+            object=data_object,
+            opts=minion_opts,
+            saltenv="test",
+            salt=local_salt,
+        ),
+    )
+    assert response == "Dec 25, 2002"
 
-        response = render_jinja_tmpl(
-            '{{ object|strftime("%b %d, %Y") }}',
-            dict(
-                object=object,
-                opts=minion_opts,
-                saltenv="test",
-                salt=local_salt,
-            ),
-        )
-        assert response == "Dec 25, 2002"
-
-        response = render_jinja_tmpl(
-            '{{ object|strftime("%y") }}',
-            dict(
-                object=object,
-                opts=minion_opts,
-                saltenv="test",
-                salt=local_salt,
-            ),
-        )
-        assert response == "02"
+    response = render_jinja_tmpl(
+        '{{ object|strftime("%y") }}',
+        dict(
+            object=data_object,
+            opts=minion_opts,
+            saltenv="test",
+            salt=local_salt,
+        ),
+    )
+    assert response == "02"
 
 
 def test_non_ascii(minion_opts, local_salt, non_ascii):
