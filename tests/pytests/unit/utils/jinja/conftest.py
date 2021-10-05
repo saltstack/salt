@@ -35,9 +35,9 @@ def template_dir(tmp_path):
 @pytest.fixture
 def hello_import(macro_template, template_dir):
     contents = """{% from 'macro' import mymacro -%}
-{% from 'macro' import mymacro -%}
-{{ mymacro('Hey') ~ mymacro(a|default('a'), b|default('b')) }}
-"""
+    {% from 'macro' import mymacro -%}
+    {{ mymacro('Hey') ~ mymacro(a|default('a'), b|default('b')) }}
+    """
 
     with pytest.helpers.temp_file(
         "hello_import", directory=template_dir, contents=contents
@@ -48,10 +48,10 @@ def hello_import(macro_template, template_dir):
 @pytest.fixture
 def macro_template(template_dir):
     contents = """# macro
-{% macro mymacro(greeting, greetee='world') -%}
-{{ greeting ~ ' ' ~ greetee }} !
-{%- endmacro %}
-"""
+    {% macro mymacro(greeting, greetee='world') -%}
+    {{ greeting ~ ' ' ~ greetee }} !
+    {%- endmacro %}
+    """
 
     with pytest.helpers.temp_file(
         "macro", directory=template_dir, contents=contents
