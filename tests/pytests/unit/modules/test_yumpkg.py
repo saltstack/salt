@@ -1988,3 +1988,26 @@ def test_services_need_restart_requires_dnf():
     """Test that yumpkg.services_need_restart raises an error if DNF is unavailable."""
     with patch("salt.modules.yumpkg._yum", Mock(return_value="yum")):
         pytest.raises(CommandExecutionError, yumpkg.services_need_restart)
+
+
+def test_61003_pkg_should_not_fail_when_target_not_in_old_pkgs():
+    patch_list_pkgs = patch(
+        "salt.modules.yumpkg.list_pkgs", return_value={}, autospec=True
+    )
+    patch_salt = patch.dict(
+        yumpkg.__salt__,
+        {
+            "pkg_resource.parse_targets": Mock(
+                return_value=[
+                    {
+                        "fnord-this-is-not-actually-a-package": "fnord-this-is-not-actually-a-package-1.2.3"
+                    }
+                ]
+            )
+        },
+    )
+    with patch_list_pkgs, patch_salt:
+        # During the 3004rc1 we discoverd that if list_pkgs was missing
+        # packages that were returned by parse_targets that yumpkg.remove would
+        # catch on fire.  This ensures that won't go undetected again.
+        yumpkg.remove()
