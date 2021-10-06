@@ -12,7 +12,7 @@ def test_adding_repo_file(states, tmp_path):
     """
     test adding a repo file using pkgrepo.managed
     """
-    repo_file = tmp_path / "stable-binary.list"
+    repo_file = str(tmp_path / "stable-binary.list")
     repo_content = "deb http://www.deb-multimedia.org stable main"
     ret = states.pkgrepo.managed(name=repo_content, file=repo_file, clean_file=True)
     with salt.utils.files.fopen(repo_file, "r") as fp:
@@ -29,7 +29,7 @@ def test_adding_repo_file_arch(states, tmp_path):
     test adding a repo file using pkgrepo.managed
     and setting architecture
     """
-    repo_file = tmp_path / "stable-binary.list"
+    repo_file = str(tmp_path / "stable-binary.list")
     repo_content = "deb [arch=amd64  ] http://www.deb-multimedia.org stable main"
     ret = states.pkgrepo.managed(name=repo_content, file=repo_file, clean_file=True)
     with salt.utils.files.fopen(repo_file, "r") as fp:
