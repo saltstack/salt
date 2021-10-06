@@ -887,7 +887,7 @@ def _read_file(path):
     try:
         with salt.utils.files.fopen(path, "rb") as rfh:
             return _get_non_blank_lines(salt.utils.stringutils.to_unicode(rfh.read()))
-    except Exception:  # pylint: disable=broad-except
+    except OSError:
         return []  # Return empty list for type consistency
 
 
@@ -897,8 +897,7 @@ def _write_file_iface(iface, data, folder, pattern):
     """
     filename = os.path.join(folder, pattern.format(iface))
     if not os.path.exists(folder):
-        msg = "{} cannot be written. {} does not exist"
-        msg = msg.format(filename, folder)
+        msg = "{} cannot be written. {} does not exist".format(filename, folder)
         log.error(msg)
         raise AttributeError(msg)
     with salt.utils.files.fopen(filename, "w") as fp_:
@@ -973,7 +972,7 @@ def build_interface(iface, iface_type, enabled, **settings):
         except jinja2.exceptions.TemplateNotFound:
             log.error("Could not load template ifcfg.jinja")
             return ""
-        log.debug("Interface opts: \n%s", opts)
+        log.debug("Interface opts:\n%s", opts)
         ifcfg = template.render(opts)
 
     if settings.get("test"):
@@ -1000,7 +999,7 @@ def build_routes(iface, **settings):
     log.debug("Template name: %s", template)
 
     opts = _parse_routes(iface, settings)
-    log.debug("Opts: \n%s", opts)
+    log.debug("Opts:\n%s", opts)
     try:
         template = JINJA.get_template(template)
     except jinja2.exceptions.TemplateNotFound:
