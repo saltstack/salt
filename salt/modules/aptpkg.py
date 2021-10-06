@@ -151,7 +151,7 @@ if not HAS_APT:
 
             repo_line.append(self.type)
             if self.architectures:
-                repo_line.append("[arch={}] ".format(" ".join(self.architectures)))
+                repo_line.append("[arch={}]".format(" ".join(self.architectures)))
 
             repo_line = repo_line + [self.uri, self.dist, " ".join(self.comps)]
             if self.comment:
