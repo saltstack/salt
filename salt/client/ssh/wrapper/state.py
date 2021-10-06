@@ -384,7 +384,9 @@ def low(data, **kwargs):
             wipe_state_file=trans_tar_name,
             **st_kwargs
         )
-        single.shell.send(trans_tar, "{}/{}".format(__opts__["thin_dir"], trans_tar_name))
+        single.shell.send(
+            trans_tar, "{}/{}".format(__opts__["thin_dir"], trans_tar_name)
+        )
         stdout, stderr, _ = single.cmd_block()
 
         # Clean up our tar
