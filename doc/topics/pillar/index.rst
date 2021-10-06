@@ -386,7 +386,7 @@ updated pillar data, but :py:func:`pillar.item <salt.modules.pillar.item>`,
 <salt.modules.pillar.raw>` will not see this data unless refreshed using
 :py:func:`saltutil.refresh_pillar <salt.modules.saltutil.refresh_pillar>`.
 
-If your are using the Pillar Cache and have set :conf_master:`pillar_cache` to be `True`,
+If you are using the Pillar Cache and have set :conf_master:`pillar_cache` to `True`,
 the pillar cache can be updated either when you run :py:func:`saltutil.refresh_pillar
 <salt.modules.saltutil.refresh_pillar>`, or using the pillar runner function
 :py:func:`pillar.clear_pillar_cache <salt.runners.pillar.clear_pillar_cache>`:

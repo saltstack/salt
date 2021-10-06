@@ -2468,7 +2468,7 @@ class Minion(MinionBase):
 
     # TODO: only allow one future in flight at a time?
     @salt.ext.tornado.gen.coroutine
-    def pillar_refresh(self, force_refresh=False):
+    def pillar_refresh(self, force_refresh=False, clean_cache=False):
         """
         Refresh the pillar
         """
@@ -2482,7 +2482,7 @@ class Minion(MinionBase):
                 self.opts["id"],
                 self.opts["saltenv"],
                 pillarenv=self.opts.get("pillarenv"),
-                clean_cache=True,
+                clean_cache=clean_cache,
             )
             try:
                 new_pillar = yield async_pillar.compile_pillar()
@@ -2676,7 +2676,10 @@ class Minion(MinionBase):
                 notify=data.get("notify", False),
             )
         elif tag.startswith("pillar_refresh"):
-            yield _minion.pillar_refresh(force_refresh=data.get("force_refresh", False))
+            yield _minion.pillar_refresh(
+                force_refresh=data.get("force_refresh", False),
+                clean_cache=data.get("clean_cache", False),
+            )
         elif tag.startswith("beacons_refresh"):
             _minion.beacons_refresh()
         elif tag.startswith("matchers_refresh"):
