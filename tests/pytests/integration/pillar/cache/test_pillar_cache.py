@@ -61,6 +61,9 @@ def pillar_cache_tree_no_refresh(
     )
     try:
         with top_tempfile, pillar_tempfile:
+            ret = pillar_salt_call_cli.run(
+                "saltutil.refresh_pillar", wait=True, clean_cache=False
+            )
             yield
     finally:
         # Refresh pillar again to cleaup the temp pillar
