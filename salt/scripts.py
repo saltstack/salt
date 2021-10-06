@@ -22,31 +22,7 @@ if sys.version_info < (3,):
     raise SystemExit(salt.defaults.exitcodes.EX_GENERIC)
 
 
-def _handle_interrupt(exc, original_exc, hardfail=False, trace=""):
-    """
-    if hardfailing:
-        If we got the original stacktrace, log it
-        If all cases, raise the original exception
-        but this is logically part the initial
-        stack.
-    else just let salt exit gracefully
-
-    """
-    if hardfail:
-        if trace:
-            log.error(trace)
-        raise original_exc
-    else:
-        raise exc
-
-
 def _handle_signals(client, signum, sigframe):
-    try:
-        # This raises AttributeError on Python 3.4 and 3.5 if there is no current exception.
-        # Ref: https://bugs.python.org/issue23003
-        trace = traceback.format_exc()
-    except AttributeError:
-        trace = ""
     try:
         hardcrash = client.options.hard_crash
     except (AttributeError, KeyError):
@@ -69,17 +45,25 @@ def _handle_signals(client, signum, sigframe):
     else:
         exit_msg = None
 
-    _handle_interrupt(
-        SystemExit(exit_msg),
-        Exception("\nExiting with hard crash on Ctrl-c"),
-        hardcrash,
-        trace=trace,
-    )
+    if exit_msg is None and hardcrash:
+        exit_msg = "\nExiting with hard crash on Ctrl-c"
+    if exit_msg:
+        print(exit_msg, file=sys.stderr, flush=True)
+    if hardcrash:
+        try:
+            # This raises AttributeError on Python 3.4 and 3.5 if there is no current exception.
+            # Ref: https://bugs.python.org/issue23003
+            trace = traceback.format_exc()
+            log.error(trace)
+        except AttributeError:
+            pass
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+    sys.exit(salt.defaults.exitcodes.EX_OK)
 
 
 def _install_signal_handlers(client):
     # Install the SIGINT/SIGTERM handlers if not done so far
-    if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
+    if signal.getsignal(signal.SIGINT) in (signal.SIG_DFL, signal.default_int_handler):
         # No custom signal handling was added, install our own
         signal.signal(signal.SIGINT, functools.partial(_handle_signals, client))
 
@@ -474,12 +458,14 @@ def salt_ssh():
         _install_signal_handlers(client)
         client.run()
     except SaltClientError as err:
-        trace = traceback.format_exc()
+        print(str(err), file=sys.stderr, flush=True)
         try:
-            hardcrash = client.options.hard_crash
+            if client.options.hard_crash:
+                trace = traceback.format_exc()
+                log.error(trace)
         except (AttributeError, KeyError):
-            hardcrash = False
-        _handle_interrupt(SystemExit(err), err, hardcrash, trace=trace)
+            pass
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
 
 def salt_cloud():
