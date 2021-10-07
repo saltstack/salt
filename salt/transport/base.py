@@ -120,6 +120,9 @@ class RequestClient:
     replies from the RequestServer.
     """
 
+    def __init__(self, opts, io_loop, **kwargs):
+        pass
+
     @salt.ext.tornado.gen.coroutine
     def send(self, load, tries=3, timeout=60):
         """
@@ -144,8 +147,13 @@ class RequestServer:
     RequestClients and sending replies to those requests.
     """
 
-    def close(self):
+    def __init__(self, opts):
         pass
+
+    def close(self):
+        """
+        Close the underlying network connection.
+        """
 
     def pre_fork(self, process_manager):
         """ """
@@ -160,7 +168,8 @@ class RequestServer:
 
 class PublishServer:
     """
-    The PublishServer publishes messages to PubilshClients
+    The PublishServer publishes messages to PublishClients or to a borker
+    service.
     """
 
     def pre_fork(self, process_manager, kwargs=None):
@@ -190,6 +199,13 @@ class PublishServer:
 
 
 class PublishClient:
+    """
+    The PublishClient receives messages from the PublishServer and runs a callback.
+    """
+
+    def __init__(self, opts, io_loop, **kwargs):
+        pass
+
     def on_recv(self, callback):
         """
         Add a message handler when we recieve a message from the PublishServer
@@ -197,4 +213,17 @@ class PublishClient:
 
     @salt.ext.tornado.gen.coroutine
     def connect(self, publish_port, connect_callback=None, disconnect_callback=None):
-        """ """
+        """
+        Create a network connection to the the PublishServer or broker.
+        """
+
+    def close(self):
+        """
+        Close the underlying network connection
+        """
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
