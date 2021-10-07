@@ -1,1 +1,0 @@
-Handle signals and properly exit, instead of raising exceptions.
