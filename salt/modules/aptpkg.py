@@ -17,6 +17,8 @@ import logging
 import os
 import pathlib
 import re
+import shutil
+import tempfile
 import time
 from urllib.error import HTTPError
 from urllib.request import Request as _Request
@@ -175,7 +177,7 @@ if not HAS_APT:
                 return False
             if repo_line[1].startswith("["):
                 opts = re.search(r"\[.*\]", self.line).group(0).strip("[]")
-                repo_line = [x.strip("[]") for x in repo_line if x.strip("[]")]
+                repo_line = [x for x in (line.strip("[]") for line in repo_line) if x]
                 for opt in opts.split():
                     if opt.startswith("arch"):
                         self.architectures.extend(opt.split("=", 1)[1].split(","))
@@ -237,19 +239,17 @@ if not HAS_APT:
             write all of the sources from the list of sources
             to the file.
             """
-            open_files = {}
-            try:
+            filemap = {}
+            with tempfile.TemporaryDirectory() as tmpdir:
                 for source in self.list:
-                    if source.file not in open_files:
-                        open_files[
-                            source.file
-                        ] = salt.utils.files.fopen(  # pylint: disable=resource-leakage
-                            source.file, "w"
-                        )
-                    open_files[source.file].write(source.repo_line())
-            finally:
-                for fp in open_files:
-                    open_files[fp].close()
+                    fname = pathlib.Path(tmpdir, pathlib.Path(source.file).name)
+                    with salt.utils.files.fopen(fname, "a") as fp:
+                        fp.write(source.repo_line())
+                    if source.file not in filemap:
+                        filemap[source.file] = {"tmp": fname}
+
+                for fp in filemap:
+                    shutil.move(filemap[fp]["tmp"], fp)
 
 
 def _get_ppa_info_from_launchpad(owner_name, ppa_name):
