@@ -1,1 +1,0 @@
-Fixing _get_envs() to preserve the order of pillar_roots. _get_envs() returned pillar_roots in a non-deterministic order.
