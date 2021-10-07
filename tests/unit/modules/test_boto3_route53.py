@@ -3,10 +3,8 @@
 """
 
 
-import datetime
 import random
 import string
-import textwrap
 
 import salt.loader
 import salt.modules.boto3_route53 as boto3_route53
@@ -17,7 +15,6 @@ from tests.support.unit import TestCase, skipIf
 
 try:
     import boto3
-    from botocore.exceptions import ClientError
 
     HAS_BOTO3 = True
 except ImportError:
