@@ -50,7 +50,6 @@ Execution module for Amazon Route53 written against Boto 3
 
 import logging
 import re
-import sys
 import time
 
 import salt.utils.compat
@@ -879,10 +878,7 @@ def aws_encode(x):
     ret = None
     try:
         x.encode("ascii")
-        if sys.version_info[0] == 3:
-            ret = re.sub(rb"\\x([a-f0-8]{2})", _hexReplace, x.encode("unicode_escape"))
-        else:
-            ret = re.sub(r"\\x([a-f0-8]{2})", _hexReplace, x.encode("unicode_escape"))
+        ret = re.sub(rb"\\x([a-f0-8]{2})", _hexReplace, x.encode("unicode_escape"))
     except UnicodeEncodeError:
         ret = x.encode("idna")
     except Exception as e:  # pylint: disable=broad-except
