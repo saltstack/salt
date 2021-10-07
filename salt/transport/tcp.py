@@ -179,7 +179,7 @@ if USE_LOAD_BALANCER:
                     raise
 
 
-class ResolverMixin:
+class Resolver:
 
     _resolver_configured = False
 
@@ -198,25 +198,20 @@ class ResolverMixin:
             self._config_resolver()
 
 
-class TCPPubClient(ResolverMixin):
-    async_methods = [
-        "send_id",
-        "connect_callback",
-        "connect",
-    ]
-    close_methods = [
-        "close",
-    ]
+class TCPPubClient(salt.transport.base.PublishClient):
+    """
+    Tornado based TCP Pub Client
+    """
 
     ttype = "tcp"
 
-    def __init__(self, opts, io_loop, **kwargs):
-        super().__init__()
+    def __init__(self, opts, io_loop, **kwargs):  # pylint: disable=W0231
         self.opts = opts
         self.io_loop = io_loop
         self.message_client = None
         self.connected = False
         self._closing = False
+        self.resolver = Resolver()
 
     def close(self):
         if self._closing:
@@ -272,16 +267,21 @@ class TCPPubClient(ResolverMixin):
     def __enter__(self):
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
 
 class TCPReqServer(salt.transport.base.RequestServer):
+    """
+    Tornado based TCP Request/Reply Server
+
+    :param dict opts: Salt master config options.
+    """
 
     # TODO: opts!
     backlog = 5
 
-    def __init__(self, opts):
+    def __init__(self, opts):  # pylint: disable=W0231
         self.opts = opts
         self._socket = None
         self.req_server = None
@@ -320,14 +320,8 @@ class TCPReqServer(salt.transport.base.RequestServer):
                 )
             self.req_server = None
 
-    ## pylint: disable=W1701
-    # def __del__(self):
-    #    self.close()
-
-    ## pylint: enable=W1701
-
-    # def __enter__(self):
-    #    return self
+    def __enter__(self):
+        return self
 
     def __exit__(self, *args):
         self.close()
@@ -948,6 +942,10 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
 
 
 class TCPPublishServer(salt.transport.base.PublishServer):
+    """
+    Tornado based TCP PublishServer
+    """
+
     # TODO: opts!
     # Based on default used in salt.ext.tornado.netutil.bind_sockets()
     backlog = 128
@@ -1064,18 +1062,20 @@ class TCPPublishServer(salt.transport.base.PublishServer):
             self.pub_sock = None
 
 
-class TCPReqClient(ResolverMixin):
+class TCPReqClient(salt.transport.base.RequestClient):
+    """
+    Tornado based TCP RequestClient
+    """
 
     ttype = "tcp"
 
-    def __init__(self, opts, io_loop, **kwargs):
-        super().__init__()
+    def __init__(self, opts, io_loop, **kwargs):  # pylint: disable=W0231
         self.opts = opts
-        # self.master_uri = master_uri
         self.io_loop = io_loop
         parse = urllib.parse.urlparse(self.opts["master_uri"])
         master_host, master_port = parse.netloc.rsplit(":", 1)
         master_addr = (master_host, int(master_port))
+        # self.resolver = Resolver()
         resolver = kwargs.get("resolver")
         self.message_client = salt.transport.tcp.MessageClient(
             opts,
@@ -1088,8 +1088,8 @@ class TCPReqClient(ResolverMixin):
         )
 
     @salt.ext.tornado.gen.coroutine
-    def send(self, message, **kwargs):
-        ret = yield self.message_client.send(message, **kwargs)
+    def send(self, load, tries=3, timeout=60):
+        ret = yield self.message_client.send(load, tries=3, timeout=60)
         raise salt.ext.tornado.gen.Return(ret)
 
     def close(self):
