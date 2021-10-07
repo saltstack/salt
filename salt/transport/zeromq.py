@@ -106,7 +106,7 @@ class PublishClient(salt.transport.base.PublishClient):
 
     ttype = "zeromq"
 
-    def __init__(self, opts, io_loop, **kwargs):
+    def __init__(self, opts, io_loop, **kwargs):  # pylint: disable=W0231
         self.opts = opts
         self.io_loop = io_loop
         self.hexid = hashlib.sha1(
@@ -198,7 +198,7 @@ class PublishClient(salt.transport.base.PublishClient):
     def __enter__(self):
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
@@ -284,7 +284,7 @@ class PublishClient(salt.transport.base.PublishClient):
 
 
 class RequestServer(salt.transport.base.RequestServer):
-    def __init__(self, opts):
+    def __init__(self, opts):  # pylint: disable=W0231
         self.opts = opts
         self._closing = False
         self._monitor = None
@@ -728,7 +728,7 @@ class PublishServer(salt.transport.base.PublishServer):
         ioloop = salt.ext.tornado.ioloop.IOLoop()
         ioloop.make_current()
         self.io_loop = ioloop
-        context = self.context = zmq.Context(1)
+        context = zmq.Context(1)
         pub_sock = context.socket(zmq.PUB)
         monitor = ZeroMQSocketMonitor(pub_sock)
         monitor.start_io_loop(ioloop)
@@ -855,7 +855,7 @@ class PublishServer(salt.transport.base.PublishServer):
         """
         if self.pub_sock:
             self.pub_close()
-        ctx = zmq.Context.instance()
+        ctx = zmq.Context()
         self._sock_data.sock = ctx.socket(zmq.PUSH)
         self.pub_sock.setsockopt(zmq.LINGER, -1)
         if self.opts.get("ipc_mode", "") == "tcp":
@@ -902,7 +902,7 @@ class PublishServer(salt.transport.base.PublishServer):
     def __enter__(self):
         return self
 
-    def __exit__(self, *args, **kwargs):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
 
@@ -910,7 +910,7 @@ class RequestClient(salt.transport.base.RequestClient):
 
     ttype = "zeromq"
 
-    def __init__(self, opts, io_loop):
+    def __init__(self, opts, io_loop):  # pylint: disable=W0231
         self.opts = opts
         master_uri = self.get_master_uri(opts)
         self.message_client = AsyncReqMessageClient(
