@@ -7,7 +7,7 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
-Salt 3004 (2021-09-28)
+Salt 3004 (2021-10-07)
 ======================
 
 
@@ -42,6 +42,7 @@ Changed
 Fixed
 -----
 
+- Handle signals and properly exit, instead of raising exceptions. (#60391, #60963)
 - Redirect imports of ``salt.ext.six`` to ``six`` (#60966)
 - Surface strerror to user state instead of returning false (#20789)
 - Fixing _get_envs() to preserve the order of pillar_roots. _get_envs() returned pillar_roots in a non-deterministic order. (#24501)
@@ -305,7 +306,7 @@ Fixed
   valid if Powershell 7 is installed on the system. (#58598)
 - Fixed the zabbix.host_create call on zabbix_host.present to include the
   optional parameter visible_name. Now working as documented. (#58602)
-- Fixed some bugs to allow zabbix_host.present to update a host already 
+- Fixed some bugs to allow zabbix_host.present to update a host already
   existent on Zabbix server:
 
   - Added checks before "pop" the elements "bulk" and "details" from
@@ -313,8 +314,8 @@ Fixed
     didn't works with Zabbix >= 5.0
   - Fixed the "inventory" comparison. It failed when both current and new
     inventory were missing.
-  - Rewrite of the update_interfaces routine to really "update" the 
-    interfaces and not trying to delete and recreate all interfaces, 
+  - Rewrite of the update_interfaces routine to really "update" the
+    interfaces and not trying to delete and recreate all interfaces,
     which almost always gives errors as interfaces with linked items
     can't be deleted. (#58603)
 - Added the "details" mandatory object with the properly default values
