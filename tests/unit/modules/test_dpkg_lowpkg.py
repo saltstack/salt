@@ -282,7 +282,6 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
                         "source:bash",
                         "version:4.4.18-2ubuntu1",
                         "section:shells",
-                        "installed_size:1588",
                         "size:",
                         "MD5:",
                         "SHA1:",
