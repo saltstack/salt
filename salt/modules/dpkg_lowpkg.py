@@ -296,17 +296,13 @@ def info(*packages, **kwargs):
         "dpkg-query",
         "-W",
         "-f=package:" + bin_var + "\\n"
-        "revision:${binary:Revision}\\n"
         "architecture:${Architecture}\\n"
         "maintainer:${Maintainer}\\n"
-        "summary:${Summary}\\n"
         "source:${source:Package}\\n"
         "version:${Version}\\n"
         "section:${Section}\\n"
         "size:${Size}\\n"
         "MD5:${MD5sum}\\n"
-        "SHA1:${SHA1}\\n"
-        "SHA256:${SHA256}\\n"
         "origin:${Origin}\\n"
         "homepage:${Homepage}\\n"
         "status:${db:Status-Abbrev}\\n"

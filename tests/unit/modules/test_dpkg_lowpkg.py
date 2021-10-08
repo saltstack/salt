@@ -274,18 +274,14 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
                 "stdout": os.linesep.join(
                     [
                         "package:bash",
-                        "revision:",
                         "architecture:amd64",
                         "maintainer:Ubuntu Developers"
                         " <ubuntu-devel-discuss@lists.ubuntu.com>",
-                        "summary:",
                         "source:bash",
                         "version:4.4.18-2ubuntu1",
                         "section:shells",
                         "size:",
                         "MD5:",
-                        "SHA1:",
-                        "SHA256:",
                         "origin:",
                         "homepage:http://tiswww.case.edu/php/chet/bash/bashtop.html",
                         "status:ii ",
