@@ -271,6 +271,7 @@ def _get_pkg_info(*packages, **kwargs):
         "origin:${Origin}\\n"
         "homepage:${Homepage}\\n"
         "status:${db:Status-Abbrev}\\n"
+        "install_date:${db-fsys:Last-Modified}\\n"
         "description:${Description}\\n"
         "\\n*/~^\\\\*\\n'"
     )
@@ -297,11 +298,17 @@ def _get_pkg_info(*packages, **kwargs):
             el.strip() for el in pkg_info.split(os.linesep) if el.strip()
         ]:
             key, value = pkg_info_line.split(":", 1)
+            if key == "install_date":
+                # Convert Unix time into ISO format in UTC
+                try:
+                    value = (
+                        datetime.datetime.utcfromtimestamp(int(value)).isoformat() + "Z"
+                    )
+                except ValueError:
+                    log.warning("Could not convert '%s' into Unix time.", value)
+                    value = None
             if value:
                 pkg_data[key] = value
-            install_date = _get_pkg_install_time(pkg_data.get("package"))
-            if install_date:
-                pkg_data["install_date"] = install_date
         pkg_data["description"] = pkg_descr
         ret.append(pkg_data)
 
@@ -325,26 +332,6 @@ def _get_pkg_license(pkg):
                     licenses.add(line.split(":", 1)[1].strip())
 
     return ", ".join(sorted(licenses))
-
-
-def _get_pkg_install_time(pkg):
-    """
-    Return package install time, based on the /var/lib/dpkg/info/<package>.list
-
-    :return:
-    """
-    iso_time = None
-    if pkg is not None:
-        location = "/var/lib/dpkg/info/{}.list".format(pkg)
-        if os.path.exists(location):
-            iso_time = (
-                datetime.datetime.utcfromtimestamp(
-                    int(os.path.getmtime(location))
-                ).isoformat()
-                + "Z"
-            )
-
-    return iso_time
 
 
 def _get_pkg_ds_avail():
