@@ -13,7 +13,6 @@ import time
 import pytest
 import salt.defaults.exitcodes
 import salt.utils.path
-from salt.utils.process import default_signals
 from saltfactories.utils.processes import ProcessResult, terminate_process
 
 log = logging.getLogger(__name__)
@@ -161,18 +160,28 @@ def test_interrupt_on_long_running_job(salt_cli, salt_master, salt_minion):
         "30",
     ]
 
-    # When the whole test suite runs, the default SIGTERM and SIGINT signals
-    # are set to SIG_IGN, ignore. The `with` line below ensures that the default
-    # handlers are set when starting the process.
-    # Failure to do so, will make the test fail.
-    with default_signals(signal.SIGINT, signal.SIGTERM):
-        proc = subprocess.Popen(
-            cmdline,
-            shell=False,
-            stdout=terminal_stdout,
-            stderr=terminal_stderr,
-            universal_newlines=True,
-        )
+    # If this test starts failing, commend the following block of code
+    proc = subprocess.Popen(
+        cmdline,
+        shell=False,
+        stdout=terminal_stdout,
+        stderr=terminal_stderr,
+        universal_newlines=True,
+    )
+    # and uncomment the following block of code
+
+    # with default_signals(signal.SIGINT, signal.SIGTERM):
+    #    proc = subprocess.Popen(
+    #        cmdline,
+    #        shell=False,
+    #        stdout=terminal_stdout,
+    #        stderr=terminal_stderr,
+    #        universal_newlines=True,
+    #    )
+
+    # What this means is that something in salt or the test suite is setting
+    # the SIGTERM and SIGINT signals to SIG_IGN, ignore.
+    # Check which line of code is doing that and fix it
     start = time.time()
     try:
         # Make sure it actually starts
