@@ -1182,14 +1182,15 @@ def default_signals(*signals):
         else:
             old_signals[signum] = saved_signal
 
-    # Do whatever is needed with the reset signals
-    yield
+    try:
+        # Do whatever is needed with the reset signals
+        yield
+    finally:
+        # Restore signals
+        for signum in old_signals:
+            signal.signal(signum, old_signals[signum])
 
-    # Restore signals
-    for signum in old_signals:
-        signal.signal(signum, old_signals[signum])
-
-    del old_signals
+        del old_signals
 
 
 class SubprocessList:
