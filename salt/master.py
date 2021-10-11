@@ -785,12 +785,9 @@ class Master(SMaster):
 
         self.process_manager.run()
 
-    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+    def _handle_signals(self, signum, sigframe):
         # escalate the signals to the process manager
-        self.process_manager.stop_restarting()
-        self.process_manager.send_signal_to_processes(signum)
-        # kill any remaining processes
-        self.process_manager.kill_children()
+        self.process_manager._handle_signals(signum, sigframe)
         time.sleep(1)
         sys.exit(0)
 
@@ -1170,6 +1167,7 @@ class AESFuncs(TransportMethods):
         "_dir_list",
         "_symlink_list",
         "_file_envs",
+        "_ext_nodes",  # To be removed in 3006 (Sulfur) #60980
     )
 
     def __init__(self, opts):
@@ -1367,6 +1365,10 @@ class AESFuncs(TransportMethods):
         if load is False:
             return {}
         return self.masterapi._master_tops(load, skip_verify=True)
+
+    # Needed so older minions can request master_tops
+    # To be removed in 3006 (Sulfur) #60980
+    _ext_nodes = _master_tops
 
     def _master_opts(self, load):
         """

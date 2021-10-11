@@ -1,0 +1,2 @@
+Do not break master_tops for minion with version lower to 3003
+This is going to be removed in Salt 3006 (Sulfur)
