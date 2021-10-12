@@ -111,22 +111,29 @@ def summary(svc_name=""):
         salt '*' monit.summary <service name>
     """
     ret = {}
-    cmd = "monit summary"
+    cmd = "monit status"
     res = __salt__["cmd.run"](cmd).splitlines()
+    resource = name = None
     for line in res:
         if "daemon is not running" in line:
             return dict(monit="daemon is not running", result=False)
-        elif not line or svc_name not in line or "The Monit daemon" in line:
+        elif not line or "The Monit daemon" in line:
             continue
         else:
-            parts = line.split("'")
-            if len(parts) == 3:
-                resource, name, status_ = (parts[0].strip(), parts[1], parts[2].strip())
+            header_re = re.match("^(.+) '([^']+)'", line)
+            status_re = re.match("^\s+status\s+(.*)$", line)
+            if header_re:
+                resource = header_re.group(1)
+                name = header_re.group(2)
+            elif status_re:
+                status_ = status_re.group(1)
+
                 if svc_name != "" and svc_name != name:
                     continue
                 if resource not in ret:
                     ret[resource] = {}
                 ret[resource][name] = status_
+                resource = name = None
     return ret
 
 
