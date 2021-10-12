@@ -33,7 +33,7 @@ def query(url, **kwargs):
 
         salt '*' http.query http://somelink.com/
         salt '*' http.query http://somelink.com/ method=POST \
-            params='key1=val1&key2=val2'
+            params='{"key1": "val1", "key2": "val2"}'
         salt '*' http.query http://somelink.com/ method=POST \
             data='<xml>somecontent</xml>'
     """

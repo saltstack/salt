@@ -55,8 +55,12 @@ def __clean_tmp(tmp):
     """
     try:
         rm_rf(tmp)
-    except Exception:  # pylint: disable=broad-except
-        pass
+    except Exception as exc:  # pylint: disable=broad-except
+        log.error(
+            "Exception while removing temp directory: %s",
+            exc,
+            exc_info_on_loglevel=logging.DEBUG,
+        )
 
 
 def guess_archive_type(name):
@@ -783,6 +787,20 @@ def backup_minion(path, bkroot):
     if not salt.utils.platform.is_windows():
         os.chown(bkpath, fstat.st_uid, fstat.st_gid)
         os.chmod(bkpath, fstat.st_mode)
+
+
+def case_insensitive_filesystem(path=None):
+    """
+    Detect case insensitivity on a system.
+
+    Returns:
+        bool: Flag to indicate case insensitivity
+
+    .. versionadded:: 3004
+
+    """
+    with tempfile.NamedTemporaryFile(prefix="TmP", dir=path, delete=True) as tmp_file:
+        return os.path.exists(tmp_file.name.lower())
 
 
 def get_encoding(path):

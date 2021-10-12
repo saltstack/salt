@@ -6,6 +6,7 @@ import random
 import re
 import string
 
+import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -38,28 +39,61 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-def secure_password(length=20, use_random=True):
+def secure_password(
+    length=20,
+    use_random=True,
+    chars=None,
+    lowercase=True,
+    uppercase=True,
+    digits=True,
+    punctuation=True,
+    whitespace=False,
+    printable=False,
+):
     """
     Generate a secure password.
     """
+    chars = chars or ""
+    if printable:
+        # as printable includes all other string character classes
+        # the other checks can be skipped
+        chars = string.printable
+    if not chars:
+        if lowercase:
+            chars += string.ascii_lowercase
+        if uppercase:
+            chars += string.ascii_uppercase
+        if digits:
+            chars += string.digits
+        if punctuation:
+            chars += string.punctuation
+        if whitespace:
+            chars += string.whitespace
     try:
         length = int(length)
         pw = ""
         while len(pw) < length:
             if HAS_RANDOM and use_random:
+                encoding = None
+                if salt.utils.platform.is_windows():
+                    encoding = "UTF-8"
                 while True:
                     try:
-                        char = salt.utils.stringutils.to_str(get_random_bytes(1))
+                        char = salt.utils.stringutils.to_str(
+                            get_random_bytes(1), encoding=encoding
+                        )
                         break
                     except UnicodeDecodeError:
                         continue
                 pw += re.sub(
-                    salt.utils.stringutils.to_str(r"[\W_]"),
+                    salt.utils.stringutils.to_str(
+                        r"[^{}]".format(re.escape(chars)), encoding=encoding
+                    ),
                     "",
                     char,
                 )
             else:
-                pw += random.SystemRandom().choice(string.ascii_letters + string.digits)
+                pw += random.SystemRandom().choice(chars)
         return pw
     except Exception as exc:  # pylint: disable=broad-except
         log.exception("Failed to generate secure passsword")
