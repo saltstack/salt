@@ -146,6 +146,9 @@ def _create_table():
       bank CHAR(255),
       etcd_key CHAR(255),
       data MEDIUMBLOB,
+      last_update TIMESTAMP NOT NULL
+                  DEFAULT CURRENT_TIMESTAMP
+                  ON UPDATE CURRENT_TIMESTAMP,
       PRIMARY KEY(bank, etcd_key)
     );""".format(
         __context__["mysql_table_name"]
@@ -263,9 +266,12 @@ def contains(bank, key):
     Checks if the specified bank contains the specified key.
     """
     _init_client()
-    query = "SELECT COUNT(data) FROM {} WHERE bank='{}' AND etcd_key='{}'".format(
-        __context__["mysql_table_name"], bank, key
-    )
+    if key is None:
+        query = "SELECT COUNT(data) FROM {} WHERE bank='{}'".format(_table_name, bank)
+    else:
+        query = "SELECT COUNT(data) FROM {} WHERE bank='{}' AND etcd_key='{}'".format(
+            __context__["mysql_table_name"], bank, key
+        )
     cur, _ = run_query(__context__.get("mysql_client"), query)
     r = cur.fetchone()
     cur.close()
@@ -273,4 +279,12 @@ def contains(bank, key):
 
 
 def updated(bank, key):
-    ...  # TODO: FIXME -W. Werner, 2021-07-27
+    _init_client()
+    query = (
+        "SELECT UNIX_TIMESTAMP(last_update) FROM {} WHERE bank='{}' "
+        "AND etcd_key='{}'".format(_table_name, bank, key)
+    )
+    cur, _ = run_query(client, query)
+    r = cur.fetchone()
+    cur.close()
+    return r[0] if r else r

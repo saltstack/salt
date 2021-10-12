@@ -135,8 +135,7 @@ def consul_container(salt_factories, docker_client, consul_port):
     )
     with container.started() as factory:
         # TODO: THIS IS HORRIBLE. THERE ARE BETTER WAYS TO DETECT SERVICE IS UP -W. Werner, 2021-10-12
-        # pylint: disable
-        import socket, time
+        import socket, time  # pylint: disable=multiple-imports,multiple-imports-on-one-line
 
         sleeptime = 0.1
         up_yet = False
@@ -152,7 +151,6 @@ def consul_container(salt_factories, docker_client, consul_port):
                 if e.errno == 104:
                     time.sleep(sleeptime)
                     sleeptime += sleeptime
-        # pylint: enable
         yield factory
 
 
