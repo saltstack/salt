@@ -42,7 +42,16 @@ pytestmark = [
 # - [✓] - redis_cache
 # - [✓] - etcd_cache - mostly complete - tried PR 56001, many more errors happened
 # - [✓] - consul_cache
-# - [ ] - mysql_cache
+# - [✓] - mysql_cache
+
+
+# WOOHOO! Tests are all passing for all of the cache modules. They are in sync,
+# behavior-wise, with localfs cache. However! They're not quite perfect.
+# Currently the mysql_cache won't update an existing cache table - it should
+# ALTER TABLE if the table exists. It's also looking horrible from a SQL
+# injection perspective, that should 100% be addressed. etcd/consul/redis
+# caches also need to appropritately clean up the timestamp entries. As
+# mentioned, we also need to add some out-of-band tests.
 
 
 @pytest.fixture(scope="module")
