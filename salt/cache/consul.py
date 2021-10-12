@@ -47,6 +47,7 @@ value to ``consul``:
 """
 
 import logging
+import time
 
 import salt.payload
 from salt.exceptions import SaltCacheError
@@ -107,9 +108,12 @@ def store(bank, key, data):
     Store a key value.
     """
     c_key = "{}/{}".format(bank, key)
+    tstamp_key = "{}.tstamp/{}".format(bank, key)
+
     try:
         c_data = salt.payload.dumps(data)
         api.kv.put(c_key, c_data)
+        api.kv.put(tstamp_key, __context__["serial"].dumps(int(time.time())))
     except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
             "There was an error writing the key, {}: {}".format(c_key, exc)
@@ -174,14 +178,25 @@ def contains(bank, key):
     """
     Checks if the specified bank contains the specified key.
     """
-    if key is None:
-        return True  # any key could be a branch and a leaf at the same time in Consul
-    else:
-        try:
-            c_key = "{}/{}".format(bank, key)
-            _, value = api.kv.get(c_key)
-        except Exception as exc:  # pylint: disable=broad-except
-            raise SaltCacheError(
-                "There was an error getting the key, {}: {}".format(c_key, exc)
-            )
-        return value is not None
+    key = key or ""
+    try:
+        c_key = "{}/{}".format(bank, key)
+        _, value = api.kv.get(c_key, keys=True)
+    except Exception as exc:  # pylint: disable=broad-except
+        raise SaltCacheError(
+            "There was an error getting the key, {}: {}".format(c_key, exc)
+        )
+    return value is not None
+
+
+def updated(bank, key):
+    c_key = "{}.tstamp/{}".format(bank, key)
+    try:
+        _, value = api.kv.get(c_key)
+        if value is None:
+            return None
+        return __context__["serial"].loads(value["Value"])
+    except Exception as exc:  # pylint: disable=broad-except
+        raise SaltCacheError(
+            "There was an error reading the key, {}: {}".format(c_key, exc)
+        )

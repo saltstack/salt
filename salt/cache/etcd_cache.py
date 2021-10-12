@@ -50,6 +50,7 @@ value to ``etcd``:
 
 import base64
 import logging
+import time
 
 import salt.payload
 from salt.exceptions import SaltCacheError
@@ -129,9 +130,11 @@ def store(bank, key, data):
     """
     _init_client()
     etcd_key = "{}/{}/{}".format(path_prefix, bank, key)
+    etcd_tstamp_key = "{}/{}/{}".format(path_prefix, bank + ".tstamp", key)
     try:
         value = salt.payload.dumps(data)
         client.write(etcd_key, base64.b64encode(value))
+        client.write(etcd_tstamp_key, int(time.time()))
     except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
             "There was an error writing the key, {}: {}".format(etcd_key, exc)
@@ -226,5 +229,14 @@ def contains(bank, key):
 
 
 def updated(bank, key):
-    return None
-    # TODO should be something besides nop
+    _init_client()
+    tstamp_key = "{}/{}/{}".format(path_prefix, bank + ".tstamp", key)
+    try:
+        value = client.read(tstamp_key).value
+        return int(value)
+    except etcd.EtcdKeyNotFound:
+        return None
+    except Exception as exc:  # pylint: disable=broad-except
+        raise SaltCacheError(
+            "There was an error reading the key, {}: {}".format(tstamp_key, exc)
+        )

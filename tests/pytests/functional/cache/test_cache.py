@@ -35,13 +35,14 @@ pytestmark = [
 
 # Thursday: start making etcd tests work
 
+# TODO: Ensure that timestamps are flushed from the cache(s) as well -W. Werner, 2021-10-12
+# TODO: add out-of-band (i.e. not via the API) additions to the cache -W. Werner, 2021-09-28
+
 
 # - [✓] - redis_cache
-# - [ ] - etcd_cache - mostly complete - tried PR 56001, many more errors happened
-# - [ ] - consul_cache
+# - [✓] - etcd_cache - mostly complete - tried PR 56001, many more errors happened
+# - [✓] - consul_cache
 # - [ ] - mysql_cache
-
-# TODO: add out-of-band (i.e. not via the API) additions to the cache -W. Werner, 2021-09-28
 
 
 @pytest.fixture(scope="module")
@@ -133,6 +134,25 @@ def consul_container(salt_factories, docker_client, consul_port):
         container_run_kwargs={"ports": {"8500/tcp": consul_port}},
     )
     with container.started() as factory:
+        # TODO: THIS IS HORRIBLE. THERE ARE BETTER WAYS TO DETECT SERVICE IS UP -W. Werner, 2021-10-12
+        # pylint: disable
+        import socket, time
+
+        sleeptime = 0.1
+        up_yet = False
+        while not up_yet:
+            try:
+                with socket.create_connection(
+                    ("localhost", consul_port), timeout=1
+                ) as cli:
+                    cli.send(b"GET /v1/kv/fnord HTTP/1.1\n\n")
+                    cli.recv(2048)
+                    up_yet = True
+            except ConnectionResetError as e:
+                if e.errno == 104:
+                    time.sleep(sleeptime)
+                    sleeptime += sleeptime
+        # pylint: enable
         yield factory
 
 
@@ -233,7 +253,8 @@ def mysql_cache(minion_opts, mysql_port, mysql_container):
         "localfs_cache",
         "redis_cache",
         "etcd_cache",
-        # "consul_cache", "mysql_cache",
+        "consul_cache",
+        "mysql_cache",
     ]
 )
 def cache(request):
