@@ -454,7 +454,7 @@ def test_pkg_011_latest_only_upgrade(
         new_version = modules.pkg.version(target, use_context=False)
         assert new_version == updates[target]
         ret = states.pkg.latest(name=target, refresh=False, only_upgrade=True)
-        assert ret["pkg_|-{0}_|-{0}_|-latest".format(target)][
+        assert ret.raw["pkg_|-{0}_|-{0}_|-latest".format(target)][
             "comment"
         ] == "Package {} is already up-to-date".format(target)
 
