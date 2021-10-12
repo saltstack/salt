@@ -1,0 +1,53 @@
+name: Generate Tag and Github Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      saltVersion:
+        description: 'Salt Version'
+        required: true
+      reTag:
+        description: 'Re Tag (Deletes tag and release)'
+        default: false
+
+jobs:
+  GenerateTagRelease:
+    name: Generate Tag and Github Release
+    runs-on: ubuntu-latest
+    steps:
+    - uses: dev-drprasad/delete-tag-and-release@v0.2.0
+      if: github.event.inputs.reTag == 'true'
+      with:
+        delete_release: true # default: false
+        tag_name: v${{ github.event.inputs.saltVersion }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - uses: actions/checkout@v2
+    - name: Bump version and push tag
+      id: tag_version
+      uses: mathieudutour/github-tag-action@v5.6
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        custom_tag: ${{ github.event.inputs.saltVersion }}
+
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.8
+
+    - name: Install pypa/build
+      run: |
+        python -m pip install build --user
+    - name: Build a binary wheel and a source tarball
+      run: |
+        git fetch --tags origin
+        git checkout v${{ github.event.inputs.saltVersion }}
+        python -m build --sdist --outdir dist/ .
+    - name: Create a GitHub release
+      uses: ncipollo/release-action@v1
+      with:
+        tag: ${{ steps.tag_version.outputs.new_tag }}
+        name: Release ${{ steps.tag_version.outputs.new_tag }}
+        body: ${{ steps.tag_version.outputs.new_tag }}
+        artifacts: dist/salt*.tar.gz
