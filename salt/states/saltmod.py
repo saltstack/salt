@@ -497,6 +497,8 @@ def function(
     roster
         In the event of using salt-ssh, a roster system can be set
 
+        .. versionadded:: 3005
+
     batch
         Execute the command :ref:`in batches <targeting-batch>`. E.g.: ``10%``.
 
