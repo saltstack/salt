@@ -17,7 +17,7 @@ def ctx():
 @requires_system_grains
 def refresh_db(ctx, grains, modules):
     if "refresh" not in ctx:
-        # modules.pkg.refresh_db()
+        modules.pkg.refresh_db()
         ctx["refresh"] = True
 
     # If this is Arch Linux, check if pacman is in use by another process
