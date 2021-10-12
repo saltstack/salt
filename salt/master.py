@@ -1568,6 +1568,7 @@ class AESFuncs(TransportMethods):
             pillar_override=load.get("pillar_override", {}),
             pillarenv=load.get("pillarenv"),
             extra_minion_data=load.get("extra_minion_data"),
+            clean_cache=load.get("clean_cache"),
         )
         data = pillar.compile_pillar()
         self.fs_.update_opts()
