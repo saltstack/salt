@@ -649,7 +649,7 @@ def test_pkg_015_installed_held(grains, modules, states, PKG_TARGETS):
         if not target_changes:
             pytest.skip(
                 "Test needs to be configured for {}: {}".format(
-                    grains["os"], ret[tag]["changes"][target]
+                    grains["os"], ret.raw[tag]["changes"][target]
                 )
             )
         assert ret.raw[tag]["changes"][target] == target_changes
