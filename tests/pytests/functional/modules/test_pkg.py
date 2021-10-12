@@ -75,9 +75,9 @@ def test_version_cmp(grains, modules):
         eq = ["2.3.1", "2.3.1"]
         gt = ["2.3.2", "2.3.1"]
 
-    assert modules.pkg.version_cmp(lt) == -1
-    assert modules.pkg.version_cmp(eq) == 0
-    assert modules.pkg.version_cmp(gt) == 1
+    assert modules.pkg.version_cmp(*lt) == -1
+    assert modules.pkg.version_cmp(*eq) == 0
+    assert modules.pkg.version_cmp(*gt) == 1
 
 
 @pytest.mark.destructive_test
@@ -113,7 +113,7 @@ def test_mod_del_repo(grains, modules):
             gpgcheck = 1
             enabled = 1
             ret = modules.pkg.mod_repo(
-                [repo],
+                repo,
                 name=name,
                 baseurl=baseurl,
                 gpgkey=gpgkey,
@@ -157,7 +157,7 @@ def test_mod_del_repo_multiline_values(modules):
             gpgcheck = 1
             enabled = 1
             ret = modules.pkg.mod_repo(
-                [repo],
+                repo,
                 name=name,
                 baseurl=baseurl,
                 gpgkey=gpgkey,
@@ -302,7 +302,7 @@ def test_refresh_db(grains, modules, tmp_path, minion_opts):
 
     ret = modules.pkg.refresh_db()
     if not isinstance(ret, dict):
-        pytest.skipTest("Upstream repo did not return coherent results: {}".format(ret))
+        pytest.skip("Upstream repo did not return coherent results: {}".format(ret))
 
     if grains["os_family"] == "RedHat":
         assert ret in (True, None)
@@ -324,22 +324,22 @@ def test_pkg_info(grains, modules, test_pkg):
     Test returning useful information on Ubuntu systems.
     """
     if grains["os_family"] == "Debian":
-        ret = modules.pkg.info_installed(["bash", "dpkg"])
+        ret = modules.pkg.info_installed("bash", "dpkg")
         keys = ret.keys()
         assert "bash" in keys
         assert "dpkg" in keys
     elif grains["os_family"] == "RedHat":
-        ret = modules.pkg.info_installed(["rpm", "bash"])
+        ret = modules.pkg.info_installed("rpm", "bash")
         keys = ret.keys()
         assert "rpm" in keys
         assert "bash" in keys
     elif grains["os_family"] == "Suse":
-        ret = modules.pkg.info_installed(["less", "zypper"])
+        ret = modules.pkg.info_installed("less", "zypper")
         keys = ret.keys()
         assert "less" in keys
         assert "zypper" in keys
     else:
-        ret = modules.pkg.info_installed([test_pkg])
+        ret = modules.pkg.info_installed(test_pkg)
         keys = ret.keys()
         assert test_pkg in keys
 
