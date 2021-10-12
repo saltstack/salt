@@ -429,10 +429,10 @@ def test_pkg_011_latest_only_upgrade(
     assert version
 
     ret = states.pkg.latest(name=target, refresh=False, only_upgrade=True)
-    assert ret.result is True
+    assert ret.result is False
 
     # Now look for updates and try to run the state on a package which is already up-to-date.
-    installed_pkgs = modules.pkg.list_pkgs
+    installed_pkgs = modules.pkg.list_pkgs()
     updates = modules.pkg.list_upgrades(refresh=False)
 
     for pkgname in updates:
@@ -451,7 +451,7 @@ def test_pkg_011_latest_only_upgrade(
     if target:
         ret = states.pkg.latest(name=target, refresh=False, only_upgrade=True)
         assert ret.result is True
-        new_version = modules.pkg.version(target)
+        new_version = modules.pkg.version(target, use_context=False)
         assert new_version == updates[target]
         ret = states.pkg.latest(name=target, refresh=False, only_upgrade=True)
         assert ret["pkg_|-{0}_|-{0}_|-latest".format(target)][
@@ -508,7 +508,6 @@ def test_pkg_012_installed_with_wildcard_version(
 
     # Clean up
     ret = states.pkg.removed(name=target)
-    log.debug("=== target %s ret %s ===", target, ret)
     assert ret.result is True
 
 
@@ -644,16 +643,16 @@ def test_pkg_015_installed_held(grains, modules, states, PKG_TARGETS):
     try:
         tag = "pkg_|-{0}_|-{0}_|-installed".format(target)
         assert ret.result is True
-        assert tag in ret
-        assert "changes" in ret[tag]
-        assert target in ret[tag]["changes"]
+        assert tag in ret.raw
+        assert "changes" in ret.raw[tag]
+        assert target in ret.raw[tag]["changes"]
         if not target_changes:
             pytest.skip(
                 "Test needs to be configured for {}: {}".format(
                     grains["os"], ret[tag]["changes"][target]
                 )
             )
-        assert ret[tag]["changes"][target] == target_changes
+        assert ret.raw[tag]["changes"][target] == target_changes
     finally:
         # Clean up, unhold package and remove
         modules.pkg.unhold(name=target)
@@ -750,7 +749,7 @@ def test_pkg_017_installed_held_equals_false(grains, modules, states, PKG_TARGET
         assert tag in target_ret.raw
         assert "changes" in target_ret.raw[tag]
         # On Centos 7 package is already installed, no change happened
-        if target_ret[tag].get("changes"):
+        if target_ret.raw[tag].get("changes"):
             assert target in target_ret.raw[tag]["changes"]
         if grains["os_family"] == "Suse":
             assert "packages were installed" in target_ret.raw[tag]["comment"]
