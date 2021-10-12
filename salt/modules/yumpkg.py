@@ -1715,10 +1715,7 @@ def install(
             if pkgname in holds:
                 if update_holds:
                     to_unhold[pkgname] = pkgstr
-                else:
-                    unhold_prevented.append(pkgname)
-            else:
-                targets.append(pkgstr)
+            targets.append(pkgstr)
 
         if not to_unhold:
             yield
@@ -1729,10 +1726,7 @@ def install(
                 # longer returns a list in python3.
                 unhold_names = list(to_unhold.keys())
                 for unheld_pkg, outcome in unhold(pkgs=unhold_names).items():
-                    if outcome["result"]:
-                        # Package was successfully unheld, add to targets
-                        targets.append(to_unhold[unheld_pkg])
-                    else:
+                    if not outcome["result"]:
                         # Failed to unhold package
                         errors.append(unheld_pkg)
                 yield
@@ -1796,15 +1790,6 @@ def install(
             ret.update(
                 {pkgname: {"old": old.get(pkgname, ""), "new": new.get(pkgname, "")}}
             )
-
-    if unhold_prevented:
-        errors.append(
-            "The following package(s) could not be updated because they are "
-            "being held: {}. Set 'update_holds' to True to temporarily "
-            "unhold these packages so that they can be updated.".format(
-                ", ".join(unhold_prevented)
-            )
-        )
 
     if errors:
         raise CommandExecutionError(
