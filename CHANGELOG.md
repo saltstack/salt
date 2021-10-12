@@ -42,6 +42,7 @@ Changed
 Fixed
 -----
 
+- Set default 'bootstrap_delay' to 0 (#61005)
 - Fixed issue where multiple args to netapi were not preserved (#59182)
 - Handle all repo formats in the aptpkg module. (#60971)
 - Do not break master_tops for minion with version lower to 3003
