@@ -1286,7 +1286,7 @@ def create_virtual_machine(
 def create_vminterface(
             name,
             vm_name,
-            cluster=None,
+            cluster,
             tenant=None,
             enabled=True,
             parent=None,
@@ -1306,7 +1306,7 @@ def create_vminterface(
         The name of the interface, e.g., ``eth0``
     vm_name
         Name of the virtual_machine the interface belongs to, ``gibson01``
-    cluster : None
+    cluster
         The name of the virtualization cluster where the virtual machine resides, e.g., ``oVirt - Cluster3``
         TODO: bug in pynetbox API?: cannot filter by cluster.
     tenant : None
@@ -1333,15 +1333,29 @@ def create_vminterface(
 
         salt myminion netbox.create_virtual_machine_interface eth0 gibson01
     """
+    
+    try:
+        nb_cluster = get_(
+            "virtualization",
+            "clusters",
+            name=cluster
+        )
+
+        if not nb_cluster:
+            log.error('No virtualization cluster found named {}'.format(cluster))
+            return False
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        return False
 
     try:
         nb_vm = get_(
-                "virtualization",
-                "virtual_machines",
-                name=vm_name,
-                tenant=tenant,
-                cluster=cluster
-            )
+            "virtualization",
+            "virtual_machines",
+            name=vm_name,
+            tenant=tenant,
+            cluster=nb_cluster['id']
+        )
 
         if not nb_vm:
             log.error('No Virtual Machine found named {} filtered by tenant {} and cluster {}'.format(vm_name, tenant, cluster))
@@ -1392,11 +1406,11 @@ def create_vminterface(
     else:
         return False
 
-def update_virtual_machine(name, **kwargs):
+def update_virtual_machine(name, cluster, **kwargs):
     """
-    .. versionadded:: 2019.2.0
+    .. versionadded:: TBD
 
-    Add attributes to an existing device, identified by name.
+    Add attributes to an existing virtual machine, identified by name and cluster.
 
     name
         The name of the virtual_machine, e.g., ``gibson01``
@@ -1423,6 +1437,82 @@ def update_virtual_machine(name, **kwargs):
             'virtualization',
             'virtual_machines',
             name=name
+        )
+        return x
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        return False
+
+def update_vminterface(name, virtual_machine, cluster, **kwargs):
+    """
+    .. versionadded:: TBD
+
+    Add attributes to an existing vminterface, identified by name, virtual_machine, and cluster.
+
+    name
+        The name of the vminterface e.g., ``eth0``
+    virtual_machine
+        Name of the virtual machine to which assign the virtual interface, e.g., ``gibson01``
+    cluster
+        The name of the cluster where the virtual_machine is residing, e.g., ``supercluster 1``
+    kwargs
+       Arguments to change in device, e.g., ``comments=This is a payphone.... Don't ask.``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion netbox.update_vminterface eth0 gibson01 "supercluster 1" comments="This is a payphone..... Don't ask."
+    """
+    try:
+        nb_cluster = get_(
+            "virtualization",
+            "clusters",
+            name=cluster
+        )
+
+        if not nb_cluster:
+            log.error('No virtualization cluster found named {}'.format(cluster))
+            return False
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        return False
+
+    try:
+        nb_vm = get_(
+            "virtualization",
+            "virtual_machines",
+            name=virtual_machine,
+            cluster=nb_cluster['id']
+        )
+
+        if not nb_vm:
+            log.error('No Virtual Machine found named {} filtered by tenant {} and cluster {}'.format(vm_name, tenant, cluster))
+            return False
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        return False
+
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+
+    nb_vminterface = _get(
+        "virtualization", 
+        "interfaces", 
+        auth_required=True, 
+        name=name,
+        virtual_machine_id=nb_vm['id'],
+        cluster_id=nb_cluster['id'],
+    )
+    for k, v in kwargs.items():
+        setattr(nb_vminterface, k, v)
+    try:
+        nb_vminterface.save()
+        x = get_(
+            'virtualization',
+            'interfaces',
+            name=name,
+            virtual_machine_id=nb_vm['id'],
+            cluster_id=nb_cluster['id'],
         )
         return x
     except pynetbox.RequestError as e:
@@ -1483,6 +1573,160 @@ def check_virtual_machine(name, cluster, **kwargs):
             print("Gelijk: {}".format(v))
         else:
             print("BOOM: {} != {}".format(v, getattr(nb_vm, k)))
+            changes[k]=v
+    return changes
+
+def check_vminterface(name, virtual_machine, cluster, **kwargs):
+    """
+    returns: 
+        - False if error
+        - None if vminterface does not exist
+        - {} if there are no changes
+        - {'with': 'changes'} for changes
+    """
+    try:
+        nb_cluster = get_(
+            "virtualization",
+            "clusters",
+            name=cluster
+        )
+
+        if not nb_cluster:
+            log.error('No virtualization cluster found named {}'.format(cluster))
+            return False
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        return False
+
+    try:
+        nb_vm = get_(
+            "virtualization",
+            "virtual_machines",
+            name=virtual_machine,
+            cluster=nb_cluster['id']
+        )
+        if not nb_vm:
+            log.warning('No virtual machine {} found in cluster {}'.format(virtual_machine, cluster))
+            return None
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        return False
+    
+    try:
+        nb_vmiface = _get(
+            "virtualization",
+            "interfaces",
+            name=name,
+            virtual_machine_id=nb_vm['id'],
+            cluster_id=nb_cluster['id'],
+        )
+        if not nb_vmiface:
+            log.info('No virtual interface {} found for virtual machine {} found in cluster {}'.format(name, virtual_machine, cluster))
+            return None
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        return False
+
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+
+    changes={}
+    for k, v in kwargs.items():
+        if v == None:
+            # state module sets al available options default to None
+            print(">>> skip: k:{} v:{}".format(k,v))
+            continue
+       
+        # Resolve kwargs to their ID if needed.
+        if k == "parent":
+            nb_iface = get_(
+                "virtualization",
+                "interfaces", 
+                name=v,
+                virtual_machine_id=nb_vm['id'],
+                cluster_id=nb_cluster['id']
+            )
+            if nb_iface:
+                v = nb_iface['id']
+            else:
+                log.error("Could not resolve vminterface {} to an ID".format(v))
+                return False
+
+        if k == "untagged_vlan":
+            nb_vlan = get_(
+                "ipam",
+                "vlans", 
+                vid=v
+            )
+            if nb_vlan:
+                v = nb_vlan['id']
+            else:
+                log.error("Could not resolve vlan {} to an ID".format(v))
+                return False
+
+        if k == "tagged_vlans":
+            vlan_list = []
+            for i in v:
+                nb_vlan = get_(
+                    "ipam",
+                    "vlans", 
+                    vid=i
+                )
+                if nb_vlan:
+                    vlan_list.append(nb_vlan['id'])
+                else:
+                    log.error("Could not resolve vlan {} to an ID".format(v))
+                    return False
+            v = vlan_list
+
+
+        # Check if the attribute has an ID attribute.
+        # If so, use it.
+        value_from_netbox = ""
+        nb_attribute = getattr(nb_vmiface, k)
+        if hasattr(nb_attribute, "id"):
+            value_from_netbox = nb_attribute.id
+        else:
+            value_from_netbox = nb_attribute
+
+        # Netbox returns the mode as an object and it's string representation
+        # is capitalized, so we work around that right here.
+        if k == "mode" and v:
+            v = v.lower()
+            value_from_netbox = str(value_from_netbox).lower()
+
+        # Netbox gives tagged_vlans as a list of vlan records
+        # and input receives tagged_vlans as a list of vlan record id's.
+        # 
+        # Here, first we create a list of vlan records id's of what exists
+        # in Netbox.
+        #
+        # Next both lists are cast to a set because sets can be
+        # compared and have no order (What we want). 
+        # When comparing lists order is taken into account (What we don't want).
+        #
+        # When both sets are compared and changes are found, v is set
+        # as the list of requested vlan record id's.
+        # Else, v and  vlan_from_netbox are set to the identical list
+        # "vlan_list_from_input". This is done so later the lists can
+        # be correctly tested for equality.
+        if k == "tagged_vlans" and v:
+            vlan_list_from_input = v
+            vlan_list_from_netbox = []
+            for vlan in value_from_netbox:
+                vlan_list_from_netbox.append(vlan['id'])
+            
+            if set(vlan_list_from_input) == set(vlan_list_from_netbox):
+                v = vlan_list_from_input
+                value_from_netbox = vlan_list_from_input
+            else:
+                v = vlan_list_from_input
+                value_from_netbox = vlan_list_from_netbox
+
+        
+        if v == value_from_netbox:
+            print("Gelijk: {}".format(v))
+        else:
+            print("BOOM: {} != {}".format(v, getattr(nb_vmiface, k)))
             changes[k]=v
     return changes
 
@@ -1602,17 +1846,36 @@ def create_ipaddress(
     endpoint = ""
     search_kwargs = {}
 
+    if tenant:
+        nb_tenant = get_(
+            "tenancy",
+            "tenants",
+            name=tenant
+        )
+        if not nb_tenant:
+            log.error("No such tenant: {}".format(tenant))
+            return False
+
+    if cluster:
+        nb_cluster = get_(
+            "virtualization",
+            "clusters",
+            name=cluster
+        )
+        if not nb_cluster:
+            log.error("No such cluster: {}".format(cluster))
+            return False
+
     if device:
         app = "dcim"
         endpoint = "devices"
         search_kwargs['name'] = device
-        search_kwargs['tenant'] = tenant
+        search_kwargs['tenant'] = nb_tenant['id']
     if virtual_machine:
         app = "virtualization"
         endpoint = "virtual_machines"
         search_kwargs['name'] = virtual_machine
-        search_kwargs['tenant'] = tenant
-        search_kwargs['cluster'] = cluster
+        search_kwargs['cluster'] = nb_cluster['id']
 
     if device or virtual_machine:
         if not interface:
@@ -1713,6 +1976,233 @@ def create_ipaddress(
         vrf=vrf,
     )
     return nb_addr
+
+def check_ipaddress(address, **kwargs):
+    """
+    returns: 
+        - False if error
+        - None if vminterface does not exist
+        - {} if there are no changes
+        - {'with': 'changes'} for changes
+
+    ip addresses are a bit strange, they can be assigned to 
+    device records as well a virtual machine objects....
+
+    notes:
+        address=address,
+        interface=interface,
+        virtual_machine=virtual_machine,
+        cluster=cluster,
+        device=device,
+        vrf=vrf,
+        tenant=tenant,
+        status=status,
+        role=role,
+        nat_inside=nat_inside,
+        dns_name=dns_name,
+        description=description
+    """
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+
+    print(">>>type kwargs: {}".format(type(kwargs)))
+    print(kwargs)
+
+    # Check if address is Sane
+    try:
+        nb_ipaddress = _get(
+            "ipam",
+            "ip_addresses",
+            address=address
+        )
+        if not nb_ipaddress:
+            log.info('No ip address {} found'.format(address))
+            return None
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        return False
+
+    # If the kwargs 'virtual_machine' is given. Use the keys 'cluster'
+    # and 'interface' in kwargs to look up the interface's ID. If found
+    # remove 'virtual_machine', 'cluster', 'interface' from kwargs and add
+    # 'assigned_object_type' and 'assigned_object_id'.
+    # This is required because ipaddresses can be assigned to dcim.interfaces and
+    # virtualization.vminterfaces.
+    if kwargs.get('virtual_machine'):
+        if not kwargs.get('cluster'):
+            log.error("cluster must be specified when specifying virtual_machine")
+            return False
+        if not kwargs.get('interface'):
+            log.error("interface must be specified when specifying virtual_machine")
+            return False
+        
+        nb_cluster = get_(
+            "virtualization",
+            "clusters",
+            name=kwargs['cluster']
+        )
+        if not nb_cluster:
+            log.error("No such cluster {}".format(kwargs['cluster']))
+            return False
+
+        nb_vm = get_(
+            "virtualization",
+            "virtual_machines",
+            name=kwargs['virtual_machine'],
+            cluster=nb_cluster['id']
+        )
+        if not nb_vm:
+            log.error("No such virtual_machine {} in cluster {}".format(
+                kwargs['virtual_machine'],
+                kwargs['cluster'],
+                )
+            )
+            return False
+
+        nb_iface = get_(
+            "virtualization",
+            "interfaces",
+            name=kwargs['interface']
+        )
+        if not nb_iface:
+            log.error("Could not find interface {} on vm {} in cluster {}".format(
+                kwargs['interface'],
+                kwargs['virtual_machine'],
+                kwargs['cluster'],
+                )
+            )
+            return False
+
+        # remove information from kwargs that are only needed to lookup
+        # the nb_iface['id']
+        del kwargs['virtual_machine']
+        del kwargs['cluster']
+        del kwargs['interface']
+        # place the proper kwargs for the api with the information we
+        # found in NetBox.
+        kwargs['assigned_object_id'] = nb_iface['id']
+        kwargs['assigned_object_type'] = "virtualization.vminterface"
+
+    # Do the same for 'device'
+    if kwargs.get('device'):
+        if kwargs.get('interface'):
+            log.error("Interface is mandatory when supplying device.")
+            return False
+
+        if kwargs.get('tenant'):
+            nb_tenant = get_(
+                "tenancy",
+                "tenant",
+                name=kwargs['tenant']
+            )
+            if not nb_tenant:
+                log.error("No such tenant: {}".format(kwargs['tenant']))
+                return False
+            tenant_id = nb_tenant['id']
+        else:
+            tenant_id = None
+            
+
+        nb_device = get_(
+            "dcim",
+            "devices",
+            name=kwargs['device'],
+            tenant=tenant_id
+        )
+        if not nb_device:
+            log.error("No such device {}".format(kwargs['device']))
+            return False
+        
+        nb_iface = get_(
+            "dcim",
+            "interfaces",
+            name=kwargs['interface'],
+            device=nb_device['id']
+        )
+        if not nb_iface:
+            log.error("No interface {} found for device {}".format(
+                kwargs['interface'],
+                kwargs['device']
+                )
+            )
+            return False
+
+        del kwargs['tenant']
+        del kwargs['device']
+        del kwargs['interface']
+        kwargs['assigned_object_id'] = nb_iface['id']
+        kwargs['assigned_object_type'] = "dcim.interface"
+
+    changes={}
+    for k, v in kwargs.items():
+        if v == None:
+            # state module sets al available options default to None
+            print(">>> skip: k:{} v:{}".format(k,v))
+            continue
+       
+        # Resolve kwargs to their ID if needed.
+        if k == "tenant":
+            nb_tenant = get_(
+                "tenancy",
+                "tenants",
+                name=v
+            )
+            if nb_tenant:
+                v = nb_tenant['id']
+            else:
+                log.error("Could not resolv tenant {} to an ID".format(v))
+                return False
+
+        if k == "vrf":
+            nb_vrf = get_(
+                "ipam",
+                "vrfs",
+                name=v
+            )
+            if nb_vrf:
+                v = nb_vrf['id']
+            else:
+                log.error("Could not resolv vrf {} to an ID".format(v))
+                return False
+
+        if k == "status":
+            valid_status_types = [
+                'active',
+                'reserved',
+                'deprecated',
+                'dhcp',
+                'slaac',
+            ]
+            if v not in valid_status_types:
+                log.error("Illegal status type {} for ipaddress {}".format(v, address))
+                return False
+
+        if k == "nat_inside":
+            nb_nat_inside = get_(
+                "ipam",
+                "ip_addresses",
+                address=v
+            )
+            if nb_nat_inside:
+                v = nb_nat_inside['id']
+            else:
+                log.error("Could not find internal nat address {}".format(v))
+                return False
+
+        # Check if the attribute has an ID attribute.
+        # If so, use it.
+        value_from_netbox = ""
+        nb_attribute = getattr(nb_ipaddress, k)
+        if hasattr(nb_attribute, "id"):
+            value_from_netbox = nb_attribute.id
+        else:
+            value_from_netbox = nb_attribute
+
+        if v == value_from_netbox:
+            print("Gelijk: {}".format(v))
+        else:
+            print("BOOM: {} != {}".format(v, getattr(nb_ipaddress, k)))
+            changes[k]=v
+    return changes
 
 def check_manufacturer(name, **kwargs):
     # justin we waren hier
