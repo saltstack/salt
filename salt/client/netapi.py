@@ -21,25 +21,6 @@ class RunNetapi(salt.utils.process.SignalHandlingProcess):
         self.opts = opts
         self.fname = fname
 
-    # __setstate__ and __getstate__ are only used on Windows.
-    # We do this so that __init__ will be invoked on Windows in the child
-    # process so that a register_after_fork() equivalent will work on Windows.
-    def __setstate__(self, state):
-        self.__init__(
-            state["opts"],
-            state["fname"],
-            log_queue=state["log_queue"],
-            log_queue_level=state["log_queue_level"],
-        )
-
-    def __getstate__(self):
-        return {
-            "opts": self.opts,
-            "fname": self.fname,
-            "log_queue": self.log_queue,
-            "log_queue_level": self.log_queue_level,
-        }
-
     def run(self):
         netapi = salt.loader.netapi(self.opts)
         netapi_func = netapi[self.fname]

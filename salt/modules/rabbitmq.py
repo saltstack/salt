@@ -115,8 +115,10 @@ def _get_rabbitmq_plugin():
     if RABBITMQ_PLUGINS is None:
         version = __salt__["pkg.version"]("rabbitmq-server").split("-")[0]
         RABBITMQ_PLUGINS = (
-            "/usr/lib/rabbitmq/lib/rabbitmq_server-{}" "/sbin/rabbitmq-plugins"
-        ).format(version)
+            "/usr/lib/rabbitmq/lib/rabbitmq_server-{}/sbin/rabbitmq-plugins".format(
+                version
+            )
+        )
 
     return RABBITMQ_PLUGINS
 
@@ -556,8 +558,10 @@ def check_password(name, password, runas=None):
 
     cmd = (
         "rabbit_auth_backend_internal:check_user_login"
-        '(<<"{0}">>, [{{password, <<"{1}">>}}]).'
-    ).format(name.replace('"', '\\"'), password.replace('"', '\\"'))
+        '(<<"{}">>, [{{password, <<"{}">>}}]).'.format(
+            name.replace('"', '\\"'), password.replace('"', '\\"')
+        )
+    )
 
     res = __salt__["cmd.run_all"](
         [RABBITMQCTL, "eval", cmd],

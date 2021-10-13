@@ -869,7 +869,9 @@ class SaltCheck:
             value[
                 "module.function [args]{}".format(assertion_section_repr_title)
             ] = "{} {}{}".format(
-                mod_and_func, dumps(args), assertion_section_repr_value,
+                mod_and_func,
+                dumps(args),
+                assertion_section_repr_value,
             )
             value["saltcheck assertion"] = "{}{} {}".format(
                 ("" if expected_return is None else "{} ".format(expected_return)),

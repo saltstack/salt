@@ -22,7 +22,8 @@ except ImportError:
 
 @skipIf(
     not HAS_CASSANDRA,
-    "Please install the cassandra datastax driver to run cassandra_cql module unit tests.",
+    "Please install the cassandra datastax driver to run cassandra_cql module unit"
+    " tests.",
 )
 class CassandraCQLReturnerTestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -109,7 +110,7 @@ class CassandraCQLReturnerTestCase(TestCase, LoaderModuleMockMixin):
             cassandra_cql.cql_query_with_prepare(
                 "SELECT now() from system.local;", "select_now", [], asynchronous=True
             )
-            self.assert_called_once(mock_execute_async)
+            mock_execute_async.assert_called_once()
 
     def test_valid_async_args(self):
         mock_execute = MagicMock(return_value={})
@@ -131,4 +132,4 @@ class CassandraCQLReturnerTestCase(TestCase, LoaderModuleMockMixin):
             cassandra_cql.cql_query_with_prepare(
                 "SELECT now() from system.local;", "select_now", [], **kwargs
             )
-            self.assert_called_once(mock_execute_async)
+            mock_execute_async.assert_called_once()

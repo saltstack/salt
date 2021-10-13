@@ -253,7 +253,7 @@ def percent(args=None):
             ret = {}
     if args and args not in ret:
         log.error(
-            "Problem parsing disk usage information: Partition '%s' " "does not exist!",
+            "Problem parsing disk usage information: Partition '%s' does not exist!",
             args,
         )
         ret = {}
@@ -302,7 +302,7 @@ def blkid(device=None, token=None):
         comps = line.split()
         device = comps[0][:-1]
         info = {}
-        device_attributes = re.split(('"*"'), line.partition(" ")[2])
+        device_attributes = re.split('"*"', line.partition(" ")[2])
         for key, value in zip(*[iter(device_attributes)] * 2):
             key = key.strip("=").strip(" ")
             info[key] = value.strip('"')
@@ -386,8 +386,8 @@ def dump(device, args=None):
         salt '*' disk.dump /dev/sda1
     """
     cmd = (
-        "blockdev --getro --getsz --getss --getpbsz --getiomin --getioopt --getalignoff "
-        "--getmaxsect --getsize --getsize64 --getra --getfra {}".format(device)
+        "blockdev --getro --getsz --getss --getpbsz --getiomin --getioopt --getalignoff"
+        " --getmaxsect --getsize --getsize64 --getra --getfra {}".format(device)
     )
     ret = {}
     opts = [c[2:] for c in cmd.split() if c.startswith("--")]

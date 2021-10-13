@@ -389,26 +389,29 @@ def policy_definition_present(
         return ret
 
     if not policy_rule and not policy_rule_json and not policy_rule_file:
-        ret[
-            "comment"
-        ] = 'One of "policy_rule", "policy_rule_json", or "policy_rule_file" is required!'
+        ret["comment"] = (
+            'One of "policy_rule", "policy_rule_json", or "policy_rule_file" is'
+            " required!"
+        )
         return ret
 
     if (
         sum(x is not None for x in [policy_rule, policy_rule_json, policy_rule_file])
         > 1
     ):
-        ret[
-            "comment"
-        ] = 'Only one of "policy_rule", "policy_rule_json", or "policy_rule_file" is allowed!'
+        ret["comment"] = (
+            'Only one of "policy_rule", "policy_rule_json", or "policy_rule_file" is'
+            " allowed!"
+        )
         return ret
 
     if (policy_rule_json or policy_rule_file) and (
         policy_type or mode or display_name or description or metadata or parameters
     ):
-        ret[
-            "comment"
-        ] = 'Policy definitions cannot be passed when "policy_rule_json" or "policy_rule_file" is defined!'
+        ret["comment"] = (
+            'Policy definitions cannot be passed when "policy_rule_json" or'
+            ' "policy_rule_file" is defined!'
+        )
         return ret
 
     temp_rule = {}

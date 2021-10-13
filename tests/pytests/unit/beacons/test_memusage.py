@@ -60,6 +60,15 @@ def test_memusage_match(stub_memory_usage):
         ret = memusage.beacon(config)
         assert ret == [{"memusage": 40.7}]
 
+        # Test without the percent
+        config = [{"percent": 40}, {"interval": 30}]
+
+        ret = memusage.validate(config)
+        assert ret == (True, "Valid beacon configuration")
+
+        ret = memusage.beacon(config)
+        assert ret == [{"memusage": 40.7}]
+
 
 def test_memusage_nomatch(stub_memory_usage):
     with patch("psutil.virtual_memory", MagicMock(return_value=stub_memory_usage)):
