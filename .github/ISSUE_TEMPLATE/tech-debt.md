@@ -1,6 +1,6 @@
 ---
-name: tech-debt.md
-about: Issue is related to tech debt
+name: Tech Debt
+about: Issue is related to tech debt. This includes compatibility changes for newer versions of software and OSes that salt interacts with.
 title: "[TECH DEBT]"
 labels: tech-debt
 assignees: ''
