@@ -104,7 +104,8 @@ __func_alias__ = {"list_": "list"}
 
 VALID_PROTOS = ["http", "https", "ftp", "file"]
 
-rex_pip_chain_read = re.compile(r"-r\s(.*)\n?", re.MULTILINE)
+rex_pip_chain_read = re.compile(r"(?:-r\s|--requirement[=\s])(.*)\n?", re.MULTILINE)
+rex_pip_reqs_comment = re.compile(r"(?:^|\s+)#.*$", re.MULTILINE)
 
 
 def __virtual__():
@@ -259,9 +260,9 @@ def _find_req(link):
     logger.info("_find_req -- link = %s", link)
 
     with salt.utils.files.fopen(link) as fh_link:
-        child_links = rex_pip_chain_read.findall(
-            salt.utils.stringutils.to_unicode(fh_link.read())
-        )
+        reqs_content = salt.utils.stringutils.to_unicode(fh_link.read())
+    reqs_content = rex_pip_reqs_comment.sub("", reqs_content)  # remove comments
+    child_links = rex_pip_chain_read.findall(reqs_content)
 
     base_path = os.path.dirname(link)
     child_links = [os.path.join(base_path, d) for d in child_links]
@@ -1596,7 +1597,6 @@ def list_all_versions(
     """
     cwd = _pip_bin_env(cwd, bin_env)
     cmd = _get_pip_bin(bin_env)
-    cmd.extend(["install", "{}==versions".format(pkg)])
 
     if index_url:
         if not salt.utils.url.validate(index_url, VALID_PROTOS):
@@ -1609,6 +1609,17 @@ def list_all_versions(
                 "'{}' is not a valid URL".format(extra_index_url)
             )
         cmd.extend(["--extra-index-url", extra_index_url])
+
+    # Is the `pip index` command available
+    pip_version = version(bin_env=bin_env, cwd=cwd, user=user)
+    if salt.utils.versions.compare(ver1=pip_version, oper=">=", ver2="21.2"):
+        regex = re.compile(r"\s*Available versions: (.*)")
+        cmd.extend(["index", "versions", pkg])
+    else:
+        if salt.utils.versions.compare(ver1=pip_version, oper=">=", ver2="20.3"):
+            cmd.append("--use-deprecated=legacy-resolver")
+        regex = re.compile(r"\s*Could not find a version.* \(from versions: (.*)\)")
+        cmd.extend(["install", "{}==versions".format(pkg)])
 
     cmd_kwargs = dict(
         cwd=cwd, runas=user, output_loglevel="quiet", redirect_stderr=True
@@ -1632,9 +1643,7 @@ def list_all_versions(
 
     versions = []
     for line in result["stdout"].splitlines():
-        match = re.search(
-            r"\s*Could not find a version.* \(from versions: (.*)\)", line
-        )
+        match = regex.search(line)
         if match:
             versions = [
                 v for v in match.group(1).split(", ") if v and excludes.match(v)

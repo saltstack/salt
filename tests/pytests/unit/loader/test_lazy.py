@@ -1,9 +1,6 @@
 """
 Tests for salt.loader.lazy
 """
-
-import os
-import shutil
 import sys
 
 import pytest
@@ -11,7 +8,6 @@ import salt.loader
 import salt.loader.context
 import salt.loader.lazy
 import salt.utils.files
-from tests.support.helpers import dedent
 
 
 @pytest.fixture
@@ -20,8 +16,7 @@ def loader_dir(tmp_path):
     Create a simple directory with a couple modules to load and run tests
     against.
     """
-    mod_content = dedent(
-        """
+    mod_contents = """
     def __virtual__():
         return True
 
@@ -31,16 +26,10 @@ def loader_dir(tmp_path):
     def get_context(key):
         return __context__[key]
     """
-    )
-    tmp_path = str(tmp_path)
-    with salt.utils.files.fopen(os.path.join(tmp_path, "mod_a.py"), "w") as fp:
-        fp.write(mod_content)
-    with salt.utils.files.fopen(os.path.join(tmp_path, "mod_b.py"), "w") as fp:
-        fp.write(mod_content)
-    try:
-        yield tmp_path
-    finally:
-        shutil.rmtree(tmp_path)
+    with pytest.helpers.temp_file(
+        "mod_a.py", directory=tmp_path, contents=mod_contents
+    ), pytest.helpers.temp_file("mod_b.py", directory=tmp_path, contents=mod_contents):
+        yield str(tmp_path)
 
 
 def test_loaders_have_uniq_context(loader_dir):
@@ -89,12 +78,18 @@ def test_loaders_create_named_loader_contexts(loader_dir):
     opts = {"optimization_order": [0, 1, 2]}
     loader_1 = salt.loader.lazy.LazyLoader([loader_dir], opts)
     mod = loader_1.mod_a
-    assert isinstance(mod.mod, dict)
+    assert isinstance(mod.mod, str)
     func = mod.set_context
     assert isinstance(func, salt.loader.lazy.LoadedFunc)
     module_name = func.func.__module__
     module = sys.modules[module_name]
     assert isinstance(module.__context__, salt.loader.context.NamedLoaderContext)
+    wrapped_module_name = func.__module__
+    wrapped_module = sys.modules[wrapped_module_name]
+    assert isinstance(
+        wrapped_module.__context__, salt.loader.context.NamedLoaderContext
+    )
+    assert module is wrapped_module
 
 
 def test_loaders_convert_context_to_values(loader_dir):
@@ -116,3 +111,10 @@ def test_loaders_convert_context_to_values(loader_dir):
     assert loader_1.opts["grains"] == grains_default
     # The loader's opts is a copy
     assert opts["grains"] == grains
+
+
+def test_missing_loader_from_salt_internal_loaders():
+    with pytest.raises(RuntimeError):
+        salt.loader._module_dirs(
+            {"extension_modules": "/tmp/foo"}, "missingmodules", "module"
+        )

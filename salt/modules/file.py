@@ -3174,11 +3174,22 @@ def patch(originalfile, patchfile, options="", dry_run=False):
     options
         Options to pass to patch.
 
+    .. note::
+        Windows now supports using patch as of 3004.
+
+        In order to use this function in Windows, please install the
+        patch binary through your own means and ensure it's found
+        in the system Path. If installing through git-for-windows,
+        please select the optional "Use Git and optional Unix tools
+        from the Command Prompt" option when installing Git.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' file.patch /opt/file.txt /tmp/file.txt.patch
+
+        salt '*' file.patch C:\\file1.txt C:\\file3.patch
     """
     patchpath = salt.utils.path.which("patch")
     if not patchpath:
@@ -4316,7 +4327,9 @@ def source_list(source, source_hash, saltenv):
                         ret = (single_src, single_hash)
                         break
                 elif proto.startswith("http") or proto == "ftp":
-                    query_res = salt.utils.http.query(single_src, method="HEAD")
+                    query_res = salt.utils.http.query(
+                        single_src, method="HEAD", decode_body=False
+                    )
                     if "error" not in query_res:
                         ret = (single_src, single_hash)
                         break
@@ -4360,7 +4373,9 @@ def source_list(source, source_hash, saltenv):
                     ret = (single, source_hash)
                     break
                 elif proto.startswith("http") or proto == "ftp":
-                    query_res = salt.utils.http.query(single, method="HEAD")
+                    query_res = salt.utils.http.query(
+                        single, method="HEAD", decode_body=False
+                    )
                     if "error" not in query_res:
                         ret = (single, source_hash)
                         break
