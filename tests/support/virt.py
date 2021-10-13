@@ -33,8 +33,10 @@ class SaltVirtMinionContainerFactory(SaltMinion):
         self.tcp_uri = "qemu+tcp://localhost:{}/system".format(self.libvirt_tcp_port)
         self.tls_uri = "qemu+tls://127.0.0.1:{}/system".format(self.libvirt_tls_port)
 
+        # pylint: disable=access-member-before-definition
         if self.check_ports is None:
             self.check_ports = []
+        # pylint: enable=access-member-before-definition
         self.check_ports.extend(
             [self.sshd_port, self.libvirt_tcp_port, self.libvirt_tls_port]
         )

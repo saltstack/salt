@@ -69,7 +69,11 @@ def pip_has_internal_exceptions_mod(ver):
     """
     True when the pip version has the `pip._internal.exceptions` module
     """
-    return salt.utils.versions.compare(ver1=ver, oper=">=", ver2="10.0",)
+    return salt.utils.versions.compare(
+        ver1=ver,
+        oper=">=",
+        ver2="10.0",
+    )
 
 
 def pip_has_exceptions_mod(ver):
@@ -313,12 +317,12 @@ def _check_if_installed(
                 extra_index_url=extra_index_url,
             )
             desired_version = ""
-            if any(version_spec):
+            if any(version_spec) and available_versions:
                 for version in reversed(available_versions):
                     if _fulfills_version_spec(version, version_spec):
                         desired_version = version
                         break
-            else:
+            elif available_versions:
                 desired_version = available_versions[-1]
             if not desired_version:
                 ret["result"] = True
@@ -745,8 +749,8 @@ def installed(
             ret["comment"] = (
                 "The 'use_wheel' option is only supported in "
                 "pip between {} and {}. The version of pip detected "
-                "was {}."
-            ).format(min_version, max_version, cur_version)
+                "was {}.".format(min_version, max_version, cur_version)
+            )
             return ret
 
     # Check that the pip binary supports the 'no_use_wheel' option
@@ -764,8 +768,8 @@ def installed(
             ret["comment"] = (
                 "The 'no_use_wheel' option is only supported in "
                 "pip between {} and {}. The version of pip detected "
-                "was {}."
-            ).format(min_version, max_version, cur_version)
+                "was {}.".format(min_version, max_version, cur_version)
+            )
             return ret
 
     # Check that the pip binary supports the 'no_binary' option
@@ -779,8 +783,8 @@ def installed(
             ret["comment"] = (
                 "The 'no_binary' option is only supported in "
                 "pip {} and newer. The version of pip detected "
-                "was {}."
-            ).format(min_version, cur_version)
+                "was {}.".format(min_version, cur_version)
+            )
             return ret
 
     # Get the packages parsed name and version from the pip library.
@@ -983,16 +987,18 @@ def installed(
                         ret["changes"]["requirements"] = True
                 if ret["changes"].get("requirements"):
                     comments.append(
-                        "Successfully processed requirements file "
-                        "{}.".format(requirements)
+                        "Successfully processed requirements file {}.".format(
+                            requirements
+                        )
                     )
                 else:
                     comments.append("Requirements were already installed.")
 
             if editable:
                 comments.append(
-                    "Package successfully installed from VCS "
-                    "checkout {}.".format(editable)
+                    "Package successfully installed from VCS checkout {}.".format(
+                        editable
+                    )
                 )
                 ret["changes"]["editable"] = True
             ret["comment"] = " ".join(comments)

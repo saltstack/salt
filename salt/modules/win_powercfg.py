@@ -72,7 +72,7 @@ def _set_powercfg_value(scheme, sub_group, setting_guid, power, value):
     if scheme is None:
         scheme = _get_current_scheme()
 
-    cmd = "powercfg /set{}valueindex {} {} {} {}" "".format(
+    cmd = "powercfg /set{}valueindex {} {} {} {}".format(
         power, scheme, sub_group, setting_guid, value * 60
     )
     return __salt__["cmd.retcode"](cmd, python_shell=False) == 0

@@ -187,7 +187,10 @@ class HTTPPostTestCase(TestCase):
         """
         Test handling of a multipart/form-data POST using the requests backend
         """
-        match_this = '{0}\r\nContent-Disposition: form-data; name="fieldname_here"\r\n\r\nmydatahere\r\n{0}--\r\n'
+        match_this = (
+            "{0}\r\nContent-Disposition: form-data;"
+            ' name="fieldname_here"\r\n\r\nmydatahere\r\n{0}--\r\n'
+        )
         ret = http.query(
             self.post_web_root,
             method="POST",

@@ -234,9 +234,8 @@ def present(
                 stream_details = stream_response["result"]["StreamDescription"]
         else:
             comments.append(
-                "Kinesis stream {}: retention hours did not require change, already set at {}".format(
-                    name, old_retention_hours
-                )
+                "Kinesis stream {}: retention hours did not require change, already set"
+                " at {}".format(name, old_retention_hours)
             )
     else:
         comments.append(
@@ -294,9 +293,8 @@ def present(
                     return ret
 
                 comments.append(
-                    "Kinesis stream {}: enhanced monitoring was enabled for shard-level metrics {}".format(
-                        name, enable_metrics
-                    )
+                    "Kinesis stream {}: enhanced monitoring was enabled for shard-level"
+                    " metrics {}".format(name, enable_metrics)
                 )
 
         if len(disable_metrics) != 0:
@@ -323,14 +321,14 @@ def present(
                     return ret
 
                 comments.append(
-                    "Kinesis stream {}: enhanced monitoring was disabled for shard-level metrics {}".format(
-                        name, disable_metrics
-                    )
+                    "Kinesis stream {}: enhanced monitoring was disabled for"
+                    " shard-level metrics {}".format(name, disable_metrics)
                 )
 
         if len(disable_metrics) == 0 and len(enable_metrics) == 0:
             comments.append(
-                "Kinesis stream {}: enhanced monitoring did not require change, already set at {}".format(
+                "Kinesis stream {}: enhanced monitoring did not require change, already"
+                " set at {}".format(
                     name,
                     (
                         old_enhanced_monitoring
@@ -369,8 +367,7 @@ def present(
                 )
             else:
                 log.info(
-                    "Resharding stream from %s to %s shards, this could take "
-                    "a while",
+                    "Resharding stream from %s to %s shards, this could take a while",
                     old_num_shards,
                     num_shards,
                 )

@@ -164,7 +164,7 @@ results = {
     0x8004130F: "Credentials became corrupted",
     0x8004131F: "An instance of this task is already running",
     0x800710E0: "The operator or administrator has refused the request",
-    0x800704DD: "The service is not available (Run only when logged " "in?)",
+    0x800704DD: "The service is not available (Run only when logged in?)",
     0xC000013A: "The application terminated as a result of CTRL+C",
     0xC06D007E: "Unknown software exception",
 }
@@ -311,8 +311,9 @@ def _save_task_definition(
     except pythoncom.com_error as error:
         hr, msg, exc, arg = error.args  # pylint: disable=W0633
         fc = {
-            -2147024773: "The filename, directory name, or volume label "
-            "syntax is incorrect",
+            -2147024773: (
+                "The filename, directory name, or volume label syntax is incorrect"
+            ),
             -2147024894: "The system cannot find the file specified",
             -2147216615: "Required element or attribute missing",
             -2147216616: "Value incorrectly formatted or out of range",
@@ -681,28 +682,43 @@ def create_task_from_xml(
                 0x80041318: "Value incorrectly formatted or out of range",
                 0x80020005: "Access denied",
                 0x80041309: "A task's trigger is not found",
-                0x8004130A: "One or more of the properties required to run this "
-                "task have not been set",
-                0x8004130C: "The Task Scheduler service is not installed on this "
-                "computer",
+                0x8004130A: (
+                    "One or more of the properties required to run this "
+                    "task have not been set"
+                ),
+                0x8004130C: (
+                    "The Task Scheduler service is not installed on this computer"
+                ),
                 0x8004130D: "The task object could not be opened",
-                0x8004130E: "The object is either an invalid task object or is not "
-                "a task object",
-                0x8004130F: "No account information could be found in the Task "
-                "Scheduler security database for the task indicated",
+                0x8004130E: (
+                    "The object is either an invalid task object or is not "
+                    "a task object"
+                ),
+                0x8004130F: (
+                    "No account information could be found in the Task "
+                    "Scheduler security database for the task indicated"
+                ),
                 0x80041310: "Unable to establish existence of the account specified",
-                0x80041311: "Corruption was detected in the Task Scheduler "
-                "security database; the database has been reset",
+                0x80041311: (
+                    "Corruption was detected in the Task Scheduler "
+                    "security database; the database has been reset"
+                ),
                 0x80041313: "The task object version is either unsupported or invalid",
-                0x80041314: "The task has been configured with an unsupported "
-                "combination of account settings and run time options",
+                0x80041314: (
+                    "The task has been configured with an unsupported "
+                    "combination of account settings and run time options"
+                ),
                 0x80041315: "The Task Scheduler Service is not running",
                 0x80041316: "The task XML contains an unexpected node",
-                0x80041317: "The task XML contains an element or attribute from an "
-                "unexpected namespace",
+                0x80041317: (
+                    "The task XML contains an element or attribute from an "
+                    "unexpected namespace"
+                ),
                 0x8004131A: "The task XML is malformed",
-                0x0004131C: "The task is registered, but may fail to start. Batch "
-                "logon privilege needs to be enabled for the task principal",
+                0x0004131C: (
+                    "The task is registered, but may fail to start. Batch "
+                    "logon privilege needs to be enabled for the task principal"
+                ),
                 0x8004131D: "The task XML contains too many nodes of the same type",
             }
             try:
@@ -1826,7 +1842,7 @@ def add_trigger(
         formats (``%H:%M:%S`` and ``%H:%M``) should to be quoted.
         See `YAML IDIOSYNCRASIES`_ for more details.
 
-    .. _`YAML IDIOSYNCRASIES`: https://docs.saltstack.com/en/latest/topics/troubleshooting/yaml_idiosyncrasies.html#time-expressions
+    .. _`YAML IDIOSYNCRASIES`: https://docs.saltproject.io/en/latest/topics/troubleshooting/yaml_idiosyncrasies.html#time-expressions
 
     Args:
 

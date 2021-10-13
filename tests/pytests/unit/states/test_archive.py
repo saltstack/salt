@@ -101,7 +101,8 @@ def test_extracted_tar():
     isfile_mock = MagicMock(side_effect=_isfile_side_effect)
 
     with patch.dict(
-        archive.__opts__, {"test": False, "cachedir": tmp_dir, "hash_type": "sha256"},
+        archive.__opts__,
+        {"test": False, "cachedir": tmp_dir, "hash_type": "sha256"},
     ), patch.dict(
         archive.__salt__,
         {

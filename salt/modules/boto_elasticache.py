@@ -495,7 +495,7 @@ def create_subnet_group(
     """
     if not _exactly_one((subnet_ids, subnet_names)):
         raise SaltInvocationError(
-            "Exactly one of either 'subnet_ids' or " "'subnet_names' must be provided."
+            "Exactly one of either 'subnet_ids' or 'subnet_names' must be provided."
         )
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if not conn:

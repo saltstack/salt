@@ -228,7 +228,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             name, version_num = line.split()[0:2]
         except ValueError:
             log.error(
-                "Problem parsing pacman -Q: Unexpected formatting in " "line: '%s'",
+                "Problem parsing pacman -Q: Unexpected formatting in line: '%s'",
                 line,
             )
         else:
@@ -270,7 +270,7 @@ def group_list():
             group, pkg = line.split()[0:2]
         except ValueError:
             log.error(
-                "Problem parsing pacman -Sgg: Unexpected formatting in " "line: '%s'",
+                "Problem parsing pacman -Sgg: Unexpected formatting in line: '%s'",
                 line,
             )
         else:
@@ -288,7 +288,7 @@ def group_list():
             group, pkg = line.split()[0:2]
         except ValueError:
             log.error(
-                "Problem parsing pacman -Qg: Unexpected formatting in " "line: '%s'",
+                "Problem parsing pacman -Qg: Unexpected formatting in line: '%s'",
                 line,
             )
         else:
@@ -350,7 +350,7 @@ def group_info(name):
             pkg = line.split()[1]
         except ValueError:
             log.error(
-                "Problem parsing pacman -Sgg: Unexpected formatting in " "line: '%s'",
+                "Problem parsing pacman -Sgg: Unexpected formatting in line: '%s'",
                 line,
             )
         else:

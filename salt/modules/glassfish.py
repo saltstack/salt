@@ -38,8 +38,9 @@ def __virtual__():
     else:
         return (
             False,
-            'The "{}" module could not be loaded: '
-            '"requests" is not installed.'.format(__virtualname__),
+            'The "{}" module could not be loaded: "requests" is not installed.'.format(
+                __virtualname__
+            ),
         )
 
 

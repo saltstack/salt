@@ -45,7 +45,7 @@ try:
     # try importing ConnectionClosedException
     # from napalm-base
     # this exception has been introduced only in version 0.24.0
-    from napalm_base.exceptions import ConnectionClosedException
+    from napalm.base.exceptions import ConnectionClosedException
 
     HAS_CONN_CLOSED_EXC_CLASS = True
 except ImportError:
@@ -94,10 +94,8 @@ def virtual(opts, virtualname, filename):
     else:
         return (
             False,
-            (
-                '"{vname}"" {filename} cannot be loaded: '
-                "NAPALM is not installed: ``pip install napalm``"
-            ).format(
+            '"{vname}"" {filename} cannot be loaded: '
+            "NAPALM is not installed: ``pip install napalm``".format(
                 vname=virtualname, filename="({filename})".format(filename=filename)
             ),
         )
@@ -179,8 +177,10 @@ def call(napalm_device, method, *args, **kwargs):
             traceback.format_exc()
         )  # let's get the full traceback and display for debugging reasons.
         if isinstance(error, NotImplementedError):
-            comment = "{method} is not implemented for the NAPALM {driver} driver!".format(
-                method=method, driver=napalm_device.get("DRIVER_NAME")
+            comment = (
+                "{method} is not implemented for the NAPALM {driver} driver!".format(
+                    method=method, driver=napalm_device.get("DRIVER_NAME")
+                )
             )
         elif (
             retry
@@ -228,18 +228,21 @@ def call(napalm_device, method, *args, **kwargs):
             #   Salt proxy keepalive helps: immediately after the first failure, it
             #   will know the state of the connection and will try reconnecting.
         else:
-            comment = 'Cannot execute "{method}" on {device}{port} as {user}. Reason: {error}!'.format(
-                device=napalm_device.get("HOSTNAME", "[unspecified hostname]"),
-                port=(
-                    ":{port}".format(
-                        port=napalm_device.get("OPTIONAL_ARGS", {}).get("port")
-                    )
-                    if napalm_device.get("OPTIONAL_ARGS", {}).get("port")
-                    else ""
-                ),
-                user=napalm_device.get("USERNAME", ""),
-                method=method,
-                error=error,
+            comment = (
+                'Cannot execute "{method}" on {device}{port} as {user}. Reason:'
+                " {error}!".format(
+                    device=napalm_device.get("HOSTNAME", "[unspecified hostname]"),
+                    port=(
+                        ":{port}".format(
+                            port=napalm_device.get("OPTIONAL_ARGS", {}).get("port")
+                        )
+                        if napalm_device.get("OPTIONAL_ARGS", {}).get("port")
+                        else ""
+                    ),
+                    user=napalm_device.get("USERNAME", ""),
+                    method=method,
+                    error=error,
+                )
             )
         log.error(comment)
         log.error(err_tb)
@@ -465,7 +468,8 @@ def proxy_napalm_wrap(func):
                 log.debug(inventory_opts)
                 napalm_opts.update(inventory_opts)
                 log.debug(
-                    "Merging the config for %s with the details found in the napalm inventory:",
+                    "Merging the config for %s with the details found in the napalm"
+                    " inventory:",
                     host,
                 )
                 log.debug(napalm_opts)
