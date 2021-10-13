@@ -398,8 +398,10 @@ def present(
 
 def absent(name, user="root", identifier=False, special=None, **kwargs):
     """
-    Verifies that the specified cron job is absent for the specified user; only
-    the name is matched when removing a cron job.
+    Verifies that the specified cron job is absent for the specified user.
+
+    If an ``identifier`` is not passed then the ``name`` is used to identify
+    the cron job for removal.
 
     name
         The command that should be absent in the user crontab.

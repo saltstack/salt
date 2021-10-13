@@ -39,7 +39,8 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             ret = parted.__virtual__()
             err = (
                 False,
-                "The parted execution module failed to load Windows systems are not supported.",
+                "The parted execution module failed to load Windows systems are not"
+                " supported.",
             )
             self.assertEqual(err, ret)
 
@@ -53,7 +54,8 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             ret = parted.__virtual__()
             err = (
                 False,
-                "The parted execution module failed to load parted binary is not in the path.",
+                "The parted execution module failed to load parted binary is not in the"
+                " path.",
             )
             self.assertEqual(err, ret)
 
@@ -67,7 +69,8 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             ret = parted.__virtual__()
             err = (
                 False,
-                "The parted execution module failed to load lsblk binary is not in the path.",
+                "The parted execution module failed to load lsblk binary is not in the"
+                " path.",
             )
             self.assertEqual(err, ret)
 
@@ -81,7 +84,8 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
             ret = parted.__virtual__()
             err = (
                 False,
-                "The parted execution module failed to load partprobe binary is not in the path.",
+                "The parted execution module failed to load partprobe binary is not in"
+                " the path.",
             )
             self.assertEqual(err, ret)
 

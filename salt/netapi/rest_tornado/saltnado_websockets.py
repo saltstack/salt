@@ -369,9 +369,7 @@ class AllEventsHandler(
             pass
 
     def on_close(self, *args, **kwargs):
-        """Cleanup.
-
-        """
+        """Cleanup."""
         log.debug("In the websocket close method")
         self.close()
 

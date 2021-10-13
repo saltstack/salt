@@ -82,8 +82,10 @@ def _load_connection_error(hostname, error):
 
     ret = {
         "code": None,
-        "content": "Error: Unable to connect to the bigip device: {host}\n{error}".format(
-            host=hostname, error=error
+        "content": (
+            "Error: Unable to connect to the bigip device: {host}\n{error}".format(
+                host=hostname, error=error
+            )
         ),
     }
 
@@ -275,8 +277,9 @@ def start_transaction(hostname, username, password, label):
 
         __salt__["grains.setval"]("bigip_f5_trans", {label: trans_id})
 
-        return "Transaction: {trans_id} - has successfully been stored in the grain: bigip_f5_trans:{label}".format(
-            trans_id=trans_id, label=label
+        return (
+            "Transaction: {trans_id} - has successfully been stored in the grain:"
+            " bigip_f5_trans:{label}".format(trans_id=trans_id, label=label)
         )
     else:
         return data
@@ -323,8 +326,8 @@ def list_transaction(hostname, username, password, label):
             return _load_connection_error(hostname, e)
     else:
         return (
-            "Error: the label for this transaction was not defined as a grain.  Begin a new transaction using the"
-            " bigip.start_transaction function"
+            "Error: the label for this transaction was not defined as a grain.  Begin a"
+            " new transaction using the bigip.start_transaction function"
         )
 
 
@@ -372,8 +375,8 @@ def commit_transaction(hostname, username, password, label):
             return _load_connection_error(hostname, e)
     else:
         return (
-            "Error: the label for this transaction was not defined as a grain.  Begin a new transaction using the"
-            " bigip.start_transaction function"
+            "Error: the label for this transaction was not defined as a grain.  Begin a"
+            " new transaction using the bigip.start_transaction function"
         )
 
 
@@ -417,8 +420,8 @@ def delete_transaction(hostname, username, password, label):
             return _load_connection_error(hostname, e)
     else:
         return (
-            "Error: the label for this transaction was not defined as a grain.  Begin a new transaction using the"
-            " bigip.start_transaction function"
+            "Error: the label for this transaction was not defined as a grain.  Begin a"
+            " new transaction using the bigip.start_transaction function"
         )
 
 
@@ -1601,8 +1604,10 @@ def create_virtual(
                 elif vlans["disabled"]:
                     payload["vlans-disabled"] = True
             except Exception:  # pylint: disable=broad-except
-                return "Error: Unable to Parse vlans dictionary: \n\tvlans={vlans}".format(
-                    vlans=vlans
+                return (
+                    "Error: Unable to Parse vlans dictionary: \n\tvlans={vlans}".format(
+                        vlans=vlans
+                    )
                 )
         elif vlans == "none":
             payload["vlans"] = "none"
@@ -1888,8 +1893,10 @@ def modify_virtual(
                 elif vlans["disabled"]:
                     payload["vlans-disabled"] = True
             except Exception:  # pylint: disable=broad-except
-                return "Error: Unable to Parse vlans dictionary: \n\tvlans={vlans}".format(
-                    vlans=vlans
+                return (
+                    "Error: Unable to Parse vlans dictionary: \n\tvlans={vlans}".format(
+                        vlans=vlans
+                    )
                 )
         elif vlans == "none":
             payload["vlans"] = "none"
@@ -1967,7 +1974,11 @@ def delete_virtual(hostname, username, password, name):
 
 
 def list_monitor(
-    hostname, username, password, monitor_type, name=None,
+    hostname,
+    username,
+    password,
+    monitor_type,
+    name=None,
 ):
     """
     A function to connect to a bigip device and list an existing monitor.  If no name is provided than all
@@ -2163,7 +2174,11 @@ def delete_monitor(hostname, username, password, monitor_type, name):
 
 
 def list_profile(
-    hostname, username, password, profile_type, name=None,
+    hostname,
+    username,
+    password,
+    profile_type,
+    name=None,
 ):
     """
     A function to connect to a bigip device and list an existing profile.  If no name is provided than all
