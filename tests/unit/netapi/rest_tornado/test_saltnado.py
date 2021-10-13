@@ -35,11 +35,17 @@ class TestJobNotRunning(tornado.testing.AsyncTestCase):
     ):
         self.handler.finish()
         result = yield self.handler.disbatch()
+        # No assertion necessary, because we just want no failure here.
+        # Asserting that it doesn't raise anything is... the default behavior
+        # for a test.
 
     @tornado.testing.gen_test
     def test_when_disbatch_has_already_finished_then_finishing_should_not_fail(self):
         self.handler.finish()
         result = yield self.handler.disbatch()
+        # No assertion necessary, because we just want no failure here.
+        # Asserting that it doesn't raise anything is... the default behavior
+        # for a test.
 
     @tornado.testing.gen_test
     def test_when_event_times_out_and_minion_is_not_running_result_should_be_True(self):
@@ -68,7 +74,7 @@ class TestJobNotRunning(tornado.testing.AsyncTestCase):
             jid=42, tgt="*", tgt_type="glob", minions=minions, is_finished=wrong_future
         )
 
-        self.assertTrue(len(minions) == 0)
+        assert not minions
 
     @tornado.testing.gen_test
     def test_when_event_finally_finishes_and_returned_minion_not_in_minions_it_should_be_set_to_False(
@@ -605,8 +611,6 @@ class TestDisbatchLocal(tornado.testing.AsyncTestCase):
             "gather_job_timeout": 10.001,
         }
         self.handler = saltnado.SaltAPIHandler(self.mock, self.mock)
-        f = tornado.gen.Future()
-        f.set_result({"jid": f, "minions": []})
 
     @tornado.testing.gen_test
     def test_when_is_timed_out_is_set_before_other_events_are_completed_then_result_should_be_empty_dictionary(
