@@ -18,13 +18,22 @@ def configure_loader_modules():
     return {
         tu: {
             "__salt__": {},
-            "__utils__": {},
+            "__utils__": {"files.rm_rf": MagicMock()},
             "__pillar__": salt.loader.context.NamedLoaderContext(
                 "__pillar__", loader_context, {}
             ),
+            "__opts__": {"extension_modules": "", "cachedir": "/tmp/"},
         },
         statemod: {"__salt__": {}, "__context__": {}},
     }
+
+
+def test__create_and_execute_salt_state():
+    with patch("salt.client.ssh.wrapper.state._cleanup_slsmod_low_data", MagicMock()):
+        with patch("salt.utils.hashutils.get_hash", MagicMock(return_value="deadbeaf")):
+            with patch("salt.fileclient.get_file_client", MagicMock()):
+                with patch("salt.modules.transactional_update.call", MagicMock()):
+                    tu._create_and_execute_salt_state({}, {}, False, "md5", False)
 
 
 def test__global_params_no_self_update():
