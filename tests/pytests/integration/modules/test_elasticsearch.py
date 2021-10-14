@@ -5,6 +5,9 @@ import logging
 
 import pytest
 import salt.modules.elasticsearch as elasticsearch  # pylint: disable=unused-import
+from tests.support.pytest.elasticsearch import (  # pylint: disable=unused-import,
+    elasticsearch_container,
+)
 
 log = logging.getLogger(__name__)
 

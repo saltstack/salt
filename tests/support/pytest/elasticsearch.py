@@ -37,7 +37,7 @@ class ElasticSearchCombo:
 def get_test_versions():
     test_versions = []
     name = "elasticsearch"
-    for version in ("6.8.16",):
+    for version in ("6.8.18", "7.14.1"):
         test_versions.append(
             ElasticSearchImage(
                 name=name,
@@ -93,7 +93,10 @@ def elasticsearch_container(request, salt_factories, salt_call_cli):
         while status_checks:
             status_checks -= 1
             # Make sure "ElasticSearch" is ready
-            ret = salt_call_cli.run("cmd.run", cmd=check_host_cmd,)
+            ret = salt_call_cli.run(
+                "cmd.run",
+                cmd=check_host_cmd,
+            )
             available = ret.exitcode == 0
             if available:
                 break

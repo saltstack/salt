@@ -357,6 +357,7 @@ cassandra-driver==3.23.0
 certifi==2021.5.30
     # via
     #   -r requirements/static/ci/common.in
+    #   elasticsearch
     #   kubernetes
     #   msrest
     #   python-telegram-bot
@@ -428,6 +429,8 @@ ecdsa==0.14.1
     #   moto
     #   python-jose
     #   sshpubkeys
+elasticsearch==7.15.1
+    # via -r requirements/static/ci/linux.in
 filelock==3.0.12
     # via virtualenv
 flaky==3.7.0
@@ -884,6 +887,7 @@ twilio==6.63.0
 urllib3==1.26.6
     # via
     #   botocore
+    #   elasticsearch
     #   kubernetes
     #   python-etcd
     #   requests
