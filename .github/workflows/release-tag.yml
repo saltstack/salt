@@ -28,6 +28,7 @@ jobs:
       id: tag_version
       uses: mathieudutour/github-tag-action@v5.6
       with:
+        create_annotated_tag: True
         github_token: ${{ secrets.GITHUB_TOKEN }}
         custom_tag: ${{ github.event.inputs.saltVersion }}
 
@@ -43,6 +44,11 @@ jobs:
       run: |
         git fetch --tags origin
         git checkout v${{ github.event.inputs.saltVersion }}
+        chmod 700 conf/cloud.*.d
+        chmod 600 conf/cloud
+        chmod 600 conf/cloud.profiles
+        chmod 600 conf/cloud.providers
+        python3 setup.py --ssh-packaging sdist
         python -m build --sdist --outdir dist/ .
     - name: Create a GitHub release
       uses: ncipollo/release-action@v1
