@@ -2084,7 +2084,7 @@ def check_ipaddress(address, **kwargs):
 
     # Do the same for 'device'
     if kwargs.get('device'):
-        if kwargs.get('interface'):
+        if not kwargs.get('interface'):
             log.error("Interface is mandatory when supplying device.")
             return False
 
