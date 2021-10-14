@@ -6,6 +6,12 @@ on:
       saltVersion:
         description: 'Salt Version'
         required: true
+      saltRepo:
+        description: 'Salt Repo'
+        default: saltstack/salt
+      saltBranch:
+        description: 'Salt Branch'
+        default: freeze
       reTag:
         description: 'Re Tag (Deletes tag and release)'
         default: false
@@ -24,6 +30,9 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - uses: actions/checkout@v2
+      with:
+        repository: ${{ github.event.inputs.saltRepo }}
+        ref: ${{ github.event.inputs.saltBranch }}
     - name: Bump version and push tag
       id: tag_version
       uses: mathieudutour/github-tag-action@v5.6
@@ -37,6 +46,7 @@ jobs:
       with:
         python-version: 3.8
 
+    - uses: actions/checkout@v2
     - name: Install pypa/build
       run: |
         python -m pip install build --user
