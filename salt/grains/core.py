@@ -2554,7 +2554,11 @@ def ip6_interfaces():
                 iface_ips.append(inet["address"])
         for secondary in ifaces[face].get("secondary", []):
             if "address" in secondary:
-                iface_ips.append(secondary["address"])
+                try:
+                    socket.inet_pton(socket.AF_INET6, secondary["address"])
+                    iface_ips.append(secondary["address"])
+                except OSError:
+                    pass
         ret[face] = iface_ips
     return {"ip6_interfaces": ret}
 
