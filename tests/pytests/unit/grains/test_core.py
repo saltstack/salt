@@ -176,6 +176,74 @@ def test_network_grains_cache(tmp_path):
         assert ret["ip_interfaces"]["wlo1"] == ["172.16.13.86"]
 
 
+def test_ip6_interfaces_grains_not_containing_ipv4_aliases(tmp_path):
+    call_1 = {
+        "lo": {
+            "up": True,
+            "hwaddr": "00:00:00:00:00:00",
+            "inet": [
+                {
+                    "address": "127.0.0.1",
+                    "netmask": "255.0.0.0",
+                    "broadcast": None,
+                    "label": "lo",
+                }
+            ],
+            "inet6": [{"address": "::1", "prefixlen": "128", "scope": "host"}],
+        },
+        "em1": {
+            "up": True,
+            "hwaddr": "aa:aa:aa:aa:aa:aa",
+            "inet": [
+                {
+                    "address": "192.168.1.100",
+                    "netmask": "255.255.255.0",
+                    "broadcast": "192.168.1.255",
+                    "label": "em1",
+                }
+            ],
+            "secondary": [
+                {
+                    "type": "inet",
+                    "address": "192.168.1.199",
+                    "netmask": "255.255.255.0",
+                    "broadcast": "192.168.1.255",
+                    "label": "em1:0",
+                }
+            ],
+            "inet6": [
+                {
+                    "address": "fe80::aa23:aa12:ab23:7567",
+                    "prefixlen": "128",
+                    "scope": "link",
+                },
+                {
+                    "address": "fe80::aa23:aa12:ab23:7568",
+                    "prefixlen": "64",
+                    "scope": "link",
+                },
+            ],
+        },
+    }
+    cache_dir = tmp_path / "cache"
+    extmods = tmp_path / "extmods"
+    opts = {
+        "cachedir": str(cache_dir),
+        "extension_modules": str(extmods),
+        "optimization_order": [0],
+    }
+    with patch("salt.utils.network.interfaces", return_value=call_1) as interfaces:
+        grains = salt.loader.grain_funcs(opts)
+
+        ret = grains["core.ip4_interfaces"]()
+        assert ret["ip4_interfaces"]["em1"] == ["192.168.1.100", "192.168.1.199"]
+        ret = grains["core.ip6_interfaces"]()
+        assert ret["ip6_interfaces"]["em1"] == [
+            "fe80::aa23:aa12:ab23:7567",
+            "fe80::aa23:aa12:ab23:7568",
+        ]
+
+
 @pytest.mark.parametrize(
     "cpe,cpe_ret",
     (
