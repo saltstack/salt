@@ -79,7 +79,7 @@ class Beacon:
                 valid, vcomment = self.beacons[validate_str](b_config[mod])
 
                 if not valid:
-                    log.info(
+                    log.error(
                         "Beacon %s configuration invalid, not running.\n%s",
                         mod,
                         vcomment,
@@ -91,7 +91,7 @@ class Beacon:
                     mod,
                 )
                 if not isinstance(b_config[mod], list):
-                    log.info("Configuration for beacon must be a list.")
+                    log.error("Configuration for beacon must be a list.")
                     continue
 
             b_config[mod].append({"_beacon_name": mod})
