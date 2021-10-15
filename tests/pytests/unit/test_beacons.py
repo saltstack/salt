@@ -59,10 +59,10 @@ def test_beacon_process_invalid():
     beacon = salt.beacons.Beacon(mock_opts, [])
 
     with patch.object(salt.beacons, "log") as log_mock, patch.object(
-        salt.beacons.log, "info"
-    ) as log_info_mock:
+        salt.beacons.log, "error"
+    ) as log_error_mock:
         ret = beacon.process(mock_opts["beacons"], mock_opts["grains"])
-        log_info_mock.assert_called_with(
+        log_error_mock.assert_called_with(
             "Beacon %s configuration invalid, not running.\n%s",
             "status",
             "Configuration for status beacon must be a list.",
@@ -73,14 +73,14 @@ def test_beacon_process_invalid():
     beacon = salt.beacons.Beacon(mock_opts, [])
 
     with patch.object(salt.beacons.log, "warn") as log_warn_mock, patch.object(
-        salt.beacons.log, "info"
-    ) as log_info_mock:
+        salt.beacons.log, "error"
+    ) as log_error_mock:
         ret = beacon.process(mock_opts["beacons"], mock_opts["grains"])
         log_warn_mock.assert_called_with(
             "No validate function found for %s, running basic beacon validation.",
             "mybeacon",
         )
-        log_info_mock.assert_called_with("Configuration for beacon must be a list.")
+        log_error_mock.assert_called_with("Configuration for beacon must be a list.")
 
 
 def test_beacon_module():
