@@ -173,7 +173,7 @@ All requisite types have a corresponding :ref:`<requisite>_in <requisites-in>` f
 * :ref:`require <requisites-require>`: Requires that a list of target states succeed before execution
 * :ref:`onchanges <requisites-onchanges>`: Execute if any target states succeed with changes
 * :ref:`watch <requisites-watch>`: Similar to ``onchanges``; modifies state behavior using ``mod_watch``
-* :ref:`listen <requisites-listen>`: Similar to ``onchanges``; delays execution to end of state run using ``mod_wait``
+* :ref:`listen <requisites-listen>`: Similar to ``onchanges``; delays execution to end of state run using ``mod_watch``
 * :ref:`prereq <requisites-prereq>`: Execute prior to target state if target state expects to produce changes
 * :ref:`onfail <requisites-onfail>`: Execute only if a target state fails
 * :ref:`use <requisites-use>`: Copy arguments from another state
@@ -467,8 +467,8 @@ listen
 
 .. versionadded:: 2014.7.0
 
-A ``listen`` requisite is used to trigger the ``mod_wait`` function of an
-execution module. Rather than modifying execution order, the ``mod_wait`` state
+A ``listen`` requisite is used to trigger the ``mod_watch`` function of a
+state module. Rather than modifying execution order, the ``mod_watch`` state
 created by ``listen`` will execute at the end of the state run.
 
 .. code-block:: yaml
@@ -764,7 +764,7 @@ be installed. Thus allowing for a requisite to be defined "after the fact".
     {% endfor %}
 
 In this scenario, ``listen_in`` is a better choice than ``require_in`` because the
-``listen`` requisite will trigger ``mod_wait`` behavior which will wait until the
+``listen`` requisite will trigger ``mod_watch`` behavior which will wait until the
 end of state execution and then reload the service.
 
 .. _requisites-any:

@@ -44,6 +44,7 @@ def get_pillar(
     pillar_override=None,
     pillarenv=None,
     extra_minion_data=None,
+    clean_cache=False,
 ):
     """
     Return the correct pillar driver based on the file_client option
@@ -78,6 +79,7 @@ def get_pillar(
             functions=funcs,
             pillar_override=pillar_override,
             pillarenv=pillarenv,
+            clean_cache=clean_cache,
         )
     return ptype(
         opts,
@@ -103,6 +105,7 @@ def get_async_pillar(
     pillar_override=None,
     pillarenv=None,
     extra_minion_data=None,
+    clean_cache=False,
 ):
     """
     Return the correct pillar driver based on the file_client option
@@ -115,6 +118,21 @@ def get_async_pillar(
     ptype = {"remote": AsyncRemotePillar, "local": AsyncPillar}.get(
         file_client, AsyncPillar
     )
+    if file_client == "remote":
+        # AsyncPillar does not currently support calls to PillarCache
+        # clean_cache is a kwarg for PillarCache
+        return ptype(
+            opts,
+            grains,
+            minion_id,
+            saltenv,
+            ext,
+            functions=funcs,
+            pillar_override=pillar_override,
+            pillarenv=pillarenv,
+            extra_minion_data=extra_minion_data,
+            clean_cache=clean_cache,
+        )
     return ptype(
         opts,
         grains,
@@ -193,6 +211,7 @@ class AsyncRemotePillar(RemotePillarMixin):
         pillar_override=None,
         pillarenv=None,
         extra_minion_data=None,
+        clean_cache=False,
     ):
         self.opts = opts
         self.opts["saltenv"] = saltenv
@@ -217,6 +236,7 @@ class AsyncRemotePillar(RemotePillarMixin):
             merge_lists=True,
         )
         self._closing = False
+        self.clean_cache = clean_cache
 
     @salt.ext.tornado.gen.coroutine
     def compile_pillar(self):
@@ -233,6 +253,8 @@ class AsyncRemotePillar(RemotePillarMixin):
             "ver": "2",
             "cmd": "_pillar",
         }
+        if self.clean_cache:
+            load["clean_cache"] = self.clean_cache
         if self.ext:
             load["ext"] = self.ext
         try:
@@ -379,6 +401,7 @@ class PillarCache:
         pillar_override=None,
         pillarenv=None,
         extra_minion_data=None,
+        clean_cache=False,
     ):
         # Yes, we need all of these because we need to route to the Pillar object
         # if we have no cache. This is another refactor target.
@@ -391,6 +414,7 @@ class PillarCache:
         self.functions = functions
         self.pillar_override = pillar_override
         self.pillarenv = pillarenv
+        self.clean_cache = clean_cache
 
         if saltenv is None:
             self.saltenv = "base"
@@ -439,6 +463,8 @@ class PillarCache:
         return True
 
     def compile_pillar(self, *args, **kwargs):  # Will likely just be pillar_dirs
+        if self.clean_cache:
+            self.clear_pillar()
         log.debug(
             "Scanning pillar cache for information about minion %s and pillarenv %s",
             self.minion_id,

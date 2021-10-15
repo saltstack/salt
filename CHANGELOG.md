@@ -223,7 +223,7 @@ Fixed
 -----
 
 - Import salt.utils.azurearm instead of using __utils__ from loader in azure cloud.  This fixes an issue where __utils__ would become unavailable when we are using the ThreadPool in azurearm. (#59744)
-- Use contextvars libary from site-packages if it is intalled. Fixes salt ssh for targets with python <=3.6 (#59942)
+- Use contextvars library from site-packages if it is intalled. Fixes salt ssh for targets with python <=3.6 (#59942)
 
 Fixed
 -----
@@ -273,7 +273,7 @@ Fixed
 - Fixed installation on Apple Silicon Macs by checking $HOMEBREW_PREFIX for `libcrypto` instead of assuming /usr/local. (#59808)
 - Fix incorrect documentation for pillar_source_merging_strategy (#26396)
 - Don't iterate through cloud map errors (#34033)
-- Supress noisy warnings when very old pyzmq is used. (#50327)
+- Suppress noisy warnings when very old pyzmq is used. (#50327)
 - Fixed glusterfs version parsing for pre-4.0 (#50707)
 - Prevent traceback when trying to list reactors when none are configured. (#53334)
 - Fixed zabbix_host.present to accept all Zabbix host properties (#53838)
@@ -295,7 +295,7 @@ Fixed
   minion not to start
   Use default timezone offset in scheduler when correct timezone cannot be determined (#58379)
 - Pop!_OS 20.04 and 20.10 now support using pkg.* / aptpkg.* (#58395)
-- Restoring functionallity of the textfsm module when using textfsm_path argument (#58499)
+- Restoring functionality of the textfsm module when using textfsm_path argument (#58499)
 - Invalidate file list cache when cache file has a future last modified time (#58529)
 - Fix issue with setting permissions in combination with the win_perms_reset
   option (#58541)
@@ -498,7 +498,7 @@ Fixed
 - Removing use of undefined varilable in utils/slack.py. (#58753)
 - Restored the ability to specify the amount of extents for a Logical
   Volume as a percentage. (#58759)
-- Ensuring that the version check function is run a second time in all the user related functions incase the user being managed is the connection user and the password has been updated. (#58773)
+- Ensuring that the version check function is run a second time in all the user related functions in case the user being managed is the connection user and the password has been updated. (#58773)
 - Allow bytes in gpg renderer (#58794)
 - Fix issue where win_wua module fails to load when BITS is set to Manual (#58848)
 - Ensure that elasticsearch.index_exists is available before loading the elasticsearch returner. (#58851)
@@ -546,7 +546,7 @@ Deprecated
 Changed
 -------
 
-- Allow to specify a custom port for Proxmox connection (#50620)
+- Allow specifying a custom port for Proxmox connection (#50620)
 - Changed the lvm.lv_present state to accept a resizefs switch. So, when
   the logical volume is resized, the filesystem will be resized too. (#55265)
 - Change the ``enable_fqdns_grains`` setting to default to ``False`` on proxy minions
@@ -739,7 +739,7 @@ Added
   even just maintaining highstate becomes unmanageable. (#57849)
 - - Added an execution module for running idem exec modules
   - Added a state module for running idem states (#57969)
-- - Added the ability for states to return `sub_state_run`s -- results frome external state engines (#57993)
+- - Added the ability for states to return `sub_state_run`s -- results from external state engines (#57993)
 - Added salt-cloud support for Linode APIv4 via the ``api_version`` provider configuration parameter. (#58093)
 - Added support to manage services in Slackware Linux. (#58206)
 - Added list_sources to chocolatey module to have an overview of the repositories present on the minions.
