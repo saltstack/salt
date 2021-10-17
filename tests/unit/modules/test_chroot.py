@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Author: Alberto Planas <aplanas@suse.com>
 #
@@ -26,16 +25,11 @@
 :platform:      Linux
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import sys
 
 import salt.modules.chroot as chroot
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -74,6 +68,17 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
         exist.return_value = False
         self.assertTrue(chroot.create("/chroot"))
         makedirs.assert_called()
+
+    @patch("salt.utils.files.fopen")
+    def test_in_chroot(self, fopen):
+        """
+        Test the detection of chroot environment.
+        """
+        matrix = (("a", "b", True), ("a", "a", False))
+        for root_mountinfo, self_mountinfo, result in matrix:
+            fopen.return_value.__enter__.return_value = fopen
+            fopen.read = MagicMock(side_effect=(root_mountinfo, self_mountinfo))
+            self.assertEqual(chroot.in_chroot(), result)
 
     @patch("salt.modules.chroot.exist")
     def test_call_fails_input_validation(self, exist):
@@ -126,19 +131,25 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
         utils_mock = {
             "thin.gen_thin": MagicMock(return_value="/salt-thin.tgz"),
             "files.rm_rf": MagicMock(),
-            "json.find_json": MagicMock(return_value={"return": {}}),
+            "json.find_json": MagicMock(side_effect=ValueError()),
         }
         salt_mock = {
             "cmd.run": MagicMock(return_value=""),
             "config.option": MagicMock(),
-            "cmd.run_chroot": MagicMock(return_value={"retcode": 1, "stderr": "Error"}),
+            "cmd.run_chroot": MagicMock(
+                return_value={"retcode": 1, "stdout": "", "stderr": "Error"}
+            ),
         }
         with patch.dict(chroot.__utils__, utils_mock), patch.dict(
             chroot.__salt__, salt_mock
         ):
             self.assertEqual(
                 chroot.call("/chroot", "test.ping"),
-                {"result": False, "comment": "Can't parse container command output"},
+                {
+                    "result": False,
+                    "retcode": 1,
+                    "comment": {"stdout": "", "stderr": "Error"},
+                },
             )
             utils_mock["thin.gen_thin"].assert_called_once()
             salt_mock["config.option"].assert_called()

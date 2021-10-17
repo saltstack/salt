@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Grains from cloud metadata servers at 169.254.169.254
 
@@ -7,21 +6,17 @@ Grains from cloud metadata servers at 169.254.169.254
 :depends: requests
 
 To enable these grains that pull from the http://169.254.169.254/latest
-metadata server set `metadata_server_grains: True`.
+metadata server set `metadata_server_grains: True` in the minion config.
 
 .. code-block:: yaml
 
     metadata_server_grains: True
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import os
 import socket
 
-# Import salt libs
-import salt.ext.six as six
 import salt.utils.data
 import salt.utils.http as http
 import salt.utils.json
@@ -29,7 +24,7 @@ import salt.utils.stringutils
 
 # metadata server information
 IP = "169.254.169.254"
-HOST = "http://{0}/".format(IP)
+HOST = "http://{}/".format(IP)
 
 
 def __virtual__():
@@ -76,7 +71,7 @@ def _search(prefix="latest/"):
             retdata = http.query(os.path.join(HOST, prefix, line)).get("body", None)
             # (gtmanfred) This try except block is slightly faster than
             # checking if the string starts with a curly brace
-            if isinstance(retdata, six.binary_type):
+            if isinstance(retdata, bytes):
                 try:
                     ret[line] = salt.utils.json.loads(
                         salt.utils.stringutils.to_unicode(retdata)

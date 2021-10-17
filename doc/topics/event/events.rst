@@ -232,7 +232,7 @@ easily done using the normal cross-calling syntax:
         # do something!
         __salt__["event.send"](
             "myco/my_custom_module/finished",
-            {"finished": True, "message": "The something is finished!",},
+            {"finished": True, "message": "The something is finished!"},
         )
 
 From Custom Python Scripts
@@ -247,10 +247,9 @@ done at the CLI:
 
     caller = salt.client.Caller()
 
-    ret = caller.cmd('event.send',
-                     'myco/event/success'
-                     { 'success': True,
-                       'message': "It works!" })
+    ret = caller.cmd(
+        "event.send", "myco/event/success", {"success": True, "message": "It works!"}
+    )
 
     if not ret:
         # the event could not be sent, process the error here

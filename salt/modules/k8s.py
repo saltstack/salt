@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Salt module to manage Kubernetes cluster
 
@@ -14,26 +13,20 @@ Roadmap:
 
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 import base64
-import logging as logger
+import logging
 import os
 import re
+import urllib.parse
 
 import salt.utils.files
 import salt.utils.http as http
 import salt.utils.json
-from salt.ext import six
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
-
-# TODO Remove requests dependency
-
 
 __virtualname__ = "k8s"
 
 # Setup the logger
-log = logger.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -70,7 +63,7 @@ def _guess_apiserver(apiserver_url=None):
 
 
 def _kpost(url, data):
-    """ create any object in kubernetes based on URL """
+    """create any object in kubernetes based on URL"""
 
     # Prepare headers
     headers = {"Content-Type": "application/json"}
@@ -87,7 +80,7 @@ def _kpost(url, data):
 
 
 def _kput(url, data):
-    """ put any object in kubernetes based on URL """
+    """put any object in kubernetes based on URL"""
 
     # Prepare headers
     headers = {"Content-Type": "application/json"}
@@ -103,7 +96,7 @@ def _kput(url, data):
 
 
 def _kpatch(url, data):
-    """ patch any object in kubernetes based on URL """
+    """patch any object in kubernetes based on URL"""
 
     # Prepare headers
     headers = {"Content-Type": "application/json-patch+json"}
@@ -133,8 +126,8 @@ def _kname(obj):
 
 
 def _is_dns_subdomain(name):
-    """ Check that name is DNS subdomain: One or more lowercase rfc1035/rfc1123
-    labels separated by '.' with a maximum length of 253 characters """
+    """Check that name is DNS subdomain: One or more lowercase rfc1035/rfc1123
+    labels separated by '.' with a maximum length of 253 characters"""
 
     dns_subdomain = re.compile(r"""^[a-z0-9\.-]{1,253}$""")
     if dns_subdomain.match(name):
@@ -146,10 +139,10 @@ def _is_dns_subdomain(name):
 
 
 def _is_port_name(name):
-    """ Check that name is IANA service: An alphanumeric (a-z, and 0-9) string,
+    """Check that name is IANA service: An alphanumeric (a-z, and 0-9) string,
     with a maximum length of 15 characters, with the '-' character allowed
     anywhere except the first or the last character or adjacent to another '-'
-    character, it must contain at least a (a-z) character """
+    character, it must contain at least a (a-z) character"""
 
     port_name = re.compile("""^[a-z0-9]{1,15}$""")
     if port_name.match(name):
@@ -159,10 +152,10 @@ def _is_port_name(name):
 
 
 def _is_dns_label(name):
-    """ Check that name is DNS label: An alphanumeric (a-z, and 0-9) string,
+    """Check that name is DNS label: An alphanumeric (a-z, and 0-9) string,
     with a maximum length of 63 characters, with the '-' character allowed
     anywhere except the first or last character, suitable for use as a hostname
-    or segment in a domain name """
+    or segment in a domain name"""
 
     dns_label = re.compile(r"""^[a-z0-9][a-z0-9\.-]{1,62}$""")
     if dns_label.match(name):
@@ -181,14 +174,14 @@ def _guess_node_id(node):
 def _get_labels(node, apiserver_url):
     """Get all labels from a kube node."""
     # Prepare URL
-    url = "{0}/api/v1/nodes/{1}".format(apiserver_url, node)
+    url = "{}/api/v1/nodes/{}".format(apiserver_url, node)
     # Make request
     ret = http.query(url)
     # Check requests status
     if "body" in ret:
         ret = salt.utils.json.loads(ret.get("body"))
     elif ret.get("status", 0) == 404:
-        return "Node {0} doesn't exist".format(node)
+        return "Node {} doesn't exist".format(node)
     else:
         return ret
     # Get and return labels
@@ -198,13 +191,13 @@ def _get_labels(node, apiserver_url):
 def _set_labels(node, apiserver_url, labels):
     """Replace labels dict by a new one"""
     # Prepare URL
-    url = "{0}/api/v1/nodes/{1}".format(apiserver_url, node)
+    url = "{}/api/v1/nodes/{}".format(apiserver_url, node)
     # Prepare data
     data = [{"op": "replace", "path": "/metadata/labels", "value": labels}]
     # Make request
     ret = _kpatch(url, data)
     if ret.get("status") == 404:
-        return "Node {0} doesn't exist".format(node)
+        return "Node {} doesn't exist".format(node)
     return ret
 
 
@@ -271,9 +264,9 @@ def label_present(name, value, node=None, apiserver_url=None):
             # there is an update during operation, need to retry
             log.debug("Got 409, will try later")
             ret["changes"] = {}
-            ret["comment"] = "Could not create label {0}, please retry".format(name)
+            ret["comment"] = "Could not create label {}, please retry".format(name)
         else:
-            ret["comment"] = "Label {0} created".format(name)
+            ret["comment"] = "Label {} created".format(name)
     elif labels.get(name) != str(value):
         # This is a old label and we are going to edit it
         ret["changes"] = {name: str(value)}
@@ -283,12 +276,12 @@ def label_present(name, value, node=None, apiserver_url=None):
             # there is an update during operation, need to retry
             log.debug("Got 409, will try later")
             ret["changes"] = {}
-            ret["comment"] = "Could not update label {0}, please retry".format(name)
+            ret["comment"] = "Could not update label {}, please retry".format(name)
         else:
-            ret["comment"] = "Label {0} updated".format(name)
+            ret["comment"] = "Label {} updated".format(name)
     else:
         # This is a old label and it has already the wanted value
-        ret["comment"] = "Label {0} already set".format(name)
+        ret["comment"] = "Label {} already set".format(name)
 
     return ret
 
@@ -319,11 +312,11 @@ def label_absent(name, node=None, apiserver_url=None):
     # Get all labels
     old_labels = _get_labels(node, apiserver_url)
     # Prepare a temp labels dict
-    labels = dict([(key, value) for key, value in old_labels.items() if key != name])
+    labels = {key: value for key, value in old_labels.items() if key != name}
     # Compare old labels and what we want
     if labels == old_labels:
         # Label already absent
-        ret["comment"] = "Label {0} already absent".format(name)
+        ret["comment"] = "Label {} already absent".format(name)
     else:
         # Label needs to be delete
         res = _set_labels(node, apiserver_url, labels)
@@ -331,10 +324,10 @@ def label_absent(name, node=None, apiserver_url=None):
             # there is an update during operation, need to retry
             log.debug("Got 409, will try later")
             ret["changes"] = {}
-            ret["comment"] = "Could not delete label {0}, please retry".format(name)
+            ret["comment"] = "Could not delete label {}, please retry".format(name)
         else:
             ret["changes"] = {"deleted": name}
-            ret["comment"] = "Label {0} absent".format(name)
+            ret["comment"] = "Label {} absent".format(name)
 
     return ret
 
@@ -366,29 +359,25 @@ def label_folder_absent(name, node=None, apiserver_url=None):
     # Get all labels
     old_labels = _get_labels(node, apiserver_url)
     # Prepare a temp labels dict
-    labels = dict(
-        [
-            (key, value)
-            for key, value in old_labels.items()
-            if not key.startswith(folder)
-        ]
-    )
+    labels = {
+        key: value for key, value in old_labels.items() if not key.startswith(folder)
+    }
     # Prepare a temp labels dict
     if labels == old_labels:
         # Label already absent
-        ret["comment"] = "Label folder {0} already absent".format(folder)
+        ret["comment"] = "Label folder {} already absent".format(folder)
     else:
         # Label needs to be delete
         res = _set_labels(node, apiserver_url, labels)
         if res.get("status") == 409:
             log.debug("Got 409, will try later")
             ret["changes"] = {}
-            ret["comment"] = "Could not delete label folder {0}, please retry".format(
+            ret["comment"] = "Could not delete label folder {}, please retry".format(
                 folder
             )
         else:
             ret["changes"] = {"deleted": folder}
-            ret["comment"] = "Label folder {0} absent".format(folder)
+            ret["comment"] = "Label folder {} absent".format(folder)
 
     return ret
 
@@ -397,7 +386,7 @@ def label_folder_absent(name, node=None, apiserver_url=None):
 def _get_namespaces(apiserver_url, name=""):
     """Get namespace is namespace is defined otherwise return all namespaces"""
     # Prepare URL
-    url = "{0}/api/v1/namespaces/{1}".format(apiserver_url, name)
+    url = "{}/api/v1/namespaces/{}".format(apiserver_url, name)
     # Make request
     ret = http.query(url)
     if ret.get("body"):
@@ -407,9 +396,9 @@ def _get_namespaces(apiserver_url, name=""):
 
 
 def _create_namespace(namespace, apiserver_url):
-    """ create namespace on the defined k8s cluster """
+    """create namespace on the defined k8s cluster"""
     # Prepare URL
-    url = "{0}/api/v1/namespaces".format(apiserver_url)
+    url = "{}/api/v1/namespaces".format(apiserver_url)
     # Prepare data
     data = {"kind": "Namespace", "apiVersion": "v1", "metadata": {"name": namespace}}
     log.trace("namespace creation requests: %s", data)
@@ -449,9 +438,9 @@ def create_namespace(name, apiserver_url=None):
         # This is a new namespace
         _create_namespace(name, apiserver_url)
         ret["changes"] = name
-        ret["comment"] = "Namespace {0} created".format(name)
+        ret["comment"] = "Namespace {} created".format(name)
     else:
-        ret["comment"] = "Namespace {0} already present".format(name)
+        ret["comment"] = "Namespace {} already present".format(name)
     return ret
 
 
@@ -472,7 +461,6 @@ def get_namespaces(namespace="", apiserver_url=None):
     .. code-block:: bash
 
         kubectl get namespaces namespace_name -o json
-
 
     CLI Example:
 
@@ -496,7 +484,7 @@ def get_namespaces(namespace="", apiserver_url=None):
 def _get_secrets(namespace, name, apiserver_url):
     """Get secrets of the namespace."""
     # Prepare URL
-    url = "{0}/api/v1/namespaces/{1}/secrets/{2}".format(apiserver_url, namespace, name)
+    url = "{}/api/v1/namespaces/{}/secrets/{}".format(apiserver_url, namespace, name)
     # Make request
     ret = http.query(url)
     if ret.get("body"):
@@ -508,20 +496,20 @@ def _get_secrets(namespace, name, apiserver_url):
 def _update_secret(namespace, name, data, apiserver_url):
     """Replace secrets data by a new one"""
     # Prepare URL
-    url = "{0}/api/v1/namespaces/{1}/secrets/{2}".format(apiserver_url, namespace, name)
+    url = "{}/api/v1/namespaces/{}/secrets/{}".format(apiserver_url, namespace, name)
     # Prepare data
     data = [{"op": "replace", "path": "/data", "value": data}]
     # Make request
     ret = _kpatch(url, data)
     if ret.get("status") == 404:
-        return "Node {0} doesn't exist".format(url)
+        return "Node {} doesn't exist".format(url)
     return ret
 
 
 def _create_secret(namespace, name, data, apiserver_url):
-    """ create namespace on the defined k8s cluster """
+    """create namespace on the defined k8s cluster"""
     # Prepare URL
-    url = "{0}/api/v1/namespaces/{1}/secrets".format(apiserver_url, namespace)
+    url = "{}/api/v1/namespaces/{}/secrets".format(apiserver_url, namespace)
     # Prepare data
     request = {
         "apiVersion": "v1",
@@ -554,12 +542,12 @@ def _decode_secrets(secrets):
     if items:
         for i, secret in enumerate(items):
             log.trace(i, secret)
-            for k, v in six.iteritems(secret.get("data", {})):
+            for k, v in secret.get("data", {}).items():
                 items[i]["data"][k] = base64.b64decode(v)
         secrets["items"] = items
         return secrets
     else:
-        for k, v in six.iteritems(secrets.get("data", {})):
+        for k, v in secrets.get("data", {}).items():
             secrets["data"][k] = base64.b64decode(v)
         return secrets
 
@@ -591,9 +579,9 @@ def get_secrets(namespace, name="", apiserver_url=None, decode=False, brief=Fals
 
 def _source_encode(source, saltenv):
     try:
-        source_url = _urlparse(source)
+        source_url = urllib.parse.urlparse(source)
     except TypeError:
-        return "", {}, ("Invalid format for source parameter")
+        return "", {}, "Invalid format for source parameter"
 
     protos = ("salt", "http", "https", "ftp", "swift", "s3", "file")
 
@@ -750,7 +738,7 @@ def create_secret(
         return {
             "name": name,
             "result": False,
-            "comment": "Secret {0} is already present".format(name),
+            "comment": "Secret {} is already present".format(name),
             "changes": {},
         }
 
@@ -762,25 +750,25 @@ def create_secret(
             # format is array of dictionaries:
             # [{public_auth: salt://public_key}, {test: "/tmp/test"}]
             log.trace("source is dictionary: %s", source)
-            for k, v in six.iteritems(source):
+            for k, v in source.items():
                 sname, encoded = _source_encode(v, saltenv)
                 if sname == encoded == "":
                     ret[
                         "comment"
-                    ] += "Source file {0} is missing or name is incorrect\n".format(v)
+                    ] += "Source file {} is missing or name is incorrect\n".format(v)
                     if force:
                         continue
                     else:
                         return ret
                 data[k] = encoded
-        elif isinstance(source, six.string_types):
+        elif isinstance(source, str):
             # expected format is array of filenames
             sname, encoded = _source_encode(source, saltenv)
             if sname == encoded == "":
                 if force:
                     ret[
                         "comment"
-                    ] += "Source file {0} is missing or name is incorrect\n".format(
+                    ] += "Source file {} is missing or name is incorrect\n".format(
                         source
                     )
                     continue
@@ -837,8 +825,8 @@ def delete_secret(namespace, name, apiserver_url=None, force=True):
             "changes": {},
         }
 
-    url = "{0}/api/v1/namespaces/{1}/secrets/{2}".format(apiserver_url, namespace, name)
+    url = "{}/api/v1/namespaces/{}/secrets/{}".format(apiserver_url, namespace, name)
     res = http.query(url, method="DELETE")
     if res.get("body"):
-        ret["comment"] = "Removed secret {0} in {1} namespace".format(name, namespace)
+        ret["comment"] = "Removed secret {} in {} namespace".format(name, namespace)
     return ret

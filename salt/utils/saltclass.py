@@ -1,19 +1,11 @@
-# -*- coding: utf-8 -*-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import glob
 import logging
 import os
 import re
 
-# Import Salt libs
 import salt.utils.path
 import salt.utils.yaml
 from jinja2 import Environment, FileSystemLoader
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -74,9 +66,9 @@ def get_class_paths(_class, saltclass_path):
     :return: 3-tuple of possible file counterparts
     :rtype: tuple(str)
     """
-    straight = os.path.join(saltclass_path, "classes", "{0}.yml".format(_class))
+    straight = os.path.join(saltclass_path, "classes", "{}.yml".format(_class))
     sub_straight = os.path.join(
-        saltclass_path, "classes", "{0}.yml".format(_class.replace(".", os.sep))
+        saltclass_path, "classes", "{}.yml".format(_class.replace(".", os.sep))
     )
     sub_init = os.path.join(
         saltclass_path, "classes", _class.replace(".", os.sep), "init.yml"
@@ -133,7 +125,7 @@ def dict_merge(a, b, path=None):
                 else:
                     a[key].extend(b[key])
             elif isinstance(a[key], dict) and isinstance(b[key], dict):
-                dict_merge(a[key], b[key], path + [six.text_type(key)])
+                dict_merge(a[key], b[key], path + [str(key)])
             elif a[key] == b[key]:
                 pass
             else:
@@ -145,7 +137,7 @@ def dict_merge(a, b, path=None):
 
 # Recursive search and replace in a dict
 def dict_search_and_replace(d, old, new, expanded):
-    for (k, v) in six.iteritems(d):
+    for (k, v) in d.items():
         if isinstance(v, dict):
             dict_search_and_replace(d[k], old, new, expanded)
 
@@ -154,7 +146,7 @@ def dict_search_and_replace(d, old, new, expanded):
             for i in v:
                 if isinstance(i, dict):
                     dict_search_and_replace(v[x], old, new, expanded)
-                if isinstance(i, six.string_types):
+                if isinstance(i, str):
                     if i == old:
                         v[x] = new
                 x = x + 1
@@ -196,7 +188,7 @@ def find_and_process_re(_str, v, k, b, expanded):
                 expanded.append(k)
             else:
                 v_expanded = find_value_to_expand(b, re_str)
-                if isinstance(v, six.string_types):
+                if isinstance(v, str):
                     v_new = v.replace(re_str, v_expanded)
                 else:
                     v_new = _str.replace(re_str, v_expanded)
@@ -213,18 +205,18 @@ def expand_variables(a, b, expanded, path=None):
         b = a.copy()
         path = []
 
-    for (k, v) in six.iteritems(a):
+    for (k, v) in a.items():
         if isinstance(v, dict):
-            expand_variables(v, b, expanded, path + [six.text_type(k)])
+            expand_variables(v, b, expanded, path + [str(k)])
         else:
             if isinstance(v, list):
                 for i in v:
                     if isinstance(i, dict):
                         expand_variables(i, b, expanded, path + [str(k)])
-                    if isinstance(i, six.string_types):
+                    if isinstance(i, str):
                         b = find_and_process_re(i, v, k, b, expanded)
 
-            if isinstance(v, six.string_types):
+            if isinstance(v, str):
                 b = find_and_process_re(v, v, k, b, expanded)
     return b
 
@@ -372,7 +364,7 @@ def expanded_dict_from_minion(minion_id, salt_data):
         os.path.join(saltclass_path, "nodes"), followlinks=True
     ):
         for minion_file in files:
-            if minion_file == "{0}.yml".format(minion_id):
+            if minion_file == "{}.yml".format(minion_id):
                 _file = os.path.join(root, minion_file)
 
     # Load the minion_id definition if existing, else an empty dict

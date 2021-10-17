@@ -1,5 +1,5 @@
-salt.states.influxdb08_database module
-======================================
+salt.states.influxdb08_database
+===============================
 
 .. automodule:: salt.states.influxdb08_database
     :members:

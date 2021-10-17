@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 This module contains the function calls to execute command line scripts
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import functools
 import logging
@@ -87,7 +85,7 @@ def _install_signal_handlers(client):
 
     if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
         # No custom signal handling was added, install our own
-        signal.signal(signal.SIGINT, functools.partial(_handle_signals, client))
+        signal.signal(signal.SIGTERM, functools.partial(_handle_signals, client))
 
 
 def salt_master():
@@ -303,7 +301,12 @@ def proxy_minion_process(queue):
         proxyminion = salt.cli.daemons.ProxyMinion()
         proxyminion.start()
         # pylint: disable=broad-except
-    except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit,) as exc:
+    except (
+        Exception,
+        SaltClientError,
+        SaltReqTimeoutError,
+        SaltSystemExit,
+    ) as exc:
         # pylint: enable=broad-except
         log.error("Proxy Minion failed to start: ", exc_info=True)
         restart = True
@@ -416,7 +419,7 @@ def salt_key():
         _install_signal_handlers(client)
         client.run()
     except Exception as err:  # pylint: disable=broad-except
-        sys.stderr.write("Error: {0}\n".format(err))
+        sys.stderr.write("Error: {}\n".format(err))
 
 
 def salt_cp():
@@ -572,7 +575,7 @@ def salt_unity():
     if len(sys.argv) < 2:
         msg = "Must pass in a salt command, available commands are:"
         for cmd in avail:
-            msg += "\n{0}".format(cmd)
+            msg += "\n{}".format(cmd)
         print(msg)
         sys.exit(1)
     cmd = sys.argv[1]
@@ -581,7 +584,7 @@ def salt_unity():
         sys.argv[0] = "salt"
         s_fun = salt_main
     else:
-        sys.argv[0] = "salt-{0}".format(cmd)
+        sys.argv[0] = "salt-{}".format(cmd)
         sys.argv.pop(1)
-        s_fun = getattr(sys.modules[__name__], "salt_{0}".format(cmd))
+        s_fun = getattr(sys.modules[__name__], "salt_{}".format(cmd))
     s_fun()

@@ -1,20 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Module to provide Postgres compatibility to salt for debian family specific tools.
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import pipes
 
-# Import salt libs
 import salt.utils.path
-from salt.ext import six
-
-# Import 3rd-party libs
 
 log = logging.getLogger(__name__)
 
@@ -66,14 +59,14 @@ def cluster_create(
 
     cmd = [salt.utils.path.which("pg_createcluster")]
     if port:
-        cmd += ["--port", six.text_type(port)]
+        cmd += ["--port", str(port)]
     if locale:
         cmd += ["--locale", locale]
     if encoding:
         cmd += ["--encoding", encoding]
     if datadir:
         cmd += ["--datadir", datadir]
-    cmd += [version, name]
+    cmd += [str(version), name]
     # initdb-specific options are passed after '--'
     if allow_group_access or data_checksums or wal_segsize:
         cmd += ["--"]
@@ -125,7 +118,7 @@ def cluster_exists(version, name="main"):
 
         salt '*' postgres.cluster_exists '9.3' 'main'
     """
-    return "{0}/{1}".format(version, name) in cluster_list()
+    return "{}/{}".format(version, name) in cluster_list()
 
 
 def cluster_remove(version, name="main", stop=False):
@@ -147,16 +140,14 @@ def cluster_remove(version, name="main", stop=False):
     cmd = [salt.utils.path.which("pg_dropcluster")]
     if stop:
         cmd += ["--stop"]
-    cmd += [version, name]
+    cmd += [str(version), name]
     cmdstr = " ".join([pipes.quote(c) for c in cmd])
     ret = __salt__["cmd.run_all"](cmdstr, python_shell=False)
     # FIXME - return Boolean ?
     if ret.get("retcode", 0) != 0:
         log.error("Error removing a Postgresql cluster %s/%s", version, name)
     else:
-        ret["changes"] = ("Successfully removed" " cluster {0}/{1}").format(
-            version, name
-        )
+        ret["changes"] = "Successfully removed cluster {}/{}".format(version, name)
     return ret
 
 
@@ -167,7 +158,7 @@ def _parse_pg_lscluster(output):
     cluster_dict = {}
     for line in output.splitlines():
         version, name, port, status, user, datadir, log = line.split()
-        cluster_dict["{0}/{1}".format(version, name)] = {
+        cluster_dict["{}/{}".format(version, name)] = {
             "port": int(port),
             "status": status,
             "user": user,

@@ -1,32 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Support for ipset
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.utils.path
-
-# Import third-party libs
 from salt._compat import ipaddress
 
-# Import Salt libs
-from salt.ext import six
-from salt.ext.six.moves import map, range
-
-# Set up logging
 log = logging.getLogger(__name__)
-
-
-# Fix included in py2-ipaddress for 32bit architectures
-# Except that xrange only supports machine integers, not longs, so...
-def long_range(start, end):
-    while start < end:
-        yield start
-        start += 1
 
 
 _IPSET_FAMILIES = {
@@ -36,158 +18,134 @@ _IPSET_FAMILIES = {
     "ip6": "inet6",
 }
 
-_IPSET_SET_TYPES = set(
-    [
-        "bitmap:ip",
-        "bitmap:ip,mac",
-        "bitmap:port",
-        "hash:ip",
-        "hash:mac",
-        "hash:ip,port",
-        "hash:ip,port,ip",
-        "hash:ip,port,net",
-        "hash:net",
-        "hash:net,net",
-        "hash:net,iface",
-        "hash:net,port",
-        "hash:net,port,net",
-        "hash:ip,mark",
-        "list:set",
-    ]
-)
+_IPSET_SET_TYPES = {
+    "bitmap:ip",
+    "bitmap:ip,mac",
+    "bitmap:port",
+    "hash:ip",
+    "hash:mac",
+    "hash:ip,port",
+    "hash:ip,port,ip",
+    "hash:ip,port,net",
+    "hash:net",
+    "hash:net,net",
+    "hash:net,iface",
+    "hash:net,port",
+    "hash:net,port,net",
+    "hash:ip,mark",
+    "list:set",
+}
 
 
 _CREATE_OPTIONS = {
-    "bitmap:ip": set(["range", "netmask", "timeout", "counters", "comment", "skbinfo"]),
-    "bitmap:ip,mac": set(["range", "timeout", "counters", "comment", "skbinfo"]),
-    "bitmap:port": set(["range", "timeout", "counters", "comment", "skbinfo"]),
-    "hash:ip": set(
-        [
-            "family",
-            "hashsize",
-            "maxelem",
-            "netmask",
-            "timeout",
-            "counters",
-            "comment",
-            "skbinfo",
-        ]
-    ),
-    "hash:mac": set(
-        ["hashsize", "maxelem", "timeout", "counters", "comment", "skbinfo"]
-    ),
-    "hash:net": set(
-        [
-            "family",
-            "hashsize",
-            "maxelem",
-            "netmask",
-            "timeout",
-            "counters",
-            "comment",
-            "skbinfo",
-        ]
-    ),
-    "hash:net,net": set(
-        [
-            "family",
-            "hashsize",
-            "maxelem",
-            "netmask",
-            "timeout",
-            "counters",
-            "comment",
-            "skbinfo",
-        ]
-    ),
-    "hash:net,port": set(
-        [
-            "family",
-            "hashsize",
-            "maxelem",
-            "netmask",
-            "timeout",
-            "counters",
-            "comment",
-            "skbinfo",
-        ]
-    ),
-    "hash:net,port,net": set(
-        [
-            "family",
-            "hashsize",
-            "maxelem",
-            "netmask",
-            "timeout",
-            "counters",
-            "comment",
-            "skbinfo",
-        ]
-    ),
-    "hash:ip,port,ip": set(
-        [
-            "family",
-            "hashsize",
-            "maxelem",
-            "netmask",
-            "timeout",
-            "counters",
-            "comment",
-            "skbinfo",
-        ]
-    ),
-    "hash:ip,port,net": set(
-        [
-            "family",
-            "hashsize",
-            "maxelem",
-            "netmask",
-            "timeout",
-            "counters",
-            "comment",
-            "skbinfo",
-        ]
-    ),
-    "hash:ip,port": set(
-        [
-            "family",
-            "hashsize",
-            "maxelem",
-            "netmask",
-            "timeout",
-            "counters",
-            "comment",
-            "skbinfo",
-        ]
-    ),
-    "hash:ip,mark": set(
-        [
-            "family",
-            "markmask",
-            "hashsize",
-            "maxelem",
-            "timeout",
-            "counters",
-            "comment",
-            "skbinfo",
-        ]
-    ),
-    "hash:net,iface": set(
-        [
-            "family",
-            "hashsize",
-            "maxelem",
-            "netmask",
-            "timeout",
-            "counters",
-            "comment",
-            "skbinfo",
-        ]
-    ),
-    "list:set": set(["size", "timeout", "counters", "comment"]),
+    "bitmap:ip": {"range", "netmask", "timeout", "counters", "comment", "skbinfo"},
+    "bitmap:ip,mac": {"range", "timeout", "counters", "comment", "skbinfo"},
+    "bitmap:port": {"range", "timeout", "counters", "comment", "skbinfo"},
+    "hash:ip": {
+        "family",
+        "hashsize",
+        "maxelem",
+        "netmask",
+        "timeout",
+        "counters",
+        "comment",
+        "skbinfo",
+    },
+    "hash:mac": {"hashsize", "maxelem", "timeout", "counters", "comment", "skbinfo"},
+    "hash:net": {
+        "family",
+        "hashsize",
+        "maxelem",
+        "netmask",
+        "timeout",
+        "counters",
+        "comment",
+        "skbinfo",
+    },
+    "hash:net,net": {
+        "family",
+        "hashsize",
+        "maxelem",
+        "netmask",
+        "timeout",
+        "counters",
+        "comment",
+        "skbinfo",
+    },
+    "hash:net,port": {
+        "family",
+        "hashsize",
+        "maxelem",
+        "netmask",
+        "timeout",
+        "counters",
+        "comment",
+        "skbinfo",
+    },
+    "hash:net,port,net": {
+        "family",
+        "hashsize",
+        "maxelem",
+        "netmask",
+        "timeout",
+        "counters",
+        "comment",
+        "skbinfo",
+    },
+    "hash:ip,port,ip": {
+        "family",
+        "hashsize",
+        "maxelem",
+        "netmask",
+        "timeout",
+        "counters",
+        "comment",
+        "skbinfo",
+    },
+    "hash:ip,port,net": {
+        "family",
+        "hashsize",
+        "maxelem",
+        "netmask",
+        "timeout",
+        "counters",
+        "comment",
+        "skbinfo",
+    },
+    "hash:ip,port": {
+        "family",
+        "hashsize",
+        "maxelem",
+        "netmask",
+        "timeout",
+        "counters",
+        "comment",
+        "skbinfo",
+    },
+    "hash:ip,mark": {
+        "family",
+        "markmask",
+        "hashsize",
+        "maxelem",
+        "timeout",
+        "counters",
+        "comment",
+        "skbinfo",
+    },
+    "hash:net,iface": {
+        "family",
+        "hashsize",
+        "maxelem",
+        "netmask",
+        "timeout",
+        "counters",
+        "comment",
+        "skbinfo",
+    },
+    "list:set": {"size", "timeout", "counters", "comment"},
 }
 
-_CREATE_OPTIONS_WITHOUT_VALUE = set(["comment", "counters", "skbinfo"])
+_CREATE_OPTIONS_WITHOUT_VALUE = {"comment", "counters", "skbinfo"}
 
 _CREATE_OPTIONS_REQUIRED = {
     "bitmap:ip": ["range"],
@@ -209,44 +167,87 @@ _CREATE_OPTIONS_REQUIRED = {
 
 
 _ADD_OPTIONS = {
-    "bitmap:ip": set(["timeout", "packets", "bytes", "skbmark", "skbprio", "skbqueue"]),
-    "bitmap:ip,mac": set(
-        ["timeout", "packets", "bytes", "skbmark", "skbprio", "skbqueue"]
-    ),
-    "bitmap:port": set(
-        ["timeout", "packets", "bytes", "skbmark", "skbprio", "skbprio"]
-    ),
-    "hash:ip": set(["timeout", "packets", "bytes", "skbmark", "skbprio", "skbqueue"]),
-    "hash:mac": set(["timeout", "packets", "bytes", "skbmark", "skbprio", "skbqueue"]),
-    "hash:net": set(
-        ["timeout", "nomatch", "packets", "bytes", "skbmark", "skbprio", "skbqueue"]
-    ),
-    "hash:net,net": set(
-        ["timeout", "nomatch", "packets", "bytes", "skbmark", "skbprio", "skbqueue"]
-    ),
-    "hash:net,port": set(
-        ["timeout", "nomatch", "packets", "bytes", "skbmark", "skbprio", "skbqueue"]
-    ),
-    "hash:net,port,net": set(
-        ["timeout", "nomatch", "packets", "bytes", "skbmark", "skbprio", "skbqueue"]
-    ),
-    "hash:ip,port,ip": set(
-        ["timeout", "packets", "bytes", "skbmark", "skbprio", "skbqueue"]
-    ),
-    "hash:ip,port,net": set(
-        ["timeout", "nomatch", "packets", "bytes", "skbmark", "skbprio", "skbqueue"]
-    ),
-    "hash:ip,port": set(
-        ["timeout", "nomatch", "packets", "bytes", "skbmark", "skbprio", "skbqueue"]
-    ),
-    "hash:net,iface": set(
-        ["timeout", "nomatch", "packets", "bytes", "skbmark", "skbprio", "skbqueue"]
-    ),
-    "hash:ip,mark": set(
-        ["timeout", "packets", "bytes", "skbmark", "skbprio", "skbqueue"]
-    ),
-    "list:set": set(["timeout", "packets", "bytes", "skbmark", "skbprio", "skbqueue"]),
+    "bitmap:ip": {"timeout", "packets", "bytes", "skbmark", "skbprio", "skbqueue"},
+    "bitmap:ip,mac": {"timeout", "packets", "bytes", "skbmark", "skbprio", "skbqueue"},
+    "bitmap:port": {"timeout", "packets", "bytes", "skbmark", "skbprio"},
+    "hash:ip": {"timeout", "packets", "bytes", "skbmark", "skbprio", "skbqueue"},
+    "hash:mac": {"timeout", "packets", "bytes", "skbmark", "skbprio", "skbqueue"},
+    "hash:net": {
+        "timeout",
+        "nomatch",
+        "packets",
+        "bytes",
+        "skbmark",
+        "skbprio",
+        "skbqueue",
+    },
+    "hash:net,net": {
+        "timeout",
+        "nomatch",
+        "packets",
+        "bytes",
+        "skbmark",
+        "skbprio",
+        "skbqueue",
+    },
+    "hash:net,port": {
+        "timeout",
+        "nomatch",
+        "packets",
+        "bytes",
+        "skbmark",
+        "skbprio",
+        "skbqueue",
+    },
+    "hash:net,port,net": {
+        "timeout",
+        "nomatch",
+        "packets",
+        "bytes",
+        "skbmark",
+        "skbprio",
+        "skbqueue",
+    },
+    "hash:ip,port,ip": {
+        "timeout",
+        "packets",
+        "bytes",
+        "skbmark",
+        "skbprio",
+        "skbqueue",
+    },
+    "hash:ip,port,net": {
+        "timeout",
+        "nomatch",
+        "packets",
+        "bytes",
+        "skbmark",
+        "skbprio",
+        "skbqueue",
+    },
+    "hash:ip,port": {
+        "timeout",
+        "nomatch",
+        "packets",
+        "bytes",
+        "skbmark",
+        "skbprio",
+        "skbqueue",
+    },
+    "hash:net,iface": {
+        "timeout",
+        "nomatch",
+        "packets",
+        "bytes",
+        "skbmark",
+        "skbprio",
+        "skbqueue",
+    },
+    "hash:ip,mark": {"timeout", "packets", "bytes", "skbmark", "skbprio", "skbqueue"},
+    "list:set": {"timeout", "packets", "bytes", "skbmark", "skbprio", "skbqueue"},
 }
+
+__virtualname__ = "ipset"
 
 
 def __virtual__():
@@ -279,12 +280,12 @@ def version():
         salt '*' ipset.version
 
     """
-    cmd = "{0} --version".format(_ipset_cmd())
-    out = __salt__["cmd.run"](cmd).split()
+    cmd = [_ipset_cmd(), "--version"]
+    out = __salt__["cmd.run"](cmd, python_shell=False).split()
     return out[1]
 
 
-def new_set(set=None, set_type=None, family="ipv4", comment=False, **kwargs):
+def new_set(name=None, set_type=None, family="ipv4", comment=False, **kwargs):
     """
     .. versionadded:: 2014.7.0
 
@@ -303,8 +304,8 @@ def new_set(set=None, set_type=None, family="ipv4", comment=False, **kwargs):
     """
 
     ipset_family = _IPSET_FAMILIES[family]
-    if not set:
-        return "Error: Set needs to be specified"
+    if not name:
+        return "Error: Set Name needs to be specified"
 
     if not set_type:
         return "Error: Set Type needs to be specified"
@@ -315,23 +316,23 @@ def new_set(set=None, set_type=None, family="ipv4", comment=False, **kwargs):
     # Check for required arguments
     for item in _CREATE_OPTIONS_REQUIRED[set_type]:
         if item not in kwargs:
-            return "Error: {0} is a required argument".format(item)
+            return "Error: {} is a required argument".format(item)
 
-    cmd = "{0} create {1} {2}".format(_ipset_cmd(), set, set_type)
+    cmd = [_ipset_cmd(), "create", name, set_type]
 
     for item in _CREATE_OPTIONS[set_type]:
         if item in kwargs:
             if item in _CREATE_OPTIONS_WITHOUT_VALUE:
-                cmd = "{0} {1} ".format(cmd, item)
+                cmd.append(item)
             else:
-                cmd = "{0} {1} {2} ".format(cmd, item, kwargs[item])
+                cmd.extend([item, kwargs[item]])
 
     # Family only valid for certain set types
     if "family" in _CREATE_OPTIONS[set_type]:
-        cmd = "{0} family {1}".format(cmd, ipset_family)
+        cmd.extend(["family", cmd, ipset_family])
 
     if comment:
-        cmd = "{0} comment".format(cmd)
+        cmd.append("comment")
 
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
@@ -340,7 +341,7 @@ def new_set(set=None, set_type=None, family="ipv4", comment=False, **kwargs):
     return out
 
 
-def delete_set(set=None, family="ipv4"):
+def delete_set(name=None, family="ipv4"):
     """
     .. versionadded:: 2014.7.0
 
@@ -356,10 +357,10 @@ def delete_set(set=None, family="ipv4"):
         salt '*' ipset.delete_set custom_set family=ipv6
     """
 
-    if not set:
+    if not name:
         return "Error: Set needs to be specified"
 
-    cmd = "{0} destroy {1}".format(_ipset_cmd(), set)
+    cmd = [_ipset_cmd(), "destroy", name]
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
     if not out:
@@ -367,7 +368,7 @@ def delete_set(set=None, family="ipv4"):
     return out
 
 
-def rename_set(set=None, new_set=None, family="ipv4"):
+def rename_set(name=None, new_set=None, family="ipv4"):
     """
     .. versionadded:: 2014.7.0
 
@@ -383,13 +384,13 @@ def rename_set(set=None, new_set=None, family="ipv4"):
         salt '*' ipset.rename_set custom_set new_set=new_set_name family=ipv6
     """
 
-    if not set:
+    if not name:
         return "Error: Set needs to be specified"
 
     if not new_set:
         return "Error: New name for set needs to be specified"
 
-    settype = _find_set_type(set)
+    settype = _find_set_type(name)
     if not settype:
         return "Error: Set does not exist"
 
@@ -397,7 +398,7 @@ def rename_set(set=None, new_set=None, family="ipv4"):
     if settype:
         return "Error: New Set already exists"
 
-    cmd = "{0} rename {1} {2}".format(_ipset_cmd(), set, new_set)
+    cmd = [_ipset_cmd(), "rename", name, new_set]
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
     if not out:
@@ -418,7 +419,7 @@ def list_sets(family="ipv4"):
         salt '*' ipset.list_sets
 
     """
-    cmd = "{0} list -t".format(_ipset_cmd())
+    cmd = [_ipset_cmd(), "list", "-t"]
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
     _tmp = out.split("\n")
@@ -436,7 +437,7 @@ def list_sets(family="ipv4"):
     return sets
 
 
-def check_set(set=None, family="ipv4"):
+def check_set(name=None, family="ipv4"):
     """
     Check that given ipset set exists.
 
@@ -446,19 +447,19 @@ def check_set(set=None, family="ipv4"):
 
     .. code-block:: bash
 
-        salt '*' ipset.check_set setname
+        salt '*' ipset.check_set name
 
     """
-    if not set:
+    if not name:
         return "Error: Set needs to be specified"
 
-    setinfo = _find_set_info(set)
+    setinfo = _find_set_info(name)
     if not setinfo:
         return False
     return True
 
 
-def add(setname=None, entry=None, family="ipv4", **kwargs):
+def add(name=None, entry=None, family="ipv4", **kwargs):
     """
     Append an entry to the specified set.
 
@@ -466,60 +467,59 @@ def add(setname=None, entry=None, family="ipv4", **kwargs):
 
     .. code-block:: bash
 
-        salt '*' ipset.add setname 192.168.1.26
+        salt '*' ipset.add name 192.168.1.26
 
-        salt '*' ipset.add setname 192.168.0.3,AA:BB:CC:DD:EE:FF
+        salt '*' ipset.add name 192.168.0.3,AA:BB:CC:DD:EE:FF
 
     """
-    if not setname:
+    if not name:
         return "Error: Set needs to be specified"
     if not entry:
         return "Error: Entry needs to be specified"
 
-    setinfo = _find_set_info(setname)
+    setinfo = _find_set_info(name)
     if not setinfo:
-        return "Error: Set {0} does not exist".format(setname)
+        return "Error: Set {} does not exist".format(name)
 
     settype = setinfo["Type"]
 
-    cmd = "{0}".format(entry)
+    cmd = [_ipset_cmd(), "add", "-exist", name, entry]
 
     if "timeout" in kwargs:
         if "timeout" not in setinfo["Header"]:
-            return "Error: Set {0} not created with timeout support".format(setname)
+            return "Error: Set {} not created with timeout support".format(name)
 
     if "packets" in kwargs or "bytes" in kwargs:
         if "counters" not in setinfo["Header"]:
-            return "Error: Set {0} not created with counters support".format(setname)
+            return "Error: Set {} not created with counters support".format(name)
 
     if "comment" in kwargs:
         if "comment" not in setinfo["Header"]:
-            return "Error: Set {0} not created with comment support".format(setname)
+            return "Error: Set {} not created with comment support".format(name)
         if "comment" not in entry:
-            cmd = '{0} comment "{1}"'.format(cmd, kwargs["comment"])
+            cmd = '{} comment "{}"'.format(cmd, kwargs["comment"])
 
-    if len(set(["skbmark", "skbprio", "skbqueue"]) & set(kwargs.keys())) > 0:
+    if {"skbmark", "skbprio", "skbqueue"} & set(kwargs.keys()):
         if "skbinfo" not in setinfo["Header"]:
-            return "Error: Set {0} not created with skbinfo support".format(setname)
+            return "Error: Set {} not created with skbinfo support".format(name)
 
     for item in _ADD_OPTIONS[settype]:
         if item in kwargs:
-            cmd = "{0} {1} {2}".format(cmd, item, kwargs[item])
+            cmd.extend([item, kwargs[item]])
 
-    current_members = _find_set_members(setname)
-    if cmd in current_members:
-        return "Warn: Entry {0} already exists in set {1}".format(cmd, setname)
+    current_members = _find_set_members(name)
+    if entry in current_members:
+        return "Warn: Entry {} already exists in set {}".format(entry, name)
 
     # Using -exist to ensure entries are updated if the comment changes
-    cmd = "{0} add -exist {1} {2}".format(_ipset_cmd(), setname, cmd)
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
     if not out:
         return "Success"
-    return "Error: {0}".format(out)
+    return "Error: {}".format(out)
 
 
-def delete(set=None, entry=None, family="ipv4", **kwargs):
+def delete(name=None, entry=None, family="ipv4", **kwargs):
     """
     Delete an entry from the specified set.
 
@@ -527,32 +527,32 @@ def delete(set=None, entry=None, family="ipv4", **kwargs):
 
     .. code-block:: bash
 
-        salt '*' ipset.delete setname 192.168.0.3,AA:BB:CC:DD:EE:FF
+        salt '*' ipset.delete name 192.168.0.3,AA:BB:CC:DD:EE:FF
 
     """
-    if not set:
+    if not name:
         return "Error: Set needs to be specified"
     if not entry:
         return "Error: Entry needs to be specified"
 
-    settype = _find_set_type(set)
+    settype = _find_set_type(name)
 
     if not settype:
-        return "Error: Set {0} does not exist".format(set)
+        return "Error: Set {} does not exist".format(name)
 
-    cmd = "{0} del {1} {2}".format(_ipset_cmd(), set, entry)
+    cmd = [_ipset_cmd(), "del", name, entry]
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
     if not out:
         return "Success"
-    return "Error: {0}".format(out)
+    return "Error: {}".format(out)
 
 
-def check(set=None, entry=None, family="ipv4"):
+def check(name=None, entry=None, family="ipv4"):
     """
     Check that an entry exists in the specified set.
 
-    set
+    name
         The ipset name
 
     entry
@@ -572,19 +572,19 @@ def check(set=None, entry=None, family="ipv4"):
 
     .. code-block:: bash
 
-        salt '*' ipset.check setname '192.168.0.1 comment "Hello"'
+        salt '*' ipset.check name '192.168.0.1 comment "Hello"'
 
     """
-    if not set:
+    if not name:
         return "Error: Set needs to be specified"
     if not entry:
         return "Error: Entry needs to be specified"
 
-    settype = _find_set_type(set)
+    settype = _find_set_type(name)
     if not settype:
-        return "Error: Set {0} does not exist".format(set)
+        return "Error: Set {} does not exist".format(name)
 
-    current_members = _parse_members(settype, _find_set_members(set))
+    current_members = _parse_members(settype, _find_set_members(name))
 
     if not current_members:
         return False
@@ -602,7 +602,7 @@ def check(set=None, entry=None, family="ipv4"):
     return False
 
 
-def test(set=None, entry=None, family="ipv4", **kwargs):
+def test(name=None, entry=None, family="ipv4", **kwargs):
     """
     Test if an entry is in the specified set.
 
@@ -610,21 +610,21 @@ def test(set=None, entry=None, family="ipv4", **kwargs):
 
     .. code-block:: bash
 
-        salt '*' ipset.test setname 192.168.0.2
+        salt '*' ipset.test name 192.168.0.2
 
         IPv6:
-        salt '*' ipset.test setname fd81:fc56:9ac7::/48
+        salt '*' ipset.test name fd81:fc56:9ac7::/48
     """
-    if not set:
+    if not name:
         return "Error: Set needs to be specified"
     if not entry:
         return "Error: Entry needs to be specified"
 
-    settype = _find_set_type(set)
+    settype = _find_set_type(name)
     if not settype:
-        return "Error: Set {0} does not exist".format(set)
+        return "Error: Set {} does not exist".format(name)
 
-    cmd = "{0} test {1} {2}".format(_ipset_cmd(), set, entry)
+    cmd = [_ipset_cmd(), "test", name, entry]
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if out["retcode"] > 0:
@@ -634,7 +634,7 @@ def test(set=None, entry=None, family="ipv4", **kwargs):
     return True
 
 
-def flush(set=None, family="ipv4"):
+def flush(name=None, family="ipv4"):
     """
     Flush entries in the specified set,
     Flush all sets if set is not specified.
@@ -653,26 +653,20 @@ def flush(set=None, family="ipv4"):
         salt '*' ipset.flush set
     """
 
-    settype = _find_set_type(set)
-    if not settype:
-        return "Error: Set {0} does not exist".format(set)
-
-    ipset_family = _IPSET_FAMILIES[family]
-    if set:
-        cmd = "{0} flush {1}".format(_ipset_cmd(), set)
-    else:
-        cmd = "{0} flush".format(_ipset_cmd())
+    cmd = [_ipset_cmd(), "flush"]
+    if name:
+        cmd.append(name)
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
     return not out
 
 
-def _find_set_members(set):
+def _find_set_members(name):
     """
     Return list of members for a set
     """
 
-    cmd = "{0} list {1}".format(_ipset_cmd(), set)
+    cmd = [_ipset_cmd(), "list", name]
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if out["retcode"] > 0:
@@ -690,12 +684,12 @@ def _find_set_members(set):
     return members
 
 
-def _find_set_info(set):
+def _find_set_info(name):
     """
     Return information about the set
     """
 
-    cmd = "{0} list -t {1}".format(_ipset_cmd(), set)
+    cmd = [_ipset_cmd(), "list", "-t", name]
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if out["retcode"] > 0:
@@ -712,11 +706,11 @@ def _find_set_info(set):
     return setinfo
 
 
-def _find_set_type(set):
+def _find_set_type(name):
     """
     Find the type of the set
     """
-    setinfo = _find_set_info(set)
+    setinfo = _find_set_info(name)
 
     if setinfo:
         return setinfo["Type"]
@@ -725,7 +719,7 @@ def _find_set_type(set):
 
 
 def _parse_members(settype, members):
-    if isinstance(members, six.string_types):
+    if isinstance(members, str):
 
         return [_parse_member(settype, members)]
 
@@ -739,8 +733,7 @@ def _parse_member(settype, member, strict=False):
     parts = all_parts[0].split(",")
 
     parsed_member = []
-    for i in range(len(subtypes)):
-        subtype = subtypes[i]
+    for i, subtype in enumerate(subtypes):
         part = parts[i]
 
         if subtype in ["ip", "net"]:
@@ -775,8 +768,8 @@ def _member_contains(member, entry):
     if len(member) < len(entry):
         return False
 
-    for i in range(len(entry)):
-        if not _compare_member_parts(member[i], entry[i]):
+    for i, _entry in enumerate(entry):
+        if not _compare_member_parts(member[i], _entry):
             return False
 
     return True
@@ -817,8 +810,8 @@ def _compare_member_parts(member_part, entry_part):
 
 
 def _is_network(o):
-    return isinstance(o, ipaddress.IPv4Network) or isinstance(o, ipaddress.IPv6Network)
+    return isinstance(o, (ipaddress.IPv4Network, ipaddress.IPv6Network))
 
 
 def _is_address(o):
-    return isinstance(o, ipaddress.IPv4Address) or isinstance(o, ipaddress.IPv6Address)
+    return isinstance(o, (ipaddress.IPv4Address, ipaddress.IPv6Address))

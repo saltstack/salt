@@ -1,22 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Scan a netmask or ipaddr for open ssh ports
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
 import socket
 
-# Import salt libs
 import salt.utils.network
 from salt._compat import ipaddress
-from salt.ext import six
-
-# Import 3rd-party libs
-from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -30,7 +21,7 @@ def targets(tgt, tgt_type="glob", **kwargs):
     return rmatcher.targets()
 
 
-class RosterMatcher(object):
+class RosterMatcher:
     """
     Matcher for the roster data structure
     """
@@ -44,21 +35,26 @@ class RosterMatcher(object):
         Return ip addrs based on netmask, sitting in the "glob" spot because
         it is the default
         """
-        addrs = ()
+        addrs = []
         ret = {}
         ports = __opts__["ssh_scan_ports"]
         if not isinstance(ports, list):
             # Comma-separate list of integers
-            ports = list(map(int, six.text_type(ports).split(",")))
-        try:
-            addrs = [ipaddress.ip_address(self.tgt)]
-        except ValueError:
+            ports = list(map(int, str(ports).split(",")))
+        if self.tgt_type == "list":
+            tgts = self.tgt
+        else:
+            tgts = [self.tgt]
+        for tgt in tgts:
             try:
-                addrs = ipaddress.ip_network(self.tgt).hosts()
+                addrs.append(ipaddress.ip_address(tgt))
             except ValueError:
-                pass
+                try:
+                    addrs.extend(ipaddress.ip_network(tgt).hosts())
+                except ValueError:
+                    pass
         for addr in addrs:
-            addr = six.text_type(addr)
+            addr = str(addr)
             ret[addr] = copy.deepcopy(__opts__.get("roster_defaults", {}))
             log.trace("Scanning host: %s", addr)
             for port in ports:
@@ -70,6 +66,6 @@ class RosterMatcher(object):
                     sock.shutdown(socket.SHUT_RDWR)
                     sock.close()
                     ret[addr].update({"host": addr, "port": port})
-                except socket.error:
+                except OSError:
                     pass
         return ret

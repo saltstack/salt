@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 r"""
 Renderer that will decrypt GPG ciphers
 
@@ -270,8 +269,6 @@ pillar data like so:
     salt myminion state.sls secretstuff pillar_enc=gpg pillar="$ciphertext"
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -279,16 +276,11 @@ import re
 from subprocess import PIPE, Popen
 
 import salt.syspaths
-
-# Import salt libs
 import salt.utils.cache
 import salt.utils.path
 import salt.utils.stringio
 import salt.utils.stringutils
 from salt.exceptions import SaltRenderError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -408,18 +400,18 @@ def _decrypt_ciphertexts(cipher, translate_newlines=False, encoding=None):
 
 def _decrypt_object(obj, translate_newlines=False, encoding=None):
     """
-    Recursively try to decrypt any object. If the object is a six.string_types
-    (string or unicode), and it contains a valid GPG header, decrypt it,
+    Recursively try to decrypt any object. If the object is a string
+    or bytes and it contains a valid GPG header, decrypt it,
     otherwise keep going until a string is found.
     """
     if salt.utils.stringio.is_readable(obj):
         return _decrypt_object(obj.getvalue(), translate_newlines)
-    if isinstance(obj, six.string_types):
+    if isinstance(obj, (str, bytes)):
         return _decrypt_ciphertexts(
             obj, translate_newlines=translate_newlines, encoding=encoding
         )
     elif isinstance(obj, dict):
-        for key, value in six.iteritems(obj):
+        for key, value in obj.items():
             obj[key] = _decrypt_object(value, translate_newlines=translate_newlines)
         return obj
     elif isinstance(obj, list):

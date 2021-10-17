@@ -1,16 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Utility functions for minions
 """
 
-# Import Python Libs
-from __future__ import absolute_import, unicode_literals
 
 import logging
 import os
 import threading
 
-# Import Salt Libs
 import salt.payload
 import salt.utils.files
 import salt.utils.platform
@@ -34,7 +30,7 @@ def running(opts):
             data = _read_proc_file(path, opts)
             if data is not None:
                 ret.append(data)
-        except (IOError, OSError):
+        except OSError:
             # proc files may be removed at any time during this process by
             # the minion process that is executing the JID in question, so
             # we must ignore ENOENT during this process
@@ -46,33 +42,30 @@ def cache_jobs(opts, jid, ret):
     """
     Write job information to cache
     """
-    serial = salt.payload.Serial(opts=opts)
-
     fn_ = os.path.join(opts["cachedir"], "minion_jobs", jid, "return.p")
     jdir = os.path.dirname(fn_)
     if not os.path.isdir(jdir):
         os.makedirs(jdir)
     with salt.utils.files.fopen(fn_, "w+b") as fp_:
-        fp_.write(serial.dumps(ret))
+        fp_.write(salt.payload.dumps(ret))
 
 
 def _read_proc_file(path, opts):
     """
     Return a dict of JID metadata, or None
     """
-    serial = salt.payload.Serial(opts)
     current_thread = threading.currentThread().name
     pid = os.getpid()
     with salt.utils.files.fopen(path, "rb") as fp_:
         buf = fp_.read()
         fp_.close()
         if buf:
-            data = serial.loads(buf)
+            data = salt.payload.loads(buf)
         else:
             # Proc file is empty, remove
             try:
                 os.remove(path)
-            except IOError:
+            except OSError:
                 log.debug("Unable to remove proc file %s.", path)
             return None
     if not isinstance(data, dict):
@@ -83,7 +76,7 @@ def _read_proc_file(path, opts):
         # continue
         try:
             os.remove(path)
-        except IOError:
+        except OSError:
             log.debug("Unable to remove proc file %s.", path)
         return None
     if opts.get("multiprocessing"):
@@ -93,15 +86,21 @@ def _read_proc_file(path, opts):
         if data.get("pid") != pid:
             try:
                 os.remove(path)
-            except IOError:
+            except OSError:
                 log.debug("Unable to remove proc file %s.", path)
             return None
-        if data.get("jid") == current_thread:
+        thread_name = "{}-Job-{}".format(data.get("jid"), data.get("jid"))
+        if data.get("jid") == current_thread or thread_name == current_thread:
             return None
-        if not data.get("jid") in [x.name for x in threading.enumerate()]:
+        found = data.get("jid") in [
+            x.name for x in threading.enumerate()
+        ] or thread_name in [x.name for x in threading.enumerate()]
+        if not found:
+            found = thread_name in [x.name for x in threading.enumerate()]
+        if not found:
             try:
                 os.remove(path)
-            except IOError:
+            except OSError:
                 log.debug("Unable to remove proc file %s.", path)
             return None
 
@@ -111,7 +110,7 @@ def _read_proc_file(path, opts):
             log.warning("PID %s exists but does not appear to be a salt process.", pid)
         try:
             os.remove(path)
-        except IOError:
+        except OSError:
             log.debug("Unable to remove proc file %s.", path)
         return None
     return data
@@ -133,12 +132,12 @@ def _check_cmdline(data):
         return False
     if not os.path.isdir("/proc"):
         return True
-    path = os.path.join("/proc/{0}/cmdline".format(pid))
+    path = os.path.join("/proc/{}/cmdline".format(pid))
     if not os.path.isfile(path):
         return False
     try:
         with salt.utils.files.fopen(path, "rb") as fp_:
             if b"salt" in fp_.read():
                 return True
-    except (OSError, IOError):
+    except OSError:
         return False

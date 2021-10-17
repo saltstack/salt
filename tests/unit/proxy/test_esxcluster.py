@@ -1,25 +1,16 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Alexandru Bleotu <alexandru.bleotu@morganstanley.com>`
 
     Tests for esxcluster proxy
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.exceptions
-
-# Import Salt Libs
 import salt.proxy.esxcluster as esxcluster
 from salt.config.schemas.esxcluster import EsxclusterProxySchema
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
-# Import external libs
 try:
     import jsonschema
 
@@ -33,13 +24,7 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
     """Tests for salt.proxy.esxcluster.init"""
 
     def setup_loader_modules(self):
-        return {
-            esxcluster: {
-                "__virtual__": MagicMock(return_value="esxcluster"),
-                "DETAILS": {},
-                "__pillar__": {},
-            }
-        }
+        return {esxcluster: {"DETAILS": {}, "__pillar__": {}}}
 
     def setUp(self):
         self.opts_userpass = {
@@ -146,7 +131,7 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
                 esxcluster.init(opts)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Mechanism is set to 'sspi', but no " "'domain' key found in proxy config.",
+            "Mechanism is set to 'sspi', but no 'domain' key found in proxy config.",
         )
 
     def test_no_principal(self):
@@ -159,8 +144,7 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
                 esxcluster.init(opts)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Mechanism is set to 'sspi', but no "
-            "'principal' key found in proxy config.",
+            "Mechanism is set to 'sspi', but no 'principal' key found in proxy config.",
         )
 
     def test_find_credentials(self):

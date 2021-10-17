@@ -1,25 +1,19 @@
-# -*- coding: utf-8 -*-
 """
 Connection library for Amazon S3
 
 :depends: requests
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
+import urllib.parse
+import xml.etree.ElementTree as ET
 
-# Import Salt libs
 import salt.utils.aws
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.xmlutil as xml
-from salt._compat import ElementTree as ET
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
-from salt.ext.six.moves.urllib.parse import quote as _quote
 
-# Import 3rd-party libs
 try:
     import requests
 
@@ -117,10 +111,10 @@ def query(
     if not bucket or path_style:
         endpoint = service_url
     else:
-        endpoint = "{0}.{1}".format(bucket, service_url)
+        endpoint = "{}.{}".format(bucket, service_url)
 
     if path_style and bucket:
-        path = "{0}/{1}".format(bucket, path)
+        path = "{}/{}".format(bucket, path)
 
     # Try grabbing the credentials from the EC2 instance IAM metadata if available
     if not key:
@@ -145,18 +139,18 @@ def query(
 
     if path is None:
         path = ""
-    path = _quote(path)
+    path = urllib.parse.quote(path)
 
     if not requesturl:
-        requesturl = (("https" if https_enable else "http") + "://{0}/{1}").format(
-            endpoint, path
+        requesturl = "{}://{}/{}".format(
+            "https" if https_enable else "http", endpoint, path
         )
         headers, requesturl = salt.utils.aws.sig4(
             method,
             endpoint,
             params,
             data=data,
-            uri="/{0}".format(path),
+            uri="/{}".format(path),
             prov_dict={"id": keyid, "key": key},
             role_arn=role_arn,
             location=location,
@@ -228,7 +222,7 @@ def query(
             log.debug(
                 "Failed to parse s3 err response. %s: %s", type(err).__name__, err
             )
-            err_code = "http-{0}".format(result.status_code)
+            err_code = "http-{}".format(result.status_code)
             err_msg = err_text
 
     log.debug("S3 Response Status Code: %s", result.status_code)
@@ -237,14 +231,12 @@ def query(
         if result.status_code != 200:
             if local_file:
                 raise CommandExecutionError(
-                    "Failed to upload from {0} to {1}. {2}: {3}".format(
+                    "Failed to upload from {} to {}. {}: {}".format(
                         local_file, path, err_code, err_msg
                     )
                 )
             raise CommandExecutionError(
-                "Failed to create bucket {0}. {1}: {2}".format(
-                    bucket, err_code, err_msg
-                )
+                "Failed to create bucket {}. {}: {}".format(bucket, err_code, err_msg)
             )
 
         if local_file:
@@ -254,17 +246,15 @@ def query(
         return
 
     if method == "DELETE":
-        if not six.text_type(result.status_code).startswith("2"):
+        if not str(result.status_code).startswith("2"):
             if path:
                 raise CommandExecutionError(
-                    "Failed to delete {0} from bucket {1}. {2}: {3}".format(
+                    "Failed to delete {} from bucket {}. {}: {}".format(
                         path, bucket, err_code, err_msg
                     )
                 )
             raise CommandExecutionError(
-                "Failed to delete bucket {0}. {1}: {2}".format(
-                    bucket, err_code, err_msg
-                )
+                "Failed to delete bucket {}. {}: {}".format(bucket, err_code, err_msg)
             )
 
         if path:
@@ -277,18 +267,18 @@ def query(
     if local_file and method == "GET":
         if result.status_code < 200 or result.status_code >= 300:
             raise CommandExecutionError(
-                "Failed to get file. {0}: {1}".format(err_code, err_msg)
+                "Failed to get file. {}: {}".format(err_code, err_msg)
             )
 
         log.debug("Saving to local file: %s", local_file)
         with salt.utils.files.fopen(local_file, "wb") as out:
             for chunk in result.iter_content(chunk_size=chunk_size):
                 out.write(chunk)
-        return "Saved to local file: {0}".format(local_file)
+        return "Saved to local file: {}".format(local_file)
 
     if result.status_code < 200 or result.status_code >= 300:
         raise CommandExecutionError(
-            "Failed s3 operation. {0}: {1}".format(err_code, err_msg)
+            "Failed s3 operation. {}: {}".format(err_code, err_msg)
         )
 
     # This can be used to return a binary object wholesale

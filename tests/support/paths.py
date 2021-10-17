@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
     :copyright: Copyright 2017 by the SaltStack Team, see AUTHORS for more details.
@@ -11,18 +10,18 @@
     Tests related paths
 """
 
-from __future__ import absolute_import
-
 import logging
 import os
 import re
 import sys
 import tempfile
 
+import salt
 import salt.utils.path
 
 log = logging.getLogger(__name__)
 
+SALT_CODE_DIR = os.path.dirname(os.path.normpath(os.path.abspath(salt.__file__)))
 TESTS_DIR = os.path.dirname(
     os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 )
@@ -36,7 +35,6 @@ if sys.platform.startswith("win"):
     CODE_DIR = CODE_DIR.replace("\\", "\\\\")
 UNIT_TEST_DIR = os.path.join(TESTS_DIR, "unit")
 INTEGRATION_TEST_DIR = os.path.join(TESTS_DIR, "integration")
-MULTIMASTER_TEST_DIR = os.path.join(TESTS_DIR, "multimaster")
 
 # Let's inject CODE_DIR so salt is importable if not there already
 if TESTS_DIR in sys.path:
@@ -63,7 +61,7 @@ TMP_ROOT_DIR = os.path.join(TMP, "rootdir")
 FILES = os.path.join(INTEGRATION_TEST_DIR, "files")
 BASE_FILES = os.path.join(INTEGRATION_TEST_DIR, "files", "file", "base")
 PROD_FILES = os.path.join(INTEGRATION_TEST_DIR, "files", "file", "prod")
-PYEXEC = "python{0}.{1}".format(*sys.version_info)
+PYEXEC = "python{}.{}".format(*sys.version_info)
 MOCKBIN = os.path.join(INTEGRATION_TEST_DIR, "mockbin")
 SCRIPT_DIR = os.path.join(CODE_DIR, "scripts")
 TMP_STATE_TREE = os.path.join(SYS_TMP_DIR, "salt-temp-state-tree")
@@ -74,11 +72,7 @@ TMP_CONF_DIR = TMP_MINION_CONF_DIR = os.path.join(TMP, "config")
 TMP_SUB_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, "sub-minion")
 TMP_SYNDIC_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, "syndic-minion")
 TMP_SYNDIC_MASTER_CONF_DIR = os.path.join(TMP_CONF_DIR, "syndic-master")
-TMP_MM_CONF_DIR = TMP_MM_MINION_CONF_DIR = os.path.join(TMP_CONF_DIR, "multimaster")
-TMP_MM_SUB_CONF_DIR = TMP_MM_SUB_MINION_CONF_DIR = os.path.join(
-    TMP_CONF_DIR, "sub-multimaster"
-)
-TMP_PROXY_CONF_DIR = TMP_CONF_DIR
+TMP_SSH_CONF_DIR = TMP_MINION_CONF_DIR
 CONF_DIR = os.path.join(INTEGRATION_TEST_DIR, "files", "conf")
 PILLAR_DIR = os.path.join(FILES, "pillar")
 TMP_SCRIPT_DIR = os.path.join(TMP, "scripts")
@@ -91,7 +85,7 @@ def list_test_mods():
     A generator which returns all of the test files
     """
     test_re = re.compile(r"^test_.+\.py$")
-    for dirname in (UNIT_TEST_DIR, INTEGRATION_TEST_DIR, MULTIMASTER_TEST_DIR):
+    for dirname in (UNIT_TEST_DIR, INTEGRATION_TEST_DIR):
         test_type = os.path.basename(dirname)
         for root, _, files in salt.utils.path.os_walk(dirname):
             parent_mod = root[len(dirname) :].lstrip(os.sep).replace(os.sep, ".")

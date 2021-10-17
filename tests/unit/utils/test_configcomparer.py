@@ -1,14 +1,6 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 
-# Import Salt libs
 import salt.utils.configcomparer as configcomparer
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 
@@ -28,7 +20,9 @@ class UtilConfigcomparerTestCase(TestCase):
         to_update = copy.deepcopy(self.base_config)
         changes = {}
         configcomparer.compare_and_update_config(
-            {}, to_update, changes,
+            {},
+            to_update,
+            changes,
         )
         self.assertEqual({}, changes)
         self.assertEqual(self.base_config, to_update)
@@ -37,10 +31,13 @@ class UtilConfigcomparerTestCase(TestCase):
         to_update = copy.deepcopy(self.base_config)
         changes = {}
         configcomparer.compare_and_update_config(
-            {"attrx": "value1"}, to_update, changes,
+            {"attrx": "value1"},
+            to_update,
+            changes,
         )
         self.assertEqual(
-            {"attrx": {"new": "value1", "old": None}}, changes,
+            {"attrx": {"new": "value1", "old": None}},
+            changes,
         )
         self.assertEqual("value1", to_update["attrx"])
         self.assertEqual("value1", to_update["attr1"])
@@ -48,10 +45,13 @@ class UtilConfigcomparerTestCase(TestCase):
         to_update = copy.deepcopy(self.base_config)
         changes = {}
         configcomparer.compare_and_update_config(
-            {"attr1": "value2"}, to_update, changes,
+            {"attr1": "value2"},
+            to_update,
+            changes,
         )
         self.assertEqual(
-            {"attr1": {"new": "value2", "old": "value1"}}, changes,
+            {"attr1": {"new": "value2", "old": "value1"}},
+            changes,
         )
         self.assertEqual("value2", to_update["attr1"])
         self.assertEqual(
@@ -69,7 +69,9 @@ class UtilConfigcomparerTestCase(TestCase):
         to_update = copy.deepcopy(self.base_config)
         changes = {}
         configcomparer.compare_and_update_config(
-            {"attr3": []}, to_update, changes,
+            {"attr3": []},
+            to_update,
+            changes,
         )
         self.assertEqual({}, changes)
         self.assertEqual(self.base_config, to_update)
@@ -78,10 +80,13 @@ class UtilConfigcomparerTestCase(TestCase):
         to_update = copy.deepcopy(self.base_config)
         changes = {}
         configcomparer.compare_and_update_config(
-            {"attr2": ["item1", "item2", "item3", "item4"]}, to_update, changes,
+            {"attr2": ["item1", "item2", "item3", "item4"]},
+            to_update,
+            changes,
         )
         self.assertEqual(
-            {"attr2[3]": {"new": "item4", "old": None}}, changes,
+            {"attr2[3]": {"new": "item4", "old": None}},
+            changes,
         )
         self.assertEqual(
             {
@@ -98,7 +103,9 @@ class UtilConfigcomparerTestCase(TestCase):
         to_update = copy.deepcopy(self.base_config)
         changes = {}
         configcomparer.compare_and_update_config(
-            {"attr2": ["itemx", "item2"]}, to_update, changes,
+            {"attr2": ["itemx", "item2"]},
+            to_update,
+            changes,
         )
         self.assertEqual(
             {
@@ -122,7 +129,9 @@ class UtilConfigcomparerTestCase(TestCase):
         to_update = copy.deepcopy(self.base_config)
         changes = {}
         configcomparer.compare_and_update_config(
-            {"attr4": {}}, to_update, changes,
+            {"attr4": {}},
+            to_update,
+            changes,
         )
         self.assertEqual({}, changes)
         self.assertEqual(self.base_config, to_update)
@@ -131,10 +140,13 @@ class UtilConfigcomparerTestCase(TestCase):
         to_update = copy.deepcopy(self.base_config)
         changes = {}
         configcomparer.compare_and_update_config(
-            {"attr5": {"subattr3": "value1"}}, to_update, changes,
+            {"attr5": {"subattr3": "value1"}},
+            to_update,
+            changes,
         )
         self.assertEqual(
-            {"attr5.subattr3": {"new": "value1", "old": None}}, changes,
+            {"attr5.subattr3": {"new": "value1", "old": None}},
+            changes,
         )
         self.assertEqual(
             {
