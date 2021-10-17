@@ -1,3 +1,0 @@
-Adds network teaming support to ``network.managed`` state for RHEL-based
-distros. Removes ``ip.get_bond`` and ``ip.build_bond`` for the same, as is
-redundant and not needed for any current RHEL/CentOS/Fedora/etc. release.

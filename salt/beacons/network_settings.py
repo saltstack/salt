@@ -1,20 +1,17 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to monitor network adapter setting changes on Linux
 
 .. versionadded:: 2016.3.0
 
 """
-from __future__ import absolute_import, unicode_literals
 
 import ast
 import logging
 import re
 
 import salt.loader
-from salt.ext.six.moves import map
+import salt.utils.beacons
 
-# Import third party libs
 try:
     from pyroute2 import IPDB
 
@@ -79,33 +76,27 @@ def validate(config):
     Validate the beacon configuration
     """
     if not isinstance(config, list):
-        return False, ("Configuration for network_settings beacon must be a list.")
+        return False, "Configuration for network_settings beacon must be a list."
     else:
-        _config = {}
-        list(map(_config.update, config))
+        config = salt.utils.beacons.list_to_dict(config)
 
-        interfaces = _config.get("interfaces", {})
+        interfaces = config.get("interfaces", {})
         if isinstance(interfaces, list):
             # Old syntax
             return (
                 False,
-                (
-                    "interfaces section for network_settings beacon"
-                    " must be a dictionary."
-                ),
+                "interfaces section for network_settings beacon must be a dictionary.",
             )
 
         for item in interfaces:
-            if not isinstance(_config["interfaces"][item], dict):
+            if not isinstance(config["interfaces"][item], dict):
                 return (
                     False,
-                    (
-                        "Interface attributes for network_settings beacon"
-                        " must be a dictionary."
-                    ),
+                    "Interface attributes for network_settings beacon"
+                    " must be a dictionary.",
                 )
-            if not all(j in ATTRS for j in _config["interfaces"][item]):
-                return False, ("Invalid attributes in beacon configuration.")
+            if not all(j in ATTRS for j in config["interfaces"][item]):
+                return False, "Invalid attributes in beacon configuration."
     return True, "Valid beacon configuration"
 
 
@@ -170,8 +161,7 @@ def beacon(config):
                   promiscuity:
 
     """
-    _config = {}
-    list(map(_config.update, config))
+    _config = salt.utils.beacons.list_to_dict(config)
 
     ret = []
     interfaces = []
@@ -209,8 +199,8 @@ def beacon(config):
     if expanded_config:
         _config["interfaces"].update(expanded_config["interfaces"])
 
-        # config updated so update _config
-        list(map(_config.update, config))
+        # config updated so update config
+        _config = salt.utils.beacons.list_to_dict(config)
 
     log.debug("interfaces %s", interfaces)
     for interface in interfaces:

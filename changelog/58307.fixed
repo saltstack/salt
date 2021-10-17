@@ -1,1 +1,0 @@
-Make proxy_config read in the proxy specific configuration which is typically found in /etc/salt/proxy.d/minionid/.

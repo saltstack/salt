@@ -1,14 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.modules.libcloud_storage as libcloud_storage
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -89,11 +84,6 @@ class LibcloudStorageModuleTestCase(TestCase, LoaderModuleMockMixin):
     def test_module_creation(self):
         client = libcloud_storage._get_driver("test")
         self.assertFalse(client is None)
-
-    def test_init(self):
-        with patch("salt.utils.compat.pack_dunder", return_value=False) as dunder:
-            libcloud_storage.__init__(None)
-            dunder.assert_called_with("salt.modules.libcloud_storage")
 
     def test_list_containers(self):
         containers = libcloud_storage.list_containers("test")

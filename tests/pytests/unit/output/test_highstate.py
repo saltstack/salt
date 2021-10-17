@@ -2,11 +2,9 @@ import pytest
 import salt.output.highstate as highstate
 
 
-@pytest.fixture(autouse=True)
-def setup_loader(request):
-    setup_loader_modules = {highstate: {"__opts__": {"strip_colors": True}}}
-    with pytest.helpers.loader_mock(request, setup_loader_modules) as loader_mock:
-        yield loader_mock
+@pytest.fixture
+def configure_loader_modules():
+    return {highstate: {"__opts__": {"strip_colors": True}}}
 
 
 @pytest.mark.parametrize("data", [None, {"return": None}, {"return": {"data": None}}])
@@ -39,7 +37,8 @@ def test_when_data_is_dict_with_return_key_and_return_value_has_data_key_and_dat
 
 
 @pytest.mark.parametrize(
-    "return_value", [42, "fnord"],
+    "return_value",
+    [42, "fnord"],
 )
 def test_when_data_is_dict_with_return_key_and_return_value_has_data_key_and_data_dict_has_one_dict_element_with_jid_and_fun_keys_and_return_value_is_int_or_str_that_value_should_be_returned(
     return_value,

@@ -16,6 +16,10 @@
                 mime-type="image/png"
                 scaling="proportional"
                 alignment="bottomleft" />
+    <background-darkAqua file="logo.png"
+                         mime-type="image/png"
+                         scaling="proportional"
+                         alignment="bottomleft" />
     <!-- Define documents displayed at various steps -->
     <welcome file="welcome.rtf"
              mime-type="text/rtf" />

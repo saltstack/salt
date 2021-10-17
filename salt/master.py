@@ -2,9 +2,6 @@
 This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 """
-
-# Import python libs
-
 import collections
 import copy
 import ctypes
@@ -23,14 +20,12 @@ import salt.acl
 import salt.auth
 import salt.client
 import salt.client.ssh.client
-
-# Import salt libs
 import salt.crypt
 import salt.daemons.masterapi
 import salt.defaults.exitcodes
 import salt.engines
 import salt.exceptions
-import salt.ext.tornado.gen  # pylint: disable=F0401
+import salt.ext.tornado.gen
 import salt.key
 import salt.log.setup
 import salt.minion
@@ -62,10 +57,6 @@ import salt.utils.zeromq
 import salt.wheel
 from salt.config import DEFAULT_INTERVAL
 from salt.defaults import DEFAULT_TARGET_DELIM
-
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-from salt.ext import six
-from salt.ext.six.moves import range
 from salt.ext.tornado.stack_context import StackContext
 from salt.transport import iter_transport_opts
 from salt.utils.ctx import RequestContext
@@ -76,10 +67,7 @@ from salt.utils.debug import (
 )
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
-from salt.utils.zeromq import ZMQ_VERSION_INFO, ZMQDefaultLoop, install_zmq, zmq
-
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
-
+from salt.utils.zeromq import ZMQ_VERSION_INFO, zmq
 
 try:
     import resource
@@ -88,15 +76,6 @@ try:
 except ImportError:
     # resource is not available on windows
     HAS_RESOURCE = False
-
-# Import halite libs
-try:
-    import halite  # pylint: disable=import-error
-
-    HAS_HALITE = True
-except ImportError:
-    HAS_HALITE = False
-
 
 log = logging.getLogger(__name__)
 
@@ -126,18 +105,21 @@ class SMaster:
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
     def __setstate__(self, state):
-        self.opts = state["opts"]
+        super().__setstate__(state)
         self.master_key = state["master_key"]
         self.key = state["key"]
         SMaster.secrets = state["secrets"]
 
     def __getstate__(self):
-        return {
-            "opts": self.opts,
-            "master_key": self.master_key,
-            "key": self.key,
-            "secrets": SMaster.secrets,
-        }
+        state = super().__getstate__()
+        state.update(
+            {
+                "key": self.key,
+                "master_key": self.master_key,
+                "secrets": SMaster.secrets,
+            }
+        )
+        return state
 
     def __prep_key(self):
         """
@@ -165,24 +147,6 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         # Track key rotation intervals
         self.rotate = int(time.time())
         # A serializer for general maint operations
-        self.serial = salt.payload.Serial(self.opts)
-
-    # __setstate__ and __getstate__ are only used on Windows.
-    # We do this so that __init__ will be invoked on Windows in the child
-    # process so that a register_after_fork() equivalent will work on Windows.
-    def __setstate__(self, state):
-        self.__init__(
-            state["opts"],
-            log_queue=state["log_queue"],
-            log_queue_level=state["log_queue_level"],
-        )
-
-    def __getstate__(self):
-        return {
-            "opts": self.opts,
-            "log_queue": self.log_queue,
-            "log_queue_level": self.log_queue_level,
-        }
 
     def _post_fork_init(self):
         """
@@ -287,7 +251,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             with salt.utils.atomicfile.atomic_open(
                 os.path.join(self.opts["pki_dir"], acc, ".key_cache"), mode="wb"
             ) as cache_file:
-                self.serial.dump(keys, cache_file)
+                salt.payload.dump(keys, cache_file)
 
     def handle_key_rotate(self, now):
         """
@@ -329,7 +293,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             self.rotate = now
             if self.opts.get("ping_on_rotate"):
                 # Ping all minions to get them to pick up the new key
-                log.debug("Pinging all connected minions " "due to key rotation")
+                log.debug("Pinging all connected minions due to key rotation")
                 salt.utils.master.ping_all_connected_minions(self.opts)
 
     def handle_git_pillar(self):
@@ -391,20 +355,6 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
         self.fileserver = salt.fileserver.Fileserver(self.opts)
         self.fill_buckets()
 
-    # __setstate__ and __getstate__ are only used on Windows.
-    # We do this so that __init__ will be invoked on Windows in the child
-    # process so that a register_after_fork() equivalent will work on Windows.
-    def __setstate__(self, state):
-        self.__init__(
-            state["opts"], log_queue=state["log_queue"],
-        )
-
-    def __getstate__(self):
-        return {
-            "opts": self.opts,
-            "log_queue": self.log_queue,
-        }
-
     def fill_buckets(self):
         """
         Get the configured backends and the intervals for any backend which
@@ -458,52 +408,53 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
                     (backend, update_func)
                 ] = None
 
-    def update_fileserver(self, interval, backends):
+    @staticmethod
+    def _do_update(backends):
+        """
+        Perform fileserver updates
+        """
+        for backend, update_args in backends.items():
+            backend_name, update_func = backend
+            try:
+                if update_args:
+                    log.debug(
+                        "Updating %s fileserver cache for the following targets: %s",
+                        backend_name,
+                        update_args,
+                    )
+                    args = (update_args,)
+                else:
+                    log.debug("Updating %s fileserver cache", backend_name)
+                    args = ()
+
+                update_func(*args)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.exception(
+                    "Uncaught exception while updating %s fileserver cache",
+                    backend_name,
+                )
+
+    @classmethod
+    def update(cls, interval, backends, timeout=300):
         """
         Threading target which handles all updates for a given wait interval
         """
-
-        def _do_update():
+        start = time.time()
+        condition = threading.Condition()
+        while time.time() - start < timeout:
             log.debug(
-                "Performing fileserver updates for items with an update "
-                "interval of %d",
+                "Performing fileserver updates for items with an update interval of %d",
                 interval,
             )
-            for backend, update_args in backends.items():
-                backend_name, update_func = backend
-                try:
-                    if update_args:
-                        log.debug(
-                            "Updating %s fileserver cache for the following "
-                            "targets: %s",
-                            backend_name,
-                            update_args,
-                        )
-                        args = (update_args,)
-                    else:
-                        log.debug("Updating %s fileserver cache", backend_name)
-                        args = ()
-
-                    update_func(*args)
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.exception(
-                        "Uncaught exception while updating %s fileserver " "cache",
-                        backend_name,
-                    )
-
+            cls._do_update(backends)
             log.debug(
                 "Completed fileserver updates for items with an update "
                 "interval of %d, waiting %d seconds",
                 interval,
                 interval,
             )
-
-        condition = threading.Condition()
-        _do_update()
-        while True:
             with condition:
                 condition.wait(interval)
-            _do_update()
 
     def run(self):
         """
@@ -526,13 +477,16 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
 
         for interval in self.buckets:
             self.update_threads[interval] = threading.Thread(
-                target=self.update_fileserver, args=(interval, self.buckets[interval]),
+                target=self.update,
+                args=(interval, self.buckets[interval]),
             )
             self.update_threads[interval].start()
 
-        # Keep the process alive
-        while True:
-            time.sleep(60)
+        while self.update_threads:
+            for name, thread in list(self.update_threads.items()):
+                thread.join(1)
+                if not thread.is_alive():
+                    self.update_threads.pop(name)
 
 
 class Master(SMaster):
@@ -772,10 +726,6 @@ class Master(SMaster):
                 except Exception:  # pylint: disable=broad-except
                     log.error("Error creating ext_processes process: %s", proc)
 
-            if HAS_HALITE and "halite" in self.opts:
-                log.info("Creating master halite process")
-                self.process_manager.add_process(Halite, args=(self.opts["halite"],))
-
             # TODO: remove, or at least push into the transport stuff (pre-fork probably makes sense there)
             if self.opts["con_cache"]:
                 log.info("Creating master concache process")
@@ -820,7 +770,8 @@ class Master(SMaster):
                     log.error("Unable to load SSDP: asynchronous IO is not available.")
                     if sys.version_info.major == 2:
                         log.error(
-                            'You are using Python 2, please install "trollius" module to enable SSDP discovery.'
+                            'You are using Python 2, please install "trollius" module'
+                            " to enable SSDP discovery."
                         )
 
         # Install the SIGINT/SIGTERM handlers if not done so far
@@ -842,45 +793,6 @@ class Master(SMaster):
         self.process_manager.kill_children()
         time.sleep(1)
         sys.exit(0)
-
-
-class Halite(salt.utils.process.SignalHandlingProcess):
-    """
-    Manage the Halite server
-    """
-
-    def __init__(self, hopts, **kwargs):
-        """
-        Create a halite instance
-
-        :param dict hopts: The halite options
-        """
-        super().__init__(**kwargs)
-        self.hopts = hopts
-
-    # __setstate__ and __getstate__ are only used on Windows.
-    # We do this so that __init__ will be invoked on Windows in the child
-    # process so that a register_after_fork() equivalent will work on Windows.
-    def __setstate__(self, state):
-        self.__init__(
-            state["hopts"],
-            log_queue=state["log_queue"],
-            log_queue_level=state["log_queue_level"],
-        )
-
-    def __getstate__(self):
-        return {
-            "hopts": self.hopts,
-            "log_queue": self.log_queue,
-            "log_queue_level": self.log_queue_level,
-        }
-
-    def run(self):
-        """
-        Fire up halite!
-        """
-        salt.utils.process.appendproctitle(self.__class__.__name__)
-        halite.start(self.hopts)
 
 
 class ReqServer(salt.utils.process.SignalHandlingProcess):
@@ -906,29 +818,6 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         # Prepare the AES key
         self.key = key
         self.secrets = secrets
-
-    # __setstate__ and __getstate__ are only used on Windows.
-    # We do this so that __init__ will be invoked on Windows in the child
-    # process so that a register_after_fork() equivalent will work on Windows.
-    def __setstate__(self, state):
-        self.__init__(
-            state["opts"],
-            state["key"],
-            state["mkey"],
-            secrets=state["secrets"],
-            log_queue=state["log_queue"],
-            log_queue_level=state["log_queue_level"],
-        )
-
-    def __getstate__(self):
-        return {
-            "opts": self.opts,
-            "key": self.key,
-            "mkey": self.master_key,
-            "secrets": self.secrets,
-            "log_queue": self.log_queue,
-            "log_queue_level": self.log_queue_level,
-        }
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         self.destroy(signum)
@@ -974,15 +863,6 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         if salt.utils.platform.is_windows():
             kwargs["log_queue"] = self.log_queue
             kwargs["log_queue_level"] = self.log_queue_level
-            # Use one worker thread if only the TCP transport is set up on
-            # Windows and we are using Python 2. There is load balancer
-            # support on Windows for the TCP transport when using Python 3.
-            if tcp_only and six.PY2 and int(self.opts["worker_threads"]) != 1:
-                log.warning(
-                    "TCP transport supports only 1 worker on Windows "
-                    "when using Python 2."
-                )
-                self.opts["worker_threads"] = 1
 
         if self.opts["req_server_niceness"] and not salt.utils.platform.is_windows():
             log.info(
@@ -1059,40 +939,26 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
     def __setstate__(self, state):
-        super().__init__(
-            log_queue=state["log_queue"], log_queue_level=state["log_queue_level"]
-        )
-        self.opts = state["opts"]
-        self.req_channels = state["req_channels"]
-        self.mkey = state["mkey"]
-        self.key = state["key"]
+        super().__setstate__(state)
         self.k_mtime = state["k_mtime"]
         SMaster.secrets = state["secrets"]
 
     def __getstate__(self):
-        return {
-            "opts": self.opts,
-            "req_channels": self.req_channels,
-            "mkey": self.mkey,
-            "key": self.key,
-            "k_mtime": self.k_mtime,
-            "secrets": SMaster.secrets,
-            "log_queue": self.log_queue,
-            "log_queue_level": self.log_queue_level,
-        }
+        state = super().__getstate__()
+        state.update({"k_mtime": self.k_mtime, "secrets": SMaster.secrets})
+        return state
 
     def _handle_signals(self, signum, sigframe):
         for channel in getattr(self, "req_channels", ()):
             channel.close()
+        self.clear_funcs.destroy()
         super()._handle_signals(signum, sigframe)
 
     def __bind(self):
         """
         Bind to the local port
         """
-        # using ZMQIOLoop since we *might* need zmq in there
-        install_zmq()
-        self.io_loop = ZMQDefaultLoop()
+        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
         self.io_loop.make_current()
         for req_channel in self.req_channels:
             req_channel.post_fork(
@@ -1224,7 +1090,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                     os.nice(-1 * self.opts["req_server_niceness"])
                 else:
                     log.error(
-                        "%s unable to decrement niceness for MWorker, not running as root",
+                        "%s unable to decrement niceness for MWorker, not running as"
+                        " root",
                         self.name,
                     )
                     enforce_mworker_niceness = False
@@ -1238,7 +1105,10 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                 )
                 os.nice(self.opts["mworker_niceness"])
 
-        self.clear_funcs = ClearFuncs(self.opts, self.key,)
+        self.clear_funcs = ClearFuncs(
+            self.opts,
+            self.key,
+        )
         self.aes_funcs = AESFuncs(self.opts)
         salt.utils.crypt.reinit_crypto()
         self.__bind()
@@ -1275,7 +1145,6 @@ class AESFuncs(TransportMethods):
     expose_methods = (
         "verify_minion",
         "_master_tops",
-        "_ext_nodes",
         "_master_opts",
         "_mine_get",
         "_mine",
@@ -1316,7 +1185,6 @@ class AESFuncs(TransportMethods):
         self.event = salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
         )
-        self.serial = salt.payload.Serial(opts)
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Make a client
         self.local = salt.client.get_local_client(self.opts["conf_file"])
@@ -1499,9 +1367,6 @@ class AESFuncs(TransportMethods):
         if load is False:
             return {}
         return self.masterapi._master_tops(load, skip_verify=True)
-
-    # Needed so older minions can request master_tops
-    _ext_nodes = _master_tops
 
     def _master_opts(self, load):
         """
@@ -1703,6 +1568,7 @@ class AESFuncs(TransportMethods):
             pillar_override=load.get("pillar_override", {}),
             pillarenv=load.get("pillarenv"),
             extra_minion_data=load.get("extra_minion_data"),
+            clean_cache=load.get("clean_cache"),
         )
         data = pillar.compile_pillar()
         self.fs_.update_opts()
@@ -1799,7 +1665,8 @@ class AESFuncs(TransportMethods):
                     return False
                 else:
                     log.info(
-                        "But 'drop_message_signature_fail' is disabled, so message is still accepted."
+                        "But 'drop_message_signature_fail' is disabled, so message is"
+                        " still accepted."
                     )
             load["sig"] = sig
 
@@ -2033,6 +1900,12 @@ class AESFuncs(TransportMethods):
         # Encrypt the return
         return ret, {"fun": "send"}
 
+    def destroy(self):
+        self.masterapi.destroy()
+        if self.local is not None:
+            self.local.destroy()
+            self.local = None
+
 
 class ClearFuncs(TransportMethods):
     """
@@ -2104,8 +1977,10 @@ class ClearFuncs(TransportMethods):
                 return {
                     "error": {
                         "name": err_name,
-                        "message": 'Authentication failure of type "{}" occurred for '
-                        "user {}.".format(auth_type, username),
+                        "message": (
+                            'Authentication failure of type "{}" occurred for '
+                            "user {}.".format(auth_type, username)
+                        ),
                     }
                 }
             elif isinstance(runner_check, dict) and "error" in runner_check:
@@ -2128,7 +2003,7 @@ class ClearFuncs(TransportMethods):
             fun = clear_load.pop("fun")
             runner_client = salt.runner.RunnerClient(self.opts)
             return runner_client.asynchronous(
-                fun, clear_load.get("kwarg", {}), username
+                fun, clear_load.get("kwarg", {}), username, local=True
             )
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Exception occurred while introspecting %s: %s", fun, exc)
@@ -2167,8 +2042,10 @@ class ClearFuncs(TransportMethods):
                 return {
                     "error": {
                         "name": err_name,
-                        "message": 'Authentication failure of type "{}" occurred for '
-                        "user {}.".format(auth_type, username),
+                        "message": (
+                            'Authentication failure of type "{}" occurred for '
+                            "user {}.".format(auth_type, username)
+                        ),
                     }
                 }
             elif isinstance(wheel_check, dict) and "error" in wheel_check:
@@ -2207,7 +2084,9 @@ class ClearFuncs(TransportMethods):
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Exception occurred while introspecting %s: %s", fun, exc)
             data["return"] = "Exception occurred in wheel {}: {}: {}".format(
-                fun, exc.__class__.__name__, exc,
+                fun,
+                exc.__class__.__name__,
+                exc,
             )
             data["success"] = False
             self.event.fire_event(data, tagify([jid, "ret"], "wheel"))
@@ -2344,8 +2223,10 @@ class ClearFuncs(TransportMethods):
                     "load": {
                         "jid": None,
                         "minions": minions,
-                        "error": "Master could not resolve minions for target {}".format(
-                            clear_load["tgt"]
+                        "error": (
+                            "Master could not resolve minions for target {}".format(
+                                clear_load["tgt"]
+                            )
                         ),
                     },
                 }
@@ -2573,3 +2454,11 @@ class ClearFuncs(TransportMethods):
         Send the load back to the sender.
         """
         return clear_load
+
+    def destroy(self):
+        if self.masterapi is not None:
+            self.masterapi.destroy()
+            self.masterapi = None
+        if self.local is not None:
+            self.local.destroy()
+            self.local = None

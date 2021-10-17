@@ -3,19 +3,14 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import Python libs
-
 import fnmatch
 import os
 
-# Import Salt libs
 import salt.utils.path
 import salt.utils.stringutils
-
-# Import Salt Testing libs
 from tests.support.paths import list_test_mods
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 EXCLUDED_DIRS = [
     os.path.join("tests", "integration", "cloud", "helpers"),
@@ -30,7 +25,6 @@ EXCLUDED_DIRS = [
     os.path.join("tests", "unit", "modules", "zypp"),
     os.path.join("tests", "unit", "setup"),
     os.path.join("tests", "unit", "templates", "files"),
-    os.path.join("tests", "unit", "utils", "cache_mods"),
 ]
 INCLUDED_DIRS = [
     os.path.join("tests", "kitchen", "tests", "*", "tests", "*"),
@@ -97,15 +91,13 @@ class BadTestModuleNamesTestCase(TestCase):
                 path, directory, filename.split("_test")[0]
             )
 
-        error_msg += "\nIf you believe one of the entries above should be ignored, please add it to either\n"
-        error_msg += "'EXCLUDED_DIRS' or 'EXCLUDED_FILES' in 'tests/unit/test_module_names.py'.\n"
-        error_msg += "If it is a tests module, then please rename as suggested."
+        error_msg += (
+            "\nIf you believe one of the entries above should be ignored, please add it to either\n"
+            "'EXCLUDED_DIRS' or 'EXCLUDED_FILES' in 'tests/unit/test_module_names.py'.\n"
+            "If it is a tests module, then please rename as suggested."
+        )
         self.assertEqual([], bad_names, error_msg)
 
-    @skipIf(
-        not os.path.isdir(os.path.join(RUNTIME_VARS.CODE_DIR, "salt")),
-        "Failed to find salt directory in '{}'.".format(RUNTIME_VARS.CODE_DIR),
-    )
     def test_module_name_source_match(self):
         """
         Check all the test mods and check if they correspond to actual files in
@@ -134,10 +126,8 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.logging.test_jid_logging",
             "integration.master.test_clear_funcs",
             "integration.master.test_event_return",
-            "integration.minion.test_blackout",
             "integration.minion.test_executor",
             "integration.minion.test_minion_cache",
-            "integration.minion.test_pillar",
             "integration.minion.test_timeout",
             "integration.modules.test_decorators",
             "integration.modules.test_pkg",
@@ -163,7 +153,6 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.shell.test_key",
             "integration.shell.test_master",
             "integration.shell.test_master_tops",
-            "integration.shell.test_matcher",
             "integration.shell.test_minion",
             "integration.shell.test_proxy",
             "integration.shell.test_runner",
@@ -192,7 +181,6 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.states.test_match",
             "integration.states.test_renderers",
             "integration.wheel.test_client",
-            "multimaster.minion.test_event",
             "unit.cache.test_cache",
             "unit.serializers.test_serializers",
             "unit.setup.test_install",
@@ -214,6 +202,7 @@ class BadTestModuleNamesTestCase(TestCase):
             "unit.utils.scheduler.test_run_job",
             "unit.utils.scheduler.test_schedule",
             "unit.utils.scheduler.test_skip",
+            "unit.auth.test_auth",
         )
         errors = []
 
@@ -242,11 +231,11 @@ class BadTestModuleNamesTestCase(TestCase):
 
             # The path from the root of the repo
             relpath = salt.utils.path.join(
-                "salt", stem.replace(".", os.sep), ".".join((flower[5:], "py"))
+                stem.replace(".", os.sep), ".".join((flower[5:], "py"))
             )
 
             # The full path to the file we expect to find
-            abspath = salt.utils.path.join(RUNTIME_VARS.CODE_DIR, relpath)
+            abspath = salt.utils.path.join(RUNTIME_VARS.SALT_CODE_DIR, relpath)
 
             if not os.path.isfile(abspath):
                 # Maybe this is in a dunder init?

@@ -2,7 +2,6 @@
 Module for gathering and managing network information
 """
 
-# Import python libs
 import datetime
 import hashlib
 import logging
@@ -12,7 +11,6 @@ import socket
 import time
 from multiprocessing.pool import ThreadPool
 
-# Import salt libs
 import salt.utils.decorators.path
 import salt.utils.functools
 import salt.utils.network
@@ -20,9 +18,6 @@ import salt.utils.platform
 import salt.utils.validate.net
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
-from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +30,8 @@ def __virtual__():
     if salt.utils.platform.is_windows():
         return (
             False,
-            "The network execution module cannot be loaded on Windows: use win_network instead.",
+            "The network execution module cannot be loaded on Windows: use win_network"
+            " instead.",
         )
     return True
 
@@ -353,7 +349,7 @@ def _netstat_bsd():
         netinfo = _netinfo_openbsd()
     elif __grains__["kernel"] in ("FreeBSD", "NetBSD"):
         netinfo = _netinfo_freebsd_netbsd()
-    for idx in range(len(ret)):
+    for idx, _ in enumerate(ret):
         local = ret[idx]["local-address"]
         remote = ret[idx]["remote-address"]
         proto = ret[idx]["proto"]
@@ -575,7 +571,17 @@ def _ip_route_linux():
 
         # need to fake similar output to that provided by netstat
         # to maintain output format
-        if comps[0] == "unreachable":
+        if comps[0] in (
+            "unicast",
+            "broadcast",
+            "throw",
+            "unreachable",
+            "prohibit",
+            "blackhole",
+            "nat",
+            "anycast",
+            "multicast",
+        ):
             continue
 
         if comps[0] == "default":
@@ -1004,8 +1010,8 @@ def traceroute(host):
                         "hostname": traceline[1],
                         "ip": traceline[2],
                     }
-                    for idx in range(0, len(delays)):
-                        result["ms{}".format(idx + 1)] = delays[idx]
+                    for idx, delay in enumerate(delays):
+                        result["ms{}".format(idx + 1)] = delay
             except IndexError:
                 result = {}
 
@@ -1401,7 +1407,7 @@ def mod_hostname(hostname):
                 if "Static hostname" in line[0]:
                     o_hostname = line[1].strip()
         else:
-            log.debug("{} was unable to get hostname".format(hostname_cmd))
+            log.debug("%s was unable to get hostname", hostname_cmd)
             o_hostname = __salt__["network.get_hostname"]()
     elif not __utils__["platform.is_sunos"]():
         # don't run hostname -f because -f is not supported on all platforms
@@ -1412,13 +1418,16 @@ def mod_hostname(hostname):
 
     if hostname_cmd.endswith("hostnamectl"):
         result = __salt__["cmd.run_all"](
-            "{} set-hostname {}".format(hostname_cmd, hostname,)
+            "{} set-hostname {}".format(
+                hostname_cmd,
+                hostname,
+            )
         )
         if result["retcode"] != 0:
             log.debug(
-                "{} was unable to set hostname. Error: {}".format(
-                    hostname_cmd, result["stderr"],
-                )
+                "%s was unable to set hostname. Error: %s",
+                hostname_cmd,
+                result["stderr"],
             )
             return False
     elif not __utils__["platform.is_sunos"]():
@@ -1458,17 +1467,13 @@ def mod_hostname(hostname):
                 if net.startswith("HOSTNAME"):
                     old_hostname = net.split("=", 1)[1].rstrip()
                     quote_type = __utils__["stringutils.is_quoted"](old_hostname)
-                    # fmt: off
                     fh_.write(
                         __utils__["stringutils.to_str"](
-                            "HOSTNAME={}{}{}\n".format(
-                                __utils__["stringutils.dequote"](hostname),
-                                quote_type,
-                                __utils__["stringutils.dequote"](hostname),
+                            "HOSTNAME={1}{0}{1}\n".format(
+                                __utils__["stringutils.dequote"](hostname), quote_type
                             )
                         )
                     )
-                    # fmt: on
                 else:
                     fh_.write(__utils__["stringutils.to_str"](net))
     elif __grains__["os_family"] in ("Debian", "NILinuxRT"):
@@ -1477,8 +1482,10 @@ def mod_hostname(hostname):
         if __grains__["lsb_distrib_id"] == "nilrt":
             str_hostname = __utils__["stringutils.to_str"](hostname)
             nirtcfg_cmd = "/usr/local/natinst/bin/nirtcfg"
-            nirtcfg_cmd += " --set section=SystemSettings,token='Host_Name',value='{}'".format(
-                str_hostname
+            nirtcfg_cmd += (
+                " --set section=SystemSettings,token='Host_Name',value='{}'".format(
+                    str_hostname
+                )
             )
             if __salt__["cmd.run_all"](nirtcfg_cmd)["retcode"] != 0:
                 raise CommandExecutionError(
@@ -1805,22 +1812,26 @@ def default_route(family=None):
 
         salt '*' network.default_route
     """
-
     if family != "inet" and family != "inet6" and family is not None:
         raise CommandExecutionError("Invalid address family {}".format(family))
 
-    _routes = routes()
+    _routes = routes(family)
+
     default_route = {}
     if __grains__["kernel"] == "Linux":
         default_route["inet"] = ["0.0.0.0", "default"]
         default_route["inet6"] = ["::/0", "default"]
-    elif __grains__["os"] in [
-        "FreeBSD",
-        "NetBSD",
-        "OpenBSD",
-        "MacOS",
-        "Darwin",
-    ] or __grains__["kernel"] in ("SunOS", "AIX"):
+    elif (
+        __grains__["os"]
+        in [
+            "FreeBSD",
+            "NetBSD",
+            "OpenBSD",
+            "MacOS",
+            "Darwin",
+        ]
+        or __grains__["kernel"] in ("SunOS", "AIX")
+    ):
         default_route["inet"] = ["default"]
         default_route["inet6"] = ["default"]
     else:
@@ -1856,7 +1867,9 @@ def get_route(ip):
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.get_route 10.10.10.10
     """
@@ -2116,6 +2129,6 @@ def fqdns():
             fqdns.update(item)
 
     elapsed = time.time() - start
-    log.debug("Elapsed time getting FQDNs: {} seconds".format(elapsed))
+    log.debug("Elapsed time getting FQDNs: %s seconds", elapsed)
 
     return {"fqdns": sorted(list(fqdns))}

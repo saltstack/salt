@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module allows you to manage extended attributes on files or directories
 
@@ -6,12 +5,9 @@ This module allows you to manage extended attributes on files or directories
 
     salt '*' xattr.list /path/to/file
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python Libs
 import logging
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.mac_utils
 from salt.exceptions import CommandExecutionError
@@ -64,8 +60,8 @@ def list_(path, **kwargs):
         ret = salt.utils.mac_utils.execute_return_result(cmd)
     except CommandExecutionError as exc:
         if "No such file" in exc.strerror:
-            raise CommandExecutionError("File not found: {0}".format(path))
-        raise CommandExecutionError("Unknown Error: {0}".format(exc.strerror))
+            raise CommandExecutionError("File not found: {}".format(path))
+        raise CommandExecutionError("Unknown Error: {}".format(exc.strerror))
 
     if not ret:
         return {}
@@ -116,10 +112,10 @@ def read(path, attribute, **kwargs):
         ret = salt.utils.mac_utils.execute_return_result(cmd)
     except CommandExecutionError as exc:
         if "No such file" in exc.strerror:
-            raise CommandExecutionError("File not found: {0}".format(path))
+            raise CommandExecutionError("File not found: {}".format(path))
         if "No such xattr" in exc.strerror:
-            raise CommandExecutionError("Attribute not found: {0}".format(attribute))
-        raise CommandExecutionError("Unknown Error: {0}".format(exc.strerror))
+            raise CommandExecutionError("Attribute not found: {}".format(attribute))
+        raise CommandExecutionError("Unknown Error: {}".format(exc.strerror))
 
     return ret
 
@@ -162,8 +158,8 @@ def write(path, attribute, value, **kwargs):
         salt.utils.mac_utils.execute_return_success(cmd)
     except CommandExecutionError as exc:
         if "No such file" in exc.strerror:
-            raise CommandExecutionError("File not found: {0}".format(path))
-        raise CommandExecutionError("Unknown Error: {0}".format(exc.strerror))
+            raise CommandExecutionError("File not found: {}".format(path))
+        raise CommandExecutionError("Unknown Error: {}".format(exc.strerror))
 
     return read(path, attribute, **{"hex": hex_}) == value
 
@@ -189,15 +185,15 @@ def delete(path, attribute):
 
         salt '*' xattr.delete /path/to/file "com.test.attr"
     """
-    cmd = 'xattr -d "{0}" "{1}"'.format(attribute, path)
+    cmd = 'xattr -d "{}" "{}"'.format(attribute, path)
     try:
         salt.utils.mac_utils.execute_return_success(cmd)
     except CommandExecutionError as exc:
         if "No such file" in exc.strerror:
-            raise CommandExecutionError("File not found: {0}".format(path))
+            raise CommandExecutionError("File not found: {}".format(path))
         if "No such xattr" in exc.strerror:
-            raise CommandExecutionError("Attribute not found: {0}".format(attribute))
-        raise CommandExecutionError("Unknown Error: {0}".format(exc.strerror))
+            raise CommandExecutionError("Attribute not found: {}".format(attribute))
+        raise CommandExecutionError("Unknown Error: {}".format(exc.strerror))
 
     return attribute not in list_(path)
 
@@ -218,12 +214,12 @@ def clear(path):
 
         salt '*' xattr.delete /path/to/file "com.test.attr"
     """
-    cmd = 'xattr -c "{0}"'.format(path)
+    cmd = 'xattr -c "{}"'.format(path)
     try:
         salt.utils.mac_utils.execute_return_success(cmd)
     except CommandExecutionError as exc:
         if "No such file" in exc.strerror:
-            raise CommandExecutionError("File not found: {0}".format(path))
-        raise CommandExecutionError("Unknown Error: {0}".format(exc.strerror))
+            raise CommandExecutionError("File not found: {}".format(path))
+        raise CommandExecutionError("Unknown Error: {}".format(exc.strerror))
 
     return list_(path) == {}

@@ -1,23 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Commands for working with travisci.
 
 :depends: pyOpenSSL >= 16.0.0
 """
-
-# Import python libraries
-from __future__ import absolute_import, print_function, unicode_literals
-
 import base64
+import urllib.parse
 
-# Import Salt libraries
 import salt.utils.json
-
-# Import 3rd party libraries
-from salt.ext import six
-from salt.ext.six.moves.urllib.parse import (  # pylint: disable=import-error,no-name-in-module
-    parse_qs,
-)
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 try:
@@ -37,7 +26,7 @@ def __virtual__():
     if HAS_OPENSSL is False:
         return (
             False,
-            "The travisci module was unable to be loaded: Install pyOpenssl >= {0}".format(
+            "The travisci module was unable to be loaded: Install pyOpenssl >= {}".format(
                 OPENSSL_MIN_VER
             ),
         )
@@ -46,7 +35,7 @@ def __virtual__():
     if cur_version < min_version:
         return (
             False,
-            "The travisci module was unable to be loaded: Install pyOpenssl >= {0}".format(
+            "The travisci module was unable to be loaded: Install pyOpenssl >= {}".format(
                 OPENSSL_MIN_VER
             ),
         )
@@ -86,10 +75,10 @@ def verify_webhook(signature, body):
     signature = base64.b64decode(signature)
 
     # parse the urlencoded payload from travis
-    payload = salt.utils.json.loads(parse_qs(body)["payload"][0])
+    payload = salt.utils.json.loads(urllib.parse.parse_qs(body)["payload"][0])
 
     try:
-        OpenSSL.crypto.verify(certificate, signature, payload, six.text_type("sha1"))
+        OpenSSL.crypto.verify(certificate, signature, payload, "sha1")
     except OpenSSL.crypto.Error:
         return False
     return True

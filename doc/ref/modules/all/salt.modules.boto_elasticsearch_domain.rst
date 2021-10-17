@@ -1,5 +1,5 @@
-salt.modules.boto_elasticsearch_domain module
-=============================================
+salt.modules.boto_elasticsearch_domain
+======================================
 
 .. automodule:: salt.modules.boto_elasticsearch_domain
     :members:

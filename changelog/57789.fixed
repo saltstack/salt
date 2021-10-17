@@ -1,1 +1,0 @@
-Raise SaltClientError in parse_host_port insted of ValueError so it is caught and handled properly when the minion is connecting to the master.

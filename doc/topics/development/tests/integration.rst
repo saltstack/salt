@@ -347,18 +347,19 @@ Testing salt-ssh functionality can be done using the SSHCase test class:
 
     from tests.support.case import SSHCase
 
-    class SSHGrainsTest(SSHCase):
-    '''
-    Test salt-ssh grains functionality
-    Depend on proper environment set by integration.SSHCase class
-    '''
 
-    def test_grains_id(self):
-        '''
-        Test salt-ssh grains id work for localhost.
-        '''
-        cmd = self.run_function('grains.get', ['id'])
-        self.assertEqual(cmd, 'localhost')
+    class SSHGrainsTest(SSHCase):
+        """
+        Test salt-ssh grains functionality
+        Depend on proper environment set by integration.SSHCase class
+        """
+
+        def test_grains_id(self):
+            """
+            Test salt-ssh grains id work for localhost.
+            """
+            cmd = self.run_function("grains.get", ["id"])
+            self.assertEqual(cmd, "localhost")
 
 
 Testing Event System via SaltMinionEventAssertsMixin
@@ -582,43 +583,42 @@ contain valid information are also required in the test class's ``setUp`` functi
     from tests.support.case import ShellCase
     from tests.support.paths import FILES
 
+
     class LinodeTest(ShellCase):
-    '''
-    Integration tests for the Linode cloud provider in Salt-Cloud
-    '''
+        """
+        Integration tests for the Linode cloud provider in Salt-Cloud
+        """
 
-    def setUp(self):
-        '''
-        Sets up the test requirements
-        '''
-        super(LinodeTest, self).setUp()
+        def setUp(self):
+            """
+            Sets up the test requirements
+            """
+            super(LinodeTest, self).setUp()
 
-        # check if appropriate cloud provider and profile files are present
-        profile_str = 'linode-config:'
-        provider = 'linode'
-        providers = self.run_cloud('--list-providers')
-        if profile_str not in providers:
-            self.skipTest(
-                'Configuration file for {0} was not found. Check {0}.conf files '
-                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                .format(provider)
-            )
-
-        # check if apikey and password are present
-        path = os.path.join(FILES,
-                            'conf',
-                            'cloud.providers.d',
-                            provider + '.conf')
-        config = cloud_providers_config(path)
-        api = config['linode-config']['linode']['apikey']
-        password = config['linode-config']['linode']['password']
-        if api == '' or password == '':
-            self.skipTest(
-                'An api key and password must be provided to run these tests. Check '
-                'tests/integration/files/conf/cloud.providers.d/{0}.conf'.format(
-                    provider
+            # check if appropriate cloud provider and profile files are present
+            profile_str = "linode-config:"
+            provider = "linode"
+            providers = self.run_cloud("--list-providers")
+            if profile_str not in providers:
+                self.skipTest(
+                    "Configuration file for {0} was not found. Check {0}.conf files "
+                    "in tests/integration/files/conf/cloud.*.d/ to run these tests.".format(
+                        provider
+                    )
                 )
-            )
+
+            # check if apikey and password are present
+            path = os.path.join(FILES, "conf", "cloud.providers.d", provider + ".conf")
+            config = cloud_providers_config(path)
+            api = config["linode-config"]["linode"]["apikey"]
+            password = config["linode-config"]["linode"]["password"]
+            if api == "" or password == "":
+                self.skipTest(
+                    "An api key and password must be provided to run these tests. Check "
+                    "tests/integration/files/conf/cloud.providers.d/{0}.conf".format(
+                        provider
+                    )
+                )
 
 Repeatedly creating and destroying instances on cloud providers can be costly.
 Therefore, cloud provider tests are off by default and do not run automatically. To

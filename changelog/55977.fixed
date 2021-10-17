@@ -1,1 +1,0 @@
-Fixing stalekey engine so it deletes the keys when they are a list.

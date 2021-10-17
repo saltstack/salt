@@ -1,15 +1,7 @@
-# coding: utf-8
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
-# Import Salt libs
 import salt.config
 import salt.loader
-
-# Import salt testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import RUNTIME_VARS
 

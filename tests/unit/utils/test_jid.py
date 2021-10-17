@@ -38,3 +38,15 @@ class JidTestCase(TestCase):
                 self.assertEqual(ret, "20021225120000000000_{}".format(os.getpid()))
                 ret = salt.utils.jid.gen_jid({"unique_jid": True})
                 self.assertEqual(ret, "20021225120000000001_{}".format(os.getpid()))
+
+    def test_deprecation_58225(self):
+        # check that type error will be raised
+        self.assertRaises(TypeError, salt.utils.jid.gen_jid)
+
+        # check that opts is missing and not another arg
+        try:
+            salt.utils.jid.gen_jid()  # pylint: disable=no-value-for-parameter
+        except TypeError as no_opts:
+            self.assertEqual(
+                str(no_opts), "gen_jid() missing 1 required positional argument: 'opts'"
+            )

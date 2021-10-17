@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Marathon
 ========
@@ -24,7 +23,6 @@ the marathon endpoint:
 
 .. versionadded:: 2015.8.2
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -57,12 +55,13 @@ def ping():
     """
     try:
         response = salt.utils.http.query(
-            "{0}/ping".format(CONFIG[CONFIG_BASE_URL]),
+            "{}/ping".format(CONFIG[CONFIG_BASE_URL]),
             decode_type="plain",
             decode=True,
         )
         log.debug(
-            "marathon.info returned successfully: %s", response,
+            "marathon.info returned successfully: %s",
+            response,
         )
         if "text" in response and response["text"].strip() == "pong":
             return True

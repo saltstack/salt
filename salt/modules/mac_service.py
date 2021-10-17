@@ -21,7 +21,7 @@ This module has support for services in the following locations.
     be used to properly interact with the service.
 
 .. note::
-    As of the Magnesium release, if a service name of ``salt-minion`` is passed this
+    As of the 3002 release, if a service name of ``salt-minion`` is passed this
     module will convert it over to it's macOS equivalent name, in this case
     to ``com.saltstack.salt.minion``. This is true for ``salt-master``
     ``salt-api``, and ``salt-syndic`` as well.
@@ -62,8 +62,7 @@ def __virtual__():
     if not salt.utils.platform.is_darwin():
         return (
             False,
-            "Failed to load the mac_service module:\n"
-            "Only available on macOS systems.",
+            "Failed to load the mac_service module:\nOnly available on macOS systems.",
         )
 
     if not salt.utils.path.which("launchctl"):

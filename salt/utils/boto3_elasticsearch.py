@@ -1,16 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Botocore waiters for elasticsearch that are not present in boto3+botocore (yet).
 
 :codeauthor: Herbert Buurman <herbert.buurman@ogd.nl>
 :depends: boto3
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.versions
-
-# Import Salt libs
 from salt.exceptions import SaltInvocationError
 
 try:
@@ -99,6 +94,7 @@ def __virtual__():
     return salt.utils.versions.check_boto_reqs(check_boto=False)
 
 
+@salt.utils.decorators.is_deprecated(globals(), "Sulfur")
 def get_waiter(client, waiter=None, waiter_config=None):
     """
     Gets a botocore waiter using either one of the preconfigured models by name
@@ -124,6 +120,7 @@ def get_waiter(client, waiter=None, waiter_config=None):
     return botocore.waiter.create_waiter_with_client(waiter, waiter_model, client)
 
 
+@salt.utils.decorators.is_deprecated(globals(), "Sulfur")
 def list_waiters():
     """
     Lists the builtin waiter configuration names.

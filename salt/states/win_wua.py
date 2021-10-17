@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Installation of Windows Updates using the Windows Update Agent
 
@@ -49,17 +48,12 @@ For removal:
          - KB3194343
          - bb1dbb26-3fb6-45fd-bb05-e3c8e379195c
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.utils.data
 import salt.utils.platform
 import salt.utils.win_update
-
-# Import Salt libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -129,7 +123,7 @@ def installed(name, updates=None):
               - KB3194343
               - 28cf1b09-2b1a-458c-9bd1-971d1b26b211
     """
-    if isinstance(updates, six.string_types):
+    if isinstance(updates, str):
         updates = [updates]
 
     if not updates:
@@ -262,7 +256,7 @@ def removed(name, updates=None):
               - KB3194343
               - 28cf1b09-2b1a-458c-9bd1-971d1b26b211
     """
-    if isinstance(updates, six.string_types):
+    if isinstance(updates, str):
         updates = [updates]
 
     if not updates:

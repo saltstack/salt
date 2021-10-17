@@ -3,11 +3,10 @@ Tests for the file state
 """
 import pytest
 import salt.states.file
-from tests.support.helpers import slowTest
 
 
 @pytest.mark.parametrize("verify_ssl", [True, False])
-@slowTest
+@pytest.mark.slow_test
 def test_get_source_sum_verify_ssl_false(
     salt_call_cli, tmpdir, ssl_webserver, verify_ssl
 ):
@@ -34,7 +33,7 @@ def test_get_source_sum_verify_ssl_false(
 
 
 @pytest.mark.parametrize("verify_ssl", [True, False])
-@slowTest
+@pytest.mark.slow_test
 def test_get_managed_verify_ssl(salt_call_cli, tmpdir, ssl_webserver, verify_ssl):
     """
     test verify_ssl with get_managed
@@ -65,7 +64,7 @@ def test_get_managed_verify_ssl(salt_call_cli, tmpdir, ssl_webserver, verify_ssl
 
 
 @pytest.mark.parametrize("verify_ssl", [True, False])
-@slowTest
+@pytest.mark.slow_test
 def test_manage_file_verify_ssl(salt_call_cli, tmpdir, ssl_webserver, verify_ssl):
     """
     test verify_ssl with manage_file
@@ -78,7 +77,8 @@ def test_manage_file_verify_ssl(salt_call_cli, tmpdir, ssl_webserver, verify_ssl
         "",
         "",
         ssl_webserver.url("this.txt"),
-        "{hash_type: 'sha256', 'hsum': 'f2ca1bb6c7e907d06dafe4687e579fce76b37e4e93b7605022da52e6ccc26fd2'}",
+        "{hash_type: 'sha256', 'hsum':"
+        " 'f2ca1bb6c7e907d06dafe4687e579fce76b37e4e93b7605022da52e6ccc26fd2'}",
         "",
         "",
         "",
@@ -95,7 +95,7 @@ def test_manage_file_verify_ssl(salt_call_cli, tmpdir, ssl_webserver, verify_ssl
 
 
 @pytest.mark.parametrize("verify_ssl", [True, False])
-@slowTest
+@pytest.mark.slow_test
 def test_check_managed_changes_verify_ssl(
     salt_call_cli, tmpdir, ssl_webserver, verify_ssl
 ):
@@ -129,7 +129,7 @@ def test_check_managed_changes_verify_ssl(
 
 
 @pytest.mark.parametrize("verify_ssl", [True, False])
-@slowTest
+@pytest.mark.slow_test
 def test_check_file_meta_verify_ssl(salt_call_cli, tmpdir, ssl_webserver, verify_ssl):
     """
     test verify_ssl with check_file_meta
@@ -144,7 +144,8 @@ def test_check_file_meta_verify_ssl(salt_call_cli, tmpdir, ssl_webserver, verify
         test_file,
         "",
         web_url,
-        "{hash_type: 'sha256', 'hsum': 'f2ca1bb6c7e907d06dafe4687e579fce76b37e4e93b7605022da52e6ccc26fd2'}",
+        "{hash_type: 'sha256', 'hsum':"
+        " 'f2ca1bb6c7e907d06dafe4687e579fce76b37e4e93b7605022da52e6ccc26fd2'}",
         "",
         "",
         "",

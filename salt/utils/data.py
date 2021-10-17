@@ -4,25 +4,19 @@ and data structures.
 """
 
 
-# Import Python libs
 import copy
+import datetime
 import fnmatch
 import functools
 import logging
 import re
 from collections.abc import Mapping, MutableMapping, Sequence
 
-# Import Salt libs
 import salt.utils.dictupdate
 import salt.utils.stringutils
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
-from salt.ext import six
-
-# Import 3rd-party libs
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
-from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
 from salt.utils.decorators.jinja import jinja_filter
 from salt.utils.odict import OrderedDict
 
@@ -290,6 +284,8 @@ def decode(
                 to_str,
             )
         )
+    if isinstance(data, datetime.datetime):
+        return data.isoformat()
     try:
         data = _decode_func(data, encoding, errors, normalize)
     except TypeError:
@@ -320,11 +316,6 @@ def decode_dict(
     # Clean data object before decoding to avoid circular references
     data = _remove_circular_refs(data)
 
-    _decode_func = (
-        salt.utils.stringutils.to_unicode
-        if not to_str
-        else salt.utils.stringutils.to_str
-    )
     # Make sure we preserve OrderedDicts
     ret = data.__class__() if preserve_dict_class else {}
     for key, value in data.items():
@@ -347,7 +338,17 @@ def decode_dict(
             )
         else:
             try:
-                key = _decode_func(key, encoding, errors, normalize)
+                key = decode(
+                    key,
+                    encoding,
+                    errors,
+                    keep,
+                    normalize,
+                    preserve_dict_class,
+                    preserve_tuples,
+                    to_str,
+                )
+
             except TypeError:
                 # to_unicode raises a TypeError when input is not a
                 # string/bytestring/bytearray. This is expected and simply
@@ -404,8 +405,17 @@ def decode_dict(
             )
         else:
             try:
-                value = _decode_func(value, encoding, errors, normalize)
-            except TypeError:
+                value = decode(
+                    value,
+                    encoding,
+                    errors,
+                    keep,
+                    normalize,
+                    preserve_dict_class,
+                    preserve_tuples,
+                    to_str,
+                )
+            except TypeError as e:
                 # to_unicode raises a TypeError when input is not a
                 # string/bytestring/bytearray. This is expected and simply
                 # means we are going to leave the value as-is.
@@ -435,11 +445,6 @@ def decode_list(
     # Clean data object before decoding to avoid circular references
     data = _remove_circular_refs(data)
 
-    _decode_func = (
-        salt.utils.stringutils.to_unicode
-        if not to_str
-        else salt.utils.stringutils.to_str
-    )
     ret = []
     for item in data:
         if isinstance(item, list):
@@ -483,7 +488,17 @@ def decode_list(
             )
         else:
             try:
-                item = _decode_func(item, encoding, errors, normalize)
+                item = decode(
+                    item,
+                    encoding,
+                    errors,
+                    keep,
+                    normalize,
+                    preserve_dict_class,
+                    preserve_tuples,
+                    to_str,
+                )
+
             except TypeError:
                 # to_unicode raises a TypeError when input is not a
                 # string/bytestring/bytearray. This is expected and simply
@@ -744,7 +759,7 @@ def filter_by(lookup_dict, lookup, traverse, merge=None, default="default", base
         elif isinstance(base_values, Mapping):
             if not isinstance(ret, Mapping):
                 raise SaltException(
-                    "filter_by default and look-up values must both be " "dictionaries."
+                    "filter_by default and look-up values must both be dictionaries."
                 )
             ret = salt.utils.dictupdate.update(copy.deepcopy(base_values), ret)
 
@@ -790,7 +805,13 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
     then return data['foo']['bar']['0']
     """
     ptr = data
-    for each in key.split(delimiter):
+    if isinstance(key, str):
+        key = key.split(delimiter)
+
+    if isinstance(key, int):
+        key = [key]
+
+    for each in key:
         if isinstance(ptr, list):
             try:
                 idx = int(each)
@@ -808,10 +829,21 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
                     # No embedded dicts matched, return the default
                     return default
             else:
-                try:
-                    ptr = ptr[idx]
-                except IndexError:
-                    return default
+                embed_match = False
+                # Index was numeric, lets look at any embedded dicts
+                # using the converted version of each.
+                for embedded in (x for x in ptr if isinstance(x, dict)):
+                    try:
+                        ptr = embedded[idx]
+                        embed_match = True
+                        break
+                    except KeyError:
+                        pass
+                if not embed_match:
+                    try:
+                        ptr = ptr[idx]
+                    except IndexError:
+                        return default
         else:
             try:
                 ptr = ptr[each]
@@ -855,15 +887,9 @@ def subdict_match(
     """
 
     def _match(target, pattern, regex_match=False, exact_match=False):
-        # The reason for using six.text_type first and _then_ using
-        # to_unicode as a fallback is because we want to eventually have
-        # unicode types for comparison below. If either value is numeric then
-        # six.text_type will turn it into a unicode string. However, if the
-        # value is a PY2 str type with non-ascii chars, then the result will be
-        # a UnicodeDecodeError. In those cases, we simply use to_unicode to
-        # decode it to unicode. The reason we can't simply use to_unicode to
-        # begin with is that (by design) to_unicode will raise a TypeError if a
-        # non-string/bytestring/bytearray value is passed.
+        # XXX: A lot of this logic is here because of supporting PY2 and PY3,
+        # now that we only support PY3 we should probably re-visit what's going
+        # on here.
         try:
             target = str(target).lower()
         except UnicodeDecodeError:
@@ -1045,7 +1071,7 @@ def repack_dictlist(data, strict=False, recurse=False, key_cb=None, val_cb=None)
                 return {}
     else:
         log.error(
-            "Invalid input for repack_dictlist, data passed is not a list " "(%s)", data
+            "Invalid input for repack_dictlist, data passed is not a list (%s)", data
         )
         return {}
 
@@ -1158,8 +1184,8 @@ def mysql_to_dict(data, key):
         if line.startswith("+"):
             continue
         comps = line.split("|")
-        for comp in range(len(comps)):
-            comps[comp] = comps[comp].strip()
+        for idx, comp in enumerate(comps):
+            comps[idx] = comp.strip()
         if len(headers) > 1:
             index = len(headers) - 1
             row = {}
@@ -1217,9 +1243,7 @@ def stringify(data):
     """
     ret = []
     for item in data:
-        if six.PY2 and isinstance(item, str):
-            item = salt.utils.stringutils.to_unicode(item)
-        elif not isinstance(item, str):
+        if not isinstance(item, str):
             item = str(item)
         ret.append(item)
     return ret

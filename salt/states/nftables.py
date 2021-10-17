@@ -112,7 +112,6 @@ at some point be deprecated in favor of a more generic `firewall` state.
 
 import logging
 
-# Import salt libs
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 log = logging.getLogger(__name__)
@@ -133,7 +132,7 @@ def chain_present(
     """
     .. versionadded:: 2014.7.0
 
-    .. versionchanged:: Magnesium
+    .. versionchanged:: 3002
 
     Verify a chain exists in a table.
 
@@ -287,18 +286,19 @@ def append(name, family="ipv4", **kwargs):
         if "save" in kwargs:
             if kwargs["save"]:
                 __salt__["nftables.save"](filename=None, family=family)
-                ret["comment"] = (
-                    "Set and Saved nftables rule for {} to: "
-                    "{} for {}".format(name, command.strip(), family)
+                ret[
+                    "comment"
+                ] = "Set and Saved nftables rule for {} to: {} for {}".format(
+                    name, command.strip(), family
                 )
         return ret
     else:
         ret["result"] = False
-        ret["comment"] = (
-            "Failed to set nftables rule for {}.\n"
-            "Attempted rule was {} for {}.\n"
-            "{}"
-        ).format(name, command.strip(), family, res["comment"])
+        ret[
+            "comment"
+        ] = "Failed to set nftables rule for {}.\nAttempted rule was {} for {}.\n{}".format(
+            name, command.strip(), family, res["comment"]
+        )
         return ret
 
 
@@ -361,16 +361,19 @@ def insert(name, family="ipv4", **kwargs):
         if "save" in kwargs:
             if kwargs["save"]:
                 __salt__["nftables.save"](filename=None, family=family)
-                ret["comment"] = (
-                    "Set and Saved nftables rule for {} to: "
-                    "{} for {}".format(name, command.strip(), family)
+                ret[
+                    "comment"
+                ] = "Set and Saved nftables rule for {} to: {} for {}".format(
+                    name, command.strip(), family
                 )
         return ret
     else:
         ret["result"] = False
-        ret["comment"] = (
-            "Failed to set nftables rule for {}.\n" "Attempted rule was {}"
-        ).format(name, command.strip())
+        ret[
+            "comment"
+        ] = "Failed to set nftables rule for {}.\nAttempted rule was {}".format(
+            name, command.strip()
+        )
         return ret
 
 
@@ -439,16 +442,19 @@ def delete(name, family="ipv4", **kwargs):
         if "save" in kwargs:
             if kwargs["save"]:
                 __salt__["nftables.save"](filename=None, family=family)
-                ret["comment"] = (
-                    "Deleted and Saved nftables rule for {} for {}"
-                    "{}".format(name, command.strip(), family)
+                ret[
+                    "comment"
+                ] = "Deleted and Saved nftables rule for {} for {}{}".format(
+                    name, command.strip(), family
                 )
         return ret
     else:
         ret["result"] = False
-        ret["comment"] = (
-            "Failed to delete nftables rule for {}.\n" "Attempted rule was {}"
-        ).format(name, command.strip())
+        ret[
+            "comment"
+        ] = "Failed to delete nftables rule for {}.\nAttempted rule was {}".format(
+            name, command.strip()
+        )
         return ret
 
 
@@ -456,7 +462,7 @@ def flush(name, family="ipv4", ignore_absence=False, **kwargs):
     """
     .. versionadded:: 2014.7.0
 
-    .. versionchanged:: Magnesium
+    .. versionchanged:: 3002
 
     Flush current nftables state
 
@@ -467,7 +473,7 @@ def flush(name, family="ipv4", ignore_absence=False, **kwargs):
         If set to True, attempts to flush a non-existent table will not
         result in a failed state.
 
-        .. versionadded:: Magnesium
+        .. versionadded:: 3002
 
     """
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
@@ -501,10 +507,9 @@ def flush(name, family="ipv4", ignore_absence=False, **kwargs):
         )
         if not ignore_absence and not check_chain["result"]:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Failed to flush chain {} in table {} in family {}, chain does not exist.".format(
-                kwargs["chain"], kwargs["table"], family
+            ret["comment"] = (
+                "Failed to flush chain {} in table {} in family {}, chain does not"
+                " exist.".format(kwargs["chain"], kwargs["table"], family)
             )
             return ret
 
@@ -526,7 +531,7 @@ def flush(name, family="ipv4", ignore_absence=False, **kwargs):
 
 def set_policy(name, table="filter", family="ipv4", **kwargs):
     """
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     Sets the default policy for nftables chains
 
@@ -565,10 +570,9 @@ def set_policy(name, table="filter", family="ipv4", **kwargs):
         return ret
 
     if __opts__["test"]:
-        ret[
-            "comment"
-        ] = "nftables default policy for chain {} on table {} for {} needs to be set to {}".format(
-            kwargs["chain"], table, family, kwargs["policy"]
+        ret["comment"] = (
+            "nftables default policy for chain {} on table {} for {} needs to be set"
+            " to {}".format(kwargs["chain"], table, family, kwargs["policy"])
         )
         return ret
 
@@ -600,7 +604,7 @@ def set_policy(name, table="filter", family="ipv4", **kwargs):
 
 def table_present(name, family="ipv4", **kwargs):
     """
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     Ensure an nftables table is present
 
@@ -645,7 +649,7 @@ def table_present(name, family="ipv4", **kwargs):
 
 def table_absent(name, family="ipv4", **kwargs):
     """
-    .. versionadded:: Magnesium
+    .. versionadded:: 3002
 
     Ensure an nftables table is absent
 

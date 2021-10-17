@@ -1,30 +1,23 @@
-# -*- coding: utf-8 -*-
 """
 Use pycrypto to generate random passwords on the fly.
 """
-
-# Import python libraries
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import random
 import re
 import string
 
-# Import salt libs
+import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext import six
 
-# Import 3rd-party libs
 try:
     try:
         from M2Crypto.Rand import rand_bytes as get_random_bytes
     except ImportError:
         try:
-            from Cryptodome.Random import get_random_bytes  # pylint: disable=E0611
+            from Cryptodome.Random import get_random_bytes
         except ImportError:
-            from Crypto.Random import get_random_bytes  # pylint: disable=E0611
+            from Crypto.Random import get_random_bytes  # nosec
     HAS_RANDOM = True
 except ImportError:
     HAS_RANDOM = False
@@ -46,32 +39,65 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-def secure_password(length=20, use_random=True):
+def secure_password(
+    length=20,
+    use_random=True,
+    chars=None,
+    lowercase=True,
+    uppercase=True,
+    digits=True,
+    punctuation=True,
+    whitespace=False,
+    printable=False,
+):
     """
     Generate a secure password.
     """
+    chars = chars or ""
+    if printable:
+        # as printable includes all other string character classes
+        # the other checks can be skipped
+        chars = string.printable
+    if not chars:
+        if lowercase:
+            chars += string.ascii_lowercase
+        if uppercase:
+            chars += string.ascii_uppercase
+        if digits:
+            chars += string.digits
+        if punctuation:
+            chars += string.punctuation
+        if whitespace:
+            chars += string.whitespace
     try:
         length = int(length)
         pw = ""
         while len(pw) < length:
             if HAS_RANDOM and use_random:
+                encoding = None
+                if salt.utils.platform.is_windows():
+                    encoding = "UTF-8"
                 while True:
                     try:
-                        char = salt.utils.stringutils.to_str(get_random_bytes(1))
+                        char = salt.utils.stringutils.to_str(
+                            get_random_bytes(1), encoding=encoding
+                        )
                         break
                     except UnicodeDecodeError:
                         continue
                 pw += re.sub(
-                    salt.utils.stringutils.to_str(r"[\W_]"),
-                    str(),  # future lint: disable=blacklisted-function
+                    salt.utils.stringutils.to_str(
+                        r"[^{}]".format(re.escape(chars)), encoding=encoding
+                    ),
+                    "",
                     char,
                 )
             else:
-                pw += random.SystemRandom().choice(string.ascii_letters + string.digits)
+                pw += random.SystemRandom().choice(chars)
         return pw
     except Exception as exc:  # pylint: disable=broad-except
         log.exception("Failed to generate secure passsword")
-        raise CommandExecutionError(six.text_type(exc))
+        raise CommandExecutionError(str(exc))
 
 
 if HAS_CRYPT:
@@ -116,7 +142,11 @@ def _gen_hash_crypt(crypt_salt=None, password=None, algorithm=None):
             # all non-crypt algorithms are specified as part of the salt
             crypt_salt = "${}${}".format(methods[algorithm].ident, crypt_salt)
 
-    return crypt.crypt(password, crypt_salt)
+    try:
+        ret = crypt.crypt(password, crypt_salt)
+    except OSError:
+        ret = None
+    return ret
 
 
 def gen_hash(crypt_salt=None, password=None, algorithm=None):
@@ -143,9 +173,9 @@ def gen_hash(crypt_salt=None, password=None, algorithm=None):
         )
     else:
         raise SaltInvocationError(
-            "Cannot hash using '{0}' hash algorithm. Natively supported "
-            "algorithms are: {1}. If passlib is installed ({2}), the supported "
-            "algorithms are: {3}.".format(
+            "Cannot hash using '{}' hash algorithm. Natively supported "
+            "algorithms are: {}. If passlib is installed ({}), the supported "
+            "algorithms are: {}.".format(
                 algorithm, list(methods), HAS_PASSLIB, known_methods
             )
         )

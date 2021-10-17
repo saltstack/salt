@@ -12,6 +12,7 @@ import random
 import re
 import tempfile
 
+import pytest
 import salt.config
 import salt.loader
 
@@ -34,7 +35,6 @@ from salt.utils.jinja import (
 from salt.utils.odict import OrderedDict
 from salt.utils.templates import JINJA, render_jinja_tmpl
 from tests.support.case import ModuleCase
-from tests.support.helpers import requires_network
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -73,6 +73,13 @@ class JinjaTestCase(TestCase):
         result = indent(data)
         expected = Markup('foo:\n      "bar"')
         assert result == expected, result
+
+    def test_tojson_should_ascii_sort_keys_when_told(self):
+        data = {"z": "zzz", "y": "yyy", "x": "xxx"}
+        expected = '{"x": "xxx", "y": "yyy", "z": "zzz"}'
+
+        actual = tojson(data, sort_keys=True)
+        assert actual == expected
 
 
 class MockFileClient:
@@ -612,6 +619,22 @@ class TestGetTemplate(TestCase):
             dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
         )
 
+    def test_relative_include(self):
+        template = "{% include './hello_import' %}"
+        expected = "Hey world !a b !"
+        filename = os.path.join(self.template_dir, "hello_import")
+        with salt.utils.files.fopen(filename) as fp_:
+            out = render_jinja_tmpl(
+                template,
+                dict(
+                    opts=self.local_opts,
+                    saltenv="test",
+                    salt=self.local_salt,
+                    tpldir=self.template_dir,
+                ),
+            )
+        self.assertEqual(out, expected)
+
 
 class TestJinjaDefaultOptions(TestCase):
     @classmethod
@@ -800,13 +823,13 @@ class TestCustomExtensions(TestCase):
         self.assertEqual(rendered, "it works")
 
         rendered = env.from_string(
-            "{% set document = document|load_yaml %}" "{{ document.foo }}"
+            "{% set document = document|load_yaml %}{{ document.foo }}"
         ).render(document="{foo: it works}")
         self.assertEqual(rendered, "it works")
 
         with self.assertRaises((TypeError, exceptions.TemplateRuntimeError)):
             env.from_string(
-                "{% set document = document|load_yaml %}" "{{ document.foo }}"
+                "{% set document = document|load_yaml %}{{ document.foo }}"
             ).render(document={"foo": "it works"})
 
     def test_load_tag(self):
@@ -822,8 +845,8 @@ class TestCustomExtensions(TestCase):
         self.assertEqual(rendered, "barred, it works")
 
         source = (
-            '{{ bar }}, {% load_json as docu %}{"foo": "it works", "{{ bar }}": "baz"}{% endload %}'
-            + "{{ docu.foo }}"
+            '{{ bar }}, {% load_json as docu %}{"foo": "it works", "{{ bar }}":'
+            ' "baz"}{% endload %}' + "{{ docu.foo }}"
         )
 
         rendered = env.from_string(source).render(bar="barred")
@@ -842,13 +865,12 @@ class TestCustomExtensions(TestCase):
     def test_load_json(self):
         env = Environment(extensions=[SerializerExtension])
         rendered = env.from_string(
-            '{% set document = \'{"foo": "it works"}\'|load_json %}'
-            "{{ document.foo }}"
+            '{% set document = \'{"foo": "it works"}\'|load_json %}{{ document.foo }}'
         ).render()
         self.assertEqual(rendered, "it works")
 
         rendered = env.from_string(
-            "{% set document = document|load_json %}" "{{ document.foo }}"
+            "{% set document = document|load_json %}{{ document.foo }}"
         ).render(document='{"foo": "it works"}')
         self.assertEqual(rendered, "it works")
 
@@ -896,12 +918,28 @@ class TestCustomExtensions(TestCase):
         with self.assertRaises(exceptions.TemplateNotFound):
             env.from_string('{% import_text "does not exists" as doc %}').render()
 
+    def test_profile(self):
+        env = Environment(extensions=[SerializerExtension])
+
+        source = (
+            "{%- profile as 'profile test' %}"
+            + "{% set var = 'val' %}"
+            + "{%- endprofile %}"
+            + "{{ var }}"
+        )
+
+        rendered = env.from_string(source).render()
+        self.assertEqual(rendered, "val")
+
     def test_catalog(self):
         loader = DictLoader(
             {
                 "doc1": '{bar: "my god is blue"}',
                 "doc2": '{% import_yaml "doc1" as local2 %} never exported',
-                "doc3": '{% load_yaml as local3 %}{"foo": "it works"}{% endload %} me neither',
+                "doc3": (
+                    '{% load_yaml as local3 %}{"foo": "it works"}{% endload %} me'
+                    " neither"
+                ),
                 "main1": '{% from "doc2" import local2 %}{{ local2.bar }}',
                 "main2": '{% from "doc3" import local3 %}{{ local3.foo }}',
                 "main3": """
@@ -955,14 +993,23 @@ class TestCustomExtensions(TestCase):
 
         rendered = env.from_string("{{ data }}").render(data=data)
         self.assertEqual(
-            rendered, "{'foo': {'bar': 'baz', 'qux': 42}}",
+            rendered,
+            "{'foo': {'bar': 'baz', 'qux': 42}}",
         )
 
         rendered = env.from_string("{{ data }}").render(
-            data=[OrderedDict(foo="bar",), OrderedDict(baz=42,)]
+            data=[
+                OrderedDict(
+                    foo="bar",
+                ),
+                OrderedDict(
+                    baz=42,
+                ),
+            ]
         )
         self.assertEqual(
-            rendered, "[{'foo': 'bar'}, {'baz': 42}]",
+            rendered,
+            "[{'foo': 'bar'}, {'baz': 42}]",
         )
 
     def test_set_dict_key_value(self):
@@ -1004,7 +1051,8 @@ class TestCustomExtensions(TestCase):
             ),
         )
         self.assertEqual(
-            rendered, "{'bar': {'baz': {'qux': 1, 'quux': 3}}}",
+            rendered,
+            "{'bar': {'baz': {'qux': 1, 'quux': 3}}}",
         )
 
         # Test incorrect usage
@@ -1046,7 +1094,8 @@ class TestCustomExtensions(TestCase):
             ),
         )
         self.assertEqual(
-            rendered, "{'bar': {'baz': [1, 2, 42]}}",
+            rendered,
+            "{'bar': {'baz': [1, 2, 42]}}",
         )
 
     def test_extend_dict_key_value(self):
@@ -1069,7 +1118,8 @@ class TestCustomExtensions(TestCase):
             ),
         )
         self.assertEqual(
-            rendered, "{'bar': {'baz': [1, 2, 42, 43]}}",
+            rendered,
+            "{'bar': {'baz': [1, 2, 42, 43]}}",
         )
         # Edge cases
         rendered = render_jinja_tmpl(
@@ -1239,14 +1289,16 @@ class TestCustomExtensions(TestCase):
 
         # provides a list with valid IP addresses only
         rendered = render_jinja_tmpl(
-            "{{ ['192.168.0.1', '172.17.17.1', 'foo', 'bar', '::'] | ipaddr | join(', ') }}",
+            "{{ ['192.168.0.1', '172.17.17.1', 'foo', 'bar', '::'] | ipaddr | join(',"
+            " ') }}",
             dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
         )
         self.assertEqual(rendered, "192.168.0.1, 172.17.17.1, ::")
 
         # return only multicast addresses
         rendered = render_jinja_tmpl(
-            "{{ ['224.0.0.1', 'FF01::1', '::'] | ipaddr(options='multicast') | join(', ') }}",
+            "{{ ['224.0.0.1', 'FF01::1', '::'] | ipaddr(options='multicast') | join(',"
+            " ') }}",
             dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
         )
         self.assertEqual(rendered, "224.0.0.1, ff01::1")
@@ -1367,15 +1419,14 @@ class TestCustomExtensions(TestCase):
         )
         self.assertEqual(rendered, "16777216")
 
-    @requires_network()
+    @pytest.mark.requires_network
     def test_http_query(self):
         """
         Test the `http_query` Jinja filter.
         """
         urls = (
             # These cannot be HTTPS urls since urllib2 chokes on those
-            "http://saltstack.com",
-            "http://community.saltstack.com",
+            "http://saltproject.io",
             "http://google.com",
             "http://duckduckgo.com",
         )
@@ -1646,10 +1697,8 @@ class TestCustomExtensions(TestCase):
         self.assertEqual(rendered, "False")
 
         rendered = render_jinja_tmpl(
-            (
-                "{{ 'get salted' | "
-                "hmac('shared secret', 'eBWf9bstXg+NiP5AOwppB5HMvZiYMPzEM9W5YMm/AmQ=') }}"
-            ),
+            "{{ 'get salted' | "
+            "hmac('shared secret', 'eBWf9bstXg+NiP5AOwppB5HMvZiYMPzEM9W5YMm/AmQ=') }}",
             dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
         )
         self.assertEqual(rendered, "True")

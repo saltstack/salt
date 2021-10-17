@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 JIRA Execution module
 =====================
@@ -18,24 +17,19 @@ Configuration example:
     username: salt
     password: pass
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
-# Import salt modules
-from salt.utils.args import clean_kwargs
+import salt.utils.args
 
-log = logging.getLogger(__name__)
-
-
-# Import third party modules
 try:
     import jira
 
     HAS_JIRA = True
 except ImportError:
     HAS_JIRA = False
+
+log = logging.getLogger(__name__)
 
 __virtualname__ = "jira"
 __proxyenabled__ = ["*"]
@@ -47,7 +41,7 @@ def __virtual__():
     return (
         __virtualname__
         if HAS_JIRA
-        else (False, "Please install the jira Python libary from PyPI")
+        else (False, "Please install the jira Python library from PyPI")
     )
 
 
@@ -173,7 +167,7 @@ def create_issue(
         "priority": {"name": priority},
         "labels": labels,
     }
-    data.update(clean_kwargs(**kwargs))
+    data.update(salt.utils.args.clean_kwargs(**kwargs))
     issue = jira_.create_issue(data)
     issue_key = str(issue)
     if assignee:
@@ -193,6 +187,8 @@ def assign_issue(issue_key, assignee, server=None, username=None, password=None)
         The name of the user to assign the ticket to.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt '*' jira.assign_issue NET-123 example_user
     """
