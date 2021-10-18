@@ -41,21 +41,7 @@ class Caller:
 
     @staticmethod
     def factory(opts, **kwargs):
-        # Default to ZeroMQ for now
-        ttype = "zeromq"
-
-        # determine the ttype
-        if "transport" in opts:
-            ttype = opts["transport"]
-        elif "transport" in opts.get("pillar", {}).get("master", {}):
-            ttype = opts["pillar"]["master"]["transport"]
-
-        # switch on available ttypes
-        if ttype in ("zeromq", "tcp", "detect"):
-            return ZeroMQCaller(opts, **kwargs)
-        else:
-            raise Exception("Callers are only defined for ZeroMQ and TCP")
-            # return NewKindOfCaller(opts, **kwargs)
+        return ZeroMQCaller(opts, **kwargs)
 
 
 class BaseCaller:
