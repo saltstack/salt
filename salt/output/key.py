@@ -6,7 +6,7 @@ The ``salt-key`` command makes use of this outputter to format its output.
 """
 
 import salt.output
-import salt.transports
+import salt.transport
 import salt.utils.color
 import salt.utils.data
 
