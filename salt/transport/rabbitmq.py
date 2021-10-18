@@ -792,6 +792,7 @@ class AsyncRabbitMQReqClient(salt.transport.base.RequestClient):
 
     # an init for the singleton instance to call
     def __init__(self, opts, master_uri, io_loop, **kwargs):
+        super().__init__(opts, master_uri, io_loop, **kwargs)
         self.opts = dict(opts)
         if "master_uri" in kwargs:
             self.opts["master_uri"] = kwargs["master_uri"]
@@ -989,6 +990,7 @@ class AsyncRabbitMQPubChannel(salt.transport.base.PublishClient):
     ttype = "rabbitmq"
 
     def __init__(self, opts, **kwargs):
+        super().__init__(opts, **kwargs)
         self.opts = opts
         self.io_loop = (
             kwargs.get("io_loop") or salt.ext.tornado.ioloop.IOLoop.instance()
@@ -1019,7 +1021,7 @@ class AsyncRabbitMQPubChannel(salt.transport.base.PublishClient):
     def __enter__(self):
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?

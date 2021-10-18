@@ -7,6 +7,7 @@ import logging
 import warnings
 
 from salt.transport.base import (
+    TRANSPORTS,
     publish_client,
     publish_server,
     request_client,
