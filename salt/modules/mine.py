@@ -8,6 +8,7 @@ import traceback
 
 import salt.crypt
 import salt.payload
+import salt.transport
 import salt.transport.client
 import salt.utils.args
 import salt.utils.dictupdate
@@ -66,7 +67,7 @@ def _mine_send(load, opts):
 
 
 def _mine_get(load, opts):
-    if opts.get("transport", "") in ("zeromq", "tcp"):
+    if opts.get("transport", "") in salt.transport.TRANSPORTS:
         try:
             load["tok"] = _auth().gen_token(b"salt")
         except AttributeError:

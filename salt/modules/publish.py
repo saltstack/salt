@@ -7,6 +7,7 @@ import time
 
 import salt.crypt
 import salt.payload
+import salt.transport
 import salt.transport.client
 import salt.utils.args
 from salt.exceptions import SaltInvocationError, SaltReqTimeoutError
@@ -18,7 +19,9 @@ __virtualname__ = "publish"
 
 def __virtual__():
     return (
-        __virtualname__ if __opts__.get("transport", "") in ("zeromq", "tcp") else False
+        __virtualname__
+        if __opts__.get("transport", "") in salt.transport.TRANSPORTS
+        else False
     )
 
 
