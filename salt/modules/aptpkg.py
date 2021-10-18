@@ -17,6 +17,8 @@ import logging
 import os
 import pathlib
 import re
+import shutil
+import tempfile
 import time
 from urllib.error import HTTPError
 from urllib.request import Request as _Request
@@ -137,7 +139,6 @@ if not HAS_APT:
             self.file = file
             if not self.file:
                 self.file = str(pathlib.Path(os.sep, "etc", "apt", "sources.list"))
-            self.edit = False
             self._parse_sources(line)
 
         def repo_line(self):
@@ -148,17 +149,16 @@ if not HAS_APT:
             if self.invalid:
                 return self.line
             if self.disabled:
-                repo_line = repo_line.append("# ")
+                repo_line.append("#")
 
             repo_line.append(self.type)
             if self.architectures:
-                repo_line.append(" [arch={}] ".format(" ".join(self.architectures)))
+                repo_line.append("[arch={}]".format(" ".join(self.architectures)))
 
             repo_line = repo_line + [self.uri, self.dist, " ".join(self.comps)]
             if self.comment:
                 repo_line.append("#{}".format(self.comment))
-            repo_line.append("\n")
-            return " ".join(repo_line)
+            return " ".join(repo_line) + "\n"
 
         def _parse_sources(self, line):
             """
@@ -175,13 +175,12 @@ if not HAS_APT:
             if repo_line[0] not in ["deb", "deb-src", "rpm", "rpm-src"]:
                 self.invalid = True
                 return False
-            self.architectures = []
             if repo_line[1].startswith("["):
                 opts = re.search(r"\[.*\]", self.line).group(0).strip("[]")
-                repo_line = [x for x in repo_line if x.strip("[]")]
+                repo_line = [x for x in (line.strip("[]") for line in repo_line) if x]
                 for opt in opts.split():
                     if opt.startswith("arch"):
-                        self.architectures = opt.split("=", 1)[1]
+                        self.architectures.extend(opt.split("=", 1)[1].split(","))
                     try:
                         repo_line.pop(repo_line.index(opt))
                     except ValueError:
@@ -201,14 +200,23 @@ if not HAS_APT:
             for file in self.files:
                 if file.is_dir():
                     for fp in file.glob("**/*.list"):
-                        file = fp
-                if file.is_file():
-                    with salt.utils.files.fopen(file) as source:
-                        for line in source:
-                            self.list.append(SourceEntry(line, file=str(file)))
+                        self.add_file(file=fp)
+                else:
+                    self.add_file(file)
 
         def __iter__(self):
             yield from self.list
+
+        def add_file(self, file):
+            """
+            Add the lines of a file to self.list
+            """
+            if file.is_file():
+                with salt.utils.files.fopen(file) as source:
+                    for line in source:
+                        self.list.append(SourceEntry(line, file=str(file)))
+            else:
+                log.debug("The apt sources file %s does not exist", file)
 
         def add(self, type, uri, dist, orig_comps, architectures):
             repo_line = [
@@ -221,22 +229,27 @@ if not HAS_APT:
             return SourceEntry(" ".join(repo_line))
 
         def remove(self, source):
-            apt_cmd = salt.utils.path.which("apt-add-repository")
-            if not apt_cmd:
-                raise CommandNotFoundError("apt-add-repository is required")
-            __salt__["cmd.run"]([apt_cmd, "--remove", source.line])
+            """
+            remove a source from the list of sources
+            """
             self.list.remove(source)
 
         def save(self):
-            for source in self.list:
-                if source.edit:
-                    if not pathlib.Path(source.file).is_file():
-                        with salt.utils.files.fopen(source.file, "w") as fp:
-                            fp.write(source.repo_line())
-                    else:
-                        __salt__["file.replace"](
-                            source.file, pattern=source.line, repl=source.repo_line()
-                        )
+            """
+            write all of the sources from the list of sources
+            to the file.
+            """
+            filemap = {}
+            with tempfile.TemporaryDirectory() as tmpdir:
+                for source in self.list:
+                    fname = pathlib.Path(tmpdir, pathlib.Path(source.file).name)
+                    with salt.utils.files.fopen(fname, "a") as fp:
+                        fp.write(source.repo_line())
+                    if source.file not in filemap:
+                        filemap[source.file] = {"tmp": fname}
+
+                for fp in filemap:
+                    shutil.move(filemap[fp]["tmp"], fp)
 
 
 def _get_ppa_info_from_launchpad(owner_name, ppa_name):
@@ -2570,7 +2583,6 @@ def mod_repo(repo, saltenv="base", **kwargs):
     for key in kwargs:
         if key in _MODIFY_OK and hasattr(mod_source, key):
             setattr(mod_source, key, kwargs[key])
-    mod_source.edit = True
     sources.save()
     # on changes, explicitly refresh
     if refresh:
