@@ -1,5 +1,11 @@
 import salt.ext.tornado.gen
 
+TRANSPORTS = (
+    "zeromq",
+    "tcp",
+    "rabbitmq",
+)
+
 
 def request_server(opts, **kwargs):
     # Default to ZeroMQ for now
@@ -23,7 +29,7 @@ def request_server(opts, **kwargs):
 
         return salt.transport.tcp.TCPReqServer(opts)
     elif ttype == "rabbitmq":
-        import salt.transport.tcp
+        import salt.transport.rabbitmq
 
         return salt.transport.rabbitmq.RabbitMQReqServer(opts)
     elif ttype == "local":
@@ -80,7 +86,7 @@ def publish_server(opts, **kwargs):
 
         return salt.transport.tcp.TCPPublishServer(opts)
     elif ttype == "rabbitmq":
-        import salt.transport.tcp
+        import salt.transport.rabbitmq
 
         return salt.transport.rabbitmq.RabbitMQPubServer(opts, **kwargs)
     elif ttype == "local":  # TODO:
@@ -108,7 +114,7 @@ def publish_client(opts, io_loop):
 
         return salt.transport.tcp.TCPPubClient(opts, io_loop)
     elif ttype == "rabbitmq":
-        import salt.transport.tcp
+        import salt.transport.rabbitmq
 
         return salt.transport.rabbitmq.RabbitMQPubClient(opts, io_loop)
     raise Exception("Transport type not found: {}".format(ttype))

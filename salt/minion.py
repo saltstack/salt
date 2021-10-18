@@ -35,6 +35,7 @@ import salt.payload
 import salt.pillar
 import salt.serializers.msgpack
 import salt.syspaths
+import salt.transport
 import salt.transport.client
 import salt.utils.args
 import salt.utils.context
@@ -805,7 +806,7 @@ class MinionBase:
                 try:
                     if self.opts["transport"] == "detect":
                         self.opts["detect_mode"] = True
-                        for trans in ("zeromq", "tcp"):
+                        for trans in salt.transport.TRANSPORTS:
                             if trans == "zeromq" and not zmq:
                                 continue
                             self.opts["transport"] = trans
