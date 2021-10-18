@@ -1,4 +1,4 @@
-.. _release-3004:
+.. _release-3005:
 
 =============================================
 Salt 3005 Release Notes - Codename Phosphorus
