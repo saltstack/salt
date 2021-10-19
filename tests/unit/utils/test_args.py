@@ -50,6 +50,9 @@ class ArgsTestCase(TestCase):
         def dummy_func_varargs_keywords(*args, **kwargs):
             pass
 
+        def dummy_func_annotations(first: int, second: str) -> bool:
+            pass
+
         _ArgSpec = namedtuple("ArgSpec", "args varargs keywords defaults")
 
         # Callable class instance
@@ -80,6 +83,16 @@ class ArgsTestCase(TestCase):
             defaults=("fourth",),
         )
         ret = salt.utils.args.get_function_argspec(dummy_func_default)
+        self.assertEqual(ret, expected_argspec)
+
+        # Function with annotations
+        expected_argspec = _ArgSpec(
+            args=["first", "second"],
+            varargs=None,
+            keywords=None,
+            defaults=None,
+        )
+        ret = salt.utils.args.get_function_argspec(dummy_func_annotations)
         self.assertEqual(ret, expected_argspec)
 
         # Function with both varargs and keywords
