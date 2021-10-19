@@ -42,7 +42,7 @@ pytestmark = [
 # - [✓] - redis_cache
 # - [✓] - etcd_cache - mostly complete - tried PR 56001, many more errors happened
 # - [✓] - consul_cache
-# - [✓] - mysql_cache
+# - [✓✓] - mysql_cache
 
 
 # WOOHOO! Tests are all passing for all of the cache modules. They are in sync,
@@ -52,6 +52,10 @@ pytestmark = [
 # injection perspective, that should 100% be addressed. etcd/consul/redis
 # caches also need to appropritately clean up the timestamp entries. As
 # mentioned, we also need to add some out-of-band tests.
+
+# TODO
+# - [✓] - mysql, check to see if the timestamp exists on the table, if not, alter table, otherwise create
+# - [✓] - as much as possible fix sql injection potential
 
 
 @pytest.fixture(scope="module")
@@ -241,16 +245,31 @@ def mysql_cache(minion_opts, mysql_port, mysql_container):
 
     # For some reason even though mysql is available in the container, we
     # can't reliably connect outside the container. Wait for access
-    timer = Timer(timeout=5)
+    timer = Timer(timeout=10)
     while not timer.expired:
         try:
-            cache.modules["mysql.derp"]("select 1;")
-        except Exception:  # pylint: disable=broad-except
+            # Doesn't matter what. We just have to execute so that we spin
+            # here until we can actually connect to the db instance.
+            cache.modules["mysql.list"]("fnord")
+        except Exception as e:  # pylint: disable=broad-except
             pass
         else:
             break
     else:
         assert False, 'Timer expired before "select 1;" worked'
+
+    # This ensures that we will correctly alter any existing mysql tables for
+    # current mysql cache users. Without completely altering the mysql_cache
+    # implementation there's no real other reasonable way to reset the client
+    # and force the alter_table to be called. Resetting the client to `None` is
+    # what triggers the implementation to allow the ALTER TABLE to add the
+    # last_update column
+    run_query = cache.modules["mysql.run_query"]
+    run_query(
+        run_query.func.__globals__["client"],
+        "ALTER TABLE salt_cache.cache DROP COLUMN last_update",
+    )[0].fetchone()
+    run_query.func.__globals__["client"] = None
 
     yield cache
 
