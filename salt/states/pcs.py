@@ -59,7 +59,7 @@ Create a cluster from scratch:
 1. This authorizes nodes to each other. It probably won't work with Ubuntu as
     it rolls out a default cluster that needs to be destroyed before the
     new cluster can be created. This is a little complicated so it's best
-    to just run the cluster_setup below in most cases.:
+    to just run the cluster_setup below in most cases:
 
    .. code-block:: yaml
 
@@ -499,7 +499,7 @@ def cluster_setup(
     This performs auth as well as setup so can be run in place of the auth state.
     It is recommended not to run auth on Debian/Ubuntu for a new cluster and just
     to run this because of the initial cluster config that is installed on
-    Ubuntu/Debian by default. Wipe_deftault has to be set to true or else the default
+    Ubuntu/Debian by default. Wipe_default has to be set to true or else the default
     cluster isn't remove and setup will fail.
 
 
