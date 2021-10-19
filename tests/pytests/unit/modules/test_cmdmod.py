@@ -5,6 +5,7 @@
 """
 
 import builtins
+import getpass
 import logging
 import os
 import re
@@ -395,51 +396,37 @@ def test_shell_properly_handled_on_macOS():
     with patch("pwd.getpwnam") as getpwnam_mock:
         with patch("salt.utils.timed_subprocess.TimedProc", mock_proc):
 
-            with patch.object(
-                cmdmod,
-                "shells",
-                MagicMock(return_value=["/usr/local/bin/bash", "/bin/zsh"]),
+            # User default shell is '/usr/local/bin/bash'
+            user_default_shell = "/usr/local/bin/bash"
+            with patch.dict(
+                cmdmod.__salt__,
+                {"user.info": MagicMock(return_value={"shell": user_default_shell})},
             ):
 
-                # User default shell is '/usr/local/bin/bash'
-                user_default_shell = "/usr/local/bin/bash"
-                with patch.dict(
-                    cmdmod.__salt__,
-                    {
-                        "user.info": MagicMock(
-                            return_value={"shell": user_default_shell}
-                        )
-                    },
-                ):
+                cmd_handler.clear()
+                cmdmod._run(
+                    "ls", cwd=tempfile.gettempdir(), runas="foobar", use_vt=False
+                )
 
-                    cmd_handler.clear()
-                    cmdmod._run(
-                        "ls", cwd=tempfile.gettempdir(), runas="foobar", use_vt=False
-                    )
+                assert re.search(
+                    "{} -l -c".format(user_default_shell), cmd_handler.cmd
+                ), "cmd invokes right bash session on macOS"
 
-                    assert re.search(
-                        "{} -l -c".format(user_default_shell), cmd_handler.cmd
-                    ), "cmd invokes right bash session on macOS"
+            # User default shell is '/bin/zsh'
+            user_default_shell = "/bin/zsh"
+            with patch.dict(
+                cmdmod.__salt__,
+                {"user.info": MagicMock(return_value={"shell": user_default_shell})},
+            ):
 
-                # User default shell is '/bin/zsh'
-                user_default_shell = "/bin/zsh"
-                with patch.dict(
-                    cmdmod.__salt__,
-                    {
-                        "user.info": MagicMock(
-                            return_value={"shell": user_default_shell}
-                        )
-                    },
-                ):
+                cmd_handler.clear()
+                cmdmod._run(
+                    "ls", cwd=tempfile.gettempdir(), runas="foobar", use_vt=False
+                )
 
-                    cmd_handler.clear()
-                    cmdmod._run(
-                        "ls", cwd=tempfile.gettempdir(), runas="foobar", use_vt=False
-                    )
-
-                    assert not re.search(
-                        "bash -l -c", cmd_handler.cmd
-                    ), "cmd does not invoke user shell on macOS"
+                assert not re.search(
+                    "bash -l -c", cmd_handler.cmd
+                ), "cmd does not invoke user shell on macOS"
 
 
 def test_run_cwd_doesnt_exist_issue_7154():
@@ -463,7 +450,7 @@ def test_run_cwd_in_combination_with_runas():
     """
     cmd = "pwd"
     cwd = "/tmp"
-    runas = os.getlogin()
+    runas = getpass.getuser()
 
     with patch.dict(cmdmod.__grains__, {"os": "Darwin", "os_family": "Solaris"}):
         stdout = cmdmod._run(cmd, cwd=cwd, runas=runas).get("stdout")

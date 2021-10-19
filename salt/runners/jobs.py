@@ -583,21 +583,19 @@ def _walk_through(job_dir, display_progress=False):
     """
     Walk through the job dir and return jobs
     """
-    serial = salt.payload.Serial(__opts__)
-
     for top in os.listdir(job_dir):
         t_path = os.path.join(job_dir, top)
 
         for final in os.listdir(t_path):
             load_path = os.path.join(t_path, final, ".load.p")
             with salt.utils.files.fopen(load_path, "rb") as rfh:
-                job = serial.load(rfh)
+                job = salt.payload.load(rfh)
 
             if not os.path.isfile(load_path):
                 continue
 
             with salt.utils.files.fopen(load_path, "rb") as rfh:
-                job = serial.load(rfh)
+                job = salt.payload.load(rfh)
             jid = job["jid"]
             if display_progress:
                 __jid_event__.fire_event(

@@ -147,7 +147,6 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         # Track key rotation intervals
         self.rotate = int(time.time())
         # A serializer for general maint operations
-        self.serial = salt.payload.Serial(self.opts)
 
     def _post_fork_init(self):
         """
@@ -252,7 +251,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             with salt.utils.atomicfile.atomic_open(
                 os.path.join(self.opts["pki_dir"], acc, ".key_cache"), mode="wb"
             ) as cache_file:
-                self.serial.dump(keys, cache_file)
+                salt.payload.dump(keys, cache_file)
 
     def handle_key_rotate(self, now):
         """
@@ -1186,7 +1185,6 @@ class AESFuncs(TransportMethods):
         self.event = salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
         )
-        self.serial = salt.payload.Serial(opts)
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Make a client
         self.local = salt.client.get_local_client(self.opts["conf_file"])
@@ -1570,6 +1568,7 @@ class AESFuncs(TransportMethods):
             pillar_override=load.get("pillar_override", {}),
             pillarenv=load.get("pillarenv"),
             extra_minion_data=load.get("extra_minion_data"),
+            clean_cache=load.get("clean_cache"),
         )
         data = pillar.compile_pillar()
         self.fs_.update_opts()

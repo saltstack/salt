@@ -54,7 +54,7 @@ msgpack==1.0.2
 portend==2.4
     # via cherrypy
 psutil==5.8.0
-    # via -r requirements/static/pkg/linux.in
+    # via -r requirements/base.txt
 pycparser==2.17
     # via cffi
 pycryptodomex==3.9.8
@@ -73,6 +73,8 @@ pyzmq==21.0.2 ; python_version >= "3.9"
     # via -r requirements/zeromq.txt
 requests==2.25.1
     # via -r requirements/base.txt
+rpm-vercmp==0.1.2
+    # via -r requirements/static/pkg/linux.in
 setproctitle==1.1.10
     # via -r requirements/static/pkg/linux.in
 six==1.16.0

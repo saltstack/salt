@@ -1,1 +1,0 @@
-Clear the cached network interface grains during minion init and grains refresh

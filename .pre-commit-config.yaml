@@ -811,24 +811,9 @@ repos:
 
   # ----- Cloud CI Requirements ------------------------------------------------------------------------------------->
       - id: pip-tools-compile
-        alias: compile-ci-cloud-py3.5-requirements
-        name: Cloud CI Py3.5 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/(cloud\.in|py3\.5/cloud\.txt)))$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.5
-          - --include=requirements/base.txt
-          - --include=requirements/zeromq.txt
-          - --include=requirements/pytest.txt
-          - --include=requirements/static/pkg/linux.in
-          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
-          - requirements/static/ci/cloud.in
-
-      - id: pip-tools-compile
         alias: compile-ci-cloud-py3.6-requirements
         name: Cloud CI Py3.6 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/(cloud\.in|py3\.6/cloud\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.6/cloud\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -837,13 +822,14 @@ repos:
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
           - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
           - --pip-args=--constraint=requirements/static/pkg/py{py_version}/linux.txt
           - requirements/static/ci/cloud.in
 
       - id: pip-tools-compile
         alias: compile-ci-cloud-py3.7-requirements
         name: Cloud CI Py3.7 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/(cloud\.in|py3\.7/cloud\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.7/cloud\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -852,13 +838,14 @@ repos:
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
           - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
           - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/cloud.in
 
       - id: pip-tools-compile
         alias: compile-ci-cloud-py3.8-requirements
         name: Cloud CI Py3.8 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/(cloud\.in|py3\.8/cloud\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.8/cloud\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -867,13 +854,14 @@ repos:
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
           - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
           - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/cloud.in
 
       - id: pip-tools-compile
         alias: compile-ci-cloud-py3.9-requirements
         name: Cloud CI Py3.9 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/(cloud\.in|py3\.9/cloud\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.9/cloud\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -882,13 +870,14 @@ repos:
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
           - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
           - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/cloud.in
 
       - id: pip-tools-compile
         alias: compile-ci-cloud-py3.10-requirements
         name: Cloud CI Py3.10 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/(cloud\.in|py3\.10/cloud\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.10/cloud\.txt)))$
         pass_filenames: false
         args:
           - -v
@@ -897,6 +886,7 @@ repos:
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
           - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
           - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/cloud.in
   # <---- Cloud CI Requirements --------------------------------------------------------------------------------------
@@ -916,7 +906,6 @@ repos:
           - --include=requirements/static/pkg/linux.in
           - --include=requirements/static/ci/linux.in
           - --include=requirements/static/ci/common.in
-          - --include=requirements/static/pkg/py{py_version}/linux.txt
           - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 
@@ -934,7 +923,6 @@ repos:
           - --include=requirements/static/pkg/linux.in
           - --include=requirements/static/ci/linux.in
           - --include=requirements/static/ci/common.in
-          - --include=requirements/static/pkg/py{py_version}/linux.txt
           - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 
@@ -952,7 +940,6 @@ repos:
           - --include=requirements/static/pkg/linux.in
           - --include=requirements/static/ci/linux.in
           - --include=requirements/static/ci/common.in
-          - --include=requirements/static/pkg/py{py_version}/linux.txt
           - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 
@@ -970,7 +957,6 @@ repos:
           - --include=requirements/static/pkg/linux.in
           - --include=requirements/static/ci/linux.in
           - --include=requirements/static/ci/common.in
-          - --include=requirements/static/pkg/py{py_version}/linux.txt
           - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 

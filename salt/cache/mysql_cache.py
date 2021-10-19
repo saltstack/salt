@@ -47,6 +47,7 @@ import copy
 import logging
 import time
 
+import salt.payload
 import salt.utils.stringutils
 from salt.exceptions import SaltCacheError
 
@@ -198,7 +199,7 @@ def store(bank, key, data):
     Store a key value.
     """
     _init_client()
-    data = __context__["serial"].dumps(data)
+    data = salt.payload.dumps(data)
     query = "REPLACE INTO {} (bank, etcd_key, data) values(%s,%s,%s)".format(
         __context__["mysql_table_name"]
     )
@@ -224,7 +225,7 @@ def fetch(bank, key):
     cur.close()
     if r is None:
         return {}
-    return __context__["serial"].loads(r[0])
+    return salt.payload.loads(r[0])
 
 
 def flush(bank, key=None):
