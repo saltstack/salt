@@ -2,7 +2,7 @@
 
 -r zeromq.txt
 
-pywin32>=300
+pywin32>=301
 wmi>=1.5.1
 pythonnet>=2.5.2
 
@@ -28,6 +28,7 @@ python-gnupg>=0.4.6
 requests>=2.25.1
 setproctitle
 timelib>=0.2.5
+urllib3>=1.26.5
 # Watchdog pulls in a GPL-3 package, argh, which cannot be shipped on the
 # windows distribution package.
 #

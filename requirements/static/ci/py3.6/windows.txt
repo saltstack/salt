@@ -103,7 +103,7 @@ python-jose[cryptography]==3.2.0  # via moto
 pythonnet==2.5.2
 pytz==2020.1
 pyvmomi==6.7.1.2018.12
-pywin32==300
+pywin32==302
 pywinrm==0.4.1
 pyyaml==5.4.1
 pyzmq==18.0.1 ; python_version < "3.9"
@@ -123,7 +123,7 @@ strict-rfc3339==0.7
 tempora==1.14.1
 timelib==0.2.5
 toml==0.10.2
-urllib3==1.26.4
+urllib3==1.26.7
 virtualenv==20.0.20
 watchdog==0.10.3
 websocket-client==0.40.0  # via docker, kubernetes

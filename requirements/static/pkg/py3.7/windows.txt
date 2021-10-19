@@ -41,7 +41,7 @@ python-dateutil==2.8.1
 python-gnupg==0.4.6
 pythonnet==2.5.2
 pytz==2020.1              # via tempora
-pywin32==300
+pywin32==302
 pyyaml==5.4.1
 pyzmq==18.0.1 ; python_version < "3.9"
 requests==2.25.1
@@ -50,7 +50,7 @@ six==1.16.0               # via cheroot, pyopenssl, python-dateutil, tempora
 smmap==3.0.4              # via gitdb
 tempora==1.14.1           # via portend
 timelib==0.2.5
-urllib3==1.26.4           # via requests
+urllib3==1.26.7
 wheel==0.36.2
 wmi==1.5.1
 zc.lockfile==2.0          # via cherrypy
