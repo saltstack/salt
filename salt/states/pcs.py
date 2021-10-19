@@ -72,7 +72,8 @@ Create a cluster from scratch:
                - pcspasswd: hoonetorg
 
 
-2. Do the initial cluster setup:
+2. Do the initial cluster setup, set wipe_default to true if you need to create
+a fresh cluster on a Debian family server or this will fail:
 
    .. code-block:: yaml
 
@@ -87,6 +88,7 @@ Create a cluster from scratch:
                    - '--enable'
                - pcsuser: hacluster
                - pcspasswd: hoonetorg
+               - wipe_default: True
 
 3. Optional: Set cluster properties:
 
@@ -497,7 +499,8 @@ def cluster_setup(
     This performs auth as well as setup so can be run in place of the auth state.
     It is recommended not to run auth on Debian/Ubuntu for a new cluster and just
     to run this because of the initial cluster config that is installed on
-    Ubuntu/Debian by default.
+    Ubuntu/Debian by default. Wipe_deftault has to be set to true or else the default
+    cluster isn't remove and setup will fail.
 
 
     name
@@ -516,6 +519,7 @@ def cluster_setup(
         Extra args to be passed to the auth function in case of reauth.
     wipe_default
         This removes the files that are installed with Debian based operating systems.
+        Default is False for compatibility.
 
     Example:
 
@@ -569,12 +573,16 @@ def cluster_setup(
     # and removes the config files. I've put this here because trying to do all this in the
     # state file can break running clusters and can also take quite a long time to debug.
 
-    log.debug("OS_Family: %s", __grains__.get("os_family"))
-    if __grains__.get("os_family") == "Debian" and wipe_default:
-        __salt__["file.remove"]("/etc/corosync/corosync.conf")
-        __salt__["file.remove"]("/var/lib/pacemaker/cib/cib.xml")
-        __salt__["service.stop"]("corosync")
-        auth("pcs_auth__auth", nodes, pcsuser, pcspasswd, pcs_auth_extra_args)
+    if __grains__.get("os_family") == "Debian":
+        if wipe_default:
+            __salt__["file.remove"]("/etc/corosync/corosync.conf")
+            __salt__["file.remove"]("/var/lib/pacemaker/cib/cib.xml")
+            __salt__["service.stop"]("corosync")
+            auth("pcs_auth__auth", nodes, pcsuser, pcspasswd, pcs_auth_extra_args)
+        else:
+            log.warning(
+                "Wipe_default is False. If the build fails set to true and try again"
+            )
 
     nodes = _get_node_list_for_version(nodes)
 
