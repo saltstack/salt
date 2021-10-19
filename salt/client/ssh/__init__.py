@@ -374,9 +374,9 @@ class SSH:
                 roster_data = self.__parsed_rosters[roster_filename]
                 if not isinstance(roster_data, bool):
                     for host_id in roster_data:
-                        if isinstance(roster_data[host_id], salt.utils.odict.OrderedDict):
+                        try:
                             roster_host = roster_data[host_id].get("host")
-                        else:
+                        except AttributeError:
                             roster_host = roster_data[host_id]
                         if hostname in [host_id, roster_host]:
                             if hostname != self.opts["tgt"]:
