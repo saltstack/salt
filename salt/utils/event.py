@@ -827,6 +827,16 @@ class SaltEvent:
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 try:
                     self.pusher.send(msg)
+                except salt.ext.tornado.iostream.StreamClosedError:
+                    log.debug("Stream closed, reconnecting")
+                    if timeout is not None:
+                        timeout_s = float(timeout) / 1000
+                    else:
+                        timeout_s = None
+
+                    self.close_pub()
+                    self.connect_pub(timeout=timeout_s)
+                    self.pusher.send(msg)
                 except Exception as exc:  # pylint: disable=broad-except
                     log.debug(
                         "Publisher send failed with exception: %s",
