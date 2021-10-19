@@ -115,6 +115,7 @@ def test_get_repos():
     assert ret["uri"] == exp_ret[1]
     assert ret["dist"] == exp_ret[2]
     assert ret["comps"] == exp_ret[3:]
+    assert ret["file"] == "/etc/apt/sources.list"
 
 
 def test_get_repos_multiple_comps():

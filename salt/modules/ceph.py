@@ -115,7 +115,7 @@ def zap(target=None, **kwargs):
         The cluster UUID. Defaults to value found in ceph config file.
     """
     if target is not None:
-        log.warning("Depricated use of function, use kwargs")
+        log.warning("Deprecated use of function, use kwargs")
     target = kwargs.get("dev", target)
     kwargs["dev"] = target
     return ceph_cfg.zap(**kwargs)
