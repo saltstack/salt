@@ -104,7 +104,7 @@ def test_mod_del_repo(grains, modules):
         elif grains["os_family"] == "RedHat":
             repo = "saltstack"
             name = "SaltStack repo for RHEL/CentOS {}".format(grains["osmajorrelease"])
-            baseurl = "http://repo.saltproject.io/py3/redhat/{}/x86_64/latest/".format(
+            baseurl = "https://repo.saltproject.io/py3/redhat/{}/x86_64/latest/".format(
                 grains["osmajorrelease"]
             )
             gpgkey = "https://repo.saltproject.io/py3/redhat/{}/x86_64/latest/SALTSTACK-GPG-KEY.pub".format(
