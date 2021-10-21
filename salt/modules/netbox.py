@@ -2342,3 +2342,186 @@ def check_cluster_type(name, **kwargs):
             print("BOOM: {} != {}".format(v, getattr(nb_cluster_type, k)))
             required_changes[k]=v
     return required_changes
+
+
+
+
+def get_cluster(name):
+    nb_cluster = get_(
+        "virtualization",
+        "clusters",
+        name=name
+    )
+    return nb_cluster
+
+def create_cluster(
+        name, 
+        cluster_type=None, # type is a reserved keyword
+        group=None,
+        tenant=None,
+        site=None,
+        comments=None):
+    """
+    salt-call netbox.create_cluster yolocluster cluster_type=oVirt
+    """
+
+    if cluster_type == None:
+        log.error("kwargs cluster_type is mandatory")
+        return False
+
+    nb_cluster = get_("virtualization", "clusters", name=name)
+    if nb_cluster:
+        log.error("A cluster type with name {} already exists within Netbox.".format(name))
+        return False
+    else:
+        nb_cluster_type = get_("virtualization", "cluster_types", name=cluster_type)
+        if not nb_cluster_type:
+            log.error("No such cluster type: {}".format(cluster_type))
+            return False
+
+        pprint(nb_cluster_type)
+        payload = {"name": name, "slug": slugify(name), "type": nb_cluster_type['id'] }
+
+        if group:
+            nb_cluster_group = get_("virtualization","cluster_groups", name=group)
+            if not nb_cluster_group:
+                log.error("No such cluster_group: {}".format(cluster_group))
+                return False
+            payload['group'] = nb_cluster_group.id
+        if tenant:
+            nb_tenant = get_("tenancy", "tenants", name=tenant)
+            if not nb_tenant:
+                log.error("No such tenant: {}".format(tenant))
+                return False
+            payload['tenant'] = nb_tenant['id']
+        if site:
+            nb_site = get_("dcim", "sites", name=site)
+            if not nb_site:
+                log.error("No such site: {}".format(site))
+                return False
+            payload['site'] = nb_site['id']
+        if comments:
+            payload['comments'] = comments
+
+        cluster = _add("virtualization", "clusters", payload)
+        if cluster:
+            return {"virtualization": {"clusters": payload}}
+        else:
+            log.error("Failed to create cluster type with name {}".format(name))
+            return False
+
+def update_cluster(name, **kwargs):
+    nb_cluster = _get("virtualization", "clusters", name=name)
+    if not nb_cluster:
+        log.error("No such cluster with name {}.".format(name))
+        return False
+
+    for k, v in kwargs.items():
+        setattr(nb_cluster, k, v)
+
+    try:
+        nb_cluster.save()
+        ret = get_cluster(name)
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        return False
+
+    return ret
+
+def delete_cluster(name):
+    """
+    .. versionadded:: TBD
+
+    name
+        name of the cluster to delete
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion netbox.cluster oVirt
+    """
+    nb_cluster = _get("virtualization", "clusters", auth_required=True, name=name)
+    if not nb_cluster:
+        log.error("No such cluster {}".format(name))
+        return None
+    nb_cluster.delete()
+    return {"DELETE": {"virtualization": {"clusters": name}}}
+
+def check_cluster(name, **kwargs):
+    """
+    returns: 
+        - False if error
+        - None if vminterface does not exist
+        - {} if there are no changes
+        - {'with': 'changes'} for changes
+    """
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+
+    try:
+        nb_cluster = _get(
+            "virtualization",
+            "clusters",
+            name=name
+        )
+        if not nb_cluster:
+            log.info('No such cluster: {}'.format(name))
+            return None
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        return False
+
+    required_changes={}
+    for k, v in kwargs.items():
+        if v == None:
+            # state module sets al available options default to None
+            continue
+       
+        # Resolve kwargs to their ID if needed.
+        if k == 'cluster_type':
+            nb_cluster_type = get_("virtualization", "cluster_types", name=v)
+            if not nb_cluster_type:
+                log.error("error retrieving cluster_type: {}".format(v))
+                return False
+            v = nb_cluster_type['id']  
+            k = 'type' # we don't use the word "type" in salt because
+                       # it is a reserved keyword in python. However
+                       # in the Netbox API this refers to a cluster type
+                       # so we swap the key from the kwarg "cluster_type" with "type" here.
+
+        if k == 'group':
+            nb_cluster_group = get_("virtualization", "cluster_groups", name=v)
+            if not nb_cluster_group:
+                log.error("No such cluster group: {}".format(v))
+                return False
+            v = nb_cluster_group['id']
+
+        if k == 'site':
+            nb_site = get_("dcim", "sites", name=v)
+            if not nb_site:
+                log.error("No such site: {}".format(v))
+                return False
+            v = nb_site['id']
+
+        if k == 'tenant':
+            nb_tenant = get_("tenancy", "tenants", name=v)
+            if not nb_tenant:
+                log.error("No such tenant: {}".format(v))
+                return False
+            v = nb_tenant['id']
+
+        # Check if the attribute has an ID attribute.
+        # If so, use it.
+        value_from_netbox = ""
+        nb_attribute = getattr(nb_cluster, k)
+        if hasattr(nb_attribute, "id"):
+            value_from_netbox = nb_attribute.id
+        else:
+            value_from_netbox = nb_attribute
+
+        if v == value_from_netbox:
+            print("Gelijk: {}".format(v))
+        else:
+            print("BOOM: {} != {}".format(v, getattr(nb_cluster, k)))
+            required_changes[k]=v
+    return required_changes
