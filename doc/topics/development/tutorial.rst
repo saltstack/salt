@@ -146,7 +146,7 @@ Push
 Push your branch to your GitHub account.  You will likely need to enter your
 GitHub username and password.
 
-.. code-block:: bash
+.. code-block:: console
 
     $ git push origin virt_ret
     Username for 'https://github.com': <my_account>
@@ -159,7 +159,7 @@ GitHub username and password.
     you have done this, you may need add the keys to your git repository
     configuration
 
-    .. code-block:: bash
+    .. code-block:: console
 
         $ git config ssh.key ~/.ssh/<key_name>
 
@@ -207,9 +207,9 @@ https://help.github.com/
 
 There are many topics covered by the Salt Developer documentation:
 
-https://docs.saltstack.com/en/latest/topics/development/index.html
+https://docs.saltproject.io/en/latest/topics/development/index.html
 
 The contributing documentation presents more details on specific contributing
 topics:
 
-https://docs.saltstack.com/en/latest/topics/development/contributing.html
+https://docs.saltproject.io/en/latest/topics/development/contributing.html

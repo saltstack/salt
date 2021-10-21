@@ -40,6 +40,7 @@ class WinWuaInstalledTestCase(TestCase):
 
     service_auto = {"StartType": "Auto"}
     service_disabled = {"StartType": "Disabled"}
+    service_manual = {"StartType": "Manual"}
 
     def test__virtual__not_windows(self):
         """
@@ -63,7 +64,7 @@ class WinWuaInstalledTestCase(TestCase):
         """
         Test __virtual__ function when the wuauserv service is disabled
         """
-        disabled_wuauserv = MagicMock(
+        mock_service_info = MagicMock(
             side_effect=[
                 self.service_disabled,  # wuauserv
                 self.service_auto,  # msiserver
@@ -72,7 +73,7 @@ class WinWuaInstalledTestCase(TestCase):
                 self.service_auto,  # TrustedInstaller
             ]
         )
-        with patch("salt.utils.win_service.info", disabled_wuauserv):
+        with patch("salt.utils.win_service.info", mock_service_info):
             expected = (
                 False,
                 "WUA: The Windows Update service (wuauserv) must not be disabled",
@@ -84,7 +85,7 @@ class WinWuaInstalledTestCase(TestCase):
         """
         Test __virtual__ function when the msiserver service is disabled
         """
-        disabled_wuauserv = MagicMock(
+        mock_service_info = MagicMock(
             side_effect=[
                 self.service_auto,  # wuauserv
                 self.service_disabled,  # msiserver
@@ -93,7 +94,7 @@ class WinWuaInstalledTestCase(TestCase):
                 self.service_auto,  # TrustedInstaller
             ]
         )
-        with patch("salt.utils.win_service.info", disabled_wuauserv):
+        with patch("salt.utils.win_service.info", mock_service_info):
             expected = (
                 False,
                 "WUA: The Windows Installer service (msiserver) must not be disabled",
@@ -105,7 +106,7 @@ class WinWuaInstalledTestCase(TestCase):
         """
         Test __virtual__ function when the BITS service is disabled
         """
-        disabled_wuauserv = MagicMock(
+        mock_service_info = MagicMock(
             side_effect=[
                 self.service_auto,  # wuauserv
                 self.service_auto,  # msiserver
@@ -114,11 +115,31 @@ class WinWuaInstalledTestCase(TestCase):
                 self.service_auto,  # TrustedInstaller
             ]
         )
-        with patch("salt.utils.win_service.info", disabled_wuauserv):
+        with patch("salt.utils.win_service.info", mock_service_info):
             expected = (
                 False,
-                "WUA: The Background Intelligent Transfer service (bits) must not be disabled",
+                "WUA: The Background Intelligent Transfer service (bits) must not be"
+                " disabled",
             )
+            result = win_wua.__virtual__()
+            self.assertEqual(expected, result)
+
+    def test__virtual__BITS_manual(self):
+        """
+        Test __virtual__ function when the BITS service is set to manual
+        Should not disable the module (__virtual__ should return True)
+        """
+        mock_service_info = MagicMock(
+            side_effect=[
+                self.service_auto,  # wuauserv
+                self.service_auto,  # msiserver
+                self.service_manual,  # BITS
+                self.service_auto,  # CryptSvc
+                self.service_auto,  # TrustedInstaller
+            ]
+        )
+        with patch("salt.utils.win_service.info", mock_service_info):
+            expected = True
             result = win_wua.__virtual__()
             self.assertEqual(expected, result)
 
@@ -126,7 +147,7 @@ class WinWuaInstalledTestCase(TestCase):
         """
         Test __virtual__ function when the CryptSvc service is disabled
         """
-        disabled_wuauserv = MagicMock(
+        mock_service_info = MagicMock(
             side_effect=[
                 self.service_auto,  # wuauserv
                 self.service_auto,  # msiserver
@@ -135,10 +156,11 @@ class WinWuaInstalledTestCase(TestCase):
                 self.service_auto,  # TrustedInstaller
             ]
         )
-        with patch("salt.utils.win_service.info", disabled_wuauserv):
+        with patch("salt.utils.win_service.info", mock_service_info):
             expected = (
                 False,
-                "WUA: The Cryptographic Services service (CryptSvc) must not be disabled",
+                "WUA: The Cryptographic Services service (CryptSvc) must not be"
+                " disabled",
             )
             result = win_wua.__virtual__()
             self.assertEqual(expected, result)
@@ -147,7 +169,7 @@ class WinWuaInstalledTestCase(TestCase):
         """
         Test __virtual__ function when the TrustedInstaller service is disabled
         """
-        disabled_wuauserv = MagicMock(
+        mock_service_info = MagicMock(
             side_effect=[
                 self.service_auto,  # wuauserv
                 self.service_auto,  # msiserver
@@ -156,10 +178,11 @@ class WinWuaInstalledTestCase(TestCase):
                 self.service_disabled,  # TrustedInstaller
             ]
         )
-        with patch("salt.utils.win_service.info", disabled_wuauserv):
+        with patch("salt.utils.win_service.info", mock_service_info):
             expected = (
                 False,
-                "WUA: The Windows Module Installer service (TrustedInstaller) must not be disabled",
+                "WUA: The Windows Module Installer service (TrustedInstaller) must not"
+                " be disabled",
             )
             result = win_wua.__virtual__()
             self.assertEqual(expected, result)

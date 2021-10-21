@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
@@ -67,7 +65,7 @@ class EC2Test(CloudTest):
                 "securitygroup or subnetid missing for {} config".format(self.PROVIDER)
             )
 
-        super(EC2Test, self).setUp()
+        super().setUp()
 
     def override_profile_config(self, name, data):
         conf_path = os.path.join(
@@ -106,6 +104,11 @@ class EC2Test(CloudTest):
 
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_val)
+        ipv6Address_present = False
+        for each in ret_val:
+            if "ipv6Address:" in each:
+                ipv6Address_present = True
+        assert ipv6Address_present
 
         self.assertDestroyInstance()
 
@@ -115,7 +118,7 @@ class EC2Test(CloudTest):
         """
         # create the instance
         ret_val = self.run_cloud(
-            "-p ec2-test {0} --no-deploy".format(self.instance_name), timeout=TIMEOUT
+            "-p ec2-test {} --no-deploy".format(self.instance_name), timeout=TIMEOUT
         )
         # check if instance returned
         self.assertInstanceExists(ret_val)
@@ -123,7 +126,7 @@ class EC2Test(CloudTest):
         changed_name = self.instance_name + "-changed"
 
         rename_result = self.run_cloud(
-            "-a rename {0} newname={1} --assume-yes".format(
+            "-a rename {} newname={} --assume-yes".format(
                 self.instance_name, changed_name
             ),
             timeout=TIMEOUT,

@@ -1,1 +1,0 @@
-check for a docker error that the swarm already exists when calling swarm.swarm_init on an existing docker swarm

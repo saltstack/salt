@@ -1,18 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Test the win_wusa execution module
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.modules.win_wusa as win_wusa
-
-# Import Salt Libs
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -51,7 +44,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             "pid": 1,
             "retcode": 0,
             "stderr": "",
-            "stdout": '[{"HotFixID": "KB123456"}, ' '{"HotFixID": "KB123457"}]',
+            "stdout": '[{"HotFixID": "KB123456"}, {"HotFixID": "KB123457"}]',
         }
         mock_all = MagicMock(return_value=ret)
         with patch.dict(win_wusa.__salt__, {"cmd.run_all": mock_all}):
@@ -98,7 +91,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             ["wusa.exe", path, "/quiet", "/norestart"], ignore_retcode=True
         )
         self.assertEqual(
-            "{0} is already installed. Additional info follows:\n\n{1}".format(
+            "{} is already installed. Additional info follows:\n\n{}".format(
                 name, retcode
             ),
             excinfo.exception.strerror,
@@ -119,9 +112,8 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             ["wusa.exe", path, "/quiet", "/norestart"], ignore_retcode=True
         )
         self.assertEqual(
-            "{0} correctly installed but server reboot is needed to complete installation. Additional info follows:\n\n{1}".format(
-                name, retcode
-            ),
+            "{} correctly installed but server reboot is needed to complete"
+            " installation. Additional info follows:\n\n{}".format(name, retcode),
             excinfo.exception.strerror,
         )
 
@@ -139,7 +131,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
             ["wusa.exe", path, "/quiet", "/norestart"], ignore_retcode=True
         )
         self.assertEqual(
-            "Unknown error. Additional info follows:\n\n{0}".format(retcode),
+            "Unknown error. Additional info follows:\n\n{}".format(retcode),
             excinfo.exception.strerror,
         )
 
@@ -172,7 +164,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
                 "wusa.exe",
                 "/uninstall",
                 "/quiet",
-                "/kb:{0}".format(kb[2:]),
+                "/kb:{}".format(kb[2:]),
                 "/norestart",
             ],
             ignore_retcode=True,
@@ -223,13 +215,13 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
                 "wusa.exe",
                 "/uninstall",
                 "/quiet",
-                "/kb:{0}".format(kb[2:]),
+                "/kb:{}".format(kb[2:]),
                 "/norestart",
             ],
             ignore_retcode=True,
         )
         self.assertEqual(
-            "{0} not installed. Additional info follows:\n\n{1}".format(kb, retcode),
+            "{} not installed. Additional info follows:\n\n{}".format(kb, retcode),
             excinfo.exception.strerror,
         )
 

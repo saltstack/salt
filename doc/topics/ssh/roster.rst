@@ -69,6 +69,7 @@ The information which can be stored in a roster ``target`` is the following:
         set_path:    # Set the path environment variable, to ensure the expected python
                      # binary is in the salt-ssh path, when running the command.
                      # Example: '$PATH:/usr/local/bin/'. Added in 3001 Release.
+        ssh_options: # List of options (as 'option=argument') to pass to ssh.
 
 
 .. _ssh_pre_flight:

@@ -1,4 +1,0 @@
-Changed get_repo in yumpkg.py to use "repo" as first parameter.
-This fixes #57778, a bug were every run of pkgrepo.managed state were
-marked as changed because the get_repo did fail to detect a previously
-applied run.

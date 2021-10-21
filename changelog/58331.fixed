@@ -1,1 +1,0 @@
-Leave boot parameters untouched if boot parameter is set to None in virt.update

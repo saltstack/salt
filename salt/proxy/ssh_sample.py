@@ -1,16 +1,12 @@
-# -*- coding: utf-8 -*-
 """
     This is a simple proxy-minion designed to connect to and communicate with
     a server that exposes functionality via SSH.
     This can be used as an option when the device does not provide
     an api over HTTP and doesn't have the python stack to run a minion.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
-# Import Salt libs
 import salt.utils.json
 from salt.utils.vt import TerminalException
 from salt.utils.vt_helper import SSHConnection
@@ -20,7 +16,6 @@ __proxyenabled__ = ["ssh_sample"]
 
 DETAILS = {}
 
-# Want logging!
 log = logging.getLogger(__file__)
 
 
@@ -89,9 +84,14 @@ def grains_refresh():
 
 
 def fns():
+    """
+    Method called by grains module.
+    """
     return {
-        "details": "This key is here because a function in "
-        "grains/ssh_sample.py called fns() here in the proxymodule."
+        "details": (
+            "This key is here because a function in "
+            "grains/ssh_sample.py called fns() here in the proxymodule."
+        )
     }
 
 
@@ -140,7 +140,8 @@ def package_list():
     List "packages" by executing a command via ssh
     This function is called in response to the salt command
 
-    ..code-block::bash
+    .. code-block:: bash
+
         salt target_minion pkg.list_pkgs
 
     """

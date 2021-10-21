@@ -1,1 +1,0 @@
-Remove include_localhost kwarg for connected_ids method in salt/utils/minions.py

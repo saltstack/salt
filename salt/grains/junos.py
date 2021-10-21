@@ -5,11 +5,10 @@ via salt-proxy-minion. Thus, some grains make sense to get them
 from the minion (PYTHONPATH), but others don't (ip_interfaces)
 """
 
-# Import Python libs
 
 import logging
 
-# Import Salt libs
+import salt.utils.platform
 
 __proxyenabled__ = ["junos"]
 __virtualname__ = "junos"
@@ -27,7 +26,7 @@ def __virtual__():
 
 def _remove_complex_types(dictionary):
     """
-    Linode-python is now returning some complex types that
+    junos-eznc is now returning some complex types that
     are not serializable by msgpack.  Kill those.
     """
     for k, v in dictionary.items():
@@ -40,13 +39,27 @@ def _remove_complex_types(dictionary):
 
 
 def defaults():
-    return {"os": "proxy", "kernel": "unknown", "osrelease": "proxy"}
+    if salt.utils.platform.is_proxy():
+        return {"os": "proxy", "kernel": "unknown", "osrelease": "proxy"}
+    else:
+        return {
+            "os": "junos",
+            "kernel": "junos",
+            "osrelease": "junos FIXME",
+        }
 
 
 def facts(proxy=None):
     if proxy is None or proxy["junos.initialized"]() is False:
         return {}
-    return {"junos_facts": proxy["junos.get_serialized_facts"]()}
+
+    ret_value = proxy["junos.get_serialized_facts"]()
+    if salt.utils.platform.is_proxy():
+        ret = {"junos_facts": ret_value}
+    else:
+        ret = {"junos_facts": ret_value, "osrelease": ret_value["version"]}
+
+    return ret
 
 
 def os_family():

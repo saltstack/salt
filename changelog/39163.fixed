@@ -1,1 +1,0 @@
-Added an bool "strict" argument to sdb.get module to force module to fail if the sdb uri is not correct.

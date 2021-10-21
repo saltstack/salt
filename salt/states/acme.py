@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 ACME / Let's Encrypt certificate management state
 =================================================
 
-.. versionadded: 2016.3
+.. versionadded:: 2016.3
 
 See also the module documentation
 
@@ -25,12 +24,9 @@ See also the module documentation
           - cmd: reload-gitlab
 
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import salt libs
 import salt.utils.dictdiffer
 
 log = logging.getLogger(__name__)
@@ -113,14 +109,14 @@ def cert(
     else:
         ret["result"] = True
         ret["comment"].append(
-            "Certificate {} exists and does not need renewal." "".format(certname)
+            "Certificate {} exists and does not need renewal.".format(certname)
         )
 
     if action:
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"].append(
-                "Certificate {} would have been {}ed." "".format(certname, action)
+                "Certificate {} would have been {}ed.".format(certname, action)
             )
             ret["changes"] = {"old": "current certificate", "new": "new certificate"}
         else:

@@ -3,6 +3,7 @@ The networking module for NI Linux Real-Time distro
 
 """
 
+import configparser
 import logging
 import os
 import re
@@ -11,7 +12,6 @@ import time
 import salt.exceptions
 import salt.utils.files
 import salt.utils.validate.net
-from salt.ext.six.moves import configparser
 
 try:
     import pyconnman
@@ -98,12 +98,14 @@ def _get_technologies():
     tech = ""
     technologies = pyconnman.ConnManager().get_technologies()
     for path, params in technologies:
-        tech += "{}\n\tName = {}\n\tType = {}\n\tPowered = {}\n\tConnected = {}\n".format(
-            path,
-            params["Name"],
-            params["Type"],
-            params["Powered"] == 1,
-            params["Connected"] == 1,
+        tech += (
+            "{}\n\tName = {}\n\tType = {}\n\tPowered = {}\n\tConnected = {}\n".format(
+                path,
+                params["Name"],
+                params["Type"],
+                params["Powered"] == 1,
+                params["Connected"] == 1,
+            )
         )
     return tech
 
@@ -928,19 +930,41 @@ def set_static_all(interface, address, netmask, gateway, nameservers=None):
         else:
             _restart(interface)
         return True
-    if interface in [x.name for x in pyiface.getIfaces()]:
-        return _configure_static_interface(
-            interface,
-            **{
-                "ip": address,
-                "dns": ",".join(nameservers) if nameservers else "''",
-                "netmask": netmask,
-                "gateway": gateway,
-            }
+
+    service = _interface_to_service(interface)
+    if not service:
+        if interface in [x.name for x in pyiface.getIfaces()]:
+            return _configure_static_interface(
+                interface,
+                **{
+                    "ip": address,
+                    "dns": ",".join(nameservers) if nameservers else "",
+                    "netmask": netmask,
+                    "gateway": gateway,
+                }
+            )
+        raise salt.exceptions.CommandExecutionError(
+            "Invalid interface name: {}".format(interface)
         )
-    raise salt.exceptions.CommandExecutionError(
-        "Invalid interface name: {}".format(interface)
-    )
+    service = pyconnman.ConnService(os.path.join(SERVICE_PATH, service))
+    ipv4 = service.get_property("IPv4.Configuration")
+    ipv4["Method"] = dbus.String("manual", variant_level=1)
+    ipv4["Address"] = dbus.String("{}".format(address), variant_level=1)
+    ipv4["Netmask"] = dbus.String("{}".format(netmask), variant_level=1)
+    ipv4["Gateway"] = dbus.String("{}".format(gateway), variant_level=1)
+    try:
+        service.set_property("IPv4.Configuration", ipv4)
+        if nameservers:
+            service.set_property(
+                "Nameservers.Configuration",
+                [dbus.String("{}".format(d)) for d in nameservers],
+            )
+    except Exception as exc:  # pylint: disable=broad-except
+        exc_msg = "Couldn't set manual settings for service: {}\nError: {}\n".format(
+            service, exc
+        )
+        raise salt.exceptions.CommandExecutionError(exc_msg)
+    return True
 
 
 def get_interface(iface):

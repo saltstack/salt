@@ -456,6 +456,8 @@ state could be done the same way as for the Salt minion described :ref:`above
 Is Targeting using Grain Data Secure?
 -------------------------------------
 
+.. include:: _incl/grains_passwords.rst
+
 Because grains can be set by users that have access to the minion configuration
 files on the local system, grains are considered less secure than other
 identifiers in Salt. Use caution when targeting sensitive operations or setting

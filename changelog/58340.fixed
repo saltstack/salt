@@ -1,8 +1,0 @@
-Apparently Apple is using both "10.16" and "11" for versioning Big Sur,
-depending on where you look. The mac_softwareupdate module uses a different
-regex depending on OS version, and the determination was based on the
-osrelease_info grain. This results in a Big Sur machine not using the correct
-regex; osrelease_info[1] is 0 for Big Sur.
-
-This change simply adds an additional clause to the if statement to handle
-osmajorrelease > 10.

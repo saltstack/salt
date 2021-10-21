@@ -23,22 +23,17 @@ Support for Zabbix
 :codeauthor: Jiri Kotlin <jiri.kotlin@ultimum.io>
 """
 
-# Import Python libs
 import logging
 import os
 import socket
+import urllib.error
 
 import salt.utils.data
 import salt.utils.files
 import salt.utils.http
 import salt.utils.json
 from salt.exceptions import SaltException
-
-# pylint: disable=import-error,no-name-in-module,unused-import
-from salt.ext.six.moves.urllib.error import HTTPError, URLError
 from salt.utils.versions import LooseVersion as _LooseVersion
-
-# pylint: enable=import-error,no-name-in-module,unused-import
 
 log = logging.getLogger(__name__)
 
@@ -128,7 +123,7 @@ def _frontend_url():
         try:
             response = salt.utils.http.query(frontend_url)
             error = response["error"]
-        except HTTPError as http_e:
+        except urllib.error.HTTPError as http_e:
             error = str(http_e)
         if error.find("412: Precondition Failed"):
             return frontend_url
@@ -237,7 +232,9 @@ def _login(**kwargs):
                     name = name[len(prefix) :]
                 except IndexError:
                     return
-            val = __salt__["config.option"]("zabbix.{}".format(name), None)
+            val = __salt__["config.get"]("zabbix.{}".format(name), None) or __salt__[
+                "config.get"
+            ]("zabbix:{}".format(name), None)
             if val is not None:
                 connargs[key] = val
 
@@ -374,8 +371,8 @@ def compare_params(defined, existing, return_old_value=False):
     # Comparison of data types
     if not isinstance(defined, type(existing)):
         raise SaltException(
-            "Zabbix object comparison failed (data type mismatch). Expecting {}, got {}. "
-            'Existing value: "{}", defined value: "{}").'.format(
+            "Zabbix object comparison failed (data type mismatch). Expecting {}, got"
+            ' {}. Existing value: "{}", defined value: "{}").'.format(
                 type(existing), type(defined), existing, defined
             )
         )
@@ -432,8 +429,8 @@ def compare_params(defined, existing, return_old_value=False):
 
         except TypeError:
             raise SaltException(
-                "Zabbix object comparison failed (data type mismatch). Expecting {}, got {}. "
-                'Existing value: "{}", defined value: "{}").'.format(
+                "Zabbix object comparison failed (data type mismatch). Expecting {},"
+                ' got {}. Existing value: "{}", defined value: "{}").'.format(
                     type(existing), type(defined), existing, defined
                 )
             )
@@ -460,9 +457,10 @@ def get_object_id_by_params(obj, params=None, **connection_args):
         return str(res[0][ZABBIX_ID_MAPPER[obj]])
     else:
         raise SaltException(
-            "Zabbix API: Object does not exist or bad Zabbix user permissions or other unexpected "
-            "result. Called method {} with params {}. "
-            "Result: {}".format(obj + ".get", params, res)
+            "Zabbix API: Object does not exist or bad Zabbix user permissions or other"
+            " unexpected result. Called method {} with params {}. Result: {}".format(
+                obj + ".get", params, res
+            )
         )
 
 
@@ -479,6 +477,7 @@ def apiinfo_version(**connection_args):
     :return: On success string with Zabbix API version, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.apiinfo_version
@@ -523,6 +522,7 @@ def user_create(alias, passwd, usrgrps, **connection_args):
     :return: On success string with id of the created user.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.user_create james password007 '[7, 12]' firstname='James Bond'
@@ -562,6 +562,7 @@ def user_delete(users, **connection_args):
     :return: On success array with userids of deleted users.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.user_delete 15
@@ -598,6 +599,7 @@ def user_exists(alias, **connection_args):
     :return: True if user exists, else False.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.user_exists james
@@ -631,6 +633,7 @@ def user_get(alias=None, userids=None, **connection_args):
     :return: Array with details of convenient users, False on failure of if no user found.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.user_get james
@@ -644,7 +647,9 @@ def user_get(alias=None, userids=None, **connection_args):
             if not userids and not alias:
                 return {
                     "result": False,
-                    "comment": "Please submit alias or userids parameter to retrieve users.",
+                    "comment": (
+                        "Please submit alias or userids parameter to retrieve users."
+                    ),
                 }
             if alias:
                 params["filter"].setdefault("alias", alias)
@@ -679,6 +684,7 @@ def user_update(userid, **connection_args):
     :return: Id of the updated user on success.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.user_update 16 visible_name='James Brown'
@@ -721,6 +727,7 @@ def user_getmedia(userids=None, **connection_args):
     :return: List of retrieved media, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.user_getmedia
@@ -764,6 +771,7 @@ def user_addmedia(
     :return: IDs of the created media.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.user_addmedia 4 active=0 mediatypeid=1 period='1-7,00:00-24:00' sendto='support2@example.com'
@@ -814,6 +822,7 @@ def user_deletemedia(mediaids, **connection_args):
     :return: IDs of the deleted media, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.user_deletemedia 27
@@ -848,6 +857,7 @@ def user_list(**connection_args):
     :return: Array with user details.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.user_list
@@ -886,6 +896,7 @@ def usergroup_create(name, **connection_args):
     :return:  IDs of the created user groups.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.usergroup_create GroupName
@@ -918,6 +929,7 @@ def usergroup_delete(usergroupids, **connection_args):
     :return: IDs of the deleted user groups.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.usergroup_delete 28
@@ -955,6 +967,7 @@ def usergroup_exists(name=None, node=None, nodeids=None, **connection_args):
     :return: True if at least one user group that matches the given filter criteria exists, else False.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.usergroup_exists Guests
@@ -977,8 +990,10 @@ def usergroup_exists(name=None, node=None, nodeids=None, **connection_args):
                 if not name and not node and not nodeids:
                     return {
                         "result": False,
-                        "comment": "Please submit name, node or nodeids parameter to check if "
-                        "at least one user group exists.",
+                        "comment": (
+                            "Please submit name, node or nodeids parameter to check if "
+                            "at least one user group exists."
+                        ),
                     }
                 if name:
                     params["name"] = name
@@ -1018,6 +1033,7 @@ def usergroup_get(name=None, usrgrpids=None, userids=None, **connection_args):
     :return: Array with convenient user groups details, False if no user group found or on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.usergroup_get Guests
@@ -1071,6 +1087,7 @@ def usergroup_update(usrgrpid, **connection_args):
     :return: IDs of the updated user group, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.usergroup_update 8 name=guestsRenamed
@@ -1103,6 +1120,7 @@ def usergroup_list(**connection_args):
     :return: Array with enabled user groups details, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.usergroup_list
@@ -1195,6 +1213,7 @@ def host_delete(hostids, **connection_args):
     :return: IDs of the deleted hosts.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.host_delete 10106
@@ -1236,6 +1255,7 @@ def host_exists(
     :return: IDs of the deleted hosts, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.host_exists 'Zabbix server'
@@ -1274,9 +1294,11 @@ def host_exists(
                 if not hostid and not host and not name and not node and not nodeids:
                     return {
                         "result": False,
-                        "comment": "Please submit hostid, host, name, node or nodeids parameter to"
-                        "check if at least one host that matches the given filter "
-                        "criteria exists.",
+                        "comment": (
+                            "Please submit hostid, host, name, node or nodeids"
+                            " parameter tocheck if at least one host that matches the"
+                            " given filter criteria exists."
+                        ),
                     }
                 ret = _query(method, params, conn_args["url"], conn_args["auth"])
                 return ret["result"]
@@ -1309,6 +1331,7 @@ def host_get(host=None, name=None, hostids=None, **connection_args):
     :return: Array with convenient hosts details, False if no host found or on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.host_get 'Zabbix server'
@@ -1362,6 +1385,7 @@ def host_update(hostid, **connection_args):
     :return: ID of the updated host.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.host_update 10084 name='Zabbix server2'
@@ -1388,14 +1412,15 @@ def host_inventory_get(hostids, **connection_args):
 
     .. versionadded:: 2019.2.0
 
-    :param hostids: Return only host interfaces used by the given hosts.
+    :param hostids: ID of the host to query
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-    :return: Array with host interfaces details, False if no convenient host interfaces found or on failure.
+    :return: Array with host inventory fields, populated or not, False if host inventory is disabled or on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.host_inventory_get 101054
@@ -1412,7 +1437,7 @@ def host_inventory_get(hostids, **connection_args):
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
             return (
                 ret["result"][0]["inventory"]
-                if len(ret["result"][0]["inventory"]) > 0
+                if ret["result"] and ret["result"][0]["inventory"]
                 else False
             )
         else:
@@ -1438,6 +1463,7 @@ def host_inventory_set(hostid, **connection_args):
     :return: ID of the updated host, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.host_inventory_set 101054 asset_tag=jml3322 type=vm clear_old=True
@@ -1452,8 +1478,10 @@ def host_inventory_set(hostid, **connection_args):
 
             if connection_args.get("clear_old"):
                 clear_old = True
-
             connection_args.pop("clear_old", None)
+
+            inventory_mode = connection_args.pop("inventory_mode", "0")
+
             inventory_params = dict(_params_extend(params, **connection_args))
             for key in inventory_params:
                 params.pop(key, None)
@@ -1466,7 +1494,7 @@ def host_inventory_set(hostid, **connection_args):
                 ret = _query(method, params, conn_args["url"], conn_args["auth"])
 
             # Set inventory mode to manual in order to submit inventory data
-            params["inventory_mode"] = "0"
+            params["inventory_mode"] = inventory_mode
             params["inventory"] = inventory_params
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
             return ret["result"]
@@ -1489,6 +1517,7 @@ def host_list(**connection_args):
     :return: Array with details about hosts, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.host_list
@@ -1529,6 +1558,7 @@ def hostgroup_create(name, **connection_args):
     :return: ID of the created host group.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.hostgroup_create MyNewGroup
@@ -1562,6 +1592,7 @@ def hostgroup_delete(hostgroupids, **connection_args):
     :return: ID of the deleted host groups, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.hostgroup_delete 23
@@ -1602,6 +1633,7 @@ def hostgroup_exists(
     :return: True if at least one host group exists, False if not or on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.hostgroup_exists MyNewGroup
@@ -1636,9 +1668,11 @@ def hostgroup_exists(
                 if not groupid and not name and not node and not nodeids:
                     return {
                         "result": False,
-                        "comment": "Please submit groupid, name, node or nodeids parameter to"
-                        "check if at least one host group that matches the given filter"
-                        " criteria exists.",
+                        "comment": (
+                            "Please submit groupid, name, node or nodeids parameter"
+                            " tocheck if at least one host group that matches the given"
+                            " filter criteria exists."
+                        ),
                     }
                 ret = _query(method, params, conn_args["url"], conn_args["auth"])
                 return ret["result"]
@@ -1673,6 +1707,7 @@ def hostgroup_get(name=None, groupids=None, hostids=None, **connection_args):
     :return: Array with host groups details, False if no convenient host group found or on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.hostgroup_get MyNewGroup
@@ -1722,6 +1757,7 @@ def hostgroup_update(groupid, name=None, **connection_args):
     :return: IDs of updated host groups.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.hostgroup_update 24 name='Renamed Name'
@@ -1756,6 +1792,7 @@ def hostgroup_list(**connection_args):
     :return: Array with details about host groups, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.hostgroup_list
@@ -1800,6 +1837,7 @@ def hostinterface_get(hostids, **connection_args):
     :return: Array with host interfaces details, False if no convenient host interfaces found or on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.hostinterface_get 101054
@@ -1863,6 +1901,7 @@ def hostinterface_create(
     :return: ID of the created host interface, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.hostinterface_create 10105 192.193.194.197
@@ -1908,6 +1947,7 @@ def hostinterface_delete(interfaceids, **connection_args):
     :return: ID of deleted host interfaces, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.hostinterface_delete 50
@@ -1952,6 +1992,7 @@ def hostinterface_update(interfaceid, **connection_args):
     :return: ID of the updated host interface, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.hostinterface_update 6 ip_=0.0.0.2
@@ -2001,6 +2042,7 @@ def usermacro_get(
         Array with usermacro details, False if no usermacro found or on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.usermacro_get macro='{$SNMP_COMMUNITY}'
@@ -2283,6 +2325,7 @@ def mediatype_get(name=None, mediatypeids=None, **connection_args):
         Array with mediatype details, False if no mediatype found or on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.mediatype_get name='Email'
@@ -2380,6 +2423,7 @@ def mediatype_delete(mediatypeids, **connection_args):
     :return: ID of deleted mediatype, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.mediatype_delete 3
@@ -2419,6 +2463,7 @@ def mediatype_update(mediatypeid, name=False, mediatype=False, **connection_args
     :return: IDs of the updated mediatypes, False on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.usergroup_update 8 name="Email update"
@@ -2464,6 +2509,7 @@ def template_get(name=None, host=None, templateids=None, **connection_args):
         Array with convenient template details, False if no template found or on failure.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.template_get name='Template OS Linux'
@@ -2511,6 +2557,7 @@ def run_query(method, params, **connection_args):
         Response from Zabbix API
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' zabbix.run_query proxy.create '{"host": "zabbixproxy.domain.com", "status": "5"}'
@@ -2647,8 +2694,7 @@ def configuration_import(config_file, rules=None, file_format="xml", **connectio
         return {
             "name": config_file,
             "result": True,
-            "message": 'Zabbix API "configuration.import" method '
-            "called successfully.",
+            "message": 'Zabbix API "configuration.import" method called successfully.',
         }
     except SaltException as exc:
         return {"name": config_file, "result": False, "message": str(exc)}

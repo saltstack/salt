@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Network SNMP
 ============
@@ -15,19 +14,13 @@ Dependencies
 
 - :mod:`napalm snmp management module (salt.modules.napalm_snmp) <salt.modules.napalm_snmp>`
 
-.. versionadded: 2016.11.0
+.. versionadded:: 2016.11.0
 """
-
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# import NAPALM utils
 import salt.utils.json
 import salt.utils.napalm
-
-# salt lib
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -100,7 +93,7 @@ def _valid_str(value):
     Valid str?
     """
 
-    return isinstance(value, six.string_types) and len(value) > 0
+    return isinstance(value, str) and len(value) > 0
 
 
 def _community_defaults():
@@ -167,7 +160,7 @@ def _check_config(config):
                 # default mode is read-only
             if _valid_dict(_comm):
                 # list of dicts
-                for _comm_name, _comm_details in six.iteritems(_comm):
+                for _comm_name, _comm_details in _comm.items():
                     if _valid_str(_comm_name):
                         _community_tmp[_comm_name] = _clear_community_details(
                             _comm_details
@@ -175,7 +168,7 @@ def _check_config(config):
     elif _valid_dict(_community):
         # directly as dict of communities
         # recommended way...
-        for _comm_name, _comm_details in six.iteritems(_community):
+        for _comm_name, _comm_details in _community.items():
             if _valid_str(_comm_name):
                 _community_tmp[_comm_name] = _clear_community_details(_comm_details)
     else:

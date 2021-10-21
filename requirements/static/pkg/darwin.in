@@ -1,2 +1,2 @@
 # This file only exists to trigger the right static compiled requirements destination
-# Don't add any requirements here.
+# Don't add any requirements here, add them in requirements/darwin.txt
