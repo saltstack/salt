@@ -666,7 +666,7 @@ example is a state tree of two sls files, one simple and one complicated.
 
         return {
             "set_roles_grains": {
-                "grains.present": [{"name": "roles"}, {"value": list(list_of_roles)},],
+                "grains.present": [{"name": "roles"}, {"value": list(list_of_roles)}],
             },
         }
 
@@ -1274,7 +1274,7 @@ A sample skeleton for the ``README.rst`` file:
     **NOTE**
 
     See the full `Salt Formulas installation and usage instructions
-    <https://docs.saltstack.com/en/latest/topics/development/conventions/formulas.html>`_.
+    <https://docs.saltproject.io/en/latest/topics/development/conventions/formulas.html>`_.
 
     Available states
     ================

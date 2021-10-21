@@ -24,7 +24,7 @@ import logging
 
 import salt.output
 
-# See https://docs.saltstack.com/en/latest/topics/tutorials/http.html
+# See https://docs.saltproject.io/en/latest/topics/tutorials/http.html
 import salt.utils.http
 
 log = logging.getLogger(__name__)
@@ -44,19 +44,15 @@ def __virtual__():
         if not client_id or not client_key or not client_secret:
             return (
                 False,
-                (
-                    "vistara client_id or client_key or client_secret "
-                    "has not been specified in the Salt master config."
-                ),
+                "vistara client_id or client_key or client_secret "
+                "has not been specified in the Salt master config.",
             )
         return True
 
     return (
         False,
-        (
-            "vistara config has not been specificed in the Salt master "
-            "config. See documentation for this runner."
-        ),
+        "vistara config has not been specificed in the Salt master "
+        "config. See documentation for this runner.",
     )
 
 

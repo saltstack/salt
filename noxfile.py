@@ -107,7 +107,7 @@ def _get_session_python_version_info(session):
             session._runner.global_config.install_only = False
             session_py_version = session.run(
                 "python",
-                "-c"
+                "-c",
                 'import sys; sys.stdout.write("{}.{}.{}".format(*sys.version_info))',
                 silent=True,
                 log=False,
@@ -133,7 +133,7 @@ def _get_session_python_site_packages_dir(session):
             session._runner.global_config.install_only = False
             site_packages_dir = session.run(
                 "python",
-                "-c"
+                "-c",
                 "import sys; from distutils.sysconfig import get_python_lib; sys.stdout.write(get_python_lib())",
                 silent=True,
                 log=False,
@@ -206,6 +206,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
+        session.error("Could not find a windows requirements file for {}".format(pydir))
     elif IS_DARWIN:
         if crypto is None:
             _requirements_file = os.path.join(
@@ -227,6 +228,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
+        session.error("Could not find a darwin requirements file for {}".format(pydir))
     elif IS_FREEBSD:
         if crypto is None:
             _requirements_file = os.path.join(
@@ -248,6 +250,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
+        session.error("Could not find a freebsd requirements file for {}".format(pydir))
     else:
         _install_system_packages(session)
         if crypto is None:
@@ -270,9 +273,10 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
+        session.error("Could not find a linux requirements file for {}".format(pydir))
 
 
-def _upgrade_pip_setuptools_and_wheel(session):
+def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
     if SKIP_REQUIREMENTS_INSTALL:
         session.log(
             "Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ"
@@ -285,11 +289,16 @@ def _upgrade_pip_setuptools_and_wheel(session):
         "pip",
         "install",
         "--progress-bar=off",
-        "-U",
-        "pip>=20.2.4,<21.2",
-        "setuptools!=50.*,!=51.*,!=52.*",
-        "wheel",
     ]
+    if upgrade:
+        install_command.append("-U")
+    install_command.extend(
+        [
+            "pip>=20.2.4,<21.2",
+            "setuptools!=50.*,!=51.*,!=52.*",
+            "wheel",
+        ]
+    )
     session.run(*install_command, silent=PIP_INSTALL_SILENT)
     return True
 
@@ -299,6 +308,13 @@ def _install_requirements(
 ):
     if not _upgrade_pip_setuptools_and_wheel(session):
         return
+
+
+def _install_requirements(
+    session, transport, *extra_requirements, requirements_type="ci"
+):
+    if not _upgrade_pip_setuptools_and_wheel(session):
+        return False
 
     # Install requirements
     requirements_file = _get_pip_requirements_file(
@@ -314,8 +330,8 @@ def _install_requirements(
 
     if EXTRA_REQUIREMENTS_INSTALL:
         session.log(
-            "Installing the following extra requirements because the EXTRA_REQUIREMENTS_INSTALL environment variable "
-            "was set: %s",
+            "Installing the following extra requirements because the"
+            " EXTRA_REQUIREMENTS_INSTALL environment variable was set: %s",
             EXTRA_REQUIREMENTS_INSTALL,
         )
         # We pass --constraint in this step because in case any of these extra dependencies has a requirement
@@ -323,6 +339,8 @@ def _install_requirements(
         install_command = ["--progress-bar=off", "--constraint", requirements_file]
         install_command += EXTRA_REQUIREMENTS_INSTALL.split()
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
+    return True
 
 
 def _run_with_coverage(session, *test_cmd, env=None):
@@ -518,26 +536,26 @@ def pytest_parametrized(session, coverage, transport, crypto):
     DO NOT CALL THIS NOX SESSION DIRECTLY
     """
     # Install requirements
-    _install_requirements(session, transport)
+    if _install_requirements(session, transport):
 
-    if crypto:
-        session.run(
-            "pip",
-            "uninstall",
-            "-y",
-            "m2crypto",
-            "pycrypto",
-            "pycryptodome",
-            "pycryptodomex",
-            silent=True,
-        )
-        install_command = [
-            "--progress-bar=off",
-            "--constraint",
-            _get_pip_requirements_file(session, transport, crypto=True),
-        ]
-        install_command.append(crypto)
-        session.install(*install_command, silent=PIP_INSTALL_SILENT)
+        if crypto:
+            session.run(
+                "pip",
+                "uninstall",
+                "-y",
+                "m2crypto",
+                "pycrypto",
+                "pycryptodome",
+                "pycryptodomex",
+                silent=True,
+            )
+            install_command = [
+                "--progress-bar=off",
+                "--constraint",
+                _get_pip_requirements_file(session, transport, crypto=True),
+            ]
+            install_command.append(crypto)
+            session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
         "--rootdir",
@@ -711,11 +729,15 @@ def pytest_cloud(session, coverage):
     """
     pytest cloud tests session
     """
+    pydir = _get_pydir(session)
+    if pydir == "py3.5":
+        session.error(
+            "Due to conflicting and unsupported requirements the cloud tests only run on Py3.6+"
+        )
     # Install requirements
     if _upgrade_pip_setuptools_and_wheel(session):
-        _install_requirements(session, "zeromq")
         requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "cloud.txt"
+            "requirements", "static", "ci", pydir, "cloud.txt"
         )
 
         install_command = ["--progress-bar=off", "-r", requirements_file]
@@ -846,9 +868,10 @@ class Tee:
         return self._first.fileno()
 
 
-def _lint(session, rcfile, flags, paths, tee_output=True):
-    if _upgrade_pip_setuptools_and_wheel(session):
-        _install_requirements(session, "zeromq")
+def _lint(
+    session, rcfile, flags, paths, tee_output=True, upgrade_setuptools_and_pip=True
+):
+    if _upgrade_pip_setuptools_and_wheel(session, upgrade=upgrade_setuptools_and_pip):
         requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "lint.txt"
         )
@@ -922,7 +945,14 @@ def _lint_pre_commit(session, rcfile, flags, paths):
             interpreter=session._runner.func.python,
             reuse_existing=True,
         )
-    _lint(session, rcfile, flags, paths, tee_output=False)
+    _lint(
+        session,
+        rcfile,
+        flags,
+        paths,
+        tee_output=False,
+        upgrade_setuptools_and_pip=False,
+    )
 
 
 @nox.session(python="3")
@@ -1060,11 +1090,13 @@ def invoke(session):
     Run invoke tasks
     """
     if _upgrade_pip_setuptools_and_wheel(session):
+        _install_requirements(session, "zeromq")
         requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "invoke.txt"
         )
         install_command = ["--progress-bar=off", "-r", requirements_file]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
+
     cmd = ["inv"]
     files = []
 

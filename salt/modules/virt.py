@@ -558,7 +558,8 @@ def _get_disks(conn, dom):
                 except libvirt.libvirtError:
                     # The volume won't be found if the pool is not started, just output less infos
                     log.info(
-                        "Couldn't extract all volume informations: pool is likely not running or refreshed"
+                        "Couldn't extract all volume informations: pool is likely not"
+                        " running or refreshed"
                     )
                 return (qemu_target, extra_properties)
 
@@ -1064,19 +1065,23 @@ def _gen_xml(
     if old_port:
         salt.utils.versions.warn_until(
             "Phosphorus",
-            "'telnet_port' parameter has been deprecated, use the 'serials' and 'consoles' parameters instead. "
-            "'telnet_port' parameter has been deprecated, use the 'serials' parameter with a value "
-            "like ``{{{{'type': 'tcp', 'protocol': 'telnet', 'port': {}}}}}`` instead and a similar `consoles` parameter. "
-            "It will be removed in {{version}}.".format(old_port),
+            "'telnet_port' parameter has been deprecated, use the 'serials' and"
+            " 'consoles' parameters instead. 'telnet_port' parameter has been"
+            " deprecated, use the 'serials' parameter with a value like ``{{{{'type':"
+            " 'tcp', 'protocol': 'telnet', 'port': {}}}}}`` instead and a similar"
+            " `consoles` parameter. It will be removed in {{version}}.".format(
+                old_port
+            ),
         )
 
     old_serial_type = kwargs.get("serial_type")
     if old_serial_type:
         salt.utils.versions.warn_until(
             "Phosphorus",
-            "'serial_type' parameter has been deprecated, use the 'serials' parameter with a value "
-            "like ``{{{{'type': '{}', 'protocol':  'telnet' }}}}`` instead and a similar `consoles` parameter. "
-            "It will be removed in {{version}}.".format(old_serial_type),
+            "'serial_type' parameter has been deprecated, use the 'serials' parameter"
+            " with a value like ``{{{{'type': '{}', 'protocol':  'telnet' }}}}``"
+            " instead and a similar `consoles` parameter. It will be removed in"
+            " {{version}}.".format(old_serial_type),
         )
         serial_context = {"type": old_serial_type}
         if serial_context["type"] == "tcp":
@@ -1088,8 +1093,8 @@ def _gen_xml(
         if old_console:
             salt.utils.versions.warn_until(
                 "Phosphorus",
-                "'console' parameter has been deprecated, use the 'serials' and 'consoles' parameters instead. "
-                "It will be removed in {version}.",
+                "'console' parameter has been deprecated, use the 'serials' and"
+                " 'consoles' parameters instead. It will be removed in {version}.",
             )
             if old_console is True:
                 context["consoles"].append(serial_context)
@@ -1433,8 +1438,9 @@ def _zfs_image_create(
 
     if not pool:
         raise CommandExecutionError(
-            "Unable to create new disk {}, please specify"
-            " the disk pool name".format(disk_name)
+            "Unable to create new disk {}, please specify the disk pool name".format(
+                disk_name
+            )
         )
 
     destination_fs = os.path.join(pool, "{}.{}".format(vm_name, disk_name))
@@ -1993,7 +1999,8 @@ def _handle_remote_boot_params(orig_boot):
         return new_boot
     else:
         raise SaltInvocationError(
-            "Invalid boot parameters,It has to follow this combination: [(kernel, initrd) or/and cmdline] or/and [(loader, nvram) or efi]"
+            "Invalid boot parameters,It has to follow this combination: [(kernel,"
+            " initrd) or/and cmdline] or/and [(loader, nvram) or efi]"
         )
 
 
@@ -2441,7 +2448,7 @@ def init(
         NUMA node, number of dies per socket, number of cores per die, and number of threads per core, respectively.
 
     features
-        A dictionary conains a set of cpu features to fine-tune features provided by the selected CPU model. Use cpu
+        A dictionary contains a set of cpu features to fine-tune features provided by the selected CPU model. Use cpu
         feature ``name`` as the key and the ``policy`` as the value. ``policy`` Attribute takes ``force``, ``require``,
         ``optional``, ``disable`` or ``forbid``.
 
@@ -5470,147 +5477,12 @@ def define_vol_xml_path(path, pool=None, **kwargs):
         return False
 
 
-def migrate_non_shared(vm_, target, ssh=False, **kwargs):
-    """
-    Attempt to execute non-shared storage "all" migration
-
-    :param vm_: domain name
-    :param target: target libvirt host name
-    :param ssh: True to connect over ssh
-
-        .. deprecated:: 3002
-
-    :param kwargs:
-        - live:           Use live migration. Default value is True.
-        - persistent:     Leave the domain persistent on destination host.
-                          Default value is True.
-        - undefinesource: Undefine the domain on the source host.
-                          Default value is True.
-        - offline:        If set to True it will migrate the domain definition
-                          without starting the domain on destination and without
-                          stopping it on source host. Default value is False.
-        - max_bandwidth:  The maximum bandwidth (in MiB/s) that will be used.
-        - max_downtime:   Set maximum tolerable downtime for live-migration.
-                          The value represents a number of milliseconds the guest
-                          is allowed to be down at the end of live migration.
-        - parallel_connections: Specify a number of parallel network connections
-                          to be used to send memory pages to the destination host.
-        - compressed:      Activate compression.
-        - comp_methods:    A comma-separated list of compression methods. Supported
-                           methods are "mt" and "xbzrle" and can be  used in any
-                           combination. QEMU defaults to "xbzrle".
-        - comp_mt_level:   Set compression level. Values are in range from 0 to 9,
-                           where 1 is maximum speed and 9 is  maximum compression.
-        - comp_mt_threads: Set number of compress threads on source host.
-        - comp_mt_dthreads: Set number of decompress threads on target host.
-        - comp_xbzrle_cache: Set the size of page cache for xbzrle compression in bytes.
-        - postcopy:        Enable the use of post-copy migration.
-        - postcopy_bandwidth: The maximum bandwidth allowed in post-copy phase. (MiB/s)
-        - username:       Username to connect with target host
-        - password:       Password to connect with target host
-
-        .. versionadded:: 3002
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.migrate_non_shared <vm name> <target hypervisor>
-
-    A tunnel data migration can be performed by setting this in the
-    configuration:
-
-    .. code-block:: yaml
-
-        virt:
-            tunnel: True
-
-    For more details on tunnelled data migrations, report to
-    https://libvirt.org/migration.html#transporttunnel
-    """
-    salt.utils.versions.warn_until(
-        "Silicon",
-        "The 'migrate_non_shared' feature has been deprecated. "
-        "Use 'migrate' with copy_storage='all' instead.",
-    )
-    return migrate(vm_, target, ssh, copy_storage="all", **kwargs)
-
-
-def migrate_non_shared_inc(vm_, target, ssh=False, **kwargs):
-    """
-    Attempt to execute non-shared storage "inc" migration
-
-    :param vm_: domain name
-    :param target: target libvirt host name
-    :param ssh: True to connect over ssh
-
-        .. deprecated:: 3002
-
-    :param kwargs:
-        - live:           Use live migration. Default value is True.
-        - persistent:     Leave the domain persistent on destination host.
-                          Default value is True.
-        - undefinesource: Undefine the domain on the source host.
-                          Default value is True.
-        - offline:        If set to True it will migrate the domain definition
-                          without starting the domain on destination and without
-                          stopping it on source host. Default value is False.
-        - max_bandwidth:  The maximum bandwidth (in MiB/s) that will be used.
-        - max_downtime:   Set maximum tolerable downtime for live-migration.
-                          The value represents a number of milliseconds the guest
-                          is allowed to be down at the end of live migration.
-        - parallel_connections: Specify a number of parallel network connections
-                          to be used to send memory pages to the destination host.
-        - compressed:      Activate compression.
-        - comp_methods:    A comma-separated list of compression methods. Supported
-                           methods are "mt" and "xbzrle" and can be  used in any
-                           combination. QEMU defaults to "xbzrle".
-        - comp_mt_level:   Set compression level. Values are in range from 0 to 9,
-                           where 1 is maximum speed and 9 is  maximum compression.
-        - comp_mt_threads: Set number of compress threads on source host.
-        - comp_mt_dthreads: Set number of decompress threads on target host.
-        - comp_xbzrle_cache: Set the size of page cache for xbzrle compression in bytes.
-        - postcopy:        Enable the use of post-copy migration.
-        - postcopy_bandwidth: The maximum bandwidth allowed in post-copy phase. (MiB/s)
-        - username:       Username to connect with target host
-        - password:       Password to connect with target host
-
-        .. versionadded:: 3002
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.migrate_non_shared_inc <vm name> <target hypervisor>
-
-    A tunnel data migration can be performed by setting this in the
-    configuration:
-
-    .. code-block:: yaml
-
-        virt:
-            tunnel: True
-
-    For more details on tunnelled data migrations, report to
-    https://libvirt.org/migration.html#transporttunnel
-    """
-    salt.utils.versions.warn_until(
-        "Silicon",
-        "The 'migrate_non_shared_inc' feature has been deprecated. "
-        "Use 'migrate' with copy_storage='inc' instead.",
-    )
-    return migrate(vm_, target, ssh, copy_storage="inc", **kwargs)
-
-
-def migrate(vm_, target, ssh=False, **kwargs):
+def migrate(vm_, target, **kwargs):
     """
     Shared storage migration
 
     :param vm_: domain name
     :param target: target libvirt URI or host name
-    :param ssh: True to connect over ssh
-
-       .. deprecated:: 3002
 
     :param kwargs:
         - live:            Use live migration. Default value is True.
@@ -5666,21 +5538,11 @@ def migrate(vm_, target, ssh=False, **kwargs):
     https://libvirt.org/migration.html#transporttunnel
     """
 
-    if ssh:
-        salt.utils.versions.warn_until(
-            "Silicon",
-            "The 'ssh' argument has been deprecated and "
-            "will be removed in a future release. "
-            "Use libvirt URI string 'target' instead.",
-        )
-
     conn = __get_conn()
     dom = _get_domain(conn, vm_)
 
     if not urllib.parse.urlparse(target).scheme:
         proto = "qemu"
-        if ssh:
-            proto += "+ssh"
         dst_uri = "{}://{}/system".format(proto, target)
     else:
         dst_uri = target
@@ -7195,7 +7057,7 @@ def network_define(
 
         .. versionadded:: 3003
 
-    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+    :param addresses: whitespace separated list of addresses of PCI devices that can be used for this network in `hostdev` forward mode.
         (default ``None``)
 
         .. code-block:: yaml
@@ -7474,7 +7336,7 @@ def network_update(
           - forward: passthrough
           - interfaces: "eth10 eth11 eth12"
 
-    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+    :param addresses: whitespace separated list of addresses of PCI devices that can be used for this network in `hostdev` forward mode.
         (default ``None``)
 
         .. code-block:: yaml

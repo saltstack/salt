@@ -28,7 +28,7 @@ log = logging.getLogger(__name__)
 
 class MockState:
     """
-        Mock class
+    Mock class
     """
 
     def __init__(self):
@@ -36,7 +36,7 @@ class MockState:
 
     class State:
         """
-            Mock state class
+        Mock state class
         """
 
         flag = None
@@ -48,7 +48,7 @@ class MockState:
 
         def verify_data(self, data):
             """
-                Mock verify_data method
+            Mock verify_data method
             """
             if self.flag:
                 return True
@@ -58,34 +58,34 @@ class MockState:
         @staticmethod
         def call(data):
             """
-                Mock call method
+            Mock call method
             """
             return list
 
         @staticmethod
         def call_high(data, orchestration_jid=None):
             """
-                Mock call_high method
+            Mock call_high method
             """
             return True
 
         @staticmethod
         def call_template_str(data):
             """
-                Mock call_template_str method
+            Mock call_template_str method
             """
             return True
 
         @staticmethod
         def _mod_init(data):
             """
-                Mock _mod_init method
+            Mock _mod_init method
             """
             return True
 
         def verify_high(self, data):
             """
-                Mock verify_high method
+            Mock verify_high method
             """
             if self.flag:
                 return True
@@ -95,28 +95,28 @@ class MockState:
         @staticmethod
         def compile_high_data(data):
             """
-                Mock compile_high_data
+            Mock compile_high_data
             """
             return [{"__id__": "ABC"}]
 
         @staticmethod
         def call_chunk(data, data1, data2):
             """
-                Mock call_chunk method
+            Mock call_chunk method
             """
             return {"": "ABC"}
 
         @staticmethod
         def call_chunks(data):
             """
-                Mock call_chunks method
+            Mock call_chunks method
             """
             return True
 
         @staticmethod
         def call_listen(data, ret):
             """
-                Mock call_listen method
+            Mock call_listen method
             """
             return True
 
@@ -125,7 +125,7 @@ class MockState:
 
     class HighState:
         """
-            Mock HighState class
+        Mock HighState class
         """
 
         flag = False
@@ -137,7 +137,7 @@ class MockState:
 
         def render_state(self, sls, saltenv, mods, matches, local=False):
             """
-                Mock render_state method
+            Mock render_state method
             """
             if self.flag:
                 return {}, True
@@ -147,13 +147,13 @@ class MockState:
         @staticmethod
         def get_top():
             """
-                Mock get_top method
+            Mock get_top method
             """
             return "_top"
 
         def verify_tops(self, data):
             """
-                Mock verify_tops method
+            Mock verify_tops method
             """
             if self.flag:
                 return ["a", "b"]
@@ -163,48 +163,48 @@ class MockState:
         @staticmethod
         def top_matches(data):
             """
-                Mock top_matches method
+            Mock top_matches method
             """
             return ["a", "b", "c"]
 
         @staticmethod
         def push_active():
             """
-                Mock push_active method
+            Mock push_active method
             """
             return True
 
         @staticmethod
         def compile_highstate():
             """
-                Mock compile_highstate method
+            Mock compile_highstate method
             """
             return "A"
 
         @staticmethod
         def compile_state_usage():
             """
-                Mock compile_state_usage method
+            Mock compile_state_usage method
             """
             return "A"
 
         @staticmethod
         def pop_active():
             """
-                Mock pop_active method
+            Mock pop_active method
             """
             return True
 
         @staticmethod
         def compile_low_chunks():
             """
-                Mock compile_low_chunks method
+            Mock compile_low_chunks method
             """
             return [{"__id__": "ABC", "__sls__": "abc"}]
 
         def render_highstate(self, data):
             """
-                Mock render_highstate method
+            Mock render_highstate method
             """
             if self.flag:
                 return ["a", "b"], True
@@ -221,7 +221,7 @@ class MockState:
             orchestration_jid=None,
         ):
             """
-                Mock call_highstate method
+            Mock call_highstate method
             """
             return True
 
@@ -234,38 +234,27 @@ class MockState:
 
 class MockSerial:
     """
-        Mock Class
+    Mock Class
     """
 
-    def __init__(self):
-        pass
-
-    class Serial:
+    @staticmethod
+    def load(data):
         """
-            Mock Serial class
+        Mock load method
         """
+        return {"A": "B"}
 
-        def __init__(self, data):
-            pass
-
-        @staticmethod
-        def load(data):
-            """
-                Mock load method
-            """
-            return {"A": "B"}
-
-        @staticmethod
-        def dump(data, data1):
-            """
-                Mock dump method
-            """
-            return True
+    @staticmethod
+    def dump(data, data1):
+        """
+        Mock dump method
+        """
+        return True
 
 
 class MockTarFile:
     """
-        Mock tarfile class
+    Mock tarfile class
     """
 
     path = os.sep + "tmp"
@@ -276,28 +265,28 @@ class MockTarFile:
     @staticmethod
     def open(data, data1):
         """
-            Mock open method
+        Mock open method
         """
         return MockTarFile
 
     @staticmethod
     def getmembers():
         """
-            Mock getmembers method
+        Mock getmembers method
         """
         return [MockTarFile]
 
     @staticmethod
     def extractall(data):
         """
-            Mock extractall method
+        Mock extractall method
         """
         return True
 
     @staticmethod
     def close():
         """
-            Mock close method
+        Mock close method
         """
         return True
 
@@ -330,7 +319,7 @@ def configure_loader_modules(salt_minion_factory):
 
 def test_running():
     """
-        Test of checking i fthe state function is already running
+    Test of checking i fthe state function is already running
     """
     assert state.running(True) == []
 
@@ -353,7 +342,7 @@ def test_running():
 
 def test_low():
     """
-        Test of executing a single low data call
+    Test of executing a single low data call
     """
     with patch.object(state, "_check_queue", side_effect=[False, None, None]):
         assert not state.low({"state": "pkg", "fun": "installed", "name": "vi"})
@@ -367,7 +356,7 @@ def test_low():
 
 def test_high():
     """
-        Test for checking the state system
+    Test for checking the state system
     """
     with patch.object(state, "_check_queue", side_effect=[False, None]):
         assert not state.high({"vim": {"pkg": ["installed"]}})
@@ -380,8 +369,8 @@ def test_high():
 
 def test_template():
     """
-        Test of executing the information
-        stored in a template file on the minion
+    Test of executing the information
+    stored in a template file on the minion
     """
     with patch.object(state, "_check_queue", side_effect=[False, None, None]):
         assert not state.template("/home/salt/salt.sls")
@@ -395,8 +384,8 @@ def test_template():
 
 def test_template_str():
     """
-        Test for Executing the information
-        stored in a string from an sls template
+    Test for Executing the information
+    stored in a string from an sls template
     """
     with patch.object(state, "_check_queue", side_effect=[False, None]):
         assert not state.template_str("Template String")
@@ -406,7 +395,7 @@ def test_template_str():
 
 def test_apply_():
     """
-        Test to apply states
+    Test to apply states
     """
     with patch.object(state, "sls", return_value=True):
         assert state.apply_(True)
@@ -417,7 +406,7 @@ def test_apply_():
 
 def test_test():
     """
-        Test to apply states in test mode
+    Test to apply states in test mode
     """
     with patch.dict(state.__opts__, {"test": False}):
         with patch.object(state, "sls", return_value=True) as mock:
@@ -433,7 +422,7 @@ def test_test():
 
 def test_list_disabled():
     """
-        Test to list disabled states
+    Test to list disabled states
     """
     mock = MagicMock(return_value=["A", "B", "C"])
     with patch.dict(state.__salt__, {"grains.get": mock}):
@@ -442,7 +431,7 @@ def test_list_disabled():
 
 def test_enable():
     """
-        Test to Enable state function or sls run
+    Test to Enable state function or sls run
     """
     mock = MagicMock(return_value=["A", "B"])
     with patch.dict(state.__salt__, {"grains.get": mock}):
@@ -463,7 +452,7 @@ def test_enable():
 
 def test_disable():
     """
-        Test to disable state run
+    Test to disable state run
     """
     mock = MagicMock(return_value=["C", "D"])
     with patch.dict(state.__salt__, {"grains.get": mock}):
@@ -484,7 +473,7 @@ def test_disable():
 
 def test_clear_cache():
     """
-        Test to clear out cached state file
+    Test to clear out cached state file
     """
     mock = MagicMock(return_value=["A.cache.p", "B.cache.p", "C"])
     with patch.object(os, "listdir", mock):
@@ -497,7 +486,7 @@ def test_clear_cache():
 
 def test_single():
     """
-        Test to execute single state function
+    Test to execute single state function
     """
     ret = {"pkg_|-name=vim_|-name=vim_|-installed": list}
     mock = MagicMock(side_effect=["A", None, None, None, None])
@@ -528,7 +517,7 @@ def test_single():
 
 def test_show_top():
     """
-        Test to return the top data that the minion will use for a highstate
+    Test to return the top data that the minion will use for a highstate
     """
     mock = MagicMock(side_effect=["A", None, None])
     with patch.object(state, "_check_queue", mock):
@@ -543,7 +532,7 @@ def test_show_top():
 
 def test_run_request():
     """
-        Test to Execute the pending state request
+    Test to Execute the pending state request
     """
     mock = MagicMock(
         side_effect=[{}, {"name": "A"}, {"name": {"mods": "A", "kwargs": {}}}]
@@ -562,7 +551,7 @@ def test_run_request():
 
 def test_show_highstate():
     """
-        Test to retrieve the highstate data from the salt master
+    Test to retrieve the highstate data from the salt master
     """
     mock = MagicMock(side_effect=["A", None, None])
     with patch.object(state, "_check_queue", mock):
@@ -575,7 +564,7 @@ def test_show_highstate():
 
 def test_show_lowstate():
     """
-        Test to list out the low data that will be applied to this minion
+    Test to list out the low data that will be applied to this minion
     """
     mock = MagicMock(side_effect=["A", None])
     with patch.object(state, "_check_queue", mock):
@@ -586,7 +575,7 @@ def test_show_lowstate():
 
 def test_show_state_usage():
     """
-        Test to list out the state usage that will be applied to this minion
+    Test to list out the state usage that will be applied to this minion
     """
 
     mock = MagicMock(side_effect=["A", None, None])
@@ -600,7 +589,7 @@ def test_show_state_usage():
 
 def test_show_states():
     """
-        Test to display the low data from a specific sls
+    Test to display the low data from a specific sls
     """
     mock = MagicMock(side_effect=["A", None])
     with patch.object(state, "_check_queue", mock):
@@ -626,8 +615,8 @@ def test_show_states_missing_sls():
 
 def test_sls_id():
     """
-        Test to call a single ID from the
-        named module(s) and handle all requisites
+    Test to call a single ID from the
+    named module(s) and handle all requisites
     """
     mock = MagicMock(side_effect=["A", None, None, None])
     with patch.object(state, "_check_queue", mock):
@@ -649,7 +638,7 @@ def test_sls_id():
 
 def test_show_low_sls():
     """
-        Test to display the low data from a specific sls
+    Test to display the low data from a specific sls
     """
     mock = MagicMock(side_effect=["A", None, None])
     with patch.object(state, "_check_queue", mock):
@@ -668,7 +657,7 @@ def test_show_low_sls():
 
 def test_show_sls():
     """
-        Test to display the state data from a specific sls
+    Test to display the state data from a specific sls
     """
     mock = MagicMock(side_effect=["A", None, None, None])
     with patch.object(state, "_check_queue", mock):
@@ -692,7 +681,7 @@ def test_show_sls():
 
 def test_sls_exists():
     """
-        Test of sls_exists
+    Test of sls_exists
     """
     test_state = {}
     test_missing_state = []
@@ -707,7 +696,7 @@ def test_sls_exists():
 
 def test_id_exists():
     """
-        Test of id_exists
+    Test of id_exists
     """
     test_state = [
         {
@@ -739,7 +728,7 @@ def test_id_exists():
 
 def test_top():
     """
-        Test to execute a specific top file
+    Test to execute a specific top file
     """
     ret = ["Pillar failed to render with the following messages:", "E"]
     mock = MagicMock(side_effect=["A", None, None, None])
@@ -774,8 +763,8 @@ def test_top():
 
 def test_highstate():
     """
-        Test to retrieve the state data from the
-        salt master for the minion and execute it
+    Test to retrieve the state data from the
+    salt master for the minion and execute it
     """
     arg = "whitelist=sls1.sls"
     mock = MagicMock(side_effect=[True, False, False, False])
@@ -814,7 +803,7 @@ def test_highstate():
 
 def test_clear_request():
     """
-        Test to clear out the state execution request without executing it
+    Test to clear out the state execution request without executing it
     """
     mock = MagicMock(return_value=True)
     with patch.object(salt.payload, "Serial", mock):
@@ -833,15 +822,15 @@ def test_clear_request():
 
 def test_check_request():
     """
-        Test to return the state request information
+    Test to return the state request information
     """
     with patch("salt.modules.state.salt.payload", MockSerial):
         mock = MagicMock(side_effect=[True, True, False])
         with patch.object(os.path, "isfile", mock):
-            with patch("salt.utils.files.fopen", mock_open()):
+            with patch("salt.utils.files.fopen", mock_open(b"")):
                 assert state.check_request() == {"A": "B"}
 
-            with patch("salt.utils.files.fopen", mock_open()):
+            with patch("salt.utils.files.fopen", mock_open("")):
                 assert state.check_request("A") == "B"
 
             assert state.check_request() == {}
@@ -849,7 +838,7 @@ def test_check_request():
 
 def test_request():
     """
-        Test to request the local admin execute a state run
+    Test to request the local admin execute a state run
     """
     mock = MagicMock(return_value=True)
     with patch.object(state, "apply_", mock):
@@ -1090,7 +1079,7 @@ def test_sls_sync(subtests):
 
 def test_pkg():
     """
-        Test to execute a packaged state run
+    Test to execute a packaged state run
     """
     tar_file = os.sep + os.path.join("tmp", "state_pkg.tgz")
     mock = MagicMock(

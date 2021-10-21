@@ -63,7 +63,9 @@ class GitTestCase(TestCase, LoaderModuleMockMixin):
             git_state.__salt__, dunder_salt
         ):
             result = git_state.latest(
-                name=name, target=target, mirror=True,  # mirror=True implies bare=True
+                name=name,
+                target=target,
+                mirror=True,  # mirror=True implies bare=True
             )
             assert result["result"] is True, result
             git_diff.assert_not_called()

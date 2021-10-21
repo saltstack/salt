@@ -20,9 +20,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        (
-            "Cannot load the {} state module: "
-            "keystore execution module not found".format(__virtualname__)
+        "Cannot load the {} state module: keystore execution module not found".format(
+            __virtualname__
         ),
     )
 

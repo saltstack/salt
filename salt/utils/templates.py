@@ -427,14 +427,16 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     if opts.get("jinja_trim_blocks", False):
         log.debug("Jinja2 trim_blocks is enabled")
         log.warning(
-            "jinja_trim_blocks is deprecated and will be removed in a future release, please use jinja_env and/or jinja_sls_env instead"
+            "jinja_trim_blocks is deprecated and will be removed in a future release,"
+            " please use jinja_env and/or jinja_sls_env instead"
         )
         opt_jinja_env["trim_blocks"] = True
         opt_jinja_sls_env["trim_blocks"] = True
     if opts.get("jinja_lstrip_blocks", False):
         log.debug("Jinja2 lstrip_blocks is enabled")
         log.warning(
-            "jinja_lstrip_blocks is deprecated and will be removed in a future release, please use jinja_env and/or jinja_sls_env instead"
+            "jinja_lstrip_blocks is deprecated and will be removed in a future release,"
+            " please use jinja_env and/or jinja_sls_env instead"
         )
         opt_jinja_env["lstrip_blocks"] = True
         opt_jinja_sls_env["lstrip_blocks"] = True
@@ -493,9 +495,10 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 SLS_ENCODING,
             )
             decoded_context[key] = salt.utils.data.decode(value)
+
+    jinja_env.globals.update(decoded_context)
     try:
         template = jinja_env.from_string(tmplstr)
-        template.globals.update(decoded_context)
         output = template.render(**decoded_context)
     except jinja2.exceptions.UndefinedError as exc:
         trace = traceback.extract_tb(sys.exc_info()[2])

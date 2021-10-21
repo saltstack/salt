@@ -38,11 +38,7 @@ def _makepass(password, hasher="sha256"):
     else:
         return NotImplemented
 
-    c = (
-        "abcdefghijklmnopqrstuvwxyz"
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "0123456789!?.,:;/*-+_()"
-    )
+    c = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?.,:;/*-+_()"
     r = {
         "Method": h.name,
         "Salt": "".join(random.SystemRandom().choice(c) for x in range(20)),

@@ -148,7 +148,7 @@ class SaltCacheLoader(BaseLoader):
                     'Relative path "%s" cannot be resolved without an environment',
                     template,
                 )
-                raise TemplateNotFound
+                raise TemplateNotFound(template)
             base_path = environment.globals["tpldir"]
             _template = os.path.normpath("/".join((base_path, _template)))
             if _template.split("/", 1)[0] == "..":

@@ -35,11 +35,10 @@ def mk_token(opts, tdata):
         tok = str(hash_type(os.urandom(512)).hexdigest())
         t_path = os.path.join(opts["token_dir"], tok)
     tdata["token"] = tok
-    serial = salt.payload.Serial(opts)
     try:
         with salt.utils.files.set_umask(0o177):
             with salt.utils.files.fopen(temp_t_path, "w+b") as fp_:
-                fp_.write(serial.dumps(tdata))
+                fp_.write(salt.payload.dumps(tdata))
         os.rename(temp_t_path, t_path)
     except OSError:
         log.warning('Authentication failure: can not write token file "%s".', t_path)
@@ -60,10 +59,9 @@ def get_token(opts, tok):
         return {}
     if not os.path.isfile(t_path):
         return {}
-    serial = salt.payload.Serial(opts)
     try:
         with salt.utils.files.fopen(t_path, "rb") as fp_:
-            tdata = serial.loads(fp_.read())
+            tdata = salt.payload.loads(fp_.read())
             return tdata
     except OSError:
         log.warning('Authentication failure: can not read token file "%s".', t_path)

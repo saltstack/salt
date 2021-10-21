@@ -379,13 +379,13 @@ def running(concurrent=False):
     active = __salt__["saltutil.is_running"]("state.*")
     for data in active:
         err = (
-            'The function "{}" is running as PID {} and was started at '
-            "{} with jid {}"
-        ).format(
-            data["fun"],
-            data["pid"],
-            salt.utils.jid.jid_to_time(data["jid"]),
-            data["jid"],
+            'The function "{}" is running as PID {} and was started at {} '
+            "with jid {}".format(
+                data["fun"],
+                data["pid"],
+                salt.utils.jid.jid_to_time(data["jid"]),
+                data["jid"],
+            )
         )
         ret.append(err)
     return ret
@@ -828,7 +828,6 @@ def request(mods=None, **kwargs):
     kwargs["test"] = True
     ret = apply_(mods, **kwargs)
     notify_path = os.path.join(__opts__["cachedir"], "req_state.p")
-    serial = salt.payload.Serial(__opts__)
     req = check_request()
     req.update(
         {
@@ -845,7 +844,7 @@ def request(mods=None, **kwargs):
                 # Make sure cache file isn't read-only
                 __salt__["cmd.run"]('attrib -R "{}"'.format(notify_path))
             with salt.utils.files.fopen(notify_path, "w+b") as fp_:
-                serial.dump(req, fp_)
+                salt.payload.dump(req, fp_)
         except OSError:
             log.error(
                 "Unable to write state request file %s. Check permission.", notify_path
@@ -866,10 +865,9 @@ def check_request(name=None):
         salt '*' state.check_request
     """
     notify_path = os.path.join(__opts__["cachedir"], "req_state.p")
-    serial = salt.payload.Serial(__opts__)
     if os.path.isfile(notify_path):
         with salt.utils.files.fopen(notify_path, "rb") as fp_:
-            req = serial.load(fp_)
+            req = salt.payload.load(fp_)
         if name:
             return req[name]
         return req
@@ -889,7 +887,6 @@ def clear_request(name=None):
         salt '*' state.clear_request
     """
     notify_path = os.path.join(__opts__["cachedir"], "req_state.p")
-    serial = salt.payload.Serial(__opts__)
     if not os.path.isfile(notify_path):
         return True
     if not name:
@@ -909,7 +906,7 @@ def clear_request(name=None):
                     # Make sure cache file isn't read-only
                     __salt__["cmd.run"]('attrib -R "{}"'.format(notify_path))
                 with salt.utils.files.fopen(notify_path, "w+b") as fp_:
-                    serial.dump(req, fp_)
+                    salt.payload.dump(req, fp_)
             except OSError:
                 log.error(
                     "Unable to write state request file %s. Check permission.",
@@ -1047,7 +1044,10 @@ def highstate(test=None, queue=False, **kwargs):
             "Salt highstate run is disabled. To re-enable, run state.enable highstate"
         )
         ret = {
-            "name": "Salt highstate run is disabled. To re-enable, run state.enable highstate",
+            "name": (
+                "Salt highstate run is disabled. To re-enable, run state.enable"
+                " highstate"
+            ),
             "result": "False",
             "comment": "Disabled",
         }
@@ -1282,7 +1282,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
     if disabled:
         for state in disabled:
             log.debug(
-                "Salt state %s is disabled. To re-enable, run " "state.enable %s",
+                "Salt state %s is disabled. To re-enable, run state.enable %s",
                 state,
                 state,
             )
@@ -1311,7 +1311,6 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
             "is specified."
         )
 
-    serial = salt.payload.Serial(__opts__)
     cfn = os.path.join(
         __opts__["cachedir"],
         "{}.cache.p".format(kwargs.get("cache_name", "highstate")),
@@ -1366,7 +1365,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
             if kwargs.get("cache"):
                 if os.path.isfile(cfn):
                     with salt.utils.files.fopen(cfn, "rb") as fp_:
-                        high_ = serial.load(fp_)
+                        high_ = salt.payload.load(fp_)
                         return st_.state.call_high(high_, orchestration_jid)
 
         # If the state file is an integer, convert to a string then to unicode
@@ -1402,7 +1401,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
                 # Make sure cache file isn't read-only
                 __salt__["cmd.run"](["attrib", "-R", cache_file], python_shell=False)
             with salt.utils.files.fopen(cache_file, "w+b") as fp_:
-                serial.dump(ret, fp_)
+                salt.payload.dump(ret, fp_)
         except OSError:
             log.error(
                 "Unable to write to SLS cache file %s. Check permission.", cache_file
@@ -1415,7 +1414,7 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
         try:
             with salt.utils.files.fopen(cfn, "w+b") as fp_:
                 try:
-                    serial.dump(high_, fp_)
+                    salt.payload.dump(high_, fp_)
                 except TypeError:
                     # Can't serialize pydsl
                     pass
@@ -1830,8 +1829,9 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         __opts__["test"] = orig_test
         if not ret:
             raise SaltInvocationError(
-                "No matches for ID '{}' found in SLS '{}' within saltenv "
-                "'{}'".format(id_, mods, opts["saltenv"])
+                "No matches for ID '{}' found in SLS '{}' within saltenv '{}'".format(
+                    id_, mods, opts["saltenv"]
+                )
             )
         return ret
 
@@ -2424,16 +2424,21 @@ def _disabled(funs):
                 if state.startswith(target_state):
                     err = (
                         'The state file "{0}" is currently disabled by "{1}", '
-                        "to re-enable, run state.enable {1}."
-                    ).format(state, _state,)
+                        "to re-enable, run state.enable {1}.".format(
+                            state,
+                            _state,
+                        )
+                    )
                     ret.append(err)
                     continue
             else:
                 if _state == state:
                     err = (
                         'The state file "{0}" is currently disabled, '
-                        "to re-enable, run state.enable {0}."
-                    ).format(_state,)
+                        "to re-enable, run state.enable {0}.".format(
+                            _state,
+                        )
+                    )
                     ret.append(err)
                     continue
     return ret
