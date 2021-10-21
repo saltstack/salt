@@ -24,6 +24,7 @@ private key file:
 
 import logging
 import re
+from pprint import pprint # debug
 
 from salt.exceptions import CommandExecutionError
 
@@ -1540,7 +1541,6 @@ def check_virtual_machine(name, cluster, **kwargs):
     for k, v in kwargs.items():
         if v == None:
             # state module sets al available options default to None
-            print(">>> skip: k:{} v:{}".format(k,v))
             continue
        
         # Resolve kwargs to their ID if needed.
@@ -1633,7 +1633,6 @@ def check_vminterface(name, virtual_machine, cluster, **kwargs):
     for k, v in kwargs.items():
         if v == None:
             # state module sets al available options default to None
-            print(">>> skip: k:{} v:{}".format(k,v))
             continue
        
         # Resolve kwargs to their ID if needed.
@@ -2004,9 +2003,6 @@ def check_ipaddress(address, **kwargs):
     """
     kwargs = __utils__["args.clean_kwargs"](**kwargs)
 
-    print(">>>type kwargs: {}".format(type(kwargs)))
-    print(kwargs)
-
     # Check if address is Sane
     try:
         nb_ipaddress = _get(
@@ -2136,7 +2132,6 @@ def check_ipaddress(address, **kwargs):
     for k, v in kwargs.items():
         if v == None:
             # state module sets al available options default to None
-            print(">>> skip: k:{} v:{}".format(k,v))
             continue
        
         # Resolve kwargs to their ID if needed.
@@ -2204,7 +2199,146 @@ def check_ipaddress(address, **kwargs):
             changes[k]=v
     return changes
 
-def check_manufacturer(name, **kwargs):
-    # justin we waren hier
-    # we moeten voor alles check implementeren voor state modules.
-    return False
+def update_ipaddress(address, **kwargs):
+    """
+    .. versionadded:: TBD
+
+    """
+
+    nb_cluster = None
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+
+    nb_ipaddress = _get("ipam", "ip_addresses", auth_required=True, address=address)
+    for k, v in kwargs.items():
+        setattr(nb_ipaddress, k, v)
+    try:
+        nb_ipaddress.save()
+        x = get_(
+            'ipam',
+            'ip_addresses',
+            address=address
+        )
+        return x
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        return False
+
+def get_cluster_type(name):
+    nb_cluster_type = get_(
+        "virtualization",
+        "cluster_types",
+        name=name
+    )
+    return nb_cluster_type
+
+def create_cluster_type(name, description=None):
+    """
+    salt-call netbox.create_cluster_type oVirt description="A oVirt virtualization cluster"
+    """
+    nb_cluster_type = get_("virtualization", "cluster_types", name=name)
+    if nb_cluster_type:
+        log.error("A cluster type with name {} already exists within Netbox.".format(name))
+        return False
+    else:
+        payload = {"name": name, "slug": slugify(name)}
+        if description:
+            payload['description'] = description
+        cluster_type = _add("virtualization", "cluster_types", payload)
+        if cluster_type:
+            return {"virtualization": {"cluster_types": payload}}
+        else:
+            log.error("Failed to create cluster type with name {}".format(name))
+            return False
+
+def update_cluster_type(name, **kwargs):
+    nb_cluster_type = _get("virtualization", "cluster_types", name=name)
+    if not nb_cluster_type:
+        log.error("No such cluster type with name {}.".format(name))
+        return False
+
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+
+    for k, v in kwargs.items():
+        setattr(nb_cluster_type, k, v)
+
+    try:
+        nb_cluster_type.save()
+        ret = get_cluster_type(name)
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        return False
+
+    return ret
+
+def delete_cluster_type(name):
+    """
+    .. versionadded:: TBD
+
+    name
+        name of the cluster_type to delete
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion netbox.cluster_type oVirt
+    """
+    nb_cluster_type = _get("virtualization", "cluster_types", auth_required=True, name=name)
+    if not nb_cluster_type:
+        log.error("No such cluster_type {}".format(name))
+        return None
+    nb_cluster_type.delete()
+    return {"DELETE": {"virtualization": {"cluster_types": name}}}
+
+def check_cluster_type(name, **kwargs):
+    """
+    returns: 
+        - False if error
+        - None if vminterface does not exist
+        - {} if there are no changes
+        - {'with': 'changes'} for changes
+
+    ip addresses are a bit strange, they can be assigned to 
+    device records as well a virtual machine objects....
+
+    """
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+
+    # Check if address is Sane
+    try:
+        nb_cluster_type = _get(
+            "virtualization",
+            "cluster_types",
+            name=name
+        )
+        if not nb_cluster_type:
+            log.error('No such cluster_type: {}'.format(name))
+            return None
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        return False
+
+    required_changes={}
+    for k, v in kwargs.items():
+        if v == None:
+            # state module sets al available options default to None
+            continue
+       
+        # Resolve kwargs to their ID if needed.
+        # <not needed>
+
+        # Check if the attribute has an ID attribute.
+        # If so, use it.
+        value_from_netbox = ""
+        nb_attribute = getattr(nb_cluster_type, k)
+        if hasattr(nb_attribute, "id"):
+            value_from_netbox = nb_attribute.id
+        else:
+            value_from_netbox = nb_attribute
+
+        if v == value_from_netbox:
+            print("Gelijk: {}".format(v))
+        else:
+            print("BOOM: {} != {}".format(v, getattr(nb_cluster_type, k)))
+            required_changes[k]=v
+    return required_changes
