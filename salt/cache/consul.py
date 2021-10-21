@@ -3,6 +3,10 @@ Minion data cache plugin for Consul key/value data store.
 
 .. versionadded:: 2016.11.2
 
+.. versionchanged:: 3005.0
+
+    Timestamp/cache updated support added.
+
 :depends: python-consul >= 0.2.0
 
 It is up to the system administrator to set up and configure the Consul
@@ -30,6 +34,12 @@ could be set in the master config. These are the defaults:
     consul.consistency: default
     consul.dc: dc1
     consul.verify: True
+    consul.timestamp_suffix: .tstamp  # Added in 3005.0
+
+In order to bring the cache APIs into conformity, in 3005.0 timestamp
+information gets stored as a separate ``{key}.tstamp`` key/value. If your
+existing functionality depends on being able to store normal keys with the
+``.tstamp`` suffix, override the ``consul.timestamp_suffix`` default config.
 
 Related docs could be found in the `python-consul documentation`_.
 
@@ -62,6 +72,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 api = None
+_tstamp_suffix = ".tstamp"
 
 
 # Define the module's virtual name
@@ -91,7 +102,8 @@ def __virtual__():
     }
 
     try:
-        global api
+        global api, _tstamp_suffix
+        _tstamp_suffix = __opts__.get("consul.timestamp_suffix", _tstamp_suffix)
         api = consul.Consul(**consul_kwargs)
     except AttributeError:
         return (
@@ -108,7 +120,7 @@ def store(bank, key, data):
     Store a key value.
     """
     c_key = "{}/{}".format(bank, key)
-    tstamp_key = "{}.tstamp/{}".format(bank, key)
+    tstamp_key = "{}/{}{}".format(bank, key, _tstamp_suffix)
 
     try:
         c_data = salt.payload.dumps(data)
@@ -144,6 +156,8 @@ def flush(bank, key=None):
         c_key = bank
     else:
         c_key = "{}/{}".format(bank, key)
+        tstamp_key = "{}/{}{}".format(bank, key, _tstamp_suffix)
+        api.kv.delete(tstamp_key)
     try:
         return api.kv.delete(c_key, recurse=key is None)
     except Exception as exc:  # pylint: disable=broad-except
@@ -170,7 +184,7 @@ def list_(bank):
         out = set()
         for key in keys:
             out.add(key[len(bank) + 1 :].rstrip("/"))
-        keys = list(out)
+        keys = [o for o in out if not o.endswith(_tstamp_suffix)]
     return keys
 
 
@@ -190,7 +204,7 @@ def contains(bank, key):
 
 
 def updated(bank, key):
-    c_key = "{}.tstamp/{}".format(bank, key)
+    c_key = "{}/{}{}".format(bank, key, _tstamp_suffix)
     try:
         _, value = api.kv.get(c_key)
         if value is None:

@@ -56,6 +56,16 @@ pytestmark = [
 # TODO
 # - [✓] - mysql, check to see if the timestamp exists on the table, if not, alter table, otherwise create
 # - [✓] - as much as possible fix sql injection potential
+# - [ ] - consul - check that we're purging the timetstamps when keys/banks are flushed
+# - [ ] - etcd - check that we're purging timestamps when keys/banks are flushed
+# - [ ] - redis - re-unify things to use original approach + ensure timestamps are flushed
+# - [ ] - redis - add legacy/modern feature flag and add deprecation warnings and guide
+# - [ ] - MemCache - add some tests for MemCache
+
+# TODO: in PR request opinion: is it better to double serialize the data, e.g.
+# store -> __context__['serial'].dumps({"timestamp": tstamp, "value": __context__['serial'].dumps(value)})
+# or is the existing approach of storing timestamp as a secondary key a good one???
+# ??? Is one slower than the other?
 
 
 @pytest.fixture(scope="module")
@@ -147,6 +157,7 @@ def consul_container(salt_factories, docker_client, consul_port):
         container_run_kwargs={"ports": {"8500/tcp": consul_port}},
     )
     with container.started() as factory:
+        # TODO: May want to do the same thing for redis to ensure that service is up & running
         # TODO: THIS IS HORRIBLE. THERE ARE BETTER WAYS TO DETECT SERVICE IS UP -W. Werner, 2021-10-12
         import socket, time  # pylint: disable=multiple-imports,multiple-imports-on-one-line
 
@@ -208,6 +219,9 @@ def consul_cache(minion_opts, consul_port, consul_container):
     opts["cache"] = "consul"
     opts["consul.host"] = "127.0.0.1"
     opts["consul.port"] = consul_port
+    # NOTE: If you would like to ensure that alternate suffixes are properly
+    # tested, simply change this value and re-run the tests.
+    opts["consul.timestamp_suffix"] = ".frobnosticate"
     cache = salt.cache.factory(opts)
     yield cache
 
@@ -359,6 +373,22 @@ def test_caching(subtests, cache):
         cache.flush(bank=bank, key=good_key)
         assert cache.contains(bank=bank)
         assert cache.list(bank=bank) == []
+
+    with subtests.test(
+        "after existing key is flushed updated should not return a timestamp for that key"
+    ):
+        cache.store(bank=bank, key=good_key, data="fnord")
+        cache.flush(bank=bank, key=good_key)
+        timestamp = cache.updated(bank=bank, key=good_key)
+        assert timestamp is None
+
+    with subtests.test(
+        "after flushing bank containing a good key, updated should not return a timestamp for that key"
+    ):
+        cache.store(bank=bank, key=good_key, data="fnord")
+        cache.flush(bank=bank, key=None)
+        timestamp = cache.updated(bank=bank, key=good_key)
+        assert timestamp is None
 
     with subtests.test("flushing bank with None as key should remove bank"):
         cache.flush(bank=bank, key=None)
