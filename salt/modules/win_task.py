@@ -1842,7 +1842,7 @@ def add_trigger(
         formats (``%H:%M:%S`` and ``%H:%M``) should to be quoted.
         See `YAML IDIOSYNCRASIES`_ for more details.
 
-    .. _`YAML IDIOSYNCRASIES`: https://docs.saltstack.com/en/latest/topics/troubleshooting/yaml_idiosyncrasies.html#time-expressions
+    .. _`YAML IDIOSYNCRASIES`: https://docs.saltproject.io/en/latest/topics/troubleshooting/yaml_idiosyncrasies.html#time-expressions
 
     Args:
 

@@ -22,7 +22,7 @@ Function Get-Settings {
         # Location where the files are kept
         $Settings = @{
             "SrcDir"       = "$env:SrcDir"
-            "SaltRepo"     = "https://repo.saltstack.com/windows/dependencies"
+            "SaltRepo"     = "https://repo.saltproject.io/windows/dependencies"
             "SaltDir"      = "C:\salt"
             "PyVerMajor"   = "$env:PyVerMajor"
             "PyVerMinor"   = "$env:PyVerMinor"
@@ -37,11 +37,13 @@ Function Get-Settings {
 
         # Prerequisite software
         $Prerequisites = @{
-            "NSIS"             = "nsis-3.03-setup.exe"
-            "NSISPluginEnVar"  = "nsis-plugin-envar.zip"
-            "NSISPluginUnzipA" = "nsis-plugin-nsisunz.zip"
-            "NSISPluginUnzipU" = "nsis-plugin-nsisunzu.zip"
-            "VS2015BuildTools" = "vcppbuildtools_full.zip"
+            "NSIS"                    = "nsis-3.03-setup.exe"
+            "NSISLibMoveFileFolder"   = "nsis-MoveFileFolder.nsh"
+            "NSISPluginAccessControl" = "nsis-plugin-accesscontrol.zip"
+            "NSISPluginEnVar"         = "nsis-plugin-envar.zip"
+            "NSISPluginUnzipA"        = "nsis-plugin-nsisunz.zip"
+            "NSISPluginUnzipU"        = "nsis-plugin-nsisunzu.zip"
+            "VS2015BuildTools"        = "vcppbuildtools_full.zip"
         }
         $ini.Add("Prerequisites", $Prerequisites)
 

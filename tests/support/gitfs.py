@@ -67,12 +67,15 @@ _OPTS = freeze(
 )
 
 
+@attr.s
 class Sshd(_Sshd):
     def apply_pre_start_states(self, salt_call_cli, testclass, username):
+        # pylint: disable=access-member-before-definition
         if self.listen_port in self.check_ports:
             self.check_ports.remove(self.listen_port)
         if self.listen_port in self.listen_ports:
             self.listen_ports.remove(self.listen_port)
+        # pylint: enable=access-member-before-definition
         self.listen_port = get_unused_localhost_port()
         self.check_ports.append(self.listen_port)
         self.listen_ports.append(self.listen_port)
@@ -138,8 +141,10 @@ class UwsgiDaemon(Daemon):
     listen_port = attr.ib(default=attr.Factory(get_unused_localhost_port))
 
     def __attrs_post_init__(self):
+        # pylint: disable=access-member-before-definition
         if self.check_ports is None:
             self.check_ports = []
+        # pylint: enable=access-member-before-definition
         self.check_ports.append(self.listen_port)
         super().__attrs_post_init__()
 
@@ -209,8 +214,10 @@ class NginxDaemon(Daemon):
     listen_port = attr.ib(default=attr.Factory(get_unused_localhost_port))
 
     def __attrs_post_init__(self):
+        # pylint: disable=access-member-before-definition
         if self.check_ports is None:
             self.check_ports = []
+        # pylint: enable=access-member-before-definition
         self.check_ports.append(self.listen_port)
         super().__attrs_post_init__()
 

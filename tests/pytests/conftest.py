@@ -324,6 +324,38 @@ def salt_proxy_factory(salt_master_factory):
     return factory
 
 
+@pytest.fixture(scope="session")
+def salt_delta_proxy_factory(salt_factories, salt_master_factory):
+    proxy_minion_id = random_string("proxytest-")
+    root_dir = salt_factories.get_root_dir_for_daemon(proxy_minion_id)
+    conf_dir = root_dir / "conf"
+    conf_dir.mkdir(parents=True, exist_ok=True)
+
+    config_defaults = {
+        "root_dir": str(root_dir),
+        "hosts.file": os.path.join(
+            RUNTIME_VARS.TMP, "hosts"
+        ),  # Do we really need this for these tests?
+        "aliases.file": os.path.join(
+            RUNTIME_VARS.TMP, "aliases"
+        ),  # Do we really need this for these tests?
+        "transport": salt_master_factory.config["transport"],
+        "user": salt_master_factory.config["user"],
+        "metaproxy": "deltaproxy",
+        "master": "127.0.0.1",
+    }
+    factory = salt_master_factory.salt_proxy_minion_daemon(
+        proxy_minion_id,
+        defaults=config_defaults,
+        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        start_timeout=240,
+    )
+    factory.after_terminate(
+        pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
+    )
+    return factory
+
+
 @pytest.fixture
 def temp_salt_master(
     request,

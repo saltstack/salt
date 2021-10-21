@@ -1,7 +1,7 @@
 """
 Routines to set up a minion
 """
-
+import binascii
 import contextlib
 import copy
 import functools
@@ -10,14 +10,12 @@ import multiprocessing
 import os
 import random
 import signal
+import stat
 import sys
 import threading
 import time
 import traceback
 import types
-from binascii import crc32
-from random import randint, shuffle
-from stat import S_IMODE
 
 import salt
 import salt.beacons
@@ -102,7 +100,6 @@ try:
     HAS_WIN_FUNCTIONS = True
 except ImportError:
     HAS_WIN_FUNCTIONS = False
-# pylint: enable=import-error
 
 log = logging.getLogger(__name__)
 
@@ -306,7 +303,7 @@ def get_proc_dir(cachedir, **kwargs):
     # if mode is not an empty dict then we have an explicit
     # dir mode. So lets check if mode needs to be changed.
     if mode:
-        mode_part = S_IMODE(d_stat.st_mode)
+        mode_part = stat.S_IMODE(d_stat.st_mode)
         if mode_part != mode["mode"]:
             os.chmod(fn_, (d_stat.st_mode ^ mode_part) | mode["mode"])
 
@@ -565,7 +562,7 @@ class MinionBase:
                         master_len = len(opts["master"])
                         if master_len > 1:
                             secondary_masters = opts["master"][1:]
-                            master_idx = crc32(opts["id"]) % master_len
+                            master_idx = binascii.crc32(opts["id"]) % master_len
                             try:
                                 preferred_masters = opts["master"]
                                 preferred_masters[0] = opts["master"][master_idx]
@@ -680,10 +677,10 @@ class MinionBase:
                 # master_failback is only used when master_type is set to failover
                 if opts["master_type"] == "failover" and opts["master_failback"]:
                     secondary_masters = opts["local_masters"][1:]
-                    shuffle(secondary_masters)
+                    random.shuffle(secondary_masters)
                     opts["local_masters"][1:] = secondary_masters
                 else:
-                    shuffle(opts["local_masters"])
+                    random.shuffle(opts["local_masters"])
 
             # This sits outside of the connection loop below because it needs to set
             # up a list of master URIs regardless of which masters are available
@@ -892,7 +889,7 @@ class MinionBase:
         msg = "Minion return retry timer set to %s seconds"
         if self.opts.get("return_retry_timer_max"):
             try:
-                random_retry = randint(
+                random_retry = random.randint(
                     self.opts["return_retry_timer"], self.opts["return_retry_timer_max"]
                 )
                 retry_msg = msg % random_retry
@@ -1755,9 +1752,7 @@ class Minion(MinionBase):
                     name="ProcessPayload",
                     args=(instance, self.opts, data, self.connected),
                 )
-                process._after_fork_methods.append(
-                    (salt.utils.crypt.reinit_crypto, [], {})
-                )
+                process.register_after_fork_method(salt.utils.crypt.reinit_crypto)
         else:
             process = threading.Thread(
                 target=self._target,
@@ -1801,8 +1796,6 @@ class Minion(MinionBase):
                 minion_instance.returners = returners
                 minion_instance.function_errors = function_errors
                 minion_instance.executors = executors
-            if not hasattr(minion_instance, "serial"):
-                minion_instance.serial = salt.payload.Serial(opts)
             if not hasattr(minion_instance, "proc_dir"):
                 uid = salt.utils.user.get_uid(user=opts.get("user", None))
                 minion_instance.proc_dir = get_proc_dir(opts["cachedir"], uid=uid)
@@ -1898,7 +1891,7 @@ class Minion(MinionBase):
         sdata.update(data)
         log.info("Starting a new job %s with PID %s", data["jid"], sdata["pid"])
         with salt.utils.files.fopen(fn_, "w+b") as fp_:
-            fp_.write(minion_instance.serial.dumps(sdata))
+            fp_.write(salt.payload.dumps(sdata))
         ret = {"success": False}
         function_name = data["fun"]
         function_args = data["arg"]
@@ -2088,7 +2081,7 @@ class Minion(MinionBase):
         sdata.update(data)
         log.info("Starting a new job with PID %s", sdata["pid"])
         with salt.utils.files.fopen(fn_, "w+b") as fp_:
-            fp_.write(minion_instance.serial.dumps(sdata))
+            fp_.write(salt.payload.dumps(sdata))
 
         multifunc_ordered = opts.get("multifunc_ordered", False)
         num_funcs = len(data["fun"])
@@ -2423,6 +2416,8 @@ class Minion(MinionBase):
         self.schedule.functions = self.functions
         self.schedule.returners = self.returners
 
+        self.beacons_refresh()
+
     def beacons_refresh(self):
         """
         Refresh the functions and returners.
@@ -2473,7 +2468,7 @@ class Minion(MinionBase):
 
     # TODO: only allow one future in flight at a time?
     @salt.ext.tornado.gen.coroutine
-    def pillar_refresh(self, force_refresh=False):
+    def pillar_refresh(self, force_refresh=False, clean_cache=False):
         """
         Refresh the pillar
         """
@@ -2487,6 +2482,7 @@ class Minion(MinionBase):
                 self.opts["id"],
                 self.opts["saltenv"],
                 pillarenv=self.opts.get("pillarenv"),
+                clean_cache=clean_cache,
             )
             try:
                 new_pillar = yield async_pillar.compile_pillar()
@@ -2680,7 +2676,10 @@ class Minion(MinionBase):
                 notify=data.get("notify", False),
             )
         elif tag.startswith("pillar_refresh"):
-            yield _minion.pillar_refresh(force_refresh=data.get("force_refresh", False))
+            yield _minion.pillar_refresh(
+                force_refresh=data.get("force_refresh", False),
+                clean_cache=data.get("clean_cache", False),
+            )
         elif tag.startswith("beacons_refresh"):
             _minion.beacons_refresh()
         elif tag.startswith("matchers_refresh"):
@@ -2930,7 +2929,6 @@ class Minion(MinionBase):
                 self.function_errors,
                 self.executors,
             ) = self._load_modules()
-            self.serial = salt.payload.Serial(self.opts)
             self.mod_opts = self._prep_mod_opts()
             #            self.matcher = Matcher(self.opts, self.functions)
             self.matchers = salt.loader.matchers(self.opts)
@@ -3555,7 +3553,7 @@ class SyndicManager(MinionBase):
         """
         masters = list(self._syndics.keys())
         if self.opts["syndic_failover"] == "random":
-            shuffle(masters)
+            random.shuffle(masters)
         if master_id not in self._syndics:
             master_id = masters.pop(0)
         else:
@@ -3610,7 +3608,7 @@ class SyndicManager(MinionBase):
 
     def _process_event(self, raw):
         # TODO: cleanup: Move down into event class
-        mtag, data = self.local.event.unpack(raw, self.local.event.serial)
+        mtag, data = self.local.event.unpack(raw)
         log.trace("Got event %s", mtag)  # pylint: disable=no-member
 
         tag_parts = mtag.split("/")

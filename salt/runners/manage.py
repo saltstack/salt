@@ -772,7 +772,7 @@ def bootstrap_psexec(
 
     installer_url
         URL of minion installer executable. Defaults to the latest version from
-        https://repo.saltstack.com/windows/
+        https://repo.saltproject.io/windows/
 
     username
         Optional user name for login on remote computer.
@@ -791,7 +791,7 @@ def bootstrap_psexec(
     """
 
     if not installer_url:
-        base_url = "https://repo.saltstack.com/windows/"
+        base_url = "https://repo.saltproject.io/windows/"
         source = urllib.request.urlopen(base_url).read()
         salty_rx = re.compile(
             '>(Salt-Minion-(.+?)-(.+)-Setup.exe)</a></td><td align="right">(.*?)\\s*<'

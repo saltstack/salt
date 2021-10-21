@@ -619,6 +619,22 @@ class TestGetTemplate(TestCase):
             dict(opts=self.local_opts, saltenv="test", salt=self.local_salt),
         )
 
+    def test_relative_include(self):
+        template = "{% include './hello_import' %}"
+        expected = "Hey world !a b !"
+        filename = os.path.join(self.template_dir, "hello_import")
+        with salt.utils.files.fopen(filename) as fp_:
+            out = render_jinja_tmpl(
+                template,
+                dict(
+                    opts=self.local_opts,
+                    saltenv="test",
+                    salt=self.local_salt,
+                    tpldir=self.template_dir,
+                ),
+            )
+        self.assertEqual(out, expected)
+
 
 class TestJinjaDefaultOptions(TestCase):
     @classmethod

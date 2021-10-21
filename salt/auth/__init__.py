@@ -58,7 +58,6 @@ class LoadAuth:
     def __init__(self, opts, ckminions=None):
         self.opts = opts
         self.max_fail = 1.0
-        self.serial = salt.payload.Serial(opts)
         self.auth = salt.loader.auth(opts)
         self.tokens = salt.loader.eauth_tokens(opts)
         self.ckminions = ckminions or salt.utils.minions.CkMinions(opts)
@@ -535,7 +534,9 @@ class Resolver:
             )
             print(
                 "Available eauth types: {}".format(
-                    ", ".join([k[:-5] for k in self.auth if k.endswith(".auth")])
+                    ", ".join(
+                        sorted([k[:-5] for k in self.auth if k.endswith(".auth")])
+                    )
                 )
             )
             return ret

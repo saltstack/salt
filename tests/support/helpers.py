@@ -496,7 +496,7 @@ class ForceImportErrorOn:
     def patch_import_function(self):
         self.patcher.start()
 
-    def restore_import_funtion(self):
+    def restore_import_function(self):
         self.patcher.stop()
 
     def __fake_import__(
@@ -525,7 +525,7 @@ class ForceImportErrorOn:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.restore_import_funtion()
+        self.restore_import_function()
 
 
 class MockWraps:
@@ -1663,6 +1663,10 @@ class VirtualEnv:
     venv_dir = attr.ib(converter=_cast_to_pathlib_path)
     env = attr.ib(default=None)
     system_site_packages = attr.ib(default=False)
+    pip_requirement = attr.ib(default="pip>=20.2.4,<21.2", repr=False)
+    setuptools_requirement = attr.ib(
+        default="setuptools!=50.*,!=51.*,!=52.*", repr=False
+    )
     environ = attr.ib(init=False, repr=False)
     venv_python = attr.ib(init=False, repr=False)
     venv_bin_dir = attr.ib(init=False, repr=False)
@@ -1701,6 +1705,11 @@ class VirtualEnv:
 
     def install(self, *args, **kwargs):
         return self.run(self.venv_python, "-m", "pip", "install", *args, **kwargs)
+
+    def uninstall(self, *args, **kwargs):
+        return self.run(
+            self.venv_python, "-m", "pip", "uninstall", "-y", *args, **kwargs
+        )
 
     def run(self, *args, **kwargs):
         check = kwargs.pop("check", True)
@@ -1787,7 +1796,7 @@ class VirtualEnv:
             python=self.get_real_python(),
             system_site_packages=self.system_site_packages,
         )
-        self.install("-U", "pip", "setuptools!=50.*,!=51.*,!=52.*")
+        self.install("-U", self.pip_requirement, self.setuptools_requirement)
         log.debug("Created virtualenv in %s", self.venv_dir)
 
 
@@ -1795,13 +1804,19 @@ class VirtualEnv:
 class SaltVirtualEnv(VirtualEnv):
     """
     This is a VirtualEnv implementation which has this salt checkout installed in it
+    using static requirements
     """
-
-    system_site_packages = attr.ib(init=False, default=True)
 
     def _create_virtualenv(self):
         super()._create_virtualenv()
-        self.install("--no-use-pep517", RUNTIME_VARS.CODE_DIR)
+        self.install(RUNTIME_VARS.CODE_DIR)
+
+    def install(self, *args, **kwargs):
+        env = self.environ.copy()
+        env.update(kwargs.pop("env", None) or {})
+        env["USE_STATIC_REQUIREMENTS"] = "1"
+        kwargs["env"] = env
+        return super().install(*args, **kwargs)
 
 
 @contextmanager
