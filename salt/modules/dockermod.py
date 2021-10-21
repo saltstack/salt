@@ -361,7 +361,7 @@ def _get_client(timeout=NOTSET, **kwargs):
         client_kwargs["base_url"] = os.environ.get("DOCKER_HOST")
 
     if "version" not in client_kwargs:
-        # Let docker-py auto detect docker version incase
+        # Let docker-py auto detect docker version in case
         # it's not defined by user.
         client_kwargs["version"] = "auto"
 

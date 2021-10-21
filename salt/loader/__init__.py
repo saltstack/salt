@@ -5,20 +5,11 @@ plugin interfaces used by Salt.
 """
 
 import contextlib
-import copy
-import functools
-import importlib
-import importlib.machinery
-import importlib.util
 import inspect
 import logging
 import os
 import re
-import sys
-import tempfile
-import threading
 import time
-import traceback
 import types
 
 import salt.config
@@ -26,7 +17,6 @@ import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.loader.context
 import salt.syspaths
-import salt.utils.args
 import salt.utils.context
 import salt.utils.data
 import salt.utils.dictupdate
@@ -40,16 +30,8 @@ import salt.utils.versions
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils import entrypoints
-from salt.utils.decorators import Depends
 
 from .lazy import SALT_BASE_PATH, FilterDictWrapper, LazyLoader
-
-try:
-    # Try the stdlib C extension first
-    import _contextvars as contextvars
-except ImportError:
-    # Py<3.7
-    import contextvars
 
 log = logging.getLogger(__name__)
 
@@ -142,6 +124,7 @@ def _module_dirs(
     ext_dirs=True,
     ext_type_dirs=None,
     base_path=None,
+    load_extensions=True,
 ):
     if tag is None:
         tag = ext_type
@@ -161,7 +144,7 @@ def _module_dirs(
             ext_type_dirs = "{}_dirs".format(tag)
         if ext_type_dirs in opts:
             ext_type_types.extend(opts[ext_type_dirs])
-        if ext_type_dirs:
+        if ext_type_dirs and load_extensions is True:
             for entry_point in entrypoints.iter_entry_points("salt.loader"):
                 with catch_entry_points_exception(entry_point) as ctx:
                     loaded_entry_point = entry_point.load()
@@ -460,12 +443,12 @@ def returners(opts, functions, whitelist=None, context=None, proxy=None):
     )
 
 
-def utils(opts, whitelist=None, context=None, proxy=proxy, pack_self=None):
+def utils(opts, whitelist=None, context=None, proxy=None, pack_self=None):
     """
     Returns the utility modules
     """
     return LazyLoader(
-        _module_dirs(opts, "utils", ext_type_dirs="utils_dirs"),
+        _module_dirs(opts, "utils", ext_type_dirs="utils_dirs", load_extensions=False),
         opts,
         tag="utils",
         whitelist=whitelist,
@@ -840,10 +823,9 @@ def _load_cached_grains(opts, cfn):
 
     log.debug("Retrieving grains from cache")
     try:
-        serial = salt.payload.Serial(opts)
         with salt.utils.files.fopen(cfn, "rb") as fp_:
             cached_grains = salt.utils.data.decode(
-                serial.load(fp_), preserve_tuples=True
+                salt.payload.load(fp_), preserve_tuples=True
             )
         if not cached_grains:
             log.debug("Cached grains are empty, cache might be corrupted. Refreshing.")
@@ -952,7 +934,7 @@ def grains(opts, force_refresh=False, proxy=None, context=None):
             # proxymodule for retrieving information from the connected
             # device.
             log.trace("Loading %s grain", key)
-            parameters = salt.utils.args.get_function_argspec(funcs[key]).args
+            parameters = inspect.signature(funcs[key]).parameters
             kwargs = {}
             if "proxy" in parameters:
                 kwargs["proxy"] = proxy
@@ -1022,8 +1004,7 @@ def grains(opts, force_refresh=False, proxy=None, context=None):
                     salt.modules.cmdmod._run_quiet('attrib -R "{}"'.format(cfn))
                 with salt.utils.files.fopen(cfn, "w+b") as fp_:
                     try:
-                        serial = salt.payload.Serial(opts)
-                        serial.dump(grains_data, fp_)
+                        salt.payload.dump(grains_data, fp_)
                     except TypeError as e:
                         log.error("Failed to serialize grains cache: %s", e)
                         raise  # re-throw for cleanup
@@ -1197,7 +1178,7 @@ def executors(opts, functions=None, context=None, proxy=None):
     )
 
 
-def cache(opts, serial):
+def cache(opts):
     """
     Returns the returner modules
     """
@@ -1205,7 +1186,6 @@ def cache(opts, serial):
         _module_dirs(opts, "cache", "cache"),
         opts,
         tag="cache",
-        pack={"__context__": {"serial": serial}},
     )
 
 

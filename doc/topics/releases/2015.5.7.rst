@@ -868,7 +868,7 @@ Changelog for v2015.5.6..v2015.5.7
 
   * 8f1fa9e78e Chocolatey doesn't have a help command.
 
-* **PR** `#27733`_: (`jacobhammons`_) hardening topic - updates to docs.saltstack.com theme
+* **PR** `#27733`_: (`jacobhammons`_) hardening topic - updates to docs.saltproject.io theme
   @ *2015-10-07 01:44:00 UTC*
 
   * 4e48651de0 Merge pull request `#27733`_ from jacobhammons/bug-fixes
