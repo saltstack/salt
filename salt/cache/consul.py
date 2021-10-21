@@ -154,11 +154,13 @@ def flush(bank, key=None):
     """
     if key is None:
         c_key = bank
+        tstamp_key = None
     else:
         c_key = "{}/{}".format(bank, key)
         tstamp_key = "{}/{}{}".format(bank, key, _tstamp_suffix)
-        api.kv.delete(tstamp_key)
     try:
+        if tstamp_key:
+            api.kv.delete(tstamp_key)
         return api.kv.delete(c_key, recurse=key is None)
     except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(

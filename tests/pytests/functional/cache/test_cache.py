@@ -201,6 +201,7 @@ def etcd_cache(minion_opts, etcd_port, etcd_apiv2_container):
     opts["etcd.host"] = "127.0.0.1"
     opts["etcd.port"] = etcd_port
     opts["etcd.protocol"] = "http"
+    opts["etcd.timestamp_suffix"] = ".frobnosticate"
     cache = salt.cache.factory(opts)
     yield cache
 

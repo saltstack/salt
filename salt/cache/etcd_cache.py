@@ -73,6 +73,7 @@ if HAS_ETCD:
 log = logging.getLogger(__name__)
 client = None
 path_prefix = None
+_tstamp_suffix = ".tstamp"
 
 # Module properties
 
@@ -95,7 +96,7 @@ def __virtual__():
 
 def _init_client():
     """Setup client and init datastore."""
-    global client, path_prefix
+    global client, path_prefix, _tstamp_suffix
     if client is not None:
         return
 
@@ -112,6 +113,7 @@ def _init_client():
         "cert": __opts__.get("etcd.cert", None),
         "ca_cert": __opts__.get("etcd.ca_cert", None),
     }
+    _tstamp_suffix = __opts__.get("etcd.timestamp_suffix", _tstamp_suffix)
     path_prefix = __opts__.get("etcd.path_prefix", _DEFAULT_PATH_PREFIX)
     if path_prefix != "":
         path_prefix = "/{}".format(path_prefix.strip("/"))
@@ -130,7 +132,7 @@ def store(bank, key, data):
     """
     _init_client()
     etcd_key = "{}/{}/{}".format(path_prefix, bank, key)
-    etcd_tstamp_key = "{}/{}/{}".format(path_prefix, bank + ".tstamp", key)
+    etcd_tstamp_key = "{}/{}/{}".format(path_prefix, bank, key + _tstamp_suffix)
     try:
         value = salt.payload.dumps(data)
         client.write(etcd_key, base64.b64encode(value))
@@ -165,13 +167,17 @@ def flush(bank, key=None):
     _init_client()
     if key is None:
         etcd_key = "{}/{}".format(path_prefix, bank)
+        tstamp_key = None
     else:
         etcd_key = "{}/{}/{}".format(path_prefix, bank, key)
+        tstamp_key = "{}/{}/{}".format(path_prefix, bank, key + _tstamp_suffix)
     try:
         client.read(etcd_key)
     except etcd.EtcdKeyNotFound:
         return  # nothing to flush
     try:
+        if tstamp_key:
+            client.delete(tstamp_key)
         client.delete(etcd_key, recursive=True)
     except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
@@ -185,7 +191,10 @@ def _walk(r):
     r: etcd.EtcdResult
     """
     if not r.dir:
-        return [r.key.split("/", 3)[3]]
+        if r.key.endswith(_tstamp_suffix):
+            return []
+        else:
+            return [r.key.split("/", 3)[3]]
 
     keys = []
     for c in client.read(r.key).children:
@@ -230,7 +239,7 @@ def contains(bank, key):
 
 def updated(bank, key):
     _init_client()
-    tstamp_key = "{}/{}/{}".format(path_prefix, bank + ".tstamp", key)
+    tstamp_key = "{}/{}/{}".format(path_prefix, bank, key + _tstamp_suffix)
     try:
         value = client.read(tstamp_key).value
         return int(value)
