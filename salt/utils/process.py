@@ -648,10 +648,10 @@ class ProcessManager:
         # make sure to kill the subprocesses if the parent is killed
         if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
             # There are no SIGTERM handlers installed, install ours
-            signal.signal(signal.SIGTERM, self.kill_children)
+            signal.signal(signal.SIGTERM, self._handle_signals)
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
             # There are no SIGINT handlers installed, install ours
-            signal.signal(signal.SIGINT, self.kill_children)
+            signal.signal(signal.SIGINT, self._handle_signals)
 
         while True:
             log.trace("Process manager iteration")
@@ -691,19 +691,6 @@ class ProcessManager:
         """
         Kill all of the children
         """
-        # first lets reset signal handlers to default one to prevent running this twice
-        signal.signal(signal.SIGTERM, signal.SIG_IGN)
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
-
-        # check that this is the correct process, children inherit this
-        # handler, if we are in a child lets just run the original handler
-        if os.getpid() != self._pid:
-            if callable(self._sigterm_handler):
-                return self._sigterm_handler(*args)
-            elif self._sigterm_handler is not None:
-                return signal.default_int_handler(signal.SIGTERM)(*args)
-            else:
-                return
         if salt.utils.platform.is_windows():
             if multiprocessing.current_process().name != "MainProcess":
                 # Since the main process will kill subprocesses by tree,
@@ -826,6 +813,27 @@ class ProcessManager:
         self.stop_restarting()
         self.send_signal_to_processes(signal.SIGTERM)
         self.kill_children()
+
+    def _handle_signals(self, *args, **kwargs):
+        # first lets reset signal handlers to default one to prevent running this twice
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+        self.stop_restarting()
+        self.send_signal_to_processes(signal.SIGTERM)
+
+        # check that this is the correct process, children inherit this
+        # handler, if we are in a child lets just run the original handler
+        if os.getpid() != self._pid:
+            if callable(self._sigterm_handler):
+                return self._sigterm_handler(*args)
+            elif self._sigterm_handler is not None:
+                return signal.default_int_handler(signal.SIGTERM)(*args)
+            else:
+                return
+
+        # Terminate child processes
+        self.kill_children(*args, **kwargs)
 
 
 class Process(multiprocessing.Process):
@@ -1182,14 +1190,15 @@ def default_signals(*signals):
         else:
             old_signals[signum] = saved_signal
 
-    # Do whatever is needed with the reset signals
-    yield
+    try:
+        # Do whatever is needed with the reset signals
+        yield
+    finally:
+        # Restore signals
+        for signum in old_signals:
+            signal.signal(signum, old_signals[signum])
 
-    # Restore signals
-    for signum in old_signals:
-        signal.signal(signum, old_signals[signum])
-
-    del old_signals
+        del old_signals
 
 
 class SubprocessList:
