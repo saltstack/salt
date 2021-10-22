@@ -1,3 +1,5 @@
+.. _salt-community:
+
 ========================
 Salt Community Resources
 ========================
@@ -17,21 +19,24 @@ is hosted by Google Groups. It is open to new members.
 
 .. _`salt-users mailing list`: https://groups.google.com/forum/#!forum/salt-users
 
+Additionally, all users of Salt should be subscribed to the Announcements mailing
+list which contains important updates about Salt, such as new releaes and
+security-related announcements. This list is low-traffic.
+
+.. _`salt-announce mailing list`: https://groups.google.com/forum/#!forum/salt-announce
 
 IRC
 ===
 
-The ``#salt`` IRC channel is hosted on the popular `Freenode`_ network. You
-can use the `Freenode webchat client`_ right from your browser.
+The ``#salt`` IRC channel is hosted on the popular `LiberaChat`_ network. You
+can use the `LiberaChat webchat client`_ right from your browser.  `Logs of the
+IRC channel activity`_ are also available.
 
-`Logs of the IRC channel activity`_ are being collected courtesy of Moritz Lenz.
+.. _LiberaChat: https://libera.chat/
+.. _`LiberaChat webchat client`: https://web.libera.chat/#salt
+.. _`Logs of the IRC channel activity`: http://ngxbot.nginx.org/logs/%23salt/
 
-.. _Freenode: http://freenode.net/irc_servers.shtml
-.. _`Freenode webchat client`: http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83
-.. _`Logs of the IRC channel activity`: http://irclog.perlgeek.de/salt/
-
-If you wish to discuss the development of Salt itself join us in
-``#salt-devel``.
+If you wish to discuss the development of Salt itself join us in ``#salt-devel``.
 
 
 Follow on Github
@@ -42,15 +47,20 @@ is happening in Salt development:
 
 |saltrepo|
 
+Long-term planning and strategic decisions are handled via Salt Enhancement Proposals
+and can be found on GitHub.
+
+.. _`Salt Enhancement Proposals`: https://github.com/saltstack/salt-enhancement-proposals
+
 
 Blogs
 =====
 
-SaltStack Inc. keeps a `blog`_ with recent news and advancements:
+The Salt Project keeps a `blog`_ with recent news and advancements:
 
-http://www.saltstack.com/blog/
+https://saltproject.io/blog/
 
-.. _`blog`: http://www.saltstack.com/blog/
+.. _`blog`: https://saltproject.io/blog/
 
 
 Example Salt States
@@ -78,13 +88,14 @@ https://www.ohloh.net/p/salt
 Other community links
 =====================
 
-- `Salt Stack Inc. <http://www.saltstack.com>`_
+- `Salt Project <http://saltproject.io>`_
 - `Subreddit <http://www.reddit.com/r/saltstack>`_
-- `Google+ <https://plus.google.com/114449193225626631691/posts>`_
-- `YouTube <http://www.youtube.com/user/SaltStack>`_
-- `Facebook <https://www.facebook.com/SaltStack>`_
-- `Twitter <https://twitter.com/SaltStackInc>`_
-- `Wikipedia page <http://en.wikipedia.org/wiki/Salt_(software)>`_
+- `YouTube <https://www.youtube.com/channel/UCpveTIucFx9ljGelW63-BWg>`_
+- `Twitch <https://twitch.tv/saltprojectoss>`_
+- `Facebook <https://www.facebook.com/SaltProjectOSS>`_
+- `Twitter <https://twitter.com/Salt_Project_OS>`_
+- `Wikipedia page <https://en.wikipedia.org/wiki/Salt_(software)>`_
+- `Stack Overflow <https://stackoverflow.com/questions/tagged/salt-stack+or+salt-cloud+or+salt-creation>`_
 
 Hack the Source
 ===============
@@ -94,4 +105,3 @@ documentation efforts, please review the :ref:`contributing documentation
 <contributing>`!
 
 .. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
-
