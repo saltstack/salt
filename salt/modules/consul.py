@@ -84,7 +84,7 @@ def _query(
         method=method,
         params=query_params,
         data=data,
-        decode=True,
+        decode=False,
         status=True,
         header_dict=headers,
         opts=__opts__,
