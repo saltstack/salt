@@ -26,7 +26,7 @@ import salt.config
 import salt.defaults.exitcodes
 import salt.exceptions
 import salt.loader
-import salt.log
+import salt.log.setup
 import salt.minion
 import salt.output
 import salt.roster
@@ -316,6 +316,43 @@ class SSH:
             extended_cfg=self.opts.get("ssh_ext_alternatives"),
         )
         self.mods = mod_data(self.fsclient)
+
+    # __setstate__ and __getstate__ are only used on spawning platforms.
+    def __setstate__(self, state):
+        # If __setstate__ is getting called it means this is running on a
+        # new process. Setup logging.
+        try:
+            salt.log.setup.set_multiprocessing_logging_queue(state["log_queue"])
+        except Exception:  # pylint: disable=broad-except
+            log.exception(
+                "Failed to run salt.log.setup.set_multiprocessing_logging_queue() on %s",
+                self,
+            )
+        try:
+            salt.log.setup.set_multiprocessing_logging_level(state["log_queue_level"])
+        except Exception:  # pylint: disable=broad-except
+            log.exception(
+                "Failed to run salt.log.setup.set_multiprocessing_logging_level() on %s",
+                self,
+            )
+        try:
+            salt.log.setup.setup_multiprocessing_logging(state["log_queue"])
+        except Exception:  # pylint: disable=broad-except
+            log.exception(
+                "Failed to run salt.log.setup.setup_multiprocessing_logging() on %s",
+                self,
+            )
+        # This will invoke __init__ of the most derived class.
+        self.__init__(state["opts"])
+
+    def __getstate__(self):
+        log_queue = salt.log.setup.get_multiprocessing_logging_queue()
+        log_queue_level = salt.log.setup.get_multiprocessing_logging_level()
+        return {
+            "opts": self.opts,
+            "log_queue": log_queue,
+            "log_queue_level": log_queue_level,
+        }
 
     @property
     def parse_tgt(self):
@@ -1278,8 +1315,8 @@ class Single:
         if not self.opts.get("log_level"):
             self.opts["log_level"] = "info"
         if (
-            salt.log.LOG_LEVELS["debug"]
-            >= salt.log.LOG_LEVELS[self.opts.get("log_level", "info")]
+            salt.log.setup.LOG_LEVELS["debug"]
+            >= salt.log.setup.LOG_LEVELS[self.opts.get("log_level", "info")]
         ):
             debug = "1"
         arg_str = '''
