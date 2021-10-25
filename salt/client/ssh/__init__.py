@@ -44,6 +44,7 @@ import salt.utils.stringutils
 import salt.utils.thin
 import salt.utils.url
 import salt.utils.verify
+from salt._logging.mixins import MultiprocessingStateMixin
 from salt.template import compile_template
 from salt.utils.platform import is_junos, is_windows
 from salt.utils.process import Process
@@ -202,7 +203,7 @@ else:
 log = logging.getLogger(__name__)
 
 
-class SSH:
+class SSH(MultiprocessingStateMixin):
     """
     Create an SSH execution system
     """
@@ -319,40 +320,14 @@ class SSH:
 
     # __setstate__ and __getstate__ are only used on spawning platforms.
     def __setstate__(self, state):
-        # If __setstate__ is getting called it means this is running on a
-        # new process. Setup logging.
-        try:
-            salt.log.setup.set_multiprocessing_logging_queue(state["log_queue"])
-        except Exception:  # pylint: disable=broad-except
-            log.exception(
-                "Failed to run salt.log.setup.set_multiprocessing_logging_queue() on %s",
-                self,
-            )
-        try:
-            salt.log.setup.set_multiprocessing_logging_level(state["log_queue_level"])
-        except Exception:  # pylint: disable=broad-except
-            log.exception(
-                "Failed to run salt.log.setup.set_multiprocessing_logging_level() on %s",
-                self,
-            )
-        try:
-            salt.log.setup.setup_multiprocessing_logging(state["log_queue"])
-        except Exception:  # pylint: disable=broad-except
-            log.exception(
-                "Failed to run salt.log.setup.setup_multiprocessing_logging() on %s",
-                self,
-            )
+        super().__setstate__(state)
         # This will invoke __init__ of the most derived class.
         self.__init__(state["opts"])
 
     def __getstate__(self):
-        log_queue = salt.log.setup.get_multiprocessing_logging_queue()
-        log_queue_level = salt.log.setup.get_multiprocessing_logging_level()
-        return {
-            "opts": self.opts,
-            "log_queue": log_queue,
-            "log_queue_level": log_queue_level,
-        }
+        state = super().__getstate__()
+        state["opts"] = self.opts
+        return state
 
     @property
     def parse_tgt(self):
