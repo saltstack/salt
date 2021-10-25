@@ -48,6 +48,11 @@ def salt_eauth_account_factory():
 
 
 @pytest.fixture(scope="session")
+def salt_auto_account_factory():
+    return TestAccount(username="saltdev_auto", password="saltdev")
+
+
+@pytest.fixture(scope="session")
 def salt_minion_id():
     return random_string("minion-")
 
@@ -212,6 +217,7 @@ def salt_master_factory(
         "auto": {
             salt_netapi_account_factory.username: ["@wheel", "@runner", "test.*"],
             salt_auto_account_factory.username: ["@wheel", "@runner", "test.*"],
+            "*": ["@wheel", "@runner", "test.*"],
         },
     }
 

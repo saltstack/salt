@@ -140,8 +140,8 @@ salt/cli/salt.py:
 
 salt/client/*:
   - integration.client.test_kwarg
-  - integration.client.test_runner
   - integration.client.test_standard
+  - pytests.integration.client.test_runner
 
 salt/cloud/*:
   - pytests.functional.cli.test_salt_cloud
@@ -307,7 +307,7 @@ salt/utils/vt.py:
   - integration.ssh.test_state
 
 salt/wheel/*:
-  - integration.wheel.test_client
+  - pytests.integration.wheel.test_client
 
 salt/(minion\.py|channel/.+|transport/.+):
   - pytests.scenarios.multimaster.test_multimaster
