@@ -226,9 +226,17 @@ salt/modules/*_sysctl.py:
   - integration.modules.test_sysctl
 
 salt/netapi/rest_cherrypy/*:
-  - unit.netapi.test_rest_cherrypy
-  - integration.netapi.rest_cherrypy.test_app_pam
   - integration.netapi.test_client
+  - pytests.functional.netapi.rest_cherrypy.test_auth
+  - pytests.functional.netapi.rest_cherrypy.test_auth_pam
+  - pytests.functional.netapi.rest_cherrypy.test_cors
+  - pytests.functional.netapi.rest_cherrypy.test_in_formats
+  - pytests.functional.netapi.rest_cherrypy.test_out_formats
+  - pytests.integration.netapi.rest_cherrypy.test_arg_kwarg
+  - pytests.integration.netapi.rest_cherrypy.test_auth
+  - pytests.integration.netapi.rest_cherrypy.test_jobs
+  - pytests.integration.netapi.rest_cherrypy.test_run
+  - pytests.integration.netapi.rest_cherrypy.test_webhook_disable_auth
 
 salt/netapi/rest_tornado/*:
   - pytests.functional.netapi.rest_tornado.test_auth_handler
