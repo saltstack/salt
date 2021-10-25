@@ -874,7 +874,6 @@ def salt_master_factory(
     prod_env_pillar_tree_root_dir,
     ext_pillar_file_tree_root_dir,
     salt_api_account_factory,
-    salt_auto_account_factory,
 ):
     root_dir = salt_factories.get_root_dir_for_daemon("master")
     conf_dir = root_dir / "conf"
@@ -920,7 +919,6 @@ def salt_master_factory(
                 "test.*",
                 "grains.*",
             ],
-            salt_auto_account_factory.username: ["@wheel", "@runner", "test.*"],
         }
     }
 
@@ -1481,11 +1479,6 @@ def _disable_salt_logging():
 @pytest.fixture(scope="session")
 def salt_api_account_factory():
     return TestAccount(username="saltdev_api", password="saltdev")
-
-
-@pytest.fixture(scope="session")
-def salt_auto_account_factory():
-    return TestAccount(username="saltdev_auto", password="saltdev")
 
 
 # <---- Custom Fixtures ----------------------------------------------------------------------------------------------
