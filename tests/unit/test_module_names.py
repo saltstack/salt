@@ -136,7 +136,6 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.modules.test_service",
             "integration.modules.test_state_jinja_filters",
             "integration.modules.test_sysctl",
-            "integration.netapi.rest_cherrypy.test_app_pam",
             "integration.netapi.rest_tornado.test_app",
             "integration.netapi.test_client",
             "integration.output.test_output",

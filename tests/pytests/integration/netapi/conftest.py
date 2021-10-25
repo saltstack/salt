@@ -1,6 +1,12 @@
 import pytest
 import salt.config
 import tests.support.netapi as netapi
+from saltfactories.utils.ports import get_unused_localhost_port
+
+
+@pytest.fixture
+def netapi_port():
+    return get_unused_localhost_port()
 
 
 @pytest.fixture
