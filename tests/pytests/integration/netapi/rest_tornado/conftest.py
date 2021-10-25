@@ -4,6 +4,12 @@ from salt.netapi.rest_tornado import saltnado
 
 
 @pytest.fixture
+def client_config(client_config, netapi_port):
+    client_config["rest_tornado"] = {"port": netapi_port}
+    return client_config
+
+
+@pytest.fixture
 def app(app_urls, load_auth, client_config, minion_config, salt_sub_minion):
     return netapi.build_tornado_app(
         app_urls, load_auth, client_config, minion_config, setup_event_listener=True
@@ -19,9 +25,9 @@ def client_headers(auth_token, content_type_map):
 
 
 @pytest.fixture
-def http_server(io_loop, app, client_headers):
+def http_server(io_loop, app, client_headers, netapi_port):
     with netapi.TestsTornadoHttpServer(
-        io_loop=io_loop, app=app, client_headers=client_headers
+        io_loop=io_loop, app=app, port=netapi_port, client_headers=client_headers
     ) as server:
         yield server
 

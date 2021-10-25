@@ -53,10 +53,10 @@ class TestsHttpClient:
 class TestsTornadoHttpServer:
     io_loop = attr.ib(repr=False)
     app = attr.ib()
+    port = attr.ib(repr=False)
     protocol = attr.ib(default="http", repr=False)
     http_server_options = attr.ib(default=attr.Factory(dict))
     sock = attr.ib(init=False, repr=False)
-    port = attr.ib(init=False, repr=False)
     address = attr.ib(init=False)
     server = attr.ib(init=False)
     client_headers = attr.ib(default=None)
@@ -65,7 +65,7 @@ class TestsTornadoHttpServer:
     @sock.default
     def _sock_default(self):
         return netutil.bind_sockets(
-            None, "127.0.0.1", family=socket.AF_INET, reuse_port=False
+            self.port, "127.0.0.1", family=socket.AF_INET, reuse_port=False
         )[0]
 
     @port.default
