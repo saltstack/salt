@@ -279,11 +279,13 @@ class Runner(RunnerClient):
                     display_output(ret, outputter, self.opts)
                 else:
                     ret = self._proc_function(
-                        self.opts["fun"],
-                        low,
-                        user,
-                        async_pub["tag"],
-                        async_pub["jid"],
+                        instance=self,
+                        opts=self.opts,
+                        fun=self.opts["fun"],
+                        low=low,
+                        user=user,
+                        tag=async_pub["tag"],
+                        jid=async_pub["jid"],
                         daemonize=False,
                     )
             except salt.exceptions.SaltException as exc:
