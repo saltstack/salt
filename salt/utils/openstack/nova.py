@@ -1,22 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Nova class
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals, with_statement
 
 import inspect
 import logging
 import time
 
-# Import salt libs
 import salt.utils.cloud
 import salt.utils.files
 from salt.exceptions import SaltCloudSystemExit
-
-# Import third party libs
-from salt.ext import six
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 HAS_NOVA = False
@@ -95,7 +88,7 @@ if check_nova():
 
 
 # kwargs has to be an object instead of a dictionary for the __post_parse_arg__
-class KwargsStruct(object):
+class KwargsStruct:
     def __init__(self, **entries):
         self.__dict__.update(entries)
 
@@ -132,7 +125,7 @@ def _parse_block_device_mapping_v2(
     for device_spec in block_device:
         bdm_dict = {}
 
-        for key, value in six.iteritems(device_spec):
+        for key, value in device_spec.items():
             bdm_dict[CLIENT_BDM2_KEYS[key]] = value
 
         # Convert the delete_on_termination to a boolean or set it to true by
@@ -173,7 +166,7 @@ def _parse_block_device_mapping_v2(
     return bdm
 
 
-class NovaServer(object):
+class NovaServer:
     def __init__(self, name, server, password=None):
         """
         Make output look like libcloud output for consistency
@@ -212,7 +205,7 @@ def get_entry(dict_, key, value, raise_error=True):
         if entry[key] == value:
             return entry
     if raise_error is True:
-        raise SaltCloudSystemExit("Unable to find {0} in {1}.".format(key, dict_))
+        raise SaltCloudSystemExit("Unable to find {} in {}.".format(key, dict_))
     return {}
 
 
@@ -221,7 +214,7 @@ def get_entry_multi(dict_, pairs, raise_error=True):
         if all([entry[key] == value for key, value in pairs]):
             return entry
     if raise_error is True:
-        raise SaltCloudSystemExit("Unable to find {0} in {1}.".format(pairs, dict_))
+        raise SaltCloudSystemExit("Unable to find {} in {}.".format(pairs, dict_))
     return {}
 
 
@@ -273,7 +266,7 @@ def sanatize_novaclient(kwargs):
 
 
 # Function alias to not shadow built-ins
-class SaltNova(object):
+class SaltNova:
     """
     Class for all novaclient functions
     """
@@ -364,7 +357,7 @@ class SaltNova(object):
             self.client_kwargs = self.kwargstruct.__dict__
 
         # Requires novaclient version >= 2.6.1
-        self.version = six.text_type(kwargs.get("version", 2))
+        self.version = str(kwargs.get("version", 2))
 
         self.client_kwargs = sanatize_novaclient(self.client_kwargs)
         options = loader.load_from_options(**self.kwargs)
@@ -436,7 +429,7 @@ class SaltNova(object):
         self.kwargs = sanatize_novaclient(self.kwargs)
 
         # Requires novaclient version >= 2.6.1
-        self.kwargs["version"] = six.text_type(kwargs.get("version", 2))
+        self.kwargs["version"] = str(kwargs.get("version", 2))
 
         conn = client.Client(**self.kwargs)
         try:
@@ -514,7 +507,7 @@ class SaltNova(object):
                 for attr in extension.module.__dict__:
                     if not inspect.isclass(getattr(extension.module, attr)):
                         continue
-                    for key, value in six.iteritems(connection.__dict__):
+                    for key, value in connection.__dict__.items():
                         if not isinstance(value, novaclient.base.Manager):
                             continue
                         if value.__class__.__name__ == attr:
@@ -533,8 +526,8 @@ class SaltNova(object):
         Make output look like libcloud output for consistency
         """
         server_info = self.server_show(uuid)
-        server = next(six.itervalues(server_info))
-        server_name = next(six.iterkeys(server_info))
+        server = next(iter(server_info.values()))
+        server_name = next(iter(server_info.keys()))
         if not hasattr(self, "password"):
             self.password = None
         ret = NovaServer(server_name, server, self.password)
@@ -576,7 +569,7 @@ class SaltNova(object):
                 time.sleep(1)
                 if time.time() - start > timeout:
                     log.error(
-                        "Timed out after %s seconds " "while waiting for data", timeout
+                        "Timed out after %s seconds while waiting for data", timeout
                     )
                     return False
 
@@ -646,7 +639,9 @@ class SaltNova(object):
         if self.volume_conn is None:
             raise SaltCloudSystemExit("No cinder endpoint available")
 
-        volumes = self.volume_list(search_opts={"display_name": name},)
+        volumes = self.volume_list(
+            search_opts={"display_name": name},
+        )
         volume = volumes[name]
 
         return volume
@@ -680,9 +675,7 @@ class SaltNova(object):
         try:
             volume = self.volume_show(name)
         except KeyError as exc:
-            raise SaltCloudSystemExit(
-                "Unable to find {0} volume: {1}".format(name, exc)
-            )
+            raise SaltCloudSystemExit("Unable to find {} volume: {}".format(name, exc))
         if volume["status"] == "deleted":
             return volume
         response = nt_ks.volumes.delete(volume["id"])
@@ -695,9 +688,7 @@ class SaltNova(object):
         try:
             volume = self.volume_show(name)
         except KeyError as exc:
-            raise SaltCloudSystemExit(
-                "Unable to find {0} volume: {1}".format(name, exc)
-            )
+            raise SaltCloudSystemExit("Unable to find {} volume: {}".format(name, exc))
         if not volume["attachments"]:
             return True
         response = self.compute_conn.volumes.delete_server_volume(
@@ -716,7 +707,7 @@ class SaltNova(object):
                 time.sleep(1)
                 if time.time() - start > timeout:
                     log.error(
-                        "Timed out after %d seconds " "while waiting for data", timeout
+                        "Timed out after %d seconds while waiting for data", timeout
                     )
                     return False
 
@@ -729,9 +720,7 @@ class SaltNova(object):
         try:
             volume = self.volume_show(name)
         except KeyError as exc:
-            raise SaltCloudSystemExit(
-                "Unable to find {0} volume: {1}".format(name, exc)
-            )
+            raise SaltCloudSystemExit("Unable to find {} volume: {}".format(name, exc))
         server = self.server_by_name(server_name)
         response = self.compute_conn.volumes.create_server_volume(
             server.id, volume["id"], device=device
@@ -749,7 +738,7 @@ class SaltNova(object):
                 time.sleep(1)
                 if time.time() - start > timeout:
                     log.error(
-                        "Timed out after %s seconds " "while waiting for data", timeout
+                        "Timed out after %s seconds while waiting for data", timeout
                     )
                     return False
 
@@ -835,7 +824,7 @@ class SaltNova(object):
         """
         nt_ks = self.compute_conn
         nt_ks.flavors.delete(flavor_id)
-        return "Flavor deleted: {0}".format(flavor_id)
+        return "Flavor deleted: {}".format(flavor_id)
 
     def keypair_list(self):
         """
@@ -871,7 +860,7 @@ class SaltNova(object):
         """
         nt_ks = self.compute_conn
         nt_ks.keypairs.delete(name)
-        return "Keypair deleted: {0}".format(name)
+        return "Keypair deleted: {}".format(name)
 
     def image_show(self, image_id):
         """
@@ -960,7 +949,7 @@ class SaltNova(object):
         if not image_id:
             return {"Error": "A valid image name or id was not specified"}
         nt_ks.images.delete_meta(image_id, pairs)
-        return {image_id: "Deleted: {0}".format(pairs)}
+        return {image_id: "Deleted: {}".format(pairs)}
 
     def server_list(self):
         """
@@ -1078,8 +1067,8 @@ class SaltNova(object):
             raise SaltCloudSystemExit(
                 "Corrupt server in server_list_detailed. Remove corrupt servers."
             )
-        for server_name, server in six.iteritems(servers):
-            if six.text_type(server["id"]) == server_id:
+        for server_name, server in servers.items():
+            if str(server["id"]) == server_id:
                 ret[server_name] = server
         return ret
 
@@ -1100,8 +1089,8 @@ class SaltNova(object):
         for item in nt_ks.security_groups.list():
             if item.name == name:
                 nt_ks.security_groups.delete(item.id)
-                return {name: "Deleted security group: {0}".format(name)}
-        return "Security group not found: {0}".format(name)
+                return {name: "Deleted security group: {}".format(name)}
+        return "Security group not found: {}".format(name)
 
     def secgroup_list(self):
         """
@@ -1175,9 +1164,7 @@ class SaltNova(object):
             "vpn_start",
         ]
 
-        for variable in six.iterkeys(
-            kwargs
-        ):  # iterate over a copy, we might delete some
+        for variable in list(kwargs):  # iterate over a copy, we might delete some
             if variable not in params:
                 del kwargs[variable]
         return kwargs

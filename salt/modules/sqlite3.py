@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Support for SQLite3
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 try:
     import sqlite3
 
@@ -18,7 +15,8 @@ def __virtual__():
     if not HAS_SQLITE3:
         return (
             False,
-            "The sqlite3 execution module failed to load: the sqlite3 python library is not available.",
+            "The sqlite3 execution module failed to load: the sqlite3 python library is"
+            " not available.",
         )
     return True
 

@@ -1,12 +1,4 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.pillar.mysql as mysql
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 
 
@@ -26,6 +18,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah",
                         "depth": 0,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -47,6 +40,7 @@ class MysqlPillarTestCase(TestCase):
                 {"query": "SELECT blah7", "as_list": True},
                 {"query": "SELECT blah8", "with_lists": "1"},
                 {"query": "SELECT blah9", "with_lists": "1,2"},
+                {"query": "SELECT json1", "as_json": True},
             ],
             {},
         )
@@ -59,6 +53,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah",
                         "depth": 0,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -69,6 +64,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah2",
                         "depth": 0,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -79,6 +75,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah3",
                         "depth": 0,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -89,6 +86,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah4",
                         "depth": 2,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -99,6 +97,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah5",
                         "depth": 0,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -109,6 +108,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah6",
                         "depth": 2,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -119,6 +119,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah7",
                         "depth": 0,
                         "as_list": True,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -129,6 +130,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah8",
                         "depth": 0,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": [1],
                         "ignore_null": False,
                     },
@@ -139,7 +141,19 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah9",
                         "depth": 0,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": [1, 2],
+                        "ignore_null": False,
+                    },
+                ],
+                [
+                    None,
+                    {
+                        "query": "SELECT json1",
+                        "depth": 0,
+                        "as_list": False,
+                        "as_json": True,
+                        "with_lists": None,
                         "ignore_null": False,
                     },
                 ],
@@ -159,6 +173,7 @@ class MysqlPillarTestCase(TestCase):
                 "5": {"query": "SELECT blah5"},
                 "6": {"query": "SELECT blah6", "depth": 2},
                 "7": {"query": "SELECT blah7", "as_list": True},
+                "8": {"query": "SELECT json1", "as_json": True},
             },
         )
         qbuffer = return_data.extract_queries(args, kwargs)
@@ -170,6 +185,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah",
                         "depth": 0,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -180,6 +196,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah2",
                         "depth": 0,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -190,6 +207,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah3",
                         "depth": 0,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -200,6 +218,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah4",
                         "depth": 2,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -210,6 +229,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah5",
                         "depth": 0,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -220,6 +240,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah6",
                         "depth": 2,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -230,6 +251,18 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah7",
                         "depth": 0,
                         "as_list": True,
+                        "as_json": False,
+                        "with_lists": None,
+                        "ignore_null": False,
+                    },
+                ],
+                [
+                    "8",
+                    {
+                        "query": "SELECT json1",
+                        "depth": 0,
+                        "as_list": False,
+                        "as_json": True,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -261,6 +294,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah1",
                         "depth": 0,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -271,6 +305,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah2",
                         "depth": 2,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -281,6 +316,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah3",
                         "depth": 0,
                         "as_list": True,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -291,6 +327,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah1",
                         "depth": 0,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -301,6 +338,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah2",
                         "depth": 2,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -311,6 +349,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah3",
                         "depth": 0,
                         "as_list": True,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -349,6 +388,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah",
                         "depth": 0,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -359,6 +399,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah2",
                         "depth": 0,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -369,6 +410,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah3",
                         "depth": 0,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -379,6 +421,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah4",
                         "depth": 2,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -389,6 +432,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah5",
                         "depth": 0,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -399,6 +443,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah6",
                         "depth": 0,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -409,6 +454,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah7",
                         "depth": 2,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -419,6 +465,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah8",
                         "depth": 0,
                         "as_list": True,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -440,6 +487,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah",
                         "depth": 0,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -450,6 +498,7 @@ class MysqlPillarTestCase(TestCase):
                         "query": "SELECT blah2",
                         "depth": 0,
                         "as_list": False,
+                        "as_json": False,
                         "with_lists": None,
                         "ignore_null": False,
                     },
@@ -780,7 +829,7 @@ class MysqlPillarTestCase(TestCase):
                         assert list(y.keys()) == ["g"]
                         assert y["g"] == 2
                     else:
-                        raise ValueError("Unexpected value {0}".format(y))
+                        raise ValueError("Unexpected value {}".format(y))
             elif "h" in x:
                 assert len(x["h"]) == 1
                 for y in x["h"]:
@@ -791,9 +840,9 @@ class MysqlPillarTestCase(TestCase):
                         assert len(y.keys()) == 2
                         assert y["k"] == 4
                     else:
-                        raise ValueError("Unexpected value {0}".format(y))
+                        raise ValueError("Unexpected value {}".format(y))
             else:
-                raise ValueError("Unexpected value {0}".format(x))
+                raise ValueError("Unexpected value {}".format(x))
 
     def test_302_process_results_with_lists_consecutive(self):
         """
@@ -837,7 +886,7 @@ class MysqlPillarTestCase(TestCase):
                         assert list(y.keys()) == ["g"]
                         assert y["g"] == 2
                     else:
-                        raise ValueError("Unexpected value {0}".format(y))
+                        raise ValueError("Unexpected value {}".format(y))
             elif len(x[0][0]) == 2:
                 for y in x[0]:
                     if "j" in y:
@@ -847,6 +896,6 @@ class MysqlPillarTestCase(TestCase):
                         assert len(y.keys()) == 2
                         assert y["k"] == 4
                     else:
-                        raise ValueError("Unexpected value {0}".format(len(x[0][0])))
+                        raise ValueError("Unexpected value {}".format(len(x[0][0])))
             else:
-                raise ValueError("Unexpected value {0}".format(x))
+                raise ValueError("Unexpected value {}".format(x))

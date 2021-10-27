@@ -34,7 +34,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 DEFAULT_LOCATION = "us-east-1"
-DEFAULT_AWS_API_VERSION = "2014-10-01"
+DEFAULT_AWS_API_VERSION = "2016-11-15"
 AWS_RETRY_CODES = [
     "RequestLimitExceeded",
     "InsufficientInstanceCapacity",
@@ -164,7 +164,9 @@ def sig2(method, endpoint, params, provider, aws_api_version):
     querystring = urllib.parse.urlencode(list(zip(keys, values)))
 
     canonical = "{}\n{}\n/\n{}".format(
-        method.encode("utf-8"), endpoint.encode("utf-8"), querystring.encode("utf-8"),
+        method.encode("utf-8"),
+        endpoint.encode("utf-8"),
+        querystring.encode("utf-8"),
     )
 
     hashed = hmac.new(secret_access_key, canonical, hashlib.sha256)
@@ -205,7 +207,10 @@ def assumed_creds(prov_dict, role_arn, location=None):
             "Action": "AssumeRole",
             "RoleSessionName": session_name,
             "RoleArn": role_arn,
-            "Policy": '{"Version":"2012-10-17","Statement":[{"Sid":"Stmt1", "Effect":"Allow","Action":"*","Resource":"*"}]}',
+            "Policy": (
+                '{"Version":"2012-10-17","Statement":[{"Sid":"Stmt1",'
+                ' "Effect":"Allow","Action":"*","Resource":"*"}]}'
+            ),
             "DurationSeconds": "3600",
         },
         aws_api_version=version,
@@ -330,9 +335,13 @@ def sig4(
     ).hexdigest()
 
     # Add signing information to the request
-    authorization_header = (
-        "{} Credential={}/{}, SignedHeaders={}, Signature={}"
-    ).format(algorithm, access_key_id, credential_scope, signed_headers, signature,)
+    authorization_header = "{} Credential={}/{}, SignedHeaders={}, Signature={}".format(
+        algorithm,
+        access_key_id,
+        credential_scope,
+        signed_headers,
+        signature,
+    )
 
     new_headers["Authorization"] = authorization_header
 
@@ -442,8 +451,8 @@ def query(
                 endpoint_err = (
                     "Could not find a valid endpoint in the "
                     "requesturl: {}. Looking for something "
-                    "like https://some.aws.endpoint/?args"
-                ).format(requesturl)
+                    "like https://some.aws.endpoint/?args".format(requesturl)
+                )
                 log.error(endpoint_err)
                 if return_url is True:
                     return {"error": endpoint_err}, requesturl
