@@ -401,7 +401,7 @@ class BuildoutOnlineTestCase(Base):
                 ]
             )
 
-    @skipIf(True, "TODO this test should probably be fixed")
+    @pytest.mark.skip(reason="TODO this test should probably be fixed")
     def test_buildout_bootstrap(self):
         b_dir = os.path.join(self.tdir, "b")
         bd_dir = os.path.join(self.tdir, "b", "bdistribute")
