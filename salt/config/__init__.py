@@ -957,6 +957,10 @@ VALID_OPTS = immutabletypes.freeze(
         # The port to be used when checking if a master is connected to a
         # minion
         "remote_minions_port": int,
+        # Backoff interval in seconds for job publish if minion is unavailable while on tcp transport
+        "tcp_publish_backoff": float,
+        # Amount of retries for job publish if minion is unavailable while on tcp transport
+        "tcp_publish_retries": int,
     }
 )
 
@@ -1597,6 +1601,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "fips_mode": False,
         "detect_remote_minions": False,
         "remote_minions_port": 22,
+        "tcp_publish_backoff": 10.0,
+        "tcp_publish_retries": 0,
     }
 )
 

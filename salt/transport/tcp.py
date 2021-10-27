@@ -1411,6 +1411,10 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
         else:
             self.event = None
 
+        # retry opts
+        self.retries = opts.get("tcp_publish_retries")
+        self.retry_backoff = opts.get("tcp_publish_backoff", 10.0)
+
     def close(self):
         if self._closing:
             return
@@ -1522,8 +1526,24 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
 
         to_remove = []
         if "topic_lst" in package:
+            # Mutate the package payload, which we use to store TTL information
+            # If the retry functionality is disabled, this condition will always be False, as 'tries' is only set here
+            if "tries" in package:
+                if package["tries"] < 1:
+                    # TTL reached
+                    log.debug(
+                        "Publish targets %s not connected and amount of retries reached",
+                        package["topic_lst"],
+                    )
+                    return
+            else:
+                package["tries"] = self.retries
+
             topic_lst = package["topic_lst"]
+            missed = []
             for topic in topic_lst:
+                published = False
+
                 if topic in self.present:
                     # This will rarely be a list of more than 1 item. It will
                     # be more than 1 item if the minion disconnects from the
@@ -1535,10 +1555,28 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
                             # Write the packed str
                             f = client.stream.write(payload)
                             self.io_loop.add_future(f, lambda f: True)
+                            published = True
                         except salt.ext.tornado.iostream.StreamClosedError:
                             to_remove.append(client)
                 else:
                     log.debug("Publish target %s not connected", topic)
+
+                # We want to check this for each topic, as there might be more connection in self.present[topic], some of them might end in to_remove, but there might be one alive - for these reasons we *don't* want to retry the publish again
+                if not published:
+                    missed.append(topic)
+
+            # Check whether we want to republish
+            if self.retries and missed:
+                self.io_loop.call_later(
+                    self.retry_backoff,
+                    self.publish_payload,
+                    {
+                        "payload": package["payload"],
+                        "topic_lst": missed,
+                        "tries": package["tries"] - 1,
+                    },
+                    None,
+                )
         else:
             for client in self.clients:
                 try:
