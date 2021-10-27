@@ -36,7 +36,7 @@ jobs:
 
       - name: Check Docstrings For Changed Files On PR
         id: check-known-missing-docstrings
-        if: github.event_name == 'pull_request' && steps.changed-files.outputs.salt == 'true'
+        if: github.event_name == 'pull_request_target' && steps.changed-files.outputs.salt == 'true'
         continue-on-error: true
         run: |
           pre-commit run -v --hook-stage manual check-known-missing-docstrings --show-diff-on-failure --color=never --files ${{ join(fromJSON(steps.changed-files.outputs.salt_files), ' ') }} | tee output.txt
