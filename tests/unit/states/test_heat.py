@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
 import salt.modules.file as file_
@@ -11,11 +6,7 @@ import salt.modules.win_file as win_file
 import salt.states.heat as heat
 import salt.utils.platform
 import salt.utils.win_dacl as dacl
-
-# Import Salt Libs
 import tests.unit.modules.test_heat
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS

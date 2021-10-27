@@ -1,20 +1,12 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.modules.pkg_resource as pkg_resource
-
-# Import Salt Libs
 import salt.utils.data
 import salt.utils.yaml
 import yaml
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -30,8 +22,8 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_pack_sources(self):
         """
-            Test to accepts list of dicts (or a string representing a
-            list of dicts) and packs the key/value pairs into a single dict.
+        Test to accepts list of dicts (or a string representing a
+        list of dicts) and packs the key/value pairs into a single dict.
         """
         with patch.object(
             salt.utils.yaml,
@@ -47,10 +39,10 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_parse_targets(self):
         """
-            Test to parses the input to pkg.install and
-            returns back the package(s) to be installed. Returns a
-            list of packages, as well as a string noting whether the
-            packages are to come from a repository or a binary package.
+        Test to parses the input to pkg.install and
+        returns back the package(s) to be installed. Returns a
+        list of packages, as well as a string noting whether the
+        packages are to come from a repository or a binary package.
         """
         with patch.dict(pkg_resource.__grains__, {"os": "A"}):
             self.assertEqual(
@@ -92,8 +84,8 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_version(self):
         """
-            Test to Common interface for obtaining the version
-            of installed packages.
+        Test to Common interface for obtaining the version
+        of installed packages.
         """
         with patch.object(salt.utils.data, "is_true", return_value=True):
             mock = MagicMock(return_value={"A": "B"})
@@ -104,30 +96,28 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
 
             mock = MagicMock(return_value={})
             with patch.dict(pkg_resource.__salt__, {"pkg.list_pkgs": mock}):
-                with patch(
-                    "builtins.next" if six.PY3 else "__builtin__.next"
-                ) as mock_next:
+                with patch("builtins.next") as mock_next:
                     mock_next.side_effect = StopIteration()
                     self.assertEqual(pkg_resource.version("A"), "")
 
     def test_add_pkg(self):
         """
-            Test to add a package to a dict of installed packages.
+        Test to add a package to a dict of installed packages.
         """
         self.assertIsNone(pkg_resource.add_pkg({"pkgs": []}, "name", "version"))
 
     def test_sort_pkglist(self):
         """
-            Test to accepts a dict obtained from pkg.list_pkgs() and sorts
-            in place the list of versions for any packages that have multiple
-            versions installed, so that two package lists can be compared
-            to one another.
+        Test to accepts a dict obtained from pkg.list_pkgs() and sorts
+        in place the list of versions for any packages that have multiple
+        versions installed, so that two package lists can be compared
+        to one another.
         """
         self.assertIsNone(pkg_resource.sort_pkglist({}))
 
     def test_format_pkg_list_no_attr(self):
         """
-            Test to output format of the package list with no attr parameter.
+        Test to output format of the package list with no attr parameter.
         """
         packages = {
             "glibc": [
@@ -164,20 +154,15 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
             "foobar.something": "3:1.1-23.1",
             "foobar.": "3:1.1-23.1",
         }
-        if six.PY3:
-            self.assertCountEqual(
-                pkg_resource.format_pkg_list(packages, False, None), expected_pkg_list
-            )
-        else:
-            self.assertItemsEqual(
-                pkg_resource.format_pkg_list(packages, False, None), expected_pkg_list
-            )
+        self.assertCountEqual(
+            pkg_resource.format_pkg_list(packages, False, None), expected_pkg_list
+        )
 
     def test_format_pkg_list_with_attr(self):
         """
-            Test to output format of the package list with attr parameter.
-            In this case, any redundant "arch" reference will be removed from the package name since it's
-            include as part of the requested attr.
+        Test to output format of the package list with attr parameter.
+        In this case, any redundant "arch" reference will be removed from the package name since it's
+        include as part of the requested attr.
         """
         NAME_ARCH_MAPPING = {
             "glibc": {"name": "glibc", "arch": None},
@@ -243,32 +228,24 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(
             pkg_resource.__salt__, {"pkg.parse_arch": NAME_ARCH_MAPPING.get}
         ):
-            if six.PY3:
-                self.assertCountEqual(
-                    pkg_resource.format_pkg_list(
-                        packages, False, attr=["epoch", "release"]
-                    ),
-                    expected_pkg_list,
-                )
-            else:
-                self.assertItemsEqual(
-                    pkg_resource.format_pkg_list(
-                        packages, False, attr=["epoch", "release"]
-                    ),
-                    expected_pkg_list,
-                )
+            self.assertCountEqual(
+                pkg_resource.format_pkg_list(
+                    packages, False, attr=["epoch", "release"]
+                ),
+                expected_pkg_list,
+            )
 
     def test_stringify(self):
         """
-            Test to takes a dict of package name/version information
-            and joins each list of
-            installed versions into a string.
+        Test to takes a dict of package name/version information
+        and joins each list of
+        installed versions into a string.
         """
         self.assertIsNone(pkg_resource.stringify({}))
 
     def test_version_clean(self):
         """
-            Test to clean the version string removing extra data.
+        Test to clean the version string removing extra data.
         """
         with patch.dict(
             pkg_resource.__salt__, {"pkg.version_clean": MagicMock(return_value="A")}
@@ -279,8 +256,8 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_check_extra_requirements(self):
         """
-            Test to check if the installed package already
-            has the given requirements.
+        Test to check if the installed package already
+        has the given requirements.
         """
         with patch.dict(
             pkg_resource.__salt__,

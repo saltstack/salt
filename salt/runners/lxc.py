@@ -102,9 +102,7 @@ def find_guest(name, quiet=False, path=None):
         salt-run lxc.find_guest name
     """
     if quiet:
-        log.warning(
-            "'quiet' argument is being deprecated." " Please migrate to --quiet"
-        )
+        log.warning("'quiet' argument is being deprecated. Please migrate to --quiet")
     for data in _list_iter(path=path):
         host, l = next(iter(data.items()))
         for x in "running", "frozen", "stopped":
@@ -228,9 +226,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     """
     path = kwargs.get("path", None)
     if quiet:
-        log.warning(
-            "'quiet' argument is being deprecated." " Please migrate to --quiet"
-        )
+        log.warning("'quiet' argument is being deprecated. Please migrate to --quiet")
     ret = {"comment": "", "result": True}
     if host is None:
         # TODO: Support selection of host based on available memory/cpu/etc.

@@ -265,7 +265,9 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         This is a destructive test as it installs a package
         """
         if not self._PKG_DOT_TARGETS:
-            self.skipTest('No packages with "." in their name have been specified',)
+            self.skipTest(
+                'No packages with "." in their name have been specified',
+            )
 
         target = self._PKG_DOT_TARGETS[0]
 
@@ -422,11 +424,21 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # needs to not be installed before we run the states below
         self.assertFalse(version)
 
-        ret = self.run_state("pkg.installed", name=target, version="*", refresh=False,)
+        ret = self.run_state(
+            "pkg.installed",
+            name=target,
+            version="*",
+            refresh=False,
+        )
         self.assertSaltTrueReturn(ret)
 
         # Repeat state, should pass
-        ret = self.run_state("pkg.installed", name=target, version="*", refresh=False,)
+        ret = self.run_state(
+            "pkg.installed",
+            name=target,
+            version="*",
+            refresh=False,
+        )
 
         expected_comment = (
             "All specified packages are already installed and are at the "
@@ -437,7 +449,10 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Repeat one more time with unavailable version, test should fail
         ret = self.run_state(
-            "pkg.installed", name=target, version="93413*", refresh=False,
+            "pkg.installed",
+            name=target,
+            version="93413*",
+            refresh=False,
         )
         self.assertSaltFalseReturn(ret)
 
@@ -467,7 +482,10 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         try:
             ret = self.run_state(
-                "pkg.installed", name=target, version="<9999999", refresh=False,
+                "pkg.installed",
+                name=target,
+                version="<9999999",
+                refresh=False,
             )
             self.assertSaltTrueReturn(ret)
 
@@ -533,23 +551,30 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 # Exit loop if a versionlock package installed correctly
                 try:
                     self.assertSaltTrueReturn(ret)
-                    log.debug(
-                        "Installed versionlock package: {}".format(versionlock_pkg)
-                    )
+                    log.debug("Installed versionlock package: %s", versionlock_pkg)
                     break
-                except AssertionError as e:
-                    log.debug("Versionlock package not found:\n{}".format(e))
+                except AssertionError as exc:
+                    log.debug("Versionlock package not found:\n%s", exc)
             else:
                 self.fail("Could not install versionlock package from {}".format(pkgs))
 
         target = self._PKG_TARGETS[0]
 
         # First we ensure that the package is installed
-        ret = self.run_state("pkg.installed", name=target, refresh=False,)
+        ret = self.run_state(
+            "pkg.installed",
+            name=target,
+            refresh=False,
+        )
         self.assertSaltTrueReturn(ret)
 
         # Then we check that the package is now held
-        ret = self.run_state("pkg.installed", name=target, hold=True, refresh=False,)
+        ret = self.run_state(
+            "pkg.installed",
+            name=target,
+            hold=True,
+            refresh=False,
+        )
 
         if versionlock_pkg and "-versionlock is not installed" in str(ret):
             self.skipTest("{}  `{}` is installed".format(ret, versionlock_pkg))
@@ -654,12 +679,10 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 # Exit loop if a versionlock package installed correctly
                 try:
                     self.assertSaltTrueReturn(ret)
-                    log.debug(
-                        "Installed versionlock package: {}".format(versionlock_pkg)
-                    )
+                    log.debug("Installed versionlock package: %s", versionlock_pkg)
                     break
-                except AssertionError as e:
-                    log.debug("Versionlock package not found:\n{}".format(e))
+                except AssertionError as exc:
+                    log.debug("Versionlock package not found:\n%s", exc)
             else:
                 self.fail("Could not install versionlock package from {}".format(pkgs))
 
@@ -667,7 +690,10 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         # First we ensure that the package is installed
         target_ret = self.run_state(
-            "pkg.installed", name=target, hold=False, refresh=False,
+            "pkg.installed",
+            name=target,
+            hold=False,
+            refresh=False,
         )
         self.assertSaltTrueReturn(target_ret)
 

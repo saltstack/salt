@@ -6,6 +6,7 @@ Beacon to fire events at specific log messages.
 """
 import logging
 
+import salt.utils.beacons
 import salt.utils.files
 import salt.utils.platform
 
@@ -47,15 +48,14 @@ def validate(config):
     """
     Validate the beacon configuration
     """
-    _config = {}
-    list(map(_config.update, config))
-
     # Configuration for log beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for log beacon must be a list.")
+        return False, "Configuration for log beacon must be a list."
 
-    if "file" not in _config:
-        return False, ("Configuration for log beacon must contain file option.")
+    config = salt.utils.beacons.list_to_dict(config)
+
+    if "file" not in config:
+        return False, "Configuration for log beacon must contain file option."
     return True, "Valid beacon configuration"
 
 
@@ -91,19 +91,18 @@ def beacon(config):
                 goodbye/world: # tag added to beacon event tag.
                   regex: .*good-bye.* # match good-bye string anywhere in the log entry.
     """
-    _config = {}
-    list(map(_config.update, config))
+    config = salt.utils.beacons.list_to_dict(config)
 
     ret = []
 
-    if "file" not in _config:
+    if "file" not in config:
         event = SKEL.copy()
         event["tag"] = "global"
         event["error"] = "file not defined in config"
         ret.append(event)
         return ret
 
-    with salt.utils.files.fopen(_config["file"], "r") as fp_:
+    with salt.utils.files.fopen(config["file"], "r") as fp_:
         loc = __context__.get(LOC_KEY, 0)
         if loc == 0:
             fp_.seek(0, 2)
@@ -118,13 +117,13 @@ def beacon(config):
         log.info("txt %s", txt)
 
         d = {}
-        for tag in _config.get("tags", {}):
-            if "regex" not in _config["tags"][tag]:
+        for tag in config.get("tags", {}):
+            if "regex" not in config["tags"][tag]:
                 continue
-            if not _config["tags"][tag]["regex"]:
+            if not config["tags"][tag]["regex"]:
                 continue
             try:
-                d[tag] = re.compile(r"{}".format(_config["tags"][tag]["regex"]))
+                d[tag] = re.compile(r"{}".format(config["tags"][tag]["regex"]))
             except Exception as e:  # pylint: disable=broad-except
                 event = SKEL.copy()
                 event["tag"] = tag

@@ -8,7 +8,7 @@ The focus of this tutorial will be building a Salt infrastructure for handling
 large numbers of minions. This will include tuning, topology, and best practices.
 
 For how to install the Salt Master please
-go here: `Installing saltstack <http://docs.saltstack.com/topics/installation/index.html>`_
+go here: `Installing saltstack <https://docs.saltproject.io/topics/installation/index.html>`_
 
 .. note::
 

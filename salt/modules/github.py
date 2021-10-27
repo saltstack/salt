@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for interacting with the GitHub v3 API.
 
@@ -30,18 +29,12 @@ For example:
       allow_repo_privacy_changes: False
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.utils.http
-
-# Import Salt Libs
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 
-# Import third party libs
 HAS_LIBS = False
 try:
     # pylint: disable=no-name-in-module
@@ -88,14 +81,15 @@ def _get_config_value(profile, config_name):
     if not config:
         raise CommandExecutionError(
             "Authentication information could not be found for the "
-            "'{0}' profile.".format(profile)
+            "'{}' profile.".format(profile)
         )
 
     config_value = config.get(config_name)
     if config_value is None:
         raise CommandExecutionError(
-            "The '{0}' parameter was not found in the '{1}' "
-            "profile.".format(config_name, profile)
+            "The '{}' parameter was not found in the '{}' profile.".format(
+                config_name, profile
+            )
         )
 
     return config_value
@@ -106,7 +100,7 @@ def _get_client(profile):
     Return the GitHub client, cached into __context__ for performance
     """
     token = _get_config_value(profile, "token")
-    key = "github.{0}:{1}".format(token, _get_config_value(profile, "org_name"))
+    key = "github.{}:{}".format(token, _get_config_value(profile, "org_name"))
 
     if key not in __context__:
         __context__[key] = github.Github(token, per_page=100)
@@ -125,7 +119,7 @@ def _get_members(organization, params=None):
 def _get_repos(profile, params=None, ignore_cache=False):
     # Use cache when no params are given
     org_name = _get_config_value(profile, "org_name")
-    key = "github.{0}:repos".format(org_name)
+    key = "github.{}:repos".format(org_name)
 
     if key not in __context__ or ignore_cache or params is not None:
         org_name = _get_config_value(profile, "org_name")
@@ -149,7 +143,7 @@ def _get_repos(profile, params=None, ignore_cache=False):
             next_result.append(repo)
 
             # Cache a copy of each repo for single lookups
-            repo_key = "github.{0}:{1}:repo_info".format(org_name, repo.name.lower())
+            repo_key = "github.{}:{}:repo_info".format(org_name, repo.name.lower())
             __context__[repo_key] = _repo_to_dict(repo)
 
         __context__[key] = next_result
@@ -177,7 +171,7 @@ def list_users(profile="github", ignore_cache=False):
         salt myminion github.list_users profile='my-github-profile'
     """
     org_name = _get_config_value(profile, "org_name")
-    key = "github.{0}:users".format(org_name)
+    key = "github.{}:users".format(org_name)
     if key not in __context__ or ignore_cache:
         client = _get_client(profile)
         organization = client.get_organization(org_name)
@@ -348,7 +342,7 @@ def get_issue(issue_number, repo_name=None, profile="github", output="min"):
         repo_name = _get_config_value(profile, "repo_name")
 
     action = "/".join(["repos", org_name, repo_name])
-    command = "issues/" + six.text_type(issue_number)
+    command = "issues/" + str(issue_number)
 
     ret = {}
     issue_data = _query(profile, action=action, command=command)
@@ -402,7 +396,7 @@ def get_issue_comments(
         repo_name = _get_config_value(profile, "repo_name")
 
     action = "/".join(["repos", org_name, repo_name])
-    command = "/".join(["issues", six.text_type(issue_number), "comments"])
+    command = "/".join(["issues", str(issue_number), "comments"])
 
     args = {}
     if since:
@@ -691,7 +685,7 @@ def get_milestone(
 
     action = "/".join(["repos", org_name, repo_name])
     if number:
-        command = "milestones/" + six.text_type(number)
+        command = "milestones/" + str(number)
         milestone_data = _query(profile, action=action, command=command)
         milestone_id = milestone_data.get("id")
         if output == "full":
@@ -705,7 +699,7 @@ def get_milestone(
 
     else:
         milestones = get_milestones(repo_name=repo_name, profile=profile, output=output)
-        for key, val in six.iteritems(milestones):
+        for key, val in milestones.items():
             if val.get("title") == name:
                 ret[key] = val
                 return ret
@@ -760,7 +754,7 @@ def get_repo_info(repo_name, profile="github", ignore_cache=False):
     """
 
     org_name = _get_config_value(profile, "org_name")
-    key = "github.{0}:{1}:repo_info".format(
+    key = "github.{}:{}:repo_info".format(
         _get_config_value(profile, "org_name"), repo_name.lower()
     )
 
@@ -780,7 +774,7 @@ def get_repo_info(repo_name, profile="github", ignore_cache=False):
             __context__[key] = ret
         except github.UnknownObjectException:
             raise CommandExecutionError(
-                "The '{0}' repository under the '{1}' organization could not "
+                "The '{}' repository under the '{}' organization could not "
                 "be found.".format(repo_name, org_name)
             )
     return __context__[key]
@@ -813,7 +807,7 @@ def get_repo_teams(repo_name, profile="github"):
         repo = client.get_repo("/".join([org_name, repo_name]))
     except github.UnknownObjectException:
         raise CommandExecutionError(
-            "The '{0}' repository under the '{1}' organization could not "
+            "The '{}' repository under the '{}' organization could not "
             "be found.".format(repo_name, org_name)
         )
     try:
@@ -824,7 +818,7 @@ def get_repo_teams(repo_name, profile="github"):
             )
     except github.UnknownObjectException:
         raise CommandExecutionError(
-            "Unable to retrieve teams for repository '{0}' under the '{1}' "
+            "Unable to retrieve teams for repository '{}' under the '{}' "
             "organization.".format(repo_name, org_name)
         )
     return ret
@@ -971,7 +965,7 @@ def add_repo(
             "license_template": license_template,
         }
         parameters = {"name": name}
-        for param_name, param_value in six.iteritems(given_params):
+        for param_name, param_value in given_params.items():
             if param_value is not None:
                 parameters[param_name] = param_value
 
@@ -1039,7 +1033,7 @@ def edit_repo(
     if private is not None and not allow_private_change:
         raise CommandExecutionError(
             "The private field is set to be changed for "
-            "repo {0} but allow_repo_privacy_changes "
+            "repo {} but allow_repo_privacy_changes "
             "disallows this.".format(name)
         )
 
@@ -1057,7 +1051,7 @@ def edit_repo(
             "has_downloads": has_downloads,
         }
         parameters = {"name": name}
-        for param_name, param_value in six.iteritems(given_params):
+        for param_name, param_value in given_params.items():
             if param_value is not None:
                 parameters[param_name] = param_value
 
@@ -1479,7 +1473,7 @@ def list_members_without_mfa(profile="github", ignore_cache=False):
 
     .. versionadded:: 2016.11.0
     """
-    key = "github.{0}:non_mfa_users".format(_get_config_value(profile, "org_name"))
+    key = "github.{}:non_mfa_users".format(_get_config_value(profile, "org_name"))
 
     if key not in __context__ or ignore_cache:
         client = _get_client(profile)
@@ -1636,7 +1630,7 @@ def list_teams(profile="github", ignore_cache=False):
 
     .. versionadded:: 2016.11.0
     """
-    key = "github.{0}:teams".format(_get_config_value(profile, "org_name"))
+    key = "github.{}:teams".format(_get_config_value(profile, "org_name"))
 
     if key not in __context__ or ignore_cache:
         client = _get_client(profile)
@@ -1840,7 +1834,7 @@ def _query(
         url += action
 
     if command:
-        url += "/{0}".format(command)
+        url += "/{}".format(command)
 
     log.debug("GitHub URL: %s", url)
 
@@ -1893,7 +1887,7 @@ def _query(
             complete_result = complete_result + result["dict"]
         else:
             raise CommandExecutionError(
-                "GitHub Response Error: {0}".format(result.get("error"))
+                "GitHub Response Error: {}".format(result.get("error"))
             )
 
         try:
