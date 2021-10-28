@@ -258,7 +258,7 @@ def create_device_type(model, manufacturer):
         return False
 
 
-def create_device_role(role, color):
+def create_device_role(role, color="133700", vm_role=True, description=None):
     """
     .. versionadded:: 2019.2.0
 
@@ -266,6 +266,19 @@ def create_device_role(role, color):
 
     role
         String of device role, e.g., ``router``
+
+    color:
+        Color of device role, e.v., ``red``. 
+        Default: ``grey``
+
+    vm_role:
+        Boolean to control wether or not device role is 
+        assignable to a virtual machine.
+        Default: True
+
+    description:
+        Description of device role
+        Default: None
 
     CLI Example:
 
@@ -277,12 +290,97 @@ def create_device_role(role, color):
     if nb_role:
         return False
     else:
-        payload = {"name": role, "slug": slugify(role), "color": color}
+        payload = {"name": role, "slug": slugify(role), "color": color, "vm_role": vm_role}
+        if description:
+            payload['description'] = description
         role = _add("dcim", "device-roles", payload)
         if role:
             return {"dcim": {"device-roles": payload}}
         else:
             return False
+
+def get_device_role(name):
+    nb_device_role = get_(
+        "dcim",
+        "device_roles",
+        name=name
+    )
+    return nb_device_role
+
+def delete_device_role(name):
+    nb_device_role = _get("dcim", "device_roles", auth_required=True, name=name)
+    if not nb_device_role:
+        log.error("No such device_role {}".format(name))
+        return None
+    nb_device_role.delete()
+    return {"DELETE": {"dcim": {"device_roles": name}}}
+
+def update_device_role(name, **kwargs):
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+    nb_device_role = _get("dcim", "device-roles", auth_required=True, name=name)
+    if not nb_device_role:
+        log.error("No such device_role with name {}.".format(name))
+        return False
+
+    pprint(nb_device_role)
+    for k, v in kwargs.items():
+        setattr(nb_device_role, k, v)
+
+    try:
+        nb_device_role.save()
+        ret = get_device_role(name)
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        return False
+    return ret
+
+def check_device_role(name, **kwargs):
+    """
+    returns: 
+        - False if error
+        - None if vminterface does not exist
+        - {} if there are no changes
+        - {'with': 'changes'} for changes
+    """
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+
+    try:
+        nb_device_role = _get(
+            "dcim",
+            "device_roles",
+            name=name
+        )
+        if not nb_device_role:
+            log.info('No such device_role: {}'.format(name))
+            return None
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        return False
+
+    required_changes={}
+    for k, v in kwargs.items():
+        if v == None:
+            # state module sets al available options default to None
+            continue
+       
+        # Resolve kwargs to their ID if needed.
+        # Not needed
+
+        # Check if the attribute has an ID attribute.
+        # If so, use it.
+        value_from_netbox = ""
+        nb_attribute = getattr(nb_device_role, k)
+        if hasattr(nb_attribute, "id"):
+            value_from_netbox = nb_attribute.id
+        else:
+            value_from_netbox = nb_attribute
+
+        if v == value_from_netbox:
+            print("Gelijk: {}".format(v))
+        else:
+            print("BOOM: {} != {}".format(v, getattr(nb_device_role, k)))
+            required_changes[k]=v
+    return required_changes
 
 
 def create_platform(platform):
@@ -2525,3 +2623,11 @@ def check_cluster(name, **kwargs):
             print("BOOM: {} != {}".format(v, getattr(nb_cluster, k)))
             required_changes[k]=v
     return required_changes
+
+# get
+# create
+# update
+# delete
+# check
+
+
