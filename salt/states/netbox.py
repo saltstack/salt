@@ -662,3 +662,112 @@ def cluster(
         ret["comment"] = "{} created".format(name)
         ret["changes"] = result
     return ret
+
+def device_role(
+    name,
+    color=None,
+    vm_role=None,
+    description=None,
+    ):
+
+    # 1. Set up the return dictionary and perform any necessary input validation (type checking, looking for use of mutually-exclusive arguments, etc.).
+    ret = {"name": name, "result": False, "changes": {}, "comment": ""}
+
+    # 2. Check if changes need to be made. 
+    # This is best done with an information-gathering function in an accompanying execution module. 
+    # The state should be able to use the return from this function to tell whether or not 
+    # the minion is already in the desired state.
+    required_changes = __salt__["netbox.check_device_role"](
+        name,
+        color=color,
+        vm_role=vm_role,
+        description=description
+    )
+    if required_changes == False:
+        ret["result"] = False
+        ret["comment"] = "Something went wrong inside netbox.check_device_role"
+        return ret
+  
+    # False: there was an error
+    # None: No such virtual machine -> create
+    # {} : No changes needed
+    # {<data>} : apply changes
+
+    # 3. If step 2 found that the minion is already in the desired state, 
+    #    then exit immediately with a True result and without making any changes.
+
+    if required_changes == {}:
+        ret["result"] = True
+        ret["comment"] = "{0} already in desired state".format(name)
+        return ret
+
+    # 4. If step 2 found that changes do need to be made, 
+    # then check to see if the state was being run in test mode (i.e. with test=True). 
+    # If so, then exit with a None result, a relevant comment, 
+    # and (if possible) a changes entry describing what changes would be made.
+
+    #TODO: The difference between changes({}) and new(None) should be handled
+    #      more elegant...
+    if __opts__["test"] and required_changes:
+        ret["result"] = None
+        ret["comment"] = "Attributes are set to be changed on {}".format(name)
+        ret["changes"] = required_changes
+        return ret
+    if __opts__["test"] and not required_changes:
+        ret["result"] = None
+        ret["comment"] = "device_role {} would be created".format(name)
+        ret["changes"] = {}
+        return ret
+
+
+    # 5. Make the desired changes. 
+    # This should again be done using a function from an accompanying execution module. 
+    # If the result of that function is enough to tell you whether or not an error occurred, 
+    # then you can exit with a False result and a relevant comment to explain what happened.
+
+    if required_changes == None:
+        result = __salt__["netbox.create_device_role"](
+            name,
+            color=color,
+            vm_role=vm_role,
+            description=description
+        )
+        if result == False:
+            log.error("Unable to create device_role")
+            return False
+
+    if required_changes:
+        result = __salt__["netbox.update_device_role"](
+            name,
+            **required_changes
+        )
+        if result == False:
+            log.error("Unable to update device_role")
+            return False
+
+    # 6. Perform the same check from step 2 again to confirm whether or not 
+    # the minion is in the desired state. 
+    # Just as in step 2, this function should be able to tell you by its 
+    # return data whether or not changes need to be made.
+    outstanding_changes = __salt__["netbox.check_device_role"](
+        name,
+        color=color,
+        vm_role=vm_role,
+        description=description
+    )
+
+    # 7. Set the return data and return!
+    if outstanding_changes:
+        # update failed, after create/update there are still required changes
+        ret["comment"] = "Failed to reconcile attributes {}".format(outstanding_changes)
+    elif required_changes:
+        # update succesfully
+        ret["result"] = True
+        ret["comment"] = "{} updated".format(name)
+        ret["changes"] = required_changes
+    else:
+        # created succesfully
+        ret["result"] = True
+        ret["comment"] = "{} created".format(name)
+        ret["changes"] = result
+    return ret
