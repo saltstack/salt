@@ -56,11 +56,11 @@ pytestmark = [
 # TODO
 # - [✓] - mysql, check to see if the timestamp exists on the table, if not, alter table, otherwise create
 # - [✓] - as much as possible fix sql injection potential
-# - [ ] - consul - check that we're purging the timetstamps when keys/banks are flushed
-# - [ ] - etcd - check that we're purging timestamps when keys/banks are flushed
-# - [ ] - redis - re-unify things to use original approach + ensure timestamps are flushed
-# - [ ] - redis - add legacy/modern feature flag and add deprecation warnings and guide
+# - [✓] - consul - check that we're purging the timetstamps when keys/banks are flushed
+# - [✓] - etcd - check that we're purging timestamps when keys/banks are flushed
+# - [✓] - redis - re-unify things to use original approach + ensure timestamps are flushed
 # - [ ] - MemCache - add some tests for MemCache
+# - [ ] - accurately document etcd slashes vs redis slashes????
 
 # TODO: in PR request opinion: is it better to double serialize the data, e.g.
 # store -> __context__['serial'].dumps({"timestamp": tstamp, "value": __context__['serial'].dumps(value)})
@@ -184,6 +184,11 @@ def redis_cache(minion_opts, redis_port, redis_container):
     opts["cache"] = "redis"
     opts["cache.redis.host"] = "127.0.0.1"
     opts["cache.redis.port"] = redis_port
+    opts["cache.redis.bank_prefix"] = "#BANKY_BANK"
+    opts["cache.redis.bank_keys_prefix"] = "#WHO_HAS_MY_KEYS"
+    opts["cache.redis.key_prefix"] = "#LPL"
+    opts["cache.redis.timestamp_prefix"] = "%TICK_TOCK"
+    opts["cache.redis.separator"] = "\N{SNAKE}"
     cache = salt.cache.factory(opts)
     yield cache
 
@@ -306,7 +311,15 @@ def cache(request):
 
 def test_caching(subtests, cache):
     cachename, cache = cache
-    bank = "fnord"
+    # This bank can be just fnord, or fnord/foo, or any mildly reasonable or
+    # possibly unreasonably nested names.
+    #
+    # No. Seriously. Try import string; bank = '/'.join(string.ascii_letters)
+    # - it works!
+    bank = "fnord/kevin/stuart"
+    import string
+
+    bank = "/".join(string.ascii_letters)
     good_key = "roscivs"
     bad_key = "monkey"
 
