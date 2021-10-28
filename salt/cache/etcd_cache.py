@@ -2,6 +2,7 @@
 Minion data cache plugin for Etcd key/value data store.
 
 .. versionadded:: 2018.3.0
+.. versionchanged:: Phosphorus
 
 It is up to the system administrator to set up and configure the Etcd
 infrastructure. All is needed for this plugin is a working Etcd agent
@@ -42,6 +43,9 @@ value to ``etcd``:
 
     cache: etcd
 
+In Phosphorus, ls/list was changed to always return the final name in the path.
+This should only make a difference if you were directly using ``ls`` on paths
+that were more or less nested than, for example: ``1/2/3/4``.
 
 .. _`Etcd documentation`: https://github.com/coreos/etcd
 .. _`python-etcd documentation`: http://python-etcd.readthedocs.io/en/latest/
@@ -194,7 +198,7 @@ def _walk(r):
         if r.key.endswith(_tstamp_suffix):
             return []
         else:
-            return [r.key.split("/", 3)[3]]
+            return [r.key.rsplit("/", 1)[-1]]
 
     keys = []
     for c in client.read(r.key).children:

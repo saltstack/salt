@@ -60,7 +60,6 @@ pytestmark = [
 # - [✓] - etcd - check that we're purging timestamps when keys/banks are flushed
 # - [✓] - redis - re-unify things to use original approach + ensure timestamps are flushed
 # - [ ] - MemCache - add some tests for MemCache
-# - [ ] - accurately document etcd slashes vs redis slashes????
 
 # TODO: in PR request opinion: is it better to double serialize the data, e.g.
 # store -> __context__['serial'].dumps({"timestamp": tstamp, "value": __context__['serial'].dumps(value)})
@@ -311,20 +310,17 @@ def cache(request):
 
 def test_caching(subtests, cache):
     cachename, cache = cache
-    # This bank can be just fnord, or fnord/foo, or any mildly reasonable or
-    # possibly unreasonably nested names.
+    bank = "fnord/kevin/stuart"
+    # ^^^^ This bank can be just fnord, or fnord/foo, or any mildly reasonable
+    # or possibly unreasonably nested names.
     #
     # No. Seriously. Try import string; bank = '/'.join(string.ascii_letters)
     # - it works!
-    bank = "fnord/kevin/stuart"
-    import string
-
-    bank = "/".join(string.ascii_letters)
+    # import string; bank = "/".join(string.ascii_letters)
     good_key = "roscivs"
     bad_key = "monkey"
 
     with subtests.test("non-existent bank should be empty on cache start"):
-        # TODO: this might need to be list(cache.list(bank)) -W. Werner, 2021-06-29
         assert not cache.contains(bank=bank)
         assert cache.list(bank=bank) == []
 
@@ -416,7 +412,7 @@ def test_caching(subtests, cache):
         # this test should change. Or be removed altogether.
         # TODO: this should actually not raise. Not sure if there's a test that we can do here... or just call the code which will fail if there's actually an exception. -W. Werner, 2021-09-28
         pytest.skip(
-            "Skipping for now - etcd does not raise. Should ensure all backends behave consistently"
+            "Skipping for now - etcd, redis, and mysql do not raise. Should ensure all backends behave consistently"
         )
         with pytest.raises(Exception):
             cache.flush(bank=None, key=None)
