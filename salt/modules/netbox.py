@@ -196,7 +196,7 @@ def get_(app, endpoint, id=None, **kwargs):
     )
 
 
-def create_manufacturer(name):
+def create_manufacturer(name, description=None):
     """
     .. versionadded:: 2019.2.0
 
@@ -216,12 +216,96 @@ def create_manufacturer(name):
         return False
     else:
         payload = {"name": name, "slug": slugify(name)}
+        if description:
+            payload['description'] = description
         man = _add("dcim", "manufacturers", payload)
         if man:
             return {"dcim": {"manufacturers": payload}}
         else:
             return False
 
+def get_manufacturer(name):
+    nb_manufacturer = get_(
+        "dcim",
+        "manufacturers",
+        name=name
+    )
+    return nb_manufacturer
+
+def delete_manufacturer(name):
+    nb_manufacturer = _get("dcim", "manufacturers", auth_required=True, name=name)
+    if not nb_manufacturer:
+        log.error("No such manufacturer {}".format(name))
+        return None
+    nb_manufacturer.delete()
+    return {"DELETE": {"dcim": {"manufacturers": name}}}
+
+def update_manufacturer(name, **kwargs):
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+    nb_manufacturer = _get("dcim", "manufacturers", auth_required=True, name=name)
+    if not nb_manufacturer:
+        log.error("No such manufacturer with name {}.".format(name))
+        return False
+
+    pprint(nb_manufacturer)
+    for k, v in kwargs.items():
+        setattr(nb_manufacturer, k, v)
+
+    try:
+        nb_manufacturer.save()
+        ret = get_manufacturer(name)
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        return False
+    return ret
+
+def check_manufacturer(name, **kwargs):
+    """
+    returns: 
+        - False if error
+        - None if vminterface does not exist
+        - {} if there are no changes
+        - {'with': 'changes'} for changes
+    """
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+
+    try:
+        nb_manufacturer = _get(
+            "dcim",
+            "manufacturers",
+            name=name
+        )
+        if not nb_manufacturer:
+            log.info('No such manufacturer: {}'.format(name))
+            return None
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        return False
+
+    required_changes={}
+    for k, v in kwargs.items():
+        if v == None:
+            # state module sets al available options default to None
+            continue
+       
+        # Resolve kwargs to their ID if needed.
+        # Not needed
+
+        # Check if the attribute has an ID attribute.
+        # If so, use it.
+        value_from_netbox = ""
+        nb_attribute = getattr(nb_manufacturer, k)
+        if hasattr(nb_attribute, "id"):
+            value_from_netbox = nb_attribute.id
+        else:
+            value_from_netbox = nb_attribute
+
+        if v == value_from_netbox:
+            print("Gelijk: {}".format(v))
+        else:
+            print("BOOM: {} != {}".format(v, getattr(nb_manufacturer, k)))
+            required_changes[k]=v
+    return required_changes
 
 def create_device_type(model, manufacturer):
     """
