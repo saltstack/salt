@@ -15,6 +15,12 @@ from tests.support.helpers import requires_system_grains
 
 log = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.skip_if_not_root,
+    pytest.mark.destructive_test,
+]
+
 
 @pytest.fixture(autouse=True)
 @requires_system_grains
@@ -158,7 +164,6 @@ def latest_version(ctx, modules):
 
 @pytest.mark.requires_salt_modules("pkg.version")
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
-@pytest.mark.slow_test
 def test_pkg_001_installed(modules, states, PKG_TARGETS):
     """
     This is a destructive test as it installs and then removes a package
@@ -201,7 +206,6 @@ def test_pkg_002_installed_with_version(
 
 
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
-@pytest.mark.slow_test
 def test_pkg_003_installed_multipkg(PKG_TARGETS, modules, states):
     """
     This is a destructive test as it installs and then removes two packages
@@ -513,7 +517,6 @@ def test_pkg_012_installed_with_wildcard_version(
 
 @pytest.mark.requires_salt_modules("pkg.version", "pkg.latest_version")
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
-@pytest.mark.slow_test
 @requires_system_grains
 def test_pkg_013_installed_with_comparison_operator(
     grains, PKG_TARGETS, states, modules
@@ -586,7 +589,6 @@ def test_pkg_014_installed_missing_release(grains, PKG_TARGETS, states, modules)
 )
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
 @requires_system_grains
-@pytest.mark.slow_test
 def test_pkg_015_installed_held(grains, modules, states, PKG_TARGETS):
     """
     Tests that a package can be held even when the package is already installed.
@@ -702,7 +704,6 @@ def test_pkg_016_conditionally_ignore_epoch(PKG_EPOCH_TARGETS, latest_version, s
 )
 @pytest.mark.requires_salt_states("pkg.installed", "pkg.removed")
 @requires_system_grains
-@pytest.mark.slow_test
 def test_pkg_017_installed_held_equals_false(grains, modules, states, PKG_TARGETS):
     """
     Tests that a package is installed when hold is explicitly False.
