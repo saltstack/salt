@@ -20,7 +20,7 @@ MySQL installed. This can be easily installed with pip:
 
 .. code-block:: bash
 
-    pip install python-mysql
+    pip install pymysql
 
 Optionally, depending on the MySQL agent configuration, the following values
 could be set in the master config. These are the defaults:

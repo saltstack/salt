@@ -1,5 +1,7 @@
 import logging
+import socket
 import time
+from pprint import pformat
 
 import pytest
 import salt.cache
@@ -17,54 +19,23 @@ pytestmark = [
     pytest.mark.skip_if_binaries_missing("dockerd"),
 ]
 
-# PLAN: currently the salt/cache/*.py caches do not have a consistent API. In
-# fact update is completely missing from at least one of them. This is not
-# ideal. We would like instead to have a consistent API across our caches. The
-# one problem with that is that in order to have a consistent API our existing
-# API must become a legacy API. Short term what that means is that the default
-# approach will be to use the legacy API which should produce deprecation
-# warnings. Then after a certain time we should drop the legacy cache api in
-# each of these backends. I need to add documentation to the cache files to
-# describe what needs to be removed when the deprecations hit removal so that
-# whoever is responsible for that is not a homicidal psychopath who wants to
-# know where I live. Also we'll need a flag in the config that starts with use
-# legacy. Maybe we want a shift from use legacy to have one release with that
-# toggled to false? Anyway. The approach that I'm taking here is to assume the
-# (default) localfs cache has the most correct API. I'm just going through and
-# building up the alternative cache backends to match the localfs cache API.
-
-# Thursday: start making etcd tests work
-
-# TODO: Ensure that timestamps are flushed from the cache(s) as well -W. Werner, 2021-10-12
 # TODO: add out-of-band (i.e. not via the API) additions to the cache -W. Werner, 2021-09-28
-
-
-# - [✓] - redis_cache
-# - [✓] - etcd_cache - mostly complete - tried PR 56001, many more errors happened
-# - [✓] - consul_cache
-# - [✓✓] - mysql_cache
-
-
-# WOOHOO! Tests are all passing for all of the cache modules. They are in sync,
-# behavior-wise, with localfs cache. However! They're not quite perfect.
-# Currently the mysql_cache won't update an existing cache table - it should
-# ALTER TABLE if the table exists. It's also looking horrible from a SQL
-# injection perspective, that should 100% be addressed. etcd/consul/redis
-# caches also need to appropritately clean up the timestamp entries. As
-# mentioned, we also need to add some out-of-band tests.
-
-# TODO
-# - [✓] - mysql, check to see if the timestamp exists on the table, if not, alter table, otherwise create
-# - [✓] - as much as possible fix sql injection potential
-# - [✓] - consul - check that we're purging the timetstamps when keys/banks are flushed
-# - [✓] - etcd - check that we're purging timestamps when keys/banks are flushed
-# - [✓] - redis - re-unify things to use original approach + ensure timestamps are flushed
-# - [ ] - MemCache - add some tests for MemCache
 
 # TODO: in PR request opinion: is it better to double serialize the data, e.g.
 # store -> __context__['serial'].dumps({"timestamp": tstamp, "value": __context__['serial'].dumps(value)})
 # or is the existing approach of storing timestamp as a secondary key a good one???
 # ??? Is one slower than the other?
+
+
+# TODO: Is there a better approach for waiting until the container is fully running? -W. Werner, 2021-07-27
+class Timer:
+    def __init__(self, timeout=20):
+        self.start = time.time()
+        self.timeout = timeout
+
+    @property
+    def expired(self):
+        return time.time() - self.start > self.timeout
 
 
 @pytest.fixture(scope="module")
@@ -158,22 +129,23 @@ def consul_container(salt_factories, docker_client, consul_port):
     with container.started() as factory:
         # TODO: May want to do the same thing for redis to ensure that service is up & running
         # TODO: THIS IS HORRIBLE. THERE ARE BETTER WAYS TO DETECT SERVICE IS UP -W. Werner, 2021-10-12
-        import socket, time  # pylint: disable=multiple-imports,multiple-imports-on-one-line
 
+        timer = Timer(timeout=10)
         sleeptime = 0.1
-        up_yet = False
-        while not up_yet:
+        while not timer.expired:
             try:
                 with socket.create_connection(
                     ("localhost", consul_port), timeout=1
                 ) as cli:
                     cli.send(b"GET /v1/kv/fnord HTTP/1.1\n\n")
                     cli.recv(2048)
-                    up_yet = True
+                    break
             except ConnectionResetError as e:
                 if e.errno == 104:
                     time.sleep(sleeptime)
                     sleeptime += sleeptime
+        else:
+            assert False, "Timer expired before connecting to consul"
         yield factory
 
 
@@ -183,6 +155,8 @@ def redis_cache(minion_opts, redis_port, redis_container):
     opts["cache"] = "redis"
     opts["cache.redis.host"] = "127.0.0.1"
     opts["cache.redis.port"] = redis_port
+    # NOTE: If you would like to ensure that alternate prefixes are properly
+    # tested, simply change these values and re-run the tests.
     opts["cache.redis.bank_prefix"] = "#BANKY_BANK"
     opts["cache.redis.bank_keys_prefix"] = "#WHO_HAS_MY_KEYS"
     opts["cache.redis.key_prefix"] = "#LPL"
@@ -194,8 +168,14 @@ def redis_cache(minion_opts, redis_port, redis_container):
 
 @pytest.fixture(scope="module", autouse="true")
 def ensure_deps(states):
-    ret = states.pip.installed(name="python-etcd")
-    assert ret.result is True, "unable to pip install python-etcd"
+    installation_results = [
+        states.pip.installed(name=pkg)
+        for pkg in ("python-etcd", "redis", "python-consul", "pymysql")
+    ]
+    ret = all(result.result for result in installation_results)
+    assert (
+        ret is True
+    ), f"unable to pip install requirements {pformat([r.comment for r in installation_results])}"
 
 
 @pytest.fixture
@@ -205,6 +185,8 @@ def etcd_cache(minion_opts, etcd_port, etcd_apiv2_container):
     opts["etcd.host"] = "127.0.0.1"
     opts["etcd.port"] = etcd_port
     opts["etcd.protocol"] = "http"
+    # NOTE: If you would like to ensure that alternate suffixes are properly
+    # tested, simply change this value and re-run the tests.
     opts["etcd.timestamp_suffix"] = ".frobnosticate"
     cache = salt.cache.factory(opts)
     yield cache
@@ -233,15 +215,6 @@ def consul_cache(minion_opts, consul_port, consul_container):
 
 @pytest.fixture
 def mysql_cache(minion_opts, mysql_port, mysql_container):
-    # TODO: Is there a better way to wait until the container is fully running? -W. Werner, 2021-07-27
-    class Timer:
-        def __init__(self, timeout=20):
-            self.start = time.time()
-            self.timeout = timeout
-
-        @property
-        def expired(self):
-            return time.time() - self.start > self.timeout
 
     # The container can be available before mysql actually is
     mysql_container.container.exec_run(
@@ -304,7 +277,8 @@ def mysql_cache(minion_opts, mysql_port, mysql_container):
 )
 def cache(request):
     # This is not an ideal way to get the particular cache type but
-    # it's currently what we have available.
+    # it's currently what we have available. It behaves *very* badly when
+    # attempting to parametrize these fixtures. Don't ask me how I known.
     yield request.param.replace("_cache", ""), request.getfixturevalue(request.param)
 
 
