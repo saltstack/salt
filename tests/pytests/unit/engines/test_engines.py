@@ -4,12 +4,12 @@ from tests.support.mock import MagicMock, patch
 
 
 def test_engine_module_name():
-    engine = salt.engines.Engine("foobar", {}, "foobar.start", {}, {}, {}, {})
+    engine = salt.engines.Engine({}, "foobar.start", {}, {}, {}, {}, name="foobar")
     assert engine.name == "foobar"
 
 
 def test_engine_title_set():
-    engine = salt.engines.Engine("foobar", {}, "foobar.start", {}, {}, {}, {})
+    engine = salt.engines.Engine({}, "foobar.start", {}, {}, {}, {}, name="foobar")
     with patch("salt.utils.process.appendproctitle", MagicMock()) as mm:
         with pytest.raises(KeyError):
             # The method does not exist so a KeyError will be raised.
