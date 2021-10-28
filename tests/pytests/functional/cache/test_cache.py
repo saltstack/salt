@@ -1,4 +1,5 @@
 import logging
+import shutil
 import socket
 import time
 from pprint import pformat
@@ -198,6 +199,11 @@ def localfs_cache(minion_opts):
     opts["cache"] = "localfs"
     cache = salt.cache.factory(opts)
     yield cache
+    try:
+        shutil.rmtree(opts["cachedir"])
+    except Exception:  # pylint: disable=broad-except
+        # Not my circus, not my monkey
+        pass
 
 
 @pytest.fixture
@@ -266,6 +272,15 @@ def mysql_cache(minion_opts, mysql_port, mysql_container):
     yield cache
 
 
+# TODO: Figure out how to parametrize this in combo with the getfixturevalue process -W. Werner, 2021-10-28
+@pytest.fixture
+def memcache_cache(minion_opts):
+    opts = minion_opts.copy()
+    opts["memcache_expire_seconds"] = 42
+    cache = salt.cache.factory(opts)
+    yield cache
+
+
 @pytest.fixture(
     params=[
         "localfs_cache",
@@ -273,17 +288,17 @@ def mysql_cache(minion_opts, mysql_port, mysql_container):
         "etcd_cache",
         "consul_cache",
         "mysql_cache",
+        "memcache_cache",  # Memcache actually delegates some behavior to the backing cache which alters the API somewhat.
     ]
 )
 def cache(request):
     # This is not an ideal way to get the particular cache type but
     # it's currently what we have available. It behaves *very* badly when
     # attempting to parametrize these fixtures. Don't ask me how I known.
-    yield request.param.replace("_cache", ""), request.getfixturevalue(request.param)
+    yield request.getfixturevalue(request.param)
 
 
 def test_caching(subtests, cache):
-    cachename, cache = cache
     bank = "fnord/kevin/stuart"
     # ^^^^ This bank can be just fnord, or fnord/foo, or any mildly reasonable
     # or possibly unreasonably nested names.
@@ -327,7 +342,12 @@ def test_caching(subtests, cache):
 
         cache.store(bank=bank, key=good_key, data=new_thing)
         actual_thing = cache.fetch(bank=bank, key=good_key)
-        assert actual_thing is not new_thing
+        if isinstance(cache, salt.cache.MemCache):
+            # MemCache should actually store the object - everything else
+            # should create a copy of it.
+            assert actual_thing is new_thing
+        else:
+            assert actual_thing is not new_thing
         assert actual_thing == new_thing
 
     with subtests.test("contains returns true if key in bank"):
@@ -409,7 +429,7 @@ def test_caching(subtests, cache):
     ):
         with patch.dict(
             cache.modules,
-            {"{}.updated".format(cachename): MagicMock(side_effect=SaltCacheError)},
+            {"{}.updated".format(cache.driver): MagicMock(side_effect=SaltCacheError)},
         ), pytest.raises(SaltCacheError):
             cache.updated(bank="kaboom", key="oops")
 
