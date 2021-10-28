@@ -49,4 +49,4 @@ jobs:
           python .github/workflows/scripts/pr-docstring-comments.py \
             --org ${{ github.repository_owner }} \
             --repo ${{ github.event.repository.name }} \
-            --issue ${{ github.event.issue.number }} output.txt
+            --issue ${{ github.event.number }} output.txt
