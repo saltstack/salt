@@ -211,10 +211,10 @@ def test_if_mode_is_insert_and_no_location_before_or_after_then_it_should_raise_
             after=None,
         )
 
-        assert (
-            str(err.value)
-            == 'On insert either "location" or "before/after" conditions are required.'
-        )
+    assert (
+        str(err.value)
+        == 'On insert either "location" or "before/after" conditions are required.'
+    )
 
 
 def test_if_mode_is_insert_and_location_is_start_it_should_insert_content_at_start():
@@ -370,10 +370,10 @@ def test_if_not_location_but_before_and_after_and_more_than_one_after_it_should_
             before=before,
             after=after,
         )
-        assert (
-            str(err.value)
-            == 'Found more than expected occurrences in "after" expression'
-        )
+    assert (
+        str(err.value)
+        == 'Found more than expected occurrences in "after" expression'
+    )
 
 
 def test_if_not_location_but_before_and_after_and_more_than_one_before_it_should_CommandExecutionError():
@@ -430,10 +430,10 @@ def test_if_not_location_or_after_but_before_and_before_has_more_than_one_it_sho
             before=before,
             after=after,
         )
-        assert (
-            str(err.value)
-            == 'Found more than expected occurrences in "before" expression'
-        )
+    assert (
+        str(err.value)
+        == 'Found more than expected occurrences in "before" expression'
+    )
 
 
 def test_if_not_location_or_after_and_no_before_in_lines_it_should_CommandExecutionError():
@@ -683,10 +683,10 @@ def test_ensure_with_before_and_too_many_after_should_CommandExecutionError():
             after=after,
         )
 
-        assert (
-            str(err.value)
-            == 'Found more than expected occurrences in "after" expression'
-        )
+    assert (
+        str(err.value)
+        == 'Found more than expected occurrences in "after" expression'
+    )
 
 
 def test_ensure_with_too_many_after_should_CommandExecutionError():
@@ -700,10 +700,10 @@ def test_ensure_with_too_many_after_should_CommandExecutionError():
             after=after,
             mode="ensure",
         )
-        assert (
-            str(err.value)
-            == 'Found more than expected occurrences in "after" expression'
-        )
+    assert (
+        str(err.value)
+        == 'Found more than expected occurrences in "after" expression'
+    )
 
 
 def test_ensure_with_after_and_too_many_before_should_CommandExecutionError():
@@ -723,10 +723,10 @@ def test_ensure_with_after_and_too_many_before_should_CommandExecutionError():
             after=after,
         )
 
-        assert (
-            str(err.value)
-            == 'Found more than expected occurrences in "before" expression'
-        )
+    assert (
+        str(err.value)
+        == 'Found more than expected occurrences in "before" expression'
+    )
 
 
 def test_ensure_with_too_many_before_should_CommandExecutionError():
@@ -740,10 +740,10 @@ def test_ensure_with_too_many_before_should_CommandExecutionError():
             before=before,
             mode="ensure",
         )
-        assert (
-            str(err.value)
-            == 'Found more than expected occurrences in "before" expression'
-        )
+    assert (
+        str(err.value)
+        == 'Found more than expected occurrences in "before" expression'
+    )
 
 
 def test_ensure_with_before_and_after_that_already_contains_the_line_should_return_original_info():
@@ -778,10 +778,10 @@ def test_ensure_with_too_many_lines_between_before_and_after_should_CommandExecu
             before=before,
         )
 
-        assert (
-            str(err.value)
-            == 'Found more than one line between boundaries "before" and "after".'
-        )
+    assert (
+        str(err.value)
+        == 'Found more than one line between boundaries "before" and "after".'
+    )
 
 
 def test_ensure_with_no_lines_between_before_and_after_should_insert_a_line():
@@ -935,11 +935,11 @@ def test_ensure_without_before_and_after_should_CommandExecutionError():
             content="aardvark",
             mode="ensure",
         )
-        assert (
-            str(err.value)
-            == "Wrong conditions? Unable to ensure line without knowing where"
-            " to put it before and/or after."
-        )
+    assert (
+        str(err.value)
+        == "Wrong conditions? Unable to ensure line without knowing where"
+        " to put it before and/or after."
+    )
 
 
 @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
@@ -1013,9 +1013,9 @@ def test_line_no_content():
     for mode in ["insert", "ensure", "replace"]:
         with pytest.raises(CommandExecutionError) as exc_info:
             filemod.line("foo", mode=mode)
-            assert 'Content can only be empty if mode is "delete"' in str(
-                exc_info.value
-            )
+        assert 'Content can only be empty if mode is "delete"' in str(
+            exc_info.value
+        )
 
 
 @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
@@ -1686,10 +1686,10 @@ def test_line_insert_ensure_beforeafter_rangelines():
                         before=_before,
                         mode="ensure",
                     )
-            assert (
-                'Found more than one line between boundaries "before" and "after"'
-                in str(exc_info.value)
-            )
+                assert (
+                    'Found more than one line between boundaries "before" and "after"'
+                    in str(exc_info.value)
+                )
 
 
 def test_line_delete(tempfile_name, get_body):
