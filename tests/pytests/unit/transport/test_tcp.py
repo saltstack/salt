@@ -1,11 +1,12 @@
 import contextlib
+import functools
 import socket
 
 import attr
 import pytest
 import salt.exceptions
 import salt.transport.tcp
-from salt.ext.tornado import concurrent, gen, ioloop
+from salt.ext.tornado import concurrent, gen, ioloop, iostream
 from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.mock import MagicMock, patch
 
@@ -401,3 +402,138 @@ def test_client_reconnect_backoff(client_socket):
             client.io_loop.run_sync(client._connect)
     finally:
         client.close()
+
+
+@pytest.fixture(scope="function")
+def pubserver_with_retry():
+    opts = {"tcp_publish_retries": 3, "tcp_publish_backoff": 10}
+
+    io_loop_mock = MagicMock(spec=ioloop.IOLoop)
+    io_loop_mock.call_later.side_effect = lambda *args, **kwargs: (args, kwargs)
+
+    with patch("salt.master.AESFuncs.__init__", return_value=None):
+        server = salt.transport.tcp.PubServer(opts, io_loop=io_loop_mock)
+        server._closing = True  # so we don't cleanup all the things we're not using
+
+    yield server
+
+
+def test_server_publish_no_retry_on_ok(pubserver_with_retry):
+    server = pubserver_with_retry
+    io_loop = salt.ext.tornado.ioloop.IOLoop.current()
+
+    package = {
+        "topic_lst": ["minion01", "minion02", "minion03"],
+        "payload": "test-payload",
+    }
+
+    # test publish with all ok minions
+    for topic in package["topic_lst"]:
+        client = salt.transport.tcp.Subscriber(
+            MagicMock(spec=iostream.IOStream), "1.2.3.4"
+        )
+        server.present[topic] = [client]
+
+    with patch("salt.transport.frame.frame_msg", return_value="framed-payload"):
+        io_loop.run_sync(functools.partial(server.publish_payload, package, None))
+
+    # verify client streams got called
+    for topic in package["topic_lst"]:
+        server.present[topic][0].stream.write.assert_called_once_with("framed-payload")
+
+    # and call_later was not
+    server.io_loop.call_later.assert_not_called()
+
+
+def test_server_publish_retry(pubserver_with_retry):
+    server = pubserver_with_retry
+    io_loop = salt.ext.tornado.ioloop.IOLoop.current()
+
+    package = {
+        "topic_lst": ["minion01", "minion02", "minion03"],
+        "payload": "test-payload",
+    }
+
+    # working client for minion02
+    client = salt.transport.tcp.Subscriber(MagicMock(spec=iostream.IOStream), "1.2.3.4")
+    server.present["minion02"] = [client]
+
+    # client with exception for minion03, should trigger publish
+    client = salt.transport.tcp.Subscriber(MagicMock(spec=iostream.IOStream), "1.2.3.4")
+    client._closing = True
+    client.stream.write.side_effect = iostream.StreamClosedError()
+    server.present["minion03"] = [client]
+
+    with patch("salt.transport.frame.frame_msg", return_value="framed-payload"):
+        io_loop.run_sync(functools.partial(server.publish_payload, package, None))
+
+    # verify minion02 got published
+    server.present["minion02"][0].stream.write.assert_called_once_with("framed-payload")
+
+    # and minion01/03 got retried
+    server.io_loop.call_later.assert_called_once_with(
+        server.retry_backoff,
+        server.publish_payload,
+        {
+            "payload": "test-payload",
+            "topic_lst": ["minion01", "minion03"],
+            "tries": server.retries - 1,
+        },
+        None,
+    )
+
+
+def test_server_publish_retry_reconnect(pubserver_with_retry):
+    """
+    When we have multiple clients for same topic, we don't trigger retry when single publish fails, but second works
+    """
+    server = pubserver_with_retry
+    io_loop = salt.ext.tornado.ioloop.IOLoop.current()
+
+    package = {"topic_lst": ["minion01"], "payload": "test-payload"}
+
+    # clients
+    client_bad = salt.transport.tcp.Subscriber(
+        MagicMock(spec=iostream.IOStream), "1.2.3.4"
+    )
+    client_bad._closing = True
+    client_bad.stream.write.side_effect = iostream.StreamClosedError()
+
+    client_ok = salt.transport.tcp.Subscriber(
+        MagicMock(spec=iostream.IOStream), "1.2.3.4"
+    )
+
+    # the ok client is in the middle
+    server.present["minion01"] = [client_bad, client_ok, client_bad]
+
+    with patch("salt.transport.frame.frame_msg", return_value="framed-payload"):
+        io_loop.run_sync(functools.partial(server.publish_payload, package, None))
+
+    # verify minion01 got published - the ok client
+    server.present["minion01"][1].stream.write.assert_called_once_with("framed-payload")
+
+    # and no retries triggered
+    server.io_loop.call_later.assert_not_called()
+
+
+def test_server_publish_reached_ttl(pubserver_with_retry):
+    """
+    When number of tries is exhausted, publish should just end
+    """
+    server = pubserver_with_retry
+    io_loop = salt.ext.tornado.ioloop.IOLoop.current()
+
+    package = {"topic_lst": ["minion01"], "payload": "test-payload", "tries": 0}
+
+    # clients
+    client = salt.transport.tcp.Subscriber(MagicMock(spec=iostream.IOStream), "1.2.3.4")
+    server.present["minion01"] = [client]
+
+    with patch("salt.transport.frame.frame_msg", return_value="framed-payload"):
+        io_loop.run_sync(functools.partial(server.publish_payload, package, None))
+
+    # verify minion01 didn't got published
+    server.present["minion01"][0].stream.write.assert_not_called()
+
+    # and no retries triggered
+    server.io_loop.call_later.assert_not_called()
