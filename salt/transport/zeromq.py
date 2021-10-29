@@ -283,7 +283,7 @@ class PublishClient(salt.transport.base.PublishClient):
         self.stream.send(msg, noblock=True)
 
 
-class RequestServer(salt.transport.base.RequestServer):
+class RequestServer(salt.transport.base.DaemonizedRequestServer):
     def __init__(self, opts):  # pylint: disable=W0231
         self.opts = opts
         self._closing = False
@@ -701,7 +701,7 @@ class ZeroMQSocketMonitor:
         log.trace("Event monitor done!")
 
 
-class PublishServer(salt.transport.base.PublishServer):
+class PublishServer(salt.transport.base.DaemonizedPublishServer):
     """
     Encapsulate synchronous operations for a publisher channel
     """

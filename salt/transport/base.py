@@ -161,6 +161,8 @@ class RequestServer:
         Close the underlying network connection.
         """
 
+class DaemonizedRequestServer(RequestServer):
+
     def pre_fork(self, process_manager):
         """ """
 
@@ -176,6 +178,20 @@ class PublishServer:
     """
     The PublishServer publishes messages to PublishClients or to a borker
     service.
+    """
+
+    def publish(self, payload, **kwargs):
+        """
+        Publish "load" to minions. This send the load to the publisher daemon
+        process with does the actual sending to minions.
+
+        :param dict load: A load to be sent across the wire to minions
+        """
+
+
+class DaemonizedPublishServer(PublishServer):
+    """
+    PublishServer that has a daemon associated with it.
     """
 
     def pre_fork(self, process_manager, kwargs=None):
@@ -195,13 +211,6 @@ class PublishServer:
         If a deamon is needed to act as a broker impliment it here.
         """
 
-    def publish(self, payload, **kwargs):
-        """
-        Publish "load" to minions. This send the load to the publisher daemon
-        process with does the actual sending to minions.
-
-        :param dict load: A load to be sent across the wire to minions
-        """
 
 
 class PublishClient:

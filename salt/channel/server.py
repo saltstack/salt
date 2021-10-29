@@ -684,7 +684,8 @@ class PubServerChannel:
 
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         """
-        process_manager.add_process(self._publish_daemon, kwargs=kwargs)
+        if hasattr(self.transport, 'publish_daemon'):
+            process_manager.add_process(self._publish_daemon, kwargs=kwargs)
 
     def _publish_daemon(self, log_queue=None, log_queue_level=None):
         salt.utils.process.appendproctitle(self.__class__.__name__)
