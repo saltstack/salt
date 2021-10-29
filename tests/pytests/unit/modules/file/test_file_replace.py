@@ -74,13 +74,21 @@ def multiline_file(tmp_path, multiline_string):
     yield multiline_file
     shutil.rmtree(tmp_path)
 
+# Make a unique subdir to avoid any tempfile conflicts
+@pytest.fixture
+def subdir(tmp_path):
+    subdir = tmp_path / "test-file-replace-subdir"
+    subdir.mkdir()
+    yield subdir
+    shutil.rmtree(str(subdir))
+
 def test_replace(multiline_file):
     filemod.replace(multiline_file, r"Etiam", "Salticus", backup=False)
 
     with salt.utils.files.fopen(multiline_file, "r") as fp:
         assert "Salticus" in salt.utils.stringutils.to_unicode(fp.read())
 
-def test_replace_append_if_not_found():
+def test_replace_append_if_not_found(subdir):
     """
     Check that file.replace append_if_not_found works
     """
@@ -92,7 +100,7 @@ def test_replace_append_if_not_found():
     base = os.linesep.join(["foo=1", "bar=2"])
 
     # File ending with a newline, no match
-    with tempfile.NamedTemporaryFile("w+b", delete=False) as tfile:
+    with salt.utils.files.fopen(str(subdir / "tfile"), "w+b") as tfile:
         tfile.write(salt.utils.stringutils.to_bytes(base + os.linesep))
         tfile.flush()
     filemod.replace(tfile.name, **args)
@@ -102,7 +110,7 @@ def test_replace_append_if_not_found():
     os.remove(tfile.name)
 
     # File not ending with a newline, no match
-    with tempfile.NamedTemporaryFile("w+b", delete=False) as tfile:
+    with salt.utils.files.fopen(str(subdir / "tfile"), "w+b") as tfile:
         tfile.write(salt.utils.stringutils.to_bytes(base))
         tfile.flush()
     filemod.replace(tfile.name, **args)
@@ -111,7 +119,7 @@ def test_replace_append_if_not_found():
     os.remove(tfile.name)
 
     # A newline should not be added in empty files
-    with tempfile.NamedTemporaryFile("w+b", delete=False) as tfile:
+    with salt.utils.files.fopen(str(subdir / "tfile"), "w+b") as tfile:
         pass
     filemod.replace(tfile.name, **args)
     expected = args["repl"] + os.linesep
@@ -120,7 +128,7 @@ def test_replace_append_if_not_found():
     os.remove(tfile.name)
 
     # Using not_found_content, rather than repl
-    with tempfile.NamedTemporaryFile("w+b", delete=False) as tfile:
+    with salt.utils.files.fopen(str(subdir / "tfile"), "w+b") as tfile:
         tfile.write(salt.utils.stringutils.to_bytes(base))
         tfile.flush()
     args["not_found_content"] = "baz=3"
@@ -131,7 +139,7 @@ def test_replace_append_if_not_found():
     os.remove(tfile.name)
 
     # not appending if matches
-    with tempfile.NamedTemporaryFile("w+b", delete=False) as tfile:
+    with salt.utils.files.fopen(str(subdir / "tfile"), "w+b") as tfile:
         base = os.linesep.join(["foo=1", "baz=42", "bar=2"])
         tfile.write(salt.utils.stringutils.to_bytes(base))
         tfile.flush()

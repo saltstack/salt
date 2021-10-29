@@ -1,3 +1,4 @@
+import shutil
 import pytest
 import logging
 import os
@@ -64,6 +65,14 @@ def configure_loader_modules():
         }
     }
 
+# Make a unique subdir to avoid any tempfile conflicts
+@pytest.fixture
+def subdir(tmp_path):
+    subdir = tmp_path / "test-file-module-subdir"
+    subdir.mkdir()
+    yield subdir
+    shutil.rmtree(str(subdir))
+    
 def test_check_file_meta_binary_contents():
     """
     Ensure that using the check_file_meta function does not raise a
@@ -155,8 +164,8 @@ def test_cmp_attrs_extents_flag():
         assert changes.removed is None
 
 @pytest.mark.skipif(salt.utils.platform.is_windows(), reason="SED is not available on Windows")
-def test_sed_limit_escaped(sed_content):
-    with tempfile.NamedTemporaryFile(mode="w+") as tfile:
+def test_sed_limit_escaped(sed_content, subdir):
+    with salt.utils.files.fopen(str(subdir / "tfile"), "w+") as tfile:
         tfile.write(sed_content)
         tfile.seek(0, 0)
 
@@ -170,13 +179,13 @@ def test_sed_limit_escaped(sed_content):
         with salt.utils.files.fopen(path, "r") as newfile:
             assert sed_content.replace(before, "") == salt.utils.stringutils.to_unicode(newfile.read())
 
-def test_append_newline_at_eof():
+def test_append_newline_at_eof(subdir):
     """
     Check that file.append works consistently on files with and without
     newlines at end of file.
     """
     # File ending with a newline
-    with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tfile:
+    with salt.utils.files.fopen(str(subdir / "tfile"), "wb") as tfile:
         tfile.write(salt.utils.stringutils.to_bytes("foo" + os.linesep))
         tfile.flush()
     filemod.append(tfile.name, "bar")
@@ -187,7 +196,7 @@ def test_append_newline_at_eof():
     os.remove(tfile.name)
 
     # File not ending with a newline
-    with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tfile:
+    with salt.utils.files.fopen(str(subdir / "tfile"), "wb") as tfile:
         tfile.write(salt.utils.stringutils.to_bytes("foo"))
         tfile.flush()
     filemod.append(tfile.name, "bar")
@@ -195,18 +204,18 @@ def test_append_newline_at_eof():
         assert salt.utils.stringutils.to_unicode(tfile2.read()) ==  expected
 
     # A newline should be added in empty files
-    with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tfile:
+    with salt.utils.files.fopen(str(subdir / "tfile"), "wb") as tfile:
         filemod.append(tfile.name, salt.utils.stringutils.to_str("bar"))
     with salt.utils.files.fopen(tfile.name) as tfile2:
         assert salt.utils.stringutils.to_unicode(tfile2.read()) == "bar" + os.linesep
     os.remove(tfile.name)
 
-def test_extract_hash():
+def test_extract_hash(subdir):
     """
     Check various hash file formats.
     """
     # With file name
-    with tempfile.NamedTemporaryFile(mode="w+b", delete=False) as tfile:
+    with salt.utils.files.fopen(str(subdir / "tfile"), "w+b") as tfile:
         tfile.write(
             salt.utils.stringutils.to_bytes(
                 "rc.conf ef6e82e4006dee563d98ada2a2a80a27\n"
@@ -291,7 +300,7 @@ def test_extract_hash():
     # Hash only, no file name (Maven repo checksum format)
     # Since there is no name match, the first checksum in the file will
     # always be returned, never the second.
-    with tempfile.NamedTemporaryFile(mode="w+b", delete=False) as tfile:
+    with salt.utils.files.fopen(str(subdir / "tfile"), "w+b") as tfile:
         tfile.write(
             salt.utils.stringutils.to_bytes(
                 "ead48423703509d37c4a90e6a0d53e143b6fc268\n"
