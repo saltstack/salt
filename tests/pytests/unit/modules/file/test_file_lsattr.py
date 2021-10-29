@@ -1,7 +1,7 @@
-import pytest
 import logging
 import textwrap
 
+import pytest
 import salt.modules.cmdmod as cmdmod
 import salt.modules.file as filemod
 from salt.exceptions import SaltInvocationError
@@ -9,11 +9,13 @@ from tests.support.mock import Mock, patch
 
 log = logging.getLogger(__name__)
 
+
 @pytest.fixture
 def configure_loader_modules():
     return {
         filemod: {"__salt__": {"cmd.run": cmdmod.run}},
     }
+
 
 @patch("salt.utils.platform.is_aix", Mock(return_value=False))
 @patch("os.path.exists", Mock(return_value=True))
@@ -26,6 +28,7 @@ def test_if_lsattr_is_missing_it_should_return_None():
     with patch_which:
         actual = filemod.lsattr("foo")
         assert actual is None, actual
+
 
 @patch("salt.utils.platform.is_aix", Mock(return_value=False))
 @patch("os.path.exists", Mock(return_value=True))
@@ -41,6 +44,7 @@ def test_on_aix_lsattr_should_be_None():
         actual = filemod.lsattr("foo")
         assert actual is None
 
+
 @patch("salt.utils.platform.is_aix", Mock(return_value=False))
 @patch("os.path.exists", Mock(return_value=True))
 @patch("salt.utils.path.which", Mock(return_value="fnord"))
@@ -51,6 +55,7 @@ def test_SaltInvocationError_should_be_raised_when_file_is_missing():
     )
     with patch_exists, pytest.raises(SaltInvocationError):
         filemod.lsattr("foo")
+
 
 @patch("salt.utils.platform.is_aix", Mock(return_value=False))
 @patch("os.path.exists", Mock(return_value=True))
@@ -82,6 +87,7 @@ def test_if_chattr_version_is_less_than_required_flags_should_ignore_extended():
         )  # pylint: disable=E1322
         assert actual == expected, msg
 
+
 @patch("salt.utils.platform.is_aix", Mock(return_value=False))
 @patch("os.path.exists", Mock(return_value=True))
 @patch("salt.utils.path.which", Mock(return_value="fnord"))
@@ -111,6 +117,7 @@ def test_if_chattr_version_is_high_enough_then_extended_flags_should_be_returned
             actual, expected
         )  # pylint: disable=E1322
         assert actual == expected, msg
+
 
 @patch("salt.utils.platform.is_aix", Mock(return_value=False))
 @patch("os.path.exists", Mock(return_value=True))
