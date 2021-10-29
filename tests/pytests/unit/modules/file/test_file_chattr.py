@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 pytestmark = pytest.mark.skip_on_windows(reason="Chattr shouldn't be available on Windows")
 
 @pytest.fixture
-def setup_loader_modules():
+def configure_loader_modules():
     return {
         filemod: {
             "__salt__": {"cmd.run": cmdmod.run},
