@@ -1,9 +1,9 @@
-import pytest
 import logging
-import shutil
 import os
+import shutil
 import textwrap
 
+import pytest
 import salt.config
 import salt.loader
 import salt.modules.cmdmod as cmdmod
@@ -21,6 +21,7 @@ log = logging.getLogger(__name__)
 pytestmark = pytest.mark.skipif(
     salt.utils.platform.is_windows(), reason="grep not supported on Windows"
 )
+
 
 @pytest.fixture
 def configure_loader_modules():
@@ -46,6 +47,7 @@ def configure_loader_modules():
         }
     }
 
+
 @pytest.fixture
 def multiline_string():
     multiline_string = textwrap.dedent(
@@ -60,15 +62,17 @@ def multiline_string():
 
     return multiline_string
 
+
 @pytest.fixture
 def multiline_file(tmp_path, multiline_string):
     multiline_file = str(tmp_path / "multiline-file.txt")
 
-    with open(multiline_file, "w+") as file_handle:
+    with salt.utils.files.fopen(multiline_file, "w+") as file_handle:
         file_handle.write(multiline_string)
 
     yield multiline_file
     shutil.rmtree(tmp_path)
+
 
 def test_grep_query_exists(multiline_file):
     result = filemod.grep(multiline_file, "Lorem ipsum")
@@ -78,12 +82,14 @@ def test_grep_query_exists(multiline_file):
     assert result["stdout"] == "Lorem ipsum dolor sit amet, consectetur"
     assert result["stderr"] == ""
 
+
 def test_grep_query_not_exists(multiline_file):
     result = filemod.grep(multiline_file, "Lorem Lorem")
 
     assert result["retcode"] == 1
     assert result["stdout"] == ""
     assert result["stderr"] == ""
+
 
 def test_grep_query_exists_with_opt(multiline_file):
     result = filemod.grep(multiline_file, "Lorem ipsum", "-i")
@@ -93,6 +99,7 @@ def test_grep_query_exists_with_opt(multiline_file):
     assert result["stdout"] == "Lorem ipsum dolor sit amet, consectetur"
     assert result["stderr"] == ""
 
+
 def test_grep_query_not_exists_opt(multiline_file, multiline_string):
     result = filemod.grep(multiline_file, "Lorem Lorem", "-v")
 
@@ -100,11 +107,13 @@ def test_grep_query_not_exists_opt(multiline_file, multiline_string):
     assert result["stdout"] == multiline_string
     assert result["stderr"] == ""
 
+
 def test_grep_query_too_many_opts(multiline_file):
     with pytest.raises(
         SaltInvocationError, match="^Passing multiple command line arg"
     ) as cm:
         result = filemod.grep(multiline_file, "Lorem Lorem", "-i -b2")
+
 
 def test_grep_query_exists_wildcard(multiline_file):
     _file = "{}*".format(multiline_file)
@@ -114,6 +123,7 @@ def test_grep_query_exists_wildcard(multiline_file):
     assert result["retcode"] == 0
     assert result["stdout"] == "Lorem ipsum dolor sit amet, consectetur"
     assert result["stderr"] == ""
+
 
 def test_grep_file_not_exists_wildcard(multiline_file):
     _file = "{}-junk*".format(multiline_file)

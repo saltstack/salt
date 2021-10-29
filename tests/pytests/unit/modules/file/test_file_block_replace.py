@@ -1,10 +1,9 @@
-import pytest
 import logging
 import os
 import shutil
-import tempfile
 import textwrap
 
+import pytest
 import salt.config
 import salt.loader
 import salt.modules.cmdmod as cmdmod
@@ -21,6 +20,7 @@ if salt.utils.platform.is_windows():
     import salt.utils.win_dacl as win_dacl
 
 log = logging.getLogger(__name__)
+
 
 @pytest.fixture
 def configure_loader_modules():
@@ -62,6 +62,7 @@ def configure_loader_modules():
 
     return ret
 
+
 @pytest.fixture
 def multiline_string():
     multiline_string = textwrap.dedent(
@@ -97,15 +98,17 @@ def multiline_string():
 
     return multiline_string
 
+
 @pytest.fixture
 def multiline_file(tmp_path, multiline_string):
     multiline_file = str(tmp_path / "multiline-file.txt")
 
-    with open(multiline_file, "w+b") as file_handle:
+    with salt.utils.files.fopen(multiline_file, "w+b") as file_handle:
         file_handle.write(salt.utils.stringutils.to_bytes(multiline_string))
 
     yield multiline_file
     shutil.rmtree(tmp_path)
+
 
 # Make a unique subdir to avoid any tempfile conflicts
 @pytest.fixture
@@ -114,6 +117,7 @@ def subdir(tmp_path):
     subdir.mkdir()
     yield subdir
     shutil.rmtree(str(subdir))
+
 
 def test_replace_multiline(multiline_file):
     new_multiline_content = os.linesep.join(
@@ -141,13 +145,17 @@ def test_replace_multiline(multiline_file):
     with salt.utils.files.fopen(multiline_file, "rb") as fp:
         filecontent = fp.read()
 
-    assert salt.utils.stringutils.to_bytes(
+    assert (
+        salt.utils.stringutils.to_bytes(
             os.linesep.join(
                 ["#-- START BLOCK 1", new_multiline_content, "#-- END BLOCK 1"]
             )
-        ) in filecontent
+        )
+        in filecontent
+    )
     assert b"old content part 1" not in filecontent
     assert b"old content part 2" not in filecontent
+
 
 def test_replace_append(multiline_file):
     new_content = "Well, I didn't vote for you."
@@ -172,7 +180,10 @@ def test_replace_append(multiline_file):
             backup=False,
         )
     with salt.utils.files.fopen(multiline_file, "r") as fp:
-        assert "#-- START BLOCK 2" + "\n" + new_content + "#-- END BLOCK 2" not in salt.utils.stringutils.to_unicode(fp.read())
+        assert (
+            "#-- START BLOCK 2" + "\n" + new_content + "#-- END BLOCK 2"
+            not in salt.utils.stringutils.to_unicode(fp.read())
+        )
 
     if salt.utils.platform.is_windows():
         check_perms_patch = win_file.check_perms
@@ -189,11 +200,15 @@ def test_replace_append(multiline_file):
         )
 
     with salt.utils.files.fopen(multiline_file, "rb") as fp:
-        assert salt.utils.stringutils.to_bytes(
+        assert (
+            salt.utils.stringutils.to_bytes(
                 os.linesep.join(
                     ["#-- START BLOCK 2", "{}#-- END BLOCK 2".format(new_content)]
                 )
-            ) in fp.read()
+            )
+            in fp.read()
+        )
+
 
 def test_replace_insert_after(multiline_file):
     new_content = "Well, I didn't vote for you."
@@ -208,7 +223,10 @@ def test_replace_insert_after(multiline_file):
             backup=False,
         )
     with salt.utils.files.fopen(multiline_file, "r") as fp:
-        assert "#-- START BLOCK 2" + "\n" + new_content + "#-- END BLOCK 2" not in salt.utils.stringutils.to_unicode(fp.read())
+        assert (
+            "#-- START BLOCK 2" + "\n" + new_content + "#-- END BLOCK 2"
+            not in salt.utils.stringutils.to_unicode(fp.read())
+        )
 
     if salt.utils.platform.is_windows():
         check_perms_patch = win_file.check_perms
@@ -225,11 +243,15 @@ def test_replace_insert_after(multiline_file):
         )
 
     with salt.utils.files.fopen(multiline_file, "rb") as fp:
-        assert salt.utils.stringutils.to_bytes(
+        assert (
+            salt.utils.stringutils.to_bytes(
                 os.linesep.join(
                     ["#-- START BLOCK 2", "{}#-- END BLOCK 2".format(new_content)]
                 )
-            ) in fp.read()
+            )
+            in fp.read()
+        )
+
 
 def test_replace_append_newline_at_eof(subdir):
     """
@@ -286,6 +308,7 @@ def test_replace_append_newline_at_eof(subdir):
         assert salt.utils.stringutils.to_unicode(tfile2.read()) == block
     os.remove(tfile.name)
 
+
 def test_replace_prepend(multiline_file):
     new_content = "Well, I didn't vote for you."
 
@@ -299,11 +322,14 @@ def test_replace_prepend(multiline_file):
             backup=False,
         )
     with salt.utils.files.fopen(multiline_file, "rb") as fp:
-        assert salt.utils.stringutils.to_bytes(
+        assert (
+            salt.utils.stringutils.to_bytes(
                 os.linesep.join(
                     ["#-- START BLOCK 2", "{}#-- END BLOCK 2".format(new_content)]
                 )
-            ) not in fp.read()
+            )
+            not in fp.read()
+        )
 
     if salt.utils.platform.is_windows():
         check_perms_patch = win_file.check_perms
@@ -321,15 +347,16 @@ def test_replace_prepend(multiline_file):
 
     with salt.utils.files.fopen(multiline_file, "rb") as fp:
         assert fp.read().startswith(
-                salt.utils.stringutils.to_bytes(
-                    os.linesep.join(
-                        [
-                            "#-- START BLOCK 2",
-                            "{}#-- END BLOCK 2".format(new_content),
-                        ]
-                    )
+            salt.utils.stringutils.to_bytes(
+                os.linesep.join(
+                    [
+                        "#-- START BLOCK 2",
+                        "{}#-- END BLOCK 2".format(new_content),
+                    ]
                 )
             )
+        )
+
 
 def test_replace_insert_before(multiline_file):
     new_content = "Well, I didn't vote for you."
@@ -344,7 +371,10 @@ def test_replace_insert_before(multiline_file):
             backup=False,
         )
     with salt.utils.files.fopen(multiline_file, "r") as fp:
-        assert "#-- START BLOCK 2" + "\n" + new_content + "#-- END BLOCK 2" not in salt.utils.stringutils.to_unicode(fp.read())
+        assert (
+            "#-- START BLOCK 2" + "\n" + new_content + "#-- END BLOCK 2"
+            not in salt.utils.stringutils.to_unicode(fp.read())
+        )
 
     if salt.utils.platform.is_windows():
         check_perms_patch = win_file.check_perms
@@ -361,11 +391,15 @@ def test_replace_insert_before(multiline_file):
         )
 
     with salt.utils.files.fopen(multiline_file, "rb") as fp:
-        assert salt.utils.stringutils.to_bytes(
+        assert (
+            salt.utils.stringutils.to_bytes(
                 os.linesep.join(
                     ["#-- START BLOCK 2", "{}#-- END BLOCK 2".format(new_content)]
                 )
-            ) in fp.read()
+            )
+            in fp.read()
+        )
+
 
 def test_replace_partial_marked_lines(multiline_file):
     if salt.utils.platform.is_windows():
@@ -389,6 +423,7 @@ def test_replace_partial_marked_lines(multiline_file):
     assert "first part of end line" not in filecontent
     assert "part of start line not removed" in filecontent
     assert "part of end line not removed" in filecontent
+
 
 def test_backup(multiline_file):
     fext = ".bak"
@@ -429,6 +464,7 @@ def test_backup(multiline_file):
 
     assert not os.path.exists(bak_file)
 
+
 def test_no_modifications(multiline_file):
     if salt.utils.platform.is_windows():
         check_perms_patch = win_file.check_perms
@@ -461,6 +497,7 @@ def test_no_modifications(multiline_file):
 
     assert before_ctime == after_ctime
 
+
 def test_dry_run(multiline_file):
     before_ctime = os.stat(multiline_file).st_mtime
     filemod.blockreplace(
@@ -473,6 +510,7 @@ def test_dry_run(multiline_file):
     after_ctime = os.stat(multiline_file).st_mtime
 
     assert before_ctime == after_ctime
+
 
 def test_show_changes(multiline_file):
     if salt.utils.platform.is_windows():
@@ -501,6 +539,7 @@ def test_show_changes(multiline_file):
         )
 
         assert isinstance(ret, bool)
+
 
 def test_unfinished_block_exception(multiline_file):
     with pytest.raises(CommandExecutionError):

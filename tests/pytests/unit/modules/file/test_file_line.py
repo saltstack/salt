@@ -2,11 +2,11 @@
 Unit tests for file.line
 """
 
-import shutil
-import pytest
 import logging
 import os
+import shutil
 
+import pytest
 import salt.config
 import salt.loader
 import salt.modules.cmdmod as cmdmod
@@ -21,6 +21,7 @@ from tests.support.mock import DEFAULT, MagicMock, mock_open, patch
 
 log = logging.getLogger(__name__)
 
+
 class DummyStat:
     st_mode = 33188
     st_ino = 115331251
@@ -33,6 +34,7 @@ class DummyStat:
     st_mtime = 1552661253
     st_ctime = 1552661253
 
+
 @pytest.fixture
 def anyattr():
     class AnyAttr:
@@ -43,6 +45,7 @@ def anyattr():
             return self
 
     return AnyAttr()
+
 
 @pytest.fixture
 def configure_loader_modules():
@@ -65,6 +68,7 @@ def configure_loader_modules():
         }
     }
 
+
 @pytest.fixture
 def get_body():
     def _get_body(content):
@@ -75,8 +79,9 @@ def get_body():
         """
         ret = content.splitlines(True)
         return salt.utils.data.decode_list(ret, to_str=True)
-    
+
     return _get_body
+
 
 @pytest.fixture
 def tempfile_name(tmp_path):
@@ -93,15 +98,18 @@ def tempfile_name(tmp_path):
     # We need to make sure to remove the tree we just created to avoid clashes with other tests
     shutil.rmtree(subdir)
 
+
 def test_set_line_should_raise_command_execution_error_with_no_mode():
     with pytest.raises(CommandExecutionError) as err:
         filemod._set_line(lines=[], mode=None)
     assert str(err.value) == "Mode was not defined. How to process the file?"
 
+
 def test_set_line_should_raise_command_execution_error_with_unknown_mode():
     with pytest.raises(CommandExecutionError) as err:
         filemod._set_line(lines=[], mode="fnord")
     assert str(err.value) == "Unknown mode: fnord"
+
 
 def test_if_content_is_none_and_mode_is_valid_but_not_delete_it_should_raise_command_execution_error():
     valid_modes = ("insert", "ensure", "replace")
@@ -110,14 +118,14 @@ def test_if_content_is_none_and_mode_is_valid_but_not_delete_it_should_raise_com
             filemod._set_line(lines=[], mode=mode)
         assert str(err.value) == "Content can only be empty if mode is delete"
 
+
 def test_if_delete_or_replace_is_called_with_empty_lines_it_should_warn_and_return_empty_body():
     for mode in ("delete", "replace"):
         with patch("salt.modules.file.log.warning", MagicMock()) as fake_warn:
             actual_lines = filemod._set_line(mode=mode, lines=[], content="roscivs")
             assert actual_lines == []
-            fake_warn.assert_called_with(
-                "Cannot find text to %s. File is empty.", mode
-            )
+            fake_warn.assert_called_with("Cannot find text to %s. File is empty.", mode)
+
 
 def test_if_mode_is_delete_and_not_before_after_or_match_then_content_should_be_used_to_delete_line():
     lines = ["foo", "roscivs", "bar"]
@@ -128,6 +136,7 @@ def test_if_mode_is_delete_and_not_before_after_or_match_then_content_should_be_
 
     assert actual_lines == expected_lines
 
+
 def test_if_mode_is_replace_and_not_before_after_or_match_and_content_exists_then_lines_should_not_change():
     original_lines = ["foo", "roscivs", "bar"]
     content = "roscivs"
@@ -137,6 +146,7 @@ def test_if_mode_is_replace_and_not_before_after_or_match_and_content_exists_the
     )
 
     assert actual_lines == original_lines
+
 
 def test_if_mode_is_replace_and_match_is_set_then_it_should_replace_the_first_match():
     to_replace = "quuxy"
@@ -152,6 +162,7 @@ def test_if_mode_is_replace_and_match_is_set_then_it_should_replace_the_first_ma
     )
 
     assert actual_lines == expected_lines
+
 
 def test_if_mode_is_replace_and_indent_is_true_then_it_should_match_indention_of_existing_line():
     indents = "\t\t      \t \t"
@@ -170,6 +181,7 @@ def test_if_mode_is_replace_and_indent_is_true_then_it_should_match_indention_of
 
     assert actual_lines == expected_lines
 
+
 def test_if_mode_is_replace_and_indent_is_false_then_it_should_just_use_content():
     indents = "\t\t      \t \t"
     to_replace = indents + "quuxy"
@@ -187,6 +199,7 @@ def test_if_mode_is_replace_and_indent_is_false_then_it_should_just_use_content(
 
     assert actual_lines == expected_lines
 
+
 def test_if_mode_is_insert_and_no_location_before_or_after_then_it_should_raise_command_execution_error():
     with pytest.raises(CommandExecutionError) as err:
         filemod._set_line(
@@ -198,7 +211,11 @@ def test_if_mode_is_insert_and_no_location_before_or_after_then_it_should_raise_
             after=None,
         )
 
-        assert str(err.value) == 'On insert either "location" or "before/after" conditions are required.'
+        assert (
+            str(err.value)
+            == 'On insert either "location" or "before/after" conditions are required.'
+        )
+
 
 def test_if_mode_is_insert_and_location_is_start_it_should_insert_content_at_start():
     lines = ["foo", "bar", "bang"]
@@ -215,6 +232,7 @@ def test_if_mode_is_insert_and_location_is_start_it_should_insert_content_at_sta
 
     assert actual_lines == expected_lines
 
+
 def test_if_mode_is_insert_and_lines_have_eol_then_inserted_line_should_have_matching_eol():
     linesep = "\r\n"
     lines = ["foo" + linesep]
@@ -229,6 +247,7 @@ def test_if_mode_is_insert_and_lines_have_eol_then_inserted_line_should_have_mat
     )
 
     assert actual_lines == expected_lines
+
 
 def test_if_mode_is_insert_and_no_lines_then_the_content_should_have_os_linesep_added():
     content = "roscivs"
@@ -245,6 +264,7 @@ def test_if_mode_is_insert_and_no_lines_then_the_content_should_have_os_linesep_
 
     assert actual_lines == expected_lines
 
+
 def test_if_location_is_end_of_empty_file_then_it_should_just_be_content():
     content = "roscivs"
     expected_lines = [content]
@@ -257,6 +277,7 @@ def test_if_location_is_end_of_empty_file_then_it_should_just_be_content():
     )
 
     assert actual_lines == expected_lines
+
 
 def test_if_location_is_end_of_file_and_indent_is_True_then_line_should_match_previous_indent():
     content = "roscivs"
@@ -273,6 +294,7 @@ def test_if_location_is_end_of_file_and_indent_is_True_then_line_should_match_pr
     )
 
     assert actual_lines == expected_lines
+
 
 def test_if_location_is_not_set_but_before_and_after_are_then_line_should_appear_as_the_line_before_before():
     for indent in ("", " \t \t\t\t      "):
@@ -299,6 +321,7 @@ def test_if_location_is_not_set_but_before_and_after_are_then_line_should_appear
         )
 
         assert actual_lines == expected_lines
+
 
 def test_insert_with_after_and_before_with_no_location_should_indent_to_match_before_indent():
     for indent in ("", " \t \t\t\t      "):
@@ -332,6 +355,7 @@ def test_insert_with_after_and_before_with_no_location_should_indent_to_match_be
 
         assert actual_lines == expected_lines
 
+
 def test_if_not_location_but_before_and_after_and_more_than_one_after_it_should_CommandExecutionError():
     after = "one"
     before = "two"
@@ -346,7 +370,11 @@ def test_if_not_location_but_before_and_after_and_more_than_one_after_it_should_
             before=before,
             after=after,
         )
-        assert str(err.value) == 'Found more than expected occurrences in "after" expression'
+        assert (
+            str(err.value)
+            == 'Found more than expected occurrences in "after" expression'
+        )
+
 
 def test_if_not_location_but_before_and_after_and_more_than_one_before_it_should_CommandExecutionError():
     after = "one"
@@ -362,7 +390,10 @@ def test_if_not_location_but_before_and_after_and_more_than_one_before_it_should
             before=before,
             after=after,
         )
-    assert str(err.value) == 'Found more than expected occurrences in "before" expression'
+    assert (
+        str(err.value) == 'Found more than expected occurrences in "before" expression'
+    )
+
 
 def test_if_not_location_or_before_but_after_and_after_has_more_than_one_it_should_CommandExecutionError():
     location = None
@@ -379,7 +410,10 @@ def test_if_not_location_or_before_but_after_and_after_has_more_than_one_it_shou
             before=before,
             after=after,
         )
-    assert str(err.value) == 'Found more than expected occurrences in "after" expression'
+    assert (
+        str(err.value) == 'Found more than expected occurrences in "after" expression'
+    )
+
 
 def test_if_not_location_or_after_but_before_and_before_has_more_than_one_it_should_CommandExecutionError():
     location = None
@@ -396,7 +430,11 @@ def test_if_not_location_or_after_but_before_and_before_has_more_than_one_it_sho
             before=before,
             after=after,
         )
-        assert str(err.value) == 'Found more than expected occurrences in "before" expression'
+        assert (
+            str(err.value)
+            == 'Found more than expected occurrences in "before" expression'
+        )
+
 
 def test_if_not_location_or_after_and_no_before_in_lines_it_should_CommandExecutionError():
     location = None
@@ -415,6 +453,7 @@ def test_if_not_location_or_after_and_no_before_in_lines_it_should_CommandExecut
         )
     assert str(err.value) == "Neither before or after was found in file"
 
+
 def test_if_not_location_or_before_and_no_after_in_lines_it_should_CommandExecutionError():
     location = None
     before = None
@@ -431,6 +470,7 @@ def test_if_not_location_or_before_and_no_after_in_lines_it_should_CommandExecut
             after=after,
         )
     assert str(err.value) == "Neither before or after was found in file"
+
 
 def test_if_not_location_or_before_but_after_then_line_should_be_inserted_after_after():
     location = before = None
@@ -451,6 +491,7 @@ def test_if_not_location_or_before_but_after_then_line_should_be_inserted_after_
 
     assert actual_lines == expected_lines
 
+
 def test_insert_with_after_should_ignore_line_endings_on_comparison():
     after = "after"
     content = "roscivs"
@@ -466,6 +507,7 @@ def test_insert_with_after_should_ignore_line_endings_on_comparison():
 
     assert actual_lines == original_lines
 
+
 def test_insert_with_before_should_ignore_line_endings_on_comparison():
     before = "before"
     content = "bottia"
@@ -480,6 +522,7 @@ def test_insert_with_before_should_ignore_line_endings_on_comparison():
     )
 
     assert actual_lines == original_lines
+
 
 def test_if_not_location_or_before_but_after_and_indent_False_then_line_should_be_inserted_after_after_without_indent():
     location = before = None
@@ -501,6 +544,7 @@ def test_if_not_location_or_before_but_after_and_indent_False_then_line_should_b
 
     assert actual_lines == expected_lines
 
+
 def test_if_not_location_or_after_but_before_then_line_should_be_inserted_before_before():
     location = after = None
     before = "indessed"
@@ -519,6 +563,7 @@ def test_if_not_location_or_after_but_before_then_line_should_be_inserted_before
     )
 
     assert actual_lines == expected_lines
+
 
 def test_if_not_location_or_after_but_before_and_indent_False_then_line_should_be_inserted_before_before_without_indent():
     location = after = None
@@ -540,6 +585,7 @@ def test_if_not_location_or_after_but_before_and_indent_False_then_line_should_b
 
     assert actual_lines == expected_lines
 
+
 def test_insert_after_the_last_line_should_work():
     location = before = None
     after = "indessed"
@@ -559,6 +605,7 @@ def test_insert_after_the_last_line_should_work():
 
     assert actual_lines == expected_lines
 
+
 def test_insert_should_work_just_like_ensure_on_before():
     # I'm pretty sure that this is or should be a bug, but that
     # is how things currently work, so I'm calling it out here.
@@ -576,6 +623,7 @@ def test_insert_should_work_just_like_ensure_on_before():
     )
 
     assert actual_lines == original_lines
+
 
 def test_insert_should_work_just_like_ensure_on_after():
     # I'm pretty sure that this is or should be a bug, but that
@@ -597,6 +645,7 @@ def test_insert_should_work_just_like_ensure_on_after():
 
     assert actual_lines == original_lines
 
+
 def test_insert_before_the_first_line_should_work():
     location = after = None
     before = "indessed"
@@ -616,6 +665,7 @@ def test_insert_before_the_first_line_should_work():
 
     assert actual_lines == expected_lines
 
+
 def test_ensure_with_before_and_too_many_after_should_CommandExecutionError():
     location = None
     before = "before"
@@ -633,7 +683,11 @@ def test_ensure_with_before_and_too_many_after_should_CommandExecutionError():
             after=after,
         )
 
-        assert str(err.value) == 'Found more than expected occurrences in "after" expression'
+        assert (
+            str(err.value)
+            == 'Found more than expected occurrences in "after" expression'
+        )
+
 
 def test_ensure_with_too_many_after_should_CommandExecutionError():
     after = "fnord"
@@ -646,7 +700,11 @@ def test_ensure_with_too_many_after_should_CommandExecutionError():
             after=after,
             mode="ensure",
         )
-        assert str(err.value) == 'Found more than expected occurrences in "after" expression'
+        assert (
+            str(err.value)
+            == 'Found more than expected occurrences in "after" expression'
+        )
+
 
 def test_ensure_with_after_and_too_many_before_should_CommandExecutionError():
     location = None
@@ -665,8 +723,12 @@ def test_ensure_with_after_and_too_many_before_should_CommandExecutionError():
             after=after,
         )
 
-        assert str(err.value) == 'Found more than expected occurrences in "before" expression'
-        
+        assert (
+            str(err.value)
+            == 'Found more than expected occurrences in "before" expression'
+        )
+
+
 def test_ensure_with_too_many_before_should_CommandExecutionError():
     before = "fnord"
     bad_lines = [before, before]
@@ -678,7 +740,11 @@ def test_ensure_with_too_many_before_should_CommandExecutionError():
             before=before,
             mode="ensure",
         )
-        assert str(err.value) =='Found more than expected occurrences in "before" expression'
+        assert (
+            str(err.value)
+            == 'Found more than expected occurrences in "before" expression'
+        )
+
 
 def test_ensure_with_before_and_after_that_already_contains_the_line_should_return_original_info():
     before = "before"
@@ -696,6 +762,7 @@ def test_ensure_with_before_and_after_that_already_contains_the_line_should_retu
 
     assert actual_lines == original_lines
 
+
 def test_ensure_with_too_many_lines_between_before_and_after_should_CommandExecutionError():
     before = "before"
     after = "after"
@@ -711,7 +778,11 @@ def test_ensure_with_too_many_lines_between_before_and_after_should_CommandExecu
             before=before,
         )
 
-        assert str(err.value) == 'Found more than one line between boundaries "before" and "after".'
+        assert (
+            str(err.value)
+            == 'Found more than one line between boundaries "before" and "after".'
+        )
+
 
 def test_ensure_with_no_lines_between_before_and_after_should_insert_a_line():
     for indent in ("", " \t \t\t\t      "):
@@ -732,6 +803,7 @@ def test_ensure_with_no_lines_between_before_and_after_should_insert_a_line():
 
         assert actual_lines == expected_lines
 
+
 def test_ensure_with_existing_but_different_line_should_set_the_line():
     for indent in ("", " \t \t\t\t      "):
         before = "before"
@@ -751,6 +823,7 @@ def test_ensure_with_existing_but_different_line_should_set_the_line():
 
         assert actual_lines == expected_lines
 
+
 def test_ensure_with_after_and_existing_content_should_return_same_lines():
     for indent in ("", " \t \t\t\t      "):
         before = None
@@ -768,6 +841,7 @@ def test_ensure_with_after_and_existing_content_should_return_same_lines():
         )
 
         assert actual_lines == original_lines
+
 
 def test_ensure_with_after_and_missing_content_should_add_it():
     for indent in ("", " \t \t\t\t      "):
@@ -788,6 +862,7 @@ def test_ensure_with_after_and_missing_content_should_add_it():
 
         assert actual_lines == expected_lines
 
+
 def test_ensure_with_after_and_content_at_the_end_should_not_add_duplicate():
     after = "after"
     content = "roscivs"
@@ -801,6 +876,7 @@ def test_ensure_with_after_and_content_at_the_end_should_not_add_duplicate():
     )
 
     assert actual_lines == original_lines
+
 
 def test_ensure_with_before_and_missing_content_should_add_it():
     for indent in ("", " \t \t\t\t      "):
@@ -826,6 +902,7 @@ def test_ensure_with_before_and_missing_content_should_add_it():
 
         assert actual_lines == expected_lines
 
+
 def test_ensure_with_before_and_existing_content_should_return_same_lines():
     for indent in ("", " \t \t\t\t      "):
         before = "before"
@@ -844,6 +921,7 @@ def test_ensure_with_before_and_existing_content_should_return_same_lines():
 
         assert actual_lines == original_lines
 
+
 def test_ensure_without_before_and_after_should_CommandExecutionError():
     before = "before"
     after = "after"
@@ -857,8 +935,12 @@ def test_ensure_without_before_and_after_should_CommandExecutionError():
             content="aardvark",
             mode="ensure",
         )
-        assert str(err.value) == "Wrong conditions? Unable to ensure line without knowing where"
-        " to put it before and/or after."
+        assert (
+            str(err.value)
+            == "Wrong conditions? Unable to ensure line without knowing where"
+            " to put it before and/or after."
+        )
+
 
 @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
 @patch("os.path.isfile", MagicMock(return_value=True))
@@ -875,10 +957,13 @@ def test_delete_line_in_empty_file(anyattr):
         with patch("salt.utils.files.fopen", mock_open(read_data="")), patch(
             "os.stat", anyattr
         ), patch("salt.modules.file.log", _log):
-                assert not filemod.line("/dummy/path", content="foo", match="bar", mode=mode)
+            assert not filemod.line(
+                "/dummy/path", content="foo", match="bar", mode=mode
+            )
         warning_call = _log.warning.call_args_list[0][0]
         warning_log_msg = warning_call[0] % warning_call[1:]
         assert "Cannot find text to {}".format(mode) in warning_log_msg
+
 
 @patch("os.path.realpath", MagicMock())
 @patch("os.path.isfile", MagicMock(return_value=True))
@@ -900,6 +985,7 @@ def test_line_delete_no_match():
             with patch("salt.utils.atomicfile.atomic_open", atomic_opener):
                 assert not filemod.line("foo", content="foo", match=match, mode=mode)
 
+
 @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
 @patch("os.path.isfile", MagicMock(return_value=True))
 def test_line_modecheck_failure():
@@ -916,6 +1002,7 @@ def test_line_modecheck_failure():
             filemod.line("foo", mode=mode)
         assert err_msg in str(exc_info.value)
 
+
 @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
 @patch("os.path.isfile", MagicMock(return_value=True))
 def test_line_no_content():
@@ -926,7 +1013,10 @@ def test_line_no_content():
     for mode in ["insert", "ensure", "replace"]:
         with pytest.raises(CommandExecutionError) as exc_info:
             filemod.line("foo", mode=mode)
-            assert 'Content can only be empty if mode is "delete"' in str(exc_info.value)
+            assert 'Content can only be empty if mode is "delete"' in str(
+                exc_info.value
+            )
+
 
 @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
 @patch("os.path.isfile", MagicMock(return_value=True))
@@ -942,6 +1032,7 @@ def test_line_insert_no_location_no_before_no_after():
             filemod.line("foo", content="test content", mode="insert")
         assert '"location" or "before/after"' in str(exc_info.value)
 
+
 def test_line_insert_after_no_pattern(tempfile_name, get_body):
     """
     Test for file.line for insertion after specific line, using no pattern.
@@ -955,13 +1046,17 @@ def test_line_insert_after_no_pattern(tempfile_name, get_body):
     )
     cfg_content = "- /srv/custom"
 
-    isfile_mock = MagicMock(side_effect=lambda x: True if x == tempfile_name else DEFAULT)
+    isfile_mock = MagicMock(
+        side_effect=lambda x: True if x == tempfile_name else DEFAULT
+    )
     with patch("os.path.isfile", isfile_mock), patch(
         "os.stat", MagicMock(return_value=DummyStat())
     ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
         "salt.utils.atomicfile.atomic_open", mock_open()
     ) as atomic_open_mock:
-        filemod.line(tempfile_name, content=cfg_content, after="- /srv/salt", mode="insert")
+        filemod.line(
+            tempfile_name, content=cfg_content, after="- /srv/salt", mode="insert"
+        )
         handles = atomic_open_mock.filehandles[tempfile_name]
         # We should only have opened the file once
         open_count = len(handles)
@@ -973,6 +1068,7 @@ def test_line_insert_after_no_pattern(tempfile_name, get_body):
         # ... with the updated content
         expected = get_body(file_modified)
         assert writelines_content[0] == expected, (writelines_content[0], expected)
+
 
 def test_line_insert_after_pattern(tempfile_name, get_body):
     """
@@ -1004,13 +1100,13 @@ def test_line_insert_after_pattern(tempfile_name, get_body):
         ]
     )
     cfg_content = os.linesep.join(["  custom:", "    - /srv/custom"])
-    isfile_mock = MagicMock(side_effect=lambda x: True if x == tempfile_name else DEFAULT)
+    isfile_mock = MagicMock(
+        side_effect=lambda x: True if x == tempfile_name else DEFAULT
+    )
     for after_line in ["file_r.*", ".*roots"]:
         with patch("os.path.isfile", isfile_mock), patch(
             "os.stat", MagicMock(return_value=DummyStat())
-        ), patch(
-            "salt.utils.files.fopen", mock_open(read_data=file_content)
-        ), patch(
+        ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
             "salt.utils.atomicfile.atomic_open", mock_open()
         ) as atomic_open_mock:
             filemod.line(
@@ -1039,6 +1135,7 @@ def test_line_insert_after_pattern(tempfile_name, get_body):
                 expected,
             )
 
+
 def test_line_insert_multi_line_content_after_unicode(tempfile_name, get_body):
     """
     Test for file.line for insertion after specific line with Unicode
@@ -1053,13 +1150,13 @@ def test_line_insert_multi_line_content_after_unicode(tempfile_name, get_body):
         "This is a line with unicode Ŷ".format(os.linesep, os.linesep)
     )
     cfg_content = "This is a line with unicode Ŷ"
-    isfile_mock = MagicMock(side_effect=lambda x: True if x == tempfile_name else DEFAULT)
+    isfile_mock = MagicMock(
+        side_effect=lambda x: True if x == tempfile_name else DEFAULT
+    )
     for after_line in ["This is another line"]:
         with patch("os.path.isfile", isfile_mock), patch(
             "os.stat", MagicMock(return_value=DummyStat())
-        ), patch(
-            "salt.utils.files.fopen", mock_open(read_data=file_content)
-        ), patch(
+        ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
             "salt.utils.atomicfile.atomic_open", mock_open()
         ) as atomic_open_mock:
             filemod.line(
@@ -1084,6 +1181,7 @@ def test_line_insert_multi_line_content_after_unicode(tempfile_name, get_body):
                 expected,
             )
 
+
 def test_line_insert_before(tempfile_name, get_body):
     """
     Test for file.line for insertion before specific line, using pattern and no patterns.
@@ -1105,13 +1203,13 @@ def test_line_insert_before(tempfile_name, get_body):
     )
     cfg_content = "- /srv/custom"
 
-    isfile_mock = MagicMock(side_effect=lambda x: True if x == tempfile_name else DEFAULT)
+    isfile_mock = MagicMock(
+        side_effect=lambda x: True if x == tempfile_name else DEFAULT
+    )
     for before_line in ["/srv/salt", "/srv/sa.*t"]:
         with patch("os.path.isfile", isfile_mock), patch(
             "os.stat", MagicMock(return_value=DummyStat())
-        ), patch(
-            "salt.utils.files.fopen", mock_open(read_data=file_content)
-        ), patch(
+        ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
             "salt.utils.atomicfile.atomic_open", mock_open()
         ) as atomic_open_mock:
             filemod.line(
@@ -1129,6 +1227,7 @@ def test_line_insert_before(tempfile_name, get_body):
             expected = get_body(file_modified)
             # assert writelines_content[0] == expected, (writelines_content[0], expected)
             assert writelines_content[0] == expected
+
 
 @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
 @patch("os.path.isfile", MagicMock(return_value=True))
@@ -1155,7 +1254,11 @@ def test_line_assert_exception_pattern():
                         before=before_line,
                         mode="insert",
                     )
-                assert str(cm.value) == 'Found more than expected occurrences in "before" expression'
+                assert (
+                    str(cm.value)
+                    == 'Found more than expected occurrences in "before" expression'
+                )
+
 
 def test_line_insert_before_after(tempfile_name, get_body):
     """
@@ -1185,13 +1288,13 @@ def test_line_insert_before_after(tempfile_name, get_body):
     )
     cfg_content = "- /srv/coriander"
 
-    isfile_mock = MagicMock(side_effect=lambda x: True if x == tempfile_name else DEFAULT)
+    isfile_mock = MagicMock(
+        side_effect=lambda x: True if x == tempfile_name else DEFAULT
+    )
     for b_line, a_line in [("/srv/sugar", "/srv/salt")]:
         with patch("os.path.isfile", isfile_mock), patch(
             "os.stat", MagicMock(return_value=DummyStat())
-        ), patch(
-            "salt.utils.files.fopen", mock_open(read_data=file_content)
-        ), patch(
+        ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
             "salt.utils.atomicfile.atomic_open", mock_open()
         ) as atomic_open_mock:
             filemod.line(
@@ -1213,6 +1316,7 @@ def test_line_insert_before_after(tempfile_name, get_body):
             expected = get_body(file_modified)
             assert writelines_content[0] == expected
 
+
 def test_line_insert_start(tempfile_name, get_body):
     """
     Test for file.line for insertion at the beginning of the file
@@ -1232,13 +1336,17 @@ def test_line_insert_start(tempfile_name, get_body):
         ]
     )
 
-    isfile_mock = MagicMock(side_effect=lambda x: True if x == tempfile_name else DEFAULT)
+    isfile_mock = MagicMock(
+        side_effect=lambda x: True if x == tempfile_name else DEFAULT
+    )
     with patch("os.path.isfile", isfile_mock), patch(
         "os.stat", MagicMock(return_value=DummyStat())
     ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
         "salt.utils.atomicfile.atomic_open", mock_open()
     ) as atomic_open_mock:
-        filemod.line(tempfile_name, content=cfg_content, location="start", mode="insert")
+        filemod.line(
+            tempfile_name, content=cfg_content, location="start", mode="insert"
+        )
         handles = atomic_open_mock.filehandles[tempfile_name]
         # We should only have opened the file once
         open_count = len(handles)
@@ -1250,6 +1358,7 @@ def test_line_insert_start(tempfile_name, get_body):
         # ... with the updated content
         expected = get_body(file_modified)
         assert writelines_content[0] == expected, (writelines_content[0], expected)
+
 
 def test_line_insert_end(tempfile_name, get_body):
     """
@@ -1270,7 +1379,9 @@ def test_line_insert_end(tempfile_name, get_body):
         ]
     )
 
-    isfile_mock = MagicMock(side_effect=lambda x: True if x == tempfile_name else DEFAULT)
+    isfile_mock = MagicMock(
+        side_effect=lambda x: True if x == tempfile_name else DEFAULT
+    )
     with patch("os.path.isfile", isfile_mock), patch(
         "os.stat", MagicMock(return_value=DummyStat())
     ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
@@ -1289,6 +1400,7 @@ def test_line_insert_end(tempfile_name, get_body):
         expected = get_body(file_modified)
         assert writelines_content[0] == expected, (writelines_content[0], expected)
 
+
 def test_line_insert_ensure_before(tempfile_name, get_body):
     """
     Test for file.line for insertion ensuring the line is before
@@ -1298,7 +1410,9 @@ def test_line_insert_ensure_before(tempfile_name, get_body):
     file_content = os.linesep.join(["#!/bin/bash", "", "exit 0"])
     file_modified = os.linesep.join(["#!/bin/bash", "", cfg_content, "exit 0"])
 
-    isfile_mock = MagicMock(side_effect=lambda x: True if x == tempfile_name else DEFAULT)
+    isfile_mock = MagicMock(
+        side_effect=lambda x: True if x == tempfile_name else DEFAULT
+    )
     with patch("os.path.isfile", isfile_mock), patch(
         "os.stat", MagicMock(return_value=DummyStat())
     ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
@@ -1317,6 +1431,7 @@ def test_line_insert_ensure_before(tempfile_name, get_body):
         expected = get_body(file_modified)
         assert writelines_content[0] == expected, (writelines_content[0], expected)
 
+
 def test_line_insert_duplicate_ensure_before(tempfile_name):
     """
     Test for file.line for insertion ensuring the line is before
@@ -1326,7 +1441,9 @@ def test_line_insert_duplicate_ensure_before(tempfile_name):
     file_content = os.linesep.join(["#!/bin/bash", "", cfg_content, "exit 0"])
     file_modified = os.linesep.join(["#!/bin/bash", "", cfg_content, "exit 0"])
 
-    isfile_mock = MagicMock(side_effect=lambda x: True if x == tempfile_name else DEFAULT)
+    isfile_mock = MagicMock(
+        side_effect=lambda x: True if x == tempfile_name else DEFAULT
+    )
     with patch("os.path.isfile", isfile_mock), patch(
         "os.stat", MagicMock(return_value=DummyStat())
     ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
@@ -1335,6 +1452,7 @@ def test_line_insert_duplicate_ensure_before(tempfile_name):
         filemod.line(tempfile_name, content=cfg_content, before="exit 0", mode="ensure")
         # If file not modified no handlers in dict
         assert atomic_open_mock.filehandles.get(tempfile_name) is None
+
 
 def test_line_insert_ensure_before_first_line(tempfile_name, get_body):
     """
@@ -1347,7 +1465,9 @@ def test_line_insert_ensure_before_first_line(tempfile_name, get_body):
         [cfg_content, "/etc/init.d/someservice restart", "exit 0"]
     )
 
-    isfile_mock = MagicMock(side_effect=lambda x: True if x == tempfile_name else DEFAULT)
+    isfile_mock = MagicMock(
+        side_effect=lambda x: True if x == tempfile_name else DEFAULT
+    )
     with patch("os.path.isfile", isfile_mock), patch(
         "os.stat", MagicMock(return_value=DummyStat())
     ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
@@ -1371,20 +1491,21 @@ def test_line_insert_ensure_before_first_line(tempfile_name, get_body):
         expected = get_body(file_modified)
         assert writelines_content[0] == expected, (writelines_content[0], expected)
 
+
 def test_line_insert_ensure_after(tempfile_name, get_body):
     """
     Test for file.line for insertion ensuring the line is after
     :return:
     """
     cfg_content = "exit 0"
-    file_content = os.linesep.join(
-        ["#!/bin/bash", "/etc/init.d/someservice restart"]
-    )
+    file_content = os.linesep.join(["#!/bin/bash", "/etc/init.d/someservice restart"])
     file_modified = os.linesep.join(
         ["#!/bin/bash", "/etc/init.d/someservice restart", cfg_content]
     )
 
-    isfile_mock = MagicMock(side_effect=lambda x: True if x == tempfile_name else DEFAULT)
+    isfile_mock = MagicMock(
+        side_effect=lambda x: True if x == tempfile_name else DEFAULT
+    )
     with patch("os.path.isfile", isfile_mock), patch(
         "os.stat", MagicMock(return_value=DummyStat())
     ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
@@ -1408,6 +1529,7 @@ def test_line_insert_ensure_after(tempfile_name, get_body):
         expected = get_body(file_modified)
         assert writelines_content[0] == expected, (writelines_content[0], expected)
 
+
 def test_line_insert_duplicate_ensure_after(tempfile_name):
     """
     Test for file.line for insertion ensuring the line is after
@@ -1421,7 +1543,9 @@ def test_line_insert_duplicate_ensure_after(tempfile_name):
         ["#!/bin/bash", "/etc/init.d/someservice restart", cfg_content]
     )
 
-    isfile_mock = MagicMock(side_effect=lambda x: True if x == tempfile_name else DEFAULT)
+    isfile_mock = MagicMock(
+        side_effect=lambda x: True if x == tempfile_name else DEFAULT
+    )
     with patch("os.path.isfile", isfile_mock), patch(
         "os.stat", MagicMock(return_value=DummyStat())
     ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
@@ -1435,6 +1559,7 @@ def test_line_insert_duplicate_ensure_after(tempfile_name):
         )
         # If file not modified no handlers in dict
         assert atomic_open_mock.filehandles.get(tempfile_name) is None
+
 
 def test_line_insert_ensure_beforeafter_twolines(tempfile_name, get_body):
     """
@@ -1453,13 +1578,13 @@ def test_line_insert_ensure_beforeafter_twolines(tempfile_name, get_body):
     after, before = file_content.split(os.linesep)
     file_modified = os.linesep.join([after, cfg_content, before])
 
-    isfile_mock = MagicMock(side_effect=lambda x: True if x == tempfile_name else DEFAULT)
+    isfile_mock = MagicMock(
+        side_effect=lambda x: True if x == tempfile_name else DEFAULT
+    )
     for (_after, _before) in [(after, before), ("NAME_.*", "SKEL_.*")]:
         with patch("os.path.isfile", isfile_mock), patch(
             "os.stat", MagicMock(return_value=DummyStat())
-        ), patch(
-            "salt.utils.files.fopen", mock_open(read_data=file_content)
-        ), patch(
+        ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
             "salt.utils.atomicfile.atomic_open", mock_open()
         ) as atomic_open_mock:
             filemod.line(
@@ -1484,6 +1609,7 @@ def test_line_insert_ensure_beforeafter_twolines(tempfile_name, get_body):
                 expected,
             )
 
+
 def test_line_insert_ensure_beforeafter_twolines_exists(tempfile_name):
     """
     Test for file.line for insertion ensuring the line is between two lines
@@ -1504,13 +1630,13 @@ def test_line_insert_ensure_beforeafter_twolines_exists(tempfile_name):
         file_content.split(os.linesep)[2],
     )
 
-    isfile_mock = MagicMock(side_effect=lambda x: True if x == tempfile_name else DEFAULT)
+    isfile_mock = MagicMock(
+        side_effect=lambda x: True if x == tempfile_name else DEFAULT
+    )
     for (_after, _before) in [(after, before), ("NAME_.*", "SKEL_.*")]:
         with patch("os.path.isfile", isfile_mock), patch(
             "os.stat", MagicMock(return_value=DummyStat())
-        ), patch(
-            "salt.utils.files.fopen", mock_open(read_data=file_content)
-        ), patch(
+        ), patch("salt.utils.files.fopen", mock_open(read_data=file_content)), patch(
             "salt.utils.atomicfile.atomic_open", mock_open()
         ) as atomic_open_mock:
             result = filemod.line(
@@ -1524,6 +1650,7 @@ def test_line_insert_ensure_beforeafter_twolines_exists(tempfile_name):
             assert not atomic_open_mock.filehandles
             # No changes should have been made
             assert result is False
+
 
 @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
 @patch("os.path.isfile", MagicMock(return_value=True))
@@ -1559,7 +1686,11 @@ def test_line_insert_ensure_beforeafter_rangelines():
                         before=_before,
                         mode="ensure",
                     )
-            assert 'Found more than one line between boundaries "before" and "after"' in str(exc_info.value)
+            assert (
+                'Found more than one line between boundaries "before" and "after"'
+                in str(exc_info.value)
+            )
+
 
 def test_line_delete(tempfile_name, get_body):
     """
@@ -1579,7 +1710,9 @@ def test_line_delete(tempfile_name, get_body):
         ["file_roots:", "  base:", "    - /srv/salt", "    - /srv/sugar"]
     )
 
-    isfile_mock = MagicMock(side_effect=lambda x: True if x == tempfile_name else DEFAULT)
+    isfile_mock = MagicMock(
+        side_effect=lambda x: True if x == tempfile_name else DEFAULT
+    )
     for content in ["/srv/pepper", "/srv/pepp*", "/srv/p.*", "/sr.*pe.*"]:
         files_fopen = mock_open(read_data=file_content)
         with patch("os.path.isfile", isfile_mock), patch(
@@ -1602,6 +1735,7 @@ def test_line_delete(tempfile_name, get_body):
                 writelines_content[0],
                 expected,
             )
+
 
 def test_line_replace(tempfile_name, get_body):
     """
@@ -1627,7 +1761,9 @@ def test_line_replace(tempfile_name, get_body):
         ]
     )
 
-    isfile_mock = MagicMock(side_effect=lambda x: True if x == tempfile_name else DEFAULT)
+    isfile_mock = MagicMock(
+        side_effect=lambda x: True if x == tempfile_name else DEFAULT
+    )
     for match in ["/srv/pepper", "/srv/pepp*", "/srv/p.*", "/sr.*pe.*"]:
         files_fopen = mock_open(read_data=file_content)
         with patch("os.path.isfile", isfile_mock), patch(
@@ -1636,7 +1772,10 @@ def test_line_replace(tempfile_name, get_body):
             "salt.utils.atomicfile.atomic_open", mock_open()
         ) as atomic_open_mock:
             filemod.line(
-                tempfile_name, content="- /srv/natrium-chloride", match=match, mode="replace"
+                tempfile_name,
+                content="- /srv/natrium-chloride",
+                match=match,
+                mode="replace",
             )
             handles = atomic_open_mock.filehandles[tempfile_name]
             # We should only have opened the file once
