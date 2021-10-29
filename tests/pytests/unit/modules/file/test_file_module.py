@@ -1,10 +1,9 @@
-import shutil
-import pytest
 import logging
 import os
-import tempfile
+import shutil
 import textwrap
 
+import pytest
 import salt.config
 import salt.loader
 import salt.modules.cmdmod as cmdmod
@@ -18,6 +17,7 @@ from salt.utils.jinja import SaltCacheLoader
 from tests.support.mock import MagicMock, Mock, patch
 
 log = logging.getLogger(__name__)
+
 
 class DummyStat:
     st_mode = 33188
@@ -34,15 +34,18 @@ class DummyStat:
 
 @pytest.fixture
 def sed_content():
-    sed_content = textwrap.dedent("""\
+    sed_content = textwrap.dedent(
+        """\
     test
     some
     content
     /var/lib/foo/app/test
     here
-    """)
+    """
+    )
 
     return sed_content
+
 
 @pytest.fixture
 def configure_loader_modules():
@@ -65,6 +68,7 @@ def configure_loader_modules():
         }
     }
 
+
 # Make a unique subdir to avoid any tempfile conflicts
 @pytest.fixture
 def subdir(tmp_path):
@@ -72,7 +76,8 @@ def subdir(tmp_path):
     subdir.mkdir()
     yield subdir
     shutil.rmtree(str(subdir))
-    
+
+
 def test_check_file_meta_binary_contents():
     """
     Ensure that using the check_file_meta function does not raise a
@@ -92,7 +97,10 @@ def test_check_file_meta_binary_contents():
         contents=contents,
     )
 
-@pytest.mark.skipif(salt.utils.platform.is_windows(), reason="lsattr is not available on Windows")
+
+@pytest.mark.skipif(
+    salt.utils.platform.is_windows(), reason="lsattr is not available on Windows"
+)
 def test_check_file_meta_no_lsattr():
     """
     Ensure that we skip attribute comparison if lsattr(1) is not found
@@ -122,6 +130,7 @@ def test_check_file_meta_no_lsattr():
                 name, name, source, source_sum, "root", "root", "755", None, "base"
             )
     assert result
+
 
 @pytest.mark.skipif(
     salt.utils.platform.is_windows() or salt.utils.platform.is_aix(),
@@ -163,7 +172,10 @@ def test_cmp_attrs_extents_flag():
         assert "e" == changes.added
         assert changes.removed is None
 
-@pytest.mark.skipif(salt.utils.platform.is_windows(), reason="SED is not available on Windows")
+
+@pytest.mark.skipif(
+    salt.utils.platform.is_windows(), reason="SED is not available on Windows"
+)
 def test_sed_limit_escaped(sed_content, subdir):
     with salt.utils.files.fopen(str(subdir / "tfile"), "w+") as tfile:
         tfile.write(sed_content)
@@ -177,7 +189,10 @@ def test_sed_limit_escaped(sed_content, subdir):
         filemod.sed(path, before, after, limit=limit)
 
         with salt.utils.files.fopen(path, "r") as newfile:
-            assert sed_content.replace(before, "") == salt.utils.stringutils.to_unicode(newfile.read())
+            assert sed_content.replace(before, "") == salt.utils.stringutils.to_unicode(
+                newfile.read()
+            )
+
 
 def test_append_newline_at_eof(subdir):
     """
@@ -201,7 +216,7 @@ def test_append_newline_at_eof(subdir):
         tfile.flush()
     filemod.append(tfile.name, "bar")
     with salt.utils.files.fopen(tfile.name) as tfile2:
-        assert salt.utils.stringutils.to_unicode(tfile2.read()) ==  expected
+        assert salt.utils.stringutils.to_unicode(tfile2.read()) == expected
 
     # A newline should be added in empty files
     with salt.utils.files.fopen(str(subdir / "tfile"), "wb") as tfile:
@@ -209,6 +224,7 @@ def test_append_newline_at_eof(subdir):
     with salt.utils.files.fopen(tfile.name) as tfile2:
         assert salt.utils.stringutils.to_unicode(tfile2.read()) == "bar" + os.linesep
     os.remove(tfile.name)
+
 
 def test_extract_hash(subdir):
     """
@@ -230,7 +246,10 @@ def test_extract_hash(subdir):
     assert result == {"hsum": "ef6e82e4006dee563d98ada2a2a80a27", "hash_type": "md5"}
 
     result = filemod.extract_hash(tfile.name, "", "/example.tar.gz")
-    assert result == {"hsum": "ead48423703509d37c4a90e6a0d53e143b6fc268", "hash_type": "sha1"}
+    assert result == {
+        "hsum": "ead48423703509d37c4a90e6a0d53e143b6fc268",
+        "hash_type": "sha1",
+    }
 
     # All the checksums in this test file are sha1 sums. We run this
     # loop three times. The first pass tests auto-detection of hash
@@ -322,6 +341,7 @@ def test_extract_hash(subdir):
         assert result == expected
     os.remove(tfile.name)
 
+
 def test_user_to_uid_int():
     """
     Tests if user is passed as an integer
@@ -330,6 +350,7 @@ def test_user_to_uid_int():
     ret = filemod.user_to_uid(user)
     assert ret == user
 
+
 def test_group_to_gid_int():
     """
     Tests if group is passed as an integer
@@ -337,6 +358,7 @@ def test_group_to_gid_int():
     group = 5034
     ret = filemod.group_to_gid(group)
     assert ret == group
+
 
 def test_patch():
     with patch("os.path.isdir", return_value=False) as mock_isdir, patch(
@@ -356,6 +378,7 @@ def test_patch():
         cmd_mock.assert_called_once_with(cmd, python_shell=False)
         assert "test_retval" == ret
 
+
 def test_patch_dry_run():
     with patch("os.path.isdir", return_value=False) as mock_isdir, patch(
         "salt.utils.path.which", return_value="/bin/patch"
@@ -374,6 +397,7 @@ def test_patch_dry_run():
         ]
         cmd_mock.assert_called_once_with(cmd, python_shell=False)
         assert "test_retval" == ret
+
 
 def test_patch_dir():
     with patch("os.path.isdir", return_value=True) as mock_isdir, patch(
@@ -395,6 +419,7 @@ def test_patch_dir():
         cmd_mock.assert_called_once_with(cmd, python_shell=False)
         assert "test_retval" == ret
 
+
 def test_apply_template_on_contents():
     """
     Tests that the templating engine works on string contents
@@ -410,6 +435,7 @@ def test_apply_template_on_contents():
             saltenv="base",
         )
     assert ret == "This is a templated file."
+
 
 def test_get_diff():
 
@@ -503,9 +529,7 @@ def test_get_diff():
             # is that the cp.cache_file mock will ensure that we are not
             # trying to do an fopen on the salt:// URL, but rather the
             # "cached" file path we've mocked.
-            with patch.object(
-                filemod, "_binary_replace", MagicMock(return_value="")
-            ):
+            with patch.object(filemod, "_binary_replace", MagicMock(return_value="")):
                 ret = filemod.get_diff("salt://text1", "salt://text1")
                 assert ret == ""
                 ret = filemod.get_diff("salt://text1", "salt://text2")
@@ -534,12 +558,11 @@ def test_get_diff():
             ret = filemod.get_diff("binary1", "text1")
             assert ret == "Replace binary file with text file"
 
+
 def test_stats():
-    with patch(
-        "os.path.expanduser", MagicMock(side_effect=lambda path: path)
-    ), patch("os.path.exists", MagicMock(return_value=True)), patch(
-        "os.stat", MagicMock(return_value=DummyStat())
-    ):
+    with patch("os.path.expanduser", MagicMock(side_effect=lambda path: path)), patch(
+        "os.path.exists", MagicMock(return_value=True)
+    ), patch("os.stat", MagicMock(return_value=DummyStat())):
         ret = filemod.stats("dummy", None, True)
         assert ret["mode"] == "0644"
         assert ret["type"] == "file"

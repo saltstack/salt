@@ -1,8 +1,8 @@
-import pytest
 import logging
 import os
 import shutil
 
+import pytest
 import salt.config
 import salt.loader
 import salt.modules.cmdmod as cmdmod
@@ -15,6 +15,7 @@ import salt.utils.stringutils
 from tests.support.mock import MagicMock, call, patch
 
 log = logging.getLogger(__name__)
+
 
 @pytest.fixture
 def configure_loader_modules():
@@ -36,6 +37,7 @@ def configure_loader_modules():
         }
     }
 
+
 @pytest.fixture
 def tmp_sub_dir(tmp_path):
     directory = tmp_path / "file-basics-test-dir"
@@ -45,27 +47,30 @@ def tmp_sub_dir(tmp_path):
 
     shutil.rmtree(str(directory))
 
+
 @pytest.fixture
 def tfile(tmp_sub_dir):
     filename = str(tmp_sub_dir / "file-basics-test-file")
 
     with salt.utils.files.fopen(filename, "w+") as fp:
         fp.write("Hi hello! I am a file.")
-    
+
     yield filename
 
     os.remove(filename)
 
+
 @pytest.fixture
 def myfile(tmp_sub_dir):
     filename = str(tmp_sub_dir / "myfile")
-    
+
     with salt.utils.files.fopen(filename, "w+") as fp:
         fp.write(salt.utils.stringutils.to_str("Hello\n"))
 
     yield filename
 
     os.remove(filename)
+
 
 @pytest.fixture
 def a_link(tmp_sub_dir):
@@ -77,6 +82,7 @@ def a_link(tmp_sub_dir):
     if path.exists():
         os.remove(linkname)
 
+
 @pytest.fixture
 def a_hardlink(tmp_sub_dir):
     path = tmp_sub_dir / "a_hardlink"
@@ -86,6 +92,7 @@ def a_hardlink(tmp_sub_dir):
 
     if path.exists():
         os.remove(linkname)
+
 
 @pytest.mark.skip_on_windows(reason="os.symlink is not available on Windows")
 def test_symlink_already_in_desired_state(tfile, a_link):
@@ -100,12 +107,14 @@ def test_hardlink_sanity(tfile, a_hardlink):
     result = filemod.link(tfile, target)
     assert result
 
+
 @pytest.mark.skip_on_windows(reason="os.link is not available on Windows")
 def test_hardlink_numlinks(tfile, a_hardlink):
     target = a_hardlink
     result = filemod.link(tfile, target)
     name_i = os.stat(tfile).st_nlink
     assert name_i > 1
+
 
 @pytest.mark.skip_on_windows(reason="os.link is not available on Windows")
 def test_hardlink_working(tfile, a_hardlink):
@@ -114,6 +123,7 @@ def test_hardlink_working(tfile, a_hardlink):
     name_i = os.stat(tfile).st_ino
     target_i = os.stat(target).st_ino
     assert name_i == target_i
+
 
 def test_source_list_for_list_returns_file_from_dict_via_http():
     with patch("salt.modules.file.os.remove") as remove:
@@ -132,6 +142,7 @@ def test_source_list_for_list_returns_file_from_dict_via_http():
                     [{"http://t.est.com/http/httpd.conf": "filehash"}], "", "base"
                 )
                 assert list(ret) == ["http://t.est.com/http/httpd.conf", "filehash"]
+
 
 def test_source_list_use_requests():
     with patch("salt.modules.file.os.remove") as remove:
@@ -158,6 +169,7 @@ def test_source_list_use_requests():
                 assert list(ret) == ["http://t.est.com/http/file1", "filehash"]
                 assert expected_call in http_query.mock_calls
 
+
 def test_source_list_for_list_returns_existing_file():
     with patch.dict(
         filemod.__salt__,
@@ -172,6 +184,7 @@ def test_source_list_for_list_returns_existing_file():
             "base",
         )
         assert list(ret) == ["salt://http/httpd.conf.fallback", "filehash"]
+
 
 def test_source_list_for_list_returns_file_from_other_env():
     def list_master(env):
@@ -195,6 +208,7 @@ def test_source_list_for_list_returns_file_from_other_env():
         )
         assert list(ret) == ["salt://http/httpd.conf?saltenv=dev", "filehash"]
 
+
 def test_source_list_for_list_returns_file_from_dict():
     with patch.dict(
         filemod.__salt__,
@@ -203,10 +217,9 @@ def test_source_list_for_list_returns_file_from_dict():
             "cp.list_master_dirs": MagicMock(return_value=[]),
         },
     ):
-        ret = filemod.source_list(
-            [{"salt://http/httpd.conf": ""}], "filehash", "base"
-        )
+        ret = filemod.source_list([{"salt://http/httpd.conf": ""}], "filehash", "base")
         assert list(ret) == ["salt://http/httpd.conf", "filehash"]
+
 
 def test_source_list_for_list_returns_existing_local_file_slash(myfile):
     with patch.dict(
@@ -216,10 +229,9 @@ def test_source_list_for_list_returns_existing_local_file_slash(myfile):
             "cp.list_master_dirs": MagicMock(return_value=[]),
         },
     ):
-        ret = filemod.source_list(
-            [myfile + "-foo", myfile], "filehash", "base"
-        )
+        ret = filemod.source_list([myfile + "-foo", myfile], "filehash", "base")
         assert list(ret) == [myfile, "filehash"]
+
 
 def test_source_list_for_list_returns_existing_local_file_proto(myfile):
     with patch.dict(
@@ -236,6 +248,7 @@ def test_source_list_for_list_returns_existing_local_file_proto(myfile):
         )
         assert list(ret) == ["file://" + myfile, "filehash"]
 
+
 def test_source_list_for_list_returns_local_file_slash_from_dict(myfile):
     with patch.dict(
         filemod.__salt__,
@@ -247,6 +260,7 @@ def test_source_list_for_list_returns_local_file_slash_from_dict(myfile):
         ret = filemod.source_list([{myfile: ""}], "filehash", "base")
         assert list(ret) == [myfile, "filehash"]
 
+
 def test_source_list_for_list_returns_local_file_proto_from_dict(myfile):
     with patch.dict(
         filemod.__salt__,
@@ -255,7 +269,5 @@ def test_source_list_for_list_returns_local_file_proto_from_dict(myfile):
             "cp.list_master_dirs": MagicMock(return_value=[]),
         },
     ):
-        ret = filemod.source_list(
-            [{"file://" + myfile: ""}], "filehash", "base"
-        )
+        ret = filemod.source_list([{"file://" + myfile: ""}], "filehash", "base")
         assert list(ret) == ["file://" + myfile, "filehash"]

@@ -1,8 +1,8 @@
-import pytest
 import logging
 import os
 import shutil
 
+import pytest
 import salt.config
 import salt.loader
 import salt.modules.cmdmod as cmdmod
@@ -13,10 +13,13 @@ import salt.utils.platform
 import salt.utils.stringutils
 from tests.support.mock import MagicMock, patch
 
-
 log = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.skipif(salt.modules.selinux.getenforce() != "Enforcing", reason="Skip if selinux not enabled")
+pytestmark = pytest.mark.skipif(
+    salt.modules.selinux.getenforce() != "Enforcing",
+    reason="Skip if selinux not enabled",
+)
+
 
 @pytest.fixture
 def configure_loader_modules():
@@ -34,11 +37,13 @@ def configure_loader_modules():
         }
     }
 
+
 @pytest.fixture
 def subdir(tmp_path):
     subdir = tmp_path / "file-selinux-test-dir"
     yield subdir
     shutil.rmtree(str(subdir))
+
 
 @pytest.fixture
 def tfile1(subdir):
@@ -48,6 +53,7 @@ def tfile1(subdir):
     yield filename
     os.remove(filename)
 
+
 @pytest.fixture
 def tfile2(subdir):
     filename = str(subdir / "tfile2")
@@ -55,6 +61,7 @@ def tfile2(subdir):
         pass
     yield filename
     os.remove(filename)
+
 
 @pytest.fixture
 def tfile3(subdir):
@@ -64,6 +71,7 @@ def tfile3(subdir):
     yield filename
     os.remove(filename)
 
+
 def test_selinux_getcontext(tfile1):
     """
     Test get selinux context
@@ -71,6 +79,7 @@ def test_selinux_getcontext(tfile1):
     """
     result = filemod.get_selinux_context(tfile1)
     assert result == "unconfined_u:object_r:user_tmp_t:s0"
+
 
 def test_selinux_setcontext(tfile2):
     """
@@ -80,15 +89,15 @@ def test_selinux_setcontext(tfile2):
     result = filemod.set_selinux_context(tfile2, user="system_u")
     assert result == "system_u:object_r:user_tmp_t:s0"
 
+
 def test_selinux_setcontext_persist(tfile2):
     """
     Test set selinux context with persist=True
     Assumes default selinux attributes on temporary files
     """
-    result = filemod.set_selinux_context(
-        tfile2, user="system_u", persist=True
-    )
+    result = filemod.set_selinux_context(tfile2, user="system_u", persist=True)
     assert result == "system_u:object_r:user_tmp_t:s0"
+
 
 def test_file_check_perms(tfile3):
     expected_result = (

@@ -1,9 +1,9 @@
-import pytest
 import logging
 import os
 import shutil
 import textwrap
 
+import pytest
 import salt.config
 import salt.loader
 import salt.modules.cmdmod as cmdmod
@@ -16,6 +16,7 @@ import salt.utils.stringutils
 from tests.support.mock import MagicMock
 
 log = logging.getLogger(__name__)
+
 
 @pytest.fixture
 def configure_loader_modules():
@@ -41,6 +42,7 @@ def configure_loader_modules():
         }
     }
 
+
 @pytest.fixture
 def multiline_string():
     multiline_string = textwrap.dedent(
@@ -55,15 +57,17 @@ def multiline_string():
 
     return multiline_string
 
+
 @pytest.fixture
 def multiline_file(tmp_path, multiline_string):
     multiline_file = str(tmp_path / "multiline-file.txt")
 
-    with open(multiline_file, "w+") as file_handle:
+    with salt.utils.files.fopen(multiline_file, "w+") as file_handle:
         file_handle.write(multiline_string)
 
     yield multiline_file
     shutil.rmtree(tmp_path)
+
 
 def test_comment_line(multiline_file):
     filemod.comment_line(multiline_file, "^ipsum")
@@ -72,12 +76,14 @@ def test_comment_line(multiline_file):
         filecontent = fp.read()
     assert "#ipsum" in filecontent
 
+
 def test_comment(multiline_file):
     filemod.comment(multiline_file, "^ipsum")
 
     with salt.utils.files.fopen(multiline_file, "r") as fp:
         filecontent = fp.read()
     assert "#ipsum" in filecontent
+
 
 def test_comment_different_character(multiline_file):
     filemod.comment_line(multiline_file, "^ipsum", "//")
@@ -86,6 +92,7 @@ def test_comment_different_character(multiline_file):
         filecontent = fp.read()
     assert "//ipsum" in filecontent
 
+
 def test_comment_not_found(multiline_file):
     filemod.comment_line(multiline_file, "^sit")
 
@@ -93,6 +100,7 @@ def test_comment_not_found(multiline_file):
         filecontent = fp.read()
     assert "#sit" not in filecontent
     assert "sit" not in filecontent
+
 
 def test_uncomment(multiline_file):
     filemod.uncomment(multiline_file, "dolor")
