@@ -25,7 +25,7 @@ salt-users@googlegroups.com
 
 **Reporting Issues** - To report an issue with Salt, please follow the
 guidelines for filing bug reports:
-`<https://docs.saltstack.com/en/master/topics/development/reporting_bugs.html>`_
+`<https://docs.saltproject.io/en/master/topics/development/reporting_bugs.html>`_
 
 **SaltStack Support** - If you need dedicated, prioritized support, please
 consider a SaltStack Support package that fits your needs:

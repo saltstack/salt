@@ -306,7 +306,7 @@
 ##########################################
 # Enable passphrase protection of Master private key.  Although a string value
 # is acceptable; passwords should be stored in an external vaulting mechanism
-# and retrieved via sdb. See https://docs.saltstack.com/en/latest/topics/sdb/.
+# and retrieved via sdb. See https://docs.saltproject.io/en/latest/topics/sdb/.
 # Passphrase protection is off by default but an example of an sdb profile and
 # query is as follows.
 # masterkeyring:
@@ -1001,7 +1001,7 @@
 # configuration options to fully understand the tunable parameters and their implications.
 #
 # Note: setting ``pillar_cache: True`` has no effect on targeting Minions with Pillars.
-# See https://docs.saltstack.com/en/latest/topics/targeting/pillar.html
+# See https://docs.saltproject.io/en/latest/topics/targeting/pillar.html
 #pillar_cache: False
 
 # If and only if a master has set ``pillar_cache: True``, the cache TTL controls the amount
@@ -1049,7 +1049,7 @@
 
 ######        Reactor Settings        #####
 ###########################################
-# Define a salt reactor. See https://docs.saltstack.com/en/latest/topics/reactor/
+# Define a salt reactor. See https://docs.saltproject.io/en/latest/topics/reactor/
 #reactor: []
 
 #Set the TTL for the cache of the reactor configuration.

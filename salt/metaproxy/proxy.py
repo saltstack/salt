@@ -59,6 +59,14 @@ log = logging.getLogger(__name__)
 
 
 def post_master_init(self, master):
+    """
+    Function to finish init after a proxy
+    minion has finished connecting to a master.
+
+    This is primarily loading modules, pillars, etc. (since they need
+    to know which master they connected to)
+    """
+
     log.debug("subclassed LazyLoaded _post_master_init")
     if self.connected:
         self.opts["master"] = master
@@ -178,7 +186,6 @@ def post_master_init(self, master):
 
     self.opts["grains"] = salt.loader.grains(self.opts, proxy=self.proxy)
 
-    self.serial = salt.payload.Serial(self.opts)
     self.mod_opts = self._prep_mod_opts()
     self.matchers = salt.loader.matchers(self.opts)
     self.beacons = salt.beacons.Beacon(self.opts, self.functions)
@@ -306,7 +313,12 @@ def post_master_init(self, master):
 
 
 def target(cls, minion_instance, opts, data, connected):
+    """
+    Handle targeting of the minion.
 
+    Calling _thread_multi_return or _thread_return
+    depending on a single or multiple commands.
+    """
     if not minion_instance:
         minion_instance = cls(opts)
         minion_instance.connected = connected
@@ -365,8 +377,6 @@ def target(cls, minion_instance, opts, data, connected):
 
             proxy_init_fn = minion_instance.proxy[fq_proxyname + ".init"]
             proxy_init_fn(opts)
-        if not hasattr(minion_instance, "serial"):
-            minion_instance.serial = salt.payload.Serial(opts)
         if not hasattr(minion_instance, "proc_dir"):
             uid = salt.utils.user.get_uid(user=opts.get("user", None))
             minion_instance.proc_dir = salt.minion.get_proc_dir(
@@ -395,7 +405,7 @@ def thread_return(cls, minion_instance, opts, data):
     sdata.update(data)
     log.info("Starting a new job with PID %s", sdata["pid"])
     with salt.utils.files.fopen(fn_, "w+b") as fp_:
-        fp_.write(minion_instance.serial.dumps(sdata))
+        fp_.write(salt.payload.dumps(sdata))
     ret = {"success": False}
     function_name = data["fun"]
     executors = (
@@ -634,7 +644,7 @@ def thread_multi_return(cls, minion_instance, opts, data):
     sdata.update(data)
     log.info("Starting a new job with PID %s", sdata["pid"])
     with salt.utils.files.fopen(fn_, "w+b") as fp_:
-        fp_.write(minion_instance.serial.dumps(sdata))
+        fp_.write(salt.payload.dumps(sdata))
 
     multifunc_ordered = opts.get("multifunc_ordered", False)
     num_funcs = len(data["fun"])
@@ -732,6 +742,10 @@ def thread_multi_return(cls, minion_instance, opts, data):
 
 
 def handle_payload(self, payload):
+    """
+    Verify the publication and then pass
+    the payload along to _handle_decoded_payload.
+    """
     if payload is not None and payload["enc"] == "aes":
         if self._target_load(payload["load"]):
 
@@ -802,6 +816,7 @@ def handle_decoded_payload(self, data):
     # side.
     instance = self
     multiprocessing_enabled = self.opts.get("multiprocessing", True)
+    name = "ProcessPayload(jid={})".format(data["jid"])
     if multiprocessing_enabled:
         if sys.platform.startswith("win"):
             # let python reconstruct the minion on the other side if we're
@@ -810,14 +825,14 @@ def handle_decoded_payload(self, data):
         with default_signals(signal.SIGINT, signal.SIGTERM):
             process = SignalHandlingProcess(
                 target=self._target,
-                name="ProcessPayload",
+                name=name,
                 args=(instance, self.opts, data, self.connected),
             )
     else:
         process = threading.Thread(
             target=self._target,
             args=(instance, self.opts, data, self.connected),
-            name=data["jid"],
+            name=name,
         )
 
     if multiprocessing_enabled:
@@ -827,12 +842,13 @@ def handle_decoded_payload(self, data):
             process.start()
     else:
         process.start()
-    process.name = "{}-Job-{}".format(process.name, data["jid"])
     self.subprocess_list.add(process)
 
 
 def target_load(self, load):
-    # Verify that the publication is valid
+    """
+    Verify that the publication is valid.
+    """
     if "tgt" not in load or "jid" not in load or "fun" not in load or "arg" not in load:
         return False
     # Verify that the publication applies to this minion

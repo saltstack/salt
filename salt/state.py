@@ -2037,7 +2037,9 @@ class State:
             name = low.get("name", low.get("__id__"))
 
         proc = salt.utils.process.Process(
-            target=self._call_parallel_target, args=(name, cdata, low)
+            target=self._call_parallel_target,
+            args=(name, cdata, low),
+            name="ParallelState({})".format(name),
         )
         proc.start()
         ret = {
@@ -3473,7 +3475,6 @@ class BaseHighState:
         self.opts = self.__gen_opts(opts)
         self.iorder = 10000
         self.avail = self.__gather_avail()
-        self.serial = salt.payload.Serial(self.opts)
         self.building_highstate = OrderedDict()
 
     def __gather_avail(self):
@@ -4479,7 +4480,7 @@ class BaseHighState:
         if cache:
             if os.path.isfile(cfn):
                 with salt.utils.files.fopen(cfn, "rb") as fp_:
-                    high = self.serial.load(fp_)
+                    high = salt.payload.load(fp_)
                     return self.state.call_high(high, orchestration_jid)
         # File exists so continue
         err = []
@@ -4532,7 +4533,7 @@ class BaseHighState:
                     )
                 with salt.utils.files.fopen(cfn, "w+b") as fp_:
                     try:
-                        self.serial.dump(high, fp_)
+                        salt.payload.dump(high, fp_)
                     except TypeError:
                         # Can't serialize pydsl
                         pass
@@ -4765,7 +4766,6 @@ class RemoteHighState:
     def __init__(self, opts, grains):
         self.opts = opts
         self.grains = grains
-        self.serial = salt.payload.Serial(self.opts)
         # self.auth = salt.crypt.SAuth(opts)
         self.channel = salt.transport.client.ReqChannel.factory(self.opts["master_uri"])
         self._closing = False

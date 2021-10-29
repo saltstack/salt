@@ -358,6 +358,10 @@ def _disable(name, started, result=True, **kwargs):
     return ret
 
 
+def _offline():
+    return "service.offline" in __salt__ and __salt__["service.offline"]()
+
+
 def _available(name, ret):
     """
     Check if the service is available
@@ -452,6 +456,11 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     if isinstance(enable, str):
         enable = salt.utils.data.is_true(enable)
 
+    if _offline():
+        ret["result"] = True
+        ret["comment"] = "Running in OFFLINE mode. Nothing to do"
+        return ret
+
     # Check if the service is available
     try:
         if not _available(name, ret):
@@ -499,19 +508,6 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
             ret.update(_enable(name, None, **kwargs))
         elif enable is False and before_toggle_enable_status:
             ret.update(_disable(name, None, **kwargs))
-        else:
-            if __opts__["test"]:
-                ret["result"] = None
-                ret["comment"] = "\n".join(
-                    [
-                        _f
-                        for _f in [
-                            "The service {} is set to restart".format(name),
-                            unmask_ret["comment"],
-                        ]
-                        if _f
-                    ]
-                )
         return ret
 
     # Run the tests
@@ -659,6 +655,11 @@ def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
     # Convert enable to boolean in case user passed a string value
     if isinstance(enable, str):
         enable = salt.utils.data.is_true(enable)
+
+    if _offline():
+        ret["result"] = True
+        ret["comment"] = "Running in OFFLINE mode. Nothing to do"
+        return ret
 
     # Check if the service is available
     try:
@@ -969,22 +970,22 @@ def mod_watch(
         This state exists to support special handling of the ``watch``
         :ref:`requisite <requisites>`. It should not be called directly.
 
-        Parameters for this function should be set by the watching service.
-        (i.e. ``service.running``)
+        Parameters for this function should be set by the watching service
+        (e.g. ``service.running``).
 
     name
-        The name of the init or rc script used to manage the service
+        The name of the service to control.
 
     sfun
         The original function which triggered the mod_watch call
         (`service.running`, for example).
 
     sig
-        The string to search for when looking for the service process with ps
+        The string to search for when looking for the service process with ps.
 
     reload
-        When set, reload the service instead of restarting it.
-        (i.e. ``service nginx reload``)
+        When set, reload the service instead of restarting it
+        (e.g. ``service nginx reload``).
 
     full_restart
         Perform a full stop/start of a service by passing ``--full-restart``.
@@ -992,10 +993,10 @@ def mod_watch(
         :py:func:`service modules <salt.modules.service>`.
 
     force
-        Use service.force_reload instead of reload (needs reload to be set to True)
+        Use service.force_reload instead of reload (needs reload to be set to True).
 
     init_delay
-        Add a sleep command (in seconds) before the service is restarted/reloaded
+        Add a sleep command (in seconds) before the service is restarted/reloaded.
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     past_participle = None
