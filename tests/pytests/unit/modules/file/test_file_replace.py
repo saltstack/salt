@@ -1,10 +1,9 @@
-import pytest
 import logging
 import os
 import shutil
-import tempfile
 import textwrap
 
+import pytest
 import salt.config
 import salt.loader
 import salt.modules.cmdmod as cmdmod
@@ -17,6 +16,7 @@ import salt.utils.stringutils
 from tests.support.mock import MagicMock
 
 log = logging.getLogger(__name__)
+
 
 @pytest.fixture
 def configure_loader_modules():
@@ -42,6 +42,7 @@ def configure_loader_modules():
         }
     }
 
+
 @pytest.fixture
 def multiline_string():
     multiline_string = textwrap.dedent(
@@ -64,15 +65,17 @@ def multiline_string():
 
     return multiline_string
 
+
 @pytest.fixture
 def multiline_file(tmp_path, multiline_string):
     multiline_file = str(tmp_path / "multiline-file.txt")
 
-    with open(multiline_file, "w+") as file_handle:
+    with salt.utils.files.fopen(multiline_file, "w+") as file_handle:
         file_handle.write(multiline_string)
 
     yield multiline_file
     shutil.rmtree(tmp_path)
+
 
 # Make a unique subdir to avoid any tempfile conflicts
 @pytest.fixture
@@ -82,11 +85,13 @@ def subdir(tmp_path):
     yield subdir
     shutil.rmtree(str(subdir))
 
+
 def test_replace(multiline_file):
     filemod.replace(multiline_file, r"Etiam", "Salticus", backup=False)
 
     with salt.utils.files.fopen(multiline_file, "r") as fp:
         assert "Salticus" in salt.utils.stringutils.to_unicode(fp.read())
+
 
 def test_replace_append_if_not_found(subdir):
     """
@@ -148,6 +153,7 @@ def test_replace_append_if_not_found(subdir):
     with salt.utils.files.fopen(tfile.name) as tfile2:
         assert salt.utils.stringutils.to_unicode(tfile2.read()) == expected
 
+
 def test_backup(multiline_file):
     fext = ".bak"
     bak_file = "{}{}".format(multiline_file, fext)
@@ -157,6 +163,7 @@ def test_backup(multiline_file):
     assert os.path.exists(bak_file)
     os.unlink(bak_file)
 
+
 def test_nobackup(multiline_file):
     fext = ".bak"
     bak_file = "{}{}".format(multiline_file, fext)
@@ -165,6 +172,7 @@ def test_nobackup(multiline_file):
 
     assert not os.path.exists(bak_file)
 
+
 def test_dry_run(multiline_file):
     before_ctime = os.stat(multiline_file).st_mtime
     filemod.replace(multiline_file, r"Etiam", "Salticus", dry_run=True)
@@ -172,15 +180,18 @@ def test_dry_run(multiline_file):
 
     assert before_ctime == after_ctime
 
+
 def test_show_changes(multiline_file):
     ret = filemod.replace(multiline_file, r"Etiam", "Salticus", show_changes=True)
 
     assert ret.startswith("---")  # looks like a diff
 
+
 def test_noshow_changes(multiline_file):
     ret = filemod.replace(multiline_file, r"Etiam", "Salticus", show_changes=False)
 
     assert isinstance(ret, bool)
+
 
 def test_re_str_flags(multiline_file):
     # upper- & lower-case
@@ -188,8 +199,10 @@ def test_re_str_flags(multiline_file):
         multiline_file, r"Etiam", "Salticus", flags=["MULTILINE", "ignorecase"]
     )
 
+
 def test_re_int_flags(multiline_file):
     filemod.replace(multiline_file, r"Etiam", "Salticus", flags=10)
+
 
 def test_numeric_repl(multiline_file):
     """
@@ -201,14 +214,16 @@ def test_numeric_repl(multiline_file):
     """
     filemod.replace(multiline_file, r"Etiam", 123)
 
+
 def test_search_only_return_true(multiline_file):
     ret = filemod.replace(multiline_file, r"Etiam", "Salticus", search_only=True)
 
     assert isinstance(ret, bool)
-    assert ret == True
+    assert ret is True
+
 
 def test_search_only_return_false(multiline_file):
     ret = filemod.replace(multiline_file, r"Etian", "Salticus", search_only=True)
 
     assert isinstance(ret, bool)
-    assert ret == False
+    assert ret is False
