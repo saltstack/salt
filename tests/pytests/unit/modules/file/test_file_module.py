@@ -33,12 +33,13 @@ class DummyStat:
 
 @pytest.fixture
 def sed_content():
-    sed_content = """test
+    sed_content = textwrap.dedent("""\
+    test
     some
     content
     /var/lib/foo/app/test
     here
-    """
+    """)
 
     return sed_content
 
@@ -111,7 +112,7 @@ def test_check_file_meta_no_lsattr():
             result = filemod.check_file_meta(
                 name, name, source, source_sum, "root", "root", "755", None, "base"
             )
-    assert result is None
+    assert result
 
 @pytest.mark.skipif(
     salt.utils.platform.is_windows() or salt.utils.platform.is_aix(),
