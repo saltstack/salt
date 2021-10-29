@@ -271,7 +271,7 @@ class TCPPubClient(salt.transport.base.PublishClient):
         self.close()
 
 
-class TCPReqServer(salt.transport.base.RequestServer):
+class TCPReqServer(salt.transport.base.DaemonizedRequestServer):
     """
     Tornado based TCP Request/Reply Server
 
@@ -941,7 +941,7 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
         log.trace("TCP PubServer finished publishing payload")
 
 
-class TCPPublishServer(salt.transport.base.PublishServer):
+class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
     """
     Tornado based TCP PublishServer
     """
