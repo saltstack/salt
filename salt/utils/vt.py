@@ -692,6 +692,9 @@ class Terminal:
 
             try:
                 pid, status = _waitpid(self.pid, waitpid_options)
+            except ChildProcessError:
+                # Child process killed externally. go ahead and return not alive.
+                return False
             except _os_error:
                 err = sys.exc_info()[1]
                 # No child processes
