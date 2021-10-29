@@ -107,6 +107,14 @@ def multiline_file(tmp_path, multiline_string):
     yield multiline_file
     shutil.rmtree(tmp_path)
 
+# Make a unique subdir to avoid any tempfile conflicts
+@pytest.fixture
+def subdir(tmp_path):
+    subdir = tmp_path / "test-file-block-replace-subdir"
+    subdir.mkdir()
+    yield subdir
+    shutil.rmtree(str(subdir))
+
 def test_replace_multiline(multiline_file):
     new_multiline_content = os.linesep.join(
         [
@@ -223,7 +231,7 @@ def test_replace_insert_after(multiline_file):
                 )
             ) in fp.read()
 
-def test_replace_append_newline_at_eof():
+def test_replace_append_newline_at_eof(subdir):
     """
     Check that file.blockreplace works consistently on files with and
     without newlines at end of file.
@@ -237,7 +245,7 @@ def test_replace_append_newline_at_eof():
     }
     block = os.linesep.join(["#start", "baz#stop"]) + os.linesep
     # File ending with a newline
-    with tempfile.NamedTemporaryFile(mode="w+b", delete=False) as tfile:
+    with salt.utils.files.fopen(str(subdir / "tfile"), "w+b") as tfile:
         tfile.write(salt.utils.stringutils.to_bytes(base + os.linesep))
         tfile.flush()
     if salt.utils.platform.is_windows():
@@ -252,7 +260,7 @@ def test_replace_append_newline_at_eof():
     os.remove(tfile.name)
 
     # File not ending with a newline
-    with tempfile.NamedTemporaryFile(mode="w+b", delete=False) as tfile:
+    with salt.utils.files.fopen(str(subdir / "tfile"), "w+b") as tfile:
         tfile.write(salt.utils.stringutils.to_bytes(base))
         tfile.flush()
     if salt.utils.platform.is_windows():
@@ -266,7 +274,7 @@ def test_replace_append_newline_at_eof():
     os.remove(tfile.name)
 
     # A newline should not be added in empty files
-    with tempfile.NamedTemporaryFile(mode="w+b", delete=False) as tfile:
+    with salt.utils.files.fopen(str(subdir / "tfile"), "w+b") as tfile:
         pass
     if salt.utils.platform.is_windows():
         check_perms_patch = win_file.check_perms
