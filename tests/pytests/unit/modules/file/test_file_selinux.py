@@ -41,6 +41,7 @@ def configure_loader_modules():
 @pytest.fixture
 def subdir(tmp_path):
     subdir = tmp_path / "file-selinux-test-dir"
+    subdir.mkdir()
     yield subdir
     shutil.rmtree(str(subdir))
 
