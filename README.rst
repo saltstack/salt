@@ -1,5 +1,5 @@
 .. image:: https://img.shields.io/github/license/saltstack/salt
-   :alt: Salt Project License: Apache v2.0
+hjaKJka:  :alt: Salt Project License: Apache v2.0
    :target: https://github.com/saltstack/salt/blob/master/LICENSE
 
 .. image:: https://img.shields.io/pypi/dm/salt?label=pypi%20downloads
