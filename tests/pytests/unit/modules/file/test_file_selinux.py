@@ -49,7 +49,7 @@ def subdir(tmp_path):
 @pytest.fixture
 def tfile1(subdir):
     filename = str(subdir / "tfile1")
-    with salt.utils.files.fopen(filename, "w"):
+    with salt.utils.files.fopen(filename, "w+"):
         pass
     yield filename
     os.remove(filename)
@@ -58,7 +58,7 @@ def tfile1(subdir):
 @pytest.fixture
 def tfile2(subdir):
     filename = str(subdir / "tfile2")
-    with salt.utils.files.fopen(filename, "w"):
+    with salt.utils.files.fopen(filename, "w+"):
         pass
     yield filename
     os.remove(filename)
@@ -67,7 +67,7 @@ def tfile2(subdir):
 @pytest.fixture
 def tfile3(subdir):
     filename = str(subdir / "tfile3")
-    with salt.utils.files.fopen(filename, "w"):
+    with salt.utils.files.fopen(filename, "w+"):
         pass
     yield filename
     os.remove(filename)
@@ -106,12 +106,12 @@ def test_file_check_perms(tfile3):
             "comment": "The file {} is set to be changed".format(tfile3),
             "changes": {
                 "selinux": {"New": "Type: lost_found_t", "Old": "Type: user_tmp_t"},
-                "mode": "0644",
+                "mode": "0664",
             },
             "name": tfile3,
             "result": True,
         },
-        {"luser": "root", "lmode": "0600", "lgroup": "root"},
+        {"luser": "root", "lmode": "0644", "lgroup": "root"},
     )
 
     # Disable lsattr calls
@@ -122,7 +122,7 @@ def test_file_check_perms(tfile3):
             {},
             "root",
             "root",
-            644,
+            664,
             seuser=None,
             serole=None,
             setype="lost_found_t",
