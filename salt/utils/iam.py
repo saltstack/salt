@@ -35,10 +35,10 @@ def _retry_get_url(url, num_retries=10, timeout=5):
         except requests.exceptions.HTTPError as exc:
             return ""
         except Exception as exc:  # pylint: disable=broad-except
+            log.warning("Caught exception reading from URL. Retry no. %s", i)
+            log.warning(pprint.pformat(exc))
             pass
 
-        log.warning("Caught exception reading from URL. Retry no. %s", i)
-        log.warning(pprint.pformat(exc))
         time.sleep(2 ** i)
     log.error("Failed to read from URL for %s times. Giving up.", num_retries)
     return ""
