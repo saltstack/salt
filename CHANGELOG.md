@@ -151,7 +151,7 @@ Fixed
 - virt.get_disks: properly report qemu-img errors (#60512)
 - Make all platforms have psutils. This prevents a minion from starting if an instance is all ready running. (#60523)
 - Ignore configuration for 'enable_fqdns_grains' for AIX, Solaris and Juniper, assume False (#60529)
-- Remove check for TIAMAT_BUILD enforcing USE_STATIC_REQUIREMENTS, this is now controled by Tiamat v7.10.1 and above (#60559)
+- Remove check for TIAMAT_BUILD enforcing USE_STATIC_REQUIREMENTS, this is now controlled by Tiamat v7.10.1 and above (#60559)
 - Have the beacon call run through a try...except, catching any errors, logging and firing an event that includes the error.
   Fixing the swapusage beacon to ensure value is a string before we attempt to filter out the %. (#60585)
 - Refactor loader into logical sub-modules (#60594)
