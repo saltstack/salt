@@ -3970,7 +3970,7 @@ def create_folder(kwargs=None, call=None):
                 folder_refs.append(folder_refs[index - 1].CreateFolder(folder_name))
 
     if path_exists:
-        return {inventory_path: "specfied path already exists"}
+        return {inventory_path: "specified path already exists"}
 
     return {inventory_path: "created the specified path"}
 
