@@ -1109,6 +1109,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             self.opts,
             self.key,
         )
+        self.clear_funcs.connect()
         self.aes_funcs = AESFuncs(self.opts)
         salt.utils.crypt.reinit_crypto()
         self.__bind()
@@ -2471,3 +2472,13 @@ class ClearFuncs(TransportMethods):
         if self.local is not None:
             self.local.destroy()
             self.local = None
+        while self.channels:
+            chan = self.channels.pop()
+            chan.close()
+
+    def connect(self):
+        if self.channels:
+            return
+        for transport, opts in iter_transport_opts(self.opts):
+            chan = salt.channel.server.PubServerChannel.factory(opts)
+            self.channels.append(chan)
