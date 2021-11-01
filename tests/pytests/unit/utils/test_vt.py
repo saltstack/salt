@@ -1,10 +1,13 @@
 import os
 import signal
+import time
 
+import pytest
 import salt.utils.platform
 import salt.utils.vt as vt
 
 
+@pytest.mark.slow_test
 def test_isalive_no_child():
     if salt.utils.platform.is_windows():
         cmd = "timeout 10"
@@ -17,6 +20,7 @@ def test_isalive_no_child():
         stream_stdout=False,
         stream_stderr=False,
     )
+    time.sleep(1)
     # make sure we have a valid term before we kill the term
     assert term.isalive() is True
     # use a large hammer to make sure pid is really dead which will cause it to
