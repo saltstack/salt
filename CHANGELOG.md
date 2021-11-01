@@ -187,7 +187,7 @@ Added
 - Add a salt.util.platform check to detect the AArch64 64-bit extension of the ARM architecture. (#59915)
 - Adding support for Deltaproxy controlled proxy minions into Salt Open. (#60090)
 - Added functions to slsutil execution module to test if files exist in the state tree
-  Added funtion to slsutil execution module to search for a file by walking up the state tree (#60159)
+  Added function to slsutil execution module to search for a file by walking up the state tree (#60159)
 - Allow module_refresh to also refresh available beacons, eg. following a Python library being installed and "refresh_modules" being passed as an argument in a state. (#60541)
 - Add the `detect_remote_minions` and `remote_minions_port` options to allow the master to detect remote ports for connected minions. This will allow users to detect Heist-Salt minions the master is connected to over port 22 by default. (#60612)
 - Add the python rpm-vercmp library in the rpm_lowpkg.py module. (#60814)
