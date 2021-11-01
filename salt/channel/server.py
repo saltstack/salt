@@ -77,7 +77,8 @@ class ReqServerChannel:
                 ),
                 "reload": salt.crypt.Crypticle.generate_key_string,
             }
-        self.transport.pre_fork(process_manager)
+        if hasattr(self.transport, "pre_fork"):
+            self.transport.pre_fork(process_manager)
 
     def post_fork(self, payload_handler, io_loop):
         """
@@ -112,7 +113,8 @@ class ReqServerChannel:
             self.ckminions = salt.utils.minions.CkMinions(self.opts)
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.payload_handler = payload_handler
-        self.transport.post_fork(self.handle_message, io_loop)
+        if hasattr(self.transport, "post_fork"):
+            self.transport.post_fork(self.handle_message, io_loop)
 
     @salt.ext.tornado.gen.coroutine
     def handle_message(self, payload):
@@ -684,7 +686,7 @@ class PubServerChannel:
 
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         """
-        if hasattr(self.transport, 'publish_daemon'):
+        if hasattr(self.transport, "publish_daemon"):
             process_manager.add_process(self._publish_daemon, kwargs=kwargs)
 
     def _publish_daemon(self, log_queue=None, log_queue_level=None):
