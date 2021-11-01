@@ -161,8 +161,8 @@ class RequestServer:
         Close the underlying network connection.
         """
 
-class DaemonizedRequestServer(RequestServer):
 
+class DaemonizedRequestServer(RequestServer):
     def pre_fork(self, process_manager):
         """ """
 
@@ -210,7 +210,6 @@ class DaemonizedPublishServer(PublishServer):
         """
         If a deamon is needed to act as a broker impliment it here.
         """
-
 
 
 class PublishClient:
