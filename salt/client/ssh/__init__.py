@@ -1133,6 +1133,7 @@ class Single:
             opts_pkg["_ssh_version"] = self.opts["_ssh_version"]
             opts_pkg["thin_dir"] = self.opts["thin_dir"]
             opts_pkg["master_tops"] = self.opts["master_tops"]
+            opts_pkg["extra_filerefs"] = self.opts.get("extra_filerefs", "")
             opts_pkg["__master_opts__"] = self.context["master_opts"]
             if "known_hosts_file" in self.opts:
                 opts_pkg["known_hosts_file"] = self.opts["known_hosts_file"]

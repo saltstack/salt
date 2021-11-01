@@ -2037,7 +2037,9 @@ class State:
             name = low.get("name", low.get("__id__"))
 
         proc = salt.utils.process.Process(
-            target=self._call_parallel_target, args=(name, cdata, low)
+            target=self._call_parallel_target,
+            args=(name, cdata, low),
+            name="ParallelState({})".format(name),
         )
         proc.start()
         ret = {

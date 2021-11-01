@@ -126,13 +126,10 @@ class Master(
     Creates a master server
     """
 
-    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+    def _handle_signals(self, signum, sigframe):
         if hasattr(self.master, "process_manager"):
             # escalate signal to the process manager processes
-            self.master.process_manager.stop_restarting()
-            self.master.process_manager.send_signal_to_processes(signum)
-            # kill any remaining processes
-            self.master.process_manager.kill_children()
+            self.master.process_manager._handle_signals(signum, sigframe)
         super()._handle_signals(signum, sigframe)
 
     def prepare(self):
