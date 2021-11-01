@@ -307,40 +307,151 @@ def check_manufacturer(name, **kwargs):
             required_changes[k]=v
     return required_changes
 
-def create_device_type(model, manufacturer):
+def create_device_type(
+        model,
+        manufacturer=None,
+        u_height=None,
+        part_number=None,
+        is_full_depth=None,
+        subdevice_role=None,
+        comments=None,
+    ):
     """
-    .. versionadded:: 2019.2.0
-
-    Create a device type. If the manufacturer doesn't exist, create a new manufacturer.
-
-    model
-        String of device model, e.g., ``MX480``
-    manufacturer
-        String of device manufacturer, e.g., ``Juniper``
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion netbox.create_device_type MX480 Juniper
     """
-    nb_type = get_("dcim", "device-types", model=model)
-    if nb_type:
+    nb_device_type = get_("dcim", "device_types", model=model)
+    if nb_device_type:
+        log.error("Device type {} already exists.".format(model))
         return False
-    nb_man = get_("dcim", "manufacturers", name=manufacturer)
-    new_man = None
-    if not nb_man:
-        new_man = create_manufacturer(manufacturer)
-    payload = {"model": model, "manufacturer": nb_man["id"], "slug": slugify(model)}
-    typ = _add("dcim", "device-types", payload)
-    ret_dict = {"dcim": {"device-types": payload}}
-    if new_man:
-        ret_dict["dcim"].update(new_man["dcim"])
-    if typ:
-        return ret_dict
+
+    nb_manufacturer = get_("dcim", "manufacturers", name=manufacturer)
+    if not nb_manufacturer:
+        log.error("No such manufacturer {}".format(manufacturer))
+        return False
+
+    payload = {"model": model, "slug": slugify(model), "manufacturer": nb_manufacturer['id']}
+    if part_number:
+        payload['part_number'] = part_number
+    if u_height:
+        payload['u_height'] = u_height
+    if is_full_depth:
+        payload['is_full_depth'] = is_full_depth
+    if subdevice_role:
+        if subdevice_role not in ['parent', 'child']:
+            log.error("Subdevice must be parent or child, given".format(subdevice_role))
+            return False
+        payload['subdevice_role'] = subdevice_role
+    if comments:
+        payload['comments'] = comments
+    device_type = _add("dcim", "device_types", payload)
+    if device_type:
+        return {"dcim": {"device_types": payload}}
     else:
         return False
 
+def get_device_type(model):
+    nb_device_type = get_(
+        "dcim",
+        "device_types",
+        model=model
+    )
+    return nb_device_type
+
+def delete_device_type(model):
+    nb_device_type = _get("dcim", "device_types", auth_required=True, model=model)
+    if not nb_device_type:
+        log.error("No such device_type {}".format(model))
+        return None
+    nb_device_type.delete()
+    return {"DELETE": {"dcim": {"device_types": model}}}
+
+def update_device_type(model, **kwargs):
+    log.info(">>> update_device_type")
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+    nb_device_type = _get("dcim", "device_types", auth_required=True, model=model)
+    if not nb_device_type:
+        log.error("No such device_type with model {}.".format(model))
+        return False
+
+    pprint(nb_device_type)
+    for k, v in kwargs.items():
+        setattr(nb_device_type, k, v)
+
+    log.info(">>> 1")
+    try:
+        nb_device_type.save()
+        ret = get_device_type(model)
+        log.info(">>> 2")
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        log.info(">>> 3")
+        return False
+    
+    log.info(">>> 4")
+    return ret
+
+def check_device_type(model, **kwargs):
+    """
+    returns: 
+        - False if error
+        - None if vminterface does not exist
+        - {} if there are no changes
+        - {'with': 'changes'} for changes
+    """
+    kwargs = __utils__["args.clean_kwargs"](**kwargs)
+
+    try:
+        nb_device_type = _get(
+            "dcim",
+            "device_types",
+            model=model,
+        )
+        if not nb_device_type:
+            log.info('No such device_type: {}'.format(model))
+            return None
+    except pynetbox.RequestError as e:
+        log.error("%s, %s, %s", e.req.request.headers, e.request_body, e.error)
+        return False
+
+    required_changes={}
+    for k, v in kwargs.items():
+        if v == None:
+            # state module sets al available options default to None
+            continue
+       
+        # Resolve kwargs to their ID if needed.
+        if k == 'manufacturer':
+            nb_manufacturer = get_(
+                "dcim",
+                "manufacturers",
+                name=v
+            )
+            if not nb_manufacturer:
+                log.error("No such manufacturer: {}".format(v))
+                return False
+            v = nb_manufacturer['id']
+
+        # Check if the attribute has an ID attribute.
+        # If so, use it.
+        nb_attribute = getattr(nb_device_type, k)
+        if hasattr(nb_attribute, "id"):
+            value_from_netbox = nb_attribute.id
+        else:
+            value_from_netbox = nb_attribute
+
+        # subdevice_role is a netbox object without an ID.
+        # we must compare string with object.value
+        if k == "subdevice_role":
+            value_from_netbox = nb_attribute.value
+
+        if k == "part_number":
+            v = str(v)
+
+        if v == value_from_netbox:
+            print("Gelijk: {}".format(v))
+        else:
+            print("BOOM: {} != {}".format(v, getattr(nb_device_type, k)))
+            required_changes[k]=v
+    return required_changes
 
 def create_device_role(role, color="133700", vm_role=True, description=None):
     """
