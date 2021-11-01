@@ -1,12 +1,18 @@
 import os
 import signal
 
+import salt.utils.platform
 import salt.utils.vt as vt
 
 
 def test_isalive_no_child():
+    if salt.utils.platform.is_windows():
+        cmd = "timeout 10"
+    else:
+        cmd = "for i in {1..9}; do echo $i;sleep $i; done"
+
     term = vt.Terminal(
-        "for i in {1..9}; do echo $i;sleep $i; done",
+        args=[cmd],
         shell=True,
         stream_stdout=False,
         stream_stderr=False,
