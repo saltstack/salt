@@ -35,6 +35,7 @@ def test__read_stdout():
         popen_mock.stdout.readline.return_value = "test"
         assert next(script._read_stdout(popen_mock)) == "test"
 
+
 def test__read_stdout_terminates_properly():
     """
     Test that _read_stdout terminates with the sentinel
