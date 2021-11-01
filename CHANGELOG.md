@@ -70,7 +70,7 @@ Fixed
 - Fixed bug #55262 where `salt.modules.iptables` would call `cmd.run` and receive and interpret interspersed `stdout` and `stderr` output from subprocesses. (#55262)
 - Updated pcs support to handle auth and setup for new syntax supporting version 0.10 (#56924)
 - Reinstate ignore_cidr option in salt-cloud openstack driver (#57127)
-- Fix for network.wolmatch runner displaying 'invalid arguments' error with valid arguements (#57473)
+- Fix for network.wolmatch runner displaying 'invalid arguments' error with valid arguments (#57473)
 - Fixed bug 57490, which prevented package installation for Open Euler and Issabel PBX. Both Open Euler and Issabel PBX use Yum for package management, added them to yumpkg.py. (#57490)
 - Better handling of bad RSA public keys from minions (#57733)
 - Fixing various functions in the file state module that use user.info to get group information, certain hosts particularly proxy minions do not have the user.info function avaiable. (#57786)
