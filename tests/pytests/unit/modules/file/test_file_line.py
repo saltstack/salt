@@ -371,8 +371,7 @@ def test_if_not_location_but_before_and_after_and_more_than_one_after_it_should_
             after=after,
         )
     assert (
-        str(err.value)
-        == 'Found more than expected occurrences in "after" expression'
+        str(err.value) == 'Found more than expected occurrences in "after" expression'
     )
 
 
@@ -431,8 +430,7 @@ def test_if_not_location_or_after_but_before_and_before_has_more_than_one_it_sho
             after=after,
         )
     assert (
-        str(err.value)
-        == 'Found more than expected occurrences in "before" expression'
+        str(err.value) == 'Found more than expected occurrences in "before" expression'
     )
 
 
@@ -684,8 +682,7 @@ def test_ensure_with_before_and_too_many_after_should_CommandExecutionError():
         )
 
     assert (
-        str(err.value)
-        == 'Found more than expected occurrences in "after" expression'
+        str(err.value) == 'Found more than expected occurrences in "after" expression'
     )
 
 
@@ -701,8 +698,7 @@ def test_ensure_with_too_many_after_should_CommandExecutionError():
             mode="ensure",
         )
     assert (
-        str(err.value)
-        == 'Found more than expected occurrences in "after" expression'
+        str(err.value) == 'Found more than expected occurrences in "after" expression'
     )
 
 
@@ -724,8 +720,7 @@ def test_ensure_with_after_and_too_many_before_should_CommandExecutionError():
         )
 
     assert (
-        str(err.value)
-        == 'Found more than expected occurrences in "before" expression'
+        str(err.value) == 'Found more than expected occurrences in "before" expression'
     )
 
 
@@ -741,8 +736,7 @@ def test_ensure_with_too_many_before_should_CommandExecutionError():
             mode="ensure",
         )
     assert (
-        str(err.value)
-        == 'Found more than expected occurrences in "before" expression'
+        str(err.value) == 'Found more than expected occurrences in "before" expression'
     )
 
 
@@ -1013,9 +1007,7 @@ def test_line_no_content():
     for mode in ["insert", "ensure", "replace"]:
         with pytest.raises(CommandExecutionError) as exc_info:
             filemod.line("foo", mode=mode)
-        assert 'Content can only be empty if mode is "delete"' in str(
-            exc_info.value
-        )
+        assert 'Content can only be empty if mode is "delete"' in str(exc_info.value)
 
 
 @patch("os.path.realpath", MagicMock(wraps=lambda x: x))
