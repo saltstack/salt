@@ -140,7 +140,7 @@ Fixed
 - Port option reinstated for Junos Proxy (accidentally removed) (#60340)
 - Now hosts.rm_host can remove entries from /etc/hosts when this file have inline comments. (#60351)
 - Fixes issue where the full same name is not used when making rights assignments with group policy (#60357)
-- Fixed zabbix_host.present to not overwrite inventory_mode to "manual" everytime inventory is updated. (#60382)
+- Fixed zabbix_host.present to not overwrite inventory_mode to "manual" every time inventory is updated. (#60382)
 - Allowed zabbix_host.present to do partial updates of inventory, also don't erase everything if inventory is missing in state definition. (#60389)
 - Fixing the mysql_cache module to handle binary inserting binary data into the database. Initially adding tests. (#60398)
 - Fixed host_inventory_get to not throw an exception if host does not exist (#60418)
