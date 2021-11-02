@@ -96,7 +96,7 @@ def tempfile_name(tmp_path):
     yield str(filename)
 
     # We need to make sure to remove the tree we just created to avoid clashes with other tests
-    shutil.rmtree(subdir)
+    shutil.rmtree(str(subdir))
 
 
 def test_set_line_should_raise_command_execution_error_with_no_mode():

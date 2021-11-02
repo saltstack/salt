@@ -74,7 +74,7 @@ def multiline_file(tmp_path, multiline_string):
         file_handle.write(multiline_string)
 
     yield multiline_file
-    shutil.rmtree(tmp_path)
+    shutil.rmtree(str(tmp_path))
 
 
 # Make a unique subdir to avoid any tempfile conflicts
