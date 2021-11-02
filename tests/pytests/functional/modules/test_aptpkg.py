@@ -147,7 +147,6 @@ def test_get_repos_doesnot_exist():
         assert not ret
 
 
-@pytest.mark.skip_if_binaries_missing("apt-add-repository")
 @pytest.mark.destructive_test
 def test_del_repo(revert_repo_file):
     """
