@@ -35,7 +35,7 @@ but these are things we consider when reviewing a pull request.
   be immediately evident to the next person who comes along why this change was
   made?
 
-.. _`style guide`: https://docs.saltstack.com/en/latest/topics/development/conventions/style.html
+.. _`style guide`: https://docs.saltproject.io/en/latest/topics/development/conventions/style.html
 
 * If appropriate, has the person who wrote the code which is being modified
   been notified and included in the process?
@@ -161,14 +161,14 @@ All PR requirements
 
 Bug Fix PR requirements
 -----------------------
-  * Test Coverage: regression test written to cover bug fix. Contributers only need
+  * Test Coverage: regression test written to cover bug fix. Contributors only need
     to write test coverage for their specific changes.
   * Point to the issue the PR is resolving. If there is not an issue one will need
     to be created.
 
 Feature PR requirements
 -----------------------
-  * Test Coverage: tests written to cover new feature. Contributers only need to write
+  * Test Coverage: tests written to cover new feature. Contributors only need to write
     test coverage for their specific changes.
   * Release Notes: Add note in release notes of new feature for relative release.
   * Add .. versionadded:: <release> to module's documentation. If you are not certain

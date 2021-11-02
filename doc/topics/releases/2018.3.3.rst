@@ -1576,7 +1576,7 @@ Changelog for v2018.3.2..v2018.3.3
 
     * 169afea16a Merge pull request `#48749`_ from Ch3LL/logo_docs
 
-      * 73b1fc29f0 Update Saltstack Logo banner on docs.saltstack.com
+      * 73b1fc29f0 Update Saltstack Logo banner on docs.saltproject.io
 
 * **ISSUE** `#48020`_: (`calvinhp`_) mine.get not returning data in a state.orchestrate sls  (refs: `#48765`_)
 
@@ -1639,12 +1639,12 @@ Changelog for v2018.3.2..v2018.3.3
 
   * d33056704b pass proxy_user, proxy_password, proxy_host, and ca_certs through salt.utils.stringutils.to_str()
 
-* **PR** `#48769`_: (`Ch3LL`_) Update Saltstack Logo banner on docs.saltstack.com
+* **PR** `#48769`_: (`Ch3LL`_) Update Saltstack Logo banner on docs.saltproject.io
   @ *2018-07-25 14:47:19 UTC*
 
   * 1eee4b136b Merge pull request `#48769`_ from Ch3LL/update_doc_2018.3
 
-  * 0cb4bac798 Update Saltstack Logo banner on docs.saltstack.com
+  * 0cb4bac798 Update Saltstack Logo banner on docs.saltproject.io
 
 * **PR** `#48760`_: (`dwoz`_) Multiple windows test fixes
   @ *2018-07-25 11:55:27 UTC*

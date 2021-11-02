@@ -1,5 +1,5 @@
-salt.thorium.wheel module
-=========================
+salt.thorium.wheel
+==================
 
 .. automodule:: salt.thorium.wheel
     :members:

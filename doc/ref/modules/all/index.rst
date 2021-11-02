@@ -92,8 +92,8 @@ execution modules
     btrfs
     cabal
     capirca_acl
-    cassandra
     cassandra_cql
+    cassandra_mod
     celery
     ceph
     chassis
@@ -127,6 +127,7 @@ execution modules
     debian_service
     debuild_pkgbuild
     defaults
+    devinfo
     devmap
     dig
     disk
@@ -172,7 +173,6 @@ execution modules
     gentoolkitmod
     git
     github
-    glance
     glanceng
     glassfish
     glusterfs
@@ -194,6 +194,7 @@ execution modules
     hosts
     http
     icinga2
+    idem
     ifttt
     ilo
     incron
@@ -233,6 +234,7 @@ execution modules
     keystoneng
     keystore
     kmod
+    kubeadm
     kubernetesmod
     launchctl_service
     layman
@@ -333,6 +335,7 @@ execution modules
     nspawn
     nxos
     nxos_api
+    nxos_upgrade
     omapi
     openbsd_sysctl
     openbsdpkg
@@ -391,6 +394,7 @@ execution modules
     rbac_solaris
     rbenv
     rdp
+    rebootmgr
     redismod
     reg
     rest_pkg
@@ -424,6 +428,7 @@ execution modules
     serverdensity_device
     servicenow
     slack_notify
+    slackware_service
     slsutil
     smartos_imgadm
     smartos_nictagadm
@@ -475,6 +480,7 @@ execution modules
     tls
     tomcat
     trafficserver
+    transactional_update
     travisci
     tuned
     twilio_notify

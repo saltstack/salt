@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Module for viewing and modifying sysctl parameters
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import re
@@ -11,9 +9,6 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-
-# Import salt libs
-from salt.ext import six
 
 # Define the module's virtual name
 __virtualname__ = "sysctl"
@@ -27,14 +22,16 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The netbsd_sysctl execution module failed to load: "
-        "only available on NetBSD.",
+        "The netbsd_sysctl execution module failed to load: only available on NetBSD.",
     )
 
 
 def show(config_file=False):
     """
     Return a list of sysctl parameters for this minion
+
+    config: Pull the data from the system configuration file
+        instead of the live data.
 
     CLI Example:
 
@@ -61,11 +58,11 @@ def show(config_file=False):
     out = __salt__["cmd.run"](cmd, output_loglevel="trace")
     comps = [""]
     for line in out.splitlines():
-        if any([line.startswith("{0}.".format(root)) for root in roots]):
+        if any([line.startswith("{}.".format(root)) for root in roots]):
             comps = re.split("[=:]", line, 1)
             ret[comps[0]] = comps[1]
         elif comps[0]:
-            ret[comps[0]] += "{0}\n".format(line)
+            ret[comps[0]] += "{}\n".format(line)
         else:
             continue
     return ret
@@ -81,7 +78,7 @@ def get(name):
 
         salt '*' sysctl.get hw.physmem
     """
-    cmd = "sysctl -n {0}".format(name)
+    cmd = "sysctl -n {}".format(name)
     out = __salt__["cmd.run"](cmd, python_shell=False)
     return out
 
@@ -97,11 +94,11 @@ def assign(name, value):
         salt '*' sysctl.assign net.inet.icmp.icmplim 50
     """
     ret = {}
-    cmd = 'sysctl -w {0}="{1}"'.format(name, value)
+    cmd = 'sysctl -w {}="{}"'.format(name, value)
     data = __salt__["cmd.run_all"](cmd, python_shell=False)
 
     if data["retcode"] != 0:
-        raise CommandExecutionError("sysctl failed: {0}".format(data["stderr"]))
+        raise CommandExecutionError("sysctl failed: {}".format(data["stderr"]))
     new_name, new_value = data["stdout"].split(":", 1)
     ret[new_name] = new_value.split(" -> ")[-1]
     return ret
@@ -119,21 +116,21 @@ def persist(name, value, config="/etc/sysctl.conf"):
     """
     nlines = []
     edited = False
-    value = six.text_type(value)
+    value = str(value)
 
     # create /etc/sysctl.conf if not present
     if not os.path.isfile(config):
         try:
             with salt.utils.files.fopen(config, "w+"):
                 pass
-        except (IOError, OSError):
+        except OSError:
             msg = "Could not create {0}"
             raise CommandExecutionError(msg.format(config))
 
     with salt.utils.files.fopen(config, "r") as ifile:
         for line in ifile:
             line = salt.utils.stringutils.to_unicode(line)
-            m = re.match(r"{0}(\??=)".format(name), line)
+            m = re.match(r"{}(\??=)".format(name), line)
             if not m:
                 nlines.append(line)
                 continue
@@ -148,13 +145,13 @@ def persist(name, value, config="/etc/sysctl.conf"):
                     rest = rest[len(rest_v) :]
                 if rest_v == value:
                     return "Already set"
-                new_line = "{0}{1}{2}{3}".format(name, m.group(1), value, rest)
+                new_line = "{}{}{}{}".format(name, m.group(1), value, rest)
                 nlines.append(new_line)
                 edited = True
 
     if not edited:
-        newline = "{0}={1}".format(name, value)
-        nlines.append("{0}\n".format(newline))
+        newline = "{}={}".format(name, value)
+        nlines.append("{}\n".format(newline))
 
     with salt.utils.files.fopen(config, "wb") as ofile:
         ofile.writelines(salt.utils.data.encode(nlines))

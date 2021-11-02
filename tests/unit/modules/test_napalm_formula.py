@@ -1,88 +1,91 @@
-# -*- coding: utf-8 -*-
 """
 Test the napalm_formula execution module.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import textwrap
 
-# Import Salt modules
 import salt.modules.napalm_formula as napalm_formula
-
-# Import Salt Testing libs
+from salt.utils.immutabletypes import freeze
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import patch
+from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 
 class TestModulesNAPALMFormula(TestCase, LoaderModuleMockMixin):
-
-    model = {
-        "interfaces": {
-            "interface": {
-                "Ethernet1": {
-                    "config": {
-                        "name": "Ethernet1",
-                        "description": "Interface Ethernet1",
-                    },
-                    "subinterfaces": {
-                        "subinterface": {
-                            "0": {
-                                "config": {
-                                    "index": 0,
-                                    "description": "Subinterface Ethernet1.0",
+    @classmethod
+    def setUpClass(cls):
+        cls.model = freeze(
+            {
+                "interfaces": {
+                    "interface": {
+                        "Ethernet1": {
+                            "config": {
+                                "name": "Ethernet1",
+                                "description": "Interface Ethernet1",
+                            },
+                            "subinterfaces": {
+                                "subinterface": {
+                                    "0": {
+                                        "config": {
+                                            "index": 0,
+                                            "description": "Subinterface Ethernet1.0",
+                                        }
+                                    },
+                                    "100": {
+                                        "config": {
+                                            "index": 100,
+                                            "description": "Subinterface Ethernet1.100",
+                                        }
+                                    },
+                                    "900": {
+                                        "config": {
+                                            "index": 900,
+                                            "description": "Subinterface Ethernet1.900",
+                                        }
+                                    },
                                 }
                             },
-                            "100": {
-                                "config": {
-                                    "index": 100,
-                                    "description": "Subinterface Ethernet1.100",
+                        },
+                        "Ethernet2": {
+                            "config": {
+                                "name": "Ethernet2",
+                                "description": "Interface Ethernet2",
+                            },
+                            "subinterfaces": {
+                                "subinterface": {
+                                    "400": {
+                                        "config": {
+                                            "index": 400,
+                                            "description": "Subinterface Ethernet2.400",
+                                        }
+                                    }
                                 }
                             },
-                            "900": {
-                                "config": {
-                                    "index": 900,
-                                    "description": "Subinterface Ethernet1.900",
-                                }
-                            },
-                        }
-                    },
-                },
-                "Ethernet2": {
-                    "config": {
-                        "name": "Ethernet2",
-                        "description": "Interface Ethernet2",
-                    },
-                    "subinterfaces": {
-                        "subinterface": {
-                            "400": {
-                                "config": {
-                                    "index": 400,
-                                    "description": "Subinterface Ethernet2.400",
-                                }
-                            }
-                        }
-                    },
-                },
-            }
-        }
-    }
-
-    defaults = {
-        "interfaces": {
-            "interface": {
-                "*": {
-                    "config": {"mtu": 2048, "enabled": True},
-                    "subinterfaces": {
-                        "subinterface": {"*": {"config": {"enabled": True}}}
-                    },
+                        },
+                    }
                 }
             }
-        }
-    }
+        )
+
+        cls.defaults = freeze(
+            {
+                "interfaces": {
+                    "interface": {
+                        "*": {
+                            "config": {"mtu": 2048, "enabled": True},
+                            "subinterfaces": {
+                                "subinterface": {"*": {"config": {"enabled": True}}}
+                            },
+                        }
+                    }
+                }
+            }
+        )
 
     def setup_loader_modules(self):
+        patcher = patch("salt.utils.napalm.is_proxy", MagicMock(return_value=True))
+        patcher.start()
+        self.addCleanup(patcher.stop)
         return {napalm_formula: {"__grains__": {"os": "eos"}}}
 
     def test_container_path(self):
@@ -94,7 +97,7 @@ class TestModulesNAPALMFormula(TestCase, LoaderModuleMockMixin):
             "interfaces:interface:Ethernet1:subinterfaces:subinterface:900:config",
             "interfaces:interface:Ethernet2:config",
         ]
-        ret = napalm_formula.container_path(self.model)
+        ret = napalm_formula.container_path(self.model.copy())
         self.assertEqual(set(ret), set(paths))
 
     def test_setval(self):
@@ -160,7 +163,7 @@ class TestModulesNAPALMFormula(TestCase, LoaderModuleMockMixin):
                 }
             }
         }
-        ret = napalm_formula.defaults(self.model, self.defaults)
+        ret = napalm_formula.defaults(self.model.copy(), self.defaults.copy())
         self.assertEqual(ret, expected_result)
 
     def test_render_field(self):

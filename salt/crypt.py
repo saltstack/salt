@@ -1,13 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 The crypt module manages all of the cryptography functions for minions and
 masters, encrypting and decrypting payloads, preparing messages, and
 authenticating peers
 """
-
-# NOTE: We can't use unicode_literals because this module implicitly uses
-# the Array class, which has incompatibilities with it.
-from __future__ import absolute_import, print_function
 
 import base64
 import binascii
@@ -16,8 +11,6 @@ import getpass
 import hashlib
 import hmac
 import logging
-
-# Import python libs
 import os
 import random
 import stat
@@ -26,7 +19,6 @@ import time
 import traceback
 import weakref
 
-# Import salt libs
 import salt.defaults.exitcodes
 import salt.ext.tornado.gen
 import salt.payload
@@ -44,14 +36,11 @@ import salt.utils.verify
 import salt.version
 from salt.exceptions import (
     AuthenticationError,
+    InvalidKeyError,
     MasterExit,
     SaltClientError,
     SaltReqTimeoutError,
 )
-from salt.ext import six
-
-# Import third party libs
-from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
 try:
     from M2Crypto import RSA, EVP, BIO
@@ -62,28 +51,33 @@ except ImportError:
 
 if not HAS_M2:
     try:
-        from Cryptodome.Cipher import AES, PKCS1_OAEP
+        from Cryptodome.Cipher import AES, PKCS1_OAEP, PKCS1_v1_5 as PKCS1_v1_5_CIPHER
         from Cryptodome.Hash import SHA
         from Cryptodome.PublicKey import RSA
         from Cryptodome.Signature import PKCS1_v1_5
-        import Cryptodome.Random  # pylint: disable=W0611
+        from Cryptodome import Random
 
-        HAS_CDOME = True
+        HAS_CRYPTO = True
     except ImportError:
-        HAS_CDOME = False
+        HAS_CRYPTO = False
 
-if not HAS_M2 and not HAS_CDOME:
+if not HAS_M2 and not HAS_CRYPTO:
     try:
-        from Crypto.Cipher import AES, PKCS1_OAEP
-        from Crypto.Hash import SHA
-        from Crypto.PublicKey import RSA
-        from Crypto.Signature import PKCS1_v1_5
+        from Crypto.Cipher import (  # nosec
+            AES,
+            PKCS1_OAEP,
+            PKCS1_v1_5 as PKCS1_v1_5_CIPHER,
+        )
+        from Crypto.Hash import SHA  # nosec
+        from Crypto.PublicKey import RSA  # nosec
+        from Crypto.Signature import PKCS1_v1_5  # nosec
 
         # let this be imported, if possible
-        import Crypto.Random  # pylint: disable=W0611
+        from Crypto import Random  # nosec
+
+        HAS_CRYPTO = True
     except ImportError:
-        # No need for crypt in local mode
-        pass
+        HAS_CRYPTO = False
 
 
 log = logging.getLogger(__name__)
@@ -112,7 +106,7 @@ def dropfile(cachedir, user=None):
 
                 uid = pwd.getpwnam(user).pw_uid
                 os.chown(dfn, uid, -1)
-            except (KeyError, ImportError, OSError, IOError):
+            except (KeyError, ImportError, OSError):
                 pass
 
 
@@ -130,8 +124,8 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
     :return: Path on the filesystem to the RSA private key
     """
     base = os.path.join(keydir, keyname)
-    priv = "{0}.pem".format(base)
-    pub = "{0}.pub".format(base)
+    priv = "{}.pem".format(base)
+    pub = "{}.pub".format(base)
 
     if HAS_M2:
         gen = RSA.gen_key(keysize, 65537, lambda: None)
@@ -145,8 +139,8 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None):
 
     # Do not try writing anything, if directory has no permissions.
     if not os.access(keydir, os.W_OK):
-        raise IOError(
-            'Write access denied to "{0}" for user "{1}".'.format(
+        raise OSError(
+            'Write access denied to "{}" for user "{}".'.format(
                 os.path.abspath(keydir), getpass.getuser()
             )
         )
@@ -196,7 +190,7 @@ def _get_key_with_evict(path, timestamp, passphrase):
     """
     log.debug("salt.crypt._get_key_with_evict: Loading private key")
     if HAS_M2:
-        key = RSA.load_key(path, lambda x: six.b(passphrase))
+        key = RSA.load_key(path, lambda x: bytes(passphrase))
     else:
         with salt.utils.files.fopen(path) as f:
             key = RSA.importKey(f.read(), passphrase)
@@ -215,7 +209,7 @@ def get_rsa_key(path, passphrase):
     the key from disk.
     """
     log.debug("salt.crypt.get_rsa_key: Loading private key")
-    return _get_key_with_evict(path, six.text_type(os.path.getmtime(path)), passphrase)
+    return _get_key_with_evict(path, str(os.path.getmtime(path)), passphrase)
 
 
 def get_rsa_pub_key(path):
@@ -227,10 +221,16 @@ def get_rsa_pub_key(path):
         with salt.utils.files.fopen(path, "rb") as f:
             data = f.read().replace(b"RSA ", b"")
         bio = BIO.MemoryBuffer(data)
-        key = RSA.load_pub_key_bio(bio)
+        try:
+            key = RSA.load_pub_key_bio(bio)
+        except RSA.RSAError:
+            raise InvalidKeyError("Encountered bad RSA public key")
     else:
         with salt.utils.files.fopen(path) as f:
-            key = RSA.importKey(f.read())
+            try:
+                key = RSA.importKey(f.read())
+            except (ValueError, IndexError, TypeError):
+                raise InvalidKeyError("Encountered bad RSA public key")
     return key
 
 
@@ -291,7 +291,7 @@ def gen_signature(priv_path, pub_path, sign_path, passphrase=None):
 
     if os.path.isfile(sign_path):
         log.trace(
-            "Signature file %s already exists, please remove it first and " "try again",
+            "Signature file %s already exists, please remove it first and try again",
             sign_path,
         )
     else:
@@ -334,6 +334,19 @@ def public_decrypt(pub, message):
         return verifier.verify(message)
 
 
+def pwdata_decrypt(rsa_key, pwdata):
+    if HAS_M2:
+        key = RSA.load_key_string(salt.utils.stringutils.to_bytes(rsa_key, "ascii"))
+        password = key.private_decrypt(pwdata, RSA.pkcs1_padding)
+    else:
+        dsize = SHA.digest_size
+        sentinel = Random.new().read(15 + dsize)
+        key_obj = RSA.importKey(rsa_key)
+        key_obj = PKCS1_v1_5_CIPHER.new(key_obj)
+        password = key_obj.decrypt(pwdata, sentinel)
+    return salt.utils.stringutils.to_unicode(password)
+
+
 class MasterKeys(dict):
     """
     The Master Keys class is used to manage the RSA public key pair used for
@@ -343,7 +356,7 @@ class MasterKeys(dict):
     """
 
     def __init__(self, opts):
-        super(MasterKeys, self).__init__()
+        super().__init__()
         self.opts = opts
         self.pub_path = os.path.join(self.opts["pki_dir"], "master.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "master.pem")
@@ -428,9 +441,7 @@ class MasterKeys(dict):
         try:
             key = get_rsa_key(path, passphrase)
         except key_error as e:
-            message = "Unable to read key: {0}; passphrase may be incorrect".format(
-                path
-            )
+            message = "Unable to read key: {}; passphrase may be incorrect".format(path)
             log.error(message)
             raise MasterExit(message)
         log.debug("Loaded %s key: %s", name, path)
@@ -466,7 +477,7 @@ class MasterKeys(dict):
         return self.pub_signature
 
 
-class AsyncAuth(object):
+class AsyncAuth:
     """
     Set up an Async object to maintain authentication with the salt master
     """
@@ -524,13 +535,7 @@ class AsyncAuth(object):
         :rtype: Auth
         """
         self.opts = opts
-        if six.PY2:
-            self.token = Crypticle.generate_key_string()
-        else:
-            self.token = salt.utils.stringutils.to_bytes(
-                Crypticle.generate_key_string()
-            )
-        self.serial = salt.payload.Serial(self.opts)
+        self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
         self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
         if self.opts["__role"] == "syndic":
@@ -758,7 +763,8 @@ class AsyncAuth(object):
                 raise salt.ext.tornado.gen.Return("retry")
             else:
                 raise SaltClientError(
-                    "Attempt to authenticate with the salt master failed with timeout error"
+                    "Attempt to authenticate with the salt master failed with timeout"
+                    " error"
                 )
         finally:
             if close_channel:
@@ -948,8 +954,7 @@ class AsyncAuth(object):
                 except Exception:  # pylint: disable=broad-except
                     return "", ""
                 digest = hashlib.sha256(key_str).hexdigest()
-                if six.PY3:
-                    digest = salt.utils.stringutils.to_bytes(digest)
+                digest = salt.utils.stringutils.to_bytes(digest)
                 if HAS_M2:
                     m_digest = public_decrypt(mkey, payload["sig"])
                 else:
@@ -959,8 +964,7 @@ class AsyncAuth(object):
         else:
             return "", ""
 
-        if six.PY3:
-            key_str = salt.utils.stringutils.to_str(key_str)
+        key_str = salt.utils.stringutils.to_str(key_str)
 
         if "_|-" in key_str:
             return key_str.split("_|-")
@@ -1038,7 +1042,7 @@ class AsyncAuth(object):
                 return False
         except Exception as sign_exc:  # pylint: disable=broad-except
             log.error(
-                "There was an error while verifying the masters public-key " "signature"
+                "There was an error while verifying the masters public-key signature"
             )
             raise Exception(sign_exc)
 
@@ -1235,7 +1239,7 @@ class SAuth(AsyncAuth):
 
     # has to remain empty for singletons, since __init__ will *always* be called
     def __init__(self, opts, io_loop=None):
-        super(SAuth, self).__init__(opts, io_loop=io_loop)
+        super().__init__(opts, io_loop=io_loop)
 
     # an init for the singleton instance to call
     def __singleton_init__(self, opts, io_loop=None):
@@ -1247,13 +1251,7 @@ class SAuth(AsyncAuth):
         :rtype: Auth
         """
         self.opts = opts
-        if six.PY2:
-            self.token = Crypticle.generate_key_string()
-        else:
-            self.token = salt.utils.stringutils.to_bytes(
-                Crypticle.generate_key_string()
-            )
-        self.serial = salt.payload.Serial(self.opts)
+        self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
         self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
         if "syndic_master" in self.opts:
@@ -1453,7 +1451,7 @@ class SAuth(AsyncAuth):
         return auth
 
 
-class Crypticle(object):
+class Crypticle:
     """
     Authenticated encryption class
 
@@ -1469,23 +1467,18 @@ class Crypticle(object):
         self.key_string = key_string
         self.keys = self.extract_keys(self.key_string, key_size)
         self.key_size = key_size
-        self.serial = salt.payload.Serial(opts)
 
     @classmethod
     def generate_key_string(cls, key_size=192):
         key = os.urandom(key_size // 8 + cls.SIG_SIZE)
         b64key = base64.b64encode(key)
-        if six.PY3:
-            b64key = b64key.decode("utf-8")
+        b64key = b64key.decode("utf-8")
         # Return data must be a base64-encoded string, not a unicode type
         return b64key.replace("\n", "")
 
     @classmethod
     def extract_keys(cls, key_string, key_size):
-        if six.PY2:
-            key = key_string.decode("base64")
-        else:
-            key = salt.utils.stringutils.to_bytes(base64.b64decode(key_string))
+        key = salt.utils.stringutils.to_bytes(base64.b64decode(key_string))
         assert len(key) == key_size / 8 + cls.SIG_SIZE, "invalid key"
         return key[: -cls.SIG_SIZE], key[-cls.SIG_SIZE :]
 
@@ -1495,10 +1488,7 @@ class Crypticle(object):
         """
         aes_key, hmac_key = self.keys
         pad = self.AES_BLOCK_SIZE - len(data) % self.AES_BLOCK_SIZE
-        if six.PY2:
-            data = data + pad * chr(pad)
-        else:
-            data = data + salt.utils.stringutils.to_bytes(pad * chr(pad))
+        data = data + salt.utils.stringutils.to_bytes(pad * chr(pad))
         iv_bytes = os.urandom(self.AES_BLOCK_SIZE)
         if HAS_M2:
             cypher = EVP.Cipher(
@@ -1520,7 +1510,7 @@ class Crypticle(object):
         aes_key, hmac_key = self.keys
         sig = data[-self.SIG_SIZE :]
         data = data[: -self.SIG_SIZE]
-        if six.PY3 and not isinstance(data, bytes):
+        if not isinstance(data, bytes):
             data = salt.utils.stringutils.to_bytes(data)
         mac_bytes = hmac.new(hmac_key, data, hashlib.sha256).digest()
         if len(mac_bytes) != len(sig):
@@ -1528,12 +1518,8 @@ class Crypticle(object):
             raise AuthenticationError("message authentication failed")
         result = 0
 
-        if six.PY2:
-            for zipped_x, zipped_y in zip(mac_bytes, sig):
-                result |= ord(zipped_x) ^ ord(zipped_y)
-        else:
-            for zipped_x, zipped_y in zip(mac_bytes, sig):
-                result |= zipped_x ^ zipped_y
+        for zipped_x, zipped_y in zip(mac_bytes, sig):
+            result |= zipped_x ^ zipped_y
         if result != 0:
             log.debug("Failed to authenticate message")
             raise AuthenticationError("message authentication failed")
@@ -1548,16 +1534,13 @@ class Crypticle(object):
         else:
             cypher = AES.new(aes_key, AES.MODE_CBC, iv_bytes)
             data = cypher.decrypt(data)
-        if six.PY2:
-            return data[: -ord(data[-1])]
-        else:
-            return data[: -data[-1]]
+        return data[: -data[-1]]
 
     def dumps(self, obj):
         """
         Serialize and encrypt a python object
         """
-        return self.encrypt(self.PICKLE_PAD + self.serial.dumps(obj))
+        return self.encrypt(self.PICKLE_PAD + salt.payload.dumps(obj))
 
     def loads(self, data, raw=False):
         """
@@ -1567,5 +1550,5 @@ class Crypticle(object):
         # simple integrity check to verify that we got meaningful data
         if not data.startswith(self.PICKLE_PAD):
             return {}
-        load = self.serial.loads(data[len(self.PICKLE_PAD) :], raw=raw)
+        load = salt.payload.loads(data[len(self.PICKLE_PAD) :], raw=raw)
         return load

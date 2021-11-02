@@ -1,24 +1,16 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.yaml
 import yaml
-
-# Create the cloud instance name to be used throughout the tests
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest
 from tests.support import win_installer
-
-# Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -73,10 +65,12 @@ class EC2Test(CloudTest):
                 "securitygroup or subnetid missing for {} config".format(self.PROVIDER)
             )
 
-        super(EC2Test, self).setUp()
+        super().setUp()
 
     def override_profile_config(self, name, data):
-        conf_path = os.path.join(self.config_dir, "cloud.profiles.d", "ec2.conf")
+        conf_path = os.path.join(
+            RUNTIME_VARS.TMP_CONF_DIR, "cloud.profiles.d", "ec2.conf"
+        )
         with salt.utils.files.fopen(conf_path, "r") as fp:
             conf = yaml.safe_load(fp)
         conf[name].update(data)
@@ -90,7 +84,7 @@ class EC2Test(CloudTest):
         returned.
         """
         src = os.path.join(RUNTIME_VARS.FILES, name)
-        dst = os.path.join(self.config_dir, name)
+        dst = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, name)
         with salt.utils.files.fopen(src, "rb") as sfp:
             with salt.utils.files.fopen(dst, "wb") as dfp:
                 dfp.write(sfp.read())
@@ -110,6 +104,11 @@ class EC2Test(CloudTest):
 
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_val)
+        ipv6Address_present = False
+        for each in ret_val:
+            if "ipv6Address:" in each:
+                ipv6Address_present = True
+        assert ipv6Address_present
 
         self.assertDestroyInstance()
 
@@ -119,7 +118,7 @@ class EC2Test(CloudTest):
         """
         # create the instance
         ret_val = self.run_cloud(
-            "-p ec2-test {0} --no-deploy".format(self.instance_name), timeout=TIMEOUT
+            "-p ec2-test {} --no-deploy".format(self.instance_name), timeout=TIMEOUT
         )
         # check if instance returned
         self.assertInstanceExists(ret_val)
@@ -127,7 +126,7 @@ class EC2Test(CloudTest):
         changed_name = self.instance_name + "-changed"
 
         rename_result = self.run_cloud(
-            "-a rename {0} newname={1} --assume-yes".format(
+            "-a rename {} newname={} --assume-yes".format(
                 self.instance_name, changed_name
             ),
             timeout=TIMEOUT,

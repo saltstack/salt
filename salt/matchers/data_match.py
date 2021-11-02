@@ -1,22 +1,19 @@
-# -*- coding: utf-8 -*-
 """
 This is the default data matcher.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import fnmatch
 import logging
 
-import salt.loader  # pylint: disable=3rd-party-module-not-gated
-import salt.utils.data  # pylint: disable=3rd-party-module-not-gated
-import salt.utils.minions  # pylint: disable=3rd-party-module-not-gated
-import salt.utils.network  # pylint: disable=3rd-party-module-not-gated
-from salt.ext import six  # pylint: disable=3rd-party-module-not-gated
+import salt.loader
+import salt.utils.data
+import salt.utils.minions
+import salt.utils.network
 
 log = logging.getLogger(__name__)
 
 
-def match(tgt, functions=None, opts=None):
+def match(tgt, functions=None, opts=None, minion_id=None):
     """
     Match based on the local data store on the minion
     """
@@ -35,11 +32,11 @@ def match(tgt, functions=None, opts=None):
     if isinstance(val, list):
         # We are matching a single component to a single list member
         for member in val:
-            if fnmatch.fnmatch(six.text_type(member).lower(), comps[1].lower()):
+            if fnmatch.fnmatch(str(member).lower(), comps[1].lower()):
                 return True
         return False
     if isinstance(val, dict):
         if comps[1] in val:
             return True
         return False
-    return bool(fnmatch.fnmatch(val, comps[1],))
+    return bool(fnmatch.fnmatch(val, comps[1]))

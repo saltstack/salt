@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     tests.unit.xmlutil_test
     ~~~~~~~~~~~~~~~~~~~~
 """
-from __future__ import absolute_import, print_function, unicode_literals
+import xml.etree.ElementTree as ET
 
 import salt.utils.xmlutil as xml
-
-# Import Salt libs
-from salt._compat import ElementTree as ET
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 
@@ -36,8 +30,10 @@ class XMLUtilTestCase(TestCase):
                 "full": {"parent": "data", "value": "data"},
             },
             "c": {
-                "xml": '<parent><child>data</child><child value="data">data</child>'
-                '<child value="data"/><child/></parent>',
+                "xml": (
+                    '<parent><child>data</child><child value="data">data</child>'
+                    '<child value="data"/><child/></parent>'
+                ),
                 "legacy": {
                     "child": [
                         "data",
@@ -56,12 +52,17 @@ class XMLUtilTestCase(TestCase):
                 },
             },
             "d": {
-                "xml": '<parent value="data" another="data"><child>data</child></parent>',
+                "xml": (
+                    '<parent value="data" another="data"><child>data</child></parent>'
+                ),
                 "legacy": {"child": "data"},
                 "full": {"child": "data", "another": "data", "value": "data"},
             },
             "e": {
-                "xml": '<parent value="data" another="data"><child value="data">data</child></parent>',
+                "xml": (
+                    '<parent value="data" another="data"><child'
+                    ' value="data">data</child></parent>'
+                ),
                 "legacy": {"child": "data"},
                 "full": {
                     "child": {"child": "data", "value": "data"},
@@ -70,8 +71,10 @@ class XMLUtilTestCase(TestCase):
                 },
             },
             "f": {
-                "xml": '<parent><child><sub-child value="data">data</sub-child></child>'
-                "<child>data</child></parent>",
+                "xml": (
+                    '<parent><child><sub-child value="data">data</sub-child></child>'
+                    "<child>data</child></parent>"
+                ),
                 "legacy": {"child": [{"sub-child": "data"}, {"child": "data"}]},
                 "full": {
                     "child": [

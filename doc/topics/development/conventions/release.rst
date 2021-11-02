@@ -36,8 +36,9 @@ example):
    on whether to release based off the RC or go through another RC process
 #. If a RC is categorized as stable, build all required packages.
 #. Test all release packages.
-#. Test links from `repo.saltstack.com`_.
-#. Update installation instructions with new release number at `repo.saltstack.com`_.
+#. Test links from `repo.saltproject.io`_.
+#. Update installation instructions with new release number at `repo.saltproject.io`_.
+#. Review and update all impacted :ref:`installation` documentation.
 #. Update and build docs to include new version (3000) as the latest.
 #. Pre-announce on salt-users google group that we are about to update our repo.
 #. Publish release (v3000) archive to pypi based off tag.
@@ -68,7 +69,7 @@ for a bugfix release.
 #. Create internal tag for testing.(ex v3000.1)
 #. Build all release packages.
 #. Run manual and package tests against new packages.
-#. Update installation instructions with new release number at `repo.saltstack.com`_.
+#. Update installation instructions with new release number at `repo.saltproject.io`_.
 #. Update and build docs to include new version. (ex. 3000.1)
 #. Pre-announce on salt-users google groups that we are about to update our repo.
 #. Push the internal tag live to salt's repo.
@@ -81,10 +82,5 @@ for a bugfix release.
 #. Update win-repo-ng with new salt versions.
 #. Announce release is live to irc, salt-users, salt-announce and release slack channel.
 
-For more information about the difference between the ``master`` branch and
-bugfix release branches, please refer to the :ref:`Which Salt Branch?
-<which-salt-branch>` section of Salt's :ref:`Contributing <contributing>`
-documentation.
-
 .. _`github`: https://github.com/saltstack/salt/releases
-.. _`repo.saltstack.com`: https://repo.saltstack.com
+.. _`repo.saltproject.io`: https://repo.saltproject.io

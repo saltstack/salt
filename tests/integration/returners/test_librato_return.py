@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the librato returner
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 

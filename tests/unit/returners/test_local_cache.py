@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 tests.unit.returners.local_cache_test
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -6,27 +5,25 @@ tests.unit.returners.local_cache_test
 Unit tests for the Default Job Cache (local_cache).
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import os
 import shutil
 import tempfile
 import time
 
+import pytest
 import salt.returners.local_cache as local_cache
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.job
 import salt.utils.platform
-from salt.ext import six
 from tests.support.mixins import (
     AdaptedConfigurationTestCaseMixin,
     LoaderModuleMockMixin,
 )
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
@@ -255,7 +252,7 @@ class Local_CacheTest(
         ):
             try:
                 attr_instance = getattr(cls, attrname)
-                if isinstance(attr_instance, six.string_types):
+                if isinstance(attr_instance, str):
                     if os.path.isdir(attr_instance):
                         shutil.rmtree(attr_instance, ignore_errors=True)
                     elif os.path.isfile(attr_instance):
@@ -304,12 +301,15 @@ class Local_CacheTest(
             "Dir/file does not exist: ", self.JOB_CACHE_DIR_FILES, status="present"
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_clean_old_jobs(self):
         """
         test to ensure jobs are removed from job cache
         """
         self._add_job()
+
+        if salt.utils.platform.is_windows():
+            time.sleep(0.01)
 
         # remove job
         self.assertEqual(local_cache.clean_old_jobs(), None)
@@ -318,7 +318,7 @@ class Local_CacheTest(
             "job cache was not removed: ", self.JOB_CACHE_DIR_FILES, status="removed"
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_not_clean_new_jobs(self):
         """
         test to ensure jobs are not removed when
@@ -333,7 +333,7 @@ class Local_CacheTest(
                 "job cache was removed: ", self.JOB_CACHE_DIR_FILES, status="present"
             )
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_empty_jid_dir(self):
         """
         test to ensure removal of empty jid dir
@@ -363,7 +363,7 @@ class Local_CacheTest(
                     time.sleep(1)
                     os.rename(lock_dir, new_jid_dir)
                     break
-                except WindowsError:  # pylint: disable=E0602
+                except OSError:  # pylint: disable=E0602
                     continue
 
         # check dir exists

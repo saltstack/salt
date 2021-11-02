@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
     Detect disks
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import glob
 import logging
 import re
@@ -12,8 +9,6 @@ import re
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
-
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -40,7 +35,7 @@ def disks():
         log.trace("Disk grain does not support OS")
 
 
-class _geomconsts(object):
+class _geomconsts:
     GEOMNAME = "Geom name"
     MEDIASIZE = "Mediasize"
     SECTORSIZE = "Sectorsize"
@@ -94,16 +89,16 @@ _geom_attribs = [
 
 def _freebsd_geom():
     geom = salt.utils.path.which("geom")
-    ret = {"disks": {}, "SSDs": []}
+    ret = {"disks": {}, "ssds": []}
 
-    devices = __salt__["cmd.run"]("{0} disk list".format(geom))
+    devices = __salt__["cmd.run"]("{} disk list".format(geom))
     devices = devices.split("\n\n")
 
     def parse_geom_attribs(device):
         tmp = {}
         for line in device.split("\n"):
             for attrib in _geom_attribs:
-                search = re.search(r"{0}:\s(.*)".format(attrib), line)
+                search = re.search(r"{}:\s(.*)".format(attrib), line)
                 if search:
                     value = _datavalue(
                         _geomconsts._datatypes.get(attrib), search.group(1)
@@ -119,7 +114,7 @@ def _freebsd_geom():
         ret["disks"][name] = tmp
         if tmp.get(_geomconsts.ROTATIONRATE) == 0:
             log.trace("Device %s reports itself as an SSD", device)
-            ret["SSDs"].append(name)
+            ret["ssds"].append(name)
 
     for device in devices:
         parse_geom_attribs(device)
@@ -131,26 +126,28 @@ def _linux_disks():
     """
     Return list of disk devices and work out if they are SSD or HDD.
     """
-    ret = {"disks": [], "SSDs": []}
+    ret = {"disks": [], "ssds": []}
 
-    for entry in glob.glob("/sys/block/*/queue/rotational"):
+    for entry in glob.glob("/sys/block/*"):
+        virtual = salt.utils.path.readlink(entry).startswith("../devices/virtual/")
         try:
-            with salt.utils.files.fopen(entry) as entry_fp:
-                device = entry.split("/")[3]
-                flag = entry_fp.read(1)
-                if flag == "0":
-                    ret["SSDs"].append(device)
-                    log.trace("Device %s reports itself as an SSD", device)
-                elif flag == "1":
-                    ret["disks"].append(device)
-                    log.trace("Device %s reports itself as an HDD", device)
-                else:
-                    log.trace(
-                        "Unable to identify device %s as an SSD or HDD. It does "
-                        "not report 0 or 1",
-                        device,
-                    )
-        except IOError:
+            if not virtual:
+                with salt.utils.files.fopen(entry + "/queue/rotational") as entry_fp:
+                    device = entry.split("/")[3]
+                    flag = entry_fp.read(1)
+                    if flag == "0":
+                        ret["ssds"].append(device)
+                        log.trace("Device %s reports itself as an SSD", device)
+                    elif flag == "1":
+                        ret["disks"].append(device)
+                        log.trace("Device %s reports itself as an HDD", device)
+                    else:
+                        log.trace(
+                            "Unable to identify device %s as an SSD or HDD. It does "
+                            "not report 0 or 1",
+                            device,
+                        )
+        except OSError:
             pass
     return ret
 
@@ -162,10 +159,10 @@ def _windows_disks():
     path = "MSFT_PhysicalDisk"
     get = "DeviceID,MediaType"
 
-    ret = {"disks": [], "SSDs": []}
+    ret = {"disks": [], "ssds": []}
 
     cmdret = __salt__["cmd.run_all"](
-        "{0} /namespace:{1} path {2} get {3} /format:table".format(
+        "{} /namespace:{} path {} get {} /format:table".format(
             wmic, namespace, path, get
         )
     )
@@ -177,14 +174,14 @@ def _windows_disks():
             info = line.split()
             if len(info) != 2 or not info[0].isdigit() or not info[1].isdigit():
                 continue
-            device = r"\\.\PhysicalDrive{0}".format(info[0])
+            device = r"\\.\PhysicalDrive{}".format(info[0])
             mediatype = info[1]
             if mediatype == "3":
                 log.trace("Device %s reports itself as an HDD", device)
                 ret["disks"].append(device)
             elif mediatype == "4":
                 log.trace("Device %s reports itself as an SSD", device)
-                ret["SSDs"].append(device)
+                ret["ssds"].append(device)
                 ret["disks"].append(device)
             elif mediatype == "5":
                 log.trace("Device %s reports itself as an SCM", device)

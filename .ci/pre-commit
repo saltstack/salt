@@ -1,6 +1,0 @@
-@Library('salt@master-1.7') _
-
-runPreCommit(
-    env: env)
-
-// vim: ft=groovy

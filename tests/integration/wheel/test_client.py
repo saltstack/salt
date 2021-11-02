@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import pytest
 import salt.auth
 import salt.utils.platform
@@ -28,7 +24,7 @@ class WheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
     def tearDown(self):
         del self.wheel
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_master_call(self):
         """
         Test executing master_call with lowdata
@@ -64,7 +60,7 @@ class WheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
             }
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_cmd_sync(self):
         low = {
             "client": "wheel",
@@ -91,7 +87,7 @@ class WheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
         self.wheel.cmd_async(low)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_cmd_sync_w_arg(self):
         low = {
             "fun": "key.finger",

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Azure (ARM) Resource Execution Module
 
@@ -47,7 +46,6 @@ Azure (ARM) Resource Execution Module
 """
 
 # Python libs
-from __future__ import absolute_import
 
 import logging
 
@@ -452,9 +450,7 @@ def deployment_create_or_update(
             "resource", "DeploymentProperties", **deploy_kwargs
         )
     except TypeError as exc:
-        result = {
-            "error": "The object model could not be built. ({0})".format(str(exc))
-        }
+        result = {"error": "The object model could not be built. ({})".format(str(exc))}
         return result
 
     try:
@@ -477,7 +473,7 @@ def deployment_create_or_update(
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
-            "error": "The object model could not be parsed. ({0})".format(str(exc))
+            "error": "The object model could not be parsed. ({})".format(str(exc))
         }
 
     return result
@@ -630,9 +626,7 @@ def deployment_validate(
             "resource", "DeploymentProperties", **deploy_kwargs
         )
     except TypeError as exc:
-        result = {
-            "error": "The object model could not be built. ({0})".format(str(exc))
-        }
+        result = {"error": "The object model could not be built. ({})".format(str(exc))}
         return result
 
     try:
@@ -651,7 +645,7 @@ def deployment_validate(
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
-            "error": "The object model could not be parsed. ({0})".format(str(exc))
+            "error": "The object model could not be parsed. ({})".format(str(exc))
         }
 
     return result
@@ -918,7 +912,7 @@ def policy_assignment_create(name, scope, definition_name, **kwargs):
         definition = definition_list[definition_name]
     else:
         definition = {
-            "error": 'The policy definition named "{0}" could not be found.'.format(
+            "error": 'The policy definition named "{}" could not be found.'.format(
                 definition_name
             )
         }
@@ -938,7 +932,7 @@ def policy_assignment_create(name, scope, definition_name, **kwargs):
             )
         except TypeError as exc:
             result = {
-                "error": "The object model could not be built. ({0})".format(str(exc))
+                "error": "The object model could not be built. ({})".format(str(exc))
             }
             return result
 
@@ -952,11 +946,11 @@ def policy_assignment_create(name, scope, definition_name, **kwargs):
             result = {"error": str(exc)}
         except SerializationError as exc:
             result = {
-                "error": "The object model could not be parsed. ({0})".format(str(exc))
+                "error": "The object model could not be parsed. ({})".format(str(exc))
             }
     else:
         result = {
-            "error": 'The policy definition named "{0}" could not be found.'.format(
+            "error": 'The policy definition named "{}" could not be found.'.format(
                 definition_name
             )
         }
@@ -1098,9 +1092,7 @@ def policy_definition_create_or_update(
             "resource.policy", "PolicyDefinition", **policy_kwargs
         )
     except TypeError as exc:
-        result = {
-            "error": "The object model could not be built. ({0})".format(str(exc))
-        }
+        result = {"error": "The object model could not be built. ({})".format(str(exc))}
         return result
 
     try:
@@ -1113,7 +1105,7 @@ def policy_definition_create_or_update(
         result = {"error": str(exc)}
     except SerializationError as exc:
         result = {
-            "error": "The object model could not be parsed. ({0})".format(str(exc))
+            "error": "The object model could not be parsed. ({})".format(str(exc))
         }
 
     return result

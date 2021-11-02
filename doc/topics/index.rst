@@ -1,3 +1,5 @@
+.. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
+
 ====================
 Introduction to Salt
 ====================
@@ -58,8 +60,8 @@ authentication and encryption are integral to Salt.  Salt takes
 advantage of communication via `msgpack`_, enabling fast and light
 network traffic.
 
-.. _`ZeroMQ`: http://zeromq.org/
-.. _`msgpack`: http://msgpack.org/
+.. _`ZeroMQ`: https://zeromq.org/
+.. _`msgpack`: https://msgpack.org/
 .. _`AES`: https://en.wikipedia.org/wiki/Advanced_Encryption_Standard
 
 Python client interface
@@ -110,21 +112,25 @@ is hosted by Google Groups. It is open to new members.
 
 .. _`salt-users mailing list`: https://groups.google.com/forum/#!forum/salt-users
 
+Additionally, all users of Salt should be subscribed to the Announcements mailing
+list which contains important updates about Salt, such as new releaes and
+security-related announcements. This list is low-traffic.
+
+.. _`salt-announce mailing list`: https://groups.google.com/forum/#!forum/salt-announce
+
 
 IRC
 ===
 
-The ``#salt`` IRC channel is hosted on the popular `Freenode`_ network. You
-can use the `Freenode webchat client`_ right from your browser.
+The ``#salt`` IRC channel is hosted on the popular `LiberaChat`_ network. You
+can use the `LiberaChat webchat client`_ right from your browser.  `Logs of the
+IRC channel activity`_ are also available.
 
-`Logs of the IRC channel activity`_ are being collected courtesy of Moritz Lenz.
+.. _LiberaChat: https://libera.chat/
+.. _`LiberaChat webchat client`: https://web.libera.chat/#salt
+.. _`Logs of the IRC channel activity`: http://ngxbot.nginx.org/logs/%23salt/
 
-.. _Freenode: http://freenode.net/irc_servers.shtml
-.. _`Freenode webchat client`: http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83
-.. _`Logs of the IRC channel activity`: http://irclog.perlgeek.de/salt/
-
-If you wish to discuss the development of Salt itself join us in
-``#salt-devel``.
+If you wish to discuss the development of Salt itself join us in ``#salt-devel``.
 
 
 Follow on Github
@@ -134,6 +140,11 @@ The Salt code is developed via Github. Follow Salt for constant updates on what
 is happening in Salt development:
 
 |saltrepo|
+
+Long-term planning and strategic decisions are handled via Salt Enhancement Proposals
+and can be found on GitHub.
+
+.. _`Salt Enhancement Proposals`: https://github.com/saltstack/salt-enhancement-proposals
 
 
 Blogs
@@ -150,7 +161,7 @@ Example Salt States
 ===================
 
 The official ``salt-states`` repository is:
-https://github.com/saltstack/salt-states
+https://github.com/SS-archive/salt-states
 
 A few examples of salt states from the community:
 
@@ -171,13 +182,13 @@ https://www.openhub.net/p/salt
 Other community links
 =====================
 
-- `Salt Stack Inc. <http://www.saltstack.com>`_
+- `Salt Project <http://saltproject.io>`_
 - `Subreddit <http://www.reddit.com/r/saltstack>`_
-- `YouTube <http://www.youtube.com/user/SaltStack>`_
-- `Facebook <https://www.facebook.com/SaltStack>`_
-- `Twitter <https://twitter.com/SaltStackInc>`_
-- `Wikipedia page <http://en.wikipedia.org/wiki/Salt_(software)>`_
-- `Stack Overflow <https://stackoverflow.com/questions/tagged/salt-stack>`_
+- `YouTube <https://www.youtube.com/channel/UCpveTIucFx9ljGelW63-BWg>`_
+- `Facebook <https://www.facebook.com/SaltProjectOSS>`_
+- `Twitter <https://twitter.com/Salt_Project_OS>`_
+- `Wikipedia page <https://en.wikipedia.org/wiki/Salt_(software)>`_
+- `Stack Overflow <https://stackoverflow.com/questions/tagged/salt-stack+or+salt-cloud+or+salt-creation>`_
 
 Hack the Source
 ===============

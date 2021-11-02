@@ -1,5 +1,5 @@
-salt.states.heat module
-=======================
+salt.states.heat
+================
 
 .. automodule:: salt.states.heat
     :members:

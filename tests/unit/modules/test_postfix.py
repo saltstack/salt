@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import
 
-# Import Salt Libs
 import salt.modules.postfix as postfix
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -58,6 +52,12 @@ class PostfixTestCase(TestCase, LoaderModuleMockMixin):
         Test for show contents of the mail queue
         """
         with patch.dict(postfix.__salt__, {"cmd.run": MagicMock(return_value="A\nB")}):
+            self.assertEqual(postfix.show_queue(), [])
+
+        # Test if get an extra newline in the output
+        with patch.dict(
+            postfix.__salt__, {"cmd.run": MagicMock(return_value="A\nB\n")}
+        ):
             self.assertEqual(postfix.show_queue(), [])
 
     def test_delete(self):

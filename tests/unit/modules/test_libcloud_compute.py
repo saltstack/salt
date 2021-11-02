@@ -1,17 +1,12 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.modules.libcloud_compute as libcloud_compute
 from salt.utils.versions import LooseVersion as _LooseVersion
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -226,11 +221,6 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
     def test_module_creation(self):
         client = libcloud_compute._get_driver("test")
         self.assertFalse(client is None)
-
-    def test_init(self):
-        with patch("salt.utils.compat.pack_dunder", return_value=False) as dunder:
-            libcloud_compute.__init__(None)
-            dunder.assert_called_with("salt.modules.libcloud_compute")
 
     def _validate_node(self, node):
         self.assertEqual(node["name"], "test_node")

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Beacon that fires events on image import/delete.
 
@@ -18,19 +17,12 @@ Beacon that fires events on image import/delete.
         - interval: 60
         - startup_import_event: True
 """
-
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 
-# Import 3rd-party libs
-# pylint: disable=import-error
-from salt.ext.six.moves import map
-
-# pylint: enable=import-error
+import salt.utils.beacons
 
 __virtualname__ = "imgadm"
+
 IMGADM_STATE = {
     "first_run": True,
     "images": [],
@@ -48,7 +40,7 @@ def __virtual__():
     else:
         return (
             False,
-            "{0} beacon can only be loaded on SmartOS compute nodes".format(
+            "{} beacon can only be loaded on SmartOS compute nodes".format(
                 __virtualname__
             ),
         )
@@ -81,10 +73,9 @@ def beacon(config):
     if IMGADM_STATE["first_run"]:
         log.info("Applying configuration for imgadm beacon")
 
-        _config = {}
-        list(map(_config.update, config))
+        config = salt.utils.beacons.list_to_dict(config)
 
-        if "startup_import_event" not in _config or not _config["startup_import_event"]:
+        if "startup_import_event" not in config or not config["startup_import_event"]:
             IMGADM_STATE["images"] = current_images
 
     # NOTE: import events

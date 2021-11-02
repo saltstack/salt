@@ -1,5 +1,5 @@
-salt.states.libcloud_dns module
-===============================
+salt.states.libcloud_dns
+========================
 
 .. automodule:: salt.states.libcloud_dns
     :members:

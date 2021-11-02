@@ -1,27 +1,16 @@
-# -*- coding: utf-8 -*-
 """
 Manage and query NPM packages.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
+import shlex
 
 import salt.modules.cmdmod
-
-# Import salt libs
 import salt.utils.json
 import salt.utils.path
 import salt.utils.user
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 from salt.utils.versions import LooseVersion as _LooseVersion
-
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
-
 
 log = logging.getLogger(__name__)
 
@@ -44,7 +33,7 @@ def __virtual__():
                 "because the npm binary could not be located",
             )
     except CommandExecutionError as exc:
-        return (False, six.text_type(exc))
+        return (False, str(exc))
 
 
 def _check_valid_version():
@@ -64,7 +53,7 @@ def _check_valid_version():
     # pylint: enable=no-member
     if npm_version < valid_version:
         raise CommandExecutionError(
-            "'npm' is not recent enough({0} < {1}). Please Upgrade.".format(
+            "'npm' is not recent enough({} < {}). Please Upgrade.".format(
                 npm_version, valid_version
             )
         )
@@ -141,13 +130,13 @@ def install(
     """
     # Protect against injection
     if pkg:
-        pkgs = [_cmd_quote(pkg)]
+        pkgs = [shlex.quote(pkg)]
     elif pkgs:
-        pkgs = [_cmd_quote(v) for v in pkgs]
+        pkgs = [shlex.quote(v) for v in pkgs]
     else:
         pkgs = []
     if registry:
-        registry = _cmd_quote(registry)
+        registry = shlex.quote(registry)
 
     cmd = ["npm", "install", "--json"]
     if silent:
@@ -157,7 +146,7 @@ def install(
         cmd.append("--global")
 
     if registry:
-        cmd.append('--registry="{0}"'.format(registry))
+        cmd.append('--registry="{}"'.format(registry))
 
     if dry_run:
         cmd.append("--dry-run")
@@ -219,7 +208,7 @@ def uninstall(pkg, dir=None, runas=None, env=None):
     """
     # Protect against injection
     if pkg:
-        pkg = _cmd_quote(pkg)
+        pkg = shlex.quote(pkg)
 
     env = env or {}
 
@@ -228,7 +217,7 @@ def uninstall(pkg, dir=None, runas=None, env=None):
         if uid:
             env.update({"SUDO_UID": uid, "SUDO_USER": ""})
 
-    cmd = ["npm", "uninstall", '"{0}"'.format(pkg)]
+    cmd = ["npm", "uninstall", '"{}"'.format(pkg)]
     if not dir:
         cmd.append("--global")
 
@@ -297,14 +286,14 @@ def list_(pkg=None, dir=None, runas=None, env=None, depth=None):
     if depth is not None:
         if not isinstance(depth, (int, float)):
             raise salt.exceptions.SaltInvocationError(
-                "Error: depth {0} must be a number".format(depth)
+                "Error: depth {} must be a number".format(depth)
             )
-        cmd.append("--depth={0}".format(int(depth)))
+        cmd.append("--depth={}".format(int(depth)))
 
     if pkg:
         # Protect against injection
-        pkg = _cmd_quote(pkg)
-        cmd.append('"{0}"'.format(pkg))
+        pkg = shlex.quote(pkg)
+        cmd.append('"{}"'.format(pkg))
     cmd = " ".join(cmd)
 
     result = __salt__["cmd.run_all"](

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Utilities for working with etcd
 
@@ -50,17 +49,11 @@ It should be noted that some usages of etcd require a profile to be specified,
 rather than top-level configurations. This being the case, it is better to
 always use a named configuration profile, as shown above.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
 from salt.exceptions import CommandExecutionError
 
-# Import salt libs
-from salt.ext import six
-
-# Import third party libs
 try:
     import etcd
     from urllib3.exceptions import ReadTimeoutError, MaxRetryError
@@ -79,7 +72,7 @@ class EtcdUtilWatchTimeout(Exception):
     """
 
 
-class EtcdClient(object):
+class EtcdClient:
     def __init__(
         self,
         opts,
@@ -117,18 +110,18 @@ class EtcdClient(object):
         auth = {}
         if username and password:
             auth = {
-                "username": six.text_type(username),
-                "password": six.text_type(password),
+                "username": str(username),
+                "password": str(password),
             }
 
         certs = {}
         if ca_cert and not (cli_cert or cli_key):
-            certs = {"ca_cert": six.text_type(ca_cert), "protocol": "https"}
+            certs = {"ca_cert": str(ca_cert), "protocol": "https"}
 
         if ca_cert and cli_cert and cli_key:
             cert = (cli_cert, cli_key)
             certs = {
-                "ca_cert": six.text_type(ca_cert),
+                "ca_cert": str(ca_cert),
                 "cert": cert,
                 "protocol": "https",
             }
@@ -140,7 +133,7 @@ class EtcdClient(object):
             self.client = etcd.Client(host, port, **xargs)
         else:
             raise CommandExecutionError(
-                "(unable to import etcd, " "module most likely not installed)"
+                "(unable to import etcd, module most likely not installed)"
             )
 
     def watch(self, key, recurse=False, timeout=0, index=None):
@@ -165,7 +158,8 @@ class EtcdClient(object):
         except (etcd.EtcdConnectionFailed, MaxRetryError):
             # This gets raised when we can't contact etcd at all
             log.error(
-                "etcd: failed to perform 'watch' operation on key %s due to connection error",
+                "etcd: failed to perform 'watch' operation on key %s due to connection"
+                " error",
                 key,
             )
             return {}
@@ -192,7 +186,8 @@ class EtcdClient(object):
             return None
         except etcd.EtcdConnectionFailed:
             log.error(
-                "etcd: failed to perform 'get' operation on key %s due to connection error",
+                "etcd: failed to perform 'get' operation on key %s due to connection"
+                " error",
                 key,
             )
             return None
@@ -227,7 +222,7 @@ class EtcdClient(object):
             if wait:
                 # Wait timeouts will throw ReadTimeoutError, which isn't bad
                 log.debug("etcd: Timed out while executing a wait")
-                raise EtcdUtilWatchTimeout("Watch on {0} timed out".format(key))
+                raise EtcdUtilWatchTimeout("Watch on {} timed out".format(key))
             log.error("etcd: Timed out")
             raise etcd.EtcdConnectionFailed("Connection failed")
         except MaxRetryError as err:
@@ -238,13 +233,14 @@ class EtcdClient(object):
         except etcd.EtcdException as err:
             # EtcdValueError inherits from ValueError, so we don't want to accidentally
             # catch this below on ValueError and give a bogus error message
-            log.error("etcd: {0}".format(err))
+            log.error("etcd: %s", err)
             raise
         except ValueError:
             # python-etcd doesn't fully support python 2.6 and ends up throwing this for *any* exception because
             # it uses the newer {} format syntax
             log.error(
-                "etcd: error. python-etcd does not fully support python 2.6, no error information available"
+                "etcd: error. python-etcd does not fully support python 2.6, no error"
+                " information available"
             )
             raise
         except Exception as err:  # pylint: disable=broad-except
@@ -253,16 +249,16 @@ class EtcdClient(object):
         return result
 
     def _flatten(self, data, path=""):
-        if len(data.keys()) == 0:
+        if not data:
             return {path: {}}
         path = path.strip("/")
         flat = {}
-        for k, v in six.iteritems(data):
+        for k, v in data.items():
             k = k.strip("/")
             if path:
-                p = "/{0}/{1}".format(path, k)
+                p = "/{}/{}".format(path, k)
             else:
-                p = "/{0}".format(k)
+                p = "/{}".format(k)
             if isinstance(v, dict):
                 ret = self._flatten(v, p)
                 flat.update(ret)
@@ -276,7 +272,7 @@ class EtcdClient(object):
             return None
         fields = self._flatten(fields, path)
         keys = {}
-        for k, v in six.iteritems(fields):
+        for k, v in fields.items():
             is_dir = False
             if isinstance(v, dict):
                 is_dir = True
@@ -341,7 +337,8 @@ class EtcdClient(object):
             return {}
         except etcd.EtcdConnectionFailed:
             log.error(
-                "etcd: failed to perform 'ls' operation on path %s due to connection error",
+                "etcd: failed to perform 'ls' operation on path %s due to connection"
+                " error",
                 path,
             )
             return None
@@ -350,7 +347,7 @@ class EtcdClient(object):
             if item.dir is True:
                 if item.key == path:
                     continue
-                dir_name = "{0}/".format(item.key)
+                dir_name = "{}/".format(item.key)
                 ret[dir_name] = {}
             else:
                 ret[item.key] = item.value
@@ -394,13 +391,14 @@ class EtcdClient(object):
             return None
         except etcd.EtcdConnectionFailed:
             log.error(
-                "etcd: failed to perform 'tree' operation on path %s due to connection error",
+                "etcd: failed to perform 'tree' operation on path %s due to connection"
+                " error",
                 path,
             )
             return None
 
         for item in items.children:
-            comps = six.text_type(item.key).split("/")
+            comps = str(item.key).split("/")
             if item.dir is True:
                 if item.key == path:
                     continue

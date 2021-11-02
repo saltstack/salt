@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Keystone module for interacting with OpenStack Keystone
 
@@ -26,7 +25,6 @@ Example configuration
       identity_api_version: 3
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 HAS_SHADE = False
 try:
@@ -48,7 +46,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The keystoneng execution module failed to load: shade python module is not available",
+        "The keystoneng execution module failed to load: shade python module is not"
+        " available",
     )
 
 
@@ -89,7 +88,7 @@ def get_entity(ent_type, **kwargs):
 
 def _clean_kwargs(keep_name=False, **kwargs):
     """
-    Sanatize the the arguments for use with shade
+    Sanatize the arguments for use with shade
     """
     if "name" in kwargs and not keep_name:
         kwargs["name_or_id"] = kwargs.pop("name")

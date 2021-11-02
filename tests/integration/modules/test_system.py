@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import datetime
 import logging
 import os
@@ -15,22 +11,13 @@ import salt.states.file
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
-from salt.ext import six
-from salt.ext.six.moves import range
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    destructiveTest,
-    flaky,
-    requires_system_grains,
-    skip_if_not_root,
-)
-from tests.support.unit import SkipTest, skipIf
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
-@skipIf(not salt.utils.platform.is_linux(), "These tests can only be run on linux")
-@pytest.mark.windows_whitelisted
+@pytest.mark.skip_unless_on_linux
 class SystemModuleTest(ModuleCase):
     """
     Validate the date/time functions in the system module
@@ -40,10 +27,7 @@ class SystemModuleTest(ModuleCase):
     _systemd_timesyncd_available_ = None
 
     @classmethod
-    @requires_system_grains
-    def setUpClass(cls, grains):  # pylint: disable=arguments-differ
-        if grains["kernel"] != "Linux":
-            raise SkipTest("Test not applicable to '{kernel}' kernel".format(**grains))
+    def setUpClass(cls):
         cls.fmt_str = "%Y-%m-%d %H:%M:%S"
         cls._orig_time = None
         cls._machine_info = True
@@ -54,7 +38,7 @@ class SystemModuleTest(ModuleCase):
             delattr(cls, name)
 
     def setUp(self):
-        super(SystemModuleTest, self).setUp()
+        super().setUp()
         if self._systemd_timesyncd_available_ is None:
             SystemModuleTest._systemd_timesyncd_available_ = self.run_function(
                 "service.available", ["systemd-timesyncd"]
@@ -154,10 +138,7 @@ class SystemModuleTest(ModuleCase):
 
                             self.assertTrue(
                                 diff <= 2.0,
-                                msg=(
-                                    "hwclock difference too big: "
-                                    + six.text_type(timeCompStr)
-                                ),
+                                msg=("hwclock difference too big: " + str(timeCompStr)),
                             )
                             break
             except CompareTimeout:
@@ -182,7 +163,7 @@ class SystemModuleTest(ModuleCase):
         else:
             self.run_function("file.remove", ["/etc/machine-info"])
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_get_system_date_time(self):
         """
         Test we are able to get the correct time
@@ -190,10 +171,10 @@ class SystemModuleTest(ModuleCase):
         t1 = datetime.datetime.now()
         res = self.run_function("system.get_system_date_time")
         t2 = datetime.datetime.strptime(res, self.fmt_str)
-        msg = "Difference in times is too large. Now: {0} Fake: {1}".format(t1, t2)
+        msg = "Difference in times is too large. Now: {} Fake: {}".format(t1, t2)
         self.assertTrue(self._same_times(t1, t2, seconds_diff=2), msg=msg)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_get_system_date_time_utc(self):
         """
         Test we are able to get the correct time with utc
@@ -201,12 +182,12 @@ class SystemModuleTest(ModuleCase):
         t1 = datetime.datetime.utcnow()
         res = self.run_function("system.get_system_date_time", utc_offset="+0000")
         t2 = datetime.datetime.strptime(res, self.fmt_str)
-        msg = "Difference in times is too large. Now: {0} Fake: {1}".format(t1, t2)
+        msg = "Difference in times is too large. Now: {} Fake: {}".format(t1, t2)
         self.assertTrue(self._same_times(t1, t2, seconds_diff=2), msg=msg)
 
-    @destructiveTest
-    @skip_if_not_root
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
+    @pytest.mark.slow_test
     def test_set_system_date_time(self):
         """
         Test changing the system clock. We are only able to set it up to a
@@ -217,15 +198,15 @@ class SystemModuleTest(ModuleCase):
         result = self._set_time(cmp_time)
         time_now = datetime.datetime.now()
 
-        msg = "Difference in times is too large. Now: {0} Fake: {1}".format(
+        msg = "Difference in times is too large. Now: {} Fake: {}".format(
             time_now, cmp_time
         )
         self.assertTrue(result and self._same_times(time_now, cmp_time), msg=msg)
         self._test_hwclock_sync()
 
-    @destructiveTest
-    @skip_if_not_root
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
+    @pytest.mark.slow_test
     def test_set_system_date_time_utc(self):
         """
         Test changing the system clock. We are only able to set it up to a
@@ -236,16 +217,16 @@ class SystemModuleTest(ModuleCase):
         result = self._set_time(cmp_time, offset="+0000")
         time_now = datetime.datetime.utcnow()
 
-        msg = "Difference in times is too large. Now: {0} Fake: {1}".format(
+        msg = "Difference in times is too large. Now: {} Fake: {}".format(
             time_now, cmp_time
         )
         self.assertTrue(result)
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
         self._test_hwclock_sync()
 
-    @destructiveTest
-    @skip_if_not_root
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
+    @pytest.mark.slow_test
     def test_set_system_date_time_utcoffset_east(self):
         """
         Test changing the system clock. We are only able to set it up to a
@@ -258,16 +239,16 @@ class SystemModuleTest(ModuleCase):
         result = self._set_time(time_to_set, offset="-0700")
         time_now = datetime.datetime.utcnow()
 
-        msg = "Difference in times is too large. Now: {0} Fake: {1}".format(
+        msg = "Difference in times is too large. Now: {} Fake: {}".format(
             time_now, cmp_time
         )
         self.assertTrue(result)
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
         self._test_hwclock_sync()
 
-    @destructiveTest
-    @skip_if_not_root
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
+    @pytest.mark.slow_test
     def test_set_system_date_time_utcoffset_west(self):
         """
         Test changing the system clock. We are only able to set it up to a
@@ -280,17 +261,17 @@ class SystemModuleTest(ModuleCase):
         result = self._set_time(time_to_set, offset="+0200")
         time_now = datetime.datetime.utcnow()
 
-        msg = "Difference in times is too large. Now: {0} Fake: {1}".format(
+        msg = "Difference in times is too large. Now: {} Fake: {}".format(
             time_now, cmp_time
         )
         self.assertTrue(result)
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
         self._test_hwclock_sync()
 
-    @flaky
-    @destructiveTest
-    @skip_if_not_root
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.flaky(max_runs=4)
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
+    @pytest.mark.slow_test
     def test_set_system_time(self):
         """
         Test setting the system time without adjusting the date.
@@ -301,7 +282,7 @@ class SystemModuleTest(ModuleCase):
         result = self.run_function("system.set_system_time", ["10:05:00"])
 
         time_now = datetime.datetime.now()
-        msg = "Difference in times is too large. Now: {0} Fake: {1}".format(
+        msg = "Difference in times is too large. Now: {} Fake: {}".format(
             time_now, cmp_time
         )
 
@@ -309,9 +290,9 @@ class SystemModuleTest(ModuleCase):
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
         self._test_hwclock_sync()
 
-    @destructiveTest
-    @skip_if_not_root
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
+    @pytest.mark.slow_test
     def test_set_system_date(self):
         """
         Test setting the system date without adjusting the time.
@@ -324,7 +305,7 @@ class SystemModuleTest(ModuleCase):
         )
 
         time_now = datetime.datetime.now()
-        msg = "Difference in times is too large. Now: {0} Fake: {1}".format(
+        msg = "Difference in times is too large. Now: {} Fake: {}".format(
             time_now, cmp_time
         )
 
@@ -332,8 +313,8 @@ class SystemModuleTest(ModuleCase):
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
         self._test_hwclock_sync()
 
-    @skip_if_not_root
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.skip_if_not_root
+    @pytest.mark.slow_test
     def test_get_computer_desc(self):
         """
         Test getting the system hostname
@@ -352,10 +333,9 @@ class SystemModuleTest(ModuleCase):
                     data = mach_info.read()
                     self.assertIn(res, data.decode("string_escape"))
 
-    @destructiveTest
-    @skip_if_not_root
-    @skipIf(True, "SLOWTEST skip")
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
+    @pytest.mark.slow_test
     def test_set_computer_desc(self):
         """
         Test setting the computer description
@@ -368,9 +348,9 @@ class SystemModuleTest(ModuleCase):
         self.assertTrue(ret)
         self.assertIn(desc, computer_desc)
 
-    @destructiveTest
-    @skip_if_not_root
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.destructive_test
+    @pytest.mark.skip_if_not_root
+    @pytest.mark.slow_test
     def test_set_computer_desc_multiline(self):
         """
         Test setting the computer description with a multiline string with tabs
@@ -393,8 +373,8 @@ class SystemModuleTest(ModuleCase):
         self.assertTrue(ret)
         self.assertIn(desc, computer_desc)
 
-    @skip_if_not_root
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.skip_if_not_root
+    @pytest.mark.slow_test
     def test_has_hwclock(self):
         """
         Verify platform has a settable hardware clock, if possible.
@@ -404,28 +384,28 @@ class SystemModuleTest(ModuleCase):
             self.assertTrue(self._hwclock_has_compare())
 
 
-@skipIf(not salt.utils.platform.is_windows(), "These tests can only be run on windows")
+@pytest.mark.skip_unless_on_windows
 @pytest.mark.windows_whitelisted
 class WinSystemModuleTest(ModuleCase):
     """
     Validate the date/time functions in the win_system module
     """
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_get_computer_name(self):
         """
         Test getting the computer name
         """
         ret = self.run_function("system.get_computer_name")
 
-        self.assertTrue(isinstance(ret, six.text_type))
+        self.assertTrue(isinstance(ret, str))
         import socket
 
         name = socket.gethostname()
         self.assertEqual(name, ret)
 
-    @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_set_computer_desc(self):
         """
         Test setting the computer description
@@ -465,7 +445,7 @@ class WinSystemModuleTest(ModuleCase):
         # Timeouts are set to 300 seconds. We're adding a 30 second buffer
         self.assertTrue(diff.seconds < 330)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_get_system_date(self):
         """
         Test getting system date
@@ -475,7 +455,7 @@ class WinSystemModuleTest(ModuleCase):
         self.assertEqual(date, ret)
 
 
-@skipIf(not salt.utils.platform.is_windows(), "These tests can only be run on windows")
+@pytest.mark.skip_unless_on_windows
 @pytest.mark.windows_whitelisted
 class WinSystemModuleTimeSettingTest(ModuleCase):
     """
@@ -504,8 +484,8 @@ class WinSystemModuleTimeSettingTest(ModuleCase):
             log.error("Re-syncing time failed")
 
     @skipIf(True, "WAR ROOM 7/18/2019, unit test?")
-    @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_set_system_time(self):
         """
         Test setting the system time
@@ -518,8 +498,8 @@ class WinSystemModuleTimeSettingTest(ModuleCase):
         self.assertEqual(new_time, test_time)
 
     @skipIf(True, "WAR ROOM 7/18/2019, unit test?")
-    @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_set_system_date(self):
         """
         Test setting system date

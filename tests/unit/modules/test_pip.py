@@ -1,18 +1,10 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import
-
 import os
 import sys
 
 import salt.modules.pip as pip
-
-# Import salt libs
+import salt.utils.files
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -37,6 +29,49 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
     def test__pip_bin_env_no_bin_env(self):
         ret = pip._pip_bin_env(None, None)
         self.assertIsNone(ret)
+
+    def test_install_frozen_app(self):
+        pkg = "pep8"
+        mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
+        with patch("sys.frozen", True, create=True):
+            with patch("sys._MEIPASS", True, create=True):
+                with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
+                    pip.install(pkg)
+                    expected = [
+                        sys.executable,
+                        "pip",
+                        "install",
+                        pkg,
+                    ]
+                    mock.assert_called_with(
+                        expected,
+                        python_shell=False,
+                        saltenv="base",
+                        use_vt=False,
+                        runas=None,
+                    )
+
+    def test_install_source_app(self):
+        pkg = "pep8"
+        mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
+        with patch("sys.frozen", False, create=True):
+            with patch("sys._MEIPASS", False, create=True):
+                with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
+                    pip.install(pkg)
+                    expected = [
+                        sys.executable,
+                        "-m",
+                        "pip",
+                        "install",
+                        pkg,
+                    ]
+                    mock.assert_called_with(
+                        expected,
+                        python_shell=False,
+                        saltenv="base",
+                        use_vt=False,
+                        runas=None,
+                    )
 
     def test_fix4361(self):
         mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
@@ -82,7 +117,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             pip.install(editable=editables)
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
         # Passing editables as a comma separated list
@@ -90,7 +129,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             pip.install(editable=",".join(editables))
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
     def test_install_multiple_pkgs_and_editables(self):
@@ -110,7 +153,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             pip.install(pkgs=pkgs, editable=editables)
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
         # Passing editables as a comma separated list
@@ -118,7 +165,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             pip.install(pkgs=",".join(pkgs), editable=",".join(editables))
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
         # As single string (just use the first element from pkgs and editables)
@@ -135,7 +186,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 editables[0],
             ]
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
     def test_issue5940_install_multiple_pip_mirrors(self):
@@ -219,7 +274,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             pip.install(pkg, find_links=find_links)
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
         # Passing mirrors as a comma separated list
@@ -227,7 +286,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             pip.install(pkg, find_links=",".join(find_links))
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
         # Valid protos work?
@@ -235,7 +298,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             pip.install(pkg, find_links=find_links)
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
         expected = [
@@ -253,7 +320,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             pip.install(pkg, find_links=find_links[0])
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
         # Invalid proto raises exception
@@ -433,7 +504,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 pkg,
             ]
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
     def test_install_extra_index_url_argument_in_resulting_command(self):
@@ -452,7 +527,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 pkg,
             ]
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
     def test_install_no_index_argument_in_resulting_command(self):
@@ -462,7 +541,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             pip.install(pkg, no_index=True)
             expected = [sys.executable, "-m", "pip", "install", "--no-index", pkg]
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
     def test_install_build_argument_in_resulting_command(self):
@@ -473,7 +556,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             pip.install(pkg, build=build)
             expected = [sys.executable, "-m", "pip", "install", "--build", build, pkg]
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
     def test_install_target_argument_in_resulting_command(self):
@@ -484,7 +571,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             pip.install(pkg, target=target)
             expected = [sys.executable, "-m", "pip", "install", "--target", target, pkg]
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
     def test_install_download_argument_in_resulting_command(self):
@@ -503,7 +594,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 pkg,
             ]
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
     def test_install_no_download_argument_in_resulting_command(self):
@@ -513,7 +608,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             pip.install(pkg, no_download=True)
             expected = [sys.executable, "-m", "pip", "install", "--no-download", pkg]
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
     def test_install_download_cache_dir_arguments_in_resulting_command(self):
@@ -567,7 +666,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             pip.install(pkg, source=source)
             expected = [sys.executable, "-m", "pip", "install", "--source", source, pkg]
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
     def test_install_exists_action_argument_in_resulting_command(self):
@@ -614,7 +717,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             pip.install(pkg, install_options=install_options)
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
         # Passing mirrors as a comma separated list
@@ -622,7 +729,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             pip.install(pkg, install_options=",".join(install_options))
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
         # Passing mirrors as a single string entry
@@ -639,7 +750,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 pkg,
             ]
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
     def test_install_global_options_argument_in_resulting_command(self):
@@ -656,7 +771,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             pip.install(pkg, global_options=global_options)
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
         # Passing mirrors as a comma separated list
@@ -664,7 +783,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             pip.install(pkg, global_options=",".join(global_options))
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
         # Passing mirrors as a single string entry
@@ -681,7 +804,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 pkg,
             ]
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
     def test_install_upgrade_argument_in_resulting_command(self):
@@ -691,7 +818,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             pip.install(pkg, upgrade=True)
             expected = [sys.executable, "-m", "pip", "install", "--upgrade", pkg]
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
     def test_install_force_reinstall_argument_in_resulting_command(self):
@@ -708,7 +839,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 pkg,
             ]
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
     def test_install_ignore_installed_argument_in_resulting_command(self):
@@ -725,7 +860,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 pkg,
             ]
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
     def test_install_no_deps_argument_in_resulting_command(self):
@@ -735,7 +874,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             pip.install(pkg, no_deps=True)
             expected = [sys.executable, "-m", "pip", "install", "--no-deps", pkg]
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
     def test_install_no_install_argument_in_resulting_command(self):
@@ -745,7 +888,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             pip.install(pkg, no_install=True)
             expected = [sys.executable, "-m", "pip", "install", "--no-install", pkg]
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
     def test_install_proxy_argument_in_resulting_command(self):
@@ -756,7 +903,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             pip.install(pkg, proxy=proxy)
             expected = [sys.executable, "-m", "pip", "install", "--proxy", proxy, pkg]
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
     def test_install_proxy_false_argument_in_resulting_command(self):
@@ -894,7 +1045,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 "--latest-pip-arg",
             ]
             mock.assert_called_with(
-                expected, saltenv="base", runas=None, use_vt=False, python_shell=False,
+                expected,
+                saltenv="base",
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
 
     def test_install_extra_args_arguments_recursion_error(self):
@@ -1121,7 +1276,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             with patch("salt.modules.pip.version", MagicMock(return_value="6.1.1")):
                 ret = pip.freeze()
                 mock.assert_called_with(
-                    expected, cwd=None, runas=None, use_vt=False, python_shell=False,
+                    expected,
+                    cwd=None,
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
                 )
                 self.assertEqual(ret, eggs)
 
@@ -1145,7 +1304,8 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             with patch("salt.modules.pip.version", MagicMock(return_value="6.1.1")):
                 self.assertRaises(
-                    CommandExecutionError, pip.freeze,
+                    CommandExecutionError,
+                    pip.freeze,
                 )
 
     def test_freeze_command_with_all(self):
@@ -1164,7 +1324,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 ret = pip.freeze()
                 expected = [sys.executable, "-m", "pip", "freeze", "--all"]
                 mock.assert_called_with(
-                    expected, cwd=None, runas=None, use_vt=False, python_shell=False,
+                    expected,
+                    cwd=None,
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
                 )
                 self.assertEqual(ret, eggs)
 
@@ -1173,7 +1337,8 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             with patch("salt.modules.pip.version", MagicMock(return_value="9.0.1")):
                 self.assertRaises(
-                    CommandExecutionError, pip.freeze,
+                    CommandExecutionError,
+                    pip.freeze,
                 )
 
     def test_list_command(self):
@@ -1193,7 +1358,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 ret = pip.list_()
                 expected = [sys.executable, "-m", "pip", "freeze"]
                 mock.assert_called_with(
-                    expected, cwd=None, runas=None, python_shell=False, use_vt=False,
+                    expected,
+                    cwd=None,
+                    runas=None,
+                    python_shell=False,
+                    use_vt=False,
                 )
                 self.assertEqual(
                     ret,
@@ -1212,7 +1381,8 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             with patch("salt.modules.pip.version", MagicMock(return_value="6.1.1")):
                 self.assertRaises(
-                    CommandExecutionError, pip.list_,
+                    CommandExecutionError,
+                    pip.list_,
                 )
 
     def test_list_command_with_all(self):
@@ -1237,7 +1407,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 ret = pip.list_()
                 expected = [sys.executable, "-m", "pip", "freeze", "--all"]
                 mock.assert_called_with(
-                    expected, cwd=None, runas=None, python_shell=False, use_vt=False,
+                    expected,
+                    cwd=None,
+                    runas=None,
+                    python_shell=False,
+                    use_vt=False,
                 )
                 self.assertEqual(
                     ret,
@@ -1257,7 +1431,8 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             with patch("salt.modules.pip.version", MagicMock(return_value="6.1.1")):
                 self.assertRaises(
-                    CommandExecutionError, pip.list_,
+                    CommandExecutionError,
+                    pip.list_,
                 )
 
     def test_list_command_with_prefix(self):
@@ -1274,7 +1449,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 ret = pip.list_(prefix="bb")
                 expected = [sys.executable, "-m", "pip", "freeze"]
                 mock.assert_called_with(
-                    expected, cwd=None, runas=None, python_shell=False, use_vt=False,
+                    expected,
+                    cwd=None,
+                    runas=None,
+                    python_shell=False,
+                    use_vt=False,
                 )
                 self.assertEqual(ret, {"bbfreeze-loader": "1.1.0", "bbfreeze": "1.1.0"})
 
@@ -1307,7 +1486,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 {"latest_filetype": "wheel", "version": "1.4.1", "name": "appdirs", "latest_version": "1.4.3"},
                 {"latest_filetype": "sdist", "version": "1.11.63", "name": "awscli", "latest_version": "1.12.1"}
                 ]"""
-        mock = MagicMock(return_value={"retcode": 0, "stdout": "{0}".format(eggs)})
+        mock = MagicMock(return_value={"retcode": 0, "stdout": "{}".format(eggs)})
         with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
             with patch("salt.modules.pip.version", MagicMock(return_value="9.1.1")):
                 ret = pip.list_upgrades()
@@ -1412,3 +1591,158 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     use_vt=False,
                     python_shell=False,
                 )
+
+    def test_resolve_requirements_chain_function(self):
+        """ensure requirements chain can handle special cases"""
+
+        class FakeFopen:
+            def __init__(self, filename):
+                d = {
+                    "requirements-0.txt": (
+                        b"--index-url http://fake.com/simple\n\n"
+                        b"one  # -r wrong.txt, other\n"
+                        b"two # --requirement wrong.exe;some\n"
+                        b"three\n"
+                        b"-r requirements-1.txt\n"
+                        b"# nothing\n"
+                    ),
+                    "requirements-1.txt": (
+                        "four\n"
+                        "five\n"
+                        "--requirement=requirements-2.txt\t# --requirements-2.txt\n\n"
+                    ),
+                    "requirements-2.txt": b"""six""",
+                    "requirements-3.txt": (
+                        b"# some comment\n"
+                        b"-e git+ssh://git.example.com/MyProject#egg=MyProject # the project\n"
+                        b"seven\n"
+                        b"-e git+ssh://git.example.com/Example#egg=example\n"
+                        b"eight # -e something#or other\n"
+                        b"--requirement requirements-4.txt\n\n"
+                    ),
+                    "requirements-4.txt": "",
+                }
+                self.val = d[filename]
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args, **kwargs):
+                pass
+
+            def read(self):
+                return self.val
+
+        with patch("salt.utils.files.fopen", FakeFopen):
+            chain = pip._resolve_requirements_chain(
+                ["requirements-0.txt", "requirements-3.txt"]
+            )
+        self.assertEqual(
+            chain,
+            [
+                "requirements-0.txt",
+                "requirements-1.txt",
+                "requirements-2.txt",
+                "requirements-3.txt",
+                "requirements-4.txt",
+            ],
+        )
+
+    # TODO: When we switch to pytest, mark parametrized with None for user as well -W. Werner, 2020-06-23
+    def test_when_upgrade_is_called_and_there_are_available_upgrades_it_should_call_correct_command(
+        self,
+    ):
+        fake_run_all = MagicMock(return_value={"retcode": 0, "stdout": ""})
+        expected_user = "fnord"
+        with patch.dict(pip.__salt__, {"cmd.run_all": fake_run_all}), patch(
+            "salt.modules.pip.list_upgrades", autospec=True, return_value=["fnord"]
+        ), patch(
+            "salt.modules.pip._get_pip_bin",
+            autospec=True,
+            return_value=["some-other-pip"],
+        ):
+            pip.upgrade(user=expected_user)
+
+            fake_run_all.assert_any_call(
+                ["some-other-pip", "install", "-U", "freeze", "--all", "fnord"],
+                runas=expected_user,
+                cwd=None,
+                use_vt=False,
+            )
+
+    # TODO: Yeah, parametrize the user here -W. Werner, 2020-07-07
+    def test_when_list_upgrades_is_provided_a_user_it_should_be_passed_to_the_version_command(
+        self,
+    ):
+        fake_run_all = MagicMock(return_value={"retcode": 0, "stdout": "{}"})
+        expected_user = "fnord"
+
+        def all_new_commands(*args, **kwargs):
+            """
+            Without this, mutating the return value mutates the return value
+            for EVERYTHING.
+            """
+            return ["some-other-pip"]
+
+        with patch.dict(pip.__salt__, {"cmd.run_all": fake_run_all}), patch(
+            "salt.modules.pip._get_pip_bin",
+            autospec=True,
+            side_effect=all_new_commands,
+        ):
+            pip._clear_context()
+            pip.list_upgrades(user=expected_user)
+            fake_run_all.assert_any_call(
+                ["some-other-pip", "--version"],
+                runas=expected_user,
+                cwd=None,
+                python_shell=False,
+            )
+
+    # TODO: Yeah, parametrize the user here -W. Werner, 2020-07-07
+    def test_when_install_is_provided_a_user_it_should_be_passed_to_the_version_command(
+        self,
+    ):
+        fake_run_all = MagicMock(return_value={"retcode": 0, "stdout": "{}"})
+        expected_user = "fnord"
+
+        def all_new_commands(*args, **kwargs):
+            """
+            Without this, mutating the return value mutates the return value
+            for EVERYTHING.
+            """
+            return ["some-other-pip"]
+
+        with patch.dict(pip.__salt__, {"cmd.run_all": fake_run_all}), patch(
+            "salt.modules.pip._get_pip_bin",
+            autospec=True,
+            side_effect=all_new_commands,
+        ):
+            pip._clear_context()
+            pip.install(user=expected_user)
+            fake_run_all.assert_any_call(
+                ["some-other-pip", "--version"],
+                runas=expected_user,
+                cwd=None,
+                python_shell=False,
+            )
+
+    # TODO: When we switch to pytest, parameterize the user - None and fnord should be enough, maybe a 3rd user -W. Werner, 2020-07-07
+    def test_when_version_is_called_with_a_user_it_should_be_passed_to_undelying_runas(
+        self,
+    ):
+        fake_run_all = MagicMock(return_value={"retcode": 0, "stdout": ""})
+        expected_user = "fnord"
+        with patch.dict(pip.__salt__, {"cmd.run_all": fake_run_all}), patch(
+            "salt.modules.pip.list_upgrades", autospec=True, return_value=["fnord"]
+        ), patch(
+            "salt.modules.pip._get_pip_bin",
+            autospec=True,
+            return_value=["some-new-pip"],
+        ):
+            pip.version(user=expected_user)
+            fake_run_all.assert_called_with(
+                ["some-new-pip", "--version"],
+                runas=expected_user,
+                cwd=None,
+                python_shell=False,
+            )

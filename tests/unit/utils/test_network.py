@@ -1,21 +1,14 @@
-# -*- coding: utf-8 -*-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 import socket
 import textwrap
+import time
 
 import pytest
 import salt.exceptions
-
-# Import salt libs
 import salt.utils.network as network
 from salt._compat import ipaddress
 from tests.support.mock import MagicMock, create_autospec, mock_open, patch
-
-# Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
@@ -142,9 +135,16 @@ IPV6_SUBNETS = {
 
 
 class NetworkTestCase(TestCase):
-    def test_sanitize_host(self):
+    def test_sanitize_host_ip(self):
         ret = network.sanitize_host("10.1./2.$3")
         self.assertEqual(ret, "10.1.2.3")
+
+    def test_sanitize_host_name(self):
+        """
+        Should not remove the underscore
+        """
+        ret = network.sanitize_host("foo_bar")
+        self.assertEqual(ret, "foo_bar")
 
     def test_host_to_ips(self):
         """
@@ -262,6 +262,9 @@ class NetworkTestCase(TestCase):
             "2001:0db8:0370:7334",
             "2001:0db8:0370::7334]:1234",
             "2001:0db8:0370:0:a:b:c:d:1234",
+            "host name",
+            "host name:1234",
+            "10.10.0.3:abcd",
         ]
         for host_port, assertion_value in good_host_ports.items():
             host = port = None
@@ -380,6 +383,12 @@ class NetworkTestCase(TestCase):
             addrs = network._test_addrs(addrinfo, 80)
             self.assertTrue(len(addrs) == 1)
             self.assertTrue(addrs[0] == addrinfo[2][4][0])
+
+            # attempt to connect to resolved address with default timeout
+            s.side_effect = socket.error
+            addrs = network._test_addrs(addrinfo, 80)
+            time.sleep(2)
+            self.assertFalse(len(addrs) == 0)
 
             # nothing can connect, but we've eliminated duplicates
             s.side_effect = socket.error
@@ -606,7 +615,7 @@ class NetworkTestCase(TestCase):
             with patch("salt.utils.platform.is_freebsd", lambda: True):
                 with patch("subprocess.check_output", return_value=FREEBSD_SOCKSTAT):
                     remotes = network._freebsd_remotes_on("4506", "remote")
-                    self.assertEqual(remotes, set(["127.0.0.1"]))
+                    self.assertEqual(remotes, {"127.0.0.1"})
 
     def test_freebsd_remotes_on_with_fat_pid(self):
         with patch("salt.utils.platform.is_sunos", lambda: False):
@@ -616,7 +625,7 @@ class NetworkTestCase(TestCase):
                     return_value=FREEBSD_SOCKSTAT_WITH_FAT_PID,
                 ):
                     remotes = network._freebsd_remotes_on("4506", "remote")
-                    self.assertEqual(remotes, set(["127.0.0.1"]))
+                    self.assertEqual(remotes, {"127.0.0.1"})
 
     def test_netlink_tool_remote_on_a(self):
         with patch("salt.utils.platform.is_sunos", lambda: False):
@@ -625,14 +634,12 @@ class NetworkTestCase(TestCase):
                     "subprocess.check_output", return_value=LINUX_NETLINK_SS_OUTPUT
                 ):
                     remotes = network._netlink_tool_remote_on("4506", "local")
-                    self.assertEqual(
-                        remotes, set(["192.168.122.177", "::ffff:127.0.0.1"])
-                    )
+                    self.assertEqual(remotes, {"192.168.122.177", "::ffff:127.0.0.1"})
 
     def test_netlink_tool_remote_on_b(self):
         with patch("subprocess.check_output", return_value=NETLINK_SS):
             remotes = network._netlink_tool_remote_on("4505", "remote_port")
-            self.assertEqual(remotes, set(["127.0.0.1", "::ffff:1.2.3.4"]))
+            self.assertEqual(remotes, {"127.0.0.1", "::ffff:1.2.3.4"})
 
     def test_generate_minion_id_distinct(self):
         """
@@ -894,7 +901,7 @@ class NetworkTestCase(TestCase):
             b"\xf8\xe7\xd6\xc5\xb4\xa3", network.mac_str_to_bytes("f8e7d6c5b4a3")
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_generate_minion_id_with_long_hostname(self):
         """
         Validate the fix for:

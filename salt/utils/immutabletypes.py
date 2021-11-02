@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
@@ -8,18 +7,9 @@
 
     Immutable types
 """
-from __future__ import absolute_import, unicode_literals
 
 import copy
-
-# Import python libs
-try:
-    from collections.abc import Mapping, Sequence, Set
-except ImportError:
-    # pylint: disable=no-name-in-module
-    from collections import Mapping, Sequence, Set
-
-    # pylint: enable=no-name-in-module
+from collections.abc import Mapping, Sequence, Set
 
 
 class ImmutableDict(Mapping):
@@ -40,7 +30,7 @@ class ImmutableDict(Mapping):
         return freeze(self.__obj[key])
 
     def __repr__(self):
-        return "<{0} {1}>".format(self.__class__.__name__, repr(self.__obj))
+        return "<{} {}>".format(self.__class__.__name__, repr(self.__obj))
 
     def __deepcopy__(self, memo):
         return copy.deepcopy(self.__obj)
@@ -76,9 +66,15 @@ class ImmutableList(Sequence):
         return freeze(self.__obj[key])
 
     def __repr__(self):
-        return "<{0} {1}>".format(self.__class__.__name__, repr(self.__obj))
+        return "<{} {}>".format(self.__class__.__name__, repr(self.__obj))
 
     def __deepcopy__(self, memo):
+        return copy.deepcopy(self.__obj)
+
+    def copy(self):
+        """
+        Return an un-frozen copy of self
+        """
         return copy.deepcopy(self.__obj)
 
 
@@ -100,9 +96,15 @@ class ImmutableSet(Set):
         return key in self.__obj
 
     def __repr__(self):
-        return "<{0} {1}>".format(self.__class__.__name__, repr(self.__obj))
+        return "<{} {}>".format(self.__class__.__name__, repr(self.__obj))
 
     def __deepcopy__(self, memo):
+        return copy.deepcopy(self.__obj)
+
+    def copy(self):
+        """
+        Return an un-frozen copy of self
+        """
         return copy.deepcopy(self.__obj)
 
 

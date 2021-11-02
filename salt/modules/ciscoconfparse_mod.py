@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Execution module for `ciscoconfparse <http://www.pennington.net/py/ciscoconfparse/index.html>`_
 
@@ -19,13 +18,10 @@ See http://www.pennington.net/py/ciscoconfparse/index.html for further details.
 This module depends on the Python library with the same name,
 ``ciscoconfparse`` - to install execute: ``pip install ciscoconfparse``.
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 from salt.exceptions import SaltException
 
 # Import Salt modules
-from salt.ext import six
 
 try:
     import ciscoconfparse
@@ -58,13 +54,12 @@ def __virtual__():
 
 
 def _get_ccp(config=None, config_path=None, saltenv="base"):
-    """
-    """
+    """ """
     if config_path:
         config = __salt__["cp.get_file_str"](config_path, saltenv=saltenv)
         if config is False:
             raise SaltException("{} is not available".format(config_path))
-    if isinstance(config, six.string_types):
+    if isinstance(config, str):
         config = config.splitlines()
     ccp = ciscoconfparse.CiscoConfParse(config)
     return ccp
@@ -261,7 +256,7 @@ def find_lines_w_child(
 
         salt '*' ciscoconfparse.find_lines_w_child config_path=https://bit.ly/2mAdq7z parent_line='line con' child_line='stopbits'
         salt '*' ciscoconfparse.find_lines_w_child config_path=https://bit.ly/2uIRxau parent_regex='ge-(.*)' child_regex='unit \d+'
-   """
+    """
     lines = find_objects_w_child(
         config=config,
         config_path=config_path,
@@ -327,7 +322,7 @@ def find_objects_wo_child(
                                                                    child_regex='stopbits')
         for obj in objects:
             print(obj.text)
-   """
+    """
     ccp = _get_ccp(config=config, config_path=config_path, saltenv=saltenv)
     lines = ccp.find_objects_wo_child(parent_regex, child_regex, ignore_ws=ignore_ws)
     return lines

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage and query Bower packages
 ===============================
@@ -8,13 +7,10 @@ Note that npm, git and bower must be installed for this module to be
 available.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import shlex
 
-# Import salt libs
 import salt.utils.json
 import salt.utils.path
 from salt.exceptions import CommandExecutionError
@@ -41,13 +37,16 @@ def _check_valid_version():
     bower must be at least version 1.3.
     """
     # pylint: disable=no-member
-    bower_version = _LooseVersion(__salt__["cmd.run"]("bower --version"))
+    bower_version = _LooseVersion(
+        __salt__["cmd.run"]("{} --version".format(salt.utils.path.which("bower")))
+    )
     valid_version = _LooseVersion("1.3")
     # pylint: enable=no-member
     if bower_version < valid_version:
         raise CommandExecutionError(
-            "'bower' is not recent enough({0} < {1}). "
-            "Please Upgrade.".format(bower_version, valid_version)
+            "'bower' is not recent enough({} < {}). Please Upgrade.".format(
+                bower_version, valid_version
+            )
         )
 
 
@@ -58,7 +57,7 @@ def _construct_bower_command(bower_command):
     if not bower_command:
         raise CommandExecutionError("bower_command, e.g. install, must be specified")
 
-    cmd = ["bower"] + shlex.split(bower_command)
+    cmd = [salt.utils.path.which("bower")] + shlex.split(bower_command)
     cmd.extend(
         [
             "--config.analytics",
@@ -144,7 +143,6 @@ def uninstall(pkg, dir, runas=None, env=None):
         Environment variables to set when invoking Bower. Uses the same ``env``
         format as the :py:func:`cmd.run <salt.modules.cmdmod.run>` execution
         function.
-
 
     CLI Example:
 

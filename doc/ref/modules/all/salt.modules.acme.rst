@@ -1,5 +1,5 @@
-salt.modules.acme module
-========================
+salt.modules.acme
+=================
 
 .. automodule:: salt.modules.acme
     :members:

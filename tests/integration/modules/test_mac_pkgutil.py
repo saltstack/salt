@@ -1,22 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 integration tests for mac_pkgutil
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
-# Import Salt libs
-import salt.utils.path
-import salt.utils.platform
+import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
-
-# Import Salt Testing libs
+from tests.support.helpers import requires_system_grains, runs_on
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 TEST_PKG_URL = (
     "https://distfiles.macports.org/MacPorts/MacPorts-2.3.4-10.11-ElCapitan.pkg"
@@ -24,7 +15,9 @@ TEST_PKG_URL = (
 TEST_PKG_NAME = "org.macports.MacPorts"
 
 
-@skip_if_not_root
+@runs_on(kernel="Darwin")
+@pytest.mark.skip_if_not_root
+@pytest.mark.skip_if_binaries_missing("pkgutil")
 class MacPkgutilModuleTest(ModuleCase):
     """
     Validate the mac_pkgutil module
@@ -36,19 +29,14 @@ class MacPkgutilModuleTest(ModuleCase):
             RUNTIME_VARS.TMP, "MacPorts-2.3.4-10.11-ElCapitan.pkg"
         )
 
-    def setUp(self):
+    @requires_system_grains
+    def setUp(self, grains):  # pylint: disable=arguments-differ
         """
         Get current settings
         """
-        if not salt.utils.platform.is_darwin():
-            self.skipTest("Test only available on macOS")
-
-        if not salt.utils.path.which("pkgutil"):
-            self.skipTest("Test requires pkgutil binary")
-
-        os_release = self.run_function("grains.get", ["osrelease"])
+        os_release = grains["osrelease"]
         self.pkg_name = "com.apple.pkg.BaseSystemResources"
-        if int(os_release.split(".")[1]) >= 13 and salt.utils.platform.is_darwin():
+        if int(os_release.split(".")[1]) >= 13:
             self.pkg_name = "com.apple.pkg.iTunesX"
 
     def tearDown(self):
@@ -58,7 +46,7 @@ class MacPkgutilModuleTest(ModuleCase):
         self.run_function("pkgutil.forget", [TEST_PKG_NAME])
         self.run_function("file.remove", ["/opt/local"])
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_list(self):
         """
         Test pkgutil.list
@@ -66,7 +54,7 @@ class MacPkgutilModuleTest(ModuleCase):
         self.assertIsInstance(self.run_function("pkgutil.list"), list)
         self.assertIn(self.pkg_name, self.run_function("pkgutil.list"))
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_is_installed(self):
         """
         Test pkgutil.is_installed
@@ -77,8 +65,8 @@ class MacPkgutilModuleTest(ModuleCase):
         # Test Package is not installed
         self.assertFalse(self.run_function("pkgutil.is_installed", ["spongebob"]))
 
-    @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_install_forget(self):
         """
         Test pkgutil.install

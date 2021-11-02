@@ -9,7 +9,6 @@ salt for Windows with their corresponding licenses:
 | cffi | MIT |
 | CherryPy | BSD |
 | cryptography | BSD |
-| enum34 | BSD |
 | gitdb | BSD |
 | GitPython | BSD |
 | idna | BSD-like |
@@ -20,7 +19,7 @@ salt for Windows with their corresponding licenses:
 | lxml | BSD |
 | Mako | MIT |
 | MarkupSafe | BSD |
-| msgpack-python | Apache 2.0 |
+| msgpack | Apache 2.0 |
 | pip | MIT |
 | psutil | BSD |
 | pyasn1 | BSD |

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for running fmadm and fmdump on Solaris
 
@@ -8,14 +7,10 @@ Module for running fmadm and fmdump on Solaris
 
 .. versionadded:: 2016.3.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
 import salt.utils.decorators as decorators
-
-# Import Salt libs
 import salt.utils.path
 import salt.utils.platform
 from salt.utils.odict import OrderedDict
@@ -54,7 +49,7 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "{0} module can only be loaded on Solaris with the fault management installed".format(
+        "{} module can only be loaded on Solaris with the fault management installed".format(
             __virtualname__
         ),
     )
@@ -74,7 +69,7 @@ def _parse_fmdump(output):
     # parse entries
     for entry in output:
         entry = [item for item in entry.split(" ") if item]
-        entry = ["{0} {1} {2}".format(entry[0], entry[1], entry[2])] + entry[3:]
+        entry = ["{} {} {}".format(entry[0], entry[1], entry[2])] + entry[3:]
 
         # prepare faults
         fault = OrderedDict()
@@ -110,7 +105,7 @@ def _parse_fmdump_verbose(output):
                 verbose_fault["details"] = ""
             if line.strip() == "":
                 continue
-            verbose_fault["details"] = "{0}{1}\n".format(verbose_fault["details"], line)
+            verbose_fault["details"] = "{}{}\n".format(verbose_fault["details"], line)
     if len(verbose_fault) > 0:
         result.append(verbose_fault)
 
@@ -220,7 +215,7 @@ def _parse_fmadm_faulty(output):
         if summary and summary_data:
             # if line starts with a whitespace and we already have a key, append
             if line.startswith(" ") and data_key:
-                fault_data[data_key] = "{0}\n{1}".format(
+                fault_data[data_key] = "{}\n{}".format(
                     fault_data[data_key], line.strip()
                 )
             # we have a key : value line, parse it
@@ -265,8 +260,8 @@ def list_records(after=None, before=None):
     fmdump = _check_fmdump()
     cmd = "{cmd}{after}{before}".format(
         cmd=fmdump,
-        after=" -t {0}".format(after) if after else "",
-        before=" -T {0}".format(before) if before else "",
+        after=" -t {}".format(after) if after else "",
+        before=" -T {}".format(before) if before else "",
     )
     res = __salt__["cmd.run_all"](cmd)
     retcode = res["retcode"]
@@ -402,7 +397,7 @@ def reset(module, serd=None):
     ret = {}
     fmadm = _check_fmadm()
     cmd = "{cmd} reset {serd}{module}".format(
-        cmd=fmadm, serd="-s {0} ".format(serd) if serd else "", module=module
+        cmd=fmadm, serd="-s {} ".format(serd) if serd else "", module=module
     )
     res = __salt__["cmd.run_all"](cmd)
     retcode = res["retcode"]
@@ -490,7 +485,9 @@ def faulty():
         salt '*' fmadm.faulty
     """
     fmadm = _check_fmadm()
-    cmd = "{cmd} faulty".format(cmd=fmadm,)
+    cmd = "{cmd} faulty".format(
+        cmd=fmadm,
+    )
     res = __salt__["cmd.run_all"](cmd)
     result = {}
     if res["stdout"] == "":

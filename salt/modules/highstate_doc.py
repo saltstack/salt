@@ -1,27 +1,25 @@
-# -*- coding: utf-8 -*-
-
 # pylint: disable=W1401
 '''
 This module renders highstate configuration into a more human readable format.
 
 How it works:
 
-`highstate or lowstate` data is parsed with a `proccesser` this defaults to `highstate_doc.proccesser_markdown`.
-The proccessed data is passed to a `jinja` template that builds up the document content.
+`highstate or lowstate` data is parsed with a `processor` this defaults to `highstate_doc.processor_markdown`.
+The processed data is passed to a `jinja` template that builds up the document content.
 
 
 configuration: Pillar
 
 .. code-block:: none
 
-    # the following defaults can be overrided
+    # the following defaults can be overridden
     highstate_doc.config:
 
-        # list of regex of state names to ignore in `highstate_doc.proccess_lowstates`
+        # list of regex of state names to ignore in `highstate_doc.process_lowstates`
         filter_id_regex:
             - '.*!doc_skip$'
 
-        # list of regex of state functions to ignore in `highstate_doc.proccess_lowstates`
+        # list of regex of state functions to ignore in `highstate_doc.process_lowstates`
         filter_state_function_regex:
             - 'file.accumulated'
 
@@ -32,8 +30,8 @@ configuration: Pillar
         # limit size of files that can be included in doc (10000 bytes)
         max_render_file_size: 10000
 
-        # advanced option to set a custom lowstate proccesser
-        proccesser: highstate_doc.proccesser_markdown
+        # advanced option to set a custom lowstate processor
+        processor: highstate_doc.processor_markdown
 
 
 State example
@@ -47,7 +45,7 @@ State example
             - contents: |
                 example `highstate_doc.note`
                 ------------------
-                This state does not do anything to the system! It is only used by a `proccesser`
+                This state does not do anything to the system! It is only used by a `processor`
                 you can use `requisites` and `order` to move your docs around the rendered file.
 
     {{sls}} a file we don't want in the doc !doc_skip:
@@ -59,7 +57,7 @@ State example
 
 
 To create the help document build a State that uses `highstate_doc.render`.
-For preformance it's advised to not included this state in your `top.sls` file.
+For performance it's advised to not included this state in your `top.sls` file.
 
 .. code-block:: yaml
 
@@ -118,14 +116,14 @@ You can use pandoc to create HTML versions of the markdown.
 
 .. code-block:: bash
 
-    # proccess all the readme.md files to readme.html
+    # process all the readme.md files to readme.html
     if which pandoc; then echo "Found pandoc"; else echo "** Missing pandoc"; exit 1; fi
     if which gs; then echo "Found gs"; else echo "** Missing gs(ghostscript)"; exit 1; fi
     readme_files=$(find $dest -type f -path "*/README.md" -print)
     for f in $readme_files ; do
         ff=${f#$dest/}
         minion=${ff%%/*}
-        echo "proccess: $dest/${minion}/$(basename $f)"
+        echo "process: $dest/${minion}/$(basename $f)"
         cat $dest/${minion}/$(basename $f) | \
             pandoc --standalone --from markdown_github --to html \
             --include-in-header $dest/style.html \
@@ -147,9 +145,9 @@ If you wish to customize the document format:
 
 .. code-block:: none
 
-    # you could also create a new `proccesser` for perhaps reStructuredText
+    # you could also create a new `processor` for perhaps reStructuredText
     # highstate_doc.config:
-    #     proccesser: doc_custom.proccesser_rst
+    #     processor: doc_custom.processor_rst
 
     # example `salt://makereadme.jinja`
     """
@@ -157,7 +155,7 @@ If you wish to customize the document format:
     ==========================================
 
     {# lowstates is set from highstate_doc.render() #}
-    {# if lowstates is missing use salt.highstate_doc.proccess_lowstates() #}
+    {# if lowstates is missing use salt.highstate_doc.process_lowstates() #}
     {% for s in lowstates %}
     {{s.id}}
     -----------------------------------------------------------------
@@ -226,13 +224,10 @@ Some `replace_text_regex` values that might be helpful::
 
 '''
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.templates as tpl
@@ -286,7 +281,7 @@ requisites like `require` force other ordering.
 
 markdown_advanced_jinja_template_txt = (
     markdown_default_jinja_template_txt
-    + """
+    + r"""
 
 {% if vars.get('doc_other', True) -%}
 Other information
@@ -388,12 +383,12 @@ def _get_config(**kwargs):
         "filter_id_regex": [".*!doc_skip"],
         "filter_function_regex": [],
         "replace_text_regex": {},
-        "proccesser": "highstate_doc.proccesser_markdown",
+        "processor": "highstate_doc.processor_markdown",
         "max_render_file_size": 10000,
         "note": None,
     }
     if "__salt__" in globals():
-        config_key = "{0}.config".format(__virtualname__)
+        config_key = "{}.config".format(__virtualname__)
         config.update(__salt__["config.get"](config_key, {}))
     # pylint: disable=C0201
     for k in set(config.keys()) & set(kwargs.keys()):
@@ -459,7 +454,7 @@ def render(
 
     """
     config = _get_config(**kwargs)
-    lowstates = proccess_lowstates(**kwargs)
+    lowstates = process_lowstates(**kwargs)
     # TODO: __env__,
     context = {
         "saltenv": None,
@@ -478,7 +473,7 @@ def render(
         raise Exception("No jinja template text")
 
     txt = tpl.render_jinja_tmpl(template_text, context, tmplpath=None)
-    # after proccessing the template replace passwords or other data.
+    # after processing the template replace passwords or other data.
     rt = config.get("replace_text_regex")
     for r in rt:
         txt = re.sub(r, rt[r], txt)
@@ -488,7 +483,7 @@ def render(
 def _blacklist_filter(s, config):
     ss = s["state"]
     sf = s["fun"]
-    state_function = "{0}.{1}".format(s["state"], s["fun"])
+    state_function = "{}.{}".format(s["state"], s["fun"])
     for b in config["filter_function_regex"]:
         if re.match(b, state_function):
             return True
@@ -498,33 +493,35 @@ def _blacklist_filter(s, config):
     return False
 
 
-def proccess_lowstates(**kwargs):
+def process_lowstates(**kwargs):
     """
-    return proccessed lowstate data that was not blacklisted
+    return processed lowstate data that was not blacklisted
 
     render_module_function is used to provide your own.
     defaults to from_lowstate
     """
     states = []
     config = _get_config(**kwargs)
-    proccesser = config.get("proccesser")
+    processor = config.get("processor")
     ls = __salt__["state.show_lowstate"]()
 
     if not isinstance(ls, list):
         raise Exception(
-            "ERROR: to see details run: [salt-call state.show_lowstate] <-----***-SEE-***"
+            "ERROR: to see details run: [salt-call state.show_lowstate]"
+            " <-----***-SEE-***"
         )
     else:
         if ls:
             if not isinstance(ls[0], dict):
                 raise Exception(
-                    "ERROR: to see details run: [salt-call state.show_lowstate] <-----***-SEE-***"
+                    "ERROR: to see details run: [salt-call state.show_lowstate]"
+                    " <-----***-SEE-***"
                 )
 
     for s in ls:
         if _blacklist_filter(s, config):
             continue
-        doc = __salt__[proccesser](s, config, **kwargs)
+        doc = __salt__[processor](s, config, **kwargs)
         states.append(doc)
     return states
 
@@ -582,7 +579,7 @@ def _format_markdown_system_file(filename, config):
         is_binary = True
         try:
             # TODO: this is linux only should find somthing portable
-            file_type = __salt__["cmd.shell"]("\\file -i '{0}'".format(filename))
+            file_type = __salt__["cmd.shell"]("\\file -i '{}'".format(filename))
             if "charset=binary" not in file_type:
                 is_binary = False
         except Exception as ex:  # pylint: disable=broad-except
@@ -596,9 +593,9 @@ def _format_markdown_system_file(filename, config):
         file_data = _md_fix(file_data)
         ret += "file data {1}\n```\n{0}\n```\n".format(file_data, filename)
     else:
-        ret += "```\n{0}\n```\n".format(
-            "SKIPPED LARGE FILE!\nSet {0}:max_render_file_size > {1} to render.".format(
-                "{0}.config".format(__virtualname__), file_size
+        ret += "```\n{}\n```\n".format(
+            "SKIPPED LARGE FILE!\nSet {}:max_render_file_size > {} to render.".format(
+                "{}.config".format(__virtualname__), file_size
             )
         )
     return ret
@@ -617,23 +614,23 @@ def _format_markdown_requisite(state, stateid, makelink=True):
     """
     format requisite as a link users can click
     """
-    fmt_id = "{0}: {1}".format(state, stateid)
+    fmt_id = "{}: {}".format(state, stateid)
     if makelink:
-        return " * [{0}](#{1})\n".format(fmt_id, _format_markdown_link(fmt_id))
+        return " * [{}](#{})\n".format(fmt_id, _format_markdown_link(fmt_id))
     else:
-        return " * `{0}`\n".format(fmt_id)
+        return " * `{}`\n".format(fmt_id)
 
 
-def proccesser_markdown(lowstate_item, config, **kwargs):
+def processor_markdown(lowstate_item, config, **kwargs):
     """
-    Takes low state data and returns a dict of proccessed data
+    Takes low state data and returns a dict of processed data
     that is by default used in a jinja template when rendering a markdown highstate_doc.
 
     This `lowstate_item_markdown` given a lowstate item, returns a dict like:
 
     .. code-block:: none
 
-        vars:       # the raw lowstate_item that was proccessed
+        vars:       # the raw lowstate_item that was processed
         id:         # the 'id' of the state.
         id_full:    # combo of the state type and id "state: id"
         state:      # name of the salt state module
@@ -647,53 +644,44 @@ def proccesser_markdown(lowstate_item, config, **kwargs):
     """
     # TODO: switch or ... ext call.
     s = lowstate_item
-    state_function = "{0}.{1}".format(s["state"], s["fun"])
-    id_full = "{0}: {1}".format(s["state"], s["__id__"])
+    state_function = "{}.{}".format(s["state"], s["fun"])
+    id_full = "{}: {}".format(s["state"], s["__id__"])
 
     # TODO: use salt defined STATE_REQUISITE_IN_KEYWORDS
     requisites = ""
-    if s.get("watch"):
-        requisites += "run or update after changes in:\n"
-        for w in s.get("watch", []):
-            requisites += _format_markdown_requisite(w.items()[0][0], w.items()[0][1])
-        requisites += "\n"
-    if s.get("watch_in"):
-        requisites += "after changes, run or update:\n"
-        for w in s.get("watch_in", []):
-            requisites += _format_markdown_requisite(w.items()[0][0], w.items()[0][1])
-        requisites += "\n"
-    if s.get("require") and len(s.get("require")) > 0:
-        requisites += "require:\n"
-        for w in s.get("require", []):
-            requisites += _format_markdown_requisite(w.items()[0][0], w.items()[0][1])
-        requisites += "\n"
-    if s.get("require_in"):
-        requisites += "required in:\n"
-        for w in s.get("require_in", []):
-            requisites += _format_markdown_requisite(w.items()[0][0], w.items()[0][1])
-        requisites += "\n"
+    for comment, key in (
+        ("run or update after changes in:\n", "watch"),
+        ("after changes, run or update:\n", "watch_in"),
+        ("require:\n", "require"),
+        ("required in:\n", "require_in"),
+    ):
+        reqs = s.get(key, [])
+        if reqs:
+            requisites += comment
+            for w in reqs:
+                requisites += _format_markdown_requisite(*next(iter(w.items())))
 
     details = ""
 
     if state_function == "highstate_doc.note":
         if "contents" in s:
-            details += "\n{0}\n".format(s["contents"])
+            details += "\n{}\n".format(s["contents"])
         if "source" in s:
             text = __salt__["cp.get_file_str"](s["source"])
             if text:
-                details += "\n{0}\n".format(text)
+                details += "\n{}\n".format(text)
             else:
-                details += "\n{0}\n".format("ERROR: opening {0}".format(s["source"]))
+                details += "\n{}\n".format("ERROR: opening {}".format(s["source"]))
 
     if state_function == "pkg.installed":
         pkgs = s.get("pkgs", s.get("name"))
-        details += "\n```\ninstall: {0}\n```\n".format(pkgs)
+        details += "\n```\ninstall: {}\n```\n".format(pkgs)
 
     if state_function == "file.recurse":
         details += """recurse copy of files\n"""
         y = _state_data_to_yaml_string(s)
         if y:
-            details += "```\n{0}\n```\n".format(y)
+            details += "```\n{}\n```\n".format(y)
         if "!doc_recurse" in id_full:
             findfiles = __salt__["file.find"](path=s.get("name"), type="f")
             if len(findfiles) < 10 or "!doc_recurse_force" in id_full:
@@ -711,12 +699,12 @@ def proccesser_markdown(lowstate_item, config, **kwargs):
 
     if state_function == "file.blockreplace":
         if s.get("content"):
-            details += "ensure block of content is in file\n```\n{0}\n```\n".format(
+            details += "ensure block of content is in file\n```\n{}\n```\n".format(
                 _md_fix(s["content"])
             )
         if s.get("source"):
             text = "** source: " + s.get("source")
-            details += "ensure block of content is in file\n```\n{0}\n```\n".format(
+            details += "ensure block of content is in file\n```\n{}\n```\n".format(
                 _md_fix(text)
             )
 
@@ -727,7 +715,7 @@ def proccesser_markdown(lowstate_item, config, **kwargs):
     if not details:
         y = _state_data_to_yaml_string(s)
         if y:
-            details += "```\n{0}```\n".format(y)
+            details += "```\n{}```\n".format(y)
 
     r = {
         "vars": lowstate_item,

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Installation of Windows Updates using the Windows Update Agent
 
@@ -49,17 +48,12 @@ For removal:
          - KB3194343
          - bb1dbb26-3fb6-45fd-bb05-e3c8e379195c
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.utils.data
 import salt.utils.platform
 import salt.utils.win_update
-
-# Import Salt libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -129,7 +123,7 @@ def installed(name, updates=None):
               - KB3194343
               - 28cf1b09-2b1a-458c-9bd1-971d1b26b211
     """
-    if isinstance(updates, six.string_types):
+    if isinstance(updates, str):
         updates = [updates]
 
     if not updates:
@@ -262,7 +256,7 @@ def removed(name, updates=None):
               - KB3194343
               - 28cf1b09-2b1a-458c-9bd1-971d1b26b211
     """
-    if isinstance(updates, six.string_types):
+    if isinstance(updates, str):
         updates = [updates]
 
     if not updates:
@@ -486,25 +480,40 @@ def uptodate(
 
     post_info = wua.updates().list()
 
+    # Updates not installed is a list of updates that the WUA first requested
+    # to be installed but became ineligible for installation because they were
+    # superseded by other updates
+    updates_not_installed = []
+
     # Verify the installation
     for item in install.list():
-        if not salt.utils.data.is_true(post_info[item]["Installed"]):
-            ret["changes"]["failed"] = {
-                item: {
-                    "Title": post_info[item]["Title"][:40] + "...",
-                    "KBs": post_info[item]["KBs"],
-                }
-            }
-            ret["result"] = False
+        if item not in post_info:
+            # Update (item) was not installed for valid reason
+            updates_not_installed.append(item)
         else:
-            ret["changes"]["installed"] = {
-                item: {
-                    "Title": post_info[item]["Title"][:40] + "...",
-                    "NeedsReboot": post_info[item]["NeedsReboot"],
-                    "KBs": post_info[item]["KBs"],
+            if not salt.utils.data.is_true(post_info[item]["Installed"]):
+                ret["changes"]["failed"] = {
+                    item: {
+                        "Title": post_info[item]["Title"][:40] + "...",
+                        "KBs": post_info[item]["KBs"],
+                    }
                 }
-            }
+                ret["result"] = False
+            else:
+                ret["changes"]["installed"] = {
+                    item: {
+                        "Title": post_info[item]["Title"][:40] + "...",
+                        "NeedsReboot": post_info[item]["NeedsReboot"],
+                        "KBs": post_info[item]["KBs"],
+                    }
+                }
 
+    # Add the list of updates not installed to the return
+    if updates_not_installed:
+        ret["comment"] = "Updates that were not installed:"
+        for update in updates_not_installed:
+            ret["comment"] += "\n"
+            ret["comment"] += ": ".join([update])
     if ret["changes"].get("failed", False):
         ret["comment"] = "Updates failed"
     else:

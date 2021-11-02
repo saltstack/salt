@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Module for gathering and managing network information
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import hashlib
@@ -12,17 +8,16 @@ import logging
 import os
 import re
 import socket
+import time
+from multiprocessing.pool import ThreadPool
 
-# Import salt libs
 import salt.utils.decorators.path
 import salt.utils.functools
+import salt.utils.network
+import salt.utils.platform
 import salt.utils.validate.net
 from salt._compat import ipaddress
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -32,10 +27,11 @@ def __virtual__():
     Only work on POSIX-like systems
     """
     # Disable on Windows, a specific file module exists:
-    if __utils__["platform.is_windows"]():
+    if salt.utils.platform.is_windows():
         return (
             False,
-            "The network execution module cannot be loaded on Windows: use win_network instead.",
+            "The network execution module cannot be loaded on Windows: use win_network"
+            " instead.",
         )
     return True
 
@@ -88,15 +84,15 @@ def ping(host, timeout=False, return_boolean=False):
     """
     if timeout:
         if __grains__["kernel"] == "SunOS":
-            cmd = "ping -c 4 {1} {0}".format(
-                timeout, __utils__["network.sanitize_host"](host)
+            cmd = "ping -c 4 {} {}".format(
+                __utils__["network.sanitize_host"](host), timeout
             )
         else:
-            cmd = "ping -W {0} -c 4 {1}".format(
+            cmd = "ping -W {} -c 4 {}".format(
                 timeout, __utils__["network.sanitize_host"](host)
             )
     else:
-        cmd = "ping -c 4 {0}".format(__utils__["network.sanitize_host"](host))
+        cmd = "ping -c 4 {}".format(__utils__["network.sanitize_host"](host))
     if return_boolean:
         ret = __salt__["cmd.run_all"](cmd)
         if ret["retcode"] != 0:
@@ -232,10 +228,10 @@ def _netinfo_openbsd():
             continue
         if tcp:
             local_addr = tcp
-            proto = "tcp{0}".format("" if ipv6 is None else ipv6)
+            proto = "tcp{}".format("" if ipv6 is None else ipv6)
         else:
             local_addr = udp
-            proto = "udp{0}".format("" if ipv6 is None else ipv6)
+            proto = "udp{}".format("" if ipv6 is None else ipv6)
         if ipv6:
             # IPv6 addresses have the address part enclosed in brackets (if the
             # address part is not a wildcard) to distinguish the address from
@@ -263,7 +259,7 @@ def _netinfo_freebsd_netbsd():
     ret = {}
     # NetBSD requires '-n' to disable port-to-service resolution
     out = __salt__["cmd.run"](
-        "sockstat -46 {0} | tail -n+2".format(
+        "sockstat -46 {} | tail -n+2".format(
             "-n" if __grains__["kernel"] == "NetBSD" else ""
         ),
         python_shell=True,
@@ -302,7 +298,7 @@ def _netstat_bsd():
     ret = []
     if __grains__["kernel"] == "NetBSD":
         for addr_family in ("inet", "inet6"):
-            cmd = "netstat -f {0} -an | tail -n+3".format(addr_family)
+            cmd = "netstat -f {} -an | tail -n+3".format(addr_family)
             out = __salt__["cmd.run"](cmd, python_shell=True)
             for line in out.splitlines():
                 comps = line.split()
@@ -353,7 +349,7 @@ def _netstat_bsd():
         netinfo = _netinfo_openbsd()
     elif __grains__["kernel"] in ("FreeBSD", "NetBSD"):
         netinfo = _netinfo_freebsd_netbsd()
-    for idx in range(len(ret)):
+    for idx, _ in enumerate(ret):
         local = ret[idx]["local-address"]
         remote = ret[idx]["remote-address"]
         proto = ret[idx]["proto"]
@@ -364,13 +360,11 @@ def _netstat_bsd():
         except KeyError:
             continue
         # Get the pid-to-ppid mappings for this connection
-        conn_ppid = dict((x, y) for x, y in six.iteritems(ppid) if x in ptr)
+        conn_ppid = {x: y for x, y in ppid.items() if x in ptr}
         try:
             # Master pid for this connection will be the pid whose ppid isn't
             # in the subset dict we created above
-            master_pid = next(
-                iter(x for x, y in six.iteritems(conn_ppid) if y not in ptr)
-            )
+            master_pid = next(iter(x for x, y in conn_ppid.items() if y not in ptr))
         except StopIteration:
             continue
         ret[idx]["user"] = ptr[master_pid]["user"]
@@ -387,7 +381,7 @@ def _netstat_sunos():
     ret = []
     for addr_family in ("inet", "inet6"):
         # Lookup TCP connections
-        cmd = "netstat -f {0} -P tcp -an | tail +5".format(addr_family)
+        cmd = "netstat -f {} -P tcp -an | tail +5".format(addr_family)
         out = __salt__["cmd.run"](cmd, python_shell=True)
         for line in out.splitlines():
             comps = line.split()
@@ -402,7 +396,7 @@ def _netstat_sunos():
                 }
             )
         # Lookup UDP connections
-        cmd = "netstat -f {0} -P udp -an | tail +5".format(addr_family)
+        cmd = "netstat -f {} -P udp -an | tail +5".format(addr_family)
         out = __salt__["cmd.run"](cmd, python_shell=True)
         for line in out.splitlines():
             comps = line.split()
@@ -426,7 +420,7 @@ def _netstat_aix():
     ## for addr_family in ('inet', 'inet6'):
     for addr_family in ("inet",):
         # Lookup connections
-        cmd = "netstat -n -a -f {0} | tail -n +3".format(addr_family)
+        cmd = "netstat -n -a -f {} | tail -n +3".format(addr_family)
         out = __salt__["cmd.run"](cmd, python_shell=True)
         for line in out.splitlines():
             comps = line.split()
@@ -577,7 +571,17 @@ def _ip_route_linux():
 
         # need to fake similar output to that provided by netstat
         # to maintain output format
-        if comps[0] == "unreachable":
+        if comps[0] in (
+            "unicast",
+            "broadcast",
+            "throw",
+            "unreachable",
+            "prohibit",
+            "blackhole",
+            "nat",
+            "anycast",
+            "multicast",
+        ):
             continue
 
         if comps[0] == "default":
@@ -931,7 +935,7 @@ def traceroute(host):
         salt '*' network.traceroute archlinux.org
     """
     ret = []
-    cmd = "traceroute {0}".format(__utils__["network.sanitize_host"](host))
+    cmd = "traceroute {}".format(__utils__["network.sanitize_host"](host))
     out = __salt__["cmd.run"](cmd)
 
     # Parse version of traceroute
@@ -985,8 +989,8 @@ def traceroute(host):
 
         # Parse output from unix variants
         if (
-            "Darwin" in six.text_type(traceroute_version[1])
-            or "FreeBSD" in six.text_type(traceroute_version[1])
+            "Darwin" in str(traceroute_version[1])
+            or "FreeBSD" in str(traceroute_version[1])
             or __grains__["kernel"] in ("SunOS", "AIX")
         ):
             try:
@@ -995,7 +999,7 @@ def traceroute(host):
                 traceline = re.findall(r"\s*(\d*)\s+(\*\s+\*\s+\*)", line)[0]
 
             log.debug("traceline: %s", traceline)
-            delays = re.findall(r"(\d+\.\d+)\s*ms", six.text_type(traceline))
+            delays = re.findall(r"(\d+\.\d+)\s*ms", str(traceline))
 
             try:
                 if traceline[1] == "* * *":
@@ -1006,8 +1010,8 @@ def traceroute(host):
                         "hostname": traceline[1],
                         "ip": traceline[2],
                     }
-                    for idx in range(0, len(delays)):
-                        result["ms{0}".format(idx + 1)] = delays[idx]
+                    for idx, delay in enumerate(delays):
+                        result["ms{}".format(idx + 1)] = delay
             except IndexError:
                 result = {}
 
@@ -1068,7 +1072,7 @@ def dig(host):
 
         salt '*' network.dig archlinux.org
     """
-    cmd = "dig {0}".format(__utils__["network.sanitize_host"](host))
+    cmd = "dig {}".format(__utils__["network.sanitize_host"](host))
     return __salt__["cmd.run"](cmd)
 
 
@@ -1225,7 +1229,7 @@ def ip_in_subnet(ip_addr, cidr):
 
 def convert_cidr(cidr):
     """
-    returns the network and subnet mask of a cidr addr
+    returns the network address, subnet mask and broadcast address of a cidr address
 
     .. versionadded:: 2016.3.0
 
@@ -1235,11 +1239,12 @@ def convert_cidr(cidr):
 
         salt '*' network.convert_cidr 172.31.0.0/16
     """
-    ret = {"network": None, "netmask": None}
+    ret = {"network": None, "netmask": None, "broadcast": None}
     cidr = calc_net(cidr)
     network_info = ipaddress.ip_network(cidr)
-    ret["network"] = six.text_type(network_info.network_address)
-    ret["netmask"] = six.text_type(network_info.netmask)
+    ret["network"] = str(network_info.network_address)
+    ret["netmask"] = str(network_info.netmask)
+    ret["broadcast"] = str(network_info.broadcast_address)
     return ret
 
 
@@ -1270,7 +1275,7 @@ def ip_addrs(interface=None, include_loopback=False, cidr=None, type=None):
     which are within that subnet. If 'type' is 'public', then only public
     addresses will be returned. Ditto for 'type'='private'.
 
-    .. versionchanged:: Sodium
+    .. versionchanged:: 3001
         ``interface`` can now be a single interface name or a list of
         interfaces. Globbing is also supported.
 
@@ -1305,7 +1310,7 @@ def ip_addrs6(interface=None, include_loopback=False, cidr=None):
     Providing a CIDR via 'cidr="2000::/3"' will return only the addresses
     which are within that subnet.
 
-    .. versionchanged:: Sodium
+    .. versionchanged:: 3001
         ``interface`` can now be a single interface name or a list of
         interfaces. Globbing is also supported.
 
@@ -1394,7 +1399,7 @@ def mod_hostname(hostname):
     # Grab the old hostname so we know which hostname to change and then
     # change the hostname using the hostname command
     if hostname_cmd.endswith("hostnamectl"):
-        result = __salt__["cmd.run_all"]("{0} status".format(hostname_cmd))
+        result = __salt__["cmd.run_all"]("{} status".format(hostname_cmd))
         if 0 == result["retcode"]:
             out = result["stdout"]
             for line in out.splitlines():
@@ -1402,7 +1407,7 @@ def mod_hostname(hostname):
                 if "Static hostname" in line[0]:
                     o_hostname = line[1].strip()
         else:
-            log.debug("{0} was unable to get hostname".format(hostname_cmd))
+            log.debug("%s was unable to get hostname", hostname_cmd)
             o_hostname = __salt__["network.get_hostname"]()
     elif not __utils__["platform.is_sunos"]():
         # don't run hostname -f because -f is not supported on all platforms
@@ -1413,19 +1418,22 @@ def mod_hostname(hostname):
 
     if hostname_cmd.endswith("hostnamectl"):
         result = __salt__["cmd.run_all"](
-            "{0} set-hostname {1}".format(hostname_cmd, hostname,)
+            "{} set-hostname {}".format(
+                hostname_cmd,
+                hostname,
+            )
         )
         if result["retcode"] != 0:
             log.debug(
-                "{0} was unable to set hostname. Error: {1}".format(
-                    hostname_cmd, result["stderr"],
-                )
+                "%s was unable to set hostname. Error: %s",
+                hostname_cmd,
+                result["stderr"],
             )
             return False
     elif not __utils__["platform.is_sunos"]():
-        __salt__["cmd.run"]("{0} {1}".format(hostname_cmd, hostname))
+        __salt__["cmd.run"]("{} {}".format(hostname_cmd, hostname))
     else:
-        __salt__["cmd.run"]("{0} -S {1}".format(uname_cmd, hostname.split(".")[0]))
+        __salt__["cmd.run"]("{} -S {}".format(uname_cmd, hostname.split(".")[0]))
 
     # Modify the /etc/hosts file to replace the old hostname with the
     # new hostname
@@ -1474,12 +1482,14 @@ def mod_hostname(hostname):
         if __grains__["lsb_distrib_id"] == "nilrt":
             str_hostname = __utils__["stringutils.to_str"](hostname)
             nirtcfg_cmd = "/usr/local/natinst/bin/nirtcfg"
-            nirtcfg_cmd += " --set section=SystemSettings,token='Host_Name',value='{0}'".format(
-                str_hostname
+            nirtcfg_cmd += (
+                " --set section=SystemSettings,token='Host_Name',value='{}'".format(
+                    str_hostname
+                )
             )
             if __salt__["cmd.run_all"](nirtcfg_cmd)["retcode"] != 0:
                 raise CommandExecutionError(
-                    "Couldn't set hostname to: {0}\n".format(str_hostname)
+                    "Couldn't set hostname to: {}\n".format(str_hostname)
                 )
     elif __grains__["os_family"] == "OpenBSD":
         with __utils__["files.fopen"]("/etc/myname", "w") as fh_:
@@ -1540,7 +1550,7 @@ def connect(host, port=None, **kwargs):
     ):
         address = host
     else:
-        address = "{0}".format(__utils__["network.sanitize_host"](host))
+        address = "{}".format(__utils__["network.sanitize_host"](host))
 
     try:
         if proto == "udp":
@@ -1564,7 +1574,7 @@ def connect(host, port=None, **kwargs):
         )[0]
     except socket.gaierror:
         ret["result"] = False
-        ret["comment"] = "Unable to resolve host {0} on {1} port {2}".format(
+        ret["comment"] = "Unable to resolve host {} on {} port {}".format(
             host, proto, port
         )
         return ret
@@ -1587,13 +1597,13 @@ def connect(host, port=None, **kwargs):
             skt.shutdown(2)
     except Exception as exc:  # pylint: disable=broad-except
         ret["result"] = False
-        ret["comment"] = "Unable to connect to {0} ({1}) on {2} port {3}".format(
+        ret["comment"] = "Unable to connect to {} ({}) on {} port {}".format(
             host, _address[0], proto, port
         )
         return ret
 
     ret["result"] = True
-    ret["comment"] = "Successfully connected to {0} ({1}) on {2} port {3}".format(
+    ret["comment"] = "Successfully connected to {} ({}) on {} port {}".format(
         host, _address[0], proto, port
     )
     return ret
@@ -1655,7 +1665,7 @@ def _get_bufsize_linux(iface):
     """
     ret = {"result": False}
 
-    cmd = "/sbin/ethtool -g {0}".format(iface)
+    cmd = "/sbin/ethtool -g {}".format(iface)
     out = __salt__["cmd.run"](cmd)
     pat = re.compile(r"^(.+):\s+(\d+)$")
     suffix = "max-"
@@ -1706,15 +1716,13 @@ def _mod_bufsize_linux(iface, *args, **kwargs):
     if not kwargs:
         return ret
     if args:
-        ret["comment"] = "Unknown arguments: " + " ".join(
-            [six.text_type(item) for item in args]
-        )
+        ret["comment"] = "Unknown arguments: " + " ".join([str(item) for item in args])
         return ret
     eargs = ""
     for kw in ["rx", "tx", "rx-mini", "rx-jumbo"]:
         value = kwargs.get(kw)
         if value is not None:
-            eargs += " " + kw + " " + six.text_type(value)
+            eargs += " " + kw + " " + str(value)
     if not eargs:
         return ret
     cmd += eargs
@@ -1761,7 +1769,7 @@ def routes(family=None):
         salt '*' network.routes
     """
     if family != "inet" and family != "inet6" and family is not None:
-        raise CommandExecutionError("Invalid address family {0}".format(family))
+        raise CommandExecutionError("Invalid address family {}".format(family))
 
     if __grains__["kernel"] == "Linux":
         if not __utils__["path.which"]("netstat"):
@@ -1804,22 +1812,26 @@ def default_route(family=None):
 
         salt '*' network.default_route
     """
-
     if family != "inet" and family != "inet6" and family is not None:
-        raise CommandExecutionError("Invalid address family {0}".format(family))
+        raise CommandExecutionError("Invalid address family {}".format(family))
 
-    _routes = routes()
+    _routes = routes(family)
+
     default_route = {}
     if __grains__["kernel"] == "Linux":
         default_route["inet"] = ["0.0.0.0", "default"]
         default_route["inet6"] = ["::/0", "default"]
-    elif __grains__["os"] in [
-        "FreeBSD",
-        "NetBSD",
-        "OpenBSD",
-        "MacOS",
-        "Darwin",
-    ] or __grains__["kernel"] in ("SunOS", "AIX"):
+    elif (
+        __grains__["os"]
+        in [
+            "FreeBSD",
+            "NetBSD",
+            "OpenBSD",
+            "MacOS",
+            "Darwin",
+        ]
+        or __grains__["kernel"] in ("SunOS", "AIX")
+    ):
         default_route["inet"] = ["default"]
         default_route["inet6"] = ["default"]
     else:
@@ -1855,13 +1867,15 @@ def get_route(ip):
     .. versionchanged:: 2016.11.4
         Added support for AIX
 
-    CLI Example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt '*' network.get_route 10.10.10.10
     """
 
     if __grains__["kernel"] == "Linux":
-        cmd = "ip route get {0}".format(ip)
+        cmd = "ip route get {}".format(ip)
         out = __salt__["cmd.run"](cmd, python_shell=True)
         regexp = re.compile(
             r"(via\s+(?P<gateway>[\w\.:]+))?\s+dev\s+(?P<interface>[\w\.\:\-]+)\s+.*src\s+(?P<source>[\w\.:]+)"
@@ -1885,7 +1899,7 @@ def get_route(ip):
         #      flags: <UP,DONE,KERNEL>
         # recvpipe  sendpipe  ssthresh    rtt,ms rttvar,ms  hopcount      mtu     expire
         #       0         0         0         0         0         0      1500         0
-        cmd = "/usr/sbin/route -n get {0}".format(ip)
+        cmd = "/usr/sbin/route -n get {}".format(ip)
         out = __salt__["cmd.run"](cmd, python_shell=False)
 
         ret = {"destination": ip, "gateway": None, "interface": None, "source": None}
@@ -1914,7 +1928,7 @@ def get_route(ip):
         #      flags: <UP,GATEWAY,DONE,STATIC>
         #     use       mtu    expire
         # 8352657         0         0
-        cmd = "route -n get {0}".format(ip)
+        cmd = "route -n get {}".format(ip)
         out = __salt__["cmd.run"](cmd, python_shell=False)
 
         ret = {"destination": ip, "gateway": None, "interface": None, "source": None}
@@ -1942,7 +1956,7 @@ def get_route(ip):
         #     flags: <UP,GATEWAY,HOST,DONE,STATIC>
         # recvpipe  sendpipe  ssthresh  rtt,msec    rttvar  hopcount      mtu     expire
         #      0         0         0         0         0         0         0    -68642
-        cmd = "route -n get {0}".format(ip)
+        cmd = "route -n get {}".format(ip)
         out = __salt__["cmd.run"](cmd, python_shell=False)
 
         ret = {"destination": ip, "gateway": None, "interface": None, "source": None}
@@ -1978,9 +1992,9 @@ def ifacestartswith(cidr):
     """
     net_list = interfaces()
     intfnames = []
-    pattern = six.text_type(cidr)
+    pattern = str(cidr)
     size = len(pattern)
-    for ifname, ifval in six.iteritems(net_list):
+    for ifname, ifval in net_list.items():
         if "inet" in ifval:
             for inet in ifval["inet"]:
                 if inet["address"][0:size] == pattern:
@@ -2010,7 +2024,7 @@ def iphexval(ip):
 
 def ip_networks(interface=None, include_loopback=False, verbose=False):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns a list of IPv4 networks to which the minion belongs.
 
@@ -2035,7 +2049,7 @@ def ip_networks(interface=None, include_loopback=False, verbose=False):
 
 def ip_networks6(interface=None, include_loopback=False, verbose=False):
     """
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns a list of IPv6 networks to which the minion belongs.
 
@@ -2056,3 +2070,65 @@ def ip_networks6(interface=None, include_loopback=False, verbose=False):
     return __utils__["network.ip_networks6"](
         interface=interface, include_loopback=include_loopback, verbose=verbose
     )
+
+
+def fqdns():
+    """
+    Return all known FQDNs for the system by enumerating all interfaces and
+    then trying to reverse resolve them (excluding 'lo' interface).
+    """
+    # Provides:
+    # fqdns
+
+    # Possible value for h_errno defined in netdb.h
+    HOST_NOT_FOUND = 1
+    NO_DATA = 4
+
+    grains = {}
+    fqdns = set()
+
+    def _lookup_fqdn(ip):
+        try:
+            return [socket.getfqdn(socket.gethostbyaddr(ip)[0])]
+        except socket.herror as err:
+            if err.errno in (0, HOST_NOT_FOUND, NO_DATA):
+                # No FQDN for this IP address, so we don't need to know this all the time.
+                log.debug("Unable to resolve address %s: %s", ip, err)
+            else:
+                log.error(err_message, err)
+        except (OSError, socket.gaierror, socket.timeout) as err:
+            log.error(err_message, err)
+
+    start = time.time()
+
+    addresses = salt.utils.network.ip_addrs(
+        include_loopback=False, interface_data=salt.utils.network._get_interfaces()
+    )
+    addresses.extend(
+        salt.utils.network.ip_addrs6(
+            include_loopback=False, interface_data=salt.utils.network._get_interfaces()
+        )
+    )
+    err_message = "Exception during resolving address: %s"
+
+    # Create a ThreadPool to process the underlying calls to 'socket.gethostbyaddr' in parallel.
+    # This avoid blocking the execution when the "fqdn" is not defined for certains IP addresses, which was causing
+    # that "socket.timeout" was reached multiple times secuencially, blocking execution for several seconds.
+
+    results = []
+    try:
+        pool = ThreadPool(8)
+        results = pool.map(_lookup_fqdn, addresses)
+        pool.close()
+        pool.join()
+    except Exception as exc:  # pylint: disable=broad-except
+        log.error("Exception while creating a ThreadPool for resolving FQDNs: %s", exc)
+
+    for item in results:
+        if item:
+            fqdns.update(item)
+
+    elapsed = time.time() - start
+    log.debug("Elapsed time getting FQDNs: %s seconds", elapsed)
+
+    return {"fqdns": sorted(list(fqdns))}
