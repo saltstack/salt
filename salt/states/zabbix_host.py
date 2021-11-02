@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of Zabbix hosts.
 
@@ -6,12 +5,12 @@ Management of Zabbix hosts.
 
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
+from collections.abc import Mapping
 from copy import deepcopy
 
+import salt.utils.dictdiffer
 import salt.utils.json
-from salt.ext import six
 
 
 def __virtual__():
@@ -36,12 +35,15 @@ def present(host, groups, interfaces, **kwargs):
     :param groups: groupids of host groups to add the host to
     :param interfaces: interfaces to be created for the host
     :param proxy_host: Optional proxy name or proxyid to monitor host
-    :param inventory: Optional list of inventory names and values
+    :param inventory: Optional list or dictionary of inventory names and values
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
-    :param visible_name: Optional - string with visible name of the host, use 'visible_name' instead of 'name' \
-    parameter to not mess with value supplied from Salt sls file.
+    :param visible_name: Optional - string with visible name of the host, use 'visible_name' instead of 'name'
+        parameter to not mess with value supplied from Salt sls file.
+    :param inventory_clean: Optional - Boolean value that selects if the current inventory will be cleaned and
+        overwritten by the declared inventory list (True); or if the inventory will be kept and only updated with
+        inventory list contents (False). Defaults to True
 
     .. code-block:: yaml
 
@@ -74,23 +76,23 @@ def present(host, groups, interfaces, **kwargs):
     """
     connection_args = {}
     if "_connection_user" in kwargs:
-        connection_args["_connection_user"] = kwargs["_connection_user"]
+        connection_args["_connection_user"] = kwargs.pop("_connection_user")
     if "_connection_password" in kwargs:
-        connection_args["_connection_password"] = kwargs["_connection_password"]
+        connection_args["_connection_password"] = kwargs.pop("_connection_password")
     if "_connection_url" in kwargs:
-        connection_args["_connection_url"] = kwargs["_connection_url"]
+        connection_args["_connection_url"] = kwargs.pop("_connection_url")
 
     ret = {"name": host, "changes": {}, "result": False, "comment": ""}
 
     # Comment and change messages
-    comment_host_created = "Host {0} created.".format(host)
-    comment_host_updated = "Host {0} updated.".format(host)
-    comment_host_notcreated = "Unable to create host: {0}. ".format(host)
-    comment_host_exists = "Host {0} already exists.".format(host)
+    comment_host_created = "Host {} created.".format(host)
+    comment_host_updated = "Host {} updated.".format(host)
+    comment_host_notcreated = "Unable to create host: {}. ".format(host)
+    comment_host_exists = "Host {} already exists.".format(host)
     changes_host_created = {
         host: {
-            "old": "Host {0} does not exist.".format(host),
-            "new": "Host {0} created.".format(host),
+            "old": "Host {} does not exist.".format(host),
+            "new": "Host {} created.".format(host),
         }
     }
 
@@ -106,7 +108,7 @@ def present(host, groups, interfaces, **kwargs):
         if not interfaces_data:
             return list()
 
-        interface_attrs = ("ip", "dns", "main", "type", "useip", "port")
+        interface_attrs = ("ip", "dns", "main", "type", "useip", "port", "details")
         interfaces_json = salt.utils.json.loads(salt.utils.json.dumps(interfaces_data))
         interfaces_dict = dict()
 
@@ -130,21 +132,51 @@ def present(host, groups, interfaces, **kwargs):
         for key, value in interfaces_dict.items():
             # Load interface values or default values
             interface_type = interface_ports[value["type"].lower()][0]
-            main = (
-                "1"
-                if six.text_type(value.get("main", "true")).lower() == "true"
-                else "0"
-            )
-            useip = (
-                "1"
-                if six.text_type(value.get("useip", "true")).lower() == "true"
-                else "0"
-            )
+            main = "1" if str(value.get("main", "true")).lower() == "true" else "0"
+            useip = "1" if str(value.get("useip", "true")).lower() == "true" else "0"
             interface_ip = value.get("ip", "")
             dns = value.get("dns", key)
-            port = six.text_type(
-                value.get("port", interface_ports[value["type"].lower()][1])
-            )
+            port = str(value.get("port", interface_ports[value["type"].lower()][1]))
+            if interface_type == "2":
+                if not value.get("details", False):
+                    details_version = "2"
+                    details_bulk = "1"
+                    details_community = "{$SNMP_COMMUNITY}"
+                else:
+                    val_details = {}
+                    for detail in value.get("details"):
+                        val_details.update(detail)
+                    details_version = val_details.get("version", "2")
+                    details_bulk = val_details.get("bulk", "1")
+                    details_community = val_details.get(
+                        "community", "{$SNMP_COMMUNITY}"
+                    )
+                details = {
+                    "version": details_version,
+                    "bulk": details_bulk,
+                    "community": details_community,
+                }
+                if details_version == "3":
+                    details_securitylevel = val_details.get("securitylevel", "0")
+                    details_securityname = val_details.get("securityname", "")
+                    details_contextname = val_details.get("contextname", "")
+                    details["securitylevel"] = details_securitylevel
+                    details["securityname"] = details_securityname
+                    details["contextname"] = details_contextname
+                    if int(details_securitylevel) > 0:
+                        details_authpassphrase = val_details.get("authpassphrase", "")
+                        details_authprotocol = val_details.get("authprotocol", "0")
+                        details["authpassphrase"] = details_authpassphrase
+                        details["authprotocol"] = details_authprotocol
+                        if int(details_securitylevel) > 1:
+                            details_privpassphrase = val_details.get(
+                                "privpassphrase", ""
+                            )
+                            details_privprotocol = val_details.get("privprotocol", "0")
+                            details["privpassphrase"] = details_privpassphrase
+                            details["privprotocol"] = details_privprotocol
+            else:
+                details = []
 
             interfaces_list.append(
                 {
@@ -154,6 +186,7 @@ def present(host, groups, interfaces, **kwargs):
                     "ip": interface_ip,
                     "dns": dns,
                     "port": port,
+                    "details": details,
                 }
             )
 
@@ -168,12 +201,12 @@ def present(host, groups, interfaces, **kwargs):
     # Ensure groups are all groupid
     groupids = []
     for group in groups:
-        if isinstance(group, six.string_types):
+        if isinstance(group, str):
             groupid = __salt__["zabbix.hostgroup_get"](name=group, **connection_args)
             try:
                 groupids.append(int(groupid[0]["groupid"]))
             except TypeError:
-                ret["comment"] = "Invalid group {0}".format(group)
+                ret["comment"] = "Invalid group {}".format(group)
                 return ret
         else:
             groupids.append(group)
@@ -182,47 +215,69 @@ def present(host, groups, interfaces, **kwargs):
     # Get and validate proxyid
     proxy_hostid = "0"
     if "proxy_host" in kwargs:
+        proxy_host = kwargs.pop("proxy_host")
         # Test if proxy_host given as name
-        if isinstance(kwargs["proxy_host"], six.string_types):
+        if isinstance(proxy_host, str):
             try:
                 proxy_hostid = __salt__["zabbix.run_query"](
                     "proxy.get",
                     {
                         "output": "proxyid",
                         "selectInterface": "extend",
-                        "filter": {"host": "{0}".format(kwargs["proxy_host"])},
+                        "filter": {"host": "{}".format(proxy_host)},
                     },
                     **connection_args
                 )[0]["proxyid"]
             except TypeError:
-                ret["comment"] = "Invalid proxy_host {0}".format(kwargs["proxy_host"])
+                ret["comment"] = "Invalid proxy_host {}".format(proxy_host)
                 return ret
         # Otherwise lookup proxy_host as proxyid
         else:
             try:
                 proxy_hostid = __salt__["zabbix.run_query"](
                     "proxy.get",
-                    {
-                        "proxyids": "{0}".format(kwargs["proxy_host"]),
-                        "output": "proxyid",
-                    },
+                    {"proxyids": "{}".format(proxy_host), "output": "proxyid"},
                     **connection_args
                 )[0]["proxyid"]
             except TypeError:
-                ret["comment"] = "Invalid proxy_host {0}".format(kwargs["proxy_host"])
+                ret["comment"] = "Invalid proxy_host {}".format(proxy_host)
                 return ret
 
-    if "inventory" not in kwargs:
-        inventory = {}
-    else:
-        inventory = kwargs["inventory"]
-    if inventory is None:
-        inventory = {}
-    # Create dict of requested inventory items
+    # Selects if the current inventory should be substituted by the new one
+    inventory_clean = kwargs.pop("inventory_clean", True)
+
+    inventory = kwargs.pop("inventory", None)
     new_inventory = {}
-    for inv_item in inventory:
-        for k, v in inv_item.items():
-            new_inventory[k] = str(v)
+    if isinstance(inventory, Mapping):
+        new_inventory = dict(inventory)
+    elif inventory is not None:
+        # Create dict of requested inventory items
+        for inv_item in inventory:
+            for k, v in inv_item.items():
+                new_inventory[k] = str(v)
+
+    visible_name = kwargs.pop("visible_name", None)
+
+    host_extra_properties = {}
+    if kwargs:
+        host_properties_definition = [
+            "description",
+            "inventory_mode",
+            "ipmi_authtype",
+            "ipmi_password",
+            "ipmi_privilege",
+            "ipmi_username",
+            "status",
+            "tls_connect",
+            "tls_accept",
+            "tls_issuer",
+            "tls_subject",
+            "tls_psk_identity",
+            "tls_psk",
+        ]
+        for param in host_properties_definition:
+            if param in kwargs:
+                host_extra_properties[param] = kwargs.pop(param)
 
     host_exists = __salt__["zabbix.host_exists"](host, **connection_args)
 
@@ -230,10 +285,26 @@ def present(host, groups, interfaces, **kwargs):
         host = __salt__["zabbix.host_get"](host=host, **connection_args)[0]
         hostid = host["hostid"]
 
+        update_host = False
         update_proxy = False
         update_hostgroups = False
         update_interfaces = False
         update_inventory = False
+
+        host_updated_params = {}
+        for param in host_extra_properties:
+            if param in host:
+                if host[param] == host_extra_properties[param]:
+                    continue
+            host_updated_params[param] = host_extra_properties[param]
+        if host_updated_params:
+            update_host = True
+
+        host_inventory_mode = host["inventory_mode"]
+        inventory_mode = host_extra_properties.get(
+            "inventory_mode",
+            "0" if host_inventory_mode == "-1" else host_inventory_mode,
+        )
 
         cur_proxy_hostid = host["proxy_hostid"]
         if proxy_hostid != cur_proxy_hostid:
@@ -257,8 +328,20 @@ def present(host, groups, interfaces, **kwargs):
             hostinterfaces_copy = deepcopy(hostinterfaces)
             for hostintf in hostinterfaces_copy:
                 hostintf.pop("interfaceid")
-                hostintf.pop("bulk")
                 hostintf.pop("hostid")
+                # "bulk" is present only in snmp interfaces with Zabbix < 5.0
+                if "bulk" in hostintf:
+                    hostintf.pop("bulk")
+                    # as we always sent the "details" it needs to be
+                    # populated in Zabbix < 5.0 response:
+                    if hostintf["type"] == "2":
+                        hostintf["details"] = {
+                            "version": "2",
+                            "bulk": "1",
+                            "community": "{$SNMP_COMMUNITY}",
+                        }
+                    else:
+                        hostintf["details"] = []
             interface_diff = [
                 x for x in interfaces_formated if x not in hostinterfaces_copy
             ] + [y for y in hostinterfaces_copy if y not in interfaces_formated]
@@ -268,26 +351,23 @@ def present(host, groups, interfaces, **kwargs):
         elif not hostinterfaces and interfaces:
             update_interfaces = True
 
-        cur_inventory = __salt__["zabbix.host_inventory_get"](
-            hostids=hostid, **connection_args
-        )
-        if cur_inventory:
-            # Remove blank inventory items
-            cur_inventory = {k: v for k, v in cur_inventory.items() if v}
-            # Remove persistent inventory keys for comparison
-            cur_inventory.pop("hostid", None)
-            cur_inventory.pop("inventory_mode", None)
+        # if inventory param is empty leave inventory as is don't compare it
+        # if inventory_mode is '-1', the inventory will be erased, why compare it?
+        if inventory is not None and inventory_mode != "-1":
+            cur_inventory = __salt__["zabbix.host_inventory_get"](
+                hostids=hostid, **connection_args
+            )
 
-        if new_inventory and not cur_inventory:
-            update_inventory = True
-        elif set(cur_inventory) != set(new_inventory):
-            update_inventory = True
+            inventory_diff = salt.utils.dictdiffer.diff(cur_inventory, new_inventory)
+            if inventory_diff.changed():
+                update_inventory = True
 
     # Dry run, test=true mode
     if __opts__["test"]:
         if host_exists:
             if (
-                update_hostgroups
+                update_host
+                or update_hostgroups
                 or update_interfaces
                 or update_proxy
                 or update_inventory
@@ -307,13 +387,28 @@ def present(host, groups, interfaces, **kwargs):
 
     if host_exists:
         ret["result"] = True
-        if update_hostgroups or update_interfaces or update_proxy or update_inventory:
+        if (
+            update_host
+            or update_hostgroups
+            or update_interfaces
+            or update_proxy
+            or update_inventory
+        ):
 
+            if update_host:
+                # combine connection_args and host_updated_params
+                sum_kwargs = deepcopy(host_updated_params)
+                sum_kwargs.update(connection_args)
+                hostupdate = __salt__["zabbix.host_update"](hostid, **sum_kwargs)
+                ret["changes"]["host"] = str(host_updated_params)
+                if "error" in hostupdate:
+                    error.append(hostupdate["error"])
             if update_inventory:
                 # combine connection_args, inventory, and clear_old
-                sum_kwargs = dict(new_inventory)
+                sum_kwargs = deepcopy(new_inventory)
                 sum_kwargs.update(connection_args)
-                sum_kwargs["clear_old"] = True
+                sum_kwargs["clear_old"] = inventory_clean
+                sum_kwargs["inventory_mode"] = inventory_mode
 
                 hostupdate = __salt__["zabbix.host_inventory_set"](hostid, **sum_kwargs)
                 ret["changes"]["inventory"] = str(new_inventory)
@@ -323,56 +418,105 @@ def present(host, groups, interfaces, **kwargs):
                 hostupdate = __salt__["zabbix.host_update"](
                     hostid, proxy_hostid=proxy_hostid, **connection_args
                 )
-                ret["changes"]["proxy_hostid"] = six.text_type(proxy_hostid)
+                ret["changes"]["proxy_hostid"] = str(proxy_hostid)
                 if "error" in hostupdate:
                     error.append(hostupdate["error"])
             if update_hostgroups:
                 hostupdate = __salt__["zabbix.host_update"](
                     hostid, groups=groups, **connection_args
                 )
-                ret["changes"]["groups"] = six.text_type(groups)
+                ret["changes"]["groups"] = str(groups)
                 if "error" in hostupdate:
                     error.append(hostupdate["error"])
             if update_interfaces:
+                interfaceid_by_type = {
+                    "1": [],  # agent
+                    "2": [],  # snmp
+                    "3": [],  # ipmi
+                    "4": [],  # jmx
+                }
+                other_interfaces = []
+
                 if hostinterfaces:
                     for interface in hostinterfaces:
-                        __salt__["zabbix.hostinterface_delete"](
-                            interfaceids=interface["interfaceid"], **connection_args
+                        if interface["main"]:
+                            interfaceid_by_type[interface["type"]].insert(
+                                0, interface["interfaceid"]
+                            )
+                        else:
+                            interfaceid_by_type[interface["type"]].append(
+                                interface["interfaceid"]
+                            )
+
+                def _update_interfaces(interface):
+                    if not interfaceid_by_type[interface["type"]]:
+                        ret = __salt__["zabbix.hostinterface_create"](
+                            hostid,
+                            interface["ip"],
+                            dns=interface["dns"],
+                            main=interface["main"],
+                            if_type=interface["type"],
+                            useip=interface["useip"],
+                            port=interface["port"],
+                            details=interface["details"],
+                            **connection_args
                         )
+                    else:
+                        interfaceid = interfaceid_by_type[interface["type"]].pop(0)
+                        ret = __salt__["zabbix.hostinterface_update"](
+                            interfaceid=interfaceid,
+                            ip=interface["ip"],
+                            dns=interface["dns"],
+                            main=interface["main"],
+                            type=interface["type"],
+                            useip=interface["useip"],
+                            port=interface["port"],
+                            details=interface["details"],
+                            **connection_args
+                        )
+                    return ret
 
-                hostid = __salt__["zabbix.host_get"](name=host, **connection_args)[0][
-                    "hostid"
-                ]
-
+                # First we try to update the "default" interfaces every host
+                # needs at least one "default" interface
                 for interface in interfaces_formated:
-                    updatedint = __salt__["zabbix.hostinterface_create"](
-                        hostid=hostid,
-                        ip=interface["ip"],
-                        dns=interface["dns"],
-                        main=interface["main"],
-                        type=interface["type"],
-                        useip=interface["useip"],
-                        port=interface["port"],
-                        **connection_args
-                    )
+                    if interface["main"]:
+                        updatedint = _update_interfaces(interface)
+                        if "error" in updatedint:
+                            error.append(updatedint["error"])
+                    else:
+                        other_interfaces.append(interface)
 
+                # Second we update the other interfaces
+                for interface in other_interfaces:
+                    updatedint = _update_interfaces(interface)
                     if "error" in updatedint:
                         error.append(updatedint["error"])
 
-                ret["changes"]["interfaces"] = six.text_type(interfaces_formated)
+                # And finally remove the ones that isn't in the host state
+                for interface_type in interfaceid_by_type:
+                    for interfaceid in interfaceid_by_type[interface_type]:
+                        __salt__["zabbix.hostinterface_delete"](
+                            interfaceids=interfaceid, **connection_args
+                        )
+
+                ret["changes"]["interfaces"] = str(interfaces_formated)
 
             ret["comment"] = comment_host_updated
 
         else:
             ret["comment"] = comment_host_exists
     else:
+        # combine connection_args and host_properties
+        sum_kwargs = host_extra_properties
+        sum_kwargs.update(connection_args)
         host_create = __salt__["zabbix.host_create"](
             host,
             groups,
             interfaces_formated,
             proxy_hostid=proxy_hostid,
             inventory=new_inventory,
-            **connection_args
+            visible_name=visible_name,
+            **sum_kwargs
         )
 
         if "error" not in host_create:
@@ -381,15 +525,13 @@ def present(host, groups, interfaces, **kwargs):
             ret["changes"] = changes_host_created
         else:
             ret["result"] = False
-            ret["comment"] = comment_host_notcreated + six.text_type(
-                host_create["error"]
-            )
+            ret["comment"] = comment_host_notcreated + str(host_create["error"])
 
     # error detected
     if error:
         ret["changes"] = {}
         ret["result"] = False
-        ret["comment"] = six.text_type(error)
+        ret["comment"] = str(error)
 
     return ret
 
@@ -414,13 +556,13 @@ def absent(name, **kwargs):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     # Comment and change messages
-    comment_host_deleted = "Host {0} deleted.".format(name)
-    comment_host_notdeleted = "Unable to delete host: {0}. ".format(name)
-    comment_host_notexists = "Host {0} does not exist.".format(name)
+    comment_host_deleted = "Host {} deleted.".format(name)
+    comment_host_notdeleted = "Unable to delete host: {}. ".format(name)
+    comment_host_notexists = "Host {} does not exist.".format(name)
     changes_host_deleted = {
         name: {
-            "old": "Host {0} exists.".format(name),
-            "new": "Host {0} deleted.".format(name),
+            "old": "Host {} exists.".format(name),
+            "new": "Host {} deleted.".format(name),
         }
     }
     connection_args = {}
@@ -461,9 +603,7 @@ def absent(name, **kwargs):
             ret["changes"] = changes_host_deleted
         else:
             ret["result"] = False
-            ret["comment"] = comment_host_notdeleted + six.text_type(
-                host_delete["error"]
-            )
+            ret["comment"] = comment_host_notdeleted + str(host_delete["error"])
 
     return ret
 
@@ -501,7 +641,7 @@ def assign_templates(host, templates, **kwargs):
 
     # Set comments
     comment_host_templates_updated = "Templates updated."
-    comment_host_templ_notupdated = "Unable to update templates on host: {0}.".format(
+    comment_host_templ_notupdated = "Unable to update templates on host: {}.".format(
         host
     )
     comment_host_templates_in_sync = "Templates already synced."
@@ -544,7 +684,7 @@ def assign_templates(host, templates, **kwargs):
             requested_template_ids.append(template_id)
         except TypeError:
             ret["result"] = False
-            ret["comment"] = "Unable to find template: {0}.".format(template)
+            ret["comment"] = "Unable to find template: {}.".format(template)
             return ret
 
     # remove any duplications

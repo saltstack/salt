@@ -1,5 +1,5 @@
-salt.states.msteams module
-==========================
+salt.states.msteams
+===================
 
 .. automodule:: salt.states.msteams
     :members:

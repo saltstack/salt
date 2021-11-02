@@ -35,7 +35,7 @@ def activate_pipeline(pipeline_id, region=None, key=None, keyid=None, profile=No
     """
     Start processing pipeline tasks. This function is idempotent.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -57,7 +57,7 @@ def create_pipeline(
     """
     Create a new, empty pipeline. This function is idempotent.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -67,7 +67,9 @@ def create_pipeline(
     r = {}
     try:
         response = client.create_pipeline(
-            name=name, uniqueId=unique_id, description=description,
+            name=name,
+            uniqueId=unique_id,
+            description=description,
         )
         r["result"] = response["pipelineId"]
     except (botocore.exceptions.BotoCoreError, botocore.exceptions.ClientError) as e:
@@ -79,7 +81,7 @@ def delete_pipeline(pipeline_id, region=None, key=None, keyid=None, profile=None
     """
     Delete a pipeline, its pipeline definition, and its run history. This function is idempotent.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -99,7 +101,7 @@ def describe_pipelines(pipeline_ids, region=None, key=None, keyid=None, profile=
     """
     Retrieve metadata about one or more pipelines.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -120,7 +122,7 @@ def get_pipeline_definition(
     """
     Get the definition of the specified pipeline.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -130,7 +132,8 @@ def get_pipeline_definition(
     r = {}
     try:
         r["result"] = client.get_pipeline_definition(
-            pipelineId=pipeline_id, version=version,
+            pipelineId=pipeline_id,
+            version=version,
         )
     except (botocore.exceptions.BotoCoreError, botocore.exceptions.ClientError) as e:
         r["error"] = str(e)
@@ -164,7 +167,7 @@ def pipeline_id_from_name(name, region=None, key=None, keyid=None, profile=None)
     """
     Get the pipeline id, if it exists, for the given name.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -197,7 +200,7 @@ def put_pipeline_definition(
     Add tasks, schedules, and preconditions to the specified pipeline. This function is
     idempotent and will replace an existing definition.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -255,5 +258,7 @@ def _get_session(region, key, keyid, profile):
         region = "us-east-1"
 
     return boto3.session.Session(
-        region_name=region, aws_secret_access_key=key, aws_access_key_id=keyid,
+        region_name=region,
+        aws_secret_access_key=key,
+        aws_access_key_id=keyid,
     )

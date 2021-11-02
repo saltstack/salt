@@ -76,7 +76,7 @@ def present(
     checksums
         If True, the cluster will be created with data page checksums.
 
-        .. note::  Data page checksums are supported since PostgreSQL 9.3.
+        .. note:: Data page checksums are supported since PostgreSQL 9.3.
 
         .. versionadded:: 2019.2.0
 

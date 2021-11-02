@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 GoGrid Cloud Module
 ====================
@@ -37,20 +36,15 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
     argument should not be used on maps referencing GoGrid instances.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import pprint
 import time
 
-# Import salt cloud libs
 import salt.config as config
 import salt.utils.cloud
 import salt.utils.hashutils
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
-from salt.ext import six
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -69,13 +63,20 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or __virtualname__,
+        _get_active_provider_name() or __virtualname__,
         ("apikey", "sharedsecret"),
     )
 
@@ -89,7 +90,10 @@ def create(vm_):
         if (
             vm_["profile"]
             and config.is_profile_configured(
-                __opts__, __active_provider_name__ or "gogrid", vm_["profile"], vm_=vm_
+                __opts__,
+                _get_active_provider_name() or "gogrid",
+                vm_["profile"],
+                vm_=vm_,
             )
             is False
         ):
@@ -100,7 +104,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "starting create",
-        "salt/cloud/{0}/creating".format(vm_["name"]),
+        "salt/cloud/{}/creating".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "creating", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -131,7 +135,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "requesting instance",
-        "salt/cloud/{0}/requesting".format(vm_["name"]),
+        "salt/cloud/{}/requesting".format(vm_["name"]),
         args={
             "kwargs": __utils__["cloud.filter_event"](
                 "requesting", create_kwargs, list(create_kwargs)
@@ -187,7 +191,7 @@ def create(vm_):
     __utils__["cloud.fire_event"](
         "event",
         "created instance",
-        "salt/cloud/{0}/created".format(vm_["name"]),
+        "salt/cloud/{}/created".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
             "created", vm_, ["name", "profile", "provider", "driver"]
         ),
@@ -266,7 +270,9 @@ def list_nodes_select(call=None):
         salt-cloud -S
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -336,6 +342,7 @@ def list_public_ips(kwargs=None, call=None):
     List all available public IPs.
 
     CLI Example:
+
     .. code-block:: bash
 
         salt-cloud -f list_public_ips <provider>
@@ -343,6 +350,7 @@ def list_public_ips(kwargs=None, call=None):
     To list unavailable (assigned) IPs, use:
 
     CLI Example:
+
     .. code-block:: bash
 
         salt-cloud -f list_public_ips <provider> state=assigned
@@ -403,13 +411,13 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](
         "event",
         "destroying instance",
-        "salt/cloud/{0}/destroying".format(name),
+        "salt/cloud/{}/destroying".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -420,7 +428,7 @@ def destroy(name, call=None):
     __utils__["cloud.fire_event"](
         "event",
         "destroyed instance",
-        "salt/cloud/{0}/destroyed".format(name),
+        "salt/cloud/{}/destroyed".format(name),
         args={"name": name},
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -428,7 +436,7 @@ def destroy(name, call=None):
 
     if __opts__.get("update_cachedir", False) is True:
         __utils__["cloud.delete_minion_cachedir"](
-            name, __active_provider_name__.split(":")[0], __opts__
+            name, _get_active_provider_name().split(":")[0], __opts__
         )
 
     return response
@@ -528,14 +536,14 @@ def _query(
         path += action
 
     if command:
-        path += "/{0}".format(command)
+        path += "/{}".format(command)
 
     log.debug("GoGrid URL: %s", path)
 
     if not isinstance(args, dict):
         args = {}
 
-    epoch = six.text_type(int(time.time()))
+    epoch = str(int(time.time()))
     hashtext = "".join((apikey, sharedsecret, epoch))
     args["sig"] = salt.utils.hashutils.md5_digest(hashtext)
     args["format"] = "json"

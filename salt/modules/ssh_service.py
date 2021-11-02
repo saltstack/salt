@@ -1,16 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Provide the service module for the proxy-minion SSH sample
 .. versionadded:: 2015.8.2
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import fnmatch
 import logging
 import re
 
-# Import Salt libs
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
@@ -104,6 +100,7 @@ def stop(name, sig=None):
 def restart(name, sig=None):
     """
     Restart the specified service with rest_sample
+
     CLI Example:
 
     .. code-block:: bash

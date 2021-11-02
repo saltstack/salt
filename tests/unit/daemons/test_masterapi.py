@@ -2,10 +2,10 @@ import io
 import stat
 from functools import wraps
 
+import pytest
 import salt.config
 import salt.daemons.masterapi as masterapi
 import salt.utils.platform
-from tests.support.helpers import slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -273,7 +273,7 @@ class LocalFuncsTestCase(TestCase):
 
     # runner tests
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_runner_token_not_authenticated(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token can't authenticate.
@@ -287,7 +287,7 @@ class LocalFuncsTestCase(TestCase):
         ret = self.local_funcs.runner({"token": "asdfasdfasdfasdf"})
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_runner_token_authorization_error(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token authenticates, but is
@@ -299,8 +299,9 @@ class LocalFuncsTestCase(TestCase):
         mock_ret = {
             "error": {
                 "name": "TokenAuthenticationError",
-                "message": 'Authentication failure of type "token" occurred '
-                "for user test.",
+                "message": (
+                    'Authentication failure of type "token" occurred for user test.'
+                ),
             }
         }
 
@@ -311,7 +312,7 @@ class LocalFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_runner_token_salt_invocation_error(self):
         """
         Asserts that a SaltInvocationError is returned when the token authenticates, but the
@@ -336,7 +337,7 @@ class LocalFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_runner_eauth_not_authenticated(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user can't authenticate.
@@ -344,14 +345,15 @@ class LocalFuncsTestCase(TestCase):
         mock_ret = {
             "error": {
                 "name": "EauthAuthenticationError",
-                "message": 'Authentication failure of type "eauth" occurred for '
-                "user UNKNOWN.",
+                "message": (
+                    'Authentication failure of type "eauth" occurred for user UNKNOWN.'
+                ),
             }
         }
         ret = self.local_funcs.runner({"eauth": "foo"})
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_runner_eauth_authorization_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but is
@@ -361,8 +363,9 @@ class LocalFuncsTestCase(TestCase):
         mock_ret = {
             "error": {
                 "name": "EauthAuthenticationError",
-                "message": 'Authentication failure of type "eauth" occurred for '
-                "user test.",
+                "message": (
+                    'Authentication failure of type "eauth" occurred for user test.'
+                ),
             }
         }
         with patch(
@@ -372,7 +375,7 @@ class LocalFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_runner_eauth_salt_invocation_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but the
@@ -401,7 +404,7 @@ class LocalFuncsTestCase(TestCase):
 
     # wheel tests
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_wheel_token_not_authenticated(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token can't authenticate.
@@ -415,7 +418,7 @@ class LocalFuncsTestCase(TestCase):
         ret = self.local_funcs.wheel({"token": "asdfasdfasdfasdf"})
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_wheel_token_authorization_error(self):
         """
         Asserts that a TokenAuthenticationError is returned when the token authenticates, but is
@@ -427,8 +430,9 @@ class LocalFuncsTestCase(TestCase):
         mock_ret = {
             "error": {
                 "name": "TokenAuthenticationError",
-                "message": 'Authentication failure of type "token" occurred '
-                "for user test.",
+                "message": (
+                    'Authentication failure of type "token" occurred for user test.'
+                ),
             }
         }
 
@@ -439,7 +443,7 @@ class LocalFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_wheel_token_salt_invocation_error(self):
         """
         Asserts that a SaltInvocationError is returned when the token authenticates, but the
@@ -464,7 +468,7 @@ class LocalFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_wheel_eauth_not_authenticated(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user can't authenticate.
@@ -472,14 +476,15 @@ class LocalFuncsTestCase(TestCase):
         mock_ret = {
             "error": {
                 "name": "EauthAuthenticationError",
-                "message": 'Authentication failure of type "eauth" occurred for '
-                "user UNKNOWN.",
+                "message": (
+                    'Authentication failure of type "eauth" occurred for user UNKNOWN.'
+                ),
             }
         }
         ret = self.local_funcs.wheel({"eauth": "foo"})
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_wheel_eauth_authorization_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but is
@@ -489,8 +494,9 @@ class LocalFuncsTestCase(TestCase):
         mock_ret = {
             "error": {
                 "name": "EauthAuthenticationError",
-                "message": 'Authentication failure of type "eauth" occurred for '
-                "user test.",
+                "message": (
+                    'Authentication failure of type "eauth" occurred for user test.'
+                ),
             }
         }
         with patch(
@@ -500,7 +506,7 @@ class LocalFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_wheel_eauth_salt_invocation_error(self):
         """
         Asserts that an EauthAuthenticationError is returned when the user authenticates, but the
@@ -527,7 +533,7 @@ class LocalFuncsTestCase(TestCase):
 
         self.assertDictEqual(mock_ret, ret)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_wheel_user_not_authenticated(self):
         """
         Asserts that an UserAuthenticationError is returned when the user can't authenticate.
@@ -535,8 +541,9 @@ class LocalFuncsTestCase(TestCase):
         mock_ret = {
             "error": {
                 "name": "UserAuthenticationError",
-                "message": 'Authentication failure of type "user" occurred for '
-                "user UNKNOWN.",
+                "message": (
+                    'Authentication failure of type "user" occurred for user UNKNOWN.'
+                ),
             }
         }
         ret = self.local_funcs.wheel({})
@@ -544,7 +551,7 @@ class LocalFuncsTestCase(TestCase):
 
     # publish tests
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_publish_user_is_blacklisted(self):
         """
         Asserts that an AuthorizationError is returned when the user has been blacklisted.
@@ -562,7 +569,7 @@ class LocalFuncsTestCase(TestCase):
                 mock_ret, self.local_funcs.publish({"user": "foo", "fun": "test.arg"})
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_publish_cmd_blacklisted(self):
         """
         Asserts that an AuthorizationError is returned when the command has been blacklisted.
@@ -582,7 +589,7 @@ class LocalFuncsTestCase(TestCase):
                 mock_ret, self.local_funcs.publish({"user": "foo", "fun": "test.arg"})
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_publish_token_not_authenticated(self):
         """
         Asserts that an AuthenticationError is returned when the token can't authenticate.
@@ -606,7 +613,7 @@ class LocalFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.local_funcs.publish(load))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_publish_token_authorization_error(self):
         """
         Asserts that an AuthorizationError is returned when the token authenticates, but is not
@@ -639,7 +646,7 @@ class LocalFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.local_funcs.publish(load))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_publish_eauth_not_authenticated(self):
         """
         Asserts that an AuthenticationError is returned when the user can't authenticate.
@@ -663,7 +670,7 @@ class LocalFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.local_funcs.publish(load))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_publish_eauth_authorization_error(self):
         """
         Asserts that an AuthorizationError is returned when the user authenticates, but is not
@@ -693,7 +700,7 @@ class LocalFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.local_funcs.publish(load))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_publish_user_not_authenticated(self):
         """
         Asserts that an AuthenticationError is returned when the user can't authenticate.
@@ -712,7 +719,7 @@ class LocalFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.local_funcs.publish(load))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_publish_user_authenticated_missing_auth_list(self):
         """
         Asserts that an AuthenticationError is returned when the user has an effective user id and is
@@ -743,7 +750,7 @@ class LocalFuncsTestCase(TestCase):
         ):
             self.assertEqual(mock_ret, self.local_funcs.publish(load))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_publish_user_authorization_error(self):
         """
         Asserts that an AuthorizationError is returned when the user authenticates, but is not
@@ -802,7 +809,7 @@ class RemoteFuncsTestCase(TestCase):
         self.addCleanup(self.funcs.destroy)
         self.addCleanup(delattr, self, "funcs")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_mine_get(self, tgt_type_key="tgt_type"):
         """
         Asserts that ``mine_get`` gives the expected results.
@@ -829,7 +836,7 @@ class RemoteFuncsTestCase(TestCase):
             )
         self.assertDictEqual(ret, dict(webserver="2001:db8::1:3"))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_mine_get_pre_nitrogen_compat(self):
         """
         Asserts that pre-Nitrogen API key ``expr_form`` is still accepted.
@@ -838,7 +845,7 @@ class RemoteFuncsTestCase(TestCase):
         """
         self.test_mine_get(tgt_type_key="expr_form")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_mine_get_dict_str(self, tgt_type_key="tgt_type"):
         """
         Asserts that ``mine_get`` gives the expected results when request
@@ -874,7 +881,7 @@ class RemoteFuncsTestCase(TestCase):
             ),
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_mine_get_dict_list(self, tgt_type_key="tgt_type"):
         """
         Asserts that ``mine_get`` gives the expected results when request
@@ -910,7 +917,7 @@ class RemoteFuncsTestCase(TestCase):
             ),
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_mine_get_acl_allowed(self):
         """
         Asserts that ``mine_get`` gives the expected results when this is allowed
@@ -947,7 +954,7 @@ class RemoteFuncsTestCase(TestCase):
             )
         self.assertDictEqual(ret, {"ip_addr": {"webserver": "2001:db8::1:4"}})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_mine_get_acl_rejected(self):
         """
         Asserts that ``mine_get`` gives the expected results when this is rejected

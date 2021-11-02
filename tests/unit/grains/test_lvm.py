@@ -1,12 +1,8 @@
 """
     :codeauthor: :email:`Shane Lee <slee@saltstack.com>`
 """
-# Import Python libs
 
-# Import Salt Libs
 import salt.grains.lvm as lvm
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -91,21 +87,25 @@ class LvmGrainsTestCase(TestCase, LoaderModuleMockMixin):
         """
 
         lsvg_out = "rootvg\nothervg"
-        lsvg_out_rootvg = "rootvg:\n\
-LV NAME             TYPE       LPs     PPs     PVs  LV STATE      MOUNT POINT\n\
-hd5                 boot       1       1       1    closed/syncd  N/A\n\
-hd6                 paging     32      32      1    open/syncd    N/A\n\
-hd8                 jfs2log    1       1       1    open/syncd    N/A\n\
-hd4                 jfs2       32      32      1    open/syncd    /\n\
-hd2                 jfs2       16      16      1    open/syncd    /usr\n\
-hd9var              jfs2       32      32      1    open/syncd    /var\n\
-hd3                 jfs2       32      32      1    open/syncd    /tmp\n\
-hd1                 jfs2       16      16      1    open/syncd    /home\n\
-hd10opt             jfs2       16      16      1    open/syncd    /opt"
-        lsvg_out_othervg = "othervg:\n\
-LV NAME             TYPE       LPs     PPs     PVs  LV STATE      MOUNT POINT\n\
-loglv01             jfs2log    1       1       1    open/syncd    N/A\n\
-datalv              jfs2       16      16      1    open/syncd    /data"
+        lsvg_out_rootvg = (
+            "rootvg:\nLV NAME             TYPE       LPs     PPs     PVs  LV STATE     "
+            " MOUNT POINT\nhd5                 boot       1       1       1   "
+            " closed/syncd  N/A\nhd6                 paging     32      32      1   "
+            " open/syncd    N/A\nhd8                 jfs2log    1       1       1   "
+            " open/syncd    N/A\nhd4                 jfs2       32      32      1   "
+            " open/syncd    /\nhd2                 jfs2       16      16      1   "
+            " open/syncd    /usr\nhd9var              jfs2       32      32      1   "
+            " open/syncd    /var\nhd3                 jfs2       32      32      1   "
+            " open/syncd    /tmp\nhd1                 jfs2       16      16      1   "
+            " open/syncd    /home\nhd10opt             jfs2       16      16      1   "
+            " open/syncd    /opt"
+        )
+        lsvg_out_othervg = (
+            "othervg:\nLV NAME             TYPE       LPs     PPs     PVs  LV STATE    "
+            "  MOUNT POINT\nloglv01             jfs2log    1       1       1   "
+            " open/syncd    N/A\ndatalv              jfs2       16      16      1   "
+            " open/syncd    /data"
+        )
         cmd_out = MagicMock(
             autospec=True, side_effect=[lsvg_out, lsvg_out_rootvg, lsvg_out_othervg]
         )

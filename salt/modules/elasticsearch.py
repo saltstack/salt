@@ -168,7 +168,9 @@ def ping(allow_failure=False, hosts=None, profile=None):
     allow_failure
         Throw exception if ping fails
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.ping allow_failure=True
         salt myminion elasticsearch.ping profile=elasticsearch-extra
@@ -188,7 +190,9 @@ def info(hosts=None, profile=None):
 
     Return Elasticsearch information.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.info
         salt myminion elasticsearch.info profile=elasticsearch-extra
@@ -199,9 +203,8 @@ def info(hosts=None, profile=None):
         return es.info()
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot retrieve server information, server returned code {} with message {}".format(
-                e.status_code, e.error
-            )
+            "Cannot retrieve server information, server returned code {} with"
+            " message {}".format(e.status_code, e.error)
         )
 
 
@@ -216,7 +219,9 @@ def node_info(nodes=None, flat_settings=False, hosts=None, profile=None):
     flat_settings
         Flatten settings keys
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.node_info flat_settings=True
     """
@@ -245,7 +250,9 @@ def cluster_health(index=None, level="cluster", local=False, hosts=None, profile
     local
         Return local information, do not retrieve the state from master node
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.cluster_health
     """
@@ -255,9 +262,8 @@ def cluster_health(index=None, level="cluster", local=False, hosts=None, profile
         return es.cluster.health(index=index, level=level, local=local)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot retrieve health information, server returned code {} with message {}".format(
-                e.status_code, e.error
-            )
+            "Cannot retrieve health information, server returned code {} with"
+            " message {}".format(e.status_code, e.error)
         )
 
 
@@ -270,7 +276,9 @@ def cluster_stats(nodes=None, hosts=None, profile=None):
     nodes
         List of cluster nodes (id or name) to display stats for. Use _local for connected node, empty for all
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.cluster_stats
     """
@@ -300,7 +308,9 @@ def cluster_get_settings(
     include_defaults
         Whether to return all default clusters setting.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.cluster_get_settings
     """
@@ -331,7 +341,9 @@ def cluster_put_settings(body=None, flat_settings=False, hosts=None, profile=Non
     flat_settings
         Return settings in flat format.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.cluster_put_settings '{"persistent": {"indices.recovery.max_bytes_per_sec": "50mb"}}'
         salt myminion elasticsearch.cluster_put_settings '{"transient": {"indices.recovery.max_bytes_per_sec": "50mb"}}'
@@ -364,7 +376,9 @@ def alias_create(indices, alias, hosts=None, body=None, profile=None, source=Non
     source
         URL of file specifying optional definition such as routing or filter. Cannot be used in combination with ``body``.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.alias_create testindex_v1 testindex
     """
@@ -381,9 +395,8 @@ def alias_create(indices, alias, hosts=None, body=None, profile=None, source=Non
         return result.get("acknowledged", False)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot create alias {} in index {}, server returned code {} with message {}".format(
-                alias, indices, e.status_code, e.error
-            )
+            "Cannot create alias {} in index {}, server returned code {} with"
+            " message {}".format(alias, indices, e.status_code, e.error)
         )
 
 
@@ -396,7 +409,9 @@ def alias_delete(indices, aliases, hosts=None, body=None, profile=None, source=N
     aliases
         Alias names separated by comma
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.alias_delete testindex_v1 testindex
     """
@@ -416,9 +431,8 @@ def alias_delete(indices, aliases, hosts=None, body=None, profile=None, source=N
         return True
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot delete alias {} in index {}, server returned code {} with message {}".format(
-                aliases, indices, e.status_code, e.error
-            )
+            "Cannot delete alias {} in index {}, server returned code {} with"
+            " message {}".format(aliases, indices, e.status_code, e.error)
         )
 
 
@@ -431,7 +445,9 @@ def alias_exists(aliases, indices=None, hosts=None, profile=None):
     aliases
         Alias names separated by comma
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.alias_exists None testindex
     """
@@ -457,7 +473,9 @@ def alias_get(indices=None, aliases=None, hosts=None, profile=None):
     aliases
         Alias names separated by comma
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.alias_get testindex
     """
@@ -492,7 +510,9 @@ def document_create(
     id
         Optional unique document identifier for specified doc_type (empty for random)
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.document_create testindex doctype1 '{}'
     """
@@ -508,9 +528,8 @@ def document_create(
         return es.index(index=index, doc_type=doc_type, body=body, id=id)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot create document in index {}, server returned code {} with message {}".format(
-                index, e.status_code, e.error
-            )
+            "Cannot create document in index {}, server returned code {} with"
+            " message {}".format(index, e.status_code, e.error)
         )
 
 
@@ -525,7 +544,9 @@ def document_delete(index, doc_type, id, hosts=None, profile=None):
     id
         Document identifier
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.document_delete testindex doctype1 AUx-384m0Bug_8U80wQZ
     """
@@ -537,9 +558,8 @@ def document_delete(index, doc_type, id, hosts=None, profile=None):
         return None
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot delete document {} in index {}, server returned code {} with message {}".format(
-                id, index, e.status_code, e.error
-            )
+            "Cannot delete document {} in index {}, server returned code {} with"
+            " message {}".format(id, index, e.status_code, e.error)
         )
 
 
@@ -554,7 +574,9 @@ def document_exists(index, id, doc_type="_all", hosts=None, profile=None):
     doc_type
         Type of the document, use _all to fetch the first document matching the ID across all types
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.document_exists testindex AUx-384m0Bug_8U80wQZ
     """
@@ -566,9 +588,8 @@ def document_exists(index, id, doc_type="_all", hosts=None, profile=None):
         return False
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot retrieve document {} from index {}, server returned code {} with message {}".format(
-                id, index, e.status_code, e.error
-            )
+            "Cannot retrieve document {} from index {}, server returned code {} with"
+            " message {}".format(id, index, e.status_code, e.error)
         )
 
 
@@ -583,7 +604,9 @@ def document_get(index, id, doc_type="_all", hosts=None, profile=None):
     doc_type
         Type of the document, use _all to fetch the first document matching the ID across all types
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.document_get testindex AUx-384m0Bug_8U80wQZ
     """
@@ -595,9 +618,8 @@ def document_get(index, id, doc_type="_all", hosts=None, profile=None):
         return None
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot retrieve document {} from index {}, server returned code {} with message {}".format(
-                id, index, e.status_code, e.error
-            )
+            "Cannot retrieve document {} from index {}, server returned code {} with"
+            " message {}".format(id, index, e.status_code, e.error)
         )
 
 
@@ -612,7 +634,9 @@ def index_create(index, body=None, hosts=None, profile=None, source=None):
     source
         URL to file specifying index definition. Cannot be used in combination with ``body``.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.index_create testindex
         salt myminion elasticsearch.index_create testindex2 '{"settings" : {"index" : {"number_of_shards" : 3, "number_of_replicas" : 2}}}'
@@ -648,7 +672,9 @@ def index_delete(index, hosts=None, profile=None):
     index
         Index name
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.index_delete testindex
     """
@@ -675,7 +701,9 @@ def index_exists(index, hosts=None, profile=None):
     index
         Index name
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.index_exists testindex
     """
@@ -700,7 +728,9 @@ def index_get(index, hosts=None, profile=None):
     index
         Index name
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.index_get testindex
     """
@@ -740,7 +770,9 @@ def index_open(
     ignore_unavailable
         Whether specified concrete indices should be ignored when unavailable (missing or closed)
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.index_open testindex
     """
@@ -785,7 +817,9 @@ def index_close(
     ignore_unavailable
         Whether specified concrete indices should be ignored when unavailable (missing or closed)
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.index_close testindex
     """
@@ -836,7 +870,9 @@ def index_get_settings(hosts=None, profile=None, **kwargs):
 
     The defaults settings for the above parameters depend on the API version being used.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.index_get_settings index=testindex
     """
@@ -891,11 +927,13 @@ def index_put_settings(body=None, hosts=None, profile=None, source=None, **kwarg
 
     The defaults settings for the above parameters depend on the API version being used.
 
-    ..note::
+    .. note::
         Elasticsearch time units can be found here:
         https://www.elastic.co/guide/en/elasticsearch/reference/current/common-options.html#time-units
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.index_put_settings index=testindex body='{"settings" : {"index" : {"number_of_replicas" : 2}}}'
     """
@@ -940,7 +978,9 @@ def mapping_create(index, doc_type, body=None, hosts=None, profile=None, source=
     source
         URL to file specifying mapping definition. Cannot be used in combination with ``body``.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.mapping_create testindex user '{ "user" : { "properties" : { "message" : {"type" : "string", "store" : true } } } }'
     """
@@ -973,7 +1013,9 @@ def mapping_delete(index, doc_type, hosts=None, profile=None):
     doc_type
         Name of the document type
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.mapping_delete testindex user
     """
@@ -1003,7 +1045,9 @@ def mapping_get(index, doc_type, hosts=None, profile=None):
     doc_type
         Name of the document type
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.mapping_get testindex user
     """
@@ -1034,7 +1078,9 @@ def index_template_create(name, body=None, hosts=None, profile=None, source=None
     source
         URL to file specifying template definition. Cannot be used in combination with ``body``.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.index_template_create testindex_templ '{ "template": "logstash-*", "order": 1, "settings": { "number_of_shards": 1 } }'
     """
@@ -1064,7 +1110,9 @@ def index_template_delete(name, hosts=None, profile=None):
     name
         Index template name
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.index_template_delete testindex_templ user
     """
@@ -1090,7 +1138,9 @@ def index_template_exists(name, hosts=None, profile=None):
     name
         Index template name
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.index_template_exists testindex_templ
     """
@@ -1112,7 +1162,9 @@ def index_template_get(name, hosts=None, profile=None):
     name
         Index template name
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.index_template_get testindex_templ
     """
@@ -1139,7 +1191,9 @@ def pipeline_get(id, hosts=None, profile=None):
     id
         Pipeline id
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.pipeline_get mypipeline
     """
@@ -1168,7 +1222,9 @@ def pipeline_delete(id, hosts=None, profile=None):
     id
         Pipeline id
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.pipeline_delete mypipeline
     """
@@ -1200,7 +1256,9 @@ def pipeline_create(id, body, hosts=None, profile=None):
     body
         Pipeline definition as specified in https://www.elastic.co/guide/en/elasticsearch/reference/master/pipeline.html
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.pipeline_create mypipeline '{"description": "my custom pipeline", "processors": [{"set" : {"field": "collector_timestamp_millis", "value": "{{_ingest.timestamp}}"}}]}'
     """
@@ -1231,7 +1289,9 @@ def pipeline_simulate(id, body, verbose=False, hosts=None, profile=None):
     verbose
         Specify if the output should be more verbose
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.pipeline_simulate mypipeline '{"docs":[{"_index":"index","_type":"type","_id":"id","_source":{"foo":"bar"}},{"_index":"index","_type":"type","_id":"id","_source":{"foo":"rab"}}]}' verbose=True
     """
@@ -1257,7 +1317,9 @@ def search_template_get(id, hosts=None, profile=None):
     id
         Template ID
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.search_template_get mytemplate
     """
@@ -1286,7 +1348,9 @@ def search_template_create(id, body, hosts=None, profile=None):
     body
         Search template definition
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.search_template_create mytemplate '{"template":{"query":{"match":{"title":"{{query_string}}"}}}}'
     """
@@ -1313,7 +1377,9 @@ def search_template_delete(id, hosts=None, profile=None):
     id
         Template ID
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.search_template_delete mytemplate
     """
@@ -1344,7 +1410,9 @@ def repository_get(name, local=False, hosts=None, profile=None):
     local
         Retrieve only local information, default is false
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.repository_get testrepo
     """
@@ -1373,7 +1441,9 @@ def repository_create(name, body, hosts=None, profile=None):
     body
         Repository definition as in https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-snapshots.html
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.repository_create testrepo '{"type":"fs","settings":{"location":"/tmp/test","compress":true}}'
     """
@@ -1400,7 +1470,9 @@ def repository_delete(name, hosts=None, profile=None):
     name
         Repository name
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.repository_delete testrepo
     """
@@ -1429,7 +1501,9 @@ def repository_verify(name, hosts=None, profile=None):
     name
         Repository name
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.repository_verify testrepo
     """
@@ -1462,7 +1536,9 @@ def snapshot_status(
     ignore_unavailable
         Ignore unavailable snapshots
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.snapshot_status ignore_unavailable=True
     """
@@ -1497,7 +1573,9 @@ def snapshot_get(
     ignore_unavailable
         Ignore unavailable snapshots
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.snapshot_get testrepo testsnapshot
     """
@@ -1511,7 +1589,8 @@ def snapshot_get(
         )
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot obtain details of snapshot {} in repository {}, server returned code {} with message {}".format(
+            "Cannot obtain details of snapshot {} in repository {}, server returned"
+            " code {} with message {}".format(
                 snapshot, repository, e.status_code, e.error
             )
         )
@@ -1530,7 +1609,9 @@ def snapshot_create(repository, snapshot, body=None, hosts=None, profile=None):
     body
         Snapshot definition as in https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-snapshots.html
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.snapshot_create testrepo testsnapshot '{"indices":"index_1,index_2","ignore_unavailable":true,"include_global_state":false}'
     """
@@ -1544,9 +1625,8 @@ def snapshot_create(repository, snapshot, body=None, hosts=None, profile=None):
         return response.get("accepted", False)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot create snapshot {} in repository {}, server returned code {} with message {}".format(
-                snapshot, repository, e.status_code, e.error
-            )
+            "Cannot create snapshot {} in repository {}, server returned code {} with"
+            " message {}".format(snapshot, repository, e.status_code, e.error)
         )
 
 
@@ -1563,7 +1643,9 @@ def snapshot_restore(repository, snapshot, body=None, hosts=None, profile=None):
     body
         Restore definition as in https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-snapshots.html
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.snapshot_restore testrepo testsnapshot '{"indices":"index_1,index_2","ignore_unavailable":true,"include_global_state":true}'
     """
@@ -1577,9 +1659,8 @@ def snapshot_restore(repository, snapshot, body=None, hosts=None, profile=None):
         return response.get("accepted", False)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot restore snapshot {} in repository {}, server returned code {} with message {}".format(
-                snapshot, repository, e.status_code, e.error
-            )
+            "Cannot restore snapshot {} in repository {}, server returned code {} with"
+            " message {}".format(snapshot, repository, e.status_code, e.error)
         )
 
 
@@ -1594,7 +1675,9 @@ def snapshot_delete(repository, snapshot, hosts=None, profile=None):
     snapshot
         Snapshot name
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.snapshot_delete testrepo testsnapshot
     """
@@ -1608,9 +1691,8 @@ def snapshot_delete(repository, snapshot, hosts=None, profile=None):
         return True
     except elasticsearch.TransportError as e:
         raise CommandExecutionError(
-            "Cannot delete snapshot {} from repository {}, server returned code {} with message {}".format(
-                snapshot, repository, e.status_code, e.error
-            )
+            "Cannot delete snapshot {} from repository {}, server returned code {} with"
+            " message {}".format(snapshot, repository, e.status_code, e.error)
         )
 
 
@@ -1643,7 +1725,9 @@ def flush_synced(hosts=None, profile=None, **kwargs):
 
     The defaults settings for the above parameters depend on the API being used.
 
-    CLI example::
+    CLI Example:
+
+    .. code-block:: bash
 
         salt myminion elasticsearch.flush_synced index='index1,index2' ignore_unavailable=True allow_no_indices=True expand_wildcards='all'
     """

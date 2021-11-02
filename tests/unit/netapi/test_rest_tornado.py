@@ -4,6 +4,7 @@ import os
 import shutil
 import urllib.parse
 
+import pytest
 import salt.auth
 import salt.ext.tornado.concurrent
 import salt.ext.tornado.escape
@@ -17,7 +18,7 @@ from salt.ext.tornado.testing import AsyncHTTPTestCase, AsyncTestCase, gen_test
 from salt.ext.tornado.websocket import websocket_connect
 from salt.netapi.rest_tornado import saltnado
 from tests.support.events import eventpublisher_process
-from tests.support.helpers import patched_environ, slowTest
+from tests.support.helpers import patched_environ
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -64,7 +65,7 @@ class SaltnadoTestsBase(AsyncHTTPTestCase, AdaptedConfigurationTestCaseMixin):
 
     @property
     def token(self):
-        """ Mint and return a valid token for auth_creds """
+        """Mint and return a valid token for auth_creds"""
         return self.auth.mk_token(self.auth_creds_dict)
 
     def setUp(self):
@@ -918,7 +919,7 @@ class TestEventListener(AsyncTestCase):
         self.addCleanup(shutil.rmtree, self.sock_dir, ignore_errors=True)
         super().setUp()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_simple(self):
         """
         Test getting a few events
@@ -942,7 +943,7 @@ class TestEventListener(AsyncTestCase):
                 self.assertEqual(event_future.result()["tag"], "evt1")
                 self.assertEqual(event_future.result()["data"]["data"], "foo1")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_set_event_handler(self):
         """
         Test subscribing events using set_event_handler
@@ -955,7 +956,10 @@ class TestEventListener(AsyncTestCase):
                 )
                 self._finished = False  # fit to event_listener's behavior
                 event_future = event_listener.get_event(
-                    self, tag="evt", callback=self.stop, timeout=1,
+                    self,
+                    tag="evt",
+                    callback=self.stop,
+                    timeout=1,
                 )  # get an event future
                 me.fire_event({"data": "foo"}, "evt")  # fire an event we do want
                 self.wait()
@@ -963,7 +967,7 @@ class TestEventListener(AsyncTestCase):
                 # check that we subscribed the event we wanted
                 self.assertEqual(len(event_listener.timeout_map), 0)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_timeout(self):
         """
         Make sure timeouts work correctly
@@ -975,14 +979,17 @@ class TestEventListener(AsyncTestCase):
             )
             self._finished = False  # fit to event_listener's behavior
             event_future = event_listener.get_event(
-                self, tag="evt1", callback=self.stop, timeout=1,
+                self,
+                tag="evt1",
+                callback=self.stop,
+                timeout=1,
             )  # get an event future
             self.wait()
             self.assertTrue(event_future.done())
             with self.assertRaises(saltnado.TimeoutException):
                 event_future.result()
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_clean_by_request(self):
         """
         Make sure the method clean_by_request clean up every related data in EventListener

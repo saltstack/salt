@@ -71,11 +71,24 @@ try:
 except ImportError:
     HAS_PSEXEC = False
 
+
+# Set the minimum version of PyWinrm.
+WINRM_MIN_VER = "0.3.0"
+
+
 try:
     import winrm
     from winrm.exceptions import WinRMTransportError
 
-    HAS_WINRM = True
+    # Verify WinRM 0.3.0 or greater
+    import pkg_resources  # pylint: disable=3rd-party-module-not-gated
+
+    winrm_pkg = pkg_resources.get_distribution("pywinrm")
+    if not salt.utils.versions.compare(winrm_pkg.version, ">=", WINRM_MIN_VER):
+        HAS_WINRM = False
+    else:
+        HAS_WINRM = True
+
 except ImportError:
     HAS_WINRM = False
 
@@ -110,6 +123,9 @@ SSH_PASSWORD_PROMP_RE = re.compile(r"(?:.*)[Pp]assword(?: for .*)?:\ *$", re.M)
 SSH_PASSWORD_PROMP_SUDO_RE = re.compile(
     r"(?:.*sudo)(?:.*)[Pp]assword(?: for .*)?:", re.M
 )
+
+SERVER_ALIVE_INTERVAL = 60
+SERVER_ALIVE_COUNT_MAX = 3
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -170,18 +186,24 @@ def __ssh_gateway_arguments(kwargs):
         ssh_gateway_user = kwargs.get("ssh_gateway_user", "root")
 
         # Setup ProxyCommand
-        extended_arguments = '-oProxyCommand="ssh {} {} {} {} {}@{} -p {} {}"'.format(
-            # Don't add new hosts to the host key database
-            "-oStrictHostKeyChecking=no",
-            # Set hosts key database path to /dev/null, i.e., non-existing
-            "-oUserKnownHostsFile=/dev/null",
-            # Don't re-use the SSH connection. Less failures.
-            "-oControlPath=none",
-            ssh_gateway_key,
-            ssh_gateway_user,
-            ssh_gateway,
-            ssh_gateway_port,
-            ssh_gateway_command,
+        extended_arguments = " ".join(
+            (
+                "ssh",
+                "-oStrictHostKeyChecking=no",
+                "-oServerAliveInterval={}".format(
+                    kwargs.get("server_alive_interval", SERVER_ALIVE_INTERVAL)
+                ),
+                "-oServerAliveCountMax={}".format(
+                    kwargs.get("server_alive_count_max", SERVER_ALIVE_COUNT_MAX)
+                ),
+                "-oUserKnownHostsFile=/dev/null",
+                "-oControlPath=none",
+                str(ssh_gateway_key),
+                "{}@{}".format(ssh_gateway_user, ssh_gateway),
+                "-p",
+                str(ssh_gateway_port),
+                str(ssh_gateway_command),
+            )
         )
 
         log.info(
@@ -592,7 +614,7 @@ def bootstrap(vm_, opts=None):
         "event",
         "executing deploy script",
         "salt/cloud/{}/deploying".format(vm_["name"]),
-        args={"kwargs": event_kwargs},
+        args={"kwargs": salt.utils.data.simple_types_filter(event_kwargs)},
         sock_dir=opts.get("sock_dir", os.path.join(__opts__["sock_dir"], "master")),
         transport=opts.get("transport", "zeromq"),
     )
@@ -678,7 +700,14 @@ def wait_for_fun(fun, timeout=900, **kwargs):
             return False
 
 
-def wait_for_port(host, port=22, timeout=900, gateway=None):
+def wait_for_port(
+    host,
+    port=22,
+    timeout=900,
+    gateway=None,
+    server_alive_interval=SERVER_ALIVE_INTERVAL,
+    server_alive_count_max=SERVER_ALIVE_COUNT_MAX,
+):
     """
     Wait until a connection to the specified port can be made on a specified
     host. This is usually port 22 (for SSH), but in the case of Windows
@@ -701,7 +730,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         test_ssh_host = ssh_gateway
         test_ssh_port = ssh_gateway_port
         log.debug(
-            "Attempting connection to host %s on port %s " "via gateway %s on port %s",
+            "Attempting connection to host %s on port %s via gateway %s on port %s",
             host,
             port,
             ssh_gateway,
@@ -752,6 +781,9 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         [
             # Don't add new hosts to the host key database
             "-oStrictHostKeyChecking=no",
+            # make sure ssh can time out on connection lose
+            "-oServerAliveInterval={}".format(server_alive_interval),
+            "-oServerAliveCountMax={}".format(server_alive_count_max),
             # Set hosts key database path to /dev/null, i.e., non-existing
             "-oUserKnownHostsFile=/dev/null",
             # Don't re-use the SSH connection. Less failures.
@@ -811,8 +843,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
             else:
                 gateway_retries -= 1
                 log.error(
-                    "Gateway usage seems to be broken, "
-                    "password error ? Tries left: %s",
+                    "Gateway usage seems to be broken, password error ? Tries left: %s",
                     gateway_retries,
                 )
             if not gateway_retries:
@@ -1205,7 +1236,11 @@ def deploy_windows(
         opts = {}
 
     if use_winrm and not HAS_WINRM:
-        log.error("WinRM requested but module winrm could not be imported")
+        log.error(
+            "WinRM requested but module winrm could not be imported. "
+            "Ensure you are using version %s or higher.",
+            WINRM_MIN_VER,
+        )
         return False
 
     starttime = time.mktime(time.localtime())
@@ -1244,8 +1279,7 @@ def deploy_windows(
     if port_available and service_available:
         log.debug("SMB port %s on %s is available", port, host)
         log.debug("Logging into %s:%s as %s", host, port, username)
-        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
-        smb_conn = salt.utils.smb.get_conn(host, username, password)
+        smb_conn = salt.utils.smb.get_conn(host, username, password, port)
         if smb_conn is False:
             log.error("Please install smbprotocol to enable SMB functionality")
             return False
@@ -1289,7 +1323,10 @@ def deploy_windows(
         local_path = "/".join(comps[:-1])
         installer = comps[-1]
         salt.utils.smb.put_file(
-            win_installer, "salttemp\\{}".format(installer), "C$", conn=smb_conn,
+            win_installer,
+            "salttemp\\{}".format(installer),
+            "C$",
+            conn=smb_conn,
         )
 
         if use_winrm:
@@ -1474,6 +1511,7 @@ def deploy_script(
                 "port": port,
                 "username": username,
                 "timeout": ssh_timeout,
+                "ssh_timeout": ssh_timeout,
                 "display_ssh_output": display_ssh_output,
                 "sudo_password": sudo_password,
                 "sftp": opts.get("use_sftp", False),
@@ -1493,14 +1531,14 @@ def deploy_script(
                 **ssh_kwargs
             ):
                 ret = root_cmd(
-                    ("sh -c \"( mkdir -p -m 700 '{}' )\"").format(tmp_dir),
+                    "sh -c \"( mkdir -p -m 700 '{}' )\"".format(tmp_dir),
                     tty,
                     sudo,
                     **ssh_kwargs
                 )
                 if ret:
                     raise SaltCloudSystemExit(
-                        "Can't create temporary " "directory in {} !".format(tmp_dir)
+                        "Can't create temporary directory in {} !".format(tmp_dir)
                     )
             if sudo:
                 comps = tmp_dir.lstrip("/").rstrip("/").split("/")
@@ -1704,9 +1742,7 @@ def deploy_script(
                 # subshell fixes that
                 ssh_file(opts, "{}/deploy.sh".format(tmp_dir), script, ssh_kwargs)
                 ret = root_cmd(
-                    ("sh -c \"( chmod +x '{}/deploy.sh' )\";" "exit $?").format(
-                        tmp_dir
-                    ),
+                    "sh -c \"( chmod +x '{}/deploy.sh' )\";exit $?".format(tmp_dir),
                     tty,
                     sudo,
                     **ssh_kwargs
@@ -1730,6 +1766,7 @@ def deploy_script(
                     kwargs=dict(
                         name=name, sock_dir=sock_dir, timeout=newtimeout, queue=queue
                     ),
+                    name="DeployScriptCheckAuth({})".format(name),
                 )
                 log.debug("Starting new process to wait for salt-minion")
                 process.start()
@@ -1781,7 +1818,9 @@ def deploy_script(
                         **ssh_kwargs
                     )
                     # The deploy command is now our wrapper
-                    deploy_command = "'{}/environ-deploy-wrapper.sh'".format(tmp_dir,)
+                    deploy_command = "'{}/environ-deploy-wrapper.sh'".format(
+                        tmp_dir,
+                    )
                 if root_cmd(deploy_command, tty, sudo, **ssh_kwargs) != 0:
                     raise SaltCloudSystemExit(
                         "Executing the command '{}' failed".format(deploy_command)
@@ -2129,6 +2168,13 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
         ssh_args = [
             # Don't add new hosts to the host key database
             "-oStrictHostKeyChecking=no",
+            # make sure ssh can time out on connection lose
+            "-oServerAliveInterval={}".format(
+                kwargs.get("server_alive_interval", SERVER_ALIVE_INTERVAL)
+            ),
+            "-oServerAliveCountMax={}".format(
+                kwargs.get("server_alive_count_max", SERVER_ALIVE_COUNT_MAX)
+            ),
             # Set hosts key database path to /dev/null, i.e., non-existing
             "-oUserKnownHostsFile=/dev/null",
             # Don't re-use the SSH connection. Less failures.
@@ -2246,6 +2292,13 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
         ssh_args = [
             # Don't add new hosts to the host key database
             "-oStrictHostKeyChecking=no",
+            # make sure ssh can time out on connection lose
+            "-oServerAliveInterval={}".format(
+                kwargs.get("server_alive_interval", SERVER_ALIVE_INTERVAL)
+            ),
+            "-oServerAliveCountMax={}".format(
+                kwargs.get("server_alive_count_max", SERVER_ALIVE_COUNT_MAX)
+            ),
             # Set hosts key database path to /dev/null, i.e., non-existing
             "-oUserKnownHostsFile=/dev/null",
             # Don't re-use the SSH connection. Less failures.
@@ -2519,8 +2572,7 @@ def remove_sshkey(host, known_hosts=None):
     else:
         log.debug("Removing ssh key for %s from known hosts file", host)
 
-    cmd = "ssh-keygen -R {}".format(host)
-    subprocess.call(cmd, shell=True)
+    subprocess.call(["ssh-keygen", "-R", host])
 
 
 def wait_for_ip(
@@ -2576,7 +2628,7 @@ def wait_for_ip(
             max_failures -= 1
             if max_failures <= 0:
                 raise SaltCloudExecutionFailure(
-                    "Too many failures occurred while waiting for " "the IP address."
+                    "Too many failures occurred while waiting for the IP address."
                 )
         elif data is not None:
             return data
@@ -2594,7 +2646,7 @@ def wait_for_ip(
             interval *= interval_multiplier
             if interval > timeout:
                 interval = timeout + 1
-            log.info("Interval multiplier in effect; interval is " "now %ss.", interval)
+            log.info("Interval multiplier in effect; interval is now %ss.", interval)
 
 
 def list_nodes_select(nodes, selection, call=None):
@@ -2603,7 +2655,7 @@ def list_nodes_select(nodes, selection, call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes_select function must be called " "with -f or --function."
+            "The list_nodes_select function must be called with -f or --function."
         )
 
     if "error" in nodes:
@@ -2754,7 +2806,12 @@ def init_cachedir(base=None):
 
 # FIXME: This function seems used nowhere. Dead code?
 def request_minion_cachedir(
-    minion_id, opts=None, fingerprint="", pubkey=None, provider=None, base=None,
+    minion_id,
+    opts=None,
+    fingerprint="",
+    pubkey=None,
+    provider=None,
+    base=None,
 ):
     """
     Creates an entry in the requested/ cachedir. This means that Salt Cloud has
@@ -2788,7 +2845,10 @@ def request_minion_cachedir(
 
 
 def change_minion_cachedir(
-    minion_id, cachedir, data=None, base=None,
+    minion_id,
+    cachedir,
+    data=None,
+    base=None,
 ):
     """
     Changes the info inside a minion's cachedir entry. The type of cachedir
@@ -3412,7 +3472,12 @@ def userdata_template(opts, vm_, userdata):
         blacklist = opts["renderer_blacklist"]
         whitelist = opts["renderer_whitelist"]
         templated = salt.template.compile_template(
-            ":string:", rend, renderer, blacklist, whitelist, input_data=userdata,
+            ":string:",
+            rend,
+            renderer,
+            blacklist,
+            whitelist,
+            input_data=userdata,
         )
         if not isinstance(templated, str):
             # template renderers like "jinja" should return a StringIO

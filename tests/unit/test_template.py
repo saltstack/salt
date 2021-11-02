@@ -1,17 +1,12 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email: `Mike Place <mp@saltstack.com>`
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
+import io
+
 from salt import template
-from salt.ext.six.moves import StringIO
 from tests.support.mock import MagicMock
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 
@@ -41,7 +36,7 @@ class TemplateTestCase(TestCase):
             We need a new MagicMock each time since we're dealing with StringIO
             objects which are read like files.
             """
-            return {renderer: MagicMock(return_value=StringIO(value))}
+            return {renderer: MagicMock(return_value=io.StringIO(value))}
 
         input_data_windows = "foo\r\nbar\r\nbaz\r\n"
         input_data_non_windows = input_data_windows.replace("\r\n", "\n")

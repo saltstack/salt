@@ -1,7 +1,6 @@
 import ctypes
 import logging
 import multiprocessing
-import signal
 import time
 from concurrent.futures.thread import ThreadPoolExecutor
 
@@ -18,6 +17,7 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 import zmq.eventloop.ioloop
+from saltfactories.utils.processes import terminate_process
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
@@ -51,7 +51,6 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         sock.setsockopt(zmq.SUBSCRIBE, b"")
         sock.connect(self.pub_uri)
         last_msg = time.time()
-        serial = salt.payload.Serial(self.minion_config)
         crypticle = salt.crypt.Crypticle(self.minion_config, self.aes_key)
         self.started.set()
         while True:
@@ -66,7 +65,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                 time.sleep(0.01)
             else:
                 try:
-                    serial_payload = serial.loads(payload)
+                    serial_payload = salt.payload.loads(payload)
                     payload = crypticle.loads(serial_payload["load"])
                     if "start" in payload:
                         self.running.set()
@@ -139,7 +138,7 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
             while True:
                 payload = self.queue.get()
                 if payload is None:
-                    log.debug("We received the stop sentinal")
+                    log.debug("We received the stop sentinel")
                     break
                 self.pub_server_channel.publish(payload)
         except KeyboardInterrupt:
@@ -157,10 +156,11 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self._closing = True
         if self.process_manager is None:
             return
-        self.process_manager.stop_restarting()
-        self.process_manager.send_signal_to_processes(signal.SIGTERM)
+        self.process_manager.terminate()
         self.pub_server_channel.pub_close()
-        self.process_manager.kill_children()
+        # Really terminate any process still left behind
+        for pid in self.process_manager._process_map:
+            terminate_process(pid=pid, kill_children=True, slow_stop=False)
         self.process_manager = None
 
     def publish(self, payload):

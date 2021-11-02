@@ -43,8 +43,7 @@ Example Provider Configuration
 :maintainer: Russell Tolle <russ.tolle@gmail.com>
 :depends: libcloud >= 1.0.0
 """
-# pylint: disable=invalid-name,function-redefined
-
+# pylint: disable=function-redefined
 
 import logging
 import os
@@ -76,16 +75,6 @@ try:
         ResourceNotFoundError,
     )
 
-    # This work-around for Issue #32743 is no longer needed for libcloud >=
-    # 1.4.0. However, older versions of libcloud must still be supported with
-    # this work-around. This work-around can be removed when the required
-    # minimum version of libcloud is 2.0.0 (See PR #40837 - which is
-    # implemented in Salt 2018.3.0).
-    if _LooseVersion(libcloud.__version__) < _LooseVersion("1.4.0"):
-        # See https://github.com/saltstack/salt/issues/32743
-        import libcloud.security
-
-        libcloud.security.CA_CERTS_PATH.append("/etc/ssl/certs/YaST-CA.pem")
     HAS_LIBCLOUD = True
 except ImportError:
     LIBCLOUD_IMPORT_ERROR = sys.exc_info()
@@ -118,6 +107,12 @@ def __virtual__():
     """
     Set up the libcloud functions and check for GCE configurations.
     """
+    if not HAS_LIBCLOUD:
+        return False, "apache-libcloud is not installed"
+
+    if _LooseVersion(libcloud.__version__) < _LooseVersion("2.5.0"):
+        return False, "The salt-cloud GCE driver requires apache-libcloud>=2.5.0"
+
     if get_configured_provider() is False:
         return False
 
@@ -140,13 +135,20 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or "gce",
+        _get_active_provider_name() or "gce",
         ("project", "service_account_email_address", "service_account_private_key"),
     )
 
@@ -294,7 +296,7 @@ def show_instance(vm_name, call=None):
         )
     conn = get_conn()
     node = _expand_node(conn.ex_get_node(vm_name))
-    __utils__["cloud.cache_node"](node, __active_provider_name__, __opts__)
+    __utils__["cloud.cache_node"](node, _get_active_provider_name(), __opts__)
     return node
 
 
@@ -562,7 +564,8 @@ def __get_ssh_credentials(vm_):
 
 def create_network(kwargs=None, call=None):
     """
-    ... versionchanged:: 2017.7.0
+    .. versionchanged:: 2017.7.0
+
     Create a GCE network. Must specify name and cidr.
 
     CLI Example:
@@ -692,7 +695,8 @@ def show_network(kwargs=None, call=None):
 
 def create_subnetwork(kwargs=None, call=None):
     """
-    ... versionadded:: 2017.7.0
+    .. versionadded:: 2017.7.0
+
     Create a GCE Subnetwork. Must specify name, cidr, network, and region.
 
     CLI Example:
@@ -766,7 +770,8 @@ def create_subnetwork(kwargs=None, call=None):
 
 def delete_subnetwork(kwargs=None, call=None):
     """
-    ... versionadded:: 2017.7.0
+    .. versionadded:: 2017.7.0
+
     Delete a GCE Subnetwork. Must specify name and region.
 
     CLI Example:
@@ -825,7 +830,8 @@ def delete_subnetwork(kwargs=None, call=None):
 
 def show_subnetwork(kwargs=None, call=None):
     """
-    ... versionadded:: 2017.7.0
+    .. versionadded:: 2017.7.0
+
     Show details of an existing GCE Subnetwork. Must specify name and region.
 
     CLI Example:
@@ -1174,6 +1180,7 @@ def create_address(kwargs=None, call=None):
     name = kwargs["name"]
     ex_region = kwargs["region"]
     ex_address = kwargs.get("address", None)
+    kwargs["region"] = {"name": ex_region.name}
 
     conn = get_conn()
 
@@ -1181,7 +1188,7 @@ def create_address(kwargs=None, call=None):
         "event",
         "create address",
         "salt/cloud/address/creating",
-        args=kwargs,
+        args=salt.utils.data.simple_types_filter(kwargs),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
@@ -1192,7 +1199,7 @@ def create_address(kwargs=None, call=None):
         "event",
         "created address",
         "salt/cloud/address/created",
-        args=kwargs,
+        args=salt.utils.data.simple_types_filter(kwargs),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
@@ -2212,7 +2219,7 @@ def destroy(vm_name, call=None):
 
     if __opts__.get("update_cachedir", False) is True:
         __utils__["cloud.delete_minion_cachedir"](
-            vm_name, __active_provider_name__.split(":")[0], __opts__
+            vm_name, _get_active_provider_name().split(":")[0], __opts__
         )
 
     return inst_deleted
@@ -2247,7 +2254,7 @@ def create_attach_volumes(name, kwargs, call=None):
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The create_attach_volumes action must be called with " "-a or --action."
+            "The create_attach_volumes action must be called with -a or --action."
         )
 
     volumes = literal_eval(kwargs["volumes"])
@@ -2277,12 +2284,12 @@ def request_instance(vm_):
     """
     Request a single GCE instance from a data dict.
 
-    .. versionchanged: 2017.7.0
+    .. versionchanged:: 2017.7.0
     """
     if not GCE_VM_NAME_REGEX.match(vm_["name"]):
         raise SaltCloudSystemExit(
-            "VM names must start with a letter, only contain letters, numbers, or dashes "
-            "and cannot end in a dash."
+            "VM names must start with a letter, only contain letters, numbers, or"
+            " dashes and cannot end in a dash."
         )
 
     try:
@@ -2290,7 +2297,7 @@ def request_instance(vm_):
         if (
             vm_["profile"]
             and config.is_profile_configured(
-                __opts__, __active_provider_name__ or "gce", vm_["profile"], vm_=vm_
+                __opts__, _get_active_provider_name() or "gce", vm_["profile"], vm_=vm_
             )
             is False
         ):
@@ -2327,13 +2334,20 @@ def request_instance(vm_):
 
     if external_ip.lower() == "ephemeral":
         external_ip = "ephemeral"
+        vm_["external_ip"] = external_ip
     elif external_ip == "None":
         external_ip = None
+        vm_["external_ip"] = external_ip
     else:
         region = __get_region(conn, vm_)
         external_ip = __create_orget_address(conn, external_ip, region)
+
+        vm_["external_ip"] = {
+            "name": external_ip.name,
+            "address": external_ip.address,
+            "region": external_ip.region.name,
+        }
     kwargs["external_ip"] = external_ip
-    vm_["external_ip"] = external_ip
 
     if LIBCLOUD_VERSION_INFO > (0, 15, 1):
 

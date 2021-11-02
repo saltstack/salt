@@ -68,7 +68,10 @@ def _gluster_xml(cmd):
     # We will pass the command string as stdin to allow for much longer
     # command strings. This is especially useful for creating large volumes
     # where the list of bricks exceeds 128 characters.
-    if _get_version() < (3, 6,):
+    if _get_version() < (
+        3,
+        6,
+    ):
         result = __salt__["cmd.run"](
             'script -q -c "gluster --xml --mode=script"', stdin="{}\n\004".format(cmd)
         )
@@ -762,11 +765,15 @@ def get_max_op_version():
     Requires Glusterfs version > 3.9
 
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' glusterfs.get_max_op_version
     """
-    if _get_version() < (3, 10,):
+    if _get_version() < (
+        3,
+        10,
+    ):
         return (
             False,
             "Glusterfs version must be 3.10+.  Your version is {}.".format(
@@ -823,7 +830,9 @@ def get_version():
     .. versionadded:: 2019.2.0
 
     Returns the version of glusterfs.
+
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' glusterfs.get_version

@@ -11,6 +11,7 @@ import os
 import shutil
 import time
 
+import pytest
 import salt.config
 import salt.ext.tornado.ioloop
 import salt.utils.event
@@ -20,7 +21,6 @@ import zmq.eventloop.ioloop
 from salt.ext.tornado.testing import AsyncTestCase
 from saltfactories.utils.processes import terminate_process
 from tests.support.events import eventpublisher_process, eventsender_process
-from tests.support.helpers import slowTest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, expectedFailure, skipIf
 
@@ -111,7 +111,7 @@ class TestSaltEvent(TestCase):
                 ),
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_event_single(self):
         """Test a single event is received"""
         with eventpublisher_process(self.sock_dir):
@@ -120,7 +120,7 @@ class TestSaltEvent(TestCase):
                 evt1 = me.get_event(tag="evt1")
                 self.assertGotEvent(evt1, {"data": "foo1"})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_event_single_no_block(self):
         """Test a single event is received, no block"""
         with eventpublisher_process(self.sock_dir):
@@ -137,7 +137,7 @@ class TestSaltEvent(TestCase):
                 evt1 = me.get_event(wait=0, tag="evt1")
                 self.assertGotEvent(evt1, {"data": "foo1"})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_event_single_wait_0_no_block_False(self):
         """Test a single event is received with wait=0 and no_block=False and doesn't spin the while loop"""
         with eventpublisher_process(self.sock_dir):
@@ -147,7 +147,7 @@ class TestSaltEvent(TestCase):
                 evt1 = me.get_event(wait=0, tag="evt1", no_block=False)
                 self.assertGotEvent(evt1, {"data": "foo1"})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_event_timeout(self):
         """Test no event is received if the timeout is reached"""
         with eventpublisher_process(self.sock_dir):
@@ -158,16 +158,16 @@ class TestSaltEvent(TestCase):
                 evt2 = me.get_event(tag="evt1")
                 self.assertIsNone(evt2)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_event_no_timeout(self):
-        """Test no wait timeout, we should block forever, until we get one """
+        """Test no wait timeout, we should block forever, until we get one"""
         with eventpublisher_process(self.sock_dir):
             with salt.utils.event.MasterEvent(self.sock_dir, listen=True) as me:
                 with eventsender_process({"data": "foo2"}, "evt2", self.sock_dir, 5):
                     evt = me.get_event(tag="evt2", wait=0, no_block=False)
                 self.assertGotEvent(evt, {"data": "foo2"})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_event_matching(self):
         """Test a startswith match"""
         with eventpublisher_process(self.sock_dir):
@@ -176,7 +176,7 @@ class TestSaltEvent(TestCase):
                 evt1 = me.get_event(tag="ev")
                 self.assertGotEvent(evt1, {"data": "foo1"})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_event_matching_regex(self):
         """Test a regex match"""
         with eventpublisher_process(self.sock_dir):
@@ -185,7 +185,7 @@ class TestSaltEvent(TestCase):
                 evt1 = me.get_event(tag="^ev", match_type="regex")
                 self.assertGotEvent(evt1, {"data": "foo1"})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_event_matching_all(self):
         """Test an all match"""
         with eventpublisher_process(self.sock_dir):
@@ -194,7 +194,7 @@ class TestSaltEvent(TestCase):
                 evt1 = me.get_event(tag="")
                 self.assertGotEvent(evt1, {"data": "foo1"})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_event_matching_all_when_tag_is_None(self):
         """Test event matching all when not passing a tag"""
         with eventpublisher_process(self.sock_dir):
@@ -203,7 +203,7 @@ class TestSaltEvent(TestCase):
                 evt1 = me.get_event()
                 self.assertGotEvent(evt1, {"data": "foo1"})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_event_not_subscribed(self):
         """Test get_event drops non-subscribed events"""
         with eventpublisher_process(self.sock_dir):
@@ -215,7 +215,7 @@ class TestSaltEvent(TestCase):
                 self.assertGotEvent(evt2, {"data": "foo2"})
                 self.assertIsNone(evt1)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_event_subscription_cache(self):
         """Test subscriptions cache a message until requested"""
         with eventpublisher_process(self.sock_dir):
@@ -228,7 +228,7 @@ class TestSaltEvent(TestCase):
                 self.assertGotEvent(evt2, {"data": "foo2"})
                 self.assertGotEvent(evt1, {"data": "foo1"})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_event_subscriptions_cache_regex(self):
         """Test regex subscriptions cache a message until requested"""
         with eventpublisher_process(self.sock_dir):
@@ -241,7 +241,7 @@ class TestSaltEvent(TestCase):
                 self.assertGotEvent(evt2, {"data": "foo2"})
                 self.assertGotEvent(evt1, {"data": "foo1"})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_event_multiple_clients(self):
         """Test event is received by multiple clients"""
         with eventpublisher_process(self.sock_dir):
@@ -271,7 +271,7 @@ class TestSaltEvent(TestCase):
                 self.assertGotEvent(evt2, {"data": "foo2"})
                 self.assertGotEvent(evt1, {"data": "foo1"})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_event_many(self):
         """Test a large number of events, one at a time"""
         with eventpublisher_process(self.sock_dir):
@@ -283,7 +283,7 @@ class TestSaltEvent(TestCase):
                         evt, {"data": "{}".format(i)}, "Event {}".format(i)
                     )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_event_many_backlog(self):
         """Test a large number of events, send all then recv all"""
         with eventpublisher_process(self.sock_dir):
@@ -299,7 +299,7 @@ class TestSaltEvent(TestCase):
 
     # Test the fire_master function. As it wraps the underlying fire_event,
     # we don't need to perform extensive testing.
-    @slowTest
+    @pytest.mark.slow_test
     def test_send_master_event(self):
         """Tests that sending an event through fire_master generates expected event"""
         with eventpublisher_process(self.sock_dir):
@@ -330,7 +330,10 @@ class TestAsyncEventPublisher(AsyncTestCase):
             os.makedirs(self.sock_dir)
         self.addCleanup(shutil.rmtree, self.sock_dir, ignore_errors=True)
         self.opts = {"sock_dir": self.sock_dir}
-        self.publisher = salt.utils.event.AsyncEventPublisher(self.opts, self.io_loop,)
+        self.publisher = salt.utils.event.AsyncEventPublisher(
+            self.opts,
+            self.io_loop,
+        )
         self.event = salt.utils.event.get_event(
             "minion", opts=self.opts, io_loop=self.io_loop
         )
@@ -369,7 +372,7 @@ class TestAsyncEventPublisher(AsyncTestCase):
 
 
 class TestEventReturn(TestCase):
-    @slowTest
+    @pytest.mark.slow_test
     def test_event_return(self):
         evt = None
         try:

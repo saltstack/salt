@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Network Probes
 ===============
@@ -15,22 +14,14 @@ Dependencies
 
 - :mod:`napalm probes management module <salt.modules.napalm_probes>`
 
-.. versionadded: 2016.11.0
+.. versionadded:: 2016.11.0
 """
 
-from __future__ import absolute_import
-
-# python std lib
+import copy
 import logging
-from copy import deepcopy
 
 import salt.utils.json
-
-# import NAPALM utils
 import salt.utils.napalm
-
-# salt modules
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -88,13 +79,13 @@ def _expand_probes(probes, defaults):
 
     expected_probes = {}
 
-    for probe_name, probe_test in six.iteritems(probes):
+    for probe_name, probe_test in probes.items():
         if probe_name not in expected_probes.keys():
             expected_probes[probe_name] = {}
         probe_defaults = probe_test.pop("defaults", {})
-        for test_name, test_details in six.iteritems(probe_test):
+        for test_name, test_details in probe_test.items():
             test_defaults = test_details.pop("defaults", {})
-            expected_test_details = deepcopy(
+            expected_test_details = copy.deepcopy(
                 defaults
             )  # copy first the general defaults
             expected_test_details.update(
@@ -121,12 +112,12 @@ def _clean_probes(probes):
     probes = _ordered_dict_to_dict(
         probes
     )  # make sure we are working only with dict-type
-    probes_copy = deepcopy(probes)
-    for probe_name, probe_tests in six.iteritems(probes_copy):
+    probes_copy = copy.deepcopy(probes)
+    for probe_name, probe_tests in probes_copy.items():
         if not probe_tests:
             probes.pop(probe_name)
             continue
-        for test_name, test_params in six.iteritems(probe_tests):
+        for test_name, test_params in probe_tests.items():
             if not test_params:
                 probes[probe_name].pop(test_name)
             if not probes.get(probe_name):
@@ -167,7 +158,7 @@ def _compare_probes(configured_probes, expected_probes):
         remove_probes[probe_name] = configured_probes.pop(probe_name)
 
     # common probes
-    for probe_name, probe_tests in six.iteritems(expected_probes):
+    for probe_name, probe_tests in expected_probes.items():
         configured_probe_tests = configured_probes.get(probe_name, {})
         configured_tests_keys_set = set(configured_probe_tests.keys())
         expected_tests_keys_set = set(probe_tests.keys())
@@ -187,7 +178,7 @@ def _compare_probes(configured_probes, expected_probes):
                 {test_name: configured_probe_tests.pop(test_name)}
             )
         # common tests for common probes
-        for test_name, test_params in six.iteritems(probe_tests):
+        for test_name, test_params in probe_tests.items():
             configured_test_params = configured_probe_tests.get(test_name, {})
             # if test params are different, probe goes to update probes dict!
             if test_params != configured_test_params:
@@ -347,8 +338,9 @@ def managed(name, probes, defaults=None):
         ret.update(
             {
                 "result": False,
-                "comment": "Cannot retrieve configurtion of the probes from the device: {reason}".format(
-                    reason=rpm_probes_config.get("comment")
+                "comment": (
+                    "Cannot retrieve configurtion of the probes from the device:"
+                    " {reason}".format(reason=rpm_probes_config.get("comment"))
                 ),
             }
         )

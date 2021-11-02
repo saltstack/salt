@@ -203,12 +203,12 @@ def list_(
             else:
                 if not salt.utils.path.which("tar"):
                     raise CommandExecutionError("'tar' command not available")
-                if decompress_cmd is not None:
+                if decompress_cmd is not None and isinstance(decompress_cmd, str):
                     # Guard against shell injection
                     try:
-                        decompress_cmd = " ".join(
-                            [shlex.quote(x) for x in shlex.split(decompress_cmd)]
-                        )
+                        decompress_cmd = [
+                            shlex.quote(x) for x in shlex.split(decompress_cmd)
+                        ]
                     except AttributeError:
                         raise CommandExecutionError("Invalid CLI options")
                 else:
@@ -221,12 +221,11 @@ def list_(
                         )
                         == 0
                     ):
-                        decompress_cmd = "xz --decompress --stdout"
+                        decompress_cmd = ["xz", "--decompress", "--stdout"]
 
                 if decompress_cmd:
                     decompressed = subprocess.Popen(
-                        "{} {}".format(decompress_cmd, shlex.quote(cached)),
-                        shell=True,
+                        decompress_cmd + [shlex.quote(cached)],
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
                     )
@@ -670,7 +669,6 @@ def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
 
         .. versionadded:: 2015.5.0
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -907,7 +905,6 @@ def cmd_unzip(
             appear in the log.
 
         .. versionadded:: 2016.11.0
-
 
     CLI Example:
 
@@ -1297,8 +1294,7 @@ def _render_filenames(filenames, zip_file, saltenv, template):
     # render the path as a template using path_template_engine as the engine
     if template not in salt.utils.templates.TEMPLATE_REGISTRY:
         raise CommandExecutionError(
-            "Attempted to render file paths with unavailable engine "
-            "{}".format(template)
+            "Attempted to render file paths with unavailable engine {}".format(template)
         )
 
     kwargs = {}

@@ -34,6 +34,13 @@ def __virtual__():
     return True
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def avail_locations(call=None):
     r"""
     This function returns a list of locations available.
@@ -53,8 +60,8 @@ def avail_locations(call=None):
 
 def avail_images(call=None):
     """This function returns a list of images available for this cloud provider.
-     vagrant will return a list of profiles.
-     salt-cloud --list-images my-cloud-provider
+    vagrant will return a list of profiles.
+    salt-cloud --list-images my-cloud-provider
     """
     vm_ = get_configured_provider()
     return {"Profiles": [profile for profile in vm_["profiles"]]}
@@ -168,7 +175,9 @@ def list_nodes_select(call=None):
     select fields.
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -265,7 +274,7 @@ def get_configured_provider():
     Return the first configured instance.
     """
     ret = config.is_provider_configured(
-        __opts__, __active_provider_name__ or "vagrant", ""
+        __opts__, _get_active_provider_name() or "vagrant", ""
     )
     return ret
 
@@ -283,7 +292,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a, or --action."
+            "The destroy action must be called with -d, --destroy, -a, or --action."
         )
 
     opts = __opts__
@@ -316,7 +325,7 @@ def destroy(name, call=None):
 
             if opts.get("update_cachedir", False) is True:
                 __utils__["cloud.delete_minion_cachedir"](
-                    name, __active_provider_name__.split(":")[0], opts
+                    name, _get_active_provider_name().split(":")[0], opts
                 )
 
             return {"Destroyed": "{} was destroyed.".format(name)}
