@@ -4,12 +4,12 @@
 Salt Channels
 =============
 
-One of fundamental features of Salt is remote execution. Salt has two basic
-"channels" for communicating with minions. Each channel requires a
-client (minion) and a server (master) implementation to work within Salt. These
-pairs of channels will work together to implement the specific message passing
-required by the channel interface. Channels use :ref:`Transports <transports>` for sending and
-receiving messages.
+One of the fundamental features of Salt is remote execution. Salt has two basic
+"channels" for communicating with minions. Each channel requires a client
+(minion) and a server (master) implementation to work within Salt. These pairs
+of channels will work together to implement the specific message passing
+required by the channel interface. Channels use :ref:`Transports <transports>`
+for sending and receiving messages.
 
 
 Pub Channel
