@@ -506,7 +506,6 @@ class AsyncReqMessageClient:
         # mapping of message -> future
         self.send_future_map = {}
 
-        # self.send_timeout_map = {}  # message -> timeout
         self._closing = False
 
     # TODO: timeout all in-flight sessions, or error
@@ -530,7 +529,7 @@ class AsyncReqMessageClient:
                     self.stream.socket = None
                     self.socket.close()
                 else:
-                    self.stream.close()
+                    self.stream.close(1)
                     self.socket = None
                 self.stream = None
             if self.context.closed is False:
