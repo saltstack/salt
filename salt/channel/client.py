@@ -318,7 +318,7 @@ class AsyncPubChannel:
         self.opts = opts
         self.io_loop = io_loop
         self.auth = auth
-        self.tok = self.auth.gen_token(b"salt")
+        self.token = self.auth.gen_token(b"salt")
         self.transport = transport
         self._closing = False
         self._reconnected = False
@@ -436,7 +436,7 @@ class AsyncPubChannel:
         try:
             # Force re-auth on reconnect since the master
             # may have been restarted
-            yield self.send_id(self.tok, self._reconnected)
+            yield self.send_id(self.token, self._reconnected)
             self.connected = True
             self.event.fire_event({"master": self.opts["master"]}, "__master_connected")
             if self._reconnected:
@@ -456,7 +456,7 @@ class AsyncPubChannel:
                     "id": self.opts["id"],
                     "cmd": "_minion_event",
                     "pretag": None,
-                    "tok": self.tok,
+                    "tok": self.token,
                     "data": data,
                     "tag": tag,
                 }
