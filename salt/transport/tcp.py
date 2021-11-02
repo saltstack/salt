@@ -878,7 +878,6 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
             try:
                 client._read_until_future = client.stream.read_bytes(4096, partial=True)
                 wire_bytes = yield client._read_until_future
-                # wire_bytes = yield client.stream.read_bytes(4096, partial=True)
                 unpacker.feed(wire_bytes)
                 for framed_msg in unpacker:
                     framed_msg = salt.transport.frame.decode_embedded_strs(framed_msg)
@@ -928,7 +927,6 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
                 try:
                     # Write the packed str
                     yield client.stream.write(payload)
-                    # self.io_loop.add_future(f, lambda f: True)
                 except salt.ext.tornado.iostream.StreamClosedError:
                     to_remove.append(client)
         for client in to_remove:
