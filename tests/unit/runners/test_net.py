@@ -1,15 +1,7 @@
-# -*- coding: utf-8 -*-
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import shutil
 import tempfile
 
-# Import salt libs
 import salt.runners.net as net
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
 from tests.support.runtests import RUNTIME_VARS

@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Module for gathering and managing information about MooseFS
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.utils.path
 
 
@@ -16,7 +13,8 @@ def __virtual__():
         return "moosefs"
     return (
         False,
-        "The moosefs execution module cannot be loaded: the mfsgetgoal binary is not in the path.",
+        "The moosefs execution module cannot be loaded: the mfsgetgoal binary is not in"
+        " the path.",
     )
 
 

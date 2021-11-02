@@ -28,12 +28,12 @@ exist for earlier Salt Minion versions.
 
 .. note::
     - `Earlier builds from supported branches
-      <https://repo.saltstack.com/windows/>`__
+      <https://repo.saltproject.io/windows/>`__
 
     Archived builds from unsupported branches:
 
-    - `Archive 1 <https://archive.saltstack.com/windows/>`__
-    - `Archive 2 <https://archive.saltstack.com/windows/archive/>`__
+    - `Archive 1 <https://archive.repo.saltproject.io/windows/>`__
+    - `Archive 2 <https://archive.repo.saltproject.io/windows/archive/>`__
 
 .. note::
 

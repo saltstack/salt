@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Vault Pillar Module
 
@@ -121,8 +120,6 @@ minion-passwd   minionbadpasswd1
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -163,7 +160,7 @@ def ext_pillar(
         if version2["v2"]:
             path = version2["data"]
 
-        url = "v1/{0}".format(path)
+        url = "v1/{}".format(path)
         response = __utils__["vault.make_request"]("GET", url)
         if response.status_code == 200:
             vault_pillar = response.json().get("data", {})

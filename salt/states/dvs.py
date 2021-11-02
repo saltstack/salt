@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage VMware distributed virtual switches (DVSs) and their distributed virtual
 portgroups (DVportgroups).
@@ -201,19 +200,12 @@ The 5.5.0.2014.1.1 is a known stable version that this original ESXi State
 Module was developed against.
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import sys
-import traceback
 
-# Import Salt Libs
 import salt.exceptions
-from salt.ext import six
-from salt.ext.six.moves import range
 
-# Import Third Party Libs
 try:
     from pyVmomi import VmomiSupport
 
@@ -238,10 +230,8 @@ def __virtual__():
 
         return (
             False,
-            (
-                "State module did not load: Incompatible versions "
-                "of Python and pyVmomi present. See Issue #29537."
-            ),
+            "State module did not load: Incompatible versions "
+            "of Python and pyVmomi present. See Issue #29537.",
         )
     return "dvs"
 
@@ -268,7 +258,7 @@ def _get_datacenter_name():
         details = __salt__["esxdatacenter.get_details"]()
     if not details:
         raise salt.exceptions.CommandExecutionError(
-            "details for proxy type '{0}' not loaded".format(proxy_type)
+            "details for proxy type '{}' not loaded".format(proxy_type)
         )
     return details["datacenter"]
 
@@ -286,8 +276,10 @@ def dvs_configured(name, dvs):
     datacenter_name = _get_datacenter_name()
     dvs_name = dvs["name"] if dvs.get("name") else name
     log.info(
-        "Running state {0} for DVS '{1}' in datacenter "
-        "'{2}'".format(name, dvs_name, datacenter_name)
+        "Running state %s for DVS '%s' in datacenter '%s'",
+        name,
+        dvs_name,
+        datacenter_name,
     )
     changes_required = False
     ret = {"name": name, "changes": {}, "result": None, "comment": None}
@@ -303,9 +295,9 @@ def dvs_configured(name, dvs):
             changes_required = True
             if __opts__["test"]:
                 comments.append(
-                    "State {0} will create a new DVS "
-                    "'{1}' in datacenter '{2}'"
-                    "".format(name, dvs_name, datacenter_name)
+                    "State {} will create a new DVS '{}' in datacenter '{}'".format(
+                        name, dvs_name, datacenter_name
+                    )
                 )
                 log.info(comments[-1])
             else:
@@ -314,8 +306,9 @@ def dvs_configured(name, dvs):
                     dvs_dict=dvs, dvs_name=dvs_name, service_instance=si
                 )
                 comments.append(
-                    "Created a new DVS '{0}' in datacenter "
-                    "'{1}'".format(dvs_name, datacenter_name)
+                    "Created a new DVS '{}' in datacenter '{}'".format(
+                        dvs_name, datacenter_name
+                    )
                 )
                 log.info(comments[-1])
                 changes.update({"dvs": {"new": dvs}})
@@ -332,9 +325,10 @@ def dvs_configured(name, dvs):
                 "network_resource_management_enabled",
             ]
             log.trace(
-                "DVS '{0}' found in datacenter '{1}'. Checking "
-                "for any updates in "
-                "{2}".format(dvs_name, datacenter_name, props)
+                "DVS '%s' found in datacenter '%s'. Checking for any updates in %s",
+                dvs_name,
+                datacenter_name,
+                props,
             )
             props_to_original_values = {}
             props_to_updated_values = {}
@@ -386,19 +380,18 @@ def dvs_configured(name, dvs):
                             for idx in range(len(props_to_updated_values[p])):
                                 d = props_to_updated_values[p][idx]
                                 s = props_to_original_values[p][idx]
-                                changes_string += (
-                                    "\t\t{0} from '{1}' to '{2}'\n"
-                                    "".format(d["key"], s, d)
+                                changes_string += "\t\t{} from '{}' to '{}'\n".format(
+                                    d["key"], s, d
                                 )
                         else:
-                            changes_string += "\t{0} from '{1}' to '{2}'\n" "".format(
+                            changes_string += "\t{} from '{}' to '{}'\n".format(
                                 p,
                                 props_to_original_values[p],
                                 props_to_updated_values[p],
                             )
                     comments.append(
-                        "State dvs_configured will update DVS '{0}' "
-                        "in datacenter '{1}':\n{2}"
+                        "State dvs_configured will update DVS '{}' "
+                        "in datacenter '{}':\n{}"
                         "".format(dvs_name, datacenter_name, changes_string)
                     )
                     log.info(comments[-1])
@@ -409,8 +402,9 @@ def dvs_configured(name, dvs):
                         service_instance=si,
                     )
                     comments.append(
-                        "Updated DVS '{0}' in datacenter '{1}'"
-                        "".format(dvs_name, datacenter_name)
+                        "Updated DVS '{}' in datacenter '{}'".format(
+                            dvs_name, datacenter_name
+                        )
                     )
                     log.info(comments[-1])
                 changes.update(
@@ -423,16 +417,13 @@ def dvs_configured(name, dvs):
                 )
         __salt__["vsphere.disconnect"](si)
     except salt.exceptions.CommandExecutionError as exc:
-        log.error("Error: {0}\n{1}".format(exc, traceback.format_exc()))
+        log.error("Error: %s", exc, exc_info=True)
         if si:
             __salt__["vsphere.disconnect"](si)
         if not __opts__["test"]:
             ret["result"] = False
         ret.update(
-            {
-                "comment": six.text_type(exc),
-                "result": False if not __opts__["test"] else None,
-            }
+            {"comment": str(exc), "result": False if not __opts__["test"] else None}
         )
         return ret
     if not comments:
@@ -440,7 +431,7 @@ def dvs_configured(name, dvs):
         ret.update(
             {
                 "comment": (
-                    "DVS '{0}' in datacenter '{1}' is "
+                    "DVS '{}' in datacenter '{}' is "
                     "correctly configured. Nothing to be done."
                     "".format(dvs_name, datacenter_name)
                 ),
@@ -485,7 +476,7 @@ def _get_val2_dict_from_diff_dict(diff_dict):
     ret_dict = {}
     for p in diff_dict.keys():
         if not isinstance(diff_dict[p], dict):
-            raise ValueError("Unexpected diff difct '{0}'".format(diff_dict))
+            raise ValueError("Unexpected diff difct '{}'".format(diff_dict))
         if "val2" in diff_dict[p].keys():
             ret_dict.update({p: diff_dict[p]["val2"]})
         else:
@@ -500,7 +491,7 @@ def _get_val1_dict_from_diff_dict(diff_dict):
     ret_dict = {}
     for p in diff_dict.keys():
         if not isinstance(diff_dict[p], dict):
-            raise ValueError("Unexpected diff difct '{0}'".format(diff_dict))
+            raise ValueError("Unexpected diff difct '{}'".format(diff_dict))
         if "val1" in diff_dict[p].keys():
             ret_dict.update({p: diff_dict[p]["val1"]})
         else:
@@ -517,25 +508,25 @@ def _get_changes_from_diff_dict(diff_dict):
     changes_strings = []
     for p in diff_dict.keys():
         if not isinstance(diff_dict[p], dict):
-            raise ValueError("Unexpected diff difct '{0}'".format(diff_dict))
+            raise ValueError("Unexpected diff difct '{}'".format(diff_dict))
         if sorted(diff_dict[p].keys()) == ["val1", "val2"]:
             # Some string formatting
             from_str = diff_dict[p]["val1"]
-            if isinstance(diff_dict[p]["val1"], six.string_types):
-                from_str = "'{0}'".format(diff_dict[p]["val1"])
+            if isinstance(diff_dict[p]["val1"], str):
+                from_str = "'{}'".format(diff_dict[p]["val1"])
             elif isinstance(diff_dict[p]["val1"], list):
-                from_str = "'{0}'".format(", ".join(diff_dict[p]["val1"]))
+                from_str = "'{}'".format(", ".join(diff_dict[p]["val1"]))
             to_str = diff_dict[p]["val2"]
-            if isinstance(diff_dict[p]["val2"], six.string_types):
-                to_str = "'{0}'".format(diff_dict[p]["val2"])
+            if isinstance(diff_dict[p]["val2"], str):
+                to_str = "'{}'".format(diff_dict[p]["val2"])
             elif isinstance(diff_dict[p]["val2"], list):
-                to_str = "'{0}'".format(", ".join(diff_dict[p]["val2"]))
-            changes_strings.append("{0} from {1} to {2}".format(p, from_str, to_str))
+                to_str = "'{}'".format(", ".join(diff_dict[p]["val2"]))
+            changes_strings.append("{} from {} to {}".format(p, from_str, to_str))
         else:
             sub_changes = _get_changes_from_diff_dict(diff_dict[p])
             if sub_changes:
-                changes_strings.append("{0}:".format(p))
-                changes_strings.extend(["\t{0}".format(c) for c in sub_changes])
+                changes_strings.append("{}:".format(p))
+                changes_strings.extend(["\t{}".format(c) for c in sub_changes])
     return changes_strings
 
 
@@ -552,10 +543,7 @@ def portgroups_configured(name, dvs, portgroups):
         Portgroup dict representations (see module sysdocs)
     """
     datacenter = _get_datacenter_name()
-    log.info(
-        "Running state {0} on DVS '{1}', datacenter "
-        "'{2}'".format(name, dvs, datacenter)
-    )
+    log.info("Running state %s on DVS '%s', datacenter '%s'", name, dvs, datacenter)
     changes_required = False
     ret = {"name": name, "changes": {}, "result": None, "comment": None}
     comments = []
@@ -573,15 +561,15 @@ def portgroups_configured(name, dvs, portgroups):
             pg_name = pg["name"]
             expected_pg_names.append(pg_name)
             del pg["name"]
-            log.info("Checking pg '{0}'".format(pg_name))
+            log.info("Checking pg '%s'", pg_name)
             filtered_current_pgs = [p for p in current_pgs if p.get("name") == pg_name]
             if not filtered_current_pgs:
                 changes_required = True
                 if __opts__["test"]:
                     comments.append(
-                        "State {0} will create a new portgroup "
-                        "'{1}' in DVS '{2}', datacenter "
-                        "'{3}'".format(name, pg_name, dvs, datacenter)
+                        "State {} will create a new portgroup "
+                        "'{}' in DVS '{}', datacenter "
+                        "'{}'".format(name, pg_name, dvs, datacenter)
                     )
                 else:
                     __salt__["vsphere.create_dvportgroup"](
@@ -591,8 +579,8 @@ def portgroups_configured(name, dvs, portgroups):
                         service_instance=si,
                     )
                     comments.append(
-                        "Created a new portgroup '{0}' in DVS "
-                        "'{1}', datacenter '{2}'"
+                        "Created a new portgroup '{}' in DVS "
+                        "'{}', datacenter '{}'"
                         "".format(pg_name, dvs, datacenter)
                     )
                 log.info(comments[-1])
@@ -600,9 +588,10 @@ def portgroups_configured(name, dvs, portgroups):
             else:
                 # Porgroup already exists. Checking the config
                 log.trace(
-                    "Portgroup '{0}' found in DVS '{1}', datacenter "
-                    "'{2}'. Checking for any updates."
-                    "".format(pg_name, dvs, datacenter)
+                    "Portgroup '%s' found in DVS '%s', datacenter '%s'. Checking for any updates.",
+                    pg_name,
+                    dvs,
+                    datacenter,
                 )
                 current_pg = filtered_current_pgs[0]
                 diff_dict = _get_diff_dict(current_pg, pg)
@@ -611,16 +600,16 @@ def portgroups_configured(name, dvs, portgroups):
                     changes_required = True
                     if __opts__["test"]:
                         changes_strings = _get_changes_from_diff_dict(diff_dict)
-                        log.trace("changes_strings = " "{0}".format(changes_strings))
+                        log.trace("changes_strings = %s", changes_strings)
                         comments.append(
-                            "State {0} will update portgroup '{1}' in "
-                            "DVS '{2}', datacenter '{3}':\n{4}"
+                            "State {} will update portgroup '{}' in "
+                            "DVS '{}', datacenter '{}':\n{}"
                             "".format(
                                 name,
                                 pg_name,
                                 dvs,
                                 datacenter,
-                                "\n".join(["\t{0}".format(c) for c in changes_strings]),
+                                "\n".join(["\t{}".format(c) for c in changes_strings]),
                             )
                         )
                     else:
@@ -631,8 +620,8 @@ def portgroups_configured(name, dvs, portgroups):
                             service_instance=si,
                         )
                         comments.append(
-                            "Updated portgroup '{0}' in DVS "
-                            "'{1}', datacenter '{2}'"
+                            "Updated portgroup '{}' in DVS "
+                            "'{}', datacenter '{}'"
                             "".format(pg_name, dvs, datacenter)
                         )
                     log.info(comments[-1])
@@ -655,9 +644,9 @@ def portgroups_configured(name, dvs, portgroups):
                 changes_required = True
                 if __opts__["test"]:
                     comments.append(
-                        "State {0} will remove "
-                        "the portgroup '{1}' from DVS '{2}', "
-                        "datacenter '{3}'"
+                        "State {} will remove "
+                        "the portgroup '{}' from DVS '{}', "
+                        "datacenter '{}'"
                         "".format(name, current_pg["name"], dvs, datacenter)
                     )
                 else:
@@ -665,15 +654,15 @@ def portgroups_configured(name, dvs, portgroups):
                         portgroup=current_pg["name"], dvs=dvs, service_instance=si
                     )
                     comments.append(
-                        "Removed the portgroup '{0}' from DVS "
-                        "'{1}', datacenter '{2}'"
+                        "Removed the portgroup '{}' from DVS "
+                        "'{}', datacenter '{}'"
                         "".format(current_pg["name"], dvs, datacenter)
                     )
                 log.info(comments[-1])
                 changes.update({current_pg["name"]: {"old": current_pg}})
         __salt__["vsphere.disconnect"](si)
     except salt.exceptions.CommandExecutionError as exc:
-        log.error("Error: {0}\n{1}".format(exc, traceback.format_exc()))
+        log.error("Error: %s", exc, exc_info=True)
         if si:
             __salt__["vsphere.disconnect"](si)
         if not __opts__["test"]:
@@ -687,8 +676,8 @@ def portgroups_configured(name, dvs, portgroups):
         ret.update(
             {
                 "comment": (
-                    "All portgroups in DVS '{0}', datacenter "
-                    "'{1}' exist and are correctly configured. "
+                    "All portgroups in DVS '{}', datacenter "
+                    "'{}' exist and are correctly configured. "
                     "Nothing to be done.".format(dvs, datacenter)
                 ),
                 "result": True,
@@ -718,9 +707,7 @@ def uplink_portgroup_configured(name, dvs, uplink_portgroup):
 
     """
     datacenter = _get_datacenter_name()
-    log.info(
-        "Running {0} on DVS '{1}', datacenter '{2}'" "".format(name, dvs, datacenter)
-    )
+    log.info("Running %s on DVS '%s', datacenter '%s'", name, dvs, datacenter)
     changes_required = False
     ret = {"name": name, "changes": {}, "result": None, "comment": None}
     comments = []
@@ -733,22 +720,22 @@ def uplink_portgroup_configured(name, dvs, uplink_portgroup):
         current_uplink_portgroup = __salt__["vsphere.list_uplink_dvportgroup"](
             dvs=dvs, service_instance=si
         )
-        log.trace("current_uplink_portgroup = " "{0}".format(current_uplink_portgroup))
+        log.trace("current_uplink_portgroup = %s", current_uplink_portgroup)
         diff_dict = _get_diff_dict(current_uplink_portgroup, uplink_portgroup)
         if diff_dict:
             changes_required = True
             if __opts__["test"]:
                 changes_strings = _get_changes_from_diff_dict(diff_dict)
-                log.trace("changes_strings = " "{0}".format(changes_strings))
+                log.trace("changes_strings = %s", changes_strings)
                 comments.append(
-                    "State {0} will update the "
-                    "uplink portgroup in DVS '{1}', datacenter "
-                    "'{2}':\n{3}"
+                    "State {} will update the "
+                    "uplink portgroup in DVS '{}', datacenter "
+                    "'{}':\n{}"
                     "".format(
                         name,
                         dvs,
                         datacenter,
-                        "\n".join(["\t{0}".format(c) for c in changes_strings]),
+                        "\n".join(["\t{}".format(c) for c in changes_strings]),
                     )
                 )
             else:
@@ -759,9 +746,9 @@ def uplink_portgroup_configured(name, dvs, uplink_portgroup):
                     service_instance=si,
                 )
                 comments.append(
-                    "Updated the uplink portgroup in DVS "
-                    "'{0}', datacenter '{1}'"
-                    "".format(dvs, datacenter)
+                    "Updated the uplink portgroup in DVS '{}', datacenter '{}'".format(
+                        dvs, datacenter
+                    )
                 )
             log.info(comments[-1])
             changes.update(
@@ -774,7 +761,7 @@ def uplink_portgroup_configured(name, dvs, uplink_portgroup):
             )
         __salt__["vsphere.disconnect"](si)
     except salt.exceptions.CommandExecutionError as exc:
-        log.error("Error: {0}\n{1}".format(exc, traceback.format_exc()))
+        log.error("Error: %s", exc, exc_info=True)
         if si:
             __salt__["vsphere.disconnect"](si)
         if not __opts__["test"]:
@@ -788,8 +775,8 @@ def uplink_portgroup_configured(name, dvs, uplink_portgroup):
         ret.update(
             {
                 "comment": (
-                    "Uplink portgroup in DVS '{0}', datacenter "
-                    "'{1}' is correctly configured. "
+                    "Uplink portgroup in DVS '{}', datacenter "
+                    "'{}' is correctly configured. "
                     "Nothing to be done.".format(dvs, datacenter)
                 ),
                 "result": True,

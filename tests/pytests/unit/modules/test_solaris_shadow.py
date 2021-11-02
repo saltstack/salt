@@ -79,13 +79,19 @@ def has_not_spwd():
 
 @pytest.fixture
 def fake_spnam():
-    with patch("spwd.getspnam", autospec=True,) as fake_spnam:
+    with patch(
+        "spwd.getspnam",
+        autospec=True,
+    ) as fake_spnam:
         yield fake_spnam
 
 
 @pytest.fixture
 def fake_pwnam():
-    with patch("pwd.getpwnam", autospec=True,) as fake_pwnam:
+    with patch(
+        "pwd.getpwnam",
+        autospec=True,
+    ) as fake_pwnam:
         yield fake_pwnam
 
 

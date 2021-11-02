@@ -78,7 +78,7 @@ def _build_machine_uri(machine, cwd):
 
 
 def _update_vm_info(name, vm_):
-    """ store the vm_ information keyed by name """
+    """store the vm_ information keyed by name"""
     __utils__["sdb.sdb_set"](_build_sdb_uri(name), vm_, __opts__)
 
     # store machine-to-name mapping, too
@@ -583,8 +583,9 @@ def get_ssh_config(name, network_mask="", get_private_key=False):
 
     except KeyError:
         raise CommandExecutionError(
-            "Insufficient SSH information to contact VM {}. "
-            "Is it running?".format(vm_.get("machine", "(default)"))
+            "Insufficient SSH information to contact VM {}. Is it running?".format(
+                vm_.get("machine", "(default)")
+            )
         )
 
     if network_mask:
@@ -597,7 +598,7 @@ def get_ssh_config(name, network_mask="", get_private_key=False):
             "{User}@{HostName} ifconfig".format(**ssh_config)
         )
 
-        log.info("Trying ssh -p {Port} {User}@{HostName} ifconfig".format(**ssh_config))
+        log.info("Trying ssh -p %(Port)s %(User)s@%(HostName)s ifconfig", ssh_config)
         reply = __salt__["cmd.shell"](command)
         log.info("--->\n%s", reply)
         target_network_range = ipaddress.ip_network(network_mask, strict=False)

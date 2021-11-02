@@ -1,29 +1,19 @@
-# -*- coding: utf-8 -*-
 """
 Manage cygwin packages.
 
 Module file to accompany the cyg state.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import bz2
-
-# Import python libs
 import logging
 import os
 import re
+import urllib.request
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
-
-# Import 3rd-party libs
-from salt.ext.six.moves.urllib.request import urlopen as _urlopen
 
 LOG = logging.getLogger(__name__)
 
@@ -86,7 +76,7 @@ def _get_all_packages(mirror=DEFAULT_MIRROR, cyg_arch="x86_64"):
     if not __context__["cyg.all_packages"][mirror]:
         pkg_source = "/".join([mirror, cyg_arch, "setup.bz2"])
 
-        file_data = _urlopen(pkg_source).read()
+        file_data = urllib.request.urlopen(pkg_source).read()
         file_lines = (
             bz2.decompress(file_data).decode("utf_8", errors="replace").splitlines()
         )
@@ -139,9 +129,9 @@ def _run_silent_cygwin(cyg_arch="x86_64", args=None, mirrors=None):
     installation up and running.
     """
     cyg_cache_dir = os.sep.join(["c:", "cygcache"])
-    cyg_setup = "setup-{0}.exe".format(cyg_arch)
+    cyg_setup = "setup-{}.exe".format(cyg_arch)
     cyg_setup_path = os.sep.join([cyg_cache_dir, cyg_setup])
-    cyg_setup_source = "http://cygwin.com/{0}".format(cyg_setup)
+    cyg_setup_source = "http://cygwin.com/{}".format(cyg_setup)
     # cyg_setup_source_hash = 'http://cygwin.com/{0}.sig'.format(cyg_setup)
 
     # until a hash gets published that we can verify the newest setup against
@@ -151,21 +141,21 @@ def _run_silent_cygwin(cyg_arch="x86_64", args=None, mirrors=None):
     elif os.path.exists(cyg_setup_path):
         os.remove(cyg_setup_path)
 
-    file_data = _urlopen(cyg_setup_source)
+    file_data = urllib.request.urlopen(cyg_setup_source)
     with salt.utils.files.fopen(cyg_setup_path, "wb") as fhw:
         fhw.write(file_data.read())
 
     setup_command = cyg_setup_path
     options = []
-    options.append("--local-package-dir {0}".format(cyg_cache_dir))
+    options.append("--local-package-dir {}".format(cyg_cache_dir))
 
     if mirrors is None:
         mirrors = [{DEFAULT_MIRROR: DEFAULT_MIRROR_KEY}]
     for mirror in mirrors:
         for mirror_url, key in mirror.items():
-            options.append("--site {0}".format(mirror_url))
+            options.append("--site {}".format(mirror_url))
             if key:
-                options.append("--pubkey {0}".format(key))
+                options.append("--pubkey {}".format(key))
     options.append("--no-desktop")
     options.append("--quiet-mode")
     options.append("--disable-buggy-antivirus")
@@ -306,7 +296,7 @@ def list_(package="", cyg_arch="x86_64"):
     args = " ".join(["-c", "-d", package])
     stdout = _cygcheck(args, cyg_arch=cyg_arch)
     lines = []
-    if isinstance(stdout, six.string_types):
+    if isinstance(stdout, str):
         lines = salt.utils.stringutils.to_unicode(stdout).splitlines()
     for line in lines:
         match = re.match(r"^([^ ]+) *([^ ]+)", line)
