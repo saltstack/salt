@@ -617,6 +617,8 @@ paramiko==2.7.2 ; sys_platform != "win32" and sys_platform != "darwin"
     #   scp
 passlib==1.7.4 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
+pathspec==0.9.0
+    # via yamllint
 platformdirs==2.3.0
     # via virtualenv
 pluggy==1.0.0
@@ -710,6 +712,7 @@ pyyaml==5.4.1
     #   clustershell
     #   junos-eznc
     #   kubernetes
+    #   yamllint
     #   yamlordereddictloader
 pyzmq==21.0.2 ; python_version < "3.9"
     # via
@@ -835,6 +838,8 @@ xmltodict==0.12.0
     # via
     #   moto
     #   pywinrm
+yamllint==1.26.3
+    # via -r requirements/static/ci/common.in
 yamlordereddictloader==0.4.0
     # via junos-eznc
 zc.lockfile==2.0

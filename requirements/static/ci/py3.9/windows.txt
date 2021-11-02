@@ -208,6 +208,8 @@ packaging==19.2
     # via pytest
 patch==1.16
     # via -r requirements/static/ci/windows.in
+pathspec==0.9.0
+    # via yamllint
 pathtools==0.1.2
     # via watchdog
 platformdirs==2.2.0
@@ -306,6 +308,7 @@ pyyaml==5.4.1
     #   clustershell
     #   kubernetes
     #   moto
+    #   yamllint
 pyzmq==20.0.0 ; python_version >= "3.9"
     # via
     #   -r requirements/zeromq.txt
@@ -408,6 +411,8 @@ xmltodict==0.12.0
     # via
     #   moto
     #   pywinrm
+yamllint==1.26.3
+    # via -r requirements/static/ci/common.in
 zc.lockfile==2.0
     # via cherrypy
 zipp==3.5.0
