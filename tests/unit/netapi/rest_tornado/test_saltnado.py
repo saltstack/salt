@@ -3,8 +3,6 @@ import salt.ext.tornado.testing
 import salt.netapi.rest_tornado.saltnado as saltnado
 from tests.support.mock import MagicMock, patch
 
-anti_lint = salt.ext.tornado.testing
-
 
 class TestJobNotRunning(salt.ext.tornado.testing.AsyncTestCase):
     def setUp(self):
