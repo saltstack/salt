@@ -39,12 +39,6 @@ class Cache:
         The name of the cache driver to use. This is the name of the python
         module of the `salt.cache` package. Default is `localfs`.
 
-    :param serial:
-        The module of `salt.serializers` package that should be used by the cache
-        driver to store data.
-        If a driver can't use a specific module or uses specific objects storage
-        it can ignore this parameter.
-
     Terminology:
 
     Salt cache subsystem is organized as a tree with nodes and leafs like a
@@ -75,7 +69,7 @@ class Cache:
         self._kwargs["cachedir"] = self.cachedir
 
     def __lazy_init(self):
-        self._modules = salt.loader.cache(self.opts, self.serial)
+        self._modules = salt.loader.cache(self.opts)
         fun = "{}.init_kwargs".format(self.driver)
         if fun in self.modules:
             self._kwargs = self.modules[fun](self._kwargs)
