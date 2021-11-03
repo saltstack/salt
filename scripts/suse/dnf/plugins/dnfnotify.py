@@ -1,11 +1,12 @@
-import dnf
 import hashlib
 import os
+
+import dnf
 
 
 class DnfNotifyPlugin(dnf.Plugin):
     def __init__(self, base, cli):
-        super(DnfNotifyPlugin, self).__init__(base, cli)
+        super().__init__(base, cli)
         self.base = base
         self.cookie_file = "/var/cache/salt/minion/rpmdb.cookie"
         if os.path.exists("/var/lib/rpm/rpmdb.sqlite"):
