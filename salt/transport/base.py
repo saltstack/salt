@@ -3,7 +3,6 @@ import salt.ext.tornado.gen
 TRANSPORTS = (
     "zeromq",
     "tcp",
-    "rabbitmq",
 )
 
 
@@ -17,9 +16,6 @@ def request_server(opts, **kwargs):
     elif "transport" in opts.get("pillar", {}).get("master", {}):
         ttype = opts["pillar"]["master"]["transport"]
 
-    # import salt.transport.zeromq
-    # opts["master_uri"] = salt.transport.zeromq.RequestClient.get_master_uri(opts)
-    # switch on available ttypes
     if ttype == "zeromq":
         import salt.transport.zeromq
 
@@ -28,10 +24,6 @@ def request_server(opts, **kwargs):
         import salt.transport.tcp
 
         return salt.transport.tcp.TCPReqServer(opts)
-    elif ttype == "rabbitmq":
-        import salt.transport.rabbitmq
-
-        return salt.transport.rabbitmq.RabbitMQReqServer(opts)
     elif ttype == "local":
         import salt.transport.local
 
@@ -42,12 +34,7 @@ def request_server(opts, **kwargs):
 
 
 def request_client(opts, io_loop):
-    # log.error("AsyncReqChannel connects to %s", master_uri)
-    # switch on available ttypes
-    # XXX
-    # opts["master_uri"] = salt.transport.zeromq.RequestClient.get_master_uri(opts)
     ttype = "zeromq"
-    # determine the ttype
     if "transport" in opts:
         ttype = opts["transport"]
     elif "transport" in opts.get("pillar", {}).get("master", {}):
@@ -60,10 +47,6 @@ def request_client(opts, io_loop):
         import salt.transport.tcp
 
         return salt.transport.tcp.TCPReqClient(opts, io_loop=io_loop)
-    elif ttype == "rabbitmq":
-        import salt.transport.rabbitmq
-
-        return salt.transportrabbitmq.RabbitMQRequestClient(opts, io_loop=io_loop)
     else:
         raise Exception("Channels are only defined for tcp, zeromq")
 
@@ -85,10 +68,6 @@ def publish_server(opts, **kwargs):
         import salt.transport.tcp
 
         return salt.transport.tcp.TCPPublishServer(opts)
-    elif ttype == "rabbitmq":
-        import salt.transport.rabbitmq
-
-        return salt.transport.rabbitmq.RabbitMQPubServer(opts, **kwargs)
     elif ttype == "local":  # TODO:
         import salt.transport.local
 
@@ -113,10 +92,6 @@ def publish_client(opts, io_loop):
         import salt.transport.tcp
 
         return salt.transport.tcp.TCPPubClient(opts, io_loop)
-    elif ttype == "rabbitmq":
-        import salt.transport.rabbitmq
-
-        return salt.transport.rabbitmq.RabbitMQPubClient(opts, io_loop)
     raise Exception("Transport type not found: {}".format(ttype))
 
 
