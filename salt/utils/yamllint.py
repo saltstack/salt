@@ -36,7 +36,17 @@ def lint(
     if yamlconf is not None:
         conf = YamlLintConfig(file=yamlconf)
     else:
-        conf = YamlLintConfig("extends: relaxed")
+        yamlconf = """
+        extends: relaxed
+        rules:
+          line-length: { max: 256, level: warning }
+          empty-lines: disable
+          empty-values: {forbid-in-block-mappings: false, forbid-in-flow-mappings: true}
+          trailing-spaces: disable
+          key-ordering: disable
+          truthy: {level: warning, check-keys: false }
+        """
+        conf = YamlLintConfig(yamlconf)
 
     yaml_out = salt.utils.stringutils.to_str(source)
     problems = []

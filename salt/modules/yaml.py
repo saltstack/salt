@@ -33,18 +33,18 @@ def lint(source, saltenv=None, pre_render=None, **kwargs):
         salt '*' yamllint.lint salt://example/bad_yaml.sls
     """
     if saltenv is None:
-        saltenv = __salt__.config.get("saltenv", "base")
+        saltenv = __salt__["config.get"]("saltenv", "base")
         if saltenv is None:
             saltenv = "base"
     if pre_render is None:
-        cache = __salt__.cp.cache_file(source, saltenv)
+        cache = __salt__["cp.cache_file"](source, saltenv)
         if cache is False:
             return (False, "Template was unable to be cached")
-        with __utils__.files.fopen(cache, "r") as yaml_stream:
+        with __utils__["files.fopen"](cache, "r") as yaml_stream:
             yaml_out = yaml_stream.read(-1)
     else:
         kwargs.update({"saltenv": saltenv})
-        yaml_out = __salt__.slsutil.renderer(
+        yaml_out = __salt__["slsutil.renderer"](
             path=source, default_renderer=pre_render, **kwargs
         )
-    return __utils__.yamllint.lint(yaml_out)
+    return __utils__["yamllint.lint"](yaml_out)
