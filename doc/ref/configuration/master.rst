@@ -1283,6 +1283,33 @@ supported on POSIX platforms only.
 
     reactor_niceness: 9
 
+.. conf_master:: tcp_publish_backoff
+
+``tcp_publish_backoff``
+-----------------------
+
+.. versionadded:: Phosphorus
+
+default: ``10.0``
+
+The time in seconds to wait for job republish if minion is not connected to master when the job is created. This only work for TCP transport and ``list`` target type. 
+
+
+.. conf_master:: tcp_publish_retries
+
+``tcp_publish_retries``
+-----------------------
+
+.. versionadded:: Phosphorus
+
+default: ``0``
+
+The number of retry attempts to publish job if minion is not connected to master when the job is created. This only work for TCP transport and ``list`` target type. Specify ``0`` to disable this behaviour.
+
+.. note::
+
+   Setting this option to higher value, along with large ``tcp_publish_backoff``, can have memory implications on the ``TCPPubServerChannel`` master process as the job payload is kept in memory until it's successfully published.
+
 .. _salt-ssh-configuration:
 
 Salt-SSH Configuration

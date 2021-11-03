@@ -3344,6 +3344,17 @@ Default: ``1``
 The time in seconds to wait before attempting another connection with salt master
 when the previous connection fails while on TCP transport.
 
+.. conf_minion:: tcp_recv_retry_backoff
+
+``tcp_recv_retry_backoff``
+------------------------------
+
+.. versionadded:: Phosphorus
+
+Default: ``10``
+
+The time in seconds to wait before attempting to process received event from master again, in case minion was just in the middle of authentication phase while on TCP transport.
+
 .. conf_minion:: failhard
 
 ``failhard``
