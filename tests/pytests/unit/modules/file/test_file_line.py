@@ -87,13 +87,13 @@ def get_body():
 def tempfile_name(tmp_path):
     subdir = tmp_path / "file-line-temp-dir"
     subdir.mkdir()
-    filename = subdir / "file-line-temp-file"
+    filename = str(subdir / "file-line-temp-file")
 
     # File needs to be created
     with salt.utils.files.fopen(filename, "w"):
         pass
 
-    yield str(filename)
+    yield filename
 
     # We need to make sure to remove the tree we just created to avoid clashes with other tests
     shutil.rmtree(str(subdir))
