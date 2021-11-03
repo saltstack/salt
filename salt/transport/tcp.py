@@ -1016,6 +1016,7 @@ class SaltMessageClient:
         self.io_loop.spawn_callback(self._stream_return)
 
         self.backoff = opts.get("tcp_reconnect_backoff", 1)
+        self.on_recv_backoff = opts.get("tcp_recv_retry_backoff", 10)
 
     def _stop_io_loop(self):
         if self.io_loop is not None:
@@ -1137,8 +1138,34 @@ class SaltMessageClient:
                 yield salt.ext.tornado.gen.sleep(self.backoff)
                 # self._connecting_future.set_exception(exc)
 
+    def _handle_framed_msg(self, framed_msg):
+        """
+        Helper to process framed message received from master
+        """
+        header = framed_msg["head"]
+        body = framed_msg["body"]
+        message_id = header.get("mid")
+
+        if message_id in self.send_future_map:
+            self.send_future_map.pop(message_id).set_result(body)
+            self.remove_message_timeout(message_id)
+            return True
+        else:
+            if self._on_recv is not None:
+                self.io_loop.spawn_callback(self._on_recv, header, body)
+                return True
+            else:
+                log.error(
+                    "Got response for message_id %s that we are not tracking. This could mean new job was received from master before authentication procedure was completed.",
+                    message_id,
+                )
+                return False
+
     @salt.ext.tornado.gen.coroutine
     def _stream_return(self):
+        """
+        Method that reads all incoming messages from master
+        """
         try:
             while not self._closing and (
                 not self._connecting_future.done()
@@ -1157,22 +1184,16 @@ class SaltMessageClient:
                         framed_msg = salt.transport.frame.decode_embedded_strs(
                             framed_msg
                         )
-                        header = framed_msg["head"]
-                        body = framed_msg["body"]
-                        message_id = header.get("mid")
+                        rtn = self._handle_framed_msg(framed_msg)
 
-                        if message_id in self.send_future_map:
-                            self.send_future_map.pop(message_id).set_result(body)
-                            self.remove_message_timeout(message_id)
-                        else:
-                            if self._on_recv is not None:
-                                self.io_loop.spawn_callback(self._on_recv, header, body)
-                            else:
-                                log.error(
-                                    "Got response for message_id %s that we are not"
-                                    " tracking",
-                                    message_id,
-                                )
+                        if not rtn:
+                            # it would seem the framed_msg handling wasn't successful and _on_recv it not yet ready, try again in some time
+                            self.io_loop.call_later(
+                                self.on_recv_backoff,
+                                self._handle_framed_msg,
+                                framed_msg,
+                            )
+
                 except salt.ext.tornado.iostream.StreamClosedError as e:
                     log.debug(
                         "tcp stream to %s:%s closed, unable to recv",

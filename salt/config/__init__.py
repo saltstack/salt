@@ -910,6 +910,8 @@ VALID_OPTS = immutabletypes.freeze(
         "tcp_authentication_retries": int,
         # Backoff interval in seconds for minion reconnect with tcp transport
         "tcp_reconnect_backoff": float,
+        # Backoff interval in seconds for minion to try to process master event when authentication procedure was not yet completed
+        "tcp_recv_retry_backoff": float,
         # Permit or deny allowing minions to request revoke of its own key
         "allow_minion_key_revoke": bool,
         # File chunk size for salt-cp
@@ -1137,6 +1139,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "tcp_pull_port": 4511,
         "tcp_authentication_retries": 5,
         "tcp_reconnect_backoff": 1,
+        "tcp_recv_retry_backoff": 10,
         "log_file": os.path.join(salt.syspaths.LOGS_DIR, "minion"),
         "log_level": "warning",
         "log_level_logfile": None,
