@@ -1,0 +1,1 @@
+Implement possibility to retry job publish to minions that were temporarily disconnected from master upon job creation, while on TCP transport
