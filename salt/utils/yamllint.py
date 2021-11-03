@@ -30,7 +30,7 @@ def lint(
     source (required)
         yaml as str
     yamlconf (optional)
-        yamllint config file to use, if not set will default to a extended relaxed format.
+        yamllint config file to use, if not set will default to a salty version of realaxed.
     """
 
     if yamlconf is not None:

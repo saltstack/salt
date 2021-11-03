@@ -21,26 +21,11 @@ def configure_loader_modules(minion_opts):
                 "cp.cache_file": MagicMock(
                     salt.modules.cp.cache_file, autospec=True, return_value=cached_file
                 ),
-                "slsutil.rednerer": MagicMock(
+                "slsutil.renderer": MagicMock(
                     salt.modules.slsutil.renderer,
                     autospec=True,
                     return_value="key: value\n",
                 ),
-                "config": {"get": salt.modules.config.get},
-                "cp": {
-                    "cache_file": MagicMock(
-                        salt.modules.cp.cache_file,
-                        autospec=True,
-                        return_value=cached_file,
-                    )
-                },
-                "slsutil": {
-                    "renderer": MagicMock(
-                        salt.modules.slsutil.renderer,
-                        autospec=True,
-                        return_value="key: value\n",
-                    )
-                },
             },
             "__opts__": minion_opts,
             "__utils__": {
@@ -61,4 +46,11 @@ def test_lint_yaml():
     assert salt.modules.yaml.lint("salt://test/test.sls") == {
         "problems": [],
         "source": "key:\n  value\n",
+    }
+
+
+def test_lint_pre_render():
+    assert salt.modules.yaml.lint("salt://test.test.sls", pre_render="jinja") == {
+        "problems": [],
+        "source": "key: value\n",
     }
