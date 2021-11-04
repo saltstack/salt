@@ -1,9 +1,8 @@
-from dnfpluginscore import _, logger
-
 import hashlib
 import os
 
 import dnf
+from dnfpluginscore import _, logger
 
 
 class DnfNotifyPlugin(dnf.Plugin):
