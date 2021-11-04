@@ -31,7 +31,7 @@ def test_input_bytes():
 
 def test_config():
     good_yaml = "key: this line is long according to config\n"
-    config_file = Path(__file__).parent / "relaxed.yaml"
+    config_file = str(Path(__file__).parent / "relaxed.yaml")
     assert yamllint.lint(good_yaml) == {"source": good_yaml, "problems": []}
     assert yamllint.lint(good_yaml, config_file) == {
         "source": good_yaml,

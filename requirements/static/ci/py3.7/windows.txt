@@ -424,7 +424,7 @@ xmltodict==0.12.0
     #   moto
     #   pywinrm
 yamllint==1.26.3
-    # via -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/windows.in
 zc.lockfile==2.0
     # via cherrypy
 zipp==3.5.0

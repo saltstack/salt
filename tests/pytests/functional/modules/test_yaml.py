@@ -13,7 +13,7 @@ from tests.support.mock import MagicMock
 
 @pytest.fixture
 def configure_loader_modules(minion_opts):
-    cached_file = Path(__file__).parent / "testyaml.yaml"
+    cached_file = str(Path(__file__).parent / "testyaml.yaml")
     return {
         salt.modules.yaml: {
             "__salt__": {

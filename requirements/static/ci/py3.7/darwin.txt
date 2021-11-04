@@ -910,7 +910,7 @@ wrapt==1.11.1
 xmltodict==0.12.0
     # via moto
 yamllint==1.26.3
-    # via -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/darwin.in
 yamlordereddictloader==0.4.0
     # via
     #   -r requirements/static/ci/darwin.in
