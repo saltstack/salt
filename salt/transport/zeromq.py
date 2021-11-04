@@ -502,7 +502,6 @@ class AsyncReqMessageClient:
 
         self.context = zmq.Context()
 
-
         self.send_queue = []
         # mapping of message -> future
         self.send_future_map = {}

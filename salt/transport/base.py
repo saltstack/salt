@@ -115,9 +115,9 @@ class RequestClient:
         """
 
     def connect(self):
-       """
-       Connect to the server / broker.
-       """
+        """
+        Connect to the server / broker.
+        """
 
 
 class RequestServer:
