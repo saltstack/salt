@@ -1053,9 +1053,15 @@ def highstate(test=None, queue=False, **kwargs):
         }
         return ret
 
-    conflict = _check_queue(queue, kwargs)
-    if conflict is not None:
-        return conflict
+    concurrent = kwargs.get("concurrent", False)
+
+    if queue:
+        _wait(kwargs.get("__pub_jid"))
+    else:
+        conflict = running(concurrent)
+        if conflict:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
+            return conflict
 
     orig_test = __opts__.get("test", None)
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
