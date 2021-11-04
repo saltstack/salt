@@ -30,7 +30,6 @@ def request_server(opts, **kwargs):
         transport = salt.transport.local.LocalServerChannel(opts)
     else:
         raise Exception("Channels are only defined for ZeroMQ and TCP")
-        # return NewKindOfChannel(opts, **kwargs)
 
 
 def request_client(opts, io_loop):
@@ -115,11 +114,10 @@ class RequestClient:
         Close the connection.
         """
 
-    # XXX:  Should have a connect too?
-    # def connect(self):
-    #    """
-    #    Connect to the server / broker.
-    #    """
+    def connect(self):
+       """
+       Connect to the server / broker.
+       """
 
 
 class RequestServer:

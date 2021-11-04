@@ -326,9 +326,7 @@ class AsyncPubChannel:
 
     @property
     def crypt(self):
-        if self.auth:
-            return "aes"
-        return "clear"
+        return "aes" if self.auth else "clear"
 
     @salt.ext.tornado.gen.coroutine
     def connect(self):
