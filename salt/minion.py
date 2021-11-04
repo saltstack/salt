@@ -1738,6 +1738,7 @@ class Minion(MinionBase):
         # side.
         instance = self
         multiprocessing_enabled = self.opts.get("multiprocessing", True)
+        name = "ProcessPayload(jid={})".format(data["jid"])
         if multiprocessing_enabled:
             if sys.platform.startswith("win"):
                 # let python reconstruct the minion on the other side if we're
@@ -1746,7 +1747,7 @@ class Minion(MinionBase):
             with default_signals(signal.SIGINT, signal.SIGTERM):
                 process = SignalHandlingProcess(
                     target=self._target,
-                    name="ProcessPayload",
+                    name=name,
                     args=(instance, self.opts, data, self.connected),
                 )
                 process.register_after_fork_method(salt.utils.crypt.reinit_crypto)
@@ -1754,7 +1755,7 @@ class Minion(MinionBase):
             process = threading.Thread(
                 target=self._target,
                 args=(instance, self.opts, data, self.connected),
-                name=data["jid"],
+                name=name,
             )
 
         if multiprocessing_enabled:
@@ -1764,7 +1765,6 @@ class Minion(MinionBase):
                 process.start()
         else:
             process.start()
-        process.name = "{}-Job-{}".format(process.name, data["jid"])
         self.subprocess_list.add(process)
 
     def ctx(self):
@@ -1880,9 +1880,7 @@ class Minion(MinionBase):
         minion_instance.gen_modules()
         fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
-        salt.utils.process.appendproctitle(
-            "{}._thread_return {}".format(cls.__name__, data["jid"])
-        )
+        salt.utils.process.appendproctitle("{}._thread_return".format(cls.__name__))
 
         sdata = {"pid": os.getpid()}
         sdata.update(data)
@@ -2071,7 +2069,7 @@ class Minion(MinionBase):
         fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
         salt.utils.process.appendproctitle(
-            "{}._thread_multi_return {}".format(cls.__name__, data["jid"])
+            "{}._thread_multi_return".format(cls.__name__)
         )
 
         sdata = {"pid": os.getpid()}

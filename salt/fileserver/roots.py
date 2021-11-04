@@ -360,11 +360,12 @@ def _file_lists(load, form):
                 if salt.fileserver.is_file_ignored(__opts__, rel_path):
                     continue
                 tgt.add(rel_path)
-                try:
-                    if not os.listdir(abs_path):
-                        ret["empty_dirs"].add(rel_path)
-                except OSError:
-                    log.debug("Unable to list dir: %s", abs_path)
+                if os.path.isdir(abs_path):
+                    try:
+                        if not os.listdir(abs_path):
+                            ret["empty_dirs"].add(rel_path)
+                    except OSError:
+                        log.debug("Unable to list dir: %s", abs_path)
                 if is_link:
                     link_dest = salt.utils.path.readlink(abs_path)
                     log.trace(
