@@ -6,6 +6,7 @@ Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 
 """
 
+
 import errno
 import logging
 import os
@@ -1085,6 +1086,7 @@ class TCPReqClient(salt.transport.base.RequestClient):
             source_ip=opts.get("source_ip"),
             source_port=opts.get("source_ret_port"),
         )
+
     @salt.ext.tornado.gen.coroutine
     def connect(self):
         yield self.message_client.connect()
