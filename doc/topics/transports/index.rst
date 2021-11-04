@@ -5,8 +5,8 @@ Salt Transport
 ==============
 
 
-Transports in Salt are used by :ref:`Channels <channels>` to send messages between Masters Minions
-and the Salt cli. Transports can be brokerless or brokered. There are two types
+Transports in Salt are used by :ref:`Channels <channels>` to send messages between Masters, Minions,
+and the Salt CLI. Transports can be brokerless or brokered. There are two types
 of server / client implementations needed to implement a channel.
 
 

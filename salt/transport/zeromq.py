@@ -299,12 +299,14 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         # Prepare the zeromq sockets
         self.uri = "tcp://{interface}:{ret_port}".format(**self.opts)
         self.clients = context.socket(zmq.ROUTER)
+        self.clients.setsockopt(zmq.LINGER, -1)
         if self.opts["ipv6"] is True and hasattr(zmq, "IPV4ONLY"):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self.clients.setsockopt(zmq.IPV4ONLY, 0)
         self.clients.setsockopt(zmq.BACKLOG, self.opts.get("zmq_backlog", 1000))
         self._start_zmq_monitor()
         self.workers = context.socket(zmq.DEALER)
+        self.workers.setsockopt(zmq.LINGER, -1)
 
         if self.opts["mworker_queue_niceness"] and not salt.utils.platform.is_windows():
             log.info(
@@ -399,6 +401,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         """
         context = zmq.Context(1)
         self._socket = context.socket(zmq.REP)
+        self._socket.setsockopt(zmq.LINGER, -1)
         self._start_zmq_monitor()
 
         if self.opts.get("ipc_mode", "") == "tcp":
@@ -499,14 +502,16 @@ class AsyncReqMessageClient:
 
         self.context = zmq.Context()
 
-        # wire up sockets
-        self._init_socket()
 
         self.send_queue = []
         # mapping of message -> future
         self.send_future_map = {}
 
         self._closing = False
+
+    def connect(self):
+        # wire up sockets
+        self._init_socket()
 
     # TODO: timeout all in-flight sessions, or error
     def close(self):
@@ -562,7 +567,6 @@ class AsyncReqMessageClient:
             elif hasattr(zmq, "IPV4ONLY"):
                 self.socket.setsockopt(zmq.IPV4ONLY, 0)
         self.socket.linger = self.linger
-        log.debug("**** Trying to connect to: %s", self.addr)
         self.socket.connect(self.addr)
         self.stream = zmq.eventloop.zmqstream.ZMQStream(
             self.socket, io_loop=self.io_loop
@@ -918,8 +922,12 @@ class RequestClient(salt.transport.base.RequestClient):
             io_loop=io_loop,
         )
 
+    def connect(self):
+        self.message_client.connect()
+
     @salt.ext.tornado.gen.coroutine
     def send(self, load, tries=3, timeout=60):
+        self.connect()
         ret = yield self.message_client.send(load, tries=tries, timeout=timeout)
         raise salt.ext.tornado.gen.Return(ret)
 

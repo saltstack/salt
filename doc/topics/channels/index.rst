@@ -17,7 +17,7 @@ Pub Channel
 The pub channel, or publish channel, is how a master sends a job (payload) to a
 minion. This is a basic pub/sub paradigm, which has specific targeting semantics.
 All data which goes across the publish system should be encrypted such that only
-members of the Salt cluster can decrypt the publishes.
+members of the Salt cluster can decrypt the published payloads.
 
 
 Req Channel
