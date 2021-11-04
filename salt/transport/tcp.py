@@ -602,6 +602,7 @@ class MessageClient:
         self._closing = True
         try:
             for msg_id in list(self.send_future_map):
+                log.error("Closing before send future completed %r", msg_id)
                 future = self.send_future_map.pop(msg_id)
                 future.set_exception(ClosingError())
             self._tcp_client.close()
@@ -1084,6 +1085,9 @@ class TCPReqClient(salt.transport.base.RequestClient):
             source_ip=opts.get("source_ip"),
             source_port=opts.get("source_ret_port"),
         )
+    @salt.ext.tornado.gen.coroutine
+    def connect(self):
+        yield self.message_client.connect()
 
     @salt.ext.tornado.gen.coroutine
     def send(self, load, tries=3, timeout=60):

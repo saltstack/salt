@@ -43,8 +43,7 @@ log = logging.getLogger(__name__)
 
 class ReqServerChannel:
     """
-    ReqServerChannel handles request/reply messages from ReqChannels. The
-    server listens on the master's ret_port (default: 4506) option.
+    ReqServerChannel handles request/reply messages from ReqChannels.
     """
 
     @classmethod
