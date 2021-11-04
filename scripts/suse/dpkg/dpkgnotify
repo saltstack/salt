@@ -2,9 +2,11 @@
 
 import os
 import hashlib
+import sys
 
 CK_PATH = "/var/cache/salt/minion/dpkg.cookie"
 DPKG_PATH = "/var/lib/dpkg/status"
+
 
 def _get_mtime():
     """
@@ -35,9 +37,19 @@ def dpkg_post_invoke():
     """
     Hook after the package installation transaction.
     """
-    if 'SALT_RUNNING' not in os.environ:
-        with open(CK_PATH, 'w') as ck_fh:
-            ck_fh.write('{chksum} {mtime}\n'.format(chksum=_get_checksum(), mtime=_get_mtime()))
+    if "SALT_RUNNING" not in os.environ:
+        try:
+            ck_dir = os.path.dirname(CK_PATH)
+            if not os.path.exists(ck_dir):
+                os.makedirs(ck_dir)
+            with open(CK_PATH, "w") as ck_fh:
+                ck_fh.write(
+                    "{chksum} {mtime}\n".format(
+                        chksum=_get_checksum(), mtime=_get_mtime()
+                    )
+                )
+        except (IOError, OSError) as e:
+            sys.stderr.write("Unable to save the cookie file: {}\n".format(e))
 
 
 if __name__ == "__main__":
