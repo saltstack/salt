@@ -106,18 +106,17 @@ def _set_retcode(ret, highstate=None):
 
 def _get_pillar_errors(kwargs, pillar=None):
     """
-    Checks all pillars (external and internal) for errors.
-    Return an error message, if anywhere or None.
+    Check pillar for errors.
+
+    If a pillar is passed, it will be checked. Otherwise, the in-memory pillar
+    will checked instead. Passing kwargs['force'] = True short cuts the check
+    and always returns None, indicating no errors.
 
     :param kwargs: dictionary of options
-    :param pillar: external pillar
-    :return: None or an error message
+    :param pillar: pillar
+    :return: None or a list of error messages
     """
-    return (
-        None
-        if kwargs.get("force")
-        else (pillar or {}).get("_errors", __pillar__.get("_errors")) or None
-    )
+    return None if kwargs.get("force") else (pillar or __pillar__).get("_errors")
 
 
 def _wait(jid):
