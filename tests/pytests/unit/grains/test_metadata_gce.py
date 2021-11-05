@@ -7,37 +7,100 @@
 """
 
 import logging
-#import pytest
 
-try:
-    import salt.grains.metadata_gce as metadata
-    from tests.support.mock import MagicMock, patch
-except ImportError:
-    pass
+import pytest
+import salt.grains.metadata_gce as metadata
+import salt.utils.http as http
+from tests.support.mock import create_autospec, patch
+
+# from Exception import Exception, ValueError
 
 log = logging.getLogger(__name__)
 
+
 metadata_vals = {
-        'http://169.254.169.254/computeMetadata/v1/': {
-            "body": "instance/",
-            "headers": {"Content-Type": "application/octet-stream", "Metadata-Flavor": "Google"}
-            },
-        'http://169.254.169.254/computeMetadata/v1/instance/': {
-            "body": "test",
-            "headers": {"Content-Type": "application/octet-stream", "Metadata-Flavor": "Google"}
-            },
-        'http://169.254.169.254/computeMetadata/v1/instance/test': {
-            "body": "fulltest",
-            "headers": {"Content-Type": "application/octet-stream", "Metadata-Flavor": "Google"}
-            }
-        }
+    "http://169.254.169.254/computeMetadata/v1/": {
+        "body": "instance/\nproject/",
+        "headers": {"Content-Type": "text/plain", "Metadata-Flavor": "Google"},
+    },
+    "http://169.254.169.254/computeMetadata/v1/instance/": {
+        "body": "test",
+        "headers": {"Content-Type": "text/plain", "Metadata-Flavor": "Google"},
+    },
+    "http://169.254.169.254/computeMetadata/v1/instance/test": {
+        "body": "fulltest",
+        "headers": {
+            "Content-Type": "application/octet-stream",
+            "Metadata-Flavor": "Google",
+        },
+    },
+}
+
+
+@pytest.fixture
+def configure_loader_modules():
+    return {metadata: {"__opts__": {"metadata_server_grains": "True"}}}
 
 
 def mock_http(url="", headers=False, header_list=None):
-    print(url)
     return metadata_vals[url]
 
 
 def test_metadata_gce_search():
-    with patch("salt.utils.http.query", MagicMock(side_effect=[mock_http, mock_http, mock_http])) as testing:
-        assert metadata._search() == "instance/"
+    with patch(
+        "salt.utils.http.query",
+        create_autospec(http.query, autospec=True, side_effect=mock_http),
+    ):
+        assert metadata.metadata() == {"instance": {"test": "fulltest"}}
+
+
+def test_metadata_virtual():
+    with patch(
+        "salt.utils.http.query",
+        create_autospec(http.query, autospec=True, side_effect=Exception(ValueError)),
+    ):
+        assert metadata.__virtual__() is False
+    with patch(
+        "salt.utils.http.query",
+        create_autospec(
+            http.query,
+            autospec=True,
+            return_value={"error": "[Errno -2] Name or service not known"},
+        ),
+    ):
+        assert metadata.__virtual__() is False
+    with patch(
+        "salt.utils.http.query",
+        create_autospec(
+            http.query,
+            autospec=True,
+            return_value={
+                "body": "test",
+                "headers": {"Metadata-Flavor": "Google"},
+                "status": 200,
+            },
+        ),
+    ):
+        assert metadata.__virtual__() is True
+    with patch(
+        "salt.utils.http.query",
+        create_autospec(
+            http.query,
+            autospec=True,
+            return_value={
+                "body": "test",
+                "headers": {"Metadata-Flavor": "Google"},
+                "status": 404,
+            },
+        ),
+    ):
+        assert metadata.__virtual__() is False
+    with patch(
+        "salt.utils.http.query",
+        create_autospec(
+            http.query,
+            autospec=True,
+            return_value={"body": "test", "headers": {}, "code": 200},
+        ),
+    ):
+        assert metadata.__virtual__() is False
