@@ -1,5 +1,3 @@
-import sys
-
 import pytest
 import salt.loader.context
 import salt.modules.state as statemod
