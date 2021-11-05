@@ -960,12 +960,6 @@ def call(function, *args, **kwargs):
 
         try:
             ret_stdout = run([str(x) for x in salt_argv], snapshot="continue")
-            # FIXME: This is hack to workaround tukit issue. It just removed the conflicting line
-            if (
-                "awk: fatal: cannot open file `/.snapshots"
-                in ret_stdout.split("\n")[-1]
-            ):
-                ret_stdout = "\n".join(ret_stdout.split("\n")[:-1])
         except salt.exceptions.CommandExecutionError as e:
             # This happens when there was an problem with salt-call execution
             ret_stdout = e.message
