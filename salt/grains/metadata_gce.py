@@ -24,8 +24,7 @@ import salt.utils.json
 import salt.utils.stringutils
 
 # metadata server information
-IP = "169.254.169.254"
-HOST = f"http://{IP}/"
+HOST = "http://169.254.169.25}/"
 
 log = logging.getLogger(__name__)
 
@@ -35,8 +34,8 @@ def __virtual__():
         return False
     googletest = http.query(HOST, status=True, headers=True)
     if (
-        googletest.get("status") != 200
-        and googletest["headers"].get("Metadata-Flavor", False) != "Google"
+        googletest.get("status", 404) != 200
+        or googletest.get("headers", {}).get("Metadata-Flavor", False) != "Google"
     ):
         return False
     return True
