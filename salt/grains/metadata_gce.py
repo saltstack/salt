@@ -24,7 +24,7 @@ import salt.utils.json
 import salt.utils.stringutils
 
 # metadata server information
-HOST = "http://169.254.169.25}/"
+HOST = "http://169.254.169.25/"
 
 log = logging.getLogger(__name__)
 
