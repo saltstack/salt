@@ -275,11 +275,7 @@ transaction.
 
 """
 
-import copy
 import logging
-import os
-import sys
-import tempfile
 
 # required by _check_queue invocation later
 import time  # pylint: disable=unused-import
