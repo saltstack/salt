@@ -57,11 +57,6 @@ def test_metadata_gce_search():
 def test_metadata_virtual():
     with patch(
         "salt.utils.http.query",
-        create_autospec(http.query, autospec=True, side_effect=Exception(ValueError)),
-    ):
-        assert metadata.__virtual__() is False
-    with patch(
-        "salt.utils.http.query",
         create_autospec(
             http.query,
             autospec=True,
