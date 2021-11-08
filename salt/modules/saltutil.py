@@ -1120,7 +1120,7 @@ def refresh_matchers():
     return ret
 
 
-def refresh_pillar(wait=False, timeout=30):
+def refresh_pillar(wait=False, timeout=30, clean_cache=True):
     """
     Signal the minion to refresh the in-memory pillar data. See :ref:`pillar-in-memory`.
 
@@ -1128,6 +1128,9 @@ def refresh_pillar(wait=False, timeout=30):
     :type wait:             bool, optional
     :param timeout:         How long to wait in seconds, only used when wait is True, defaults to 30.
     :type timeout:          int, optional
+    :param clean_cache:     Clean the pillar cache, only used when `pillar_cache` is True. Defaults to True
+    :type clean_cache:      bool, optional
+        .. versionadded:: 3005
     :return:                Boolean status, True when the pillar_refresh event was fired successfully.
 
     CLI Example:
@@ -1137,13 +1140,14 @@ def refresh_pillar(wait=False, timeout=30):
         salt '*' saltutil.refresh_pillar
         salt '*' saltutil.refresh_pillar wait=True timeout=60
     """
+    data = {"clean_cache": clean_cache}
     try:
         if wait:
             #  If we're going to block, first setup a listener
             with salt.utils.event.get_event(
                 "minion", opts=__opts__, listen=True
             ) as eventer:
-                ret = __salt__["event.fire"]({}, "pillar_refresh")
+                ret = __salt__["event.fire"](data, "pillar_refresh")
                 # Wait for the finish event to fire
                 log.trace("refresh_pillar waiting for pillar refresh to complete")
                 # Blocks until we hear this event or until the timeout expires
@@ -1156,7 +1160,7 @@ def refresh_pillar(wait=False, timeout=30):
                         "Pillar refresh did not complete within timeout %s", timeout
                     )
         else:
-            ret = __salt__["event.fire"]({}, "pillar_refresh")
+            ret = __salt__["event.fire"](data, "pillar_refresh")
     except KeyError:
         log.error("Event module not available. Pillar refresh failed.")
         ret = False  # Effectively a no-op, since we can't really return without an event system
