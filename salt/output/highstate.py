@@ -499,7 +499,7 @@ def _format_host(host, data, indent_level=1):
                 hstrs.append(
                     colorfmt.format(
                         colors["GREEN"],
-                        _counts(f"Success %", success_pct),
+                        _counts("Success %", success_pct),
                         colors,
                     )
                 )
@@ -517,7 +517,7 @@ def _format_host(host, data, indent_level=1):
                 hstrs.append(
                     colorfmt.format(
                         colors["RED"] if num_failed else colors["CYAN"],
-                        _counts(f"Failure %", failed_pct),
+                        _counts("Failure %", failed_pct),
                         colors,
                     )
                 )
