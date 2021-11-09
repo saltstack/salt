@@ -17,6 +17,7 @@ import salt.client.ssh.wrapper.state
 import salt.defaults.exitcodes
 import salt.exceptions
 import salt.utils.args
+import salt.utils.files
 
 __func_alias__ = {"apply_": "apply"}
 
@@ -36,6 +37,16 @@ def __virtual__():
 def exist(root):
     """
     Return True if the chroot environment is present.
+
+    root
+        Path to the chroot environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion chroot.exist /chroot
+
     """
     dev = os.path.join(root, "dev")
     proc = os.path.join(root, "proc")
@@ -75,6 +86,38 @@ def create(root):
     return True
 
 
+def in_chroot():
+    """
+    Return True if the process is inside a chroot jail
+
+    .. versionadded:: 3004
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion chroot.in_chroot
+
+    """
+    result = False
+
+    try:
+        # We cannot assume that we are "root", so we cannot read
+        # '/proc/1/root', that is required for the usual way of
+        # detecting that we are in a chroot jail.  We use the debian
+        # ischroot method.
+        with salt.utils.files.fopen(
+            "/proc/1/mountinfo"
+        ) as root_fd, salt.utils.files.fopen("/proc/self/mountinfo") as self_fd:
+            root_mountinfo = root_fd.read()
+            self_mountinfo = self_fd.read()
+        result = root_mountinfo != self_mountinfo
+    except OSError:
+        pass
+
+    return result
+
+
 def call(root, function, *args, **kwargs):
     """
     Executes a Salt function inside a chroot environment.
@@ -112,7 +155,7 @@ def call(root, function, *args, **kwargs):
         so_mods=__salt__["config.option"]("thin_so_mods", ""),
     )
     # Some bug in Salt is preventing us to use `archive.tar` here. A
-    # AsyncZeroMQReqChannel is not closed at the end os the salt-call,
+    # AsyncZeroMQReqChannel is not closed at the end of the salt-call,
     # and makes the client never exit.
     #
     # stdout = __salt__['archive.tar']('xzf', thin_path, dest=thin_dest_path)
@@ -154,8 +197,12 @@ def call(root, function, *args, **kwargs):
             if isinstance(local, dict) and "retcode" in local:
                 __context__["retcode"] = local["retcode"]
             return local.get("return", data)
-        except (KeyError, ValueError):
-            return {"result": False, "comment": "Can't parse container command output"}
+        except ValueError:
+            return {
+                "result": False,
+                "retcode": ret["retcode"],
+                "comment": {"stdout": ret["stdout"], "stderr": ret["stderr"]},
+            }
     finally:
         __utils__["files.rm_rf"](thin_dest_path)
 
@@ -190,19 +237,23 @@ def apply_(root, mods=None, **kwargs):
 
 def _create_and_execute_salt_state(root, chunks, file_refs, test, hash_type):
     """
-    Create the salt_stage tarball, and execute in the chroot
+    Create the salt_state tarball, and execute in the chroot
     """
     # Create the tar containing the state pkg and relevant files.
     salt.client.ssh.wrapper.state._cleanup_slsmod_low_data(chunks)
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-        salt.fileclient.get_file_client(__opts__), chunks, file_refs, __pillar__, root
+        salt.fileclient.get_file_client(__opts__),
+        chunks,
+        file_refs,
+        __pillar__.value(),
+        root,
     )
     trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, hash_type)
 
     ret = None
 
     # Create a temporary directory inside the chroot where we can move
-    # the salt_stage.tgz
+    # the salt_state.tgz
     salt_state_path = tempfile.mkdtemp(dir=root)
     salt_state_path = os.path.join(salt_state_path, "salt_state.tgz")
     salt_state_path_in_chroot = salt_state_path.replace(root, "", 1)
@@ -256,7 +307,7 @@ def sls(root, mods, saltenv="base", test=None, exclude=None, **kwargs):
     """
     # Get a copy of the pillar data, to avoid overwriting the current
     # pillar, instead the one delegated
-    pillar = copy.deepcopy(__pillar__)
+    pillar = copy.deepcopy(__pillar__.value())
     pillar.update(kwargs.get("pillar", {}))
 
     # Clone the options data and apply some default values. May not be
@@ -325,30 +376,30 @@ def highstate(root, **kwargs):
     """
     # Get a copy of the pillar data, to avoid overwriting the current
     # pillar, instead the one delegated
-    pillar = copy.deepcopy(__pillar__)
+    pillar = copy.deepcopy(__pillar__.value())
     pillar.update(kwargs.get("pillar", {}))
 
     # Clone the options data and apply some default values. May not be
     # needed, as this module just delegate
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
-    st_ = salt.client.ssh.state.SSHHighState(
+    with salt.client.ssh.state.SSHHighState(
         opts, pillar, __salt__, salt.fileclient.get_file_client(__opts__)
-    )
+    ) as st_:
 
-    # Compile and verify the raw chunks
-    chunks = st_.compile_low_chunks()
-    file_refs = salt.client.ssh.state.lowstate_file_refs(
-        chunks,
-        salt.client.ssh.wrapper.state._merge_extra_filerefs(
-            kwargs.get("extra_filerefs", ""), opts.get("extra_filerefs", "")
-        ),
-    )
-    # Check for errors
-    for chunk in chunks:
-        if not isinstance(chunk, dict):
-            __context__["retcode"] = 1
-            return chunks
+        # Compile and verify the raw chunks
+        chunks = st_.compile_low_chunks()
+        file_refs = salt.client.ssh.state.lowstate_file_refs(
+            chunks,
+            salt.client.ssh.wrapper.state._merge_extra_filerefs(
+                kwargs.get("extra_filerefs", ""), opts.get("extra_filerefs", "")
+            ),
+        )
+        # Check for errors
+        for chunk in chunks:
+            if not isinstance(chunk, dict):
+                __context__["retcode"] = 1
+                return chunks
 
-    test = kwargs.pop("test", False)
-    hash_type = opts["hash_type"]
-    return _create_and_execute_salt_state(root, chunks, file_refs, test, hash_type)
+        test = kwargs.pop("test", False)
+        hash_type = opts["hash_type"]
+        return _create_and_execute_salt_state(root, chunks, file_refs, test, hash_type)

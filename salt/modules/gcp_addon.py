@@ -39,7 +39,8 @@ def __virtual__():
     if HAS_LIB is False:
         return (
             False,
-            "Required dependencies 'googleapiclient' and/or 'oauth2client' were not found.",
+            "Required dependencies 'googleapiclient' and/or 'oauth2client' were not"
+            " found.",
         )
     return __virtualname__
 
@@ -117,8 +118,10 @@ def route_create(
     packet to instance "instance-1"(if packet is intended to other network)
     """
 
-    credentials = oauth2client.service_account.ServiceAccountCredentials.from_json_keyfile_name(
-        credential_file
+    credentials = (
+        oauth2client.service_account.ServiceAccountCredentials.from_json_keyfile_name(
+            credential_file
+        )
     )
     service = googleapiclient.discovery.build("compute", "v1", credentials=credentials)
     routes = service.routes()

@@ -221,7 +221,7 @@ def present(
     lambda_funcname_format
         Please review the earlier example for the usage.  The only substituable keys in the funcname
         format are {stage}, {api}, {resource}, {method}.
-        Any other keys or positional subsitution parameters will be flagged as an invalid input.
+        Any other keys or positional substitution parameters will be flagged as an invalid input.
 
     authorization_type
         This field can be either 'NONE', or 'AWS_IAM'.  This will be applied to all methods in the given
@@ -624,55 +624,37 @@ class _Swagger:
 
     # AWS integration templates for normal and options methods
     REQUEST_TEMPLATE = {
-        "application/json": "#set($inputRoot = $input.path('$'))\n"
-        "{\n"
-        '"header_params" : {\n'
-        "#set ($map = $input.params().header)\n"
-        "#foreach( $param in $map.entrySet() )\n"
-        '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
-        "#end\n"
-        "},\n"
-        '"query_params" : {\n'
-        "#set ($map = $input.params().querystring)\n"
-        "#foreach( $param in $map.entrySet() )\n"
-        '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
-        "#end\n"
-        "},\n"
-        '"path_params" : {\n'
-        "#set ($map = $input.params().path)\n"
-        "#foreach( $param in $map.entrySet() )\n"
-        '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
-        "#end\n"
-        "},\n"
-        '"apigw_context" : {\n'
-        '"apiId": "$context.apiId",\n'
-        '"httpMethod": "$context.httpMethod",\n'
-        '"requestId": "$context.requestId",\n'
-        '"resourceId": "$context.resourceId",\n'
-        '"resourcePath": "$context.resourcePath",\n'
-        '"stage": "$context.stage",\n'
-        '"identity": {\n'
-        '  "user":"$context.identity.user",\n'
-        '  "userArn":"$context.identity.userArn",\n'
-        '  "userAgent":"$context.identity.userAgent",\n'
-        '  "sourceIp":"$context.identity.sourceIp",\n'
-        '  "cognitoIdentityId":"$context.identity.cognitoIdentityId",\n'
-        '  "cognitoIdentityPoolId":"$context.identity.cognitoIdentityPoolId",\n'
-        '  "cognitoAuthenticationType":"$context.identity.cognitoAuthenticationType",\n'
-        '  "cognitoAuthenticationProvider":["$util.escapeJavaScript($context.identity.cognitoAuthenticationProvider)"],\n'
-        '  "caller":"$context.identity.caller",\n'
-        '  "apiKey":"$context.identity.apiKey",\n'
-        '  "accountId":"$context.identity.accountId"\n'
-        "}\n"
-        "},\n"
-        "\"body_params\" : $input.json('$'),\n"
-        '"stage_variables": {\n'
-        "#foreach($variable in $stageVariables.keySet())\n"
-        '"$variable": "$util.escapeJavaScript($stageVariables.get($variable))"\n'
-        "#if($foreach.hasNext), #end\n"
-        "#end\n"
-        "}\n"
-        "}"
+        "application/json": (
+            "#set($inputRoot = $input.path('$'))\n{\n\"header_params\" : {\n#set ($map"
+            " = $input.params().header)\n#foreach( $param in $map.entrySet()"
+            ' )\n"$param.key" : "$param.value" #if( $foreach.hasNext ),'
+            ' #end\n#end\n},\n"query_params" : {\n#set ($map ='
+            " $input.params().querystring)\n#foreach( $param in $map.entrySet()"
+            ' )\n"$param.key" : "$param.value" #if( $foreach.hasNext ),'
+            ' #end\n#end\n},\n"path_params" : {\n#set ($map ='
+            " $input.params().path)\n#foreach( $param in $map.entrySet()"
+            ' )\n"$param.key" : "$param.value" #if( $foreach.hasNext ),'
+            ' #end\n#end\n},\n"apigw_context" : {\n"apiId":'
+            ' "$context.apiId",\n"httpMethod": "$context.httpMethod",\n"requestId":'
+            ' "$context.requestId",\n"resourceId":'
+            ' "$context.resourceId",\n"resourcePath":'
+            ' "$context.resourcePath",\n"stage": "$context.stage",\n"identity": {\n '
+            ' "user":"$context.identity.user",\n '
+            ' "userArn":"$context.identity.userArn",\n '
+            ' "userAgent":"$context.identity.userAgent",\n '
+            ' "sourceIp":"$context.identity.sourceIp",\n '
+            ' "cognitoIdentityId":"$context.identity.cognitoIdentityId",\n '
+            ' "cognitoIdentityPoolId":"$context.identity.cognitoIdentityPoolId",\n '
+            ' "cognitoAuthenticationType":"$context.identity.cognitoAuthenticationType",\n'
+            '  "cognitoAuthenticationProvider":["$util.escapeJavaScript($context.identity.cognitoAuthenticationProvider)"],\n'
+            '  "caller":"$context.identity.caller",\n '
+            ' "apiKey":"$context.identity.apiKey",\n '
+            ' "accountId":"$context.identity.accountId"\n}\n},\n"body_params" :'
+            " $input.json('$'),\n\"stage_variables\": {\n#foreach($variable in"
+            ' $stageVariables.keySet())\n"$variable":'
+            ' "$util.escapeJavaScript($stageVariables.get($variable))"\n#if($foreach.hasNext),'
+            " #end\n#end\n}\n}"
+        )
     }
     REQUEST_OPTION_TEMPLATE = {"application/json": '{"statusCode": 200}'}
 
@@ -681,22 +663,24 @@ class _Swagger:
     # an array of non-uniform types, to it is not possible to create error model to match
     # exactly what comes out of lambda functions in case of error.
     RESPONSE_TEMPLATE = {
-        "application/json": "#set($inputRoot = $input.path('$'))\n"
-        "{\n"
-        '  "errorMessage" : "$inputRoot.errorMessage",\n'
-        '  "errorType" : "$inputRoot.errorType",\n'
-        '  "stackTrace" : [\n'
-        "#foreach($stackTrace in $inputRoot.stackTrace)\n"
-        "    [\n"
-        "#foreach($elem in $stackTrace)\n"
-        '      "$elem"\n'
-        "#if($foreach.hasNext),#end\n"
-        "#end\n"
-        "    ]\n"
-        "#if($foreach.hasNext),#end\n"
-        "#end\n"
-        "  ]\n"
-        "}"
+        "application/json": (
+            "#set($inputRoot = $input.path('$'))\n"
+            "{\n"
+            '  "errorMessage" : "$inputRoot.errorMessage",\n'
+            '  "errorType" : "$inputRoot.errorType",\n'
+            '  "stackTrace" : [\n'
+            "#foreach($stackTrace in $inputRoot.stackTrace)\n"
+            "    [\n"
+            "#foreach($elem in $stackTrace)\n"
+            '      "$elem"\n'
+            "#if($foreach.hasNext),#end\n"
+            "#end\n"
+            "    ]\n"
+            "#if($foreach.hasNext),#end\n"
+            "#end\n"
+            "  ]\n"
+            "}"
+        )
     }
     RESPONSE_OPTION_TEMPLATE = {}
 
@@ -955,8 +939,7 @@ class _Swagger:
         self._swagger_version = self._cfg.get("swagger")
         if self._swagger_version not in _Swagger.SWAGGER_VERSIONS_SUPPORTED:
             raise ValueError(
-                "Unsupported Swagger version: {},"
-                "Supported versions are {}".format(
+                "Unsupported Swagger version: {},Supported versions are {}".format(
                     self._swagger_version, _Swagger.SWAGGER_VERSIONS_SUPPORTED
                 )
             )
@@ -1013,7 +996,8 @@ class _Swagger:
         models = self._cfg.get("definitions")
         if not models:
             raise ValueError(
-                "Definitions Object has no values, You need to define them in your swagger file"
+                "Definitions Object has no values, You need to define them in your"
+                " swagger file"
             )
 
         return models
@@ -1037,7 +1021,8 @@ class _Swagger:
         paths = self._cfg.get("paths")
         if not paths:
             raise ValueError(
-                "Paths Object has no values, You need to define them in your swagger file"
+                "Paths Object has no values, You need to define them in your swagger"
+                " file"
             )
         for path in paths:
             if not path.startswith("/"):
@@ -1235,8 +1220,9 @@ class _Swagger:
                 self.restApiId = apis[0].get("id")
             else:
                 raise ValueError(
-                    "Multiple APIs matching given name {} and "
-                    "description {}".format(self.rest_api_name, self.info_json)
+                    "Multiple APIs matching given name {} and description {}".format(
+                        self.rest_api_name, self.info_json
+                    )
                 )
 
     def delete_stage(self, ret):
@@ -1458,9 +1444,8 @@ class _Swagger:
 
             ret = _log_changes(ret, "delete_api", delete_api_response)
         else:
-            ret["comment"] = (
-                "api already absent for swagger file: "
-                "{}, desc: {}".format(self.rest_api_name, self.info_json)
+            ret["comment"] = "api already absent for swagger file: {}, desc: {}".format(
+                self.rest_api_name, self.info_json
             )
 
         return ret
@@ -1591,13 +1576,12 @@ class _Swagger:
                     ret["result"] = False
                     ret["abort"] = True
                     if "error" in update_model_schema_response:
-                        ret["comment"] = (
-                            "Failed to update existing model {} with schema {}, "
-                            "error: {}".format(
-                                model,
-                                _dict_to_json_pretty(schema),
-                                update_model_schema_response["error"]["message"],
-                            )
+                        ret[
+                            "comment"
+                        ] = "Failed to update existing model {} with schema {}, " "error: {}".format(
+                            model,
+                            _dict_to_json_pretty(schema),
+                            update_model_schema_response["error"]["message"],
                         )
                     return ret
 
@@ -1616,13 +1600,12 @@ class _Swagger:
                     ret["result"] = False
                     ret["abort"] = True
                     if "error" in create_model_response:
-                        ret["comment"] = (
-                            "Failed to create model {}, schema {}, "
-                            "error: {}".format(
-                                model,
-                                _dict_to_json_pretty(schema),
-                                create_model_response["error"]["message"],
-                            )
+                        ret[
+                            "comment"
+                        ] = "Failed to create model {}, schema {}, error: {}".format(
+                            model,
+                            _dict_to_json_pretty(schema),
+                            create_model_response["error"]["message"],
                         )
                     return ret
 
@@ -1669,8 +1652,9 @@ class _Swagger:
 
         if not lambda_desc.get("function"):
             raise ValueError(
-                "Could not find lambda function {} in "
-                "regions [{}, {}].".format(lambda_name, lambda_region, apigw_region)
+                "Could not find lambda function {} in regions [{}, {}].".format(
+                    lambda_name, lambda_region, apigw_region
+                )
             )
 
         lambda_arn = lambda_desc.get("function").get("FunctionArn")
@@ -2255,9 +2239,10 @@ def usage_plan_association_present(
             return ret
 
         if len(existing["plans"]) != 1:
-            ret[
-                "comment"
-            ] = "There are multiple usage plans with the same name - it is not supported"
+            ret["comment"] = (
+                "There are multiple usage plans with the same name - it is not"
+                " supported"
+            )
             ret["result"] = False
             return ret
 
@@ -2355,9 +2340,10 @@ def usage_plan_association_absent(
             return ret
 
         if len(existing["plans"]) != 1:
-            ret[
-                "comment"
-            ] = "There are multiple usage plans with the same name - it is not supported"
+            ret["comment"] = (
+                "There are multiple usage plans with the same name - it is not"
+                " supported"
+            )
             ret["result"] = False
             return ret
 

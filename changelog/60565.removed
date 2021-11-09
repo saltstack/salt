@@ -1,1 +1,0 @@
-Removed the deprecated support for ``gid_from_name`` from the ``user`` state module

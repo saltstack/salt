@@ -99,7 +99,7 @@ def _present_test(
             )
     else:
         # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$")
+        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w-]+\s.+)$")
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:
@@ -172,7 +172,7 @@ def _absent_test(
             return (True, "All host keys in file {} are already absent".format(source))
     else:
         # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$")
+        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w-]+\s.+)$")
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:
@@ -230,8 +230,8 @@ def present(
         The user who owns the SSH authorized keys file to modify
 
     enc
-        Defines what type of key is being used; can be ed25519, ecdsa, ssh-rsa
-        or ssh-dss
+        Defines what type of key is being used, can be ed25519, ecdsa,
+        ssh-rsa, ssh-dss or any other type as of openssh server version 8.7.
 
     comment
         The comment to be placed with the SSH public key
@@ -269,7 +269,7 @@ def present(
 
     if source == "":
         # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$")
+        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w-]+\s.+)$")
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:
@@ -311,7 +311,7 @@ def present(
         key = __salt__["cp.get_file_str"](source, saltenv=__env__)
         filehasoptions = False
         # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(ssh\-|ecds).*")
+        sshre = re.compile(r"^(sk-)?(ssh\-|ecds).*")
         key = key.rstrip().split("\n")
         for keyline in key:
             filehasoptions = sshre.match(keyline)
@@ -356,9 +356,10 @@ def present(
         )
         return ret
     elif data == "no change":
-        ret["comment"] = (
-            "The authorized host key {} is already present "
-            "for user {}".format(name, user)
+        ret[
+            "comment"
+        ] = "The authorized host key {} is already present for user {}".format(
+            name, user
         )
     elif data == "new":
         ret["changes"][name] = "New"
@@ -412,8 +413,8 @@ def absent(
         The user who owns the SSH authorized keys file to modify
 
     enc
-        Defines what type of key is being used; can be ed25519, ecdsa, ssh-rsa
-        or ssh-dss
+        Defines what type of key is being used, can be ed25519, ecdsa,
+        ssh-rsa, ssh-dss or any other type as of openssh server version 8.7.
 
     comment
         The comment to be placed with the SSH public key
@@ -459,7 +460,7 @@ def absent(
         key = __salt__["cp.get_file_str"](source, saltenv=__env__)
         filehasoptions = False
         # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(ssh\-|ecds).*")
+        sshre = re.compile(r"^(sk-)?(ssh\-|ecds).*")
         key = key.rstrip().split("\n")
         for keyline in key:
             filehasoptions = sshre.match(keyline)
@@ -482,7 +483,7 @@ def absent(
                 )
     else:
         # Get just the key
-        sshre = re.compile(r"^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$")
+        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w-]+\s.+)$")
         fullkey = sshre.search(name)
         # if it is {key} [comment]
         if not fullkey:
@@ -537,8 +538,8 @@ def manage(
         The user who owns the SSH authorized keys file to modify
 
     enc
-        Defines what type of key is being used; can be ed25519, ecdsa, ssh-rsa
-        or ssh-dss
+        Defines what type of key is being used, can be ed25519, ecdsa,
+        ssh-rsa, ssh-dss or any other type as of openssh server version 8.7.
 
     comment
         The comment to be placed with the SSH public key
