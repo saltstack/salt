@@ -5,7 +5,7 @@ Redis
 Redis plugin for the Salt caching subsystem.
 
 .. versionadded:: 2017.7.0
-.. versionchanged:: Phosphorus
+.. versionchanged:: 3005
 
 As Redis provides a simple mechanism for very fast key-value store, in order to
 provide the necessary features for the Salt caching subsystem, the following
@@ -60,7 +60,7 @@ key_prefix: ``$KEY``
 timestamp_prefix: ``$TSTAMP``
     The prefix for the last modified timestamp for keys.
 
-    .. versionadded:: Phosphorus
+    .. versionadded:: 3005
 
 separator: ``_``
     The separator between the prefix and the key body.
@@ -216,6 +216,9 @@ def __virtual__():
 
 
 def init_kwargs(kwargs):
+    """
+    Effectively a noop. Return an empty dictionary.
+    """
     return {}
 
 
@@ -380,7 +383,7 @@ def store(bank, key, data):
         # localfs cache truncates the timestamp to int only. We'll do the same.
         redis_pipe.set(
             _get_timestamp_key(bank=bank, key=key),
-            __context__["serial"].dumps(int(time.time())),
+            salt.payload.dumps(int(time.time())),
         )
         log.debug("Adding %s to %s", key, redis_bank_keys)
         redis_pipe.execute()
@@ -558,9 +561,13 @@ def contains(bank, key):
 
 
 def updated(bank, key):
+    """
+    Return the Unix Epoch timestamp of when the key was last updated. Return
+    None if key is not found.
+    """
     redis_server = _get_redis_server()
     timestamp_key = _get_timestamp_key(bank=bank, key=key)
     value = redis_server.get(timestamp_key)
     if value is not None:
-        value = __context__["serial"].loads(value)
+        value = salt.payload.loads(value)
     return value

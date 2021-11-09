@@ -1213,6 +1213,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.parent_loader = current_loader
         token = salt.loader.context.loader_ctxvar.set(self)
         try:
+            if getattr(
+                getattr(_func_or_method, "__wrapped__", None), "__name__", None
+            ) in ("store", "cache", "updated", "fetch", "flush"):
+                _func_or_method = _func_or_method.__wrapped__
             return _func_or_method(*args, **kwargs)
         finally:
             self.parent_loader = None

@@ -125,7 +125,7 @@ def store(bank, key, data):
     try:
         c_data = salt.payload.dumps(data)
         api.kv.put(c_key, c_data)
-        api.kv.put(tstamp_key, __context__["serial"].dumps(int(time.time())))
+        api.kv.put(tstamp_key, salt.payload.dumps(int(time.time())))
     except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
             "There was an error writing the key, {}: {}".format(c_key, exc)
@@ -206,12 +206,16 @@ def contains(bank, key):
 
 
 def updated(bank, key):
+    """
+    Return the Unix Epoch timestamp of when the key was last updated. Return
+    None if key is not found.
+    """
     c_key = "{}/{}{}".format(bank, key, _tstamp_suffix)
     try:
         _, value = api.kv.get(c_key)
         if value is None:
             return None
-        return __context__["serial"].loads(value["Value"])
+        return salt.payload.loads(value["Value"])
     except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
             "There was an error reading the key, {}: {}".format(c_key, exc)
