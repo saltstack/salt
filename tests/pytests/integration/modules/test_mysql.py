@@ -5,7 +5,6 @@ import logging
 
 import pytest
 import salt.modules.mysql as mysql
-from tests.support.helpers import requires_system_grains
 from tests.support.pytest.mysql import mysql_container  # pylint: disable=unused-import
 
 log = logging.getLogger(__name__)
@@ -20,7 +19,6 @@ pytestmark = [
 
 
 @pytest.fixture(autouse=True)
-@requires_system_grains
 def skip_on_centos_7(grains):
     if grains.get("os") == "CentOS" and grains.get("osmajorrelease") == "7":
         pytest.skip(
