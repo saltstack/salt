@@ -319,7 +319,9 @@ def returner(ret):
             textfile.write(
                 "\n".join(
                     [
-                        f'# HELP {k.split("{")[0]} {v["help"]}\n# TYPE {k.split("{")[0]} gauge\n{k} {v["value"]}'
+                        "# HELP {} {}\n# TYPE {} gauge\n{} {}".format(
+                            k.split("{")[0], v["help"], k.split("{")[0], k, v["value"]
+                        )
                         for k, v in output.items()
                     ]
                 )
