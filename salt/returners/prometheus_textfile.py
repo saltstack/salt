@@ -293,7 +293,7 @@ def returner(ret):
         old_name = os.path.basename(opts["filename"])
         new_name = (
             "".join(old_name.split(".")[:-1])
-            + f"-{prom_state}."
+            + "-{}.".format(prom_state)
             + "".join(old_name.split(".")[-1])
         )
         opts["filename"] = os.path.join(out_dir, new_name)
