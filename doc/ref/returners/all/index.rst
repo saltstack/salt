@@ -36,6 +36,7 @@ returner modules
     pgjsonb
     postgres
     postgres_local_cache
+    prometheus_textfile
     pushover_returner
     rawfile_json
     redis_return
