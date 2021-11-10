@@ -294,14 +294,14 @@ def verify_env(
                         path = os.path.join(root, name)
                         try:
                             fmode = os.stat(path)
+                            if fmode.st_uid != uid or fmode.st_gid != gid:
+                                if permissive and fmode.st_gid in groups:
+                                    pass
+                                else:
+                                    # chown the file for the new user
+                                    os.chown(path, uid, gid)
                         except OSError:
                             continue
-                        if fmode.st_uid != uid or fmode.st_gid != gid:
-                            if permissive and fmode.st_gid in groups:
-                                pass
-                            else:
-                                # chown the file for the new user
-                                os.chown(path, uid, gid)
 
         # Allow the pki dir to be 700 or 750, but nothing else.
         # This prevents other users from writing out keys, while
