@@ -160,7 +160,7 @@ class TestSaltEvent(TestCase):
 
     @pytest.mark.slow_test
     def test_event_no_timeout(self):
-        """Test no wait timeout, we should block forever, until we get one """
+        """Test no wait timeout, we should block forever, until we get one"""
         with eventpublisher_process(self.sock_dir):
             with salt.utils.event.MasterEvent(self.sock_dir, listen=True) as me:
                 with eventsender_process({"data": "foo2"}, "evt2", self.sock_dir, 5):
@@ -330,7 +330,10 @@ class TestAsyncEventPublisher(AsyncTestCase):
             os.makedirs(self.sock_dir)
         self.addCleanup(shutil.rmtree, self.sock_dir, ignore_errors=True)
         self.opts = {"sock_dir": self.sock_dir}
-        self.publisher = salt.utils.event.AsyncEventPublisher(self.opts, self.io_loop,)
+        self.publisher = salt.utils.event.AsyncEventPublisher(
+            self.opts,
+            self.io_loop,
+        )
         self.event = salt.utils.event.get_event(
             "minion", opts=self.opts, io_loop=self.io_loop
         )

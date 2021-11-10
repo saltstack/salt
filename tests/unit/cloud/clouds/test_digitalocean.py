@@ -26,7 +26,9 @@ class DigitalOceanTestCase(TestCase):
         kwargs that are provided do not include an action.
         """
         self.assertRaises(
-            SaltCloudSystemExit, digitalocean.reboot, name="fake_name",
+            SaltCloudSystemExit,
+            digitalocean.reboot,
+            name="fake_name",
         )
 
         with self.assertRaises(SaltCloudSystemExit) as excinfo:

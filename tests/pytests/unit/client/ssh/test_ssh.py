@@ -100,8 +100,6 @@ def test_cmd_block_python_version_error(ssh_target):
         ("ssh_wipe", True, True),
         ("rand_thin_dir", True, True),
         ("regen_thin", True, True),
-        ("python2_bin", "python2", True),
-        ("python3_bin", "python3", True),
         ("ssh_run_pre_flight", True, True),
         ("no_host_keys", True, True),
         ("saltfile", "/tmp/test", True),

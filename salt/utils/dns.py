@@ -29,7 +29,6 @@ import salt.utils.network
 import salt.utils.path
 import salt.utils.stringutils
 from salt._compat import ipaddress
-from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
 from salt.utils.odict import OrderedDict
 
 # Integrations
@@ -64,18 +63,46 @@ class RFC:
     CAA_TAGS = ("issue", "issuewild", "iodef")
 
     # http://www.iana.org/assignments/dns-sshfp-rr-parameters/dns-sshfp-rr-parameters.xhtml
-    SSHFP_ALGO = OrderedDict(((1, "rsa"), (2, "dsa"), (3, "ecdsa"), (4, "ed25519"),))
+    SSHFP_ALGO = OrderedDict(
+        (
+            (1, "rsa"),
+            (2, "dsa"),
+            (3, "ecdsa"),
+            (4, "ed25519"),
+        )
+    )
 
-    SSHFP_HASH = OrderedDict(((1, "sha1"), (2, "sha256"),))
+    SSHFP_HASH = OrderedDict(
+        (
+            (1, "sha1"),
+            (2, "sha256"),
+        )
+    )
 
     # http://www.iana.org/assignments/dane-parameters/dane-parameters.xhtml
     TLSA_USAGE = OrderedDict(
-        ((0, "pkixta"), (1, "pkixee"), (2, "daneta"), (3, "daneee"),)
+        (
+            (0, "pkixta"),
+            (1, "pkixee"),
+            (2, "daneta"),
+            (3, "daneee"),
+        )
     )
 
-    TLSA_SELECT = OrderedDict(((0, "cert"), (1, "spki"),))
+    TLSA_SELECT = OrderedDict(
+        (
+            (0, "cert"),
+            (1, "spki"),
+        )
+    )
 
-    TLSA_MATCHING = OrderedDict(((0, "full"), (1, "sha256"), (2, "sha512"),))
+    TLSA_MATCHING = OrderedDict(
+        (
+            (0, "full"),
+            (1, "sha256"),
+            (2, "sha512"),
+        )
+    )
 
     SRV_PROTO = ("tcp", "udp", "sctp")
 
@@ -809,7 +836,12 @@ def mx_rec(rdatas):
     :param rdata: DNS record data
     :return: dict w/fields
     """
-    rschema = OrderedDict((("preference", int), ("name", str),))
+    rschema = OrderedDict(
+        (
+            ("preference", int),
+            ("name", str),
+        )
+    )
     return _data2rec_group(rschema, rdatas, "preference")
 
 
@@ -937,7 +969,12 @@ def srv_rec(rdatas):
     :return: dict w/fields
     """
     rschema = OrderedDict(
-        (("prio", int), ("weight", int), ("port", _to_port), ("name", str),)
+        (
+            ("prio", int),
+            ("weight", int),
+            ("port", _to_port),
+            ("name", str),
+        )
     )
     return _data2rec_group(rschema, rdatas, "prio")
 

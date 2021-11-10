@@ -1,9 +1,14 @@
+import logging
+
 import pytest
 import salt.modules.beacons as beaconmod
 import salt.states.beacon as beaconstate
 import salt.states.pkg as pkg
+import salt.utils.state as state_utils
 from salt.utils.event import SaltEvent
 from tests.support.mock import MagicMock, patch
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture
@@ -16,7 +21,7 @@ def configure_loader_modules():
             "__opts__": {"test": False, "cachedir": ""},
             "__instance_id__": "",
             "__low__": {},
-            "__utils__": {},
+            "__utils__": {"state.gen_tag": state_utils.gen_tag},
         },
         beaconstate: {"__salt__": {}, "__opts__": {}},
         beaconmod: {"__salt__": {}, "__opts__": {}},
@@ -29,6 +34,15 @@ def pkgs():
         "pkga": {"old": "1.0.1", "new": "2.0.1"},
         "pkgb": {"old": "1.0.2", "new": "2.0.2"},
         "pkgc": {"old": "1.0.3", "new": "2.0.3"},
+    }
+
+
+@pytest.fixture(scope="module")
+def list_pkgs():
+    return {
+        "pkga": "1.0.1",
+        "pkgb": "1.0.2",
+        "pkgc": "1.0.3",
     }
 
 
@@ -86,13 +100,21 @@ def test_uptodate_with_pkgs_with_changes(pkgs):
     ):
         # Run state with test=false
         with patch.dict(pkg.__opts__, {"test": False}):
-            ret = pkg.uptodate("dummy", test=True, pkgs=[pkgname for pkgname in pkgs],)
+            ret = pkg.uptodate(
+                "dummy",
+                test=True,
+                pkgs=[pkgname for pkgname in pkgs],
+            )
             assert ret["result"]
             assert ret["changes"] == pkgs
 
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
-            ret = pkg.uptodate("dummy", test=True, pkgs=[pkgname for pkgname in pkgs],)
+            ret = pkg.uptodate(
+                "dummy",
+                test=True,
+                pkgs=[pkgname for pkgname in pkgs],
+            )
             assert ret["result"] is None
             assert ret["changes"] == pkgs
 
@@ -135,13 +157,21 @@ def test_uptodate_with_pkgs_no_changes(pkgs):
     ):
         # Run state with test=false
         with patch.dict(pkg.__opts__, {"test": False}):
-            ret = pkg.uptodate("dummy", test=True, pkgs=[pkgname for pkgname in pkgs],)
+            ret = pkg.uptodate(
+                "dummy",
+                test=True,
+                pkgs=[pkgname for pkgname in pkgs],
+            )
             assert ret["result"]
             assert ret["changes"] == {}
 
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
-            ret = pkg.uptodate("dummy", test=True, pkgs=[pkgname for pkgname in pkgs],)
+            ret = pkg.uptodate(
+                "dummy",
+                test=True,
+                pkgs=[pkgname for pkgname in pkgs],
+            )
             assert ret["result"]
             assert ret["changes"] == {}
 
@@ -167,13 +197,21 @@ def test_uptodate_with_failed_changes(pkgs):
     ):
         # Run state with test=false
         with patch.dict(pkg.__opts__, {"test": False}):
-            ret = pkg.uptodate("dummy", test=True, pkgs=[pkgname for pkgname in pkgs],)
+            ret = pkg.uptodate(
+                "dummy",
+                test=True,
+                pkgs=[pkgname for pkgname in pkgs],
+            )
             assert not ret["result"]
             assert ret["changes"] == {}
 
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
-            ret = pkg.uptodate("dummy", test=True, pkgs=[pkgname for pkgname in pkgs],)
+            ret = pkg.uptodate(
+                "dummy",
+                test=True,
+                pkgs=[pkgname for pkgname in pkgs],
+            )
             assert ret["result"] is None
             assert ret["changes"] == pkgs
 
@@ -215,7 +253,11 @@ def test_parse_version_string(version_string, expected_version_conditions):
         ("> 1.0.0, < 15.0.0, != 14.0.1", ["14.0.1"], False),
         ("> 1.0.0, < 15.0.0, != 14.0.1", ["16.0.0"], False),
         ("> 1.0.0, < 15.0.0, != 14.0.1", ["2.0.0"], True),
-        ("> 1.0.0, < 15.0.0, != 14.0.1", ["1.0.0", "14.0.1", "16.0.0", "2.0.0"], True,),
+        (
+            "> 1.0.0, < 15.0.0, != 14.0.1",
+            ["1.0.0", "14.0.1", "16.0.0", "2.0.0"],
+            True,
+        ),
         ("> 15.0.0", [], False),
         ("> 15.0.0", ["1.0.0"], False),
         ("> 15.0.0", ["16.0.0"], True),
@@ -251,8 +293,10 @@ def test_fulfills_version_string(version_string, installed_versions, expected_re
     ],
 )
 def test_fulfills_version_spec(installed_versions, operator, version, expected_result):
-    msg = "installed_versions: {}, operator: {}, version: {}, expected_result: {}".format(
-        installed_versions, operator, version, expected_result
+    msg = (
+        "installed_versions: {}, operator: {}, version: {}, expected_result: {}".format(
+            installed_versions, operator, version, expected_result
+        )
     )
     assert expected_result == pkg._fulfills_version_spec(
         installed_versions, operator, version
@@ -272,7 +316,9 @@ def test_mod_beacon(tmp_path):
                 "name": name,
                 "changes": {},
                 "result": False,
-                "comment": "pkg.latest does not work with the mod_beacon state function",
+                "comment": (
+                    "pkg.latest does not work with the mod_beacon state function"
+                ),
             }
 
             assert ret == expected
@@ -349,3 +395,186 @@ def test_mod_beacon(tmp_path):
                         }
 
                         assert ret == expected
+
+
+def test_mod_aggregate():
+    """
+    Test to mod_aggregate function
+    """
+    low = {
+        "state": "pkg",
+        "name": "other_pkgs",
+        "pkgs": ["byobu"],
+        "aggregate": True,
+        "fun": "installed",
+    }
+
+    chunks = [
+        {
+            "state": "file",
+            "name": "/tmp/install-vim",
+            "__sls__": "47628",
+            "__env__": "base",
+            "__id__": "/tmp/install-vim",
+            "order": 10000,
+            "fun": "managed",
+        },
+        {
+            "state": "file",
+            "name": "/tmp/install-tmux",
+            "__sls__": "47628",
+            "__env__": "base",
+            "__id__": "/tmp/install-tmux",
+            "order": 10001,
+            "fun": "managed",
+        },
+        {
+            "state": "pkg",
+            "name": "other_pkgs",
+            "__sls__": "47628",
+            "__env __": "base",
+            "__id__": "other_pkgs",
+            "pkgs": ["byobu"],
+            "aggregate": True,
+            "order": 10002,
+            "fun": "installed",
+        },
+        {
+            "state": "pkg",
+            "name": "bc",
+            "__sls__": "47628",
+            "__env__": "base",
+            "__id__": "bc",
+            "hold": True,
+            "order": 10003,
+            "fun": "installed",
+        },
+        {
+            "state": "pkg",
+            "name": "vim",
+            "__sls__": "47628",
+            "__env__": "base",
+            "__id__": "vim",
+            "require": ["/tmp/install-vim"],
+            "order": 10004,
+            "fun": "installed",
+        },
+        {
+            "state": "pkg",
+            "name": "tmux",
+            "__sls__": "47628",
+            "__env__": "base",
+            "__id__": "tmux",
+            "require": ["/tmp/install-tmux"],
+            "order": 10005,
+            "fun": "installed",
+        },
+        {
+            "state": "pkgrepo",
+            "name": "deb https://packages.cloud.google.com/apt cloud-sdk main",
+            "__sls__": "47628",
+            "__env__": "base",
+            "__id__": "google-cloud-repo",
+            "humanname": "Google Cloud SDK",
+            "file": "/etc/apt/sources.list.d/google-cloud-sdk.list",
+            "key_url": "https://packages.cloud.google.com/apt/doc/apt-key.gpg",
+            "order": 10006,
+            "fun": "managed",
+        },
+        {
+            "state": "pkg",
+            "name": "google-cloud-sdk",
+            "__sls__": "47628",
+            "__env__": "base",
+            "__id__": "google-cloud-sdk",
+            "require": ["google-cloud-repo"],
+            "order": 10007,
+            "fun": "installed",
+        },
+    ]
+
+    running = {
+        "file_|-/tmp/install-vim_| -/tmp/install-vim_|-managed": {
+            "changes": {},
+            "comment": "File /tmp/install-vim exists with proper permissions. No changes made.",
+            "name": "/tmp/install-vim",
+            "result": True,
+            "__sls__": "47628",
+            "__run_num__": 0,
+            "start_time": "18:41:20.987275",
+            "duration": 5.833,
+            "__id__": "/tmp/install-vim",
+        },
+        "file_|-/tmp/install-tmux_|-/tmp/install-tmux_|-managed": {
+            "changes": {},
+            "comment": "File /tmp/install-tmux exists with proper permissions. No changes made.",
+            "name": "/tmp/install-tmux",
+            "result": True,
+            "__sls__": "47628",
+            "__run_num__": 1,
+            "start_time": "18:41:20.993258",
+            "duration": 1.263,
+            "__id__": "/tmp/install-tmux",
+        },
+    }
+
+    expected = {
+        "pkgs": ["byobu", "byobu", "vim", "tmux", "google-cloud-sdk"],
+        "name": "other_pkgs",
+        "fun": "installed",
+        "aggregate": True,
+        "state": "pkg",
+    }
+    res = pkg.mod_aggregate(low, chunks, running)
+    assert res == expected
+
+
+def test_installed_with_changes_test_true(list_pkgs):
+    """
+    Test pkg.installed with simulated changes
+    """
+
+    list_pkgs = MagicMock(return_value=list_pkgs)
+
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.list_pkgs": list_pkgs,
+        },
+    ):
+
+        expected = {"installed": {"dummy": {"new": "installed", "old": ""}}}
+        # Run state with test=true
+        with patch.dict(pkg.__opts__, {"test": True}):
+            ret = pkg.installed("dummy", test=True)
+            assert ret["result"] is None
+            assert ret["changes"] == expected
+
+
+@pytest.mark.parametrize("action", ["removed", "purged"])
+def test_removed_purged_with_changes_test_true(list_pkgs, action):
+    """
+    Test pkg.removed with simulated changes
+    """
+
+    list_pkgs = MagicMock(return_value=list_pkgs)
+
+    mock_parse_targets = MagicMock(return_value=[{"pkga": None}, "repository"])
+
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.list_pkgs": list_pkgs,
+            "pkg_resource.parse_targets": mock_parse_targets,
+            "pkg_resource.version_clean": MagicMock(return_value=None),
+        },
+    ):
+
+        expected = {"pkga": {"new": "{}".format(action), "old": ""}}
+        pkg_actions = {"removed": pkg.removed, "purged": pkg.purged}
+
+        # Run state with test=true
+        with patch.dict(pkg.__opts__, {"test": True}):
+            ret = pkg_actions[action]("pkga", test=True)
+            assert ret["result"] is None
+            assert ret["changes"] == expected

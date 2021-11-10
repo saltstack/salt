@@ -179,7 +179,10 @@ def update_employee(emp_id, key=None, value=None, items=None):
     xml_items = "<employee>{}</employee>".format(xml_items)
 
     status, result = _query(
-        action="employees", command=emp_id, data=xml_items, method="POST",
+        action="employees",
+        command=emp_id,
+        data=xml_items,
+        method="POST",
     )
 
     return show_employee(emp_id, ",".join(items.keys()))

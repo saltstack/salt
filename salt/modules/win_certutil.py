@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module allows you to install certificates into the windows certificate
 manager.
@@ -8,13 +7,10 @@ manager.
     salt '*' certutil.add_store salt://cert.cer "TrustedPublisher"
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
 
-# Import Salt Libs
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
@@ -43,7 +39,7 @@ def get_cert_serial(cert_file):
 
         salt '*' certutil.get_cert_serial <certificate name>
     """
-    cmd = "certutil.exe -silent -verify {0}".format(cert_file)
+    cmd = "certutil.exe -silent -verify {}".format(cert_file)
     out = __salt__["cmd.run"](cmd)
     # match serial number by paragraph to work with multiple languages
     matches = re.search(r":\s*(\w*)\r\n\r\n", out)
@@ -66,7 +62,7 @@ def get_stored_cert_serials(store):
 
         salt '*' certutil.get_stored_cert_serials <store>
     """
-    cmd = "certutil.exe -store {0}".format(store)
+    cmd = "certutil.exe -store {}".format(store)
     out = __salt__["cmd.run"](cmd)
     # match serial numbers by header position to work with multiple languages
     matches = re.findall(r"={16}\r\n.*:\s*(\w*)\r\n", out)
@@ -98,7 +94,7 @@ def add_store(source, store, retcode=False, saltenv="base"):
         salt '*' certutil.add_store salt://cert.cer TrustedPublisher
     """
     cert_file = __salt__["cp.cache_file"](source, saltenv)
-    cmd = "certutil.exe -addstore {0} {1}".format(store, cert_file)
+    cmd = "certutil.exe -addstore {} {}".format(store, cert_file)
     if retcode:
         return __salt__["cmd.retcode"](cmd)
     else:
@@ -131,7 +127,7 @@ def del_store(source, store, retcode=False, saltenv="base"):
     """
     cert_file = __salt__["cp.cache_file"](source, saltenv)
     serial = get_cert_serial(cert_file)
-    cmd = "certutil.exe -delstore {0} {1}".format(store, serial)
+    cmd = "certutil.exe -delstore {} {}".format(store, serial)
     if retcode:
         return __salt__["cmd.retcode"](cmd)
     else:

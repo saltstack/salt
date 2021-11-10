@@ -16,7 +16,6 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import range
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 log = logging.getLogger(__name__)
@@ -33,7 +32,7 @@ def __virtual__():
     global RABBITMQ_PLUGINS
 
     if salt.utils.platform.is_windows():
-        from salt.ext.six.moves import winreg
+        import winreg
 
         key = None
         try:
@@ -116,8 +115,10 @@ def _get_rabbitmq_plugin():
     if RABBITMQ_PLUGINS is None:
         version = __salt__["pkg.version"]("rabbitmq-server").split("-")[0]
         RABBITMQ_PLUGINS = (
-            "/usr/lib/rabbitmq/lib/rabbitmq_server-{}" "/sbin/rabbitmq-plugins"
-        ).format(version)
+            "/usr/lib/rabbitmq/lib/rabbitmq_server-{}/sbin/rabbitmq-plugins".format(
+                version
+            )
+        )
 
     return RABBITMQ_PLUGINS
 
@@ -557,8 +558,10 @@ def check_password(name, password, runas=None):
 
     cmd = (
         "rabbit_auth_backend_internal:check_user_login"
-        '(<<"{0}">>, [{{password, <<"{1}">>}}]).'
-    ).format(name.replace('"', '\\"'), password.replace('"', '\\"'))
+        '(<<"{}">>, [{{password, <<"{}">>}}]).'.format(
+            name.replace('"', '\\"'), password.replace('"', '\\"')
+        )
+    )
 
     res = __salt__["cmd.run_all"](
         [RABBITMQCTL, "eval", cmd],

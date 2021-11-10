@@ -1,20 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Test module for syslog_ng
 """
 
 # Import Python modules
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 from textwrap import dedent
 
 import salt.modules.syslog_ng as syslog_ng
-
-# Import Salt libs
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -65,9 +59,9 @@ _SYSLOG_NG_CTL_NOT_INSTALLED_RETURN_VALUE = {
 class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
 
     # pylint: disable=blacklisted-function
-    orig_env = {str("PATH"): str("/foo:/bar")}
-    bin_dir = str("/baz")
-    mocked_env = {str("PATH"): str("/foo:/bar:/baz")}
+    orig_env = {"PATH": "/foo:/bar"}
+    bin_dir = "/baz"
+    mocked_env = {"PATH": "/foo:/bar:/baz"}
     # pylint: enable=blacklisted-function
 
     def setup_loader_modules(self):
@@ -336,7 +330,7 @@ class SyslogNGTestCase(TestCase, LoaderModuleMockMixin):
     def test_config_test_cfgfile(self):
         cfgfile = "/path/to/syslog-ng.conf"
         cmd_ret = {"retcode": 1, "stderr": "Syntax error...", "stdout": ""}
-        cmd_args = ["syslog-ng", "--syntax-only", "--cfgfile={0}".format(cfgfile)]
+        cmd_args = ["syslog-ng", "--syntax-only", "--cfgfile={}".format(cfgfile)]
 
         cmd_mock = MagicMock(return_value=cmd_ret)
         with patch.dict(syslog_ng.__salt__, {"cmd.run_all": cmd_mock}), patch.dict(

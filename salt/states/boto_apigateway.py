@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage Apigateway Rest APIs
 ===========================
@@ -51,21 +50,15 @@ config:
 
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import hashlib
 import logging
 import os
 import re
 
-# Import Salt Libs
 import salt.utils.files
 import salt.utils.json
 import salt.utils.yaml
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -228,7 +221,7 @@ def present(
     lambda_funcname_format
         Please review the earlier example for the usage.  The only substituable keys in the funcname
         format are {stage}, {api}, {resource}, {method}.
-        Any other keys or positional subsitution parameters will be flagged as an invalid input.
+        Any other keys or positional substitution parameters will be flagged as an invalid input.
 
     authorization_type
         This field can be either 'NONE', or 'AWS_IAM'.  This will be applied to all methods in the given
@@ -297,11 +290,11 @@ def present(
             # just reassociate the stage_name to the given deployment label.
             if __opts__["test"]:
                 ret["comment"] = (
-                    "[stage: {0}] will be reassociated to an already available "
-                    "deployment that matched the given [api_name: {1}] "
-                    "and [swagger_file: {2}].\n"
+                    "[stage: {}] will be reassociated to an already available "
+                    "deployment that matched the given [api_name: {}] "
+                    "and [swagger_file: {}].\n"
                     "Stage variables will be set "
-                    "to {3}.".format(stage_name, api_name, swagger_file, stage_vars)
+                    "to {}.".format(stage_name, api_name, swagger_file, stage_vars)
                 )
                 ret["result"] = None
                 return ret
@@ -311,11 +304,11 @@ def present(
             # already at desired state for the stage, swagger_file, and api_name
             if __opts__["test"]:
                 ret["comment"] = (
-                    "[stage: {0}] is already at desired state with an associated "
-                    "deployment matching the given [api_name: {1}] "
-                    "and [swagger_file: {2}].\n"
+                    "[stage: {}] is already at desired state with an associated "
+                    "deployment matching the given [api_name: {}] "
+                    "and [swagger_file: {}].\n"
                     "Stage variables will be set "
-                    "to {3}.".format(stage_name, api_name, swagger_file, stage_vars)
+                    "to {}.".format(stage_name, api_name, swagger_file, stage_vars)
                 )
                 ret["result"] = None
             return swagger.overwrite_stage_variables(ret, stage_vars)
@@ -325,12 +318,12 @@ def present(
         # and finally create a new deployment and tie the stage_name to this new deployment
         if __opts__["test"]:
             ret["comment"] = (
-                "There is no deployment matching the given [api_name: {0}] "
-                "and [swagger_file: {1}].  A new deployment will be "
-                "created and the [stage_name: {2}] will then be associated "
+                "There is no deployment matching the given [api_name: {}] "
+                "and [swagger_file: {}].  A new deployment will be "
+                "created and the [stage_name: {}] will then be associated "
                 "to the newly created deployment.\n"
                 "Stage variables will be set "
-                "to {3}.".format(api_name, swagger_file, stage_name, stage_vars)
+                "to {}.".format(api_name, swagger_file, stage_name, stage_vars)
             )
             ret["result"] = None
             return ret
@@ -355,9 +348,9 @@ def present(
 
         ret = swagger.publish_api(ret, stage_vars)
 
-    except (ValueError, IOError) as e:
+    except (ValueError, OSError) as e:
         ret["result"] = False
-        ret["comment"] = "{0}".format(e.args)
+        ret["comment"] = "{}".format(e.args)
 
     return ret
 
@@ -371,7 +364,7 @@ def _get_stage_variables(stage_variables):
     if stage_variables is None:
         return ret
 
-    if isinstance(stage_variables, six.string_types):
+    if isinstance(stage_variables, str):
         if stage_variables in __opts__:
             ret = __opts__[stage_variables]
         master_opts = __pillar__.get("master", {})
@@ -442,18 +435,18 @@ def absent(
         swagger = _Swagger(api_name, stage_name, "", None, None, None, common_args)
 
         if not swagger.restApiId:
-            ret["comment"] = "[Rest API: {0}] does not exist.".format(api_name)
+            ret["comment"] = "[Rest API: {}] does not exist.".format(api_name)
             return ret
 
         if __opts__["test"]:
             if nuke_api:
                 ret["comment"] = (
-                    "[stage: {0}] will be deleted, if there are no other "
-                    "active stages, the [api: {1} will also be "
+                    "[stage: {}] will be deleted, if there are no other "
+                    "active stages, the [api: {} will also be "
                     "deleted.".format(stage_name, api_name)
                 )
             else:
-                ret["comment"] = "[stage: {0}] will be deleted.".format(stage_name)
+                ret["comment"] = "[stage: {}] will be deleted.".format(stage_name)
             ret["result"] = None
             return ret
 
@@ -465,9 +458,9 @@ def absent(
         if nuke_api and swagger.no_more_deployments_remain():
             ret = swagger.delete_api(ret)
 
-    except (ValueError, IOError) as e:
+    except (ValueError, OSError) as e:
         ret["result"] = False
-        ret["comment"] = "{0}".format(e.args)
+        ret["comment"] = "{}".format(e.args)
 
     return ret
 
@@ -485,7 +478,7 @@ def _gen_md5_filehash(fname, *args):
             _hash.update(chunk)
 
     for extra_arg in args:
-        _hash.update(six.b(str(extra_arg)))
+        _hash.update(str(extra_arg).encode())
     return _hash.hexdigest()
 
 
@@ -536,7 +529,7 @@ def _object_reducer(
     """
     result = {}
     if isinstance(o, dict):
-        for k, v in six.iteritems(o):
+        for k, v in o.items():
             if isinstance(v, dict):
                 reduced = v if k == "variables" else _object_reducer(v, names)
                 if reduced or _name_matches(k, names):
@@ -572,11 +565,11 @@ def _log_error_and_abort(ret, obj):
     ret["result"] = False
     ret["abort"] = True
     if "error" in obj:
-        ret["comment"] = "{0}".format(obj.get("error"))
+        ret["comment"] = "{}".format(obj.get("error"))
     return ret
 
 
-class _Swagger(object):
+class _Swagger:
     """
     this is a helper class that holds the swagger definition file and the associated logic
     related to how to interpret the file and apply it to AWS Api Gateway.
@@ -631,55 +624,37 @@ class _Swagger(object):
 
     # AWS integration templates for normal and options methods
     REQUEST_TEMPLATE = {
-        "application/json": "#set($inputRoot = $input.path('$'))\n"
-        "{\n"
-        '"header_params" : {\n'
-        "#set ($map = $input.params().header)\n"
-        "#foreach( $param in $map.entrySet() )\n"
-        '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
-        "#end\n"
-        "},\n"
-        '"query_params" : {\n'
-        "#set ($map = $input.params().querystring)\n"
-        "#foreach( $param in $map.entrySet() )\n"
-        '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
-        "#end\n"
-        "},\n"
-        '"path_params" : {\n'
-        "#set ($map = $input.params().path)\n"
-        "#foreach( $param in $map.entrySet() )\n"
-        '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
-        "#end\n"
-        "},\n"
-        '"apigw_context" : {\n'
-        '"apiId": "$context.apiId",\n'
-        '"httpMethod": "$context.httpMethod",\n'
-        '"requestId": "$context.requestId",\n'
-        '"resourceId": "$context.resourceId",\n'
-        '"resourcePath": "$context.resourcePath",\n'
-        '"stage": "$context.stage",\n'
-        '"identity": {\n'
-        '  "user":"$context.identity.user",\n'
-        '  "userArn":"$context.identity.userArn",\n'
-        '  "userAgent":"$context.identity.userAgent",\n'
-        '  "sourceIp":"$context.identity.sourceIp",\n'
-        '  "cognitoIdentityId":"$context.identity.cognitoIdentityId",\n'
-        '  "cognitoIdentityPoolId":"$context.identity.cognitoIdentityPoolId",\n'
-        '  "cognitoAuthenticationType":"$context.identity.cognitoAuthenticationType",\n'
-        '  "cognitoAuthenticationProvider":["$util.escapeJavaScript($context.identity.cognitoAuthenticationProvider)"],\n'
-        '  "caller":"$context.identity.caller",\n'
-        '  "apiKey":"$context.identity.apiKey",\n'
-        '  "accountId":"$context.identity.accountId"\n'
-        "}\n"
-        "},\n"
-        "\"body_params\" : $input.json('$'),\n"
-        '"stage_variables": {\n'
-        "#foreach($variable in $stageVariables.keySet())\n"
-        '"$variable": "$util.escapeJavaScript($stageVariables.get($variable))"\n'
-        "#if($foreach.hasNext), #end\n"
-        "#end\n"
-        "}\n"
-        "}"
+        "application/json": (
+            "#set($inputRoot = $input.path('$'))\n{\n\"header_params\" : {\n#set ($map"
+            " = $input.params().header)\n#foreach( $param in $map.entrySet()"
+            ' )\n"$param.key" : "$param.value" #if( $foreach.hasNext ),'
+            ' #end\n#end\n},\n"query_params" : {\n#set ($map ='
+            " $input.params().querystring)\n#foreach( $param in $map.entrySet()"
+            ' )\n"$param.key" : "$param.value" #if( $foreach.hasNext ),'
+            ' #end\n#end\n},\n"path_params" : {\n#set ($map ='
+            " $input.params().path)\n#foreach( $param in $map.entrySet()"
+            ' )\n"$param.key" : "$param.value" #if( $foreach.hasNext ),'
+            ' #end\n#end\n},\n"apigw_context" : {\n"apiId":'
+            ' "$context.apiId",\n"httpMethod": "$context.httpMethod",\n"requestId":'
+            ' "$context.requestId",\n"resourceId":'
+            ' "$context.resourceId",\n"resourcePath":'
+            ' "$context.resourcePath",\n"stage": "$context.stage",\n"identity": {\n '
+            ' "user":"$context.identity.user",\n '
+            ' "userArn":"$context.identity.userArn",\n '
+            ' "userAgent":"$context.identity.userAgent",\n '
+            ' "sourceIp":"$context.identity.sourceIp",\n '
+            ' "cognitoIdentityId":"$context.identity.cognitoIdentityId",\n '
+            ' "cognitoIdentityPoolId":"$context.identity.cognitoIdentityPoolId",\n '
+            ' "cognitoAuthenticationType":"$context.identity.cognitoAuthenticationType",\n'
+            '  "cognitoAuthenticationProvider":["$util.escapeJavaScript($context.identity.cognitoAuthenticationProvider)"],\n'
+            '  "caller":"$context.identity.caller",\n '
+            ' "apiKey":"$context.identity.apiKey",\n '
+            ' "accountId":"$context.identity.accountId"\n}\n},\n"body_params" :'
+            " $input.json('$'),\n\"stage_variables\": {\n#foreach($variable in"
+            ' $stageVariables.keySet())\n"$variable":'
+            ' "$util.escapeJavaScript($stageVariables.get($variable))"\n#if($foreach.hasNext),'
+            " #end\n#end\n}\n}"
+        )
     }
     REQUEST_OPTION_TEMPLATE = {"application/json": '{"statusCode": 200}'}
 
@@ -688,22 +663,24 @@ class _Swagger(object):
     # an array of non-uniform types, to it is not possible to create error model to match
     # exactly what comes out of lambda functions in case of error.
     RESPONSE_TEMPLATE = {
-        "application/json": "#set($inputRoot = $input.path('$'))\n"
-        "{\n"
-        '  "errorMessage" : "$inputRoot.errorMessage",\n'
-        '  "errorType" : "$inputRoot.errorType",\n'
-        '  "stackTrace" : [\n'
-        "#foreach($stackTrace in $inputRoot.stackTrace)\n"
-        "    [\n"
-        "#foreach($elem in $stackTrace)\n"
-        '      "$elem"\n'
-        "#if($foreach.hasNext),#end\n"
-        "#end\n"
-        "    ]\n"
-        "#if($foreach.hasNext),#end\n"
-        "#end\n"
-        "  ]\n"
-        "}"
+        "application/json": (
+            "#set($inputRoot = $input.path('$'))\n"
+            "{\n"
+            '  "errorMessage" : "$inputRoot.errorMessage",\n'
+            '  "errorType" : "$inputRoot.errorType",\n'
+            '  "stackTrace" : [\n'
+            "#foreach($stackTrace in $inputRoot.stackTrace)\n"
+            "    [\n"
+            "#foreach($elem in $stackTrace)\n"
+            '      "$elem"\n'
+            "#if($foreach.hasNext),#end\n"
+            "#end\n"
+            "    ]\n"
+            "#if($foreach.hasNext),#end\n"
+            "#end\n"
+            "  ]\n"
+            "}"
+        )
     }
     RESPONSE_OPTION_TEMPLATE = {}
 
@@ -716,7 +693,7 @@ class _Swagger(object):
         }
     )
 
-    class SwaggerParameter(object):
+    class SwaggerParameter:
         """
         This is a helper class for the Swagger Parameter Object
         """
@@ -735,7 +712,7 @@ class _Swagger(object):
             if _location in _Swagger.SwaggerParameter.LOCATIONS:
                 return _location
             raise ValueError(
-                "Unsupported parameter location: {0} in Parameter Object".format(
+                "Unsupported parameter location: {} in Parameter Object".format(
                     _location
                 )
             )
@@ -748,14 +725,14 @@ class _Swagger(object):
             _name = self._paramdict.get("name")
             if _name:
                 if self.location == "header":
-                    return "method.request.header.{0}".format(_name)
+                    return "method.request.header.{}".format(_name)
                 elif self.location == "query":
-                    return "method.request.querystring.{0}".format(_name)
+                    return "method.request.querystring.{}".format(_name)
                 elif self.location == "path":
-                    return "method.request.path.{0}".format(_name)
+                    return "method.request.path.{}".format(_name)
                 return None
             raise ValueError(
-                "Parameter must have a name: {0}".format(
+                "Parameter must have a name: {}".format(
                     _dict_to_json_pretty(self._paramdict)
                 )
             )
@@ -772,19 +749,17 @@ class _Swagger(object):
                         schema_name = _schema.get("$ref").split("/")[-1]
                         return schema_name
                     raise ValueError(
-                        (
-                            "Body parameter must have a JSON reference "
-                            "to the schema definition due to Amazon API restrictions: {0}".format(
-                                self.name
-                            )
+                        "Body parameter must have a JSON reference "
+                        "to the schema definition due to Amazon API restrictions: {}".format(
+                            self.name
                         )
                     )
                 raise ValueError(
-                    "Body parameter must have a schema: {0}".format(self.name)
+                    "Body parameter must have a schema: {}".format(self.name)
                 )
             return None
 
-    class SwaggerMethodResponse(object):
+    class SwaggerMethodResponse:
         """
         Helper class for Swagger Method Response Object
         """
@@ -802,10 +777,8 @@ class _Swagger(object):
                 if "$ref" in _schema:
                     return _schema.get("$ref").split("/")[-1]
                 raise ValueError(
-                    (
-                        "Method response must have a JSON reference "
-                        "to the schema definition: {0}".format(_schema)
-                    )
+                    "Method response must have a JSON reference "
+                    "to the schema definition: {}".format(_schema)
                 )
             return None
 
@@ -846,9 +819,7 @@ class _Swagger(object):
                     self._cfg = salt.utils.yaml.safe_load(sf)
                 self._swagger_version = ""
             else:
-                raise IOError(
-                    "Invalid swagger file path, {0}".format(swagger_file_path)
-                )
+                raise OSError("Invalid swagger file path, {}".format(swagger_file_path))
 
             self._validate_swagger_file()
 
@@ -869,7 +840,7 @@ class _Swagger(object):
         to handle response code mapping/integration
         """
         for path, ops in paths:
-            for opname, opobj in six.iteritems(ops):
+            for opname, opobj in ops.items():
                 if opname not in _Swagger.SWAGGER_OPERATION_NAMES:
                     continue
 
@@ -877,44 +848,40 @@ class _Swagger(object):
                     raise ValueError(
                         "missing mandatory responses field in path item object"
                     )
-                for rescode, resobj in six.iteritems(opobj.get("responses")):
-                    if not self._is_http_error_rescode(
-                        str(rescode)
-                    ):  # future lint: disable=blacklisted-function
+                for rescode, resobj in opobj.get("responses").items():
+                    if not self._is_http_error_rescode(str(rescode)):
                         continue
 
                     # only check for response code from 400-599
                     if "schema" not in resobj:
                         raise ValueError(
-                            "missing schema field in path {0}, "
-                            "op {1}, response {2}".format(path, opname, rescode)
+                            "missing schema field in path {}, "
+                            "op {}, response {}".format(path, opname, rescode)
                         )
 
                     schemaobj = resobj.get("schema")
                     if "$ref" not in schemaobj:
                         raise ValueError(
                             "missing $ref field under schema in "
-                            "path {0}, op {1}, response {2}".format(
-                                path, opname, rescode
-                            )
+                            "path {}, op {}, response {}".format(path, opname, rescode)
                         )
                     schemaobjref = schemaobj.get("$ref", "/")
                     modelname = schemaobjref.split("/")[-1]
 
                     if modelname not in mods:
                         raise ValueError(
-                            "model schema {0} reference not found "
+                            "model schema {} reference not found "
                             "under /definitions".format(schemaobjref)
                         )
                     model = mods.get(modelname)
 
                     if model.get("type") != "object":
                         raise ValueError(
-                            "model schema {0} must be type object".format(modelname)
+                            "model schema {} must be type object".format(modelname)
                         )
                     if "properties" not in model:
                         raise ValueError(
-                            "model schema {0} must have properties fields".format(
+                            "model schema {} must have properties fields".format(
                                 modelname
                             )
                         )
@@ -922,7 +889,7 @@ class _Swagger(object):
                     modelprops = model.get("properties")
                     if "errorMessage" not in modelprops:
                         raise ValueError(
-                            "model schema {0} must have errorMessage as a property to "
+                            "model schema {} must have errorMessage as a property to "
                             "match AWS convention. If pattern is not set, .+ will "
                             "be used".format(modelname)
                         )
@@ -939,7 +906,7 @@ class _Swagger(object):
             return True
         except Exception:  # pylint: disable=broad-except
             raise ValueError(
-                "Invalid lambda_funcname_format {0}.  Please review "
+                "Invalid lambda_funcname_format {}.  Please review "
                 "documentation for known substitutable keys".format(
                     self._lambda_funcname_format
                 )
@@ -961,19 +928,18 @@ class _Swagger(object):
                 field not in _Swagger.SWAGGER_OBJ_V2_FIELDS
                 and not _Swagger.VENDOR_EXT_PATTERN.match(field)
             ):
-                raise ValueError("Invalid Swagger Object Field: {0}".format(field))
+                raise ValueError("Invalid Swagger Object Field: {}".format(field))
 
         # check for Required Swagger fields by Saltstack boto apigateway state
         for field in _Swagger.SWAGGER_OBJ_V2_FIELDS_REQUIRED:
             if field not in self._cfg:
-                raise ValueError("Missing Swagger Object Field: {0}".format(field))
+                raise ValueError("Missing Swagger Object Field: {}".format(field))
 
         # check for Swagger Version
         self._swagger_version = self._cfg.get("swagger")
         if self._swagger_version not in _Swagger.SWAGGER_VERSIONS_SUPPORTED:
             raise ValueError(
-                "Unsupported Swagger version: {0},"
-                "Supported versions are {1}".format(
+                "Unsupported Swagger version: {},Supported versions are {}".format(
                     self._swagger_version, _Swagger.SWAGGER_VERSIONS_SUPPORTED
                 )
             )
@@ -1030,7 +996,8 @@ class _Swagger(object):
         models = self._cfg.get("definitions")
         if not models:
             raise ValueError(
-                "Definitions Object has no values, You need to define them in your swagger file"
+                "Definitions Object has no values, You need to define them in your"
+                " swagger file"
             )
 
         return models
@@ -1054,14 +1021,15 @@ class _Swagger(object):
         paths = self._cfg.get("paths")
         if not paths:
             raise ValueError(
-                "Paths Object has no values, You need to define them in your swagger file"
+                "Paths Object has no values, You need to define them in your swagger"
+                " file"
             )
         for path in paths:
             if not path.startswith("/"):
                 raise ValueError(
-                    "Path object {0} should start with /. Please fix it".format(path)
+                    "Path object {} should start with /. Please fix it".format(path)
                 )
-        return six.iteritems(paths)
+        return paths.items()
 
     @property
     def basePath(self):
@@ -1252,8 +1220,9 @@ class _Swagger(object):
                 self.restApiId = apis[0].get("id")
             else:
                 raise ValueError(
-                    "Multiple APIs matching given name {0} and "
-                    "description {1}".format(self.rest_api_name, self.info_json)
+                    "Multiple APIs matching given name {} and description {}".format(
+                        self.rest_api_name, self.info_json
+                    )
                 )
 
     def delete_stage(self, ret):
@@ -1272,7 +1241,7 @@ class _Swagger(object):
             if not result.get("deleted"):
                 ret["abort"] = True
                 ret["result"] = False
-                ret["comment"] = "delete_stage delete_api_stage, {0}".format(
+                ret["comment"] = "delete_stage delete_api_stage, {}".format(
                     result.get("error")
                 )
             else:
@@ -1288,16 +1257,16 @@ class _Swagger(object):
                         ret["result"] = False
                         ret[
                             "comment"
-                        ] = "delete_stage delete_api_deployment, {0}".format(
+                        ] = "delete_stage delete_api_deployment, {}".format(
                             result.get("error")
                         )
                 else:
-                    ret["comment"] = "stage {0} has been deleted.\n".format(
+                    ret["comment"] = "stage {} has been deleted.\n".format(
                         self._stage_name
                     )
         else:
             # no matching stage_name/deployment found
-            ret["comment"] = "stage {0} does not exist".format(self._stage_name)
+            ret["comment"] = "stage {} does not exist".format(self._stage_name)
 
         return ret
 
@@ -1316,8 +1285,8 @@ class _Swagger(object):
             deployed_label_json = self._get_current_deployment_label()
             if deployed_label_json == self.deployment_label_json:
                 ret["comment"] = (
-                    "Already at desired state, the stage {0} is already at the desired "
-                    "deployment label:\n{1}".format(
+                    "Already at desired state, the stage {} is already at the desired "
+                    "deployment label:\n{}".format(
                         self._stage_name, deployed_label_json
                     )
                 )
@@ -1412,9 +1381,7 @@ class _Swagger(object):
         if self.restApiId:
             res = self._cleanup_api()
             if not res.get("deleted"):
-                ret["comment"] = "Failed to cleanup restAreId {0}".format(
-                    self.restApiId
-                )
+                ret["comment"] = "Failed to cleanup restAreId {}".format(self.restApiId)
                 ret["abort"] = True
                 ret["result"] = False
                 return ret
@@ -1430,7 +1397,7 @@ class _Swagger(object):
             ret["result"] = False
             ret["abort"] = True
             if "error" in response:
-                ret["comment"] = "Failed to create rest api: {0}.".format(
+                ret["comment"] = "Failed to create rest api: {}.".format(
                     response["error"]["message"]
                 )
             return ret
@@ -1454,7 +1421,7 @@ class _Swagger(object):
         )
         if exists_response.get("exists"):
             if __opts__["test"]:
-                ret["comment"] = "Rest API named {0} is set to be deleted.".format(
+                ret["comment"] = "Rest API named {} is set to be deleted.".format(
                     self.rest_api_name
                 )
                 ret["result"] = None
@@ -1470,16 +1437,15 @@ class _Swagger(object):
                 ret["result"] = False
                 ret["abort"] = True
                 if "error" in delete_api_response:
-                    ret["comment"] = "Failed to delete rest api: {0}.".format(
+                    ret["comment"] = "Failed to delete rest api: {}.".format(
                         delete_api_response["error"]["message"]
                     )
                 return ret
 
             ret = _log_changes(ret, "delete_api", delete_api_response)
         else:
-            ret["comment"] = (
-                "api already absent for swagger file: "
-                "{0}, desc: {1}".format(self.rest_api_name, self.info_json)
+            ret["comment"] = "api already absent for swagger file: {}, desc: {}".format(
+                self.rest_api_name, self.info_json
             )
 
         return ret
@@ -1489,7 +1455,7 @@ class _Swagger(object):
         Helper function to reference models created on aws apigw
         """
         model_name = r.split("/")[-1]
-        return "https://apigateway.amazonaws.com/restapis/{0}/models/{1}".format(
+        return "https://apigateway.amazonaws.com/restapis/{}/models/{}".format(
             self.restApiId, model_name
         )
 
@@ -1529,7 +1495,7 @@ class _Swagger(object):
                 # need to walk each property object
                 properties = obj_schema.get("properties")
                 if properties:
-                    for _, prop_obj_schema in six.iteritems(properties):
+                    for _, prop_obj_schema in properties.items():
                         dep_models_list.extend(
                             self._build_dependent_model_list(prop_obj_schema)
                         )
@@ -1540,7 +1506,7 @@ class _Swagger(object):
         Helper function to build a map of model to their list of model reference dependencies
         """
         ret = {}
-        for model, schema in six.iteritems(self._models()):
+        for model, schema in self._models().items():
             dep_list = self._build_dependent_model_list(schema)
             ret[model] = dep_list
         return ret
@@ -1553,7 +1519,7 @@ class _Swagger(object):
         if not models_dict:
             return next_model
 
-        for model, dependencies in six.iteritems(models_dict):
+        for model, dependencies in models_dict.items():
             if dependencies == []:
                 next_model = model
                 break
@@ -1561,12 +1527,12 @@ class _Swagger(object):
         if next_model is None:
             raise ValueError(
                 "incomplete model definitions, models in dependency "
-                "list not defined: {0}".format(models_dict)
+                "list not defined: {}".format(models_dict)
             )
 
         # remove the model from other depednencies before returning
         models_dict.pop(next_model)
-        for model, dep_list in six.iteritems(models_dict):
+        for model, dep_list in models_dict.items():
             if next_model in dep_list:
                 dep_list.remove(next_model)
 
@@ -1587,7 +1553,7 @@ class _Swagger(object):
             _schema.update(
                 {
                     "$schema": _Swagger.JSON_SCHEMA_DRAFT_4,
-                    "title": "{0} Schema".format(model),
+                    "title": "{} Schema".format(model),
                 }
             )
 
@@ -1610,13 +1576,12 @@ class _Swagger(object):
                     ret["result"] = False
                     ret["abort"] = True
                     if "error" in update_model_schema_response:
-                        ret["comment"] = (
-                            "Failed to update existing model {0} with schema {1}, "
-                            "error: {2}".format(
-                                model,
-                                _dict_to_json_pretty(schema),
-                                update_model_schema_response["error"]["message"],
-                            )
+                        ret[
+                            "comment"
+                        ] = "Failed to update existing model {} with schema {}, " "error: {}".format(
+                            model,
+                            _dict_to_json_pretty(schema),
+                            update_model_schema_response["error"]["message"],
                         )
                     return ret
 
@@ -1635,13 +1600,12 @@ class _Swagger(object):
                     ret["result"] = False
                     ret["abort"] = True
                     if "error" in create_model_response:
-                        ret["comment"] = (
-                            "Failed to create model {0}, schema {1}, "
-                            "error: {2}".format(
-                                model,
-                                _dict_to_json_pretty(schema),
-                                create_model_response["error"]["message"],
-                            )
+                        ret[
+                            "comment"
+                        ] = "Failed to create model {}, schema {}, error: {}".format(
+                            model,
+                            _dict_to_json_pretty(schema),
+                            create_model_response["error"]["message"],
                         )
                     return ret
 
@@ -1688,14 +1652,15 @@ class _Swagger(object):
 
         if not lambda_desc.get("function"):
             raise ValueError(
-                "Could not find lambda function {0} in "
-                "regions [{1}, {2}].".format(lambda_name, lambda_region, apigw_region)
+                "Could not find lambda function {} in regions [{}, {}].".format(
+                    lambda_name, lambda_region, apigw_region
+                )
             )
 
         lambda_arn = lambda_desc.get("function").get("FunctionArn")
         lambda_uri = (
-            "arn:aws:apigateway:{0}:lambda:path/2015-03-31"
-            "/functions/{1}/invocations".format(apigw_region, lambda_arn)
+            "arn:aws:apigateway:{}:lambda:path/2015-03-31"
+            "/functions/{}/invocations".format(apigw_region, lambda_arn)
         )
         return lambda_uri
 
@@ -1731,7 +1696,7 @@ class _Swagger(object):
     def _find_patterns(self, o):
         result = []
         if isinstance(o, dict):
-            for k, v in six.iteritems(o):
+            for k, v in o.items():
                 if isinstance(v, dict):
                     result.extend(self._find_patterns(v))
                 else:
@@ -1779,11 +1744,11 @@ class _Swagger(object):
         method_response_params = {}
         method_integration_response_params = {}
         for header in method_response.headers:
-            response_header = "method.response.header.{0}".format(header)
+            response_header = "method.response.header.{}".format(header)
             method_response_params[response_header] = False
             header_data = method_response.headers.get(header)
             method_integration_response_params[response_header] = (
-                "'{0}'".format(header_data.get("default"))
+                "'{}'".format(header_data.get("default"))
                 if "default" in header_data
                 else "'*'"
             )
@@ -1890,8 +1855,8 @@ class _Swagger(object):
         ret = _log_changes(ret, "_deploy_method.create_api_integration", integration)
 
         if "responses" in method_data:
-            for response, response_data in six.iteritems(method_data["responses"]):
-                httpStatus = str(response)  # future lint: disable=blacklisted-function
+            for response, response_data in method_data["responses"].items():
+                httpStatus = str(response)
                 method_response = self._parse_method_response(
                     method_name.lower(),
                     _Swagger.SwaggerMethodResponse(response_data),
@@ -1930,7 +1895,7 @@ class _Swagger(object):
                 )
         else:
             raise ValueError(
-                "No responses specified for {0} {1}".format(resource_path, method_name)
+                "No responses specified for {} {}".format(resource_path, method_name)
             )
 
         return ret
@@ -1971,7 +1936,7 @@ class _Swagger(object):
                 ret = _log_error_and_abort(ret, resource)
                 return ret
             ret = _log_changes(ret, "deploy_resources", resource)
-            for method, method_data in six.iteritems(pathData):
+            for method, method_data in pathData.items():
                 if method in _Swagger.SWAGGER_OPERATION_NAMES:
                     ret = self._deploy_method(
                         ret,
@@ -2066,7 +2031,7 @@ def usage_plan_present(
         if not existing["plans"]:
             # plan does not exist, we need to create it
             if __opts__["test"]:
-                ret["comment"] = "a new usage plan {0} would be created".format(
+                ret["comment"] = "a new usage plan {} would be created".format(
                     plan_name
                 )
                 ret["result"] = None
@@ -2081,13 +2046,13 @@ def usage_plan_present(
             )
             if "error" in result:
                 ret["result"] = False
-                ret["comment"] = "Failed to create a usage plan {0}, {1}".format(
+                ret["comment"] = "Failed to create a usage plan {}, {}".format(
                     plan_name, result["error"]
                 )
                 return ret
 
             ret["changes"]["old"] = {"plan": None}
-            ret["comment"] = "A new usage plan {0} has been created".format(plan_name)
+            ret["comment"] = "A new usage plan {} has been created".format(plan_name)
 
         else:
             # need an existing plan modified to match given value
@@ -2108,14 +2073,14 @@ def usage_plan_present(
                         break
 
             if not needs_updating:
-                ret["comment"] = "usage plan {0} is already in a correct state".format(
+                ret["comment"] = "usage plan {} is already in a correct state".format(
                     plan_name
                 )
                 ret["result"] = True
                 return ret
 
             if __opts__["test"]:
-                ret["comment"] = "a new usage plan {0} would be updated".format(
+                ret["comment"] = "a new usage plan {} would be updated".format(
                     plan_name
                 )
                 ret["result"] = None
@@ -2126,13 +2091,13 @@ def usage_plan_present(
             )
             if "error" in result:
                 ret["result"] = False
-                ret["comment"] = "Failed to update a usage plan {0}, {1}".format(
+                ret["comment"] = "Failed to update a usage plan {}, {}".format(
                     plan_name, result["error"]
                 )
                 return ret
 
             ret["changes"]["old"] = {"plan": plan}
-            ret["comment"] = "usage plan {0} has been updated".format(plan_name)
+            ret["comment"] = "usage plan {} has been updated".format(plan_name)
 
         newstate = __salt__["boto_apigateway.describe_usage_plans"](
             name=plan_name, **common_args
@@ -2144,9 +2109,9 @@ def usage_plan_present(
 
         ret["changes"]["new"] = {"plan": newstate["plans"][0]}
 
-    except (ValueError, IOError) as e:
+    except (ValueError, OSError) as e:
         ret["result"] = False
-        ret["comment"] = "{0}".format(e.args)
+        ret["comment"] = "{}".format(e.args)
 
     return ret
 
@@ -2187,11 +2152,11 @@ def usage_plan_absent(name, plan_name, region=None, key=None, keyid=None, profil
             return ret
 
         if not existing["plans"]:
-            ret["comment"] = "Usage plan {0} does not exist already".format(plan_name)
+            ret["comment"] = "Usage plan {} does not exist already".format(plan_name)
             return ret
 
         if __opts__["test"]:
-            ret["comment"] = "Usage plan {0} exists and would be deleted".format(
+            ret["comment"] = "Usage plan {} exists and would be deleted".format(
                 plan_name
             )
             ret["result"] = None
@@ -2202,18 +2167,18 @@ def usage_plan_absent(name, plan_name, region=None, key=None, keyid=None, profil
 
         if "error" in result:
             ret["result"] = False
-            ret["comment"] = "Failed to delete usage plan {0}, {1}".format(
+            ret["comment"] = "Failed to delete usage plan {}, {}".format(
                 plan_name, result
             )
             return ret
 
-        ret["comment"] = "Usage plan {0} has been deleted".format(plan_name)
+        ret["comment"] = "Usage plan {} has been deleted".format(plan_name)
         ret["changes"]["old"] = {"plan": existing["plans"][0]}
         ret["changes"]["new"] = {"plan": None}
 
-    except (ValueError, IOError) as e:
+    except (ValueError, OSError) as e:
         ret["result"] = False
-        ret["comment"] = "{0}".format(e.args)
+        ret["comment"] = "{}".format(e.args)
 
     return ret
 
@@ -2269,14 +2234,15 @@ def usage_plan_association_present(
             return ret
 
         if not existing["plans"]:
-            ret["comment"] = "Usage plan {0} does not exist".format(plan_name)
+            ret["comment"] = "Usage plan {} does not exist".format(plan_name)
             ret["result"] = False
             return ret
 
         if len(existing["plans"]) != 1:
-            ret[
-                "comment"
-            ] = "There are multiple usage plans with the same name - it is not supported"
+            ret["comment"] = (
+                "There are multiple usage plans with the same name - it is not"
+                " supported"
+            )
             ret["result"] = False
             return ret
 
@@ -2299,7 +2265,7 @@ def usage_plan_association_present(
         if "error" in result:
             ret[
                 "comment"
-            ] = "Failed to associate a usage plan {0} to the apis {1}, {2}".format(
+            ] = "Failed to associate a usage plan {} to the apis {}, {}".format(
                 plan_name, stages_to_add, result["error"]
             )
             ret["result"] = False
@@ -2309,9 +2275,9 @@ def usage_plan_association_present(
         ret["changes"]["old"] = plan_stages
         ret["changes"]["new"] = result.get("result", {}).get("apiStages", [])
 
-    except (ValueError, IOError) as e:
+    except (ValueError, OSError) as e:
         ret["result"] = False
-        ret["comment"] = "{0}".format(e.args)
+        ret["comment"] = "{}".format(e.args)
 
     return ret
 
@@ -2369,14 +2335,15 @@ def usage_plan_association_absent(
             return ret
 
         if not existing["plans"]:
-            ret["comment"] = "Usage plan {0} does not exist".format(plan_name)
+            ret["comment"] = "Usage plan {} does not exist".format(plan_name)
             ret["result"] = False
             return ret
 
         if len(existing["plans"]) != 1:
-            ret[
-                "comment"
-            ] = "There are multiple usage plans with the same name - it is not supported"
+            ret["comment"] = (
+                "There are multiple usage plans with the same name - it is not"
+                " supported"
+            )
             ret["result"] = False
             return ret
 
@@ -2385,7 +2352,7 @@ def usage_plan_association_absent(
         plan_stages = plan.get("apiStages", [])
 
         if not plan_stages:
-            ret["comment"] = "Usage plan {0} has no associated stages already".format(
+            ret["comment"] = "Usage plan {} has no associated stages already".format(
                 plan_name
             )
             return ret
@@ -2405,7 +2372,7 @@ def usage_plan_association_absent(
         if "error" in result:
             ret[
                 "comment"
-            ] = "Failed to disassociate a usage plan {0} from the apis {1}, {2}".format(
+            ] = "Failed to disassociate a usage plan {} from the apis {}, {}".format(
                 plan_name, stages_to_remove, result["error"]
             )
             ret["result"] = False
@@ -2415,8 +2382,8 @@ def usage_plan_association_absent(
         ret["changes"]["old"] = plan_stages
         ret["changes"]["new"] = result.get("result", {}).get("apiStages", [])
 
-    except (ValueError, IOError) as e:
+    except (ValueError, OSError) as e:
         ret["result"] = False
-        ret["comment"] = "{0}".format(e.args)
+        ret["comment"] = "{}".format(e.args)
 
     return ret

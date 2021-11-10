@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 NAPALM: Network Automation and Programmability Abstraction Layer with Multivendor support
 =========================================================================================
@@ -158,15 +157,9 @@ Example using a user-specific library, extending NAPALM's capabilities, e.g. ``c
     ``salt '*' net.arp username=my-alt-usr force_reconnect=True``.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import python lib
 import logging
 
 import salt.utils.napalm
-
-# Import Salt modules
-from salt.ext import six
 
 log = logging.getLogger(__file__)
 
@@ -178,12 +171,6 @@ log = logging.getLogger(__file__)
 __proxyenabled__ = ["napalm"]
 # proxy name
 
-# ----------------------------------------------------------------------------------------------------------------------
-# global variables
-# ----------------------------------------------------------------------------------------------------------------------
-
-NETWORK_DEVICE = {}
-DETAILS = {}
 
 # ----------------------------------------------------------------------------------------------------------------------
 # property functions
@@ -207,8 +194,12 @@ def init(opts):
     """
     Opens the connection with the network device.
     """
-    NETWORK_DEVICE.update(salt.utils.napalm.get_device(opts))
-    DETAILS["initialized"] = True
+    __context__["napalm_device"] = {
+        "opts": opts,
+        "id": opts["id"],
+        "network_device": salt.utils.napalm.get_device(opts),
+        "details": {"initialized": True},
+    }
     return True
 
 
@@ -243,21 +234,21 @@ def ping():
     """
     Connection open successfully?
     """
-    return NETWORK_DEVICE.get("UP", False)
+    return __context__["napalm_device"]["network_device"].get("UP", False)
 
 
 def initialized():
     """
     Connection finished initializing?
     """
-    return DETAILS.get("initialized", False)
+    return __context__["napalm_device"]["details"].get("initialized", False)
 
 
 def get_device():
     """
     Returns the network device object.
     """
-    return NETWORK_DEVICE
+    return __context__["napalm_device"]["network_device"]
 
 
 def get_grains():
@@ -271,7 +262,7 @@ def grains_refresh():
     """
     Refresh the grains.
     """
-    DETAILS["grains_cache"] = {}
+    __context__["napalm_device"]["details"]["grains_cache"] = {}
     return get_grains()
 
 
@@ -287,15 +278,21 @@ def shutdown(opts):
     Closes connection with the device.
     """
     try:
-        if not NETWORK_DEVICE.get("UP", False):
+        if not __context__["napalm_device"]["network_device"].get("UP", False):
             raise Exception("not connected!")
-        NETWORK_DEVICE.get("DRIVER").close()
+        __context__["napalm_device"]["network_device"].get("DRIVER").close()
     except Exception as error:  # pylint: disable=broad-except
-        port = NETWORK_DEVICE.get("OPTIONAL_ARGS", {}).get("port")
+        port = (
+            __context__["napalm_device"]["network_device"]
+            .get("OPTIONAL_ARGS", {})
+            .get("port"),
+        )
         log.error(
             "Cannot close connection with %s%s! Please check error: %s",
-            NETWORK_DEVICE.get("HOSTNAME", "[unknown hostname]"),
-            ":{0}".format(port) if port else "",
+            __context__["napalm_device"]["network_device"].get(
+                "HOSTNAME", "[unknown hostname]"
+            ),
+            ":{}".format(port) if port else "",
             error,
         )
 
@@ -342,9 +339,11 @@ def call(method, *args, **kwargs):
     """
     kwargs_copy = {}
     kwargs_copy.update(kwargs)
-    for karg, warg in six.iteritems(kwargs_copy):
+    for karg, warg in kwargs_copy.items():
         # will remove None values
         # thus the NAPALM methods will be called with their defaults
         if warg is None:
             kwargs.pop(karg)
-    return salt.utils.napalm.call(NETWORK_DEVICE, method, *args, **kwargs)
+    return salt.utils.napalm.call(
+        __context__["napalm_device"]["network_device"], method, *args, **kwargs
+    )
