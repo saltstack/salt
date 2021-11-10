@@ -44,6 +44,17 @@ def __virtual__():
     return False
 
 
+def _get_opts(command):
+    opts = {}
+    opts["UserName"] = __salt__["config.option"]("namecheap.user")
+    opts["ApiUser"] = __salt__["config.option"]("namecheap.name")
+    opts["ApiKey"] = __salt__["config.option"]("namecheap.key")
+    opts["ClientIp"] = __salt__["config.option"]("namecheap.client_ip")
+    opts["Command"] = command
+
+    return opts
+
+
 def get_balances():
     """
     Gets information about fund in the user's account. This method returns the
@@ -61,9 +72,10 @@ def get_balances():
 
         salt 'my-minion' namecheap_users.get_balances
     """
-    opts = salt.utils.namecheap.get_opts("namecheap.users.getBalances")
+    opts = _get_opts("namecheap.users.getBalances")
 
-    response_xml = salt.utils.namecheap.get_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.get_request(opts, url)
 
     if response_xml is None:
         return {}

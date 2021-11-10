@@ -47,13 +47,13 @@ def __virtual__():
     return True
 
 
-def post_request(opts):
-    namecheap_url = __salt__["config.option"]("namecheap.url")
+def post_request(opts, url):
+    namecheap_url = url
     return _handle_request(requests.post(namecheap_url, data=opts, timeout=45))
 
 
-def get_request(opts):
-    namecheap_url = __salt__["config.option"]("namecheap.url")
+def get_request(opts, url):
+    namecheap_url = url
     return _handle_request(requests.get(namecheap_url, params=opts, timeout=45))
 
 
