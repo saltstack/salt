@@ -23,7 +23,7 @@ file, or in the Pillar data.
     #Real url
     namecheap.url: https://api.namecheap.com/xml.response
     #Sandbox url
-    #namecheap.url: https://api.sandbox.namecheap.xml.response
+    #namecheap.url: https://api.sandbox.namecheap.com/xml.response
 """
 
 import logging
