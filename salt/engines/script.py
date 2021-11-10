@@ -36,7 +36,7 @@ def _read_stdout(proc):
     """
     Generator that returns stdout
     """
-    yield from iter(proc.stdout.readline, "")
+    yield from iter(proc.stdout.readline, b"")
 
 
 def _get_serializer(output):
