@@ -62,40 +62,42 @@ def test_basic_prometheus_output_with_default_options(cache_dir, temp_salt_minio
     }
 
     expected = "\n".join(
-        [
-            "# HELP salt_procs Number of salt minion processes running",
-            "# TYPE salt_procs gauge",
-            "salt_procs 0",
-            "# HELP salt_states_succeeded Number of successful states in the run",
-            "# TYPE salt_states_succeeded gauge",
-            "salt_states_succeeded 2",
-            "# HELP salt_states_failed Number of failed states in the run",
-            "# TYPE salt_states_failed gauge",
-            "salt_states_failed 0",
-            "# HELP salt_states_changed Number of changed states in the run",
-            "# TYPE salt_states_changed gauge",
-            "salt_states_changed 2",
-            "# HELP salt_states_total Total states in the run",
-            "# TYPE salt_states_total gauge",
-            "salt_states_total 2",
-            "# HELP salt_states_success_pct Percent of successful states in the run",
-            "# TYPE salt_states_success_pct gauge",
-            "salt_states_success_pct 100.0",
-            "# HELP salt_states_failure_pct Percent of failed states in the run",
-            "# TYPE salt_states_failure_pct gauge",
-            "salt_states_failure_pct 0.0",
-            "# HELP salt_states_changed_pct Percent of changed states in the run",
-            "# TYPE salt_states_changed_pct gauge",
-            "salt_states_changed_pct 100.0",
-            "# HELP salt_elapsed_time Time spent for all operations during the state run",
-            "# TYPE salt_elapsed_time gauge",
-            "salt_elapsed_time 13.695",
-            "# HELP salt_last_started Estimated time the state run started",
-            "# TYPE salt_last_started gauge",
-            "# HELP salt_last_completed Time of last state run completion",
-            "# TYPE salt_last_completed gauge",
-            "",
-        ]
+        sorted(
+            [
+                "# HELP salt_procs Number of salt minion processes running",
+                "# TYPE salt_procs gauge",
+                "salt_procs 0",
+                "# HELP salt_states_succeeded Number of successful states in the run",
+                "# TYPE salt_states_succeeded gauge",
+                "salt_states_succeeded 2",
+                "# HELP salt_states_failed Number of failed states in the run",
+                "# TYPE salt_states_failed gauge",
+                "salt_states_failed 0",
+                "# HELP salt_states_changed Number of changed states in the run",
+                "# TYPE salt_states_changed gauge",
+                "salt_states_changed 2",
+                "# HELP salt_states_total Total states in the run",
+                "# TYPE salt_states_total gauge",
+                "salt_states_total 2",
+                "# HELP salt_states_success_pct Percent of successful states in the run",
+                "# TYPE salt_states_success_pct gauge",
+                "salt_states_success_pct 100.0",
+                "# HELP salt_states_failure_pct Percent of failed states in the run",
+                "# TYPE salt_states_failure_pct gauge",
+                "salt_states_failure_pct 0.0",
+                "# HELP salt_states_changed_pct Percent of changed states in the run",
+                "# TYPE salt_states_changed_pct gauge",
+                "salt_states_changed_pct 100.0",
+                "# HELP salt_elapsed_time Time spent for all operations during the state run",
+                "# TYPE salt_elapsed_time gauge",
+                "salt_elapsed_time 13.695",
+                "# HELP salt_last_started Estimated time the state run started",
+                "# TYPE salt_last_started gauge",
+                "# HELP salt_last_completed Time of last state run completion",
+                "# TYPE salt_last_completed gauge",
+                "",
+            ]
+        )
     )
 
     opts = temp_salt_minion.config.copy()
@@ -112,11 +114,13 @@ def test_basic_prometheus_output_with_default_options(cache_dir, temp_salt_minio
 
         # Drop time-based fields for comparison
         salt_prom = "\n".join(
-            [
-                line
-                for line in salt_prom.split("\n")
-                if not line.startswith("salt_last_started")
-                and not line.startswith("salt_last_completed")
-            ]
+            sorted(
+                [
+                    line
+                    for line in salt_prom.split("\n")
+                    if not line.startswith("salt_last_started")
+                    and not line.startswith("salt_last_completed")
+                ]
+            )
         )
         assert salt_prom == expected
