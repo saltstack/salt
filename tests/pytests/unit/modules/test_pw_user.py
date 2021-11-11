@@ -10,18 +10,11 @@ import salt.modules.pw_user as pw_user
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
 
-try:
-    import pwd
-
-    HAS_PWD = True
-except ImportError:
-    HAS_PWD = False
+pwd = pytest.importorskip(
+    "pwd", reason="Tests can only run on systems with the python pwd module"
+)
 
 log = logging.getLogger(__name__)
-
-pytestmark = pytest.mark.skipif(
-    HAS_PWD is False, reason="Tests can only run on systems with the python pwd module"
-)
 
 
 @pytest.fixture
