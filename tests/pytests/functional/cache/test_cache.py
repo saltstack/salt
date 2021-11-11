@@ -221,6 +221,8 @@ def consul_cache(minion_opts, consul_port, consul_container):
 
 @pytest.fixture
 def mysql_cache(minion_opts, mysql_port, mysql_container):
+    # We're doing a late import because we need access to the exception
+    import salt.cache.mysql_cache
 
     # The container can be available before mysql actually is
     mysql_container.container.exec_run(
@@ -249,7 +251,8 @@ def mysql_cache(minion_opts, mysql_port, mysql_container):
             # Doesn't matter what. We just have to execute so that we spin
             # here until we can actually connect to the db instance.
             cache.modules["mysql.list"]("fnord")
-        except Exception as e:  # pylint: disable=broad-except
+        except salt.cache.mysql_cache.MySQLdb.DatabaseError:
+            # We don't really care what MySQL error is happening -
             pass
         else:
             break
@@ -264,11 +267,11 @@ def mysql_cache(minion_opts, mysql_port, mysql_container):
     # last_update column
     run_query = cache.modules["mysql.run_query"]
     run_query(
-        run_query.func.__globals__["client"],
-        "ALTER TABLE salt_cache.cache DROP COLUMN last_update",
+        conn=None,
+        query="ALTER TABLE salt_cache.cache DROP COLUMN last_update",
     )[0].fetchone()
-    run_query.func.__globals__["client"] = None
 
+    cache.modules["mysql.force_reconnect"]()
     yield cache
 
 
@@ -468,7 +471,9 @@ def test_caching(subtests, cache):
     with subtests.test(
         "cache.cache should update the value with all of the outputs from loop_fun if loop_fun was provided",
     ), patch(
-        "salt.cache.Cache.updated", return_value=42, autospec=True,
+        "salt.cache.Cache.updated",
+        return_value=42,
+        autospec=True,
     ):
         expected_value = "SOME HUGE STRING OKAY?"
 
@@ -487,7 +492,9 @@ def test_caching(subtests, cache):
     with subtests.test(
         "cache.cache should update the value if the stored value is empty but present and expiry is way in the future"
     ), patch(
-        "salt.cache.Cache.updated", return_value=time.time() * 2, autospec=True,
+        "salt.cache.Cache.updated",
+        return_value=time.time() * 2,
+        autospec=True,
     ):
         # Unclear if this was intended behavior: currently any falsey data will
         # be updated by cache.cache. If this is incorrect, this test should
