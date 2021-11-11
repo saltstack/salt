@@ -2,13 +2,12 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
+import io
 
 import salt.modules.hosts as hosts
 import salt.utils.data
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.ext import six
-from salt.ext.six.moves import StringIO
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase
@@ -144,7 +143,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
                 )
             ]
 
-            class TmpStringIO(StringIO):
+            class TmpStringIO(io.StringIO):
                 def __init__(self, fn, mode="r"):
                     self.mode = mode
                     initial_value = data[0]
@@ -169,11 +168,11 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
                     # module
                     if self.getvalue():
                         data[0] = self.getvalue()
-                    StringIO.close(self)
+                    io.StringIO.close(self)
 
                 def read(self, *args):
                     ret = super().read(*args)
-                    if six.PY3 and "b" in self.mode:
+                    if "b" in self.mode:
                         return salt.utils.stringutils.to_bytes(ret)
                     else:
                         return ret
@@ -196,7 +195,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
 
                 def readlines(self):
                     ret = super().readlines()
-                    if six.PY3 and "b" in self.mode:
+                    if "b" in self.mode:
                         return salt.utils.data.encode(ret)
                     else:
                         return ret
@@ -206,7 +205,12 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
                         self.write(line)
 
             expected = (
-                "\n".join(("2.2.2.2 bar.barbar bar", "3.3.3.3 asdf.asdfadsf asdf",))
+                "\n".join(
+                    (
+                        "2.2.2.2 bar.barbar bar",
+                        "3.3.3.3 asdf.asdfadsf asdf",
+                    )
+                )
                 + "\n"
             )
 
@@ -224,9 +228,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         Tests if specified host entry gets removed from the hosts file
         """
         hosts_content = (
-            b"# one line comment\n"
-            b"10.10.10.10    Salt1\n"
-            b"9.9.9.9    Salt2   # comment\n"
+            b"# one line comment\n10.10.10.10    Salt1\n9.9.9.9    Salt2   # comment\n"
         )
         with patch("salt.utils.files.fopen", mock_open(hosts_content)), patch(
             "salt.modules.hosts.__get_hosts_filename",

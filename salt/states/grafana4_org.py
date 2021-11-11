@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage Grafana v4.0 orgs
 
@@ -42,13 +41,9 @@ Manage Grafana v4.0 orgs
         - state: ""
         - country: ""
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.dictupdate as dictupdate
 from requests.exceptions import HTTPError
-
-# Import 3rd-party libs
-from salt.ext.six import string_types
 from salt.utils.dictdiffer import deep_diff
 
 
@@ -119,7 +114,7 @@ def present(
         Configuration profile used to connect to the Grafana instance.
         Default is 'grafana'.
     """
-    if isinstance(profile, string_types):
+    if isinstance(profile, str):
         profile = __salt__["config.option"](profile)
 
     ret = {"name": name, "result": None, "comment": None, "changes": {}}
@@ -134,12 +129,12 @@ def present(
 
     if create:
         if __opts__["test"]:
-            ret["comment"] = "Org {0} will be created".format(name)
+            ret["comment"] = "Org {} will be created".format(name)
             return ret
         __salt__["grafana4.create_org"](profile=profile, name=name)
         org = __salt__["grafana4.get_org"](name, profile)
         ret["changes"] = org
-        ret["comment"] = "New org {0} added".format(name)
+        ret["comment"] = "New org {} added".format(name)
 
     data = _get_json_data(
         address1=address1,
@@ -152,7 +147,7 @@ def present(
     )
     if data != org["address"]:
         if __opts__["test"]:
-            ret["comment"] = "Org {0} address will be updated".format(name)
+            ret["comment"] = "Org {} address will be updated".format(name)
             return ret
         __salt__["grafana4.update_org_address"](name, profile=profile, **data)
         if create:
@@ -169,7 +164,7 @@ def present(
     )
     if data != prefs:
         if __opts__["test"]:
-            ret["comment"] = "Org {0} prefs will be updated".format(name)
+            ret["comment"] = "Org {} prefs will be updated".format(name)
             return ret
         __salt__["grafana4.update_org_prefs"](name, profile=profile, **data)
         if create:
@@ -188,7 +183,7 @@ def present(
             if username in db_users:
                 if role is False:
                     if __opts__["test"]:
-                        ret["comment"] = "Org {0} user {1} will be " "deleted".format(
+                        ret["comment"] = "Org {} user {} will be deleted".format(
                             name, username
                         )
                         return ret
@@ -197,9 +192,8 @@ def present(
                     )
                 elif role != db_users[username]["role"]:
                     if __opts__["test"]:
-                        ret["comment"] = (
-                            "Org {0} user {1} role will be "
-                            "updated".format(name, username)
+                        ret["comment"] = "Org {} user {} role will be updated".format(
+                            name, username
                         )
                         return ret
                     __salt__["grafana4.update_org_user"](
@@ -210,7 +204,7 @@ def present(
                     )
             elif role:
                 if __opts__["test"]:
-                    ret["comment"] = "Org {0} user {1} will be created".format(
+                    ret["comment"] = "Org {} user {} will be created".format(
                         name, username
                     )
                     return ret
@@ -232,10 +226,10 @@ def present(
     ret["result"] = True
     if not create:
         if ret["changes"]:
-            ret["comment"] = "Org {0} updated".format(name)
+            ret["comment"] = "Org {} updated".format(name)
         else:
             ret["changes"] = {}
-            ret["comment"] = "Org {0} already up-to-date".format(name)
+            ret["comment"] = "Org {} already up-to-date".format(name)
 
     return ret
 
@@ -251,7 +245,7 @@ def absent(name, profile="grafana"):
         Configuration profile used to connect to the Grafana instance.
         Default is 'grafana'.
     """
-    if isinstance(profile, string_types):
+    if isinstance(profile, str):
         profile = __salt__["config.option"](profile)
 
     ret = {"name": name, "result": None, "comment": None, "changes": {}}
@@ -259,17 +253,17 @@ def absent(name, profile="grafana"):
 
     if not org:
         ret["result"] = True
-        ret["comment"] = "Org {0} already absent".format(name)
+        ret["comment"] = "Org {} already absent".format(name)
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Org {0} will be deleted".format(name)
+        ret["comment"] = "Org {} will be deleted".format(name)
         return ret
     __salt__["grafana4.delete_org"](org["id"], profile=profile)
 
     ret["result"] = True
     ret["changes"][name] = "Absent"
-    ret["comment"] = "Org {0} was deleted".format(name)
+    ret["comment"] = "Org {} was deleted".format(name)
 
     return ret
 

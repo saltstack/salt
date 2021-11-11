@@ -76,7 +76,8 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
 
         for osrelease in range(7, 8):
             with patch.dict(
-                rh_ip.__grains__, {"os": "RedHat", "osrelease": str(osrelease)},
+                rh_ip.__grains__,
+                {"os": "RedHat", "osrelease": str(osrelease)},
             ):
                 with patch.object(rh_ip, "_raise_error_iface", return_value=None):
                     with patch.object(rh_ip, "_parse_settings_bond", MagicMock()):
@@ -392,7 +393,10 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         kwargs["downdelay"] = 201
         try:
             rh_ip.build_interface(
-                "bond0", "bond", enabled=True, **kwargs,
+                "bond0",
+                "bond",
+                enabled=True,
+                **kwargs,
             )
         except AttributeError as exc:
             assert "multiple of miimon" in str(exc)
@@ -414,7 +418,10 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
             # Leaving out miimon should raise an error
             try:
                 rh_ip.build_interface(
-                    "bond0", "bond", enabled=True, **kwargs,
+                    "bond0",
+                    "bond",
+                    enabled=True,
+                    **kwargs,
                 )
             except AttributeError as exc:
                 assert "miimon" in str(exc)
@@ -424,7 +431,12 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         self._validate_miimon_downdelay(kwargs)
 
     def _get_bonding_opts(self, kwargs):
-        results = rh_ip.build_interface("bond0", "bond", enabled=True, **kwargs,)
+        results = rh_ip.build_interface(
+            "bond0",
+            "bond",
+            enabled=True,
+            **kwargs,
+        )
         self._check_common_opts_bond(results)
 
         for line in results:
@@ -781,7 +793,11 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 results = sorted(
                     rh_ip.build_interface(
-                        "eth1", "slave", enabled=True, test=True, master="bond0",
+                        "eth1",
+                        "slave",
+                        enabled=True,
+                        test=True,
+                        master="bond0",
                     )
                 )
                 expected = [

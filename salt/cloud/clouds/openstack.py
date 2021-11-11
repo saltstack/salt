@@ -346,7 +346,7 @@ def ignore_cidr(vm_, ip):
         cidrs = [cidrs]
     for cidr in cidrs or []:
         if ip_address(ip) in ip_network(cidr):
-            log.warning("IP '{}' found within '{}'; ignoring it.".format(ip, cidr))
+            log.warning("IP %r found within %r; ignoring it.", ip, cidr)
             return True
 
     return False
@@ -608,7 +608,7 @@ def list_networks(conn=None, call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_networks function must be called with " "-f or --function"
+            "The list_networks function must be called with -f or --function"
         )
     if conn is None:
         conn = get_conn()
@@ -629,7 +629,7 @@ def list_subnets(conn=None, call=None, kwargs=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_subnets function must be called with " "-f or --function."
+            "The list_subnets function must be called with -f or --function."
         )
     if conn is None:
         conn = get_conn()
@@ -841,7 +841,7 @@ def destroy(name, conn=None, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](
@@ -901,7 +901,7 @@ def call(conn=None, call=None, kwargs=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The call function must be called with " "-f or --function."
+            "The call function must be called with -f or --function."
         )
 
     if "func" not in kwargs:

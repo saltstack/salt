@@ -14,7 +14,6 @@ import shlex
 import time
 import unicodedata
 
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 from salt.utils.decorators.jinja import jinja_filter
 
 log = logging.getLogger(__name__)
@@ -74,8 +73,6 @@ def to_str(s, encoding=None, errors="strict", normalize=False):
     if not encoding:
         raise ValueError("encoding cannot be empty")
 
-    # This shouldn't be six.string_types because if we're on PY2 and we already
-    # have a string, we should just return it.
     if isinstance(s, str):
         return _normalize(s)
 

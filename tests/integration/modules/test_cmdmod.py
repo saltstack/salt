@@ -275,6 +275,7 @@ class CMDModuleTest(ModuleCase):
                 ret = self.run_function("cmd.tty", [tty, "apply salt liberally"])
                 self.assertTrue("Success" in ret)
 
+    @pytest.mark.skip_on_windows
     @pytest.mark.skip_if_binaries_missing("which")
     def test_which(self):
         """
@@ -286,6 +287,7 @@ class CMDModuleTest(ModuleCase):
         self.assertIsInstance(cmd_run, str)
         self.assertEqual(cmd_which.rstrip(), cmd_run.rstrip())
 
+    @pytest.mark.skip_on_windows
     @pytest.mark.skip_if_binaries_missing("which")
     def test_which_bin(self):
         """
@@ -588,8 +590,9 @@ class CMDModuleTest(ModuleCase):
         Ensure that powershell processes inline script in args
         """
         val = "i like cheese"
-        args = '-SecureString (ConvertTo-SecureString -String "{}" -AsPlainText -Force) -ErrorAction Stop'.format(
-            val
+        args = (
+            '-SecureString (ConvertTo-SecureString -String "{}" -AsPlainText -Force)'
+            " -ErrorAction Stop".format(val)
         )
         script = "salt://issue-56195/test.ps1"
         ret = self.run_function("cmd.script", [script], args=args, shell="powershell")
@@ -604,8 +607,9 @@ class CMDModuleTest(ModuleCase):
         core
         """
         val = "i like cheese"
-        args = '-SecureString (ConvertTo-SecureString -String "{}" -AsPlainText -Force) -ErrorAction Stop'.format(
-            val
+        args = (
+            '-SecureString (ConvertTo-SecureString -String "{}" -AsPlainText -Force)'
+            " -ErrorAction Stop".format(val)
         )
         script = "salt://issue-56195/test.ps1"
         ret = self.run_function("cmd.script", [script], args=args, shell="pwsh")
