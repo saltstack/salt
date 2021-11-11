@@ -18,7 +18,18 @@ Statistics
 - Total Issue References: **111**
 - Total PR References: **412**
 
-- Contributors: **76** (`5uper5hoot`_, `Ch3LL`_, `ClaudiuPID`_, `Giandom`_, `KaiSforza`_, `MTecknology`_, `ManicoW`_, `OrangeDog`_, `ShantonRU`_, `The-Loeki`_, `Yxnt`_, `aarnaud`_, `amendlik`_, `angeloudy`_, `bartlaarhoven`_, `bbh-kmd`_, `bbinet`_, `bdrung`_, `bergmannf`_, `bluesliverx`_, `bornwitbugs`_, `brejoc`_, `cachedout`_, `casselt`_, `cro`_, `cstarke`_, `dgmorrisjr`_, `dmurphy18`_, `dubb-b`_, `dwoz`_, `frogunder`_, `garethgreenaway`_, `gtmanfred`_, `isbm`_, `jacobweinstock`_, `jgleissner`_, `jodok`_, `jpsv`_, `jyurdal`_, `kiemlicz`_, `kunal-bajpai`_, `lexvella`_, `lomeroe`_, `m03`_, `madrisan`_, `mat813`_, `mattp-`_, `max-arnold`_, `mchugh19`_, `meaksh`_, `michaelgibson`_, `nhavens`_, `pirogoeth`_, `rallytime`_, `rkrieger`_, `rmarcinik`_, `rongzeng54`_, `rwaweber`_, `s0undt3ch`_, `sathieu`_, `sheagcraig`_, `silenius`_, `sunyq`_, `t0fik`_, `terminalmage`_, `terrible-broom`_, `thebluesnevrdie`_, `thetaurean`_, `tlemarchand`_, `tonybaloney`_, `twangboy`_, `waynew`_, `weswhet`_, `whytewolf`_, `yosnoop`_, `zwo-bot`_)
+- Contributors: **76** (`5uper5hoot`_, `Ch3LL`_, `ClaudiuPID`_, `Giandom`_, `KaiSforza`_,
+  `MTecknology`_, `ManicoW`_, `OrangeDog`_, `ShantonRU`_, `The-Loeki`_, `Yxnt`_, `aarnaud`_,
+  `amendlik`_, `angeloudy`_, `bartlaarhoven`_, `bbh-kmd`_, `bbinet`_, `bdrung`_, `bergmannf`_,
+  `bluesliverx`_, `bornwitbugs`_, `brejoc`_, `cachedout`_, `casselt`_, `cro`_, `cstarke`_,
+  `dgmorrisjr`_, `dmurphy18`_, `dubb-b`_, `dwoz`_, `frogunder`_, `garethgreenaway`_, `gtmanfred`_,
+  `isbm`_, `jacobweinstock`_, `jgleissner`_, `jodok`_, `jpsv`_, `jyurdal`_, `kiemlicz`_,
+  `kunal-bajpai`_, `lexvella`_, `lomeroe`_, `m03`_, `madrisan`_, `mat813`_, `mattp-`_,
+  `max-arnold`_, `mchugh19`_, `meaksh`_, `michaelgibson`_, `nhavens`_, `pirogoeth`_, `rallytime`_,
+  `rkrieger`_, `rmarcinik`_, `rongzeng54`_, `rwaweber`_, `s0undt3ch`_, `sathieu`_, `sheagcraig`_,
+  `silenius`_, `sunyq`_, `t0fik`_, `terminalmage`_, `terrible-broom`_, `thebluesnevrdie`_,
+  `thetaurean`_, `tlemarchand`_, `tonybaloney`_, `twangboy`_, `waynew`_, `weswhet`_, `whytewolf`_,
+  `yosnoop`_, `zwo-bot`_)
 
 
 Changelog for v2018.3.3..v2018.3.4

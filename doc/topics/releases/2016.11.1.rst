@@ -12,7 +12,11 @@ Statistics
 - Total Issue References: **29**
 - Total PR References: **83**
 
-- Contributors: **30** (`Ch3LL`_, `Da-Juan`_, `DmitryKuzmenko`_, `MTecknology`_, `adelcast`_, `attiasr`_, `bbinet`_, `cachedout`_, `cro`_, `dmurphy18`_, `gtmanfred`_, `isbm`_, `jeanpralo`_, `kraney`_, `kstreee`_, `lorengordon`_, `mateiw`_, `mirceaulinic`_, `morsik`_, `mschneider82`_, `rallytime`_, `rbjorklin`_, `scott-w`_, `sjorge`_, `skizunov`_, `techhat`_, `terminalmage`_, `thatch45`_, `ticosax`_, `whiteinge`_)
+- Contributors: **30** (`Ch3LL`_, `Da-Juan`_, `DmitryKuzmenko`_, `MTecknology`_, `adelcast`_,
+  `attiasr`_, `bbinet`_, `cachedout`_, `cro`_, `dmurphy18`_, `gtmanfred`_, `isbm`_, `jeanpralo`_,
+  `kraney`_, `kstreee`_, `lorengordon`_, `mateiw`_, `mirceaulinic`_, `morsik`_, `mschneider82`_,
+  `rallytime`_, `rbjorklin`_, `scott-w`_, `sjorge`_, `skizunov`_, `techhat`_, `terminalmage`_,
+  `thatch45`_, `ticosax`_, `whiteinge`_)
 
 
 Changelog for v2016.11.0..v2016.11.1

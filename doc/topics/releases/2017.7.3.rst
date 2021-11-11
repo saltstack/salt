@@ -12,7 +12,19 @@ Statistics
 - Total Issue References: **94**
 - Total PR References: **423**
 
-- Contributors: **86** (`3add3287`_, `BenoitKnecht`_, `Ch3LL`_, `CorvinM`_, `Da-Juan`_, `DmitryKuzmenko`_, `Giandom`_, `The-Loeki`_, `UtahDave`_, `adelcast`_, `amendlik`_, `angeloudy`_, `anlutro`_, `arthurlogilab`_, `basepi`_, `benediktwerner`_, `brejoc`_, `cachedout`_, `campbellmc`_, `chnrxn`_, `clan`_, `corywright`_, `damon-atkins`_, `dincamihai`_, `dmurphy18`_, `eliasp`_, `eradman`_, `forksaber`_, `frogunder`_, `gaborn57`_, `garethgreenaway`_, `golmaal`_, `gracinet`_, `gtmanfred`_, `haam3r`_, `isbm`_, `jettero`_, `jf`_, `jubrad`_, `keesbos`_, `kris-anderson`_, `lomeroe`_, `mateiw`_, `mattLLVW`_, `mephi42`_, `mirceaulinic`_, `mkurtak`_, `morganwillcock`_, `msummers42`_, `mtorromeo`_, `multani`_, `mvivaldi`_, `mz-bmcqueen`_, `nasenbaer13`_, `nicholasmhughes`_, `oarmstrong`_, `pkruk`_, `pratik705`_, `psagers`_, `rallytime`_, `rbjorklin`_, `rcallphin`_, `renner`_, `rhoths`_, `richardsimko`_, `rklaren`_, `roaldnefs`_, `s0undt3ch`_, `samodid`_, `skizunov`_, `skjaro`_, `steverweber`_, `sumeetisp`_, `t0fik`_, `techhat`_, `terminalmage`_, `timfreund`_, `timka`_, `tkwilliams`_, `twangboy`_, `unthought`_, `vernondcole`_, `vutny`_, `wedge-jarrad`_, `whytewolf`_, `xuhcc`_)
+- Contributors: **86** (`3add3287`_, `BenoitKnecht`_, `Ch3LL`_, `CorvinM`_, `Da-Juan`_,
+  `DmitryKuzmenko`_, `Giandom`_, `The-Loeki`_, `UtahDave`_, `adelcast`_, `amendlik`_, `angeloudy`_,
+  `anlutro`_, `arthurlogilab`_, `basepi`_, `benediktwerner`_, `brejoc`_, `cachedout`_,
+  `campbellmc`_, `chnrxn`_, `clan`_, `corywright`_, `damon-atkins`_, `dincamihai`_, `dmurphy18`_,
+  `eliasp`_, `eradman`_, `forksaber`_, `frogunder`_, `gaborn57`_, `garethgreenaway`_, `golmaal`_,
+  `gracinet`_, `gtmanfred`_, `haam3r`_, `isbm`_, `jettero`_, `jf`_, `jubrad`_, `keesbos`_,
+  `kris-anderson`_, `lomeroe`_, `mateiw`_, `mattLLVW`_, `mephi42`_, `mirceaulinic`_, `mkurtak`_,
+  `morganwillcock`_, `msummers42`_, `mtorromeo`_, `multani`_, `mvivaldi`_, `mz-bmcqueen`_,
+  `nasenbaer13`_, `nicholasmhughes`_, `oarmstrong`_, `pkruk`_, `pratik705`_, `psagers`_,
+  `rallytime`_, `rbjorklin`_, `rcallphin`_, `renner`_, `rhoths`_, `richardsimko`_, `rklaren`_,
+  `roaldnefs`_, `s0undt3ch`_, `samodid`_, `skizunov`_, `skjaro`_, `steverweber`_, `sumeetisp`_,
+  `t0fik`_, `techhat`_, `terminalmage`_, `timfreund`_, `timka`_, `tkwilliams`_, `twangboy`_,
+  `unthought`_, `vernondcole`_, `vutny`_, `wedge-jarrad`_, `whytewolf`_, `xuhcc`_)
 
 
 Windows Changes
