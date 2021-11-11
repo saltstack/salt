@@ -295,7 +295,9 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 993c341 Merge pull request `#54235`_ from ogd-software/fix_46034-2019.2.1
 
-  * 93bd30d Add alternative fix for "!" stomping Apparently (after watching Jenkins tests fail), what yaml.safe_load returns depends not on the version of salt, but on some other external dependency. Because of this, fix both possible return values.
+  * 93bd30d Add alternative fix for "!" stomping Apparently (after watching Jenkins tests fail),
+    what yaml.safe_load returns depends not on the version of salt, but on some other external
+    dependency. Because of this, fix both possible return values.
 
   * c95dd4d Add test for this specific bugfix
 
