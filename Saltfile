@@ -1,4 +1,0 @@
-salt-call:
-  local: True
-  config_dir: /home/wayne/programming/salt/local/etc/salt
-  pillar_root: /home/wayne/programming/salt/local/pillar
