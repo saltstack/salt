@@ -3,6 +3,7 @@ import pathlib
 
 import pytest
 import salt.spm.pkgfiles.local as spm
+import salt.syspaths
 from tests.support.mock import MagicMock
 
 
@@ -15,7 +16,7 @@ class MockTar:
     def __init__(self):
         self.name = str(pathlib.Path("apache", "_README"))
         self.path = str(
-            pathlib.Path(os.sep, "var", "cache", "salt", "master", "extmods")
+            pathlib.Path(os.sep, salt.syspaths.CACHE_DIR, "master", "extmods")
         )
 
 
@@ -29,7 +30,7 @@ def test_install_file():
             formula_tar=MagicMock(),
             member=MockTar(),
             formula_def={"name": "apache"},
-            conn={"formula_path": "/tmp/blah"},
+            conn={"formula_path": "/tmp/test"},
         )
         == MockTar().path
     )
