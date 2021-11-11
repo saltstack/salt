@@ -6,8 +6,8 @@ from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
-def configure_loader_modules():
-    return {pkgin: {"__opts__": {"cachedir": "/tmp"}}}
+def configure_loader_modules(tmp_path):
+    return {pkgin: {"__opts__": {"cachedir": str(tmp_path)}}}
 
 
 def test_search():
