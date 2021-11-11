@@ -12,7 +12,14 @@ Statistics
 - Total Issue References: **58**
 - Total PR References: **153**
 
-- Contributors: **49** (`BenoitKnecht`_, `Ch3LL`_, `Enquier`_, `F30`_, `Foxlik`_, `The-Loeki`_, `UtahDave`_, `abednarik`_, `alex-zel`_, `arif-ali`_, `automate-solutions`_, `axmetishe`_, `bdrung`_, `cachedout`_, `cro`_, `darenjacobs`_, `dmurphy18`_, `dschaller`_, `epcim`_, `garethgreenaway`_, `github-abcde`_, `gtmanfred`_, `isbm`_, `jettero`_, `jmarinaro`_, `kiorky`_, `lomeroe`_, `lordcirth`_, `lorengordon`_, `lubyou`_, `mcalmer`_, `moio`_, `onlyanegg`_, `peter-funktionIT`_, `pkazmierczak`_, `pprkut`_, `rallytime`_, `ricohouse`_, `seanjnkns`_, `sebw`_, `skizunov`_, `svinota`_, `t0fik`_, `terminalmage`_, `tmeneau`_, `tonybaloney`_, `twangboy`_, `whiteinge`_, `yannj-fr`_)
+- Contributors: **49** (`BenoitKnecht`_, `Ch3LL`_, `Enquier`_, `F30`_, `Foxlik`_, `The-Loeki`_,
+  `UtahDave`_, `abednarik`_, `alex-zel`_, `arif-ali`_, `automate-solutions`_, `axmetishe`_,
+  `bdrung`_, `cachedout`_, `cro`_, `darenjacobs`_, `dmurphy18`_, `dschaller`_, `epcim`_,
+  `garethgreenaway`_, `github-abcde`_, `gtmanfred`_, `isbm`_, `jettero`_, `jmarinaro`_, `kiorky`_,
+  `lomeroe`_, `lordcirth`_, `lorengordon`_, `lubyou`_, `mcalmer`_, `moio`_, `onlyanegg`_,
+  `peter-funktionIT`_, `pkazmierczak`_, `pprkut`_, `rallytime`_, `ricohouse`_, `seanjnkns`_,
+  `sebw`_, `skizunov`_, `svinota`_, `t0fik`_, `terminalmage`_, `tmeneau`_, `tonybaloney`_,
+  `twangboy`_, `whiteinge`_, `yannj-fr`_)
 
 
 Changelog for v2016.11.5..v2016.11.6

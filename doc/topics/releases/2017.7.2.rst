@@ -12,7 +12,14 @@ Statistics
 - Total Issue References: **73**
 - Total PR References: **236**
 
-- Contributors: **47** (`Ch3LL`_, `CorvinM`_, `DmitryKuzmenko`_, `Giandom`_, `Mapel88`_, `Mareo`_, `SuperPommeDeTerre`_, `The-Loeki`_, `abulford`_, `amendlik`_, `blarghmatey`_, `brejoc`_, `cachedout`_, `carsonoid`_, `cro`_, `damon-atkins`_, `darcoli`_, `dmurphy18`_, `frankiexyz`_, `garethgreenaway`_, `gtmanfred`_, `hibbert`_, `isbm`_, `ixs`_, `jettero`_, `jmarinaro`_, `justincbeard`_, `kkoppel`_, `llua`_, `lomeroe`_, `m03`_, `mcalmer`_, `mirceaulinic`_, `morganwillcock`_, `nhavens`_, `pabloh007`_, `rallytime`_, `seedickcode`_, `shengis`_, `skizunov`_, `terminalmage`_, `the-glu`_, `thusoy`_, `twangboy`_, `vitaliyf`_, `vutny`_, `whiteinge`_)
+- Contributors: **47** (`Ch3LL`_, `CorvinM`_, `DmitryKuzmenko`_, `Giandom`_, `Mapel88`_, `Mareo`_,
+  `SuperPommeDeTerre`_, `The-Loeki`_, `abulford`_, `amendlik`_, `blarghmatey`_, `brejoc`_,
+  `cachedout`_, `carsonoid`_, `cro`_, `damon-atkins`_, `darcoli`_, `dmurphy18`_, `frankiexyz`_,
+  `garethgreenaway`_, `gtmanfred`_, `hibbert`_, `isbm`_, `ixs`_, `jettero`_, `jmarinaro`_,
+  `justincbeard`_, `kkoppel`_, `llua`_, `lomeroe`_, `m03`_, `mcalmer`_, `mirceaulinic`_,
+  `morganwillcock`_, `nhavens`_, `pabloh007`_, `rallytime`_, `seedickcode`_, `shengis`_,
+  `skizunov`_, `terminalmage`_, `the-glu`_, `thusoy`_, `twangboy`_, `vitaliyf`_, `vutny`_,
+  `whiteinge`_)
 
 
 Security Fix
