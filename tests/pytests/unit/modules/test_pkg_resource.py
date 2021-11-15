@@ -220,7 +220,7 @@ def test_format_pkg_list_with_attr():
     }
     with patch.dict(pkg_resource.__salt__, {"pkg.parse_arch": name_arch_mapping.get}):
         pkgs = pkg_resource.format_pkg_list(packages, False, attr=["epoch", "release"])
-        assert pkgs == expected_pkg_list
+        assert sorted(pkgs) == sorted(expected_pkg_list)
 
 
 def test_stringify():
