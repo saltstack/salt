@@ -407,6 +407,7 @@ class Terminal:
             self.child_fd = parent
             self.child_fde = err_parent
             self.pid = proc.pid
+            self.proc = proc
             self.closed = False
             self.terminated = False
 
@@ -693,8 +694,13 @@ class Terminal:
             try:
                 pid, status = _waitpid(self.pid, waitpid_options)
             except ChildProcessError:
-                # Child process killed externally. go ahead and return not alive.
-                return False
+                # check if process is really dead or if it is just pretending and we should exit normally through the gift center
+                polled = self.proc.poll()
+                if polled is None:
+                    return True
+                # process must have returned on it's own process the return code
+                pid = self.pid
+                status = polled
             except _os_error:
                 err = sys.exc_info()[1]
                 # No child processes
