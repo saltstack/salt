@@ -70,12 +70,67 @@ Functions to interact with Hashicorp Vault.
         https://www.nomadproject.io/docs/vault-integration/index.html#vault-token-role-configuration
 
     auth
-        Currently only token and approle auth types are supported. Required.
+        Currently only token, approle, aws, kubernetes auth types are supported. Required.
 
         Approle is the preferred way to authenticate with Vault as it provide
         some advanced options to control authentication process.
         Please visit Vault documentation for more info:
         https://www.vaultproject.io/docs/auth/approle.html
+
+        AWS requires specific options to be setup and boto3 library installed on host
+        Please visit Vault documentation for more info on ec2 or iam auth method
+        https://www.vaultproject.io/docs/auth/aws.html
+
+        Following parameters are mandatory:
+            - aws_method
+                - Valid value are ``ec2`` or ``iam``
+            - role
+                - Role in vault against you want to perform authentication
+
+        Optionals vault parameters are:
+            - provider
+
+        Warning ! Your provider config should use the same region as vault do
+
+        Please visit Salt Cloud documentation for more info about provider possible arguments
+        https://docs.saltproject.io/en/latest/topics/cloud/aws.html
+
+        .. code-block:: yaml
+
+           vault:
+             url: https://vault.service.domain:8200
+             auth:
+               method: aws
+               aws_method: ec2 | iam
+               role: vault_role
+               provider:
+                 location: us-west-1
+
+        Kubernetes requires specific options to be setup
+
+        Following parameters are mandatory:
+            - role
+                - Role to be authenticate against in vault
+
+        Optionals parameters are:
+            - kubernetes_token_file
+                - default: ``/var/run/secrets/kubernetes.io/serviceaccount/token``
+            - jwt
+                - default: <empty>
+
+        If both jwt and kubernetes_token_file are configured jwt value will be prefered
+
+        Please visit Vault documentation for more info on those parameters
+        https://www.vaultproject.io/api-docs/auth/kubernetes#login
+
+        .. code-block:: yaml
+
+           vault:
+             url: https://vault.service.domain:8200
+             auth:
+               method: kubernetes
+               kubernetes_token_file: /custom_location_of_k8s_token/token
+
 
         The token must be able to create tokens with the policies that should be
         assigned to minions.
@@ -238,7 +293,7 @@ def read_secret(path, key=None, metadata=False, default=CommandExecutionError):
         if default is CommandExecutionError:
             raise CommandExecutionError(
                 "Failed to read secret! {}: {}".format(type(err).__name__, err)
-            )
+            ) from err
         return default
 
 
@@ -386,7 +441,7 @@ def list_secrets(path, default=CommandExecutionError):
         if default is CommandExecutionError:
             raise CommandExecutionError(
                 "Failed to list secrets! {}: {}".format(type(err).__name__, err)
-            )
+            ) from err
         return default
 
 
