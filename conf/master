@@ -639,6 +639,10 @@
 # will be shown for each state run.
 #state_output_profile: True
 
+# The state_output_pct setting changes whether success and failure information
+# as a percent of total actions will be shown for each state run.
+#state_output_pct: False
+
 # Automatically aggregate all states that have support for mod_aggregate by
 # setting to 'True'. Or pass a list of state module names to automatically
 # aggregate just those types.
