@@ -16,7 +16,7 @@ def test_isalive_no_child():
 
     # make sure we have a valid term before we kill the term
     # commenting out for now, terminal seems to be stopping before this point
-    #    assert term.isalive() is True
+    assert term.isalive() is True
     # use a large hammer to make sure pid is really dead which will cause it to
     # raise an exception that we want to test for.
     os.kill(term.pid, signal.SIGKILL)
