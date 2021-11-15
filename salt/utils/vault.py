@@ -6,7 +6,6 @@
 Utilities supporting modules for Hashicorp Vault. Configuration instructions are
 documented in the execution module docs.
 """
-
 import base64
 import logging
 import os
@@ -107,6 +106,87 @@ def _get_token_and_url_from_master():
         "issued": result["issued"],
     }
 
+def _build_iam_signature(credentials):
+    from urllib.parse import urlparse
+    from botocore.auth import SigV4Auth
+    from botocore.awsrequest import AWSRequest
+    from datetime import datetime
+    import json
+    try:
+        url = urlparse(__opts__["vault"]["auth"].get("iam_request_url", "https://sts.amazonaws.com/"))
+    except ValueError:
+        errmsg = 'iam_request_url should be a valid plain text URL (not a base64)'
+        raise salt.exceptions.CommandExecutionError(errmsg)
+
+    body = __opts__["vault"]["auth"].get("iam_request_body", "Action=GetCallerIdentity&Version=2011-06-15")
+    header_value = __opts__["vault"]["auth"].get("iam_server_id_header_value")
+    region = __opts__["vault"]["auth"].get("region_name", "us-east-1")
+    method = __opts__["vault"]["auth"].get("iam_http_request_method", "POST")
+    request = AWSRequest(
+        method=method,
+        url=url.geturl(),
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+            "Host": url.netloc,
+            "X-Amz-Date": datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+        },
+        data=body,
+        params={}
+    )
+    if credentials.token:
+        request.headers["X-Amz-Security-Token"] = credentials.token
+
+    if header_value:
+        request.headers["X-Vault-AWS-IAM-Server-ID"] = header_value
+
+    sigv4 = SigV4Auth(credentials, 'sts', region)
+    sigv4.add_auth(request)
+    headers = json.dumps({k: [request.headers[k]] for k in request.headers})
+    return { "iam_http_request_method":method,
+             "iam_request_url":base64.b64encode(request.url.encode("utf-8")).decode("utf-8"),
+             "iam_request_headers":base64.b64encode(headers.encode("utf-8")).decode("utf-8"),
+             "iam_request_body": base64.b64encode(request.body).decode("utf-8")
+        }
+
+def _build_aws_payload():
+    """
+    Generates arguments for aws auth backend based on config and / or IAM environment
+    """
+    SERVICE_URL = "http://169.254.169.254"
+
+    role = __opts__["vault"]["auth"].get("role", "")
+    aws_method = __opts__["vault"]["auth"].get("aws_method")
+    if aws_method not in ("ec2", "iam"):
+        errmsg = 'Vault AWS Authentication is selected but aws_method("{}") is neither ec2 or iam'.format(
+            aws_method
+        )
+        raise salt.exceptions.CommandExecutionError(errmsg)
+    if aws_method == "ec2":
+        doc = requests.get(f"{SERVICE_URL}/latest/dynamic/instance-identity/document").json()
+        pkc7str = requests.get(f"{SERVICE_URL}/latest/dynamic/instance-identity/pkcs7").text.replace('\n', '')
+        nonce = __opts__["vault"]["auth"].get("nonce")
+        if nonce is None:
+            # Fallback to immuable data (arn of instance)
+            nonce = __salt__["hashutil.sha256_digest"](f"""arn:aws:ec2:{doc["region"]}:{doc["accountId"]}:instance/{doc["instanceId"]}""")
+        payload = {"role": role, "pkcs7": pkc7str, "nonce": nonce}
+    elif aws_method == "iam":
+        payload = {"role": role}
+        try:
+            import boto3
+            import inspect
+        except ModuleNotFoundError as err:
+            errmsg = 'AWS library - %s - was not found'.format(
+                err.name
+            )
+            raise salt.exceptions.CommandExecutionError(errmsg)
+
+        session_args = { k:v for k,v in __opts__["vault"]["auth"].items() if k in inspect.signature(boto3.Session).parameters.keys() }
+        credentials = boto3.Session(**session_args).get_credentials()
+        iam_signature = _build_iam_signature(credentials)
+        payload.update(iam_signature)
+
+    log.trace("AWS payload %s", payload)
+    return payload
 
 def get_vault_connection():
     """
@@ -155,6 +235,67 @@ def get_vault_connection():
                     __opts__["vault"]["auth"]["token"] = response.json()["auth"][
                         "client_token"
                     ]
+            if __opts__["vault"]["auth"]["method"] == "aws":
+                verify = __opts__["vault"].get("verify", None)
+                if _selftoken_expired():
+                    log.debug("Vault token expired. Recreating one")
+                    # Requesting a short ttl token
+                    url = "{}/v1/auth/aws/login".format(__opts__["vault"]["url"])
+                    payload = _build_aws_payload()
+                    if namespace is not None:
+                        headers = {"X-Vault-Namespace": namespace}
+                        response = requests.post(
+                            url, headers=headers, json=payload, verify=verify
+                        )
+                    else:
+                        response = requests.post(url, json=payload, verify=verify)
+                    if response.status_code != 200:
+                        errmsg = "An error occurred while getting a token from aws - {}".format(response.json().get("errors"))
+                        raise salt.exceptions.CommandExecutionError(errmsg)
+                    __opts__["vault"]["auth"]["token"] = response.json()["auth"][
+                        "client_token"
+                    ]
+            if __opts__["vault"]["auth"]["method"] == "kubernetes":
+                verify = __opts__["vault"].get("verify", None)
+                if _selftoken_expired():
+                    log.debug("Vault token expired. Recreating one")
+                    # Requesting a short ttl token
+                    url = "{}/v1/auth/kubernetes/login".format(__opts__["vault"]["url"])
+
+                    k8s_token_file = __opts__["vault"]["auth"].get("kubernetes_token_file", "/var/run/secrets/kubernetes.io/serviceaccount/token")
+                    jwt_token = __opts__["vault"]["auth"].get("jwt")
+                    vault_role = __opts__["vault"]["auth"].get("role")
+                    if jwt_token is None:
+                        if not __salt__["file.access"](k8s_token_file, "f"):
+                            errmsg = "An error occurred while getting a vault token from kubernetes - Kubernetes token file ({}) not found".format(k8s_token_file)
+                            raise salt.exceptions.CommandExecutionError(errmsg)
+                        elif not __salt__["file.access"](k8s_token_file, "r"):
+                            errmsg = "An error occurred while getting a vault token from kubernetes - Kubernetes token file ({}) not readable".format(k8s_token_file)
+                            raise salt.exceptions.CommandExecutionError(errmsg)                            
+                        else:
+                            jwt_token = __salt__["file.read"](k8s_token_file)
+                    if vault_role is None:
+                        errmsg = "An error occurred while getting a vault token from kubernetes - Missing vault role"
+                        raise salt.exceptions.CommandExecutionError(errmsg)
+                    elif  jwt_token is None:
+                        errmsg = "An error occurred while getting a vault token from kubernetes - Missing Kubernetes Token"
+                        raise salt.exceptions.CommandExecutionError(errmsg)
+                   
+                    payload = {"role":vault_role, "jwt": jwt_token}
+                    if namespace is not None:
+                        headers = {"X-Vault-Namespace": namespace}
+                        response = requests.post(
+                            url, headers=headers, json=payload, verify=verify
+                        )
+                    else:
+                        response = requests.post(url, json=payload, verify=verify)
+                    if response.status_code != 200:
+                        errmsg = "An error occurred while getting a token from aws - {}".format(response.json().get("errors"))
+                        raise salt.exceptions.CommandExecutionError(errmsg)
+                    __opts__["vault"]["auth"]["token"] = response.json()["auth"][
+                        "client_token"
+                    ]
+
             return {
                 "url": __opts__["vault"]["url"],
                 "namespace": namespace,

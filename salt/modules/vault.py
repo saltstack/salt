@@ -70,12 +70,86 @@ Functions to interact with Hashicorp Vault.
         https://www.nomadproject.io/docs/vault-integration/index.html#vault-token-role-configuration
 
     auth
-        Currently only token and approle auth types are supported. Required.
+        Currently only token, approle, aws, kubernetes auth types are supported. Required.
 
         Approle is the preferred way to authenticate with Vault as it provide
         some advanced options to control authentication process.
         Please visit Vault documentation for more info:
         https://www.vaultproject.io/docs/auth/approle.html
+
+        AWS requires specific options to be setup and boto3 library installed on host
+        Please visit Vault documentation for more info on ec2 or iam auth method
+        https://www.vaultproject.io/docs/auth/aws.html
+
+        Following parameters are mandatory:
+            - aws_method
+                - Valid value are ``ec2`` or ``iam``
+            - role
+        
+        Optionals vault parameters are:
+            - iam_server_id_header_value
+                - default: <empty>
+            - iam_http_request_method
+                - default: POST
+            - iam_request_url
+                - default: https://sts.amazonaws.com/
+            - iam_request_body
+                - default: Action=GetCallerIdentity&Version=2011-06-15
+            - nonce
+                - default: sha256(instance_arn)
+
+        Please visit Vault documentation for more info on those parameters
+        https://www.vaultproject.io/docs/auth/aws.html
+
+        Optionals boto3 parameters are Session arguments:
+            - aws_access_key_id
+                - default: boto3 default behavior
+            - aws_secret_access_key
+                - default: boto3 default behavior
+            - aws_session_token
+                - default: boto3 default behavior
+            - region_name
+                - default: us-east-1
+            - profile_name
+                - default: <empty>
+
+        Please visit Boto3 documentation for more info on those parameters
+        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/core/session.html#boto3.session.Session        
+
+        .. code-block:: yaml
+
+           vault:
+             url: https://vault.service.domain:8200
+             auth:
+               method: aws
+               aws_method: ec2 | iam
+               role: vault_role
+               region_name: us_west_1
+
+        Kubernetes requires specific options to be setup
+
+        Following parameters are mandatory:
+            - role
+                - Role to be authenticate against in vault
+
+        Optionals parameters are:
+            - kubernetes_token_file
+                - default: ``/var/run/secrets/kubernetes.io/serviceaccount/token``
+            - jwt
+                - default: <empty>
+        If both jwt and kubernetes_token_file are configured jwt value will be prefered
+
+        Please visit Vault documentation for more info on those parameters
+        https://www.vaultproject.io/api-docs/auth/kubernetes#login
+
+        .. code-block:: yaml
+
+           vault:
+             url: https://vault.service.domain:8200
+             auth:
+               method: kubernetes
+               kubernetes_token_file: /custom_location_of_k8s_token/token
+
 
         The token must be able to create tokens with the policies that should be
         assigned to minions.
