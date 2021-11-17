@@ -348,6 +348,11 @@ def post_master_init(self, master):
         ).compile_pillar()
 
         proxyopts["proxy"] = self.proxy_pillar[_id].get("proxy", {})
+        if not proxyopts["proxy"]:
+            log.warn(
+                "Pillar data for proxy minion %s could not be loaded, skipping.", _id
+            )
+            continue
 
         # Remove ids
         proxyopts["proxy"].pop("ids", None)
