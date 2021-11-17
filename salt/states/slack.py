@@ -117,9 +117,9 @@ def post_message(name, **kwargs):
                 ret["comment"] = "Please specify api_key or webhook."
                 return ret
 
-    if api_key and webhook:
-        ret["comment"] = "Please specify only either api_key or webhook."
-        return ret
+#   if api_key and webhook:
+#        ret["comment"] = "Please specify only either api_key or webhook."
+#        return ret
 
     if api_key and not kwargs.get("channel"):
         ret["comment"] = "Slack channel is missing."
@@ -141,7 +141,8 @@ def post_message(name, **kwargs):
         return ret
 
     try:
-        if api_key:
+#        if api_key:
+         if 1==1:
             result = __salt__["slack.post_message"](
                 channel=kwargs.get("channel"),
                 message=kwargs.get("message"),
