@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Module for sending events using the runner system.
 
 .. versionadded:: 2016.11.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 

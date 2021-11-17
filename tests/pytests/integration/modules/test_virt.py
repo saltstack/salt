@@ -153,7 +153,7 @@ def virt_minion_1(
 
 @pytest.fixture(scope="module")
 def salt_cli(salt_master, virt_minion_0, virt_minion_1):
-    return salt_master.get_salt_cli()
+    return salt_master.salt_cli()
 
 
 @pytest.mark.slow_test
@@ -481,8 +481,7 @@ class TestVirtMigrateTest:
         ret = salt_cli.run(
             "virt.migrate",
             virt_domain,
-            virt_minion_1.uri,
-            ssh=True,
+            "qemu+ssh://{}/system".format(virt_minion_1.uri),
             minion_tgt=virt_minion_0.id,
         )
         assert ret.exitcode == 0, ret

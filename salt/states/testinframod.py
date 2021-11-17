@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
 from salt.utils.stringutils import camel_to_snake_case
@@ -43,7 +40,7 @@ def _generate_functions():
         modules_ = [module_ for module_ in modules.modules]
 
     for module_name in modules_:
-        func_name = "testinfra.{0}".format(module_name)
+        func_name = "testinfra.{}".format(module_name)
         __all__.append(module_name)
         log.debug(
             "Generating state for module %s as function %s", module_name, func_name

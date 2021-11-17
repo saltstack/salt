@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.logadm as logadm
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -61,8 +55,7 @@ class LogadmTestCase(TestCase, LoaderModuleMockMixin):
                 logadm.remove("name"),
                 {
                     "Output": "stderr",
-                    "Error": "Failure in removing log. Possibly\
- already removed?",
+                    "Error": "Failure in removing log. Possibly already removed?",
                 },
             )
 

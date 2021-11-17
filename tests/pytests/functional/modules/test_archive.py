@@ -157,6 +157,7 @@ def unicode_filename(request):
     return request.param
 
 
+@pytest.mark.skip_on_windows
 @pytest.mark.skip_if_binaries_missing("tar")
 def test_tar_pack(archive, unicode_filename):
     """
@@ -168,6 +169,7 @@ def test_tar_pack(archive, unicode_filename):
         arch.assert_artifacts_in_ret(ret)
 
 
+@pytest.mark.skip_on_windows
 @pytest.mark.skip_if_binaries_missing("tar")
 def test_tar_unpack(archive, unicode_filename):
     """
@@ -183,6 +185,7 @@ def test_tar_unpack(archive, unicode_filename):
         arch.assert_artifacts_in_ret(ret)
 
 
+@pytest.mark.skip_on_windows
 @pytest.mark.skip_if_binaries_missing("tar")
 def test_tar_list(archive, unicode_filename):
     """

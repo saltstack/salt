@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of OpenStack Neutron Subnets
 =========================================
@@ -47,7 +46,6 @@ Example States
         - ip_version: 6
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 __virtualname__ = "neutron_subnet"
 
@@ -57,8 +55,7 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The neutronng execution module failed to load:\
-                    shade python module is not available",
+        "The neutronng execution module failed to load: shade python module is not available",
     )
 
 

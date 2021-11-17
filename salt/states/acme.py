@@ -109,14 +109,14 @@ def cert(
     else:
         ret["result"] = True
         ret["comment"].append(
-            "Certificate {} exists and does not need renewal." "".format(certname)
+            "Certificate {} exists and does not need renewal.".format(certname)
         )
 
     if action:
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"].append(
-                "Certificate {} would have been {}ed." "".format(certname, action)
+                "Certificate {} would have been {}ed.".format(certname, action)
             )
             ret["changes"] = {"old": "current certificate", "new": "new certificate"}
         else:

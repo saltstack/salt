@@ -1,11 +1,4 @@
-# -*- coding: utf-8 -*-
-
-# Import Salt Testing Libs
-from __future__ import absolute_import
-
 import salt.modules.selinux as selinux
-
-# Import Salt libs
 from salt.exceptions import SaltInvocationError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
@@ -27,7 +20,10 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
         """
         cases = [
             {
-                "semanage_out": "/var/www(/.*)?     all files          system_u:object_r:httpd_sys_content_t:s0",
+                "semanage_out": (
+                    "/var/www(/.*)?     all files         "
+                    " system_u:object_r:httpd_sys_content_t:s0"
+                ),
                 "name": "/var/www(/.*)?",
                 "filetype": "all files",
                 "sel_user": "system_u",
@@ -36,7 +32,10 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
                 "sel_level": "s0",
             },
             {
-                "semanage_out": "/var/www(/.*)? all files          system_u:object_r:httpd_sys_content_t:s0",
+                "semanage_out": (
+                    "/var/www(/.*)? all files         "
+                    " system_u:object_r:httpd_sys_content_t:s0"
+                ),
                 "name": "/var/www(/.*)?",
                 "filetype": "all files",
                 "sel_user": "system_u",
@@ -45,7 +44,10 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
                 "sel_level": "s0",
             },
             {
-                "semanage_out": "/var/lib/dhcp3?                                    directory          system_u:object_r:dhcp_state_t:s0",
+                "semanage_out": (
+                    "/var/lib/dhcp3?                                    directory      "
+                    "    system_u:object_r:dhcp_state_t:s0"
+                ),
                 "name": "/var/lib/dhcp3?",
                 "filetype": "directory",
                 "sel_user": "system_u",
@@ -54,7 +56,10 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
                 "sel_level": "s0",
             },
             {
-                "semanage_out": "/var/lib/dhcp3?  directory          system_u:object_r:dhcp_state_t:s0",
+                "semanage_out": (
+                    "/var/lib/dhcp3?  directory         "
+                    " system_u:object_r:dhcp_state_t:s0"
+                ),
                 "name": "/var/lib/dhcp3?",
                 "filetype": "directory",
                 "sel_user": "system_u",
@@ -63,7 +68,10 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
                 "sel_level": "s0",
             },
             {
-                "semanage_out": "/var/lib/dhcp3? directory          system_u:object_r:dhcp_state_t:s0",
+                "semanage_out": (
+                    "/var/lib/dhcp3? directory         "
+                    " system_u:object_r:dhcp_state_t:s0"
+                ),
                 "name": "/var/lib/dhcp3?",
                 "filetype": "directory",
                 "sel_user": "system_u",
@@ -159,7 +167,9 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
                 },
             },
             {
-                "semanage_out": "cluster_port_t                 tcp      5149, 40040, 50006-50008",
+                "semanage_out": (
+                    "cluster_port_t                 tcp      5149, 40040, 50006-50008"
+                ),
                 "name": "tcp/40040",
                 "expected": {
                     "sel_type": "cluster_port_t",
@@ -168,16 +178,24 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
                 },
             },
             {
-                "semanage_out": "http_port_t                    tcp      9008, 8010, 9002-9003, 80, 81, 443, 488, 8008, 8009, 8443, 9000",
+                "semanage_out": (
+                    "http_port_t                    tcp      9008, 8010, 9002-9003, 80,"
+                    " 81, 443, 488, 8008, 8009, 8443, 9000"
+                ),
                 "name": "tcp/9000",
                 "expected": {
                     "sel_type": "http_port_t",
                     "protocol": "tcp",
-                    "port": "9008, 8010, 9002-9003, 80, 81, 443, 488, 8008, 8009, 8443, 9000",
+                    "port": (
+                        "9008, 8010, 9002-9003, 80, 81, 443, 488, 8008, 8009, 8443,"
+                        " 9000"
+                    ),
                 },
             },
             {
-                "semanage_out": "vnc_port_t                     tcp      5985-5999, 5900-5983",
+                "semanage_out": (
+                    "vnc_port_t                     tcp      5985-5999, 5900-5983"
+                ),
                 "name": "tcp/5985-5999",
                 "expected": {
                     "sel_type": "vnc_port_t",
@@ -186,7 +204,9 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
                 },
             },
             {
-                "semanage_out": "zebra_port_t                   tcp      2606, 2608-2609, 2600-2604",
+                "semanage_out": (
+                    "zebra_port_t                   tcp      2606, 2608-2609, 2600-2604"
+                ),
                 "name": "tcp/2608-2609",
                 "expected": {
                     "sel_type": "zebra_port_t",
@@ -195,7 +215,9 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
                 },
             },
             {
-                "semanage_out": "radius_port_t                  udp      1645, 1812, 18120-18121",
+                "semanage_out": (
+                    "radius_port_t                  udp      1645, 1812, 18120-18121"
+                ),
                 "name": "tcp/18120-18121",
                 "expected": {
                     "sel_type": "radius_port_t",
@@ -217,7 +239,10 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test parsing the stdout response of restorecon used in fcontext_policy_applied, new style.
         """
-        restorecon_ret = "Would relabel /foo/bar from some_u:some_r:some_t:s0 to other_u:other_r:other_t:s0"
+        restorecon_ret = (
+            "Would relabel /foo/bar from some_u:some_r:some_t:s0 to"
+            " other_u:other_r:other_t:s0"
+        )
         with patch.object(
             selinux, "fcontext_policy_is_applied", return_value=restorecon_ret
         ), patch.dict(
@@ -248,7 +273,10 @@ class SelinuxModuleTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test parsing the stdout response of restorecon used in fcontext_policy_applied, old style.
         """
-        restorecon_ret = "restorecon reset /foo/bar context some_u:some_r:some_t:s0->other_u:other_r:other_t:s0"
+        restorecon_ret = (
+            "restorecon reset /foo/bar context"
+            " some_u:some_r:some_t:s0->other_u:other_r:other_t:s0"
+        )
         with patch.object(
             selinux, "fcontext_policy_is_applied", return_value=restorecon_ret
         ), patch.dict(

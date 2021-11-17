@@ -38,7 +38,6 @@ import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 # do not remove, used in imported file.py functions
-from salt.ext import six
 from salt.modules.file import check_hash  # pylint: disable=W0611
 from salt.modules.file import (
     HASHES,
@@ -95,6 +94,7 @@ from salt.modules.file import (
 from salt.modules.file import normpath as normpath_
 from salt.modules.file import (
     pardir,
+    patch,
     path_exists_glob,
     prepend,
     psed,
@@ -150,7 +150,7 @@ def __virtual__():
     if salt.utils.platform.is_windows():
         if HAS_WINDOWS_MODULES:
             # Load functions from file.py
-            global get_managed, manage_file
+            global get_managed, manage_file, patch
             global source_list, __clean_tmp, file_exists
             global check_managed, check_managed_changes, check_file_meta
             global append, _error, directory_exists, touch, contains
@@ -239,6 +239,7 @@ def __virtual__():
             list_backups_dir = _namespaced_function(list_backups_dir, globals())
             normpath_ = _namespaced_function(normpath_, globals())
             _assert_occurrence = _namespaced_function(_assert_occurrence, globals())
+            patch = _namespaced_function(patch, globals())
 
         else:
             return False, "Module win_file: Missing Win32 modules"
