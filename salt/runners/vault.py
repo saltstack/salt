@@ -16,6 +16,9 @@ import time
 import requests
 import salt.crypt
 import salt.exceptions
+import salt.utils.files
+import salt.utils.validate.path
+from salt.utils.vault import _build_aws_payload
 
 log = logging.getLogger(__name__)
 
@@ -72,6 +75,63 @@ def generate_token(
                 if "secret_id" in config["auth"]:
                     payload["secret_id"] = config["auth"]["secret_id"]
                 # Vault Enterprise call requires headers
+                headers = None
+                if namespace is not None:
+                    headers = {"X-Vault-Namespace": namespace}
+                response = requests.post(
+                    url, headers=headers, json=payload, verify=verify
+                )
+                if response.status_code != 200:
+                    return {"error": response.reason}
+                config["auth"]["token"] = response.json()["auth"]["client_token"]
+
+        if config["auth"]["method"] == "aws":
+            verify = config.get("verify", None)
+            if _selftoken_expired():
+                log.debug("Vault token expired. Recreating one")
+                # Requesting a short ttl token
+                url = "{}/v1/auth/aws/login".format(config["url"])
+                payload = _build_aws_payload(config)
+                headers = None
+                if namespace is not None:
+                    headers = {"X-Vault-Namespace": namespace}
+                response = requests.post(
+                    url, headers=headers, json=payload, verify=verify
+                )
+                if response.status_code != 200:
+                    return {"error": response.reason}
+                config["auth"]["token"] = response.json()["auth"]["client_token"]
+
+        if config["auth"]["method"] == "kubernetes":
+            verify = config.get("verify", None)
+            if _selftoken_expired():
+                log.debug("Vault token expired. Recreating one")
+                # Requesting a short ttl token
+                url = "{}/v1/auth/kubernetes/login".format(config["url"])
+
+                k8s_token_file = config["auth"].get(
+                    "kubernetes_token_file",
+                    "/var/run/secrets/kubernetes.io/serviceaccount/token",
+                )
+                jwt_token = config["auth"].get("jwt")
+                vault_role = config["auth"].get("role")
+                if jwt_token is None:
+                    if not salt.utils.validate.path.is_readable(k8s_token_file):
+                        errmsg = "An error occurred while getting a vault token from kubernetes - Kubernetes token file ({}) not found/readable".format(
+                            k8s_token_file
+                        )
+                        raise salt.exceptions.CommandExecutionError(errmsg)
+                    else:
+                        with salt.utils.files.fpopen(k8s_token_file, "r") as fp_:
+                            jwt_token = fp_.read()
+                if vault_role is None:
+                    errmsg = "An error occurred while getting a vault token from kubernetes - Missing vault role"
+                    raise salt.exceptions.CommandExecutionError(errmsg)
+                elif jwt_token is None:
+                    errmsg = "An error occurred while getting a vault token from kubernetes - Missing Kubernetes Token"
+                    raise salt.exceptions.CommandExecutionError(errmsg)
+
+                payload = {"role": vault_role, "jwt": jwt_token}
                 headers = None
                 if namespace is not None:
                     headers = {"X-Vault-Namespace": namespace}

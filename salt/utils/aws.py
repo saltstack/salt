@@ -272,9 +272,11 @@ def sig4(
     if location is None:
         location = DEFAULT_LOCATION
 
+    querystring = ""
     params_with_headers = params.copy()
     if product not in ("s3", "ssm"):
-        params_with_headers["Version"] = aws_api_version
+        if method == "GET":
+            params_with_headers["Version"] = aws_api_version
     keys = sorted(params_with_headers.keys())
     values = list(map(params_with_headers.get, keys))
     querystring = urllib.parse.urlencode(list(zip(keys, values))).replace("+", "%20")
@@ -344,8 +346,8 @@ def sig4(
     )
 
     new_headers["Authorization"] = authorization_header
-
-    requesturl = "{}?{}".format(requesturl, querystring)
+    if querystring:
+        requesturl = "{}?{}".format(requesturl, querystring)
     return new_headers, requesturl
 
 

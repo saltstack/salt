@@ -85,36 +85,15 @@ Functions to interact with Hashicorp Vault.
             - aws_method
                 - Valid value are ``ec2`` or ``iam``
             - role
-        
+                - Role in vault against you want to perform authentication
+
         Optionals vault parameters are:
-            - iam_server_id_header_value
-                - default: <empty>
-            - iam_http_request_method
-                - default: POST
-            - iam_request_url
-                - default: https://sts.amazonaws.com/
-            - iam_request_body
-                - default: Action=GetCallerIdentity&Version=2011-06-15
-            - nonce
-                - default: sha256(instance_arn)
+            - provider
 
-        Please visit Vault documentation for more info on those parameters
-        https://www.vaultproject.io/docs/auth/aws.html
+        Warning ! Your provider config should use the same region as vault do
 
-        Optionals boto3 parameters are Session arguments:
-            - aws_access_key_id
-                - default: boto3 default behavior
-            - aws_secret_access_key
-                - default: boto3 default behavior
-            - aws_session_token
-                - default: boto3 default behavior
-            - region_name
-                - default: us-east-1
-            - profile_name
-                - default: <empty>
-
-        Please visit Boto3 documentation for more info on those parameters
-        https://boto3.amazonaws.com/v1/documentation/api/latest/reference/core/session.html#boto3.session.Session        
+        Please visit Salt Cloud documentation for more info about provider possible arguments
+        https://docs.saltproject.io/en/latest/topics/cloud/aws.html
 
         .. code-block:: yaml
 
@@ -124,7 +103,8 @@ Functions to interact with Hashicorp Vault.
                method: aws
                aws_method: ec2 | iam
                role: vault_role
-               region_name: us_west_1
+               provider:
+                 location: us-west-1
 
         Kubernetes requires specific options to be setup
 
@@ -137,6 +117,7 @@ Functions to interact with Hashicorp Vault.
                 - default: ``/var/run/secrets/kubernetes.io/serviceaccount/token``
             - jwt
                 - default: <empty>
+
         If both jwt and kubernetes_token_file are configured jwt value will be prefered
 
         Please visit Vault documentation for more info on those parameters
@@ -312,7 +293,7 @@ def read_secret(path, key=None, metadata=False, default=CommandExecutionError):
         if default is CommandExecutionError:
             raise CommandExecutionError(
                 "Failed to read secret! {}: {}".format(type(err).__name__, err)
-            )
+            ) from err
         return default
 
 
@@ -460,7 +441,7 @@ def list_secrets(path, default=CommandExecutionError):
         if default is CommandExecutionError:
             raise CommandExecutionError(
                 "Failed to list secrets! {}: {}".format(type(err).__name__, err)
-            )
+            ) from err
         return default
 
 
