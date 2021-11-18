@@ -8,7 +8,7 @@ import salt.utils.vt as vt
 @pytest.mark.skip_on_windows(reason="salt.utils.vt.Terminal doesn't have _spawn.")
 def test_isalive_no_child():
     term = vt.Terminal(
-        "for i in {1..9}; do echo $i;sleep $i; done",
+        "sleep 100",
         shell=True,
         stream_stdout=False,
         stream_stderr=False,
