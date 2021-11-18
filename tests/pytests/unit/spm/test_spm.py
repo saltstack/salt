@@ -107,25 +107,25 @@ def _create_formula_files(formula, _tmp_spm):
     return fdir
 
 
-def test_build_install(setup_spm, f1_content):
+@pytest.fixture()
+def patch_local_client(setup_spm):
+    _tmp_spm, ui, client, minion_config, minion_opts = setup_spm
+    with patch("salt.client.Caller", return_value=minion_opts):
+        with patch(
+            "salt.client.get_local_client", return_value=minion_opts["conf_file"]
+        ):
+            yield
+
+
+def test_build_install(setup_spm, f1_content, patch_local_client):
     # Build package
     _tmp_spm, ui, client, minion_config, minion_opts = setup_spm
     fdir = _create_formula_files(f1_content, _tmp_spm)
-    with patch("salt.client.Caller", MagicMock(return_value=minion_opts)):
-        with patch(
-            "salt.client.get_local_client",
-            MagicMock(return_value=minion_opts["conf_file"]),
-        ):
-            client.run(["build", fdir])
+    client.run(["build", fdir])
     pkgpath = ui._status[-1].split()[-1]
     assert os.path.exists(pkgpath)
     # Install package
-    with patch("salt.client.Caller", MagicMock(return_value=minion_opts)):
-        with patch(
-            "salt.client.get_local_client",
-            MagicMock(return_value=minion_opts["conf_file"]),
-        ):
-            client.run(["local", "install", pkgpath])
+    client.run(["local", "install", pkgpath])
     # Check filesystem
     for path, contents in f1_content["contents"]:
         path = os.path.join(
@@ -137,12 +137,7 @@ def test_build_install(setup_spm, f1_content):
         with salt.utils.files.fopen(path, "r") as rfh:
             assert rfh.read() == contents
     # Check database
-    with patch("salt.client.Caller", MagicMock(return_value=minion_opts)):
-        with patch(
-            "salt.client.get_local_client",
-            MagicMock(return_value=minion_opts["conf_file"]),
-        ):
-            client.run(["info", f1_content["definition"]["name"]])
+    client.run(["info", f1_content["definition"]["name"]])
     lines = ui._status[-1].split("\n")
     for key, line in (
         ("name", "Name: {0}"),
@@ -153,12 +148,7 @@ def test_build_install(setup_spm, f1_content):
         assert line.format(f1_content["definition"][key]) in lines
     # Reinstall with force=False, should fail
     ui._error = []
-    with patch("salt.client.Caller", MagicMock(return_value=minion_opts)):
-        with patch(
-            "salt.client.get_local_client",
-            MagicMock(return_value=minion_opts["conf_file"]),
-        ):
-            client.run(["local", "install", pkgpath])
+    client.run(["local", "install", pkgpath])
     assert len(ui._error) > 0
     # Reinstall with force=True, should succeed
     with patch.dict(minion_config, {"force": True}):
@@ -172,7 +162,7 @@ def test_build_install(setup_spm, f1_content):
         assert len(ui._error) == 0
 
 
-def test_failure_paths(setup_spm):
+def test_failure_paths(setup_spm, patch_local_client):
     _tmp_spm, ui, client, minion_config, minion_opts = setup_spm
     fail_args = (
         ["bogus", "command"],
@@ -202,10 +192,5 @@ def test_failure_paths(setup_spm):
 
     for args in fail_args:
         ui._error = []
-        with patch("salt.client.Caller", MagicMock(return_value=minion_opts)):
-            with patch(
-                "salt.client.get_local_client",
-                MagicMock(return_value=minion_opts["conf_file"]),
-            ):
-                client.run(args)
+        client.run(args)
         assert len(ui._error) > 0
