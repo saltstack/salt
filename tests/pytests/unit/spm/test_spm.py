@@ -5,7 +5,6 @@ import pytest
 import salt.config
 import salt.spm
 import salt.utils.files
-from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 
 
@@ -40,7 +39,6 @@ def f1_content():
     return _F1
 
 
-@pytest.mark.destructive_test
 class SPMTestUserInterface(salt.spm.SPMUserInterface):
     """
     Unit test user interface to SPMClient
@@ -63,9 +61,9 @@ class SPMTestUserInterface(salt.spm.SPMUserInterface):
 
 @pytest.fixture()
 def setup_spm(tmp_path):
-    minion_config = AdaptedConfigurationTestCaseMixin.get_temp_config(
-        "minion",
-        **{
+    minion_config = salt.config.DEFAULT_MINION_OPTS.copy()
+    minion_config.update(
+        {
             "spm_logfile": str(tmp_path / "log"),
             "spm_repos_config": str(tmp_path / "etc" / "spm.repos"),
             "spm_cache_dir": str(tmp_path / "cache"),
