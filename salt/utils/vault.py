@@ -209,6 +209,7 @@ def _build_aws_payload(config):
     log.trace("AWS payload %s", payload)
     return payload
 
+
 def _retreive_aws_metatada():
     SERVICE_URL = "http://169.254.169.254"
     try:
