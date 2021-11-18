@@ -165,10 +165,7 @@ except ImportError:
     HAS_REDIS = False
 
 try:
-    # pylint: disable=no-name-in-module
-    from rediscluster import StrictRedisCluster
-
-    # pylint: enable=no-name-in-module
+    from rediscluster import RedisCluster
 
     HAS_REDIS_CLUSTER = True
 except ImportError:
@@ -252,7 +249,7 @@ def _get_redis_server(opts=None):
         opts = _get_redis_cache_opts()
 
     if opts["cluster_mode"]:
-        REDIS_SERVER = StrictRedisCluster(
+        REDIS_SERVER = RedisCluster(
             startup_nodes=opts["startup_nodes"],
             skip_full_coverage_check=opts["skip_full_coverage_check"],
         )

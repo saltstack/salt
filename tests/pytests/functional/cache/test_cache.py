@@ -2,7 +2,6 @@ import logging
 import shutil
 import socket
 import time
-from pprint import pformat
 
 import pytest
 import salt.cache
@@ -169,14 +168,13 @@ def redis_cache(minion_opts, redis_port, redis_container):
 
 @pytest.fixture(scope="module", autouse="true")
 def ensure_deps(states):
-    installation_results = [
-        states.pip.installed(name=pkg)
-        for pkg in ("python-etcd", "redis", "python-consul", "pymysql")
-    ]
-    ret = all(result.result for result in installation_results)
+    installation_result = states.pip.installed(
+        name="fnord",
+        pkgs=["python-etcd", "redis", "redis-py-cluster", "python-consul", "pymysql"],
+    )
     assert (
-        ret is True
-    ), f"unable to pip install requirements {pformat([r.comment for r in installation_results])}"
+        installation_result.result is True
+    ), f"unable to pip install requirements {installation_result.comment}"
 
 
 @pytest.fixture
