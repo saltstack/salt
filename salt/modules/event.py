@@ -216,13 +216,13 @@ def send(
         if isinstance(with_grains, list):
             data_dict["grains"] = _dict_subset(with_grains, __grains__)
         else:
-            data_dict["grains"] = __grains__
+            data_dict["grains"] = __grains__.value()
 
     if with_pillar:
         if isinstance(with_pillar, list):
             data_dict["pillar"] = _dict_subset(with_pillar, __pillar__)
         else:
-            data_dict["pillar"] = __pillar__
+            data_dict["pillar"] = __pillar__.value()
 
     if with_env_opts:
         data_dict["saltenv"] = __opts__.get("saltenv", "base")
