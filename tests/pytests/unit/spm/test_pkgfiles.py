@@ -1,4 +1,3 @@
-import os
 import pathlib
 
 import pytest
@@ -15,12 +14,10 @@ def configure_loader_modules():
 class MockTar:
     def __init__(self):
         self.name = str(pathlib.Path("apache", "_README"))
-        self.path = str(
-            pathlib.Path(os.sep, salt.syspaths.CACHE_DIR, "master", "extmods")
-        )
+        self.path = str(pathlib.Path(salt.syspaths.CACHE_DIR, "master", "extmods"))
 
 
-def test_install_file():
+def test_install_file(tmp_path):
     """
     test spm.pkgfiles.local
     """
@@ -30,7 +27,7 @@ def test_install_file():
             formula_tar=MagicMock(),
             member=MockTar(),
             formula_def={"name": "apache"},
-            conn={"formula_path": "/tmp/test"},
+            conn={"formula_path": str(tmp_path / "test")},
         )
         == MockTar().path
     )
