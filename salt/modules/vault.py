@@ -255,7 +255,7 @@ def read_secret(path, key=None, metadata=False, default=CommandExecutionError):
 
     .. code-block:: bash
 
-            salt '*' vault.read_secret "secret/my/secret"
+            salt '*' vault.read_secret "secret/my/secret" "some-key" metadata=False
 
     Jinja Example:
 
