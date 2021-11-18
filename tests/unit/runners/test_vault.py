@@ -2,7 +2,7 @@
 Unit tests for the Vault runner
 """
 
-
+import io
 import logging
 
 import salt.runners.vault as vault
@@ -357,6 +357,178 @@ class VaultAppRoleAuthTest(TestCase, LoaderModuleMockMixin):
             calls = [
                 call(
                     "http://127.0.0.1/v1/auth/approle/login",
+                    headers=ANY,
+                    json=ANY,
+                    verify=ANY,
+                ),
+                call("http://fake_url", headers=ANY, json=ANY, verify=ANY),
+            ]
+            mock.assert_has_calls(calls)
+
+
+class VaultAWSIAMRoleAuthTest(TestCase, LoaderModuleMockMixin):
+    """
+    Tests for the runner module of the Vault with approle setup
+    """
+
+    def setup_loader_modules(self):
+        return {
+            vault: {
+                "__opts__": {
+                    "vault": {
+                        "url": "http://127.0.0.1",
+                        "auth": {"method": "aws", "role": "test", "aws_method": "iam"},
+                    }
+                }
+            }
+        }
+
+    @patch("salt.runners.vault._validate_signature", MagicMock(return_value=None))
+    @patch(
+        "salt.runners.vault._get_token_create_url",
+        MagicMock(return_value="http://fake_url"),
+    )
+    @patch(
+        "salt.utils.aws.creds",
+        MagicMock(
+            return_value=(
+                "AKIAIOSFODNN7EXAMPLE",
+                "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+                "AQoEXAMPLEH4ao",
+            )
+        ),
+    )
+    def test_generate_token(self):
+        """
+        Basic test for test_generate_token with approle (two vault calls)
+        """
+        mock = _mock_json_response(
+            {"auth": {"client_token": "test", "renewable": False, "lease_duration": 0}}
+        )
+        with patch("requests.post", mock):
+            result = vault.generate_token("test-minion", "signature")
+            log.debug("generate_token result: %s", result)
+            self.assertTrue(isinstance(result, dict))
+            self.assertFalse("error" in result)
+            self.assertTrue("token" in result)
+            self.assertEqual(result["token"], "test")
+            calls = [
+                call(
+                    "http://127.0.0.1/v1/auth/aws/login",
+                    headers=ANY,
+                    json=ANY,
+                    verify=ANY,
+                ),
+                call("http://fake_url", headers=ANY, json=ANY, verify=ANY),
+            ]
+            mock.assert_has_calls(calls)
+
+
+class VaultAWSEC2RoleAuthTest(TestCase, LoaderModuleMockMixin):
+    """
+    Tests for the runner module of the Vault with approle setup
+    """
+
+    def setup_loader_modules(self):
+        return {
+            vault: {
+                "__opts__": {
+                    "vault": {
+                        "url": "http://127.0.0.1",
+                        "auth": {"method": "aws", "role": "test", "aws_method": "ec2"},
+                    }
+                }
+            }
+        }
+
+    @patch("salt.runners.vault._validate_signature", MagicMock(return_value=None))
+    @patch(
+        "salt.runners.vault._get_token_create_url",
+        MagicMock(return_value="http://fake_url"),
+    )
+    @patch(
+        "salt.utils.vault._retreive_aws_metatada",
+        MagicMock(
+            return_value=(
+                {
+                    "region": "random",
+                    "accountId": "123456789",
+                    "instanceId": "i-123456789",
+                },
+                "sample_signature",
+            )
+        ),
+    )
+    def test_generate_token(self):
+        """
+        Basic test for test_generate_token with approle (two vault calls)
+        """
+        mock = _mock_json_response(
+            {"auth": {"client_token": "test", "renewable": False, "lease_duration": 0}}
+        )
+        with patch("requests.post", mock):
+            result = vault.generate_token("test-minion", "signature")
+            log.debug("generate_token result: %s", result)
+            self.assertTrue(isinstance(result, dict))
+            self.assertFalse("error" in result)
+            self.assertTrue("token" in result)
+            self.assertEqual(result["token"], "test")
+            calls = [
+                call(
+                    "http://127.0.0.1/v1/auth/aws/login",
+                    headers=ANY,
+                    json=ANY,
+                    verify=ANY,
+                ),
+                call("http://fake_url", headers=ANY, json=ANY, verify=ANY),
+            ]
+            mock.assert_has_calls(calls)
+
+
+class VaultKubernetesRoleAuthTest(TestCase, LoaderModuleMockMixin):
+    """
+    Tests for the runner module of the Vault with approle setup
+    """
+
+    def setup_loader_modules(self):
+        return {
+            vault: {
+                "__opts__": {
+                    "vault": {
+                        "url": "http://127.0.0.1",
+                        "auth": {"method": "kubernetes", "role": "test"},
+                    }
+                }
+            }
+        }
+
+    @patch("salt.runners.vault._validate_signature", MagicMock(return_value=None))
+    @patch(
+        "salt.runners.vault._get_token_create_url",
+        MagicMock(return_value="http://fake_url"),
+    )
+    @patch(
+        "salt.utils.files.fopen",
+        MagicMock(return_value=io.StringIO("Fake Kubernetes Token")),
+    )
+    @patch("salt.utils.validate.path.is_readable", MagicMock(return_value=True))
+    def test_generate_token(self):
+        """
+        Basic test for test_generate_token with approle (two vault calls)
+        """
+        mock = _mock_json_response(
+            {"auth": {"client_token": "test", "renewable": False, "lease_duration": 0}}
+        )
+        with patch("requests.post", mock):
+            result = vault.generate_token("test-minion", "signature")
+            log.debug("generate_token result: %s", result)
+            self.assertTrue(isinstance(result, dict))
+            self.assertFalse("error" in result)
+            self.assertTrue("token" in result)
+            self.assertEqual(result["token"], "test")
+            calls = [
+                call(
+                    "http://127.0.0.1/v1/auth/kubernetes/login",
                     headers=ANY,
                     json=ANY,
                     verify=ANY,

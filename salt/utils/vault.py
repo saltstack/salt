@@ -6,16 +6,21 @@
 Utilities supporting modules for Hashicorp Vault. Configuration instructions are
 documented in the execution module docs.
 """
-
 import base64
+import json
 import logging
 import os
 import time
+from urllib.parse import parse_qsl, urlparse
 
 import requests
 import salt.crypt
 import salt.exceptions
+import salt.utils.files
+import salt.utils.validate.path
 import salt.utils.versions
+from salt.utils.aws import IROLE_CODE, sig4
+from salt.utils.hashutils import sha256_digest
 
 log = logging.getLogger(__name__)
 
@@ -108,6 +113,200 @@ def _get_token_and_url_from_master():
     }
 
 
+def _retreive_aws_metatada():
+    SERVICE_URL = "http://169.254.169.254"
+    try:
+        doc = requests.get(
+            f"{SERVICE_URL}/latest/dynamic/instance-identity/document", timeout=5
+        ).json()
+        pkc7str = requests.get(
+            f"{SERVICE_URL}/latest/dynamic/instance-identity/pkcs7", timeout=5
+        ).text.replace("\n", "")
+        return doc, pkc7str
+    except requests.exceptions.RequestException as err:
+        errmsg = "Failed to retreive AWS Metadata"
+        raise salt.exceptions.CommandExecutionError(errmsg) from err
+
+
+def _build_iam_signature(config, provider):
+    try:
+        url = urlparse(
+            config["auth"].get("iam_request_url", "https://sts.amazonaws.com/")
+        )
+    except ValueError as err:
+        errmsg = "iam_request_url should be a valid plain text URL (not a base64)"
+        raise salt.exceptions.CommandExecutionError(errmsg) from err
+    body = config["auth"].get(
+        "iam_request_body", "Action=GetCallerIdentity&Version=2011-06-15"
+    )
+    header_value = config["auth"].get("iam_server_id_header_value")
+    method = config["auth"].get("iam_http_request_method", "POST")
+    headers = {"X-Vault-AWS-IAM-Server-ID": header_value} if header_value else {}
+    params = {k: v for k, v in parse_qsl(body)}
+    version = params.get("Version", "2011-06-15")
+    product, location = url.netloc.split(".")[0:2]
+    location = location if location != "amazonaws" else "us-east-1"
+
+    if method != "POST":
+        errmsg = "Vault up to 1.7.4 does not support {} method".format(method)
+        raise salt.exceptions.CommandExecutionError(errmsg)
+
+    headers, requests_url = sig4(
+        method=method,
+        endpoint=url.netloc,
+        prov_dict=provider,
+        params={},
+        product=product,
+        data=body,
+        aws_api_version=version,
+        location=location,
+        requesturl=url.geturl(),
+        headers=headers,
+    )
+    jheader = json.dumps(headers)
+    return {
+        "iam_http_request_method": method,
+        "iam_request_url": base64.b64encode(requests_url.encode("utf-8")).decode(
+            "utf-8"
+        ),
+        "iam_request_headers": base64.b64encode(jheader.encode("utf-8")).decode(
+            "utf-8"
+        ),
+        "iam_request_body": base64.b64encode(body.encode("utf-8")).decode("utf-8"),
+    }
+
+
+def _build_aws_payload(config):
+    """
+    Generates arguments for aws auth backend based on config and / or IAM environment
+    """
+    role = config["auth"].get("role", "")
+    aws_method = config["auth"].get("aws_method")
+    aws_provider = {"id": IROLE_CODE, "key": IROLE_CODE}
+    aws_provider.update(config["auth"].get("provider", {}))
+
+    if aws_method not in ("ec2", "iam"):
+        errmsg = 'Vault AWS Authentication is selected but aws_method("{}") is neither ec2 or iam'.format(
+            aws_method
+        )
+        raise salt.exceptions.CommandExecutionError(errmsg)
+
+    if aws_method == "ec2":
+        doc, pkc7str = _retreive_aws_metatada()
+        nonce = config["auth"].get("nonce")
+        if nonce is None:
+            # Fallback to immuable data (arn of instance)
+            nonce = sha256_digest(
+                f"""arn:aws:ec2:{doc["region"]}:{doc["accountId"]}:instance/{doc["instanceId"]}"""
+            )
+        payload = {"role": role, "pkcs7": pkc7str, "nonce": nonce}
+
+    elif aws_method == "iam":
+        payload = {"role": role}
+        iam_signature = _build_iam_signature(config, aws_provider)
+        payload.update(iam_signature)
+
+    log.trace("AWS payload %s", payload)
+    return payload
+
+
+def _retreive_aws_metatada():
+    SERVICE_URL = "http://169.254.169.254"
+    try:
+        doc = requests.get(
+            f"{SERVICE_URL}/latest/dynamic/instance-identity/document", timeout=5
+        ).json()
+        pkc7str = requests.get(
+            f"{SERVICE_URL}/latest/dynamic/instance-identity/pkcs7", timeout=5
+        ).text.replace("\n", "")
+        return doc, pkc7str
+    except requests.exceptions.RequestException as err:
+        errmsg = "Failed to retreive AWS Metadata"
+        raise salt.exceptions.CommandExecutionError(errmsg) from err
+
+
+def _build_iam_signature(config, provider):
+    try:
+        url = urlparse(
+            config["auth"].get("iam_request_url", "https://sts.amazonaws.com/")
+        )
+    except ValueError as err:
+        errmsg = "iam_request_url should be a valid plain text URL (not a base64)"
+        raise salt.exceptions.CommandExecutionError(errmsg) from err
+    body = config["auth"].get(
+        "iam_request_body", "Action=GetCallerIdentity&Version=2011-06-15"
+    )
+    header_value = config["auth"].get("iam_server_id_header_value")
+    method = config["auth"].get("iam_http_request_method", "POST")
+    headers = {"X-Vault-AWS-IAM-Server-ID": header_value} if header_value else {}
+    params = {k: v for k, v in parse_qsl(body)}
+    version = params.get("Version", "2011-06-15")
+    product, location = url.netloc.split(".")[0:2]
+    location = location if location != "amazonaws" else "us-east-1"
+
+    if method != "POST":
+        errmsg = "Vault up to 1.7.4 does not support {} method".format(method)
+        raise salt.exceptions.CommandExecutionError(errmsg)
+
+    headers, requests_url = sig4(
+        method=method,
+        endpoint=url.netloc,
+        prov_dict=provider,
+        params={},
+        product=product,
+        data=body,
+        aws_api_version=version,
+        location=location,
+        requesturl=url.geturl(),
+        headers=headers,
+    )
+    jheader = json.dumps(headers)
+    return {
+        "iam_http_request_method": method,
+        "iam_request_url": base64.b64encode(requests_url.encode("utf-8")).decode(
+            "utf-8"
+        ),
+        "iam_request_headers": base64.b64encode(jheader.encode("utf-8")).decode(
+            "utf-8"
+        ),
+        "iam_request_body": base64.b64encode(body.encode("utf-8")).decode("utf-8"),
+    }
+
+
+def _build_aws_payload(config):
+    """
+    Generates arguments for aws auth backend based on config and / or IAM environment
+    """
+    role = config["auth"].get("role", "")
+    aws_method = config["auth"].get("aws_method")
+    aws_provider = {"id": IROLE_CODE, "key": IROLE_CODE}
+    aws_provider.update(config["auth"].get("provider", {}))
+
+    if aws_method not in ("ec2", "iam"):
+        errmsg = 'Vault AWS Authentication is selected but aws_method("{}") is neither ec2 or iam'.format(
+            aws_method
+        )
+        raise salt.exceptions.CommandExecutionError(errmsg)
+
+    if aws_method == "ec2":
+        doc, pkc7str = _retreive_aws_metatada()
+        nonce = config["auth"].get("nonce")
+        if nonce is None:
+            # Fallback to immuable data (arn of instance)
+            nonce = sha256_digest(
+                f"""arn:aws:ec2:{doc["region"]}:{doc["accountId"]}:instance/{doc["instanceId"]}"""
+            )
+        payload = {"role": role, "pkcs7": pkc7str, "nonce": nonce}
+
+    elif aws_method == "iam":
+        payload = {"role": role}
+        iam_signature = _build_iam_signature(config, aws_provider)
+        payload.update(iam_signature)
+
+    log.trace("AWS payload %s", payload)
+    return payload
+
+
 def get_vault_connection():
     """
     Get the connection details for calling Vault, from local configuration if
@@ -155,6 +354,72 @@ def get_vault_connection():
                     __opts__["vault"]["auth"]["token"] = response.json()["auth"][
                         "client_token"
                     ]
+            if __opts__["vault"]["auth"]["method"] == "aws":
+                verify = __opts__["vault"].get("verify", None)
+                if _selftoken_expired():
+                    log.debug("Vault token expired. Recreating one")
+                    # Requesting a short ttl token
+                    url = "{}/v1/auth/aws/login".format(__opts__["vault"]["url"])
+                    payload = _build_aws_payload(__opts__["vault"])
+                    headers = None
+                    if namespace is not None:
+                        headers = {"X-Vault-Namespace": namespace}
+                    response = requests.post(
+                        url, headers=headers, json=payload, verify=verify
+                    )
+                    if response.status_code != 200:
+                        errmsg = "An error occurred while getting a token from aws - {}".format(
+                            response.json().get("errors")
+                        )
+                        raise salt.exceptions.CommandExecutionError(errmsg)
+                    __opts__["vault"]["auth"]["token"] = response.json()["auth"][
+                        "client_token"
+                    ]
+            if __opts__["vault"]["auth"]["method"] == "kubernetes":
+                verify = __opts__["vault"].get("verify", None)
+                if _selftoken_expired():
+                    log.debug("Vault token expired. Recreating one")
+                    # Requesting a short ttl token
+                    url = "{}/v1/auth/kubernetes/login".format(__opts__["vault"]["url"])
+
+                    k8s_token_file = __opts__["vault"]["auth"].get(
+                        "kubernetes_token_file",
+                        "/var/run/secrets/kubernetes.io/serviceaccount/token",
+                    )
+                    jwt_token = __opts__["vault"]["auth"].get("jwt")
+                    vault_role = __opts__["vault"]["auth"].get("role")
+                    if jwt_token is None:
+                        if not salt.utils.validate.path.is_readable(k8s_token_file):
+                            errmsg = "An error occurred while getting a vault token from kubernetes - Kubernetes token file ({}) not found/readable".format(
+                                k8s_token_file
+                            )
+                            raise salt.exceptions.CommandExecutionError(errmsg)
+                        else:
+                            with salt.utils.files.fpopen(k8s_token_file, "r") as fp_:
+                                jwt_token = fp_.read()
+                    if vault_role is None:
+                        errmsg = "An error occurred while getting a vault token from kubernetes - Missing vault role"
+                        raise salt.exceptions.CommandExecutionError(errmsg)
+                    elif jwt_token is None:
+                        errmsg = "An error occurred while getting a vault token from kubernetes - Missing Kubernetes Token"
+                        raise salt.exceptions.CommandExecutionError(errmsg)
+
+                    payload = {"role": vault_role, "jwt": jwt_token}
+                    headers = None
+                    if namespace is not None:
+                        headers = {"X-Vault-Namespace": namespace}
+                    response = requests.post(
+                        url, headers=headers, json=payload, verify=verify
+                    )
+                    if response.status_code != 200:
+                        errmsg = "An error occurred while getting a token from aws - {}".format(
+                            response.json().get("errors")
+                        )
+                        raise salt.exceptions.CommandExecutionError(errmsg)
+                    __opts__["vault"]["auth"]["token"] = response.json()["auth"][
+                        "client_token"
+                    ]
+
             return {
                 "url": __opts__["vault"]["url"],
                 "namespace": namespace,
@@ -300,7 +565,7 @@ def make_request(
     namespace=None,
     get_token_url=False,
     retry=False,
-    **args
+    **args,
 ):
     """
     Make a request to Vault
@@ -337,7 +602,7 @@ def make_request(
                 vault_url=vault_url,
                 get_token_url=get_token_url,
                 retry=True,
-                **args
+                **args,
             )
         else:
             log.error("Unable to connect to vault server: %s", response.text)
