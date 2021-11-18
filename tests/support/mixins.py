@@ -80,9 +80,9 @@ class AdaptedConfigurationTestCaseMixin:
 
     @staticmethod
     def get_temp_config(config_for, **config_overrides):
-        rootdir = config_overrides.get("root_dir")
-        if not rootdir:
-            rootdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        rootdir = config_overrides.get(
+            "root_dir", tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        )
         if not os.path.exists(rootdir):
             os.makedirs(rootdir)
         conf_dir = config_overrides.pop("conf_dir", os.path.join(rootdir, "conf"))
