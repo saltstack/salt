@@ -181,6 +181,9 @@ def sig2(method, endpoint, params, provider, aws_api_version):
 
 
 def assumed_creds(prov_dict, role_arn, location=None):
+    """
+    Return the credentials after assuming the role passed in parameters.
+    """
     valid_session_name_re = re.compile("[^a-z0-9A-Z+=,.@-]")
 
     # current time in epoch seconds

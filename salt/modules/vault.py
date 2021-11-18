@@ -251,6 +251,12 @@ def read_secret(path, key=None, metadata=False, default=CommandExecutionError):
 
         .. versionadded:: 3001
 
+    CLI Example:
+
+    .. code-block:: bash
+
+            salt '*' vault.read_secret "secret/my/secret"
+
     Jinja Example:
 
     .. code-block:: jinja
