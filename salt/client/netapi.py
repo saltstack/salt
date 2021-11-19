@@ -46,18 +46,12 @@ class NetapiClient:
         if not self.netapi:
             log.error("Did not find any netapi configurations, nothing to start")
 
-        kwargs = {}
-        if salt.utils.platform.is_windows():
-            kwargs["log_queue"] = salt.log.setup.get_multiprocessing_logging_queue()
-            kwargs[
-                "log_queue_level"
-            ] = salt.log.setup.get_multiprocessing_logging_level()
-
         for fun in self.netapi:
             if fun.endswith(".start"):
-                log.info("Starting %s netapi module", fun)
+                name = "RunNetapi({})".format(self.netapi[fun].__module__)
+                log.info("Starting %s", name)
                 self.process_manager.add_process(
-                    RunNetapi, args=(self.opts, fun), kwargs=kwargs, name="RunNetapi"
+                    RunNetapi, args=(self.opts, fun), name=name
                 )
 
         # Install the SIGINT/SIGTERM handlers if not done so far
