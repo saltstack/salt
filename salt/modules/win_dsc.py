@@ -290,8 +290,9 @@ def compile_config(
     # Add any script parameters
     if script_parameters:
         cmd.append(script_parameters)
-    # Select fields to return
+    # Select properties of the generated .mof file to return, avoiding the .meta.mof
     cmd.append(
+        "| Where-Object FullName -match '(?<!\.meta)\.mof$' "
         "| Select-Object -Property FullName, Extension, Exists, "
         '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) '
         "-Format g}}"
@@ -316,6 +317,7 @@ def compile_config(
     if config_data:
         cmd.extend(["-ConfigurationData", config_data])
     cmd.append(
+        "| Where-Object FullName -match '(?<!\.meta)\.mof$' "
         "| Select-Object -Property FullName, Extension, Exists, "
         '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) '
         "-Format g}}"
