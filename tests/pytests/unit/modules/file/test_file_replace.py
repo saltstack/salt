@@ -204,6 +204,10 @@ def test_re_int_flags(multiline_file):
     filemod.replace(multiline_file, r"Etiam", "Salticus", flags=10)
 
 
+def test_empty_flags_list(multiline_file):
+    filemod.replace(multiline_file, r"Etiam", "Salticus", flags=[])
+
+
 def test_numeric_repl(multiline_file):
     """
     This test covers cases where the replacement string is numeric, and the
