@@ -350,7 +350,7 @@ class TCPReqServer(salt.transport.base.DaemonizedRequestServer):
         After forking we need to create all of the local sockets to listen to the
         router
 
-        payload_handler: function to call with your payloads
+        message_handler: function to call with your payloads
         """
         self.message_handler = message_handler
 
