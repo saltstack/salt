@@ -182,6 +182,15 @@ class DaemonizedPublishServer(PublishServer):
     ):
         """
         If a deamon is needed to act as a broker impliment it here.
+
+        :param func publish_payload: A method used to publish the payload
+        :param func presence_callback: If the transport support presence
+                                       callbacks call this method to notify the
+                                       channel of a client's presence
+        :param func remove_presence_callback: If the transport support presence
+                                              callbacks call this method to
+                                              notify the channel a client is no
+                                              longer present
         """
 
 
