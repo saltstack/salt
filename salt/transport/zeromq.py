@@ -395,7 +395,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         After forking we need to create all of the local sockets to listen to the
         router
 
-        :param func payload_handler: A function to called to handle incoming payloads as
+        :param func message_handler: A function to called to handle incoming payloads as
                                      they are picked up off the wire
         :param IOLoop io_loop: An instance of a Tornado IOLoop, to handle event scheduling
         """
