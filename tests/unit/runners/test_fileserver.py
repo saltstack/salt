@@ -1,26 +1,20 @@
-# -*- coding: utf-8 -*-
 """
 unit tests for the fileserver runner
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt libs
 import salt.loader
 import salt.runners.fileserver as fileserver
 import salt.utils.files
-
-# Import testing libs
 from tests.support.helpers import with_tempdir
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
 
 
-class DummyFS(object):
+class DummyFS:
     """
     Dummy object to provide the attributes needed to run unit tests
     """
@@ -29,7 +23,7 @@ class DummyFS(object):
         self.backends = backends
 
     def keys(self):
-        return ["{0}.envs".format(x) for x in self.backends]
+        return ["{}.envs".format(x) for x in self.backends]
 
 
 class FileserverTest(TestCase, LoaderModuleMockMixin):

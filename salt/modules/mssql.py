@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module to provide MS SQL Server compatibility to salt.
 
@@ -21,11 +20,7 @@ Module to provide MS SQL Server compatibility to salt.
     configs or pillars.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
-import salt.ext.six as six
 import salt.utils.json
 
 try:
@@ -54,7 +49,8 @@ def __virtual__():
         return True
     return (
         False,
-        "The mssql execution module cannot be loaded: the pymssql python library is not available.",
+        "The mssql execution module cannot be loaded: the pymssql python library is not"
+        " available.",
     )
 
 
@@ -73,7 +69,7 @@ def _get_connection(**kwargs):
 class _MssqlEncoder(salt.utils.json.JSONEncoder):
     # E0202: 68:_MssqlEncoder.default: An attribute inherited from JSONEncoder hide this method
     def default(self, o):  # pylint: disable=E0202
-        return six.text_type(o)
+        return str(o)
 
 
 def tsql_query(query, **kwargs):
@@ -95,7 +91,7 @@ def tsql_query(query, **kwargs):
         )["resultset"]
     except Exception as err:  # pylint: disable=broad-except
         # Trying to look like the output of cur.fetchall()
-        return (("Could not run the query",), (six.text_type(err),))
+        return (("Could not run the query",), (str(err),))
 
 
 def version(**kwargs):
@@ -141,7 +137,7 @@ def db_exists(database_name, **kwargs):
     return (
         len(
             tsql_query(
-                "SELECT database_id FROM sys.databases WHERE NAME='{0}'".format(
+                "SELECT database_id FROM sys.databases WHERE NAME='{}'".format(
                     database_name
                 ),
                 **kwargs
@@ -165,7 +161,7 @@ def db_create(database, containment="NONE", new_database_options=None, **kwargs)
     """
     if containment not in ["NONE", "PARTIAL"]:
         return "CONTAINMENT can be one of NONE and PARTIAL"
-    sql = "CREATE DATABASE [{0}] CONTAINMENT = {1} ".format(database, containment)
+    sql = "CREATE DATABASE [{}] CONTAINMENT = {} ".format(database, containment)
     if new_database_options:
         sql += " WITH " + ", ".join(new_database_options)
     conn = None
@@ -176,7 +172,7 @@ def db_create(database, containment="NONE", new_database_options=None, **kwargs)
         # cur.execute(sql)
         conn.cursor().execute(sql)
     except Exception as e:  # pylint: disable=broad-except
-        return "Could not create the database: {0}".format(e)
+        return "Could not create the database: {}".format(e)
     finally:
         if conn:
             conn.autocommit(False)
@@ -206,18 +202,18 @@ def db_remove(database_name, **kwargs):
             conn.autocommit(True)
             cur = conn.cursor()
             cur.execute(
-                "ALTER DATABASE {0} SET SINGLE_USER WITH ROLLBACK IMMEDIATE".format(
+                "ALTER DATABASE {} SET SINGLE_USER WITH ROLLBACK IMMEDIATE".format(
                     database_name
                 )
             )
-            cur.execute("DROP DATABASE {0}".format(database_name))
+            cur.execute("DROP DATABASE {}".format(database_name))
             conn.autocommit(False)
             conn.close()
             return True
         else:
             return False
     except Exception as e:  # pylint: disable=broad-except
-        return "Could not find the database: {0}".format(e)
+        return "Could not find the database: {}".format(e)
 
 
 def role_list(**kwargs):
@@ -247,7 +243,7 @@ def role_exists(role, **kwargs):
     """
     # We should get one, and only one row
     return (
-        len(tsql_query(query='sp_helprole "{0}"'.format(role), as_dict=True, **kwargs))
+        len(tsql_query(query='sp_helprole "{}"'.format(role), as_dict=True, **kwargs))
         == 1
     )
 
@@ -268,9 +264,9 @@ def role_create(role, owner=None, grants=None, **kwargs):
     if not grants:
         grants = []
 
-    sql = "CREATE ROLE {0}".format(role)
+    sql = "CREATE ROLE {}".format(role)
     if owner:
-        sql += " AUTHORIZATION {0}".format(owner)
+        sql += " AUTHORIZATION {}".format(owner)
     conn = None
     try:
         conn = _get_connection(**kwargs)
@@ -279,9 +275,9 @@ def role_create(role, owner=None, grants=None, **kwargs):
         # cur.execute(sql)
         conn.cursor().execute(sql)
         for grant in grants:
-            conn.cursor().execute("GRANT {0} TO [{1}]".format(grant, role))
+            conn.cursor().execute("GRANT {} TO [{}]".format(grant, role))
     except Exception as e:  # pylint: disable=broad-except
-        return "Could not create the role: {0}".format(e)
+        return "Could not create the role: {}".format(e)
     finally:
         if conn:
             conn.autocommit(False)
@@ -303,12 +299,12 @@ def role_remove(role, **kwargs):
         conn = _get_connection(**kwargs)
         conn.autocommit(True)
         cur = conn.cursor()
-        cur.execute("DROP ROLE {0}".format(role))
+        cur.execute("DROP ROLE {}".format(role))
         conn.autocommit(True)
         conn.close()
         return True
     except Exception as e:  # pylint: disable=broad-except
-        return "Could not remove the role: {0}".format(e)
+        return "Could not remove the role: {}".format(e)
 
 
 def login_exists(login, domain="", **kwargs):
@@ -323,13 +319,13 @@ def login_exists(login, domain="", **kwargs):
         salt minion mssql.login_exists 'LOGIN'
     """
     if domain:
-        login = "{0}\\{1}".format(domain, login)
+        login = "{}\\{}".format(domain, login)
     try:
         # We should get one, and only one row
         return (
             len(
                 tsql_query(
-                    query="SELECT name FROM sys.syslogins WHERE name='{0}'".format(
+                    query="SELECT name FROM sys.syslogins WHERE name='{}'".format(
                         login
                     ),
                     **kwargs
@@ -339,7 +335,7 @@ def login_exists(login, domain="", **kwargs):
         )
 
     except Exception as e:  # pylint: disable=broad-except
-        return "Could not find the login: {0}".format(e)
+        return "Could not find the login: {}".format(e)
 
 
 def login_create(
@@ -375,21 +371,19 @@ def login_create(
     if login_exists(login, new_login_domain, **kwargs):
         return False
     if new_login_domain:
-        login = "{0}\\{1}".format(new_login_domain, login)
+        login = "{}\\{}".format(new_login_domain, login)
     if not new_login_roles:
         new_login_roles = []
     if not new_login_options:
         new_login_options = []
 
-    sql = "CREATE LOGIN [{0}] ".format(login)
+    sql = "CREATE LOGIN [{}] ".format(login)
     if new_login_domain:
         sql += " FROM WINDOWS "
-    elif isinstance(new_login_password, six.integer_types):
-        new_login_options.insert(
-            0, "PASSWORD=0x{0:x} HASHED".format(new_login_password)
-        )
+    elif isinstance(new_login_password, int):
+        new_login_options.insert(0, "PASSWORD=0x{:x} HASHED".format(new_login_password))
     else:  # Plain test password
-        new_login_options.insert(0, "PASSWORD=N'{0}'".format(new_login_password))
+        new_login_options.insert(0, "PASSWORD=N'{}'".format(new_login_password))
     if new_login_options:
         sql += " WITH " + ", ".join(new_login_options)
     conn = None
@@ -401,10 +395,10 @@ def login_create(
         conn.cursor().execute(sql)
         for role in new_login_roles:
             conn.cursor().execute(
-                "ALTER SERVER ROLE [{0}] ADD MEMBER [{1}]".format(role, login)
+                "ALTER SERVER ROLE [{}] ADD MEMBER [{}]".format(role, login)
             )
     except Exception as e:  # pylint: disable=broad-except
-        return "Could not create the login: {0}".format(e)
+        return "Could not create the login: {}".format(e)
     finally:
         if conn:
             conn.autocommit(False)
@@ -426,12 +420,12 @@ def login_remove(login, **kwargs):
         conn = _get_connection(**kwargs)
         conn.autocommit(True)
         cur = conn.cursor()
-        cur.execute("DROP LOGIN [{0}]".format(login))
+        cur.execute("DROP LOGIN [{}]".format(login))
         conn.autocommit(False)
         conn.close()
         return True
     except Exception as e:  # pylint: disable=broad-except
-        return "Could not remove the login: {0}".format(e)
+        return "Could not remove the login: {}".format(e)
 
 
 def user_exists(username, domain="", database=None, **kwargs):
@@ -446,14 +440,14 @@ def user_exists(username, domain="", database=None, **kwargs):
         salt minion mssql.user_exists 'USERNAME' [database='DBNAME']
     """
     if domain:
-        username = "{0}\\{1}".format(domain, username)
+        username = "{}\\{}".format(domain, username)
     if database:
         kwargs["database"] = database
     # We should get one, and only one row
     return (
         len(
             tsql_query(
-                query="SELECT name FROM sysusers WHERE name='{0}'".format(username),
+                query="SELECT name FROM sysusers WHERE name='{}'".format(username),
                 **kwargs
             )
         )
@@ -498,10 +492,10 @@ def user_create(
     if domain and not login:
         return "domain cannot be set without login"
     if user_exists(username, domain, **kwargs):
-        return "User {0} already exists".format(username)
+        return "User {} already exists".format(username)
     if domain:
-        username = "{0}\\{1}".format(domain, username)
-        login = "{0}\\{1}".format(domain, login) if login else login
+        username = "{}\\{}".format(domain, username)
+        login = "{}\\{}".format(domain, login) if login else login
     if database:
         kwargs["database"] = database
     if not roles:
@@ -509,12 +503,12 @@ def user_create(
     if not options:
         options = []
 
-    sql = "CREATE USER [{0}] ".format(username)
+    sql = "CREATE USER [{}] ".format(username)
     if login:
         # If the login does not exist, user creation will throw
         # if not login_exists(name, **kwargs):
         #     return False
-        sql += " FOR LOGIN [{0}]".format(login)
+        sql += " FOR LOGIN [{}]".format(login)
     else:  # Plain test password
         sql += " WITHOUT LOGIN"
     if options:
@@ -528,10 +522,10 @@ def user_create(
         conn.cursor().execute(sql)
         for role in roles:
             conn.cursor().execute(
-                "ALTER ROLE [{0}] ADD MEMBER [{1}]".format(role, username)
+                "ALTER ROLE [{}] ADD MEMBER [{}]".format(role, username)
             )
     except Exception as e:  # pylint: disable=broad-except
-        return "Could not create the user: {0}".format(e)
+        return "Could not create the user: {}".format(e)
     finally:
         if conn:
             conn.autocommit(False)
@@ -556,9 +550,9 @@ def user_remove(username, **kwargs):
         conn = _get_connection(**kwargs)
         conn.autocommit(True)
         cur = conn.cursor()
-        cur.execute("DROP USER {0}".format(username))
+        cur.execute("DROP USER {}".format(username))
         conn.autocommit(False)
         conn.close()
         return True
     except Exception as e:  # pylint: disable=broad-except
-        return "Could not remove the user: {0}".format(e)
+        return "Could not remove the user: {}".format(e)

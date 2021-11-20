@@ -26,28 +26,36 @@ def test_post_message_apikey():
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
     with patch.dict(slack.__opts__, {"test": True}):
-        comt = "The following message is to be sent to Slack: {}".format(message)
-        ret.update({"comment": comt})
-        assert (
-            slack.post_message(
-                name,
-                channel=channel,
-                from_name=from_name,
-                message=message,
-                api_key=api_key,
+        mock = MagicMock(return_value=True)
+        with patch.dict(slack.__salt__, {"config.get": mock}):
+            comt = "The following message is to be sent to Slack: {}".format(message)
+            ret.update({"comment": comt})
+            assert (
+                slack.post_message(
+                    name,
+                    channel=channel,
+                    from_name=from_name,
+                    message=message,
+                    api_key=api_key,
+                )
+                == ret
             )
-            == ret
-        )
 
     with patch.dict(slack.__opts__, {"test": False}):
-        comt = "Please specify api_key or webhook."
-        ret.update({"comment": comt, "result": False})
-        assert (
-            slack.post_message(
-                name, channel=None, from_name=from_name, message=message, api_key=None,
+        mock = MagicMock(return_value=False)
+        with patch.dict(slack.__salt__, {"config.get": mock}):
+            comt = "Please specify api_key or webhook."
+            ret.update({"comment": comt, "result": False})
+            assert (
+                slack.post_message(
+                    name,
+                    channel=None,
+                    from_name=from_name,
+                    message=message,
+                    api_key=None,
+                )
+                == ret
             )
-            == ret
-        )
 
         comt = "Slack channel is missing."
         ret.update({"comment": comt, "result": False})
@@ -66,7 +74,11 @@ def test_post_message_apikey():
         ret.update({"comment": comt, "result": False})
         assert (
             slack.post_message(
-                name, channel=channel, from_name=None, message=message, api_key=api_key,
+                name,
+                channel=channel,
+                from_name=None,
+                message=message,
+                api_key=api_key,
             )
             == ret
         )
@@ -114,28 +126,32 @@ def test_post_message_webhook():
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
     with patch.dict(slack.__opts__, {"test": True}):
-        comt = "The following message is to be sent to Slack: {}".format(message)
-        ret.update({"comment": comt})
-        assert (
-            slack.post_message(
-                name,
-                channel=channel,
-                username=username,
-                message=message,
-                webhook=webhook,
+        mock = MagicMock(return_value=True)
+        with patch.dict(slack.__salt__, {"config.get": mock}):
+            comt = "The following message is to be sent to Slack: {}".format(message)
+            ret.update({"comment": comt})
+            assert (
+                slack.post_message(
+                    name,
+                    channel=channel,
+                    username=username,
+                    message=message,
+                    webhook=webhook,
+                )
+                == ret
             )
-            == ret
-        )
 
     with patch.dict(slack.__opts__, {"test": False}):
-        comt = "Please specify api_key or webhook."
-        ret.update({"comment": comt, "result": False})
-        assert (
-            slack.post_message(
-                name, channel=channel, username=username, message=None, webhook=None
+        mock = MagicMock(return_value=False)
+        with patch.dict(slack.__salt__, {"config.get": mock}):
+            comt = "Please specify api_key or webhook."
+            ret.update({"comment": comt, "result": False})
+            assert (
+                slack.post_message(
+                    name, channel=channel, username=username, message=None, webhook=None
+                )
+                == ret
             )
-            == ret
-        )
 
         comt = "Please specify only either api_key or webhook."
         ret.update({"comment": comt, "result": False})
@@ -155,7 +171,11 @@ def test_post_message_webhook():
         ret.update({"comment": comt, "result": False})
         assert (
             slack.post_message(
-                name, channel=channel, username=username, message=None, webhook=webhook,
+                name,
+                channel=channel,
+                username=username,
+                message=None,
+                webhook=webhook,
             )
             == ret
         )

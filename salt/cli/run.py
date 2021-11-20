@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.defaults.exitcodes  # pylint: disable=W0611
 import salt.utils.parsers
 import salt.utils.profile
 from salt.exceptions import SaltClientError
-from salt.ext import six
 from salt.utils.verify import check_user, verify_log
 
 
@@ -55,4 +51,4 @@ class SaltRun(salt.utils.parsers.SaltRunOptionParser):
                     )
 
         except SaltClientError as exc:
-            raise SystemExit(six.text_type(exc))
+            raise SystemExit(str(exc))

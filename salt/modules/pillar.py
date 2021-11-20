@@ -503,7 +503,7 @@ def ext(external, pillar=None):
         external = salt.utils.yaml.safe_load(external)
     pillar_obj = salt.pillar.get_pillar(
         __opts__,
-        __grains__,
+        __grains__.value(),
         __opts__["id"],
         __opts__["saltenv"],
         ext=external,
@@ -575,7 +575,7 @@ def file_exists(path, saltenv=None):
     pillar_roots = __opts__.get("pillar_roots")
     if not pillar_roots:
         raise CommandExecutionError(
-            "No pillar_roots found. Are you running " "this on the master?"
+            "No pillar_roots found. Are you running this on the master?"
         )
 
     if saltenv:

@@ -1,13 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Module for running imgadm command on SmartOS
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 
-# Import Salt libs
 import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
@@ -33,9 +29,7 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "{0} module can only be loaded on SmartOS compute nodes".format(
-            __virtualname__
-        ),
+        "{} module can only be loaded on SmartOS compute nodes".format(__virtualname__),
     )
 
 
@@ -77,8 +71,12 @@ def _parse_image_meta(image=None, detail=False):
 
             if docker_repo and docker_tag:
                 name = "{}:{}".format(docker_repo, docker_tag)
-                description = "Docker image imported from {repo}:{tag} on {date}.".format(
-                    repo=docker_repo, tag=docker_tag, date=published,
+                description = (
+                    "Docker image imported from {repo}:{tag} on {date}.".format(
+                        repo=docker_repo,
+                        tag=docker_tag,
+                        date=published,
+                    )
                 )
 
         if name and detail:
@@ -92,10 +90,12 @@ def _parse_image_meta(image=None, detail=False):
             }
         elif name:
             ret = "{name}@{version} [{published}]".format(
-                name=name, version=version, published=published,
+                name=name,
+                version=version,
+                published=published,
             )
     else:
-        log.debug("smartos_image - encountered invalid image payload: {}".format(image))
+        log.debug("smartos_image - encountered invalid image payload: %s", image)
         ret = {"Error": "This looks like an orphaned image, image payload was invalid."}
 
     return ret
@@ -120,7 +120,7 @@ def _is_uuid(uuid):
 
     Example: e69a0918-055d-11e5-8912-e3ceb6df4cf8
     """
-    if uuid and list((len(x) for x in uuid.split("-"))) == [8, 4, 4, 4, 12]:
+    if uuid and list(len(x) for x in uuid.split("-")) == [8, 4, 4, 4, 12]:
         return True
     return False
 
@@ -183,7 +183,7 @@ def update_installed(uuid=""):
 
         salt '*' imgadm.update [uuid]
     """
-    cmd = "imgadm update {0}".format(uuid).rstrip()
+    cmd = "imgadm update {}".format(uuid).rstrip()
     __salt__["cmd.run"](cmd)
     return {}
 
@@ -279,7 +279,7 @@ def show(uuid):
     ret = {}
 
     if _is_uuid(uuid) or _is_docker_uuid(uuid):
-        cmd = "imgadm show {0}".format(uuid)
+        cmd = "imgadm show {}".format(uuid)
         res = __salt__["cmd.run_all"](cmd, python_shell=False)
         retcode = res["retcode"]
         if retcode != 0:
@@ -312,7 +312,7 @@ def get(uuid):
         uuid = docker_to_uuid(uuid)
 
     if _is_uuid(uuid):
-        cmd = "imgadm get {0}".format(uuid)
+        cmd = "imgadm get {}".format(uuid)
         res = __salt__["cmd.run_all"](cmd, python_shell=False)
         retcode = res["retcode"]
         if retcode != 0:
@@ -341,7 +341,7 @@ def import_image(uuid, verbose=False):
         salt '*' imgadm.import e42f8c84-bbea-11e2-b920-078fab2aab1f [verbose=True]
     """
     ret = {}
-    cmd = "imgadm import {0}".format(uuid)
+    cmd = "imgadm import {}".format(uuid)
     res = __salt__["cmd.run_all"](cmd, python_shell=False)
     retcode = res["retcode"]
     if retcode != 0:
@@ -367,7 +367,7 @@ def delete(uuid):
         salt '*' imgadm.delete e42f8c84-bbea-11e2-b920-078fab2aab1f
     """
     ret = {}
-    cmd = "imgadm delete {0}".format(uuid)
+    cmd = "imgadm delete {}".format(uuid)
     res = __salt__["cmd.run_all"](cmd, python_shell=False)
     retcode = res["retcode"]
     if retcode != 0:
@@ -465,7 +465,7 @@ def source_delete(source):
         salt '*' imgadm.source_delete https://updates.joyent.com
     """
     ret = {}
-    cmd = "imgadm sources -d {0}".format(source)
+    cmd = "imgadm sources -d {}".format(source)
     res = __salt__["cmd.run_all"](cmd)
     retcode = res["retcode"]
     if retcode != 0:
@@ -500,7 +500,7 @@ def source_add(source, source_type="imgapi"):
     if source_type not in ["imgapi", "docker"]:
         log.warning("Possible unsupported imgage source type specified!")
 
-    cmd = "imgadm sources -a {0} -t {1}".format(source, source_type)
+    cmd = "imgadm sources -a {} -t {}".format(source, source_type)
     res = __salt__["cmd.run_all"](cmd)
     retcode = res["retcode"]
     if retcode != 0:
