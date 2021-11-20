@@ -8,7 +8,7 @@ in a number of ways:
 
 -  Using Salt and opening well-written bug reports.
 -  Joining a `working group <https://github.com/saltstack/community>`__.
--  Answering questions on `irc <https://webchat.freenode.net/#salt>`__,
+-  Answering questions on `irc <https://web.libera.chat/#salt>`__,
    the `community Slack <https://join.slack.com/t/saltstackcommunity/shared_invite/zt-3av8jjyf-oBQ2M0vhXOhJpNpRkPWBvg>`__,
    the `salt-users mailing
    list <https://groups.google.com/forum/#!forum/salt-users>`__,
@@ -180,6 +180,25 @@ Now before each commit, it will ensure that your code at least *looks*
 right before you open a pull request. And with that step, it’s time to
 start hacking on Salt!
 
+.. _imagemagick-setup:
+
+``imagemagick`` Setup
+~~~~~~~~~~~~~~~~~~~~~
+
+One last prerequisite is to have ``imagemagick`` installed, as it is required
+by Sphinx for generating the HTML documentation.
+
+::
+
+   # On Mac, via homebrew
+   brew install imagemagick
+
+::
+
+   # Example Linux installation: Debian-based
+   sudo apt install imagemagick
+
+
 Salt Issues
 -----------
 
@@ -273,8 +292,10 @@ Documentation
 ~~~~~~~~~~~~~
 
 Salt uses both docstrings, as well as normal reStructuredText files in
-the ``salt/doc`` folder for documentation. Since we use nox, you can
-build your docs and view them in your browser with this one-liner:
+the ``salt/doc`` folder for documentation. Sphinx is used to generate the
+documentation, and does require :ref:`setting up imagemagick on your OS.<imagemagick-setup>`
+Since we use ``nox``, you can build your docs and view them in your browser
+with this one-liner:
 
 ::
 
@@ -507,8 +528,7 @@ your PR is submitted during the week you should be able to expect some
 kind of communication within that business day. If your tests are
 passing and we’re not in a code freeze, ideally your code will be merged
 that day. If you haven’t heard from your assigned reviewer, ping them on
-GitHub, `irc <https://webchat.freenode.net/#salt>`__, or Community
-Slack.
+GitHub, `irc <https://web.libera.chat/#salt>`__, or Community Slack.
 
 It’s likely that your reviewer will leave some comments that need
 addressing - it may be a style change, or you forgot a changelog entry,

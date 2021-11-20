@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Glues the VMware vSphere Execution Module to the VMware ESXi Proxy Minions to the
 :mod:`esxi proxymodule <salt.proxy.esxi>`.
@@ -27,12 +26,9 @@ type manor.
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.utils.platform
 
 log = logging.getLogger(__name__)

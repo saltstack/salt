@@ -1,4 +1,4 @@
-{%- set data = '{"Der Zucker": "süß", "Die Webseite": "https://saltstack.com"}'|load_json -%}
+{%- set data = '{"Der Zucker": "süß", "Die Webseite": "https://saltproject.io"}'|load_json -%}
 {{ pillar['tojson-file'] }}:
   file.managed:
     - source: salt://tojson/template.jinja

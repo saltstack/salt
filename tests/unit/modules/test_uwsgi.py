@@ -1,12 +1,4 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import salt libs
 import salt.modules.uwsgi as uwsgi
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase
@@ -25,7 +17,7 @@ class UwsgiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(uwsgi.__salt__, {"cmd.run": mock}):
             result = uwsgi.stats(socket)
             mock.assert_called_once_with(
-                ["uwsgi", "--connect-and-read", "{0}".format(socket)],
+                ["uwsgi", "--connect-and-read", "{}".format(socket)],
                 python_shell=False,
             )
             self.assertEqual(result, {"a": 1, "b": 2})

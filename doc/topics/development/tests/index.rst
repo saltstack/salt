@@ -276,7 +276,7 @@ command would be:
 
 .. code-block:: bash
 
-    nox -e 'runtests-zeromq-3(coverage=False)' -- --run-destuctive
+    nox -e 'runtests-zeromq-3(coverage=False)' -- --run-destructive
 
 
 Running Cloud Provider Tests
@@ -366,7 +366,7 @@ As soon as the pull request is merged, the changes will be added to the
 next branch test run on Jenkins.
 
 For a full list of currently running test environments, go to
-https://jenkinsci.saltstack.com.
+https://jenkins.saltproject.io.
 
 
 Using Salt-Cloud on Jenkins

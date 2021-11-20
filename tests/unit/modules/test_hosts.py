@@ -1,20 +1,13 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
+import io
 
-# Import Salt Libs
 import salt.modules.hosts as hosts
 import salt.utils.data
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.ext import six
-from salt.ext.six.moves import StringIO
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase
@@ -150,13 +143,13 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
                 )
             ]
 
-            class TmpStringIO(StringIO, object):
+            class TmpStringIO(io.StringIO):
                 def __init__(self, fn, mode="r"):
                     self.mode = mode
                     initial_value = data[0]
                     if "w" in self.mode:
                         initial_value = ""
-                    super(TmpStringIO, self).__init__(initial_value)
+                    super().__init__(initial_value)
 
                 def __enter__(self):
                     return self
@@ -175,39 +168,34 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
                     # module
                     if self.getvalue():
                         data[0] = self.getvalue()
-                    StringIO.close(self)
+                    io.StringIO.close(self)
 
                 def read(self, *args):
-                    ret = super(TmpStringIO, self).read(*args)
-                    if six.PY3 and "b" in self.mode:
+                    ret = super().read(*args)
+                    if "b" in self.mode:
                         return salt.utils.stringutils.to_bytes(ret)
                     else:
                         return ret
 
                 def write(self, s, *args):
-                    if six.PY3:
-                        if "b" in self.mode:
-                            if not isinstance(s, bytes):
-                                # Make this act like a binary filehandle
-                                raise TypeError(
-                                    "a bytes-like object is required, not 'str'"
-                                )
-                            # The StringIO wants a str type, it won't take
-                            # bytes. Convert before writing to it.
-                            return super(TmpStringIO, self).write(
-                                salt.utils.stringutils.to_str(s), *args
+                    if "b" in self.mode:
+                        if not isinstance(s, bytes):
+                            # Make this act like a binary filehandle
+                            raise TypeError(
+                                "a bytes-like object is required, not 'str'"
                             )
-                        else:
-                            if not isinstance(s, str):
-                                # Make this act like a non-binary filehandle
-                                raise TypeError(
-                                    "write() argument must be str, not bytes"
-                                )
-                    return super(TmpStringIO, self).write(s, *args)
+                        # The StringIO wants a str type, it won't take
+                        # bytes. Convert before writing to it.
+                        return super().write(salt.utils.stringutils.to_str(s), *args)
+                    else:
+                        if not isinstance(s, str):
+                            # Make this act like a non-binary filehandle
+                            raise TypeError("write() argument must be str, not bytes")
+                    return super().write(s, *args)
 
                 def readlines(self):
-                    ret = super(TmpStringIO, self).readlines()
-                    if six.PY3 and "b" in self.mode:
+                    ret = super().readlines()
+                    if "b" in self.mode:
                         return salt.utils.data.encode(ret)
                     else:
                         return ret
@@ -217,7 +205,12 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
                         self.write(line)
 
             expected = (
-                "\n".join(("2.2.2.2 bar.barbar bar", "3.3.3.3 asdf.asdfadsf asdf",))
+                "\n".join(
+                    (
+                        "2.2.2.2 bar.barbar bar",
+                        "3.3.3.3 asdf.asdfadsf asdf",
+                    )
+                )
                 + "\n"
             )
 
@@ -234,7 +227,10 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         """
         Tests if specified host entry gets removed from the hosts file
         """
-        with patch("salt.utils.files.fopen", mock_open(b"")), patch(
+        hosts_content = (
+            b"# one line comment\n10.10.10.10    Salt1\n9.9.9.9    Salt2   # comment\n"
+        )
+        with patch("salt.utils.files.fopen", mock_open(hosts_content)), patch(
             "salt.modules.hosts.__get_hosts_filename",
             MagicMock(return_value="/etc/hosts"),
         ), patch("salt.modules.hosts.has_pair", MagicMock(return_value=True)), patch(

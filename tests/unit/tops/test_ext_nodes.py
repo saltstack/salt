@@ -1,22 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Test ext_nodes master_tops module
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import subprocess
 import textwrap
 
 import salt.tops.ext_nodes as ext_nodes
-
-# Import Salt libs
 import salt.utils.stringutils
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 

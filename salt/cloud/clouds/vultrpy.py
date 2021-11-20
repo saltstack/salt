@@ -264,7 +264,9 @@ def list_nodes_select(conn=None, call=None):
     Return a list of the VMs that are on the provider, with select fields
     """
     return __utils__["cloud.list_nodes_select"](
-        list_nodes_full(), __opts__["query.selection"], call,
+        list_nodes_full(),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -342,7 +344,11 @@ def create(vm_):
         vm_["driver"] = vm_["provider"]
 
     private_networking = config.get_cloud_config_value(
-        "enable_private_network", vm_, __opts__, search_global=False, default=False,
+        "enable_private_network",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=False,
     )
 
     ssh_key_ids = config.get_cloud_config_value(
@@ -350,7 +356,11 @@ def create(vm_):
     )
 
     startup_script = config.get_cloud_config_value(
-        "startup_script_id", vm_, __opts__, search_global=False, default=None,
+        "startup_script_id",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
 
     if startup_script and str(startup_script) not in avail_scripts():
@@ -361,7 +371,11 @@ def create(vm_):
         return False
 
     firewall_group_id = config.get_cloud_config_value(
-        "firewall_group_id", vm_, __opts__, search_global=False, default=None,
+        "firewall_group_id",
+        vm_,
+        __opts__,
+        search_global=False,
+        default=None,
     )
 
     if firewall_group_id and str(firewall_group_id) not in avail_firewall_groups():
@@ -452,7 +466,7 @@ def create(vm_):
         )
         if int(data.get("status", "200")) >= 300:
             log.error(
-                "Error creating %s on Vultr\n\n" "Vultr API returned %s\n",
+                "Error creating %s on Vultr\n\nVultr API returned %s\n",
                 vm_["name"],
                 data,
             )
@@ -598,7 +612,10 @@ def _query(path, method="GET", data=None, params=None, header_dict=None, decode=
     Perform a query directly against the Vultr REST API
     """
     api_key = config.get_cloud_config_value(
-        "api_key", get_configured_provider(), __opts__, search_global=False,
+        "api_key",
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
     )
     management_host = config.get_cloud_config_value(
         "management_host",
@@ -608,7 +625,9 @@ def _query(path, method="GET", data=None, params=None, header_dict=None, decode=
         default="api.vultr.com",
     )
     url = "https://{management_host}/v1/{path}?api_key={api_key}".format(
-        management_host=management_host, path=path, api_key=api_key,
+        management_host=management_host,
+        path=path,
+        api_key=api_key,
     )
 
     if header_dict is None:

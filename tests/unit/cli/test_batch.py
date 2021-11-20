@@ -81,7 +81,9 @@ class BatchTestCase(TestCase):
             "gather_job_timeout": 5,
             "ret": "my_return",
         }
-        self.batch.minions = ["foo", "bar", "baz"]
+        self.batch.gather_minions = MagicMock(
+            return_value=[["foo", "bar", "baz"], [], []],
+        )
         self.batch.local.cmd_iter_no_block = MagicMock(return_value=iter([]))
         ret = Batch.run(self.batch)
         # We need to fetch at least one object to trigger the relevant code path.
@@ -112,7 +114,9 @@ class BatchTestCase(TestCase):
             "gather_job_timeout": 5,
             "return": "my_return",
         }
-        self.batch.minions = ["foo", "bar", "baz"]
+        self.batch.gather_minions = MagicMock(
+            return_value=[["foo", "bar", "baz"], [], []],
+        )
         self.batch.local.cmd_iter_no_block = MagicMock(return_value=iter([]))
         ret = Batch.run(self.batch)
         # We need to fetch at least one object to trigger the relevant code path.

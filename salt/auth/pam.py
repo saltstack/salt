@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # The pam components have been modified to be salty and have been taken from
 # the pam module under this licence:
 # (c) 2007 Chris AtLee <chris@atlee.ca>
@@ -35,8 +34,6 @@ authenticated against.  This defaults to `login`
 
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 from ctypes import (
@@ -55,12 +52,7 @@ from ctypes import (
 )
 from ctypes.util import find_library
 
-# Import Salt libs
 import salt.utils.user
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -110,7 +102,7 @@ class PamMessage(Structure):
     ]
 
     def __repr__(self):
-        return "<PamMessage {0} '{1}'>".format(self.msg_style, self.msg)
+        return "<PamMessage {} '{}'>".format(self.msg_style, self.msg)
 
 
 class PamResponse(Structure):
@@ -124,7 +116,7 @@ class PamResponse(Structure):
     ]
 
     def __repr__(self):
-        return "<PamResponse {0} '{1}'>".format(self.resp_retcode, self.resp)
+        return "<PamResponse {} '{}'>".format(self.resp_retcode, self.resp)
 
 
 CONV_FUNC = CFUNCTYPE(
@@ -182,11 +174,11 @@ def authenticate(username, password):
     """
     service = __opts__.get("auth.pam.service", "login")
 
-    if isinstance(username, six.text_type):
+    if isinstance(username, str):
         username = username.encode(__salt_system_encoding__)
-    if isinstance(password, six.text_type):
+    if isinstance(password, str):
         password = password.encode(__salt_system_encoding__)
-    if isinstance(service, six.text_type):
+    if isinstance(service, str):
         service = service.encode(__salt_system_encoding__)
 
     @CONV_FUNC

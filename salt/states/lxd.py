@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage LXD profiles.
 
@@ -28,14 +27,9 @@ Manage LXD profiles.
 :platform: Linux
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os.path
 
-import salt.ext.six as six
-
-# Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 __docformat__ = "restructuredtext en"
@@ -137,7 +131,7 @@ def init(
             storage_pool if storage_pool else None,
         )
     except CommandExecutionError as e:
-        return _error(ret, six.text_type(e))
+        return _error(ret, str(e))
 
     return _success(ret, "Initialized the LXD Daemon")
 
@@ -168,17 +162,18 @@ def config_managed(name, value, force_password=False):
     try:
         current_value = __salt__["lxd.config_get"](name)
     except CommandExecutionError as e:
-        return _error(ret, six.text_type(e))
+        return _error(ret, str(e))
 
     if name == _password_config_key and (not force_password or not current_value):
-        msg = (
-            '"{0}" is already set ' "(we don't known if the password is correct)"
-        ).format(name)
-        return _success(ret, msg)
+        return _success(
+            ret,
+            '"{}" is already set (we don\'t known if the password is correct)'.format(
+                name
+            ),
+        )
 
-    elif six.text_type(value) == current_value:
-        msg = '"{0}" is already set to "{1}"'.format(name, value)
-        return _success(ret, msg)
+    elif str(value) == current_value:
+        return _success(ret, '"{}" is already set to "{}"'.format(name, value))
 
     if __opts__["test"]:
         if name == _password_config_key:
@@ -186,7 +181,7 @@ def config_managed(name, value, force_password=False):
             ret["changes"] = {"password": msg}
             return _unchanged(ret, msg)
         else:
-            msg = 'Would set the "{0}" to "{1}"'.format(name, value)
+            msg = 'Would set the "{}" to "{}"'.format(name, value)
             ret["changes"] = {name: msg}
             return _unchanged(ret, msg)
 
@@ -197,10 +192,10 @@ def config_managed(name, value, force_password=False):
             ret["changes"] = {name: "Changed the password"}
         else:
             ret["changes"] = {
-                name: 'Changed from "{0}" to {1}"'.format(current_value, value)
+                name: 'Changed from "{}" to {}"'.format(current_value, value)
             }
     except CommandExecutionError as e:
-        return _error(ret, six.text_type(e))
+        return _error(ret, str(e))
 
     return _success(ret, result_msg)
 
@@ -256,9 +251,9 @@ def authenticate(name, remote_addr, password, cert, key, verify_cert=True):
     try:
         client = __salt__["lxd.pylxd_client_get"](remote_addr, cert, key, verify_cert)
     except SaltInvocationError as e:
-        return _error(ret, six.text_type(e))
+        return _error(ret, str(e))
     except CommandExecutionError as e:
-        return _error(ret, six.text_type(e))
+        return _error(ret, str(e))
 
     if client.trusted:
         return _success(ret, "Already authenticated.")
@@ -268,12 +263,12 @@ def authenticate(name, remote_addr, password, cert, key, verify_cert=True):
             remote_addr, password, cert, key, verify_cert
         )
     except CommandExecutionError as e:
-        return _error(ret, six.text_type(e))
+        return _error(ret, str(e))
 
     if result is not True:
-        return _error(ret, "Failed to authenticate with peer: {0}".format(remote_addr))
+        return _error(ret, "Failed to authenticate with peer: {}".format(remote_addr))
 
-    msg = "Successfully authenticated with peer: {0}".format(remote_addr)
+    msg = "Successfully authenticated with peer: {}".format(remote_addr)
     ret["changes"] = msg
     return _success(ret, msg)
 
