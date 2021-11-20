@@ -186,8 +186,6 @@ class Resolver:
 
     @classmethod
     def _config_resolver(cls, num_threads=10):
-        import salt.ext.tornado.netutil
-
         salt.ext.tornado.netutil.Resolver.configure(
             "salt.ext.tornado.netutil.ThreadedResolver", num_threads=num_threads
         )
