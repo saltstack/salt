@@ -1,3 +1,5 @@
+import copy
+
 def iter_transport_opts(opts):
     """
     Yield transport, opts for all master configured transports
@@ -5,7 +7,7 @@ def iter_transport_opts(opts):
     transports = set()
 
     for transport, opts_overrides in opts.get("transport_opts", {}).items():
-        t_opts = dict(opts)
+        t_opts = copy.deepcopy(opts)
         t_opts.update(opts_overrides)
         t_opts["transport"] = transport
         transports.add(transport)
