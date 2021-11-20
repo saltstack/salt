@@ -24,7 +24,7 @@ def __virtual__():
 
 def info():
     """
-        Returns the RESTCONF capabilities PATH
+    Returns the RESTCONF capabilities PATH
     """
     return __proxy__["restconf.request"](
         "restconf/data/ietf-restconf-monitoring:restconf-state/capabilities/capability"

@@ -205,7 +205,8 @@ def request(path, method="GET", dict_payload=None):
         data = json.dumps(dict_payload)
     response = salt.utils.http.query(
         "{transport}://{hostname}/{path}".format(
-            path=path, **restconf_device["conn_args"],
+            path=path,
+            **restconf_device["conn_args"],
         ),
         method=method,
         data=data,
