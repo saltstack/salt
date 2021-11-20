@@ -104,8 +104,6 @@ class AsyncReqChannel:
 
     @classmethod
     def factory(cls, opts, **kwargs):
-        import salt.ext.tornado.ioloop
-        import salt.crypt
 
         # Default to ZeroMQ for now
         ttype = "zeromq"
@@ -292,9 +290,6 @@ class AsyncPubChannel:
 
     @classmethod
     def factory(cls, opts, **kwargs):
-        import salt.ext.tornado.ioloop
-        import salt.crypt
-
         # Default to ZeroMQ for now
         ttype = "zeromq"
 
