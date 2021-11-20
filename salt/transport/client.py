@@ -5,6 +5,8 @@ This includes client side transport, for the ReqServer and the Publisher
 """
 import logging
 
+from salt.utils.versions import warn_until
+
 log = logging.getLogger(__name__)
 
 # XXX: Add depreication warnings to start using salt.channel.client
@@ -21,6 +23,10 @@ class ReqChannel:
     def factory(opts, **kwargs):
         import salt.channel.client
 
+        warn_until(
+            "Argon",
+            "This module is deprecated. Please use salt.channel.client instead.",
+        )
         return salt.channel.client.ReqChannel.factory(opts, **kwargs)
 
 
@@ -33,6 +39,10 @@ class PushChannel:
     def factory(opts, **kwargs):
         import salt.channel.client
 
+        warn_until(
+            "Argon",
+            "This module is deprecated. Please use salt.channel.client instead.",
+        )
         return salt.channel.client.PushChannel.factory(opts, **kwargs)
 
 
@@ -45,6 +55,10 @@ class PullChannel:
     def factory(opts, **kwargs):
         import salt.channel.client
 
+        warn_until(
+            "Argon",
+            "This module is deprecated. Please use salt.channel.client instead.",
+        )
         return salt.channel.client.PullChannel.factory(opts, **kwargs)
 
 
@@ -59,6 +73,10 @@ class AsyncReqChannel:
     def factory(cls, opts, **kwargs):
         import salt.channel.client
 
+        warn_until(
+            "Argon",
+            "This module is deprecated. Please use salt.channel.client instead.",
+        )
         return salt.channel.client.AsyncReqChannel.factory(opts, **kwargs)
 
 
@@ -71,6 +89,10 @@ class AsyncPubChannel:
     def factory(cls, opts, **kwargs):
         import salt.channel.client
 
+        warn_until(
+            "Argon",
+            "This module is deprecated. Please use salt.channel.client instead.",
+        )
         return salt.channel.client.AsyncPubChannel.factory(opts, **kwargs)
 
 
@@ -86,6 +108,10 @@ class AsyncPushChannel:
         """
         import salt.channel.client
 
+        warn_until(
+            "Argon",
+            "This module is deprecated. Please use salt.channel.client instead.",
+        )
         return salt.channel.client.AsyncPushChannel.factory(opts, **kwargs)
 
 
@@ -101,4 +127,8 @@ class AsyncPullChannel:
         """
         import salt.channel.client
 
+        warn_until(
+            "Argon",
+            "This module is deprecated. Please use salt.channel.client instead.",
+        )
         return salt.channel.client.AsyncPullChannel.factory(opts, **kwargs)
