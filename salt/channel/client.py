@@ -42,8 +42,7 @@ log = logging.getLogger(__name__)
 class ReqChannel:
     """
     Factory class to create a sychronous communication channels to the master's
-    ReqServer. ReqChannels connect to the ReqServer on the ret_port (default:
-    4506)
+    ReqServer. ReqChannels use transports to connect to the ReqServer.
     """
 
     @staticmethod
@@ -90,8 +89,7 @@ class PullChannel:
 class AsyncReqChannel:
     """
     Factory class to create a asynchronous communication channels to the
-    master's ReqServer. ReqChannels connect to the master's ReqServerChannel on
-    the minion's master_port (default: 4506) option.
+    master's ReqServer. ReqChannels connect to the master's ReqServerChannel.
     """
 
     async_methods = [
