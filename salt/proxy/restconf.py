@@ -73,7 +73,6 @@ Proxy Pillar Example
 """
 
 
-# Import python stdlib
 import copy
 import json
 import logging
@@ -117,6 +116,10 @@ def __virtual__():
 
 
 def init(opts):
+    """
+    Required.
+    Initialize device config and test an initial connection
+    """
     log.debug("RESTCONF proxy init(opts) called...")
     # Open the connection to the RESTCONF Device.
     # As the communication is HTTP based, there is no connection to maintain,
@@ -162,6 +165,9 @@ def init(opts):
 
 
 def connection_test():
+    """
+    Runs a connection test via http/https. Returns an array.
+    """
     log.debug("RESTCONF proxy connection_test() called...")
     response = request("restconf/yang-library-version", method="GET", dict_payload=None)
 
@@ -172,6 +178,10 @@ def connection_test():
 
 
 def ping():
+    """
+    Triggers connection test.
+    Returns True or False
+    """
     log.debug("RESTCONF proxy ping() called...")
     # Connection open successfully?
     return connection_test()[0]
@@ -197,6 +207,9 @@ def shutdown(opts):
 
 
 def request(path, method="GET", dict_payload=None):
+    """
+    Trigger http request to device
+    """
     if dict_payload is None:
         data = ""
     elif isinstance(dict_payload, str):
