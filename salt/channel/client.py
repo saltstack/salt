@@ -340,8 +340,6 @@ class AsyncPubChannel:
         Return a future which completes when connected to the remote publisher
         """
         try:
-            import traceback
-
             if not self.auth.authenticated:
                 yield self.auth.authenticate()
             # if this is changed from the default, we assume it was intentional
