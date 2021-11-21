@@ -25,19 +25,19 @@ pytestmark = [
 ]
 
 
-def test_get_sid_string():
+@pytest.mark.skipif(not HAS_WIN32, reason="Requires Win32 libraries")
+@pytest.mark.parametrize(
+    "principal",
+    (
+        "Administrators",  # Normal
+        "adMiniStrAtorS",  # Mixed Case
+        "S-1-5-32-544",  # String SID
+    ),
+)
+def test_get_sid(principal):
     """
-    Validate getting a pysid object from a name
+    Validate getting a pysid object with various inputs
     """
-    sid_obj = salt.utils.win_dacl.get_sid("Administrators")
-    assert isinstance(sid_obj, pywintypes.SIDType)
-    assert win32security.LookupAccountSid(None, sid_obj)[0] == "Administrators"
-
-
-def test_get_sid_sid_string():
-    """
-    Validate getting a pysid object from a SID string
-    """
-    sid_obj = salt.utils.win_dacl.get_sid("S-1-5-32-544")
+    sid_obj = salt.utils.win_dacl.get_sid(principal)
     assert isinstance(sid_obj, pywintypes.SIDType)
     assert win32security.LookupAccountSid(None, sid_obj)[0] == "Administrators"
