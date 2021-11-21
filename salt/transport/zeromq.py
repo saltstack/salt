@@ -106,7 +106,8 @@ class PublishClient(salt.transport.base.PublishClient):
 
     ttype = "zeromq"
 
-    def __init__(self, opts, io_loop, **kwargs):  # pylint: disable=W0231
+    def __init__(self, opts, io_loop, **kwargs):
+        super().__init__(opts, io_loop, **kwargs)
         self.opts = opts
         self.io_loop = io_loop
         self.hexid = hashlib.sha1(
