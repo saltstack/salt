@@ -1,0 +1,1 @@
+Added support cpu hot add/remove, memory hot add, and nested virtualization to VMware salt-cloud driver.
