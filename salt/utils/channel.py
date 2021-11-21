@@ -1,5 +1,6 @@
 import copy
 
+
 def iter_transport_opts(opts):
     """
     Yield transport, opts for all master configured transports
