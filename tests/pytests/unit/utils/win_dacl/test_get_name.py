@@ -25,65 +25,55 @@ pytestmark = [
 ]
 
 
-def test_get_name_normal_name():
+@pytest.mark.skipif(not HAS_WIN32, reason="Requires Win32 libraries")
+@pytest.mark.parametrize(
+    "principal",
+    (
+        "Administrators",  # Normal
+        "adMiniStrAtorS",  # Mixed Case
+        "S-1-5-32-544",  # String SID
+    ),
+)
+def test_get_name(principal):
     """
-    Test get_name when passing a normal string name
+    Test get_name with various input methods
     """
-    result = salt.utils.win_dacl.get_name("Administrators")
+    result = salt.utils.win_dacl.get_name(principal)
     expected = "Administrators"
     assert result == expected
 
 
-def test_get_name_mixed_case():
+def test_get_name_pysid_ob():
     """
-    Test get_name when passing an account name with mixed case characters
+    Test get_name with various input methods
+    We can't parametrize this one as it gets evaluated before the test runs
+    and tries to import salt.utils.win_functions on non-Windows boxes
     """
-    result = salt.utils.win_dacl.get_name("adMiniStrAtorS")
+    pysid_obj = salt.utils.win_dacl.get_sid("Administrators")
+    result = salt.utils.win_dacl.get_name(pysid_obj)
     expected = "Administrators"
     assert result == expected
 
 
-def test_get_name_sid():
-    """
-    Test get_name when passing a sid string
-    """
-    result = salt.utils.win_dacl.get_name("S-1-5-32-544")
-    expected = "Administrators"
-    assert result == expected
-
-
-def test_get_name_sid_object():
-    """
-    Test get_name when passing a sid object
-    """
-    # SID Object
-    sid_obj = salt.utils.win_dacl.get_sid("Administrators")
-    result = salt.utils.win_dacl.get_name(sid_obj)
-    expected = "Administrators"
-    assert result == expected
-
-
-def test_get_name_virtual_account():
+@pytest.mark.skipif(not HAS_WIN32, reason="Requires Win32 libraries")
+@pytest.mark.parametrize(
+    "principal",
+    (
+        "NT Service\\EventLog",  # Normal
+        "S-1-5-80-880578595-1860270145-482643319-2788375705-1540778122",  # SID
+    ),
+)
+def test_get_name_virtual_account(principal):
     """
     Test get_name with a virtual account. Should prepend the name with
     NT Security
     """
-    result = salt.utils.win_dacl.get_name("NT Service\\EventLog")
+    result = salt.utils.win_dacl.get_name(principal)
     expected = "NT Service\\EventLog"
     assert result == expected
 
 
-def test_get_name_virtual_account_sid():
-    """
-    Test get_name with a virtual account using the sid. Should prepend the name
-    with NT Security
-    """
-    sid = "S-1-5-80-880578595-1860270145-482643319-2788375705-1540778122"
-    result = salt.utils.win_dacl.get_name(sid)
-    expected = "NT Service\\EventLog"
-    assert result == expected
-
-
+@pytest.mark.skipif(not HAS_WIN32, reason="Requires Win32 libraries")
 def test_get_name_capability_sid():
     """
     Test get_name with a compatibility SID. Should return `None` as we want to
@@ -94,6 +84,7 @@ def test_get_name_capability_sid():
     assert salt.utils.win_dacl.get_name(sid_obj) is None
 
 
+@pytest.mark.skipif(not HAS_WIN32, reason="Requires Win32 libraries")
 def test_get_name_error():
     """
     Test get_name with an un mapped SID, should throw a CommandExecutionError

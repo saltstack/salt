@@ -1233,7 +1233,7 @@ def get_name(principal):
         # https://docs.microsoft.com/en-us/previous-versions/technet-magazine/cc138011(v=msdn.10)
         # https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2008-R2-and-2008/dd548356(v=ws.10)
         if str_sid.startswith("S-1-5-80"):
-            name = "NT Service\\{0}".format(name)
+            name = "NT Service\\{}".format(name)
 
         return name
     except (pywintypes.error, TypeError) as exc:
