@@ -5,22 +5,14 @@ import pytest
 import salt.utils.platform
 import salt.utils.win_dacl as win_dacl
 import salt.utils.win_reg as win_reg
-from tests.support.helpers import TstSuiteLoggingHandler, random_string
+from tests.support.helpers import random_string
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
 
-try:
-    import win32security
-
-    HAS_WIN32 = True
-except ImportError:
-    HAS_WIN32 = False
-
 FAKE_KEY = "SOFTWARE\\{}".format(random_string("SaltTesting-", lowercase=False))
 
 
-@skipIf(not HAS_WIN32, "Requires pywin32")
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
 class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
     obj_name = "HKLM\\" + FAKE_KEY
@@ -429,7 +421,6 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         self.assertDictEqual(result, expected)
 
 
-@skipIf(not HAS_WIN32, "Requires pywin32")
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
 class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
     obj_name = ""

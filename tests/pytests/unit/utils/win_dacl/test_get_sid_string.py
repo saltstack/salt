@@ -13,7 +13,6 @@ import salt.utils.win_dacl
 # Third-party libs
 try:
     import pywintypes
-    import win32security
 
     HAS_WIN32 = True
 except ImportError:
@@ -25,19 +24,20 @@ pytestmark = [
 ]
 
 
-def test_get_sid_string_name():
+@pytest.mark.skipif(not HAS_WIN32, reason="Requires Win32 libraries")
+@pytest.mark.parametrize(
+    "principal,expected",
+    [
+        ("Administrators", "S-1-5-32-544"),  # Normal
+        ("adMiniStrAtorS", "S-1-5-32-544"),  # Mixed Case
+        ("S-1-5-32-544", "S-1-5-32-544"),  # String SID
+        (None, "S-1-0-0"),  # None SID
+    ],
+)
+def test_get_sid_string(principal, expected):
     """
     Validate getting a sid string from a valid pysid object
     """
-    sid_obj = salt.utils.win_dacl.get_sid("Administrators")
+    sid_obj = salt.utils.win_dacl.get_sid(principal)
     assert isinstance(sid_obj, pywintypes.SIDType)
-    assert salt.utils.win_dacl.get_sid_string(sid_obj) == "S-1-5-32-544"
-
-
-def test_get_sid_string_none():
-    """
-    Validate getting a null sid (S-1-0-0) when a null sid is passed
-    """
-    sid_obj = salt.utils.win_dacl.get_sid(None)
-    assert isinstance(sid_obj, pywintypes.SIDType)
-    assert salt.utils.win_dacl.get_sid_string(sid_obj) == "S-1-0-0"
+    assert salt.utils.win_dacl.get_sid_string(sid_obj) == expected
