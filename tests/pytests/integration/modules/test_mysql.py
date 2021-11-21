@@ -41,7 +41,7 @@ def salt_call_cli_wrapper(salt_call_cli, mysql_container):
 def test_query(salt_call_cli_wrapper):
     ret = salt_call_cli_wrapper("mysql.query", "mysql", "SELECT 1")
     assert ret.json
-    assert ret.json["results"] == [["b'1'"]]
+    assert ret.json["results"] == [["1"]]
 
 
 def test_version(salt_call_cli_wrapper, mysql_container):
@@ -60,7 +60,7 @@ def test_db_list(salt_call_cli_wrapper):
     ret = salt_call_cli_wrapper("mysql.db_list")
 
     assert ret.json
-    assert "b'mysql'" in ret.json
+    assert "mysql" in ret.json
 
 
 def test_db_create_alter_remove(salt_call_cli_wrapper):
@@ -82,7 +82,7 @@ def test_db_create_alter_remove(salt_call_cli_wrapper):
 def test_user_list(salt_call_cli_wrapper):
     ret = salt_call_cli_wrapper("mysql.user_list")
     assert ret.json
-    assert {"User": "b'root'", "Host": "b'%'"} in ret.json
+    assert {"User": "root", "Host": "%"} in ret.json
 
 
 def test_user_exists(salt_call_cli_wrapper):
@@ -105,37 +105,37 @@ def test_user_info(salt_call_cli_wrapper):
     # Check that a subset of the information
     # is available in the returned user information.
     expected = {
-        "Host": "b'%'",
-        "User": "b'root'",
-        "Select_priv": "b'Y'",
-        "Insert_priv": "b'Y'",
-        "Update_priv": "b'Y'",
-        "Delete_priv": "b'Y'",
-        "Create_priv": "b'Y'",
-        "Drop_priv": "b'Y'",
-        "Reload_priv": "b'Y'",
-        "Shutdown_priv": "b'Y'",
-        "Process_priv": "b'Y'",
-        "File_priv": "b'Y'",
-        "Grant_priv": "b'Y'",
-        "References_priv": "b'Y'",
-        "Index_priv": "b'Y'",
-        "Alter_priv": "b'Y'",
-        "Show_db_priv": "b'Y'",
-        "Super_priv": "b'Y'",
-        "Create_tmp_table_priv": "b'Y'",
-        "Lock_tables_priv": "b'Y'",
-        "Execute_priv": "b'Y'",
-        "Repl_slave_priv": "b'Y'",
-        "Repl_client_priv": "b'Y'",
-        "Create_view_priv": "b'Y'",
-        "Show_view_priv": "b'Y'",
-        "Create_routine_priv": "b'Y'",
-        "Alter_routine_priv": "b'Y'",
-        "Create_user_priv": "b'Y'",
-        "Event_priv": "b'Y'",
-        "Trigger_priv": "b'Y'",
-        "Create_tablespace_priv": "b'Y'",
+        "Host": "%",
+        "User": "root",
+        "Select_priv": "Y",
+        "Insert_priv": "Y",
+        "Update_priv": "Y",
+        "Delete_priv": "Y",
+        "Create_priv": "Y",
+        "Drop_priv": "Y",
+        "Reload_priv": "Y",
+        "Shutdown_priv": "Y",
+        "Process_priv": "Y",
+        "File_priv": "Y",
+        "Grant_priv": "Y",
+        "References_priv": "Y",
+        "Index_priv": "Y",
+        "Alter_priv": "Y",
+        "Show_db_priv": "Y",
+        "Super_priv": "Y",
+        "Create_tmp_table_priv": "Y",
+        "Lock_tables_priv": "Y",
+        "Execute_priv": "Y",
+        "Repl_slave_priv": "Y",
+        "Repl_client_priv": "Y",
+        "Create_view_priv": "Y",
+        "Show_view_priv": "Y",
+        "Create_routine_priv": "Y",
+        "Alter_routine_priv": "Y",
+        "Create_user_priv": "Y",
+        "Event_priv": "Y",
+        "Trigger_priv": "Y",
+        "Create_tablespace_priv": "Y",
     }
     assert all(ret.json.get(key, None) == val for key, val in expected.items())
 
@@ -284,7 +284,7 @@ def test_plugin_add_status_remove(salt_call_cli_wrapper, mysql_container):
 
     ret = salt_call_cli_wrapper("mysql.plugin_status", plugin, host="%")
     assert ret.json
-    assert ret.json == "b'ACTIVE'"
+    assert ret.json == "ACTIVE"
 
     ret = salt_call_cli_wrapper("mysql.plugin_remove", plugin)
     assert ret.json
@@ -300,7 +300,7 @@ def test_plugin_list(salt_call_cli_wrapper, mysql_container):
         plugin = "auth_socket"
 
     ret = salt_call_cli_wrapper("mysql.plugins_list")
-    assert {"name": "b'{}'".format(plugin), "status": "b'ACTIVE'"} not in ret.json
+    assert {"name": plugin, "status": "ACTIVE"} not in ret.json
     assert ret.json
 
     ret = salt_call_cli_wrapper("mysql.plugin_add", plugin)
@@ -308,7 +308,7 @@ def test_plugin_list(salt_call_cli_wrapper, mysql_container):
 
     ret = salt_call_cli_wrapper("mysql.plugins_list")
     assert ret.json
-    assert {"name": "b'{}'".format(plugin), "status": "b'ACTIVE'"} in ret.json
+    assert {"name": plugin, "status": "ACTIVE"} in ret.json
 
     ret = salt_call_cli_wrapper("mysql.plugin_remove", plugin)
     assert ret.json
