@@ -1171,9 +1171,9 @@ def test_recurse_keep_symlinks_in_fileserver_root(
                 test_tempdir.joinpath(_dir, str(_file)).touch()
 
         cwd = os.getcwd()
-        os.chdir(test_tempdir)
+        os.chdir(str(test_tempdir))
         pathlib.Path("test").symlink_to("test3", target_is_directory=True)
-        os.chdir(cwd)
+        os.chdir(str(cwd))
 
         ret = salt_call_cli.run("state.apply", sls_name)
         assert ret.exitcode == 0
@@ -1224,12 +1224,12 @@ def test_recurse_keep_symlinks_outside_fileserver_root(
                 test_tempdir.joinpath(_dir, str(_file)).touch()
 
         cwd = os.getcwd()
-        os.chdir(test_tempdir)
+        os.chdir(str(test_tempdir))
         pathlib.Path("/tmp/test_recurse_outside").mkdir(parents=True, exist_ok=True)
         pathlib.Path("test4").symlink_to(
             "/tmp/test_recurse_outside", target_is_directory=True
         )
-        os.chdir(cwd)
+        os.chdir(str(cwd))
 
         ret = salt_cli_secondary_wrapper("state.apply", sls_name)
         assert ret.exitcode == 0
