@@ -233,5 +233,5 @@ def request(path, method="GET", dict_payload=None):
             "Content-Type: application/yang-data+json",
         ],
     )
-    log.debug("proxy_restconf_request_response: {r}".format(r=response))
+    log.debug("proxy_restconf_request_response: %s", response)
     return response
