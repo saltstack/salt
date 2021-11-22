@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Proxy Minion interface module for managing VMWare ESXi clusters.
 
@@ -145,13 +144,10 @@ Look there to find an example structure for Pillar as well as an example
 ``.sls`` file for configuring an ESX datacenter from scratch.
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 
-# Import Salt Libs
 import salt.exceptions
 from salt.config.schemas.esxdatacenter import EsxdatacenterProxySchema
 from salt.utils.dictupdate import merge
@@ -225,8 +221,7 @@ def init(opts):
     else:
         if "domain" not in proxy_conf:
             raise salt.exceptions.InvalidConfigError(
-                "Mechanism is set to 'sspi', but no "
-                "'domain' key found in proxy config."
+                "Mechanism is set to 'sspi', but no 'domain' key found in proxy config."
             )
         if "principal" not in proxy_conf:
             raise salt.exceptions.InvalidConfigError(
@@ -298,7 +293,7 @@ def find_credentials():
         return DETAILS["username"], password
     # We've reached the end of the list without successfully authenticating.
     raise salt.exceptions.VMwareConnectionError(
-        "Cannot complete login due to " "incorrect credentials."
+        "Cannot complete login due to incorrect credentials."
     )
 
 

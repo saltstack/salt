@@ -8,8 +8,8 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 
 @pytest.mark.skipif(salt.modules.lxd.HAS_PYLXD is False, reason="pylxd not installed")
-@pytest.mark.skip_if_binaries_missing("lxd", message="LXD not installed")
-@pytest.mark.skip_if_binaries_missing("lxc", message="LXC not installed")
+@pytest.mark.skip_if_binaries_missing("lxd", reason="LXD not installed")
+@pytest.mark.skip_if_binaries_missing("lxc", reason="LXC not installed")
 class LxdImageTestCase(ModuleCase, SaltReturnAssertsMixin):
     def test_02__pull_image(self):
         ret = self.run_state(
@@ -27,7 +27,10 @@ class LxdImageTestCase(ModuleCase, SaltReturnAssertsMixin):
         assert ret[name]["changes"]["aliases"] == ['Added alias "images:centos/7"']
 
     def test_03__delete_image(self):
-        ret = self.run_state("lxd_image.absent", name="images:centos/7",)
+        ret = self.run_state(
+            "lxd_image.absent",
+            name="images:centos/7",
+        )
         name = "lxd_image_|-images:centos/7_|-images:centos/7_|-absent"
         self.assertSaltTrueReturn(ret)
         assert name in ret

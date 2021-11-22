@@ -28,5 +28,6 @@ def test_empty_config():
     ret = avahi_announce.validate(config)
     assert ret == (
         False,
-        "Configuration for avahi_announce beacon must contain servicetype, port and txt items.",
+        "Configuration for avahi_announce beacon must contain servicetype, port and txt"
+        " items.",
     )

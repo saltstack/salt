@@ -12,7 +12,10 @@ except NameError:
     # Not a Windows Machine
     pass
 
-pytestmark = [pytest.mark.windows_whitelisted, pytest.mark.skip_unless_on_windows]
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+    pytest.mark.skip_unless_on_windows,
+]
 
 
 @pytest.fixture(scope="module")

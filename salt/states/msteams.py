@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Send a message card to Microsoft Teams
 ======================================
@@ -22,10 +21,7 @@ The hook_url can be specified in the master or minion configuration like below:
       hook_url: https://outlook.office.com/webhook/837
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 from salt.exceptions import SaltInvocationError
 
 
@@ -67,28 +63,31 @@ def post_card(name, message, hook_url=None, title=None, theme_color=None):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     if __opts__["test"]:
-        ret["comment"] = "The following message is to be sent to Teams: {0}".format(
+        ret["comment"] = "The following message is to be sent to Teams: {}".format(
             message
         )
         ret["result"] = None
         return ret
 
     if not message:
-        ret["comment"] = "Teams message is missing: {0}".format(message)
+        ret["comment"] = "Teams message is missing: {}".format(message)
         return ret
 
     try:
         result = __salt__["msteams.post_card"](
-            message=message, hook_url=hook_url, title=title, theme_color=theme_color,
+            message=message,
+            hook_url=hook_url,
+            title=title,
+            theme_color=theme_color,
         )
     except SaltInvocationError as sie:
-        ret["comment"] = "Failed to send message ({0}): {1}".format(sie, name)
+        ret["comment"] = "Failed to send message ({}): {}".format(sie, name)
     else:
         if isinstance(result, bool) and result:
             ret["result"] = True
-            ret["comment"] = "Sent message: {0}".format(name)
+            ret["comment"] = "Sent message: {}".format(name)
         else:
-            ret["comment"] = "Failed to send message ({0}): {1}".format(
+            ret["comment"] = "Failed to send message ({}): {}".format(
                 result["message"], name
             )
 

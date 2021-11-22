@@ -23,7 +23,7 @@ def test_defined_no_change(test):
         ):
             assert virt.defined("myvm") == {
                 "name": "myvm",
-                "changes": {"myvm": {"definition": False}},
+                "changes": {},
                 "result": True,
                 "comment": "Domain myvm unchanged",
             }
@@ -274,16 +274,13 @@ def test_running_no_change(test, running):
                 "virt.list_domains": MagicMock(return_value=["myvm"]),
             },
         ):
-            changes = {"definition": False}
-            comment = "Domain myvm exists and is running"
-            if running == "shutdown":
-                changes["started"] = True
-                comment = "Domain myvm started"
             assert virt.running("myvm") == {
                 "name": "myvm",
                 "result": True,
-                "changes": {"myvm": changes},
-                "comment": comment,
+                "changes": {"myvm": {"started": True}} if running == "shutdown" else {},
+                "comment": "Domain myvm started"
+                if running == "shutdown"
+                else "Domain myvm exists and is running",
             }
             if running == "shutdown" and not test:
                 start_mock.assert_called()
@@ -414,7 +411,7 @@ def test_running_start_error():
         ):
             assert virt.running("myvm") == {
                 "name": "myvm",
-                "changes": {"myvm": {"definition": False}},
+                "changes": {},
                 "result": False,
                 "comment": "libvirt error msg",
             }
@@ -438,12 +435,12 @@ def test_running_update(test, running):
                 "virt.list_domains": MagicMock(return_value=["myvm"]),
             },
         ):
-            changes = {"myvm": {"definition": True, "cpu": True}}
+            changes = {"definition": True, "cpu": True}
             if running == "shutdown":
-                changes["myvm"]["started"] = True
+                changes["started"] = True
             assert virt.running("myvm", cpu=2) == {
                 "name": "myvm",
-                "changes": changes,
+                "changes": {"myvm": changes},
                 "result": True if not test else None,
                 "comment": "Domain myvm updated"
                 if running == "running"
@@ -553,7 +550,10 @@ def test_stopped(test, running):
                 changes = {"stopped": [{"domain": "myvm", "shutdown": True}]}
                 comment = "Machine has been shut down"
             assert virt.stopped(
-                "myvm", connection="myconnection", username="user", password="secret",
+                "myvm",
+                connection="myconnection",
+                username="user",
+                password="secret",
             ) == {
                 "name": "myvm",
                 "changes": changes,
@@ -601,7 +601,8 @@ def test_stopped_not_existing(test):
     with patch.dict(virt.__opts__, {"test": test}):
         shutdown_mock = MagicMock(return_value=True)
         with patch.dict(
-            virt.__salt__, {"virt.list_domains": MagicMock(return_value=[])},
+            virt.__salt__,
+            {"virt.list_domains": MagicMock(return_value=[])},
         ):
             assert virt.stopped("myvm") == {
                 "name": "myvm",
@@ -632,7 +633,10 @@ def test_powered_off(test, running):
                 changes = {"unpowered": [{"domain": "myvm", "stop": True}]}
                 comment = "Machine has been powered off"
             assert virt.powered_off(
-                "myvm", connection="myconnection", username="user", password="secret",
+                "myvm",
+                connection="myconnection",
+                username="user",
+                password="secret",
             ) == {
                 "name": "myvm",
                 "result": True if not test or running == "shutdown" else None,
@@ -783,7 +787,10 @@ def test_rebooted(test):
             },
         ):
             assert virt.rebooted(
-                "myvm", connection="myconnection", username="user", password="secret",
+                "myvm",
+                connection="myconnection",
+                username="user",
+                password="secret",
             ) == {
                 "name": "myvm",
                 "result": True if not test else None,

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 An external pillar module for getting credentials from confidant.
 
@@ -37,14 +36,10 @@ ext_pillar:
 Module Documentation
 ====================
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
-
-# Import python libs
 import logging
 
-# Import third party libs
 try:
     # pylint: disable=no-name-in-module
     import confidant.client

@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.hg as hg
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -88,7 +82,7 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
             hg.__salt__,
             {
                 "cmd.run_stdout": MagicMock(
-                    return_value=("A added 0\n" "A added 1\n" "M modified")
+                    return_value="A added 0\nA added 1\nM modified"
                 )
             },
         ):

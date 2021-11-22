@@ -744,9 +744,9 @@ discussed in more detail below. To understand these examples you'll need a basic
 understanding of Jinja. The following links have some basic tips and best
 practices for working with Jinja in Salt:
 
-`Understanding Jinja <https://docs.saltstack.com/en/latest/topics/jinja/index.html>`_
+`Understanding Jinja <https://docs.saltproject.io/en/latest/topics/jinja/index.html>`_
 
-`Jinja <https://docs.saltstack.com/en/getstarted/config/jinja.html>`_
+`Jinja <https://docs.saltproject.io/en/getstarted/config/jinja.html>`_
 
 Example: Basic
 ==============

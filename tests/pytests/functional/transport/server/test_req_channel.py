@@ -1,6 +1,5 @@
 import logging
 import multiprocessing
-import signal
 
 import pytest
 import salt.config
@@ -64,9 +63,7 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
             self.req_server_channel.close()
             self.req_server_channel = None
         if self.process_manager is not None:
-            self.process_manager.stop_restarting()
-            self.process_manager.send_signal_to_processes(signal.SIGTERM)
-            self.process_manager.kill_children()
+            self.process_manager.terminate()
             # Really terminate any process still left behind
             for pid in self.process_manager._process_map:
                 terminate_process(pid=pid, kill_children=True, slow_stop=False)

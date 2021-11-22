@@ -44,8 +44,7 @@ def _auth():
             __context__["auth"] = salt.crypt.SAuth(__opts__)
         except SaltClientError:
             log.error(
-                "Could not authenticate with master."
-                "Mine data will not be transmitted."
+                "Could not authenticate with master. Mine data will not be transmitted."
             )
     return __context__["auth"]
 
@@ -72,8 +71,7 @@ def _mine_get(load, opts):
             load["tok"] = _auth().gen_token(b"salt")
         except AttributeError:
             log.error(
-                "Mine could not authenticate with master. "
-                "Mine could not be retrieved."
+                "Mine could not authenticate with master. Mine could not be retrieved."
             )
             return False
     with salt.transport.client.ReqChannel.factory(opts) as channel:
@@ -130,7 +128,7 @@ def update(clear=False, mine_functions=None):
     :param dict mine_functions:
         Update (or clear, see ``clear``) the mine data on these functions only.
         This will need to have the structure as defined on
-        https://docs.saltstack.com/en/latest/topics/mine/index.html#mine-functions
+        https://docs.saltproject.io/en/latest/topics/mine/index.html#mine-functions
 
         This feature can be used when updating the mine for functions
         that require a refresh at different intervals than the rest of
