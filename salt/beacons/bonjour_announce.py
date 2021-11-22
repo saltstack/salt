@@ -6,6 +6,7 @@ import logging
 import select
 import time
 
+import salt.utils.beacons
 import salt.utils.stringutils
 
 try:

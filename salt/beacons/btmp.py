@@ -95,6 +95,7 @@ import logging
 import os
 import struct
 
+import salt.utils.beacons
 import salt.utils.files
 import salt.utils.stringutils
 
