@@ -25,6 +25,12 @@ def __virtual__():
 def info():
     """
     Returns the RESTCONF capabilities PATH
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' restconf.info
     """
     return __proxy__["restconf.request"](
         "restconf/data/ietf-restconf-monitoring:restconf-state/capabilities/capability"
@@ -63,6 +69,12 @@ def path_check(primary_path, init_path):
     """
     Used to check which path responds with a 200 status
     Returns an array of True/False and a dict with keys path + path_method + response data, used in states code.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' restconf.path_check restconf/yang-library-version/specifc_item restconf/yang-library-version
     """
     ret = {"result": False}
 
