@@ -188,7 +188,6 @@ def post_master_init(self, master):
 
     self.opts["grains"] = salt.loader.grains(self.opts, proxy=self.proxy)
 
-    self.serial = salt.payload.Serial(self.opts)
     self.mod_opts = self._prep_mod_opts()
     self.matchers = salt.loader.matchers(self.opts)
     self.beacons = salt.beacons.Beacon(self.opts, self.functions)
@@ -480,9 +479,6 @@ def target(cls, minion_instance, opts, data, connected):
         opts["id"],
     )
 
-    if not hasattr(minion_instance, "serial"):
-        minion_instance.serial = salt.payload.Serial(opts)
-
     if not hasattr(minion_instance, "proc_dir"):
         uid = salt.utils.user.get_uid(user=opts.get("user", None))
         minion_instance.proc_dir = salt.minion.get_proc_dir(opts["cachedir"], uid=uid)
@@ -509,15 +505,13 @@ def thread_return(cls, minion_instance, opts, data):
         # Reconfigure multiprocessing logging after daemonizing
         salt.log.setup.setup_multiprocessing_logging()
 
-    salt.utils.process.appendproctitle(
-        "{}._thread_return {}".format(cls.__name__, data["jid"])
-    )
+    salt.utils.process.appendproctitle("{}._thread_return".format(cls.__name__))
 
     sdata = {"pid": os.getpid()}
     sdata.update(data)
     log.info("Starting a new job with PID %s", sdata["pid"])
     with salt.utils.files.fopen(fn_, "w+b") as fp_:
-        fp_.write(minion_instance.serial.dumps(sdata))
+        fp_.write(salt.payload.dumps(sdata))
     ret = {"success": False}
     function_name = data["fun"]
     executors = (
@@ -759,15 +753,13 @@ def thread_multi_return(cls, minion_instance, opts, data):
         # Reconfigure multiprocessing logging after daemonizing
         salt.log.setup.setup_multiprocessing_logging()
 
-    salt.utils.process.appendproctitle(
-        "{}._thread_multi_return {}".format(cls.__name__, data["jid"])
-    )
+    salt.utils.process.appendproctitle("{}._thread_multi_return".format(cls.__name__))
 
     sdata = {"pid": os.getpid()}
     sdata.update(data)
     log.info("Starting a new job with PID %s", sdata["pid"])
     with salt.utils.files.fopen(fn_, "w+b") as fp_:
-        fp_.write(minion_instance.serial.dumps(sdata))
+        fp_.write(salt.payload.dumps(sdata))
 
     multifunc_ordered = opts.get("multifunc_ordered", False)
     num_funcs = len(data["fun"])
@@ -948,19 +940,22 @@ def handle_decoded_payload(self, data):
     # side.
     instance = self
     multiprocessing_enabled = self.opts.get("multiprocessing", True)
+    name = "ProcessPayload(jid={})".format(data["jid"])
     if multiprocessing_enabled:
         if sys.platform.startswith("win"):
             # let python reconstruct the minion on the other side if we"re
             # running on windows
             instance = None
         process = SignalHandlingProcess(
-            target=target, args=(self, instance, instance.opts, data, self.connected)
+            target=target,
+            args=(self, instance, instance.opts, data, self.connected),
+            name=name,
         )
     else:
         process = threading.Thread(
             target=target,
             args=(self, instance, instance.opts, data, self.connected),
-            name=data["jid"],
+            name=name,
         )
 
     process.start()
