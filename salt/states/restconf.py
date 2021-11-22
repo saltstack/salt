@@ -90,9 +90,8 @@ def config_manage(
     if not isinstance(config, salt.utils.odict.OrderedDict):
         ret["comment"] = "CRITICAL: config must be an OrderedDict type"
         log.critical(
-            "config is required, config must be a salt OrderedDict, not a {}".format(
-                type(config)
-            )
+            "config is required, config must be a salt OrderedDict, not a %s",
+            type(config),
         )
         return ret
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
@@ -173,7 +172,7 @@ def config_manage(
                     resp["status"], why, path_check["request_path"]
                 )
             )
-            log.debug("post_content: {b}".format(b=json.dumps(proposed_config)))
+            log.debug("post_content: %s", json.dumps(proposed_config))
 
     return ret
 
