@@ -51,6 +51,17 @@ def __virtual__():
     return False
 
 
+def _get_opts(command):
+    opts = {}
+    opts["UserName"] = __salt__["config.option"]("namecheap.user")
+    opts["ApiUser"] = __salt__["config.option"]("namecheap.name")
+    opts["ApiKey"] = __salt__["config.option"]("namecheap.key")
+    opts["ClientIp"] = __salt__["config.option"]("namecheap.client_ip")
+    opts["Command"] = command
+
+    return opts
+
+
 def reissue(
     csr_file,
     certificate_id,
@@ -287,7 +298,8 @@ def __get_certificates(
     for key, value in kwargs.items():
         opts[key] = value
 
-    response_xml = salt.utils.namecheap.post_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.post_request(opts, url)
 
     if response_xml is None:
         return {}
@@ -422,7 +434,8 @@ def renew(years, certificate_id, certificate_type, promotion_code=None):
     if promotion_code is not None:
         opts["PromotionCode"] = promotion_code
 
-    response_xml = salt.utils.namecheap.post_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.post_request(opts, url)
     if response_xml is None:
         return {}
 
@@ -603,7 +616,8 @@ def create(years, certificate_type, promotion_code=None, sans_to_add=None):
     if sans_to_add is not None:
         opts["SANStoADD"] = sans_to_add
 
-    response_xml = salt.utils.namecheap.post_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.post_request(opts, url)
     if response_xml is None:
         return {}
 
@@ -712,7 +726,8 @@ def parse_csr(csr_file, certificate_type, http_dc_validation=False):
     if http_dc_validation:
         opts["HTTPDCValidation"] = "true"
 
-    response_xml = salt.utils.namecheap.post_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.post_request(opts, url)
 
     sslparseresult = response_xml.getElementsByTagName("SSLParseCSRResult")[0]
 
@@ -763,7 +778,8 @@ def get_list(**kwargs):
     for key, value in kwargs.items():
         opts[key] = value
 
-    response_xml = salt.utils.namecheap.get_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.get_request(opts, url)
 
     if response_xml is None:
         return []
@@ -828,7 +844,8 @@ def get_info(certificate_id, returncertificate=False, returntype=None):
             )
         opts["returntype"] = returntype
 
-    response_xml = salt.utils.namecheap.get_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.get_request(opts, url)
 
     if response_xml is None:
         return {}

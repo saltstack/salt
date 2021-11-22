@@ -47,6 +47,17 @@ def __virtual__():
     return False
 
 
+def _get_opts(command):
+    opts = {}
+    opts["UserName"] = __salt__["config.option"]("namecheap.user")
+    opts["ApiUser"] = __salt__["config.option"]("namecheap.name")
+    opts["ApiKey"] = __salt__["config.option"]("namecheap.key")
+    opts["ClientIp"] = __salt__["config.option"]("namecheap.client_ip")
+    opts["Command"] = command
+
+    return opts
+
+
 def get_hosts(sld, tld):
     """
     Retrieves DNS host record settings for the requested domain.
@@ -65,11 +76,12 @@ def get_hosts(sld, tld):
 
         salt 'my-minion' namecheap_domains_dns.get_hosts sld tld
     """
-    opts = salt.utils.namecheap.get_opts("namecheap.domains.dns.gethosts")
+    opts = _get_opts("namecheap.domains.dns.gethosts")
     opts["TLD"] = tld
     opts["SLD"] = sld
 
-    response_xml = salt.utils.namecheap.get_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.get_request(opts, url)
     if response_xml is None:
         return {}
 
@@ -98,11 +110,12 @@ def get_list(sld, tld):
 
         salt 'my-minion' namecheap_domains_dns.get_list sld tld
     """
-    opts = salt.utils.namecheap.get_opts("namecheap.domains.dns.getlist")
+    opts = _get_opts("namecheap.domains.dns.getlist")
     opts["TLD"] = tld
     opts["SLD"] = sld
 
-    response_xml = salt.utils.namecheap.get_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.get_request(opts, url)
     if response_xml is None:
         return {}
 
@@ -144,7 +157,7 @@ def set_hosts(sld, tld, hosts):
 
         salt 'my-minion' namecheap_domains_dns.set_hosts sld tld hosts
     """
-    opts = salt.utils.namecheap.get_opts("namecheap.domains.dns.setHosts")
+    opts = _get_opts("namecheap.domains.dns.setHosts")
     opts["SLD"] = sld
     opts["TLD"] = tld
     i = 1
@@ -160,7 +173,8 @@ def set_hosts(sld, tld, hosts):
             opts["EmailType"] = hostrecord["emailtype"]
         i += 1
 
-    response_xml = salt.utils.namecheap.post_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.post_request(opts, url)
     if response_xml is None:
         return False
 
@@ -189,11 +203,12 @@ def set_custom(sld, tld, nameservers):
 
         salt 'my-minion' namecheap_domains_dns.set_custom sld tld nameserver
     """
-    opts = salt.utils.namecheap.get_opts("namecheap.domains.dns.setCustom")
+    opts = _get_opts("namecheap.domains.dns.setCustom")
     opts["SLD"] = sld
     opts["TLD"] = tld
     opts["Nameservers"] = ",".join(nameservers)
-    response_xml = salt.utils.namecheap.post_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.post_request(opts, url)
     if response_xml is None:
         return False
 
@@ -222,10 +237,11 @@ def set_default(sld, tld):
 
         salt 'my-minion' namecheap_domains_dns.set_default sld tld
     """
-    opts = salt.utils.namecheap.get_opts("namecheap.domains.dns.setDefault")
+    opts = _get_opts("namecheap.domains.dns.setDefault")
     opts["SLD"] = sld
     opts["TLD"] = tld
-    response_xml = salt.utils.namecheap.post_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.get_request(opts, url)
     if response_xml is None:
         return False
 

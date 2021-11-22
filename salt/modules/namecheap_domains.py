@@ -48,6 +48,17 @@ def __virtual__():
     return False
 
 
+def _get_opts(command):
+    opts = {}
+    opts["UserName"] = __salt__["config.option"]("namecheap.user")
+    opts["ApiUser"] = __salt__["config.option"]("namecheap.name")
+    opts["ApiKey"] = __salt__["config.option"]("namecheap.key")
+    opts["ClientIp"] = __salt__["config.option"]("namecheap.client_ip")
+    opts["Command"] = command
+
+    return opts
+
+
 def reactivate(domain_name):
     """
     Try to reactivate the expired domain name
@@ -65,10 +76,11 @@ def reactivate(domain_name):
 
         salt 'my-minion' namecheap_domains.reactivate my-domain-name
     """
-    opts = salt.utils.namecheap.get_opts("namecheap.domains.reactivate")
+    opts = _get_opts("namecheap.domains.reactivate")
     opts["DomainName"] = domain_name
 
-    response_xml = salt.utils.namecheap.post_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.post_request(opts, url)
 
     if response_xml is None:
         return {}
@@ -104,13 +116,14 @@ def renew(domain_name, years, promotion_code=None):
         salt 'my-minion' namecheap_domains.renew my-domain-name 5
     """
 
-    opts = salt.utils.namecheap.get_opts("namecheap.domains.renew")
+    opts = _get_opts("namecheap.domains.renew")
     opts["DomainName"] = domain_name
     opts["Years"] = years
     if promotion_code is not None:
         opts["PromotionCode"] = promotion_code
 
-    response_xml = salt.utils.namecheap.post_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.post_request(opts, url)
 
     if response_xml is None:
         return {}
@@ -299,7 +312,7 @@ def create(domain_name, years, **kwargs):
         "TechStateProvince",
         "Years",
     ]
-    opts = salt.utils.namecheap.get_opts("namecheap.domains.create")
+    opts = _get_opts("namecheap.domains.create")
     opts["DomainName"] = domain_name
     opts["Years"] = str(years)
 
@@ -366,7 +379,8 @@ def create(domain_name, years, **kwargs):
             log.error("Missing required parameter '%s'", requiredkey)
             raise Exception("Missing required parameter '" + requiredkey + "'")
 
-    response_xml = salt.utils.namecheap.post_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.post_request(opts, url)
 
     if response_xml is None:
         return {}
@@ -391,10 +405,11 @@ def check(*domains_to_check):
 
         salt 'my-minion' namecheap_domains.check domain-to-check
     """
-    opts = salt.utils.namecheap.get_opts("namecheap.domains.check")
+    opts = _get_opts("namecheap.domains.check")
     opts["DomainList"] = ",".join(domains_to_check)
 
-    response_xml = salt.utils.namecheap.get_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.get_request(opts, url)
 
     if response_xml is None:
         return {}
@@ -424,10 +439,11 @@ def get_info(domain_name):
 
         salt 'my-minion' namecheap_domains.get_info my-domain-name
     """
-    opts = salt.utils.namecheap.get_opts("namecheap.domains.getinfo")
+    opts = _get_opts("namecheap.domains.getinfo")
     opts["DomainName"] = domain_name
 
-    response_xml = salt.utils.namecheap.get_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.get_request(opts, url)
 
     if response_xml is None:
         return []
@@ -448,8 +464,9 @@ def get_tld_list():
         salt 'my-minion' namecheap_domains.get_tld_list
     """
 
+    url = __salt__["config.option"]("namecheap.url")
     response_xml = salt.utils.namecheap.get_request(
-        salt.utils.namecheap.get_opts("namecheap.domains.gettldlist")
+        salt.utils.namecheap.get_opts("namecheap.domains.gettldlist"), url
     )
 
     if response_xml is None:
@@ -499,7 +516,7 @@ def get_list(list_type=None, search_term=None, page=None, page_size=None, sort_b
 
         salt 'my-minion' namecheap_domains.get_list
     """
-    opts = salt.utils.namecheap.get_opts("namecheap.domains.getList")
+    opts = _get_opts("namecheap.domains.getList")
 
     if list_type is not None:
         if list_type not in ["ALL", "EXPIRING", "EXPIRED"]:
@@ -535,7 +552,8 @@ def get_list(list_type=None, search_term=None, page=None, page_size=None, sort_b
             raise Exception("Invalid option for sort_by")
         opts["SortBy"] = sort_by
 
-    response_xml = salt.utils.namecheap.get_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.get_request(opts, url)
 
     if response_xml is None:
         return []

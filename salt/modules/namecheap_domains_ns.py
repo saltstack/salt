@@ -47,6 +47,17 @@ def __virtual__():
     return False
 
 
+def _get_opts(command):
+    opts = {}
+    opts["UserName"] = __salt__["config.option"]("namecheap.user")
+    opts["ApiUser"] = __salt__["config.option"]("namecheap.name")
+    opts["ApiKey"] = __salt__["config.option"]("namecheap.key")
+    opts["ClientIp"] = __salt__["config.option"]("namecheap.client_ip")
+    opts["Command"] = command
+
+    return opts
+
+
 def get_info(sld, tld, nameserver):
     """
     Retrieves information about a registered nameserver. Returns the following
@@ -71,12 +82,13 @@ def get_info(sld, tld, nameserver):
 
         salt '*' namecheap_domains_ns.get_info sld tld nameserver
     """
-    opts = salt.utils.namecheap.get_opts("namecheap.domains.ns.delete")
+    opts = _get_opts("namecheap.domains.ns.delete")
     opts["SLD"] = sld
     opts["TLD"] = tld
     opts["Nameserver"] = nameserver
 
-    response_xml = salt.utils.namecheap.post_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.post_request(opts, url)
     if response_xml is None:
         return {}
 
@@ -111,14 +123,15 @@ def update(sld, tld, nameserver, old_ip, new_ip):
 
         salt '*' namecheap_domains_ns.update sld tld nameserver old_ip new_ip
     """
-    opts = salt.utils.namecheap.get_opts("namecheap.domains.ns.update")
+    opts = _get_opts("namecheap.domains.ns.update")
     opts["SLD"] = sld
     opts["TLD"] = tld
     opts["Nameserver"] = nameserver
     opts["OldIP"] = old_ip
     opts["IP"] = new_ip
 
-    response_xml = salt.utils.namecheap.post_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.post_request(opts, url)
     if response_xml is None:
         return False
 
@@ -148,12 +161,13 @@ def delete(sld, tld, nameserver):
 
         salt '*' namecheap_domains_ns.delete sld tld nameserver
     """
-    opts = salt.utils.namecheap.get_opts("namecheap.domains.ns.delete")
+    opts = _get_opts("namecheap.domains.ns.delete")
     opts["SLD"] = sld
     opts["TLD"] = tld
     opts["Nameserver"] = nameserver
 
-    response_xml = salt.utils.namecheap.post_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.post_request(opts, url)
     if response_xml is None:
         return False
 
@@ -187,13 +201,14 @@ def create(sld, tld, nameserver, ip):
         salt '*' namecheap_domains_ns.create sld tld nameserver ip
     """
 
-    opts = salt.utils.namecheap.get_opts("namecheap.domains.ns.create")
+    opts = _get_opts("namecheap.domains.ns.create")
     opts["SLD"] = sld
     opts["TLD"] = tld
     opts["Nameserver"] = nameserver
     opts["IP"] = ip
 
-    response_xml = salt.utils.namecheap.post_request(opts)
+    url = __salt__["config.option"]("namecheap.url")
+    response_xml = salt.utils.namecheap.post_request(opts, url)
     if response_xml is None:
         return False
 
