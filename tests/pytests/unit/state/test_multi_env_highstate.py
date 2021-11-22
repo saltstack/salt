@@ -66,7 +66,9 @@ def highstate(
         opts["id"] = "match"
         opts["file_client"] = "local"
         opts["file_roots"] = dict(
-            base=[base_state_tree_dir], other=[other_state_tree_dir]
+            base=[base_state_tree_dir],
+            other=[other_state_tree_dir],
+            __env__=[base_state_tree_dir],
         )
         opts["cachedir"] = cache_dir
         opts["test"] = False
@@ -145,7 +147,11 @@ def test_lazy_avail_states_other(highstate, base_state_tree_dir, tmp_path):
         # After getting 'other' env available states
         highstate.avail["other"]  # pylint: disable=pointless-statement
         assert highstate.avail._filled
-        assert highstate.avail._avail == {"base": None, "other": ["test"]}
+        assert highstate.avail._avail == {
+            "base": None,
+            "__env__": None,
+            "other": ["test"],
+        }
 
 
 def test_lazy_avail_states_multi(highstate, base_state_tree_dir, tmp_path):
@@ -178,4 +184,59 @@ def test_lazy_avail_states_multi(highstate, base_state_tree_dir, tmp_path):
         # After getting 'other' env available states
         highstate.avail["other"]  # pylint: disable=pointless-statement
         assert highstate.avail._filled
-        assert highstate.avail._avail == {"base": ["core", "top"], "other": ["test"]}
+        assert highstate.avail._avail == {
+            "base": ["core", "top"],
+            "__env__": None,
+            "other": ["test"],
+        }
+
+
+def test_lazy_avail_states_dynamic(highstate, base_state_tree_dir, tmp_path):
+    top_sls = """
+    {{ saltenv }}:
+      '*':
+        - core
+        """
+
+    core_state = """
+    include:
+      - includeme
+
+    {}/testfile:
+      file:
+        - managed
+        - source: salt://testfile
+        - makedirs: true
+        """.format(
+        str(tmp_path)
+    )
+
+    includeme_state = """
+    included state:
+      test.succeed_without_changes:
+        - name: test
+    """
+
+    with pytest.helpers.temp_file(
+        "top.sls", top_sls, base_state_tree_dir
+    ), pytest.helpers.temp_file(
+        "core.sls", core_state, base_state_tree_dir
+    ), pytest.helpers.temp_file(
+        "includeme.sls", includeme_state, base_state_tree_dir
+    ):
+        # list_states not called yet
+        assert not highstate.avail._filled
+        assert highstate.avail._avail == {"base": None}
+        # After getting 'base' env available states
+        highstate.avail["base"]  # pylint: disable=pointless-statement
+        assert not highstate.avail._filled
+        assert highstate.avail._avail == {"base": ["core", "includeme", "top"]}
+        # After getting 'dynamic' env available states
+        highstate.avail["dynamic"]  # pylint: disable=pointless-statement
+        assert highstate.avail._filled
+        assert highstate.avail._avail == {
+            "__env__": None,
+            "base": ["core", "includeme", "top"],
+            "dynamic": ["core", "includeme", "top"],
+            "other": None,
+        }
