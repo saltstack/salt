@@ -1,10 +1,10 @@
 """
     :codeauthor: Rajvi Dhimar <rajvidhimar95@gmail.com>
 """
-
 import os
 
 import salt.modules.junos as junos
+import yaml
 from tests.support.mixins import LoaderModuleMockMixin, XMLEqualityMixin
 from tests.support.mock import ANY, MagicMock, PropertyMock, call, mock_open, patch
 from tests.support.unit import TestCase, skipIf
@@ -1175,6 +1175,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ) as mock_safe_rm, patch(
                 "salt.utils.files.mkstemp"
             ) as mock_mkstemp, patch(
+                "salt.utils.files.fopen", mock_open(), create=True
+            ) as m_open, patch(
                 "os.path.isfile"
             ) as mock_isfile, patch(
                 "os.path.getsize"
@@ -1217,6 +1219,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ) as mock_mkstemp, patch(
                 "os.path.isfile"
             ) as mock_isfile, patch(
+                "salt.utils.files.fopen", mock_open(), create=True
+            ) as m_open, patch(
                 "os.path.getsize"
             ) as mock_getsize:
                 mock_isfile.return_value = True
@@ -1257,6 +1261,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ) as mock_mkstemp, patch(
                 "os.path.isfile"
             ) as mock_isfile, patch(
+                "salt.utils.files.fopen", mock_open(), create=True
+            ) as m_open, patch(
                 "os.path.getsize"
             ) as mock_getsize:
                 mock_isfile.return_value = True
@@ -1294,6 +1300,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ) as mock_mkdtemp, patch(
                 "os.path.isfile"
             ) as mock_isfile, patch(
+                "salt.utils.files.fopen", mock_open(), create=True
+            ) as m_open, patch(
                 "os.path.getsize"
             ) as mock_getsize:
                 mock_isfile.return_value = True
@@ -1338,6 +1346,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ) as mock_mkstemp, patch(
                 "os.path.isfile"
             ) as mock_isfile, patch(
+                "salt.utils.files.fopen", mock_open(), create=True
+            ) as m_open, patch(
                 "os.path.getsize"
             ) as mock_getsize:
                 mock_isfile.return_value = True
@@ -1391,6 +1401,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ) as mock_mkstemp, patch(
                 "os.path.isfile"
             ) as mock_isfile, patch(
+                "salt.utils.files.fopen", mock_open(), create=True
+            ) as m_open, patch(
                 "os.path.getsize"
             ) as mock_getsize:
                 mock_isfile.return_value = True
@@ -1444,6 +1456,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ) as mock_mkstemp, patch(
                 "os.path.isfile"
             ) as mock_isfile, patch(
+                "salt.utils.files.fopen", mock_open(), create=True
+            ) as m_open, patch(
                 "os.path.getsize"
             ) as mock_getsize:
                 mock_isfile.return_value = True
@@ -1481,6 +1495,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_mkstemp, patch(
             "os.path.isfile"
         ) as mock_isfile, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
             "os.path.getsize"
         ) as mock_getsize:
             mock_isfile.return_value = True
@@ -1501,6 +1517,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_mkstemp, patch(
             "os.path.isfile"
         ) as mock_isfile, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
             "os.path.getsize"
         ) as mock_getsize:
             mock_isfile.return_value = True
@@ -1567,8 +1585,10 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_mkstemp, patch(
             "os.path.isfile"
         ) as mock_isfile, patch(
-            "salt.utils.files.fopen"
+            "salt.utils.files.fopen", mock_open(), create=True
         ) as mock_fopen, patch(
+            "salt.utils.stringutils.to_str"
+        ) as mock_strgutils, patch(
             "os.path.getsize"
         ) as mock_getsize:
             mock_isfile.return_value = True
@@ -1576,7 +1596,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_mkstemp.return_value = "test/path/config"
             mock_diff.return_value = "diff"
             mock_commit_check.return_value = True
-            mock_fopen.side_effect = self.raise_exception
+            mock_strgutils.side_effect = self.raise_exception
 
             args = {
                 "__pub_user": "root",
@@ -1590,10 +1610,9 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             }
 
             ret = dict()
-            ret["message"] = 'Could not write into diffs_file due to: "Test exception"'
+            ret["message"] = "Could not write into diffs_file due to: 'Test exception'"
             ret["out"] = False
             self.assertEqual(junos.install_config("actual/path/config", **args), ret)
-            mock_fopen.assert_called_with("copy/config/here", "w")
 
     def test_install_config_commit_params(self):
         with patch("jnpr.junos.utils.config.Config.commit") as mock_commit, patch(
@@ -1609,6 +1628,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_mkstemp, patch(
             "os.path.isfile"
         ) as mock_isfile, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
             "os.path.getsize"
         ) as mock_getsize:
             mock_isfile.return_value = True
@@ -1647,6 +1668,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_mkstemp, patch(
             "os.path.isfile"
         ) as mock_isfile, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
             "os.path.getsize"
         ) as mock_getsize:
             mock_isfile.return_value = True
@@ -1656,9 +1679,10 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_commit_check.return_value = False
 
             ret = dict()
-            ret[
-                "message"
-            ] = "Loaded configuration but commit check failed, hence rolling back configuration."
+            ret["message"] = (
+                "Loaded configuration but commit check failed, hence rolling back"
+                " configuration."
+            )
             ret["out"] = False
             self.assertEqual(junos.install_config("actual/path/config.xml"), ret)
 
@@ -1676,6 +1700,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_mkstemp, patch(
             "os.path.isfile"
         ) as mock_isfile, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
             "os.path.getsize"
         ) as mock_getsize:
             mock_isfile.return_value = True
@@ -1705,6 +1731,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_mkstemp, patch(
             "os.path.isfile"
         ) as mock_isfile, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
             "os.path.getsize"
         ) as mock_getsize:
             mock_isfile.return_value = True
@@ -1713,9 +1741,10 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_diff.return_value = "diff"
             mock_commit_check.return_value = True
             ret = dict()
-            ret[
-                "message"
-            ] = "Commit check passed, but skipping commit for dry-run and rolling back configuration."
+            ret["message"] = (
+                "Commit check passed, but skipping commit for dry-run and rolling back"
+                " configuration."
+            )
             ret["out"] = True
             self.assertEqual(junos.install_config("actual/path/config", test=True), ret)
             mock_commit.assert_not_called()
@@ -1734,6 +1763,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_mkstemp, patch(
             "os.path.isfile"
         ) as mock_isfile, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
             "os.path.getsize"
         ) as mock_getsize:
             mock_isfile.return_value = True
@@ -1768,6 +1799,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ) as mock_mkstemp, patch(
             "os.path.isfile"
         ) as mock_isfile, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
             "os.path.getsize"
         ) as mock_getsize:
             mock_isfile.return_value = True
@@ -1820,13 +1853,28 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 "file.rmdir": MagicMock(return_value="True"),
             },
         ):
-            with patch("os.path.isfile") as mock_isfile, patch(
+            with patch("jnpr.junos.utils.sw.SW.install") as mock_install, patch(
+                "salt.utils.files.safe_rm"
+            ) as mock_safe_rm, patch(
+                "salt.utils.files.fopen", mock_open(), create=True
+            ) as m_open, patch(
+                "salt.utils.files.mkstemp"
+            ) as mock_mkstemp, patch(
+                "os.path.isfile"
+            ) as mock_isfile, patch(
                 "os.path.getsize"
             ) as mock_getsize:
                 mock_getsize.return_value = 10
                 mock_isfile.return_value = False
+                mock_install.return_value = (
+                    False,
+                    "Invalid path. Please provide a valid image path",
+                )
                 ret = dict()
-                ret["message"] = "Invalid path. Please provide a valid image path"
+                ret["message"] = (
+                    "Installation failed. Reason: Invalid path. Please provide a valid"
+                    " image path"
+                )
                 ret["out"] = False
                 self.assertEqual(junos.install_os("salt://image/path/"), ret)
 
@@ -1840,25 +1888,43 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             self.assertEqual(junos.install_os("/image/path/"), ret)
 
     def test_install_os(self):
-        with patch("jnpr.junos.utils.sw.SW.install") as mock_install, patch(
-            "salt.utils.files.safe_rm"
-        ) as mock_safe_rm, patch("salt.utils.files.mkstemp") as mock_mkstemp, patch(
-            "os.path.isfile"
-        ) as mock_isfile, patch(
-            "os.path.getsize"
-        ) as mock_getsize:
-            mock_getsize.return_value = 10
-            mock_isfile.return_value = True
-            mock_install.return_value = True, "installed"
-            ret = dict()
-            ret["out"] = True
-            ret["message"] = "Installed the os."
-            self.assertEqual(junos.install_os("path"), ret)
+        with patch.dict(
+            junos.__salt__,
+            {
+                "cp.is_cached": MagicMock(return_value="test/path/config"),
+                "cp.hash_file": MagicMock(
+                    return_value={"hash_type": "sha256", "hsum": "a386e49c17"}
+                ),
+                "file.get_hash": MagicMock(return_value="a386e49c17"),
+            },
+        ):
+            with patch("jnpr.junos.utils.sw.SW.install") as mock_install, patch(
+                "salt.utils.files.safe_rm"
+            ) as mock_safe_rm, patch(
+                "salt.utils.files.fopen", mock_open(), create=True
+            ) as m_open, patch(
+                "salt.utils.files.mkstemp"
+            ) as mock_mkstemp, patch(
+                "os.path.isfile"
+            ) as mock_isfile, patch(
+                "os.path.getsize"
+            ) as mock_getsize:
+                mock_getsize.return_value = 10
+                mock_isfile.return_value = True
+                mock_install.return_value = True, "installed"
+                ret = dict()
+                ret["out"] = True
+                ret["message"] = "Installed the os."
+                self.assertEqual(junos.install_os("path"), ret)
 
     def test_install_os_failure(self):
         with patch("jnpr.junos.utils.sw.SW.install") as mock_install, patch(
             "salt.utils.files.safe_rm"
-        ) as mock_safe_rm, patch("salt.utils.files.mkstemp") as mock_mkstemp, patch(
+        ) as mock_safe_rm, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
+            "salt.utils.files.mkstemp"
+        ) as mock_mkstemp, patch(
             "os.path.isfile"
         ) as mock_isfile, patch(
             "os.path.getsize"
@@ -1877,6 +1943,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         with patch("jnpr.junos.utils.sw.SW.install") as mock_install, patch(
             "jnpr.junos.utils.sw.SW.reboot"
         ) as mock_reboot, patch("salt.utils.files.safe_rm") as mock_safe_rm, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
             "salt.utils.files.mkstemp"
         ) as mock_mkstemp, patch(
             "os.path.isfile"
@@ -1904,7 +1972,11 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
     def test_install_os_pyez_install_throws_exception(self):
         with patch("jnpr.junos.utils.sw.SW.install") as mock_install, patch(
             "salt.utils.files.safe_rm"
-        ) as mock_safe_rm, patch("salt.utils.files.mkstemp") as mock_mkstemp, patch(
+        ) as mock_safe_rm, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
+            "salt.utils.files.mkstemp"
+        ) as mock_mkstemp, patch(
             "os.path.isfile"
         ) as mock_isfile, patch(
             "os.path.getsize"
@@ -1921,6 +1993,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         with patch("jnpr.junos.utils.sw.SW.install") as mock_install, patch(
             "jnpr.junos.utils.sw.SW.reboot"
         ) as mock_reboot, patch("salt.utils.files.safe_rm") as mock_safe_rm, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
             "salt.utils.files.mkstemp"
         ) as mock_mkstemp, patch(
             "os.path.isfile"
@@ -1951,7 +2025,11 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
     def test_install_os_no_copy(self):
         with patch("jnpr.junos.utils.sw.SW.install") as mock_install, patch(
             "salt.utils.files.safe_rm"
-        ) as mock_safe_rm, patch("salt.utils.files.mkstemp") as mock_mkstemp, patch(
+        ) as mock_safe_rm, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
+            "salt.utils.files.mkstemp"
+        ) as mock_mkstemp, patch(
             "os.path.isfile"
         ) as mock_isfile, patch(
             "os.path.getsize"
@@ -1972,7 +2050,11 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
     def test_install_os_issu(self):
         with patch("jnpr.junos.utils.sw.SW.install") as mock_install, patch(
             "salt.utils.files.safe_rm"
-        ) as mock_safe_rm, patch("salt.utils.files.mkstemp") as mock_mkstemp, patch(
+        ) as mock_safe_rm, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
+            "salt.utils.files.mkstemp"
+        ) as mock_mkstemp, patch(
             "os.path.isfile"
         ) as mock_isfile, patch(
             "os.path.getsize"
@@ -1989,7 +2071,11 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
     def test_install_os_add_params(self):
         with patch("jnpr.junos.utils.sw.SW.install") as mock_install, patch(
             "salt.utils.files.safe_rm"
-        ) as mock_safe_rm, patch("salt.utils.files.mkstemp") as mock_mkstemp, patch(
+        ) as mock_safe_rm, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
+            "salt.utils.files.mkstemp"
+        ) as mock_mkstemp, patch(
             "os.path.isfile"
         ) as mock_isfile, patch(
             "os.path.getsize"
@@ -2231,7 +2317,9 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
     def test_load_none_path(self):
         ret_exp = {
             "out": False,
-            "message": "Please provide the salt path where the configuration is present",
+            "message": (
+                "Please provide the salt path where the configuration is present"
+            ),
         }
         ret = junos.load()
         self.assertEqual(ret, ret_exp)
@@ -2239,7 +2327,10 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
     def test_load_wrong_tmp_file(self):
         ret_exp = {
             "out": False,
-            "message": "Could not load configuration due to : \"[Errno 2] No such file or directory: '/pat/to/tmp/file'\"",
+            "message": (
+                'Could not load configuration due to : "[Errno 2] No such file or'
+                " directory: '/pat/to/tmp/file'\""
+            ),
             "format": "text",
         }
         with patch.dict(
@@ -2252,19 +2343,30 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 "file.get_hash": MagicMock(return_value="a386e49c17"),
             },
         ):
-            with patch("os.path.getsize") as mock_getsize:
+            with patch(
+                "salt.utils.files.fopen", mock_open(), create=True
+            ) as m_open, patch("os.path.getsize") as mock_getsize, patch(
+                "salt.utils.files.mkstemp"
+            ) as mock_mkstmp:
+                mock_mkstmp.return_value = "/pat/to/tmp/file"
                 mock_getsize.return_value = 1000
                 ret = junos.load("salt://path/to/file")
                 self.assertEqual(ret, ret_exp)
 
     def test_load_invalid_path(self):
-        self.assertRaises(FileNotFoundError, junos.load, path="/path/to/file")
+        with patch("salt.utils.files.mkstemp") as mock_mkstmp:
+            mock_mkstmp.return_value = "/path/to/file"
+            self.assertRaises(FileNotFoundError, junos.load, path="/path/to/file")
 
     def test_load_no_extension(self):
         ret_exp = {"out": True, "message": "Successfully loaded the configuration."}
         with patch("os.path.getsize") as mock_getsize, patch(
             "jnpr.junos.utils.config.Config.load"
-        ) as mock_load, patch("salt.utils.files.mkstemp") as mock_mkstmp, patch(
+        ) as mock_load, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
+            "salt.utils.files.mkstemp"
+        ) as mock_mkstmp, patch(
             "os.path.isfile"
         ) as mock_isfile:
             mock_getsize.return_value = 1000
@@ -2278,8 +2380,13 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ret_exp = {"out": True, "message": "Successfully loaded the configuration."}
         with patch("os.path.getsize") as mock_getsize, patch(
             "jnpr.junos.utils.config.Config.load"
-        ) as mock_load, patch("os.path.isfile") as mock_isfile:
+        ) as mock_load, patch("os.path.isfile") as mock_isfile, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
+            "salt.utils.files.mkstemp"
+        ) as mock_mkstmp:
             mock_getsize.return_value = 1000
+            mock_mkstmp.return_value = "/path/to/file.xml"
             mock_isfile.return_value = True
             ret = junos.load("/path/to/file.xml")
             mock_load.assert_called_with(format="xml", path="/path/to/file.xml")
@@ -2293,8 +2400,9 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             "os.path.isfile"
         ) as mock_isfile, patch(
             "salt.utils.files.fopen"
-        ) as fopen:
-            mock_getsize.return_value = 1000
+        ) as fopen, patch(
+            "salt.utils.files.mkstemp"
+        ) as mock_mkstmp:
             mock_mkstmp.return_value = "/path/to/file"
             mock_isfile.return_value = True
             ret = junos.load("/path/to/file.xml", template_vars=dict(hostname="test"))
@@ -2308,10 +2416,12 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         with patch("os.path.getsize") as mock_getsize, patch(
             "jnpr.junos.utils.config.Config.load"
         ) as mock_load, patch("salt.utils.files.mkstemp") as mock_mkstmp, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
             "os.path.isfile"
         ) as mock_isfile:
             mock_getsize.return_value = 1000
-            mock_mkstmp.return_value = "/path/to/file"
+            mock_mkstmp.return_value = "/path/to/file.set"
             mock_isfile.return_value = True
             ret = junos.load("/path/to/file.set")
             mock_load.assert_called_with(format="set", path="/path/to/file.set")
@@ -2322,6 +2432,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         with patch("os.path.getsize") as mock_getsize, patch(
             "jnpr.junos.utils.config.Config.load"
         ) as mock_load, patch("salt.utils.files.mkstemp") as mock_mkstmp, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
             "os.path.isfile"
         ) as mock_isfile:
             mock_getsize.return_value = 1000
@@ -2338,6 +2450,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         with patch("os.path.getsize") as mock_getsize, patch(
             "jnpr.junos.utils.config.Config.load"
         ) as mock_load, patch("salt.utils.files.mkstemp") as mock_mkstmp, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
             "os.path.isfile"
         ) as mock_isfile:
             mock_getsize.return_value = 1000
@@ -2354,6 +2468,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         with patch("os.path.getsize") as mock_getsize, patch(
             "jnpr.junos.utils.config.Config.load"
         ) as mock_load, patch("salt.utils.files.mkstemp") as mock_mkstmp, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
             "os.path.isfile"
         ) as mock_isfile:
             mock_getsize.return_value = 1000
@@ -2369,7 +2485,11 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         ret_exp = {"out": True, "message": "Successfully loaded the configuration."}
         with patch("os.path.getsize") as mock_getsize, patch(
             "jnpr.junos.utils.config.Config.load"
-        ) as mock_load, patch("salt.utils.files.mkstemp") as mock_mkstmp, patch(
+        ) as mock_load, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
+            "salt.utils.files.mkstemp"
+        ) as mock_mkstmp, patch(
             "os.path.isfile"
         ) as mock_isfile:
             mock_getsize.return_value = 1000
@@ -2390,6 +2510,8 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         with patch("os.path.getsize") as mock_getsize, patch(
             "jnpr.junos.utils.config.Config.load"
         ) as mock_load, patch("salt.utils.files.mkstemp") as mock_mkstmp, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch(
             "os.path.isfile"
         ) as mock_isfile:
             mock_getsize.return_value = 1000
@@ -2397,6 +2519,17 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_isfile.return_value = True
             mock_load.side_effect = Exception("Test Error")
             ret = junos.load("/path/to/file")
+            self.assertEqual(ret, ret_exp)
+
+    def test_load_template(self):
+        ret_exp = {
+            "out": True,
+            "message": "Successfully loaded the configuration.",
+        }
+        with patch("os.path.getsize") as mock_getsize, patch(
+            "jnpr.junos.utils.config.Config.load"
+        ) as mock_load:
+            ret = junos.load("tests/unit/modules/templates/basic2.j2", test=True)
             self.assertEqual(ret, ret_exp)
 
     def test_commit_check_success(self):
@@ -2467,23 +2600,53 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ),
         }
         with patch(
-            "salt.utils.files.fopen", mock_open(IOError(message))
-        ) as mock_file, patch("glob.glob") as mock_fopen:
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as mock_file, patch("glob.glob") as mock_fopen, patch.object(
+            yaml, "load"
+        ) as mock_yamlload:
             mock_fopen.return_value = ["/path/to/file"]
+            mock_yamlload.side_effect = OSError(message)
             ret = junos.get_table(table, file, path)
             self.assertEqual(ret, ret_exp)
 
     def test_get_table_api_error(self):
         table = "sample"
         file = "inventory.yml"
+        table_yamlload = {
+            "ModuleTable": {
+                "item": (
+                    ".//chassis-sub-module|.//chassis-module|.//chassis-sub-sub-module"
+                ),
+                "key": "name",
+                "rpc": "get-chassis-inventory",
+                "view": "ModuleTableView",
+            },
+            "ModuleTableView": {
+                "fields": {
+                    "jname": "name",
+                    "pn": "part-number",
+                    "sn": "serial-number",
+                    "type": "description",
+                    "ver": "version",
+                },
+            },
+        }
         ret_exp = {
             "out": False,
             "hostname": "1.1.1.1",
             "tablename": "sample",
-            "message": "Uncaught exception during get API call - please report:"
-            " '{}'".format(str(table)),
+            "message": (
+                "Uncaught exception during get API call - please report: '{}'".format(
+                    str(table)
+                )
+            ),
         }
-        with patch("jnpr.junos.device.Device.execute") as mock_execute:
+        with patch("jnpr.junos.device.Device.execute") as mock_execute, patch(
+            "yaml.load"
+        ) as mock_yamlload, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open:
+            mock_yamlload.return_value = table_yamlload
             ret = junos.get_table(table, file)
             self.assertEqual(ret["out"], ret_exp["out"])
             self.assertEqual(ret["tablename"], ret_exp["tablename"])
@@ -2492,15 +2655,41 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
     def test_get_table_connect_closed_error(self):
         table = "ModuleTable"
         file = "inventory.yml"
+        table_yamlload = {
+            "ModuleTable": {
+                "item": (
+                    ".//chassis-sub-module|.//chassis-module|.//chassis-sub-sub-module"
+                ),
+                "key": "name",
+                "rpc": "get-chassis-inventory",
+                "view": "ModuleTableView",
+            },
+            "ModuleTableView": {
+                "fields": {
+                    "jname": "name",
+                    "pn": "part-number",
+                    "sn": "serial-number",
+                    "type": "description",
+                    "ver": "version",
+                },
+            },
+        }
         ret_exp = {
             "out": False,
             "hostname": "1.1.1.1",
             "tablename": "ModuleTable",
-            "message": "Got ConnectClosedError exception. Connection lost with Device(1.1.1.1)",
+            "message": (
+                "Got ConnectClosedError exception. Connection lost with Device(1.1.1.1)"
+            ),
         }
-        with patch("jnpr.junos.factory.optable.OpTable.get") as mock_load:
+        with patch("jnpr.junos.factory.optable.OpTable.get") as mock_load, patch(
+            "yaml.load"
+        ) as mock_yamlload, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open:
             dev = Device(host="1.1.1.1", user="rick")
             mock_load.side_effect = ConnectClosedError(dev)
+            mock_yamlload.return_value = table_yamlload
             ret = junos.get_table(table, file)
             self.assertEqual(ret["out"], ret_exp["out"])
             self.assertEqual(ret["tablename"], ret_exp["tablename"])
@@ -2511,21 +2700,63 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         file = "inventory.yml"
         pyez_tables_path = os.path.dirname(os.path.abspath(tables_dir.__file__))
         path = pyez_tables_path
+        table_yamlload = {
+            "ModuleTable": {
+                "item": (
+                    ".//chassis-sub-module|.//chassis-module|.//chassis-sub-sub-module"
+                ),
+                "key": "name",
+                "rpc": "get-chassis-inventory",
+                "view": "ModuleTableView",
+            },
+            "ModuleTableView": {
+                "fields": {
+                    "jname": "name",
+                    "pn": "part-number",
+                    "sn": "serial-number",
+                    "type": "description",
+                    "ver": "version",
+                },
+            },
+        }
         with patch("jnpr.junos.device.Device.execute") as mock_execute, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch("yaml.load") as mock_yamlload, patch(
             "salt.utils.json.dumps"
         ) as mock_dumps:
             mock_dumps.return_value = "json rpc reply"
-            m = mock_open()
+            mock_yamlload.return_value = table_yamlload
             ret = junos.get_table(table, file, path)
             self.assertEqual(ret["out"], True)
 
     def test_get_table_no_path_inventory(self):
         table = "ModuleTable"
         file = "inventory.yml"
+        table_yamlload = {
+            "ModuleTable": {
+                "item": (
+                    ".//chassis-sub-module|.//chassis-module|.//chassis-sub-sub-module"
+                ),
+                "key": "name",
+                "rpc": "get-chassis-inventory",
+                "view": "ModuleTableView",
+            },
+            "ModuleTableView": {
+                "fields": {
+                    "jname": "name",
+                    "pn": "part-number",
+                    "sn": "serial-number",
+                    "type": "description",
+                    "ver": "version",
+                },
+            },
+        }
         with patch("jnpr.junos.device.Device.execute") as mock_execute, patch(
+            "salt.utils.files.fopen", mock_open(), create=True
+        ) as m_open, patch("yaml.load") as mock_yamlload, patch(
             "salt.utils.json.dumps"
         ) as mock_dumps:
             mock_dumps.return_value = "json rpc reply"
-            m = mock_open()
+            mock_yamlload.return_value = table_yamlload
             ret = junos.get_table(table, file)
             self.assertEqual(ret["out"], True)

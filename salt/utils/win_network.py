@@ -23,7 +23,6 @@ depending on the version of Windows this is run on. Once support for Windows
 import platform
 
 from salt._compat import ipaddress
-from salt.ext.six.moves import range
 from salt.utils.versions import StrictVersion
 
 IS_WINDOWS = platform.system() == "Windows"

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 On-demand logging
 =================
@@ -11,7 +10,7 @@ It comes very handy when debugging complex Jinja templates, for example:
 .. code-block:: jinja
 
     {%- for var in range(10) %}
-      {%- do salt.log.info(var) -%}
+      {%- do salt["log.info"](var) -%}
     {%- endfor %}
 
 CLI Example:
@@ -20,9 +19,7 @@ CLI Example:
 
     salt '*' log.error "Please don't do that, this module is not for CLI use!"
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
 log = logging.getLogger(__name__)

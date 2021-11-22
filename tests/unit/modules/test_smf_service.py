@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.smf_service as smf
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -44,7 +38,7 @@ class SmfTestCase(TestCase, LoaderModuleMockMixin):
         otherwise returns ``False``.
         """
         with patch.dict(smf.__salt__, {"cmd.run": MagicMock(return_value="A")}):
-            with patch.object(smf, "get_all", return_value=("A")):
+            with patch.object(smf, "get_all", return_value="A"):
                 self.assertTrue(smf.available("A"))
 
     def test_missing(self):
@@ -54,7 +48,7 @@ class SmfTestCase(TestCase, LoaderModuleMockMixin):
         returns ``False``.
         """
         with patch.dict(smf.__salt__, {"cmd.run": MagicMock(return_value="A")}):
-            with patch.object(smf, "get_all", return_value=("A")):
+            with patch.object(smf, "get_all", return_value="A"):
                 self.assertFalse(smf.missing("A"))
 
     def test_get_all(self):

@@ -4,4 +4,5 @@ PyYAML
 MarkupSafe
 requests>=1.0.0
 distro>=1.0.1
-contextvars; python_version < '3.7'
+contextvars
+psutil>=5.0.0

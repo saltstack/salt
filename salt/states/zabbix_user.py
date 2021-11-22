@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of Zabbix users.
 
@@ -7,15 +6,11 @@ Management of Zabbix users.
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 from copy import deepcopy
 
-# Import Salt libs
 import salt.utils.json
 from salt.exceptions import SaltException
-from salt.ext import six
 
 
 def __virtual__():
@@ -77,9 +72,7 @@ def admin_password_present(name, password=None, **kwargs):
 
     # get unique list in preserved order and reverse it
     seen = set()
-    unique_passwords = [
-        six.text_type(x) for x in passwords if x not in seen and not seen.add(x)
-    ]
+    unique_passwords = [str(x) for x in passwords if x not in seen and not seen.add(x)]
     unique_passwords.reverse()
 
     if not unique_passwords:
@@ -99,7 +92,7 @@ def admin_password_present(name, password=None, **kwargs):
                 default_zabbix_user, **connection_args
             )
         except SaltException as err:
-            if "Login name or password is incorrect" in six.text_type(err):
+            if "Login name or password is incorrect" in str(err):
                 user_get = False
             else:
                 raise
@@ -118,16 +111,14 @@ def admin_password_present(name, password=None, **kwargs):
             )
             if user_update:
                 ret["result"] = True
-                ret["changes"]["passwd"] = (
-                    "changed to '" + six.text_type(desired_password) + "'"
-                )
+                ret["changes"]["passwd"] = "changed to '" + str(desired_password) + "'"
         else:
             ret["result"] = None
             ret["comment"] = (
                 "Password for user "
-                + six.text_type(default_zabbix_user)
+                + str(default_zabbix_user)
                 + " updated to '"
-                + six.text_type(desired_password)
+                + str(desired_password)
                 + "'"
             )
 
@@ -193,14 +184,14 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
     ret = {"name": alias, "changes": {}, "result": False, "comment": ""}
 
     # Comment and change messages
-    comment_user_created = "User {0} created.".format(alias)
-    comment_user_updated = "User {0} updated.".format(alias)
-    comment_user_notcreated = "Unable to create user: {0}. ".format(alias)
-    comment_user_exists = "User {0} already exists.".format(alias)
+    comment_user_created = "User {} created.".format(alias)
+    comment_user_updated = "User {} updated.".format(alias)
+    comment_user_notcreated = "Unable to create user: {}. ".format(alias)
+    comment_user_exists = "User {} already exists.".format(alias)
     changes_user_created = {
         alias: {
-            "old": "User {0} does not exist.".format(alias),
-            "new": "User {0} created.".format(alias),
+            "old": "User {} does not exist.".format(alias),
+            "new": "User {} created.".format(alias),
         }
     }
 
@@ -231,24 +222,20 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
         medias_list = list()
         for key, value in medias_dict.items():
             # Load media values or default values
-            active = (
-                "0"
-                if six.text_type(value.get("active", "true")).lower() == "true"
-                else "1"
-            )
-            mediatype_sls = six.text_type(value.get("mediatype", "mail")).lower()
-            mediatypeid = six.text_type(media_type.get(mediatype_sls, 1))
+            active = "0" if str(value.get("active", "true")).lower() == "true" else "1"
+            mediatype_sls = str(value.get("mediatype", "mail")).lower()
+            mediatypeid = str(media_type.get(mediatype_sls, 1))
             period = value.get("period", "1-7,00:00-24:00")
             sendto = value.get("sendto", key)
 
             severity_sls = value.get("severity", "HD")
-            severity_bin = six.text_type()
+            severity_bin = ""
             for sev in media_severities:
                 if sev in severity_sls:
                     severity_bin += "1"
                 else:
                     severity_bin += "0"
-            severity = six.text_type(int(severity_bin, 2))
+            severity = str(int(severity_bin, 2))
 
             medias_list.append(
                 {
@@ -330,9 +317,9 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
                 usrgrp_diff = list(set(usrgrps) - set(cur_usrgrps))
 
                 if usrgrp_diff:
-                    error.append("Unable to update grpup(s): {0}".format(usrgrp_diff))
+                    error.append("Unable to update grpup(s): {}".format(usrgrp_diff))
 
-                ret["changes"]["usrgrps"] = six.text_type(updated_groups)
+                ret["changes"]["usrgrps"] = str(updated_groups)
 
             if password_reset:
                 updated_password = __salt__["zabbix.user_update"](
@@ -365,7 +352,7 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
                     if "error" in updatemed:
                         error.append(updatemed["error"])
 
-                ret["changes"]["medias"] = six.text_type(medias_formated)
+                ret["changes"]["medias"] = str(medias_formated)
 
         else:
             ret["comment"] = comment_user_exists
@@ -378,15 +365,13 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
             ret["changes"] = changes_user_created
         else:
             ret["result"] = False
-            ret["comment"] = comment_user_notcreated + six.text_type(
-                user_create["error"]
-            )
+            ret["comment"] = comment_user_notcreated + str(user_create["error"])
 
     # error detected
     if error:
         ret["changes"] = {}
         ret["result"] = False
-        ret["comment"] = six.text_type(error)
+        ret["comment"] = str(error)
 
     return ret
 
@@ -419,13 +404,13 @@ def absent(name, **kwargs):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     # Comment and change messages
-    comment_user_deleted = "USer {0} deleted.".format(name)
-    comment_user_notdeleted = "Unable to delete user: {0}. ".format(name)
-    comment_user_notexists = "User {0} does not exist.".format(name)
+    comment_user_deleted = "USer {} deleted.".format(name)
+    comment_user_notdeleted = "Unable to delete user: {}. ".format(name)
+    comment_user_notexists = "User {} does not exist.".format(name)
     changes_user_deleted = {
         name: {
-            "old": "User {0} exists.".format(name),
-            "new": "User {0} deleted.".format(name),
+            "old": "User {} exists.".format(name),
+            "new": "User {} deleted.".format(name),
         }
     }
 
@@ -457,8 +442,6 @@ def absent(name, **kwargs):
             ret["changes"] = changes_user_deleted
         else:
             ret["result"] = False
-            ret["comment"] = comment_user_notdeleted + six.text_type(
-                user_delete["error"]
-            )
+            ret["comment"] = comment_user_notdeleted + str(user_delete["error"])
 
     return ret

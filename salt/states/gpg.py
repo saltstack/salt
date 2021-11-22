@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of the GPG keychains
 ===============================
@@ -6,12 +5,8 @@ Management of the GPG keychains
 .. versionadded:: 2016.3.0
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -77,7 +72,7 @@ def present(
     if not keys:
         keys = name
 
-    if isinstance(keys, six.string_types):
+    if isinstance(keys, str):
         keys = [keys]
 
     for key in keys:
@@ -87,48 +82,57 @@ def present(
                     if current_keys[key]["trust"] != TRUST_MAP[trust]:
                         # update trust level
                         result = __salt__["gpg.trust_key"](
-                            keyid=key, trust_level=trust, user=user,
+                            keyid=key,
+                            trust_level=trust,
+                            user=user,
                         )
                         if "result" in result and not result["result"]:
                             ret["result"] = result["result"]
                             ret["comment"].append(result["comment"])
                         else:
                             ret["comment"].append(
-                                "Set trust level for {0} to {1}".format(key, trust)
+                                "Set trust level for {} to {}".format(key, trust)
                             )
                     else:
                         ret["comment"].append(
-                            "GPG Public Key {0} already in correct trust state".format(
+                            "GPG Public Key {} already in correct trust state".format(
                                 key
                             )
                         )
                 else:
-                    ret["comment"].append("Invalid trust level {0}".format(trust))
+                    ret["comment"].append("Invalid trust level {}".format(trust))
 
-            ret["comment"].append("GPG Public Key {0} already in keychain ".format(key))
+            ret["comment"].append("GPG Public Key {} already in keychain ".format(key))
 
         else:
-            result = __salt__["gpg.receive_keys"](keyserver, key, user, gnupghome,)
+            result = __salt__["gpg.receive_keys"](
+                keyserver,
+                key,
+                user,
+                gnupghome,
+            )
             if "result" in result and not result["result"]:
                 ret["result"] = result["result"]
                 ret["comment"].append(result["comment"])
             else:
-                ret["comment"].append("Adding {0} to GPG keychain".format(name))
+                ret["comment"].append("Adding {} to GPG keychain".format(name))
 
             if trust:
                 if trust in _VALID_TRUST_VALUES:
                     result = __salt__["gpg.trust_key"](
-                        keyid=key, trust_level=trust, user=user,
+                        keyid=key,
+                        trust_level=trust,
+                        user=user,
                     )
                     if "result" in result and not result["result"]:
                         ret["result"] = result["result"]
                         ret["comment"].append(result["comment"])
                     else:
                         ret["comment"].append(
-                            "Set trust level for {0} to {1}".format(key, trust)
+                            "Set trust level for {} to {}".format(key, trust)
                         )
                 else:
-                    ret["comment"].append("Invalid trust level {0}".format(trust))
+                    ret["comment"].append("Invalid trust level {}".format(trust))
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -163,18 +167,22 @@ def absent(name, keys=None, user=None, gnupghome=None, **kwargs):
     if not keys:
         keys = name
 
-    if isinstance(keys, six.string_types):
+    if isinstance(keys, str):
         keys = [keys]
 
     for key in keys:
         if key in current_keys:
-            result = __salt__["gpg.delete_key"](key, user, gnupghome,)
+            result = __salt__["gpg.delete_key"](
+                key,
+                user,
+                gnupghome,
+            )
             if "result" in result and not result["result"]:
                 ret["result"] = result["result"]
                 ret["comment"].append(result["comment"])
             else:
-                ret["comment"].append("Deleting {0} from GPG keychain".format(name))
+                ret["comment"].append("Deleting {} from GPG keychain".format(name))
         else:
-            ret["comment"].append("{0} not found in GPG keychain".format(name))
+            ret["comment"].append("{} not found in GPG keychain".format(name))
     ret["comment"] = "\n".join(ret["comment"])
     return ret

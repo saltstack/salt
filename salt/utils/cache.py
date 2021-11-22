@@ -184,7 +184,6 @@ class CacheCli:
         Sets up the zmq-connection to the ConCache
         """
         self.opts = opts
-        self.serial = salt.payload.Serial(self.opts.get("serial", ""))
         self.cache_sock = os.path.join(self.opts["sock_dir"], "con_cache.ipc")
         self.cache_upd_sock = os.path.join(self.opts["sock_dir"], "con_upd.ipc")
 
@@ -204,15 +203,15 @@ class CacheCli:
         """
         published the given minions to the ConCache
         """
-        self.cupd_out.send(self.serial.dumps(minions))
+        self.cupd_out.send(salt.payload.dumps(minions))
 
     def get_cached(self):
         """
         queries the ConCache for a list of currently connected minions
         """
-        msg = self.serial.dumps("minions")
+        msg = salt.payload.dumps("minions")
         self.creq_out.send(msg)
-        min_list = self.serial.loads(self.creq_out.recv())
+        min_list = salt.payload.loads(self.creq_out.recv())
         return min_list
 
 
@@ -282,7 +281,6 @@ class ContextCache:
         """
         self.opts = opts
         self.cache_path = os.path.join(opts["cachedir"], "context", "{}.p".format(name))
-        self.serial = salt.payload.Serial(self.opts)
 
     def cache_context(self, context):
         """
@@ -291,14 +289,14 @@ class ContextCache:
         if not os.path.isdir(os.path.dirname(self.cache_path)):
             os.mkdir(os.path.dirname(self.cache_path))
         with salt.utils.files.fopen(self.cache_path, "w+b") as cache:
-            self.serial.dump(context, cache)
+            salt.payload.dump(context, cache)
 
     def get_cache_context(self):
         """
         Retrieve a context cache from disk
         """
         with salt.utils.files.fopen(self.cache_path, "rb") as cache:
-            return salt.utils.data.decode(self.serial.load(cache))
+            return salt.utils.data.decode(salt.payload.load(cache))
 
 
 def context_cache(func):
