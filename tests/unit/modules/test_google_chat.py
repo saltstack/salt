@@ -1,13 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Test the Google Chat Execution module.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.google_chat as gchat
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase

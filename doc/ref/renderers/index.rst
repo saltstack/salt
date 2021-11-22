@@ -25,6 +25,8 @@ data. The one exception to this would be the :mod:`pure python
 Text Renderers
 **************
 
+.. include:: ../../_incl/jinja_security.rst
+
 A text renderer returns text. These include templating engines such as
 :mod:`jinja <salt.renderers.jinja>`, :mod:`mako <salt.renderers.mako>`, and
 :mod:`genshi <salt.renderers.genshi>`, as well as the :mod:`gpg
@@ -80,7 +82,7 @@ to install a package:
         """
         return {
             "include": ["python"],
-            "python-foo": {"pkg.installed": [{"version": "1.5-1.el7"},]},
+            "python-foo": {"pkg.installed": [{"version": "1.5-1.el7"}]},
         }
 
 This would be equivalent to the following:

@@ -1,17 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 unittests for json outputter
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.output.json_out as json_out
 import salt.utils.stringutils
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase
@@ -64,11 +56,6 @@ class JsonTestCase(TestCase, LoaderModuleMockMixin):
             encoded = {"test": salt.utils.stringutils.to_str("Д"), "example": "one"}
             # json.dumps on Python 2 adds a space before a newline while in the
             # process of dumping a dictionary.
-            if six.PY2:
-                expected = salt.utils.stringutils.to_str(
-                    '{\n    "example": "one", \n    "test": "Д"\n}'
-                )
-            else:
-                expected = '{\n    "example": "one",\n    "test": "Д"\n}'
+            expected = '{\n    "example": "one",\n    "test": "Д"\n}'
             self.assertEqual(json_out.output(decoded), expected)
             self.assertEqual(json_out.output(encoded), expected)

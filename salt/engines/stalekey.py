@@ -5,7 +5,7 @@ connected for a certain period of time.
 
 Requires that the :conf_master:`minion_data_cache` option be enabled.
 
-.. versionadded: 2017.7.0
+.. versionadded:: 2017.7.0
 
 :configuration:
 

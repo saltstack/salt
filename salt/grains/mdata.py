@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 SmartOS Metadata grain provider
 
@@ -7,21 +6,14 @@ SmartOS Metadata grain provider
 :depends:       salt.utils, salt.module.cmdmod
 :platform:      SmartOS
 
-.. versionadded:: nitrogen
+.. versionadded:: 2017.7.0
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import os
 
-# Solve the Chicken and egg problem where grains need to run before any
-# of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
-
-# Import salt libs
 import salt.utils.dictupdate
 import salt.utils.json
 import salt.utils.path
@@ -70,7 +62,7 @@ def _user_mdata(mdata_list=None, mdata_get=None):
             log.warning("mdata-list returned an error, skipping mdata grains.")
             continue
         mdata_value = __salt__["cmd.run"](
-            "{0} {1}".format(mdata_get, mdata_grain), ignore_retcode=True
+            "{} {}".format(mdata_get, mdata_grain), ignore_retcode=True
         )
 
         if not mdata_grain.startswith("sdc:"):
@@ -116,13 +108,12 @@ def _sdc_mdata(mdata_list=None, mdata_get=None):
 
     for mdata_grain in sdc_text_keys + sdc_json_keys:
         mdata_value = __salt__["cmd.run"](
-            "{0} sdc:{1}".format(mdata_get, mdata_grain), ignore_retcode=True
+            "{} sdc:{}".format(mdata_get, mdata_grain), ignore_retcode=True
         )
         if mdata_value.startswith("ERROR:"):
             log.warning(
-                "unable to read sdc:{0} via mdata-get, mdata grain may be incomplete.".format(
-                    mdata_grain,
-                )
+                "unable to read sdc:%s via mdata-get, mdata grain may be incomplete.",
+                mdata_grain,
             )
             continue
 

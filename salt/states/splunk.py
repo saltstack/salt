@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Splunk User State Module
 
-.. versionadded:: 2016.3.0.
+.. versionadded:: 2016.3.0
 
 This state is used to ensure presence of users in splunk.
 
@@ -13,7 +12,6 @@ This state is used to ensure presence of users in splunk.
             - name: 'Example TestUser1'
             - email: example@domain.com
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -52,22 +50,22 @@ def present(email, profile="splunk", **kwargs):
 
     if not target:
         if __opts__["test"]:
-            ret["comment"] = "User {0} will be created".format(name)
+            ret["comment"] = "User {} will be created".format(name)
             return ret
 
         # create the user
         result = __salt__["splunk.create_user"](email, profile=profile, **kwargs)
         if result:
             ret["changes"].setdefault("old", None)
-            ret["changes"].setdefault("new", "User {0} exists".format(name))
+            ret["changes"].setdefault("new", "User {} exists".format(name))
             ret["result"] = True
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to create {0}".format(name)
+            ret["comment"] = "Failed to create {}".format(name)
 
         return ret
     else:
-        ret["comment"] = "User {0} set to be updated.".format(name)
+        ret["comment"] = "User {} set to be updated.".format(name)
         if __opts__["test"]:
             ret["result"] = None
             return ret
@@ -132,31 +130,31 @@ def absent(email, profile="splunk", **kwargs):
         "name": user_identity,
         "changes": {},
         "result": None,
-        "comment": "User {0} is absent.".format(user_identity),
+        "comment": "User {} is absent.".format(user_identity),
     }
 
     target = __salt__["splunk.get_user"](email, profile=profile)
 
     if not target:
-        ret["comment"] = "User {0} does not exist".format(user_identity)
+        ret["comment"] = "User {} does not exist".format(user_identity)
         ret["result"] = True
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "User {0} is all set to be deleted".format(user_identity)
+        ret["comment"] = "User {} is all set to be deleted".format(user_identity)
         ret["result"] = None
         return ret
 
     result = __salt__["splunk.delete_user"](email, profile=profile)
 
     if result:
-        ret["comment"] = "Deleted user {0}".format(user_identity)
-        ret["changes"].setdefault("old", "User {0} exists".format(user_identity))
-        ret["changes"].setdefault("new", "User {0} deleted".format(user_identity))
+        ret["comment"] = "Deleted user {}".format(user_identity)
+        ret["changes"].setdefault("old", "User {} exists".format(user_identity))
+        ret["changes"].setdefault("new", "User {} deleted".format(user_identity))
         ret["result"] = True
 
     else:
-        ret["comment"] = "Failed to delete {0}".format(user_identity)
+        ret["comment"] = "Failed to delete {}".format(user_identity)
         ret["result"] = False
 
     return ret

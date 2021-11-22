@@ -7,7 +7,9 @@ import pytest
 import salt.utils.idem as idem
 import salt.utils.path
 
-pytestmark = pytest.mark.skipif(not idem.HAS_POP[0], reason=idem.HAS_POP[1])
+pytestmark = [
+    pytest.mark.skipif(not idem.HAS_POP[0], reason=idem.HAS_POP[1]),
+]
 
 
 @pytest.mark.skipif(not salt.utils.path.which("idem"), reason="idem is not installed")

@@ -1,18 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Support for nginx
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import re
+import urllib.request
 
 import salt.utils.decorators as decorators
-
-# Import salt libs
 import salt.utils.path
-
-# Import 3rd-party libs
-from salt.ext.six.moves.urllib.request import urlopen as _urlopen
 
 
 # Cache the output of running which('nginx') so this module
@@ -45,9 +39,9 @@ def version():
 
         salt '*' nginx.version
     """
-    cmd = "{0} -v".format(__detect_os())
+    cmd = "{} -v".format(__detect_os())
     out = __salt__["cmd.run"](cmd).splitlines()
-    ret = out[0].split(": ")
+    ret = out[0].rsplit("/", maxsplit=1)
     return ret[-1]
 
 
@@ -62,7 +56,7 @@ def build_info():
         salt '*' nginx.build_info
     """
     ret = {"info": []}
-    out = __salt__["cmd.run"]("{0} -V".format(__detect_os()))
+    out = __salt__["cmd.run"]("{} -V".format(__detect_os()))
 
     for i in out.splitlines():
         if i.startswith("configure argument"):
@@ -86,7 +80,7 @@ def configtest():
     """
     ret = {}
 
-    cmd = "{0} -t".format(__detect_os())
+    cmd = "{} -t".format(__detect_os())
     out = __salt__["cmd.run_all"](cmd)
 
     if out["retcode"] != 0:
@@ -122,7 +116,7 @@ def signal(signal=None):
     if signal == "start":
         arguments = ""
     else:
-        arguments = " -s {0}".format(signal)
+        arguments = " -s {}".format(signal)
     cmd = __detect_os() + arguments
     out = __salt__["cmd.run_all"](cmd)
 
@@ -136,7 +130,7 @@ def signal(signal=None):
         ret = out["stdout"].strip()
     # No output for something like: nginxctl graceful
     else:
-        ret = 'Command: "{0}" completed successfully!'.format(cmd)
+        ret = 'Command: "{}" completed successfully!'.format(cmd)
     return ret
 
 
@@ -154,7 +148,7 @@ def status(url="http://127.0.0.1/status"):
 
         salt '*' nginx.status
     """
-    resp = _urlopen(url)
+    resp = urllib.request.urlopen(url)
     status_data = resp.read()
     resp.close()
 

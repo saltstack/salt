@@ -1,5 +1,5 @@
-salt.output.pony module
-=======================
+salt.output.pony
+================
 
 .. automodule:: salt.output.pony
     :members:

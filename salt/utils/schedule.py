@@ -42,7 +42,6 @@ import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.yaml
 from salt.exceptions import SaltInvocationError
-from salt.ext import six
 from salt.utils.odict import OrderedDict
 
 # pylint: disable=import-error
@@ -160,10 +159,21 @@ class Schedule:
                 self.returners = returners
             else:
                 self.returners = returners.loader.gen_functions()
-        self.time_offset = self.functions.get("timezone.get_offset", lambda: "0000")()
+        try:
+            self.time_offset = self.functions.get(
+                "timezone.get_offset", lambda: "0000"
+            )()
+        except Exception:  # pylint: disable=W0703
+            # get_offset can fail, if that happens, default to 0000
+            log.warning(
+                "Unable to obtain correct timezone offset, defaulting to 0000",
+                exc_info_on_loglevel=logging.DEBUG,
+            )
+            self.time_offset = "0000"
+
         self.schedule_returner = self.option("schedule_returner")
         # Keep track of the lowest loop interval needed in this variable
-        self.loop_interval = six.MAXSIZE
+        self.loop_interval = sys.maxsize
         if not self.standalone:
             clean_proc_dir(opts)
         if cleanup:
@@ -235,7 +245,7 @@ class Schedule:
             for job in current_jobs:
                 if "schedule" in job:
                     log.debug(
-                        "schedule.handle_func: Checking job against fun " "%s: %s",
+                        "schedule.handle_func: Checking job against fun %s: %s",
                         func,
                         job,
                     )
@@ -647,13 +657,26 @@ class Schedule:
                 tag="/salt/minion/minion_schedule_next_fire_time_complete",
             )
 
-    def job_status(self, name):
+    def job_status(self, name, fire_event=False):
         """
         Return the specified schedule item
         """
 
-        schedule = self._get_schedule()
-        return schedule.get(name, {})
+        if fire_event:
+            schedule = self._get_schedule()
+            data = schedule.get(name, {})
+
+            # Fire the complete event back along with updated list of schedule
+            with salt.utils.event.get_event(
+                "minion", opts=self.opts, listen=False
+            ) as evt:
+                evt.fire_event(
+                    {"complete": True, "data": data},
+                    tag="/salt/minion/minion_schedule_job_status_complete",
+                )
+        else:
+            schedule = self._get_schedule()
+            return schedule.get(name, {})
 
     def handle_func(self, multiprocessing_enabled, func, data, jid=None):
         """
@@ -700,11 +723,6 @@ class Schedule:
                     "specified as a dictionary.  Ignoring."
                 )
 
-        if multiprocessing_enabled:
-            # We just want to modify the process name if we're on a different process
-            salt.utils.process.appendproctitle(
-                "{} {}".format(self.__class__.__name__, ret["jid"])
-            )
         data_returner = data.get("returner", None)
 
         if not self.standalone:
@@ -763,7 +781,7 @@ class Schedule:
                     )
                     # write this to /var/cache/salt/minion/proc
                     with salt.utils.files.fopen(proc_fn, "w+b") as fp_:
-                        fp_.write(salt.payload.Serial(self.opts).dumps(ret))
+                        fp_.write(salt.payload.dumps(ret))
 
             # if the func support **kwargs, lets pack in the pub data we have
             # TODO: pack the *same* pub data as a minion?
@@ -1014,7 +1032,7 @@ class Schedule:
             Handle schedule item with when
             """
             if not _WHEN_SUPPORTED:
-                data["_error"] = "Missing python-dateutil. " "Ignoring job {}.".format(
+                data["_error"] = "Missing python-dateutil. Ignoring job {}.".format(
                     data["name"]
                 )
                 log.error(data["_error"])
@@ -1045,9 +1063,10 @@ class Schedule:
                     "whens" in self.opts["grains"] and i in self.opts["grains"]["whens"]
                 ):
                     if not isinstance(self.opts["grains"]["whens"], dict):
-                        data["_error"] = (
-                            'Grain "whens" must be a dict. '
-                            "Ignoring job {}.".format(data["name"])
+                        data[
+                            "_error"
+                        ] = 'Grain "whens" must be a dict. Ignoring job {}.'.format(
+                            data["name"]
                         )
                         log.error(data["_error"])
                         return
@@ -1059,9 +1078,10 @@ class Schedule:
                     try:
                         when_ = dateutil_parser.parse(when_)
                     except ValueError:
-                        data["_error"] = (
-                            "Invalid date string {}. "
-                            "Ignoring job {}.".format(i, data["name"])
+                        data[
+                            "_error"
+                        ] = "Invalid date string {}. Ignoring job {}.".format(
+                            i, data["name"]
                         )
                         log.error(data["_error"])
                         return
@@ -1119,7 +1139,7 @@ class Schedule:
             Handle schedule item with cron
             """
             if not _CRON_SUPPORTED:
-                data["_error"] = "Missing python-croniter. " "Ignoring job {}.".format(
+                data["_error"] = "Missing python-croniter. Ignoring job {}.".format(
                     data["name"]
                 )
                 log.error(data["_error"])
@@ -1136,7 +1156,7 @@ class Schedule:
                         data["cron"], now
                     ).get_next(datetime.datetime)
                 except (ValueError, KeyError):
-                    data["_error"] = "Invalid cron string. " "Ignoring job {}.".format(
+                    data["_error"] = "Invalid cron string. Ignoring job {}.".format(
                         data["name"]
                     )
                     log.error(data["_error"])
@@ -1217,7 +1237,7 @@ class Schedule:
             Handle schedule item with skip_explicit
             """
             if not _RANGE_SUPPORTED:
-                data["_error"] = "Missing python-dateutil. " "Ignoring job {}.".format(
+                data["_error"] = "Missing python-dateutil. Ignoring job {}.".format(
                     data["name"]
                 )
                 log.error(data["_error"])
@@ -1296,7 +1316,7 @@ class Schedule:
             Handle schedule item with skip_explicit
             """
             if not _RANGE_SUPPORTED:
-                data["_error"] = "Missing python-dateutil. " "Ignoring job {}".format(
+                data["_error"] = "Missing python-dateutil. Ignoring job {}".format(
                     data["name"]
                 )
                 log.error(data["_error"])
@@ -1317,9 +1337,10 @@ class Schedule:
                 try:
                     start = dateutil_parser.parse(start)
                 except ValueError:
-                    data["_error"] = (
-                        "Invalid date string for start. "
-                        "Ignoring job {}.".format(data["name"])
+                    data[
+                        "_error"
+                    ] = "Invalid date string for start. Ignoring job {}.".format(
+                        data["name"]
                     )
                     log.error(data["_error"])
                     return
@@ -1328,9 +1349,10 @@ class Schedule:
                 try:
                     end = dateutil_parser.parse(end)
                 except ValueError:
-                    data["_error"] = (
-                        "Invalid date string for end."
-                        " Ignoring job {}.".format(data["name"])
+                    data[
+                        "_error"
+                    ] = "Invalid date string for end. Ignoring job {}.".format(
+                        data["name"]
                     )
                     log.error(data["_error"])
                     return
@@ -1365,7 +1387,7 @@ class Schedule:
             Handle schedule item with after
             """
             if not _WHEN_SUPPORTED:
-                data["_error"] = "Missing python-dateutil. " "Ignoring job {}".format(
+                data["_error"] = "Missing python-dateutil. Ignoring job {}".format(
                     data["name"]
                 )
                 log.error(data["_error"])
@@ -1389,7 +1411,7 @@ class Schedule:
             Handle schedule item with until
             """
             if not _WHEN_SUPPORTED:
-                data["_error"] = "Missing python-dateutil. " "Ignoring job {}".format(
+                data["_error"] = "Missing python-dateutil. Ignoring job {}".format(
                     data["name"]
                 )
                 log.error(data["_error"])
@@ -1686,7 +1708,7 @@ class Schedule:
 
             miss_msg = ""
             if seconds < 0:
-                miss_msg = " (runtime missed " "by {} seconds)".format(abs(seconds))
+                miss_msg = " (runtime missed by {} seconds)".format(abs(seconds))
 
             try:
                 if run:
@@ -1783,24 +1805,25 @@ class Schedule:
             else:
                 thread_cls = threading.Thread
 
+            name = "Schedule(name={}, jid={})".format(data["name"], jid)
             if multiprocessing_enabled:
                 with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                    # Reset current signals before starting the process in
+                    # order not to inherit the current signal handlers
                     proc = thread_cls(
                         target=self.handle_func,
                         args=(multiprocessing_enabled, func, data, jid),
+                        name=name,
                     )
-                    # Reset current signals before starting the process in
-                    # order not to inherit the current signal handlers
                     proc.start()
-                    proc.name = "{}-Schedule-{}".format(proc.name, data["name"])
                     self._subprocess_list.add(proc)
             else:
                 proc = thread_cls(
                     target=self.handle_func,
                     args=(multiprocessing_enabled, func, data, jid),
+                    name=name,
                 )
                 proc.start()
-                proc.name = "{}-Schedule-{}".format(proc.name, data["name"])
                 self._subprocess_list.add(proc)
         finally:
             if multiprocessing_enabled and salt.utils.platform.is_windows():
@@ -1825,7 +1848,7 @@ def clean_proc_dir(opts):
         with salt.utils.files.fopen(fn_, "rb") as fp_:
             job = None
             try:
-                job = salt.payload.Serial(opts).load(fp_)
+                job = salt.payload.load(fp_)
             except Exception:  # pylint: disable=broad-except
                 # It's corrupted
                 # Windows cannot delete an open file
@@ -1837,7 +1860,7 @@ def clean_proc_dir(opts):
                 except OSError:
                     continue
             log.debug(
-                "schedule.clean_proc_dir: checking job %s for process " "existence", job
+                "schedule.clean_proc_dir: checking job %s for process existence", job
             )
             if job is not None and "pid" in job:
                 if salt.utils.process.os_is_running(job["pid"]):

@@ -1,6 +1,6 @@
 """
-    unit.loader
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    tests.unit.test_loader
+    ~~~~~~~~~~~~~~~~~~~~~~
 
     Test Salt's loader
 """
@@ -17,13 +17,14 @@ import sys
 import tempfile
 import textwrap
 
+import pytest
 import salt.config
 import salt.loader
-import salt.loader_context
+import salt.loader.context
+import salt.loader.lazy
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
-from tests.support.helpers import slowTest
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
@@ -91,7 +92,7 @@ class LazyLoaderTest(TestCase):
             os.fsync(fh.fileno())
 
         # Invoke the loader
-        self.loader = salt.loader.LazyLoader(
+        self.loader = salt.loader.lazy.LazyLoader(
             [self.module_dir],
             copy.deepcopy(self.opts),
             pack={
@@ -114,7 +115,7 @@ class LazyLoaderTest(TestCase):
         del cls.utils
         del cls.proxy
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_depends(self):
         """
         Test that the depends decorator works properly
@@ -123,7 +124,7 @@ class LazyLoaderTest(TestCase):
         # results in a KeyError, the decorator is broken.
         self.assertTrue(
             isinstance(
-                self.loader[self.module_name + ".loaded"], salt.loader.LoadedFunc,
+                self.loader[self.module_name + ".loaded"], salt.loader.lazy.LoadedFunc
             )
         )
         # Make sure depends correctly kept a function from loading
@@ -208,7 +209,7 @@ class LazyLoaderUtilsTest(TestCase):
             extra_module_dirs=[self.utils_dir],
         )
         self.assertTrue(
-            isinstance(loader[self.module_name + ".run"], salt.loader.LoadedFunc)
+            isinstance(loader[self.module_name + ".run"], salt.loader.lazy.LoadedFunc)
         )
         self.assertTrue(loader[self.module_name + ".run"]())
 
@@ -258,7 +259,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         del cls.utils
         del cls.proxy
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_basic(self):
         """
         Ensure that it only loads stuff when needed
@@ -283,11 +284,11 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         with self.assertRaises(KeyError):
             self.loader[1]  # pylint: disable=W0104
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_disable(self):
         self.assertNotIn("pillar.items", self.loader)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_len_load(self):
         """
         Since LazyLoader is a MutableMapping, if someone asks for len() we have
@@ -297,7 +298,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         len(self.loader)  # force a load all
         self.assertNotEqual(self.loader._dict, {})
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_iter_load(self):
         """
         Since LazyLoader is a MutableMapping, if someone asks to iterate we have
@@ -317,7 +318,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
         self.assertEqual(self.loader._dict, {})
         # get something, and make sure its a func
         func = self.loader["test.ping"]
-        with salt.loader_context.loader_context(self.loader):
+        with salt.loader.context.loader_context(self.loader):
             with patch.dict(func.__globals__["__context__"], {"foo": "bar"}):
                 self.assertEqual(
                     self.loader["test.echo"].__globals__["__context__"]["foo"], "bar"
@@ -327,7 +328,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
                 )
 
     def test_globals(self):
-        with salt.loader_context.loader_context(self.loader):
+        with salt.loader.context.loader_context(self.loader):
             func_globals = self.loader["test.ping"].__globals__
             self.assertEqual(
                 func_globals["__grains__"].value(), self.opts.get("grains", {})
@@ -354,12 +355,12 @@ class LazyLoaderVirtualEnabledTest(TestCase):
                 self.assertEqual(self.opts[key], val)
 
     def test_pack(self):
-        with salt.loader_context.loader_context(self.loader):
+        with salt.loader.context.loader_context(self.loader):
             self.loader.pack["__foo__"] = "bar"
             func_globals = self.loader["test.ping"].__globals__
             self.assertEqual(func_globals["__foo__"].value(), "bar")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_virtual(self):
         self.assertNotIn("test_virtual.ping", self.loader)
 
@@ -400,10 +401,10 @@ class LazyLoaderVirtualDisabledTest(TestCase):
         del cls.funcs
         del cls.proxy
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_virtual(self):
         self.assertTrue(
-            isinstance(self.loader["test_virtual.ping"], salt.loader.LoadedFunc,)
+            isinstance(self.loader["test_virtual.ping"], salt.loader.lazy.LoadedFunc)
         )
 
 
@@ -443,7 +444,7 @@ class LazyLoaderWhitelistTest(TestCase):
         del cls.utils
         del cls.proxy
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_whitelist(self):
         self.assertTrue(inspect.isfunction(self.loader["test.ping"].func))
         self.assertTrue(inspect.isfunction(self.loader["pillar.get"].func))
@@ -462,7 +463,7 @@ class LazyLoaderGrainsBlacklistTest(TestCase):
     def tearDown(self):
         del self.opts
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_whitelist(self):
         opts = copy.deepcopy(self.opts)
         opts["grains_blacklist"] = ["master", "os*", "ipv[46]"]
@@ -619,7 +620,7 @@ class LazyLoaderReloadingTest(TestCase):
     def module_path(self):
         return os.path.join(self.tmp_dir, "{}.py".format(self.module_name))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_alias(self):
         """
         Make sure that you can access alias-d modules
@@ -632,7 +633,7 @@ class LazyLoaderReloadingTest(TestCase):
         self.assertTrue(
             isinstance(
                 self.loader["{}.working_alias".format(self.module_name)],
-                salt.loader.LoadedFunc,
+                salt.loader.lazy.LoadedFunc,
             )
         )
         self.assertTrue(
@@ -641,16 +642,18 @@ class LazyLoaderReloadingTest(TestCase):
             )
         )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_clear(self):
-        self.assertTrue(isinstance(self.loader["test.ping"], salt.loader.LoadedFunc))
+        self.assertTrue(
+            isinstance(self.loader["test.ping"], salt.loader.lazy.LoadedFunc)
+        )
         self.assertTrue(inspect.isfunction(self.loader["test.ping"].func))
         self.update_module()  # write out out custom module
         self.loader.clear()  # clear the loader dict
 
         # force a load of our module
         self.assertTrue(
-            isinstance(self.loader[self.module_key], salt.loader.LoadedFunc)
+            isinstance(self.loader[self.module_key], salt.loader.lazy.LoadedFunc)
         )
         self.assertTrue(inspect.isfunction(self.loader[self.module_key].func))
 
@@ -659,18 +662,18 @@ class LazyLoaderReloadingTest(TestCase):
         for k, v in self.loader._dict.items():
             self.assertTrue(k.startswith(self.module_name))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_load(self):
         # ensure it doesn't exist
         self.assertNotIn(self.module_key, self.loader)
 
         self.update_module()
         self.assertTrue(
-            isinstance(self.loader[self.module_key], salt.loader.LoadedFunc)
+            isinstance(self.loader[self.module_key], salt.loader.lazy.LoadedFunc)
         )
         self.assertTrue(inspect.isfunction(self.loader[self.module_key].func))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test__load__(self):
         """
         If a module specifies __load__ we should only load/expose those modules
@@ -680,7 +683,7 @@ class LazyLoaderReloadingTest(TestCase):
         # ensure it doesn't exist
         self.assertNotIn(self.module_key + "2", self.loader)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test__load__and_depends(self):
         """
         If a module specifies __load__ we should only load/expose those modules
@@ -690,7 +693,7 @@ class LazyLoaderReloadingTest(TestCase):
         self.assertNotIn(self.module_key + "3", self.loader)
         self.assertNotIn(self.module_key + "4", self.loader)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_reload(self):
         # ensure it doesn't exist
         self.assertNotIn(self.module_key, self.loader)
@@ -800,7 +803,7 @@ class LazyLoaderVirtualAliasTest(TestCase):
     def module_path(self):
         return os.path.join(self.tmp_dir, "{}.py".format(self.module_name))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_virtual_alias(self):
         """
         Test the __virtual_alias__ feature
@@ -942,7 +945,7 @@ class LazyLoaderSubmodReloadingTest(TestCase):
     def lib_path(self):
         return os.path.join(self.module_dir, "lib.py")
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_basic(self):
         # ensure it doesn't exist
         self.assertNotIn(self.module_key, self.loader)
@@ -952,7 +955,7 @@ class LazyLoaderSubmodReloadingTest(TestCase):
         self.loader.clear()
         self.assertIn(self.module_key, self.loader)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_reload(self):
         # ensure it doesn't exist
         self.assertNotIn(self.module_key, self.loader)
@@ -994,7 +997,7 @@ class LazyLoaderSubmodReloadingTest(TestCase):
         self.loader.clear()
         self.assertNotIn(self.module_key, self.loader)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_reload_missing_lib(self):
         # ensure it doesn't exist
         self.assertNotIn(self.module_key, self.loader)
@@ -1088,7 +1091,7 @@ class LazyLoaderModulePackageTest(TestCase):
     def rm_module(self, relative_path):
         self.rm_pyfile(os.path.join(self.tmp_dir, relative_path))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_module(self):
         # ensure it doesn't exist
         self.assertNotIn("foo", self.loader)
@@ -1098,7 +1101,7 @@ class LazyLoaderModulePackageTest(TestCase):
         self.assertIn("foo.test", self.loader)
         self.assertEqual(self.loader["foo.test"](), 1)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_package(self):
         # ensure it doesn't exist
         self.assertNotIn("foo", self.loader)
@@ -1108,7 +1111,7 @@ class LazyLoaderModulePackageTest(TestCase):
         self.assertIn("foo.test", self.loader)
         self.assertEqual(self.loader["foo.test"](), 2)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_module_package_collision(self):
         # ensure it doesn't exist
         self.assertNotIn("foo", self.loader)
@@ -1235,7 +1238,7 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
         # https://docs.python.org/2/library/sys.html#sys.dont_write_bytecode
         remove_bytecode(path)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_basic(self):
         self.assertIn("{}.top".format(self.module_name), self.loader)
 
@@ -1248,7 +1251,7 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
                 self.lib_count[lib],
             )
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_reload(self):
         """
         Make sure that we can reload all libraries of arbitrary depth
@@ -1299,16 +1302,16 @@ class LoaderMultipleGlobalTest(ModuleCase):
 
         self.loader2.pack["__foo__"] = "bar2"
         func2 = self.loader2["test.ping"]
-        token = salt.loader_context.loader_ctxvar.set(self.loader1)
+        token = salt.loader.context.loader_ctxvar.set(self.loader1)
         try:
             assert func1.__globals__["__foo__"].value() == "bar1"
         finally:
-            salt.loader_context.loader_ctxvar.reset(token)
-        token = salt.loader_context.loader_ctxvar.set(self.loader2)
+            salt.loader.context.loader_ctxvar.reset(token)
+        token = salt.loader.context.loader_ctxvar.set(self.loader2)
         try:
             assert func2.__globals__["__foo__"].value() == "bar2"
         finally:
-            salt.loader_context.loader_ctxvar.reset(token)
+            salt.loader.context.loader_ctxvar.reset(token)
 
 
 class LoaderCleanupTest(ModuleCase):
@@ -1449,7 +1452,7 @@ class LoaderGlobalsTest(ModuleCase):
         """
         self._verify_globals(salt.loader.serializers(self.master_opts))
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_states(self):
         """
         Test that states have:
@@ -1489,7 +1492,7 @@ class RawModTest(TestCase):
     def tearDown(self):
         del self.opts
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_basic(self):
         testmod = salt.loader.raw_mod(self.opts, "test", None)
         for k, v in testmod.items():
@@ -1669,7 +1672,7 @@ class LoaderLoadCachedGrainsTest(TestCase):
         self.opts["grains_cache"] = True
         self.opts["grains"] = salt.loader.grains(self.opts)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_osrelease_info_has_correct_type(self):
         """
         Make sure osrelease_info is tuple after caching
@@ -1746,7 +1749,7 @@ class LazyLoaderRefreshFileMappingTest(TestCase):
         try:
             loader = self.__init_loader()
             # Don't assert if the current environment has no pyximport
-            if salt.loader.pyximport is not None:
+            if salt.loader.lazy.pyximport is not None:
                 assert ".pyx" in loader.suffix_map
                 assert ".pyx" in loader.suffix_order
         finally:

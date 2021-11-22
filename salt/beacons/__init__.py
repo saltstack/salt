@@ -5,6 +5,7 @@ This package contains the loader modules for the salt streams system
 import copy
 import logging
 import re
+import sys
 
 import salt.loader
 import salt.utils.event
@@ -70,9 +71,31 @@ class Beacon:
                 beacon_name = current_beacon_config["beacon_module"]
             else:
                 beacon_name = mod
+
+            # Run the validate function if it's available,
+            # otherwise there is a warning about it being missing
+            validate_str = "{}.validate".format(beacon_name)
+            if validate_str in self.beacons:
+                valid, vcomment = self.beacons[validate_str](b_config[mod])
+
+                if not valid:
+                    log.error(
+                        "Beacon %s configuration invalid, not running.\n%s",
+                        mod,
+                        vcomment,
+                    )
+                    continue
+            else:
+                log.warn(
+                    "No validate function found for %s, running basic beacon validation.",
+                    mod,
+                )
+                if not isinstance(b_config[mod], list):
+                    log.error("Configuration for beacon must be a list.")
+                    continue
+
             b_config[mod].append({"_beacon_name": mod})
             fun_str = "{}.beacon".format(beacon_name)
-            validate_str = "{}.validate".format(beacon_name)
             if fun_str in self.beacons:
                 runonce = self._determine_beacon_config(
                     current_beacon_config, "run_once"
@@ -111,30 +134,35 @@ class Beacon:
                 # Update __grains__ on the beacon
                 self.beacons[fun_str].__globals__["__grains__"] = grains
 
-                # Run the validate function if it's available,
-                # otherwise there is a warning about it being missing
-                if validate_str in self.beacons:
-                    valid, vcomment = self.beacons[validate_str](b_config[mod])
-
-                    if not valid:
-                        log.info(
-                            "Beacon %s configuration invalid, " "not running.\n%s",
-                            mod,
-                            vcomment,
-                        )
-                        continue
-
                 # Fire the beacon!
-                raw = self.beacons[fun_str](b_config[mod])
-                for data in raw:
+                error = None
+                try:
+                    raw = self.beacons[fun_str](b_config[mod])
+                except:  # pylint: disable=bare-except
+                    error = "{}".format(sys.exc_info()[1])
+                    log.error("Unable to start %s beacon, %s", mod, error)
+                    # send beacon error event
                     tag = "salt/beacon/{}/{}/".format(self.opts["id"], mod)
-                    if "tag" in data:
-                        tag += data.pop("tag")
-                    if "id" not in data:
-                        data["id"] = self.opts["id"]
-                    ret.append({"tag": tag, "data": data, "beacon_name": beacon_name})
-                if runonce:
-                    self.disable_beacon(mod)
+                    ret.append(
+                        {
+                            "tag": tag,
+                            "error": error,
+                            "data": {},
+                            "beacon_name": beacon_name,
+                        }
+                    )
+                if not error:
+                    for data in raw:
+                        tag = "salt/beacon/{}/{}/".format(self.opts["id"], mod)
+                        if "tag" in data:
+                            tag += data.pop("tag")
+                        if "id" not in data:
+                            data["id"] = self.opts["id"]
+                        ret.append(
+                            {"tag": tag, "data": data, "beacon_name": beacon_name}
+                        )
+                    if runonce:
+                        self.disable_beacon(mod)
             else:
                 log.warning("Unable to process beacon %s", mod)
         return ret
@@ -278,7 +306,9 @@ class Beacon:
         """
         Return available beacon functions
         """
-        validate_str = "{}.validate".format(name)
+        beacon_name = next(item.get("beacon_module", name) for item in beacon_data)
+
+        validate_str = "{}.validate".format(beacon_name)
         # Run the validate function if it's available,
         # otherwise there is a warning about it being missing
         if validate_str in self.beacons:
@@ -288,7 +318,7 @@ class Beacon:
         else:
             vcomment = (
                 "Beacon {} does not have a validate"
-                " function, skipping validation.".format(name)
+                " function, skipping validation.".format(beacon_name)
             )
             valid = True
 
@@ -317,7 +347,7 @@ class Beacon:
             complete = False
         else:
             if name in self.opts["beacons"]:
-                comment = "Updating settings for beacon " "item: {}".format(name)
+                comment = "Updating settings for beacon item: {}".format(name)
             else:
                 comment = "Added new beacon item: {}".format(name)
             complete = True
@@ -346,12 +376,11 @@ class Beacon:
 
         if name in self._get_beacons(include_opts=False):
             comment = (
-                "Cannot modify beacon item {}, "
-                "it is configured in pillar.".format(name)
+                "Cannot modify beacon item {}, it is configured in pillar.".format(name)
             )
             complete = False
         else:
-            comment = "Updating settings for beacon " "item: {}".format(name)
+            comment = "Updating settings for beacon item: {}".format(name)
             complete = True
             self.opts["beacons"].update(data)
 
@@ -374,8 +403,7 @@ class Beacon:
 
         if name in self._get_beacons(include_opts=False):
             comment = (
-                "Cannot delete beacon item {}, "
-                "it is configured in pillar.".format(name)
+                "Cannot delete beacon item {}, it is configured in pillar.".format(name)
             )
             complete = False
         else:
@@ -438,8 +466,7 @@ class Beacon:
 
         if name in self._get_beacons(include_opts=False):
             comment = (
-                "Cannot enable beacon item {}, "
-                "it is configured in pillar.".format(name)
+                "Cannot enable beacon item {}, it is configured in pillar.".format(name)
             )
             complete = False
         else:
@@ -467,8 +494,9 @@ class Beacon:
 
         if name in self._get_beacons(include_opts=False):
             comment = (
-                "Cannot disable beacon item {}, "
-                "it is configured in pillar.".format(name)
+                "Cannot disable beacon item {}, it is configured in pillar.".format(
+                    name
+                )
             )
             complete = False
         else:

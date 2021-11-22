@@ -744,9 +744,9 @@ discussed in more detail below. To understand these examples you'll need a basic
 understanding of Jinja. The following links have some basic tips and best
 practices for working with Jinja in Salt:
 
-`Understanding Jinja <https://docs.saltstack.com/en/latest/topics/jinja/index.html>`_
+`Understanding Jinja <https://docs.saltproject.io/en/latest/topics/jinja/index.html>`_
 
-`Jinja <https://docs.saltstack.com/en/getstarted/config/jinja.html>`_
+`Jinja <https://docs.saltproject.io/en/getstarted/config/jinja.html>`_
 
 Example: Basic
 ==============
@@ -1167,7 +1167,7 @@ before execution. The value can be formatted as ``<hash_algorithm>=<hash_sum>``,
 or it can be a URI to a file containing the hash sum.
 
 For a list of supported algorithms, see the `hashlib documentation
-<https://docs.python.org/2/library/hashlib.html>`_.
+<https://docs.python.org/3/library/hashlib.html>`_.
 
 Here's an example using ``source_hash``:
 

@@ -1,18 +1,12 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import os
 
-# Import 3rd-party libs
 import jinja2.exceptions
 import salt.modules.rh_ip as rh_ip
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -82,7 +76,8 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
 
         for osrelease in range(7, 8):
             with patch.dict(
-                rh_ip.__grains__, {"os": "RedHat", "osrelease": str(osrelease)},
+                rh_ip.__grains__,
+                {"os": "RedHat", "osrelease": str(osrelease)},
             ):
                 with patch.object(rh_ip, "_raise_error_iface", return_value=None):
                     with patch.object(rh_ip, "_parse_settings_bond", MagicMock()):
@@ -231,6 +226,20 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
             )
         self.assertIn("macaddr", results)
         self.assertEqual(results["macaddr"], opts["macaddr"])
+
+    def test__parse_settings_eth_ethtool_channels(self):
+        """
+        Make sure channels gets added when parsing opts
+        """
+        opts = {"channels": {"rx": 4, "tx": 4, "combined": 4, "other": 4}}
+        with patch.dict(rh_ip.__grains__, {"num_cpus": 4}), patch.dict(
+            rh_ip.__salt__, {"network.interfaces": MagicMock()}
+        ):
+            results = rh_ip._parse_settings_eth(
+                opts=opts, iface_type="eth", enabled=True, iface="eth0"
+            )
+        self.assertIn("ethtool", results)
+        self.assertEqual(results["ethtool"], "-L eth0 rx 4 tx 4 other 4 combined 4")
 
     def test_up(self):
         """
@@ -384,7 +393,10 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         kwargs["downdelay"] = 201
         try:
             rh_ip.build_interface(
-                "bond0", "bond", enabled=True, **kwargs,
+                "bond0",
+                "bond",
+                enabled=True,
+                **kwargs,
             )
         except AttributeError as exc:
             assert "multiple of miimon" in str(exc)
@@ -406,7 +418,10 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
             # Leaving out miimon should raise an error
             try:
                 rh_ip.build_interface(
-                    "bond0", "bond", enabled=True, **kwargs,
+                    "bond0",
+                    "bond",
+                    enabled=True,
+                    **kwargs,
                 )
             except AttributeError as exc:
                 assert "miimon" in str(exc)
@@ -416,7 +431,12 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
         self._validate_miimon_downdelay(kwargs)
 
     def _get_bonding_opts(self, kwargs):
-        results = rh_ip.build_interface("bond0", "bond", enabled=True, **kwargs,)
+        results = rh_ip.build_interface(
+            "bond0",
+            "bond",
+            enabled=True,
+            **kwargs,
+        )
         self._check_common_opts_bond(results)
 
         for line in results:
@@ -473,7 +493,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                     expected = [
                         "downdelay=200",
                         "miimon=100",
-                        "mode={0}".format(mode_num),
+                        "mode={}".format(mode_num),
                         "use_carrier=0",
                     ]
                     assert bonding_opts == expected, bonding_opts
@@ -487,7 +507,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                         "arp_ip_target=1.2.3.4,5.6.7.8",
                         "downdelay=200",
                         "miimon=100",
-                        "mode={0}".format(mode_num),
+                        "mode={}".format(mode_num),
                         "use_carrier=0",
                     ]
                     assert bonding_opts == expected, bonding_opts
@@ -499,7 +519,7 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                     expected = [
                         "arp_interval=300",
                         "arp_ip_target=1.2.3.4,5.6.7.8",
-                        "mode={0}".format(mode_num),
+                        "mode={}".format(mode_num),
                     ]
                     assert bonding_opts == expected, bonding_opts
 
@@ -664,9 +684,9 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                                     raise
                             else:
                                 expected = [
-                                    "ad_select={0}".format(ad_select),
+                                    "ad_select={}".format(ad_select),
                                     "downdelay=200",
-                                    "lacp_rate={0}".format(
+                                    "lacp_rate={}".format(
                                         "1"
                                         if lacp_rate == "fast"
                                         else "0"
@@ -773,7 +793,11 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 results = sorted(
                     rh_ip.build_interface(
-                        "eth1", "slave", enabled=True, test=True, master="bond0",
+                        "eth1",
+                        "slave",
+                        enabled=True,
+                        test=True,
+                        master="bond0",
                     )
                 )
                 expected = [

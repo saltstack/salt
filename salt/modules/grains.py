@@ -639,6 +639,13 @@ def get_or_set_hash(
         issues when using the output of this function in an SLS file containing YAML+Jinja,
         surround the call with single quotes.
     """
+    salt.utils.versions.warn_until(
+        "Phosphorus",
+        "The 'grains.get_or_set_hash' function has been deprecated and it's "
+        "functionality will be completely removed. Reference pillar and SDB "
+        "documentation for secure ways to manage sensitive information. Grains "
+        "are an insecure way to store secrets.",
+    )
     ret = get(name, None)
 
     if ret is None:

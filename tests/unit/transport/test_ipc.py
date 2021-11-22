@@ -18,6 +18,7 @@ import salt.transport.client
 import salt.transport.ipc
 import salt.transport.server
 import salt.utils.platform
+from salt.ext.tornado.iostream import StreamClosedError
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -45,14 +46,16 @@ class IPCMessagePubSubCase(salt.ext.tornado.testing.AsyncTestCase):
 
     def _get_pub_channel(self):
         pub_channel = salt.transport.ipc.IPCMessagePublisher(
-            self.opts, self.socket_path,
+            self.opts,
+            self.socket_path,
         )
         pub_channel.start()
         return pub_channel
 
     def _get_sub_channel(self):
         sub_channel = salt.transport.ipc.IPCMessageSubscriber(
-            socket_path=self.socket_path, io_loop=self.io_loop,
+            socket_path=self.socket_path,
+            io_loop=self.io_loop,
         )
         sub_channel.connect(callback=self.stop)
         self.wait()
@@ -122,3 +125,30 @@ class IPCMessagePubSubCase(salt.ext.tornado.testing.AsyncTestCase):
         ret2 = client2.read_sync()
         self.assertEqual(ret1, "TEST")
         self.assertEqual(ret2, "TEST")
+
+    @salt.ext.tornado.testing.gen_test
+    def test_async_reading_streamclosederror(self):
+        client1 = self.sub_channel
+        call_cnt = []
+
+        # Create a watchdog to be safe from hanging in sync loops (what old code did)
+        evt = threading.Event()
+
+        def close_server():
+            if evt.wait(0.001):
+                return
+            client1.close()
+            self.stop()
+
+        watchdog = threading.Thread(target=close_server)
+        watchdog.start()
+
+        # Runs in ioloop thread so we're safe from race conditions here
+        def handler(raw):
+            pass
+
+        try:
+            ret1 = yield client1.read_async(handler)
+            self.wait()
+        except StreamClosedError as ex:
+            assert False, "StreamClosedError was raised inside the Future"

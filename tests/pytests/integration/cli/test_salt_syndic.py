@@ -1,11 +1,3 @@
-"""
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-
-    tests.integration.shell.syndic
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-"""
-
 import logging
 import os
 import time
@@ -47,8 +39,8 @@ def test_exit_status_unknown_user(salt_master, syndic_id):
     Ensure correct exit status when the syndic is configured to run as an unknown user.
     """
     with pytest.raises(FactoryNotStarted) as exc:
-        factory = salt_master.get_salt_syndic_daemon(
-            syndic_id, config_overrides={"user": "unknown-user"}
+        factory = salt_master.salt_syndic_daemon(
+            syndic_id, overrides={"user": "unknown-user"}
         )
         factory.before_start_callbacks.clear()
         factory.start(start_timeout=10, max_start_attempts=1)
@@ -63,7 +55,7 @@ def test_exit_status_unknown_argument(salt_master, syndic_id):
     Ensure correct exit status when an unknown argument is passed to salt-syndic.
     """
     with pytest.raises(FactoryNotStarted) as exc:
-        factory = salt_master.get_salt_syndic_daemon(syndic_id)
+        factory = salt_master.salt_syndic_daemon(syndic_id)
         factory.before_start_callbacks.clear()
         factory.start("--unknown-argument", start_timeout=10, max_start_attempts=1)
 
@@ -75,10 +67,10 @@ def test_exit_status_unknown_argument(salt_master, syndic_id):
 @PRE_PYTEST_SKIP
 @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
 def test_exit_status_correct_usage(salt_master, syndic_id):
-    factory = salt_master.get_salt_syndic_daemon(
+    factory = salt_master.salt_syndic_daemon(
         syndic_id,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
-        config_defaults={"transport": salt_master.config["transport"]},
+        defaults={"transport": salt_master.config["transport"]},
     )
     factory.start()
     assert factory.is_running()

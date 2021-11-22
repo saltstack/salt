@@ -65,7 +65,7 @@
     </host>
   {%- endfor %}
   {%- for srv in dns.srvs %}
-    <srv name='{{ srv.name }}' protocol='{{ srv.protocol }}'
+    <srv service='{{ srv.name }}' protocol='{{ srv.protocol }}'
        {{ opt_attribute(srv, "port") }}
        {{ opt_attribute(srv, "target") }}
        {{ opt_attribute(srv, "priority") }}

@@ -7,7 +7,7 @@ Support for Opkg
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 
-.. versionadded: 2016.3.0
+.. versionadded:: 2016.3.0
 
 .. note::
 
@@ -752,7 +752,6 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -910,14 +909,14 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
             else:
                 result = _set_state(target, "ok")
                 ret[target].update(changes=result[target], result=True)
-                ret[target][
-                    "comment"
-                ] = "Package {} is no longer being " "held.".format(target)
+                ret[target]["comment"] = "Package {} is no longer being held.".format(
+                    target
+                )
         else:
             ret[target].update(result=True)
-            ret[target][
-                "comment"
-            ] = "Package {} is already set not to be " "held.".format(target)
+            ret[target]["comment"] = "Package {} is already set not to be held.".format(
+                target
+            )
     return ret
 
 
@@ -972,6 +971,18 @@ def _set_state(pkg, state):
     return ret
 
 
+def _list_pkgs_from_context(versions_as_list):
+    """
+    Use pkg list from __context__
+    """
+    if versions_as_list:
+        return __context__["pkg.list_pkgs"]
+    else:
+        ret = copy.deepcopy(__context__["pkg.list_pkgs"])
+        __salt__["pkg_resource.stringify"](ret)
+        return ret
+
+
 def list_pkgs(versions_as_list=False, **kwargs):
     """
     List the packages currently installed in a dict::
@@ -993,12 +1004,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
         return {}
 
     if "pkg.list_pkgs" in __context__:
-        if versions_as_list:
-            return __context__["pkg.list_pkgs"]
-        else:
-            ret = copy.deepcopy(__context__["pkg.list_pkgs"])
-            __salt__["pkg_resource.stringify"](ret)
-            return ret
+        return _list_pkgs_from_context(versions_as_list)
 
     cmd = ["opkg", "list-installed"]
     ret = {}
@@ -1130,7 +1136,7 @@ def info_installed(*names, **kwargs):
             install_date_time_t, md5sum, packager, provides, recommends,
             replaces, size, source, suggests, url, version
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1231,8 +1237,9 @@ def version_cmp(
         cmd_compare = ["opkg-compare-versions"]
     else:
         log.warning(
-            "Unable to find a compare-versions utility installed. Either upgrade opkg to "
-            "version > 0.3.4 (preferred) or install the older opkg-compare-versions script."
+            "Unable to find a compare-versions utility installed. Either upgrade opkg"
+            " to version > 0.3.4 (preferred) or install the older opkg-compare-versions"
+            " script."
         )
         return None
 
@@ -1618,6 +1625,8 @@ def owner(*paths, **kwargs):  # pylint: disable=unused-argument
     then an empty string will be returned for that path.
 
     CLI Example:
+
+    .. code-block:: bash
 
         salt '*' pkg.owner /usr/bin/apachectl
         salt '*' pkg.owner /usr/bin/apachectl /usr/bin/basename

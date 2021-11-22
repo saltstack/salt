@@ -1,10 +1,11 @@
 include AUTHORS
 include CODE_OF_CONDUCT.md
-include CONTRIBUTING.md
+include CONTRIBUTING.rst
 include LICENSE
 include NOTICE
 include README.rst
 include SUPPORT.rst
+include run.py
 include tests/*.py
 recursive-include tests *
 recursive-include requirements *.txt

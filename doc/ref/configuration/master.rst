@@ -847,6 +847,39 @@ that does not send executions to minions.
 
     presence_events: False
 
+``detect_remote_minions``
+-------------------------
+
+Default: False
+
+When checking the minions connected to a master, also include the master's
+connections to minions on the port specfied in the setting `remote_minions_port`.
+This is particularly useful when checking if the master is connected to any Heist-Salt
+minions. If this setting is set to True, the master will check all connections on port 22
+by default unless a user also configures a different port with the setting
+`remote_minions_port`.
+
+Changing this setting will check the remote minions the master is connected to when using
+presence events, the manage runner, and any other parts of the code that call the
+`connected_ids` method to check the status of connected minions.
+
+.. code-block:: yaml
+
+    detect_remote_minions: True
+
+``remote_minions_port``
+-----------------------
+
+Default: 22
+
+The port to use when checking for remote minions when `detect_remote_minions` is set
+to True.
+
+.. code-block:: yaml
+
+    remote_minions_port: 2222
+
+
 .. conf_master:: ping_on_rotate
 
 ``ping_on_rotate``
@@ -1853,7 +1886,7 @@ Default: ``False``
 
 Sign the master auth-replies with a cryptographic signature of the master's
 public key. Please see the tutorial how to use these settings in the
-`Multimaster-PKI with Failover Tutorial <http://docs.saltstack.com/en/latest/topics/tutorials/multimaster_pki.html>`_
+`Multimaster-PKI with Failover Tutorial <https://docs.saltproject.io/en/latest/topics/tutorials/multimaster_pki.html>`_
 
 .. code-block:: yaml
 
@@ -1941,7 +1974,7 @@ Default: ``None``
 TLS/SSL connection options. This could be set to a dictionary containing
 arguments corresponding to python ``ssl.wrap_socket`` method. For details see
 `Tornado <http://www.tornadoweb.org/en/stable/tcpserver.html#tornado.tcpserver.TCPServer>`_
-and `Python <https://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`_
+and `Python <https://docs.python.org/3/library/ssl.html#ssl.wrap_socket>`_
 documentation.
 
 Note: to set enum arguments values like ``cert_reqs`` and ``ssl_version`` use
@@ -2517,6 +2550,34 @@ states is cluttering the logs. Set it to True to ignore them.
 .. code-block:: yaml
 
     state_output_diff: False
+
+.. conf_master:: state_output_profile
+
+``state_output_profile``
+------------------------
+
+Default: ``True``
+
+The ``state_output_profile`` setting changes whether profile information
+will be shown for each state run.
+
+.. code-block:: yaml
+
+    state_output_profile: True
+
+.. conf_master:: state_output_pct
+
+``state_output_pct``
+------------------------
+
+Default: ``False``
+
+The ``state_output_pct`` setting changes whether success and failure information
+as a percent of total actions will be shown for each state run.
+
+.. code-block:: yaml
+
+    state_output_pct: False
 
 .. conf_master:: state_aggregate
 
@@ -4661,7 +4722,6 @@ strategy between different sources. It accepts 5 values:
 
   .. code-block:: yaml
 
-      #!yamlex
       foo: 42
       bar: !aggregate {
         element1: True
@@ -4670,7 +4730,6 @@ strategy between different sources. It accepts 5 values:
 
   .. code-block:: yaml
 
-      #!yamlex
       bar: !aggregate {
         element2: True
       }
@@ -4687,6 +4746,11 @@ strategy between different sources. It accepts 5 values:
       baz:
         - quux
         - quux2
+
+  .. note::
+      This requires that the :ref:`render pipeline <renderers-composing>`
+      defined in the :conf_master:`renderer` master configuration ends in
+      ``yamlex``.
 
 * ``overwrite``:
 

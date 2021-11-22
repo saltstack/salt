@@ -19,7 +19,9 @@ log = logging.getLogger(__name__)
 
 @pytest.fixture(scope="module")
 def salt_proxy(salt_proxy):
-    cachefile = os.path.join(salt_proxy.config["cachedir"], "dummy-proxy.cache")
+    cachefile = os.path.join(
+        salt_proxy.config["cachedir"], "dummy-proxy-{}.cache".format(salt_proxy.id)
+    )
     if os.path.exists(cachefile):
         os.unlink(cachefile)
     return salt_proxy
@@ -27,7 +29,7 @@ def salt_proxy(salt_proxy):
 
 @pytest.fixture
 def salt_call_cli(salt_proxy):
-    return salt_proxy.get_salt_call_cli(default_timeout=120)
+    return salt_proxy.salt_call_cli(timeout=120)
 
 
 @pytest.mark.slow_test

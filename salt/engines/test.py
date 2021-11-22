@@ -2,7 +2,6 @@
 A simple test engine, not intended for real use but as an example
 """
 
-
 import logging
 
 import salt.utils.event

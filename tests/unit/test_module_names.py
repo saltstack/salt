@@ -25,7 +25,6 @@ EXCLUDED_DIRS = [
     os.path.join("tests", "unit", "modules", "zypp"),
     os.path.join("tests", "unit", "setup"),
     os.path.join("tests", "unit", "templates", "files"),
-    os.path.join("tests", "unit", "utils", "cache_mods"),
 ]
 INCLUDED_DIRS = [
     os.path.join("tests", "kitchen", "tests", "*", "tests", "*"),
@@ -92,9 +91,11 @@ class BadTestModuleNamesTestCase(TestCase):
                 path, directory, filename.split("_test")[0]
             )
 
-        error_msg += "\nIf you believe one of the entries above should be ignored, please add it to either\n"
-        error_msg += "'EXCLUDED_DIRS' or 'EXCLUDED_FILES' in 'tests/unit/test_module_names.py'.\n"
-        error_msg += "If it is a tests module, then please rename as suggested."
+        error_msg += (
+            "\nIf you believe one of the entries above should be ignored, please add it to either\n"
+            "'EXCLUDED_DIRS' or 'EXCLUDED_FILES' in 'tests/unit/test_module_names.py'.\n"
+            "If it is a tests module, then please rename as suggested."
+        )
         self.assertEqual([], bad_names, error_msg)
 
     def test_module_name_source_match(self):
@@ -201,6 +202,7 @@ class BadTestModuleNamesTestCase(TestCase):
             "unit.utils.scheduler.test_run_job",
             "unit.utils.scheduler.test_schedule",
             "unit.utils.scheduler.test_skip",
+            "unit.auth.test_auth",
         )
         errors = []
 

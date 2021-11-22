@@ -7,9 +7,16 @@ import os
 import re
 import subprocess
 
-import salt.loader_context
+import salt.loader.context
+import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import SaltInvocationError
+
+try:
+    import dbus
+except ImportError:
+    dbus = None
+
 
 log = logging.getLogger(__name__)
 
@@ -22,7 +29,7 @@ def booted(context=None):
     keep the logic below from needing to be run again during the same salt run.
     """
     contextkey = "salt.utils.systemd.booted"
-    if isinstance(context, (dict, salt.loader_context.NamedLoaderContext)):
+    if isinstance(context, (dict, salt.loader.context.NamedLoaderContext)):
         # Can't put this if block on the same line as the above if block,
         # because it willl break the elif below.
         if contextkey in context:
@@ -45,13 +52,37 @@ def booted(context=None):
     return ret
 
 
+def offline(context=None):
+    """Return True if systemd is in offline mode
+
+    .. versionadded:: 3004
+    """
+    contextkey = "salt.utils.systemd.offline"
+    if isinstance(context, (dict, salt.loader.context.NamedLoaderContext)):
+        if contextkey in context:
+            return context[contextkey]
+    elif context is not None:
+        raise SaltInvocationError("context must be a dictionary if passed")
+
+    # Note that there is a difference from SYSTEMD_OFFLINE=1.  Here we
+    # assume that there is no PID 1 to talk with.
+    ret = not booted(context) and salt.utils.path.which("systemctl")
+
+    try:
+        context[contextkey] = ret
+    except TypeError:
+        pass
+
+    return ret
+
+
 def version(context=None):
     """
     Attempts to run systemctl --version. Returns None if unable to determine
     version.
     """
     contextkey = "salt.utils.systemd.version"
-    if isinstance(context, (dict, salt.loader_context.NamedLoaderContext)):
+    if isinstance(context, (dict, salt.loader.context.NamedLoaderContext)):
         # Can't put this if block on the same line as the above if block,
         # because it will break the elif below.
         if contextkey in context:
@@ -93,3 +124,66 @@ def has_scope(context=None):
     if _sd_version is None:
         return False
     return _sd_version >= 205
+
+
+def pid_to_service(pid):
+    """
+    Check if a PID belongs to a systemd service and return its name.
+    Return None if the PID does not belong to a service.
+
+    Uses DBUS if available.
+    """
+    if dbus:
+        return _pid_to_service_dbus(pid)
+    else:
+        return _pid_to_service_systemctl(pid)
+
+
+def _pid_to_service_systemctl(pid):
+    systemd_cmd = ["systemctl", "--output", "json", "status", str(pid)]
+    try:
+        systemd_output = subprocess.run(
+            systemd_cmd, check=True, text=True, capture_output=True
+        )
+        status_json = salt.utils.json.find_json(systemd_output.stdout)
+    except (ValueError, subprocess.CalledProcessError):
+        return None
+
+    name = status_json.get("_SYSTEMD_UNIT")
+    if name and name.endswith(".service"):
+        return _strip_suffix(name)
+    else:
+        return None
+
+
+def _pid_to_service_dbus(pid):
+    """
+    Use DBUS to check if a PID belongs to a running systemd service and return the service name if it does.
+    """
+    bus = dbus.SystemBus()
+    systemd_object = bus.get_object(
+        "org.freedesktop.systemd1", "/org/freedesktop/systemd1"
+    )
+    systemd = dbus.Interface(systemd_object, "org.freedesktop.systemd1.Manager")
+    try:
+        service_path = systemd.GetUnitByPID(pid)
+        service_object = bus.get_object("org.freedesktop.systemd1", service_path)
+        service_props = dbus.Interface(
+            service_object, "org.freedesktop.DBus.Properties"
+        )
+        service_name = service_props.Get("org.freedesktop.systemd1.Unit", "Id")
+        name = str(service_name)
+
+        if name and name.endswith(".service"):
+            return _strip_suffix(name)
+        else:
+            return None
+    except dbus.DBusException:
+        return None
+
+
+def _strip_suffix(service_name):
+    """
+    Strip ".service" suffix from a given service name.
+    """
+    return service_name[:-8]
