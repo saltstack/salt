@@ -10,13 +10,11 @@ Welcome to the delta proxy minion installation guide. This installation
 guide explains the process for installing and using delta proxy minion
 which is available beginning in version 3004.
 
-This guide is intended for system administrators with the general knowledge and
-experience required in the field. This guide is also intended for users that
-have ideally already tested and used standard Salt proxy minions in their
-environment before deciding to move to a delta proxy minion environment. See
-`Salt proxy minions
-<https://docs.saltstack.com/en/latest/topics/proxyminion/index.html>`_ for more
-information.
+This guide is intended for system and network administrators with the general
+knowledge and experience required in the field. This guide is also intended for
+users that have ideally already tested and used standard Salt proxy minions in
+their environment before deciding to move to a delta proxy minion environment.
+See `Salt proxy minions <https://docs.saltstack.com/en/latest/topics/proxyminion/index.html>`_ for more information.
 
 .. Note::
     If you have not used standard Salt proxy minions before, consider testing
