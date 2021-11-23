@@ -3450,7 +3450,7 @@ class LazyAvailStates:
     def __getitem__(self, saltenv):
         if saltenv != "base":
             self._fill()
-        if self._avail[saltenv] is None:
+        if saltenv not in self._avail or self._avail[saltenv] is None:
             self._avail[saltenv] = self._hs.client.list_states(saltenv)
         return self._avail[saltenv]
 
@@ -4083,7 +4083,7 @@ class BaseHighState:
                     else:
                         env_key = saltenv
 
-                    if env_key not in self.avail:
+                    if env_key not in self.avail and "__env__" not in self.avail:
                         msg = (
                             "Nonexistent saltenv '{}' found in include "
                             "of '{}' within SLS '{}:{}'".format(
