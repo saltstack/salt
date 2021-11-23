@@ -252,7 +252,7 @@ def _send(saltdata, metric_base, opts):
     with _carbon(host, port) as sock:
         total_sent_bytes = 0
         while total_sent_bytes < len(data):
-            sent_bytes = sock.send(data[total_sent_bytes:])
+            sent_bytes = sock.send(data[total_sent_bytes:].encode())
             if sent_bytes == 0:
                 log.error("Bytes sent 0, Connection reset?")
                 return
