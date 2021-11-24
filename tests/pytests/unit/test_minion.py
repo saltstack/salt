@@ -56,11 +56,11 @@ def test_minion_load_grains_default():
     "req_channel",
     [
         (
-            "salt.transport.client.AsyncReqChannel.factory",
+            "salt.channel.client.AsyncReqChannel.factory",
             lambda load, timeout, tries: salt.ext.tornado.gen.maybe_future(tries),
         ),
         (
-            "salt.transport.client.ReqChannel.factory",
+            "salt.channel.client.ReqChannel.factory",
             lambda load, timeout, tries: tries,
         ),
     ],
@@ -72,12 +72,10 @@ def test_send_req_tries(req_channel):
     channel.__enter__.return_value = channel_enter
 
     with patch(req_channel[0], return_value=channel):
-        opts = {
-            "random_startup_delay": 0,
-            "grains": {},
-            "return_retry_tries": 30,
-            "minion_sign_messages": False,
-        }
+        opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        opts["random_startup_delay"] = 0
+        opts["return_retry_tries"] = 30
+        opts["grains"] = {}
         with patch("salt.loader.grains"):
             minion = salt.minion.Minion(opts)
 
@@ -92,7 +90,7 @@ def test_send_req_tries(req_channel):
             assert rtn == 30
 
 
-@patch("salt.transport.client.ReqChannel.factory")
+@patch("salt.channel.client.ReqChannel.factory")
 def test_mine_send_tries(req_channel_factory):
     channel_enter = MagicMock()
     channel_enter.send.side_effect = lambda load, timeout, tries: tries
@@ -903,12 +901,12 @@ def test_master_type_failover():
             "master_uri": "tcp://192.168.2.1:4505",
         }
 
-    def mock_transport_factory(opts, **kwargs):
+    def mock_channel(opts, **kwargs):
         assert opts["master"] == "master2"
         return MockPubChannel()
 
     with patch("salt.minion.resolve_dns", mock_resolve_dns), patch(
-        "salt.transport.client.AsyncPubChannel.factory", mock_transport_factory
+        "salt.channel.client.AsyncPubChannel.factory", mock_channel_factory
     ), patch("salt.loader.grains", MagicMock(return_value=[])):
         with pytest.raises(SaltClientError):
             minion = salt.minion.Minion(mock_opts)
