@@ -3,8 +3,8 @@
 """
 
 
+import salt.channel.client
 import salt.modules.cp as cp
-import salt.transport.client
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.templates as templates
@@ -135,7 +135,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
         ), patch(
             "salt.utils.files.fopen", mock_open(read_data=b"content")
         ) as m_open, patch(
-            "salt.transport.client.ReqChannel.factory", MagicMock()
+            "salt.channel.client.ReqChannel.factory", MagicMock()
         ) as req_channel_factory_mock:
             response = cp.push(filename)
             assert response, response
