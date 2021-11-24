@@ -10,8 +10,6 @@ import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.log.setup
 import salt.master
-import salt.transport.client
-import salt.transport.server
 import salt.transport.zeromq
 import salt.utils.platform
 import salt.utils.process

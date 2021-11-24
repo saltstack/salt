@@ -243,7 +243,7 @@ class TestSaltCacheLoader(TestCase):
         """
         Multiple instantiations of SaltCacheLoader use the cached file client
         """
-        with patch("salt.transport.client.ReqChannel.factory", Mock()):
+        with patch("salt.channel.client.ReqChannel.factory", Mock()):
             loader_a = SaltCacheLoader(self.opts)
             loader_b = SaltCacheLoader(self.opts)
         assert loader_a._file_client is loader_b._file_client
