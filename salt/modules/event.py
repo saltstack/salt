@@ -10,9 +10,9 @@ import sys
 import traceback
 from collections.abc import Mapping
 
+import salt.channel.client
 import salt.crypt
 import salt.payload
-import salt.transport.client
 import salt.utils.event
 import salt.utils.zeromq
 
@@ -72,7 +72,7 @@ def fire_master(data, tag, preload=None):
             load.update(preload)
 
         for master in masters:
-            with salt.transport.client.ReqChannel.factory(
+            with salt.channel.client.ReqChannel.factory(
                 __opts__, master_uri=master
             ) as channel:
                 try:

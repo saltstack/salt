@@ -60,13 +60,13 @@ import os
 import time
 from collections.abc import MutableMapping
 
+import salt.channel.client
 import salt.config
 import salt.defaults.exitcodes
 import salt.ext.tornado.ioloop
 import salt.ext.tornado.iostream
 import salt.log.setup
 import salt.payload
-import salt.transport.client
 import salt.transport.ipc
 import salt.utils.asynchronous
 import salt.utils.cache
@@ -1451,7 +1451,7 @@ class StateFire:
             }
         )
 
-        with salt.transport.client.ReqChannel.factory(self.opts) as channel:
+        with salt.channel.client.ReqChannel.factory(self.opts) as channel:
             try:
                 channel.send(load)
             except Exception as exc:  # pylint: disable=broad-except
@@ -1479,7 +1479,7 @@ class StateFire:
                 "True" if running[stag]["changes"] else "False",
             )
             load["events"].append({"tag": tag, "data": running[stag]})
-        with salt.transport.client.ReqChannel.factory(self.opts) as channel:
+        with salt.channel.client.ReqChannel.factory(self.opts) as channel:
             try:
                 channel.send(load)
             except Exception as exc:  # pylint: disable=broad-except
