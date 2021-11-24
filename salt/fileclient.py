@@ -12,12 +12,12 @@ import string
 import urllib.error
 import urllib.parse
 
+import salt.channel.client
 import salt.client
 import salt.crypt
 import salt.fileserver
 import salt.loader
 import salt.payload
-import salt.transport.client
 import salt.utils.atomicfile
 import salt.utils.data
 import salt.utils.files
@@ -1098,7 +1098,7 @@ class RemoteClient(Client):
     def __init__(self, opts):
         Client.__init__(self, opts)
         self._closing = False
-        self.channel = salt.transport.client.ReqChannel.factory(self.opts)
+        self.channel = salt.channel.client.ReqChannel.factory(self.opts)
         if hasattr(self.channel, "auth"):
             self.auth = self.channel.auth
         else:
@@ -1111,7 +1111,7 @@ class RemoteClient(Client):
         # Close the previous channel
         self.channel.close()
         # Instantiate a new one
-        self.channel = salt.transport.client.ReqChannel.factory(self.opts)
+        self.channel = salt.channel.client.ReqChannel.factory(self.opts)
         return self.channel
 
     # pylint: disable=no-dunder-del

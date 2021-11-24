@@ -6,10 +6,10 @@ import logging
 import time
 import traceback
 
+import salt.channel.client
 import salt.crypt
 import salt.payload
 import salt.transport
-import salt.transport.client
 import salt.utils.args
 import salt.utils.dictupdate
 import salt.utils.event
@@ -75,7 +75,7 @@ def _mine_get(load, opts):
                 "Mine could not authenticate with master. Mine could not be retrieved."
             )
             return False
-    with salt.transport.client.ReqChannel.factory(opts) as channel:
+    with salt.channel.client.ReqChannel.factory(opts) as channel:
         return channel.send(load)
 
 
