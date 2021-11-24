@@ -899,7 +899,7 @@ def test_master_type_failover():
             "master_uri": "tcp://192.168.2.1:4505",
         }
 
-    def mock_channel(opts, **kwargs):
+    def mock_channel_factory(opts, **kwargs):
         assert opts["master"] == "master2"
         return MockPubChannel()
 
