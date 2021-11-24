@@ -4,13 +4,12 @@
 
 import hashlib
 
+import salt.channel.client
 import salt.config
 import salt.exceptions
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.log.setup
-import salt.transport.client
-import salt.transport.server
 import salt.transport.zeromq
 import salt.utils.platform
 import salt.utils.process
@@ -89,9 +88,7 @@ def test_clear_req_channel_master_uri_override(temp_salt_minion, temp_salt_maste
     master_uri = "tcp://{master_ip}:{master_port}".format(
         master_ip="localhost", master_port=opts["master_port"]
     )
-    with salt.transport.client.ReqChannel.factory(
-        opts, master_uri=master_uri
-    ) as channel:
+    with salt.channel.client.ReqChannel.factory(opts, master_uri=master_uri) as channel:
         assert "127.0.0.1" in channel.transport.message_client.addr
 
 
