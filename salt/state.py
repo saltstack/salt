@@ -25,12 +25,12 @@ import sys
 import time
 import traceback
 
+import salt.channel.client
 import salt.fileclient
 import salt.loader
 import salt.minion
 import salt.pillar
 import salt.syspaths as syspaths
-import salt.transport.client
 import salt.utils.args
 import salt.utils.crypt
 import salt.utils.data
@@ -4767,7 +4767,7 @@ class RemoteHighState:
         self.opts = opts
         self.grains = grains
         # self.auth = salt.crypt.SAuth(opts)
-        self.channel = salt.transport.client.ReqChannel.factory(self.opts["master_uri"])
+        self.channel = salt.channel.client.ReqChannel.factory(self.opts["master_uri"])
         self._closing = False
 
     def compile_master(self):

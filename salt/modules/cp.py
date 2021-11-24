@@ -9,10 +9,10 @@ import logging
 import os
 import urllib.parse
 
+import salt.channel.client
 import salt.crypt
 import salt.fileclient
 import salt.minion
-import salt.transport.client
 import salt.utils.data
 import salt.utils.files
 import salt.utils.gzip_util
@@ -835,7 +835,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
         "tok": auth.gen_token(b"salt"),
     }
 
-    with salt.transport.client.ReqChannel.factory(__opts__) as channel:
+    with salt.channel.client.ReqChannel.factory(__opts__) as channel:
         with salt.utils.files.fopen(path, "rb") as fp_:
             init_send = False
             while True:
