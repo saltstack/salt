@@ -599,17 +599,29 @@ class MessageClient:
         if self._closing:
             return
         self._closing = True
-        try:
-            for msg_id in list(self.send_future_map):
-                log.error("Closing before send future completed %r", msg_id)
-                future = self.send_future_map.pop(msg_id)
-                future.set_exception(ClosingError())
+        self.io_loop.add_timeout(1, self.check_close)
+        return
+        # try:
+        #     for msg_id in list(self.send_future_map):
+        #         log.error("Closing before send future completed %r", msg_id)
+        #         future = self.send_future_map.pop(msg_id)
+        #         future.set_exception(ClosingError())
+        #     self._tcp_client.close()
+        #     # self._stream.close()
+        # finally:
+        #     self._stream = None
+        #     self._closing = False
+        #     self._closed = True
+
+    @salt.ext.tornado.gen.coroutine
+    def check_close(self):
+        if not self.send_future_map:
             self._tcp_client.close()
-            # self._stream.close()
-        finally:
             self._stream = None
             self._closing = False
             self._closed = True
+        else:
+            self.io_loop.add_timeout(1, self.check_close)
 
     # pylint: disable=W1701
     def __del__(self):
