@@ -11,6 +11,7 @@ import pytest
 import salt.utils.files
 import salt.utils.path
 from salt.utils.versions import LooseVersion as _LooseVersion
+from saltfactories.utils.ports import get_unused_localhost_port
 
 log = logging.getLogger(__name__)
 
@@ -119,13 +120,18 @@ def salt_secondary_master(request, salt_factories):
     #
     # Enable a secondary Salt master so we can disable follow_symlinks
     #
+    publish_port = get_unused_localhost_port()
+    ret_port = get_unused_localhost_port()
+
     config_defaults = {
         "open_mode": True,
         "transport": request.config.getoption("--transport"),
     }
     config_overrides = {
-        "interface": "127.0.0.100",
+        "interface": "127.0.0.1",
         "fileserver_followsymlinks": False,
+        "publish_port": publish_port,
+        "ret_port": ret_port,
     }
 
     factory = salt_factories.salt_master_daemon(
@@ -145,7 +151,10 @@ def salt_secondary_minion(salt_secondary_master):
     # point it at athe secondary Salt master
     #
     config_defaults = {}
-    config_overrides = {"master": "127.0.0.100"}
+    config_overrides = {
+        "master": salt_secondary_master.config["interface"],
+        "master_port": salt_secondary_master.config["ret_port"],
+    }
 
     factory = salt_secondary_master.salt_minion_daemon(
         "secondary-minion",
