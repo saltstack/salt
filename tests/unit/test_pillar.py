@@ -1090,7 +1090,7 @@ sub_with_slashes:
         )
 
 
-@patch("salt.transport.client.ReqChannel.factory", MagicMock())
+@patch("salt.channel.client.ReqChannel.factory", MagicMock())
 class RemotePillarTestCase(TestCase):
     """
     Tests for instantiating a RemotePillar in salt.pillar
