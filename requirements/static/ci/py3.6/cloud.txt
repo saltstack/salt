@@ -642,7 +642,7 @@ pycparser==2.19
     # via cffi
 pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
-pycurl==7.44.1
+pycurl==7.44.1 ; python_version <= "3.9"
     # via -r requirements/static/ci/common.in
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via -r requirements/static/ci/common.in
@@ -674,7 +674,7 @@ pytest-tempdir==2019.10.12
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
-pytest==6.2.5
+pytest==6.2.5 ; python_version <= "3.9"
     # via
     #   -r requirements/pytest.txt
     #   pytest-helpers-namespace

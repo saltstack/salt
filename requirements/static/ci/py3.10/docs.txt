@@ -642,11 +642,11 @@ pycparser==2.17
     # via cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
-pycurl==7.44.1
+pycurl==7.44.1 ; python_version >= "3.10"
     # via -r requirements/static/ci/common.in
 pyeapi==0.8.4
     # via napalm
-pygit2==1.6.1 ; python_version > "3.8"
+pygit2==1.7.1 ; python_version >= "3.10"
     # via -r requirements/static/ci/linux.in
 pygments==2.8.1
     # via sphinx
