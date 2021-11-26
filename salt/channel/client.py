@@ -211,7 +211,7 @@ class AsyncReqChannel:
             # upload the results to the master
             if data:
                 data = self.auth.crypticle.loads(data, raw)
-            if not raw:
+            if not raw or self.ttype == "tcp":  # XXX Why is this needed for tcp
                 data = salt.transport.frame.decode_embedded_strs(data)
             raise salt.ext.tornado.gen.Return(data)
 
