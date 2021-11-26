@@ -250,8 +250,10 @@ class AsyncReqChannel:
         Send a request, return a future which will complete when we send the message
         """
         if self.crypt == "clear":
+            log.info("ReqChannel send clear load=%r", load)
             ret = yield self._uncrypted_transfer(load, tries=tries, timeout=timeout)
         else:
+            log.info("ReqChannel send crypt load=%r", load)
             ret = yield self._crypted_transfer(
                 load, tries=tries, timeout=timeout, raw=raw
             )
@@ -377,6 +379,7 @@ class AsyncPubChannel:
         def wrap_callback(messages):
             payload = yield self.transport._decode_messages(messages)
             decoded = yield self._decode_payload(payload)
+            log.info("PubChannel received: %r", decoded)
             if decoded is not None:
                 callback(decoded)
 
