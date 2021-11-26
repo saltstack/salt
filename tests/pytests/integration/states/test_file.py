@@ -1151,6 +1151,7 @@ def test_recurse(
                 assert test_tempdir.joinpath(_dir, str(_file)).is_file()
 
 
+@pytest.mark.skip_on_windows
 def test_recurse_keep_symlinks_in_fileserver_root(
     salt_master,
     salt_call_cli,
@@ -1204,6 +1205,7 @@ def test_recurse_keep_symlinks_in_fileserver_root(
         assert target_path.joinpath("test").is_symlink()
 
 
+@pytest.mark.skip_on_windows
 def test_recurse_keep_symlinks_outside_fileserver_root(
     salt_secondary_minion,
     salt_secondary_master,
