@@ -17,7 +17,8 @@ docker
 gitpython>=2.1.15
 jmespath
 jsonschema
-junos-eznc==2.4.0; sys_platform != 'win32'
+junos-eznc==2.4.0; sys_platform != 'win32' and python_version <= '3.9'
+junos-eznc==2.6.0; sys_platform != 'win32' and python_version >= '3.10'
 jxmlease; sys_platform != 'win32'
 kazoo; sys_platform != 'win32' and sys_platform != 'darwin'
 keyring==5.7.1

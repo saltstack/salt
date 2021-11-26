@@ -491,7 +491,7 @@ jsonschema==3.2.0
     #   cfn-lint
 junit-xml==1.9
     # via cfn-lint
-junos-eznc==2.4.0 ; sys_platform != "win32"
+junos-eznc==2.4.0 ; sys_platform != "win32" and python_version <= "3.9"
     # via
     #   -r requirements/static/ci/common.in
     #   napalm

@@ -458,7 +458,7 @@ jmespath==0.10.0
     #   botocore
 jsonschema==3.2.0
     # via -r requirements/static/ci/common.in
-junos-eznc==2.4.0 ; sys_platform != "win32"
+junos-eznc==2.6.0 ; sys_platform != "win32" and python_version >= "3.10"
     # via
     #   -r requirements/static/ci/common.in
     #   napalm
@@ -591,7 +591,7 @@ msrestazure==0.6.4
     #   azure-mgmt-web
 napalm==3.3.1 ; sys_platform != "win32" and python_version > "3.6"
     # via -r requirements/static/ci/common.in
-ncclient==0.6.12
+ncclient==0.6.9
     # via
     #   junos-eznc
     #   napalm
@@ -603,9 +603,7 @@ netaddr==0.8.0
 netmiko==3.4.0
     # via napalm
 ntc-templates==2.2.2
-    # via
-    #   junos-eznc
-    #   netmiko
+    # via netmiko
 oauthlib==3.1.1
     # via requests-oauthlib
 oscrypto==1.2.1
