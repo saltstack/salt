@@ -3,6 +3,7 @@
 """
 
 
+from requests.models import Response
 from salt.cloud.clouds import proxmox
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import ANY, MagicMock, patch
@@ -215,3 +216,38 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
                 verify=True,
                 data={"username": ("fakeuser",), "password": "secretpassword"},
             )
+
+    def test__import_api(self):
+        """
+        Test that import apidoc works on Promox 6 and Proxmox 7
+        """
+
+        def _mocked_requests_get_proxmox_6(*args, **kwargs):
+            request_content = "var pveapi = [1,2,3]\n;"
+            return _create_reponse(request_content)
+
+        def _mocked_requests_get_proxmox_7(*args, **kwargs):
+            request_content = "var apiSchema = [4,5,6]\n;"
+            return _create_reponse(request_content)
+
+        def _create_reponse(content):
+            response = Response()
+            response.status_code = 200
+            response._content = str.encode(content)
+            return response
+
+        # CASE 1: test Proxmox 6 call
+        with patch(
+            "requests.get", side_effect=_mocked_requests_get_proxmox_6
+        ) as requests_get_mock:
+
+            proxmox._import_api()
+            assert proxmox.api == [1, 2, 3]
+
+        # CASE 2: test Proxmox 7 call
+        with patch(
+            "requests.get", side_effect=_mocked_requests_get_proxmox_7
+        ) as requests_get_mock:
+
+            proxmox._import_api()
+            assert proxmox.api == [4, 5, 6]
