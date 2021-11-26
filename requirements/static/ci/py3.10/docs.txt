@@ -435,8 +435,10 @@ imagesize==1.2.0
     # via sphinx
 immutables==0.15
     # via contextvars
-importlib-metadata==4.6.4
-    # via moto
+importlib_metadata==4.6.3 ; python_version >= "3.10"
+    # via
+    #   -r requirements/static/pkg/linux.in
+    #   moto
 ipaddress==1.0.23
     # via kubernetes
 isodate==0.6.0
@@ -752,7 +754,7 @@ scp==0.13.6
     #   junos-eznc
     #   napalm
     #   netmiko
-setproctitle==1.1.10
+setproctitle==1.2.2 ; python_version >= "3.10"
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
     # via

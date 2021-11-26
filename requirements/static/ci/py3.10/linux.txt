@@ -457,6 +457,8 @@ idna==2.8
     #   requests
 immutables==0.15
     # via contextvars
+importlib_metadata==4.6.3 ; python_version >= "3.10"
+    # via -r requirements/static/pkg/linux.in
 iniconfig==1.0.1
     # via pytest
 ipaddress==1.0.22
@@ -827,7 +829,7 @@ scp==0.13.2
     #   junos-eznc
     #   napalm
     #   netmiko
-setproctitle==1.1.10
+setproctitle==1.2.2 ; python_version >= "3.10"
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
     # via
@@ -924,7 +926,9 @@ yamlordereddictloader==0.4.0
 zc.lockfile==1.4
     # via cherrypy
 zipp==3.4.0
-    # via moto
+    # via
+    #   importlib-metadata
+    #   moto
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

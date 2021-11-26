@@ -743,7 +743,7 @@ saltpylint==2020.9.28
     # via -r requirements/static/ci/lint.in
 scp==0.13.6
     # via junos-eznc
-setproctitle==1.2.2
+setproctitle==1.2.2 ; python_version < "3.10"
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
     # via

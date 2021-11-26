@@ -762,7 +762,7 @@ scp==0.13.6
     #   junos-eznc
     #   napalm
     #   netmiko
-setproctitle==1.1.10
+setproctitle==1.1.10 ; python_version < "3.10"
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
     # via
