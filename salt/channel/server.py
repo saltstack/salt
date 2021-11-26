@@ -819,7 +819,7 @@ class PubServerChannel:
         """
         payload = self.wrap_payload(load)
         log.debug(
-            "Sending payload to publish daemon. jid=%s",
-            load.get("jid", None),
+            "Sending payload to publish daemon. jid=%s load=%r",
+            load.get("jid", None), load
         )
         self.transport.publish(payload)
