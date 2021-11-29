@@ -558,21 +558,15 @@ def _reconfigure_clone(vm_, vmid):
         log.warning("Reconfiguring clones is only available under `qemu`")
         return
 
-    # TODO: Support other settings here too as these are not the only ones that can be modified after a clone operation
     log.info("Configuring cloned VM")
+
+    # Get all properties that can be passed to config
+    props = _get_properties("nodes/{node}/qemu/{vmid}/config", "POST")
 
     # Modify the settings for the VM one at a time so we can see any problems with the values
     # as quickly as possible
     for setting in vm_:
-        if re.match(r"^(ide|sata|scsi)(\d+)$", setting):
-            postParams = {setting: vm_[setting]}
-            query(
-                "post",
-                "nodes/{}/qemu/{}/config".format(vm_["host"], vmid),
-                postParams,
-            )
-
-        elif re.match(r"^net(\d+)$", setting):
+        if re.match(r"^net(\d+)$", setting):
             # net strings are a list of comma seperated settings. We need to merge the settings so that
             # the setting in the profile only changes the settings it touches and the other settings
             # are left alone. An example of why this is necessary is because the MAC address is set
@@ -591,6 +585,14 @@ def _reconfigure_clone(vm_, vmid):
 
             # Convert the dictionary back into a string list
             postParams = {setting: _dictionary_to_stringlist(new_setting)}
+            query(
+                "post",
+                "nodes/{}/qemu/{}/config".format(vm_["host"], vmid),
+                postParams,
+            )
+        # If the setting is equal to an property that can be set, then update config:
+        elif setting in props:
+            postParams = {setting: vm_[setting]}
             query(
                 "post",
                 "nodes/{}/qemu/{}/config".format(vm_["host"], vmid),
@@ -1026,6 +1028,7 @@ def create_node(vm_, newid):
     if "clone" in vm_ and vm_["clone"] is True and vm_["technology"] == "qemu":
         postParams = {}
         postParams["newid"] = newnode["vmid"]
+        postParams["name"] = vm_["name"]
 
         for prop in "description", "format", "full", "name":
             if (

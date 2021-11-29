@@ -41,6 +41,8 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
             "sata0": "data",
             "scsi0": "data",
             "net0": "a=b,c=d",
+            "cores": 4,
+            "memory": 1024,
         }
 
     def tearDown(self):
@@ -77,7 +79,12 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
 
     def test__reconfigure_clone(self):
         # The return_value is for the net reconfigure assertions, it is irrelevant for the rest
-        with patch.object(
+        with patch(
+            "salt.cloud.clouds.proxmox._get_properties",
+            MagicMock(
+                return_value={"ide0", "sata0", "scsi0", "net0", "cores", "memory"}
+            ),
+        ), patch.object(
             proxmox, "query", return_value={"net0": "c=overwritten,g=h"}
         ) as query:
             # Test a vm that lacks the required attributes
@@ -103,6 +110,10 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
             query.assert_any_call(
                 "post", "nodes/127.0.0.1/qemu/0/config", {"scsi0": "data"}
             )
+            query.assert_any_call("post", "nodes/127.0.0.1/qemu/0/config", {"cores": 4})
+            query.assert_any_call(
+                "post", "nodes/127.0.0.1/qemu/0/config", {"memory": 1024}
+            )
 
     def test_clone(self):
         """
@@ -125,7 +136,7 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
             mock_query.assert_called_once_with(
                 "post",
                 "nodes/myhost/qemu/123/clone",
-                {"newid": ANY},
+                {"newid": ANY, "name": "new2"},
             )
             assert result == {}
 
@@ -136,7 +147,7 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
             mock_query.assert_called_once_with(
                 "post",
                 "nodes/otherhost/qemu/123/clone",
-                {"newid": ANY},
+                {"newid": ANY, "name": "new2"},
             )
             assert result == {}
 
