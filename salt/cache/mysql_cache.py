@@ -264,7 +264,6 @@ def store(bank, key, data):
     query = "REPLACE INTO {} (bank, etcd_key, data) values(%s,%s,%s)".format(
         __context__["mysql_table_name"]
     )
-    query = salt.utils.stringutils.to_bytes(query)
     args = (bank, key, data)
 
     cur, cnt = run_query(__context__.get("mysql_client"), query, args=args)

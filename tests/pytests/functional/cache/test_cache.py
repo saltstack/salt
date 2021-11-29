@@ -315,7 +315,7 @@ def test_caching(subtests, cache):
         assert cache.list(bank=bank) == []
 
     with subtests.test("after storing key in bank it should be in cache list"):
-        cache.store(bank=bank, key=good_key, data="fnordy data")
+        cache.store(bank=bank, key=good_key, data=b"\x01\x04\x05fnordy data")
         assert cache.list(bank) == [good_key]
 
     with subtests.test("after storing value, it should be fetchable"):
