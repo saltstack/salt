@@ -30,7 +30,7 @@ def __virtual__():
 
 
 def _formatfor(name, value, config, tail=""):
-    if config == "/boot/loader.conf":
+    if config == "/boot/loader.conf.local":
         return '{}="{}"{}'.format(name, value, tail)
     else:
         return "{}={}{}".format(name, value, tail)
@@ -136,7 +136,7 @@ def assign(name, value):
     return ret
 
 
-def persist(name, value, config="/etc/sysctl.conf"):
+def persist(name, value, config="/etc/sysctl.conf.local"):
     """
     Assign and persist a simple sysctl parameter for this minion
 
@@ -145,7 +145,7 @@ def persist(name, value, config="/etc/sysctl.conf"):
     .. code-block:: bash
 
         salt '*' sysctl.persist net.inet.icmp.icmplim 50
-        salt '*' sysctl.persist coretemp_load NO config=/boot/loader.conf
+        salt '*' sysctl.persist coretemp_load NO config=/boot/loader.conf.local
     """
     nlines = []
     edited = False
@@ -176,6 +176,6 @@ def persist(name, value, config="/etc/sysctl.conf"):
     with salt.utils.files.fopen(config, "w+") as ofile:
         nlines = [salt.utils.stringutils.to_str(_l) + "\n" for _l in nlines]
         ofile.writelines(nlines)
-    if config != "/boot/loader.conf":
+    if config != "/boot/loader.conf.local":
         assign(name, value)
     return "Updated"
