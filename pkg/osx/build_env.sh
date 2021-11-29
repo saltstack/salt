@@ -251,8 +251,8 @@ if [ "$1" == "true" ]; then
 else
     PY_CONF="--prefix=$INSTALL_DIR --enable-shared --with-ensurepip=install --enable-optimizations"
 fi
-PKGURL="https://www.python.org/ftp/python/3.7.4/Python-3.7.4.tar.xz"
-PKGDIR="Python-3.7.4"
+PKGURL="https://www.python.org/ftp/python/3.8.12/Python-3.8.12.tar.xz"
+PKGDIR="Python-3.8.12"
 
 download $PKGURL
 
