@@ -2,7 +2,7 @@
 Minion data cache plugin for Etcd key/value data store.
 
 .. versionadded:: 2018.3.0
-.. versionchanged:: Phosphorus
+.. versionchanged:: 3005
 
 It is up to the system administrator to set up and configure the Etcd
 infrastructure. All is needed for this plugin is a working Etcd agent
@@ -242,6 +242,9 @@ def contains(bank, key):
 
 
 def updated(bank, key):
+    """
+    Return Unix Epoch based timestamp of when the bank/key was updated.
+    """
     _init_client()
     tstamp_key = "{}/{}/{}".format(path_prefix, bank, key + _tstamp_suffix)
     try:

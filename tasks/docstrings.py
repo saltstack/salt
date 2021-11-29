@@ -28,7 +28,6 @@ MISSING_DOCSTRINGS = {
     "salt/beacons/salt_monitor.py": ["validate", "beacon"],
     "salt/beacons/watchdog.py": ["close", "to_salt_event"],
     "salt/cache/localfs.py": ["get_storage_id", "init_kwargs"],
-    "salt/cache/redis_cache.py": ["init_kwargs"],
     "salt/cloud/clouds/clc.py": [
         "get_creds",
         "get_configured_provider",
