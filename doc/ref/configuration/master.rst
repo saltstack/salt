@@ -2565,6 +2565,20 @@ will be shown for each state run.
 
     state_output_profile: True
 
+.. conf_master:: state_output_pct
+
+``state_output_pct``
+------------------------
+
+Default: ``False``
+
+The ``state_output_pct`` setting changes whether success and failure information
+as a percent of total actions will be shown for each state run.
+
+.. code-block:: yaml
+
+    state_output_pct: False
+
 .. conf_master:: state_aggregate
 
 ``state_aggregate``

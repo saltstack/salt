@@ -52,6 +52,21 @@ def _refine_enc(enc):
         "ecdsa-sha2-nistp256",
     ]
     ed25519 = ["ed25519", "ssh-ed25519"]
+    also_allowed = [
+        "rsa-sha2-512",
+        "rsa-sha2-256",
+        "rsa-sha2-512-cert-v01@openssh.com",
+        "rsa-sha2-256-cert-v01@openssh.com",
+        "ssh-rsa-cert-v01@openssh.com",
+        "ecdsa-sha2-nistp256-cert-v01@openssh.com",
+        "ecdsa-sha2-nistp384-cert-v01@openssh.com",
+        "ecdsa-sha2-nistp521-cert-v01@openssh.com",
+        "sk-ecdsa-sha2-nistp256@openssh.com",
+        "sk-ecdsa-sha2-nistp256-cert-v01@openssh.com",
+        "ssh-ed25519-cert-v01@openssh.com",
+        "sk-ssh-ed25519@openssh.com",
+        "sk-ssh-ed25519-cert-v01@openssh.com",
+    ]
 
     if enc in rsa:
         return "ssh-rsa"
@@ -65,6 +80,8 @@ def _refine_enc(enc):
         return enc
     elif enc in ed25519:
         return "ssh-ed25519"
+    elif enc in also_allowed:
+        return enc
     else:
         raise CommandExecutionError("Incorrect encryption key type '{}'.".format(enc))
 
@@ -152,7 +169,7 @@ def _replace_auth_key(
                     lines.append(line)
                     continue
                 comps = re.findall(
-                    r"((.*)\s)?(ssh-[a-z0-9-]+|ecdsa-[a-z0-9-]+)\s([a-zA-Z0-9+/]+={0,2})(\s(.*))?",
+                    r"((.*)\s)?((?:sk-)?(?:ssh|ecdsa)-[a-z0-9@.-]+)\s([a-zA-Z0-9+/]+={0,2})(\s(.*))?",
                     line,
                 )
                 if len(comps) > 0 and len(comps[0]) > 3 and comps[0][3] == key:
@@ -176,7 +193,7 @@ def _validate_keys(key_file, fingerprint_hash_type):
     Return a dict containing validated keys in the passed file
     """
     ret = {}
-    linere = re.compile(r"^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$")
+    linere = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s.+)$")
 
     try:
         with salt.utils.files.fopen(key_file, "r") as _fh:
@@ -544,7 +561,7 @@ def rm_auth_key(user, key, config=".ssh/authorized_keys", fingerprint_hash_type=
     current = auth_keys(
         user, config=config, fingerprint_hash_type=fingerprint_hash_type
     )
-    linere = re.compile(r"^(.*?)\s?((?:ssh\-|ecds)[\w-]+\s.+)$")
+    linere = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w@.-]+\s.+)$")
     if key in current:
         # Remove the key
         full = _get_config_file(user, config)
@@ -858,8 +875,8 @@ def recv_known_host_entries(
         The name of the remote host (e.g. "github.com")
 
     enc
-        Defines what type of key is being used, can be ed25519, ecdsa ssh-rsa
-        or ssh-dss
+        Defines what type of key is being used, can be ed25519, ecdsa,
+        ssh-rsa, ssh-dss or any other type as of openssh server version 8.7.
 
     port
         Optional parameter, denoting the port of the remote host on which an
@@ -1045,8 +1062,8 @@ def set_known_host(
         the port 22 is used.
 
     enc
-        Defines what type of key is being used, can be ed25519, ecdsa ssh-rsa
-        or ssh-dss
+        Defines what type of key is being used, can be ed25519, ecdsa,
+        ssh-rsa, ssh-dss or any other type as of openssh server version 8.7.
 
     config
         The location of the authorized keys file relative to the user's home
