@@ -63,6 +63,13 @@ to use a YAML 'explicit key', as demonstrated in the second example below.
 import re
 import sys
 
+sshre = re.compile(
+    r"((?P<options>.*?)\s)?"
+    r"(?P<keytype>\S+?-\S+?|ed25519|ecdsa)\s"
+    r"(?P<key>[0-9A-Za-z/+]+={0,2})"
+    r"(\s(?P<comment>.+))?"
+)
+
 
 def _present_test(
     user, name, enc, comment, options, source, config, fingerprint_hash_type
@@ -98,25 +105,11 @@ def _present_test(
                 "All host keys in file {} are already present".format(source),
             )
     else:
-        # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w-]+\s.+)$")
-        fullkey = sshre.search(name)
-        # if it is {key} [comment]
-        if not fullkey:
-            key_and_comment = name.split()
-            name = key_and_comment[0]
-            if len(key_and_comment) == 2:
-                comment = key_and_comment[1]
-        else:
-            # if there are options, set them
-            if fullkey.group(1):
-                options = fullkey.group(1).split(",")
-            # key is of format: {enc} {key} [comment]
-            comps = fullkey.group(2).split()
-            enc = comps[0]
-            name = comps[1]
-            if len(comps) == 3:
-                comment = comps[2]
+        fullkey = _parse_line(name)
+        name = fullkey.get("key", name)
+        enc = fullkey.get("keytype", enc)
+        comment = fullkey.get("comment", comment)
+        options = fullkey.get("options", options)
 
     check = __salt__["ssh.check_key"](
         user,
@@ -171,25 +164,11 @@ def _absent_test(
         else:
             return (True, "All host keys in file {} are already absent".format(source))
     else:
-        # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w-]+\s.+)$")
-        fullkey = sshre.search(name)
-        # if it is {key} [comment]
-        if not fullkey:
-            key_and_comment = name.split()
-            name = key_and_comment[0]
-            if len(key_and_comment) == 2:
-                comment = key_and_comment[1]
-        else:
-            # if there are options, set them
-            if fullkey.group(1):
-                options = fullkey.group(1).split(",")
-            # key is of format: {enc} {key} [comment]
-            comps = fullkey.group(2).split()
-            enc = comps[0]
-            name = comps[1]
-            if len(comps) == 3:
-                comment = comps[2]
+        fullkey = _parse_line(name)
+        name = fullkey.get("key", name)
+        enc = fullkey.get("keytype", enc)
+        comment = fullkey.get("comment", comment)
+        options = fullkey.get("options", options)
 
     check = __salt__["ssh.check_key"](
         user,
@@ -207,6 +186,27 @@ def _absent_test(
         result = True
 
     return result, comment
+
+
+def _parse_line(line):
+    """
+    Attempt to parse a protocol version 2 authorized_keys line.
+
+    Allows non-standard keytype extensions like sk-ssh-ed25519@openssh.com.
+    """
+    if line is None or line == "" or line[0] == "#":
+        return {}
+
+    match = sshre.fullmatch(line)
+    if not match:
+        # the key is probably not valid, but try anyway
+        key_and_comment = line.split(maxsplit=1)
+        ret = {"key": key_and_comment[0], "comment": key_and_comment.get(1)}
+    else:
+        ret = match.groupdict()
+        if ret["options"] is not None:
+            ret["options"] = ret["options"].split(",")
+    return {k: v for k, v in ret.items() if v is not None}
 
 
 def present(
@@ -268,25 +268,11 @@ def present(
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     if source == "":
-        # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w-]+\s.+)$")
-        fullkey = sshre.search(name)
-        # if it is {key} [comment]
-        if not fullkey:
-            key_and_comment = name.split(None, 1)
-            name = key_and_comment[0]
-            if len(key_and_comment) == 2:
-                comment = key_and_comment[1]
-        else:
-            # if there are options, set them
-            if fullkey.group(1):
-                options = fullkey.group(1).split(",")
-            # key is of format: {enc} {key} [comment]
-            comps = fullkey.group(2).split(None, 2)
-            enc = comps[0]
-            name = comps[1]
-            if len(comps) == 3:
-                comment = comps[2]
+        fullkey = _parse_line(name)
+        name = fullkey.get("key", name)
+        enc = fullkey.get("keytype", enc)
+        comment = fullkey.get("comment", comment)
+        options = fullkey.get("options", options)
 
     if __opts__["test"]:
         ret["result"], ret["comment"] = _present_test(
@@ -308,14 +294,12 @@ def present(
     if source != "" and not source_path:
         data = "no key"
     elif source != "" and source_path:
-        key = __salt__["cp.get_file_str"](source, saltenv=__env__)
-        filehasoptions = False
-        # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(sk-)?(ssh\-|ecds).*")
-        key = key.rstrip().split("\n")
-        for keyline in key:
-            filehasoptions = sshre.match(keyline)
-            if not filehasoptions:
+        keys = __salt__["cp.get_file_str"](source, saltenv=__env__).rstrip().split("\n")
+        for key_line in keys:
+            key_data = _parse_line(key_line)
+            if "key" not in key_data:
+                continue
+            elif "options" not in key_data:
                 data = __salt__["ssh.set_auth_key_from_file"](
                     user,
                     source,
@@ -324,16 +308,11 @@ def present(
                     fingerprint_hash_type=fingerprint_hash_type,
                 )
             else:
-                # Split keyline to get key and comment
-                keyline = keyline.split(" ")
-                key_type = keyline[0]
-                key_value = keyline[1]
-                key_comment = keyline[2] if len(keyline) > 2 else ""
                 data = __salt__["ssh.set_auth_key"](
                     user,
-                    key_value,
-                    enc=key_type,
-                    comment=key_comment,
+                    key_data["key"],
+                    enc=key_data.get("keytype"),
+                    comment=key_data.get("comment", ""),
                     options=options or [],
                     config=config,
                     fingerprint_hash_type=fingerprint_hash_type,
@@ -457,14 +436,12 @@ def absent(
 
     # Extract Key from file if source is present
     if source != "":
-        key = __salt__["cp.get_file_str"](source, saltenv=__env__)
-        filehasoptions = False
-        # check if this is of form {options} {enc} {key} {comment}
-        sshre = re.compile(r"^(sk-)?(ssh\-|ecds).*")
-        key = key.rstrip().split("\n")
-        for keyline in key:
-            filehasoptions = sshre.match(keyline)
-            if not filehasoptions:
+        keys = __salt__["cp.get_file_str"](source, saltenv=__env__).rstrip().split("\n")
+        for key_line in keys:
+            key_data = _parse_line(key_line)
+            if "key" not in key_data:
+                continue
+            elif "options" not in key_data:
                 ret["comment"] = __salt__["ssh.rm_auth_key_from_file"](
                     user,
                     source,
@@ -473,34 +450,15 @@ def absent(
                     fingerprint_hash_type=fingerprint_hash_type,
                 )
             else:
-                # Split keyline to get key
-                keyline = keyline.split(" ")
                 ret["comment"] = __salt__["ssh.rm_auth_key"](
                     user,
-                    keyline[1],
+                    key_data["key"],
                     config=config,
                     fingerprint_hash_type=fingerprint_hash_type,
                 )
     else:
         # Get just the key
-        sshre = re.compile(r"^(.*?)\s?((?:sk-)?(?:ssh\-|ecds)[\w-]+\s.+)$")
-        fullkey = sshre.search(name)
-        # if it is {key} [comment]
-        if not fullkey:
-            key_and_comment = name.split(None, 1)
-            name = key_and_comment[0]
-            if len(key_and_comment) == 2:
-                comment = key_and_comment[1]
-        else:
-            # if there are options, set them
-            if fullkey.group(1):
-                options = fullkey.group(1).split(",")
-            # key is of format: {enc} {key} [comment]
-            comps = fullkey.group(2).split()
-            enc = comps[0]
-            name = comps[1]
-            if len(comps) == 3:
-                comment = comps[2]
+        name = _parse_line(name).get("key", name)
         ret["comment"] = __salt__["ssh.rm_auth_key"](
             user, name, config=config, fingerprint_hash_type=fingerprint_hash_type
         )
