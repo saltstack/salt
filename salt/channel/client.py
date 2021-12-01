@@ -249,14 +249,19 @@ class AsyncReqChannel:
         """
         Send a request, return a future which will complete when we send the message
         """
-        if self.crypt == "clear":
-            log.info("ReqChannel send clear load=%r", load)
-            ret = yield self._uncrypted_transfer(load, tries=tries, timeout=timeout)
-        else:
-            log.info("ReqChannel send crypt load=%r", load)
-            ret = yield self._crypted_transfer(
-                load, tries=tries, timeout=timeout, raw=raw
-            )
+        try:
+            if self.crypt == "clear":
+                log.info("ReqChannel send clear load=%r", load)
+                ret = yield self._uncrypted_transfer(load, tries=tries, timeout=timeout)
+            else:
+                log.info("ReqChannel send crypt load=%r", load)
+                ret = yield self._crypted_transfer(
+                    load, tries=tries, timeout=timeout, raw=raw
+                )
+        except salt.ext.tornado.iostream.StreamClosedError:
+            # Convert to 'SaltClientError' so that clients can handle this
+            # exception more appropriately.
+            raise SaltClientError("Connection to master lost")
         raise salt.ext.tornado.gen.Return(ret)
 
     def close(self):
