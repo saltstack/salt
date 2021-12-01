@@ -1643,7 +1643,7 @@ class State:
                 state_type = next(x for x in body if not x.startswith("__"))
                 if name not in high or state_type not in high[name]:
                     # Check for a matching 'name' override in high data
-                    ids = find_name(name, state_type, high, strict)
+                    ids = find_name(name, state_type, high, strict=strict)
                     if len(ids) != 1:
                         errors.append(
                             "Cannot extend ID '{0}' in '{1}:{2}'. It is not "
@@ -1891,7 +1891,9 @@ class State:
                                         )
                                     if key == "prereq":
                                         # Add prerequired to prereqs
-                                        ext_ids = find_name(name, _state, high, True)
+                                        ext_ids = find_name(
+                                            name, _state, high, strict=True
+                                        )
                                         for ext_id, _req_state in ext_ids:
                                             if ext_id not in extend:
                                                 extend[ext_id] = OrderedDict()
@@ -1904,7 +1906,9 @@ class State:
                                     if key == "use_in":
                                         # Add the running states args to the
                                         # use_in states
-                                        ext_ids = find_name(name, _state, high, True)
+                                        ext_ids = find_name(
+                                            name, _state, high, strict=True
+                                        )
                                         for ext_id, _req_state in ext_ids:
                                             if not ext_id:
                                                 continue
@@ -1931,7 +1935,9 @@ class State:
                                     if key == "use":
                                         # Add the use state's args to the
                                         # running state
-                                        ext_ids = find_name(name, _state, high, True)
+                                        ext_ids = find_name(
+                                            name, _state, high, strict=True
+                                        )
                                         for ext_id, _req_state in ext_ids:
                                             if not ext_id:
                                                 continue
@@ -1979,7 +1985,7 @@ class State:
         high["__extend__"] = []
         for key, val in extend.items():
             high["__extend__"].append({key: val})
-        req_in_high, req_in_errors = self.reconcile_extend(high, True)
+        req_in_high, req_in_errors = self.reconcile_extend(high, strict=True)
         errors.extend(req_in_errors)
         return req_in_high, errors
 
