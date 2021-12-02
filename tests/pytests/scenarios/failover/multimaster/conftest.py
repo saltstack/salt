@@ -1,7 +1,7 @@
 import logging
+import os
 import shutil
 import subprocess
-from pathlib import Path
 
 import pytest
 import salt.utils.platform
@@ -64,17 +64,9 @@ def salt_mm_failover_master_2(salt_factories, salt_mm_failover_master_1):
     # # Both masters will share the same signing key pair
     for keyfile in ("master_sign.pem", "master_sign.pub"):
         shutil.copyfile(
-            Path(salt_mm_failover_master_1.config["pki_dir"]) / keyfile,
-            Path(factory.config["pki_dir"]) / keyfile,
+            os.path.join(salt_mm_failover_master_1.config["pki_dir"], keyfile),
+            os.path.join(factory.config["pki_dir"], keyfile),
         )
-
-    # The secondary salt master depends on the primarily salt master fixture
-    # because we need to clone the keys
-    # for keyfile in ("master.pem", "master.pub"):
-    #     shutil.copyfile(
-    #         os.path.join(salt_mm_failover_master_1.config["pki_dir"], keyfile),
-    #         os.path.join(factory.config["pki_dir"], keyfile),
-    #     )
     with factory.started(start_timeout=120):
         yield factory
 
@@ -99,9 +91,7 @@ def salt_mm_failover_minion_1(salt_mm_failover_master_1, salt_mm_failover_master
             "{}:{}".format(mm_master_1_addr, mm_master_1_port),
             "{}:{}".format(mm_master_2_addr, mm_master_2_port),
         ],
-        "publish_port": salt_mm_failover_master_1.config[
-            "publish_port"
-        ],  # Because the ports might not be the standard ones
+        "publish_port": salt_mm_failover_master_1.config["publish_port"],
         "master_type": "failover",
         "master_alive_interval": 15,
         "master_tries": -1,
@@ -115,8 +105,8 @@ def salt_mm_failover_minion_1(salt_mm_failover_master_1, salt_mm_failover_master
     )
     # Need to grab the public signing key from the master, either will do
     shutil.copyfile(
-        Path(salt_mm_failover_master_1.config["pki_dir"]) / "master_sign.pub",
-        Path(factory.config["pki_dir"]) / "master_sign.pub",
+        os.path.join(salt_mm_failover_master_1.config["pki_dir"], "master_sign.pub"),
+        os.path.join(factory.config["pki_dir"], "master_sign.pub"),
     )
     with factory.started(start_timeout=120):
         yield factory
@@ -138,9 +128,7 @@ def salt_mm_failover_minion_2(salt_mm_failover_master_1, salt_mm_failover_master
             "{}:{}".format(mm_master_2_addr, mm_master_2_port),
             "{}:{}".format(mm_master_1_addr, mm_master_1_port),
         ],
-        "publish_port": salt_mm_failover_master_1.config[
-            "publish_port"
-        ],  # Because the ports might not be the standard ones
+        "publish_port": salt_mm_failover_master_1.config["publish_port"],
         "master_type": "failover",
         "master_alive_interval": 15,
         "master_tries": -1,
@@ -154,8 +142,8 @@ def salt_mm_failover_minion_2(salt_mm_failover_master_1, salt_mm_failover_master
     )
     # Need to grab the public signing key from the master, either will do
     shutil.copyfile(
-        Path(salt_mm_failover_master_1.config["pki_dir"]) / "master_sign.pub",
-        Path(factory.config["pki_dir"]) / "master_sign.pub",
+        os.path.join(salt_mm_failover_master_1.config["pki_dir"], "master_sign.pub"),
+        os.path.join(factory.config["pki_dir"], "master_sign.pub"),
     )
     with factory.started(start_timeout=120):
         yield factory
