@@ -456,7 +456,9 @@ def upgraded(
     return ret
 
 
-def source_present(name, source_location, priority=None, username=None, password=None, force=False):
+def source_present(
+    name, source_location, priority=None, username=None, password=None, force=False
+):
     """
     Instructs Chocolatey to add a source if not already present.
 
