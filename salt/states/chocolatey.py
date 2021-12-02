@@ -523,7 +523,11 @@ def source_present(name, source_location, priority=None, username=None, password
 
     # Add the source
     result = __salt__["chocolatey.add_source"](
-        name=name, source_location=source_location, priority=priority, username=username, password=password
+        name=name,
+        source_location=source_location,
+        priority=priority,
+        username=username,
+        password=password
     )
 
     if "Running chocolatey failed" not in result:
