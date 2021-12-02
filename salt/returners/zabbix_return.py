@@ -30,7 +30,9 @@ ZABBIX_SENDER_CANDIDATES = [
 
 ZABBIX_CONFIG_CANDIDATES = [
     "/usr/local/zabbix/etc/zabbix_agentd.conf",
+    "/usr/local/zabbix/etc/zabbix_agent2.conf",
     "/etc/zabbix/zabbix_agentd.conf",
+    "/etc/zabbix/zabbix_agent2.conf",
 ]
 
 ZABBIX_SENDER = next((p for p in ZABBIX_SENDER_CANDIDATES if os.path.exists(p)), None)
