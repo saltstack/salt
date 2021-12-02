@@ -529,7 +529,7 @@ def source_present(
         source_location=source_location,
         priority=priority,
         username=username,
-        password=password
+        password=password,
     )
 
     if "Running chocolatey failed" not in result:
