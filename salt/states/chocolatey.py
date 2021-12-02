@@ -456,7 +456,7 @@ def upgraded(
     return ret
 
 
-def source_present(name, source_location, username=None, password=None, force=False):
+def source_present(name, source_location, priority=None, username=None, password=None, force=False):
     """
     Instructs Chocolatey to add a source if not already present.
 
@@ -465,6 +465,12 @@ def source_present(name, source_location, username=None, password=None, force=Fa
 
     source
         Location of the source you want to work with.
+
+    priority
+        The priority order of this source as compared to other sources,
+        lower is better. Defaults to 0 (no priority). All priorities
+        above 0 will be evaluated first, then zero-based values will be
+        evaluated in config file order.
 
     username
         Provide username for chocolatey sources that need authentication
@@ -486,6 +492,7 @@ def source_present(name, source_location, username=None, password=None, force=Fa
           chocolatey.source_present:
             - name: reponame
             - source: https://repo.exemple.com
+            - priority: 100
             - username: myuser
             - password: mypassword
     """
@@ -516,7 +523,7 @@ def source_present(name, source_location, username=None, password=None, force=Fa
 
     # Add the source
     result = __salt__["chocolatey.add_source"](
-        name=name, source_location=source_location, username=username, password=password
+        name=name, source_location=source_location, priority=priority, username=username, password=password
     )
 
     if "Running chocolatey failed" not in result:
