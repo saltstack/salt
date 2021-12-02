@@ -448,7 +448,7 @@ jaraco.functools==3.3.0
     #   tempora
 jaraco.text==3.5.1
     # via jaraco.collections
-jinja2==2.11.3 ; python_version <= "3.9"
+jinja2==2.11.3
     # via
     #   -r requirements/base.txt
     #   junos-eznc
@@ -484,7 +484,7 @@ lxml==4.6.3
     #   ncclient
 mako==1.1.5
     # via -r requirements/static/ci/common.in
-markupsafe==1.1.1 ; python_version <= "3.9"
+markupsafe==1.1.1
     # via
     #   -r requirements/base.txt
     #   jinja2

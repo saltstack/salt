@@ -1,9 +1,7 @@
-Jinja2<3.0.3 ; python_version <= "3.9"
-Jinja2>=3.0.3 ; python_version >= "3.10"
+Jinja2
 msgpack>=0.5,!=0.5.5
 PyYAML
-MarkupSafe==1.1.1 ; python_version <= "3.9"
-MarkupSafe>=2.0 ; python_version >= "3.10"
+MarkupSafe
 requests>=1.0.0
 distro>=1.0.1
 contextvars
