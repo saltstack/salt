@@ -205,13 +205,13 @@ def present(host, groups, interfaces, **kwargs):
         if isinstance(group, str):
             groupid = __salt__["zabbix.hostgroup_get"](name=group, **connection_args)
             try:
-                groupids.append(int(groupid[0]["groupid"]))
+                groupids.append(groupid[0]["groupid"])
             except TypeError:
                 ret["comment"] = "Invalid group {}".format(group)
                 return ret
         else:
-            groupids.append(group)
-            groupid_dic.append({"groupid": group})
+            groupids.append(str(group))
+        groupid_dic.append({"groupid": group})
     groups = groupids
 
     # Get and validate proxyid
@@ -302,7 +302,18 @@ def present(host, groups, interfaces, **kwargs):
         if host_updated_params:
             update_host = True
 
-        host_inventory_mode = host["inventory_mode"]
+        if "inventory_mode" in host:
+            host_inventory_mode = host["inventory_mode"]
+        else:
+            host_inventory_mode = __salt__["zabbix.run_query"](
+                "host.get",
+                {
+                    "hostids": "{}".format(hostid),
+                    "output": ["inventory_mode"],
+                },
+                **connection_args
+            )[0]["inventory_mode"]
+
         inventory_mode = host_extra_properties.get(
             "inventory_mode",
             "0" if host_inventory_mode == "-1" else host_inventory_mode,
@@ -316,7 +327,7 @@ def present(host, groups, interfaces, **kwargs):
         cur_hostgroups = list()
 
         for hostgroup in hostgroups:
-            cur_hostgroups.append(int(hostgroup["groupid"]))
+            cur_hostgroups.append(hostgroup["groupid"])
 
         if set(groups) != set(cur_hostgroups):
             update_hostgroups = True
@@ -329,8 +340,19 @@ def present(host, groups, interfaces, **kwargs):
             hostinterfaces = sorted(hostinterfaces, key=lambda k: k["main"])
             hostinterfaces_copy = deepcopy(hostinterfaces)
             for hostintf in hostinterfaces_copy:
-                hostintf.pop("interfaceid")
-                hostintf.pop("hostid")
+                # hostid and interfaceid: makes no sense to compare this fields
+                # available, disable_until, error and errors_from: readonly
+                # properties that shows the state of interface. Present since Zabbix 5.4
+                intf_property_to_remove = (
+                    "interfaceid",
+                    "hostid",
+                    "available",
+                    "disable_until",
+                    "error",
+                    "errors_from",
+                )
+                for intf_property in intf_property_to_remove:
+                    hostintf.pop(intf_property, None)
                 # "bulk" is present only in snmp interfaces with Zabbix < 5.0
                 if "bulk" in hostintf:
                     hostintf.pop("bulk")
