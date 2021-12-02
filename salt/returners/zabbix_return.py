@@ -23,34 +23,37 @@ import os
 __virtualname__ = "zabbix"
 
 
+ZABBIX_SENDER_CANDIDATES = [
+    "/usr/local/zabbix/bin/zabbix_sender",
+    "/usr/bin/zabbix_sender",
+]
+
+ZABBIX_CONFIG_CANDIDATES = [
+    "/usr/local/zabbix/etc/zabbix_agentd.conf",
+    "/etc/zabbix/zabbix_agentd.conf",
+]
+
+ZABBIX_SENDER = next((p for p in ZABBIX_SENDER_CANDIDATES if os.path.exists(p)), None)
+ZABBIX_CONFIG = next((p for p in ZABBIX_CONFIG_CANDIDATES if os.path.exists(p)), None)
+
+
 def __virtual__():
-    if zbx():
-        return True
-    return False, "Zabbix returner: No zabbix_sender and zabbix_agend.conf found."
-
-
-def zbx():
-    if os.path.exists("/usr/local/zabbix/bin/zabbix_sender") and os.path.exists(
-        "/usr/local/zabbix/etc/zabbix_agentd.conf"
-    ):
-        zabbix_sender = "/usr/local/zabbix/bin/zabbix_sender"
-        zabbix_config = "/usr/local/zabbix/etc/zabbix_agentd.conf"
-        return {"sender": zabbix_sender, "config": zabbix_config}
-    elif os.path.exists("/usr/bin/zabbix_sender") and os.path.exists(
-        "/etc/zabbix/zabbix_agentd.conf"
-    ):
-        zabbix_sender = "/usr/bin/zabbix_sender"
-        zabbix_config = "/etc/zabbix/zabbix_agentd.conf"
-        return {"sender": zabbix_sender, "config": zabbix_config}
-    else:
-        return False
+    if ZABBIX_SENDER is None or ZABBIX_CONFIG is None:
+        message = "No zabbix_sender and no zabbix_agent(d|2).conf found."
+        if ZABBIX_SENDER:
+            message = "No zabbix_agent(d|2).conf found"
+        elif ZABBIX_CONFIG:
+            message = "No zabbix_sender found"
+        return False, f"Zabbix returner: {message}"
+    return True
 
 
 def zabbix_send(key, output):
+    assert ZABBIX_SENDER and ZABBIX_CONFIG
     cmd = (
-        zbx()["sender"]
+        ZABBIX_SENDER
         + " -c "
-        + zbx()["config"]
+        + ZABBIX_CONFIG
         + " -k "
         + key
         + ' -o "'
