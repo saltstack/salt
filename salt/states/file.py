@@ -7357,7 +7357,7 @@ def rename(name, source, force=False, makedirs=False, **kwargs):
     # All tests pass, move the file into place
     try:
         if os.path.islink(source):
-            linkto = os.readlink(source)
+            linkto = salt.utils.path.readlink(source)
             os.symlink(linkto, name)
             os.unlink(source)
         else:

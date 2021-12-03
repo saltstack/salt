@@ -2487,7 +2487,7 @@ def replace(
     symlink = False
     if is_link(path):
         symlink = True
-        target_path = os.readlink(path)
+        target_path = salt.utils.path.readlink(path)
         given_path = os.path.expanduser(path)
 
     path = os.path.realpath(os.path.expanduser(path))
@@ -3720,7 +3720,7 @@ def symlink(src, path):
     path = os.path.expanduser(path)
 
     try:
-        if os.path.normpath(os.readlink(path)) == os.path.normpath(src):
+        if os.path.normpath(salt.utils.path.readlink(path)) == os.path.normpath(src):
             log.debug("link already in correct state: %s -> %s", path, src)
             return True
     except OSError:
@@ -3947,7 +3947,7 @@ def readlink(path, canonicalize=False):
     if canonicalize:
         return os.path.realpath(path)
     else:
-        return os.readlink(path)
+        return salt.utils.path.readlink(path)
 
 
 def readdir(path):
