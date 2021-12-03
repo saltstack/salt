@@ -1822,12 +1822,17 @@ def installed(
         )
 
     comment = []
+    changes = {"installed": {}}
     if __opts__["test"]:
         if targets:
             if sources:
-                summary = ", ".join(targets)
+                _targets = targets
             else:
-                summary = ", ".join([_get_desired_pkg(x, targets) for x in targets])
+                _targets = [_get_desired_pkg(x, targets) for x in targets]
+            summary = ", ".join(targets)
+            changes["installed"].update(
+                {x: {"new": "installed", "old": ""} for x in targets}
+            )
             comment.append(
                 "The following packages would be installed/updated: {}".format(summary)
             )
@@ -1835,6 +1840,9 @@ def installed(
             comment.append(
                 "The following packages would have their selection status "
                 "changed from 'purge' to 'install': {}".format(", ".join(to_unpurge))
+            )
+            changes["installed"].update(
+                {x: {"new": "installed", "old": ""} for x in to_unpurge}
             )
         if to_reinstall:
             # Add a comment for each package in to_reinstall with its
@@ -1848,6 +1856,9 @@ def installed(
                         reinstall_targets.append(
                             _get_desired_pkg(reinstall_pkg, to_reinstall)
                         )
+                    changes["installed"].update(
+                        {x: {"new": "installed", "old": ""} for x in reinstall_targets}
+                    )
                 msg = "The following packages would be reinstalled: "
                 msg += ", ".join(reinstall_targets)
                 comment.append(msg)
@@ -1861,10 +1872,11 @@ def installed(
                         "Package '{}' would be reinstalled because the "
                         "following files have been altered:".format(pkgstr)
                     )
+                    changes["installed"].update({reinstall_pkg: {}})
                     comment.append(_nested_output(altered_files[reinstall_pkg]))
         ret = {
             "name": name,
-            "changes": {},
+            "changes": changes,
             "result": None,
             "comment": "\n".join(comment),
         }
@@ -1872,7 +1884,6 @@ def installed(
             ret.setdefault("warnings", []).extend(warnings)
         return ret
 
-    changes = {"installed": {}}
     modified_hold = None
     not_modified_hold = None
     failed_hold = None
@@ -2948,9 +2959,13 @@ def _uninstall(
         }
 
     if __opts__["test"]:
+
+        _changes = {}
+        _changes.update({x: {"new": "{}d".format(action), "old": ""} for x in targets})
+
         return {
             "name": name,
-            "changes": {},
+            "changes": _changes,
             "result": None,
             "comment": "The following packages will be {}d: {}.".format(
                 action, ", ".join(targets)
