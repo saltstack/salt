@@ -25,10 +25,8 @@ def proxy_minion_id(salt_master):
         pytest.helpers.remove_stale_minion_key(salt_master, _proxy_minion_id)
 
 
-@pytest.fixture
 def clear_proxy_minions(salt_master, proxy_minion_id):
     for proxy in [proxy_minion_id, "dummy_proxy_one", "dummy_proxy_two"]:
-        log.debug("=== cleaning %s ===", proxy)
         pytest.helpers.remove_stale_minion_key(salt_master, proxy)
 
         cachefile = os.path.join(
@@ -109,7 +107,6 @@ def test_exit_status_correct_usage(
     salt_master,
     salt_cli,
     proxy_minion_id,
-    clear_proxy_minions,
 ):
     """
     Ensure the salt-proxy control proxy starts and
@@ -178,6 +175,8 @@ def test_exit_status_correct_usage(
             start_timeout=240,
         )
 
+        factory.after_terminate(clear_proxy_minions, salt_master, factory.id)
+
         factory.start()
         assert factory.is_running()
 
@@ -210,7 +209,6 @@ def test_missing_pillar_file(
     salt_master,
     salt_cli,
     proxy_minion_id,
-    clear_proxy_minions,
 ):
     """
     Ensure that the control proxy minion starts up when
@@ -263,6 +261,8 @@ def test_missing_pillar_file(
             extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
             start_timeout=240,
         )
+
+        factory.after_terminate(clear_proxy_minions, salt_master, factory.id)
 
         factory.start()
         assert factory.is_running()
