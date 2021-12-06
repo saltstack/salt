@@ -87,6 +87,7 @@ import logging
 import os
 import time
 
+import salt.exceptions
 import salt.returners
 import salt.utils.files
 
@@ -146,17 +147,18 @@ def _get_options(ret):
     return _options
 
 
-def _find_minion_procs(proc_name="salt-minion", match_exe=False, exe=None):
+def _count_minion_procs(proc_name="salt-minion", match_exe=False, exe=None):
     """
     Return a list of processes with name matching "salt-minion"
     """
     ls = []
-    for p in psutil.process_iter(["name", "exe"]):
-        if match_exe and p.info["exe"] == exe:
-            ls.append(p)
-        elif p.info["name"] == proc_name:
-            ls.append(p)
-    return ls
+    if HAS_PSUTIL:
+        for p in psutil.process_iter(["name", "exe"]):
+            if match_exe and p.info["exe"] == exe:
+                ls.append(p)
+            elif p.info["name"] == proc_name:
+                ls.append(p)
+    return len(ls)
 
 
 def returner(ret):
@@ -228,17 +230,13 @@ def returner(ret):
 
     if not total:
         log.error("Total states run equals 0. There may be something wrong...")
-        raise  # pylint: disable=misplaced-bare-raise
+        raise salt.exceptions.SaltRunnerError
 
-    salt_procs = 0
-    if HAS_PSUTIL:
-        salt_procs = len(
-            _find_minion_procs(
-                proc_name=opts["proc_name"],
-                match_exe=opts["match_exe"],
-                exe=opts["exe"],
-            )
-        )
+    salt_procs = _count_minion_procs(
+        proc_name=opts["proc_name"],
+        match_exe=opts["match_exe"],
+        exe=opts["exe"],
+    )
 
     now = int(time.time())
 
@@ -290,21 +288,20 @@ def returner(ret):
     }
 
     if opts["add_state_name"]:
-        old_name = os.path.basename(opts["filename"])
-        new_name = (
-            "".join(old_name.split(".")[:-1])
-            + "-{}.".format(prom_state)
-            + "".join(old_name.split(".")[-1])
+        old_name, ext = os.path.splitext(opts["filename"])
+        opts["filename"] = "{}-{}{}".format(old_name, prom_state, ext)
+        log.debug(
+            "Modified Prometheus filename from %s to %s",
+            old_name + ext,
+            opts["filename"],
         )
-        opts["filename"] = os.path.join(out_dir, new_name)
-        log.debug("Modified Prometheus filename from %s to %s", old_name, new_name)
         for key in list(output.keys()):
             output[key + '{state="' + prom_state + '"}'] = output.pop(key)
 
     if opts["mode"]:
         try:
             opts["mode"] = int(opts["mode"], base=8)
-        except (KeyError, ValueError):
+        except ValueError:
             opts["mode"] = None
             log.exception("Unable to convert mode to octal. Using system default.")
 
@@ -316,17 +313,17 @@ def returner(ret):
             gid=opts["gid"],
             mode=opts["mode"],
         ) as textfile:
-            textfile.write(
-                "\n".join(
-                    [
-                        "# HELP {} {}\n# TYPE {} gauge\n{} {}".format(
-                            k.split("{")[0], v["help"], k.split("{")[0], k, v["value"]
-                        )
-                        for k, v in output.items()
-                    ]
+            outlines = []
+            for key, val in output.items():
+                metric = key.split("{")[0]
+                outlines.append(
+                    "# HELP {metric} {helptext}".format(
+                        metric=metric, helptext=val["help"]
+                    )
                 )
-                + "\n"
-            )
+                outlines.append("# TYPE {metric} gauge".format(metric=metric))
+                outlines.append("{key} {value}".format(key=key, value=val["value"]))
+            textfile.write("\n".join(outlines) + "\n")
     except Exception:  # pylint: disable=broad-except
         log.exception("Could not write to prometheus file: %s", opts["filename"])
         raise
