@@ -740,15 +740,24 @@ def create(vm_):
 def _import_api():
     """
     Download https://<url>/pve-docs/api-viewer/apidoc.js
-    Extract content of pveapi var (json formatted)
+    Extract content of pveapi var (json formatted) if proxmox is version 6
+    Extract content of apiSchema var (json formatted) if proxmox is version 7
     Load this json content into global variable "api"
     """
     global api
     full_url = "https://{}:{}/pve-docs/api-viewer/apidoc.js".format(url, port)
     returned_data = requests.get(full_url, verify=verify_ssl)
 
-    re_filter = re.compile("(?<=pveapi =)(.*)(?=^;)", re.DOTALL | re.MULTILINE)
-    api_json = re_filter.findall(returned_data.text)[0]
+    # Filter below will check for a json variable named either pveapi or apiSchema
+    re_filter = re.compile(
+        "((?<=pveapi =)(?<=apiSchema =))(.*)(?=^;)", re.DOTALL | re.MULTILINE
+    )
+    # Results for both possible matches are returned as a tuple instead of a single string
+    filter_results = re_filter.findall(returned_data.text)[0]
+    # We need to capture the single tuple item expected to have valid json
+    for result in filter_results:
+        if result != "":
+            api_json = result
     api = salt.utils.json.loads(api_json)
 
 
