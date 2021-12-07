@@ -744,6 +744,10 @@ class CkMinions:
         """
 
         v_minions = set(self.check_minions(valid, "compound").get("minions", []))
+        if not v_minions:
+            # There are no valid minions, so it doesn't matter what we are
+            # targeting - this is a fail.
+            return False
         if minions is None:
             _res = self.check_minions(expr, tgt_type)
             minions = set(_res["minions"])
