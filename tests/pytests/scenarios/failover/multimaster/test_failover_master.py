@@ -1,12 +1,18 @@
 import logging
 import time
-from contextlib import contextmanager
 
 import pytest
+import salt.utils.platform
 from salt.utils.files import fopen
 from saltfactories.exceptions import FactoryTimeout
 
-pytestmark = [pytest.mark.slow_test]
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.skipif(
+        salt.utils.platform.is_freebsd(),
+        reason="Processes are not properly killed on FreeBSD",
+    ),
+]
 
 log = logging.getLogger(__name__)
 
@@ -39,30 +45,6 @@ def _run_echo_for_all_possibilities(cli_list, minion_list):
                 )
 
     return returned_minions
-
-
-@contextmanager
-def _stop_with_grains_swap(
-    master_to_stop, master_to_stop_cli, disconnected_minions, alive_master
-):
-    """
-    Context manager to deal with failover quirks.
-
-    Since we are running on the same interface, we have to keep track of the publish port.
-    In fact, the previous statement is true if we ran on two separate interfaces, because we are not using default ports.
-    To see why, take a look at the master function in the status execution module.  It caused much pain :(
-    We are running on the same interface to allow FreeBSD tests to pass, as salt-factories has trouble stopping masters properly otherwise.
-    This adjustment should not impact the integrity of the tests.
-    """
-    for minion in disconnected_minions:
-        master_to_stop_cli.run(
-            "grains.setval",
-            "publish_port",
-            alive_master.config["publish_port"],
-            minion_tgt=minion.id,
-        )
-    with master_to_stop.stopped():
-        yield
 
 
 def test_pki(salt_mm_failover_minion_1):
@@ -149,12 +131,7 @@ def test_failover_to_second_master(
     ]
 
     # breakpoint()
-    with _stop_with_grains_swap(
-        salt_mm_failover_master_1,
-        mm_failover_master_1_salt_cli,
-        master_1_minions,
-        salt_mm_failover_master_2,
-    ):
+    with salt_mm_failover_master_1.stopped():
         start_time = time.time()
         # We need to wait for them to realize that the master is not alive
         # At this point, only the first minion will need to change masters
