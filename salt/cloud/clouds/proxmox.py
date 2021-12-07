@@ -750,7 +750,7 @@ def _import_api():
 
     # Filter below will check for a json variable named either pveapi or apiSchema
     re_filter = re.compile(
-        "((?<=pveapi =)(?<=apiSchema =))(.*)(?=^;)", re.DOTALL | re.MULTILINE
+        "((?<=pveapi =)|(?<=apiSchema =))(.*)(?=^;)", re.DOTALL | re.MULTILINE
     )
     # Results for both possible matches are returned as a tuple instead of a single string
     filter_results = re_filter.findall(returned_data.text)[0]
