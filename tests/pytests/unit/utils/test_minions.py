@@ -55,7 +55,6 @@ def test_connected_ids_remote_minions():
 # These validate_tgt tests make the assumption that CkMinions.check_minions is
 # correct. In other words, these tests are only worthwhile if check_minions is
 # also correct.
-@pytest.mark.xfail
 def test_validate_tgt_should_return_false_when_no_valid_minions_have_been_found():
     ckminions = salt.utils.minions.CkMinions(opts={})
     with patch(
