@@ -183,7 +183,7 @@ def test_minion_reconnection_against_one_live_master(
     """
     Test that mininons reconnect to a live master.
 
-    To work well with salt factories, the minions will reconnect to the master the were connected to in conftest.py.
+    To work well with salt factories, the minions will reconnect to the master they were connected to in conftest.py.
     We should keep this test directly after `test_failover_to_second_master`, to ensure all minions are initially
     connected to the second master.  A more thorough test.
     """
