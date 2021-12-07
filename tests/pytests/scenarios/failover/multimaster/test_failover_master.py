@@ -1,7 +1,9 @@
 import logging
 import time
+from contextlib import contextmanager
 
 import pytest
+from salt.utils.files import fopen
 from saltfactories.exceptions import FactoryTimeout
 
 pytestmark = [pytest.mark.slow_test]
@@ -28,7 +30,7 @@ def _run_echo_for_all_possibilities(cli_list, minion_list):
                 if ret and ret.json:
                     assert ret.json == "salt is cool!"
                     assert ret.exitcode == 0
-                    returned_minions.append(minion.id)
+                    returned_minions.append(minion)
             except FactoryTimeout as exc:
                 log.debug(
                     "Failed to execute test.echo from %s to %s.",
@@ -37,6 +39,49 @@ def _run_echo_for_all_possibilities(cli_list, minion_list):
                 )
 
     return returned_minions
+
+
+@contextmanager
+def _stop_with_grains_swap(
+    master_to_stop, master_to_stop_cli, disconnected_minions, alive_master
+):
+    """
+    Context manager to deal with failover quirks.
+
+    Since we are running on the same interface, we have to keep track of the publish port.
+    In fact, the previous statement is true if we ran on two separate interfaces, because we are not using default ports.
+    To see why, take a look at the master function in the status execution module.  It caused much pain :(
+    We are running on the same interface to allow FreeBSD tests to pass, as salt-factories has trouble stopping masters properly otherwise.
+    This adjustment should not impact the integrity of the tests.
+    """
+    for minion in disconnected_minions:
+        master_to_stop_cli.run(
+            "grains.setval",
+            "publish_port",
+            alive_master.config["publish_port"],
+            minion_tgt=minion.id,
+        )
+    with master_to_stop.stopped():
+        yield
+
+
+def test_pki(salt_mm_failover_minion_1):
+    """
+    Verify https://docs.saltproject.io/en/latest/topics/tutorials/multimaster_pki.html
+
+    We should keep this as the first test to minimize the size of the log file.
+    """
+    with fopen(salt_mm_failover_minion_1.config["log_file"]) as fp:
+        while True:
+            line = fp.readline()
+            if not line:
+                # We have reached the end of the file
+                assert False
+            if (
+                "Successfully verified signature of master public key with verification public key master_sign.pub"
+                in line
+            ):
+                break
 
 
 def test_return_to_assigned_master(
@@ -99,10 +144,17 @@ def test_failover_to_second_master(
         [salt_mm_failover_minion_1, salt_mm_failover_minion_2],
     )
     event_patterns = [
-        (minion, "salt/minion/{}/start".format(minion)) for minion in master_1_minions
+        (minion.id, "salt/minion/{}/start".format(minion.id))
+        for minion in master_1_minions
     ]
 
-    with salt_mm_failover_master_1.stopped():
+    # breakpoint()
+    with _stop_with_grains_swap(
+        salt_mm_failover_master_1,
+        mm_failover_master_1_salt_cli,
+        master_1_minions,
+        salt_mm_failover_master_2,
+    ):
         start_time = time.time()
         # We need to wait for them to realize that the master is not alive
         # At this point, only the first minion will need to change masters
@@ -155,7 +207,8 @@ def test_minion_reconnection_against_one_live_master(
     Test that mininons reconnect to a live master.
 
     To work well with salt factories, the minions will reconnect to the master the were connected to in conftest.py.
-    We should keep this test directly after `test_failover_to_second_master`, to ensure all minions are initially connected to the second master.  A more thorough test.
+    We should keep this test directly after `test_failover_to_second_master`, to ensure all minions are initially
+    connected to the second master.  A more thorough test.
     """
     start_time = time.time()
 
