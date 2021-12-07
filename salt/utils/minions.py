@@ -736,8 +736,14 @@ class CkMinions:
 
     def validate_tgt(self, valid, expr, tgt_type, minions=None, expr_form=None):
         """
-        Return a Bool. This function returns if the expression sent in is
-        within the scope of the valid expression
+        Validate the target minions against the possible valid minions.
+
+        If ``minions`` is provided, they will be compared against the valid
+        minions. Otherwise, ``expr`` and ``tgt_type`` will be used to expand
+        to a list of target minions.
+
+        Return True if all of the requested minions are valid minions,
+        otherwise return False.
         """
 
         v_minions = set(self.check_minions(valid, "compound").get("minions", []))
@@ -746,10 +752,7 @@ class CkMinions:
             minions = set(_res["minions"])
         else:
             minions = set(minions)
-        d_bool = not bool(minions.difference(v_minions))
-        if len(v_minions) == len(minions) and d_bool:
-            return True
-        return d_bool
+        return minions.issubset(v_minions)
 
     def match_check(self, regex, fun):
         """
