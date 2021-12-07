@@ -44,16 +44,10 @@ def salt_mm_failover_master_2(salt_factories, salt_mm_failover_master_1):
         "transport": salt_mm_failover_master_1.config["transport"],
     }
     config_overrides = {
-        "interface": "127.0.0.2",
+        "interface": "127.0.0.1",
         "master_sign_pubkey": True,
     }
 
-    # Use the same ports for both masters, they are binding to different interfaces
-    for key in (
-        "ret_port",
-        "publish_port",
-    ):
-        config_overrides[key] = salt_mm_failover_master_1.config[key]
     factory = salt_factories.salt_master_daemon(
         "mm-failover-master-2",
         defaults=config_defaults,
@@ -61,7 +55,7 @@ def salt_mm_failover_master_2(salt_factories, salt_mm_failover_master_1):
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
 
-    # # Both masters will share the same signing key pair
+    # Both masters will share the same signing key pair
     for keyfile in ("master_sign.pem", "master_sign.pub"):
         shutil.copyfile(
             os.path.join(salt_mm_failover_master_1.config["pki_dir"], keyfile),
@@ -91,7 +85,8 @@ def salt_mm_failover_minion_1(salt_mm_failover_master_1, salt_mm_failover_master
             "{}:{}".format(mm_master_1_addr, mm_master_1_port),
             "{}:{}".format(mm_master_2_addr, mm_master_2_port),
         ],
-        "publish_port": salt_mm_failover_master_1.config["publish_port"],
+        # "publish_port": salt_mm_failover_master_1.config["publish_port"],
+        "grains": {"publish_port": salt_mm_failover_master_1.config["publish_port"]},
         "master_type": "failover",
         "master_alive_interval": 15,
         "master_tries": -1,
@@ -128,7 +123,8 @@ def salt_mm_failover_minion_2(salt_mm_failover_master_1, salt_mm_failover_master
             "{}:{}".format(mm_master_2_addr, mm_master_2_port),
             "{}:{}".format(mm_master_1_addr, mm_master_1_port),
         ],
-        "publish_port": salt_mm_failover_master_1.config["publish_port"],
+        # "publish_port": salt_mm_failover_master_1.config["publish_port"],
+        "grains": {"publish_port": salt_mm_failover_master_1.config["publish_port"]},
         "master_type": "failover",
         "master_alive_interval": 15,
         "master_tries": -1,
