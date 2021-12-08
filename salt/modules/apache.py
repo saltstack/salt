@@ -11,6 +11,7 @@ Support for Apache
 
 import io
 import logging
+import os
 import re
 import urllib.error
 import urllib.request
@@ -110,7 +111,9 @@ def modules():
     ret = {}
     ret["static"] = []
     ret["shared"] = []
-    out = __salt__["cmd.run"](cmd).splitlines()
+    out = __salt__["cmd.run"](
+        cmd, env={"PATH": os.getenv("PATH")}, clean_env=True
+    ).splitlines()
     for line in out:
         comps = line.split()
         if not comps:
@@ -156,7 +159,7 @@ def directives():
     """
     cmd = "{} -L".format(_detect_os())
     ret = {}
-    out = __salt__["cmd.run"](cmd)
+    out = __salt__["cmd.run"](cmd, env={"PATH": os.getenv("PATH")}, clean_env=True)
     out = out.replace("\n\t", "\t")
     for line in out.splitlines():
         if not line:
@@ -184,7 +187,7 @@ def vhosts():
     cmd = "{} -S".format(_detect_os())
     ret = {}
     namevhost = ""
-    out = __salt__["cmd.run"](cmd)
+    out = __salt__["cmd.run"](cmd, env={"PATH": os.getenv("PATH")}, clean_env=True)
     for line in out.splitlines():
         if not line:
             continue
@@ -226,7 +229,7 @@ def signal(signal=None):
     else:
         arguments = " {}".format(signal)
     cmd = _detect_os() + arguments
-    out = __salt__["cmd.run_all"](cmd)
+    out = __salt__["cmd.run_all"](cmd, env={"PATH": os.getenv("PATH")}, clean_env=True)
 
     # A non-zero return code means fail
     if out["retcode"] and out["stderr"]:
