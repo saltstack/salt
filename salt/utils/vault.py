@@ -311,7 +311,7 @@ def make_request(
         connection = get_cache()
     token = connection["token"] if not token else token
     vault_url = connection["url"] if not vault_url else vault_url
-    namespace = namespace or connection["namespace"]
+    namespace = namespace or connection.get("namespace")
     if "verify" in args:
         args["verify"] = args["verify"]
     else:
