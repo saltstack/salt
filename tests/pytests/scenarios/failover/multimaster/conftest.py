@@ -77,9 +77,7 @@ def mm_failover_master_2_salt_cli(salt_mm_failover_master_2):
 
 
 @pytest.fixture(scope="package")
-def salt_mm_failover_minion_1(
-    salt_mm_failover_master_1, salt_mm_failover_master_2, mm_failover_master_1_salt_cli
-):
+def salt_mm_failover_minion_1(salt_mm_failover_master_1, salt_mm_failover_master_2):
     config_defaults = {
         "transport": salt_mm_failover_master_1.config["transport"],
     }
