@@ -656,6 +656,10 @@
 #  base:
 #    - /srv/pillar
 
+# If this is `True` and the ciphertext could not be decrypted, then an error is
+# raised.
+#gpg_decrypt_must_succeed: False
+
 # Set a hard-limit on the size of the files that can be pushed to the master.
 # It will be interpreted as megabytes. Default: 100
 #file_recv_max_size: 100

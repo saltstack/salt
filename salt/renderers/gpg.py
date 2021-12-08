@@ -267,6 +267,21 @@ pillar data like so:
 .. code-block:: bash
 
     salt myminion state.sls secretstuff pillar_enc=gpg pillar="$ciphertext"
+
+Configuration
+*************
+
+The default behaviour of this renderer is to log a warning if a block could not
+be decrypted; in other words, it just returns the ciphertext rather than the
+encrypted secret.
+
+This behaviour can be changed via the `gpg_decrypt_must_succeed` configuration
+option.  If set to `True`, any gpg block that cannot be decrypted raises a
+`SaltRenderError` exception, which registers an error in ``_errors`` during
+rendering.
+
+In the Chlorine release, the default behavior will be reversed and an error
+message will be added to ``_errors`` by default.
 """
 
 
@@ -280,6 +295,7 @@ import salt.utils.cache
 import salt.utils.path
 import salt.utils.stringio
 import salt.utils.stringutils
+import salt.utils.versions
 from salt.exceptions import SaltRenderError
 
 log = logging.getLogger(__name__)
@@ -365,6 +381,18 @@ def _decrypt_ciphertext(cipher):
     decrypted_data, decrypt_error = proc.communicate(input=cipher)
     if not decrypted_data:
         log.warning("Could not decrypt cipher %r, received: %r", cipher, decrypt_error)
+        if __opts__["gpg_decrypt_must_succeed"]:
+            raise SaltRenderError(
+                "Could not decrypt cipher {!r}, received: {!r}".format(
+                    cipher,
+                    decrypt_error,
+                )
+            )
+        else:
+            salt.utils.versions.warn_until(
+                "Chlorine",
+                "After the Chlorine release of Salt, gpg_decrypt_must_succeed will default to True.",
+            )
         return cipher
     else:
         if __opts__.get("gpg_cache"):
