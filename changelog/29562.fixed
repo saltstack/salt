@@ -1,0 +1,1 @@
+Addressing a few issues when having keep_symlinks set to True with file.recurse.  Also allow symlinks that are outside the salt fileserver root to be discoverable as symlinks when fileserver_followsymlinks is set to False.
