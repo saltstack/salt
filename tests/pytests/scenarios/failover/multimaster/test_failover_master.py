@@ -1,9 +1,10 @@
 import logging
+import os
+import shutil
 import time
 
 import pytest
 import salt.utils.platform
-from salt.utils.files import fopen
 from saltfactories.exceptions import FactoryTimeout
 
 pytestmark = [
@@ -47,23 +48,49 @@ def _run_echo_for_all_possibilities(cli_list, minion_list):
     return returned_minions
 
 
-def test_pki(salt_mm_failover_minion_1):
+def test_pki(salt_mm_failover_master_1, salt_mm_failover_master_2, caplog):
     """
     Verify https://docs.saltproject.io/en/latest/topics/tutorials/multimaster_pki.html
-
-    We should keep this as the first test to minimize the size of the log file.
     """
-    with fopen(salt_mm_failover_minion_1.config["log_file"]) as fp:
-        while True:
-            line = fp.readline()
-            if not line:
-                # We have reached the end of the file
-                assert False
-            if (
-                "Successfully verified signature of master public key with verification public key master_sign.pub"
-                in line
-            ):
-                break
+    # At first we spin up a simple minion in order to capture its logging output.
+    config_defaults = {
+        "transport": salt_mm_failover_master_1.config["transport"],
+    }
+
+    mm_master_1_port = salt_mm_failover_master_1.config["ret_port"]
+    mm_master_1_addr = salt_mm_failover_master_1.config["interface"]
+    mm_master_2_port = salt_mm_failover_master_2.config["ret_port"]
+    mm_master_2_addr = salt_mm_failover_master_2.config["interface"]
+    config_overrides = {
+        "master": [
+            "{}:{}".format(mm_master_1_addr, mm_master_1_port),
+            "{}:{}".format(mm_master_2_addr, mm_master_2_port),
+        ],
+        "publish_port": salt_mm_failover_master_1.config["publish_port"],
+        "master_type": "failover",
+        "master_alive_interval": 15,
+        "master_tries": -1,
+        "verify_master_pubkey_sign": True,
+    }
+    factory = salt_mm_failover_master_1.salt_minion_daemon(
+        "mm-failover-minion-1",
+        defaults=config_defaults,
+        overrides=config_overrides,
+        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+    )
+    # Need to grab the public signing key from the master, either will do
+    shutil.copyfile(
+        os.path.join(salt_mm_failover_master_1.config["pki_dir"], "master_sign.pub"),
+        os.path.join(factory.config["pki_dir"], "master_sign.pub"),
+    )
+    with caplog.at_level(logging.DEBUG):
+        with factory.started(start_timeout=120):
+            pass
+
+    assert (
+        "Successfully verified signature of master public key with verification public key master_sign.pub"
+        in caplog.text
+    )
 
 
 def test_return_to_assigned_master(
@@ -130,7 +157,6 @@ def test_failover_to_second_master(
         for minion in master_1_minions
     ]
 
-    # breakpoint()
     with salt_mm_failover_master_1.stopped():
         start_time = time.time()
         # We need to wait for them to realize that the master is not alive
@@ -184,8 +210,6 @@ def test_minion_reconnection_against_one_live_master(
     Test that mininons reconnect to a live master.
 
     To work well with salt factories, the minions will reconnect to the master they were connected to in conftest.py.
-    We should keep this test directly after `test_failover_to_second_master`, to ensure all minions are initially
-    connected to the second master.  A more thorough test.
     """
     start_time = time.time()
 
