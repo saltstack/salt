@@ -300,11 +300,14 @@ def present(host, groups, interfaces, **kwargs):
         if host_updated_params:
             update_host = True
 
-        host_inventory_mode = host["inventory_mode"]
-        inventory_mode = host_extra_properties.get(
-            "inventory_mode",
-            "0" if host_inventory_mode == "-1" else host_inventory_mode,
-        )
+        try:
+            host_inventory_mode = host["inventory_mode"]
+            inventory_mode = host_extra_properties.get(
+                "inventory_mode",
+                "0" if host_inventory_mode == "-1" else host_inventory_mode,
+            )
+        except KeyError:
+            inventory_mode = None
 
         cur_proxy_hostid = host["proxy_hostid"]
         if proxy_hostid != cur_proxy_hostid:
