@@ -1108,6 +1108,7 @@ class MinionManager(MinionBase):
         for master in masters:
             s_opts = copy.deepcopy(self.opts)
             s_opts["master"] = master
+            s_opts["random_master"] = False # spawn with one master, no need for random
             s_opts["multimaster"] = True
             s_opts["beacons_leader"] = beacons_leader
             if beacons_leader:
