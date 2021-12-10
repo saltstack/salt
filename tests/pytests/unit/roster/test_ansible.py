@@ -3,7 +3,6 @@ import salt.roster.ansible as ansible
 from tests.support.mock import patch
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize(
     "which_value",
     [False, None],
