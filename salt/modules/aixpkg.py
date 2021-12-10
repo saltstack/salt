@@ -38,9 +38,10 @@ def _check_pkg(target):
     """
     Return name, version and if rpm package for specified target
     """
+    log.debug(f"_check_pkg target '{target}'")
     ret = {}
     cmd = ["/usr/bin/lslpp", "-Lc", target]
-    lines = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
+    lines = __salt__["cmd.run_all"](cmd, python_shell=False).splitlines()
 
     name = ""
     version_num = ""
@@ -66,6 +67,9 @@ def _check_pkg(target):
         version_num = comps[2]
         break
 
+    log.debug(
+        f"_check_pkg returning name '{name}', version number '{version_num}', rpmpkg '{rpmpkg}'"
+    )
     return name, version_num, rpmpkg
 
 
@@ -206,18 +210,18 @@ def version(*names, **kwargs):
     return ret
 
 
-## def _is_installed(name, **kwargs):
-##     """
-##     Returns True if the fileset/rpm package is installed. Otherwise returns False.
-##
-##     CLI Example:
-##
-##     .. code-block:: bash
-##
-##         salt '*' pkg._is_installed bash
-##     """
-##     cmd = ["/usr/bin/lslpp", "-Lc", name]
-##     return __salt__["cmd.retcode"](cmd) == 0
+def _is_installed(name, **kwargs):
+    """
+    Returns True if the fileset/rpm package is installed. Otherwise returns False.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg._is_installed bash
+    """
+    cmd = ["/usr/bin/lslpp", "-Lc", name]
+    return __salt__["cmd.retcode"](cmd) == 0
 
 
 def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwargs):
@@ -245,6 +249,10 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
                 if fails
                     attempt process as fileset
 
+            Fileset needs to be available as a single path and filename
+            compound filesets are not handled are not supported
+            for example: bos.adt.insttools is part of bos.adt.other and is installed as follows
+                /usr/bin/installp -acXYg /cecc/repos/aix72/TL4/BASE/installp/ppc/bos.adt.other bos.adt.insttools
 
     name
         The name of the fileset or rpm package to be installed.
@@ -321,11 +329,11 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
             if pathlib.Path("/opt/freeware/bin/dnf").is_file():
                 cmdexe = "/opt/freeware/bin/dnf"
                 if test:
-                    cmdflags += " --assumeno"
+                    cmdflags += "--assumeno"
                 else:
-                    cmdflags += " --assumeyes"
+                    cmdflags += "--assumeyes"
                 if refresh:
-                    cmdflags += " --refresh"
+                    cmdflags += "--refresh"
 
                 cmd = f"{cmdexe} {cmdflags} {target}"
                 out = __salt__["cmd.run_all"](
@@ -338,11 +346,11 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
             elif pathlib.Path("/opt/freeware/bin/yum").is_file():
                 cmdexe = "/opt/freeware/bin/yum"
                 if test:
-                    cmdflags += " --assumeno"
+                    cmdflags += "--assumeno"
                 else:
-                    cmdflags += " --assumeyes"
+                    cmdflags += "--assumeyes"
                 if refresh:
-                    cmdflags += " --refresh"
+                    cmdflags += "--refresh"
 
                 cmd = f"{cmdexe} {cmdflags} {target}"
                 out = __salt__["cmd.run_all"](
@@ -355,18 +363,18 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
             elif pathlib.Path("/usr/bin/yum").is_file():
                 cmdexe = "/usr/bin/yum"
                 if test:
-                    cmdflags += " --assumeno"
+                    cmdflags += "--assumeno"
                 else:
-                    cmdflags += " --assumeyes"
+                    cmdflags += "--assumeyes"
 
                 cmd = f"{cmdexe} {cmdflags} {target}"
                 out = __salt__["cmd.run_all"](cmd, python_shell=False)
 
             else:
                 cmdexe = "/usr/bin/rpm"
-                cmdflags = " -Uivh "
+                cmdflags = "-Uivh"
                 if test:
-                    cmdflags += " --test"
+                    cmdflags += "--test"
 
                 cmd = f"{cmdexe} {cmdflags} {target}"
                 out = __salt__["cmd.run_all"](cmd, python_shell=False)
@@ -387,8 +395,6 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
 
         if flag_fileset or flag_try_rpm_failed:
             # either identified as fileset, or failed trying install as rpm, try as fileset
-            ##            if _is_installed(target):
-            ##                continue
 
             cmd = "/usr/sbin/installp -acYXg"
             if test:
@@ -471,6 +477,8 @@ def remove(name=None, pkgs=None, **kwargs):
 
     # Remove the fileset or rpm package(s)
     for target in targets:
+        cmd = ""
+        out = {}
         try:
             named, versionpkg, rpmpkg = _check_pkg(target)
         except CommandExecutionError as exc:
@@ -481,7 +489,7 @@ def remove(name=None, pkgs=None, **kwargs):
         if rpmpkg:
 
             # assume use dnf or yum
-            cmdflags = " -y remove "
+            cmdflags = "-y remove"
             libpathenv = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
             if pathlib.Path("/opt/freeware/bin/dnf").is_file():
                 cmdexe = "/opt/freeware/bin/dnf"
@@ -507,7 +515,7 @@ def remove(name=None, pkgs=None, **kwargs):
                 out = __salt__["cmd.run_all"](cmd, python_shell=False)
             else:
                 cmdexe = "/usr/bin/rpm"
-                cmdflags = " -e "
+                cmdflags = "-e"
                 cmd = f"{cmdexe} {cmdflags} {target}"
                 out = __salt__["cmd.run_all"](cmd, python_shell=False)
         else:
@@ -702,28 +710,3 @@ def upgrade_available(name, **kwargs):
     else:
         log.debug(f"upgrade_available for name '{name}' not found")
         return False
-
-
-##    cmd = f"lslpp -Lq {name}"
-##    log.debug(f"AIX packaging upgrade_available command '{cmd}'")
-##    aix_info = __salt__["cmd.run_all"](cmd, python_shell=False)
-##    log.debug(f"AIX packaging upgrade_available aix_info '{aix_info}'")
-##    if 0 == aix_info["retcode"]:
-##        aix_info_list = aix_info["stdout"].split("\n")
-##        log.debug(
-##            f"upgrade_available aix_info_list '{aix_info_list}' for {name} using lslpp -Lq {name}"
-##        )
-##        for aix_line in aix_info_list:
-##            if name in aix_line:
-##                aix_ver_list = aix_line.split()
-##                log.debug(f"upgrade_available aix_ver_list '{aix_ver_list}' for {name}")
-##                if "R" in aix_ver_list[3]:
-##                    rpm_found = True
-##                    log.debug(f"AIX packaging upgrade_available found {name} is an RPM")
-##                    break
-##    else:
-##        log.debug(f"Could not find AIX packaging version for {name}")
-##        return False
-##
-##    if not rpm_found:
-##        return False
