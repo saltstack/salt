@@ -9,6 +9,7 @@ from saltfactories.exceptions import FactoryTimeout
 
 pytestmark = [
     pytest.mark.slow_test,
+    pytest.mark.windows_whitelisted,
     pytest.mark.skipif(
         salt.utils.platform.is_freebsd(),
         reason="Processes are not properly killed on FreeBSD",
