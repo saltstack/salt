@@ -232,7 +232,8 @@ salt/serializers/*:
   - pytests.unit.serializers.test_serializers
 
 salt/(cli/spm\.py|spm/.+):
-  - unit.test_spm
+  - pytests.unit.spm.test_spm
+  - pytests.unit.spm.test_pkgfiles
   - integration.shell.test_spm
   - integration.spm.test_build
   - integration.spm.test_files
