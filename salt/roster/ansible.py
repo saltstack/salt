@@ -45,6 +45,7 @@ There is also the option of specifying a dynamic inventory, and generating it on
 .. code-block:: bash
 
     #!/bin/bash
+    # filename: /etc/salt/hosts
     echo '{
       "servers": [
         "salt.gtmanfred.com"
@@ -81,9 +82,14 @@ This is the format that an inventory script needs to output to work with ansible
 
 .. code-block:: bash
 
-    [~]# salt-ssh --roster-file /etc/salt/hosts salt.gtmanfred.com test.ping
+    [~]# salt-ssh --roster=ansible --roster-file /etc/salt/hosts salt.gtmanfred.com test.ping
     salt.gtmanfred.com:
             True
+
+.. note::
+
+    A dynamic inventory script must have the executable bit set. In the above
+    excample, ``chmod +x /etc/salt/hosts``.
 
 Any of the [groups] or direct hostnames will return.  The 'all' is special, and returns everything.
 """
