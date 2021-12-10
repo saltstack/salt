@@ -1098,7 +1098,7 @@ def test_install_rpm_using_dnf():
             result = aixpkg.install("info")
             libpath_env = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
             dnf_call.assert_any_call(
-                "/opt/freeware/bin/dnf install --allowerasing  --assumeyes info",
+                "/opt/freeware/bin/dnf install --allowerasing --assumeyes info",
                 env=libpath_env,
                 ignore_retcode=True,
                 python_shell=False,
@@ -1134,7 +1134,7 @@ Error: Unable to find a match: info_fake
             assert dnf_call.call_count == 1
             libpath_env = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
             dnf_call.assert_any_call(
-                "/opt/freeware/bin/dnf install --allowerasing  --assumeyes info_fake.rpm",
+                "/opt/freeware/bin/dnf install --allowerasing --assumeyes info_fake.rpm",
                 env=libpath_env,
                 ignore_retcode=True,
                 python_shell=False,
@@ -1203,13 +1203,13 @@ No match for argument: bos.net
 Error: Unable to find a match: bos.net
 """
 
+    fileset_pkg_name = "/cecc/repos/aix72/TL3/BASE/installp/ppc/bos.net"
     dnf_installp_call = MagicMock(
         side_effect=[
             {"retcode": 1, "stdout": "", "stderr": bos_net_fake_error},
             {"retcode": 0, "stdout": ""},
         ]
     )
-    fileset_pkg_name = "/cecc/repos/aix72/TL3/BASE/installp/ppc/bos.net"
     list_pkgs_mock = MagicMock(
         side_effect=[
             {"bos.net.tcp.tcpdump": "7.1.6.3"},
@@ -1228,7 +1228,7 @@ Error: Unable to find a match: bos.net
             assert dnf_installp_call.call_count == 2
             libpath_env = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
             dnf_installp_call.assert_any_call(
-                f"/opt/freeware/bin/dnf install --allowerasing  --assumeyes {fileset_pkg_name}",
+                f"/opt/freeware/bin/dnf install --allowerasing --assumeyes {fileset_pkg_name}",
                 env=libpath_env,
                 ignore_retcode=True,
                 python_shell=False,
@@ -1294,14 +1294,14 @@ Name                      Level           Pre-installation Failure/Warning
 fake_info                                 Not found on the installation media
 
 """
-
+    fileset_pkg_name = "/cecc/repos/aix72/TL3/BASE/installp/ppc/info_fake"
+    fileset_pkg_base_name = os.path.basename(f"{fileset_pkg_name}")
     dnf_installp_call = MagicMock(
         side_effect=[
             {"retcode": 1, "stdout": "", "stderr": info_fake_dnf_error},
             {"retcode": 1, "stdout": "", "stderr": info_fake_fileset_error},
         ]
     )
-    fileset_pkg_name = "/cecc/repos/aix72/TL3/BASE/installp/ppc/info_fake"
     list_pkgs_mock = MagicMock(
         side_effect=[
             {"bos.net.tcp.tcpdump": "7.2.4.1"},
@@ -1326,13 +1326,201 @@ fake_info                                 Not found on the installation media
             assert dnf_installp_call.call_count == 2
             libpath_env = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
             dnf_installp_call.assert_any_call(
-                f"/opt/freeware/bin/dnf install --allowerasing  --assumeyes {fileset_pkg_name}",
+                f"/opt/freeware/bin/dnf install --allowerasing --assumeyes {fileset_pkg_name}",
                 env=libpath_env,
                 ignore_retcode=True,
                 python_shell=False,
             )
-            test_name = os.path.basename(fileset_pkg_name)
             dnf_installp_call.assert_called_with(
-                f"/usr/sbin/installp -acYXg -d /cecc/repos/aix72/TL3/BASE/installp/ppc {test_name}",
+                f"/usr/sbin/installp -acYXg -d /cecc/repos/aix72/TL3/BASE/installp/ppc {fileset_pkg_base_name}",
                 python_shell=False,
             )
+
+
+def test_remove_dnf():
+    """
+    Test remove rpm file using dnf
+    """
+    pkg_name = "info"
+    pkg_name_version = "6.7-1"
+    pkg_name_lslpp_out = """#Package Name:Fileset:Level:State:PTF Id:Fix State:Type:Description:Destination Dir.:Uninstaller:Message Catalog:Message Set:Message Number:Parent:Automatic:EFIX Locked:Install Path:Build Date
+info:info-6.7-1:6.7-1: : :C:R:A stand-alone TTY-based reader for GNU texinfo documentation.: :/bin/rpm -e info: : : : :1: :(none):Mon Feb  8 08:04:43 EST 2021
+"""
+    dnf_call = MagicMock(side_effect=[pkg_name_lslpp_out, {"retcode": 0, "stdout": ""}])
+    list_pkgs_mock = MagicMock(
+        side_effect=[{f"{pkg_name}": f"{pkg_name_version}"}, {f"{pkg_name}": ""}]
+    )
+
+    with patch("pathlib.Path.is_file", return_value=True):
+        with patch.dict(
+            aixpkg.__salt__,
+            {"cmd.run_all": dnf_call, "config.get": MagicMock(return_value=False)},
+        ), patch.object(aixpkg, "list_pkgs", list_pkgs_mock):
+            result = aixpkg.remove(f"{pkg_name}")
+            dnf_call.assert_any_call(
+                ["/usr/bin/lslpp", "-Lc", f"{pkg_name}"],
+                python_shell=False,
+            )
+            libpath_env = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
+            dnf_call.assert_any_call(
+                f"/opt/freeware/bin/dnf -y remove {pkg_name}",
+                env=libpath_env,
+                ignore_retcode=True,
+                python_shell=False,
+            )
+            expected = {f"{pkg_name}": {"old": f"{pkg_name_version}", "new": ""}}
+            assert result == expected
+
+
+def test_remove_fileset():
+    """
+    Test remove fileset using installp
+
+    Note: need to have the fileset available, compound filesets are not handled
+        for example:  /usr/bin/installp -acXYg  /cecc/repos/aix72/TL4/BASE/installp/ppc/bos.adt.other bos.adt.insttools"
+            is not supported
+    """
+    fileset_pkg_name = "/cecc/repos/aix72/TL4/BASE/installp/ppc/bos.adt.insttools"  # fake fileset (as part of compound bos.adt.other)
+    fileset_base_name = os.path.basename(fileset_pkg_name)
+    fileset_pkg_name_version = "7.2.2.0"
+    fileset_pkg_name_lslpp_out = """#Package Name:Fileset:Level:State:PTF Id:Fix State:Type:Description:Destination Dir.:Uninstaller:Message Catalog:Message Set:Message Number:Parent:Automatic:EFIX Locked:Install Path:Build Date
+bos.adt:bos.adt.insttools:7.2.2.0: : :C: :Tool to Create installp Packages : : : : : : :0:0:/:1731
+"""
+    fileset_pkg_name_installp_out = """+-----------------------------------------------------------------------------+
+                    Pre-installation Verification...
++-----------------------------------------------------------------------------+
+Verifying selections...done
+Verifying requisites...done
+Results...
+
+SUCCESSES
+---------
+  Filesets listed in this section passed pre-installation verification
+  and will be installed.
+
+  Selected Filesets
+  -----------------
+  bos.adt.insttools 7.2.2.0                   # Tool to Create installp Pack...
+
+  << End of Success Section >>
+
++-----------------------------------------------------------------------------+
+                   BUILDDATE Verification ...
++-----------------------------------------------------------------------------+
+Verifying build dates...done
+FILESET STATISTICS 
+------------------
+    1  Selected to be installed, of which:
+        1  Passed pre-installation verification
+  ----
+    1  Total to be installed
+
++-----------------------------------------------------------------------------+
+                         Installing Software...
++-----------------------------------------------------------------------------+
+
+installp: APPLYING software for:
+        bos.adt.insttools 7.2.2.0
+
+
+. . . . . << Copyright notice for bos.adt >> . . . . . . .
+ Licensed Materials - Property of IBM
+
+ 5765CD200
+   Copyright International Business Machines Corp. 2002, 2019.
+
+ All rights reserved.
+ US Government Users Restricted Rights - Use, duplication or disclosure
+ restricted by GSA ADP Schedule Contract with IBM Corp.
+. . . . . << End of copyright notice for bos.adt >>. . . . 
+
+Successfully updated the Kernel Authorization Table.
+Successfully updated the Kernel Role Table.
+Successfully updated the Kernel Command Table.
+Successfully updated the Kernel Device Table.
+Successfully updated the Kernel Object Domain Table.
+Successfully updated the Kernel  Domains Table.
+Successfully updated the Kernel RBAC log level. 
+Finished processing all filesets.  (Total time:  1 secs).
+
++-----------------------------------------------------------------------------+
+                                Summaries:
++-----------------------------------------------------------------------------+
+
+Installation Summary
+--------------------
+Name                        Level           Part        Event       Result
+-------------------------------------------------------------------------------
+bos.adt.insttools           7.2.2.0         USR         APPLY       SUCCESS    
+bos.adt.insttools           7.2.2.0         ROOT        APPLY       SUCCESS 
+"""
+    dnf_call = MagicMock(
+        side_effect=[fileset_pkg_name_lslpp_out, {"retcode": 0, "stdout": ""}]
+    )
+    list_pkgs_mock = MagicMock(
+        side_effect=[
+            {f"{fileset_base_name}": f"{fileset_pkg_name_version}"},
+            {f"{fileset_base_name}": ""},
+        ]
+    )
+
+    with patch("pathlib.Path.is_file", return_value=True):
+        with patch.dict(
+            aixpkg.__salt__,
+            {"cmd.run_all": dnf_call, "config.get": MagicMock(return_value=False)},
+        ), patch.object(aixpkg, "list_pkgs", list_pkgs_mock):
+            result = aixpkg.remove(f"{fileset_pkg_name}")
+            dnf_call.assert_any_call(
+                ["/usr/bin/lslpp", "-Lc", f"{fileset_pkg_name}"],
+                python_shell=False,
+            )
+            libpath_env = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
+            test_name = os.path.basename(fileset_pkg_name)
+            dnf_call.assert_any_call(
+                ["/usr/sbin/installp", "-u", f"{fileset_base_name}"],
+                python_shell=False,
+            )
+            expected = {
+                f"{fileset_base_name}": {
+                    "old": f"{fileset_pkg_name_version}",
+                    "new": "",
+                }
+            }
+            assert result == expected
+
+
+def test_remove_failure():
+    """
+    Test remove package / fileset and experience failure
+    """
+
+    fileset_pkg_name = "info_fake"
+    fileset_lslpp_error = """#Package Name:Fileset:Level:State:PTF Id:Fix State:Type:Description:Destination Dir.:Uninstaller:Message Catalog:Message Set:Message Number:Parent:Automatic:EFIX Locked:Install Path:Build Date
+lslpp: Fileset info_fake not installed.
+"""
+    lslpp_call = MagicMock(return_value=fileset_lslpp_error)
+    list_pkgs_mock = MagicMock(
+        side_effect=[
+            {"bos.net.tcp.tcpdump": "7.2.4.1"},
+            {"bos.net.tcp.tcpdump": "7.2.4.1"},
+        ]
+    )
+    with patch.dict(
+        aixpkg.__salt__,
+        {
+            "cmd.run_all": lslpp_call,
+            "config.get": MagicMock(return_value=False),
+        },
+    ), patch.object(aixpkg, "list_pkgs", list_pkgs_mock):
+        expected = {
+            "changes": {},
+            "errors": [f"Fileset {fileset_pkg_name} not installed."],
+        }
+        with pytest.raises(CommandExecutionError) as exc_info:
+            result = aixpkg.remove(fileset_pkg_name)
+        assert exc_info.value.info == expected, exc_info.value.info
+        assert lslpp_call.call_count == 1
+        lslpp_call.assert_any_call(
+            ["/usr/bin/lslpp", "-Lc", f"{fileset_pkg_name}"],
+            python_shell=False,
+        )
