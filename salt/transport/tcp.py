@@ -1186,6 +1186,7 @@ class MessageClient:
         )
         return future
 
+
 class Subscriber:
     """
     Client object for use with the TCP publisher server
