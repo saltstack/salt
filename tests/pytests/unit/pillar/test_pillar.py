@@ -27,3 +27,19 @@ def test_pillar_envs_order(envs, temp_salt_minion, tmp_path):
     )
     # The base environment is always present and as the first environment name
     assert pillar._get_envs() == ["base"] + envs
+
+
+def test_pillar_get_tops_should_not_error_when_merging_strategy_is_none_and_no_pillarenv(
+    temp_salt_minion,
+):
+    opts = temp_salt_minion.config.copy()
+    opts["pillarenv"] = None
+    opts["pillar_source_merging_strategy"] = "none"
+    pillar = salt.pillar.Pillar(
+        opts=opts,
+        grains=salt.loader.grains(opts),
+        minion_id=temp_salt_minion.id,
+        saltenv="base",
+    )
+    tops, errors = pillar.get_tops()
+    assert not errors
