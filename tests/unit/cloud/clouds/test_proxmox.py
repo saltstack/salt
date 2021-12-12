@@ -162,3 +162,39 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
                 verify=True,
                 data={"username": ("fakeuser",), "password": "secretpassword"},
             )
+
+    def test__import_api_version_6(self):
+        """
+        Test successful import of version 6 api
+        """
+        with patch("salt.cloud.clouds.proxmox.requests.get") as mock_request:
+            url = "proxmox"
+            port = "8006"
+            verify_ssl = False
+
+            mock_request.return_value.text = """
+var pveapi = [
+    {
+        "testkey": "testvalue"
+    }]
+;
+"""
+            proxmox._import_api()
+
+    def test__import_api_version_7(self):
+        """
+        Test successful import of version 6 api
+        """
+        with patch("salt.cloud.clouds.proxmox.requests.get") as mock_request:
+            url = "proxmox"
+            port = "8006"
+            verify_ssl = False
+
+            mock_request.return_value.text = """
+const apiSchema = [
+    {
+        "testkey": "testvalue"
+    }]
+;
+"""
+            proxmox._import_api()
