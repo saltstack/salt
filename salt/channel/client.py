@@ -261,7 +261,7 @@ class AsyncReqChannel:
         except salt.ext.tornado.iostream.StreamClosedError:
             # Convert to 'SaltClientError' so that clients can handle this
             # exception more appropriately.
-            raise SaltClientError("Connection to master lost")
+            raise salt.exceptions.SaltClientError("Connection to master lost")
         raise salt.ext.tornado.gen.Return(ret)
 
     def close(self):
