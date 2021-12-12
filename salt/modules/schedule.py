@@ -1339,7 +1339,7 @@ def show_next_fire_time(name, **kwargs):
     return ret
 
 
-def job_status(name):
+def job_status(name, time_fmt="%Y-%m-%dT%H:%M:%S"):
     """
     Show the information for a particular job.
 
@@ -1350,6 +1350,14 @@ def job_status(name):
         salt '*' schedule.job_status job_name
 
     """
+
+    def convert_datetime_objects_in_dict_to_string(data_dict, time_fmt):
+        return {
+            key: value.strftime(time_fmt)
+            if isinstance(value, datetime.datetime)
+            else value
+            for key, value in data_dict.items()
+        }
 
     schedule = {}
     try:
@@ -1362,7 +1370,8 @@ def job_status(name):
                 event_ret = event_bus.get_event(
                     tag="/salt/minion/minion_schedule_job_status_complete", wait=30
                 )
-                return event_ret.get("data", {})
+                data = event_ret.get("data", {})
+                return convert_datetime_objects_in_dict_to_string(data, time_fmt)
     except KeyError:
         # Effectively a no-op, since we can't really return without an event system
         ret = {}

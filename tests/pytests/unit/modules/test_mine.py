@@ -23,7 +23,7 @@ class FakeCache:
         return self.data.get((bank, key), {})
 
     def debug(self):
-        print(__name__ + ":FakeCache dump:\n{}".format(self.data))
+        print("{}:FakeCache dump:\n{}".format(__name__, self.data))
 
 
 @pytest.fixture
