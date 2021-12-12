@@ -141,7 +141,7 @@ def test_pub_server_channel_with_tcp_transport(io_loop, configs, process_manager
             io_loop.stop()
 
         channel.on_recv(cb)
-        server.publish({"tgt_type": "glob", "tgt": ["carbon"], "WTF": "SON"})
+        server.publish({"tgt_type": "glob", "tgt": ["minion"], "WTF": "SON"})
         start = time.time()
         while time.time() - start < timeout:
             yield salt.ext.tornado.gen.sleep(1)
