@@ -239,11 +239,11 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
 
     .. versionadded:: 3005
 
-    preference to install rpm packages are to use in the following order:
-        /opt/freeware/bin/dnf
-        /opt/freeware/bin/yum
-        /usr/bin/yum
-        /usr/bin/rpm
+        preference to install rpm packages are to use in the following order:
+            /opt/freeware/bin/dnf
+            /opt/freeware/bin/yum
+            /usr/bin/yum
+            /usr/bin/rpm
 
     Note: use of rpm to install implies that rpm's dependencies must have been previously installed.
         dnf and yum automatically install rpm's dependencies as part of the install process
@@ -333,33 +333,17 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
                 log.debug(f"install, filename '{filename}' trying install as rpm")
 
             # assume use dnf or yum
-            cmdflags = "install --allowerasing "
+            cmdflags = "install "
             libpathenv = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
             if pathlib.Path("/opt/freeware/bin/dnf").is_file():
+                cmdflags += "--allowerasing "
                 cmdexe = "/opt/freeware/bin/dnf"
                 if test:
-                    cmdflags += "--assumeno"
+                    cmdflags += "--assumeno "
                 else:
-                    cmdflags += "--assumeyes"
+                    cmdflags += "--assumeyes "
                 if refresh:
-                    cmdflags += "--refresh"
-
-                cmd = f"{cmdexe} {cmdflags} {target}"
-                out = __salt__["cmd.run_all"](
-                    cmd,
-                    python_shell=False,
-                    env=libpathenv,
-                    ignore_retcode=True,
-                )
-
-            elif pathlib.Path("/opt/freeware/bin/yum").is_file():
-                cmdexe = "/opt/freeware/bin/yum"
-                if test:
-                    cmdflags += "--assumeno"
-                else:
-                    cmdflags += "--assumeyes"
-                if refresh:
-                    cmdflags += "--refresh"
+                    cmdflags += "--refresh "
 
                 cmd = f"{cmdexe} {cmdflags} {target}"
                 out = __salt__["cmd.run_all"](
@@ -370,18 +354,42 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
                 )
 
             elif pathlib.Path("/usr/bin/yum").is_file():
+                # check for old yum first, removed if new dnf or yum
                 cmdexe = "/usr/bin/yum"
                 if test:
-                    cmdflags += "--assumeno"
+                    cmdflags += "--assumeno "
                 else:
-                    cmdflags += "--assumeyes"
+                    cmdflags += "--assumeyes "
 
                 cmd = f"{cmdexe} {cmdflags} {target}"
-                out = __salt__["cmd.run_all"](cmd, python_shell=False)
+                out = __salt__["cmd.run_all"](
+                    cmd,
+                    python_shell=False,
+                    env=libpathenv,
+                    ignore_retcode=True,
+                )
+
+            elif pathlib.Path("/opt/freeware/bin/yum").is_file():
+                cmdflags += "--allowerasing "
+                cmdexe = "/opt/freeware/bin/yum"
+                if test:
+                    cmdflags += "--assumeno "
+                else:
+                    cmdflags += "--assumeyes "
+                if refresh:
+                    cmdflags += "--refresh "
+
+                cmd = f"{cmdexe} {cmdflags} {target}"
+                out = __salt__["cmd.run_all"](
+                    cmd,
+                    python_shell=False,
+                    env=libpathenv,
+                    ignore_retcode=True,
+                )
 
             else:
                 cmdexe = "/usr/bin/rpm"
-                cmdflags = "-Uivh"
+                cmdflags = "-Uivh "
                 if test:
                     cmdflags += "--test"
 
@@ -521,7 +529,12 @@ def remove(name=None, pkgs=None, **kwargs):
             elif pathlib.Path("/usr/bin/yum").is_file():
                 cmdexe = "/usr/bin/yum"
                 cmd = f"{cmdexe} {cmdflags} {target}"
-                out = __salt__["cmd.run_all"](cmd, python_shell=False)
+                out = __salt__["cmd.run_all"](
+                    cmd,
+                    python_shell=False,
+                    env=libpathenv,
+                    ignore_retcode=True,
+                )
             else:
                 cmdexe = "/usr/bin/rpm"
                 cmdflags = "-e"
@@ -594,7 +607,9 @@ def latest_version(*names, **kwargs):
         elif pathlib.Path("/usr/bin/yum").is_file():
             cmdexe = "/usr/bin/yum"
             cmd = f"{cmdexe} check-update {name}"
-            available_info = __salt__["cmd.run_all"](cmd, python_shell=False)
+            available_info = __salt__["cmd.run_all"](
+                cmd, python_shell=False, env=libpathenv, ignore_retcode=True
+            )
         else:
             # no yum found implies no repository support
             available_info = None
@@ -681,7 +696,9 @@ def upgrade_available(name, **kwargs):
     elif pathlib.Path("/usr/bin/yum").is_file():
         cmdexe = "/usr/bin/yum"
         cmd = f"{cmdexe} check-update {name}"
-        available_info = __salt__["cmd.run_all"](cmd, python_shell=False)
+        available_info = __salt__["cmd.run_all"](
+            cmd, python_shell=False, env=libpathenv, ignore_retcode=True
+        )
     else:
         # no yum found implies no repository support
         return False
