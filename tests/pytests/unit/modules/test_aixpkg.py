@@ -1098,7 +1098,7 @@ def test_install_rpm_using_dnf():
             result = aixpkg.install("info")
             libpath_env = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
             dnf_call.assert_any_call(
-                "/opt/freeware/bin/dnf install --allowerasing --assumeyes info",
+                "/opt/freeware/bin/dnf install --allowerasing --assumeyes  info",
                 env=libpath_env,
                 ignore_retcode=True,
                 python_shell=False,
@@ -1134,7 +1134,7 @@ Error: Unable to find a match: info_fake
             assert dnf_call.call_count == 1
             libpath_env = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
             dnf_call.assert_any_call(
-                "/opt/freeware/bin/dnf install --allowerasing --assumeyes info_fake.rpm",
+                "/opt/freeware/bin/dnf install --allowerasing --assumeyes  info_fake.rpm",
                 env=libpath_env,
                 ignore_retcode=True,
                 python_shell=False,
@@ -1228,7 +1228,7 @@ Error: Unable to find a match: bos.net
             assert dnf_installp_call.call_count == 2
             libpath_env = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
             dnf_installp_call.assert_any_call(
-                f"/opt/freeware/bin/dnf install --allowerasing --assumeyes {fileset_pkg_name}",
+                f"/opt/freeware/bin/dnf install --allowerasing --assumeyes  {fileset_pkg_name}",
                 env=libpath_env,
                 ignore_retcode=True,
                 python_shell=False,
@@ -1326,7 +1326,7 @@ fake_info                                 Not found on the installation media
             assert dnf_installp_call.call_count == 2
             libpath_env = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
             dnf_installp_call.assert_any_call(
-                f"/opt/freeware/bin/dnf install --allowerasing --assumeyes {fileset_pkg_name}",
+                f"/opt/freeware/bin/dnf install --allowerasing --assumeyes  {fileset_pkg_name}",
                 env=libpath_env,
                 ignore_retcode=True,
                 python_shell=False,
