@@ -1,9 +1,8 @@
-import time
-import pytest
 import logging
+import time
 
+import pytest
 from saltfactories.exceptions import FactoryNotStarted, FactoryTimeout
-
 
 log = logging.getLogger(__name__)
 
@@ -14,6 +13,7 @@ pytestmark = [
     pytest.mark.windows_whitelisted,
 ]
 
+
 def _run_salt_cmds(clis, minions):
     """
     Run test.echo from all clis to all minions
@@ -23,9 +23,7 @@ def _run_salt_cmds(clis, minions):
     for cli in clis:
         for minion in minions:
             try:
-                ret = cli.run(
-                    "test.echo", ECHO_STR, minion_tgt=minion.id, _timeout=5
-                )
+                ret = cli.run("test.echo", ECHO_STR, minion_tgt=minion.id, _timeout=5)
                 if ret and ret.json:
                     assert ret.json == ECHO_STR
                     assert ret.exitcode == 0
@@ -52,11 +50,12 @@ def _get_all_ret_events_after_time(masters, minions, event_listener, start_time)
         matchers = [(master.id, tag) for master in masters]
         ret_events = event_listener.get_events(matchers, after_time=start_time)
         events.append(ret_events)
-    
+
     return tuple(events)
 
 
-def test_basic_command_return(event_listener,
+def test_basic_command_return(
+    event_listener,
     salt_mm_master_1,
     salt_mm_master_2,
     salt_mm_minion_1,
@@ -69,20 +68,29 @@ def test_basic_command_return(event_listener,
     """
     start_time = time.time()
 
-    _run_salt_cmds([mm_master_1_salt_cli, mm_master_2_salt_cli],[salt_mm_minion_1, salt_mm_minion_2])
+    _run_salt_cmds(
+        [mm_master_1_salt_cli, mm_master_2_salt_cli],
+        [salt_mm_minion_1, salt_mm_minion_2],
+    )
 
-    minion_1_ret_events, minion_2_ret_events = _get_all_ret_events_after_time([salt_mm_master_1, salt_mm_master_2],[salt_mm_minion_1, salt_mm_minion_2], event_listener, start_time)
-    
+    # pylint: disable=unbalanced-tuple-unpacking
+    minion_1_ret_events, minion_2_ret_events = _get_all_ret_events_after_time(
+        [salt_mm_master_1, salt_mm_master_2],
+        [salt_mm_minion_1, salt_mm_minion_2],
+        event_listener,
+        start_time,
+    )
+
     assert len(minion_1_ret_events) == 2
     assert len(minion_2_ret_events) == 2
 
 
-def test_stopped_first_master(event_listener,
+def test_stopped_first_master(
+    event_listener,
     salt_mm_master_1,
     salt_mm_master_2,
     salt_mm_minion_1,
     salt_mm_minion_2,
-    mm_master_1_salt_cli,
     mm_master_2_salt_cli,
 ):
     """
@@ -93,7 +101,13 @@ def test_stopped_first_master(event_listener,
 
         _run_salt_cmds([mm_master_2_salt_cli], [salt_mm_minion_1, salt_mm_minion_2])
 
-        minion_1_ret_events, minion_2_ret_events = _get_all_ret_events_after_time([salt_mm_master_1, salt_mm_master_2],[salt_mm_minion_1, salt_mm_minion_2], event_listener, start_time)
+        # pylint: disable=unbalanced-tuple-unpacking
+        minion_1_ret_events, minion_2_ret_events = _get_all_ret_events_after_time(
+            [salt_mm_master_1, salt_mm_master_2],
+            [salt_mm_minion_1, salt_mm_minion_2],
+            event_listener,
+            start_time,
+        )
 
         # Each minion should only return to the second master
         assert len(minion_1_ret_events) == 1
@@ -102,13 +116,13 @@ def test_stopped_first_master(event_listener,
         assert minion_2_ret_events.pop().daemon_id == salt_mm_master_2.id
 
 
-def test_stopped_second_master(event_listener,
+def test_stopped_second_master(
+    event_listener,
     salt_mm_master_1,
     salt_mm_master_2,
     salt_mm_minion_1,
     salt_mm_minion_2,
     mm_master_1_salt_cli,
-    mm_master_2_salt_cli,
 ):
     """
     Make sure minions return only to the first master when the second is stopped
@@ -118,7 +132,13 @@ def test_stopped_second_master(event_listener,
 
         _run_salt_cmds([mm_master_1_salt_cli], [salt_mm_minion_1, salt_mm_minion_2])
 
-        minion_1_ret_events, minion_2_ret_events = _get_all_ret_events_after_time([salt_mm_master_1, salt_mm_master_2],[salt_mm_minion_1, salt_mm_minion_2], event_listener, start_time)
+        # pylint: disable=unbalanced-tuple-unpacking
+        minion_1_ret_events, minion_2_ret_events = _get_all_ret_events_after_time(
+            [salt_mm_master_1, salt_mm_master_2],
+            [salt_mm_minion_1, salt_mm_minion_2],
+            event_listener,
+            start_time,
+        )
 
         # Each minion should only return to the first master
         assert len(minion_1_ret_events) == 1
@@ -127,7 +147,8 @@ def test_stopped_second_master(event_listener,
         assert minion_2_ret_events.pop().daemon_id == salt_mm_master_1.id
 
 
-def test_minion_reconnection_attempts(event_listener,
+def test_minion_reconnection_attempts(
+    event_listener,
     salt_mm_master_1,
     salt_mm_master_2,
     salt_mm_minion_1,
@@ -136,6 +157,9 @@ def test_minion_reconnection_attempts(event_listener,
     mm_master_2_salt_cli,
     caplog,
 ):
+    """
+    Test that minions stay alive and reauth when masters go down and back up, even after restart
+    """
     with salt_mm_master_2.stopped():
         with salt_mm_master_1.stopped():
             # Force the minion to restart
@@ -144,8 +168,20 @@ def test_minion_reconnection_attempts(event_listener,
                 with pytest.raises(FactoryNotStarted):
                     with salt_mm_minion_1.started(start_timeout=30):
                         pass
-            assert "Trying to connect to: tcp://{}:{}".format(salt_mm_master_1.config["interface"], salt_mm_master_1.config["ret_port"]) in caplog.text
-            assert "Trying to connect to: tcp://{}:{}".format(salt_mm_master_2.config["interface"], salt_mm_master_2.config["ret_port"]) in caplog.text
+            assert (
+                "Trying to connect to: tcp://{}:{}".format(
+                    salt_mm_master_1.config["interface"],
+                    salt_mm_master_1.config["ret_port"],
+                )
+                in caplog.text
+            )
+            assert (
+                "Trying to connect to: tcp://{}:{}".format(
+                    salt_mm_master_2.config["interface"],
+                    salt_mm_master_2.config["ret_port"],
+                )
+                in caplog.text
+            )
 
         assert not salt_mm_minion_1.is_running()
 
@@ -155,14 +191,23 @@ def test_minion_reconnection_attempts(event_listener,
         assert salt_mm_minion_2.is_running()
 
         # Make sure the minion reauths
-        events = event_listener.get_events([(salt_mm_master_1.id, "salt/auth")], after_time=start_time)
+        events = event_listener.get_events(
+            [(salt_mm_master_1.id, "salt/auth")], after_time=start_time
+        )
         assert events
         assert len(events) == 1
         assert events.pop().data["id"] == salt_mm_minion_1.id
 
         start_time = time.time()
         _run_salt_cmds([mm_master_1_salt_cli], [salt_mm_minion_1, salt_mm_minion_2])
-        minion_1_ret_events, minion_2_ret_events = _get_all_ret_events_after_time([salt_mm_master_1, salt_mm_master_2],[salt_mm_minion_1, salt_mm_minion_2], event_listener, start_time)
+
+        # pylint: disable=unbalanced-tuple-unpacking
+        minion_1_ret_events, minion_2_ret_events = _get_all_ret_events_after_time(
+            [salt_mm_master_1, salt_mm_master_2],
+            [salt_mm_minion_1, salt_mm_minion_2],
+            event_listener,
+            start_time,
+        )
 
         # Each minion should only return to the first master
         assert len(minion_1_ret_events) == 1
@@ -173,18 +218,35 @@ def test_minion_reconnection_attempts(event_listener,
     with salt_mm_master_1.stopped():
         start_time = time.time()
         _run_salt_cmds([mm_master_2_salt_cli], [salt_mm_minion_1, salt_mm_minion_2])
-        minion_1_ret_events, minion_2_ret_events = _get_all_ret_events_after_time([salt_mm_master_1, salt_mm_master_2],[salt_mm_minion_1, salt_mm_minion_2], event_listener, start_time)
+
+        # pylint: disable=unbalanced-tuple-unpacking
+        minion_1_ret_events, minion_2_ret_events = _get_all_ret_events_after_time(
+            [salt_mm_master_1, salt_mm_master_2],
+            [salt_mm_minion_1, salt_mm_minion_2],
+            event_listener,
+            start_time,
+        )
 
         # Each minion should only return to the second master
         assert len(minion_1_ret_events) == 1
         assert len(minion_2_ret_events) == 1
         assert minion_1_ret_events.pop().daemon_id == salt_mm_master_2.id
         assert minion_2_ret_events.pop().daemon_id == salt_mm_master_2.id
-    
+
     # Make sure minions work normally
     start_time = time.time()
-    _run_salt_cmds([mm_master_1_salt_cli, mm_master_2_salt_cli],[salt_mm_minion_1, salt_mm_minion_2])
-    minion_1_ret_events, minion_2_ret_events = _get_all_ret_events_after_time([mm_master_1_salt_cli, mm_master_2_salt_cli],[salt_mm_minion_1, salt_mm_minion_2], event_listener, start_time)
-    
+    _run_salt_cmds(
+        [mm_master_1_salt_cli, mm_master_2_salt_cli],
+        [salt_mm_minion_1, salt_mm_minion_2],
+    )
+
+    # pylint: disable=unbalanced-tuple-unpacking
+    minion_1_ret_events, minion_2_ret_events = _get_all_ret_events_after_time(
+        [mm_master_1_salt_cli, mm_master_2_salt_cli],
+        [salt_mm_minion_1, salt_mm_minion_2],
+        event_listener,
+        start_time,
+    )
+
     assert len(minion_1_ret_events) == 2
     assert len(minion_2_ret_events) == 2
