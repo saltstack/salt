@@ -563,7 +563,9 @@ class AsyncClientMixin:
         async_pub = pub if pub is not None else self._gen_async_pub()
         proc = salt.utils.process.SignalHandlingProcess(
             target=proc_func,
-            name="ProcessFunc",
+            name="ProcessFunc(func={}, jid={})".format(
+                proc_func.__qualname__, async_pub["jid"]
+            ),
             args=(fun, low, user, async_pub["tag"], async_pub["jid"]),
         )
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):

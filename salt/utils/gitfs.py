@@ -2602,9 +2602,8 @@ class GitBase:
 
         if refresh_env_cache:
             new_envs = self.envs(ignore_cache=True)
-            serial = salt.payload.Serial(self.opts)
             with salt.utils.files.fopen(self.env_cache, "wb+") as fp_:
-                fp_.write(serial.dumps(new_envs))
+                fp_.write(salt.payload.dumps(new_envs))
                 log.trace("Wrote env cache data to %s", self.env_cache)
 
         # if there is a change, fire an event

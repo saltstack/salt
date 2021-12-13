@@ -372,6 +372,8 @@ VALID_OPTS = immutabletypes.freeze(
         "state_output_diff": bool,
         # Tells the highstate outputter whether profile information will be shown for each state run
         "state_output_profile": bool,
+        # Tells the highstate outputter whether success and failure percents will be shown for each state run
+        "state_output_pct": bool,
         # When true, states run in the order defined in an SLS file, unless requisites re-order them
         "state_auto_order": bool,
         # Fire events as state chunks are processed by the state compiler
@@ -1571,8 +1573,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "http_connect_timeout": 20.0,  # tornado default - 20 seconds
         "http_request_timeout": 1 * 60 * 60.0,  # 1 hour
         "http_max_body": 100 * 1024 * 1024 * 1024,  # 100GB
-        "python2_bin": "python2",
-        "python3_bin": "python3",
         "cache": "localfs",
         "memcache_expire_seconds": 0,
         "memcache_max_items": 1024,
@@ -1664,7 +1664,7 @@ DEFAULT_CLOUD_OPTS = immutabletypes.freeze(
         "log_granular_levels": {},
         "log_rotate_max_bytes": 0,
         "log_rotate_backup_count": 0,
-        "bootstrap_delay": None,
+        "bootstrap_delay": 0,
         "cache": "localfs",
     }
 )

@@ -104,6 +104,11 @@ class EC2Test(CloudTest):
 
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_val)
+        ipv6Address_present = False
+        for each in ret_val:
+            if "ipv6Address:" in each:
+                ipv6Address_present = True
+        assert ipv6Address_present
 
         self.assertDestroyInstance()
 
