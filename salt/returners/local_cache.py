@@ -392,6 +392,19 @@ def get_jids_filter(count, filter_find_job=True):
     return ret
 
 
+def _remove_job_dir(job_path):
+    """
+    Try to remove job dir. If job dir cant be removed then then error will be logged.
+
+    :param job_path:      Path to job
+    """
+    # Remove remove job dir
+    try:
+        shutil.rmtree(job_path)
+    except OSError as err:
+        log.error("Unable to remove %s: %s", job_path, err)
+
+
 def clean_old_jobs():
     """
     Clean out the old jobs from the job cache
@@ -423,7 +436,7 @@ def clean_old_jobs():
                 if not os.path.isfile(jid_file) and os.path.exists(f_path):
                     # No jid file means corrupted cache entry, scrub it
                     # by removing the entire f_path directory
-                    shutil.rmtree(f_path)
+                    _remove_job_dir(f_path)
                 elif os.path.isfile(jid_file):
                     jid_ctime = os.stat(jid_file).st_ctime
                     hours_difference = (time.time() - jid_ctime) / 3600.0
@@ -432,7 +445,7 @@ def clean_old_jobs():
                     ):
                         # Remove the entire f_path from the original JID dir
                         try:
-                            shutil.rmtree(f_path)
+                            _remove_job_dir(f_path)
                         except OSError as err:
                             log.error("Unable to remove %s: %s", f_path, err)
 
@@ -447,7 +460,7 @@ def clean_old_jobs():
                 t_path_ctime = os.stat(t_path).st_ctime
                 hours_difference = (time.time() - t_path_ctime) / 3600.0
                 if hours_difference > __opts__["keep_jobs"]:
-                    shutil.rmtree(t_path)
+                    _remove_job_dir(t_path)
 
 
 def update_endtime(jid, time):
