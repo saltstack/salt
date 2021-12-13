@@ -602,6 +602,7 @@ class MessageClient:
         self._closing = True
         self.io_loop.add_timeout(1, self.check_close)
         return
+
         # try:
         #     for msg_id in list(self.send_future_map):
         #         log.error("Closing before send future completed %r", msg_id)
@@ -681,8 +682,8 @@ class MessageClient:
         unpacker = salt.utils.msgpack.Unpacker()
         while not self._closing:
             try:
-                #self._read_until_future = self._stream.read_bytes(4096, partial=True)
-                #wire_bytes = yield self._read_until_future
+                # self._read_until_future = self._stream.read_bytes(4096, partial=True)
+                # wire_bytes = yield self._read_until_future
                 wire_bytes = yield self._stream.read_bytes(4096, partial=True)
                 unpacker.feed(wire_bytes)
                 for framed_msg in unpacker:
@@ -717,13 +718,13 @@ class MessageClient:
                 if self.disconnect_callback:
                     self.disconnect_callback()
                 # if the last connect finished, then we need to make a new one
-                #if self._connecting_future.done():
+                # if self._connecting_future.done():
                 stream = self._stream
                 self._stream = None
                 stream.close()
                 yield self.connect()
-                #self._connecting_future = self.connect()
-                #yield self._connecting_future
+                # self._connecting_future = self.connect()
+                # yield self._connecting_future
             except TypeError:
                 # This is an invalid transport
                 if "detect_mode" in self.opts:
@@ -747,9 +748,9 @@ class MessageClient:
                 stream.close()
                 yield self.connect()
                 # if the last connect finished, then we need to make a new one
-                #if self._connecting_future.done():
+                # if self._connecting_future.done():
                 #    self._connecting_future = self.connect()
-                #yield self._connecting_future
+                # yield self._connecting_future
         self._stream_return_running = False
 
     def _message_id(self):
