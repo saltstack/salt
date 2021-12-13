@@ -89,7 +89,7 @@ This is the format that an inventory script needs to output to work with ansible
 .. note::
 
     A dynamic inventory script must have the executable bit set. In the above
-    excample, ``chmod +x /etc/salt/hosts``.
+    example, ``chmod +x /etc/salt/hosts``.
 
 Any of the [groups] or direct hostnames will return.  The 'all' is special, and returns everything.
 """
