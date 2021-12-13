@@ -62,7 +62,6 @@ def test_message_client_cleanup_on_close(client_socket, temp_salt_master):
 
         # Ensure we are testing the _read_until_future and io_loop teardown
         assert client._stream is not None
-        assert client._read_until_future is not None
         assert orig_loop.stop_called is True
 
         # The run_sync call will set stop_called, reset it
