@@ -444,10 +444,7 @@ def clean_old_jobs():
                         t_path
                     ):
                         # Remove the entire f_path from the original JID dir
-                        try:
-                            _remove_job_dir(f_path)
-                        except OSError as err:
-                            log.error("Unable to remove %s: %s", f_path, err)
+                        _remove_job_dir(f_path)
 
         # Remove empty JID dirs from job cache, if they're old enough.
         # JID dirs may be empty either from a previous cache-clean with the bug
