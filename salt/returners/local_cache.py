@@ -394,7 +394,7 @@ def get_jids_filter(count, filter_find_job=True):
 
 def _remove_job_dir(job_path):
     """
-    Try to remove job dir. If job dir cant be removed then then error will be logged.
+    Try to remove job dir. If job dir cant be removed then error will be logged.
 
     :param job_path:      Path to job
     """
