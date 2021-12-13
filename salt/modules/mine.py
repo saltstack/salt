@@ -239,9 +239,9 @@ def send(name, *args, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' mine.send network.ip_addrs eth0
-        salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs eth0
-        salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs eth0 allow_tgt='G@grain:value' allow_tgt_type=compound
+        salt '*' mine.send network.ip_addrs interface=eth0
+        salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs interface=eth0
+        salt '*' mine.send eth0_ip_addrs mine_function=network.ip_addrs interface=eth0 allow_tgt='G@grain:value' allow_tgt_type=compound
     """
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     mine_function = kwargs.pop("mine_function", None)

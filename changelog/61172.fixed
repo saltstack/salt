@@ -1,0 +1,1 @@
+Fixing deltaproxy code to handle the situation where the control proxy is configured to control a proxy minion whose pillar data could not be loaded.
