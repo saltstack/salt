@@ -1343,10 +1343,16 @@ def test_remove_dnf():
     """
     pkg_name = "info"
     pkg_name_version = "6.7-1"
-    pkg_name_lslpp_out = """#Package Name:Fileset:Level:State:PTF Id:Fix State:Type:Description:Destination Dir.:Uninstaller:Message Catalog:Message Set:Message Number:Parent:Automatic:EFIX Locked:Install Path:Build Date
-info:info-6.7-1:6.7-1: : :C:R:A stand-alone TTY-based reader for GNU texinfo documentation.: :/bin/rpm -e info: : : : :1: :(none):Mon Feb  8 08:04:43 EST 2021
-"""
-    dnf_call = MagicMock(side_effect=[pkg_name_lslpp_out, {"retcode": 0, "stdout": ""}])
+    pkg_name_lslpp_out = """#Package Name:Fileset:Level:State:PTF Id:Fix State:Type:Description:Destination Dir.:Uninstaller:Message Catalog:Message Set:Message Number:Parent:Automatic:EFIX Locked:Install Path:Build Date\ninfo:info-6.7-1:6.7-1: : :C:R:A stand-alone TTY-based reader for GNU texinfo documentation.: :/bin/rpm -e info: : : : :1: :(none):Mon Feb  8 08:04:43 2021"""
+    pkg_name_lslpp_out_dict = {
+        "pid": 5439838,
+        "retcode": 0,
+        "stdout": pkg_name_lslpp_out,
+        "stderr": "",
+    }
+    dnf_call = MagicMock(
+        side_effect=[pkg_name_lslpp_out_dict, {"retcode": 0, "stdout": ""}]
+    )
     list_pkgs_mock = MagicMock(
         side_effect=[{f"{pkg_name}": f"{pkg_name_version}"}, {f"{pkg_name}": ""}]
     )
@@ -1386,6 +1392,12 @@ def test_remove_fileset():
     fileset_pkg_name_lslpp_out = """#Package Name:Fileset:Level:State:PTF Id:Fix State:Type:Description:Destination Dir.:Uninstaller:Message Catalog:Message Set:Message Number:Parent:Automatic:EFIX Locked:Install Path:Build Date
 bos.adt:bos.adt.insttools:7.2.2.0: : :C: :Tool to Create installp Packages : : : : : : :0:0:/:1731
 """
+    fileset_pkg_name_lslpp_out_dict = {
+        "pid": 5439838,
+        "retcode": 0,
+        "stdout": fileset_pkg_name_lslpp_out,
+        "stderr": "",
+    }
     fileset_pkg_name_installp_out = """+-----------------------------------------------------------------------------+
                     Pre-installation Verification...
 +-----------------------------------------------------------------------------+
@@ -1455,7 +1467,7 @@ bos.adt.insttools           7.2.2.0         USR         APPLY       SUCCESS
 bos.adt.insttools           7.2.2.0         ROOT        APPLY       SUCCESS 
 """
     dnf_call = MagicMock(
-        side_effect=[fileset_pkg_name_lslpp_out, {"retcode": 0, "stdout": ""}]
+        side_effect=[fileset_pkg_name_lslpp_out_dict, {"retcode": 0, "stdout": ""}]
     )
     list_pkgs_mock = MagicMock(
         side_effect=[
@@ -1495,10 +1507,17 @@ def test_remove_failure():
     """
 
     fileset_pkg_name = "info_fake"
-    fileset_lslpp_error = """#Package Name:Fileset:Level:State:PTF Id:Fix State:Type:Description:Destination Dir.:Uninstaller:Message Catalog:Message Set:Message Number:Parent:Automatic:EFIX Locked:Install Path:Build Date
+    fileset_lslpp_error_stdout = """#Package Name:Fileset:Level:State:PTF Id:Fix State:Type:Description:Destination Dir.:Uninstaller:Message Catalog:Message Set:Message Number:Parent:Automatic:EFIX Locked:Install Path:Build Date
 lslpp: Fileset info_fake not installed.
 """
-    lslpp_call = MagicMock(return_value=fileset_lslpp_error)
+    fileset_lslpp_error_dict = {
+        "pid": 5374414,
+        "retcode": 1,
+        "stdout": fileset_lslpp_error_stdout,
+        "stderr": "/usr/bin/lslpp: Fileset info_fake not installed.",
+    }
+
+    lslpp_call = MagicMock(return_value=fileset_lslpp_error_dict)
     list_pkgs_mock = MagicMock(
         side_effect=[
             {"bos.net.tcp.tcpdump": "7.2.4.1"},
@@ -1514,7 +1533,7 @@ lslpp: Fileset info_fake not installed.
     ), patch.object(aixpkg, "list_pkgs", list_pkgs_mock):
         expected = {
             "changes": {},
-            "errors": [f"Fileset {fileset_pkg_name} not installed."],
+            "errors": [f"/usr/bin/lslpp: Fileset {fileset_pkg_name} not installed."],
         }
         with pytest.raises(CommandExecutionError) as exc_info:
             result = aixpkg.remove(fileset_pkg_name)
