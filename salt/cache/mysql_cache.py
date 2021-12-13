@@ -118,7 +118,7 @@ def run_query(conn, query, args=None, retries=3):
         else:
             log.info("mysql_cache: recreating db connection due to: %r", e)
         __context__["mysql_client"] = MySQLdb.connect(**__context__["mysql_kwargs"])
-        return run_query(__context__["mysql_client"], query, args, retries - 1)
+        return run_query(conn=__context__.get("mysql_client"), query=query, args=args, retries=(retries - 1))
     except Exception as e:  # pylint: disable=broad-except
         if len(query) > 150:
             query = query[:150] + "<...>"
@@ -136,7 +136,7 @@ def _create_table():
         __context__["mysql_kwargs"]["db"],
         __context__["mysql_table_name"],
     )
-    cur, _ = run_query(__context__.get("mysql_client"), query)
+    cur, _ = run_query(conn=__context__.get("mysql_client"), query=query)
     r = cur.fetchone()
     cur.close()
     if r[0] == 1:
@@ -151,7 +151,7 @@ def _create_table():
         __context__["mysql_table_name"]
     )
     log.info("mysql_cache: creating table %s", __context__["mysql_table_name"])
-    cur, _ = run_query(__context__["mysql_client"], query)
+    cur, _ = run_query(conn=__context__.get("mysql_client"), query=query)
     cur.close()
 
 
@@ -205,7 +205,7 @@ def store(bank, key, data):
     )
     args = (bank, key, data)
 
-    cur, cnt = run_query(__context__.get("mysql_client"), query, args)
+    cur, cnt = run_query(conn=__context__.get("mysql_client"), query=query, args=args)
     cur.close()
     if cnt not in (1, 2):
         raise SaltCacheError("Error storing {} {} returned {}".format(bank, key, cnt))
@@ -219,7 +219,7 @@ def fetch(bank, key):
     query = "SELECT data FROM {} WHERE bank='{}' AND etcd_key='{}'".format(
         __context__["mysql_table_name"], bank, key
     )
-    cur, _ = run_query(__context__.get("mysql_client"), query)
+    cur, _ = run_query(conn=__context__.get("mysql_client"), query=query)
     r = cur.fetchone()
     cur.close()
     if r is None:
@@ -238,7 +238,7 @@ def flush(bank, key=None):
     if key is not None:
         query += " AND etcd_key='{}'".format(key)
 
-    cur, _ = run_query(__context__.get("mysql_client"), query)
+    cur, _ = run_query(conn=__context__.get("mysql_client"), query=query)
     cur.close()
 
 
@@ -251,7 +251,7 @@ def ls(bank):
     query = "SELECT etcd_key FROM {} WHERE bank='{}'".format(
         __context__["mysql_table_name"], bank
     )
-    cur, _ = run_query(__context__.get("mysql_client"), query)
+    cur, _ = run_query(conn=__context__.get("mysql_client"), query=query)
     out = [row[0] for row in cur.fetchall()]
     cur.close()
     return out
@@ -265,7 +265,7 @@ def contains(bank, key):
     query = "SELECT COUNT(data) FROM {} WHERE bank='{}' AND etcd_key='{}'".format(
         __context__["mysql_table_name"], bank, key
     )
-    cur, _ = run_query(__context__.get("mysql_client"), query)
+    cur, _ = run_query(conn=__context__.get("mysql_client"), query=query)
     r = cur.fetchone()
     cur.close()
     return r[0] == 1
