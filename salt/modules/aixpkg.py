@@ -41,36 +41,45 @@ def _check_pkg(target):
     log.debug(f"_check_pkg target '{target}'")
     ret = {}
     cmd = ["/usr/bin/lslpp", "-Lc", target]
-    lines = __salt__["cmd.run_all"](cmd, python_shell=False).splitlines()
+    ## lines = __salt__["cmd.run_all"](cmd, python_shell=False).splitlines()
+    result = __salt__["cmd.run_all"](cmd, python_shell=False)
+    log.debug(f"_check_pkg result '{result}'")
 
-    name = ""
-    version_num = ""
-    rpmpkg = False
-    for line in lines:
-        if line.startswith("#"):
-            continue
+    if 0 == result["retcode"]:
+        name = ""
+        version_num = ""
+        rpmpkg = False
+        lines = result["stdout"].splitlines()
+        for line in lines:
+            if line.startswith("#"):
+                continue
 
-        comps = line.split(":")
-        if len(comps) < 7:
-            raise CommandExecutionError(
-                "Error occurred finding fileset/package",
-                info={"errors": comps[1].strip()},
-            )
+            comps = line.split(":")
+            if len(comps) < 7:
+                raise CommandExecutionError(
+                    "Error occurred finding fileset/package",
+                    info={"errors": comps[1].strip()},
+                )
 
-        # handle first matching line
-        if "R" in comps[6]:
-            name = comps[0]
-            rpmpkg = True
-        else:
-            name = comps[1]  # use fileset rather than rpm package
+            # handle first matching line
+            if "R" in comps[6]:
+                name = comps[0]
+                rpmpkg = True
+            else:
+                name = comps[1]  # use fileset rather than rpm package
 
-        version_num = comps[2]
-        break
+            version_num = comps[2]
+            break
 
-    log.debug(
-        f"_check_pkg returning name '{name}', version number '{version_num}', rpmpkg '{rpmpkg}'"
-    )
-    return name, version_num, rpmpkg
+        log.debug(
+            f"_check_pkg returning name '{name}', version number '{version_num}', rpmpkg '{rpmpkg}'"
+        )
+        return name, version_num, rpmpkg
+    else:
+        raise CommandExecutionError(
+            "Error occurred finding fileset/package",
+            info={"errors": result["stderr"].strip()},
+        )
 
 
 def _is_installed_rpm(name):
@@ -230,29 +239,29 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
 
     .. versionadded:: 3005
 
-        preference to install rpm packages are to use in the following order:
-            /opt/freeware/bin/dnf
-            /opt/freeware/bin/yum
-            /usr/bin/yum
-            /usr/bin/rpm
+    preference to install rpm packages are to use in the following order:
+        /opt/freeware/bin/dnf
+        /opt/freeware/bin/yum
+        /usr/bin/yum
+        /usr/bin/rpm
 
-        Note: use of rpm to install implies that rpm's dependencies must have been previously installed.
-            dnf and yum automatically install rpm's dependencies as part of the install process
+    Note: use of rpm to install implies that rpm's dependencies must have been previously installed.
+        dnf and yum automatically install rpm's dependencies as part of the install process
 
-            Alogrithm to install filesets or rpms is as follows:
-            if ends with '.rte' or '.bff'
-                process as fileset
-            if ends with '.rpm'
-                process as rpm
-            if unrecognised or no file extension
-                attempt process with dnf | yum
-                if fails
-                    attempt process as fileset
+        Alogrithm to install filesets or rpms is as follows:
+        if ends with '.rte' or '.bff'
+            process as fileset
+        if ends with '.rpm'
+            process as rpm
+        if unrecognised or no file extension
+            attempt process with dnf | yum
+            if fails
+                attempt process as fileset
 
-            Fileset needs to be available as a single path and filename
-            compound filesets are not handled are not supported
-            for example: bos.adt.insttools is part of bos.adt.other and is installed as follows
-                /usr/bin/installp -acXYg /cecc/repos/aix72/TL4/BASE/installp/ppc/bos.adt.other bos.adt.insttools
+        Fileset needs to be available as a single path and filename
+        compound filesets are not handled are not supported
+        for example: bos.adt.insttools is part of bos.adt.other and is installed as follows
+            /usr/bin/installp -acXYg /cecc/repos/aix72/TL4/BASE/installp/ppc/bos.adt.other bos.adt.insttools
 
     name
         The name of the fileset or rpm package to be installed.
