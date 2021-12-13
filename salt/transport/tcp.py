@@ -548,7 +548,7 @@ class TCPClientKeepAlive(salt.ext.tornado.tcpclient.TCPClient):
 # TODO consolidate with IPCClient
 # TODO: limit in-flight messages.
 # TODO: singleton? Something to not re-create the tcp connection so much
-class xMessageClient:
+class MessageClient:
     """
     Low-level message sending client
     """
@@ -586,6 +586,7 @@ class xMessageClient:
         self._closing = False
         self._closed = False
         self._connecting_future = salt.ext.tornado.concurrent.Future()
+        self._stream_return_running = False
         self._stream = None
 
         self.backoff = opts.get("tcp_reconnect_backoff", 1)
@@ -666,19 +667,23 @@ class xMessageClient:
 
     @salt.ext.tornado.gen.coroutine
     def connect(self):
-        if not self._stream:
+        if self._stream is None:
+            self.stream = True
             self._stream = yield self.getstream()
+            if not self._stream_return_running:
+                self.io_loop.spawn_callback(self._stream_return)
             if self.connect_callback:
                 self.connect_callback(True)
-            self.io_loop.spawn_callback(self._stream_return)
 
     @salt.ext.tornado.gen.coroutine
     def _stream_return(self):
+        self._stream_return_running = True
         unpacker = salt.utils.msgpack.Unpacker()
         while not self._closing:
             try:
-                self._read_until_future = self._stream.read_bytes(4096, partial=True)
-                wire_bytes = yield self._read_until_future
+                #self._read_until_future = self._stream.read_bytes(4096, partial=True)
+                #wire_bytes = yield self._read_until_future
+                wire_bytes = yield self._stream.read_bytes(4096, partial=True)
                 unpacker.feed(wire_bytes)
                 for framed_msg in unpacker:
                     framed_msg = salt.transport.frame.decode_embedded_strs(framed_msg)
@@ -712,9 +717,13 @@ class xMessageClient:
                 if self.disconnect_callback:
                     self.disconnect_callback()
                 # if the last connect finished, then we need to make a new one
-                if self._connecting_future.done():
-                    self._connecting_future = self.connect()
-                yield self._connecting_future
+                #if self._connecting_future.done():
+                stream = self._stream
+                self._stream = None
+                stream.close()
+                yield self.connect()
+                #self._connecting_future = self.connect()
+                #yield self._connecting_future
             except TypeError:
                 # This is an invalid transport
                 if "detect_mode" in self.opts:
@@ -733,10 +742,15 @@ class xMessageClient:
                     return
                 if self.disconnect_callback:
                     self.disconnect_callback()
+                stream = self._stream
+                self._stream = None
+                stream.close()
+                yield self.connect()
                 # if the last connect finished, then we need to make a new one
-                if self._connecting_future.done():
-                    self._connecting_future = self.connect()
-                yield self._connecting_future
+                #if self._connecting_future.done():
+                #    self._connecting_future = self.connect()
+                #yield self._connecting_future
+        self._stream_return_running = False
 
     def _message_id(self):
         wrap = False
@@ -813,7 +827,7 @@ class xMessageClient:
         raise salt.ext.tornado.gen.Return(recv)
 
 
-class MessageClient:
+class xMessageClient:
     """
     Low-level message sending client
     """
