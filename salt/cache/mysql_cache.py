@@ -118,8 +118,8 @@ def run_query(conn, query, args=None, retries=3):
         else:
             log.info("mysql_cache: recreating db connection due to: %r", e)
         __context__["mysql_client"] = MySQLdb.connect(**__context__["mysql_kwargs"])
-        return run_query(__context__.get("mysql_client"), query, args=args,
-                retries=(retries - 1))
+        return run_query(
+                __context__.get("mysql_client"), query, args=args, retries=(retries - 1))
     except Exception as e:  # pylint: disable=broad-except
         if len(query) > 150:
             query = query[:150] + "<...>"
