@@ -47,7 +47,6 @@ class ReqChannel:
 
     @staticmethod
     def factory(opts, **kwargs):
-        # All Sync interfaces are just wrappers around the Async ones
         return SyncWrapper(
             AsyncReqChannel.factory,
             (opts,),
