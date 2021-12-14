@@ -1309,7 +1309,7 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
         log.error("TCP PubServer sending payload: %s \n\n %r", package, topic_list)
         payload = salt.transport.frame.frame_msg(package)
         to_remove = []
-        if topic_list and False:
+        if topic_list:
             for topic in topic_list:
                 sent = False
                 for client in list(self.clients):
