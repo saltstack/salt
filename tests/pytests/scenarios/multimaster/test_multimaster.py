@@ -183,20 +183,21 @@ def test_minion_reconnection_attempts(
                 in caplog.text
             )
 
+        start_time = time.time()
         assert not salt_mm_minion_1.is_running()
 
-        start_time = time.time()
         salt_mm_minion_1.start()
+
         assert salt_mm_minion_1.is_running()
         assert salt_mm_minion_2.is_running()
 
-        # Make sure the minion reauths
-        events = event_listener.get_events(
-            [(salt_mm_master_1.id, "salt/auth")], after_time=start_time
+        start_events = event_listener.wait_for_events(
+            [(salt_mm_master_1.id, "salt/minion/{}/start".format(salt_mm_minion_1.id))],
+            timeout=30,
+            after_time=start_time,
         )
-        assert events
-        assert len(events) == 1
-        assert events.pop().data["id"] == salt_mm_minion_1.id
+        assert not start_events.missed
+        assert len(start_events.matches) == 1
 
         start_time = time.time()
         _run_salt_cmds([mm_master_1_salt_cli], [salt_mm_minion_1, salt_mm_minion_2])
@@ -214,6 +215,14 @@ def test_minion_reconnection_attempts(
         assert len(minion_2_ret_events) == 1
         assert minion_1_ret_events.pop().daemon_id == salt_mm_master_1.id
         assert minion_2_ret_events.pop().daemon_id == salt_mm_master_1.id
+
+    start_events = event_listener.wait_for_events(
+        [(salt_mm_master_2.id, "salt/minion/{}/start".format(salt_mm_minion_1.id))],
+        timeout=30,
+        after_time=start_time,
+    )
+    assert not start_events.missed
+    assert len(start_events.matches) == 1
 
     with salt_mm_master_1.stopped():
         start_time = time.time()
@@ -235,6 +244,7 @@ def test_minion_reconnection_attempts(
 
     # Make sure minions work normally
     start_time = time.time()
+
     _run_salt_cmds(
         [mm_master_1_salt_cli, mm_master_2_salt_cli],
         [salt_mm_minion_1, salt_mm_minion_2],
