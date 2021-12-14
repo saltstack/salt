@@ -794,9 +794,11 @@ class PubServerChannel:
             log.debug("Signing data packet")
             payload["sig"] = salt.crypt.sign_message(master_pem_path, payload["load"])
         int_payload = {"payload": salt.payload.dumps(payload)}
+
         # add some targeting stuff for lists only (for now)
         if load["tgt_type"] == "list":
             int_payload["topic_lst"] = load["tgt"]
+
         # If topics are upported, target matching has to happen master side
         match_targets = ["pcre", "glob", "list"]
         if self.transport.topic_support and load["tgt_type"] in match_targets:
@@ -811,6 +813,22 @@ class PubServerChannel:
                 int_payload["topic_lst"] = match_ids
             else:
                 int_payload["topic_lst"] = load["tgt"]
+
+        ## From TCP transport
+        # if load["tgt_type"] == "list" and not self.opts.get("order_masters", False):
+        #    if isinstance(load["tgt"], str):
+        #        # Fetch a list of minions that match
+        #        _res = self.ckminions.check_minions(
+        #            load["tgt"], tgt_type=load["tgt_type"]
+        #        )
+        #        match_ids = _res["minions"]
+
+        #        log.debug("Publish Side Match: %s", match_ids)
+        #        # Send list of miions thru so zmq can target them
+        #        int_payload["topic_lst"] = match_ids
+        #    else:
+        #        int_payload["topic_lst"] = load["tgt"]
+
         return int_payload
 
     def publish(self, load):
