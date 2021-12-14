@@ -19,7 +19,7 @@ Minions to receive jobs from Masters.
 Publish Client
 ==============
 
-The publish client subscribes and receives messages from a Publish Server.
+The publish client subscribes to, and receives messages from a Publish Server.
 
 
 Request Server

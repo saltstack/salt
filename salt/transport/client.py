@@ -19,8 +19,7 @@ log = logging.getLogger(__name__)
 class ReqChannel:
     """
     Factory class to create a sychronous communication channels to the master's
-    ReqServer. ReqChannels connect to the ReqServer on the ret_port (default:
-    4506)
+    ReqServer.
     """
 
     @staticmethod
