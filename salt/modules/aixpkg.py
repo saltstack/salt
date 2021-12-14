@@ -245,23 +245,23 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
             /usr/bin/yum
             /usr/bin/rpm
 
-    Note: use of rpm to install implies that rpm's dependencies must have been previously installed.
+    .. note:
+        use of rpm to install implies that rpm's dependencies must have been previously installed.
         dnf and yum automatically install rpm's dependencies as part of the install process
 
         Alogrithm to install filesets or rpms is as follows:
-        if ends with '.rte' or '.bff'
-            process as fileset
-        if ends with '.rpm'
-            process as rpm
-        if unrecognised or no file extension
-            attempt process with dnf | yum
-            if fails
-                attempt process as fileset
+            if ends with '.rte' or '.bff'
+                process as fileset
+            if ends with '.rpm'
+                process as rpm
+            if unrecognised or no file extension
+                attempt process with dnf | yum
+                failure implies attempt process as fileset
 
         Fileset needs to be available as a single path and filename
-        compound filesets are not handled are not supported
-        for example: bos.adt.insttools is part of bos.adt.other and is installed as follows
-            /usr/bin/installp -acXYg /cecc/repos/aix72/TL4/BASE/installp/ppc/bos.adt.other bos.adt.insttools
+        compound filesets are not handled and are not supported
+        an example is bos.adt.insttools which is part of bos.adt.other and is installed as follows
+        /usr/bin/installp -acXYg /cecc/repos/aix72/TL4/BASE/installp/ppc/bos.adt.other bos.adt.insttools
 
     name
         The name of the fileset or rpm package to be installed.
@@ -269,8 +269,6 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
     refresh
         Whether or not to update the yum database before executing.
 
-
-    Multiple Package Installation Options:
 
     pkgs
         A list of filesets and/or rpm packages to install.
@@ -282,7 +280,7 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
         (Unused at present).
 
     test
-        Verify that command functions correctly:
+        Verify that command functions correctly.
 
     Returns a dict containing the new fileset(s)/rpm package(s) names and versions:
 
@@ -459,8 +457,6 @@ def remove(name=None, pkgs=None, **kwargs):
             /opt/freeware/bin/yum
             /usr/bin/yum
             /usr/bin/rpm
-
-    Multiple Package Options:
 
     pkgs
         A list of filesets and/or rpm packages to delete.
