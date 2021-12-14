@@ -74,7 +74,7 @@ BuildRequires:  python-ioflo >= 1.1.7
 BuildRequires:  python-raet >= 0.6.0
 %endif
 # requirements/zeromq.txt
-BuildRequires:  python-pycrypto >= 2.6.1
+BuildRequires:  pycryptodomex >= 3.9.7
 BuildRequires:  python-pyzmq >= 2.2.0
 %if %{with test}
 # requirements/dev_python27.txt
@@ -121,7 +121,7 @@ Recommends:     python-gnupg
 # Recommends:     salt-raet
 # requirements/zeromq.txt
 %endif
-Requires:       python-pycrypto >= 2.6.1
+Requires:       pycryptodomex >= 3.9.7
 Requires:       python-pyzmq >= 2.2.0
 #
 %if 0%{?suse_version}
@@ -198,7 +198,7 @@ Group:          Documentation/HTML
 Requires:       %{name} = %{version}
 
 %description doc
-This contains the documentation of salt, it is an offline version of http://docs.saltstack.com.
+This contains the documentation of salt, it is an offline version of https://docs.saltproject.io.
 %endif
 
 %package master
@@ -479,7 +479,7 @@ install -Dpm 0644  pkg/suse/salt.SuSEfirewall2 %{buildroot}%{_sysconfdir}/syscon
 install -Dpm 0644 pkg/salt.bash %{buildroot}%{_sysconfdir}/bash_completion.d/salt
 %endif
 %if %{with zsh_completion}
-install -Dpm 0644 pkg/zsh_completion.zsh %{buildroot}%{_sysconfdir}/zsh_completion.d/salt
+install -Dpm 0644 pkg/salt.zsh %{buildroot}%{_sysconfdir}/zsh_completion.d/salt
 %endif
 
 %if %{with fish_completion}
@@ -772,8 +772,6 @@ systemd-tmpfiles --create /usr/lib/tmpfiles.d/salt.conf || true
 %defattr(-,root,root,-)
 %{_bindir}/spm
 %{_bindir}/salt-call
-%{_bindir}/salt-unity
-%{_mandir}/man1/salt-unity.1.gz
 %{_mandir}/man1/salt-call.1.gz
 %config(noreplace) %{_sysconfdir}/logrotate.d/salt
 %{python_sitelib}/*

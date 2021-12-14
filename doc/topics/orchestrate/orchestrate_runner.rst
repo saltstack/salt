@@ -278,10 +278,10 @@ in remote execution functions. Here is some example pseudocode:
 
     def myrunner():
         ...
-        do stuff
+        # do stuff
         ...
         if some_error_condition:
-            __context__['retcode'] = 1
+            __context__["retcode"] = 1
         return result
 
 This allows a custom runner/wheel function to report its failure so that

@@ -185,7 +185,7 @@ Connection Timeout
 ==================
 
 There are several stages when deploying Salt where Salt Cloud needs to wait for
-something to happen. The VM getting it's IP address, the VM's SSH port is
+something to happen. The VM getting its IP address, the VM's SSH port is
 available, etc.
 
 If you find that the Salt Cloud defaults are not enough and your deployment

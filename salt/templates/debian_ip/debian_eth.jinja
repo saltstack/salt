@@ -1,135 +1,42 @@
-{% if data.enabled %}auto {{name}}{# Enabled #}
-{%endif%}{% if data.hotplug %}allow-hotplug {{name}}{# Hotplug #}
-{%endif%}{# START IPV4 #}{%- if data.data['inet'] and data.data['inet'].addrfam == 'inet' -%}{% set interface = data.data['inet'] -%}
-{# START V4IF #}{% if interface.proto and interface.addrfam %}iface {{name}} {{interface.addrfam}} {{interface.proto}}
-{% if interface.hwaddress                   %}    hwaddress {{interface.hwaddress}}
-{%endif%}{% if interface.vlan_raw_device    %}    vlan-raw-device {{interface.vlan_raw_device}}
-{%endif%}{% if interface.address            %}    address {{interface.address}}
-{%endif%}{% if interface.addresses          %}{%for addr in interface.addresses %}    address {{addr}}
-{%endfor%}{%endif%}{% if interface.netmask  %}    netmask {{interface.netmask}}
-{%endif%}{% if interface.broadcast          %}    broadcast {{interface.broadcast}}
-{%endif%}{% if interface.metric             %}    metric {{interface.metric}}
-{%endif%}{% if interface.gateway            %}    gateway {{interface.gateway}}
-{%endif%}{% if interface.pointopoint        %}    pointopoint {{interface.pointopoint}}
-{%endif%}{% if interface.scope              %}    scope {{interface.scope}}
-{%endif%}{% if interface.hostname           %}    hostname {{interface.hostname}}
-{%endif%}{% if interface.media              %}    media {{interface.media}}
-{%endif%}{% if interface.leasehours         %}    leasehours {{interface.leasehours}}
-{%endif%}{% if interface.leasetime          %}    leasetime {{interface.leasetime}}
-{%endif%}{% if interface.vendor             %}    vendor {{interface.vendor}}
-{%endif%}{% if interface.client             %}    client {{interface.client}}
-{%endif%}{% if interface.bootfile           %}    bootfile {{interface.bootfile}}
-{%endif%}{% if interface.server             %}    server {{interface.server}}
-{%endif%}{% if interface.hwaddr             %}    hwaddress {{interface.hwaddr}}
-{%endif%}{% if interface.mode               %}    mode {{interface.mode}}
-{%endif%}{% if interface.endpoint           %}    endpoint {{interface.endpoint}}
-{%endif%}{% if interface.dstaddr            %}    dstaddr {{interface.dstaddr}}
-{%endif%}{% if interface.local              %}    local {{interface.local}}
-{%endif%}{% if interface.ttl                %}    ttl {{interface.ttl}}
-{%endif%}{% if interface.mtu                %}    mtu {{interface.mtu}}
-{%endif%}{% if interface.provider           %}    provider {{interface.provider}}
-{%endif%}{% if interface.unit               %}    unit {{interface.unit}}
-{%endif%}{% if interface.options            %}    options {{interface.options}}
-{%endif%}{% if interface.master             %}    bond-master {{interface.master}}
-{%endif%}{% if interface.dns_nameservers    %}    dns-nameservers {%
-    if interface.dns_nameservers is string %}{{ interface.dns_nameservers }}{%
-    else %}{{ interface.dns_nameservers|join(" ") }}{% endif %}
-{%endif%}{% if interface.dns_search         %}    dns-search {%
-    if interface.dns_search is string %}{{interface.dns_search }}{%
-    else %}{{ interface.dns_search|join(" ") }}{% endif %}
-{%endif%}{% if interface.ethtool            %}{%for item in interface.ethtool_keys %}    {{item}} {{interface.ethtool[item]}}
-{%endfor%}{%endif%}{% if interface.bonding  %}{%for item in interface.bonding_keys %}    bond-{{item}} {{interface.bonding[item]}}
-{%endfor%}{%endif%}{% if interface.bridging %}{%for item in interface.bridging_keys %}    bridge_{{item}} {{interface.bridging[item]}}
-{%endfor%}{%endif%}{% if interface.wireless_essid %}    wireless-essid {{interface.wireless_essid}}
-{%endif%}{% if interface.wireless_mode      %}    wireless-mode {{interface.wireless_mode}}
-{%endif%}{% if interface.wpa_ap_scan        %}    wpa-ap-scan {{interface.wpa_ap_scan}}
-{%endif%}{% if interface.wpa_conf           %}    wpa-conf {{interface.wpa_conf}}
-{%endif%}{% if interface.wpa_driver         %}    wpa-driver {{interface.wpa_driver}}
-{%endif%}{% if interface.wpa_group          %}    wpa-group {{interface.wpa_group}}
-{%endif%}{% if interface.wpa_key_mgmt       %}    wpa-key-mgmt {{interface.wpa_key_mgmt}}
-{%endif%}{% if interface.wpa_pairwise       %}    wpa-pairwise {{interface.wpa_pairwise}}
-{%endif%}{% if interface.wpa_proto          %}    wpa-proto {{interface.wpa_proto}}
-{%endif%}{% if interface.wpa_psk            %}    wpa-psk {{interface.wpa_psk}}
-{%endif%}{% if interface.wpa_roam           %}    wpa-roam {{interface.wpa_roam}}
-{%endif%}{% if interface.wpa_ssid           %}    wpa-ssid {{interface.wpa_ssid}}
-{%endif%}{% if interface.up_cmds            %}{% for cmd in interface.up_cmds %}    up {{ cmd }}
-{%endfor-%}
-{%endif%}{% if interface.down_cmds          %}{% for cmd in interface.down_cmds %}    down {{ cmd }}
-{%endfor-%}
-{%endif%}{% if interface.pre_up_cmds        %}{% for cmd in interface.pre_up_cmds %}    pre-up {{ cmd }}
-{%endfor-%}
-{%endif%}{% if interface.post_up_cmds       %}{% for cmd in interface.post_up_cmds %}    post-up {{ cmd }}
-{%endfor-%}
-{%endif%}{% if interface.pre_down_cmds      %}{% for cmd in interface.pre_down_cmds %}    pre-down {{ cmd }}
-{%endfor-%}
-{%endif%}{% if interface.post_down_cmds     %}{% for cmd in interface.post_down_cmds %}    post-down {{ cmd }}
-{%endfor-%}{%endif%}{%endif%}{# END V4IF #}
-{%- endif%}{# END IPV4 -#}
-{#- START IPV6 #}{%- if data.data['inet6'] and data.data['inet6'].addrfam == 'inet6' -%}{%- set interface = data.data['inet6'] -%}
-{#- START V6IF -#}{% if interface.proto and interface.addrfam %}iface {{name}} {{interface.addrfam}} {{interface.proto}}
-{% if interface.hwaddress                   %}    hwaddress {{interface.hwaddress}}
-{%endif%}{# START V6ONLOPTS #}{% if interface.accept_ra %}    accept_ra {{interface.accept_ra}}
-{%endif%}{% if interface.autoconf           %}    autoconf {{interface.autoconf}}
-{%endif%}{% if interface.privext            %}    privext {{interface.privext}}
-{%endif%}{% if interface.dhcp               %}    dhcp {{interface.dhcp}}{# END V6ONLOPTS #}
-{%endif%}{% if interface.vlan_raw_device    %}    vlan-raw-device {{interface.vlan_raw_device}}
-{%endif%}{% if interface.address            %}    address {{interface.address}}
-{%endif%}{% if interface.addresses          %}{% for addr in interface.addresses %}    address {{addr}}
-{%endfor%}{%endif%}{% if interface.netmask  %}    netmask {{interface.netmask}}
-{%endif%}{% if interface.broadcast          %}    broadcast {{interface.broadcast}}
-{%endif%}{% if interface.metric             %}    metric {{interface.metric}}
-{%endif%}{% if interface.gateway            %}    gateway {{interface.gateway}}
-{%endif%}{% if interface.pointopoint        %}    pointopoint {{interface.pointopoint}}
-{%endif%}{% if interface.scope              %}    scope {{interface.scope}}
-{%endif%}{% if interface.hostname           %}    hostname {{interface.hostname}}
-{%endif%}{% if interface.media              %}    media {{interface.media}}
-{%endif%}{% if interface.leasehours         %}    leasehours {{interface.leasehours}}
-{%endif%}{% if interface.leasetime          %}    leasetime {{interface.leasetime}}
-{%endif%}{% if interface.vendor             %}    vendor {{interface.vendor}}
-{%endif%}{% if interface.client             %}    client {{interface.client}}
-{%endif%}{% if interface.bootfile           %}    bootfile {{interface.bootfile}}
-{%endif%}{% if interface.server             %}    server {{interface.server}}
-{%endif%}{% if interface.hwaddr             %}    hwaddress {{interface.hwaddr}}
-{%endif%}{% if interface.mode               %}    mode {{interface.mode}}
-{%endif%}{% if interface.endpoint           %}    endpoint {{interface.endpoint}}
-{%endif%}{% if interface.dstaddr            %}    dstaddr {{interface.dstaddr}}
-{%endif%}{% if interface.local              %}    local {{interface.local}}
-{%endif%}{% if interface.ttl                %}    ttl {{interface.ttl}}
-{%endif%}{% if interface.mtu                %}    mtu {{interface.mtu}}
-{%endif%}{% if interface.provider           %}    provider {{interface.provider}}
-{%endif%}{% if interface.unit               %}    unit {{interface.unit}}
-{%endif%}{% if interface.options            %}    options {{interface.options}}
-{%endif%}{% if interface.master             %}    bond-master {{interface.master}}
-{%endif%}{% if interface.dns_nameservers    %}    dns-nameservers {%
-    if interface.dns_nameservers is string %}{{ interface.dns_nameservers }}{%
-    else %}{{ interface.dns_nameservers|join(" ") }}{% endif %}
-{%endif%}{% if interface.dns_search         %}    dns-search {%
-    if interface.dns_search is string %}{{interface.dns_search }}{%
-    else %}{{ interface.dns_search|join(" ") }}{% endif %}
-{%endif%}{% if interface.ethtool            %}{%for item in interface.ethtool_keys %}    {{item}} {{interface.ethtool[item]}}
-{%endfor%}{%endif%}{% if interface.bonding  %}{%for item in interface.bonding_keys %}    bond-{{item}} {{interface.bonding[item]}}
-{%endfor%}{%endif%}{% if interface.bridging %}{%for item in interface.bridging_keys %}    bridge_{{item}} {{interface.bridging[item]}}
-{%endfor%}{%endif%}{% if interface.wireless_essid %}    wireless-essid {{interface.wireless_essid}}
-{%endif%}{% if interface.wireless_mode      %}    wireless-mode {{interface.wireless_mode}}
-{%endif%}{% if interface.wpa_ap_scan        %}    wpa-ap-scan {{interface.wpa_ap_scan}}
-{%endif%}{% if interface.wpa_conf           %}    wpa-conf {{interface.wpa_conf}}
-{%endif%}{% if interface.wpa_driver         %}    wpa-driver {{interface.wpa_driver}}
-{%endif%}{% if interface.wpa_group          %}    wpa-group {{interface.wpa_group}}
-{%endif%}{% if interface.wpa_key_mgmt       %}    wpa-key-mgmt {{interface.wpa_key_mgmt}}
-{%endif%}{% if interface.wpa_pairwise       %}    wpa-pairwise {{interface.wpa_pairwise}}
-{%endif%}{% if interface.wpa_proto          %}    wpa-proto {{interface.wpa_proto}}
-{%endif%}{% if interface.wpa_psk            %}    wpa-psk {{interface.wpa_psk}}
-{%endif%}{% if interface.wpa_roam           %}    wpa-roam {{interface.wpa_roam}}
-{%endif%}{% if interface.wpa_ssid           %}    wpa-ssid {{interface.wpa_ssid}}
-{%endif%}{% if interface.up_cmds            %}{% for cmd in interface.up_cmds %}    up {{ cmd }}
-{%endfor-%}
-{%endif%}{% if interface.down_cmds          %}{% for cmd in interface.down_cmds %}    down {{ cmd }}
-{%endfor-%}
-{%endif%}{% if interface.pre_up_cmds        %}{% for cmd in interface.pre_up_cmds %}    pre-up {{ cmd }}
-{%endfor-%}
-{%endif%}{% if interface.post_up_cmds       %}{% for cmd in interface.post_up_cmds %}    post-up {{ cmd }}
-{%endfor-%}
-{%endif%}{% if interface.pre_down_cmds      %}{% for cmd in interface.pre_down_cmds %}    pre-down {{ cmd }}
-{%endfor-%}
-{%endif%}{% if interface.post_down_cmds     %}{% for cmd in interface.post_down_cmds %}    post-down {{ cmd }}
-{%endfor-%}{%endif%}{%endif%}{# END V6IF #}{%endif%}{# END IPV6#}
+{% set optmap = {
+  'addresses': 'address',
+  'hwaddr': 'hwaddress',
+  'up_cmds': 'up',
+  'down_cmds': 'down',
+  'pre_up_cmds': 'pre-up',
+  'post_up_cmds': 'post-up',
+  'pre_down_cmds': 'pre-down',
+  'post_down_cmds': 'post-down',
+  'master': 'bond-master',
+  'accept_ra': 'accept_ra',
+  } -%}
+{% set concat_opts = ['dns_nameservers'] -%}
+{% set valid_opts = [
+  'autoconf', 'privext', 'dhcp', 'hwaddress', 'vlan_raw_device', 'address', 'addresses', 'netmask',
+  'metric', 'gateway', 'pointopoint', 'scope', 'hostname', 'media', 'leasehours', 'leasetime',
+  'vendor', 'client', 'bootfile', 'server', 'mode', 'endpoint', 'dstaddr', 'local', 'ttl', 'mtu',
+  'provider', 'unit', 'options', 'master', 'dns_nameservers', 'wireless_mode', 'wpa_ap_scan',
+  'wpa_conf', 'wpa_driver', 'wpa_group', 'wpa_key_mgmt', 'wpa_pairwise', 'wpa_proto', 'wpa_psk',
+  'wpa_roam', 'wpa_ssid', 'accept_ra'
+  ] -%}
+{% if data.enabled %}auto {{ name }}
+{% endif %}{% if data.hotplug %}allow-hotplug {{ name }}
+{% endif %}{% for inet in ['inet', 'inet6'] -%}
+{% if data.data[inet] and data.data[inet].addrfam == inet %}{% set interface = data.data[inet] -%}
+{% if interface.proto and interface.addrfam %}iface {{name}} {{interface.addrfam}} {{interface.proto}}
+{% for opt in valid_opts %}{% set debopt = optmap.get(opt, opt.replace('_', '-')) -%}
+{% set val = interface.get(opt, False) %}{% if val -%}
+{% if opt in concat_opts and val is iterable %}    {{ debopt }} {{ val|join(' ') }}
+{% elif val is string or val is number       %}    {{ debopt }} {{ val }}
+{% elif val is iterable %}{% for v in val    %}    {{ debopt }} {{ v }}
+{% endfor %}{% endif %}{% endif -%}
+{% endfor %}{% if interface.ethtool %}{% for item in interface.ethtool_keys -%}
+{% if interface.ethtool[item] is string      %}    {{ item }} {{ interface.ethtool[item] }}
+{% elif interface.ethtool[item] is iterable  %}    {{ item }} {{ interface.ethtool[item]|join(' ') }}
+{% endif %}{% endfor %}{% endif %}{% if interface.bonding  %}{% for item in interface.bonding_keys  -%}
+{% if interface.bonding[item] is string      %}    bond-{{ item }} {{ interface.bonding[item] }}
+{% elif interface.bonding[item] is iterable  %}    bond-{{ item }} {{ interface.bonding[item]|join(' ') }}
+{% endif %}{% endfor %}{% endif %}{% if interface.bridging %}{% for item in interface.bridging_keys -%}.
+{% if interface.bridging[item] is string     %}    bridge_{{ item }} {{ interface.bridging[item] }}
+{% elif interface.bridging[item] is iterable %}    bridge_{{ item }} {{ interface.bridging[item]|join(' ') }}
+{% endif %}{% endfor %}{% endif %}{% endif %}{% endif %}{% endfor %}

@@ -69,7 +69,7 @@ Key Generation
 --------------
 
 We have reduced the requirements needed for `salt-key` to generate minion keys.
-You're no longer required to have salt configured and it's common directories
+You're no longer required to have salt configured and its common directories
 created just to generate keys. This might prove useful if you're batch creating
 keys to pre-load on minions.
 

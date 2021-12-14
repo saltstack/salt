@@ -103,6 +103,16 @@ The option can also be set to a list of masters, enabling
           - address2
         master_type: failover
 
+.. conf_minion:: color
+
+``color``
+---------
+
+Default: ``True``
+
+By default output is colored. To disable colored output, set the color value to
+``False``.
+
 .. conf_minion:: ipv6
 
 ``ipv6``
@@ -223,7 +233,7 @@ the minion also sends a similar event with an event tag like this:
 ``minion_start``. This duplication can cause a lot of clutter on the event bus
 when there are many minions. Set ``enable_legacy_startup_events: False`` in the
 minion config to ensure only the ``salt/minion/<minion_id>/start`` events are
-sent. Beginning with the ``Sodium`` Salt release this option will default to
+sent. Beginning with the ``3001`` Salt release this option will default to
 ``False``.
 
 .. code-block:: yaml
@@ -652,6 +662,35 @@ FQDN (for instance, Solaris).
 
     append_domain: foo.org
 
+.. conf_minion:: minion_id_remove_domain
+
+``minion_id_remove_domain``
+---------------------------
+
+.. versionadded:: 3000
+
+Default: ``False``
+
+Remove a domain when the minion id is generated as a fully qualified domain
+name (either by the user provided ``id_function``, or by Salt). This is useful
+when the minions shall be named like hostnames. Can be a single domain (to
+prevent name clashes), or True, to remove all domains.
+
+Examples:
+ - minion_id_remove_domain = foo.org
+   - FQDN = king_bob.foo.org --> minion_id = king_bob
+   - FQDN = king_bob.bar.org --> minion_id = king_bob.bar.org
+ - minion_id_remove_domain = True
+   - FQDN = king_bob.foo.org --> minion_id = king_bob
+   - FQDN = king_bob.bar.org --> minion_id = king_bob
+
+
+For more information, please see :issue:`49212` and  :pull:`49378`.
+
+.. code-block:: yaml
+
+    minion_id_remove_domain: foo.org
+
 .. conf_minion:: minion_id_lowercase
 
 ``minion_id_lowercase``
@@ -681,7 +720,7 @@ This directory may contain sensitive data and should be protected accordingly.
 
     cachedir: /var/cache/salt/minion
 
-.. conf_master:: color_theme
+.. conf_minion:: color_theme
 
 ``color_theme``
 ---------------
@@ -784,7 +823,7 @@ matches, and regular expressions are supported.
     Some states and execution modules depend on grains. Filtering may cause
     them to be unavailable or run unreliably.
 
-.. versionadded:: Neon
+.. versionadded:: 3000
 
 .. code-block:: yaml
 
@@ -802,11 +841,27 @@ Default: ``False``
 
 The minion can locally cache grain data instead of refreshing the data
 each time the grain is referenced. By default this feature is disabled,
-to enable set grains_cache to ``True``.
+to enable set ``grains_cache`` to ``True``.
 
 .. code-block:: yaml
 
     grains_cache: False
+
+.. conf_minion:: grains_cache_expiration
+
+``grains_cache_expiration``
+---------------------------
+
+Default: ``300``
+
+Grains cache expiration, in seconds. If the cache file is older than this number
+of seconds then the grains cache will be dumped and fully re-populated with
+fresh data. Defaults to 5 minutes. Will have no effect if
+:conf_minion:`grains_cache` is not enabled.
+
+.. code-block:: yaml
+
+    grains_cache_expiration: 300
 
 .. conf_minion:: grains_deep_merge
 
@@ -831,10 +886,11 @@ For example, with these custom grains functions:
 .. code-block:: python
 
     def custom1_k1():
-        return {'custom1': {'k1': 'v1'}}
+        return {"custom1": {"k1": "v1"}}
+
 
     def custom1_k2():
-        return {'custom1': {'k2': 'v2'}}
+        return {"custom1": {"k2": "v2"}}
 
 Without ``grains_deep_merge``, the result would be:
 
@@ -1008,6 +1064,28 @@ The directory where Unix sockets will be kept.
 
     sock_dir: /var/run/salt/minion
 
+.. conf_minion:: enable_fqdns_grains
+
+``enable_fqdns_grains``
+-----------------------
+
+Default: ``True``
+
+In order to calculate the fqdns grain, all the IP addresses from the minion are
+processed with underlying calls to ``socket.gethostbyaddr`` which can take 5 seconds
+to be released (after reaching ``socket.timeout``) when there is no fqdn for that IP.
+These calls to ``socket.gethostbyaddr`` are processed asynchronously, however, it still
+adds 5 seconds every time grains are generated if an IP does not resolve. In Windows
+grains are regenerated each time a new process is spawned. Therefore, the default for
+Windows is ``False``. In many cases this value does not make sense to include for proxy
+minions as it will be FQDN for the host running the proxy minion process, so the default
+for proxy minions is ``False```. All other OSes default to ``True``. This options was
+added `here <https://github.com/saltstack/salt/pull/55581>`_.
+
+.. code-block:: yaml
+
+    enable_fqdns_grains: False
+
 .. conf_minion:: enable_gpu_grains
 
 ``enable_gpu_grains``
@@ -1163,7 +1241,7 @@ when trying to authenticate to the master.
 
 .. versionadded:: 2014.7.0
 
-Default: ``60``
+Default: ``5``
 
 When waiting for a master to accept the minion's public key, salt will
 continuously attempt to reconnect until successful. This is the timeout value,
@@ -1172,9 +1250,12 @@ will wait for :conf_minion:`acceptance_wait_time` seconds before trying again.
 Unless your master is under unusually heavy load, this should be left at the
 default.
 
+.. note::
+    For high latency networks try increasing this value
+
 .. code-block:: yaml
 
-    auth_timeout: 60
+    auth_timeout: 5
 
 .. conf_minion:: auth_safemode
 
@@ -1341,6 +1422,19 @@ retry timeout will be a random int between ``return_retry_timer`` and
 .. code-block:: yaml
 
     return_retry_timer_max: 10
+
+.. conf_minion:: return_retry_tries
+
+``return_retry_tries``
+--------------------------
+
+Default: ``3``
+
+The maximum number of retries for a minion return attempt.
+
+.. code-block:: yaml
+
+    return_retry_tries: 3
 
 .. conf_minion:: cache_sreqs
 
@@ -1530,6 +1624,21 @@ List of hosts to bypass HTTP proxy
 .. code-block:: yaml
 
     no_proxy: [ '127.0.0.1', 'foo.tld' ]
+
+``use_yamlloader_old``
+------------------------
+
+.. versionadded:: 2019.2.1
+
+Default: ``False``
+
+Use the pre-2019.2 YAML renderer.
+Uses legacy YAML rendering to support some legacy inline data structures.
+See the :ref:`2019.2.1 release notes <release-2019-2-1>` for more details.
+
+.. code-block:: yaml
+
+    use_yamlloader_old: False
 
 Docker Configuration
 ====================
@@ -2037,6 +2146,21 @@ List of states to run when the minion starts up if ``startup_states`` is set to 
       - edit.vim
       - hyper
 
+.. conf_minion:: start_event_grains
+
+``start_event_grains``
+----------------------
+
+Default: ``[]``
+
+List of grains to pass in start event when minion starts up.
+
+.. code-block:: yaml
+
+    start_event_grains:
+      - machine_id
+      - uuid
+
 .. conf_minion:: top_file
 
 ``top_file``
@@ -2080,6 +2204,28 @@ or just post what changes are going to be made.
 .. code-block:: yaml
 
     test: False
+
+.. conf_minion:: state_aggregate
+
+``state_aggregate``
+-------------------
+
+Default: ``False``
+
+Automatically aggregate all states that have support for ``mod_aggregate`` by
+setting to ``True``.
+
+.. code-block:: yaml
+
+    state_aggregate: True
+
+Or pass a list of state module names to automatically
+aggregate just those types.
+
+.. code-block:: yaml
+
+    state_aggregate:
+      - pkg
 
 .. conf_minion:: state_verbose
 
@@ -2131,6 +2277,34 @@ states is cluttering the logs. Set it to True to ignore them.
 
     state_output_diff: False
 
+.. conf_minion:: state_output_profile
+
+``state_output_profile``
+------------------------
+
+Default: ``True``
+
+The ``state_output_profile`` setting changes whether profile information
+will be shown for each state run.
+
+.. code-block:: yaml
+
+    state_output_profile: True
+
+.. conf_minion:: state_output_pct
+
+``state_output_pct``
+------------------------
+
+Default: ``False``
+
+The ``state_output_pct`` setting changes whether success and failure information
+as a percent of total actions will be shown for each state run.
+
+.. code-block:: yaml
+
+    state_output_pct: False
+
 .. conf_minion:: autoload_dynamic_modules
 
 ``autoload_dynamic_modules``
@@ -2147,6 +2321,9 @@ auto-loading modules when states run, set this value to ``False``.
     autoload_dynamic_modules: True
 
 .. conf_minion:: clean_dynamic_modules
+
+``clean_dynamic_modules``
+-------------------------
 
 Default: ``True``
 
@@ -2612,8 +2789,35 @@ the ``extra_minion_data`` parameter will be
 
 .. code-block:: python
 
-    {'opt1': 'value1',
-     'opt2': {'subopt1': 'value2'}}
+    {"opt1": "value1", "opt2": {"subopt1": "value2"}}
+
+``ssh_merge_pillar``
+--------------------
+
+.. versionadded:: 2018.3.2
+
+Default: ``True``
+
+Merges the compiled pillar data with the pillar data already available globally.
+This is useful when using ``salt-ssh`` or ``salt-call --local`` and overriding the pillar
+data in a state file:
+
+.. code-block:: yaml
+
+    apply_showpillar:
+      module.run:
+        - name: state.apply
+        - mods:
+          - showpillar
+        - kwargs:
+              pillar:
+                  test: "foo bar"
+
+If set to ``True``, the ``showpillar`` state will have access to the
+global pillar data.
+
+If set to ``False``, only the overriding pillar data will be available
+to the ``showpillar`` state.
 
 Security Settings
 =================
@@ -2641,7 +2845,7 @@ minion to clean the keys.
 Default: ``''``
 
 Fingerprint of the master public key to validate the identity of your Salt master
-before the initial key exchange. The master fingerprint can be found by running
+before the initial key exchange. The master fingerprint can be found as ``master.pub`` by running
 "salt-key -F master" on the Salt master.
 
 .. code-block:: yaml
@@ -2686,7 +2890,7 @@ Default: ``False``
 
 Enables verification of the master-public-signature returned by the master in
 auth-replies. Please see the tutorial on how to configure this properly
-`Multimaster-PKI with Failover Tutorial <http://docs.saltstack.com/en/latest/topics/tutorials/multimaster_pki.html>`_
+`Multimaster-PKI with Failover Tutorial <https://docs.saltproject.io/en/latest/topics/tutorials/multimaster_pki.html>`_
 
 .. versionadded:: 2014.7.0
 
@@ -2817,7 +3021,7 @@ Default: ``None``
 TLS/SSL connection options. This could be set to a dictionary containing
 arguments corresponding to python ``ssl.wrap_socket`` method. For details see
 `Tornado <http://www.tornadoweb.org/en/stable/tcpserver.html#tornado.tcpserver.TCPServer>`_
-and `Python <http://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`_
+and `Python <https://docs.python.org/3/library/ssl.html#ssl.wrap_socket>`_
 documentation.
 
 Note: to set enum arguments values like ``cert_reqs`` and ``ssl_version`` use
@@ -3128,7 +3332,7 @@ should be logged as the minion starts up and initially connects to the
 master. If not, check for debug log level and that the necessary version of
 ZeroMQ is installed.
 
-.. conf_minion:: failhard
+.. conf_minion:: tcp_authentication_retries
 
 ``tcp_authentication_retries``
 ------------------------------
@@ -3143,6 +3347,18 @@ reauthenticate. The tcp transport should try to connect with a new connection
 if the old one times out on reauthenticating.
 
 `-1` for infinite tries.
+
+.. conf_minion:: tcp_reconnect_backoff
+
+``tcp_reconnect_backoff``
+------------------------------
+
+Default: ``1``
+
+The time in seconds to wait before attempting another connection with salt master
+when the previous connection fails while on TCP transport.
+
+.. conf_minion:: failhard
 
 ``failhard``
 ------------
@@ -3315,6 +3531,14 @@ have other services that need to go with it.
 
     update_restart_services: ['salt-minion']
 
+.. _winrepo-minion-config-opts:
+
+Windows Software Repo Settings
+==============================
+
+These settings apply to all minions, whether running in masterless or
+master-minion mode.
+
 .. conf_minion:: winrepo_cache_expire_min
 
 ``winrepo_cache_expire_min``
@@ -3351,16 +3575,6 @@ the metadata will be refreshed.
 
     winrepo_cache_expire_max: 86400
 
-.. _winrepo-minion-config-opts:
-
-Minion Windows Software Repo Settings
-=====================================
-
-.. important::
-    To use these config options, the minion can be running in master-minion or
-    masterless mode.
-
-
 .. conf_minion:: winrepo_source_dir
 
 ``winrepo_source_dir``
@@ -3377,9 +3591,13 @@ The source location for the winrepo sls files.
 Standalone Minion Windows Software Repo Settings
 ================================================
 
+The following settings are for configuring the Windows Software Repository
+(winrepo) on a masterless minion. To run in masterless minion mode, set the
+:conf_minion:`file_client` to ``local`` or run ``salt-call`` with the
+``--local`` option
+
 .. important::
-    To use these config options, the minion must be running in masterless mode
-    (set :conf_minion:`file_client` to ``local``).
+    These config options are only valid for minions running in masterless mode
 
 .. conf_minion:: winrepo_dir
 .. conf_minion:: win_repo
@@ -3388,13 +3606,14 @@ Standalone Minion Windows Software Repo Settings
 ---------------
 
 .. versionchanged:: 2015.8.0
-    Renamed from ``win_repo`` to ``winrepo_dir``. Also, this option did not
-    have a default value until this version.
+    Renamed from ``win_repo`` to ``winrepo_dir``. This option did not have a
+    default value until this version.
 
 Default: ``C:\salt\srv\salt\win\repo``
 
-Location on the minion where the :conf_minion:`winrepo_remotes` are checked
-out.
+Location on the minion :conf_minion:`file_roots` where winrepo files are kept.
+This is also where the :conf_minion:`winrepo_remotes` are cloned to by
+:mod:`winrepo.update_git_repos`.
 
 .. code-block:: yaml
 
@@ -3408,10 +3627,11 @@ out.
 .. versionadded:: 2015.8.0
     A new :ref:`ng <windows-package-manager>` repo was added.
 
-Default: ``/srv/salt/win/repo-ng``
+Default: ``C:\salt\srv\salt\win\repo-ng``
 
-Location on the minion where the :conf_minion:`winrepo_remotes_ng` are checked
-out for 2015.8.0 and later minions.
+Location on the minion :conf_minion:`file_roots` where winrepo files are kept
+for 2018.8.0 and later minions. This is also where the
+:conf_minion:`winrepo_remotes` are cloned to by :mod:`winrepo.update_git_repos`.
 
 .. code-block:: yaml
 
@@ -3429,8 +3649,8 @@ out for 2015.8.0 and later minions.
 
 Default: ``winrepo.p``
 
-Path relative to :conf_minion:`winrepo_dir` where the winrepo cache should be
-created.
+The name of the winrepo cache file. The file will be created at root of
+the directory specified by :conf_minion:`winrepo_dir_ng`.
 
 .. code-block:: yaml
 
@@ -3499,31 +3719,3 @@ URL of the repository:
 Replace ``<commit_id>`` with the SHA1 hash of a commit ID. Specifying a commit
 ID is useful in that it allows one to revert back to a previous version in the
 event that an error is introduced in the latest revision of the repo.
-
-``ssh_merge_pillar``
---------------------
-
-.. versionadded:: 2018.3.2
-
-Default: ``True``
-
-Merges the compiled pillar data with the pillar data already available globally.
-This is useful when using ``salt-ssh`` or ``salt-call --local`` and overriding the pillar
-data in a state file:
-
-.. code-block:: yaml
-
-    apply_showpillar:
-      module.run:
-        - name: state.apply
-        - mods:
-          - showpillar
-        - kwargs:
-              pillar:
-                  test: "foo bar"
-
-If set to ``True`` the ``showpillar`` state will have access to the
-global pillar data.
-
-If set to ``False`` only the overriding pillar data will be available
-to the ``showpillar`` state.

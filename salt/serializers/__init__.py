@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
     salt.serializers
     ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -13,17 +12,15 @@
     :available: flag that tells if the serializer is available
                 (all dependencies are met etc.)
 
-'''
+"""
 
-from __future__ import absolute_import, print_function, unicode_literals
+
 from salt.exceptions import SaltException, SaltRenderError
 
 
 class DeserializationError(SaltRenderError, RuntimeError):
     """Raised when stream of string failed to be deserialized"""
-    pass
 
 
 class SerializationError(SaltException, RuntimeError):
     """Raised when stream of string failed to be serialized"""
-    pass

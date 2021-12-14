@@ -1,17 +1,14 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Module to provide icinga2 compatibility to salt.
 
 .. versionadded:: 2017.7.0
 
 :depends:   - icinga2 server
-'''
+"""
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 
-# Import Salt libs
 import salt.utils.path
 import salt.utils.platform
 from salt.utils.icinga2 import get_certs_path
@@ -20,20 +17,20 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
+    """
     Only load this module if the mysql libraries exist
-    '''
+    """
     # TODO: This could work on windows with some love
     if salt.utils.platform.is_windows():
-        return (False, 'The module cannot be loaded on windows.')
+        return (False, "The module cannot be loaded on windows.")
 
-    if salt.utils.path.which('icinga2'):
+    if salt.utils.path.which("icinga2"):
         return True
-    return (False, 'Icinga2 not installed.')
+    return (False, "Icinga2 not installed.")
 
 
 def generate_ticket(domain):
-    '''
+    """
     Generate and save an icinga2 ticket.
 
     Returns::
@@ -45,13 +42,15 @@ def generate_ticket(domain):
 
         salt '*' icinga2.generate_ticket domain.tld
 
-    '''
-    result = __salt__['cmd.run_all'](["icinga2", "pki", "ticket", "--cn", domain], python_shell=False)
+    """
+    result = __salt__["cmd.run_all"](
+        ["icinga2", "pki", "ticket", "--cn", domain], python_shell=False
+    )
     return result
 
 
 def generate_cert(domain):
-    '''
+    """
     Generate an icinga2 client certificate and key.
 
     Returns::
@@ -63,13 +62,26 @@ def generate_cert(domain):
 
         salt '*' icinga2.generate_cert domain.tld
 
-    '''
-    result = __salt__['cmd.run_all'](["icinga2", "pki", "new-cert", "--cn", domain, "--key", "{0}{1}.key".format(get_certs_path(), domain), "--cert", "{0}{1}.crt".format(get_certs_path(), domain)], python_shell=False)
+    """
+    result = __salt__["cmd.run_all"](
+        [
+            "icinga2",
+            "pki",
+            "new-cert",
+            "--cn",
+            domain,
+            "--key",
+            "{}{}.key".format(get_certs_path(), domain),
+            "--cert",
+            "{}{}.crt".format(get_certs_path(), domain),
+        ],
+        python_shell=False,
+    )
     return result
 
 
 def save_cert(domain, master):
-    '''
+    """
     Save the certificate for master icinga2 node.
 
     Returns::
@@ -81,14 +93,28 @@ def save_cert(domain, master):
 
         salt '*' icinga2.save_cert domain.tld master.domain.tld
 
-    '''
-    result = __salt__['cmd.run_all'](["icinga2", "pki", "save-cert", "--key", "{0}{1}.key".format(get_certs_path(), domain), "--cert", "{0}{1}.cert".format(get_certs_path(), domain), "--trustedcert",
-                                      "{0}trusted-master.crt".format(get_certs_path()), "--host", master], python_shell=False)
+    """
+    result = __salt__["cmd.run_all"](
+        [
+            "icinga2",
+            "pki",
+            "save-cert",
+            "--key",
+            "{}{}.key".format(get_certs_path(), domain),
+            "--cert",
+            "{}{}.cert".format(get_certs_path(), domain),
+            "--trustedcert",
+            "{}trusted-master.crt".format(get_certs_path()),
+            "--host",
+            master,
+        ],
+        python_shell=False,
+    )
     return result
 
 
 def request_cert(domain, master, ticket, port):
-    '''
+    """
     Request CA cert from master icinga2 node.
 
     Returns::
@@ -101,14 +127,34 @@ def request_cert(domain, master, ticket, port):
 
         salt '*' icinga2.request_cert domain.tld master.domain.tld TICKET_ID
 
-    '''
-    result = __salt__['cmd.run_all'](["icinga2", "pki", "request", "--host", master, "--port", port, "--ticket", ticket, "--key", "{0}{1}.key".format(get_certs_path(), domain), "--cert",
-                                      "{0}{1}.crt".format(get_certs_path(), domain), "--trustedcert", "{0}trusted-master.crt".format(get_certs_path()), "--ca", "{0}ca.crt".format(get_certs_path())], python_shell=False)
+    """
+    result = __salt__["cmd.run_all"](
+        [
+            "icinga2",
+            "pki",
+            "request",
+            "--host",
+            master,
+            "--port",
+            port,
+            "--ticket",
+            ticket,
+            "--key",
+            "{}{}.key".format(get_certs_path(), domain),
+            "--cert",
+            "{}{}.crt".format(get_certs_path(), domain),
+            "--trustedcert",
+            "{}trusted-master.crt".format(get_certs_path()),
+            "--ca",
+            "{}ca.crt".format(get_certs_path()),
+        ],
+        python_shell=False,
+    )
     return result
 
 
 def node_setup(domain, master, ticket):
-    '''
+    """
     Setup the icinga2 node.
 
     Returns::
@@ -121,7 +167,23 @@ def node_setup(domain, master, ticket):
 
         salt '*' icinga2.node_setup domain.tld master.domain.tld TICKET_ID
 
-    '''
-    result = __salt__['cmd.run_all'](["icinga2", "node", "setup", "--ticket", ticket, "--endpoint", master, "--zone", domain, "--master_host", master, "--trustedcert", "{0}trusted-master.crt".format(get_certs_path())],
-                                       python_shell=False)
+    """
+    result = __salt__["cmd.run_all"](
+        [
+            "icinga2",
+            "node",
+            "setup",
+            "--ticket",
+            ticket,
+            "--endpoint",
+            master,
+            "--zone",
+            domain,
+            "--master_host",
+            master,
+            "--trustedcert",
+            "{}trusted-master.crt".format(get_certs_path()),
+        ],
+        python_shell=False,
+    )
     return result

@@ -1,6 +1,5 @@
-==========================
-salt.modules.netbox module
-==========================
+salt.modules.netbox
+===================
 
 .. automodule:: salt.modules.netbox
     :members:

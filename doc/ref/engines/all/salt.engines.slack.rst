@@ -1,5 +1,5 @@
-salt.engines.slack module
-=========================
+salt.engines.slack
+==================
 
 .. automodule:: salt.engines.slack
     :members:

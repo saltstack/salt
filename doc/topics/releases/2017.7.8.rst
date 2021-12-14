@@ -534,12 +534,12 @@ Changelog for v2017.7.7..v2017.7.8
 
   * 365ebdf539 Fixed `enable_vnc` runner arg being passed into `seed_cmd` module arg in `virt.init`.
 
-* **PR** `#48749`_: (`Ch3LL`_) Update Saltstack Logo banner on docs.saltstack.com
+* **PR** `#48749`_: (`Ch3LL`_) Update Saltstack Logo banner on docs.saltproject.io
   @ *2018-07-25 13:05:04 UTC*
 
   * 169afea16a Merge pull request `#48749`_ from Ch3LL/logo_docs
 
-  * 73b1fc29f0 Update Saltstack Logo banner on docs.saltstack.com
+  * 73b1fc29f0 Update Saltstack Logo banner on docs.saltproject.io
 
 * **PR** `#48743`_: (`rallytime`_) Update DOCBANNER with new SaltConf18 image
   @ *2018-07-24 16:46:19 UTC*

@@ -649,7 +649,7 @@ Changelog for v2016.3.4..v2016.3.5
 
   * cdbd2fbe3c Added limit-output to eliminate false packages
 
-* **ISSUE** `#38174`_: (`NickDubelman`_) [syndic] Why can't a syndic node signal when all of it's minions have returned? (refs: `#38279`_)
+* **ISSUE** `#38174`_: (`NickDubelman`_) [syndic] Why can't a syndic node signal when all of its minions have returned? (refs: `#38279`_)
 
 * **ISSUE** `#32400`_: (`rallytime`_) Document Default Config Values (refs: `#38279`_)
 

@@ -1,20 +1,13 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Module for gathering disk information on Windows
 
 :depends:   - win32api Python module
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
 
-# Import Python libs
 import ctypes
 import string
 
-# Import Salt libs
 import salt.utils.platform
-
-# Import 3rd-party libs
-from salt.ext import six
 
 try:
     import win32api
@@ -22,26 +15,23 @@ except ImportError:
     pass
 
 # Define the module's virtual name
-__virtualname__ = 'disk'
+__virtualname__ = "disk"
 
 
-if six.PY3:
-    UPPERCASE = string.ascii_uppercase
-else:
-    UPPERCASE = string.uppercase
+UPPERCASE = string.ascii_uppercase
 
 
 def __virtual__():
-    '''
+    """
     Only works on Windows systems
-    '''
+    """
     if salt.utils.platform.is_windows():
         return __virtualname__
     return (False, "Module win_disk: module only works on Windows systems")
 
 
 def usage():
-    '''
+    """
     Return usage information for volumes mounted on this minion
 
     CLI Example:
@@ -49,7 +39,7 @@ def usage():
     .. code-block:: bash
 
         salt '*' disk.usage
-    '''
+    """
     drives = []
     ret = {}
     drive_bitmask = ctypes.windll.kernel32.GetLogicalDrives()
@@ -59,26 +49,26 @@ def usage():
         drive_bitmask >>= 1
     for drive in drives:
         try:
-            (available_bytes,
-             total_bytes,
-             total_free_bytes) = win32api.GetDiskFreeSpaceEx(
-                 '{0}:\\'.format(drive)
-            )
+            (
+                available_bytes,
+                total_bytes,
+                total_free_bytes,
+            ) = win32api.GetDiskFreeSpaceEx("{}:\\".format(drive))
             used = total_bytes - total_free_bytes
             capacity = used / float(total_bytes) * 100
-            ret['{0}:\\'.format(drive)] = {
-                'filesystem': '{0}:\\'.format(drive),
-                '1K-blocks': total_bytes / 1024,
-                'used': used / 1024,
-                'available': total_free_bytes / 1024,
-                'capacity': '{0:.0f}%'.format(capacity),
+            ret["{}:\\".format(drive)] = {
+                "filesystem": "{}:\\".format(drive),
+                "1K-blocks": total_bytes / 1024,
+                "used": used / 1024,
+                "available": total_free_bytes / 1024,
+                "capacity": "{:.0f}%".format(capacity),
             }
-        except Exception:
-            ret['{0}:\\'.format(drive)] = {
-                'filesystem': '{0}:\\'.format(drive),
-                '1K-blocks': None,
-                'used': None,
-                'available': None,
-                'capacity': None,
+        except Exception:  # pylint: disable=broad-except
+            ret["{}:\\".format(drive)] = {
+                "filesystem": "{}:\\".format(drive),
+                "1K-blocks": None,
+                "used": None,
+                "available": None,
+                "capacity": None,
             }
     return ret

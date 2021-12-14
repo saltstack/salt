@@ -14,7 +14,9 @@ of the Salt system each have a respective configuration file. The
     :ref:`Example master configuration file <configuration-examples-master>`.
 
 The configuration file for the salt-master is located at ``/etc/salt/master``
-by default. A notable exception is FreeBSD, where the configuration file is
+by default. Atomic included configuration files can be placed in
+``/etc/salt/master.d/*.conf``. Warning: files with other suffixes than .conf will
+not be included. A notable exception is FreeBSD, where the configuration file is
 located at ``/usr/local/etc/salt``. The available options are as follows:
 
 
@@ -482,6 +484,22 @@ grains for the master.
 
     enable_gpu_grains: True
 
+.. conf_master:: skip_grains
+
+``skip_grains``
+---------------------
+
+Default: ``False``
+
+MasterMinions should omit grains. A MasterMinion is "a minion function object
+for generic use on the master" that omit pillar. A RunnerClient creates a
+MasterMinion omitting states and renderer. Setting to True can improve master
+performance.
+
+.. code-block:: yaml
+
+    skip_grains: True
+
 .. conf_master:: job_cache
 
 ``job_cache``
@@ -589,8 +607,8 @@ be found by analyzing the cache log with ``memcache_debug`` enabled.
 Default: ``False``
 
 If cache storage got full, i.e. the items count exceeds the
-``memcache_max_items`` value, memcache cleans up it's storage. If this option
-set to ``False`` memcache removes the only one oldest value from it's storage.
+``memcache_max_items`` value, memcache cleans up its storage. If this option
+set to ``False`` memcache removes the only one oldest value from its storage.
 If this set set to ``True`` memcache removes all the expired items and also
 removes the oldest one if there are no expired items.
 
@@ -829,6 +847,39 @@ that does not send executions to minions.
 
     presence_events: False
 
+``detect_remote_minions``
+-------------------------
+
+Default: False
+
+When checking the minions connected to a master, also include the master's
+connections to minions on the port specfied in the setting `remote_minions_port`.
+This is particularly useful when checking if the master is connected to any Heist-Salt
+minions. If this setting is set to True, the master will check all connections on port 22
+by default unless a user also configures a different port with the setting
+`remote_minions_port`.
+
+Changing this setting will check the remote minions the master is connected to when using
+presence events, the manage runner, and any other parts of the code that call the
+`connected_ids` method to check the status of connected minions.
+
+.. code-block:: yaml
+
+    detect_remote_minions: True
+
+``remote_minions_port``
+-----------------------
+
+Default: 22
+
+The port to use when checking for remote minions when `detect_remote_minions` is set
+to True.
+
+.. code-block:: yaml
+
+    remote_minions_port: 2222
+
+
 .. conf_master:: ping_on_rotate
 
 ``ping_on_rotate``
@@ -1008,7 +1059,7 @@ The TCP port for ``mworkers`` to connect to on the master.
 .. conf_master:: auth_events
 
 ``auth_events``
---------------------
+---------------
 
 .. versionadded:: 2017.7.3
 
@@ -1071,6 +1122,166 @@ Should be greater than overall download time.
 .. code-block:: yaml
 
     http_request_timeout: 3600
+
+``use_yamlloader_old``
+----------------------
+
+.. versionadded:: 2019.2.1
+
+Default: ``False``
+
+Use the pre-2019.2 YAML renderer.
+Uses legacy YAML rendering to support some legacy inline data structures.
+See the :ref:`2019.2.1 release notes <release-2019-2-1>` for more details.
+
+.. code-block:: yaml
+
+    use_yamlloader_old: False
+
+.. conf_master:: req_server_niceness
+
+``req_server_niceness``
+-----------------------
+
+.. versionadded:: 3001
+
+Default: ``None``
+
+Process priority level of the ReqServer subprocess of the master.
+Supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    req_server_niceness: 9
+
+.. conf_master:: pub_server_niceness
+
+``pub_server_niceness``
+-----------------------
+
+.. versionadded:: 3001
+
+Default: ``None``
+
+Process priority level of the PubServer subprocess of the master.
+Supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    pub_server_niceness: 9
+
+.. conf_master:: fileserver_update_niceness
+
+``fileserver_update_niceness``
+------------------------------
+
+.. versionadded:: 3001
+
+Default: ``None``
+
+Process priority level of the FileServerUpdate subprocess of the master.
+Supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    fileserver_update_niceness: 9
+
+.. conf_master:: maintenance_niceness
+
+``maintenance_niceness``
+------------------------
+
+.. versionadded:: 3001
+
+Default: ``None``
+
+Process priority level of the Maintenance subprocess of the master.
+Supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    maintenance_niceness: 9
+
+.. conf_master:: mworker_niceness
+
+``mworker_niceness``
+--------------------
+
+.. versionadded:: 3001
+
+Default: ``None``
+
+Process priority level of the MWorker subprocess of the master.
+Supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    mworker_niceness: 9
+
+.. conf_master:: mworker_queue_niceness
+
+``mworker_queue_niceness``
+--------------------------
+
+.. versionadded:: 3001
+
+default: ``None``
+
+process priority level of the MWorkerQueue subprocess of the master.
+supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    mworker_queue_niceness: 9
+
+.. conf_master:: event_return_niceness
+
+``event_return_niceness``
+-------------------------
+
+.. versionadded:: 3001
+
+default: ``None``
+
+process priority level of the EventReturn subprocess of the master.
+supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    event_return_niceness: 9
+
+
+.. conf_master:: event_publisher_niceness
+
+``event_publisher_niceness``
+----------------------------
+
+.. versionadded:: 3001
+
+default: ``none``
+
+process priority level of the EventPublisher subprocess of the master.
+supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    event_publisher_niceness: 9
+
+.. conf_master:: reactor_niceness
+
+``reactor_niceness``
+--------------------
+
+.. versionadded:: 3001
+
+default: ``None``
+
+process priority level of the Reactor subprocess of the master.
+supported on POSIX platforms only.
+
+.. code-block:: yaml
+
+    reactor_niceness: 9
 
 .. _salt-ssh-configuration:
 
@@ -1324,6 +1535,15 @@ salt-ssh.
       groupA: minion1,minion2
       groupB: minion1,minion3
 
+.. conf_master:: ssh_run_pre_flight
+
+Default: False
+
+Run the ssh_pre_flight script defined in the salt-ssh roster. By default
+the script will only run when the thin dir does not exist on the targeted
+minion. This will force the script to run and not check if the thin dir
+exists first.
+
 .. conf_master:: thin_extra_mods
 
 ``thin_extra_mods``
@@ -1426,7 +1646,7 @@ This should still be considered a less than secure option, due to the fact
 that trust is based on just the requesting minion id.
 
 .. versionchanged:: 2018.3.0
-    For security reasons the file must be readonly except for it's owner.
+    For security reasons the file must be readonly except for its owner.
     If :conf_master:`permissive_pki_access` is ``True`` the owning group can also
     have write access, but if Salt is running as ``root`` it must be a member of that group.
     A less strict requirement also existed in previous version.
@@ -1666,7 +1886,7 @@ Default: ``False``
 
 Sign the master auth-replies with a cryptographic signature of the master's
 public key. Please see the tutorial how to use these settings in the
-`Multimaster-PKI with Failover Tutorial <http://docs.saltstack.com/en/latest/topics/tutorials/multimaster_pki.html>`_
+`Multimaster-PKI with Failover Tutorial <https://docs.saltproject.io/en/latest/topics/tutorials/multimaster_pki.html>`_
 
 .. code-block:: yaml
 
@@ -1754,7 +1974,7 @@ Default: ``None``
 TLS/SSL connection options. This could be set to a dictionary containing
 arguments corresponding to python ``ssl.wrap_socket`` method. For details see
 `Tornado <http://www.tornadoweb.org/en/stable/tcpserver.html#tornado.tcpserver.TCPServer>`_
-and `Python <http://docs.python.org/2/library/ssl.html#ssl.wrap_socket>`_
+and `Python <https://docs.python.org/3/library/ssl.html#ssl.wrap_socket>`_
 documentation.
 
 Note: to set enum arguments values like ``cert_reqs`` and ``ssl_version`` use
@@ -1835,7 +2055,7 @@ Each minion connecting to the master uses AT LEAST one file descriptor, the
 master subscription connection. If enough minions connect you might start
 seeing on the console(and then salt-master crashes):
 
-.. code-block:: bash
+.. code-block:: text
 
     Too many open files (tcp_listener.cpp:335)
     Aborted (core dumped)
@@ -2135,7 +2355,7 @@ To set the options for sls templates use :conf_master:`jinja_sls_env`.
 
 .. note::
 
-    The `Jinja2 Environment documentation <http://jinja.pocoo.org/docs/api/#jinja2.Environment>`_ is the official source for the default values.
+    The `Jinja2 Environment documentation <https://jinja.palletsprojects.com/en/2.11.x/api/#jinja2.Environment>`_ is the official source for the default values.
     Not all the options listed in the jinja documentation can be overridden using :conf_master:`jinja_env` or :conf_master:`jinja_sls_env`.
 
 The default options are:
@@ -2331,6 +2551,34 @@ states is cluttering the logs. Set it to True to ignore them.
 
     state_output_diff: False
 
+.. conf_master:: state_output_profile
+
+``state_output_profile``
+------------------------
+
+Default: ``True``
+
+The ``state_output_profile`` setting changes whether profile information
+will be shown for each state run.
+
+.. code-block:: yaml
+
+    state_output_profile: True
+
+.. conf_master:: state_output_pct
+
+``state_output_pct``
+------------------------
+
+Default: ``False``
+
+The ``state_output_pct`` setting changes whether success and failure information
+as a percent of total actions will be shown for each state run.
+
+.. code-block:: yaml
+
+    state_output_pct: False
+
 .. conf_master:: state_aggregate
 
 ``state_aggregate``
@@ -2338,18 +2586,20 @@ states is cluttering the logs. Set it to True to ignore them.
 
 Default: ``False``
 
-Automatically aggregate all states that have support for mod_aggregate by
-setting to ``True``. Or pass a list of state module names to automatically
+Automatically aggregate all states that have support for ``mod_aggregate`` by
+setting to ``True``.
+
+.. code-block:: yaml
+
+    state_aggregate: True
+
+Or pass a list of state module names to automatically
 aggregate just those types.
 
 .. code-block:: yaml
 
     state_aggregate:
       - pkg
-
-.. code-block:: yaml
-
-    state_aggregate: True
 
 .. conf_master:: state_events
 
@@ -2612,14 +2862,18 @@ nothing is ignored.
 ``master_roots``
 ----------------
 
-Default: ``/srv/salt-master``
+Default: ``''``
 
 A master-only copy of the :conf_master:`file_roots` dictionary, used by the
 state compiler.
 
+Example:
+
 .. code-block:: yaml
 
-    master_roots: /srv/salt-master
+    master_roots:
+      base:
+        - /srv/salt-master
 
 roots: Master's Local File Server
 ---------------------------------
@@ -3778,6 +4032,10 @@ Default:
 Set the environments and directories used to hold pillar sls data. This
 configuration is the same as :conf_master:`file_roots`:
 
+As of 2017.7.5 and 2018.3.1, it is possible to have `__env__` as a catch-all environment.
+
+Example:
+
 .. code-block:: yaml
 
     pillar_roots:
@@ -3787,6 +4045,8 @@ configuration is the same as :conf_master:`file_roots`:
         - /srv/pillar/dev
       prod:
         - /srv/pillar/prod
+      __env__:
+        - /srv/pillar/others
 
 .. conf_master:: on_demand_ext_pillar
 
@@ -3985,7 +4245,7 @@ ext_pillar keys to override those from :conf_master:`pillar_roots`.
 
     ext_pillar_first: False
 
-.. conf_minion:: pillarenv_from_saltenv
+.. conf_master:: pillarenv_from_saltenv
 
 ``pillarenv_from_saltenv``
 --------------------------
@@ -4103,7 +4363,7 @@ branch/tag (or from a per-remote ``env`` parameter), but if set this will
 override the process of deriving the env from the branch/tag name. For example,
 in the configuration below the ``foo`` branch would be assigned to the ``base``
 environment, while the ``bar`` branch would need to explicitly have ``bar``
-configured as it's environment to keep it from also being mapped to the
+configured as its environment to keep it from also being mapped to the
 ``base`` environment.
 
 .. code-block:: yaml
@@ -4239,6 +4499,21 @@ explanation <git-pillar-multiple-remotes>` from the git_pillar documentation.
 .. code-block:: yaml
 
     git_pillar_includes: False
+
+``git_pillar_update_interval``
+******************************
+
+.. versionadded:: 3000
+
+Default: ``60``
+
+This option defines the default update interval (in seconds) for git_pillar
+remotes. The update is handled within the global loop, hence
+``git_pillar_update_interval`` should be a multiple of ``loop_interval``.
+
+.. code-block:: yaml
+
+    git_pillar_update_interval: 120
 
 .. _git-ext-pillar-auth-opts:
 
@@ -4447,7 +4722,6 @@ strategy between different sources. It accepts 5 values:
 
   .. code-block:: yaml
 
-      #!yamlex
       foo: 42
       bar: !aggregate {
         element1: True
@@ -4456,7 +4730,6 @@ strategy between different sources. It accepts 5 values:
 
   .. code-block:: yaml
 
-      #!yamlex
       bar: !aggregate {
         element2: True
       }
@@ -4473,6 +4746,11 @@ strategy between different sources. It accepts 5 values:
       baz:
         - quux
         - quux2
+
+  .. note::
+      This requires that the :ref:`render pipeline <renderers-composing>`
+      defined in the :conf_master:`renderer` master configuration ends in
+      ``yamlex``.
 
 * ``overwrite``:
 
@@ -5373,7 +5651,7 @@ out for 2015.8.0 and later minions.
 .. note::
 
     2015.8.0 and later minions do not use this setting since the cachefile
-    is now located on the minion.
+    is now generated by the minion.
 
 Default: ``winrepo.p``
 
@@ -5602,7 +5880,7 @@ authenticate is protected by a passphrase.
 .. conf_master:: winrepo_refspecs
 
 ``winrepo_refspecs``
-~~~~~~~~~~~~~~~~~~~~
+********************
 
 .. versionadded:: 2017.7.0
 

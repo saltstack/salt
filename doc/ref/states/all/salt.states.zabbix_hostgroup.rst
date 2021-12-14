@@ -1,5 +1,5 @@
-salt.states.zabbix_hostgroup module
-===================================
+salt.states.zabbix_hostgroup
+============================
 
 .. automodule:: salt.states.zabbix_hostgroup
     :members:

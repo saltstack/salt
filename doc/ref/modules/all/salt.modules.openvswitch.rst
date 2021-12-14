@@ -1,5 +1,5 @@
-salt.modules.openvswitch module
-===============================
+salt.modules.openvswitch
+========================
 
 .. automodule:: salt.modules.openvswitch
     :members:

@@ -1,14 +1,10 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-from collections import OrderedDict
-
-# Import Salt Testing libs
+import salt.pillar.pepa as pepa
 from tests.support.unit import TestCase
 
-# Import Salt Libs
-import salt.pillar.pepa as pepa
+try:
+    from salt.utils.odict import OrderedDict
+except ImportError:
+    from collections import OrderedDict
 
 
 class PepaPillarTestCase(TestCase):
@@ -21,9 +17,11 @@ class PepaPillarTestCase(TestCase):
                 },
             },
         }
-        data = OrderedDict([
-            ('foo..bar..foo', True),
-            ('foo..bar..baz', True),
-        ])
+        data = OrderedDict(
+            [
+                ("foo..bar..foo", True),
+                ("foo..bar..baz", True),
+            ]
+        )
         result = pepa.key_value_to_tree(data)
         self.assertDictEqual(result, expected_result)

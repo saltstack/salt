@@ -1,3 +1,7 @@
+.. meta::
+   :description: How do you install Salt on FreeBSD?
+   :keywords: freebsd
+
 =======
 FreeBSD
 =======
@@ -12,36 +16,37 @@ Salt is available in the FreeBSD ports tree at `sysutils/py-salt
 FreeBSD binary repo
 ===================
 
+
+Install Salt on FreeBSD via the official package repository. Salt is packaged
+with whichever Python version is currently the `default on FreeBSD <https://cgit.freebsd.org/ports/tree/Mk/bsd.default-versions.mk>`_.
+
+Python 3.8 is currently default, install from packages like this:
+
 .. code-block:: bash
 
-    pkg install py27-salt
+    pkg install py38-salt
+
 
 FreeBSD ports
 =============
 
-By default salt is packaged using python 2.7, but if you build your own packages from FreeBSD ports either by hand or with poudriere you can instead package it with your choice of python. Add a line to /etc/make.conf to choose your python flavour:
-
-.. code-block:: text
-
-    echo "DEFAULT_VERSIONS+= python=3.6" >> /etc/make.conf
-
-Then build the port and install:
+Installation from ports:
 
 .. code-block:: bash
 
     cd /usr/ports/sysutils/py-salt
     make install
 
+Python 3.7 can be used by setting default Python version to 3.7:  
+    
+.. code-block:: text
+
+    echo "DEFAULT_VERSIONS+= python=3.7" >> /etc/make.conf
+
+
 Post-installation tasks
 =======================
 
-**Master**
-
-Copy the sample configuration file:
-
-.. code-block:: bash
-
-   cp /usr/local/etc/salt/master.sample /usr/local/etc/salt/master
 
 **rc.conf**
 
@@ -58,14 +63,6 @@ Start the Salt Master as follows:
 .. code-block:: bash
 
    service salt_master start
-
-**Minion**
-
-Copy the sample configuration file:
-
-.. code-block:: bash
-
-   cp /usr/local/etc/salt/minion.sample /usr/local/etc/salt/minion
 
 **rc.conf**
 
