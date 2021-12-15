@@ -250,10 +250,10 @@ class AsyncReqChannel:
         """
         try:
             if self.crypt == "clear":
-                log.info("ReqChannel send clear load=%r", load)
+                log.trace("ReqChannel send clear load=%r", load)
                 ret = yield self._uncrypted_transfer(load, tries=tries, timeout=timeout)
             else:
-                log.info("ReqChannel send crypt load=%r", load)
+                log.trace("ReqChannel send crypt load=%r", load)
                 ret = yield self._crypted_transfer(
                     load, tries=tries, timeout=timeout, raw=raw
                 )
