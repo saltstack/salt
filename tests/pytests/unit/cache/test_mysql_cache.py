@@ -65,7 +65,7 @@ def test_store(master_config):
                     call(
                         mock_connect_client,
                         "REPLACE INTO salt (bank, etcd_key, data) values(%s,%s,%s)",
-                        ("minions/minion", "key1", b"\xa4data"),
+                        args=("minions/minion", "key1", b"\xa4data"),
                     )
                 ]
 
@@ -82,7 +82,7 @@ def test_store(master_config):
                     call(
                         mock_connect_client,
                         "REPLACE INTO salt (bank, etcd_key, data) values(%s,%s,%s)",
-                        ("minions/minion", "key2", b"\xa4data"),
+                        args=("minions/minion", "key2", b"\xa4data"),
                     )
                 ]
 
