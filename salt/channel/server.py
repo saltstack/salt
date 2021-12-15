@@ -814,21 +814,6 @@ class PubServerChannel:
             else:
                 int_payload["topic_lst"] = load["tgt"]
 
-        ## From TCP transport
-        # if load["tgt_type"] == "list" and not self.opts.get("order_masters", False):
-        #    if isinstance(load["tgt"], str):
-        #        # Fetch a list of minions that match
-        #        _res = self.ckminions.check_minions(
-        #            load["tgt"], tgt_type=load["tgt_type"]
-        #        )
-        #        match_ids = _res["minions"]
-
-        #        log.debug("Publish Side Match: %s", match_ids)
-        #        # Send list of miions thru so zmq can target them
-        #        int_payload["topic_lst"] = match_ids
-        #    else:
-        #        int_payload["topic_lst"] = load["tgt"]
-
         return int_payload
 
     def publish(self, load):

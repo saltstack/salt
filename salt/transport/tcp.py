@@ -601,19 +601,6 @@ class MessageClient:
             return
         self._closing = True
         self.io_loop.add_timeout(1, self.check_close)
-        return
-
-        # try:
-        #     for msg_id in list(self.send_future_map):
-        #         log.error("Closing before send future completed %r", msg_id)
-        #         future = self.send_future_map.pop(msg_id)
-        #         future.set_exception(ClosingError())
-        #     self._tcp_client.close()
-        #     # self._stream.close()
-        # finally:
-        #     self._stream = None
-        #     self._closing = False
-        #     self._closed = True
 
     @salt.ext.tornado.gen.coroutine
     def check_close(self):
@@ -1306,7 +1293,7 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
     # TODO: ACK the publish through IPC
     @salt.ext.tornado.gen.coroutine
     def publish_payload(self, package, topic_list=None):
-        log.error("TCP PubServer sending payload: %s \n\n %r", package, topic_list)
+        log.trace("TCP PubServer sending payload: %s \n\n %r", package, topic_list)
         payload = salt.transport.frame.frame_msg(package)
         to_remove = []
         if topic_list:
@@ -1379,10 +1366,8 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         log_queue_level = kwargs.get("log_queue_level")
         if log_queue_level is not None:
             salt.log.setup.set_multiprocessing_logging_level(log_queue_level)
-        log.error("PUB D - a")
         io_loop = salt.ext.tornado.ioloop.IOLoop()
         io_loop.make_current()
-        log.error("PUB D - b")
 
         # Spin up the publisher
         self.pub_server = pub_server = PubServer(
@@ -1391,7 +1376,6 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
             presence_callback=presence_callback,
             remove_presence_callback=remove_presence_callback,
         )
-        log.error("PUB D - c")
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         _set_tcp_keepalive(sock, self.opts)
@@ -1407,7 +1391,6 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         else:
             pull_uri = os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
         self.pub_server = pub_server
-        log.error("PUB D - d")
         pull_sock = salt.transport.ipc.IPCMessageServer(
             pull_uri,
             io_loop=io_loop,
@@ -1421,13 +1404,11 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
 
         # run forever
         try:
-            log.error("PUB D - e")
             io_loop.start()
         except (KeyboardInterrupt, SystemExit):
             pass
         finally:
             pull_sock.close()
-        log.error("PUB D - f")
 
     def pre_fork(self, process_manager, kwargs=None):
         """
@@ -1441,7 +1422,6 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
 
     @salt.ext.tornado.gen.coroutine
     def publish_payload(self, payload, *args):
-        log.error("PUB CHAN publish_payload")
         ret = yield self.pub_server.publish_payload(payload, *args)
         raise salt.ext.tornado.gen.Return(ret)
 
