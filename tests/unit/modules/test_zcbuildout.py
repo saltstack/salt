@@ -353,7 +353,7 @@ class BuildoutOnlineTestCase(Base):
             )
         except subprocess.CalledProcessError:
             subprocess.check_call(
-                [salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES), cls.ppy.dis]
+                [salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES), cls.ppy_dis]
             )
 
             url = (

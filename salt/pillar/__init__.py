@@ -692,7 +692,7 @@ class Pillar:
                 else:
                     saltenvs.add(self.opts["pillarenv"])
             else:
-                saltenvs = self._get_envs()
+                saltenvs.update(self._get_envs())
                 if self.opts.get("pillar_source_merging_strategy", None) == "none":
                     saltenvs &= {self.saltenv or "base"}
 
