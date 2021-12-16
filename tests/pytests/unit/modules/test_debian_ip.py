@@ -1,4 +1,3 @@
-import pytest
 import salt.modules.debian_ip as debian_ip
 
 
@@ -21,7 +20,6 @@ def test_when_adapters_only_contains_source_then_source_should_be_returned():
     assert actual_adapters == expected_adapters
 
 
-@pytest.mark.xfail
 def test_when_data_is_missing_from_adapters_they_should_not_be_in_result():
     missing_data_adapters = {"no data adapter": "no dayta is here"}
     expected_adapters = {}
@@ -32,7 +30,6 @@ def test_when_data_is_missing_from_adapters_they_should_not_be_in_result():
     assert actual_adapters == expected_adapters
 
 
-@pytest.mark.xfail
 def test_when_data_in_adapters_and_no_inet_or_inet6_in_data_segment_then_original_data_should_be_returned():
     expected_adapters = {
         "some cool adapter": {"data": {}},
@@ -49,7 +46,6 @@ def test_when_data_in_adapters_and_no_inet_or_inet6_in_data_segment_then_origina
     assert actual_adapters == expected_adapters
 
 
-@pytest.mark.xfail
 def test_when_opts_are_in_data_sorted_opt_keys_should_be_added():
     comprehensive_adapters = {
         "source": "keep me here",

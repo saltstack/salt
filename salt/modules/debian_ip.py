@@ -684,7 +684,7 @@ def _parse_interfaces(interface_files=None):
 def _filter_malformed_interfaces(*, adapters):
     # Return a sorted list of the keys for bond, bridge and ethtool options to
     # ensure a consistent order
-    for iface_name in adapters:
+    for iface_name in list(adapters):
         if iface_name == "source":
             continue
         if "data" not in adapters[iface_name]:
