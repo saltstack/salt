@@ -341,11 +341,10 @@ def _get_accumulator_filepath():
 
 def _load_accumulators():
     def _deserialize(path):
-        serial = salt.payload.Serial(__opts__)
         ret = {"accumulators": {}, "accumulators_deps": {}}
         try:
             with salt.utils.files.fopen(path, "rb") as f:
-                loaded = serial.load(f)
+                loaded = salt.payload.load(f)
                 return loaded if loaded else ret
         except (OSError, NameError):
             # NameError is a msgpack error from salt-ssh
@@ -359,10 +358,9 @@ def _load_accumulators():
 def _persist_accummulators(accumulators, accumulators_deps):
     accumm_data = {"accumulators": accumulators, "accumulators_deps": accumulators_deps}
 
-    serial = salt.payload.Serial(__opts__)
     try:
         with salt.utils.files.fopen(_get_accumulator_filepath(), "w+b") as f:
-            serial.dump(accumm_data, f)
+            salt.payload.dump(accumm_data, f)
     except NameError:
         # msgpack error from salt-ssh
         pass
@@ -452,7 +450,7 @@ def _gen_recurse_managed_files(
             # the same list.
             _filenames = list(filenames)
             for filename in _filenames:
-                if filename.startswith(lname):
+                if filename.startswith(lname + os.sep):
                     log.debug(
                         "** skipping file ** %s, it intersects a symlink", filename
                     )
@@ -532,9 +530,9 @@ def _gen_recurse_managed_files(
             if keep_symlinks:
                 islink = False
                 for link in symlinks:
-                    if mdir.startswith(link, 0):
+                    if mdir.startswith(link + os.sep, 0):
                         log.debug(
-                            "** skipping empty dir ** %s, it intersectsa symlink", mdir
+                            "** skipping empty dir ** %s, it intersects a symlink", mdir
                         )
                         islink = True
                         break
@@ -6862,7 +6860,13 @@ def patch(
             __opts__["test"] = orig_test
             sys.modules[__salt__["file.patch"].__module__].__opts__["test"] = orig_test
 
-        if not result["result"]:
+        # TODO adding the not orig_test is just a patch
+        # The call above to managed ends up in win_dacl utility and overwrites
+        # the ret dict, specifically "result". This surfaces back here and is
+        # providing an incorrect representation of the actual value.
+        # This fix requires re-working the dacl utility when test mode is passed
+        # to it from another function, such as this one, and it overwrites ret.
+        if not orig_test and not result["result"]:
             log.debug(
                 "failed to download %s",
                 salt.utils.url.redact_http_basic_auth(source_match),
@@ -6905,6 +6909,16 @@ def patch(
             reverse_pass = _patch(patch_rejects, ["-R", "-f"], dry_run=True)
             already_applied = reverse_pass["retcode"] == 0
 
+            # Check if the patch command threw an error upon execution
+            # and return the error here. According to gnu on patch-messages
+            # patch exits with a status of 0 if successful
+            # patch exits with a status of 1 if some hunks cannot be applied
+            # patch exits with a status of 2 if something else went wrong
+            # www.gnu.org/software/diffutils/manual/html_node/patch-Messages.html
+            if pre_check["retcode"] == 2 and pre_check["stderr"]:
+                ret["comment"] = pre_check["stderr"]
+                ret["result"] = False
+                return ret
             if already_applied:
                 ret["comment"] = "Patch was already applied"
                 ret["result"] = True

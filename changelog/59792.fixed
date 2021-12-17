@@ -1,1 +1,0 @@
-The ``ansiblegate`` module now correctly passes keyword arguments to Ansible module calls

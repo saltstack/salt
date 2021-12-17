@@ -351,7 +351,6 @@ class AsyncZeroMQPubChannel(
             salt.utils.stringutils.to_bytes(self.opts["id"])
         ).hexdigest()
         self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
-        self.serial = salt.payload.Serial(self.opts)
         self.context = zmq.Context()
         self._socket = self.context.socket(zmq.SUB)
 
@@ -488,7 +487,7 @@ class AsyncZeroMQPubChannel(
         messages_len = len(messages)
         # if it was one message, then its old style
         if messages_len == 1:
-            payload = self.serial.loads(messages[0])
+            payload = salt.payload.loads(messages[0])
         # 2 includes a header which says who should do it
         elif messages_len == 2:
             message_target = salt.utils.stringutils.to_str(messages[0])
@@ -501,7 +500,7 @@ class AsyncZeroMQPubChannel(
             ):
                 log.debug("Publish received for not this minion: %s", message_target)
                 raise salt.ext.tornado.gen.Return(None)
-            payload = self.serial.loads(messages[1])
+            payload = salt.payload.loads(messages[1])
         else:
             raise Exception(
                 "Invalid number of messages ({}) in zeromq pubmessage from master".format(
@@ -556,7 +555,6 @@ class ZeroMQReqServerChannel(
         Multiprocessing target for the zmq queue device
         """
         self.__setup_signals()
-        salt.utils.process.appendproctitle("MWorkerQueue")
         self.context = zmq.Context(self.opts["worker_threads"])
         # Prepare the zeromq sockets
         self.uri = "tcp://{interface}:{ret_port}".format(**self.opts)
@@ -632,7 +630,7 @@ class ZeroMQReqServerChannel(
         :param func process_manager: An instance of salt.utils.process.ProcessManager
         """
         salt.transport.mixins.auth.AESReqServerMixin.pre_fork(self, process_manager)
-        process_manager.add_process(self.zmq_device)
+        process_manager.add_process(self.zmq_device, name="MWorkerQueue")
 
     def _start_zmq_monitor(self):
         """
@@ -697,7 +695,7 @@ class ZeroMQReqServerChannel(
         :param dict payload: A payload to process
         """
         try:
-            payload = self.serial.loads(payload[0])
+            payload = salt.payload.loads(payload[0])
             payload = self._decode_payload(payload)
         except Exception as exc:  # pylint: disable=broad-except
             exc_type = type(exc).__name__
@@ -710,7 +708,7 @@ class ZeroMQReqServerChannel(
                 )
             else:
                 log.error("Bad load from minion: %s: %s", exc_type, exc)
-            stream.send(self.serial.dumps("bad load"))
+            stream.send(salt.payload.dumps("bad load"))
             raise salt.ext.tornado.gen.Return()
 
         # TODO helper functions to normalize payload?
@@ -720,26 +718,26 @@ class ZeroMQReqServerChannel(
                 payload,
                 payload.get("load"),
             )
-            stream.send(self.serial.dumps("payload and load must be a dict"))
+            stream.send(salt.payload.dumps("payload and load must be a dict"))
             raise salt.ext.tornado.gen.Return()
 
         try:
             id_ = payload["load"].get("id", "")
             if "\0" in id_:
                 log.error("Payload contains an id with a null byte: %s", payload)
-                stream.send(self.serial.dumps("bad load: id contains a null byte"))
+                stream.send(salt.payload.dumps("bad load: id contains a null byte"))
                 raise salt.ext.tornado.gen.Return()
         except TypeError:
             log.error("Payload contains non-string id: %s", payload)
             stream.send(
-                self.serial.dumps("bad load: id {} is not a string".format(id_))
+                salt.payload.dumps("bad load: id {} is not a string".format(id_))
             )
             raise salt.ext.tornado.gen.Return()
 
         # intercept the "_auth" commands, since the main daemon shouldn't know
         # anything about our key auth
         if payload["enc"] == "clear" and payload.get("load", {}).get("cmd") == "_auth":
-            stream.send(self.serial.dumps(self._auth(payload["load"])))
+            stream.send(salt.payload.dumps(self._auth(payload["load"])))
             raise salt.ext.tornado.gen.Return()
 
         # TODO: test
@@ -755,12 +753,12 @@ class ZeroMQReqServerChannel(
 
         req_fun = req_opts.get("fun", "send")
         if req_fun == "send_clear":
-            stream.send(self.serial.dumps(ret))
+            stream.send(salt.payload.dumps(ret))
         elif req_fun == "send":
-            stream.send(self.serial.dumps(self.crypticle.dumps(ret)))
+            stream.send(salt.payload.dumps(self.crypticle.dumps(ret)))
         elif req_fun == "send_private":
             stream.send(
-                self.serial.dumps(
+                salt.payload.dumps(
                     self._encrypt_private(
                         ret,
                         req_opts["key"],
@@ -823,7 +821,6 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
 
     def __init__(self, opts):
         self.opts = opts
-        self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
 
     def connect(self):
@@ -833,8 +830,6 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         """
         Bind to the interface specified in the configuration file
         """
-        salt.utils.process.appendproctitle(self.__class__.__name__)
-
         if self.opts["pub_server_niceness"] and not salt.utils.platform.is_windows():
             log.info(
                 "setting Publish daemon niceness to %i",
@@ -966,7 +961,9 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
 
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         """
-        process_manager.add_process(self._publish_daemon, kwargs=kwargs)
+        process_manager.add_process(
+            self._publish_daemon, kwargs=kwargs, name=self.__class__.__name__
+        )
 
     @property
     def pub_sock(self):
@@ -1028,7 +1025,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             master_pem_path = os.path.join(self.opts["pki_dir"], "master.pem")
             log.debug("Signing data packet")
             payload["sig"] = salt.crypt.sign_message(master_pem_path, payload["load"])
-        int_payload = {"payload": self.serial.dumps(payload)}
+        int_payload = {"payload": salt.payload.dumps(payload)}
 
         # add some targeting stuff for lists only (for now)
         if load["tgt_type"] == "list":
@@ -1044,7 +1041,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             log.debug("Publish Side Match: %s", match_ids)
             # Send list of miions thru so zmq can target them
             int_payload["topic_lst"] = match_ids
-        payload = self.serial.dumps(int_payload)
+        payload = salt.payload.dumps(int_payload)
         log.debug(
             "Sending payload to publish daemon. jid=%s size=%d",
             load.get("jid", None),
@@ -1113,7 +1110,6 @@ class AsyncReqMessageClient:
         else:
             self.io_loop = io_loop
 
-        self.serial = salt.payload.Serial(self.opts)
         self.context = zmq.Context()
 
         # wire up sockets
@@ -1199,7 +1195,7 @@ class AsyncReqMessageClient:
             # send
             def mark_future(msg):
                 if not future.done():
-                    data = self.serial.loads(msg[0])
+                    data = salt.payload.loads(msg[0])
                     future.set_result(data)
 
             self.stream.on_recv(mark_future)
@@ -1265,7 +1261,7 @@ class AsyncReqMessageClient:
             future.attempts = 0
             future.timeout = timeout
             # if a future wasn't passed in, we need to serialize the message
-            message = self.serial.dumps(message)
+            message = salt.payload.dumps(message)
         if callback is not None:
 
             def handle_future(future):

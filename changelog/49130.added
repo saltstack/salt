@@ -1,1 +1,0 @@
-Added ability to pass exclude kwarg to salt.state inside orchestrate.
