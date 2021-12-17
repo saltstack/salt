@@ -1,0 +1,1 @@
+Prevent salt-minion systemd unit stuck on reloading state after calling some of apache module functions.
