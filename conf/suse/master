@@ -574,6 +574,10 @@ syndic_user: salt
 # states is cluttering the logs. Set it to True to ignore them.
 #state_output_diff: False
 
+# The state_output_pct setting changes whether success and failure information
+# as a percent of total actions will be shown for each state run.
+#state_output_pct: False
+
 # Automatically aggregate all states that have support for mod_aggregate by
 # setting to 'True'. Or pass a list of state module names to automatically
 # aggregate just those types.
@@ -934,7 +938,7 @@ syndic_user: salt
 # configuration options to fully understand the tunable parameters and their implications.
 #
 # Note: setting ``pillar_cache: True`` has no effect on targeting Minions with Pillars.
-# See https://docs.saltstack.com/en/latest/topics/targeting/pillar.html
+# See https://docs.saltproject.io/en/latest/topics/targeting/pillar.html
 #pillar_cache: False
 
 # If and only if a master has set ``pillar_cache: True``, the cache TTL controls the amount
@@ -1202,7 +1206,7 @@ syndic_user: salt
 ############################################
 # Warning: Failure to set TCP keepalives on the salt-master can result in
 # not detecting the loss of a minion when the connection is lost or when
-# it's host has been terminated without first closing the socket.
+# its host has been terminated without first closing the socket.
 # Salt's Presence System depends on this connection status to know if a minion
 # is "present".
 # ZeroMQ now includes support for configuring SO_KEEPALIVE if supported by

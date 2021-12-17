@@ -247,8 +247,8 @@ Once the profile is created, you can use the **PROFILE_NAME** to configure
 your cloud profiles.
 
 .. _`IAM Management Console`: https://console.aws.amazon.com/iam/home?#roles
-.. _`AWS CLI`: http://docs.aws.amazon.com/cli/latest/index.html
-.. _`instance profile`: http://docs.aws.amazon.com/IAM/latest/UserGuide/instance-profiles.html
+.. _`AWS CLI`: https://docs.aws.amazon.com/cli/latest/index.html
+.. _`instance profile`: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html
 
 
 Cloud Profiles
@@ -457,7 +457,7 @@ EC2 instances can be added to an `AWS Placement Group`_ by specifying the
     my-ec2-config:
       placementgroup: my-aws-placement-group
 
-.. _`AWS Placement Group`: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/placement-groups.html
+.. _`AWS Placement Group`: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/placement-groups.html
 
 Your instances may optionally make use of EC2 Spot Instances. The
 following example will request that spot instances be used and your
@@ -627,8 +627,8 @@ Tags can be set once an instance has been launched.
             tag0: value
             tag1: value
 
-.. _`AWS documentation`: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html
-.. _`AWS Spot Instances`: http://aws.amazon.com/ec2/purchasing-options/spot-instances/
+.. _`AWS documentation`: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html
+.. _`AWS Spot Instances`: https://aws.amazon.com/ec2/spot/
 
 Setting up a Master inside EC2
 ------------------------------
@@ -766,7 +766,7 @@ them have never been used, much less tested, by the Salt Stack team.
 
 * `CentOS`__
 
-.. __: http://wiki.centos.org/Cloud/AWS
+.. __: https://wiki.centos.org/Cloud/AWS
 
 * `Ubuntu`__
 
@@ -778,7 +778,7 @@ them have never been used, much less tested, by the Salt Stack team.
 
 * `OmniOS`__
 
-.. __: http://omnios.omniti.com/wiki.php/Installation#IntheCloud
+.. __: https://omniosce.org/setup/aws.html
 
 * `All Images on Amazon`__
 
@@ -949,7 +949,7 @@ Alternate Endpoint
 Normally, EC2 endpoints are build using the region and the service_url. The
 resulting endpoint would follow this pattern:
 
-.. code-block:: bash
+.. code-block:: text
 
     ec2.<region>.<service_url>
 

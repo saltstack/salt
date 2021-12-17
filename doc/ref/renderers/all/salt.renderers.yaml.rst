@@ -1,4 +1,3 @@
-===================
 salt.renderers.yaml
 ===================
 
@@ -40,7 +39,7 @@ In Python, the above maps to:
 
 .. code-block:: python
 
-    {'my_key': 'my_value'}
+    {"my_key": "my_value"}
 
 Dictionaries can be nested:
 
@@ -53,7 +52,7 @@ And in Python:
 
 .. code-block:: python
 
-    {'first_level_dict_key': {'second_level_dict_key': 'value_in_second_level_dict' } }
+    {"first_level_dict_key": {"second_level_dict_key": "value_in_second_level_dict"}}
 
 Rule Three: Dashes
 ------------------

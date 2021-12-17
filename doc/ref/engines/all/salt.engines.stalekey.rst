@@ -1,5 +1,5 @@
-salt.engines.stalekey module
-============================
+salt.engines.stalekey
+=====================
 
 .. automodule:: salt.engines.stalekey
     :members:

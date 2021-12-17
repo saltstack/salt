@@ -1,8 +1,8 @@
 .. _all-salt.tokens:
 
-============
-auth modules
-============
+=============
+token modules
+=============
 
 .. currentmodule:: salt.tokens
 

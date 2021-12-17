@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Pass Renderer for Salt
 ======================
 
@@ -46,63 +45,58 @@ Install pass binary
 
         pass:
           pkg.installed
-'''
+"""
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
+
 import logging
 import os
 from os.path import expanduser
-from subprocess import Popen, PIPE
+from subprocess import PIPE, Popen
 
-# Import salt libs
 import salt.utils.path
 from salt.exceptions import SaltRenderError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
 
 def _get_pass_exec():
-    '''
+    """
     Return the pass executable or raise an error
-    '''
-    pass_exec = salt.utils.path.which('pass')
+    """
+    pass_exec = salt.utils.path.which("pass")
     if pass_exec:
         return pass_exec
     else:
-        raise SaltRenderError('pass unavailable')
+        raise SaltRenderError("pass unavailable")
 
 
 def _fetch_secret(pass_path):
-    '''
+    """
     Fetch secret from pass based on pass_path. If there is
     any error, return back the original pass_path value
-    '''
-    cmd = "pass show {0}".format(pass_path.strip())
-    log.debug('Fetching secret: %s', cmd)
+    """
+    cmd = "pass show {}".format(pass_path.strip())
+    log.debug("Fetching secret: %s", cmd)
 
-    proc = Popen(cmd.split(' '), stdout=PIPE, stderr=PIPE)
+    proc = Popen(cmd.split(" "), stdout=PIPE, stderr=PIPE)
     pass_data, pass_error = proc.communicate()
 
     # The version of pass used during development sent output to
     # stdout instead of stderr even though its returncode was non zero.
     if proc.returncode or not pass_data:
-        log.warning('Could not fetch secret: %s %s', pass_data, pass_error)
+        log.warning("Could not fetch secret: %s %s", pass_data, pass_error)
         pass_data = pass_path
     return pass_data.strip()
 
 
 def _decrypt_object(obj):
-    '''
+    """
     Recursively try to find a pass path (string) that can be handed off to pass
-    '''
-    if isinstance(obj, six.string_types):
+    """
+    if isinstance(obj, str):
         return _fetch_secret(obj)
     elif isinstance(obj, dict):
-        for pass_key, pass_path in six.iteritems(obj):
+        for pass_key, pass_path in obj.items():
             obj[pass_key] = _decrypt_object(pass_path)
     elif isinstance(obj, list):
         for pass_key, pass_path in enumerate(obj):
@@ -110,13 +104,13 @@ def _decrypt_object(obj):
     return obj
 
 
-def render(pass_info, saltenv='base', sls='', argline='', **kwargs):
-    '''
+def render(pass_info, saltenv="base", sls="", argline="", **kwargs):
+    """
     Fetch secret from pass based on pass_path
-    '''
+    """
     _get_pass_exec()
 
     # Make sure environment variable HOME is set, since Pass looks for the
     # password-store under ~/.password-store.
-    os.environ['HOME'] = expanduser('~')
+    os.environ["HOME"] = expanduser("~")
     return _decrypt_object(pass_info)

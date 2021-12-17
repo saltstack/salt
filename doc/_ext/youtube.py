@@ -36,8 +36,10 @@
 from __future__ import division
 
 import re
+
 from docutils import nodes
 from docutils.parsers.rst import directives
+
 try:
     from sphinx.util.compat import Directive
 except ImportError:
@@ -140,7 +142,9 @@ class YouTube(Directive):
             aspect = None
         width = get_size(self.options, "width")
         height = get_size(self.options, "height")
-        return [youtube(id=self.arguments[0], aspect=aspect, width=width, height=height)]
+        return [
+            youtube(id=self.arguments[0], aspect=aspect, width=width, height=height)
+        ]
 
 
 def setup(app):

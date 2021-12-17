@@ -1,13 +1,8 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import salt libs
 import salt.utils.msgpack
-from salt.ext import six
 
 
-def render(msgpack_data, saltenv='base', sls='', **kws):
-    '''
+def render(msgpack_data, saltenv="base", sls="", **kws):
+    """
     Accepts a message pack string or a file object, renders said data back to
     a python dict.
 
@@ -18,12 +13,12 @@ def render(msgpack_data, saltenv='base', sls='', **kws):
         fluid fileserver backends that rely on pure data sources.
 
     :rtype: A Python data structure
-    '''
-    if not isinstance(msgpack_data, six.string_types):
+    """
+    if not isinstance(msgpack_data, str):
         msgpack_data = msgpack_data.read()
 
-    if msgpack_data.startswith('#!'):
-        msgpack_data = msgpack_data[(msgpack_data.find('\n') + 1):]
+    if msgpack_data.startswith("#!"):
+        msgpack_data = msgpack_data[(msgpack_data.find("\n") + 1) :]
     if not msgpack_data.strip():
         return {}
     return salt.utils.msgpack.loads(msgpack_data)

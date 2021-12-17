@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 A Python-based DSL
 
 :maintainer: Jack Kuan <kjkuan@gmail.com>
@@ -230,7 +229,7 @@ is enabled by setting the ``ordered`` option on ``__pydsl__``.
     __pydsl__.set(ordered=True)
 
     for i in range(10):
-        i = six.text_type(i)
+        i = str(i)
         state(i).cmd.run('echo '+i, cwd='/')
     state('1').cmd.run('echo one')
     state('2').cmd.run(name='echo two')
@@ -333,28 +332,26 @@ For example:
     def main():
         my_mod = sys.modules['salt.loaded.ext.module.my_mod']
 
-'''
-from __future__ import absolute_import, print_function, unicode_literals
-
+"""
 import types
+
 import salt.utils.pydsl as pydsl
 import salt.utils.stringutils
-from salt.ext.six import exec_
-from salt.utils.pydsl import PyDslError
 from salt.exceptions import SaltRenderError
+from salt.utils.pydsl import PyDslError
 
-__all__ = ['render']
+__all__ = ["render"]
 
 
-def render(template, saltenv='base', sls='', tmplpath=None, rendered_sls=None, **kws):
+def render(template, saltenv="base", sls="", tmplpath=None, rendered_sls=None, **kws):
     sls = salt.utils.stringutils.to_str(sls)
     mod = types.ModuleType(sls)
-    # Note: mod object is transient. It's existence only lasts as long as
+    # Note: mod object is transient. Its existence only lasts as long as
     #       the lowstate data structure that the highstate in the sls file
     #       is compiled to.
 
     # __name__ can't be assigned a unicode
-    mod.__name__ = str(sls)  # future lint: disable=blacklisted-function
+    mod.__name__ = str(sls)
 
     # to workaround state.py's use of copy.deepcopy(chunk)
     mod.__deepcopy__ = lambda x: mod
@@ -372,10 +369,11 @@ def render(template, saltenv='base', sls='', tmplpath=None, rendered_sls=None, *
         __env__=saltenv,
         __sls__=sls,
         __file__=tmplpath,
-        **kws)
+        **kws
+    )
 
     dsl_sls.get_render_stack().append(dsl_sls)
-    exec_(template.read(), mod.__dict__)
+    exec(template.read(), mod.__dict__)
     highstate = dsl_sls.to_highstate(mod)
     dsl_sls.get_render_stack().pop()
     return highstate
@@ -388,4 +386,5 @@ def _wrap_sls(method):
             return getattr(sls, method.__name__)(*args, **kws)
         except PyDslError as exc:
             raise SaltRenderError(exc)
+
     return _sls_method

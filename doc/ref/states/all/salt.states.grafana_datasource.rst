@@ -1,5 +1,5 @@
-salt.states.grafana_datasource module
-=====================================
+salt.states.grafana_datasource
+==============================
 
 .. automodule:: salt.states.grafana_datasource
     :members:

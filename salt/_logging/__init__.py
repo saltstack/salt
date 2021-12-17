@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
     salt._logging
     ~~~~~~~~~~~~~
 
@@ -9,10 +8,6 @@
 
     The ``salt._logging`` package should be imported as soon as possible since salt tweaks
     the python's logging system.
-'''
+"""
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import salt libs
 from salt._logging.impl import *  # pylint: disable=wildcard-import

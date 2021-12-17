@@ -946,7 +946,7 @@ Changelog for v2016.3.3..v2016.3.4
 
   * 6ce4653fa3 Error on reaction with missing SLS file
 
-* **ISSUE** `saltstack/salt#36788`_: (`damon-atkins`_) pillar/libvirt.py assume certtool is available and works everytime (refs: `#36803`_)
+* **ISSUE** `saltstack/salt#36788`_: (`damon-atkins`_) pillar/libvirt.py assume certtool is available and works every time (refs: `#36803`_)
 
 * **PR** `#36803`_: (`gtmanfred`_) do not load libvirt pillar if certtool is unavailable
   @ *2016-10-06 11:15:14 UTC*

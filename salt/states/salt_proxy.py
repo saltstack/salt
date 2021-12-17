@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
     Salt proxy state
 
     .. versionadded:: 2015.8.2
@@ -11,7 +10,7 @@
 
     Run the state as below
 
-    ..code-block:: yaml
+    .. code-block:: yaml
 
         salt-proxy-configure:
             salt_proxy.configure_proxy:
@@ -22,16 +21,15 @@
     within /etc/salt/proxy (if /etc/salt/proxy doesn't exists)
     and start the salt-proxy process (default true),
     if it isn't already running.
-'''
-from __future__ import absolute_import, unicode_literals, print_function
+"""
 
 import logging
 
 log = logging.getLogger(__name__)
 
 
-def configure_proxy(name, proxyname='p8000', start=True):
-    '''
+def configure_proxy(name, proxyname="p8000", start=True):
+    """
     Create the salt proxy file and start the proxy process
     if required
 
@@ -45,18 +43,14 @@ def configure_proxy(name, proxyname='p8000', start=True):
 
     Example:
 
-    ..code-block:: yaml
+    .. code-block:: yaml
 
         salt-proxy-configure:
             salt_proxy.configure_proxy:
                 - proxyname: p8000
                 - start: True
 
-    '''
-    ret = __salt__['salt_proxy.configure_proxy'](proxyname,
-                                                 start=start)
-    ret.update({
-        'name': name,
-        'comment': '{0} config messages'.format(name)
-    })
+    """
+    ret = __salt__["salt_proxy.configure_proxy"](proxyname, start=start)
+    ret.update({"name": name, "comment": "{} config messages".format(name)})
     return ret

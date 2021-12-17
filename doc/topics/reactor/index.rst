@@ -738,3 +738,28 @@ Also, if it is not desirable that *every* minion syncs on startup, the ``*``
 can be replaced with a different glob to narrow down the set of minions which
 will match that reactor (e.g. ``salt/minion/appsrv*/start``, which would only
 match minion IDs beginning with ``appsrv``).
+
+
+Reactor Tuning for Large-Scale Installations
+============================================
+
+The reactor uses a thread pool implementation that's contained inside
+``salt.utils.process.ThreadPool``. It uses Python's stdlib Queue to enqueue
+jobs which are picked up by standard Python threads. If the queue is full,
+``False`` is simply returned by the firing method on the thread pool.
+
+As such, there are a few things to say about the selection of proper values
+for the reactor.
+
+For situations where it is expected that many long-running jobs might be
+executed by the reactor, ``reactor_worker_hwm`` should be increased or even
+set to ``0`` to bound it only by available memory. If set to zero, a close eye
+should be kept on memory consumption.
+
+If many long-running jobs are expected and execution concurrency and
+performance are a concern, you may also increase the value for
+``reactor_worker_threads``. This will control the number of concurrent threads
+which are pulling jobs from the queue and executing them. Obviously, this
+bears a relationship to the speed at which the queue itself will fill up.
+The price to pay for this value is that each thread will contain a copy of
+Salt code needed to perform the requested action. 

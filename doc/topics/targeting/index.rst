@@ -12,7 +12,7 @@ For example the command ``salt web1 apache.signal restart`` to restart the
 Apache httpd server specifies the machine ``web1`` as the target and the
 command will only be run on that one minion.
 
-Similarly when using States, the following :term:`top file` specifies that only
+Similarly when using States, the following :term:`top file <Top File>` specifies that only
 the ``web1`` minion should execute the contents of ``webserver.sls``:
 
 .. code-block:: yaml

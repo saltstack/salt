@@ -1,5 +1,5 @@
-salt.modules.win_snmp module
-============================
+salt.modules.win_snmp
+=====================
 
 .. automodule:: salt.modules.win_snmp
     :members:
