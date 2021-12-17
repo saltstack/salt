@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-
-'''
+"""
 Decrypt pillar data through the builtin GPG renderer
 
 In most cases, you'll want to make this the last external pillar used. For
@@ -15,9 +13,9 @@ this:
 
 Set ``gpg_keydir`` in your config to adjust the homedir the renderer uses.
 
-'''
+"""
 
-from __future__ import absolute_import, print_function, unicode_literals
+
 import salt.loader
 
 

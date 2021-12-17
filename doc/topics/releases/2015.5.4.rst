@@ -517,7 +517,7 @@ Changelog for v2015.5.3..v2015.5.4
 
   * 1e9a850e23 fix autoruns.list looking in wrong directory
 
-* **ISSUE** `saltstack/salt-bootstrap#640`_: (`Deshke`_) salt-minon install bug on ubuntu 14.04 tornado>=4.0 (refs: `#26065`_)
+* **ISSUE** `saltstack/salt-bootstrap#640`_: (`Deshke`_) salt-minion install bug on ubuntu 14.04 tornado>=4.0 (refs: `#26065`_)
 
 * **ISSUE** `saltstack/salt-bootstrap#633`_: (`neilmb`_) Bootstrap install fails on python-requests dependency (refs: `#26065`_)
 

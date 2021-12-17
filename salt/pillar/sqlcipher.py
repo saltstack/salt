@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
 Retrieve Pillar data by running a SQLCipher query
 
 .. versionadded:: 2016.3.0
@@ -56,22 +55,19 @@ Complete Example
             depth: 5
             as_list: True
             with_lists: [1,3]
-'''
-from __future__ import absolute_import, print_function, unicode_literals
+"""
 
-# Import python libs
-from contextlib import contextmanager
 import logging
+from contextlib import contextmanager
 
-# Import Salt libs
 from salt.pillar.sql_base import SqlBaseExtPillar
 
 # Set up logging
 log = logging.getLogger(__name__)
 
-# Import third party libs
 try:
     from pysqlcipher import dbapi2 as sqlcipher
+
     HAS_SQLCIPHER = True
 except ImportError:
     HAS_SQLCIPHER = False
@@ -84,26 +80,29 @@ def __virtual__():
 
 
 class SQLCipherExtPillar(SqlBaseExtPillar):
-    '''
+    """
     This class receives and processes the database rows from SQLCipher.
-    '''
+    """
+
     @classmethod
     def _db_name(cls):
-        return 'SQLCipher'
+        return "SQLCipher"
 
     def _get_options(self):
-        '''
+        """
         Returns options used for the SQLCipher connection.
-        '''
-        defaults = {'database': '/var/lib/salt/pillar-sqlcipher.db',
-                    'pass': 'strong_pass_phrase',
-                    'timeout': 5.0}
+        """
+        defaults = {
+            "database": "/var/lib/salt/pillar-sqlcipher.db",
+            "pass": "strong_pass_phrase",
+            "timeout": 5.0,
+        }
         _options = {}
-        _opts = __opts__.get('sqlcipher', {})
+        _opts = __opts__.get("sqlcipher", {})
 
         for attr in defaults:
             if attr not in _opts:
-                log.debug('Using default for SQLCipher pillar %s', attr)
+                log.debug("Using default for SQLCipher pillar %s", attr)
                 _options[attr] = defaults[attr]
                 continue
             _options[attr] = _opts[attr]
@@ -111,27 +110,25 @@ class SQLCipherExtPillar(SqlBaseExtPillar):
 
     @contextmanager
     def _get_cursor(self):
-        '''
+        """
         Yield a SQLCipher cursor
-        '''
+        """
         _options = self._get_options()
-        conn = sqlcipher.connect(_options.get('database'),
-                                 timeout=float(_options.get('timeout')))
-        conn.execute('pragma key="{0}"'.format(_options.get('pass')))
+        conn = sqlcipher.connect(
+            _options.get("database"), timeout=float(_options.get("timeout"))
+        )
+        conn.execute('pragma key="{}"'.format(_options.get("pass")))
         cursor = conn.cursor()
         try:
             yield cursor
         except sqlcipher.Error as err:
-            log.exception('Error in ext_pillar SQLCipher: %s', err.args)
+            log.exception("Error in ext_pillar SQLCipher: %s", err.args)
         finally:
             conn.close()
 
 
-def ext_pillar(minion_id,
-               pillar,
-               *args,
-               **kwargs):
-    '''
+def ext_pillar(minion_id, pillar, *args, **kwargs):
+    """
     Execute queries against SQLCipher, merge and return as a dict
-    '''
+    """
     return SQLCipherExtPillar().fetch(minion_id, pillar, *args, **kwargs)

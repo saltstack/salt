@@ -1,6 +1,0 @@
-# Need to set a specific version of pyzmq, so can't use the main project's requirements file... have to copy it in and modify...
-#-r ../../../requirements/zeromq.txt
--r ../../../requirements/base.txt
-pycrypto>=2.6.1
-pyzmq
--r requirements.txt

@@ -47,7 +47,7 @@ Anyone wanting to run Salt daemons via a process supervisor such as `monit`_,
 `runit`_, or `supervisord`_, should omit the ``-d`` argument to the daemons and
 run them in the foreground.
 
-.. _`monit`: http://mmonit.com/monit/
+.. _`monit`: https://mmonit.com/monit/
 .. _`runit`: http://smarden.org/runit/
 .. _`supervisord`: http://supervisord.org/
 
@@ -75,7 +75,7 @@ additional access control system such as `SELinux`_ or `AppArmor`_ is blocking
 Salt.
 
 .. _`SELinux`: https://en.wikipedia.org/wiki/Security-Enhanced_Linux
-.. _`AppArmor`: http://wiki.apparmor.net/index.php/Main_Page
+.. _`AppArmor`: https://gitlab.com/apparmor/apparmor/-/wikis/home
 
 
 .. _using-salt-call:
@@ -112,7 +112,7 @@ The salt-master needs at least 2 sockets per host that connects to it, one for
 the Publisher and one for response port. Thus, large installations may, upon
 scaling up the number of minions accessing a given master, encounter:
 
-.. code-block:: bash
+.. code-block:: console
 
     12:45:29,289 [salt.master    ][INFO    ] Starting Salt worker process 38
     Too many open files
@@ -212,7 +212,7 @@ come with Python 2.4 installed by default. When installing on RHEL 5 from the
 advised that its dependencies need to be installed from EPEL and that Salt
 needs to be run with the ``python26`` executable.
 
-.. _`EPEL repository`: http://fedoraproject.org/wiki/EPEL
+.. _`EPEL repository`: https://fedoraproject.org/wiki/EPEL
 
 Common YAML Gotchas
 ===================

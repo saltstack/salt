@@ -69,6 +69,20 @@ Options
     an explicit number of minions to execute at once, or a percentage of
     minions to execute on.
 
+.. option:: --batch-wait=BATCH_WAIT
+
+   Wait the specified time in seconds after each job is done before
+   freeing the slot in the batch of the next one.
+
+.. option:: --batch-safe-limit=BATCH_SAFE_LIMIT
+
+   Execute the salt job in batch mode if the job would have executed
+   on at least this many minions.
+
+.. option:: --batch-safe-size=BATCH_SAFE_SIZE
+
+   Batch size to use for batch jobs created by --batch-safe-limit.
+
 .. option:: -a EAUTH, --auth=EAUTH
 
     Pass in an external authentication medium to validate against. The
@@ -111,6 +125,12 @@ Options
 
 .. include:: _includes/output-options.rst
 
+.. note::
+    If using ``--out=json``, you will probably want ``--static`` as well.
+    Without the static option, you will get a separate JSON string per minion
+    which makes JSON output invalid as a whole.
+    This is due to using an iterative outputter. So if you want to feed it
+    to a JSON parser, use ``--static`` as well.
 
 See also
 ========

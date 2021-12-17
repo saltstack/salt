@@ -21,7 +21,7 @@ As of Salt 0.9.10 it is possible to run Salt as a non-root user. This can be
 done by setting the :conf_master:`user` parameter in the master configuration
 file. and restarting the ``salt-master`` service.
 
-The minion has it's own :conf_minion:`user` parameter as well, but running the
+The minion has its own :conf_minion:`user` parameter as well, but running the
 minion as an unprivileged user will keep it from making changes to things like
 users, installed packages, etc. unless access controls (sudo, etc.) are setup
 on the minion to permit the non-root user to make the needed changes.

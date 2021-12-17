@@ -16,11 +16,7 @@ contributors and developers to send in code. Simplicity is always a goal!
 New Code Entry
 ==============
 
-All new SaltStack code should be submitted against either the ``develop`` branch
-or a point release branch, depending on the nature of the submission. Please see
-the :ref:`Which Salt Branch? <which-salt-branch>` section of Salt's
-:ref:`Contributing <contributing>` documentation or the Release Branching
-section below for more information.
+All new SaltStack code should be submitted against ``master``.
 
 Release Branching
 =================
@@ -36,7 +32,7 @@ Feature Release Branching
 
 Each feature release is maintained in a dedicated git branch derived from the
 last applicable release commit on develop. All file changes relevant to the
-feature release will be completed in the develop branch prior to the creation
+feature release will be completed in the ``master`` branch prior to the creation
 of the feature release branch. The feature release branch will be named after
 the relevant numbers to the feature release, which constitute the first two
 numbers. This means that the release branch for the 2015.8.0 series is named
@@ -46,32 +42,11 @@ A feature release branch is created with the following command:
 
 .. code-block:: bash
 
-    # git checkout -b 2015.8 # From the develop branch
+    # git checkout -b 2015.8 # From the master branch
     # git push origin 2015.8
 
 Point Releases
 --------------
 
-Each point release is derived from its parent release branch. Constructing point
-releases is a critical aspect of Salt development and is managed by members of
-the core development team. Point releases comprise bug and security fixes. Bug
-fixes can be made against a point release branch in one of two ways: the bug
-fix can be submitted directly against the point release branch, or an attempt
-can be made to back-port the fix to the point release branch.
-
-Bug fixes should be made against the earliest supported release branch on which
-the bug is present. The Salt development team regularly merges older point
-release branches forward into newer point release branches. That way, the bug
-fixes that are submitted to older release branches can cascade up through all
-related release branches.
-
-For more information, please see the :ref:`Which Salt Branch? <which-salt-branch>`
-section of Salt's :ref:`Contributing <contributing>` documentation.
-
-Generally point releases are made every 2 months or if there is a security fix
-they can be made sooner.
-
-The point release is designated by branching (ex 2019.2.1) and then tagging (v2019.2.1)
-from that newly created release branch when its determined the release is stable.
-From the tag point a new source tarball is generated and published to PyPI,
-and a release announcement is made.
+As documented in `SEP 14 <https://github.com/saltstack/salt-enhancement-proposals/blob/master/accepted/0014-dev-overhaul.md#hotfix--patch-release>`__,
+point releases should be rare.

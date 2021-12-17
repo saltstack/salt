@@ -1,0 +1,1 @@
+Remove unnecessary dot in template that cause the bridge interface to fail on debian. Fixes #58195

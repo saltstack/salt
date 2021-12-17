@@ -1,5 +1,5 @@
-salt.states.ceph module
-=======================
+salt.states.ceph
+================
 
 .. automodule:: salt.states.ceph
     :members:

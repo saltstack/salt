@@ -19,7 +19,7 @@ Anyone wanting to run Salt daemons via a process supervisor such as `monit`_,
 `runit`_, or `supervisord`_, should omit the ``-d`` argument to the daemons and
 run them in the foreground.
 
-.. _`monit`: http://mmonit.com/monit/
+.. _`monit`: https://mmonit.com/monit/
 .. _`runit`: http://smarden.org/runit/
 .. _`supervisord`: http://supervisord.org/
 
@@ -38,7 +38,7 @@ check that no additional access control system such as `SELinux`_ or
 `AppArmor`_ is blocking Salt.
 
 .. _`SELinux`: https://en.wikipedia.org/wiki/Security-Enhanced_Linux
-.. _`AppArmor`: http://wiki.apparmor.net/index.php/Main_Page
+.. _`AppArmor`: https://gitlab.com/apparmor/apparmor/-/wikis/home
 
 Too many open files
 ===================
@@ -47,7 +47,7 @@ The salt-master needs at least 2 sockets per host that connects to it, one for
 the Publisher and one for response port. Thus, large installations may, upon
 scaling up the number of minions accessing a given master, encounter:
 
-.. code-block:: bash
+.. code-block:: console
 
     12:45:29,289 [salt.master    ][INFO    ] Starting Salt worker process 38
     Too many open files
@@ -180,14 +180,15 @@ Results can then be analyzed with `kcachegrind`_ or similar tool.
 
 .. _`kcachegrind`: http://kcachegrind.sourceforge.net/html/Home.html
 
+Make sure you have yappi installed.
 
-On Windows, in the absense of kcachegrind, a simple file-based workflow to create
+On Windows, in the absence of kcachegrind, a simple file-based workflow to create
 profiling graphs could use `gprof2dot`_, `graphviz`_ and this batch file:
 
 .. _`gprof2dot`: https://pypi.org/project/gprof2dot
 .. _`graphviz`: https://graphviz.gitlab.io
 
-.. code-block:: bash
+.. code-block:: batch
 
     ::
     :: Converts callgrind* profiler output to *.pdf, via *.dot
