@@ -519,7 +519,7 @@ Changelog for v2015.8.3..v2015.8.4
 * **PR** `#30384`_: (`isbm`_) Bugfix: info_available does not work correctly on SLE 11 series
   @ *2016-01-15 18:31:57 UTC*
 
-  * c478148b60 Merge pull request `#30384`_ from isbm/isbm-zypper-info-avaiable-fix
+  * c478148b60 Merge pull request `#30384`_ from isbm/isbm-zypper-info-available-fix
 
   * c7bc20e865 Split information, that is compatible with the Zypper's output on SLE11.
 

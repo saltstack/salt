@@ -450,7 +450,7 @@ def _gen_recurse_managed_files(
             # the same list.
             _filenames = list(filenames)
             for filename in _filenames:
-                if filename.startswith(lname):
+                if filename.startswith(lname + os.sep):
                     log.debug(
                         "** skipping file ** %s, it intersects a symlink", filename
                     )
@@ -530,9 +530,9 @@ def _gen_recurse_managed_files(
             if keep_symlinks:
                 islink = False
                 for link in symlinks:
-                    if mdir.startswith(link, 0):
+                    if mdir.startswith(link + os.sep, 0):
                         log.debug(
-                            "** skipping empty dir ** %s, it intersectsa symlink", mdir
+                            "** skipping empty dir ** %s, it intersects a symlink", mdir
                         )
                         islink = True
                         break

@@ -676,7 +676,7 @@ Section "MainSection" SEC01
     CreateDirectory "$RootDir\conf\minion.d"
     CreateDirectory "$RootDir\var\cache\salt\minion\extmods\grains"
     CreateDirectory "$RootDir\var\cache\salt\minion\proc"
-    CreateDirectory "$RootDir\var\log\salt\minion"
+    CreateDirectory "$RootDir\var\log\salt"
     CreateDirectory "$RootDir\var\run"
     File /r "..\buildenv\"
     nsExec::Exec 'icacls $RootDir /inheritance:r /grant:r "*S-1-5-32-544":(OI)(CI)F /grant:r "*S-1-5-18":(OI)(CI)F'
@@ -1620,7 +1620,7 @@ Function updateMinionConfig
             ${If} $3 == 0                               # is it in the first...
             ${OrIf} $3 == 1                             # or second position (account for comments)
 
-                ${Explode} $9 "," $MasterHost_state     # Split the hostname on commas, $9 is the number of items found
+                ${Explode} $9 "," $MasterHost           # Split the hostname on commas, $9 is the number of items found
                 ${If} $9 == 1                           # 1 means only a single master was passed
                     StrCpy $cfg_line "master: $MasterHost$\r$\n"  # write the master
                 ${Else}                                 # make a multi-master entry
@@ -1676,7 +1676,7 @@ Function updateMinionConfig
     # Does master config still need to be written
     ${If} $ConfigWriteMaster == 1                       # master not written to the config
 
-        ${Explode} $9 "," $MasterHost_state             # split the hostname on commas, $9 is the number of items found
+        ${Explode} $9 "," $MasterHost                   # split the hostname on commas, $9 is the number of items found
         ${If} $9 == 1                                   # 1 means only a single master was passed
             StrCpy $cfg_line "master: $MasterHost"      # write the master
         ${Else}                                         # make a multi-master entry
@@ -1837,7 +1837,7 @@ Function parseInstallerCommandLineSwitches
         FileWrite $0 "$\t$\t$\ta timestamp and a .bak extension. That includes$\n"
         FileWrite $0 "$\t$\t$\tthe minion file and the minion.d directory$\n"
         FileWrite $0 "$\n"
-        FileWrite $0 "/install-dir=$\tSpecify the installation location for the Salt binaries.$\n"
+        FileWrite $0 "/install-dir=$\t$\tSpecify the installation location for the Salt binaries.$\n"
         FileWrite $0 "$\t$\t$\tThis will be ignored for existing installations.$\n"
         FileWrite $0 "$\n"
         FileWrite $0 "/move-config$\t$\tIf config is found at C:\salt it will be moved to %ProgramData%$\n"
