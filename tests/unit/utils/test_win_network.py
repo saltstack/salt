@@ -212,6 +212,7 @@ class WinNetworkTestCase(TestCase):
                     {
                         "address": "fe80::e8a4:1224:5548:2b81",
                         "gateway": "fe80::208:a2ff:fe0b:de70",
+                        "prefixlen": 64,
                     }
                 ],
                 "up": True,

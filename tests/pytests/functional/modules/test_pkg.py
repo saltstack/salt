@@ -104,7 +104,7 @@ def test_mod_del_repo(grains, modules):
         elif grains["os_family"] == "RedHat":
             repo = "saltstack"
             name = "SaltStack repo for RHEL/CentOS {}".format(grains["osmajorrelease"])
-            baseurl = "http://repo.saltproject.io/py3/redhat/{}/x86_64/latest/".format(
+            baseurl = "https://repo.saltproject.io/py3/redhat/{}/x86_64/latest/".format(
                 grains["osmajorrelease"]
             )
             gpgkey = "https://repo.saltproject.io/py3/redhat/{}/x86_64/latest/SALTSTACK-GPG-KEY.pub".format(
@@ -254,7 +254,7 @@ def test_hold_unhold(grains, modules, states, test_pkg):
     """
     versionlock_pkg = None
     if grains["os_family"] == "RedHat":
-        pkgs = {p for p in modules.pkg.list_pkgs() if "-versionlock" in p}
+        pkgs = {p for p in modules.pkg.list_repo_pkgs() if "-versionlock" in p}
         if not pkgs:
             pytest.skip("No versionlock package found in repositories")
         for versionlock_pkg in pkgs:
@@ -281,6 +281,9 @@ def test_hold_unhold(grains, modules, states, test_pkg):
         assert test_pkg in unhold_ret
         assert unhold_ret[test_pkg]["result"] is True
         modules.pkg.remove(test_pkg)
+    except salt.exceptions.SaltInvocationError as err:
+        if "versionlock is not installed" in err.message:
+            pytest.skip("Correct versionlock package is not installed")
     finally:
         if versionlock_pkg:
             ret = states.pkg.removed(name=versionlock_pkg)
