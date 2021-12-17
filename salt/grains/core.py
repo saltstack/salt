@@ -2559,6 +2559,14 @@ def ip6_interfaces():
     return {"ip6_interfaces": ret}
 
 
+def networks():
+    """
+    Provides a list of connected networks  
+    """
+    nets = salt.utils.network.ip_networks()
+    return {"networks": nets}
+
+
 def hwaddr_interfaces():
     """
     Provide a dict of the connected interfaces and their
