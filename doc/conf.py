@@ -33,7 +33,18 @@ import salt.version  # isort:skip
 formulas_dir = os.path.join(os.pardir, docs_basepath, "formulas")
 
 # ----- Intersphinx Settings ------------------------------------------------>
-intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
+intersphinx_mapping = {
+    "python": (
+        "https://docs.python.org/3",
+        (
+            "/usr/share/doc/python{}.{}/html/objects.inv".format(
+                sys.version_info[0], sys.version_info[1]
+            ),
+            "/usr/share/doc/python/html/objects.inv",
+            None,
+        ),
+    )
+}
 # <---- Intersphinx Settings -------------------------------------------------
 
 # -- General Configuration -----------------------------------------------------

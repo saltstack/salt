@@ -853,7 +853,7 @@ that does not send executions to minions.
 Default: False
 
 When checking the minions connected to a master, also include the master's
-connections to minions on the port specfied in the setting `remote_minions_port`.
+connections to minions on the port specified in the setting `remote_minions_port`.
 This is particularly useful when checking if the master is connected to any Heist-Salt
 minions. If this setting is set to True, the master will check all connections on port 22
 by default unless a user also configures a different port with the setting

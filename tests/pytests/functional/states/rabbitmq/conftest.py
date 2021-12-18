@@ -37,7 +37,10 @@ class RabbitMQCombo:
 def get_test_versions():
     test_versions = []
     name = "rabbitmq"
-    for version in ("3.8",):
+    for version in (
+        "3.8",
+        "3.9",
+    ):
         test_versions.append(
             RabbitMQImage(
                 name=name,
