@@ -36,6 +36,7 @@ from salt._logging import (
     DFLT_LOG_DATEFMT_LOGFILE,
     DFLT_LOG_FMT_CONSOLE,
     DFLT_LOG_FMT_JID,
+    DFLT_LOG_FMT_MINION_ID,
     DFLT_LOG_FMT_LOGFILE,
 )
 
@@ -350,6 +351,10 @@ VALID_OPTS = immutabletypes.freeze(
         "log_fmt_console": str,
         # The format for a given log file
         "log_fmt_logfile": (tuple, str),
+        # The format for JIDs prior to formatting into log lines as %(jid)s
+        "log_fmt_jid": str,
+        # The format for minion_ids prior to formatting into log lines as %(jid)s
+        "log_fmt_minion_id": str,
         # A dictionary of logging levels
         "log_granular_levels": dict,
         # The maximum number of bytes a single log file may contain before
@@ -1205,6 +1210,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "log_fmt_console": DFLT_LOG_FMT_CONSOLE,
         "log_fmt_logfile": DFLT_LOG_FMT_LOGFILE,
         "log_fmt_jid": DFLT_LOG_FMT_JID,
+        "log_fmt_minion_id": DFLT_LOG_FMT_MINION_ID,
         "log_granular_levels": {},
         "log_rotate_max_bytes": 0,
         "log_rotate_backup_count": 0,
@@ -1538,6 +1544,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "log_fmt_console": DFLT_LOG_FMT_CONSOLE,
         "log_fmt_logfile": DFLT_LOG_FMT_LOGFILE,
         "log_fmt_jid": DFLT_LOG_FMT_JID,
+        "log_fmt_minion_id": DFLT_LOG_FMT_MINION_ID,
         "log_granular_levels": {},
         "log_rotate_max_bytes": 0,
         "log_rotate_backup_count": 0,
@@ -1750,6 +1757,7 @@ DEFAULT_CLOUD_OPTS = immutabletypes.freeze(
         "log_fmt_console": DFLT_LOG_FMT_CONSOLE,
         "log_fmt_logfile": DFLT_LOG_FMT_LOGFILE,
         "log_fmt_jid": DFLT_LOG_FMT_JID,
+        "log_fmt_minion_id": DFLT_LOG_FMT_MINION_ID,
         "log_granular_levels": {},
         "log_rotate_max_bytes": 0,
         "log_rotate_backup_count": 0,

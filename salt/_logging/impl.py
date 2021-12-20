@@ -100,10 +100,11 @@ MODNAME_PATTERN = re.compile(r"(?P<name>%%\(name\)(?:\-(?P<digits>[\d]+))?s)")
 
 # Default logging formatting options
 DFLT_LOG_FMT_JID = "[JID: %(jid)s]"
+DFLT_LOG_FMT_MINION_ID = "[%(minion_id)s]"
 DFLT_LOG_DATEFMT = "%H:%M:%S"
 DFLT_LOG_DATEFMT_LOGFILE = "%Y-%m-%d %H:%M:%S"
-DFLT_LOG_FMT_CONSOLE = "[%(levelname)-8s] %(message)s"
-DFLT_LOG_FMT_LOGFILE = "%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(levelname)-8s][%(process)d] %(message)s"
+DFLT_LOG_FMT_CONSOLE = "[%(levelname)-8s]%(jid)s%(minion_id)s %(message)s"
+DFLT_LOG_FMT_LOGFILE = "%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(levelname)-8s][%(process)d]%(jid)s%(minion_id)s %(message)s"
 
 
 class SaltLogRecord(logging.LogRecord):
@@ -262,6 +263,15 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
         if log_fmt_jid is not None:
             extra["log_fmt_jid"] = log_fmt_jid
 
+        current_minion_id = data.get("id", None)
+        log_fmt_minion_id = opts.get("log_fmt_minion_id", None)
+
+        if current_minion_id is not None:
+            extra["minion_id"] = current_minion_id
+
+        if log_fmt_minion_id is not None:
+            extra["log_fmt_minion_id"] = log_fmt_minion_id
+
         # If both exc_info and exc_info_on_loglevel are both passed, let's fail
         if exc_info and exc_info_on_loglevel:
             raise LoggingRuntimeError(
@@ -336,6 +346,11 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
             log_fmt_jid = extra.pop("log_fmt_jid")
             jid = log_fmt_jid % {"jid": jid}
 
+        minion_id = extra.pop("minion_id", "")
+        if minion_id:
+            log_fmt_minion_id = extra.pop("log_fmt_minion_id")
+            minion_id = log_fmt_minion_id % {"minion_id": minion_id}
+
         if not extra:
             # If nothing else is in extra, make it None
             extra = None
@@ -385,6 +400,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
 
         logrecord.exc_info_on_loglevel = exc_info_on_loglevel
         logrecord.jid = jid
+        logrecord.minion_id = minion_id
         return logrecord
 
 
