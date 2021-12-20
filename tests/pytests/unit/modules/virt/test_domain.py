@@ -1850,7 +1850,9 @@ def test_update_console(make_mock_vm):
             <type arch='x86_64' machine='pc-i440fx-2.6'>hvm</type>
           </os>
           <devices>
-            <serial type='pty'/>
+            <serial type='pty'>
+              <source path='/dev/pts/4'/>
+            </serial>
             <console type='pty'/>
           </devices>
         </domain>
