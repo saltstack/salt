@@ -120,6 +120,7 @@ __grants__ = [
     "SHOW DATABASES",
     "SHOW VIEW",
     "SHUTDOWN",
+    "SLAVE MONITOR",
     "SUPER",
     "SYSTEM_VARIABLES_ADMIN",
     "TRIGGER",
