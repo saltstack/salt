@@ -3,6 +3,7 @@ import os
 import pytest
 import salt.returners.prometheus_textfile as prometheus_textfile
 import salt.utils.files
+import salt.version
 from tests.support.mock import patch
 
 
@@ -111,6 +112,14 @@ def test_basic_prometheus_output_with_default_options(
                 "# TYPE salt_last_started gauge",
                 "# HELP salt_last_completed Time of last state run completion",
                 "# TYPE salt_last_completed gauge",
+                "# HELP salt_version Version of installed Salt package",
+                "# TYPE salt_version gauge",
+                "salt_version {}".format(salt.version.__version__),
+                "# HELP salt_version_tagged Version of installed Salt package as a tag",
+                "# TYPE salt_version_tagged gauge",
+                'salt_version_tagged{{salt_version="{}"}} 1'.format(
+                    salt.version.__version__
+                ),
             ]
         )
     )
@@ -191,6 +200,16 @@ def test_when_add_state_name_is_set_then_correct_output_should_be_in_correct_fil
                 "# TYPE salt_last_started gauge",
                 "# HELP salt_last_completed Time of last state run completion",
                 "# TYPE salt_last_completed gauge",
+                "# HELP salt_version Version of installed Salt package",
+                "# TYPE salt_version gauge",
+                'salt_version{{state="{}"}} {}'.format(
+                    state_name, salt.version.__version__
+                ),
+                "# HELP salt_version_tagged Version of installed Salt package as a tag",
+                "# TYPE salt_version_tagged gauge",
+                'salt_version_tagged{{state="{}",salt_version="{}"}} 1'.format(
+                    state_name, salt.version.__version__
+                ),
             ]
         )
     )
@@ -207,6 +226,101 @@ def test_when_add_state_name_is_set_then_correct_output_should_be_in_correct_fil
                 for line in prom_file
                 if not line.startswith("salt_last_started")
                 and not line.startswith("salt_last_completed")
+            )
+        )
+    assert salt_prom == expected
+
+
+def test_prometheus_output_with_show_failed_state_option_and_abort_state_ids(
+    patch_dunders, job_ret, cache_dir, temp_salt_minion
+):
+    job_ret["return"]["cmd_|-echo includeme_|-echo includeme_|-run"]["result"] = False
+    prometheus_textfile.__opts__.update({"show_failed_states": True})
+    promfile_lines = [
+        "# HELP salt_procs Number of salt minion processes running",
+        "# TYPE salt_procs gauge",
+        "salt_procs 0",
+        "# HELP salt_states_succeeded Number of successful states in the run",
+        "# TYPE salt_states_succeeded gauge",
+        "salt_states_succeeded 1",
+        "# HELP salt_states_failed Number of failed states in the run",
+        "# TYPE salt_states_failed gauge",
+        "salt_states_failed 1",
+        "# HELP salt_states_changed Number of changed states in the run",
+        "# TYPE salt_states_changed gauge",
+        "salt_states_changed 2",
+        "# HELP salt_states_total Total states in the run",
+        "# TYPE salt_states_total gauge",
+        "salt_states_total 2",
+        "# HELP salt_states_success_pct Percent of successful states in the run",
+        "# TYPE salt_states_success_pct gauge",
+        "salt_states_success_pct 50.0",
+        "# HELP salt_states_failure_pct Percent of failed states in the run",
+        "# TYPE salt_states_failure_pct gauge",
+        "salt_states_failure_pct 50.0",
+        "# HELP salt_states_changed_pct Percent of changed states in the run",
+        "# TYPE salt_states_changed_pct gauge",
+        "salt_states_changed_pct 100.0",
+        "# HELP salt_elapsed_time Time spent for all operations during the state run",
+        "# TYPE salt_elapsed_time gauge",
+        "salt_elapsed_time 13.695",
+        "# HELP salt_last_started Estimated time the state run started",
+        "# TYPE salt_last_started gauge",
+        "# HELP salt_last_completed Time of last state run completion",
+        "# TYPE salt_last_completed gauge",
+        "# HELP salt_version Version of installed Salt package",
+        "# TYPE salt_version gauge",
+        "salt_version {}".format(salt.version.__version__),
+        "# HELP salt_version_tagged Version of installed Salt package as a tag",
+        "# TYPE salt_version_tagged gauge",
+        'salt_version_tagged{{salt_version="{}"}} 1'.format(salt.version.__version__),
+        "# HELP salt_failed Information regarding state with failure condition",
+        "# TYPE salt_failed gauge",
+        'salt_failed{state_id="echo includeme",state_comment="Command "echo includeme" run"} 1',
+    ]
+    expected = "\n".join(sorted(promfile_lines))
+
+    prometheus_textfile.returner(job_ret)
+
+    with salt.utils.files.fopen(
+        os.path.join(cache_dir, "prometheus_textfile", "salt.prom")
+    ) as prom_file:
+        # Drop time-based fields for comparison
+        salt_prom = "\n".join(
+            sorted(
+                [
+                    line[:-1]
+                    for line in prom_file
+                    if not line.startswith("salt_last_started")
+                    and not line.startswith("salt_last_completed")
+                ]
+            )
+        )
+    assert salt_prom == expected
+
+    prometheus_textfile.__opts__.update({"abort_state_ids": ["echo includeme"]})
+    promfile_lines.extend(
+        [
+            "# HELP salt_aborted Flag to show that a specific abort state failed",
+            "# TYPE salt_aborted gauge",
+            "salt_aborted 1",
+        ]
+    )
+    expected = "\n".join(sorted(promfile_lines))
+    prometheus_textfile.returner(job_ret)
+
+    with salt.utils.files.fopen(
+        os.path.join(cache_dir, "prometheus_textfile", "salt.prom")
+    ) as prom_file:
+        # Drop time-based fields for comparison
+        salt_prom = "\n".join(
+            sorted(
+                [
+                    line[:-1]
+                    for line in prom_file
+                    if not line.startswith("salt_last_started")
+                    and not line.startswith("salt_last_completed")
+                ]
             )
         )
     assert salt_prom == expected

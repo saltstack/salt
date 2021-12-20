@@ -81,6 +81,36 @@ options:
     prometheus_textfile.gid: 0
     prometheus_textfile.mode: "0644"
 
+The metrics can include the names of failed states if necessary. This is
+sometimes beneficial for monitoring purposes so engineers can see what in
+particular caused a failure condition on a host and whether it is critical.
+
+.. code-block:: yaml
+
+    prometheus_textfile.show_failed_states: true
+
+An additional way of viewing failure conditions is through the
+``abort_state_ids`` option. If this option is used, a state ID or list of state
+IDs can be provided to indicate an "abort" condition. This allows the user to
+see that a failure was related to a "circuit breaker" condition which prevented
+the state run to complete.
+
+.. code-block:: yaml
+
+    prometheus_textfile.abort_state_ids:
+      - circuit_breaker_state
+      - my_other_circuit_breaker
+
+The state IDs in this configuration option can also be presented as a string in
+the following manner:
+
+.. code-block:: yaml
+
+    # comma-separated states
+    prometheus_textfile.abort_state_ids: circuit_breaker_state,my_other_circuit_breaker
+    # single state
+    prometheus_textfile.abort_state_ids: circuit_breaker_state
+
 """
 
 import logging
@@ -103,6 +133,13 @@ except (ImportError, ModuleNotFoundError):
 
 # Define the module's virtual name
 __virtualname__ = "prometheus_textfile"
+# Loader workaround
+try:
+    __grains__
+except NameError:
+    import salt.version
+
+    __grains__ = {"saltversion": salt.version.__version__}
 
 
 def __virtual__():
@@ -124,6 +161,8 @@ def _get_options(ret):
         "match_exe": False,
         "proc_name": "salt-minion",
         "add_state_name": False,
+        "abort_state_ids": None,
+        "show_failed_states": False,
     }
     attrs = {
         "exe": "exe",
@@ -134,6 +173,8 @@ def _get_options(ret):
         "match_exe": "match_exe",
         "proc_name": "proc_name",
         "add_state_name": "add_state_name",
+        "abort_state_ids": "abort_state_ids",
+        "show_failed_states": "show_failed_states",
     }
     _options = salt.returners.get_returner_options(
         __virtualname__,
@@ -149,7 +190,7 @@ def _get_options(ret):
 
 def _count_minion_procs(proc_name="salt-minion", match_exe=False, exe=None):
     """
-    Return a list of processes with name matching "salt-minion"
+    Return the count of processes with name matching "salt-minion"
     """
     ls = []
     if HAS_PSUTIL:
@@ -178,7 +219,7 @@ def returner(ret):
             ", ".join(state_functions),
             ret["fun"],
         )
-        raise  # pylint: disable=misplaced-bare-raise
+        raise salt.exceptions.SaltRunnerError
 
     opts = _get_options(ret)
 
@@ -197,7 +238,7 @@ def returner(ret):
     for fun_arg in ret["fun_args"]:
         if fun_arg.lower() == "test=true":
             log.warning("The prometheus_textfile returner is not enabled in Test mode.")
-            raise  # pylint: disable=misplaced-bare-raise
+            raise salt.exceptions.SaltRunnerError
         if opts["add_state_name"] and fun_arg.lower().startswith(
             "prom_textfile_state="
         ):
@@ -211,7 +252,7 @@ def returner(ret):
             os.makedirs(out_dir)
         except OSError:
             log.error("Could not create directory for prometheus output: %s", out_dir)
-            raise
+            raise salt.exceptions.SaltRunnerError
 
     success = 0
     failure = 0
@@ -285,7 +326,56 @@ def returner(ret):
             "help": "Time of last state run completion",
             "value": now,
         },
+        "salt_version": {
+            "help": "Version of installed Salt package",
+            "value": __grains__["saltversion"],
+        },
+        "salt_version_tagged": {
+            "help": "Version of installed Salt package as a tag",
+            "value": 1,
+        },
     }
+
+    if opts["show_failed_states"]:
+        for state_id, state_return in ret["return"].items():
+            if not state_return["result"]:
+                key = (
+                    'salt_failed{state_id="'
+                    + state_return["__id__"]
+                    + '",state_comment="'
+                    + state_return["comment"]
+                )
+                if opts["add_state_name"]:
+                    key += '",state="' + prom_state
+                key += '"}'
+                output.update(
+                    {
+                        key: {
+                            "help": "Information regarding state with failure condition",
+                            "value": 1,
+                        },
+                    }
+                )
+
+    if opts["abort_state_ids"]:
+        if not isinstance(opts["abort_state_ids"], list):
+            opts["abort_state_ids"] = [
+                item.strip() for item in opts["abort_state_ids"].split(",")
+            ]
+        output.update(
+            {
+                "salt_aborted": {
+                    "help": "Flag to show that a specific abort state failed",
+                    "value": 0,
+                },
+            }
+        )
+        for state_id, state_return in ret["return"].items():
+            if (
+                not state_return["result"]
+                and state_return["__id__"] in opts["abort_state_ids"]
+            ):
+                output["salt_aborted"]["value"] = 1
 
     if opts["add_state_name"]:
         old_name, ext = os.path.splitext(opts["filename"])
@@ -295,8 +385,20 @@ def returner(ret):
             old_name + ext,
             opts["filename"],
         )
+        labels = 'state="{}"'.format(prom_state)
         for key in list(output.keys()):
-            output[key + '{state="' + prom_state + '"}'] = output.pop(key)
+            _labels = labels
+            if key.startswith("salt_failed"):
+                continue
+            if key == "salt_version_tagged":
+                _labels = labels + ',salt_version="{}"'.format(
+                    __grains__["saltversion"]
+                )
+            output[key + "{" + _labels + "}"] = output.pop(key)
+    else:
+        output[
+            'salt_version_tagged{salt_version="' + __grains__["saltversion"] + '"}'
+        ] = output.pop("salt_version_tagged")
 
     if opts["mode"]:
         try:
@@ -326,4 +428,4 @@ def returner(ret):
             textfile.write("\n".join(outlines) + "\n")
     except Exception:  # pylint: disable=broad-except
         log.exception("Could not write to prometheus file: %s", opts["filename"])
-        raise
+        raise salt.exceptions.SaltRunnerError
