@@ -15,6 +15,7 @@ from salt._logging.impl import (
     DFLT_LOG_DATEFMT_LOGFILE,
     DFLT_LOG_FMT_CONSOLE,
     DFLT_LOG_FMT_JID,
+    DFLT_LOG_FMT_MINION_ID,
     DFLT_LOG_FMT_LOGFILE,
     LOG_COLORS,
     LOG_LEVELS,
