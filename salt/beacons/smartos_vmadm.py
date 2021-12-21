@@ -35,15 +35,12 @@ def __virtual__():
     """
     Provides vmadm beacon on SmartOS
     """
-    if "vmadm.list" in __salt__:
+    if "imgadm.list" in __salt__:
         return True
     else:
-        return (
-            False,
-            "{} beacon can only be loaded on SmartOS compute nodes".format(
-                __virtualname__
-            ),
-        )
+        err_msg = "Only available on SmartOS compute nodes."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
 
 
 def validate(config):
