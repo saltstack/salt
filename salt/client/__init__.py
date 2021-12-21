@@ -1648,7 +1648,7 @@ class LocalClient:
             timeout=timeout,
             tgt=tgt,
             tgt_type=tgt_type,
-            # (gtmanfred) expect_minions is popped here incase it is passed from a client
+            # (gtmanfred) expect_minions is popped here in case it is passed from a client
             # call. If this is not popped, then it would be passed twice to
             # get_iter_returns.
             expect_minions=(

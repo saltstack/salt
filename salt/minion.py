@@ -1319,13 +1319,10 @@ class Minion(MinionBase):
             # No custom signal handling was added, install our own
             signal.signal(signal.SIGTERM, self._handle_signals)
 
-    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+    def _handle_signals(self, signum, sigframe):
         self._running = False
         # escalate the signals to the process manager
-        self.process_manager.stop_restarting()
-        self.process_manager.send_signal_to_processes(signum)
-        # kill any remaining processes
-        self.process_manager.kill_children()
+        self.process_manager._handle_signals(signum, sigframe)
         time.sleep(1)
         sys.exit(0)
 
@@ -1741,6 +1738,7 @@ class Minion(MinionBase):
         # side.
         instance = self
         multiprocessing_enabled = self.opts.get("multiprocessing", True)
+        name = "ProcessPayload(jid={})".format(data["jid"])
         if multiprocessing_enabled:
             if sys.platform.startswith("win"):
                 # let python reconstruct the minion on the other side if we're
@@ -1749,7 +1747,7 @@ class Minion(MinionBase):
             with default_signals(signal.SIGINT, signal.SIGTERM):
                 process = SignalHandlingProcess(
                     target=self._target,
-                    name="ProcessPayload",
+                    name=name,
                     args=(instance, self.opts, data, self.connected),
                 )
                 process.register_after_fork_method(salt.utils.crypt.reinit_crypto)
@@ -1757,7 +1755,7 @@ class Minion(MinionBase):
             process = threading.Thread(
                 target=self._target,
                 args=(instance, self.opts, data, self.connected),
-                name=data["jid"],
+                name=name,
             )
 
         if multiprocessing_enabled:
@@ -1767,7 +1765,6 @@ class Minion(MinionBase):
                 process.start()
         else:
             process.start()
-        process.name = "{}-Job-{}".format(process.name, data["jid"])
         self.subprocess_list.add(process)
 
     def ctx(self):
@@ -1883,9 +1880,7 @@ class Minion(MinionBase):
         minion_instance.gen_modules()
         fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
-        salt.utils.process.appendproctitle(
-            "{}._thread_return {}".format(cls.__name__, data["jid"])
-        )
+        salt.utils.process.appendproctitle("{}._thread_return".format(cls.__name__))
 
         sdata = {"pid": os.getpid()}
         sdata.update(data)
@@ -2074,7 +2069,7 @@ class Minion(MinionBase):
         fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
         salt.utils.process.appendproctitle(
-            "{}._thread_multi_return {}".format(cls.__name__, data["jid"])
+            "{}._thread_multi_return".format(cls.__name__)
         )
 
         sdata = {"pid": os.getpid()}
@@ -2468,7 +2463,7 @@ class Minion(MinionBase):
 
     # TODO: only allow one future in flight at a time?
     @salt.ext.tornado.gen.coroutine
-    def pillar_refresh(self, force_refresh=False):
+    def pillar_refresh(self, force_refresh=False, clean_cache=False):
         """
         Refresh the pillar
         """
@@ -2482,6 +2477,7 @@ class Minion(MinionBase):
                 self.opts["id"],
                 self.opts["saltenv"],
                 pillarenv=self.opts.get("pillarenv"),
+                clean_cache=clean_cache,
             )
             try:
                 new_pillar = yield async_pillar.compile_pillar()
@@ -2675,7 +2671,10 @@ class Minion(MinionBase):
                 notify=data.get("notify", False),
             )
         elif tag.startswith("pillar_refresh"):
-            yield _minion.pillar_refresh(force_refresh=data.get("force_refresh", False))
+            yield _minion.pillar_refresh(
+                force_refresh=data.get("force_refresh", False),
+                clean_cache=data.get("clean_cache", False),
+            )
         elif tag.startswith("beacons_refresh"):
             _minion.beacons_refresh()
         elif tag.startswith("matchers_refresh"):
