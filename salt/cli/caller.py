@@ -130,7 +130,7 @@ class BaseCaller:
             # _retcode will be available in the kwargs of the outputter function
             if self.opts.get("retcode_passthrough", False):
                 sys.exit(ret["retcode"])
-            elif ret["retcode"] != salt.defaults.exitcodes.EX_OK:
+            elif ret.get("retcode") != salt.defaults.exitcodes.EX_OK:
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         except SaltInvocationError as err:
             raise SystemExit(err)

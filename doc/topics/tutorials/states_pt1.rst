@@ -176,9 +176,11 @@ and all changes made.
     1. The ``.sls`` is discarded (i.e. ``webserver.sls`` becomes
        ``webserver``).
     2. Subdirectories can be used for better organization.
-        a. Each subdirectory is represented with a dot (following the Python
-           import model) in Salt states and on the command line .  ``webserver/dev.sls``
-           on the filesystem is referred to as ``webserver.dev`` in Salt
+        a. Each subdirectory under the configured file_roots (default:
+           ``/srv/salt/``) is represented with a dot (following the Python
+           import model) in Salt states and on the command line.
+           ``webserver/dev.sls`` on the filesystem is referred to as
+           ``webserver.dev`` in Salt
         b. Because slashes are represented as dots, SLS files can not contain
            dots in the name (other than the dot for the SLS suffix).  The SLS
            file ``webserver_1.0.sls`` can not be matched, and ``webserver_1.0``

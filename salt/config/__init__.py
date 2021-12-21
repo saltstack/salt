@@ -372,6 +372,8 @@ VALID_OPTS = immutabletypes.freeze(
         "state_output_diff": bool,
         # Tells the highstate outputter whether profile information will be shown for each state run
         "state_output_profile": bool,
+        # Tells the highstate outputter whether success and failure percents will be shown for each state run
+        "state_output_pct": bool,
         # When true, states run in the order defined in an SLS file, unless requisites re-order them
         "state_auto_order": bool,
         # Fire events as state chunks are processed by the state compiler
@@ -1662,7 +1664,7 @@ DEFAULT_CLOUD_OPTS = immutabletypes.freeze(
         "log_granular_levels": {},
         "log_rotate_max_bytes": 0,
         "log_rotate_backup_count": 0,
-        "bootstrap_delay": None,
+        "bootstrap_delay": 0,
         "cache": "localfs",
     }
 )

@@ -2,6 +2,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
+import datetime
 import logging
 
 import pytest
@@ -625,7 +626,12 @@ def test_job_status(sock_dir):
     """
     Test is_enabled
     """
-    job1 = {"function": "salt", "seconds": 3600}
+    job1 = {
+        "_last_run": datetime.datetime(2021, 11, 1, 12, 36, 57),
+        "_next_fire_time": datetime.datetime(2021, 11, 1, 13, 36, 57),
+        "function": "salt",
+        "seconds": 3600,
+    }
 
     comm1 = "Modified job: job1 in schedule."
 
@@ -641,4 +647,9 @@ def test_job_status(sock_dir):
             _ret_value = {"complete": True, "data": job1}
             with patch.object(SaltEvent, "get_event", return_value=_ret_value):
                 ret = schedule.job_status("job1")
-                assert ret == job1
+                assert ret == {
+                    "_last_run": "2021-11-01T12:36:57",
+                    "_next_fire_time": "2021-11-01T13:36:57",
+                    "function": "salt",
+                    "seconds": 3600,
+                }

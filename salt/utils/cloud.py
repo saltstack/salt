@@ -1766,6 +1766,7 @@ def deploy_script(
                     kwargs=dict(
                         name=name, sock_dir=sock_dir, timeout=newtimeout, queue=queue
                     ),
+                    name="DeployScriptCheckAuth({})".format(name),
                 )
                 log.debug("Starting new process to wait for salt-minion")
                 process.start()
