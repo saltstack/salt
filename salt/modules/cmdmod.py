@@ -616,6 +616,9 @@ def _run(
     if prepend_path:
         run_env["PATH"] = ":".join((prepend_path, run_env["PATH"]))
 
+    if "NOTIFY_SOCKET" not in env:
+        run_env.pop("NOTIFY_SOCKET", None)
+
     if python_shell is None:
         python_shell = False
 
