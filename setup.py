@@ -902,7 +902,6 @@ class SaltDistribution(distutils.dist.Distribution):
         * salt-cp
         * salt-minion
         * salt-syndic
-        * salt-unity
         * spm
 
     When packaged for salt-ssh, the following scripts should be installed:
@@ -1152,7 +1151,6 @@ class SaltDistribution(distutils.dist.Distribution):
                     "doc/man/salt-key.1",
                     "doc/man/salt-minion.1",
                     "doc/man/salt-syndic.1",
-                    "doc/man/salt-unity.1",
                     "doc/man/spm.1",
                 ]
             )
@@ -1172,7 +1170,6 @@ class SaltDistribution(distutils.dist.Distribution):
                 "doc/man/salt.1",
                 "doc/man/salt-ssh.1",
                 "doc/man/salt-syndic.1",
-                "doc/man/salt-unity.1",
             ]
         )
         return data_files
@@ -1236,7 +1233,6 @@ class SaltDistribution(distutils.dist.Distribution):
                     "scripts/salt-key",
                     "scripts/salt-minion",
                     "scripts/salt-syndic",
-                    "scripts/salt-unity",
                     "scripts/spm",
                 ]
             )
@@ -1255,7 +1251,6 @@ class SaltDistribution(distutils.dist.Distribution):
                 "scripts/salt-proxy",
                 "scripts/salt-ssh",
                 "scripts/salt-syndic",
-                "scripts/salt-unity",
                 "scripts/spm",
             ]
         )
@@ -1283,7 +1278,6 @@ class SaltDistribution(distutils.dist.Distribution):
                     "salt-key = salt.scripts:salt_key",
                     "salt-minion = salt.scripts:salt_minion",
                     "salt-syndic = salt.scripts:salt_syndic",
-                    "salt-unity = salt.scripts:salt_unity",
                     "spm = salt.scripts:salt_spm",
                 ]
             )
@@ -1301,7 +1295,6 @@ class SaltDistribution(distutils.dist.Distribution):
                 "salt-minion = salt.scripts:salt_minion",
                 "salt-ssh = salt.scripts:salt_ssh",
                 "salt-syndic = salt.scripts:salt_syndic",
-                "salt-unity = salt.scripts:salt_unity",
                 "spm = salt.scripts:salt_spm",
             ]
         )
