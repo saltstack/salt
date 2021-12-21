@@ -133,9 +133,7 @@ main cloud config file:
 
 This is currently considered to be experimental functionality, and may not work
 well with all cloud hosts. If you experience problems with Salt Cloud hanging
-after Salt is deployed, consider using Startup States instead:
-
-https://docs.saltproject.io/ref/states/startup.html
+after Salt is deployed, consider using :ref:`Startup States<startup_states>` instead.
 
 
 Skipping the Deploy Script
