@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright 2016 SUSE LLC
 #
@@ -14,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import fnmatch
 import os.path
@@ -24,11 +21,8 @@ import re
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
 
-# Import Salt libs
-from salt.ext import six
 
-
-class InputSanitizer(object):
+class InputSanitizer:
     @staticmethod
     def trim(value):
         """
@@ -40,7 +34,7 @@ class InputSanitizer(object):
         if not value:
             raise CommandExecutionError("Empty value during sanitation")
 
-        return six.text_type(value)
+        return str(value)
 
     @staticmethod
     def filename(value):

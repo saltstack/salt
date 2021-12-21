@@ -36,11 +36,11 @@ import salt.utils.verify
 import salt.version
 from salt.exceptions import (
     AuthenticationError,
+    InvalidKeyError,
     MasterExit,
     SaltClientError,
     SaltReqTimeoutError,
 )
-from salt.ext import six
 
 try:
     from M2Crypto import RSA, EVP, BIO
@@ -63,13 +63,17 @@ if not HAS_M2:
 
 if not HAS_M2 and not HAS_CRYPTO:
     try:
-        from Crypto.Cipher import AES, PKCS1_OAEP, PKCS1_v1_5 as PKCS1_v1_5_CIPHER
-        from Crypto.Hash import SHA
-        from Crypto.PublicKey import RSA
-        from Crypto.Signature import PKCS1_v1_5
+        from Crypto.Cipher import (  # nosec
+            AES,
+            PKCS1_OAEP,
+            PKCS1_v1_5 as PKCS1_v1_5_CIPHER,
+        )
+        from Crypto.Hash import SHA  # nosec
+        from Crypto.PublicKey import RSA  # nosec
+        from Crypto.Signature import PKCS1_v1_5  # nosec
 
         # let this be imported, if possible
-        from Crypto import Random
+        from Crypto import Random  # nosec
 
         HAS_CRYPTO = True
     except ImportError:
@@ -186,7 +190,7 @@ def _get_key_with_evict(path, timestamp, passphrase):
     """
     log.debug("salt.crypt._get_key_with_evict: Loading private key")
     if HAS_M2:
-        key = RSA.load_key(path, lambda x: six.b(passphrase))
+        key = RSA.load_key(path, lambda x: bytes(passphrase))
     else:
         with salt.utils.files.fopen(path) as f:
             key = RSA.importKey(f.read(), passphrase)
@@ -217,10 +221,16 @@ def get_rsa_pub_key(path):
         with salt.utils.files.fopen(path, "rb") as f:
             data = f.read().replace(b"RSA ", b"")
         bio = BIO.MemoryBuffer(data)
-        key = RSA.load_pub_key_bio(bio)
+        try:
+            key = RSA.load_pub_key_bio(bio)
+        except RSA.RSAError:
+            raise InvalidKeyError("Encountered bad RSA public key")
     else:
         with salt.utils.files.fopen(path) as f:
-            key = RSA.importKey(f.read())
+            try:
+                key = RSA.importKey(f.read())
+            except (ValueError, IndexError, TypeError):
+                raise InvalidKeyError("Encountered bad RSA public key")
     return key
 
 
@@ -281,7 +291,7 @@ def gen_signature(priv_path, pub_path, sign_path, passphrase=None):
 
     if os.path.isfile(sign_path):
         log.trace(
-            "Signature file %s already exists, please remove it first and " "try again",
+            "Signature file %s already exists, please remove it first and try again",
             sign_path,
         )
     else:
@@ -526,7 +536,6 @@ class AsyncAuth:
         """
         self.opts = opts
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
-        self.serial = salt.payload.Serial(self.opts)
         self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
         if self.opts["__role"] == "syndic":
@@ -754,7 +763,8 @@ class AsyncAuth:
                 raise salt.ext.tornado.gen.Return("retry")
             else:
                 raise SaltClientError(
-                    "Attempt to authenticate with the salt master failed with timeout error"
+                    "Attempt to authenticate with the salt master failed with timeout"
+                    " error"
                 )
         finally:
             if close_channel:
@@ -1032,7 +1042,7 @@ class AsyncAuth:
                 return False
         except Exception as sign_exc:  # pylint: disable=broad-except
             log.error(
-                "There was an error while verifying the masters public-key " "signature"
+                "There was an error while verifying the masters public-key signature"
             )
             raise Exception(sign_exc)
 
@@ -1242,7 +1252,6 @@ class SAuth(AsyncAuth):
         """
         self.opts = opts
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
-        self.serial = salt.payload.Serial(self.opts)
         self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
         if "syndic_master" in self.opts:
@@ -1458,7 +1467,6 @@ class Crypticle:
         self.key_string = key_string
         self.keys = self.extract_keys(self.key_string, key_size)
         self.key_size = key_size
-        self.serial = salt.payload.Serial(opts)
 
     @classmethod
     def generate_key_string(cls, key_size=192):
@@ -1532,7 +1540,7 @@ class Crypticle:
         """
         Serialize and encrypt a python object
         """
-        return self.encrypt(self.PICKLE_PAD + self.serial.dumps(obj))
+        return self.encrypt(self.PICKLE_PAD + salt.payload.dumps(obj))
 
     def loads(self, data, raw=False):
         """
@@ -1542,5 +1550,5 @@ class Crypticle:
         # simple integrity check to verify that we got meaningful data
         if not data.startswith(self.PICKLE_PAD):
             return {}
-        load = self.serial.loads(data[len(self.PICKLE_PAD) :], raw=raw)
+        load = salt.payload.loads(data[len(self.PICKLE_PAD) :], raw=raw)
         return load

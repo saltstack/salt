@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Clone a remote SVN repository and use the filesystem as a Pillar source
 
@@ -46,19 +45,14 @@ section in it, like this:
       '*':
         - bar
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import hashlib
 import logging
 import os
-
-# Import python libs
 from copy import deepcopy
 
-# Import salt libs
 from salt.pillar import Pillar
 
-# Import third party libs
 HAS_SVN = False
 try:
     import pysvn
@@ -89,7 +83,7 @@ def __virtual__():
     return __virtualname__
 
 
-class SvnPillar(object):
+class SvnPillar:
     """
     Deal with the remote SVN repository for Pillar
     """
@@ -178,7 +172,7 @@ def ext_pillar(minion_id, pillar, repo_string):  # pylint: disable=W0613
         DELIM = "="
         if DELIM not in extraopt:
             log.error(
-                "Incorrectly formatted extra parameter. " "Missing '%s': %s",
+                "Incorrectly formatted extra parameter. Missing '%s': %s",
                 DELIM,
                 extraopt,
             )

@@ -1,19 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Test salt.utils.zeromq
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.utils.zeromq
 import zmq
 from salt._compat import ipaddress
 from salt.exceptions import SaltSystemExit
 from tests.support.mock import patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 
 
@@ -24,10 +18,10 @@ class UtilsTestCase(TestCase):
         test_ipv6_uri = "[::1]"
         self.assertEqual(test_ipv4, salt.utils.zeromq.ip_bracket(test_ipv4))
         self.assertEqual(
-            "[{0}]".format(test_ipv6), salt.utils.zeromq.ip_bracket(test_ipv6)
+            "[{}]".format(test_ipv6), salt.utils.zeromq.ip_bracket(test_ipv6)
         )
         self.assertEqual(
-            "[{0}]".format(test_ipv6), salt.utils.zeromq.ip_bracket(test_ipv6_uri)
+            "[{}]".format(test_ipv6), salt.utils.zeromq.ip_bracket(test_ipv6_uri)
         )
 
         ip_addr_obj = ipaddress.ip_address(test_ipv4)

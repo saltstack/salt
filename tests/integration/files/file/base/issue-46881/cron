@@ -1,2 +1,0 @@
-# Lines below here are managed by Salt, do not edit
-@hourly touch /tmp/test-file

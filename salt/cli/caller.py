@@ -69,7 +69,6 @@ class BaseCaller:
         """
         self.opts = opts
         self.opts["caller"] = True
-        self.serial = salt.payload.Serial(self.opts)
         # Handle this here so other deeper code which might
         # be imported as part of the salt api doesn't do  a
         # nasty sys.exit() and tick off our developer users
@@ -131,7 +130,7 @@ class BaseCaller:
             # _retcode will be available in the kwargs of the outputter function
             if self.opts.get("retcode_passthrough", False):
                 sys.exit(ret["retcode"])
-            elif ret["retcode"] != salt.defaults.exitcodes.EX_OK:
+            elif ret.get("retcode") != salt.defaults.exitcodes.EX_OK:
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         except SaltInvocationError as err:
             raise SystemExit(err)
@@ -185,7 +184,7 @@ class BaseCaller:
             )
             try:
                 with salt.utils.files.fopen(proc_fn, "w+b") as fp_:
-                    fp_.write(self.serial.dumps(sdata))
+                    fp_.write(salt.payload.dumps(sdata))
             except NameError:
                 # Don't require msgpack with local
                 pass
@@ -234,7 +233,7 @@ class BaseCaller:
                     sys.stderr.write(trace)
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
             try:
-                retcode = sys.modules[func.__module__].__context__.get("retcode", 0)
+                retcode = self.minion.executors.pack["__context__"].get("retcode", 0)
             except AttributeError:
                 retcode = salt.defaults.exitcodes.EX_GENERIC
 

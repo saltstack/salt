@@ -104,7 +104,10 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                     "\nNOTICE: Too many minions targeted, switching to batch execution."
                 )
                 self.options.batch = self.options.batch_safe_size
-                self._run_batch()
+                try:
+                    self._run_batch()
+                finally:
+                    self.local_client.destroy()
                 return
 
         if getattr(self.options, "return"):
@@ -164,7 +167,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         try:
             if self.options.subset:
                 cmd_func = self.local_client.cmd_subset
-                kwargs["sub"] = self.options.subset
+                kwargs["subset"] = self.options.subset
                 kwargs["cli"] = True
             else:
                 cmd_func = self.local_client.cmd_cli
@@ -229,6 +232,8 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         ) as exc:
             ret = str(exc)
             self._output_ret(ret, "", retcode=1)
+        finally:
+            self.local_client.destroy()
 
     def _preview_target(self):
         """
@@ -284,7 +289,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             try:
                 self.config["batch"] = self.options.batch
                 batch = salt.cli.batch.Batch(
-                    self.config, eauth=eauth, parser=self.options
+                    self.config, eauth=eauth, _parser=self.options
                 )
             except SaltClientError:
                 # We will print errors to the console further down the stack

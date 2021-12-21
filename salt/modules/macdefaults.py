@@ -1,15 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Set defaults on Mac OS
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import Salt libs
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
@@ -61,13 +56,13 @@ def write(domain, key, value, type="string", user=None):
         elif value is False:
             value = "FALSE"
 
-    cmd = 'defaults write "{0}" "{1}" -{2} "{3}"'.format(domain, key, type, value)
+    cmd = 'defaults write "{}" "{}" -{} "{}"'.format(domain, key, type, value)
     return __salt__["cmd.run_all"](cmd, runas=user)
 
 
 def read(domain, key, user=None):
     """
-    Write a default to the system
+    Read a default from the system
 
     CLI Example:
 
@@ -84,10 +79,10 @@ def read(domain, key, user=None):
         The key of the given domain to read from
 
     user
-        The user to write the defaults to
+        The user to read the defaults as
 
     """
-    cmd = 'defaults read "{0}" "{1}"'.format(domain, key)
+    cmd = 'defaults read "{}" "{}"'.format(domain, key)
     return __salt__["cmd.run"](cmd, runas=user)
 
 
@@ -113,5 +108,5 @@ def delete(domain, key, user=None):
         The user to delete the defaults with
 
     """
-    cmd = 'defaults delete "{0}" "{1}"'.format(domain, key)
+    cmd = 'defaults delete "{}" "{}"'.format(domain, key)
     return __salt__["cmd.run_all"](cmd, runas=user, output_loglevel="debug")

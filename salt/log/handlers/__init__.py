@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     salt.log.handlers
     ~~~~~~~~~~~~~~~~~
@@ -8,12 +7,8 @@
     Custom logging handlers to be used in salt.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-# Import salt libs
 from salt._logging.handlers import (
     FileHandler,
     QueueHandler,

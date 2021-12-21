@@ -9,17 +9,8 @@ from tests.support.mock import patch
 
 
 @pytest.fixture
-def sections():
-    sections = OrderedDict()
-    sections["general"] = OrderedDict()
-    sections["general"]["hostname"] = "myserver.com"
-    sections["general"]["port"] = "1234"
-    return sections
-
-
-@pytest.fixture(autouse=True)
-def setup_loader():
-    setup_loader_modules = {
+def configure_loader_modules():
+    return {
         ini_manage: {
             "__salt__": {
                 "ini.get_ini": mod_ini_manage.get_ini,
@@ -29,8 +20,15 @@ def setup_loader():
         },
         mod_ini_manage: {"__opts__": {"test": False}},
     }
-    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-        yield loader_mock
+
+
+@pytest.fixture
+def sections():
+    sections = OrderedDict()
+    sections["general"] = OrderedDict()
+    sections["general"]["hostname"] = "myserver.com"
+    sections["general"]["port"] = "1234"
+    return sections
 
 
 def test_options_present(tmpdir, sections):
@@ -62,8 +60,10 @@ def test_options_present_true_no_file(tmpdir, sections):
         "name": name,
         "changes": {},
         "result": None,
-        "comment": "Changed key hostname in section general.\n"
-        "Changed key port in section general.\n",
+        "comment": (
+            "Changed key hostname in section general.\n"
+            "Changed key port in section general.\n"
+        ),
     }
     with patch.dict(ini_manage.__opts__, {"test": True}), patch.dict(
         mod_ini_manage.__opts__, {"test": True}
@@ -84,9 +84,11 @@ def test_options_present_true_file(tmpdir, sections):
         "name": name,
         "changes": {},
         "result": None,
-        "comment": "Unchanged key hostname in section general.\n"
-        "Unchanged key port in section general.\n"
-        "Changed key user in section general.\n",
+        "comment": (
+            "Unchanged key hostname in section general.\n"
+            "Unchanged key port in section general.\n"
+            "Changed key user in section general.\n"
+        ),
     }
 
     ini_manage.options_present(name, sections)

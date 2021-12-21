@@ -5,8 +5,6 @@ Beacon to monitor disk usage.
 
 :depends: python-psutil
 """
-
-
 import logging
 import re
 
@@ -38,7 +36,7 @@ def validate(config):
     """
     # Configuration for diskusage beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for diskusage beacon must be a list.")
+        return False, "Configuration for diskusage beacon must be a list."
     return True, "Valid beacon configuration"
 
 
@@ -117,7 +115,7 @@ def beacon(config):
 
                 current_usage = _current_usage.percent
                 monitor_usage = mounts[mount]
-                if "%" in monitor_usage:
+                if isinstance(monitor_usage, str) and "%" in monitor_usage:
                     monitor_usage = re.sub("%", "", monitor_usage)
                 monitor_usage = float(monitor_usage)
                 if current_usage >= monitor_usage:

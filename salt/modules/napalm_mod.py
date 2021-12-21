@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 NAPALM helpers
 ==============
@@ -7,17 +6,11 @@ Helpers for the NAPALM modules.
 
 .. versionadded:: 2017.7.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python stdlib
 import logging
 
-# import NAPALM utils
 import salt.utils.napalm
 from salt.exceptions import CommandExecutionError
-
-# Import Salt modules
-from salt.ext import six
 from salt.utils.decorators import depends
 from salt.utils.napalm import proxy_napalm_wrap
 
@@ -108,7 +101,7 @@ def _get_netmiko_args(optional_args):
     check_self = netmiko_args.pop(0)
     if check_self != "self":
         raise ValueError("Error processing Netmiko arguments")
-    netmiko_argument_map = dict(six.moves.zip(netmiko_args, netmiko_defaults))
+    netmiko_argument_map = dict(zip(netmiko_args, netmiko_defaults))
     # Netmiko arguments that are integrated into NAPALM already
     netmiko_filter = ["ip", "host", "username", "password", "device_type", "timeout"]
     # Filter out all of the arguments that are integrated into NAPALM
@@ -116,7 +109,7 @@ def _get_netmiko_args(optional_args):
         netmiko_argument_map.pop(k)
     # Check if any of these arguments were passed in as NAPALM optional_args
     netmiko_optional_args = {}
-    for k, v in six.iteritems(netmiko_argument_map):
+    for k, v in netmiko_argument_map.items():
         try:
             netmiko_optional_args[k] = optional_args[k]
         except KeyError:
@@ -159,7 +152,10 @@ def _junos_prep_fun(napalm_device):
         return {
             "out": None,
             "result": False,
-            "comment": "Please install jxmlease (``pip install jxmlease``) to be able to use this function.",
+            "comment": (
+                "Please install jxmlease (``pip install jxmlease``) to be able to use"
+                " this function."
+            ),
         }
     _inject_junos_proxy(napalm_device)
     return {"result": True}
@@ -267,7 +263,7 @@ def call(method, *args, **kwargs):
         salt '*' napalm.call get_bgp_config group='my-group'
     """
     clean_kwargs = {}
-    for karg, warg in six.iteritems(kwargs):
+    for karg, warg in kwargs.items():
         # remove the __pub args
         if not karg.startswith("__pub_"):
             clean_kwargs[karg] = warg
@@ -563,7 +559,6 @@ def netmiko_multi_call(*methods, **kwargs):
         - ``name``: the name of the Netmiko function to invoke.
         - ``args``: list of arguments to send to the ``name`` method.
         - ``kwargs``: key-value arguments to send to the ``name`` method.
-
 
     CLI Example:
 
@@ -1075,7 +1070,7 @@ def pyeapi_call(method, *args, **kwargs):
 
         salt '*' napalm.pyeapi_call run_commands 'show version' encoding=text
         salt '*' napalm.pyeapi_call get_config as_string=True
-   """
+    """
     pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
     return __salt__["pyeapi.call"](method, *args, **pyeapi_kwargs)
 
@@ -1162,7 +1157,7 @@ def pyeapi_config(
     .. code-block:: bash
 
         salt '*' napalm.pyeapi_config 'ntp server 1.2.3.4'
-   """
+    """
     pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
     return __salt__["pyeapi.config"](
         commands=commands,

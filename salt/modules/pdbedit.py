@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage accounts in Samba's passdb using pdbedit
 
@@ -8,26 +7,15 @@ Manage accounts in Samba's passdb using pdbedit
 
 .. versionadded:: 2017.7.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import binascii
 import hashlib
 import logging
-
-# Import Python libs
 import re
+import shlex
 
 import salt.modules.cmdmod
 import salt.utils.path
-
-# Import Salt libs
-from salt.ext import six
-
-try:
-    from shlex import quote as _quote_args  # pylint: disable=e0611
-except ImportError:
-    from pipes import quote as _quote_args
-
 
 log = logging.getLogger(__name__)
 
@@ -59,6 +47,10 @@ def __virtual__():
     if not (int(ver_match.group(1)) >= 4 and int(ver_match.group(2)) >= 5):
         return (False, "pdbedit is to old, 4.5.0 or newer is required")
 
+    try:
+        hashlib.new("md4", "".encode("utf-16le"))
+    except ValueError:
+        return (False, "Hash type md4 unsupported")
     return __virtualname__
 
 
@@ -106,19 +98,22 @@ def list_users(verbose=True, hashes=False):
             log.error(res["stderr"] if "stderr" in res else res["stdout"])
             return users
 
-        user_data = {}
-        for user in res["stdout"].splitlines():
-            if user.startswith("-"):
-                if "unix username" in user_data:
-                    users[user_data["unix username"]] = user_data
-                user_data = {}
-            elif ":" in user:
-                label = user[: user.index(":")].strip().lower()
-                data = user[(user.index(":") + 1) :].strip()
-                user_data[label] = data
-
-        if user_data:
-            users[user_data["unix username"]] = user_data
+        for batch in re.split("\n-+|-+\n", res["stdout"]):
+            user_data = {}
+            last_label = None
+            for line in batch.splitlines():
+                if not line.strip():
+                    continue
+                label, sep, data = line.partition(":")
+                label = label.strip().lower()
+                data = data.strip()
+                if not sep:
+                    user_data[last_label] += line.strip()
+                else:
+                    last_label = label
+                    user_data[label] = data
+            if user_data:
+                users[user_data["unix username"]] = user_data
     else:
         # list users
         res = __salt__["cmd.run_all"]("pdbedit --list")
@@ -170,7 +165,7 @@ def delete(login):
     """
     if login in list_users(False):
         res = __salt__["cmd.run_all"](
-            "pdbedit --delete {login}".format(login=_quote_args(login)),
+            "pdbedit --delete {login}".format(login=shlex.quote(login)),
         )
 
         if res["retcode"] > 0:
@@ -215,7 +210,7 @@ def create(login, password, password_hashed=False, machine_account=False):
         # NOTE: --create requires a password, even if blank
         res = __salt__["cmd.run_all"](
             cmd="pdbedit --create --user {login} -t {machine}".format(
-                login=_quote_args(login),
+                login=shlex.quote(login),
                 machine="--machine" if machine_account else "",
             ),
             stdin="{password}\n{password}\n".format(password=password),
@@ -231,7 +226,7 @@ def create(login, password, password_hashed=False, machine_account=False):
     if user["nt hash"] != password_hash:
         res = __salt__["cmd.run_all"](
             "pdbedit --modify --user {login} --set-nt-hash={nthash}".format(
-                login=_quote_args(login), nthash=_quote_args(password_hash)
+                login=shlex.quote(login), nthash=shlex.quote(password_hash)
             ),
         )
 
@@ -361,9 +356,9 @@ def modify(
             if (
                 val is not None
                 and key in current
-                and not current[key].endswith(six.text_type(val))
+                and not current[key].endswith(str(val))
             ):
-                changes[key] = six.text_type(val)
+                changes[key] = str(val)
         elif key in ["account flags"]:
             if val is not None:
                 if val.startswith("["):
@@ -372,9 +367,8 @@ def modify(
                 for f in val.upper():
                     if f not in ["N", "D", "H", "L", "X"]:
                         log.warning(
-                            "pdbedit.modify - unknown {f} flag for account_control, ignored".format(
-                                f=f
-                            )
+                            "pdbedit.modify - unknown %s flag for account_control, ignored",
+                            f,
                         )
                     else:
                         new.append(f)
@@ -389,7 +383,8 @@ def modify(
         for change in changes:
             cmds.append(
                 "{flag}{value}".format(
-                    flag=flags[change], value=_quote_args(changes[change]),
+                    flag=flags[change],
+                    value=shlex.quote(changes[change]),
                 )
             )
         if reset_login_hours:
@@ -399,7 +394,8 @@ def modify(
 
         res = __salt__["cmd.run_all"](
             "pdbedit --modify --user {login} {changes}".format(
-                login=_quote_args(login), changes=" ".join(cmds),
+                login=shlex.quote(login),
+                changes=" ".join(cmds),
             ),
         )
 

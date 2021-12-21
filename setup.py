@@ -94,9 +94,6 @@ else:
 USE_STATIC_REQUIREMENTS = os.environ.get("USE_STATIC_REQUIREMENTS")
 if USE_STATIC_REQUIREMENTS is not None:
     USE_STATIC_REQUIREMENTS = USE_STATIC_REQUIREMENTS == "1"
-# Are we running pop-build
-if "TIAMAT_BUILD" in os.environ:
-    USE_STATIC_REQUIREMENTS = True
 
 try:
     # Add the esky bdist target if the module is available
@@ -134,9 +131,7 @@ SALT_LINUX_LOCKED_REQS = [
     )
 ]
 SALT_OSX_REQS = SALT_BASE_REQUIREMENTS + [
-    os.path.abspath(SETUP_DIRNAME),
-    "requirements",
-    "darwin.txt",
+    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "darwin.txt")
 ]
 SALT_OSX_LOCKED_REQS = [
     # OSX packages already defined locked requirements
@@ -150,9 +145,7 @@ SALT_OSX_LOCKED_REQS = [
     )
 ]
 SALT_WINDOWS_REQS = SALT_BASE_REQUIREMENTS + [
-    os.path.abspath(SETUP_DIRNAME),
-    "requirements",
-    "windows.txt",
+    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "windows.txt")
 ]
 SALT_WINDOWS_LOCKED_REQS = [
     # Windows packages already defined locked requirements
@@ -248,6 +241,8 @@ def _check_ver(pyver, op, wanted):
     wanted = distutils.version.LooseVersion(wanted)
     if not isinstance(pyver, str):
         pyver = str(pyver)
+    if not isinstance(wanted, str):
+        wanted = str(wanted)
     return getattr(operator, "__{}__".format(op))(pyver, wanted)
 
 
@@ -304,8 +299,9 @@ class WriteSaltVersion(Command):
         ):
             # Write the version file
             if getattr(self.distribution, "salt_version_hardcoded_path", None) is None:
-                print("This command is not meant to be called on it's own")
-                exit(1)
+                self.distribution.salt_version_hardcoded_path = SALT_VERSION_HARDCODED
+                sys.stderr.write("This command is not meant to be called on it's own\n")
+                sys.stderr.flush()
 
             if not self.distribution.with_salt_version:
                 salt_version = (
@@ -505,19 +501,21 @@ class DownloadWindowsDlls(Command):
                 yield
 
         platform_bits, _ = platform.architecture()
-        url = "https://repo.saltstack.com/windows/dependencies/{bits}/{fname}.dll"
-        dest = os.path.join(os.path.dirname(sys.executable), "{fname}.dll")
+        url = "https://repo.saltproject.io/windows/dependencies/{bits}/{fname}"
+        dest = os.path.join(os.path.dirname(sys.executable), "{fname}")
         with indent_log():
-            for fname in ("libeay32", "ssleay32", "libsodium"):
+            for fname in (
+                "openssl/1.1.1k/ssleay32.dll",
+                "openssl/1.1.1k/libeay32.dll",
+                "libsodium/1.0.18/libsodium.dll",
+            ):
                 # See if the library is already on the system
                 if find_library(fname):
                     continue
                 furl = url.format(bits=platform_bits[:2], fname=fname)
-                fdest = dest.format(fname=fname)
+                fdest = dest.format(fname=os.path.basename(fname))
                 if not os.path.exists(fdest):
-                    log.info(
-                        "Downloading {}.dll to {} from {}".format(fname, fdest, furl)
-                    )
+                    log.info("Downloading {} to {} from {}".format(fname, fdest, furl))
                     try:
                         from contextlib import closing
 
@@ -532,7 +530,7 @@ class DownloadWindowsDlls(Command):
                                             wfh.flush()
                             else:
                                 log.error(
-                                    "Failed to download {}.dll to {} from {}".format(
+                                    "Failed to download {} to {} from {}".format(
                                         fname, fdest, furl
                                     )
                                 )
@@ -549,7 +547,7 @@ class DownloadWindowsDlls(Command):
                                     wfh.flush()
                         else:
                             log.error(
-                                "Failed to download {}.dll to {} from {}".format(
+                                "Failed to download {} to {} from {}".format(
                                     fname, fdest, furl
                                 )
                             )
@@ -689,25 +687,25 @@ class TestCommand(Command):
         """
 
     def run(self):
-        from subprocess import Popen
+        # This should either be removed or migrated to use nox
+        import subprocess
 
         self.run_command("build")
         build_cmd = self.get_finalized_command("build_ext")
         runner = os.path.abspath("tests/runtests.py")
-        test_cmd = sys.executable + " {}".format(runner)
+        test_cmd = [sys.executable, runner]
         if self.runtests_opts:
-            test_cmd += " {}".format(self.runtests_opts)
+            test_cmd.extend(self.runtests_opts.split())
 
         print("running test")
-        test_process = Popen(
+        ret = subprocess.run(
             test_cmd,
-            shell=True,
             stdout=sys.stdout,
             stderr=sys.stderr,
             cwd=build_cmd.build_lib,
+            check=False,
         )
-        test_process.communicate()
-        sys.exit(test_process.returncode)
+        sys.exit(ret.returncode)
 
 
 class Clean(clean):
@@ -904,7 +902,6 @@ class SaltDistribution(distutils.dist.Distribution):
         * salt-cp
         * salt-minion
         * salt-syndic
-        * salt-unity
         * spm
 
     When packaged for salt-ssh, the following scripts should be installed:
@@ -1013,13 +1010,37 @@ class SaltDistribution(distutils.dist.Distribution):
 
         self.name = "salt-ssh" if PACKAGED_FOR_SALT_SSH else "salt"
         self.salt_version = __version__  # pylint: disable=undefined-variable
-        self.description = "Portable, distributed, remote execution and configuration management system"
+        self.description = (
+            "Portable, distributed, remote execution and configuration management"
+            " system"
+        )
         with open(SALT_LONG_DESCRIPTION_FILE, encoding="utf-8") as f:
             self.long_description = f.read()
         self.long_description_content_type = "text/x-rst"
+        self.python_requires = ">=3.5"
+        self.classifiers = [
+            "Programming Language :: Python",
+            "Programming Language :: Cython",
+            "Programming Language :: Python :: 3",
+            "Programming Language :: Python :: 3 :: Only",
+            "Programming Language :: Python :: 3.5",
+            "Programming Language :: Python :: 3.6",
+            "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3.8",
+            "Programming Language :: Python :: 3.9",
+            "Development Status :: 5 - Production/Stable",
+            "Environment :: Console",
+            "Intended Audience :: Developers",
+            "Intended Audience :: Information Technology",
+            "Intended Audience :: System Administrators",
+            "License :: OSI Approved :: Apache Software License",
+            "Operating System :: POSIX :: Linux",
+            "Topic :: System :: Clustering",
+            "Topic :: System :: Distributed Computing",
+        ]
         self.author = "Thomas S Hatch"
         self.author_email = "thatch45@gmail.com"
-        self.url = "http://saltstack.org"
+        self.url = "https://saltproject.io"
         self.cmdclass.update(
             {
                 "test": TestCommand,
@@ -1077,28 +1098,6 @@ class SaltDistribution(distutils.dist.Distribution):
 
     # ----- Static Data -------------------------------------------------------------------------------------------->
     @property
-    def _property_classifiers(self):
-        return [
-            "Programming Language :: Python",
-            "Programming Language :: Cython",
-            "Programming Language :: Python :: 3",
-            "Programming Language :: Python :: 3 :: Only",
-            "Programming Language :: Python :: 3.5",
-            "Programming Language :: Python :: 3.6",
-            "Programming Language :: Python :: 3.7",
-            "Programming Language :: Python :: 3.8",
-            "Development Status :: 5 - Production/Stable",
-            "Environment :: Console",
-            "Intended Audience :: Developers",
-            "Intended Audience :: Information Technology",
-            "Intended Audience :: System Administrators",
-            "License :: OSI Approved :: Apache Software License",
-            "Operating System :: POSIX :: Linux",
-            "Topic :: System :: Clustering",
-            "Topic :: System :: Distributed Computing",
-        ]
-
-    @property
     def _property_dependency_links(self):
         return [
             "https://github.com/saltstack/salt-testing/tarball/develop#egg=SaltTesting"
@@ -1152,7 +1151,6 @@ class SaltDistribution(distutils.dist.Distribution):
                     "doc/man/salt-key.1",
                     "doc/man/salt-minion.1",
                     "doc/man/salt-syndic.1",
-                    "doc/man/salt-unity.1",
                     "doc/man/spm.1",
                 ]
             )
@@ -1172,7 +1170,6 @@ class SaltDistribution(distutils.dist.Distribution):
                 "doc/man/salt.1",
                 "doc/man/salt-ssh.1",
                 "doc/man/salt-syndic.1",
-                "doc/man/salt-unity.1",
             ]
         )
         return data_files
@@ -1236,7 +1233,6 @@ class SaltDistribution(distutils.dist.Distribution):
                     "scripts/salt-key",
                     "scripts/salt-minion",
                     "scripts/salt-syndic",
-                    "scripts/salt-unity",
                     "scripts/spm",
                 ]
             )
@@ -1255,7 +1251,6 @@ class SaltDistribution(distutils.dist.Distribution):
                 "scripts/salt-proxy",
                 "scripts/salt-ssh",
                 "scripts/salt-syndic",
-                "scripts/salt-unity",
                 "scripts/spm",
             ]
         )
@@ -1283,7 +1278,6 @@ class SaltDistribution(distutils.dist.Distribution):
                     "salt-key = salt.scripts:salt_key",
                     "salt-minion = salt.scripts:salt_minion",
                     "salt-syndic = salt.scripts:salt_syndic",
-                    "salt-unity = salt.scripts:salt_unity",
                     "spm = salt.scripts:salt_spm",
                 ]
             )
@@ -1301,7 +1295,6 @@ class SaltDistribution(distutils.dist.Distribution):
                 "salt-minion = salt.scripts:salt_minion",
                 "salt-ssh = salt.scripts:salt_ssh",
                 "salt-syndic = salt.scripts:salt_syndic",
-                "salt-unity = salt.scripts:salt_unity",
                 "spm = salt.scripts:salt_spm",
             ]
         )

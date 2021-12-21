@@ -126,7 +126,7 @@ Changelog for v2015.8.3..v2015.8.4
 
     * 8e56be7f4c Merge pull request `#30548`_ from jacobhammons/doc-fixes
 
-      * 03c51bb54d Added placeholder release notes for 2015.5.10 Changed old doc links from docs.saltstack.org to docs.saltstack.com
+      * 03c51bb54d Added placeholder release notes for 2015.5.10 Changed old doc links from docs.saltstack.org to docs.saltproject.io
 
     * 1aafd4c5b5 Merge pull request `#30530`_ from terminalmage/yumpkg-dnf-cleanup
 
@@ -519,7 +519,7 @@ Changelog for v2015.8.3..v2015.8.4
 * **PR** `#30384`_: (`isbm`_) Bugfix: info_available does not work correctly on SLE 11 series
   @ *2016-01-15 18:31:57 UTC*
 
-  * c478148b60 Merge pull request `#30384`_ from isbm/isbm-zypper-info-avaiable-fix
+  * c478148b60 Merge pull request `#30384`_ from isbm/isbm-zypper-info-available-fix
 
   * c7bc20e865 Split information, that is compatible with the Zypper's output on SLE11.
 

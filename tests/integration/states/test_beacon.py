@@ -3,7 +3,6 @@ Integration tests for the beacon states
 """
 import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import slowTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 
@@ -14,15 +13,14 @@ class BeaconStateTestCase(ModuleCase, SaltReturnAssertsMixin):
     """
 
     def setUp(self):
-        """
-        """
+        """ """
         self.run_function("beacons.reset", f_timeout=300)
         self.wait_for_all_jobs()
 
     def tearDown(self):
         self.run_function("beacons.reset", f_timeout=300)
 
-    @slowTest
+    @pytest.mark.slow_test
     def test_present_absent(self):
         kwargs = {"/": "38%", "interval": 5}
         ret = self.run_state(

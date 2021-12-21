@@ -2,12 +2,13 @@
     :codeauthor: :email:`Daniel Wallace <dwallace@saltstack.com`
 """
 
-
 import os
 import re
 import shutil
 import tempfile
 
+import pytest
+import salt.client.ssh.client
 import salt.config
 import salt.roster
 import salt.utils.files
@@ -16,7 +17,6 @@ import salt.utils.thin
 import salt.utils.yaml
 from salt.client import ssh
 from tests.support.case import ShellCase
-from tests.support.helpers import slowTest
 from tests.support.mock import MagicMock, call, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -24,7 +24,7 @@ from tests.support.unit import TestCase, skipIf
 
 @skipIf(not salt.utils.path.which("ssh"), "No ssh binary found in path")
 class SSHPasswordTests(ShellCase):
-    @slowTest
+    @pytest.mark.slow_test
     def test_password_failure(self):
         """
         Check password failures when trying to deploy keys
@@ -177,8 +177,7 @@ class SSHSingleTests(TestCase):
         }
 
     def test_single_opts(self):
-        """ Sanity check for ssh.Single options
-        """
+        """Sanity check for ssh.Single options"""
 
         single = ssh.Single(
             self.opts,
@@ -507,6 +506,31 @@ class SSHTests(ShellCase):
             client._expand_target()
         assert opts["tgt"] == host
 
+    def test_expand_target_no_host(self):
+        """
+        test expand_target when host is not included in the rosterdata
+        """
+        host = "127.0.0.1"
+        user = "test-user@"
+        opts = self.opts
+        opts["tgt"] = user + host
+
+        roster = """
+            localhost: 127.0.0.1
+            """
+        roster_file = os.path.join(RUNTIME_VARS.TMP, "test_roster_no_host")
+        with salt.utils.files.fopen(roster_file, "w") as fp:
+            salt.utils.yaml.safe_dump(salt.utils.yaml.safe_load(roster), fp)
+
+        with patch(
+            "salt.utils.network.is_reachable_host", MagicMock(return_value=False)
+        ):
+            client = ssh.SSH(opts)
+        assert opts["tgt"] == user + host
+        with patch("salt.roster.get_roster_file", MagicMock(return_value=roster_file)):
+            client._expand_target()
+        assert opts["tgt"] == host
+
     def test_expand_target_dns(self):
         """
         test expand_target when target is root@<dns>
@@ -667,3 +691,26 @@ class SSHTests(ShellCase):
             assert client.parse_tgt["hostname"] == host
             assert client.parse_tgt["user"] == opts["ssh_user"]
             assert self.opts.get("ssh_cli_tgt") == host
+
+    def test_extra_filerefs(self):
+        """
+        test "extra_filerefs" are not excluded from kwargs
+        when preparing the SSH opts
+        """
+        opts = {
+            "eauth": "auto",
+            "username": "test",
+            "password": "test",
+            "client": "ssh",
+            "tgt": "localhost",
+            "fun": "test.ping",
+            "ssh_port": 22,
+            "extra_filerefs": "salt://foobar",
+        }
+        roster = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "roster")
+        client = salt.client.ssh.client.SSHClient(
+            mopts=self.opts, disable_custom_roster=True
+        )
+        with patch("salt.roster.get_roster_file", MagicMock(return_value=roster)):
+            ssh_obj = client._prep_ssh(**opts)
+            assert ssh_obj.opts.get("extra_filerefs", None) == "salt://foobar"
