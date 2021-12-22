@@ -275,7 +275,6 @@ class EventListener:
         self.event = salt.utils.event.get_event(
             "master",
             opts["sock_dir"],
-            opts["transport"],
             opts=opts,
             listen=True,
             io_loop=salt.ext.tornado.ioloop.IOLoop.current(),
@@ -1773,7 +1772,6 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         self.event = salt.utils.event.get_event(
             "master",
             self.application.opts["sock_dir"],
-            self.application.opts["transport"],
             opts=self.application.opts,
             listen=False,
         )
