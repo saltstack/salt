@@ -401,7 +401,6 @@ class RemoteFuncs:
         self.event = salt.utils.event.get_event(
             "master",
             self.opts["sock_dir"],
-            self.opts["transport"],
             opts=self.opts,
             listen=False,
         )
@@ -1071,7 +1070,6 @@ class LocalFuncs:
         self.event = salt.utils.event.get_event(
             "master",
             self.opts["sock_dir"],
-            self.opts["transport"],
             opts=self.opts,
             listen=False,
         )

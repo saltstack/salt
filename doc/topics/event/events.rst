@@ -87,7 +87,7 @@ The following code will check for a single event:
     opts = salt.config.client_config("/etc/salt/master")
 
     event = salt.utils.event.get_event(
-        "master", sock_dir=opts["sock_dir"], transport=opts["transport"], opts=opts
+        "master", sock_dir=opts["sock_dir"], opts=opts
     )
 
     data = event.get_event()
@@ -138,7 +138,7 @@ using the fnmatch library.
     opts = salt.config.client_config("/etc/salt/master")
 
     sevent = salt.utils.event.get_event(
-        "master", sock_dir=opts["sock_dir"], transport=opts["transport"], opts=opts
+        "master", sock_dir=opts["sock_dir"], opts=opts
     )
 
     while True:

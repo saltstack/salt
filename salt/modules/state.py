@@ -2478,7 +2478,6 @@ def event(
     with salt.utils.event.get_event(
         node,
         sock_dir or __opts__["sock_dir"],
-        __opts__["transport"],
         opts=__opts__,
         listen=True,
     ) as sevent:

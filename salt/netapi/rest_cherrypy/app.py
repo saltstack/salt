@@ -2363,7 +2363,6 @@ class Events:
             with salt.utils.event.get_event(
                 "master",
                 sock_dir=self.opts["sock_dir"],
-                transport=self.opts["transport"],
                 opts=self.opts,
                 listen=True,
             ) as event:
@@ -2539,7 +2538,6 @@ class WebsocketEndpoint:
             with salt.utils.event.get_event(
                 "master",
                 sock_dir=self.opts["sock_dir"],
-                transport=self.opts["transport"],
                 opts=self.opts,
                 listen=True,
             ) as event:
@@ -2639,7 +2637,6 @@ class Webhook:
         self.event = salt.utils.event.get_event(
             "master",
             sock_dir=self.opts["sock_dir"],
-            transport=self.opts["transport"],
             opts=self.opts,
             listen=False,
         )

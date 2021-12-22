@@ -106,7 +106,6 @@ TAGS = {
 def get_event(
     node,
     sock_dir=None,
-    transport="zeromq",
     opts=None,
     listen=True,
     io_loop=None,
