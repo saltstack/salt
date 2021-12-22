@@ -12,7 +12,19 @@ Statistics
 - Total Issue References: **94**
 - Total PR References: **423**
 
-- Contributors: **86** (`3add3287`_, `BenoitKnecht`_, `Ch3LL`_, `CorvinM`_, `Da-Juan`_, `DmitryKuzmenko`_, `Giandom`_, `The-Loeki`_, `UtahDave`_, `adelcast`_, `amendlik`_, `angeloudy`_, `anlutro`_, `arthurlogilab`_, `basepi`_, `benediktwerner`_, `brejoc`_, `cachedout`_, `campbellmc`_, `chnrxn`_, `clan`_, `corywright`_, `damon-atkins`_, `dincamihai`_, `dmurphy18`_, `eliasp`_, `eradman`_, `forksaber`_, `frogunder`_, `gaborn57`_, `garethgreenaway`_, `golmaal`_, `gracinet`_, `gtmanfred`_, `haam3r`_, `isbm`_, `jettero`_, `jf`_, `jubrad`_, `keesbos`_, `kris-anderson`_, `lomeroe`_, `mateiw`_, `mattLLVW`_, `mephi42`_, `mirceaulinic`_, `mkurtak`_, `morganwillcock`_, `msummers42`_, `mtorromeo`_, `multani`_, `mvivaldi`_, `mz-bmcqueen`_, `nasenbaer13`_, `nicholasmhughes`_, `oarmstrong`_, `pkruk`_, `pratik705`_, `psagers`_, `rallytime`_, `rbjorklin`_, `rcallphin`_, `renner`_, `rhoths`_, `richardsimko`_, `rklaren`_, `roaldnefs`_, `s0undt3ch`_, `samodid`_, `skizunov`_, `skjaro`_, `steverweber`_, `sumeetisp`_, `t0fik`_, `techhat`_, `terminalmage`_, `timfreund`_, `timka`_, `tkwilliams`_, `twangboy`_, `unthought`_, `vernondcole`_, `vutny`_, `wedge-jarrad`_, `whytewolf`_, `xuhcc`_)
+- Contributors: **86** (`3add3287`_, `BenoitKnecht`_, `Ch3LL`_, `CorvinM`_, `Da-Juan`_,
+  `DmitryKuzmenko`_, `Giandom`_, `The-Loeki`_, `UtahDave`_, `adelcast`_, `amendlik`_, `angeloudy`_,
+  `anlutro`_, `arthurlogilab`_, `basepi`_, `benediktwerner`_, `brejoc`_, `cachedout`_,
+  `campbellmc`_, `chnrxn`_, `clan`_, `corywright`_, `damon-atkins`_, `dincamihai`_, `dmurphy18`_,
+  `eliasp`_, `eradman`_, `forksaber`_, `frogunder`_, `gaborn57`_, `garethgreenaway`_, `golmaal`_,
+  `gracinet`_, `gtmanfred`_, `haam3r`_, `isbm`_, `jettero`_, `jf`_, `jubrad`_, `keesbos`_,
+  `kris-anderson`_, `lomeroe`_, `mateiw`_, `mattLLVW`_, `mephi42`_, `mirceaulinic`_, `mkurtak`_,
+  `morganwillcock`_, `msummers42`_, `mtorromeo`_, `multani`_, `mvivaldi`_, `mz-bmcqueen`_,
+  `nasenbaer13`_, `nicholasmhughes`_, `oarmstrong`_, `pkruk`_, `pratik705`_, `psagers`_,
+  `rallytime`_, `rbjorklin`_, `rcallphin`_, `renner`_, `rhoths`_, `richardsimko`_, `rklaren`_,
+  `roaldnefs`_, `s0undt3ch`_, `samodid`_, `skizunov`_, `skjaro`_, `steverweber`_, `sumeetisp`_,
+  `t0fik`_, `techhat`_, `terminalmage`_, `timfreund`_, `timka`_, `tkwilliams`_, `twangboy`_,
+  `unthought`_, `vernondcole`_, `vutny`_, `wedge-jarrad`_, `whytewolf`_, `xuhcc`_)
 
 
 Windows Changes
@@ -450,7 +462,8 @@ Changelog for v2017.7.2..v2017.7.3
 
   * aeb5f4e248 Add state.running ssh integration test
 
-* **ISSUE** `saltstack/salt-jenkins#675`_: (`rallytime`_) [2017.7] unit.states.test_file.TestFileState.test_directory is failing on Fedora 27 and CentOS 6 (refs: `#45295`_)
+* **ISSUE** `saltstack/salt-jenkins#675`_: (`rallytime`_) [2017.7] unit.states.test_file.TestFileState.test_directory
+  is failing on Fedora 27 and CentOS 6 (refs: `#45295`_)
 
 * **PR** `#45295`_: (`gtmanfred`_) test directory that doesn't exist
   @ *2018-01-08 20:59:53 UTC*
@@ -1067,7 +1080,14 @@ Changelog for v2017.7.2..v2017.7.3
 
   * 32ef1e12ae Merge branch '2017.7' into 2017.7_replace_with_newer_2016.11_win_pkg
 
-  * 494835c3f2 I backported develop and applied a long list of fixes to 2016.11 this brings these fixes into 2017.7 - Software was not always being removed, general if & was in the string or msi was downloaded to uninstall the software - pkg.list_upgrades failed. Added support for 'latest' and 'Not Found' for version_cmp() to fix this. - output fixes - pkg.list_available no longer forces a pkg.refresh_db this is no longer required, as by default it will update if older than 6 hours - cmd /s /c is prefixed for all commands i.e. installs and removes. - cmd are now strings, instead of a list when using cmd.run. As windows only supports strings. And the " were being broken
+  * 494835c3f2 I backported develop and applied a long list of fixes to 2016.11 this brings these
+    fixes into 2017.7 - Software was not always being removed, general if & was in the string or
+    msi was downloaded to uninstall the software - pkg.list_upgrades failed. Added support for
+    'latest' and 'Not Found' for version_cmp() to fix this. - output fixes - pkg.list_available no
+    longer forces a pkg.refresh_db this is no longer required, as by default it will update if
+    older than 6 hours - cmd /s /c is prefixed for all commands i.e. installs and removes. - cmd
+    are now strings, instead of a list when using cmd.run. As windows only supports strings. And
+    the " were being broken
 
 * **PR** `#44754`_: (`twangboy`_) Fix inet_pton for Windows on Py3
   @ *2017-12-12 14:04:20 UTC*
@@ -1549,7 +1569,8 @@ Changelog for v2017.7.2..v2017.7.3
 
   * 9d43221422 Correct indentation
 
-  * d6e28ebed1 Add handling for FreeBSD in method zone_compare to avoid exception when /etc/localtime file does is absent.  This is valid configuration on FreeBSD and represents UTC.
+  * d6e28ebed1 Add handling for FreeBSD in method zone_compare to avoid exception when
+    /etc/localtime file does is absent.  This is valid configuration on FreeBSD and represents UTC.
 
 * **ISSUE** `#41869`_: (`mirceaulinic`_) Thorium: unable to execute runners (refs: `#44781`_)
 
@@ -3434,7 +3455,9 @@ Changelog for v2017.7.2..v2017.7.3
 
       * babad12d83 Revise "Contributing" docs: merge-forwards/release branches explained!
 
-* **ISSUE** `#43737`_: (`syedaali`_) salt.loaded.int.module.boto_kinesis.__virtual__() is wrongly returning `None`. It should either return `True`, `False` or a new name. If you're the developer of the module 'boto_kinesis', please fix this. (refs: `#43748`_)
+* **ISSUE** `#43737`_: (`syedaali`_) salt.loaded.int.module.boto_kinesis.__virtual__() is wrongly
+  returning `None`. It should either return `True`, `False` or a new name. If you're the developer
+  of the module 'boto_kinesis', please fix this. (refs: `#43748`_)
 
 * **PR** `#43748`_: (`rallytime`_) Add message to boto_kinesis modules if boto libs are missing
   @ *2017-09-27 13:19:33 UTC*
@@ -4389,7 +4412,11 @@ Changelog for v2017.7.2..v2017.7.3
 
     * c15bcbe1cc Merge remote-tracking branch 'upstream/2016.11' into fix-apache-config-multi-entity
 
-    * 4164047951 Fix apache.config with multiple statement At this moment when you post more than one statement in config only last is used. Also file is rewrited multiple times until last statement is written. Example: salt '*' apache.config /etc/httpd/conf.d/ports.conf config="[{'Listen': '8080'}, {'Proxy': "Something"}]" Ends only with    Proxy Something and ignore Listen 8080, This patch fix this issue.
+    * 4164047951 Fix apache.config with multiple statement At this moment when you post more than
+      one statement in config only last is used. Also file is rewrited multiple times until last
+      statement is written. Example: salt '*' apache.config /etc/httpd/conf.d/ports.conf
+      config="[{'Listen': '8080'}, {'Proxy': "Something"}]" Ends only with Proxy Something and
+      ignore Listen 8080, This patch fix this issue.
 
   * b90e59ede9 Merge pull request `#43154`_ from lomeroe/bp-43116-2016.11
 
