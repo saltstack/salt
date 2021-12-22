@@ -1,0 +1,1 @@
+Removed transport kwarg from salt.utils.event.get_event
