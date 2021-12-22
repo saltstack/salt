@@ -49,6 +49,7 @@ Namespaced tag
 
 """
 
+import asyncio
 import atexit
 import contextlib
 import datetime
@@ -230,7 +231,7 @@ class SaltEvent:
             self.io_loop = io_loop
             self._run_io_loop_sync = False
         else:
-            self.io_loop = salt.ext.tornado.ioloop.IOLoop()
+            self.io_loop = asyncio.get_event_loop()
             self._run_io_loop_sync = True
         self.cpub = False
         self.cpush = False
@@ -356,10 +357,10 @@ class SaltEvent:
         if self._run_io_loop_sync:
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 if self.subscriber is None:
-                    self.subscriber = salt.utils.asynchronous.SyncWrapper(
+                    self.subscriber = salt.utils.asynchronous.AIOSyncWrapper(
                         salt.transport.ipc.IPCMessageSubscriber,
                         args=(self.puburi,),
-                        kwargs={"io_loop": self.io_loop},
+                        #kwargs={"io_loop": self.io_loop},
                         loop_kwarg="io_loop",
                     )
                 try:
@@ -411,7 +412,7 @@ class SaltEvent:
         if self._run_io_loop_sync:
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 if self.pusher is None:
-                    self.pusher = salt.utils.asynchronous.SyncWrapper(
+                    self.pusher = salt.utils.asynchronous.AIOSyncWrapper(
                         salt.transport.ipc.IPCMessageClient,
                         args=(self.pulluri,),
                         kwargs={"io_loop": self.io_loop},
@@ -563,7 +564,11 @@ class SaltEvent:
             try:
                 if not self.cpub and not self.connect_pub(timeout=wait):
                     break
-                raw = self.subscriber.read(timeout=wait)
+                try:
+                    raw = self.subscriber.read(timeout=wait)
+                except TypeError:
+                    log.error("WTF %r", self.subscriber.read)
+                    raise
                 if raw is None:
                     break
                 mtag, data = self.unpack(raw)
@@ -649,7 +654,6 @@ class SaltEvent:
         request, it MUST subscribe the result to ensure the response is not lost
         should other regions of code call get_event for other purposes.
         """
-        log.trace("Get event. tag: %s", tag)
         assert self._run_io_loop_sync
 
         match_func = self._get_match_func(match_type)
@@ -668,6 +672,8 @@ class SaltEvent:
                             self.close_pub()
                             self.connect_pub(timeout=wait)
                             continue
+                        except Exception as exc:  # pylint: disable=broad-except
+                            log.error("Unhandled exception %s", exc, exc_info=True)
                     self.raise_errors = raise_errors
                 else:
                     ret = self._get_event(wait, tag, match_func, no_block)
@@ -720,8 +726,7 @@ class SaltEvent:
                 continue
             yield data
 
-    @salt.ext.tornado.gen.coroutine
-    def fire_event_async(self, data, tag, cb=None, timeout=1000):
+    async def fire_event_async(self, data, tag, cb=None, timeout=1000):
         """
         Send a single event into the publisher with payload dict "data" and
         event identifier "tag"
@@ -769,7 +774,7 @@ class SaltEvent:
             ]
         )
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
-        ret = yield self.pusher.send(msg)
+        ret = await self.pusher.send(msg)
         if cb is not None:
             cb(ret)
 
@@ -833,7 +838,7 @@ class SaltEvent:
                     )
                     raise
         else:
-            self.io_loop.spawn_callback(self.pusher.send, msg)
+            self.io_loop.create_task(self.pusher.send(msg))
         return True
 
     def fire_master(self, data, tag, timeout=1000):
@@ -852,7 +857,8 @@ class SaltEvent:
         if self.pusher is not None:
             self.close_pull()
         if self._run_io_loop_sync and not self.keep_loop:
-            self.io_loop.close()
+            pass
+            # self.io_loop.close()
 
     def _fire_ret_load_specific_fun(self, load, fun_index=0):
         """
@@ -894,16 +900,20 @@ class SaltEvent:
                     data["success"] = False
                     data["return"] = "Error: {}.{}".format(tags[0], tags[-1])
                     data["fun"] = fun
-                    data["user"] = load["user"]
+                    if "user" in load:
+                        data["user"] = load["user"]
+                    else:
+                        log.warn("No user in load")
                     self.fire_event(
                         data,
                         tagify([load["jid"], "sub", load["id"], "error", fun], "job"),
                     )
         except Exception as exc:  # pylint: disable=broad-except
             log.error(
-                "Event iteration failed with exception: %s",
+                "Event iteration failed with exception: %s %r",
                 exc,
-                exc_info_on_loglevel=logging.DEBUG,
+                data,
+                exc_info_on_loglevel=logging.INFO,
             )
 
     def fire_ret_load(self, load):
@@ -947,7 +957,7 @@ class SaltEvent:
         if not self.cpub:
             self.connect_pub()
         # This will handle reconnects
-        return self.subscriber.read_async(event_handler)
+        self.io_loop.create_task(self.subscriber.read_async(event_handler))
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1057,8 +1067,7 @@ class AsyncEventPublisher:
         self.opts = salt.config.DEFAULT_MINION_OPTS.copy()
         default_minion_sock_dir = self.opts["sock_dir"]
         self.opts.update(opts)
-
-        self.io_loop = io_loop or salt.ext.tornado.ioloop.IOLoop.current()
+        self.io_loop = io_loop or asyncio.get_event_loop()
         self._closing = False
         self.publisher = None
         self.puller = None
@@ -1122,14 +1131,15 @@ class AsyncEventPublisher:
 
         log.info("Starting pull socket on %s", epull_uri)
         with salt.utils.files.set_umask(0o177):
-            self.publisher.start()
-            self.puller.start()
+            self.io_loop.create_task(self.publisher.start())
+            self.io_loop.create_task(self.puller.start())
 
     def handle_publish(self, package, _):
         """
         Get something from epull, publish it out epub, and return the package (or None)
         """
         try:
+            log.error("Publisher got package %r", package)
             self.publisher.publish(package)
             return package
         # Add an extra fallback in case a forked process leeks through
@@ -1161,6 +1171,8 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
         self.io_loop = None
         self.puller = None
         self.publisher = None
+        self.log_queue = kwargs.get("log_queue", None)
+        self.log_queue_level = kwargs.get("log_queue_level", None)
 
     def run(self):
         """
@@ -1176,50 +1188,56 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
             )
             os.nice(self.opts["event_publisher_niceness"])
 
-        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
-        with salt.utils.asynchronous.current_ioloop(self.io_loop):
-            if self.opts["ipc_mode"] == "tcp":
-                epub_uri = int(self.opts["tcp_master_pub_port"])
-                epull_uri = int(self.opts["tcp_master_pull_port"])
-            else:
-                epub_uri = os.path.join(self.opts["sock_dir"], "master_event_pub.ipc")
-                epull_uri = os.path.join(self.opts["sock_dir"], "master_event_pull.ipc")
+        if self.log_queue:
+            salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
+        if self.log_queue_level is not None:
+            salt.log.setup.set_multiprocessing_logging_level(self.log_queue_level)
+        salt.log.setup.setup_multiprocessing_logging(self.log_queue)
+        self.io_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.io_loop)
 
-            self.publisher = salt.transport.ipc.IPCMessagePublisher(
-                self.opts, epub_uri, io_loop=self.io_loop
-            )
+        if self.opts["ipc_mode"] == "tcp":
+            epub_uri = int(self.opts["tcp_master_pub_port"])
+            epull_uri = int(self.opts["tcp_master_pull_port"])
+        else:
+            epub_uri = os.path.join(self.opts["sock_dir"], "master_event_pub.ipc")
+            epull_uri = os.path.join(self.opts["sock_dir"], "master_event_pull.ipc")
 
-            self.puller = salt.transport.ipc.IPCMessageServer(
-                epull_uri,
-                io_loop=self.io_loop,
-                payload_handler=self.handle_publish,
-            )
+        self.publisher = salt.transport.ipc.IPCMessagePublisher(
+            self.opts, epub_uri, io_loop=self.io_loop
+        )
 
-            # Start the master event publisher
-            with salt.utils.files.set_umask(0o177):
-                self.publisher.start()
-                self.puller.start()
-                if self.opts["ipc_mode"] != "tcp" and (
-                    self.opts["publisher_acl"] or self.opts["external_auth"]
-                ):
-                    os.chmod(  # nosec
-                        os.path.join(self.opts["sock_dir"], "master_event_pub.ipc"),
-                        0o666,
-                    )
+        self.puller = salt.transport.ipc.IPCMessageServer(
+            epull_uri,
+            io_loop=self.io_loop,
+            payload_handler=self.handle_publish,
+        )
 
-            atexit.register(self.close)
-            with contextlib.suppress(KeyboardInterrupt):
-                try:
-                    self.io_loop.start()
-                finally:
-                    # Make sure the IO loop and respective sockets are closed and destroyed
-                    self.close()
+        # Start the master event publisher
+        # with salt.utils.files.set_umask(0o177):
+        self.io_loop.create_task(self.publisher.start())
+        self.io_loop.create_task(self.puller.start())
+        #    if self.opts["ipc_mode"] != "tcp" and (
+        #        self.opts["publisher_acl"] or self.opts["external_auth"]
+        #    ):
+        #        os.chmod(  # nosec
+        #            os.path.join(self.opts["sock_dir"], "master_event_pub.ipc"),
+        #            0o666,
+        #        )
+        atexit.register(self.close)
+        with contextlib.suppress(KeyboardInterrupt):
+            try:
+                self.io_loop.run_forever()
+            finally:
+                # Make sure the IO loop and respective sockets are closed and destroyed
+                self.close()
 
     def handle_publish(self, package, _):
         """
         Get something from epull, publish it out epub, and return the package (or None)
         """
         try:
+            log.debug("%s handle publish %r", self.__class__.__name__, package)
             self.publisher.publish(package)
             return package
         # Add an extra fallback in case a forked process leeks through

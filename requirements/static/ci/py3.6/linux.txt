@@ -14,8 +14,6 @@ ansible==4.4.0
     # via -r requirements/static/ci/linux.in
 apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-apscheduler==3.6.3
-    # via python-telegram-bot
 asn1crypto==1.3.0
     # via
     #   certvalidator
@@ -347,9 +345,7 @@ botocore==1.20.67
     #   moto
     #   s3transfer
 cachetools==4.2.2
-    # via
-    #   google-auth
-    #   python-telegram-bot
+    # via google-auth
 cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
 certifi==2021.5.30
@@ -357,7 +353,6 @@ certifi==2021.5.30
     #   -r requirements/static/ci/common.in
     #   kubernetes
     #   msrest
-    #   python-telegram-bot
     #   requests
 certvalidator==0.11.1
     # via vcert
@@ -719,14 +714,13 @@ python-gnupg==0.4.4
     # via -r requirements/static/pkg/linux.in
 python-telegram-bot==13.7 ; python_version > "3.5"
     # via -r requirements/static/ci/linux.in
+python-jose[cryptography]==3.2.0
+    # via moto
 pytz==2021.1
     # via
-    #   apscheduler
     #   moto
-    #   python-telegram-bot
     #   tempora
     #   twilio
-    #   tzlocal
 pyvmomi==6.7.1.2018.12
     # via -r requirements/static/ci/common.in
 pyyaml==5.4.1
@@ -737,7 +731,7 @@ pyyaml==5.4.1
     #   junos-eznc
     #   kubernetes
     #   yamlordereddictloader
-pyzmq==18.0.1 ; python_version < "3.9"
+pyzmq==22.3.0 ; python_version >= "3.6"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
@@ -783,6 +777,7 @@ setproctitle==1.1.10 ; python_version < "3.10"
 six==1.16.0
     # via
     #   apscheduler
+    #   aws-sam-translator
     #   bcrypt
     #   cassandra-driver
     #   cheroot
@@ -830,16 +825,14 @@ toml==0.10.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest
-tornado==6.1
-    # via python-telegram-bot
+tornado==5.1
+    # via -r requirements/base.txt
 transitions==0.8.1
     # via junos-eznc
 twilio==6.63.0
     # via -r requirements/static/ci/linux.in
 typing-extensions==3.10.0.0
     # via importlib-metadata
-tzlocal==2.1
-    # via apscheduler
 urllib3==1.26.6
     # via
     #   botocore

@@ -106,7 +106,7 @@ pywin32==303
     #   wmi
 pyyaml==5.4.1
     # via -r requirements/base.txt
-pyzmq==18.0.1 ; python_version < "3.9"
+pyzmq==22.3.0 ; python_version >= "3.6"
     # via -r requirements/zeromq.txt
 requests==2.25.1
     # via
@@ -125,6 +125,8 @@ tempora==4.1.1
     # via portend
 timelib==0.2.5
     # via -r requirements/windows.txt
+tornado==5.1
+    # via -r requirements/base.txt
 typing-extensions==3.10.0.0
     # via
     #   gitpython

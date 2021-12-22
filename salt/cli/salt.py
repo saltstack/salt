@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 
 import salt.defaults.exitcodes
 import salt.log
@@ -20,6 +21,8 @@ from salt.utils.verify import verify_log
 
 sys.modules["pkg_resources"] = None
 
+
+log = logging.getLogger(__name__)
 
 class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
     """
@@ -194,6 +197,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                     ret.update(ret_)
                 self._output_ret(ret, out, retcode=retcode)
             else:
+                log.error("HERE")
                 if self.options.verbose:
                     kwargs["verbose"] = True
                 ret = {}
@@ -205,6 +209,9 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                         ret.update(full_ret)
                     except KeyError:
                         errors.append(full_ret)
+                    log.error("HERE 2")
+
+                log.error("HERE 4")
 
             # Returns summary
             if self.config["cli_summary"] is True:

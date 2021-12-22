@@ -2,6 +2,7 @@
 This module contains all of the routines needed to set up a master server, this
 involves preparing the three listeners and the workers needed by the master.
 """
+import asyncio
 import collections
 import copy
 import ctypes
@@ -682,8 +683,10 @@ class Master(SMaster):
             self.process_manager.add_process(
                 salt.utils.event.EventPublisher,
                 args=(self.opts,),
+                kwargs={"log_queue": log_queue},
                 name="EventPublisher",
             )
+            log.info("publisher started")
 
             if self.opts.get("reactor"):
                 if isinstance(self.opts["engines"], list):
@@ -943,20 +946,22 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         Bind to the local port
         """
-        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
-        self.io_loop.make_current()
+        # New event loop because we should be in a new process.
+        self.io_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.io_loop)
+        self.io_loop.set_debug(True)
         for req_channel in self.req_channels:
+            log.error("Register payload handler")
             req_channel.post_fork(
                 self._handle_payload, io_loop=self.io_loop
             )  # TODO: cleaner? Maybe lazily?
         try:
-            self.io_loop.start()
+            self.io_loop.run_forever()
         except (KeyboardInterrupt, SystemExit):
             # Tornado knows what to do
             pass
 
-    @salt.ext.tornado.gen.coroutine
-    def _handle_payload(self, payload):
+    async def _handle_payload(self, payload):
         """
         The _handle_payload method is the key method used to figure out what
         needs to be done with communication to the server
@@ -980,7 +985,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         key = payload["enc"]
         load = payload["load"]
         ret = {"aes": self._handle_aes, "clear": self._handle_clear}[key](load)
-        raise salt.ext.tornado.gen.Return(ret)
+        return ret
 
     def _post_stats(self, start, cmd):
         """
@@ -2282,7 +2287,9 @@ class ClearFuncs(TransportMethods):
         """
         if not self.channels:
             for transport, opts in iter_transport_opts(self.opts):
-                chan = salt.channel.server.PubServerChannel.factory(opts)
+                chan = salt.channel.server.PubServerChannel.factory(
+                    opts, io_loop=self.io_loop
+                )
                 self.channels.append(chan)
         for chan in self.channels:
             chan.publish(load)

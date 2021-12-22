@@ -86,7 +86,7 @@ pytz==2021.1
     # via tempora
 pyyaml==5.4.1
     # via -r requirements/base.txt
-pyzmq==21.0.2 ; python_version >= "3.9"
+pyzmq==22.3.0 ; python_version >= "3.6"
     # via -r requirements/zeromq.txt
 requests==2.25.1
     # via
@@ -107,6 +107,8 @@ tempora==4.1.1
     # via portend
 timelib==0.2.5
     # via -r requirements/darwin.txt
+tornado==5.1
+    # via -r requirements/base.txt
 urllib3==1.26.6
     # via requests
 vultr==1.0.1

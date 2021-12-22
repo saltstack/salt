@@ -1,13 +1,12 @@
+import asyncio
 import pathlib
 import sys
 
 import attr
 import pytest
 import salt.channel.server
-import salt.ext.tornado.gen
 import salt.transport.ipc
 import salt.utils.platform
-from salt.ext.tornado import locks
 
 pytestmark = [
     # Windows does not support POSIX IPC
@@ -40,7 +39,7 @@ class IPCTester:
     publisher = attr.ib()
     subscriber = attr.ib()
     payloads = attr.ib(default=attr.Factory(list))
-    payload_ack = attr.ib(default=attr.Factory(locks.Condition))
+    payload_ack = attr.ib(default=attr.Factory(asyncio.Condition))
 
     @subscriber.default
     def _subscriber_default(self):
@@ -78,15 +77,28 @@ class IPCTester:
         ret = await self.subscriber.read(timeout)
         return ret
 
-    def __enter__(self):
-        self.publisher.start()
-        self.io_loop.add_callback(self.subscriber.connect)
+#    def __enter__(self):
+#        self.publisher.start()
+#        self.io_loop.create_task(self.subscriber.connect())
+#        return self
+#
+#    def __exit__(self, *args):
+#        self.subscriber.close()
+#        self.publisher.close()
+
+    async def __aenter__(self):
+        await self.publisher.start()
+        await self.subscriber.connect()
+        while not self.publisher.streams:
+            await asyncio.sleep(.01)
         return self
 
-    def __exit__(self, *args):
+    async def __aexit__(self, *args):
         self.subscriber.close()
         self.publisher.close()
 
+    def __await__(self):
+        return self.__aenter__().__await__()
 
 @pytest.fixture
 def ipc_socket_path(tmp_path):
@@ -104,19 +116,14 @@ def ipc_socket_path(tmp_path):
 @pytest.fixture
 def channel(io_loop, ipc_socket_path):
     _ipc_tester = IPCTester(io_loop=io_loop, socket_path=str(ipc_socket_path))
-    with _ipc_tester:
-        yield _ipc_tester
+    yield _ipc_tester
 
-
+import logging
+log = logging.getLogger(__name__)
 async def test_basic_send(channel):
     msg = {"foo": "bar", "stop": True}
-    # XXX: IPCClient connect and connected methods need to be cleaned up as
-    # this should not be needed.
-    while not channel.subscriber._connecting_future.done():
-        await salt.ext.tornado.gen.sleep(0.01)
-    while not channel.subscriber.connected():
-        await salt.ext.tornado.gen.sleep(0.01)
-    assert channel.subscriber.connected()
-    await channel.publish(msg)
-    ret = await channel.read()
-    assert ret == msg
+    async with channel as ch:
+        assert ch.subscriber.connected()
+        await ch.publish(msg)
+        ret = await ch.read()
+        assert ret == msg

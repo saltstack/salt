@@ -4,6 +4,7 @@ masters, encrypting and decrypting payloads, preparing messages, and
 authenticating peers
 """
 
+import asyncio
 import base64
 import binascii
 import copy
@@ -21,7 +22,6 @@ import weakref
 
 import salt.channel.client
 import salt.defaults.exitcodes
-import salt.ext.tornado.gen
 import salt.payload
 import salt.utils.crypt
 import salt.utils.decorators
@@ -481,36 +481,8 @@ class AsyncAuth:
     Set up an Async object to maintain authentication with the salt master
     """
 
-    # This class is only a singleton per minion/master pair
-    # mapping of io_loop -> {key -> auth}
-    instance_map = weakref.WeakKeyDictionary()
-
     # mapping of key -> creds
     creds_map = {}
-
-    def __new__(cls, opts, io_loop=None):
-        """
-        Only create one instance of AsyncAuth per __key()
-        """
-        # do we have any mapping for this io_loop
-        io_loop = io_loop or salt.ext.tornado.ioloop.IOLoop.current()
-        if io_loop not in AsyncAuth.instance_map:
-            AsyncAuth.instance_map[io_loop] = weakref.WeakValueDictionary()
-        loop_instance_map = AsyncAuth.instance_map[io_loop]
-
-        key = cls.__key(opts)
-        auth = loop_instance_map.get(key)
-        if auth is None:
-            log.debug("Initializing new AsyncAuth for %s", key)
-            # we need to make a local variable for this, as we are going to store
-            # it in a WeakValueDictionary-- which will remove the item if no one
-            # references it-- this forces a reference while we return to the caller
-            auth = object.__new__(cls)
-            auth.__singleton_init__(opts, io_loop=io_loop)
-            loop_instance_map[key] = auth
-        else:
-            log.debug("Re-using AsyncAuth for %s", key)
-        return auth
 
     @classmethod
     def __key(cls, opts, io_loop=None):
@@ -520,12 +492,7 @@ class AsyncAuth:
             opts["master_uri"],  # master ID
         )
 
-    # has to remain empty for singletons, since __init__ will *always* be called
     def __init__(self, opts, io_loop=None):
-        pass
-
-    # an init for the singleton instance to call
-    def __singleton_init__(self, opts, io_loop=None):
         """
         Init an Auth instance
 
@@ -544,7 +511,7 @@ class AsyncAuth:
         if not os.path.isfile(self.pub_path):
             self.get_keys()
 
-        self.io_loop = io_loop or salt.ext.tornado.ioloop.IOLoop.current()
+        self.io_loop = io_loop or asyncio.get_event_loop()
 
         salt.utils.crypt.reinit_crypto()
         key = self.__key(self.opts)
@@ -553,23 +520,11 @@ class AsyncAuth:
             creds = AsyncAuth.creds_map[key]
             self._creds = creds
             self._crypticle = Crypticle(self.opts, creds["aes"])
-            self._authenticate_future = salt.ext.tornado.concurrent.Future()
+            self._authenticate_future = asyncio.Future()
             self._authenticate_future.set_result(True)
-        else:
-            self.authenticate()
-
-    def __deepcopy__(self, memo):
-        cls = self.__class__
-        result = cls.__new__(cls, copy.deepcopy(self.opts, memo))
-        memo[id(self)] = result
-        for key in self.__dict__:
-            if key in ("io_loop",):
-                # The io_loop has a thread Lock which will fail to be deep
-                # copied. Skip it because it will just be recreated on the
-                # new copy.
-                continue
-            setattr(result, key, copy.deepcopy(self.__dict__[key], memo))
-        return result
+        # XXX: No side effects in __init__
+        # else:
+        #    self.authenticate()
 
     @property
     def creds(self):
@@ -608,22 +563,22 @@ class AsyncAuth:
         ):
             future = self._authenticate_future
         else:
-            future = salt.ext.tornado.concurrent.Future()
+            future = asyncio.Future()
             self._authenticate_future = future
-            self.io_loop.add_callback(self._authenticate)
+            self.io_loop.create_task(self._authenticate())
+            # asyncio.ensure_future(self._authenticate())
 
         if callback is not None:
 
             def handle_future(future):
                 response = future.result()
-                self.io_loop.add_callback(callback, response)
+                self.io_loop.create_task(callback(response))
 
             future.add_done_callback(handle_future)
 
         return future
 
-    @salt.ext.tornado.gen.coroutine
-    def _authenticate(self):
+    async def _authenticate(self):
         """
         Authenticate with the master, this method breaks the functional
         paradigm, it will update the master information from a fresh sign
@@ -645,7 +600,7 @@ class AsyncAuth:
             error = None
             while True:
                 try:
-                    creds = yield self.sign_in(channel=channel)
+                    creds = await self.sign_in(channel=channel)
                 except SaltClientError as exc:
                     error = exc
                     break
@@ -673,7 +628,7 @@ class AsyncAuth:
                         log.info(
                             "Waiting %s seconds before retry.", acceptance_wait_time
                         )
-                        yield salt.ext.tornado.gen.sleep(acceptance_wait_time)
+                        await asyncio.sleep(acceptance_wait_time)
                     if acceptance_wait_time < acceptance_wait_time_max:
                         acceptance_wait_time += acceptance_wait_time
                         log.debug(
@@ -711,8 +666,7 @@ class AsyncAuth:
                             salt.utils.event.tagify(prefix="auth", suffix="creds"),
                         )
 
-    @salt.ext.tornado.gen.coroutine
-    def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
+    async def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
         """
         Send a sign in request to the master, sets the key information and
         returns a dict containing the master publish interface to bind to
@@ -753,13 +707,13 @@ class AsyncAuth:
 
         sign_in_payload = self.minion_sign_in_payload()
         try:
-            payload = yield channel.send(sign_in_payload, tries=tries, timeout=timeout)
+            payload = await channel.send(sign_in_payload, tries=tries, timeout=timeout)
         except SaltReqTimeoutError as e:
             if safe:
                 log.warning("SaltReqTimeoutError: %s", e)
-                raise salt.ext.tornado.gen.Return("retry")
+                return "retry"
             if self.opts.get("detect_mode") is True:
-                raise salt.ext.tornado.gen.Return("retry")
+                return "retry"
             else:
                 raise SaltClientError(
                     "Attempt to authenticate with the salt master failed with timeout"
@@ -771,7 +725,7 @@ class AsyncAuth:
 
         if not isinstance(payload, dict):
             log.error("Sign-in attempt failed: %s", payload)
-            raise salt.ext.tornado.gen.Return(False)
+            return False
         if "load" in payload:
             if "ret" in payload["load"]:
                 if not payload["load"]["ret"]:
@@ -782,7 +736,7 @@ class AsyncAuth:
                             "for this minion on the Salt Master.\nThe Salt "
                             "Minion will attempt to to re-authenicate."
                         )
-                        raise salt.ext.tornado.gen.Return("retry")
+                        return "retry"
                     else:
                         log.critical(
                             "The Salt Master has rejected this minion's public "
@@ -794,11 +748,11 @@ class AsyncAuth:
                         # Add a random sleep here for systems that are using a
                         # a service manager to immediately restart the service
                         # to avoid overloading the system
-                        time.sleep(random.randint(10, 20))
+                        await asyncio.sleep(random.randint(10, 20))
                         sys.exit(salt.defaults.exitcodes.EX_NOPERM)
                 # has the master returned that its maxed out with minions?
                 elif payload["load"]["ret"] == "full":
-                    raise salt.ext.tornado.gen.Return("full")
+                    return "full"
                 else:
                     log.error(
                         "The Salt Master has cached the public key for this "
@@ -806,7 +760,7 @@ class AsyncAuth:
                         "before attempting to re-authenticate",
                         self.opts["acceptance_wait_time"],
                     )
-                    raise salt.ext.tornado.gen.Return("retry")
+                    return "retry"
         auth["aes"] = self.verify_master(payload, master_pub="token" in sign_in_payload)
         if not auth["aes"]:
             log.critical(
@@ -843,7 +797,7 @@ class AsyncAuth:
                 ):
                     self._finger_fail(self.opts["master_finger"], m_pub_fn)
         auth["publish_port"] = payload["publish_port"]
-        raise salt.ext.tornado.gen.Return(auth)
+        return auth
 
     def get_keys(self):
         """
@@ -1210,38 +1164,7 @@ class SAuth(AsyncAuth):
     Set up an object to maintain authentication with the salt master
     """
 
-    # This class is only a singleton per minion/master pair
-    instances = weakref.WeakValueDictionary()
-
-    def __new__(cls, opts, io_loop=None):
-        """
-        Only create one instance of SAuth per __key()
-        """
-        key = cls.__key(opts)
-        auth = SAuth.instances.get(key)
-        if auth is None:
-            log.debug("Initializing new SAuth for %s", key)
-            auth = object.__new__(cls)
-            auth.__singleton_init__(opts)
-            SAuth.instances[key] = auth
-        else:
-            log.debug("Re-using SAuth for %s", key)
-        return auth
-
-    @classmethod
-    def __key(cls, opts, io_loop=None):
-        return (
-            opts["pki_dir"],  # where the keys are stored
-            opts["id"],  # minion ID
-            opts["master_uri"],  # master ID
-        )
-
-    # has to remain empty for singletons, since __init__ will *always* be called
     def __init__(self, opts, io_loop=None):
-        super().__init__(opts, io_loop=io_loop)
-
-    # an init for the singleton instance to call
-    def __singleton_init__(self, opts, io_loop=None):
         """
         Init an Auth instance
 
