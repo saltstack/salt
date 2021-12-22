@@ -236,6 +236,8 @@ def returner(ret):
             prom_state = ret["fun_args"][0]
 
     for fun_arg in ret["fun_args"]:
+        if not isinstance(fun_arg, str):
+            continue
         if fun_arg.lower() == "test=true":
             log.warning("The prometheus_textfile returner is not enabled in Test mode.")
             raise salt.exceptions.SaltRunnerError
