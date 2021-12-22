@@ -55,6 +55,7 @@ def store(bank, key, data, cachedir):
             )
 
     outfile = os.path.join(base, "{}.p".format(key))
+    log.error("CACHE IS %r", base)
     tmpfh, tmpfname = tempfile.mkstemp(dir=base)
     os.close(tmpfh)
     try:

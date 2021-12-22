@@ -16,7 +16,7 @@ class BasePillarTest(ModuleCase):
         opts = {
             "file_client": "remote",
             "minion_pillar_cache": "true",
-            "master_type": "local",
+            "master_type": "disable",
             "discovery": False,
             "master": "local",
             "__role": "",

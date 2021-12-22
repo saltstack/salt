@@ -2,6 +2,7 @@
     tests.pytests.conftest
     ~~~~~~~~~~~~~~~~~~~~~~
 """
+import asyncio
 import functools
 import inspect
 import logging
@@ -13,6 +14,7 @@ import sys
 import attr
 import pytest
 import salt.ext.tornado.ioloop
+import salt.utils.asynchronous
 import salt.utils.files
 import salt.utils.platform
 from salt.serializers import yaml
@@ -486,10 +488,10 @@ def pytest_pyfunc_call(pyfuncitem):
     try:
         loop = funcargs["io_loop"]
     except KeyError:
-        loop = salt.ext.tornado.ioloop.IOLoop.current()
+        loop = asyncio.get_event_loop()
 
-    loop.run_sync(
-        CoroTestFunction(pyfuncitem.obj, testargs), timeout=get_test_timeout(pyfuncitem)
+    salt.utils.asynchronous.run_sync(
+        CoroTestFunction, args=(pyfuncitem.obj, testargs), io_loop=loop, timeout=get_test_timeout(pyfuncitem)
     )
     return True
 
@@ -499,13 +501,13 @@ def io_loop():
     """
     Create new io loop for each test, and tear it down after.
     """
-    loop = salt.ext.tornado.ioloop.IOLoop()
-    loop.make_current()
+    loop = asyncio.new_event_loop()
     try:
         yield loop
     finally:
-        loop.clear_current()
-        loop.close(all_fds=True)
+        #loop.clear_current()
+        #loop.close(all_fds=True)
+        loop.close()
 
 
 # <---- Async Test Fixtures ------------------------------------------------------------------------------------------

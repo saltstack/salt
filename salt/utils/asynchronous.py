@@ -3,6 +3,7 @@ Helpers/utils for working with tornado asynchronous stuff
 """
 
 
+import asyncio
 import contextlib
 import logging
 import sys
@@ -14,17 +15,21 @@ import salt.ext.tornado.ioloop
 log = logging.getLogger(__name__)
 
 
+# XXX: Remove this all together
 @contextlib.contextmanager
 def current_ioloop(io_loop):
     """
     A context manager that will set the current ioloop to io_loop for the context
     """
-    orig_loop = salt.ext.tornado.ioloop.IOLoop.current()
-    io_loop.make_current()
-    try:
-        yield
-    finally:
-        orig_loop.make_current()
+    yield
+
+
+#    orig_loop = salt.ext.tornado.ioloop.IOLoop.current()
+#    io_loop.make_current()
+#    try:
+#        yield
+#    finally:
+#        orig_loop.make_current()
 
 
 class SyncWrapper:
@@ -71,15 +76,6 @@ class SyncWrapper:
         self._close_methods = list(
             set(close_methods + getattr(self.obj, "close_methods", []))
         )
-
-    def _populate_async_methods(self):
-        """
-        We need the '_coroutines' attribute on classes until we can depricate
-        tornado<4.5. After that 'is_coroutine_fuction' will always be
-        available.
-        """
-        if hasattr(self.obj, "_coroutines"):
-            self._async_methods += self.obj._coroutines
 
     def __repr__(self):
         return "<SyncWrapper(cls={})".format(self.cls)
@@ -140,3 +136,140 @@ class SyncWrapper:
 
     def __exit__(self, exc_type, exc_val, tb):
         self.close()
+
+
+class AIOSyncWrapper:
+    """
+    A wrapper to make Async classes synchronous
+
+    This is uses as a simple wrapper, for example:
+
+    asynchronous = AsyncClass()
+    # this method would reguarly return a future
+    future = asynchronous.async_method()
+
+    sync = SyncWrapper(async_factory_method, (arg1, arg2), {'kwarg1': 'val'})
+    # the sync wrapper will automatically wait on the future
+    ret = sync.async_method()
+    """
+
+    def __init__(
+        self,
+        cls,
+        args=None,
+        kwargs=None,
+        async_methods=None,
+        close_methods=None,
+        loop_kwarg=None,
+        debug=True,
+    ):
+        self.io_loop = asyncio.new_event_loop()
+        self.io_loop.set_debug(debug)
+        if args is None:
+            args = []
+        if kwargs is None:
+            kwargs = {}
+        if async_methods is None:
+            async_methods = []
+        if close_methods is None:
+            close_methods = []
+        self.loop_kwarg = loop_kwarg
+        self.cls = cls
+        if loop_kwarg:
+            kwargs[self.loop_kwarg] = self.io_loop
+        self.obj = cls(*args, **kwargs)
+        self._async_methods = list(
+            set(async_methods + getattr(self.obj, "async_methods", []))
+        )
+        self._close_methods = list(
+            set(close_methods + getattr(self.obj, "close_methods", []))
+        )
+
+    def __repr__(self):
+        return "<AIOSyncWrapper(cls={})".format(self.cls)
+
+    def close(self):
+        for method in self._close_methods:
+            try:
+                #method = self._wrap(method)
+                func = getattr(self.obj, method)
+                self.io_loop.call_soon_threadsafe(func)
+            except AttributeError:
+                log.error("No async method %s on object %r", method, self.obj)
+            except Exception:  # pylint: disable=broad-except
+                log.exception("Exception encountered while running stop method")
+        self.io_loop.stop()
+        #self.io_loop.close()
+
+    def __getattr__(self, key):
+        if key in self._async_methods:
+            return self._wrap(key)
+        return getattr(self.obj, key)
+
+    def _wrap(self, key):
+        def wrap(*args, **kwargs):
+            results = []
+            func = getattr(self.obj, key)
+            thread = threading.Thread(
+                target=_run_sync_target,
+                args=(func, args, kwargs, results, self.io_loop),
+            )
+            thread.start()
+            thread.join()
+            if results[0]:
+                return results[1]
+            else:
+                exc_info = results[1]
+                raise exc_info[1].with_traceback(exc_info[2])
+
+        return wrap
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, tb):
+        self.close()
+
+
+def _run_sync_target(func, args, kwargs, results, io_loop, timeout=None):
+    asyncio.set_event_loop(io_loop)
+    if args is None:
+        args = ()
+    if kwargs is None:
+        kwargs = {}
+    try:
+        if asyncio.iscoroutinefunction(func):
+            async def wrapper(func, args, kwargs):
+                result = await func(*args, **kwargs)
+                results.append(True)
+                results.append(result)
+            if timeout:
+                io_loop.run_until_complete(
+                    asyncio.wait_for(wrapper(func, args, kwargs), timeout)
+                )
+            else:
+                io_loop.run_until_complete(wrapper(func, args, kwargs))
+        else:
+            result = func(*args, **kwargs)
+            results.append(True)
+            results.append(result)
+    except Exception as exc:  # pylint: disable=broad-except
+        log.error("Encountered exception %r", func, exc_info=True)
+        results.append(False)
+        results.append(sys.exc_info())
+
+
+def run_sync(func, args=None, kwargs=None, io_loop=None, timeout=None):
+    ioloop = io_loop or asyncio.new_event_loop()
+    results = []
+    thread = threading.Thread(
+        target=_run_sync_target,
+        args=(func, args, kwargs, results, ioloop, timeout),
+    )
+    thread.start()
+    thread.join()
+    if results[0]:
+        return results[1]
+    else:
+        exc_info = results[1]
+        raise exc_info[1].with_traceback(exc_info[2])

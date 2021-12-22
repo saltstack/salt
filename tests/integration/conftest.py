@@ -28,7 +28,9 @@ def salt_minion(salt_minion_factory):
     with salt_minion_factory.started():
         # Sync All
         salt_call_cli = salt_minion_factory.salt_call_cli()
-        ret = salt_call_cli.run("saltutil.sync_all", _timeout=120)
+        ret = salt_call_cli.run("saltutil.sync_all",
+            '-l', 'debug',
+            _timeout=120)
         assert ret.exitcode == 0, ret
         yield salt_minion_factory
 

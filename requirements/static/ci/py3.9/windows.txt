@@ -269,7 +269,7 @@ pyyaml==5.4.1
     #   -r requirements/base.txt
     #   clustershell
     #   kubernetes
-pyzmq==20.0.0 ; python_version >= "3.9"
+pyzmq==22.3.0 ; python_version >= "3.6"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
@@ -333,6 +333,8 @@ toml==0.10.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest
+tornado==5.1
+    # via -r requirements/base.txt
 urllib3==1.26.6
     # via
     #   botocore

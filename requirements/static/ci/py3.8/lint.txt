@@ -340,9 +340,7 @@ botocore==1.21.27
     #   moto
     #   s3transfer
 cachetools==4.2.2
-    # via
-    #   google-auth
-    #   python-telegram-bot
+    # via google-auth
 cassandra-driver==3.25.0
     # via -r requirements/static/ci/common.in
 certifi==2021.5.30
@@ -395,7 +393,10 @@ cryptography==3.4.7
     #   moto
     #   paramiko
     #   pyopenssl
+    #   python-telegram-bot
     #   vcert
+decorator==5.1.0
+    # via python-telegram-bot
 distlib==0.3.2
     # via virtualenv
 distro==1.6.0
@@ -703,13 +704,12 @@ python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
 python-gnupg==0.4.7
     # via -r requirements/static/pkg/linux.in
-python-telegram-bot==13.7 ; python_version > "3.5"
+python-telegram-bot==13.0 ; python_version > "3.6"
     # via -r requirements/static/ci/linux.in
 pytz==2021.1
     # via
     #   apscheduler
     #   moto
-    #   python-telegram-bot
     #   tempora
     #   twilio
 pyvmomi==7.0.2
@@ -723,7 +723,7 @@ pyyaml==5.4.1
     #   kubernetes
     #   napalm
     #   yamlordereddictloader
-pyzmq==21.0.2 ; python_version < "3.9"
+pyzmq==22.3.0 ; python_version >= "3.6"
     # via -r requirements/zeromq.txt
 requests-oauthlib==1.3.0
     # via msrest
@@ -817,8 +817,10 @@ toml==0.10.2
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/ci/lint.in
-tornado==6.1
-    # via python-telegram-bot
+tornado==5.1
+    # via
+    #   -r requirements/base.txt
+    #   python-telegram-bot
 transitions==0.8.8
     # via junos-eznc
 twilio==6.63.0
