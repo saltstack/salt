@@ -181,7 +181,7 @@ class DaemonizedPublishServer(PublishServer):
         **kwargs
     ):
         """
-        If a deamon is needed to act as a broker impliment it here.
+        If a daemon is needed to act as a broker implement it here.
 
         :param func publish_payload: A method used to publish the payload
         :param func presence_callback: If the transport support presence
