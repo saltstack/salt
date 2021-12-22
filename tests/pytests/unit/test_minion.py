@@ -492,7 +492,7 @@ def test_scheduler_before_connect():
             minion.destroy()
 
 
-def test_minion_module_refresh():
+def test_minion_module_refresh(tmp_path):
     """
     Tests that the 'module_refresh' just return in case there is no 'schedule'
     because destroy method was already called.
@@ -506,6 +506,7 @@ def test_minion_module_refresh():
     ):
         try:
             mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+            mock_opts["cachedir"] = str(tmp_path)
             minion = salt.minion.Minion(
                 mock_opts,
                 io_loop=salt.ext.tornado.ioloop.IOLoop(),
@@ -519,7 +520,7 @@ def test_minion_module_refresh():
             minion.destroy()
 
 
-def test_minion_module_refresh_beacons_refresh():
+def test_minion_module_refresh_beacons_refresh(tmp_path):
     """
     Tests that 'module_refresh' calls beacons_refresh and that the
     minion object has a beacons attribute with beacons.
@@ -533,6 +534,7 @@ def test_minion_module_refresh_beacons_refresh():
     ):
         try:
             mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+            mock_opts["cachedir"] = str(tmp_path)
             minion = salt.minion.Minion(
                 mock_opts,
                 io_loop=salt.ext.tornado.ioloop.IOLoop(),
