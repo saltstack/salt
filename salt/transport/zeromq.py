@@ -402,6 +402,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         """
         context = zmq.Context(1)
         self._socket = context.socket(zmq.REP)
+        # Linger -1 means we'll never discard messages.
         self._socket.setsockopt(zmq.LINGER, -1)
         self._start_zmq_monitor()
 
@@ -726,7 +727,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     ):
         """
         This method represents the Publish Daemon process. It is intended to be
-        run inn a thread or process as it creates and runs an it's own ioloop.
+        run in a thread or process as it creates and runs an it's own ioloop.
         """
         ioloop = salt.ext.tornado.ioloop.IOLoop()
         ioloop.make_current()
