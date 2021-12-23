@@ -345,7 +345,7 @@ def returner(ret):
                     'salt_failed{state_id="'
                     + state_return["__id__"]
                     + '",state_comment="'
-                    + state_return["comment"]
+                    + state_return["comment"].replace('"', "")
                 )
                 if opts["add_state_name"]:
                     key += '",state="' + prom_state

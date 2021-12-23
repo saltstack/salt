@@ -276,7 +276,7 @@ def test_prometheus_output_with_show_failed_state_option_and_abort_state_ids(
         'salt_version_tagged{{salt_version="{}"}} 1'.format(salt.version.__version__),
         "# HELP salt_failed Information regarding state with failure condition",
         "# TYPE salt_failed gauge",
-        'salt_failed{state_id="echo includeme",state_comment="Command "echo includeme" run"} 1',
+        'salt_failed{state_id="echo includeme",state_comment="Command echo includeme run"} 1',
     ]
     expected = "\n".join(sorted(promfile_lines))
 
