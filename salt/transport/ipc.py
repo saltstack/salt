@@ -240,19 +240,20 @@ class IPCMessagePublisher:
             log.debug("%s Socket is %r", self.__class__.__name__, socket)
         self.streams.add((reader, writer))
 
-    async def _write(self, writer, pack):
+    async def _write(self, writer, reader, pack):
         try:
             log.debug("%s write %r", self.__class__.__name__, pack)
             writer.write(pack)
             await writer.drain()
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Exception occurred while handling stream: %s", exc)
+            self.streams.remove((reader, writer))
 
     def publish(self, msg):
         log.debug("%s publish %r", self.__class__.__name__, msg)
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
-        for reader, writer in self.streams:
-            self.io_loop.create_task(self._write(writer, pack))
+        for reader, writer in list(self.streams):
+            self.io_loop.create_task(self._write(writer, reader, pack))
 
     def close(self):
         if self.server:
