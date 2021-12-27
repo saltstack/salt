@@ -491,7 +491,7 @@ def pytest_pyfunc_call(pyfuncitem):
         loop = asyncio.get_event_loop()
 
     salt.utils.asynchronous.run_sync(
-        CoroTestFunction(pyfuncitem.obj, testargs)(), io_loop=loop, timeout=get_test_timeout(pyfuncitem)
+        CoroTestFunction, args=(pyfuncitem.obj, testargs), io_loop=loop, timeout=get_test_timeout(pyfuncitem)
     )
     return True
 

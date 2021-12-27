@@ -233,6 +233,10 @@ class AIOSyncWrapper:
 
 def _run_sync_target(func, args, kwargs, results, io_loop, timeout=None):
     asyncio.set_event_loop(io_loop)
+    if args is None:
+        args = ()
+    if kwargs is None:
+        kwargs = {}
     try:
         if asyncio.iscoroutinefunction(func):
             async def wrapper(func, args, kwargs):
@@ -255,7 +259,7 @@ def _run_sync_target(func, args, kwargs, results, io_loop, timeout=None):
         results.append(sys.exc_info())
 
 
-def run_sync(func, args, kwargs, io_loop=None, timeout=None):
+def run_sync(func, args=None, kwargs=None, io_loop=None, timeout=None):
     ioloop = io_loop or asyncio.new_event_loop()
     results = []
     thread = threading.Thread(
