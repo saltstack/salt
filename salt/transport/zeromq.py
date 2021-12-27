@@ -304,7 +304,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self._w_monitor = None
         self.task = None
 
-    def zmq_device(self):
+    def xzmq_device(self):
         """
         Multiprocessing target for the zmq queue device
         """
@@ -356,6 +356,79 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             except (KeyboardInterrupt, SystemExit):
                 break
         context.term()
+
+    def zmq_device(self):
+        """
+        Multiprocessing target for the zmq queue device
+        """
+        loop = asyncio.get_event_loop()
+        loop.stop()
+        loop.close()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        self.__setup_signals()
+        from zmq.devices.monitoredqueuedevice import MonitoredQueue
+        from zmq.devices import Device
+        from zmq.utils.strtypes import asbytes
+
+        if self.opts["mworker_queue_niceness"] and not salt.utils.platform.is_windows():
+            log.info(
+                "setting mworker_queue niceness to %d",
+                self.opts["mworker_queue_niceness"],
+            )
+            os.nice(self.opts["mworker_queue_niceness"])
+
+        if self.opts.get("ipc_mode", "") == "tcp":
+            self.w_uri = "tcp://127.0.0.1:{}".format(
+                self.opts.get("tcp_master_workers", 4515)
+            )
+        else:
+            self.w_uri = "ipc://{}".format(
+                os.path.join(self.opts["sock_dir"], "workers.ipc")
+            )
+
+        context = zmq.Context(self.opts["worker_threads"])
+        # Prepare the zeromq sockets
+        self.uri = "tcp://{interface}:{ret_port}".format(**self.opts)
+        #self.clients = context.socket(zmq.ROUTER)
+        #self.clients.setsockopt(zmq.LINGER, -1)
+        #if self.opts["ipv6"] is True and hasattr(zmq, "IPV4ONLY"):
+        #    # IPv6 sockets work for both IPv6 and IPv4 addresses
+        #    self.clients.setsockopt(zmq.IPV4ONLY, 0)
+        #self.clients.setsockopt(zmq.BACKLOG, self.opts.get("zmq_backlog", 1000))
+        #self._start_zmq_monitor(self.clients)
+        #self.workers = context.socket(zmq.DEALER)
+        #self.workers.setsockopt(zmq.LINGER, -1)
+
+
+        log.info("Setting up the master communication server")
+        #log.debug("ReqServer clients %s", self.uri)
+        #self.clients.bind(self.uri)
+        #log.debug("ReqServer workers %s", self.w_uri)
+        #self.workers.bind(self.w_uri)
+
+        #mon = MonitoredQueue(zmq.ROUTER, zmq.DEALER, zmq.PUB, asbytes("in"), asbytes("out"))
+        mon = Device(in_type=zmq.ROUTER, out_type=zmq.DEALER)
+        mon.bind_in(self.uri)
+        mon.bind_out(self.w_uri)
+        #mon.bind_mon('tcp://127.0.0.1:9999')
+        mon.start()
+
+        #while True:
+        #    if self.clients.closed or self.workers.closed:
+        #        break
+        #    try:
+        #        log.error("ZMQ DEVICE RUN")
+        #        zmq.device(zmq.QUEUE, self.clients, self.workers)
+        #    except zmq.ZMQError as exc:
+        #        if exc.errno == errno.EINTR:
+        #            continue
+        #        raise
+        #    except (KeyboardInterrupt, SystemExit):
+        #        break
+        #log.error("ZMQ DEVICE TERM")
+        context.term()
+
 
     def close(self):
         """
