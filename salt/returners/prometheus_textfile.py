@@ -345,7 +345,7 @@ def returner(ret):
                     'salt_failed{state_id="'
                     + state_return["__id__"]
                     + '",state_comment="'
-                    + state_return["comment"].replace('"', "")
+                    + state_return["comment"].replace('"', "").replace("\n", " ")
                 )
                 if opts["add_state_name"]:
                     key += '",state="' + prom_state
@@ -418,14 +418,17 @@ def returner(ret):
             mode=opts["mode"],
         ) as textfile:
             outlines = []
+            metric_list = set()
             for key, val in output.items():
                 metric = key.split("{")[0]
-                outlines.append(
-                    "# HELP {metric} {helptext}".format(
-                        metric=metric, helptext=val["help"]
+                if metric not in metric_list:
+                    outlines.append(
+                        "# HELP {metric} {helptext}".format(
+                            metric=metric, helptext=val["help"]
+                        )
                     )
-                )
-                outlines.append("# TYPE {metric} gauge".format(metric=metric))
+                    outlines.append("# TYPE {metric} gauge".format(metric=metric))
+                    metric_list.add(metric)
                 outlines.append("{key} {value}".format(key=key, value=val["value"]))
             textfile.write("\n".join(outlines) + "\n")
     except Exception:  # pylint: disable=broad-except

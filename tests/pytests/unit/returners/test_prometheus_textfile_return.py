@@ -278,6 +278,8 @@ def test_prometheus_output_with_show_failed_state_option_and_abort_state_ids(
         "# TYPE salt_failed gauge",
         'salt_failed{state_id="echo includeme",state_comment="Command echo includeme run"} 1',
     ]
+
+    # Test one failed state
     expected = "\n".join(sorted(promfile_lines))
 
     prometheus_textfile.returner(job_ret)
@@ -298,6 +300,36 @@ def test_prometheus_output_with_show_failed_state_option_and_abort_state_ids(
         )
     assert salt_prom == expected
 
+    # Test two failed states
+    job_ret["return"]["cmd_|-echo applyme_|-echo applyme_|-run"]["result"] = False
+    promfile_lines[5] = "salt_states_succeeded 0"
+    promfile_lines[8] = "salt_states_failed 2"
+    promfile_lines[17] = "salt_states_success_pct 0.0"
+    promfile_lines[20] = "salt_states_failure_pct 100.0"
+    promfile_lines.append(
+        'salt_failed{state_id="echo applyme",state_comment="Command echo applyme run"} 1'
+    )
+    expected = "\n".join(sorted(promfile_lines))
+
+    prometheus_textfile.returner(job_ret)
+
+    with salt.utils.files.fopen(
+        os.path.join(cache_dir, "prometheus_textfile", "salt.prom")
+    ) as prom_file:
+        # Drop time-based fields for comparison
+        salt_prom = "\n".join(
+            sorted(
+                [
+                    line[:-1]
+                    for line in prom_file
+                    if not line.startswith("salt_last_started")
+                    and not line.startswith("salt_last_completed")
+                ]
+            )
+        )
+    assert salt_prom == expected
+
+    # Test abort state ID
     prometheus_textfile.__opts__.update({"abort_state_ids": ["echo includeme"]})
     promfile_lines.extend(
         [
