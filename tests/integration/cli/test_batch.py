@@ -26,7 +26,8 @@ class BatchTest(ShellCase):
         """
         ret = "Executing run on [{}]".format(repr("sub_minion"))
         cmd = self.run_salt(
-            '"*minion" test.echo "batch testing" -b 50%', timeout=self.run_timeout,
+            '"*minion" test.echo "batch testing" -b 50%',
+            timeout=self.run_timeout,
         )
         self.assertIn(ret, cmd)
 
@@ -38,7 +39,8 @@ class BatchTest(ShellCase):
         """
         ret = "Executing run on [{}, {}]".format(repr("minion"), repr("sub_minion"))
         cmd = self.run_salt(
-            '"*minion" test.ping --batch-size 2', timeout=self.run_timeout,
+            '"*minion" test.ping --batch-size 2',
+            timeout=self.run_timeout,
         )
         self.assertIn(ret, cmd)
 
@@ -58,7 +60,9 @@ class BatchTest(ShellCase):
 
         os_grain = os_grain.strip()
         cmd = self.run_salt(
-            '-C "G@os:{} and not localhost" -b 25% test.ping'.format(os_grain),
+            '-C "G@os:{} and not localhost" -b 25% test.ping'.format(
+                os_grain.replace(" ", "?")
+            ),
             timeout=self.run_timeout,
         )
         self.assertIn(sub_min_ret, cmd)
@@ -120,7 +124,8 @@ class BatchTest(ShellCase):
 
         # Executing salt with batch: 1 and with failhard. It should stop after the first error.
         cmd = self.run_salt(
-            '"*minion" state.single test.fail_without_changes name=test_me -b 1 --out=yaml --failhard',
+            '"*minion" state.single test.fail_without_changes name=test_me -b 1'
+            " --out=yaml --failhard",
             timeout=self.run_timeout,
         )
 

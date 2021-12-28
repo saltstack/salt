@@ -1,3 +1,5 @@
+import platform
+
 import pytest
 from tests.support.case import SSHCase
 
@@ -12,6 +14,8 @@ class SSHJinjaFiltersTest(SSHCase):
         """
         test jinja filter datautils.strftime
         """
+        if "debian-9" in platform.platform().lower():
+            pytest.skip("This test is broken on debian 9, skipping")
         arg = self._arg_str("state.sls", ["jinja_filters.dateutils_strftime"])
         ret = self.run_ssh(arg)
         import salt.utils.json

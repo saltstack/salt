@@ -91,7 +91,13 @@ def test_compare():
 
 
 @pytest.mark.parametrize(
-    "version", ("Chlorine", 3007, (3007, 0), salt.version.SaltVersionsInfo.CHLORINE,)
+    "version",
+    (
+        "Chlorine",
+        3007,
+        (3007, 0),
+        salt.version.SaltVersionsInfo.CHLORINE,
+    ),
 )
 def test_warn_until_good_version_argument(version):
     with pytest.raises(
@@ -192,7 +198,7 @@ def test_warn_until_warning_raised(subtests):
                 r"([\d.]+). Please remove the warning."
             ),
         ):
-            raise_named_version_warning(_version_info_=(sys.maxsize, 16, 0,))
+            raise_named_version_warning(_version_info_=(sys.maxsize, 16, 0))
 
     with subtests.test(
         "Even though we're calling warn_until, we pass _dont_call_warnings "
@@ -222,7 +228,7 @@ def test_warn_until_warning_raised(subtests):
                 "Hydrogen",
                 "Foo",
                 _dont_call_warnings=True,
-                _version_info_=(sys.maxsize, 16, 0,),
+                _version_info_=(sys.maxsize, 16, 0),
             )
 
     with subtests.test("version on the deprecation message gets properly formatted"):

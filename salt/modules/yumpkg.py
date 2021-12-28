@@ -2043,6 +2043,8 @@ def update(
     See :py:func:`pkg.upgrade <salt.modules.yumpkg.upgrade>` for
     further documentation.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' pkg.update
@@ -2120,12 +2122,11 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
 
     for target in pkg_params:
         version_to_remove = pkg_params[target]
-        installed_versions = old[target].split(",")
 
         # Check if package version set to be removed is actually installed:
         if target in old and not version_to_remove:
             targets.append(target)
-        elif target in old and version_to_remove in installed_versions:
+        elif target in old and version_to_remove in old[target].split(","):
             arch = ""
             pkgname = target
             try:
@@ -3377,9 +3378,9 @@ def _get_patches(installed_only=False):
 
     if parsing_errors:
         log.warning(
-            "Skipped some unexpected output while running '{}' to list patches. Please check output".format(
-                " ".join(cmd)
-            )
+            "Skipped some unexpected output while running '%s' to list "
+            "patches. Please check output",
+            " ".join(cmd),
         )
 
     if installed_only:
@@ -3433,7 +3434,6 @@ def services_need_restart(**kwargs):
     package manager. It might be needed to restart them.
 
     Requires systemd.
-
 
     CLI Examples:
 

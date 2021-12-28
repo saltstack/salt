@@ -300,7 +300,10 @@ class InfluxTestCase(TestCase):
             client.create_retention_policy = MagicMock()
             self.assertTrue(
                 influx08.retention_policy_add(
-                    database="db", name="name", duration="30d", replication=1,
+                    database="db",
+                    name="name",
+                    duration="30d",
+                    replication=1,
                 )
             )
             client.create_retention_policy.assert_called_once_with(
@@ -313,7 +316,10 @@ class InfluxTestCase(TestCase):
             client.alter_retention_policy = MagicMock()
             self.assertTrue(
                 influx08.retention_policy_alter(
-                    database="db", name="name", duration="30d", replication=1,
+                    database="db",
+                    name="name",
+                    duration="30d",
+                    replication=1,
                 )
             )
             client.alter_retention_policy.assert_called_once_with(

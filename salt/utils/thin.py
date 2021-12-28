@@ -287,9 +287,7 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
             continue
 
         if not salt.utils.path.which(py_ver):
-            log.error(
-                "{} does not exist. Could not auto detect dependencies".format(py_ver)
-            )
+            log.error("%s does not exist. Could not auto detect dependencies", py_ver)
             return {}
         py_shell_cmd = [py_ver, "-c", "import {0}; print({0}.__file__)".format(mod)]
         cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE)
@@ -298,9 +296,9 @@ def get_tops_python(py_ver, exclude=None, ext_py_ver=None):
 
         if not stdout or not os.path.exists(mod_file):
             log.error(
-                "Could not auto detect file location for module {} for python version {}".format(
-                    mod, py_ver
-                )
+                "Could not auto detect file location for module %s for python version %s",
+                mod,
+                py_ver,
             )
             continue
 
@@ -453,16 +451,16 @@ def get_tops(extra_mods="", so_mods=""):
                 else:
                     tops.append(os.path.join(moddir, base + ".py"))
             except ImportError as err:
-                log.exception(err)
-                log.error('Unable to import extra-module "%s"', mod)
+                log.error(
+                    'Unable to import extra-module "%s": %s', mod, err, exc_info=True
+                )
 
     for mod in [m for m in so_mods.split(",") if m]:
         try:
             locals()[mod] = __import__(mod)
             tops.append(locals()[mod].__file__)
         except ImportError as err:
-            log.exception(err)
-            log.error('Unable to import so-module "%s"', mod)
+            log.error('Unable to import so-module "%s"', mod, exc_info=True)
 
     return tops
 
@@ -585,8 +583,6 @@ def gen_thin(
     extra_mods="",
     overwrite=False,
     so_mods="",
-    python2_bin="python2",
-    python3_bin="python3",
     absonly=True,
     compress="gzip",
     extended_cfg=None,
@@ -605,11 +601,6 @@ def gen_thin(
         salt-run thin.generate mako,wempy 1
         salt-run thin.generate overwrite=1
     """
-    if python2_bin != "python2" or python3_bin != "python3":
-        salt.utils.versions.warn_until(
-            "Silicon",
-            "python2_bin and python3_bin are no longer used, please update your call to gen_thin",
-        )
     if sys.version_info < (3,):
         raise salt.exceptions.SaltSystemExit(
             'The minimum required python version to run salt-ssh is "3".'
@@ -787,8 +778,6 @@ def gen_min(
     extra_mods="",
     overwrite=False,
     so_mods="",
-    python2_bin="python2",
-    python3_bin="python3",
 ):
     """
     Generate the salt-min tarball and print the location of the tarball
@@ -804,11 +793,6 @@ def gen_min(
         salt-run min.generate mako,wempy 1
         salt-run min.generate overwrite=1
     """
-    if python2_bin != "python2" or python3_bin != "python3":
-        salt.utils.versions.warn_until(
-            "Silicon",
-            "python2_bin and python3_bin are no longer used, please update your call to gen_min",
-        )
     mindir = os.path.join(cachedir, "min")
     if not os.path.isdir(mindir):
         os.makedirs(mindir)

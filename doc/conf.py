@@ -33,7 +33,18 @@ import salt.version  # isort:skip
 formulas_dir = os.path.join(os.pardir, docs_basepath, "formulas")
 
 # ----- Intersphinx Settings ------------------------------------------------>
-intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
+intersphinx_mapping = {
+    "python": (
+        "https://docs.python.org/3",
+        (
+            "/usr/share/doc/python{}.{}/html/objects.inv".format(
+                sys.version_info[0], sys.version_info[1]
+            ),
+            "/usr/share/doc/python/html/objects.inv",
+            None,
+        ),
+    )
+}
 # <---- Intersphinx Settings -------------------------------------------------
 
 # -- General Configuration -----------------------------------------------------
@@ -86,7 +97,13 @@ elif build_type == "next":
     search_cx = "011515552685726825874:ht0p8miksrm"  # latest
 elif build_type == "previous":
     release = previous_release
-    if release.startswith("3003"):
+    if release.startswith("3006"):
+        search_cx = "2e4374de8af93a7b1"  # 3006
+    elif release.startswith("3005"):
+        search_cx = "57b1006b37edd9e79"  # 3005
+    elif release.startswith("3004"):
+        search_cx = "23cd7068705804111"  # 3004
+    elif release.startswith("3003"):
         search_cx = "a70a1a73eef62aecd"  # 3003
     elif release.startswith("3002"):
         search_cx = "5026f4f2af0bdbe2d"  # 3002
@@ -164,17 +181,17 @@ rst_prolog = """\
 .. |windownload| raw:: html
 
      <p>Python3 x86: <a
-     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-x86-Setup.exe.md5"><strong>md5</strong></a></p>
+     href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
+      | <a href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-x86-Setup.exe.md5"><strong>md5</strong></a></p>
 
      <p>Python3 AMD64: <a
-     href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
+     href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
+      | <a href="https://repo.saltproject.io/windows/Salt-Minion-{release}-Py3-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
 
 .. |osxdownloadpy3| raw:: html
 
-     <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg"><strong>salt-{release}-py3-x86_64.pkg</strong></a>
-      | <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg.md5"><strong>md5</strong></a></p>
+     <p>x86_64: <a href="https://repo.saltproject.io/osx/salt-{release}-py3-x86_64.pkg"><strong>salt-{release}-py3-x86_64.pkg</strong></a>
+      | <a href="https://repo.saltproject.io/osx/salt-{release}-py3-x86_64.pkg.md5"><strong>md5</strong></a></p>
 
 """.format(
     release=stripped_release
@@ -342,7 +359,6 @@ man_pages = [
     ("ref/cli/salt-ssh", "salt-ssh", "salt-ssh Documentation", authors, 1),
     ("ref/cli/salt-cloud", "salt-cloud", "Salt Cloud Command", authors, 1),
     ("ref/cli/salt-api", "salt-api", "salt-api Command", authors, 1),
-    ("ref/cli/salt-unity", "salt-unity", "salt-unity Command", authors, 1),
     ("ref/cli/spm", "spm", "Salt Package Manager Command", authors, 1),
 ]
 

@@ -54,8 +54,8 @@ def test_extracted_tar():
     """
 
     if salt.utils.platform.is_windows():
-        source = "c:\\tmp\\foo.tar.gz"
-        tmp_dir = "c:\\tmp\\test_extracted_tar"
+        source = "C:\\tmp\\foo.tar.gz"
+        tmp_dir = "C:\\tmp\\test_extracted_tar"
     elif salt.utils.platform.is_darwin():
         source = "/private/tmp/foo.tar.gz"
         tmp_dir = "/private/tmp/test_extracted_tar"
@@ -101,7 +101,8 @@ def test_extracted_tar():
     isfile_mock = MagicMock(side_effect=_isfile_side_effect)
 
     with patch.dict(
-        archive.__opts__, {"test": False, "cachedir": tmp_dir, "hash_type": "sha256"},
+        archive.__opts__,
+        {"test": False, "cachedir": tmp_dir, "hash_type": "sha256"},
     ), patch.dict(
         archive.__salt__,
         {
@@ -429,8 +430,8 @@ def test_skip_files_list_verify_success():
     """
 
     if salt.utils.platform.is_windows():
-        source = "c:\\tmp\\foo.tar.gz"
-        tmp_dir = "c:\\tmp\\test_extracted_tar"
+        source = "C:\\tmp\\foo.tar.gz"
+        tmp_dir = "C:\\tmp\\test_extracted_tar"
     elif salt.utils.platform.is_darwin():
         source = "/private/tmp/foo.tar.gz"
         tmp_dir = "/private/tmp/test_extracted_tar"

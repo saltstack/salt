@@ -9,8 +9,7 @@
     are made to assure backwards compatibility.
 """
 
-# Import severals classes/functions from salt.log.setup for backwards
-# compatibility
+# Import several classes/functions from salt.log.setup for backwards compatibility
 from salt.log.setup import (
     LOG_LEVELS,
     SORTED_LEVEL_NAMES,

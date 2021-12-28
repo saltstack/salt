@@ -599,7 +599,6 @@ def __discover_version(saltstack_version):
                 "describe",
                 "--tags",
                 "--long",
-                "--first-parent",
                 "--match",
                 "v[0-9]*",
                 "--always",
@@ -609,22 +608,6 @@ def __discover_version(saltstack_version):
 
         out, err = process.communicate()
 
-        if process.returncode != 0:
-            # The git version running this might not support --first-parent
-            # Revert to old command
-            process = subprocess.Popen(
-                [
-                    "git",
-                    "describe",
-                    "--tags",
-                    "--long",
-                    "--match",
-                    "v[0-9]*",
-                    "--always",
-                ],
-                **kwargs
-            )
-            out, err = process.communicate()
         out = out.decode().strip()
         err = err.decode().strip()
 
@@ -721,7 +704,9 @@ def dependency_information(include_salt_cloud=False):
     ]
 
     if include_salt_cloud:
-        libs.append(("Apache Libcloud", "libcloud", "__version__"),)
+        libs.append(
+            ("Apache Libcloud", "libcloud", "__version__"),
+        )
 
     for name, imp, attr in libs:
         if imp is None:

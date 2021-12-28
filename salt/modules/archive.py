@@ -1294,8 +1294,7 @@ def _render_filenames(filenames, zip_file, saltenv, template):
     # render the path as a template using path_template_engine as the engine
     if template not in salt.utils.templates.TEMPLATE_REGISTRY:
         raise CommandExecutionError(
-            "Attempted to render file paths with unavailable engine "
-            "{}".format(template)
+            "Attempted to render file paths with unavailable engine {}".format(template)
         )
 
     kwargs = {}

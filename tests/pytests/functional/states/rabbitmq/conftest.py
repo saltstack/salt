@@ -37,7 +37,10 @@ class RabbitMQCombo:
 def get_test_versions():
     test_versions = []
     name = "rabbitmq"
-    for version in ("3.8",):
+    for version in (
+        "3.8",
+        "3.9",
+    ):
         test_versions.append(
             RabbitMQImage(
                 name=name,
@@ -66,7 +69,8 @@ def rabbitmq_container(request, salt_factories, modules):
     rabbitmq_image = request.param
 
     combo = RabbitMQCombo(
-        rabbitmq_name=rabbitmq_image.name, rabbitmq_version=rabbitmq_image.tag,
+        rabbitmq_name=rabbitmq_image.name,
+        rabbitmq_version=rabbitmq_image.tag,
     )
     container = salt_factories.get_container(
         rabbitmq_image.container_id,

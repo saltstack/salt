@@ -171,7 +171,8 @@ def _call_cli(jboss_config, command, retries=1):
 
     if cli_command_result["retcode"] == 127:
         raise CommandExecutionError(
-            "Could not execute jboss-cli.sh script. Have you specified server_dir variable correctly?\nCurrent CLI path: {cli_path}. ".format(
+            "Could not execute jboss-cli.sh script. Have you specified server_dir"
+            " variable correctly?\nCurrent CLI path: {cli_path}. ".format(
                 cli_path=jboss_config["cli_path"]
             )
         )
@@ -181,9 +182,9 @@ def _call_cli(jboss_config, command, retries=1):
         and "Unable to authenticate against controller" in cli_command_result["stderr"]
     ):
         raise CommandExecutionError(
-            "Could not authenticate against controller, please check username and password for the management console. Err code: {retcode}, stdout: {stdout}, stderr: {stderr}".format(
-                **cli_command_result
-            )
+            "Could not authenticate against controller, please check username and"
+            " password for the management console. Err code: {retcode}, stdout:"
+            " {stdout}, stderr: {stderr}".format(**cli_command_result)
         )
 
     # TODO add WFLYCTL code

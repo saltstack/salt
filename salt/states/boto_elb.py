@@ -667,15 +667,13 @@ def _elb_present(
                 " the provided list."
             )
         if "elb_port" not in listener:
-            raise SaltInvocationError("elb_port is a required value for" " listeners.")
+            raise SaltInvocationError("elb_port is a required value for listeners.")
         if "instance_port" not in listener:
             raise SaltInvocationError(
-                "instance_port is a required value for" " listeners."
+                "instance_port is a required value for listeners."
             )
         if "elb_protocol" not in listener:
-            raise SaltInvocationError(
-                "elb_protocol is a required value for" " listeners."
-            )
+            raise SaltInvocationError("elb_protocol is a required value for listeners.")
         listener["elb_protocol"] = listener["elb_protocol"].upper()
         if listener["elb_protocol"] == "HTTPS" and "certificate" not in listener:
             raise SaltInvocationError(
@@ -953,7 +951,7 @@ def _attributes_present(name, attributes, region, key, keyid, profile):
             sbp = attributes["access_log"]["s3_bucket_prefix"]
             if sbp.startswith("/") or sbp.endswith("/"):
                 raise SaltInvocationError(
-                    "s3_bucket_prefix can not start or" " end with /."
+                    "s3_bucket_prefix can not start or end with /."
                 )
     if attrs_to_set:
         if __opts__["test"]:
@@ -1174,20 +1172,17 @@ def _policies_present(
     policy_names = set()
     for p in policies:
         if "policy_name" not in p:
-            raise SaltInvocationError(
-                "policy_name is a required value for " "policies."
-            )
+            raise SaltInvocationError("policy_name is a required value for policies.")
         if "policy_type" not in p:
-            raise SaltInvocationError(
-                "policy_type is a required value for " "policies."
-            )
+            raise SaltInvocationError("policy_type is a required value for policies.")
         if "policy" not in p:
-            raise SaltInvocationError("policy is a required value for " "listeners.")
+            raise SaltInvocationError("policy is a required value for listeners.")
         # check for unique policy names
         if p["policy_name"] in policy_names:
             raise SaltInvocationError(
-                "Policy names must be unique: policy {}"
-                " is declared twice.".format(p["policy_name"])
+                "Policy names must be unique: policy {} is declared twice.".format(
+                    p["policy_name"]
+                )
             )
         policy_names.add(p["policy_name"])
 
@@ -1196,8 +1191,9 @@ def _policies_present(
         for p in l.get("policies", []):
             if p not in policy_names:
                 raise SaltInvocationError(
-                    "Listener {} on ELB {} refers to "
-                    "undefined policy {}.".format(l["elb_port"], name, p)
+                    "Listener {} on ELB {} refers to undefined policy {}.".format(
+                        l["elb_port"], name, p
+                    )
                 )
 
     # check that backends refer to valid policy names
@@ -1205,9 +1201,9 @@ def _policies_present(
         for p in b.get("policies", []):
             if p not in policy_names:
                 raise SaltInvocationError(
-                    "Backend {} on ELB {} refers to "
-                    "undefined policy "
-                    "{}.".format(b["instance_port"], name, p)
+                    "Backend {} on ELB {} refers to undefined policy {}.".format(
+                        b["instance_port"], name, p
+                    )
                 )
 
     ret = {"result": True, "comment": "", "changes": {}}
