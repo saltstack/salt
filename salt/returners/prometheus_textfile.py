@@ -117,7 +117,6 @@ import logging
 import os
 import time
 
-import salt.exceptions
 import salt.returners
 import salt.utils.files
 
@@ -213,13 +212,13 @@ def returner(ret):
     ]
 
     if ret["fun"] not in state_functions:
-        log.warning(
+        log.info(
             "The prometheus_textfile returner is only intended to run"
             " on %s functions... not %s",
             ", ".join(state_functions),
             ret["fun"],
         )
-        raise salt.exceptions.SaltRunnerError
+        return
 
     opts = _get_options(ret)
 
@@ -239,8 +238,8 @@ def returner(ret):
         if not isinstance(fun_arg, str):
             continue
         if fun_arg.lower() == "test=true":
-            log.warning("The prometheus_textfile returner is not enabled in Test mode.")
-            raise salt.exceptions.SaltRunnerError
+            log.info("The prometheus_textfile returner is not enabled in Test mode.")
+            return
         if opts["add_state_name"] and fun_arg.lower().startswith(
             "prom_textfile_state="
         ):
@@ -254,7 +253,7 @@ def returner(ret):
             os.makedirs(out_dir)
         except OSError:
             log.error("Could not create directory for prometheus output: %s", out_dir)
-            raise salt.exceptions.SaltRunnerError
+            return
 
     success = 0
     failure = 0
@@ -273,7 +272,7 @@ def returner(ret):
 
     if not total:
         log.error("Total states run equals 0. There may be something wrong...")
-        raise salt.exceptions.SaltRunnerError
+        return
 
     salt_procs = _count_minion_procs(
         proc_name=opts["proc_name"],
@@ -433,4 +432,6 @@ def returner(ret):
             textfile.write("\n".join(outlines) + "\n")
     except Exception:  # pylint: disable=broad-except
         log.exception("Could not write to prometheus file: %s", opts["filename"])
-        raise salt.exceptions.SaltRunnerError
+        return
+
+    return True
