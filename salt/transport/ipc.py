@@ -149,8 +149,7 @@ class IPCClient:
                 ConnectionRefusedError,
                 FileNotFoundError,
             ):
-                if timeout is not None:
-                    if time.time() - start > timeout:
+                if timeout is None or time.time() - start > timeout:
                         raise
                 await asyncio.sleep(1)
         if callback:
