@@ -559,6 +559,7 @@ def test_resize():
 
 
 def test_config_loading(vm):
+    """Test if usual config parameters are loaded via get_cloud_config_value()"""
     with patch(
         "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
     ) as client:
