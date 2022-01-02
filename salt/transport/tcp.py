@@ -642,7 +642,7 @@ class MessageClient:
 
     # pylint: disable=W1701
     def __del__(self):
-        if not self._closing:
+        #if not self._closing:
             #log.error("__del__ called %s", "\n".join(self._tb))
         self.close()
 
