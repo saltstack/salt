@@ -102,6 +102,7 @@ class AsyncReqChannel:
     ]
     close_methods = [
         "close",
+        "wait_closed",
     ]
 
     @classmethod
@@ -151,9 +152,7 @@ class AsyncReqChannel:
             "load": load,
         }
 
-    async def crypted_transfer_decode_dictentry(
-        self, load, dictkey=None, timeout=60
-    ):
+    async def crypted_transfer_decode_dictentry(self, load, dictkey=None, timeout=60):
         if not self.auth.authenticated:
             await self.auth.authenticate()
         ret = await self.transport.send(
@@ -275,6 +274,9 @@ class AsyncReqChannel:
         log.debug("Closing %s instance", self.__class__.__name__)
         self._closing = True
         self.transport.close()
+
+    async def wait_closed(self):
+        await self.transport.message_client.stream_return_running
 
     def __enter__(self):
         return self

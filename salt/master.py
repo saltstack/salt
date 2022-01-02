@@ -920,6 +920,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         self.k_mtime = 0
         self.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
         self.stat_clock = time.time()
+        self.name = kwargs.get("name", self.__class__.__name__)
 
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
     # Otherwise, 'SMaster.secrets' won't be copied over to the spawned process
@@ -946,6 +947,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         Bind to the local port
         """
+        log.error("BIND")
         # New event loop because we should be in a new process.
         self.io_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.io_loop)
@@ -982,6 +984,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
 
         :param dict payload: The payload route to the appropriate handler
         """
+        log.error("%s HANDLE PAYLOAD %r", self.name, payload)
         key = payload["enc"]
         load = payload["load"]
         ret = {"aes": self._handle_aes, "clear": self._handle_clear}[key](load)

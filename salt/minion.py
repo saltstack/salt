@@ -836,6 +836,8 @@ class MinionBase:
                         if pub_channel:
                             pub_channel.close()
                         raise
+            # if pub_channel:
+            #    pub_channel.close()
 
     def _discover_masters(self):
         """
@@ -934,7 +936,9 @@ class SMinion(MinionBase):
         if self.opts.get("file_client", "remote") == "remote" or self.opts.get(
             "use_master_when_local", False
         ):
-            salt.utils.asynchronous.run_sync(self.eval_master, args=(self.opts,), kwargs=dict(failed=True))
+            salt.utils.asynchronous.run_sync(
+                self.eval_master, args=(self.opts,), kwargs=dict(failed=True)
+            )
         self.gen_modules(initial_load=True, context=context)
 
         # If configured, cache pillar data on the minion
@@ -1130,7 +1134,6 @@ class MinionManager(MinionBase):
         """
         Create a minion, and asynchronously connect it to a master
         """
-        log.error("CONNECT_MINION")
         last = 0  # never have we signed in
         auth_wait = minion.opts["acceptance_wait_time"]
         failed = False
@@ -1184,11 +1187,9 @@ class MinionManager(MinionBase):
         self._bind()
 
         # Fire off all the minion coroutines
-        log.error("Spawn minion coroutines")
         self._spawn_minions()
 
         # serve forever!
-        log.error("Start IO loop")
         self.io_loop.run_forever()
 
     @property

@@ -181,25 +181,30 @@ class AIOSyncWrapper:
         self._async_methods = list(
             set(async_methods + getattr(self.obj, "async_methods", []))
         )
-        self._close_methods = list(
-            set(close_methods + getattr(self.obj, "close_methods", []))
-        )
+        self._close_methods = getattr(self.obj, "close_methods")
+        # list(
+        #    set(close_methods + getattr(self.obj, "close_methods", []))
+        # )
 
     def __repr__(self):
         return "<AIOSyncWrapper(cls={})".format(self.cls)
 
     def close(self):
         for method in self._close_methods:
+            log.error(
+                "Sync wrapper run close method: %r %s", self._close_methods, method
+            )
             try:
-                #method = self._wrap(method)
-                func = getattr(self.obj, method)
-                self.io_loop.call_soon_threadsafe(func)
+                method = self._wrap(method)
+                method()
+                # func = getattr(self.obj, method)
+                # self.io_loop.call_soon_threadsafe(func)
             except AttributeError:
                 log.error("No async method %s on object %r", method, self.obj)
             except Exception:  # pylint: disable=broad-except
                 log.exception("Exception encountered while running stop method")
         self.io_loop.stop()
-        #self.io_loop.close()
+        # self.io_loop.close()
 
     def __getattr__(self, key):
         if key in self._async_methods:
@@ -219,6 +224,8 @@ class AIOSyncWrapper:
             if results[0]:
                 return results[1]
             else:
+                # import traceback
+                # log.error("\n".join(traceback.format_stack()))
                 exc_info = results[1]
                 raise exc_info[1].with_traceback(exc_info[2])
 
@@ -239,10 +246,12 @@ def _run_sync_target(func, args, kwargs, results, io_loop, timeout=None):
         kwargs = {}
     try:
         if asyncio.iscoroutinefunction(func):
+
             async def wrapper(func, args, kwargs):
                 result = await func(*args, **kwargs)
                 results.append(True)
                 results.append(result)
+
             if timeout:
                 io_loop.run_until_complete(
                     asyncio.wait_for(wrapper(func, args, kwargs), timeout)
