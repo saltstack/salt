@@ -112,6 +112,9 @@ def _connect_client():
 
 
 def avail_locations(call=None):
+    """
+    Return a dictionary of available locations
+    """
     if call == "action":
         raise SaltCloudSystemExit(
             "The list_locations function must be called with -f or --function"
@@ -125,6 +128,9 @@ def avail_locations(call=None):
 
 
 def avail_images(call=None):
+    """
+    Return a dictionary of available images
+    """
     if call == "action":
         raise SaltCloudSystemExit(
             "The avail_images function must be called with -f or --function"
@@ -138,6 +144,9 @@ def avail_images(call=None):
 
 
 def avail_sizes(call=None):
+    """
+    Return a dictionary of available VM sizes
+    """
     if call == "action":
         raise SaltCloudSystemExit(
             "The avail_sizes function must be called with -f or --function"
@@ -151,6 +160,9 @@ def avail_sizes(call=None):
 
 
 def list_ssh_keys(call=None):
+    """
+    Return a dictionary of available SSH keys configured in the current project
+    """
     if call == "action":
         raise SaltCloudSystemExit(
             "The list_ssh_keys function must be called with -f or --function"
@@ -164,6 +176,9 @@ def list_ssh_keys(call=None):
 
 
 def list_nodes_full(call=None):
+    """
+    Return a dictionary of existing VMs in the current project, containing full details per VM
+    """
     if call == "action":
         raise SaltCloudSystemExit(
             "The list_nodes_full function must be called with -f or --function"
@@ -189,6 +204,9 @@ def list_nodes_full(call=None):
 
 
 def list_nodes(call=None):
+    """
+    Return a dictionary of existing VMs in the current project, containing basic details of each VM
+    """
     if call == "action":
         raise SaltCloudSystemExit(
             "The list_nodes function must be called with -f or --function"
@@ -220,6 +238,9 @@ def wait_until(name, state, timeout=300):
 
 
 def show_instance(name, call=None):
+    """
+    Return the details of a specific VM
+    """
     if call != "action":
         raise SaltCloudSystemExit(
             "The show_instance function must be called with -a or --action."
