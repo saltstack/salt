@@ -75,8 +75,8 @@ class IPCTester:
         return ret
 
     def __enter__(self):
-        self.io_loop.add_callback(self.server.start)
-        self.io_loop.add_callback(self.client.connect)
+        self.io_loop.create_task(self.server.start())
+        self.io_loop.create_task(self.client.connect())
         return self
 
     def __exit__(self, *args):

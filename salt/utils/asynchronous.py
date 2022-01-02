@@ -195,10 +195,12 @@ class AIOSyncWrapper:
                 "Sync wrapper run close method: %r %s", self._close_methods, method
             )
             try:
-                method = self._wrap(method)
-                method()
-                # func = getattr(self.obj, method)
-                # self.io_loop.call_soon_threadsafe(func)
+                func = getattr(self.obj, method)
+                if asyncio.iscoroutinefunction(func):
+                    method = self._wrap(method)
+                    method()
+                else:
+                    self.io_loop.call_soon_threadsafe(func)
             except AttributeError:
                 log.error("No async method %s on object %r", method, self.obj)
             except Exception:  # pylint: disable=broad-except
