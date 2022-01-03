@@ -432,6 +432,7 @@ def service_name():
 
 
 class MinionBase:
+
     def __init__(self, opts):
         self.opts = opts
         self.beacons_leader = opts.get("beacons_leader", True)
@@ -1100,6 +1101,7 @@ class MinionManager(MinionBase):
         """
         if not self.minions:
             log.error("Minion unable to successfully connect to a Salt Master.")
+            log.error("\n".join(traceback.format_stack()))
 
     def _spawn_minions(self, timeout=60):
         """
@@ -3743,6 +3745,7 @@ class ProxyMinionManager(MinionManager):
         """
         Helper function to return the correct type of object
         """
+        log.error("CREATE MINION OBJECT")
         return ProxyMinion(
             opts,
             timeout,
@@ -3792,8 +3795,9 @@ class ProxyMinion(Minion):
         which is why the differences are not factored out into separate helper
         functions.
         """
+        log.error("*** WTF %r", master)
         mp_call = _metaproxy_call(self.opts, "post_master_init")
-        return mp_call(self, master)
+        return await mp_call(self, master)
 
     def tune_in(self, start=True):
         """
@@ -3816,7 +3820,7 @@ class ProxyMinion(Minion):
 
     async def _handle_decoded_payload(self, data):
         mp_call = _metaproxy_call(self.opts, "handle_decoded_payload")
-        return mp_call(self, data)
+        return await mp_call(self, data)
 
     @classmethod
     def _target(cls, minion_instance, opts, data, connected):

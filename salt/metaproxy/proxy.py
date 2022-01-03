@@ -58,7 +58,7 @@ from salt.utils.process import SignalHandlingProcess, default_signals
 log = logging.getLogger(__name__)
 
 
-def post_master_init(self, master):
+async def post_master_init(self, master):
     """
     Function to finish init after a proxy
     minion has finished connecting to a master.
@@ -71,7 +71,7 @@ def post_master_init(self, master):
     if self.connected:
         self.opts["master"] = master
 
-        self.opts["pillar"] = yield salt.pillar.get_async_pillar(
+        self.opts["pillar"] = await salt.pillar.get_async_pillar(
             self.opts,
             self.opts["grains"],
             self.opts["id"],
@@ -761,7 +761,7 @@ def handle_payload(self, payload):
     # the minion currently has no need.
 
 
-def handle_decoded_payload(self, data):
+async def handle_decoded_payload(self, data):
     """
     Override this method if you wish to handle the decoded data
     differently.
@@ -807,7 +807,8 @@ def handle_decoded_payload(self, data):
                 "Maximum number of processes reached while executing jid %s, waiting...",
                 data["jid"],
             )
-            yield salt.ext.tornado.gen.sleep(10)
+            await asyncio.sleep(10)
+            #time.sleep(.05)
             process_count = len(salt.utils.minion.running(self.opts))
 
     # We stash an instance references to allow for the socket
