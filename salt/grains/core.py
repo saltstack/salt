@@ -2557,7 +2557,7 @@ def ip6_interfaces():
                 try:
                     socket.inet_pton(socket.AF_INET6, secondary["address"])
                     iface_ips.append(secondary["address"])
-                except (OSError, socket.error):
+                except OSError:
                     pass
         ret[face] = iface_ips
     return {"ip6_interfaces": ret}
