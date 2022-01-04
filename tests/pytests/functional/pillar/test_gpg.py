@@ -184,14 +184,34 @@ GPG_PILLAR_DECRYPTED = {
     },
 }
 
+# Random data pretending to be ciphertext
+GPG_PILLAR_YAML_FAIL = """\
+fail: |
+  -----BEGIN PGP MESSAGE-----
+
+  OzyJmQJJVPxGQqyxwIcAl0wWqdSTHpMXYPLrDoRU8H1xa2DhE5DeUihjm4fHUcHp
+  -----END PGP MESSAGE-----
+"""
+
+GPG_PILLAR_ENCRYPTED_FAIL = {
+    "fail": (
+        "-----BEGIN PGP MESSAGE-----\n"
+        "\n"
+        "OzyJmQJJVPxGQqyxwIcAl0wWqdSTHpMXYPLrDoRU8H1xa2DhE5DeUihjm4fHUcHp\n"
+        "-----END PGP MESSAGE-----\n"
+    ),
+}
+
 
 @pytest.fixture(scope="package", autouse=True)
-def gpg_homedir(salt_master, pillar_state_tree):
+def gpg_homedir(salt_master):
+    """
+    Setup gpg environment
+    """
     _gpg_homedir = pathlib.Path(salt_master.config_dir) / "gpgkeys"
     _gpg_homedir.mkdir(0o700)
     agent_started = False
     try:
-
         cmd_prefix = ["gpg", "--homedir", str(_gpg_homedir)]
 
         cmd = cmd_prefix + ["--list-keys"]
@@ -226,17 +246,10 @@ def gpg_homedir(salt_master, pillar_state_tree):
             cmdline=proc.args,
         )
         log.debug("Importing keypair...:\n%s", ret)
+
         agent_started = True
 
-        top_file_contents = """
-        base:
-          '*':
-            - gpg
-        """
-        with pytest.helpers.temp_file(
-            "top.sls", top_file_contents, pillar_state_tree
-        ), pytest.helpers.temp_file("gpg.sls", GPG_PILLAR_YAML, pillar_state_tree):
-            yield _gpg_homedir
+        yield _gpg_homedir
     finally:
         if agent_started:
             try:
@@ -261,7 +274,43 @@ def gpg_homedir(salt_master, pillar_state_tree):
         shutil.rmtree(str(_gpg_homedir), ignore_errors=True)
 
 
-def test_decrypt_pillar_default_renderer(salt_master, grains):
+@pytest.fixture(scope="package")
+def pillar_homedir(pillar_state_tree):
+    """
+    Setup gpg pillar
+    """
+    top_file_contents = """
+    base:
+      '*':
+        - gpg
+    """
+    with pytest.helpers.temp_file(
+        "top.sls", top_file_contents, pillar_state_tree
+    ), pytest.helpers.temp_file("gpg.sls", GPG_PILLAR_YAML, pillar_state_tree):
+        # Need to yield something so that pytest closes the context as a
+        # callback after the test rather than immediately
+        yield None
+
+
+@pytest.fixture(scope="package")
+def pillar_homedir_bad(pillar_state_tree):
+    """
+    Setup gpg pillar with bad data
+    """
+    top_file_contents = """
+    base:
+      '*':
+        - gpg
+    """
+    with pytest.helpers.temp_file(
+        "top.sls", top_file_contents, pillar_state_tree
+    ), pytest.helpers.temp_file("gpg.sls", GPG_PILLAR_YAML_FAIL, pillar_state_tree):
+        # Need to yield something so that pytest closes the context as a
+        # callback after the test rather than immediately
+        yield None
+
+
+def test_decrypt_pillar_default_renderer(salt_master, grains, pillar_homedir):
     """
     Test recursive decryption of secrets:vault as well as the fallback to
     default decryption renderer.
@@ -274,7 +323,7 @@ def test_decrypt_pillar_default_renderer(salt_master, grains):
 
 
 @pytest.mark.slow_test
-def test_decrypt_pillar_alternate_delimiter(salt_master, grains):
+def test_decrypt_pillar_alternate_delimiter(salt_master, grains, pillar_homedir):
     """
     Test recursive decryption of secrets:vault using a pipe instead of a
     colon as the nesting delimiter.
@@ -291,7 +340,7 @@ def test_decrypt_pillar_alternate_delimiter(salt_master, grains):
     assert ret == GPG_PILLAR_DECRYPTED
 
 
-def test_decrypt_pillar_deeper_nesting(salt_master, grains):
+def test_decrypt_pillar_deeper_nesting(salt_master, grains, pillar_homedir):
     """
     Test recursive decryption, only with a more deeply-nested target. This
     should leave the other keys in secrets:vault encrypted.
@@ -310,7 +359,7 @@ def test_decrypt_pillar_deeper_nesting(salt_master, grains):
     assert ret == expected
 
 
-def test_decrypt_pillar_explicit_renderer(salt_master, grains):
+def test_decrypt_pillar_explicit_renderer(salt_master, grains, pillar_homedir):
     """
     Test recursive decryption of secrets:vault, with the renderer
     explicitly defined, overriding the default. Setting the default to a
@@ -332,7 +381,7 @@ def test_decrypt_pillar_explicit_renderer(salt_master, grains):
     assert ret == GPG_PILLAR_DECRYPTED
 
 
-def test_decrypt_pillar_missing_renderer(salt_master, grains):
+def test_decrypt_pillar_missing_renderer(salt_master, grains, pillar_homedir):
     """
     Test decryption using a missing renderer. It should fail, leaving the
     encrypted keys intact, and add an error to the pillar dictionary.
@@ -361,7 +410,7 @@ def test_decrypt_pillar_missing_renderer(salt_master, grains):
     assert ret["secrets"]["vault"]["qux"] == expected["secrets"]["vault"]["qux"]
 
 
-def test_decrypt_pillar_invalid_renderer(salt_master, grains):
+def test_decrypt_pillar_invalid_renderer(salt_master, grains, pillar_homedir):
     """
     Test decryption using a renderer which is not permitted. It should
     fail, leaving the encrypted keys intact, and add an error to the pillar
@@ -390,3 +439,51 @@ def test_decrypt_pillar_invalid_renderer(salt_master, grains):
     assert ret["secrets"]["vault"]["bar"] == expected["secrets"]["vault"]["bar"]
     assert ret["secrets"]["vault"]["baz"] == expected["secrets"]["vault"]["baz"]
     assert ret["secrets"]["vault"]["qux"] == expected["secrets"]["vault"]["qux"]
+
+
+def test_gpg_decrypt_must_succeed(salt_master, grains, pillar_homedir_bad):
+    """
+    Test that gpg rendering fails when ``gpg_decrypt_must_succeed`` is
+    ``True`` and decryption fails.
+
+        gpg_decrypt_must_succeed: True
+        decrypt_pillar:
+          - fail
+    """
+    opts = salt_master.config.copy()
+    opts["gpg_decrypt_must_succeed"] = True
+    opts["decrypt_pillar"] = ["fail"]
+    pillar_obj = salt.pillar.Pillar(opts, grains, "test", "base")
+    ret = pillar_obj.compile_pillar()
+    expected = copy.deepcopy(GPG_PILLAR_ENCRYPTED_FAIL)
+    expected_error = "Failed to decrypt pillar key 'fail': Could not decrypt cipher "
+
+    assert "_errors" in ret
+    assert len(ret["_errors"]) == 1
+    assert ret["_errors"][0].startswith(expected_error)
+    assert "fail" in ret
+    assert ret["fail"] == expected["fail"]
+
+
+def test_gpg_decrypt_may_succeed(salt_master, grains, pillar_homedir_bad):
+    """
+    Test that gpg rendering does not fail when ``gpg_decrypt_must_succeed`` is
+    ``False`` and decryption fails.
+
+        gpg_decrypt_must_succeed: False
+        decrypt_pillar:
+          - fail
+    """
+    opts = salt_master.config.copy()
+    opts["gpg_decrypt_must_succeed"] = False
+    opts["decrypt_pillar"] = ["fail"]
+    pillar_obj = salt.pillar.Pillar(opts, grains, "test", "base")
+    ret = pillar_obj.compile_pillar()
+    expected = copy.deepcopy(GPG_PILLAR_ENCRYPTED_FAIL)
+
+    assert "_errors" not in ret
+    assert "fail" in ret
+    assert len(ret.keys()) == 1
+    # Presence of trailing whitespace in encrypted/decrypted blocks is not
+    # well-defined
+    assert ret["fail"].rstrip() == expected["fail"].rstrip()
