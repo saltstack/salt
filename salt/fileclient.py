@@ -681,8 +681,6 @@ class Client:
             write_body = [None, False, None]
 
             def on_header(hdr):
-                nonlocal dest_etag
-                nonlocal use_etag
                 if write_body[1] is not False and write_body[2] is None:
                     if not hdr.strip() and "Content-Type" not in write_body[1]:
                         # If write_body[0] is True, then we are not following a

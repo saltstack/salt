@@ -5966,6 +5966,12 @@ def manage_file(
 
     """
     name = os.path.expanduser(name)
+    check_web_source_hash = bool(
+        source
+        and urllib.parse.urlparse(source).scheme != "salt"
+        and not skip_verify
+        and not use_etag
+    )
 
     if not ret:
         ret = {"name": name, "changes": {}, "comment": "", "result": True}
@@ -6019,11 +6025,7 @@ def manage_file(
             # If the downloaded file came from a non salt server or local
             # source, and we are not skipping checksum verification, then
             # verify that it matches the specified checksum.
-            if (
-                not skip_verify
-                and urllib.parse.urlparse(source).scheme != "salt"
-                and not use_etag
-            ):
+            if check_web_source_hash:
                 dl_sum = get_hash(sfn, source_sum["hash_type"])
                 if dl_sum != source_sum["hsum"]:
                     ret["comment"] = (
@@ -6120,11 +6122,7 @@ def manage_file(
                 return _error(ret, "Source file '{}' not found".format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if (
-                not skip_verify
-                and urllib.parse.urlparse(source).scheme != "salt"
-                and not use_etag
-            ):
+            if check_web_source_hash:
                 dl_sum = get_hash(sfn, source_sum["hash_type"])
                 if dl_sum != source_sum["hsum"]:
                     ret["comment"] = (
@@ -6233,11 +6231,7 @@ def manage_file(
                 return _error(ret, "Source file '{}' not found".format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if (
-                not skip_verify
-                and urllib.parse.urlparse(source).scheme != "salt"
-                and not use_etag
-            ):
+            if check_web_source_hash:
                 dl_sum = get_hash(sfn, source_sum["hash_type"])
                 if dl_sum != source_sum["hsum"]:
                     ret["comment"] = (
