@@ -191,9 +191,6 @@ class AIOSyncWrapper:
 
     def close(self):
         for method in self._close_methods:
-            log.error(
-                "Sync wrapper run close method: %r %s", self._close_methods, method
-            )
             try:
                 func = getattr(self.obj, method)
                 if asyncio.iscoroutinefunction(func):

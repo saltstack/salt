@@ -160,7 +160,7 @@ async def post_master_init(self, master):
     # Start engines here instead of in the Minion superclass __init__
     # This is because we need to inject the __proxy__ variable but
     # it is not setup until now.
-    self.io_loop.spawn_callback(
+    self.io_loop.call_soon(
         salt.engines.start_engines, self.opts, self.process_manager, proxy=self.proxy
     )
 
