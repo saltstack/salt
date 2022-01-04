@@ -74,7 +74,7 @@ def test_pki(salt_mm_failover_master_1, salt_mm_failover_master_2, caplog):
         "verify_master_pubkey_sign": True,
     }
     factory = salt_mm_failover_master_1.salt_minion_daemon(
-        "mm-failover-minion-1",
+        "mm-failover-pki-minion-1",
         defaults=config_defaults,
         overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
