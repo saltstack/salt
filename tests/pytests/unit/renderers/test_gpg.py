@@ -11,7 +11,10 @@ from tests.support.mock import MagicMock, Mock, call, patch
 
 @pytest.fixture
 def configure_loader_modules():
-    return {gpg: {}}
+    """
+    GPG renderer configuration
+    """
+    return {gpg: {"__opts__": {"gpg_decrypt_must_succeed": True}}}
 
 
 def test__get_gpg_exec():
@@ -53,8 +56,20 @@ def test__decrypt_ciphertext():
             assert gpg._decrypt_ciphertexts(crypted) == secret
             assert gpg._decrypt_ciphertexts(multicrypted) == multisecret
         with patch("salt.renderers.gpg.Popen", MagicMock(return_value=GPGNotDecrypt())):
-            assert gpg._decrypt_ciphertexts(crypted) == crypted
-            assert gpg._decrypt_ciphertexts(multicrypted) == multicrypted
+            with pytest.raises(SaltRenderError) as decrypt_error:
+                gpg._decrypt_ciphertexts(crypted)
+            # Assertions must be made after closure of context manager
+            assert decrypt_error.value.args[0].startswith("Could not decrypt cipher ")
+            assert crypted in decrypt_error.value.args[0]
+            assert "decrypt error" in decrypt_error.value.args[0]
+            with pytest.raises(SaltRenderError) as multidecrypt_error:
+                gpg._decrypt_ciphertexts(multicrypted)
+            assert multidecrypt_error.value.args[0].startswith(
+                "Could not decrypt cipher "
+            )
+            # Function will raise on a single ciphertext even if multiple are passed
+            assert crypted in multidecrypt_error.value.args[0]
+            assert "decrypt error" in multidecrypt_error.value.args[0]
 
 
 def test__decrypt_object():

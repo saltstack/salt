@@ -1,0 +1,1 @@
+`gpg_decrypt_must_succeed` config to prevent gpg renderer from failing silently
