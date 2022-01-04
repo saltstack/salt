@@ -23,7 +23,7 @@ def _run_salt_cmds(clis, minions):
     for cli in clis:
         for minion in minions:
             try:
-                ret = cli.run("test.echo", ECHO_STR, minion_tgt=minion.id, _timeout=5)
+                ret = cli.run("test.echo", ECHO_STR, minion_tgt=minion.id, _timeout=20)
                 if ret and ret.json:
                     assert ret.json == ECHO_STR
                     assert ret.exitcode == 0
@@ -49,7 +49,7 @@ def _get_all_ret_events_after_time(masters, minions, event_listener, start_time)
         tag = minion_pattern.format(minion.id)
         matchers = [(master.id, tag) for master in masters]
         ret_events = event_listener.get_events(matchers, after_time=start_time)
-        events.append(ret_events)
+        events.append([event for event in ret_events if event.data["fun"] == "test.echo"])
 
     return tuple(events)
 
