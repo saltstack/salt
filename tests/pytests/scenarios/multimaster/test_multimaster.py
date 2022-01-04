@@ -49,7 +49,9 @@ def _get_all_ret_events_after_time(masters, minions, event_listener, start_time)
         tag = minion_pattern.format(minion.id)
         matchers = [(master.id, tag) for master in masters]
         ret_events = event_listener.get_events(matchers, after_time=start_time)
-        events.append([event for event in ret_events if event.data["fun"] == "test.echo"])
+        events.append(
+            [event for event in ret_events if event.data["fun"] == "test.echo"]
+        )
 
     return tuple(events)
 
