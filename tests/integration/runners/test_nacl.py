@@ -3,6 +3,7 @@ Tests for the salt-run command
 """
 
 import logging
+import sys
 
 import pytest
 from tests.support.case import ShellCase
@@ -20,6 +21,7 @@ log = logging.getLogger(__name__)
 
 
 @skipIf(not HAS_LIBNACL, "skipping test_nacl, libnacl is unavailable")
+@skipIf(sys.version_info >= (3, 10), "Segfaults with python 3")
 @pytest.mark.windows_whitelisted
 class NaclTest(ShellCase):
     """
