@@ -136,24 +136,21 @@ def salt_mm_minion_2(salt_mm_master_1, salt_mm_master_2):
 def run_salt_cmds():
     def _run_salt_cmds_fn(clis, minions):
         """
-        Run test.echo from all clis to all minions
+        Run test.ping from all clis to all minions
         """
-        echo_str = "The FitnessGram Pacer Test is a multistage aerobic capacity test"
         returned_minions = []
 
         for cli in clis:
             for minion in minions:
                 try:
-                    ret = cli.run(
-                        "test.echo", echo_str, minion_tgt=minion.id, _timeout=20
-                    )
+                    ret = cli.run("test.ping", minion_tgt=minion.id, _timeout=20)
                     if ret and ret.json:
-                        assert ret.json == echo_str
+                        assert ret.json
                         assert ret.exitcode == 0
                         returned_minions.append(minion)
                 except FactoryTimeout as exc:
                     log.debug(
-                        "Failed to execute test.echo from %s to %s.",
+                        "Failed to execute test.ping from %s to %s.",
                         cli.get_display_name(),
                         minion.id,
                     )
