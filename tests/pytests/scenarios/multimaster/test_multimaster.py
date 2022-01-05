@@ -29,7 +29,7 @@ def _get_all_ret_events_after_time(masters, minions, event_listener, start_time)
             [
                 event
                 for event in ret_events
-                if event.data["fun"] == "test.echo" and event.data["return"] == ECHO_STR
+                if event.data["fun"] == "test.ping" and event.data["return"]
             ]
         )
 
@@ -98,7 +98,6 @@ def test_stopped_first_master(
         assert len(minion_2_ret_events) == 1
         assert minion_1_ret_events.pop().daemon_id == salt_mm_master_2.id
         assert minion_2_ret_events.pop().daemon_id == salt_mm_master_2.id
-        start_time = time.time()
 
 
 def test_stopped_second_master(
@@ -141,7 +140,6 @@ def test_minion_reconnection_attempts(
     salt_mm_minion_2,
     mm_master_1_salt_cli,
     mm_master_2_salt_cli,
-    caplog,
     run_salt_cmds,
     ensure_connections,
 ):
@@ -152,28 +150,14 @@ def test_minion_reconnection_attempts(
         with salt_mm_master_1.stopped():
             # Force the minion to restart
             salt_mm_minion_1.terminate()
-            with caplog.at_level(logging.DEBUG):
-                with pytest.raises(FactoryNotStarted):
-                    with salt_mm_minion_1.started(start_timeout=30):
-                        pass
-            assert (
-                "Trying to connect to: tcp://{}:{}".format(
-                    salt_mm_master_1.config["interface"],
-                    salt_mm_master_1.config["ret_port"],
-                )
-                in caplog.text
-            )
-            assert (
-                "Trying to connect to: tcp://{}:{}".format(
-                    salt_mm_master_2.config["interface"],
-                    salt_mm_master_2.config["ret_port"],
-                )
-                in caplog.text
-            )
+            # This should make sure the minion stays alive with no masters
+            with pytest.raises(FactoryNotStarted):
+                with salt_mm_minion_1.started(start_timeout=30):
+                    pass
 
-        start_time = time.time()
         assert not salt_mm_minion_1.is_running()
 
+        start_time = time.time()
         salt_mm_minion_1.start()
 
         assert salt_mm_minion_1.is_running()
@@ -184,6 +168,7 @@ def test_minion_reconnection_attempts(
             timeout=30,
             after_time=start_time,
         )
+
         assert not start_events.missed
         assert len(start_events.matches) == 1
 
