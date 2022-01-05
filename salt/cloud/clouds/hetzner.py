@@ -222,7 +222,7 @@ def wait_until(name, state, timeout=300):
 def show_instance(name, call=None):
     if call != "action":
         raise SaltCloudSystemExit(
-            "The show_instance action must be called with -a or --action."
+            "The show_instance function must be called with -a or --action."
         )
 
     try:
