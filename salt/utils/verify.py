@@ -3,6 +3,7 @@ A few checks to make sure the environment is sane
 """
 
 import errno
+import itertools
 import logging
 import os
 import re
@@ -287,29 +288,21 @@ def verify_env(
                 if "{}jobs".format(os.path.sep) in fsubdir:
                     continue
                 for root, dirs, files in salt.utils.path.os_walk(fsubdir):
-                    for name in files:
+                    for name in itertools.chain(files, dirs):
                         if name.startswith("."):
                             continue
                         path = os.path.join(root, name)
                         try:
                             fmode = os.stat(path)
+                            if fmode.st_uid != uid or fmode.st_gid != gid:
+                                if permissive and fmode.st_gid in groups:
+                                    pass
+                                else:
+                                    # chown the file for the new user
+                                    os.chown(path, uid, gid)
                         except OSError:
-                            pass
-                        if fmode.st_uid != uid or fmode.st_gid != gid:
-                            if permissive and fmode.st_gid in groups:
-                                pass
-                            else:
-                                # chown the file for the new user
-                                os.chown(path, uid, gid)
-                    for name in dirs:
-                        path = os.path.join(root, name)
-                        fmode = os.stat(path)
-                        if fmode.st_uid != uid or fmode.st_gid != gid:
-                            if permissive and fmode.st_gid in groups:
-                                pass
-                            else:
-                                # chown the file for the new user
-                                os.chown(path, uid, gid)
+                            continue
+
         # Allow the pki dir to be 700 or 750, but nothing else.
         # This prevents other users from writing out keys, while
         # allowing the use-case of 3rd-party software (like django)
