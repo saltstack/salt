@@ -772,3 +772,32 @@ def psaux(name):
     ret = []
     ret.extend([sanitize_name, found_infos, pid_count])
     return ret
+
+
+def status(filter):
+    """
+    Returns a list of processes according to their states.
+    See https://psutil.readthedocs.io/en/latest/index.html\
+?highlight=status#process-status-constants
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ps.status [running, idle, stopped, sleeping, dead, \
+zombie, ...]
+    """
+    ret = []
+    if filter is not None and filter != "":
+        sanitize_name = str(filter)
+        try:
+            ret = [
+                proc.info
+                for proc in psutil.process_iter(["pid", "name", "status"])
+                if proc.info["status"] == sanitize_name
+            ]
+        except psutil.AccessDenied:
+            pass
+    for i in ret:
+        i.pop("status")
+    return ret
