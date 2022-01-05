@@ -12,8 +12,7 @@ import socket
 import threading
 import time
 import traceback
-import urllib.parse as urlparse
-import weakref
+import urllib.parse
 
 import salt.crypt
 import salt.exceptions
@@ -149,26 +148,6 @@ if USE_LOAD_BALANCER:
             self.socket_queue = socket_queue
             self._socket = None
 
-        # __setstate__ and __getstate__ are only used on Windows.
-        # We do this so that __init__ will be invoked on Windows in the child
-        # process so that a register_after_fork() equivalent will work on
-        # Windows.
-        def __setstate__(self, state):
-            self.__init__(
-                state["opts"],
-                state["socket_queue"],
-                log_queue=state["log_queue"],
-                log_queue_level=state["log_queue_level"],
-            )
-
-        def __getstate__(self):
-            return {
-                "opts": self.opts,
-                "socket_queue": self.socket_queue,
-                "log_queue": self.log_queue,
-                "log_queue_level": self.log_queue_level,
-            }
-
         def close(self):
             if self._socket is not None:
                 self._socket.shutdown(socket.SHUT_RDWR)
@@ -221,9 +200,6 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     Note: this class returns a singleton
     """
 
-    # This class is only a singleton per minion/master pair
-    # mapping of io_loop -> {key -> channel}
-    instance_map = weakref.WeakKeyDictionary()
     async_methods = [
         "crypted_transfer_decode_dictentry",
         "_crypted_transfer",
@@ -234,65 +210,10 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         "close",
     ]
 
-    def __new__(cls, opts, **kwargs):
-        """
-        Only create one instance of channel per __key()
-        """
-        # do we have any mapping for this io_loop
-        io_loop = kwargs.get("io_loop") or salt.ext.tornado.ioloop.IOLoop.current()
-        if io_loop not in cls.instance_map:
-            cls.instance_map[io_loop] = weakref.WeakValueDictionary()
-        loop_instance_map = cls.instance_map[io_loop]
-
-        key = cls.__key(opts, **kwargs)
-        obj = loop_instance_map.get(key)
-        if obj is None:
-            log.debug("Initializing new AsyncTCPReqChannel for %s", key)
-            # we need to make a local variable for this, as we are going to store
-            # it in a WeakValueDictionary-- which will remove the item if no one
-            # references it-- this forces a reference while we return to the caller
-            obj = object.__new__(cls)
-            obj.__singleton_init__(opts, **kwargs)
-            obj._instance_key = key
-            loop_instance_map[key] = obj
-            obj._refcount = 1
-            obj._refcount_lock = threading.RLock()
-        else:
-            with obj._refcount_lock:
-                obj._refcount += 1
-            log.debug("Re-using AsyncTCPReqChannel for %s", key)
-        return obj
-
-    @classmethod
-    def __key(cls, opts, **kwargs):
-        if "master_uri" in kwargs:
-            opts["master_uri"] = kwargs["master_uri"]
-        return (
-            opts["pki_dir"],  # where the keys are stored
-            opts["id"],  # minion ID
-            opts["master_uri"],
-            kwargs.get("crypt", "aes"),  # TODO: use the same channel for crypt
-        )
-
-    @classmethod
-    def force_close_all_instances(cls):
-        """
-        Will force close all instances
-        :return: None
-        """
-        for weak_dict in list(cls.instance_map.values()):
-            for instance in list(weak_dict.values()):
-                instance.close()
-
-    # has to remain empty for singletons, since __init__ will *always* be called
     def __init__(self, opts, **kwargs):
-        pass
-
-    # an init for the singleton instance to call
-    def __singleton_init__(self, opts, **kwargs):
         self.opts = dict(opts)
-
-        self.serial = salt.payload.Serial(self.opts)
+        if "master_uri" in kwargs:
+            self.opts["master_uri"] = kwargs["master_uri"]
 
         # crypt defaults to 'aes'
         self.crypt = kwargs.get("crypt", "aes")
@@ -304,13 +225,17 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
 
         resolver = kwargs.get("resolver")
 
-        parse = urlparse.urlparse(self.opts["master_uri"])
+        parse = urllib.parse.urlparse(self.opts["master_uri"])
         master_host, master_port = parse.netloc.rsplit(":", 1)
         self.master_addr = (master_host, int(master_port))
         self._closing = False
         self.message_client = SaltMessageClientPool(
             self.opts,
-            args=(self.opts, master_host, int(master_port),),
+            args=(
+                self.opts,
+                master_host,
+                int(master_port),
+            ),
             kwargs={
                 "io_loop": self.io_loop,
                 "resolver": resolver,
@@ -322,38 +247,12 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     def close(self):
         if self._closing:
             return
-
-        if self._refcount > 1:
-            # Decrease refcount
-            with self._refcount_lock:
-                self._refcount -= 1
-            log.debug(
-                "This is not the last %s instance. Not closing yet.",
-                self.__class__.__name__,
-            )
-            return
-
         log.debug("Closing %s instance", self.__class__.__name__)
         self._closing = True
         self.message_client.close()
 
-        # Remove the entry from the instance map so that a closed entry may not
-        # be reused.
-        # This forces this operation even if the reference count of the entry
-        # has not yet gone to zero.
-        if self.io_loop in self.__class__.instance_map:
-            loop_instance_map = self.__class__.instance_map[self.io_loop]
-            if self._instance_key in loop_instance_map:
-                del loop_instance_map[self._instance_key]
-            if not loop_instance_map:
-                del self.__class__.instance_map[self.io_loop]
-
     # pylint: disable=W1701
     def __del__(self):
-        with self._refcount_lock:
-            # Make sure we actually close no matter if something
-            # went wrong with our ref counting
-            self._refcount = 1
         try:
             self.close()
         except OSError as exc:
@@ -429,7 +328,9 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
     @salt.ext.tornado.gen.coroutine
     def _uncrypted_transfer(self, load, tries=3, timeout=60):
         ret = yield self.message_client.send(
-            self._package_load(load), timeout=timeout, tries=tries,
+            self._package_load(load),
+            timeout=timeout,
+            tries=tries,
         )
 
         raise salt.ext.tornado.gen.Return(ret)
@@ -465,9 +366,6 @@ class AsyncTCPPubChannel(
 
     def __init__(self, opts, **kwargs):
         self.opts = opts
-
-        self.serial = salt.payload.Serial(self.opts)
-
         self.crypt = kwargs.get("crypt", "aes")
         self.io_loop = kwargs.get("io_loop") or salt.ext.tornado.ioloop.IOLoop.current()
         self.connected = False
@@ -563,13 +461,16 @@ class AsyncTCPPubChannel(
                 "tag": tag,
             }
             req_channel = salt.utils.asynchronous.SyncWrapper(
-                AsyncTCPReqChannel, (self.opts,), loop_kwarg="io_loop",
+                AsyncTCPReqChannel,
+                (self.opts,),
+                loop_kwarg="io_loop",
             )
             try:
                 req_channel.send(load, timeout=60)
             except salt.exceptions.SaltReqTimeoutError:
                 log.info(
-                    "fire_master failed: master could not be contacted. Request timed out."
+                    "fire_master failed: master could not be contacted. Request timed"
+                    " out."
                 )
             except Exception:  # pylint: disable=broad-except
                 log.info("fire_master failed: %s", traceback.format_exc())
@@ -707,7 +608,9 @@ class TCPReqServerChannel(
         if USE_LOAD_BALANCER:
             self.socket_queue = multiprocessing.Queue()
             process_manager.add_process(
-                LoadBalancerServer, args=(self.opts, self.socket_queue)
+                LoadBalancerServer,
+                args=(self.opts, self.socket_queue),
+                name="LoadBalancerServer",
             )
         elif not salt.utils.platform.is_windows():
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -732,7 +635,6 @@ class TCPReqServerChannel(
 
         self.payload_handler = payload_handler
         self.io_loop = io_loop
-        self.serial = salt.payload.Serial(self.opts)
         with salt.utils.asynchronous.current_ioloop(self.io_loop):
             if USE_LOAD_BALANCER:
                 self.req_server = LoadBalancerWorker(
@@ -787,12 +689,12 @@ class TCPReqServerChannel(
                 id_ = payload["load"].get("id", "")
                 if "\0" in id_:
                     log.error("Payload contains an id with a null byte: %s", payload)
-                    stream.send(self.serial.dumps("bad load: id contains a null byte"))
+                    stream.send(salt.payload.dumps("bad load: id contains a null byte"))
                     raise salt.ext.tornado.gen.Return()
             except TypeError:
                 log.error("Payload contains non-string id: %s", payload)
                 stream.send(
-                    self.serial.dumps("bad load: id {} is not a string".format(id_))
+                    salt.payload.dumps("bad load: id {} is not a string".format(id_))
                 )
                 raise salt.ext.tornado.gen.Return()
 
@@ -833,7 +735,11 @@ class TCPReqServerChannel(
             elif req_fun == "send_private":
                 stream.write(
                     salt.transport.frame.frame_msg(
-                        self._encrypt_private(ret, req_opts["key"], req_opts["tgt"],),
+                        self._encrypt_private(
+                            ret,
+                            req_opts["key"],
+                            req_opts["tgt"],
+                        ),
                         header=header,
                     )
                 )
@@ -1210,7 +1116,8 @@ class SaltMessageClient:
                         }
                     else:
                         log.warning(
-                            "If you need a certain source IP/port, consider upgrading Tornado >= 4.5"
+                            "If you need a certain source IP/port, consider upgrading"
+                            " Tornado >= 4.5"
                         )
                 with salt.utils.asynchronous.current_ioloop(self.io_loop):
                     self._stream = yield self._tcp_client.connect(
@@ -1220,7 +1127,8 @@ class SaltMessageClient:
                 break
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
-                    "TCP Message Client encountered an exception while connecting to %s:%s: %r, will reconnect in %d seconds",
+                    "TCP Message Client encountered an exception while connecting to"
+                    " %s:%s: %r, will reconnect in %d seconds",
                     self.host,
                     self.port,
                     exc,
@@ -1261,7 +1169,8 @@ class SaltMessageClient:
                                 self.io_loop.spawn_callback(self._on_recv, header, body)
                             else:
                                 log.error(
-                                    "Got response for message_id %s that we are not tracking",
+                                    "Got response for message_id %s that we are not"
+                                    " tracking",
                                     message_id,
                                 )
                 except salt.ext.tornado.iostream.StreamClosedError as e:
@@ -1385,7 +1294,10 @@ class SaltMessageClient:
                         future.tries,
                     )
                     self.send(
-                        msg, timeout=future.timeout, tries=future.tries, future=future,
+                        msg,
+                        timeout=future.timeout,
+                        tries=future.tries,
+                        future=future,
                     )
 
                 else:
@@ -1652,7 +1564,6 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
 
     def __init__(self, opts):
         self.opts = opts
-        self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
         self.ckminions = salt.utils.minions.CkMinions(opts)
         self.io_loop = None
 
@@ -1667,8 +1578,6 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         """
         Bind to the interface specified in the configuration file
         """
-        salt.utils.process.appendproctitle(self.__class__.__name__)
-
         log_queue = kwargs.get("log_queue")
         if log_queue is not None:
             salt.log.setup.set_multiprocessing_logging_queue(log_queue)
@@ -1699,7 +1608,9 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
             pull_uri = os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
 
         pull_sock = salt.transport.ipc.IPCMessageServer(
-            pull_uri, io_loop=self.io_loop, payload_handler=pub_server.publish_payload,
+            pull_uri,
+            io_loop=self.io_loop,
+            payload_handler=pub_server.publish_payload,
         )
 
         # Securely create socket
@@ -1721,7 +1632,9 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         primarily be used to create IPC channels and create our daemon process to
         do the actual publishing
         """
-        process_manager.add_process(self._publish_daemon, kwargs=kwargs)
+        process_manager.add_process(
+            self._publish_daemon, kwargs=kwargs, name=self.__class__.__name__
+        )
 
     def publish(self, load):
         """
@@ -1745,11 +1658,13 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         # TODO: switch to the actual asynchronous interface
         # pub_sock = salt.transport.ipc.IPCMessageClient(self.opts, io_loop=self.io_loop)
         pub_sock = salt.utils.asynchronous.SyncWrapper(
-            salt.transport.ipc.IPCMessageClient, (pull_uri,), loop_kwarg="io_loop",
+            salt.transport.ipc.IPCMessageClient,
+            (pull_uri,),
+            loop_kwarg="io_loop",
         )
         pub_sock.connect()
 
-        int_payload = {"payload": self.serial.dumps(payload)}
+        int_payload = {"payload": salt.payload.dumps(payload)}
 
         # add some targeting stuff for lists only (for now)
         if load["tgt_type"] == "list" and not self.opts.get("order_masters", False):

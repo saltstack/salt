@@ -189,7 +189,7 @@ class PillarRefresh:
     minion_1_pillar = attr.ib(init=False, default=None)
 
     def refresh_pillar(self, timeout=60):
-        ret = self.master.get_salt_cli().run(
+        ret = self.master.salt_cli().run(
             "saltutil.refresh_pillar",
             wait=True,
             minion_tgt=self.minion_id,
@@ -579,3 +579,12 @@ def test_pillar_match_filter_by_minion_id(
 
     # Refresh pillar once we're done
     salt_cli.run("saltutil.refresh_pillar", wait=True, minion_tgt=salt_minion.id)
+
+
+@pytest.mark.slow_test
+def test_pillar_ext_59975(salt_call_cli):
+    """
+    pillar.ext returns result. Issue #59975
+    """
+    ret = salt_call_cli.run("pillar.ext", '{"libvert": _}')
+    assert "ext_pillar_opts" in ret.json

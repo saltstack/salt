@@ -382,8 +382,10 @@ def info(name):
         salt '*' user.info root
     """
     try:
-        data = pwd.getpwnam(name)
-    except KeyError:
+        # pwd.getpwnam seems to cache weirdly, after an account is
+        # deleted, it still returns data. Let's not use it
+        data = next(iter(x for x in pwd.getpwall() if x.pw_name == name))
+    except StopIteration:
         return {}
     else:
         return _format_info(data)

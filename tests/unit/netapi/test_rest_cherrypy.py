@@ -1,13 +1,7 @@
-# Import Python libs
-
-# Import 3rd-party libs
 from urllib.parse import urlencode
 
-# Import Salt libs
 import salt.utils.json
 import salt.utils.yaml
-
-# Import Salt libs
 from tests.support.cherrypy_testclasses import BaseToolsTest
 
 
@@ -56,6 +50,19 @@ class TestInFormats(BaseToolsTest):
         self.assertEqual(response.status, "200 OK")
         self.assertEqual(request.raw_body, raw)
         self.assertDictEqual(request.unserialized_data, data)
+
+    def test_urlencoded_multi_args(self):
+        multi_args = "arg=arg1&arg=arg2"
+        expected = {"arg": ["arg1", "arg2"]}
+        request, response = self.request(
+            "/",
+            method="POST",
+            body=multi_args,
+            headers=(("Content-type", "application/x-www-form-urlencoded"),),
+        )
+        self.assertEqual(response.status, "200 OK")
+        self.assertEqual(request.raw_body, multi_args)
+        self.assertDictEqual(request.unserialized_data, expected)
 
     def test_json_ctype(self):
         data = {"valid": "stuff"}

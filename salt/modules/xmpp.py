@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for Sending Messages via XMPP (a.k.a. Jabber)
 
@@ -35,8 +34,6 @@ Module for Sending Messages via XMPP (a.k.a. Jabber)
 
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -48,7 +45,7 @@ try:
     HAS_LIBS = True
 except ImportError:
 
-    class _ClientXMPP(object):
+    class _ClientXMPP:
         """
         Fake class in order not to raise errors
         """
@@ -79,7 +76,7 @@ class SendMsgBot(_ClientXMPP):
     def __init__(self, jid, password, recipient, msg):
         # PyLint wrongly reports an error when calling super, hence the above
         # disable call
-        super(SendMsgBot, self).__init__(jid, password)
+        super().__init__(jid, password)
 
         self.recipients = [] if recipient is None else [recipient]
         self.rooms = []

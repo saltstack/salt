@@ -79,9 +79,10 @@ def __virtual__():
 
 
 def _log_cmd(cmd):
-    if isinstance(cmd, str):
-        return cmd.split()[0].strip()
-    return cmd[0].strip()
+    if isinstance(cmd, (tuple, list)):
+        return cmd[0].strip()
+    else:
+        return str(cmd).split()[0].strip()
 
 
 def _check_cb(cb_):
@@ -139,8 +140,7 @@ def _render_cmd(
     # render the path as a template using path_template_engine as the engine
     if template not in salt.utils.templates.TEMPLATE_REGISTRY:
         raise CommandExecutionError(
-            "Attempted to render file paths with unavailable engine "
-            "{}".format(template)
+            "Attempted to render file paths with unavailable engine {}".format(template)
         )
 
     kwargs = {}
@@ -488,10 +488,9 @@ def _run(
             marker = "<<<" + str(uuid.uuid4()) + ">>>"
             marker_b = marker.encode(__salt_system_encoding__)
             py_code = (
-                "import sys, os, itertools; "
-                'sys.stdout.write("' + marker + '"); '
-                'sys.stdout.write("\\0".join(itertools.chain(*os.environ.items()))); '
-                'sys.stdout.write("' + marker + '");'
+                "import sys, os, itertools; sys.stdout.write('{0}'); "
+                "sys.stdout.write('\\0'.join(itertools.chain(*os.environ.items()))); "
+                "sys.stdout.write('{0}');".format(marker)
             )
 
             if use_sudo:
@@ -702,7 +701,9 @@ def _run(
                 proc = salt.utils.timed_subprocess.TimedProc(cmd, **new_kwargs)
             except OSError as exc:
                 msg = "Unable to run command '{}' with the context '{}', reason: {}".format(
-                    cmd if output_loglevel is not None else "REDACTED", new_kwargs, exc
+                    cmd if output_loglevel is not None else "REDACTED",
+                    new_kwargs,
+                    exc,
                 )
                 raise CommandExecutionError(msg)
 
@@ -825,7 +826,7 @@ def _run(
                         else:
                             stderr = ""
                         if timeout and (time.time() > will_timeout):
-                            ret["stderr"] = ("SALT: Timeout after {}s\n{}").format(
+                            ret["stderr"] = "SALT: Timeout after {}s\n{}".format(
                                 timeout, stderr
                             )
                             ret["retcode"] = None
@@ -3195,8 +3196,24 @@ def exec_code_all(lang, code, cwd=None, args=None, **kwargs):
     elif isinstance(args, list):
         cmd += args
 
+    def _cleanup_tempfile(path):
+        try:
+            __salt__["file.remove"](path)
+        except (SaltInvocationError, CommandExecutionError) as exc:
+            log.error(
+                "cmd.exec_code_all: Unable to clean tempfile '%s': %s",
+                path,
+                exc,
+                exc_info_on_loglevel=logging.DEBUG,
+            )
+
+    runas = kwargs.get("runas")
+    if runas is not None:
+        if not salt.utils.platform.is_windows():
+            os.chown(codefile, __salt__["file.user_to_uid"](runas), -1)
+
     ret = run_all(cmd, cwd=cwd, python_shell=False, **kwargs)
-    os.remove(codefile)
+    _cleanup_tempfile(codefile)
     return ret
 
 
@@ -3634,8 +3651,9 @@ def shell_info(shell, list_modules=False):
         pw_keys.sort(key=int)
         if not pw_keys:
             return {
-                "error": "Unable to locate 'powershell' Reason: Cannot be "
-                "found in registry.",
+                "error": (
+                    "Unable to locate 'powershell' Reason: Cannot be found in registry."
+                ),
                 "installed": False,
             }
         for reg_ver in pw_keys:
@@ -3650,8 +3668,9 @@ def shell_info(shell, list_modules=False):
             ):
                 details = salt.utils.win_reg.list_values(
                     hive="HKEY_LOCAL_MACHINE",
-                    key="Software\\Microsoft\\PowerShell\\{}\\"
-                    "PowerShellEngine".format(reg_ver),
+                    key="Software\\Microsoft\\PowerShell\\{}\\PowerShellEngine".format(
+                        reg_ver
+                    ),
                 )
 
                 # reset data, want the newest version details only as powershell
@@ -3684,8 +3703,11 @@ def shell_info(shell, list_modules=False):
     else:
         if shell not in regex_shells:
             return {
-                "error": "Salt does not know how to get the version number for "
-                "{}".format(shell),
+                "error": (
+                    "Salt does not know how to get the version number for {}".format(
+                        shell
+                    )
+                ),
                 "installed": None,
             }
         shell_data = regex_shells[shell]

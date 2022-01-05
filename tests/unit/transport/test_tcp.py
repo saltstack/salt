@@ -86,7 +86,11 @@ class AsyncPubChannelTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         cls.stop = threading.Event()
         cls.req_server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
         cls.server_thread = threading.Thread(
-            target=run_loop_in_thread, args=(cls.io_loop, cls.stop,),
+            target=run_loop_in_thread,
+            args=(
+                cls.io_loop,
+                cls.stop,
+            ),
         )
         cls.server_thread.start()
 
@@ -103,7 +107,7 @@ class AsyncPubChannelTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         cls.server_channel.close()
         cls.stop.set()
         cls.server_thread.join()
-        cls.process_manager.kill_children()
+        cls.process_manager.terminate()
         del cls.req_server_channel
 
     def setUp(self):

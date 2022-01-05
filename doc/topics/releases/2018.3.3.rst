@@ -11,7 +11,14 @@ Statistics
 - Total Issue References: **69**
 - Total PR References: **341**
 
-- Contributors: **55** (`Ch3LL`_, `FedericoCeratto`_, `KaiSforza`_, `L4rS6`_, `Lutseslav`_, `The-Loeki`_, `Vaelatern`_, `admd`_, `aesposito91`_, `asenci`_, `astorath`_, `azelezni`_, `babs`_, `bbczeuz`_, `bbinet`_, `brejoc`_, `cro`_, `daa`_, `dmurphy18`_, `dubb-b`_, `dwoz`_, `eliasp`_, `ezh`_, `garethgreenaway`_, `gtmanfred`_, `isbm`_, `jeduardo`_, `kt97679`_, `kuetrzi`_, `linoplt`_, `lomeroe`_, `lusche`_, `mateiw`_, `max-arnold`_, `maxim-sermin`_, `meaksh`_, `mmulqueen`_, `morganwillcock`_, `mtorromeo`_, `nullify005`_, `paulcollinsiii`_, `pritambaral`_, `rallytime`_, `rares-pop`_, `rmarchei`_, `rosscdh`_, `sizgiyaev`_, `sjorge`_, `t0fik`_, `terminalmage`_, `travispaul`_, `twangboy`_, `vinian`_, `weswhet`_, `zerthimon`_)
+- Contributors: **55** (`Ch3LL`_, `FedericoCeratto`_, `KaiSforza`_, `L4rS6`_, `Lutseslav`_,
+  `The-Loeki`_, `Vaelatern`_, `admd`_, `aesposito91`_, `asenci`_, `astorath`_, `azelezni`_,
+  `babs`_, `bbczeuz`_, `bbinet`_, `brejoc`_, `cro`_, `daa`_, `dmurphy18`_, `dubb-b`_, `dwoz`_,
+  `eliasp`_, `ezh`_, `garethgreenaway`_, `gtmanfred`_, `isbm`_, `jeduardo`_, `kt97679`_,
+  `kuetrzi`_, `linoplt`_, `lomeroe`_, `lusche`_, `mateiw`_, `max-arnold`_, `maxim-sermin`_,
+  `meaksh`_, `mmulqueen`_, `morganwillcock`_, `mtorromeo`_, `nullify005`_, `paulcollinsiii`_,
+  `pritambaral`_, `rallytime`_, `rares-pop`_, `rmarchei`_, `rosscdh`_, `sizgiyaev`_, `sjorge`_,
+  `t0fik`_, `terminalmage`_, `travispaul`_, `twangboy`_, `vinian`_, `weswhet`_, `zerthimon`_)
 
 
 .. warning::
@@ -1576,7 +1583,7 @@ Changelog for v2018.3.2..v2018.3.3
 
     * 169afea16a Merge pull request `#48749`_ from Ch3LL/logo_docs
 
-      * 73b1fc29f0 Update Saltstack Logo banner on docs.saltstack.com
+      * 73b1fc29f0 Update Saltstack Logo banner on docs.saltproject.io
 
 * **ISSUE** `#48020`_: (`calvinhp`_) mine.get not returning data in a state.orchestrate sls  (refs: `#48765`_)
 
@@ -1639,12 +1646,12 @@ Changelog for v2018.3.2..v2018.3.3
 
   * d33056704b pass proxy_user, proxy_password, proxy_host, and ca_certs through salt.utils.stringutils.to_str()
 
-* **PR** `#48769`_: (`Ch3LL`_) Update Saltstack Logo banner on docs.saltstack.com
+* **PR** `#48769`_: (`Ch3LL`_) Update Saltstack Logo banner on docs.saltproject.io
   @ *2018-07-25 14:47:19 UTC*
 
   * 1eee4b136b Merge pull request `#48769`_ from Ch3LL/update_doc_2018.3
 
-  * 0cb4bac798 Update Saltstack Logo banner on docs.saltstack.com
+  * 0cb4bac798 Update Saltstack Logo banner on docs.saltproject.io
 
 * **PR** `#48760`_: (`dwoz`_) Multiple windows test fixes
   @ *2018-07-25 11:55:27 UTC*

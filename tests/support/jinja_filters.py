@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 
 import salt.utils.files
@@ -10,7 +5,7 @@ import salt.utils.platform
 from tests.support.unit import skipIf
 
 
-class JinjaFiltersTest(object):
+class JinjaFiltersTest:
     """
     testing Jinja filters are available via state system
     """

@@ -1,20 +1,11 @@
-# -*- coding: utf-8 -*-
-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 import shutil
 import tempfile
 
 import salt.runners.winrepo as winrepo
-
-# Import salt libs
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.mixins import LoaderModuleMockMixin
-
-# Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 

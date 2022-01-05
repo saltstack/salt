@@ -110,7 +110,11 @@ def pillar_tree(integration_files_dir):
 
 @pytest.fixture(scope="package")
 def salt_master(
-    request, salt_factories, host_docker_network_ip_address, state_tree, pillar_tree,
+    request,
+    salt_factories,
+    host_docker_network_ip_address,
+    state_tree,
+    pillar_tree,
 ):
     master_id = random_string("master-compat-", uppercase=False)
     root_dir = salt_factories.get_root_dir_for_daemon(master_id)
@@ -145,7 +149,9 @@ def salt_master(
         }
     )
     factory = salt_factories.salt_master_daemon(
-        master_id, defaults=config_defaults, overrides=config_overrides,
+        master_id,
+        defaults=config_defaults,
+        overrides=config_overrides,
     )
     with factory.started():
         yield factory
@@ -153,7 +159,7 @@ def salt_master(
 
 @pytest.fixture
 def salt_cli(salt_master):
-    return salt_master.get_salt_cli()
+    return salt_master.salt_cli()
 
 
 @pytest.fixture

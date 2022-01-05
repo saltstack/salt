@@ -709,9 +709,8 @@ def db_remove(
     """
     for query in [
         'REVOKE CONNECT ON DATABASE "{db}" FROM public;'.format(db=name),
-        "SELECT pid, pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{db}' AND pid <> pg_backend_pid();".format(
-            db=name
-        ),
+        "SELECT pid, pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname ="
+        " '{db}' AND pid <> pg_backend_pid();".format(db=name),
         'DROP DATABASE "{db}";'.format(db=name),
     ]:
         ret = _psql_prepare_and_run(
@@ -998,22 +997,16 @@ def user_list(
 
     query = "".join(
         [
-            "SELECT "
-            'pg_roles.rolname as "name",'
-            'pg_roles.rolsuper as "superuser", '
-            'pg_roles.rolinherit as "inherits privileges", '
-            'pg_roles.rolcreaterole as "can create roles", '
-            'pg_roles.rolcreatedb as "can create databases", '
-            '{0} as "can update system catalogs", '
-            'pg_roles.rolcanlogin as "can login", '
-            '{1} as "replication", '
-            'pg_roles.rolconnlimit as "connections", '
-            "(SELECT array_agg(pg_roles2.rolname)"
-            "    FROM pg_catalog.pg_auth_members"
-            "    JOIN pg_catalog.pg_roles pg_roles2 ON (pg_auth_members.roleid = pg_roles2.oid)"
-            '    WHERE pg_auth_members.member = pg_roles.oid) as "groups",'
-            'pg_roles.rolvaliduntil::timestamp(0) as "expiry time", '
-            'pg_roles.rolconfig  as "defaults variables" ',
+            'SELECT pg_roles.rolname as "name",pg_roles.rolsuper as "superuser",'
+            ' pg_roles.rolinherit as "inherits privileges", pg_roles.rolcreaterole as'
+            ' "can create roles", pg_roles.rolcreatedb as "can create databases", {0}'
+            ' as "can update system catalogs", pg_roles.rolcanlogin as "can login", {1}'
+            ' as "replication", pg_roles.rolconnlimit as "connections", (SELECT'
+            " array_agg(pg_roles2.rolname)    FROM pg_catalog.pg_auth_members    JOIN"
+            " pg_catalog.pg_roles pg_roles2 ON (pg_auth_members.roleid = pg_roles2.oid)"
+            "    WHERE pg_auth_members.member = pg_roles.oid) as"
+            ' "groups",pg_roles.rolvaliduntil::timestamp(0) as "expiry time",'
+            ' pg_roles.rolconfig  as "defaults variables" ',
             _x(', COALESCE(pg_shadow.passwd, pg_authid.rolpassword) as "password" '),
             "FROM pg_roles ",
             _x("LEFT JOIN pg_authid ON pg_roles.oid = pg_authid.oid "),
@@ -1285,7 +1278,9 @@ def _role_cmd_args(
             )
         )
     if isinstance(valid_until, str) and bool(valid_until):
-        escaped_valid_until = "'{}'".format(valid_until.replace("'", "''"),)
+        escaped_valid_until = "'{}'".format(
+            valid_until.replace("'", "''"),
+        )
     skip_superuser = False
     if bool(db_role) and bool(superuser) == bool(db_role["superuser"]):
         skip_superuser = True
@@ -1634,7 +1629,7 @@ def available_extensions(
 
     """
     exts = []
-    query = "select * " "from pg_available_extensions();"
+    query = "select * from pg_available_extensions();"
     ret = psql_query(
         query,
         user=user,
@@ -3033,7 +3028,7 @@ def _validate_privileges(object_type, privs, privileges):
     else:
         if privileges:
             raise SaltInvocationError(
-                "The privileges option should not " "be set for object_type group"
+                "The privileges option should not be set for object_type group"
             )
 
 
@@ -3434,11 +3429,8 @@ def privileges_grant(
         if object_type == "group":
             query = 'GRANT {} TO "{}" WITH ADMIN OPTION'.format(object_name, name)
         elif object_type in ("table", "sequence") and object_name.upper() == "ALL":
-            query = (
-                "GRANT {} ON ALL {}S IN SCHEMA {} TO "
-                '"{}" WITH GRANT OPTION'.format(
-                    _grants, object_type.upper(), prepend, name
-                )
+            query = 'GRANT {} ON ALL {}S IN SCHEMA {} TO "{}" WITH GRANT OPTION'.format(
+                _grants, object_type.upper(), prepend, name
             )
         else:
             query = 'GRANT {} ON {} {} TO "{}" WITH GRANT OPTION'.format(
@@ -3565,7 +3557,7 @@ def privileges_revoke(
         runas=runas,
     ):
         log.info(
-            "The object: %s of type: %s does not" " have privileges: %s set",
+            "The object: %s of type: %s does not have privileges: %s set",
             object_name,
             object_type,
             privileges,
