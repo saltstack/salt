@@ -9,7 +9,8 @@ import pytest
 import salt.modules.schedule as schedule
 import salt.utils.odict
 from salt.utils.event import SaltEvent
-from tests.support.mock import MagicMock, patch
+from salt.utils.odict import OrderedDict
+from tests.support.mock import MagicMock, call, mock_open, patch
 
 log = logging.getLogger(__name__)
 
@@ -31,30 +32,67 @@ def sock_dir(tmp_path):
 
 
 @pytest.fixture
+def schedule_config_file(tmp_path):
+    return "/etc/salt/minion.d/_schedule.conf"
+
+
+@pytest.fixture
 def configure_loader_modules():
     return {schedule: {}}
 
 
 # 'purge' function tests: 1
 @pytest.mark.slow_test
-def test_purge(sock_dir):
+def test_purge(sock_dir, job1, schedule_config_file):
     """
     Test if it purge all the jobs currently scheduled on the minion.
     """
+    _schedule_data = {"job1": job1}
     with patch.dict(schedule.__opts__, {"schedule": {}, "sock_dir": sock_dir}):
         mock = MagicMock(return_value=True)
         with patch.dict(schedule.__salt__, {"event.fire": mock}):
             _ret_value = {"complete": True, "schedule": {}}
             with patch.object(SaltEvent, "get_event", return_value=_ret_value):
-                assert schedule.purge() == {
-                    "comment": ["Deleted job: schedule from schedule."],
+                with patch.object(
+                    schedule, "list_", MagicMock(return_value=_schedule_data)
+                ):
+                    assert schedule.purge() == {
+                        "comment": ["Deleted job: job1 from schedule."],
+                        "changes": {"job1": "removed"},
+                        "result": True,
+                    }
+
+    _schedule_data = {"job1": job1, "job2": job1, "job3": job1}
+    comm = [
+        "Deleted job: job1 from schedule.",
+        "Deleted job: job2 from schedule.",
+        "Deleted job: job3 from schedule.",
+    ]
+
+    changes = {"job1": "removed", "job2": "removed", "job3": "removed"}
+
+    with patch.dict(
+        schedule.__opts__, {"schedule": {"job1": "salt"}, "sock_dir": sock_dir}
+    ):
+        with patch("salt.utils.files.fopen", mock_open(read_data="")) as fopen_mock:
+            with patch.object(
+                schedule, "list_", MagicMock(return_value=_schedule_data)
+            ):
+                assert schedule.purge(offline=True) == {
+                    "comment": comm,
+                    "changes": changes,
                     "result": True,
                 }
+                _call = call(b"schedule: {}\n")
+                write_calls = fopen_mock.filehandles[schedule_config_file][
+                    0
+                ].write._mock_mock_calls
+                assert _call in write_calls
 
 
 # 'delete' function tests: 1
 @pytest.mark.slow_test
-def test_delete(sock_dir):
+def test_delete(sock_dir, job1, schedule_config_file):
     """
     Test if it delete a job from the minion's schedule.
     """
@@ -68,6 +106,28 @@ def test_delete(sock_dir):
                     "changes": {},
                     "result": False,
                 }
+
+    _schedule_data = {"job1": job1}
+    comm = "Deleted Job job1 from schedule."
+    changes = {"job1": "removed"}
+    with patch.dict(
+        schedule.__opts__, {"schedule": {"job1": "salt"}, "sock_dir": sock_dir}
+    ):
+        with patch("salt.utils.files.fopen", mock_open(read_data="")) as fopen_mock:
+            with patch.object(
+                schedule, "list_", MagicMock(return_value=_schedule_data)
+            ):
+                assert schedule.delete("job1", offline="True") == {
+                    "comment": comm,
+                    "changes": changes,
+                    "result": True,
+                }
+
+                _call = call(b"schedule: {}\n")
+                write_calls = fopen_mock.filehandles[schedule_config_file][
+                    0
+                ].write._mock_mock_calls
+                assert _call in write_calls
 
 
 # 'build_schedule_item' function tests: 1
@@ -121,7 +181,7 @@ def test_build_schedule_item_invalid_when(sock_dir):
 
 
 @pytest.mark.slow_test
-def test_add(sock_dir):
+def test_add(sock_dir, schedule_config_file):
     """
     Test if it add a job to the schedule.
     """
@@ -163,6 +223,24 @@ def test_add(sock_dir):
                     "changes": {},
                     "result": True,
                 }
+
+    comm1 = "Added job: job3 to schedule."
+    changes1 = {"job3": "added"}
+    with patch.dict(
+        schedule.__opts__, {"schedule": {"job1": "salt"}, "sock_dir": sock_dir}
+    ):
+        with patch("salt.utils.files.fopen", mock_open(read_data="")) as fopen_mock:
+            assert schedule.add(
+                "job3", function="test.ping", seconds=3600, offline="True"
+            ) == {"comment": comm1, "changes": changes1, "result": True}
+
+            _call = call(
+                b"schedule:\n  job3: {function: test.ping, seconds: 3600, maxrunning: 1, name: job3, enabled: true,\n    jid_include: true}\n"
+            )
+            write_calls = fopen_mock.filehandles[schedule_config_file][
+                1
+            ].write._mock_mock_calls
+            assert _call in write_calls
 
 
 # 'run_job' function tests: 1
@@ -445,7 +523,7 @@ def test_copy(sock_dir, job1):
 
 
 @pytest.mark.slow_test
-def test_modify(sock_dir):
+def test_modify(sock_dir, job1, schedule_config_file):
     """
     Test if modifying job to the schedule.
     """
@@ -565,7 +643,6 @@ def test_modify(sock_dir):
                 for key in [
                     "maxrunning",
                     "function",
-                    "seconds",
                     "jid_include",
                     "name",
                     "enabled",
@@ -586,6 +663,51 @@ def test_modify(sock_dir):
             with patch.object(SaltEvent, "get_event", return_value=_ret_value):
                 ret = schedule.modify("job2", function="test.version", test=True)
                 assert ret == expected5
+
+    _schedule_data = {"job1": job1}
+    comm = "Modified job: job1 in schedule."
+    changes = {"job1": "removed"}
+
+    changes = {
+        "job1": {
+            "new": OrderedDict(
+                [
+                    ("function", "test.version"),
+                    ("maxrunning", 1),
+                    ("name", "job1"),
+                    ("enabled", True),
+                    ("jid_include", True),
+                ]
+            ),
+            "old": OrderedDict(
+                [
+                    ("function", "test.ping"),
+                    ("maxrunning", 1),
+                    ("name", "job1"),
+                    ("jid_include", True),
+                    ("enabled", True),
+                ]
+            ),
+        }
+    }
+    with patch.dict(
+        schedule.__opts__, {"schedule": {"job1": "salt"}, "sock_dir": sock_dir}
+    ):
+        with patch("salt.utils.files.fopen", mock_open(read_data="")) as fopen_mock:
+            with patch.object(
+                schedule, "list_", MagicMock(return_value=_schedule_data)
+            ):
+                assert schedule.modify(
+                    "job1", function="test.version", offline="True"
+                ) == {"comment": comm, "changes": changes, "result": True}
+
+                _call = call(
+                    b"schedule:\n  job1: {enabled: true, function: test.version, jid_include: true, maxrunning: 1,\n    name: job1}\n"
+                )
+                write_calls = fopen_mock.filehandles[schedule_config_file][
+                    0
+                ].write._mock_mock_calls
+                assert _call in write_calls
 
 
 # 'is_enabled' function tests: 1
