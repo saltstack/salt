@@ -12,7 +12,13 @@ Statistics
 - Total Issue References: **52**
 - Total PR References: **163**
 
-- Contributors: **43** (`Adaephon-GH`_, `Ch3LL`_, `DmitryKuzmenko`_, `Foxlik`_, `GideonRed-zz`_, `The-Loeki`_, `UtahDave`_, `alexbleotu`_, `anlutro`_, `bobrik`_, `cachedout`_, `cro`_, `dincamihai`_, `drawsmcgraw`_, `fboismenu`_, `galet`_, `garethgreenaway`_, `grep4linux`_, `gtmanfred`_, `jacobhammons`_, `jfindlay`_, `joe-niland`_, `lvg01`_, `mbom2004`_, `mcalmer`_, `mchugh19`_, `meaksh`_, `mirceaulinic`_, `morganwillcock`_, `narendraingale2`_, `nasenbaer13`_, `ni3mm4nd`_, `rallytime`_, `s0undt3ch`_, `sergeizv`_, `smarsching`_, `techhat`_, `terminalmage`_, `thatch45`_, `twangboy`_, `velom`_, `vutny`_, `yue9944882`_)
+- Contributors: **43** (`Adaephon-GH`_, `Ch3LL`_, `DmitryKuzmenko`_, `Foxlik`_, `GideonRed-zz`_,
+  `The-Loeki`_, `UtahDave`_, `alexbleotu`_, `anlutro`_, `bobrik`_, `cachedout`_, `cro`_,
+  `dincamihai`_, `drawsmcgraw`_, `fboismenu`_, `galet`_, `garethgreenaway`_, `grep4linux`_,
+  `gtmanfred`_, `jacobhammons`_, `jfindlay`_, `joe-niland`_, `lvg01`_, `mbom2004`_, `mcalmer`_,
+  `mchugh19`_, `meaksh`_, `mirceaulinic`_, `morganwillcock`_, `narendraingale2`_, `nasenbaer13`_,
+  `ni3mm4nd`_, `rallytime`_, `s0undt3ch`_, `sergeizv`_, `smarsching`_, `techhat`_, `terminalmage`_,
+  `thatch45`_, `twangboy`_, `velom`_, `vutny`_, `yue9944882`_)
 
 
 Security Fix

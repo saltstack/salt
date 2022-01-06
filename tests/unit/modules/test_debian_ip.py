@@ -561,6 +561,41 @@ test_interfaces = [
                 '    mode 802.3ad\n',
                 '\n']},
 
+        # Bridged interface
+        {'iface_name': 'br0', 'iface_type': 'bridge', 'enabled': True,
+            'build_interface': {
+                'proto': 'static',
+                'ipaddr': '192.168.4.10',
+                'netmask': '255.255.255.0',
+                'gateway': '192.168.4.1',
+                'bridge_ports': 'eth1',
+                'enable_ipv6': False,
+                'noifupdown': True,
+                },
+           'get_interface': odict([('br0', odict([('enabled', True), ('data', odict([
+                ('inet', odict([
+                    ('addrfam', 'inet'),
+                    ('proto', 'static'),
+                    ('filename', None),
+                    ('address', '192.168.4.10'),
+                    ('netmask', '255.255.255.0'),
+                    ('gateway', '192.168.4.1'),
+                    ('bridging', odict([
+                        ('ports', 'eth1'),
+                    ])),
+                    ('bridging_keys', ['ports']),
+                    ])),
+                ]))]))]),
+            'return': [
+                'auto br0\n',
+                'iface br0 inet static\n',
+                '    address 192.168.4.10\n',
+                '    netmask 255.255.255.0\n',
+                '    gateway 192.168.4.1\n',
+                '    bridge_ports eth1\n',
+                '\n']},
+
+
         # DNS NS as list
         {'iface_name': 'eth13', 'iface_type': 'eth', 'enabled': True,
             'build_interface': {
