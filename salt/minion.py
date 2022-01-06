@@ -1749,6 +1749,7 @@ class Minion(MinionBase):
                 self.schedule.returners = self.returners
 
         process_count_max = self.opts.get("process_count_max")
+        log.error("Process count %r", process_count_max)
         if process_count_max > 0:
             process_count = len(salt.utils.minion.running(self.opts))
             while process_count >= process_count_max:
@@ -3164,10 +3165,11 @@ class Minion(MinionBase):
             ):  # A RuntimeError can be re-raised by Tornado on shutdown
                 self.destroy()
 
-    def _handle_payload(self, payload):
+    async def _handle_payload(self, payload):
         if payload is not None and payload["enc"] == "aes":
             if self._target_load(payload["load"]):
-                self.io_loop.create_task(self._handle_decoded_payload(payload["load"]))
+                #self.io_loop.create_task(self._handle_decoded_payload(payload["load"]))
+                await self._handle_decoded_payload(payload["load"])
             elif self.opts["zmq_filtering"]:
                 # In the filtering enabled case, we'd like to know when minion sees something it shouldn't
                 log.trace(
@@ -3814,9 +3816,9 @@ class ProxyMinion(Minion):
         mp_call = _metaproxy_call(self.opts, "target_load")
         return mp_call(self, load)
 
-    def _handle_payload(self, payload):
+    async def _handle_payload(self, payload):
         mp_call = _metaproxy_call(self.opts, "handle_payload")
-        return mp_call(self, payload)
+        return await mp_call(self, payload)
 
     async def _handle_decoded_payload(self, data):
         mp_call = _metaproxy_call(self.opts, "handle_decoded_payload")

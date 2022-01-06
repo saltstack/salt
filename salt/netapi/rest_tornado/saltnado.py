@@ -185,6 +185,7 @@ a return like::
 .. |500| replace:: internal server error
 """
 
+import asyncio
 import cgi
 import fnmatch
 import logging
@@ -278,7 +279,8 @@ class EventListener:
             opts["transport"],
             opts=opts,
             listen=True,
-            io_loop=salt.ext.tornado.ioloop.IOLoop.current(),
+            #io_loop=salt.ext.tornado.ioloop.IOLoop.current(),
+            io_loop=asyncio.get_event_loop(),
         )
 
         # tag -> list of futures
@@ -1209,7 +1211,8 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         f_call = salt.utils.args.format_call(
             salt.client.LocalClient.run_job, chunk, is_class_method=True
         )
-        f_call.get("kwargs", {})["io_loop"] = salt.ext.tornado.ioloop.IOLoop.current()
+        #f_call.get("kwargs", {})["io_loop"] = salt.ext.tornado.ioloop.IOLoop.current()
+        f_call.get("kwargs", {})["io_loop"] = asyncio.get_event_loop()
         return f_call
 
 

@@ -390,7 +390,10 @@ class AsyncPubChannel:
             decoded = await self._decode_payload(payload)
             log.trace("PubChannel received: %r", decoded)
             if decoded is not None:
-                callback(decoded)
+                if asyncio.iscoroutinefunction(callback):
+                    await callback(decoded)
+                else:
+                    callback(decoded)
 
         return self.transport.on_recv(wrap_callback)
 

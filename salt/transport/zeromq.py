@@ -180,9 +180,9 @@ class PublishClient(salt.transport.base.PublishClient):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self._socket.setsockopt(zmq.IPV4ONLY, 0)
 
-        if HAS_ZMQ_MONITOR and self.opts["zmq_monitor"]:
-            self._monitor = ZeroMQSocketMonitor(self._socket)
-            self._monitor.start_io_loop(self.io_loop)
+        #if HAS_ZMQ_MONITOR and self.opts["zmq_monitor"]:
+        #    self._monitor = ZeroMQSocketMonitor(self._socket)
+        #    self._monitor.start_io_loop(self.io_loop)
         self.task = None
 
     def close(self):
@@ -827,7 +827,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
     _sock_data = threading.local()
 
-    def __init__(self, opts):
+    def __init__(self, opts, **kwargs):
         self.opts = opts
 
     def connect(self):

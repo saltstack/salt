@@ -862,7 +862,7 @@ def thread_multi_return(cls, minion_instance, opts, data):
                 log.error("The return failed for job %s: %s", data["jid"], exc)
 
 
-def handle_payload(self, payload):
+async def handle_payload(self, payload):
     """
     Verify the publication and then pass
     the payload along to _handle_decoded_payload.
@@ -870,8 +870,8 @@ def handle_payload(self, payload):
     if payload is not None and payload["enc"] == "aes":
         # First handle payload for the "control" proxy
         if self._target_load(payload["load"]):
-            self.io_loop.create_task(self._handle_decoded_payload(payload["load"]))
-            #self._handle_decoded_payload(payload["load"])
+            #self.io_loop.create_task(self._handle_decoded_payload(payload["load"]))
+            await self._handle_decoded_payload(payload["load"])
 
         # The following handles the sub-proxies
         sub_ids = self.opts["proxy"].get("ids", [self.opts["id"]])
@@ -880,7 +880,8 @@ def handle_payload(self, payload):
                 instance = self.deltaproxy_objs[_id]
                 if instance._target_load(payload["load"]):
                     #instance._handle_decoded_payload(payload["load"])
-                    instance.io_loop.create_task(instance._handle_decoded_payload(payload["load"]))
+                    #instance.io_loop.create_task(instance._handle_decoded_payload(payload["load"]))
+                    await instance._handle_decoded_payload(payload["load"])
             else:
                 log.warn("Proxy minion %s is not loaded, skipping.", _id)
 

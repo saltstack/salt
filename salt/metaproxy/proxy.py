@@ -742,7 +742,7 @@ def thread_multi_return(cls, minion_instance, opts, data):
                 log.error("The return failed for job %s: %s", data["jid"], exc)
 
 
-def handle_payload(self, payload):
+async def handle_payload(self, payload):
     """
     Verify the publication and then pass
     the payload along to _handle_decoded_payload.
@@ -750,7 +750,7 @@ def handle_payload(self, payload):
     if payload is not None and payload["enc"] == "aes":
         if self._target_load(payload["load"]):
 
-            self._handle_decoded_payload(payload["load"])
+            await self._handle_decoded_payload(payload["load"])
         elif self.opts["zmq_filtering"]:
             # In the filtering enabled case, we'd like to know when minion sees something it shouldnt
             log.trace(
