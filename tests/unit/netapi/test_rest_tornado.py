@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import hashlib
 import os
@@ -69,6 +70,9 @@ class SaltnadoTestsBase(AsyncHTTPTestCase, AdaptedConfigurationTestCaseMixin):
         return self.auth.mk_token(self.auth_creds_dict)
 
     def setUp(self):
+        try:
+            os.makedirs('/tmp/salt-tests-tmpdir')
+        except: pass
         super().setUp()
         self.patched_environ = patched_environ(ASYNC_TEST_TIMEOUT="30")
         self.patched_environ.__enter__()

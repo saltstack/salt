@@ -405,6 +405,7 @@ class SaltMessageServer:
         self.io_loop = io_loop
         self.clients = []
         self.message_handler = message_handler
+        self.server = None
 
     async def connect(self, sock):
         self.server = await asyncio.start_server(
@@ -468,7 +469,8 @@ class SaltMessageServer:
         if self._closing:
             return
         self._closing = True
-        self.server.close()
+        if self.server:
+            self.server.close()
         for item in self.clients:
             (reader, writer), address = item
             writer.close()

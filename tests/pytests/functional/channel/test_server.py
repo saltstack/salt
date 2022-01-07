@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import time
@@ -101,7 +102,7 @@ async def test_pub_server_channel_with_zmq_transport(configs, process_manager):
     pub_channel.close()
 
 
-def test_pub_server_channel_with_tcp_transport(io_loop, configs, process_manager):
+async def test_pub_server_channel_with_tcp_transport(io_loop, configs, process_manager):
     minion_conf, master_conf = configs
     minion_conf["transport"] = "tcp"
     master_conf["transport"] = "tcp"
@@ -121,10 +122,9 @@ def test_pub_server_channel_with_tcp_transport(io_loop, configs, process_manager
     pub_channel = salt.channel.client.AsyncPubChannel.factory(minion_conf)
     received = []
 
-    @salt.ext.tornado.gen.coroutine
-    def doit(channel, server, received, timeout=60):
+    async def doit(channel, server, received, timeout=60):
         log.info("TEST - BEFORE CHANNEL CONNECT")
-        yield channel.connect()
+        await channel.connect()
         log.info("TEST - AFTER CHANNEL CONNECT")
 
         def cb(payload):
@@ -136,7 +136,7 @@ def test_pub_server_channel_with_tcp_transport(io_loop, configs, process_manager
         server.publish({"tgt_type": "glob", "tgt": ["minion"], "WTF": "SON"})
         start = time.time()
         while time.time() - start < timeout:
-            yield salt.ext.tornado.gen.sleep(1)
+             await asyncio.sleep(1)
         io_loop.stop()
 
     try:
