@@ -278,7 +278,7 @@ def test_minions_alive_with_no_master(
     ]
     events = event_listener.wait_for_events(
         event_patterns,
-        timeout=salt_mm_failover_minion_1.config["master_alive_interval"] * 2,
+        timeout=salt_mm_failover_minion_1.config["master_alive_interval"] * 4,
         after_time=start_time,
     )
 
