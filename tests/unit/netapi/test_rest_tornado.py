@@ -1,5 +1,6 @@
 import asyncio
 import copy
+import logging
 import hashlib
 import os
 import shutil
@@ -24,6 +25,8 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 
+
+log = logging.getLogger(__name__)
 
 class SaltnadoTestsBase(AsyncHTTPTestCase, AdaptedConfigurationTestCaseMixin):
     """
@@ -934,6 +937,11 @@ class TestEventListener(AsyncTestCase):
                     {},  # we don't use mod_opts, don't save?
                     {"sock_dir": self.sock_dir, "transport": "zeromq"},
                 )
+                async def foo():
+                    await event_listener.event.subscriber.connect()
+                    self.stop()
+                self.io_loop.spawn_callback(foo)
+                self.wait()
                 self._finished = False  # fit to event_listener's behavior
                 event_future = event_listener.get_event(
                     self, "evt1", callback=self.stop
@@ -957,7 +965,13 @@ class TestEventListener(AsyncTestCase):
                 event_listener = saltnado.EventListener(
                     {},  # we don't use mod_opts, don't save?
                     {"sock_dir": self.sock_dir, "transport": "zeromq"},
+                    io_loop=self.io_loop,
                 )
+                async def foo():
+                    await event_listener.event.subscriber.connect()
+                    self.stop()
+                self.io_loop.spawn_callback(foo)
+                self.wait()
                 self._finished = False  # fit to event_listener's behavior
                 event_future = event_listener.get_event(
                     self,
@@ -1020,19 +1034,23 @@ class TestEventListener(AsyncTestCase):
 
         def stop():
             """
-            To realize the scenario of this test, define a custom stop method to call
-            self.stop after finished two events.
+            Keep track of stop count
             """
+            self.stop()
             cnt[0] += 1
-            if cnt[0] == 2:
-                self.stop()
 
         with eventpublisher_process(self.sock_dir):
             with salt.utils.event.MasterEvent(self.sock_dir) as me:
                 event_listener = saltnado.EventListener(
                     {},  # we don't use mod_opts, don't save?
                     {"sock_dir": self.sock_dir, "transport": "zeromq"},
+                    io_loop=self.io_loop,
                 )
+                async def foo():
+                    await event_listener.event.subscriber.connect()
+                    stop()
+                self.io_loop.spawn_callback(foo)
+                self.wait()
 
                 self.assertEqual(0, len(event_listener.tag_map))
                 self.assertEqual(0, len(event_listener.request_map))

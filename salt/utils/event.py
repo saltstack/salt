@@ -364,6 +364,7 @@ class SaltEvent:
                         loop_kwarg="io_loop",
                     )
                 try:
+                    log.error("CONNECT SUBSCRIBER")
                     self.subscriber.connect(timeout=timeout)
                     self.cpub = True
                 except salt.ext.tornado.iostream.StreamClosedError:
@@ -383,7 +384,6 @@ class SaltEvent:
                 self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
                     self.puburi, io_loop=self.io_loop
                 )
-
             # For the asynchronous case, the connect will be defered to when
             # set_event_handler() is invoked.
             self.cpub = True
@@ -953,12 +953,12 @@ class SaltEvent:
         """
         Invoke the event_handler callback each time an event arrives.
         """
-        assert not self._run_io_loop_sync
+        #assert not self._run_io_loop_sync
 
         if not self.cpub:
             self.connect_pub()
         # This will handle reconnects
-        self.io_loop.create_task(self.subscriber.read_async(event_handler))
+        return self.io_loop.create_task(self.subscriber.read_async(event_handler))
 
     # pylint: disable=W1701
     def __del__(self):

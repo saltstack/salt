@@ -270,9 +270,13 @@ class EventListener:
     non-blocking work in the main processes and "wait" for an event to happen
     """
 
-    def __init__(self, mod_opts, opts):
+    def __init__(self, mod_opts, opts, io_loop=None):
         self.mod_opts = mod_opts
         self.opts = opts
+        if io_loop is None:
+            io_loop = asyncio.get_event_loop()
+        if hasattr(io_loop, 'asyncio_loop'):
+            io_loop = io_loop.asyncio_loop
         self.event = salt.utils.event.get_event(
             "master",
             opts["sock_dir"],
@@ -280,7 +284,7 @@ class EventListener:
             opts=opts,
             listen=True,
             #io_loop=salt.ext.tornado.ioloop.IOLoop.current(),
-            io_loop=asyncio.get_event_loop(),
+            io_loop=io_loop,
         )
 
         # tag -> list of futures
@@ -342,10 +346,12 @@ class EventListener:
             future.set_exception(TimeoutException())
             return future
 
-        future = Future()
+        future = asyncio.Future()
+        asyncio.ensure_future(future)
         if callback is not None:
 
             def handle_future(future):
+                log.error("HANDLE FUTURE")
                 salt.ext.tornado.ioloop.IOLoop.current().add_callback(
                     callback, future
                 )  # pylint: disable=E1102
@@ -379,6 +385,7 @@ class EventListener:
         """
         Callback for events on the event sub socket
         """
+        log.error("SOC RECV")
         mtag, data = self.event.unpack(raw)
 
         # see if we have any futures that need this info:
@@ -430,6 +437,7 @@ class BaseSaltAPIHandler(salt.ext.tornado.web.RequestHandler):  # pylint: disabl
             self.application.event_listener = EventListener(
                 self.application.mod_opts,
                 self.application.opts,
+                io_loop=salt.ext.tornado.ioloop.IOLoop.current(),
             )
 
         if not hasattr(self, "saltclients"):
@@ -1159,6 +1167,9 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                     ping_tag = tagify([ping_pub_data["jid"], "ret"], "job")
                     minion_running = False
                     continue
+
+            if event is None:
+                break
 
             # Minions can return, we want to see if the job is running...
             if event["data"].get("return", {}) == {}:

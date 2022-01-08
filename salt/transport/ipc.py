@@ -296,6 +296,7 @@ class IPCMessageSubscriber(IPCClient):
                     # Backwards compat
                     if timeout == 0:
                         timeout = .3
+                    log.error("Lets read")
                     if timeout is None:
                         wire_bytes = await self.reader.read(1024)
                     else:
@@ -313,6 +314,7 @@ class IPCMessageSubscriber(IPCClient):
                     first_sync_msg = True
                     for framed_msg in self.unpacker:
                         if callback:
+                            log.error("SHOULD CALL CB")
                             # Try to run the callback as a normal function
                             # first, if it fails, run it as a coroutine.
                             try:
@@ -355,5 +357,7 @@ class IPCMessageSubscriber(IPCClient):
 
     async def read_async(self, callback):
         if not self.connected():
+            log.error("NOT YET CONNECTED")
             await self.connect()
+        log.error("NOW %r", self.connected())
         await self._read(None, callback)
