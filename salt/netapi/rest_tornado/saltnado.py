@@ -441,16 +441,19 @@ class BaseSaltAPIHandler(salt.ext.tornado.web.RequestHandler):  # pylint: disabl
             )
 
         if not hasattr(self, "saltclients"):
+            log.error("WTF YES %r", salt.runner.RunnerClient)
             local_client = salt.client.get_local_client(mopts=self.application.opts)
             self.saltclients = {
                 "local": local_client.run_job_async,
                 # not the actual client we'll use.. but its what we'll use to get args
                 "local_async": local_client.run_job_async,
                 "runner": salt.runner.RunnerClient(
-                    opts=self.application.opts
+                    self.application.opts
                 ).cmd_async,
                 "runner_async": None,  # empty, since we use the same client as `runner`
             }
+        else:
+            log.error("WTF NO")
 
         if not hasattr(self, "ckminions"):
             self.ckminions = salt.utils.minions.CkMinions(self.application.opts)

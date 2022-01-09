@@ -1,10 +1,20 @@
+import os
+import logging
 import pytest
 import salt.ext.tornado.iostream
 import salt.transport.ipc
 import salt.utils.asynchronous
 import salt.utils.platform
+from tests.support.runtests import RUNTIME_VARS
 from saltfactories.utils.ports import get_unused_localhost_port
 
+pytestmark = [
+    pytest.mark.skip_on_darwin,
+    pytest.mark.skip_on_freebsd,
+    pytest.mark.skip_on_windows,
+]
+
+log = logging.getLogger(__name__)
 
 def test_ipc_connect_in_async_methods():
     "The connect method is in IPCMessageSubscriber's async_methods property"
@@ -29,3 +39,112 @@ async def test_ipc_connect_sync_wrapped(io_loop, tmp_path):
     with pytest.raises(salt.ext.tornado.iostream.StreamClosedError):
         # Don't `await subscriber.connect()`, that's the purpose of the SyncWrapper
         subscriber.connect()
+
+
+@pytest.fixture
+def opts():
+    yield {"ipc_write_buffer": 0}
+
+@pytest.fixture
+def socket_path():
+    yield os.path.join(RUNTIME_VARS.TMP, "ipc_test.ipc")
+
+@pytest.fixture
+def pub_channel(opts, socket_path):
+    channel = salt.transport.ipc.IPCMessagePublisher(
+        opts,
+        socket_path,
+    )
+    channel.start()
+    yield channel
+    channel.close()
+
+
+@pytest.fixture
+async def sub_channel(opts, socket_path):
+    channel = salt.transport.ipc.IPCMessageSubscriber(
+        opts,
+        socket_path,
+    )
+    await channel.connect()
+    try:
+        yield channel
+    except:
+        channel.close()
+
+
+async def test_async_reading_streamclosederror(sub_channel):
+    client1 = sub_channel
+    call_cnt = []
+
+    # Create a watchdog to be safe from hanging in sync loops (what old code did)
+    evt = threading.Event()
+
+    def close_server():
+        if evt.wait(0.001):
+            return
+        client1.close()
+        self.stop()
+
+    watchdog = threading.Thread(target=close_server)
+    watchdog.start()
+
+    # Runs in ioloop thread so we're safe from race conditions here
+    def handler(raw):
+        pass
+
+    try:
+        ret1 = await client1.read_async(handler)
+    except StreamClosedError as ex:
+        assert False, "StreamClosedError was raised inside the Future"
+
+async def test_sync_reading(pub_channel, opts, socket_path):
+    # To be completely fair let's create 2 clients.
+    client1 =  salt.transport.ipc.IPCMessageSubscriber(
+        opts,
+        socket_path,
+    )
+    client2 =  salt.transport.ipc.IPCMessageSubscriber(
+        opts,
+        socket_path,
+    )
+    await client1.connect()
+    await client2.connect()
+    call_cnt = []
+    # Now let both waiting data at once
+    pub_channel.publish("TEST")
+    ret1 = client1.read_sync()
+    ret2 = client2.read_sync()
+    self.assertEqual(ret1, "TEST")
+    self.assertEqual(ret2, "TEST")
+
+
+async def test_multi_client_reading(pub_channel, opts, socket_path):
+    # To be completely fair let's create 2 clients.
+    client1 =  salt.transport.ipc.IPCMessageSubscriber(
+        opts,
+        socket_path,
+    )
+    client2 =  salt.transport.ipc.IPCMessageSubscriber(
+        opts,
+        socket_path,
+    )
+    await client1.connect()
+    await client2.connect()
+    call_cnt = []
+
+    # Create a watchdog to be safe from hanging in sync loops (what old code did)
+    evt = threading.Event()
+
+
+    # Runs in ioloop thread so we're safe from race conditions here
+    def handler(raw):
+        call_cnt.append(raw)
+
+    # Now let both waiting data at once
+    await client1.read_async(handler)
+    await client2.read_async(handler)
+    self.pub_channel.publish("TEST")
+    self.assertEqual(len(call_cnt), 2)
+    self.assertEqual(call_cnt[0], "TEST")
+    self.assertEqual(call_cnt[1], "TEST")

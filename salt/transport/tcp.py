@@ -618,7 +618,8 @@ class MessageClient:
         if self._closing:
             return
         self._closing = True
-        self._writer.close()
+        if self._writer:
+            self._writer.close()
         #self.io_loop.call_later(1, self.check_close)
 
         # try:
