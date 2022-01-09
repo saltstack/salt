@@ -16,6 +16,12 @@ class TestRequestHandler(http.server.SimpleHTTPRequestHandler):
     Modified request handler class
     """
 
+    def __init__(self, *args, directory=None, **kwargs):
+        if directory is None:
+            directory = os.getcwd()
+        self.directory = directory
+        super().__init__(*args, **kwargs)
+
     def do_GET(self):
         """
         GET request handling
