@@ -68,6 +68,7 @@ log = logging.getLogger(__name__)
 
 
 _DEFAULT_PASSWORDS_ENCRYPTION = "md5"
+_DEFAULT_COMMAND_TIMEOUT_SECS = 60
 _EXTENSION_NOT_INSTALLED = "EXTENSION NOT INSTALLED"
 _EXTENSION_INSTALLED = "EXTENSION INSTALLED"
 _EXTENSION_TO_UPGRADE = "EXTENSION TO UPGRADE"
@@ -154,6 +155,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
     kwargs = {
         "reset_system_locale": False,
         "clean_env": True,
+        "timeout": _DEFAULT_COMMAND_TIMEOUT_SECS,
     }
     if runas is None:
         if not host:
@@ -254,7 +256,7 @@ def _run_initdb(
             __salt__["file.chown"](pgpassfile, runas, "")
         cmd.extend(["--pwfile={}".format(pgpassfile)])
 
-    kwargs = dict(runas=runas, clean_env=True)
+    kwargs = dict(runas=runas, clean_env=True, timeout=_DEFAULT_COMMAND_TIMEOUT_SECS)
     cmdstr = " ".join([pipes.quote(c) for c in cmd])
     ret = __salt__["cmd.run_all"](cmdstr, python_shell=False, **kwargs)
 
