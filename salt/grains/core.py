@@ -2528,7 +2528,7 @@ def ip4_interfaces():
             if "address" in inet:
                 iface_ips.append(inet["address"])
         for secondary in ifaces[face].get("secondary", []):
-            if "address" in secondary:
+            if "address" in secondary  and "type" in secondary and secondary["type"] == "inet":
                 iface_ips.append(secondary["address"])
         ret[face] = iface_ips
     return {"ip4_interfaces": ret}
@@ -2553,7 +2553,7 @@ def ip6_interfaces():
             if "address" in inet:
                 iface_ips.append(inet["address"])
         for secondary in ifaces[face].get("secondary", []):
-            if "address" in secondary:
+            if "address" in secondary and "type" in secondary and secondary["type"] == "inet6":
                 iface_ips.append(secondary["address"])
         ret[face] = iface_ips
     return {"ip6_interfaces": ret}
