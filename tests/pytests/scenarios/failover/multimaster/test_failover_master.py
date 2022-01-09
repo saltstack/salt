@@ -132,9 +132,6 @@ def test_failover_to_second_master(
     """
     Test then when the first master is stopped, connected minions failover to the second master.
     """
-    if request.config.getoption("--transport") == "tcp":
-        pytest.skip("Failover process under the TPC transport is not working.")
-
     event_patterns = [
         (
             salt_mm_failover_master_2.id,
@@ -149,7 +146,7 @@ def test_failover_to_second_master(
         # At this point, only the first minion will need to change masters
         events = event_listener.wait_for_events(
             event_patterns,
-            timeout=salt_mm_failover_minion_1.config["master_alive_interval"] * 2,
+            timeout=salt_mm_failover_minion_1.config["master_alive_interval"] * 4,
             after_time=start_time,
         )
 
