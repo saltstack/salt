@@ -44,7 +44,10 @@ class MockRunnerClient:
 def configure_loader_modules():
     patcher = patch("salt.states.winrepo.salt.runner", MockRunnerClient)
     patcher.start()
-    return {winrepo: {}}
+    try:
+        yield {winrepo: {}}
+    finally:
+        patcher.stop()
 
 
 def test_genrepo():
