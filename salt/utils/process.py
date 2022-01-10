@@ -458,6 +458,8 @@ class ThreadPool:
             return False
 
     def _thread_target(self):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         while True:
             # 1s timeout so that if the parent dies this thread will die within 1s
             try:

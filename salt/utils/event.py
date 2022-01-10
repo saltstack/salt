@@ -364,7 +364,6 @@ class SaltEvent:
                         loop_kwarg="io_loop",
                     )
                 try:
-                    log.error("CONNECT SUBSCRIBER")
                     self.subscriber.connect(timeout=timeout)
                     self.cpub = True
                 except salt.ext.tornado.iostream.StreamClosedError:

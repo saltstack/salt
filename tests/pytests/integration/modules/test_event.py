@@ -12,8 +12,8 @@ pytestmark = [
     pytest.mark.windows_whitelisted,
 ]
 
-
-def test_fire_master(event_listener, salt_master, salt_minion, salt_call_cli):
+import asyncio
+async def test_fire_master(event_listener, salt_master, salt_minion, salt_call_cli):
     """
     Test firing an event on the master event bus
     """
@@ -25,6 +25,8 @@ def test_fire_master(event_listener, salt_master, salt_minion, salt_call_cli):
     assert ret.exitcode == 0
     assert ret.json
     assert ret.json is True
+    #XXX Something blocking the vent loop?
+    await asyncio.sleep(1)
 
     event_pattern = (salt_master.id, event_tag)
     matched_events = event_listener.wait_for_events(
@@ -61,7 +63,7 @@ def test_event_fire(event_listener, salt_minion, salt_sub_minion, salt_cli):
             assert event.data == data
 
 
-def test_send(event_listener, salt_master, salt_minion, salt_call_cli):
+async def test_send(event_listener, salt_master, salt_minion, salt_call_cli):
     """
     Test sending an event to the master event bus
     """
@@ -79,6 +81,8 @@ def test_send(event_listener, salt_master, salt_minion, salt_call_cli):
     assert ret.exitcode == 0
     assert ret.json
     assert ret.json is True
+    #XXX Something blocking the vent loop?
+    await asyncio.sleep(1)
 
     event_pattern = (salt_master.id, event_tag)
     matched_events = event_listener.wait_for_events(
