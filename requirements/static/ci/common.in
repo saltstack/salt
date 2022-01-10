@@ -17,17 +17,20 @@ docker
 gitpython>=2.1.15
 jmespath
 jsonschema
-junos-eznc==2.4.0; sys_platform != 'win32'
+junos-eznc==2.4.0; sys_platform != 'win32' and python_version <= '3.9'
+junos-eznc==2.6.0; sys_platform != 'win32' and python_version >= '3.10'
 jxmlease; sys_platform != 'win32'
 kazoo; sys_platform != 'win32' and sys_platform != 'darwin'
 keyring==5.7.1
 kubernetes<4.0
 libnacl>=1.7.1; sys_platform != 'win32' and sys_platform != 'darwin'
-moto>=1.3.14
+moto>=1.3.14 ; python_version <= '3.9'
+moto>=2.0.0 ; python_version >= '3.10'
 napalm; sys_platform != 'win32' and python_version > '3.6'
 paramiko>=2.1.6; sys_platform != 'win32' and sys_platform != 'darwin'
 passlib>=1.7.2; sys_platform != 'win32'
-pycurl>=7.43.0.5
+pycurl>=7.43.0.5; python_version <= '3.9'
+pycurl==7.44.1; python_version >= '3.10'
 pyinotify>=0.9.6; sys_platform != 'win32' and sys_platform != 'darwin' and platform_system != "openbsd"
 python-etcd>0.4.2
 pyvmomi

@@ -14,7 +14,13 @@ Statistics
 - Total Issue References: **73**
 - Total PR References: **162**
 
-- Contributors: **46** (`AndrewPashkin`_, `Ch3LL`_, `DmitryKuzmenko`_, `TheNullByte`_, `UtahDave`_, `abednarik`_, `amontalban`_, `anlutro`_, `attiasr`_, `basepi`_, `borgstrom`_, `brejoc`_, `bstevenson`_, `cachedout`_, `carlwgeorge`_, `efficks`_, `gerhardqux`_, `gtmanfred`_, `heyfife`_, `jacobhammons`_, `jfindlay`_, `justinta`_, `lomeroe`_, `lorengordon`_, `mtorromeo`_, `nmadhok`_, `notpeter`_, `paclat`_, `pcn`_, `phistrom`_, `rallytime`_, `robgott`_, `sacren`_, `sastorsl`_, `serge-p`_, `sjmh`_, `sjorge`_, `techhat`_, `terminalmage`_, `thatch45`_, `thegoodduke`_, `toanju`_, `tomwalsh`_, `twangboy`_, `whiteinge`_, `yannis666`_)
+- Contributors: **46** (`AndrewPashkin`_, `Ch3LL`_, `DmitryKuzmenko`_, `TheNullByte`_, `UtahDave`_,
+  `abednarik`_, `amontalban`_, `anlutro`_, `attiasr`_, `basepi`_, `borgstrom`_, `brejoc`_,
+  `bstevenson`_, `cachedout`_, `carlwgeorge`_, `efficks`_, `gerhardqux`_, `gtmanfred`_, `heyfife`_,
+  `jacobhammons`_, `jfindlay`_, `justinta`_, `lomeroe`_, `lorengordon`_, `mtorromeo`_, `nmadhok`_,
+  `notpeter`_, `paclat`_, `pcn`_, `phistrom`_, `rallytime`_, `robgott`_, `sacren`_, `sastorsl`_,
+  `serge-p`_, `sjmh`_, `sjorge`_, `techhat`_, `terminalmage`_, `thatch45`_, `thegoodduke`_,
+  `toanju`_, `tomwalsh`_, `twangboy`_, `whiteinge`_, `yannis666`_)
 
 
 Changelog for v2015.5.10..v2015.5.11
