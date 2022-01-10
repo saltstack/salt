@@ -35,7 +35,7 @@ def __virtual__():
     """
     Provides vmadm beacon on SmartOS
     """
-    if "imgadm.list" in __salt__:
+    if "vmadm.list" in __salt__:
         return True
     else:
         err_msg = "Only available on SmartOS compute nodes."
