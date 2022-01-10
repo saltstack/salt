@@ -99,7 +99,7 @@ def web_root(tmp_path_factory):
     """
     _web_root = tmp_path_factory.mktemp("web_root")
     try:
-        yield _web_root
+        yield str(_web_root)
     finally:
         shutil.rmtree(str(_web_root), ignore_errors=True)
 
