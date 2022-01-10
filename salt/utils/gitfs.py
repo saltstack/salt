@@ -2354,7 +2354,9 @@ class GitBase:
             per_remote_defaults[param] = enforce_types(key, self.opts[key])
 
         self.remotes = []
-        for remote in remotes:
+        remotes_to_process = list(remotes)
+        while remotes_to_process:
+            remote = remotes_to_process.pop()
             repo_obj = self.git_providers[self.provider](
                 self.opts,
                 remote,
@@ -2411,7 +2413,34 @@ class GitBase:
                     if key not in all_envs and "ref" in conf:
                         repo_obj.saltenv_revmap.setdefault(conf["ref"], []).append(key)
 
-                self.remotes.append(repo_obj)
+                # When using "__env__" as target, we need to resolve all available
+                # branches and have a cachedir for each one of them in order to avoid
+                # race conditions when checking out from multiple branches at the same
+                if hasattr(repo_obj, "branch") and repo_obj.branch == "__env__":
+                    if not list(repo_obj.repo.branches.remote):
+                        log.debug(
+                            "Fetching refs to get available branches to resolve '__env__'"
+                        )
+                        repo_obj.fetch()
+                    branches = list(repo_obj.repo.branches.remote)
+                    log.debug(
+                        "Adding available branches as new remotes: {}".format(branches)
+                    )
+                    for branch in branches:
+                        if isinstance(remote, dict):
+                            key = next(iter(remote))
+                            _, _url = key.split(None, 1)
+                            new_remote = {
+                                "{} {}".format(branch.lstrip("origin/"), _url): remote[
+                                    key
+                                ]
+                            }
+                            remotes_to_process.append(new_remote)
+
+                # Do not add '__env__' as remote since new remotes for available
+                # branches have been already added to be processed
+                if hasattr(repo_obj, "branch") and not repo_obj.branch == "__env__":
+                    self.remotes.append(repo_obj)
 
         # Don't allow collisions in cachedir naming
         cachedir_map = {}
