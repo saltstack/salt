@@ -27,7 +27,9 @@ def __virtual__():
     if HAS_TWILIO:
         return __virtualname__
     else:
-        return False
+        err_msg = "twilio library is missing."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
 
 
 def validate(config):
