@@ -127,7 +127,6 @@ def test_failover_to_second_master(
     mm_failover_master_1_salt_cli,
     mm_failover_master_2_salt_cli,
     run_salt_cmds,
-    request,
 ):
     """
     Test then when the first master is stopped, connected minions failover to the second master.
@@ -204,7 +203,7 @@ def test_minion_reconnection(
     ]
     events = event_listener.wait_for_events(
         event_patterns,
-        timeout=salt_mm_failover_minion_1.config["master_alive_interval"] * 2,
+        timeout=salt_mm_failover_minion_1.config["master_alive_interval"] * 4,
         after_time=start_time,
     )
     assert not events.missed
@@ -246,7 +245,7 @@ def test_minions_alive_with_no_master(
                     (salt_mm_failover_minion_1.id, "__master_disconnected"),
                     (salt_mm_failover_minion_2.id, "__master_disconnected"),
                 ],
-                timeout=salt_mm_failover_minion_1.config["master_alive_interval"] * 2,
+                timeout=salt_mm_failover_minion_1.config["master_alive_interval"] * 4,
                 after_time=start_time,
             )
             assert not events.missed
