@@ -210,7 +210,7 @@ class PublishClient(salt.transport.base.PublishClient):
             "Connecting the Minion to the Master publish port, using the URI: %s",
             self.master_pub,
         )
-        log.error("PubChannel %s", self.master_pub)
+        log.debug("%r connecting to %s", self, self.master_pub)
         self._socket.connect(self.master_pub)
         connect_callback(True)
 
