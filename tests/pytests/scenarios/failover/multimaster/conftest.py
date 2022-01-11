@@ -95,7 +95,7 @@ def salt_mm_failover_minion_1(salt_mm_failover_master_1, salt_mm_failover_master
         ],
         "publish_port": salt_mm_failover_master_1.config["publish_port"],
         "master_type": "failover",
-        "master_alive_interval": 15,
+        "master_alive_interval": 30,
         "master_tries": -1,
         "verify_master_pubkey_sign": True,
     }
@@ -132,7 +132,7 @@ def salt_mm_failover_minion_2(salt_mm_failover_master_1, salt_mm_failover_master
         ],
         "publish_port": salt_mm_failover_master_1.config["publish_port"],
         "master_type": "failover",
-        "master_alive_interval": 15,
+        "master_alive_interval": 30,
         "master_tries": -1,
         "verify_master_pubkey_sign": True,
     }
