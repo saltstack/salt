@@ -59,6 +59,12 @@ def recv(files, dest):
 
     This function receives small fast copy files from the master via salt-cp.
     It does not work via the CLI.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cp.recv
     """
     ret = {}
     for path, data in files.items():
@@ -85,6 +91,12 @@ def recv_chunked(dest, chunk, append=False, compressed=True, mode=None):
     """
     This function receives files copied to the minion using ``salt-cp`` and is
     not intended to be used directly on the CLI.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cp.recv_chuncked
     """
     if "retcode" not in __context__:
         __context__["retcode"] = 0
@@ -283,7 +295,7 @@ def envs():
     """
     List available environments for fileserver
 
-    CLI Example
+    CLI Example:
 
     .. code-block:: bash
 
