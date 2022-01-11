@@ -102,7 +102,7 @@ def _get_windows_root_dir():
     if root_dir["success"]:
         # Make sure vdata contains something
         if root_dir["vdata"]:
-            return root_dir["vdata"]
+            return os.path.expandvars(root_dir["vdata"])
 
     # If this key does not exist, then salt was not installed using the
     # new method installer. Could be pip or setup.py or an older version of the
