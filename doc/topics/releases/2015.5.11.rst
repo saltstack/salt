@@ -265,7 +265,7 @@ Changelog for v2015.5.10..v2015.5.11
 
   * **PR** `#32421`_: (`terminalmage`_) Ignore Raspbian in service.py __virtual__
 
-* **ISSUE** `#1409`_: (`twinshadow`_) module/network.py: Interfaces do not list multiple addesses
+* **ISSUE** `#1409`_: (`twinshadow`_) module/network.py: Interfaces do not list multiple addresses
 
 * **ISSUE** `saltstack/salt#28262`_: (`palica`_) FreeBSD pkgng provider raising error for minion (refs: `#32376`_)
 
@@ -440,9 +440,9 @@ Changelog for v2015.5.10..v2015.5.11
 
   * d18b4be80b remove whitespace end of line 186:q
 
-  * d2b89c85ad fix formating
+  * d2b89c85ad fix formatting
 
-  * 103cee9e29 cleaned up formating
+  * 103cee9e29 cleaned up formatting
 
   * 7a4d7f0bff added whitespace
 
