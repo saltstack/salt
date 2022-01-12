@@ -656,7 +656,8 @@ class AsyncReqMessageClient:
                 #    self.socket = None
                 # self.stream = None
                 self.socket.close(0)
-                self.context.destroy()
+            if hasattr(self, "context"):
+                self.context.term()
                 self.context = None
             # if self.context.closed is False:
             #    self.context.term()

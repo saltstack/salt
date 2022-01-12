@@ -277,7 +277,8 @@ class AsyncReqChannel:
 
     async def wait_closed(self):
         try:
-            await self.transport.message_client.stream_return_running
+            if self.transport.message_client.stream_return_running:
+                await self.transport.message_client.stream_return_running
         except AttributeError:
             pass
 

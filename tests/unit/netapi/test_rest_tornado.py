@@ -937,10 +937,10 @@ class TestEventListener(AsyncTestCase):
                     {},  # we don't use mod_opts, don't save?
                     {"sock_dir": self.sock_dir, "transport": "zeromq"},
                 )
-                async def foo():
+                async def connect():
                     await event_listener.event.subscriber.connect()
                     self.stop()
-                self.io_loop.spawn_callback(foo)
+                self.io_loop.spawn_callback(connect)
                 self.wait()
                 self._finished = False  # fit to event_listener's behavior
                 event_future = event_listener.get_event(
@@ -967,10 +967,10 @@ class TestEventListener(AsyncTestCase):
                     {"sock_dir": self.sock_dir, "transport": "zeromq"},
                     io_loop=self.io_loop,
                 )
-                async def foo():
+                async def connect():
                     await event_listener.event.subscriber.connect()
                     self.stop()
-                self.io_loop.spawn_callback(foo)
+                self.io_loop.spawn_callback(connect)
                 self.wait()
                 self._finished = False  # fit to event_listener's behavior
                 event_future = event_listener.get_event(
@@ -1036,8 +1036,9 @@ class TestEventListener(AsyncTestCase):
             """
             Keep track of stop count
             """
-            self.stop()
             cnt[0] += 1
+            if cnt[0] == 2:
+                self.stop()
 
         with eventpublisher_process(self.sock_dir):
             with salt.utils.event.MasterEvent(self.sock_dir) as me:
@@ -1046,10 +1047,10 @@ class TestEventListener(AsyncTestCase):
                     {"sock_dir": self.sock_dir, "transport": "zeromq"},
                     io_loop=self.io_loop,
                 )
-                async def foo():
+                async def connect():
                     await event_listener.event.subscriber.connect()
-                    stop()
-                self.io_loop.spawn_callback(foo)
+                    self.stop()
+                self.io_loop.spawn_callback(connect)
                 self.wait()
 
                 self.assertEqual(0, len(event_listener.tag_map))

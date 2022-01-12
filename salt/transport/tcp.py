@@ -1135,7 +1135,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self.io_loop = io_loop
         parse = urllib.parse.urlparse(self.opts["master_uri"])
         master_host, master_port = parse.netloc.rsplit(":", 1)
-        master_addr = (master_host, int(master_port))
+        #master_addr = (master_host, int(master_port))
         # self.resolver = Resolver()
         resolver = kwargs.get("resolver")
         self.message_client = salt.transport.tcp.MessageClient(

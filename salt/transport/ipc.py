@@ -91,25 +91,32 @@ class IPCServer:
                         log.debug(
                             "%s process message %r", self.__class__.__name__, wire_bytes
                         )
-                        self.process_message(unpacker, wire_bytes, write_callback)
+                        await self.process_message(unpacker, wire_bytes, write_callback)
                         break
                     else:
                         log.debug("%s reader reached EOF", self)
                         break
-                self.process_message(unpacker, wire_bytes, write_callback)
+                await self.process_message(unpacker, wire_bytes, write_callback)
             except Exception as exc:  # pylint: disable=broad-except
                 log.error("Unhandled exception %s", exc, exc_info=True)
                 break
 
-    def process_message(self, unpacker, wire_bytes, write_callback):
+    async def process_message(self, unpacker, wire_bytes, write_callback):
         unpacker.feed(wire_bytes)
         for framed_msg in unpacker:
             head = framed_msg.get("head", None)
             body = framed_msg["body"]
-            self.payload_handler(
-                body,
-                write_callback(head),
-            )
+            if asyncio.iscoroutinefunction(self.payload_handler):
+                await self.payload_handler(
+                    body,
+                    write_callback(head),
+                )
+            else:
+                # XXX Spawn callback or enforce coroutine here?
+                self.payload_handler(
+                    body,
+                    write_callback(head),
+                )
 
 
 class IPCClient:
@@ -156,7 +163,6 @@ class IPCClient:
             callback(self)
 
     def close(self):
-        log.error("CLOSE CALLED")
         # Only the writer has a close method
         if self.writer:
             self.writer.close()

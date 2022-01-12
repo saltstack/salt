@@ -1704,10 +1704,10 @@ class Minion(MinionBase):
                 timeout_handler = handle_timeout
 
             # XXX: Asyncio version
-            with salt.ext.tornado.stack_context.ExceptionStackContext(timeout_handler):
-                # pylint: disable=unexpected-keyword-arg
-                self._send_req_async(load, timeout, callback=lambda f: None)
-                # pylint: enable=unexpected-keyword-arg
+            #with salt.ext.tornado.stack_context.ExceptionStackContext(timeout_handler):
+            # pylint: disable=unexpected-keyword-arg
+            self.io_loop.create_task(self._send_req_async(load, timeout)) #, callback=lambda f: None)
+            # pylint: enable=unexpected-keyword-arg
         return True
 
     async def _handle_decoded_payload(self, data):
@@ -2428,6 +2428,7 @@ class Minion(MinionBase):
         """
         if not hasattr(self, "schedule"):
             return
+
         log.debug("Refreshing modules. Notify=%s", notify)
         self.functions, self.returners, _, self.executors = self._load_modules(
             force_refresh, notify=notify
@@ -3166,6 +3167,7 @@ class Minion(MinionBase):
                 self.destroy()
 
     async def _handle_payload(self, payload):
+        log.error("MINION GOT %r", payload)
         if payload is not None and payload["enc"] == "aes":
             if self._target_load(payload["load"]):
                 #self.io_loop.create_task(self._handle_decoded_payload(payload["load"]))
