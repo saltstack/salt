@@ -2448,8 +2448,9 @@ class GitBase:
 
                 # Do not add '__env__' as remote since new remotes for
                 # available refs have been already added to be processed
-                if hasattr(repo_obj, "branch") and not repo_obj.branch == "__env__":
-                    self.remotes.append(repo_obj)
+                if hasattr(repo_obj, "branch") and repo_obj.branch == "__env__":
+                    continue
+                self.remotes.append(repo_obj)
 
         # Don't allow collisions in cachedir naming
         cachedir_map = {}
