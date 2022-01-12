@@ -1211,6 +1211,11 @@ class GitPython(GitProvider):
         GitPython.
         """
         tgt_ref = self.get_checkout_target()
+
+        # Fetch references if in case provider is new
+        if self.new:
+            self.fetch()
+
         try:
             head_sha = self.repo.rev_parse("HEAD").hexsha
         except Exception:  # pylint: disable=broad-except
@@ -1539,6 +1544,10 @@ class Pygit2(GitProvider):
         local_ref = "refs/heads/" + tgt_ref
         remote_ref = "refs/remotes/origin/" + tgt_ref
         tag_ref = "refs/tags/" + tgt_ref
+
+        # Fetch references if in case provider is new
+        if self.new:
+            self.fetch()
 
         try:
             local_head = self.repo.lookup_reference("HEAD")
