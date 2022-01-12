@@ -16,7 +16,8 @@ Statistics
 - Total Issue References: **12**
 - Total PR References: **27**
 
-- Contributors: **12** (`MasterNayru`_, `TronPaul`_, `basepi`_, `cachedout`_, `cxmcc`_, `jfindlay`_, `kevinlondon`_, `messa`_, `rallytime`_, `tehmaspc`_, `twangboy`_, `whiteinge`_)
+- Contributors: **12** (`MasterNayru`_, `TronPaul`_, `basepi`_, `cachedout`_, `cxmcc`_,
+  `jfindlay`_, `kevinlondon`_, `messa`_, `rallytime`_, `tehmaspc`_, `twangboy`_, `whiteinge`_)
 
 
 Security Fix

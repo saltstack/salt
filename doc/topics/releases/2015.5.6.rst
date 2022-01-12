@@ -14,7 +14,14 @@ Statistics
 - Total Issue References: **71**
 - Total PR References: **178**
 
-- Contributors: **53** (`Arabus`_, `JensRantil`_, `PierreR`_, `SaltyCharles`_, `TheBigBear`_, `abh`_, `aboe76`_, `anlutro`_, `arthurlogilab`_, `aspyatkin`_, `basepi`_, `benhosmer`_, `bersace`_, `cachedout`_, `carlpett`_, `damonzheng`_, `derphilipp`_, `dmyerscough`_, `dsumsky`_, `efficks`_, `eguven`_, `garethgreenaway`_, `hexedpackets`_, `jacksontj`_, `jacobhammons`_, `jfindlay`_, `joejulian`_, `johanek`_, `julianbrost`_, `kev009`_, `lorengordon`_, `madprog`_, `marccardinal`_, `netroby`_, `nmadhok`_, `plastikos`_, `rallytime`_, `serge-p`_, `spudfkc`_, `stanislavb`_, `styro`_, `systembell`_, `tankywoo`_, `techhat`_, `terminalmage`_, `thatch45`_, `tjstansell`_, `twangboy`_, `vakulich`_, `vtek21`_, `whiteinge`_, `zmalone`_, `zyio`_)
+- Contributors: **53** (`Arabus`_, `JensRantil`_, `PierreR`_, `SaltyCharles`_, `TheBigBear`_,
+  `abh`_, `aboe76`_, `anlutro`_, `arthurlogilab`_, `aspyatkin`_, `basepi`_, `benhosmer`_,
+  `bersace`_, `cachedout`_, `carlpett`_, `damonzheng`_, `derphilipp`_, `dmyerscough`_, `dsumsky`_,
+  `efficks`_, `eguven`_, `garethgreenaway`_, `hexedpackets`_, `jacksontj`_, `jacobhammons`_,
+  `jfindlay`_, `joejulian`_, `johanek`_, `julianbrost`_, `kev009`_, `lorengordon`_, `madprog`_,
+  `marccardinal`_, `netroby`_, `nmadhok`_, `plastikos`_, `rallytime`_, `serge-p`_, `spudfkc`_,
+  `stanislavb`_, `styro`_, `systembell`_, `tankywoo`_, `techhat`_, `terminalmage`_, `thatch45`_,
+  `tjstansell`_, `twangboy`_, `vakulich`_, `vtek21`_, `whiteinge`_, `zmalone`_, `zyio`_)
 
 
 Security Fixes

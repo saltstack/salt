@@ -361,7 +361,7 @@
 # templating on the SLS file, and then load the result as YAML. This syntax is
 # documented in further depth at the following URL:
 #
-# https://docs.saltstack.com/en/latest/ref/renderers/#composing-renderers
+# https://docs.saltproject.io/en/latest/ref/renderers/#composing-renderers
 #
 # NOTE: The "shebang" prefix (e.g. "#!jinja|yaml") described in the
 # documentation linked above is for use in an SLS file to override the default
@@ -513,6 +513,10 @@
 # The state_output_profile setting changes whether profile information
 # will be shown for each state run.
 #state_output_profile: True
+
+# The state_output_pct setting changes whether success and failure information
+# as a percent of total actions will be shown for each state run.
+#state_output_pct: False
 
 # Fingerprint of the master public key to validate the identity of your Salt master
 # before the initial key exchange. The master fingerprint can be found by running

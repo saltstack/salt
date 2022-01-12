@@ -132,7 +132,7 @@ class OptionParser(optparse.OptionParser):
 
     epilog = (
         'You can find additional help about %prog issuing "man %prog" '
-        "or on http://docs.saltstack.com"
+        "or on https://docs.saltproject.io"
     )
     description = None
 
@@ -221,6 +221,8 @@ class OptionParser(optparse.OptionParser):
                 "Configuration file path: %s",
                 self.config["conf_file"],  # pylint: disable=no-member
             )
+
+        salt.utils.process.appendproctitle("MainProcess")
         # Retain the standard behavior of optparse to return options and args
         return options, args
 
@@ -1044,8 +1046,8 @@ class DaemonMixIn(metaclass=MixInMeta):
                 # We'll restart it once forked
                 log.shutdown_multiprocessing_logging_listener(daemonizing=True)
 
-            # Late import so logging works correctly
             salt.utils.process.daemonize()
+            salt.utils.process.appendproctitle("MainProcess")
 
         # Setup the multiprocessing log queue listener if enabled
         self._setup_mp_logging_listener()
@@ -1897,7 +1899,7 @@ class CloudCredentialsMixIn(metaclass=MixInMeta):
         if self.options.set_password:
             raise RuntimeError(
                 "This functionality is not supported; please see the keyring module at"
-                " http://docs.saltstack.com/en/latest/topics/sdb/"
+                " https://docs.saltproject.io/en/latest/topics/sdb/"
             )
 
 
@@ -2213,7 +2215,7 @@ class SaltCMDOptionParser(
             type=int,
             help=(
                 "Execute the salt job in batch mode if the job would have "
-                "executed on more than this many minions."
+                "executed on at least this many minions."
             ),
         )
         self.add_option(

@@ -424,7 +424,7 @@ def get_file_str(path, saltenv="base"):
     return fn_
 
 
-def cache_file(path, saltenv="base", source_hash=None, verify_ssl=True):
+def cache_file(path, saltenv="base", source_hash=None, verify_ssl=True, use_etag=False):
     """
     Used to cache a single file on the Minion
 
@@ -442,6 +442,15 @@ def cache_file(path, saltenv="base", source_hash=None, verify_ssl=True):
         will not attempt to validate the servers certificate. Default is True.
 
         .. versionadded:: 3002
+
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
 
     CLI Example:
 
@@ -496,9 +505,9 @@ def cache_file(path, saltenv="base", source_hash=None, verify_ssl=True):
         saltenv = senv
 
     result = _client().cache_file(
-        path, saltenv, source_hash=source_hash, verify_ssl=verify_ssl
+        path, saltenv, source_hash=source_hash, verify_ssl=verify_ssl, use_etag=use_etag
     )
-    if not result:
+    if not result and not use_etag:
         log.error("Unable to cache file '%s' from saltenv '%s'.", path, saltenv)
     if path_is_remote:
         # Cache was successful, store the result in __context__ to prevent

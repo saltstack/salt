@@ -29,6 +29,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
+import salt.utils.verify
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError
 from salt.ext.tornado.httputil import (
@@ -83,7 +84,6 @@ class Client:
     def __init__(self, opts):
         self.opts = opts
         self.utils = salt.loader.utils(self.opts)
-        self.serial = salt.payload.Serial(self.opts)
 
     # Add __setstate__ and __getstate__ so that the object may be
     # deep copied. It normally can't be deep copied because its
@@ -171,7 +171,13 @@ class Client:
         raise NotImplementedError
 
     def cache_file(
-        self, path, saltenv="base", cachedir=None, source_hash=None, verify_ssl=True
+        self,
+        path,
+        saltenv="base",
+        cachedir=None,
+        source_hash=None,
+        verify_ssl=True,
+        use_etag=False,
     ):
         """
         Pull a file down from the file server and store it in the minion
@@ -185,6 +191,7 @@ class Client:
             cachedir=cachedir,
             source_hash=source_hash,
             verify_ssl=verify_ssl,
+            use_etag=use_etag,
         )
 
     def cache_files(self, paths, saltenv="base", cachedir=None):
@@ -465,6 +472,7 @@ class Client:
         cachedir=None,
         source_hash=None,
         verify_ssl=True,
+        use_etag=False,
     ):
         """
         Get a single file from a URL.
@@ -642,6 +650,7 @@ class Client:
             fixed_url = url
 
         destfp = None
+        dest_etag = "{}.etag".format(dest)
         try:
             # Tornado calls streaming_callback on redirect response bodies.
             # But we need streaming to support fetching large files (> RAM
@@ -687,7 +696,10 @@ class Client:
                     # Try to find out what content type encoding is used if
                     # this is a text file
                     write_body[1].parse_line(hdr)  # pylint: disable=no-member
-                    if "Content-Type" in write_body[1]:
+                    if use_etag and "Etag" in write_body[1]:
+                        with salt.utils.files.fopen(dest_etag, "w") as etagfp:
+                            etag = etagfp.write(write_body[1].get("Etag"))
+                    elif "Content-Type" in write_body[1]:
                         content_type = write_body[1].get(
                             "Content-Type"
                         )  # pylint: disable=no-member
@@ -744,6 +756,14 @@ class Client:
                     if write_body[0]:
                         destfp.write(chunk)
 
+            # ETag is only used for refetch. Cached file and previous ETag
+            # should be present for verification.
+            header_dict = {}
+            if use_etag and os.path.exists(dest_etag) and os.path.exists(dest):
+                with salt.utils.files.fopen(dest_etag, "r") as etagfp:
+                    etag = etagfp.read().replace("\n", "").strip()
+                header_dict["If-None-Match"] = etag
+
             query = salt.utils.http.query(
                 fixed_url,
                 stream=True,
@@ -753,8 +773,14 @@ class Client:
                 password=url_data.password,
                 opts=self.opts,
                 verify_ssl=verify_ssl,
+                header_dict=header_dict,
                 **get_kwargs
             )
+
+            # 304 Not Modified is returned when If-None-Match header
+            # matches server ETag for requested file.
+            if use_etag and query.get("status") == 304:
+                return dest
             if "handle" not in query:
                 raise MinionError(
                     "Error: {} reading {}".format(query["error"], url_data.path)
@@ -853,6 +879,12 @@ class Client:
             file_name = "-".join([url_data.path, url_data.query])
         else:
             file_name = url_data.path
+
+        # clean_path returns an empty string if the check fails
+        root_path = salt.utils.path.join(cachedir, "extrn_files", saltenv, netloc)
+        new_path = os.path.sep.join([root_path, file_name])
+        if not salt.utils.verify.clean_path(root_path, new_path, subdir=True):
+            return "Invalid path"
 
         if len(file_name) > MAX_FILENAME_LENGTH:
             file_name = salt.utils.hashutils.sha256_digest(file_name)
