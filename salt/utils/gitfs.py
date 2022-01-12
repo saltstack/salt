@@ -2422,32 +2422,32 @@ class GitBase:
                     if key not in all_envs and "ref" in conf:
                         repo_obj.saltenv_revmap.setdefault(conf["ref"], []).append(key)
 
-                # When using "__env__" as target, we need to resolve all available
-                # branches and have a cachedir for each one of them in order to avoid
-                # race conditions when checking out from multiple branches at the same
+                # When using "__env__" as target, we need to resolve all available branches
+                # and tags and have a separated cachedir for each one of them in order to avoid
+                # race conditions when checking out multiple refs the same time
                 if hasattr(repo_obj, "branch") and repo_obj.branch == "__env__":
-                    if not list(repo_obj.repo.branches.remote):
-                        log.debug(
-                            "Fetching refs to get available branches to resolve '__env__'"
+                    log.debug("Fetching all refs to resolve '__env__' dynamically")
+                    repo_obj.fetch()
+                    refs = []
+                    for ref in repo_obj.repo.listall_references():
+                        if ref.startswith(("refs/remotes/origin/", "refs/tags/")):
+                            refs.append(ref)
+                    log.debug("Adding available refs as new remotes: {}".format(refs))
+                    for ref in refs:
+                        tgt = ref.replace("refs/remotes/origin/", "").replace(
+                            "refs/tags/", ""
                         )
-                        repo_obj.fetch()
-                    branches = list(repo_obj.repo.branches.remote)
-                    log.debug(
-                        "Adding available branches as new remotes: {}".format(branches)
-                    )
-                    for branch in branches:
                         if isinstance(remote, dict):
                             key = next(iter(remote))
                             _, _url = key.split(None, 1)
-                            new_remote = {
-                                "{} {}".format(branch.lstrip("origin/"), _url): remote[
-                                    key
-                                ]
-                            }
-                            remotes_to_process.append(new_remote)
+                            new_remote = {"{} {}".format(tgt, _url): remote[key]}
+                        else:
+                            _, _url = remote.split(None, 1)
+                            new_remote = "{} {}".format(tgt, _url)
+                        remotes_to_process.append(new_remote)
 
-                # Do not add '__env__' as remote since new remotes for available
-                # branches have been already added to be processed
+                # Do not add '__env__' as remote since new remotes for
+                # available refs have been already added to be processed
                 if hasattr(repo_obj, "branch") and not repo_obj.branch == "__env__":
                     self.remotes.append(repo_obj)
 
