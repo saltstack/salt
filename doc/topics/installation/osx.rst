@@ -107,8 +107,8 @@ best results, add ``/opt/local/bin`` to your PATH.
 
     sudo port install salt
 
-Variants allow selection of the python version used to run Salt, defaulting to
-python27, but also supporting python34, python35, and python36. To install Salt
+Variants allow selection of the python version used to run Salt. Supported
+versions are python35, python36, python37, and python38. To install Salt
 with Python 3.6, use the python36 variant, for example:
 
 .. code-block:: bash
@@ -144,26 +144,12 @@ Salt-Master Customizations
     `SaltStack Platform Support <https://saltstack.com/product-support-lifecycle/>`_
     for more information.
 
-To run salt-master on macOS, sudo add this configuration option to the
+To run salt-master on macOS, add this configuration option to the
 ``/etc/salt/master`` file:
 
 .. code-block:: bash
 
     max_open_files: 8192
-
-On versions previous to macOS 10.10 (Yosemite), increase the root user maxfiles
-limit:
-
-.. code-block:: bash
-
-    sudo launchctl limit maxfiles 4096 8192
-
-.. note::
-
-    On macOS 10.10 (Yosemite) and higher, maxfiles should not be adjusted. The
-    default limits are sufficient in all but the most extreme scenarios.
-    Overriding these values with the setting below will cause system
-    instability!
 
 Now the salt-master should run without errors:
 
