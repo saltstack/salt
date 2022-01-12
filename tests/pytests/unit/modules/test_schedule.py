@@ -229,18 +229,19 @@ def test_add(sock_dir, schedule_config_file):
     with patch.dict(
         schedule.__opts__, {"schedule": {"job1": "salt"}, "sock_dir": sock_dir}
     ):
-        with patch("salt.utils.files.fopen", mock_open(read_data="")) as fopen_mock:
-            assert schedule.add(
-                "job3", function="test.ping", seconds=3600, offline="True"
-            ) == {"comment": comm1, "changes": changes1, "result": True}
+        with patch("os.path.exists", MagicMock(return_value=True)):
+            with patch("salt.utils.files.fopen", mock_open(read_data="")) as fopen_mock:
+                assert schedule.add(
+                    "job3", function="test.ping", seconds=3600, offline="True"
+                ) == {"comment": comm1, "changes": changes1, "result": True}
 
-            _call = call(
-                b"schedule:\n  job3: {function: test.ping, seconds: 3600, maxrunning: 1, name: job3, enabled: true,\n    jid_include: true}\n"
-            )
-            write_calls = fopen_mock.filehandles[schedule_config_file][
-                1
-            ].write._mock_mock_calls
-            assert _call in write_calls
+                _call = call(
+                    b"schedule:\n  job3: {function: test.ping, seconds: 3600, maxrunning: 1, name: job3, enabled: true,\n    jid_include: true}\n"
+                )
+                write_calls = fopen_mock.filehandles[schedule_config_file][
+                    1
+                ].write._mock_mock_calls
+                assert _call in write_calls
 
 
 # 'run_job' function tests: 1
