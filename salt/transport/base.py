@@ -101,23 +101,26 @@ class RequestClient:
     """
 
     def __init__(self, opts, io_loop, **kwargs):
-        pass
+        raise NotImplementedError
 
     @salt.ext.tornado.gen.coroutine
     def send(self, load, tries=3, timeout=60):
         """
         Send a request message and return the reply from the server.
         """
+        raise NotImplementedError
 
     def close(self):
         """
         Close the connection.
         """
+        raise NotImplementedError
 
     def connect(self):
         """
         Connect to the server / broker.
         """
+        raise NotImplementedError
 
 
 class RequestServer:
@@ -127,17 +130,18 @@ class RequestServer:
     """
 
     def __init__(self, opts):
-        pass
+        raise NotImplementedError
 
     def close(self):
         """
         Close the underlying network connection.
         """
+        raise NotImplementedError
 
 
 class DaemonizedRequestServer(RequestServer):
     def pre_fork(self, process_manager):
-        """ """
+        raise NotImplementedError
 
     def post_fork(self, message_handler, io_loop):
         """
@@ -145,6 +149,7 @@ class DaemonizedRequestServer(RequestServer):
         new request comes into the server. The return from the message handler
         will be send back to the RequestClient
         """
+        raise NotImplementedError
 
 
 class PublishServer:
@@ -160,6 +165,7 @@ class PublishServer:
 
         :param dict load: A load to be sent across the wire to minions
         """
+        raise NotImplementedError
 
 
 class DaemonizedPublishServer(PublishServer):
@@ -168,10 +174,10 @@ class DaemonizedPublishServer(PublishServer):
     """
 
     def pre_fork(self, process_manager, kwargs=None):
-        """ """
+        raise NotImplementedError
 
     def post_fork(self, message_handler, io_loop):
-        """ """
+        raise NotImplementedError
 
     def publish_daemon(
         self,
@@ -192,6 +198,7 @@ class DaemonizedPublishServer(PublishServer):
                                               notify the channel a client is no
                                               longer present
         """
+        raise NotImplementedError
 
 
 class PublishClient:
@@ -200,23 +207,26 @@ class PublishClient:
     """
 
     def __init__(self, opts, io_loop, **kwargs):
-        pass
+        raise NotImplementedError
 
     def on_recv(self, callback):
         """
         Add a message handler when we recieve a message from the PublishServer
         """
+        raise NotImplementedError
 
     @salt.ext.tornado.gen.coroutine
     def connect(self, publish_port, connect_callback=None, disconnect_callback=None):
         """
         Create a network connection to the the PublishServer or broker.
         """
+        raise NotImplementedError
 
     def close(self):
         """
         Close the underlying network connection
         """
+        raise NotImplementedError
 
     def __enter__(self):
         return self
