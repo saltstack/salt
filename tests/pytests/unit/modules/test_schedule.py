@@ -698,9 +698,23 @@ def test_modify(sock_dir, job1, schedule_config_file):
             with patch.object(
                 schedule, "list_", MagicMock(return_value=_schedule_data)
             ):
-                assert schedule.modify(
-                    "job1", function="test.version", offline="True"
-                ) == {"comment": comm, "changes": changes, "result": True}
+                ret = schedule.modify("job1", function="test.version", offline="True")
+                assert ret["comment"] == comm
+                assert ret["result"]
+                assert all(
+                    [
+                        True
+                        for k, v in ret["changes"]["job1"]["old"].items()
+                        if v == changes["job1"]["old"][k]
+                    ]
+                )
+                assert all(
+                    [
+                        True
+                        for k, v in ret["changes"]["job1"]["new"].items()
+                        if v == changes["job1"]["new"][k]
+                    ]
+                )
 
                 _call = call(
                     b"schedule:\n  job1: {enabled: true, function: test.version, jid_include: true, maxrunning: 1,\n    name: job1}\n"
