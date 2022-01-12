@@ -110,7 +110,7 @@ def _get_windows_root_dir():
     log.debug("Failed to get ROOT_DIR from registry. %s", root_dir["comment"])
     # Check for C:\salt\conf
     old_root = "\\".join([os.environ["SystemDrive"], "salt", "conf"])
-    dflt_root = os.path.join(os.environ["ProgramData"], "Salt Project", "salt")
+    dflt_root = os.path.join(os.environ["ProgramData"], "Salt Project", "Salt")
     if os.path.isdir(old_root):
         # If the old config location is present use it
         log.debug("ROOT_DIR: %s", os.path.dirname(old_root))
