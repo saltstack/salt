@@ -176,9 +176,6 @@ class DaemonizedPublishServer(PublishServer):
     def pre_fork(self, process_manager, kwargs=None):
         raise NotImplementedError
 
-    def post_fork(self, message_handler, io_loop):
-        raise NotImplementedError
-
     def publish_daemon(
         self,
         publish_payload,
