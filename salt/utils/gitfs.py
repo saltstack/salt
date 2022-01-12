@@ -2365,7 +2365,7 @@ class GitBase:
         self.remotes = []
         remotes_to_process = list(remotes)
         while remotes_to_process:
-            remote = remotes_to_process.pop()
+            remote = remotes_to_process.pop(0)
             repo_obj = self.git_providers[self.provider](
                 self.opts,
                 remote,
