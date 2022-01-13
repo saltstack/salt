@@ -80,22 +80,13 @@ def test_persist_no_conf_failure():
     """
     Tests adding of config file failure
     """
-    asn_cmd = {
-        "pid": 1337,
-        "retcode": 0,
-        "stderr": "sysctl: permission denied",
-        "stdout": "",
-    }
-    mock_asn_cmd = MagicMock(return_value=asn_cmd)
-    cmd = "sysctl -w net.ipv4.ip_forward=1"
-    mock_cmd = MagicMock(return_value=cmd)
-    with patch.dict(
-        linux_sysctl.__salt__,
-        {"cmd.run_stdout": mock_cmd, "cmd.run_all": mock_asn_cmd},
-    ):
-        with patch("salt.utils.files.fopen", mock_open()) as m_open:
-            with pytest.raises(CommandExecutionError):
-                linux_sysctl.persist("net.ipv4.ip_forward", 1, config=None)
+    fopen_mock = MagicMock(side_effect=OSError())
+    with patch("os.path.isfile", MagicMock(return_value=False)), patch(
+        "os.path.exists", MagicMock(return_value=False)
+    ), patch("os.makedirs", MagicMock()), patch("salt.utils.files.fopen", fopen_mock):
+        with pytest.raises(CommandExecutionError):
+            linux_sysctl.persist("net.ipv4.ip_forward", 42, config=None)
+    fopen_mock.called_once()
 
 
 def test_persist_no_conf_success():
