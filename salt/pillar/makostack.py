@@ -3,37 +3,42 @@ Simple and flexible YAML ext_pillar which can read pillar from within pillar.
 
 .. versionadded:: 2016.3.0
 
-This custom saltstack ``ext_pillar`` is a direct ripoff of the 'stack' ext_pillar, simply ported
-to use mako instead of jinja2 for templating.
+This custom saltstack ``ext_pillar`` is a direct ripoff of the 'stack'
+ext_pillar, simply ported to use mako instead of jinja2 for templating.
 
 It supports the following features:
 
-- multiple config files that are mako templates with support for ``pillar``, ``__grains__``,
-  ``__salt__``, ``__opts__`` variable dereferencing.
-- a config file renders as an ordered list of files. Unless absolute, the paths of these files are
-  relative to the current config file - if absolute, they will be treated literally.
-- this list of files are read in order as mako templates with support for ``stack``, ``pillar``,
+- multiple config files that are mako templates with support for ``pillar``,
   ``__grains__``, ``__salt__``, ``__opts__`` variable dereferencing.
+- a config file renders as an ordered list of files. Unless absolute, the paths
+  of these files are relative to the current config file - if absolute, they
+  will be treated literally.
+- this list of files are read in order as mako templates with support for
+  ``stack``, ``pillar``, ``__grains__``, ``__salt__``, ``__opts__`` variable
+  dereferencing.
 - all these rendered files are then parsed as ``yaml``.
-- then all yaml dicts are merged in order, with support for the following  merging strategies:
-  ``merge-first``
+- then all yaml dicts are merged in order, with support for the following
+  merging strategies: ``merge-first``
   ``merge-last``
   ``remove``
   ``overwrite``
-- MakoStack config files can be matched based on ``pillar``, ``grains``, or ``opts`` values, which
-  make it possible to support kind of self-contained environments.
+- MakoStack config files can be matched based on ``pillar``, ``grains``, or
+  ``opts`` values, which make it possible to support kind of self-contained
+  environments.
 
 Configuration in Salt
 ---------------------
 
-Like any other external pillar, its configuration is declared via the ``ext_pillar`` key in the
-master config file.  However, you can configure MakoStack in 3 different ways:
+Like any other external pillar, its configuration is declared via the
+``ext_pillar`` key in the master config file.
+
+However, you can configure MakoStack in 3 different ways:
 
 Single config file
 ~~~~~~~~~~~~~~~~~~
 
-This is the simplest option, you just need to set the path to your single MakoStack config file
-as shown below:
+This is the simplest option, you just need to set the path to your single
+MakoStack config file as shown below:
 
 .. code:: yaml
 
@@ -55,10 +60,12 @@ You can also provide a list of config files:
 Select config files through grains|pillar|opts matching
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can also use a much more flexible configuration:  MakoStack allows one to select the config
-files for the current minion based on matching values from either grains, or pillar, or opts.
+You can also use a much more flexible configuration:  MakoStack allows one to
+select the config files for the current minion based on matching values from
+either grains, or pillar, or opts.
 
-Here is an example of such a configuration, which should hopefully speak for itself:
+Here is an example of such a configuration, which should hopefully speak for
+itself:
 
 .. code:: yaml
 
@@ -77,8 +84,9 @@ Here is an example of such a configuration, which should hopefully speak for its
 Grafting data from files to arbitrary namespaces
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-An extended syntax for config files permits defining "graft points" on a per-config-file basis.
-As an example, if the file foo.cfg would produce the following:
+An extended syntax for config files permits defining "graft points" on a
+per-config-file basis.  As an example, if the file foo.cfg would produce the
+following:
 
 .. code:: yaml
 
@@ -86,8 +94,8 @@ As an example, if the file foo.cfg would produce the following:
     - bar
     - baz
 
-and you specified the cfg file as ``/path/to/foo.cfg:yummy:fur``, the following would actually end
-up in pillar after all merging was complete:
+and you specified the cfg file as ``/path/to/foo.cfg:yummy:fur``, the following
+would actually end up in pillar after all merging was complete:
 
 .. code:: yaml
 
@@ -100,25 +108,29 @@ up in pillar after all merging was complete:
 MakoStack configuration files
 -----------------------------
 
-The config files that are referenced in the above ``ext_pillar`` configuration are mako templates,
-which must (eventually) render as a single, simple, flat ordered list of ``yaml`` files which will
-then be themselves templated with mako, with their results merged to build pillar data.
+The config files that are referenced in the above ``ext_pillar`` configuration
+are mako templates, which must (eventually) render as a single, simple, flat
+ordered list of ``yaml`` files which will then be themselves templated with
+mako, with their results merged to build pillar data.
 
-Unless an absolute path name is specified, the path of these ``yaml`` files is assumed to be
-relative to the directory containing the MakoStack config file.  If a path begins with '/',
-however, it will be treated literally and can be anywhere on the filesystem.
+Unless an absolute path name is specified, the path of these ``yaml`` files is
+assumed to be relative to the directory containing the MakoStack config file.
+If a path begins with '/', however, it will be treated literally and can be
+anywhere on the filesystem.
 
-The following variables are available for interpolation in makostack configuration files:
+The following variables are available for interpolation in makostack
+configuration files:
 
 - ``pillar``: the pillar data (as passed by Salt to our ``ext_pillar`` function)
 - ``minion_id``: the minion id ;-)
 - ``__opts__``: a dictionary of mostly Salt configuration options
-- ``__grains__``: a dictionary of the grains of the minion making this pillar call
-- ``__salt__``: a dictionary of Salt module functions, useful so you don't have to duplicate
-  functions that already exist (note: runs on the master)
+- ``__grains__``: a dictionary of the grains of the minion making this pillar
+  call
+- ``__salt__``: a dictionary of Salt module functions, useful so you don't have
+  to duplicate functions that already exist (note: runs on the master)
 
-So you can use all the power of mako to build your list of ``yaml`` files that then will be merged
-in pillar data.
+So you can use all the power of mako to build your list of ``yaml`` files that
+then will be merged in pillar data.
 
 For example, you could have a MakoStack config file which looks like:
 
@@ -157,8 +169,9 @@ while the directory structure could look like:
 Overall process
 ---------------
 
-In the above configuration, given the test-1-dev minion is an amd64 platform running Debian Jessie
-and that pillar ``roles`` is ``["db"]``, the following ``yaml`` files would be merged in order:
+In the above configuration, given the test-1-dev minion is an amd64 platform
+running Debian Jessie and that pillar ``roles`` is ``["db"]``, the following
+``yaml`` files would be merged in order:
 
 - ``core.yml``
 - ``osarchs/amd64.yml``
@@ -166,45 +179,53 @@ and that pillar ``roles`` is ``["db"]``, the following ``yaml`` files would be m
 - ``roles/db.yml``
 - ``minions/test-1-dev.yml``
 
-Before merging, every files above will be preprocessed as mako templates.  The following variables
-are available in mako templating of ``yaml`` files:
+Before merging, every files above will be preprocessed as mako templates.  The
+following variables are available in mako templating of ``yaml`` files:
 
-- ``stack``: the MakoStack pillar data object under construction (e.g. data from any and all
-  previous ``yaml`` files in MakoStack configuration loaded so far).
-- ``pillar``: the pillar data (as passed by Salt to our ``ext_pillar`` function)
+- ``stack``: the MakoStack pillar data object under construction (e.g. data
+  from any and all previous ``yaml`` files in MakoStack configuration loaded so
+  far).
+- ``pillar``: the pillar data (as passed by Salt to our ``ext_pillar``
+  function).
 - ``minion_id``: the minion id ;-)
-- ``__opts__``: a dictionary of mostly Salt configuration options
-- ``__grains__``: a dictionary of the grains of the minion making this pillar call
-- ``__salt__``: a dictionary of Salt module functions, useful so you don't have to duplicate
-  functions that already exist (note: runs on the master)
+- ``__opts__``: a dictionary of mostly Salt configuration options.
+- ``__grains__``: a dictionary of the grains of the minion making this pillar
+  call.
+- ``__salt__``: a dictionary of Salt module functions, useful so you don't have
+  to duplicate functions that already exist (note: runs on the master).
 
-So you can use all the power of mako to build your pillar data, and even use other MakoStack values
-that have already been parsed and evaluated (from ``yaml`` files earlier in the configuration)
-through the ``stack`` variable.
+So you can use all the power of mako to build your pillar data, and even use
+other MakoStack values that have already been parsed and evaluated (from
+``yaml`` files earlier in the configuration) through the ``stack`` variable.
 
-Once a ``yaml`` file is processed by mako, we obtain a Python dict - let's call it ``yml_data``.
-This ``yml_data`` dict is then merged into in the main ``stack`` dict (which itself is the already
-merged MakoStack pillar data)., based on the declared ``merge-strategy``.  By default, MakoStack
-will deeply merge ``yml_data`` into ``stack`` (much like the ``recurse`` option for salt's
-``pillar_source_merging_strategy``), but 3 other merging strategies (see next section) are also
-available, on a per-object basis, to give you full control over the rendered data.
+Once a ``yaml`` file is processed by mako, we obtain a Python dict - let's call
+it ``yml_data``.  This ``yml_data`` dict is then merged into in the main
+``stack`` dict (which itself is the already merged MakoStack pillar data).,
+based on the declared ``merge-strategy``.  By default, MakoStack will deeply
+merge ``yml_data`` into ``stack`` (much like the ``recurse`` option for salt's
+``pillar_source_merging_strategy``), but 3 other merging strategies (see next
+section) are also available, on a per-object basis, to give you full control
+over the rendered data.
 
-Once all ``yaml`` files have been processed, the ``stack`` dict will contain MakoStack's copmlete
-pillar data.  At this point the MakoStack ``ext_pillar`` returns the ``stack`` dict to Salt, which
-then merges it in with any other pillars, finally returning the whole pillar to the minion.
+Once all ``yaml`` files have been processed, the ``stack`` dict will contain
+MakoStack's copmlete pillar data.  At this point the MakoStack ``ext_pillar``
+returns the ``stack`` dict to Salt, which then merges it in with any other
+pillars, finally returning the whole pillar to the minion.
 
 Merging strategies
 ------------------
 
-The way the data from a new ``yaml_data`` dict is merged with the existing ``stack`` data can be
-controlled by specifying a merging strategy.  Available strategies are:
+The way the data from a new ``yaml_data`` dict is merged with the existing
+``stack`` data can be controlled by specifying a merging strategy.  Available
+strategies are:
 - ``merge-last`` (the default)
 - ``merge-first``
 - ``remove``
 - ``overwrite``
 
-Note that scalar values like strings, integers, booleans, etc. (`leaf nodes` in yaml parlance) are
-always (necessarily) evaluated using ``overwrite`` (other strategies don't make sense in that case).
+Note that scalar values like strings, integers, booleans, etc. (`leaf nodes` in
+yaml parlance) are always (necessarily) evaluated using ``overwrite`` (other
+strategies don't make sense in that case).
 
 The merging strategy can be set by including a dict in the form of:
 
@@ -212,44 +233,50 @@ The merging strategy can be set by including a dict in the form of:
 
     __: <merging strategy>
 
-as the first item of the dict or list.  This allows fine grained control over the merging process.
+as the first item of the dict or list.  This allows fine grained control over
+the merging process.
 
 ``merge-last`` (default) strategy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If the ``merge-last`` strategy is selected (the default), then content of dict or list variables is
-merged recursively with previous definitions of this variable (similarly to the ``recurse`` salt
-``pillar_source_merging_strategy``).  This allows for extending previously defined data.
+If the ``merge-last`` strategy is selected (the default), then content of dict
+or list variables is merged recursively with previous definitions of this
+variable (similarly to the ``recurse`` salt
+``pillar_source_merging_strategy``).  This allows for extending previously
+defined data.
 
 ``merge-first`` strategy
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-If the ``merge-first`` strategy is selected, then the content of dict or list variables are swapped
-between the ``yaml_data`` and ``stack`` objects before being merged recursively with the previous
-``merge-last`` strategy.  This allows for e.g. prepending to list items and such, and keeping
-previously defined dictionary keys (to prevent overwriting "default values" for instance).
+If the ``merge-first`` strategy is selected, then the content of dict or list
+variables are swapped between the ``yaml_data`` and ``stack`` objects before
+being merged recursively with the previous ``merge-last`` strategy.  This
+allows for e.g. prepending to list items and such, and keeping previously
+defined dictionary keys (to prevent overwriting "default values" for instance).
 
 ``remove`` strategy
 ~~~~~~~~~~~~~~~~~~~
 
-If the ``remove`` strategy is selected, then content of dict or list variables in ``stack`` are
-removed only if the corresponding item is present in the ``yaml_data`` dict.  This allows for
-removing items entirely from previously defined data without replacing them with something else.
+If the ``remove`` strategy is selected, then content of dict or list variables
+in ``stack`` are removed only if the corresponding item is present in the
+``yaml_data`` dict.  This allows for removing items entirely from previously
+defined data without replacing them with something else.
 
 ``overwrite`` strategy
 ~~~~~~~~~~~~~~~~~~~~~~
 
-If the ``overwrite`` strategy is selected, then the content of dict or list variables in ``stack``
-is overwritten by the content of ``yaml_data`` dict.  This allows one to overwrite variables from
-previous definitions.
+If the ``overwrite`` strategy is selected, then the content of dict or list
+variables in ``stack`` is overwritten by the content of ``yaml_data`` dict.
+This allows one to overwrite variables from previous definitions.
 
 Merging examples
 ----------------
 
-Let's go through small examples that should clarify what's going on when a ``yaml_data`` dict is
-merged in the ``stack`` dict.
+Let's go through small examples that should clarify what's going on when a
+``yaml_data`` dict is merged in the ``stack`` dict.
 
-When you don't specify any strategy, the default ``merge-last`` strategy is selected:
+When you don't specify any strategy, the default ``merge-last`` strategy is
+selected:
 
 +----------------------+-----------------------+-------------------------+
 | ``stack``            | ``yaml_data``         | ``stack`` (after merge) |
@@ -357,19 +384,20 @@ Similarly, list allow a custom merging strategy using a ``__`` item:
 Tweaking MakoStack
 ------------------
 
-Out of the box, MakoStack (following the ``stack`` module it was cribbed from), will more or less
-silently pass over template files it cannot load due to mako or yaml parsing errors.  This is
-convenient, but arguably WRONG, behaviour; but for backwards compatibility, it is maintained as the
-default.
+Out of the box, MakoStack (following the ``stack`` module it was cribbed from),
+will more or less silently pass over template files it cannot load due to mako
+or yaml parsing errors.  This is convenient, but arguably WRONG, behaviour; but
+for backwards compatibility, it is maintained as the default.
 
-If desired, a configuration option may be set via a ``config`` entry under the ``ext_pillar``
-definition for MakoStack, as shown in the following snippet:
+If desired, a configuration option may be set via a ``config`` entry under the
+``ext_pillar`` definition for MakoStack, as shown in the following snippet:
 
-It's also possible (though not really recommended) to set a ``fail_on_missing_file`` option, which
-will cause a compilation error whenever a "potential" file isn't found during processing.  This is
-largely contrary to the intended usage of MakoStack (which is to let it search for and utilize any
-files under a directory tree, quietly loading those it finds, and ignoring any missing), but it
-MIGHT be useful to someone, somewhere so I added it...
+It's also possible (though not really recommended) to set a
+``fail_on_missing_file`` option, which will cause a compilation error whenever
+a "potential" file isn't found during processing.  This is largely contrary to
+the intended usage of MakoStack (which is to let it search for and utilize any
+files under a directory tree, quietly loading those it finds, and ignoring any
+missing), but it MIGHT be useful to someone, somewhere so I added it...
 
 .. code:: yaml
 
@@ -379,9 +407,10 @@ MIGHT be useful to someone, somewhere so I added it...
         fail_on_missing_file: False
     - makostack: /path/to/stack.cfg
 
-This will cause MakoStack to still ignore non-existant files, but fail on actual parse errors
-inside files that do exist.  Note that False is the default for both options, so neither need be
-provided unless the intention is to set it to True.
+This will cause MakoStack to still ignore non-existant files, but fail on
+actual parse errors inside files that do exist.  Note that False is the default
+for both options, so neither need be provided unless the intention is to set it
+to True.
 
 """
 
@@ -578,7 +607,7 @@ def _merge_list(stack, obj):
         del obj[0]
     if strategy not in strategies:
         raise Exception(
-            "Unknown strategy {!r}, should be one of {}".format(strategy, strategies)
+            "Unknown strategy {!r}, should be one of {!r}".format(strategy, strategies)
         )
     if strategy == "overwrite":
         return obj
