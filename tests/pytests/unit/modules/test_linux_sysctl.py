@@ -149,17 +149,12 @@ def test_persist_read_conf_success():
         sys_cmd = "systemd 208\n+PAM +LIBWRAP"
         mock_sys_cmd = MagicMock(return_value=sys_cmd)
 
-        with patch("salt.utils.files.fopen", mock_open()):
-            with patch.dict(
-                linux_sysctl.__context__, {"salt.utils.systemd.version": 232}
-            ):
-                with patch.dict(
-                    linux_sysctl.__salt__,
-                    {"cmd.run_stdout": mock_sys_cmd, "cmd.run_all": mock_asn_cmd},
-                ):
-                    with patch.dict(
-                        systemd.__context__, {"salt.utils.systemd.booted": True}
-                    ):
-                        assert (
-                            linux_sysctl.persist("net.ipv4.ip_forward", 1) == "Updated"
-                        )
+        with patch("salt.utils.files.fopen", mock_open()), patch.dict(
+            linux_sysctl.__context__, {"salt.utils.systemd.version": 232}
+        ), patch.dict(
+            linux_sysctl.__salt__,
+            {"cmd.run_stdout": mock_sys_cmd, "cmd.run_all": mock_asn_cmd},
+        ), patch.dict(
+            systemd.__context__, {"salt.utils.systemd.booted": True}
+        ):
+            assert linux_sysctl.persist("net.ipv4.ip_forward", 1) == "Updated"
