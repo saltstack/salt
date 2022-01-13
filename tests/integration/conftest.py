@@ -29,13 +29,10 @@ def salt_minion(salt_minion_factory):
     with salt_minion_factory.started():
         # Sync All
         salt_call_cli = salt_minion_factory.salt_call_cli()
-        import time
         tries = 0
         while True:
             try:
-                ret = salt_call_cli.run("saltutil.sync_all",
-        #            '-l', 'debug',
-                    _timeout=60)
+                ret = salt_call_cli.run("saltutil.sync_all", _timeout=60)
             except saltfactories.exceptions.FactoryTimeout:
                 if tries == 2:
                     raise

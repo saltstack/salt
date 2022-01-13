@@ -596,7 +596,6 @@ class MessageClient:
         self.send_queue = []  # queue of messages to be sent
         self.send_future_map = {}  # mapping of request_id -> Future
 
-        self._read_until_future = None
         self._on_recv = None
         self._closing = False
         self._closed = False
@@ -692,9 +691,6 @@ class MessageClient:
         unpacker = salt.utils.msgpack.Unpacker()
         while not self._closing:
             try:
-                # self._read_until_future = self._stream.read_bytes(4096, partial=True)
-                # wire_bytes = yield self._read_until_future
-                #wire_bytes = await asyncio.wait_for(self._reader.read(4096), timeout=10)
                 wire_bytes = await self._reader.read(4096)
                 if not wire_bytes:
                     log.error("%s empty read", self.__class__.__name__)
@@ -711,7 +707,7 @@ class MessageClient:
                         # self.remove_message_timeout(message_id)
                     else:
                         if self._on_recv is not None:
-                            self.io_loop.spawn_callback(self._on_recv, header, body)
+                            self.io_loop.call_soon(self._on_recv, header, body)
                         else:
                             log.error(
                                 "Got response for message_id %s that we are not"
@@ -796,7 +792,10 @@ class MessageClient:
         else:
 
             def wrap_recv(header, body):
-                callback(body)
+                if asyncio.iscoroutinefunction(callback):
+                    self.io_loop.create_task(callback(body))
+                else:
+                    callback(body)
 
             self._on_recv = wrap_recv
 
@@ -863,23 +862,13 @@ class Subscriber:
         self.writer = writer
         self.address = address
         self._closing = False
-        self._read_until_future = None
         self.id_ = None
 
     def close(self):
         if self._closing:
             return
         self._closing = True
-        if not self.writter.closed():
-            self.writter.close()
-            if self._read_until_future is not None and self._read_until_future.done():
-                # This will prevent this message from showing up:
-                # '[ERROR   ] Future exception was never retrieved:
-                # StreamClosedError'
-                # This happens because the logic is always waiting to read
-                # the next message and the associated read future is marked
-                # 'StreamClosedError' when the stream is closed.
-                self._read_until_future.exception()
+        self.writer.close()
 
     # pylint: disable=W1701
     def __del__(self):
@@ -937,29 +926,29 @@ class PubServer:
     async def _stream_read(self, client):
         unpacker = salt.utils.msgpack.Unpacker()
         while not self._closing:
-            #try:
-               # client._read_until_future = client.stream.read_bytes(4096, partial=True)
+            try:
                 wire_bytes = await client.reader.read(4096)
-                #if not wire_bytes:
-                #    log.error("%s empty read", self.__class__.__name__)
-                #    break
+                log.error("PubServer Read from client %r", wire_bytes)
+                if not wire_bytes:
+                    log.error("%s empty read", self.__class__.__name__)
+                    break
                 unpacker.feed(wire_bytes)
                 for framed_msg in unpacker:
                     framed_msg = salt.transport.frame.decode_embedded_strs(framed_msg)
                     body = framed_msg["body"]
                     if self.presence_callback:
                         self.presence_callback(client, body)
-            #except salt.ext.tornado.iostream.StreamClosedError as e:
-            #    log.debug("tcp stream to %s closed, unable to recv", client.address)
-            #    client.close()
-            #    self.remove_presence_callback(client)
-            #    self.clients.discard(client)
-            #    break
-            #except Exception as e:  # pylint: disable=broad-except
-            #    log.error(
-            #        "Exception parsing response from %s", client.address, exc_info=True
-            #    )
-            #    continue
+            except salt.ext.tornado.iostream.StreamClosedError as e:
+                log.debug("tcp stream to %s closed, unable to recv", client.address)
+                client.close()
+                self.remove_presence_callback(client)
+                self.clients.discard(client)
+                break
+            except Exception as e:  # pylint: disable=broad-except
+                log.error(
+                    "Exception parsing response from %s", client.address, exc_info=True
+                )
+                continue
 
     async def handle_stream(self, reader, writer):
         socket = writer.get_extra_info("socket")
@@ -967,12 +956,11 @@ class PubServer:
         log.error("Subscriber at %s connected", address)
         client = Subscriber(reader, writer, address)
         self.clients.add(client)
-        #await self._stream_read(client)
+        await self._stream_read(client)
         #self.io_loop.create_task(self._stream_read(client))
 
     # TODO: ACK the publish through IPC
-    @salt.ext.tornado.gen.coroutine
-    def publish_payload(self, package, topic_list=None):
+    async def publish_payload(self, package, topic_list=None):
         log.trace("TCP PubServer sending payload: %s \n\n %r", package, topic_list)
         payload = salt.transport.frame.frame_msg(package)
         to_remove = []
@@ -982,19 +970,24 @@ class PubServer:
                 for client in self.clients:
                     if topic == client.id_:
                         try:
-                            # Write the packed str
-                            yield client.stream.write(payload)
+                            client.writer.write(payload)
+                            await client.writer.drain()
                             sent = True
                             # self.io_loop.add_future(f, lambda f: True)
-                        except salt.ext.tornado.iostream.StreamClosedError:
+                        except Exception:
+                            log.error("Exception while writting to client", exc_info=True)
                             to_remove.append(client)
                 if not sent:
-                    log.debug("Publish target %s not connected %r", topic, self.clients)
+                    log.debug("Publish target %s not connected %r",
+                        topic, [c.id_ for c in self.clients]
+                    )
         else:
             for client in self.clients:
                 try:
-                    # Write the packed str
-                    yield client.stream.write(payload)
+                    client.stream.write(payload)
+                    await client.writer.drain()
+                except Exception:
+                    log.error("Exception while writting to client", exc_info=True)
                 except salt.ext.tornado.iostream.StreamClosedError:
                     to_remove.append(client)
         for client in to_remove:
