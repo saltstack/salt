@@ -213,9 +213,6 @@ def persist(name, value, config=None):
             nlines.append(line)
             continue
 
-        if len(comps) < 2:
-            nlines.append(line)
-            continue
         if name == comps[0]:
             # This is the line to edit
             sanitized_value = _sanitize_sysctl_value(value)
