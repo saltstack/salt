@@ -4,6 +4,7 @@
 
 import datetime
 import logging
+import os
 
 import pytest
 import salt.modules.schedule as schedule
@@ -32,8 +33,25 @@ def sock_dir(tmp_path):
 
 
 @pytest.fixture
-def schedule_config_file(tmp_path):
-    return "/etc/salt/minion.d/_schedule.conf"
+def schedule_config_file():
+    config_dir = schedule.__opts__.get("conf_dir", None)
+    if config_dir is None and "conf_file" in schedule.__opts__:
+        config_dir = os.path.dirname(schedule.__opts__["conf_file"])
+    if config_dir is None:
+        config_dir = salt.syspaths.CONFIG_DIR
+
+    minion_d_dir = os.path.join(
+        config_dir,
+        os.path.dirname(
+            schedule.__opts__.get(
+                "default_include",
+                salt.config.DEFAULT_MINION_OPTS["default_include"],
+            )
+        ),
+    )
+
+    schedule_conf = os.path.join(minion_d_dir, "_schedule.conf")
+    return schedule_conf
 
 
 @pytest.fixture
