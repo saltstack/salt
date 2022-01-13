@@ -99,7 +99,7 @@ class VMWareTest(CloudTest):
         Tests creating Instant Clone VM
         """
         # salt-cloud -p my-instant-clone IC3
-        profile_name = "my-instant-clone"
+        profile_name = "vmware-test-instant-clone"
         self.add_profile_config(
             "vmware-test", {"instant_clone": True}, "vmware.conf", profile_name
         )
