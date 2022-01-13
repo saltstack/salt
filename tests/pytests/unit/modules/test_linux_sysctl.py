@@ -23,6 +23,9 @@ def test_get():
     mock_cmd = MagicMock(return_value=1)
     with patch.dict(linux_sysctl.__salt__, {"cmd.run": mock_cmd}):
         assert linux_sysctl.get("net.ipv4.ip_forward") == 1
+    mock_cmd.assert_called_once_with(
+        ["sysctl", "-n", "net.ipv4.ip_forward"], python_shell=False
+    )
 
 
 def test_assign_proc_sys_failed():
@@ -40,6 +43,7 @@ def test_assign_proc_sys_failed():
         with patch.dict(linux_sysctl.__salt__, {"cmd.run_all": mock_cmd}):
             with pytest.raises(CommandExecutionError):
                 linux_sysctl.assign("net.ipv4.ip_forward", 1)
+        mock_cmd.assert_not_called()
 
 
 def test_assign_cmd_failed():
@@ -57,6 +61,9 @@ def test_assign_cmd_failed():
         with patch.dict(linux_sysctl.__salt__, {"cmd.run_all": mock_cmd}):
             with pytest.raises(CommandExecutionError):
                 linux_sysctl.assign("net.ipv4.ip_forward", "backward")
+        mock_cmd.assert_called_once_with(
+            ["sysctl", "-w", "net.ipv4.ip_forward=backward"], python_shell=False
+        )
 
 
 def test_assign_success():
@@ -74,6 +81,9 @@ def test_assign_success():
         mock_cmd = MagicMock(return_value=cmd)
         with patch.dict(linux_sysctl.__salt__, {"cmd.run_all": mock_cmd}):
             assert linux_sysctl.assign("net.ipv4.ip_forward", 1) == ret
+        mock_cmd.assert_called_once_with(
+            ["sysctl", "-w", "net.ipv4.ip_forward=1"], python_shell=False
+        )
 
 
 def test_persist_no_conf_failure():
@@ -120,6 +130,9 @@ def test_persist_no_conf_success():
             linux_sysctl.persist("net.ipv4.ip_forward", 1, config=config)
             writes = m_open.write_calls()
             assert writes == ["#\n# Kernel sysctl configuration\n#\n"], writes
+        mock_asn_cmd.assert_called_once_with(
+            ["sysctl", "-w", "net.ipv4.ip_forward=1"], python_shell=False
+        )
 
 
 def test_persist_read_conf_success():
@@ -149,3 +162,6 @@ def test_persist_read_conf_success():
             systemd.__context__, {"salt.utils.systemd.booted": True}
         ):
             assert linux_sysctl.persist("net.ipv4.ip_forward", 1) == "Updated"
+        mock_asn_cmd.assert_called_once_with(
+            ["sysctl", "-w", "net.ipv4.ip_forward=1"], python_shell=False
+        )

@@ -91,7 +91,7 @@ def show(config_file=False):
             log.error("Could not open sysctl file")
             return None
     else:
-        cmd = "sysctl -a"
+        cmd = ["sysctl", "-a"]
         out = __salt__["cmd.run_stdout"](cmd, output_loglevel="trace")
         for line in out.splitlines():
             if not line or " = " not in line:
@@ -111,7 +111,7 @@ def get(name):
 
         salt '*' sysctl.get net.ipv4.ip_forward
     """
-    cmd = "sysctl -n {}".format(name)
+    cmd = ["sysctl", "-n", name]
     out = __salt__["cmd.run"](cmd, python_shell=False)
     return out
 
@@ -135,7 +135,7 @@ def assign(name, value):
         raise CommandExecutionError("sysctl {} does not exist".format(name))
 
     ret = {}
-    cmd = 'sysctl -w {}="{}"'.format(name, value)
+    cmd = ["sysctl", "-w", "{}={}".format(name, value)]
     data = __salt__["cmd.run_all"](cmd, python_shell=False)
     out = data["stdout"]
     err = data["stderr"]
