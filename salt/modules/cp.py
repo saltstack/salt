@@ -96,7 +96,7 @@ def recv_chunked(dest, chunk, append=False, compressed=True, mode=None):
 
     .. code-block:: bash
 
-        salt '*' cp.recv_chuncked
+        salt '*' cp.recv_chunked
     """
     if "retcode" not in __context__:
         __context__["retcode"] = 0
