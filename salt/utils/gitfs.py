@@ -487,11 +487,14 @@ class GitProvider:
             else:
                 if rname == self.base:
                     env_set.add("base")
-                elif not self.disable_saltenv_mapping:
+                elif not getattr(self, "disable_saltenv_mapping", False):
                     env_set.add(rname)
 
-        use_branches = "branch" in self.ref_types
-        use_tags = "tag" in self.ref_types
+        if hasattr(self, "ref_types"):
+            use_branches = "branch" in self.ref_types
+            use_tags = "tag" in self.ref_types
+        else:
+            use_branches = use_tags = True
 
         ret = set()
         if salt.utils.stringutils.is_hex(self.base):
@@ -2428,22 +2431,17 @@ class GitBase:
                 if hasattr(repo_obj, "branch") and repo_obj.branch == "__env__":
                     log.debug("Fetching all refs to resolve '__env__' dynamically")
                     repo_obj.fetch()
-                    refs = []
-                    for ref in repo_obj.repo.listall_references():
-                        if ref.startswith(("refs/remotes/origin/", "refs/tags/")):
-                            refs.append(ref)
-                    log.debug("Adding available refs as new remotes: {}".format(refs))
-                    for ref in refs:
-                        tgt = ref.replace("refs/remotes/origin/", "").replace(
-                            "refs/tags/", ""
-                        )
+                    envs = repo_obj.envs()
+                    log.debug("Adding available envs as new remotes: {}".format(envs))
+                    for env in envs:
+                        log.debug("__env --> {}".format(env))
                         if isinstance(remote, dict):
                             key = next(iter(remote))
                             _, _url = key.split(None, 1)
-                            new_remote = {"{} {}".format(tgt, _url): remote[key]}
+                            new_remote = {"{} {}".format(env, _url): remote[key]}
                         else:
                             _, _url = remote.split(None, 1)
-                            new_remote = "{} {}".format(tgt, _url)
+                            new_remote = "{} {}".format(env, _url)
                         remotes_to_process.append(new_remote)
 
                 # Do not add '__env__' as remote since new remotes for
