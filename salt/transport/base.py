@@ -101,7 +101,7 @@ class RequestClient:
     """
 
     def __init__(self, opts, io_loop, **kwargs):
-        raise NotImplementedError
+        pass
 
     @salt.ext.tornado.gen.coroutine
     def send(self, load, tries=3, timeout=60):
@@ -130,7 +130,7 @@ class RequestServer:
     """
 
     def __init__(self, opts):
-        raise NotImplementedError
+        pass
 
     def close(self):
         """
@@ -204,7 +204,7 @@ class PublishClient:
     """
 
     def __init__(self, opts, io_loop, **kwargs):
-        raise NotImplementedError
+        pass
 
     def on_recv(self, callback):
         """
