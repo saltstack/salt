@@ -8,6 +8,7 @@ import pytest
 import salt.modules.linux_sysctl as linux_sysctl
 import salt.modules.systemd_service as systemd
 from salt.exceptions import CommandExecutionError
+from salt.utils.files import fopen
 from tests.support.mock import MagicMock, mock_open, patch
 
 
@@ -26,6 +27,53 @@ def test_get():
     mock_cmd.assert_called_once_with(
         ["sysctl", "-n", "net.ipv4.ip_forward"], python_shell=False
     )
+
+
+def test_show():
+    """
+    Tests the return of show function
+    """
+    mock_cmd = MagicMock(
+        return_value="""\
+kernel.core_pattern = |/usr/share/kdump-tools/dump-core %p %s %t %e
+kernel.printk = 3 4 1 3
+net.ipv4.ip_forward = 1
+net.ipv4.tcp_rmem = 4096	131072	6291456
+"""
+    )
+    with patch.dict(linux_sysctl.__salt__, {"cmd.run_stdout": mock_cmd}):
+        assert linux_sysctl.show() == {
+            "kernel.core_pattern": "|/usr/share/kdump-tools/dump-core %p %s %t %e",
+            "kernel.printk": "3 4 1 3",
+            "net.ipv4.ip_forward": "1",
+            "net.ipv4.tcp_rmem": "4096\t131072\t6291456",
+        }
+    mock_cmd.assert_called_once_with(["sysctl", "-a"], output_loglevel="trace")
+
+
+def test_show_config_file(tmp_path):
+    """
+    Tests the return of show function for a given file
+    """
+    config = str(tmp_path / "sysctl.conf")
+    with fopen(config, "w", encoding="utf-8") as config_file:
+        config_file.write(
+            """\
+# Use dump-core from kdump-tools Debian package.
+kernel.core_pattern = |/usr/share/kdump-tools/dump-core %p %s %t %e
+ # Stop low-level messages on console = less logging
+ kernel.printk  = 3 4 1 3
+
+net.ipv4.ip_forward=1
+net.ipv4.tcp_rmem	=	4096	131072	6291456
+"""
+        )
+    assert linux_sysctl.show(config) == {
+        "kernel.core_pattern": "|/usr/share/kdump-tools/dump-core %p %s %t %e",
+        "kernel.printk": "3 4 1 3",
+        "net.ipv4.ip_forward": "1",
+        "net.ipv4.tcp_rmem": "4096\t131072\t6291456",
+    }
 
 
 def test_assign_proc_sys_failed():

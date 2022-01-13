@@ -77,16 +77,10 @@ def show(config_file=False):
         try:
             with salt.utils.files.fopen(config_file) as fp_:
                 for line in fp_:
-                    line = salt.utils.stringutils.to_str(line)
+                    line = salt.utils.stringutils.to_str(line).strip()
                     if not line.startswith("#") and "=" in line:
-                        # search if we have some '=' instead of ' = ' separators
-                        SPLIT = " = "
-                        if SPLIT not in line:
-                            SPLIT = SPLIT.strip()
-                        key, value = line.split(SPLIT, 1)
-                        key = key.strip()
-                        value = value.lstrip()
-                        ret[key] = value
+                        key, value = line.split("=", 1)
+                        ret[key.rstrip()] = value.lstrip()
         except OSError:
             log.error("Could not open sysctl file")
             return None
@@ -196,15 +190,17 @@ def persist(name, value, config=None):
         raise CommandExecutionError(msg.format(config))
 
     for line in config_data:
-        if line.startswith("#"):
-            nlines.append(line)
-            continue
         if "=" not in line:
             nlines.append(line)
             continue
 
         # Strip trailing whitespace and split the k,v
         comps = [i.strip() for i in line.split("=", 1)]
+
+        if comps[0].startswith("#"):
+            # Check for comment lines after stripping leading whitespaces.
+            nlines.append(line)
+            continue
 
         # On Linux procfs, files such as /proc/sys/net/ipv4/tcp_rmem or any
         # other sysctl with whitespace in it consistently uses 1 tab.  Lets
