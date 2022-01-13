@@ -1,18 +1,12 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import
 
 import logging
 import os
 
-# Import Salt Libs
 import salt.states.git as git_state  # Don't potentially shadow GitPython
-
-# Import Salt Testing Libs
 from tests.support.helpers import with_tempdir
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import DEFAULT, MagicMock, Mock, patch
@@ -69,7 +63,9 @@ class GitTestCase(TestCase, LoaderModuleMockMixin):
             git_state.__salt__, dunder_salt
         ):
             result = git_state.latest(
-                name=name, target=target, mirror=True,  # mirror=True implies bare=True
+                name=name,
+                target=target,
+                mirror=True,  # mirror=True implies bare=True
             )
             assert result["result"] is True, result
             git_diff.assert_not_called()

@@ -1,13 +1,10 @@
-# coding: utf-8
-from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.ext.tornado.gen
 import salt.ext.tornado.testing
 import salt.utils.asynchronous as asynchronous
 from salt.ext.tornado.testing import AsyncTestCase
 
 
-class HelperA(object):
+class HelperA:
 
     async_methods = [
         "sleep",
@@ -22,7 +19,7 @@ class HelperA(object):
         raise salt.ext.tornado.gen.Return(True)
 
 
-class HelperB(object):
+class HelperB:
 
     async_methods = [
         "sleep",

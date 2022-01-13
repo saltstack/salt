@@ -14,7 +14,20 @@ Statistics
 - Total Issue References: **138**
 - Total PR References: **312**
 
-- Contributors: **92** (`0xf10e`_, `AkhterAli`_, `BretFisher`_, `DmitryKuzmenko`_, `EvaSDK`_, `GideonRed-zz`_, `JohannesEbke`_, `Oro`_, `TheBigBear`_, `TronPaul`_, `UtahDave`_, `ahus1`_, `alekti`_, `alexandrsushko`_, `amontalban`_, `andre-luiz-dos-santos`_, `aneeshusa`_, `anlutro`_, `asyncsrc`_, `attiasr`_, `babilen`_, `basepi`_, `bbinet`_, `bclermont`_, `bechtoldt`_, `blackduckx`_, `bobrik`_, `cachedout`_, `colekowalski`_, `cro`_, `d--j`_, `davidjb`_, `denmat`_, `derBroBro`_, `dkiser`_, `driskell`_, `egarbi`_, `fleaflicker`_, `garethgreenaway`_, `gmcwhistler`_, `gtmanfred`_, `hasues`_, `isbm`_, `jacksontj`_, `jacobhammons`_, `jahamn`_, `jarpy`_, `jasonkeene`_, `jayeshka`_, `jfindlay`_, `jleroy`_, `jmdcal`_, `jodv`_, `joejulian`_, `jquast`_, `justinta`_, `kev009`_, `klyr`_, `l2ol33rt`_, `loa`_, `lomeroe`_, `martinhoefling`_, `mgwilliams`_, `nicholascapo`_, `niq000`_, `nmadhok`_, `nyushi`_, `oeuftete`_, `opdude`_, `pcdummy`_, `pcn`_, `peterdemin`_, `puneetk`_, `rallytime`_, `rmatulat`_, `s0undt3ch`_, `silenius`_, `sjorge`_, `stanislavb`_, `steverweber`_, `supertom`_, `t0rrant`_, `tankywoo`_, `techhat`_, `terminalmage`_, `thatch45`_, `tony-cocco`_, `twangboy`_, `uvsmtid`_, `vr-jack`_, `yanatan16`_, `zyio`_)
+- Contributors: **92** (`0xf10e`_, `AkhterAli`_, `BretFisher`_, `DmitryKuzmenko`_, `EvaSDK`_,
+  `GideonRed-zz`_, `JohannesEbke`_, `Oro`_, `TheBigBear`_, `TronPaul`_, `UtahDave`_, `ahus1`_,
+  `alekti`_, `alexandrsushko`_, `amontalban`_, `andre-luiz-dos-santos`_, `aneeshusa`_, `anlutro`_,
+  `asyncsrc`_, `attiasr`_, `babilen`_, `basepi`_, `bbinet`_, `bclermont`_, `bechtoldt`_,
+  `blackduckx`_, `bobrik`_, `cachedout`_, `colekowalski`_, `cro`_, `d--j`_, `davidjb`_, `denmat`_,
+  `derBroBro`_, `dkiser`_, `driskell`_, `egarbi`_, `fleaflicker`_, `garethgreenaway`_,
+  `gmcwhistler`_, `gtmanfred`_, `hasues`_, `isbm`_, `jacksontj`_, `jacobhammons`_, `jahamn`_,
+  `jarpy`_, `jasonkeene`_, `jayeshka`_, `jfindlay`_, `jleroy`_, `jmdcal`_, `jodv`_, `joejulian`_,
+  `jquast`_, `justinta`_, `kev009`_, `klyr`_, `l2ol33rt`_, `loa`_, `lomeroe`_, `martinhoefling`_,
+  `mgwilliams`_, `nicholascapo`_, `niq000`_, `nmadhok`_, `nyushi`_, `oeuftete`_, `opdude`_,
+  `pcdummy`_, `pcn`_, `peterdemin`_, `puneetk`_, `rallytime`_, `rmatulat`_, `s0undt3ch`_,
+  `silenius`_, `sjorge`_, `stanislavb`_, `steverweber`_, `supertom`_, `t0rrant`_, `tankywoo`_,
+  `techhat`_, `terminalmage`_, `thatch45`_, `tony-cocco`_, `twangboy`_, `uvsmtid`_, `vr-jack`_,
+  `yanatan16`_, `zyio`_)
 
 
 Bug Fixes

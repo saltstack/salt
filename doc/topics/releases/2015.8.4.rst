@@ -14,7 +14,18 @@ Statistics
 - Total Issue References: **120**
 - Total PR References: **312**
 
-- Contributors: **78** (`AkhterAli`_, `DmitryKuzmenko`_, `MadsRC`_, `Oro`_, `The-Loeki`_, `abednarik`_, `akissa`_, `anlutro`_, `basepi`_, `bastiaanb`_, `bdrung`_, `borgstrom`_, `cachedout`_, `clan`_, `clinta`_, `cournape`_, `cro`_, `ctrlrsf`_, `dmacvicar`_, `dmurphy18`_, `dnd`_, `dr4Ke`_, `eliasp`_, `fcrozat`_, `frioux`_, `galet`_, `garethgreenaway`_, `gqgunhed`_, `gtmanfred`_, `hexedpackets`_, `isbm`_, `jacksontj`_, `jacobhammons`_, `jfindlay`_, `jleimbach`_, `job`_, `joejulian`_, `julianbrost`_, `justinta`_, `kingsquirrel152`_, `kiorky`_, `l2ol33rt`_, `lagesag`_, `lorengordon`_, `mbarrien`_, `mpreziuso`_, `multani`_, `nmadhok`_, `oeuftete`_, `opdude`_, `optix2000`_, `pass-by-value`_, `paulnivin`_, `plastikos`_, `pritambaral`_, `rallytime`_, `rasathus`_, `rmatulat`_, `ruxandraburtica`_, `ryan-lane`_, `s0undt3ch`_, `seanjnkns`_, `serge-p`_, `sjorge`_, `stanislavb`_, `tbaker57`_, `techhat`_, `terminalmage`_, `thatch45`_, `thegoodduke`_, `thomaso-mirodin`_, `ticosax`_, `timcharper`_, `tkunicki`_, `trevor-h`_, `twangboy`_, `whiteinge`_, `whytewolf`_)
+- Contributors: **78** (`AkhterAli`_, `DmitryKuzmenko`_, `MadsRC`_, `Oro`_, `The-Loeki`_,
+  `abednarik`_, `akissa`_, `anlutro`_, `basepi`_, `bastiaanb`_, `bdrung`_, `borgstrom`_,
+  `cachedout`_, `clan`_, `clinta`_, `cournape`_, `cro`_, `ctrlrsf`_, `dmacvicar`_, `dmurphy18`_,
+  `dnd`_, `dr4Ke`_, `eliasp`_, `fcrozat`_, `frioux`_, `galet`_, `garethgreenaway`_, `gqgunhed`_,
+  `gtmanfred`_, `hexedpackets`_, `isbm`_, `jacksontj`_, `jacobhammons`_, `jfindlay`_, `jleimbach`_,
+  `job`_, `joejulian`_, `julianbrost`_, `justinta`_, `kingsquirrel152`_, `kiorky`_, `l2ol33rt`_,
+  `lagesag`_, `lorengordon`_, `mbarrien`_, `mpreziuso`_, `multani`_, `nmadhok`_, `oeuftete`_,
+  `opdude`_, `optix2000`_, `pass-by-value`_, `paulnivin`_, `plastikos`_, `pritambaral`_,
+  `rallytime`_, `rasathus`_, `rmatulat`_, `ruxandraburtica`_, `ryan-lane`_, `s0undt3ch`_,
+  `seanjnkns`_, `serge-p`_, `sjorge`_, `stanislavb`_, `tbaker57`_, `techhat`_, `terminalmage`_,
+  `thatch45`_, `thegoodduke`_, `thomaso-mirodin`_, `ticosax`_, `timcharper`_, `tkunicki`_,
+  `trevor-h`_, `twangboy`_, `whiteinge`_, `whytewolf`_)
 
 
 Known Issues
@@ -126,7 +137,7 @@ Changelog for v2015.8.3..v2015.8.4
 
     * 8e56be7f4c Merge pull request `#30548`_ from jacobhammons/doc-fixes
 
-      * 03c51bb54d Added placeholder release notes for 2015.5.10 Changed old doc links from docs.saltstack.org to docs.saltstack.com
+      * 03c51bb54d Added placeholder release notes for 2015.5.10 Changed old doc links from docs.saltstack.org to docs.saltproject.io
 
     * 1aafd4c5b5 Merge pull request `#30530`_ from terminalmage/yumpkg-dnf-cleanup
 
@@ -519,7 +530,7 @@ Changelog for v2015.8.3..v2015.8.4
 * **PR** `#30384`_: (`isbm`_) Bugfix: info_available does not work correctly on SLE 11 series
   @ *2016-01-15 18:31:57 UTC*
 
-  * c478148b60 Merge pull request `#30384`_ from isbm/isbm-zypper-info-avaiable-fix
+  * c478148b60 Merge pull request `#30384`_ from isbm/isbm-zypper-info-available-fix
 
   * c7bc20e865 Split information, that is compatible with the Zypper's output on SLE11.
 

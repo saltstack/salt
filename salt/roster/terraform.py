@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Dynamic roster from terraform current state
 ===========================================
@@ -54,13 +53,10 @@ examples.
 
 .. _Terraform Salt: https://github.com/dmacvicar/terraform-provider-salt
 """
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
 
 import logging
 import os.path
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.json
 
@@ -142,7 +138,7 @@ def _parse_state_file(state_file_path="terraform.tfstate"):
 
     for module in modules:
         resources = module.get("resources", [])
-        for resource_name, resource in salt.ext.six.iteritems(resources):
+        for resource_name, resource in resources.items():
             roster_entry = None
             if resource["type"] == "salt_host":
                 roster_entry = _handle_salt_host_resource(resource)

@@ -19,11 +19,10 @@ import time
 import traceback
 import weakref
 
+import salt.channel.client
 import salt.defaults.exitcodes
 import salt.ext.tornado.gen
 import salt.payload
-import salt.transport.client
-import salt.transport.frame
 import salt.utils.crypt
 import salt.utils.decorators
 import salt.utils.event
@@ -36,6 +35,7 @@ import salt.utils.verify
 import salt.version
 from salt.exceptions import (
     AuthenticationError,
+    InvalidKeyError,
     MasterExit,
     SaltClientError,
     SaltReqTimeoutError,
@@ -220,10 +220,16 @@ def get_rsa_pub_key(path):
         with salt.utils.files.fopen(path, "rb") as f:
             data = f.read().replace(b"RSA ", b"")
         bio = BIO.MemoryBuffer(data)
-        key = RSA.load_pub_key_bio(bio)
+        try:
+            key = RSA.load_pub_key_bio(bio)
+        except RSA.RSAError:
+            raise InvalidKeyError("Encountered bad RSA public key")
     else:
         with salt.utils.files.fopen(path) as f:
-            key = RSA.importKey(f.read())
+            try:
+                key = RSA.importKey(f.read())
+            except (ValueError, IndexError, TypeError):
+                raise InvalidKeyError("Encountered bad RSA public key")
     return key
 
 
@@ -284,7 +290,7 @@ def gen_signature(priv_path, pub_path, sign_path, passphrase=None):
 
     if os.path.isfile(sign_path):
         log.trace(
-            "Signature file %s already exists, please remove it first and " "try again",
+            "Signature file %s already exists, please remove it first and try again",
             sign_path,
         )
     else:
@@ -529,7 +535,6 @@ class AsyncAuth:
         """
         self.opts = opts
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
-        self.serial = salt.payload.Serial(self.opts)
         self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
         if self.opts["__role"] == "syndic":
@@ -634,7 +639,7 @@ class AsyncAuth:
             acceptance_wait_time_max = acceptance_wait_time
         creds = None
 
-        with salt.transport.client.AsyncReqChannel.factory(
+        with salt.channel.client.AsyncReqChannel.factory(
             self.opts, crypt="clear", io_loop=self.io_loop
         ) as channel:
             error = None
@@ -742,7 +747,7 @@ class AsyncAuth:
         close_channel = False
         if not channel:
             close_channel = True
-            channel = salt.transport.client.AsyncReqChannel.factory(
+            channel = salt.channel.client.AsyncReqChannel.factory(
                 self.opts, crypt="clear", io_loop=self.io_loop
             )
 
@@ -757,7 +762,8 @@ class AsyncAuth:
                 raise salt.ext.tornado.gen.Return("retry")
             else:
                 raise SaltClientError(
-                    "Attempt to authenticate with the salt master failed with timeout error"
+                    "Attempt to authenticate with the salt master failed with timeout"
+                    " error"
                 )
         finally:
             if close_channel:
@@ -1035,7 +1041,7 @@ class AsyncAuth:
                 return False
         except Exception as sign_exc:  # pylint: disable=broad-except
             log.error(
-                "There was an error while verifying the masters public-key " "signature"
+                "There was an error while verifying the masters public-key signature"
             )
             raise Exception(sign_exc)
 
@@ -1245,7 +1251,6 @@ class SAuth(AsyncAuth):
         """
         self.opts = opts
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
-        self.serial = salt.payload.Serial(self.opts)
         self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
         if "syndic_master" in self.opts:
@@ -1283,7 +1288,7 @@ class SAuth(AsyncAuth):
         acceptance_wait_time_max = self.opts["acceptance_wait_time_max"]
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             self.opts, crypt="clear"
         ) as channel:
             while True:
@@ -1355,7 +1360,7 @@ class SAuth(AsyncAuth):
         close_channel = False
         if not channel:
             close_channel = True
-            channel = salt.transport.client.ReqChannel.factory(self.opts, crypt="clear")
+            channel = salt.channel.client.ReqChannel.factory(self.opts, crypt="clear")
 
         sign_in_payload = self.minion_sign_in_payload()
         try:
@@ -1461,7 +1466,6 @@ class Crypticle:
         self.key_string = key_string
         self.keys = self.extract_keys(self.key_string, key_size)
         self.key_size = key_size
-        self.serial = salt.payload.Serial(opts)
 
     @classmethod
     def generate_key_string(cls, key_size=192):
@@ -1535,7 +1539,7 @@ class Crypticle:
         """
         Serialize and encrypt a python object
         """
-        return self.encrypt(self.PICKLE_PAD + self.serial.dumps(obj))
+        return self.encrypt(self.PICKLE_PAD + salt.payload.dumps(obj))
 
     def loads(self, data, raw=False):
         """
@@ -1545,5 +1549,5 @@ class Crypticle:
         # simple integrity check to verify that we got meaningful data
         if not data.startswith(self.PICKLE_PAD):
             return {}
-        load = self.serial.loads(data[len(self.PICKLE_PAD) :], raw=raw)
+        load = salt.payload.loads(data[len(self.PICKLE_PAD) :], raw=raw)
         return load

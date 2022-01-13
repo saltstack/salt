@@ -13,6 +13,7 @@ import salt.auth.ldap
 import salt.cache
 import salt.payload
 import salt.roster
+import salt.transport
 import salt.utils.data
 import salt.utils.files
 import salt.utils.network
@@ -80,7 +81,7 @@ def _nodegroup_regex(nodegroup, words, opers):
 
 def parse_target(target_expression):
     """Parse `target_expressing` splitting it into `engine`, `delimiter`,
-     `pattern` - returns a dict"""
+    `pattern` - returns a dict"""
 
     match = TARGET_REX.match(target_expression)
     if not match:
@@ -191,7 +192,7 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
             return joined
 
         log.debug(
-            "No nested nodegroups detected. Using original nodegroup " "definition: %s",
+            "No nested nodegroups detected. Using original nodegroup definition: %s",
             nodegroups[nodegroup],
         )
         return ret
@@ -209,10 +210,9 @@ class CkMinions:
 
     def __init__(self, opts):
         self.opts = opts
-        self.serial = salt.payload.Serial(opts)
         self.cache = salt.cache.factory(opts)
         # TODO: this is actually an *auth* check
-        if self.opts.get("transport", "zeromq") in ("zeromq", "tcp"):
+        if self.opts.get("transport", "zeromq") in salt.transport.TRANSPORTS:
             self.acc = "minions"
         else:
             self.acc = "accepted"
@@ -270,7 +270,7 @@ class CkMinions:
             if self.opts["key_cache"] and os.path.exists(pki_cache_fn):
                 log.debug("Returning cached minion list")
                 with salt.utils.files.fopen(pki_cache_fn, mode="rb") as fn_:
-                    return self.serial.load(fn_)
+                    return salt.payload.load(fn_)
             else:
                 for fn_ in salt.utils.data.sorted_ignorecase(
                     os.listdir(os.path.join(self.opts["pki_dir"], self.acc))
@@ -564,7 +564,7 @@ class CkMinions:
                             unmatched.append(word)
                         else:
                             log.error(
-                                "Expression may begin with" " binary operator: %s", word
+                                "Expression may begin with binary operator: %s", word
                             )
                             return {"minions": [], "missing": []}
 
@@ -635,6 +635,10 @@ class CkMinions:
             if search is None:
                 return minions
             addrs = salt.utils.network.local_port_tcp(int(self.opts["publish_port"]))
+            if self.opts.get("detect_remote_minions", False):
+                addrs = addrs.union(
+                    salt.utils.network.remote_port_tcp(self.opts["remote_minions_port"])
+                )
             if "127.0.0.1" in addrs:
                 # Add in the address of a possible locally-connected minion.
                 addrs.discard("127.0.0.1")

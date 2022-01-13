@@ -181,8 +181,10 @@ def test_exists_add_no_index_failure_exception(name):
         "name": name,
         "changes": {},
         "result": False,
-        "comment": "Encountered error: Global Thermonuclear War. "
-        "Failed to add {} to the PATH.".format(name),
+        "comment": (
+            "Encountered error: Global Thermonuclear War. "
+            "Failed to add {} to the PATH.".format(name)
+        ),
     }
 
 
@@ -277,8 +279,10 @@ def test_exists_change_index_add_exception(name):
         "name": name,
         "changes": {},
         "result": False,
-        "comment": "Encountered error: Global Thermonuclear War. "
-        "Failed to move {} from index 3 to 0.".format(name),
+        "comment": (
+            "Encountered error: Global Thermonuclear War. "
+            "Failed to move {} from index 3 to 0.".format(name)
+        ),
     }
 
 
@@ -311,8 +315,10 @@ def test_exists_change_negative_index_add_exception(name):
         "name": name,
         "changes": {},
         "result": False,
-        "comment": "Encountered error: Global Thermonuclear War. "
-        "Failed to move {} from index -2 to -1.".format(name),
+        "comment": (
+            "Encountered error: Global Thermonuclear War. "
+            "Failed to move {} from index -2 to -1.".format(name)
+        ),
     }
 
 

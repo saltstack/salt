@@ -189,6 +189,7 @@ at some point be deprecated in favor of a more generic ``firewall`` state.
     appearance of ``-m policy``, it is interpreted as the ``--proto`` option of
     the policy extension (see the iptables-extensions(8) man page).
 
+
 Example rules for IPSec policy:
 
 .. code-block:: yaml
@@ -230,6 +231,11 @@ Example rules for IPSec policy:
         - use:
           - iptables: accept_esp_out
         - chain: FORWARD
+
+.. note::
+
+    ``name`` is reserved for the Salt state name. To pass ``--name EXAMPLE`` to
+    iptables, provide it with ``- name_: EXAMPLE``.
 
 .. note::
 
@@ -401,7 +407,7 @@ def append(name, table="filter", family="ipv4", **kwargs):
         if save:
             if save_file is True:
                 save_file = None
-            __salt__["iptables.save"](save_file, family=family)
+            __salt__["iptables.save"](filename=save_file, family=family)
         if not ret["changes"]["locale"]:
             del ret["changes"]["locale"]
         ret["comment"] = "\n".join(comments)
@@ -426,7 +432,9 @@ def append(name, table="filter", family="ipv4", **kwargs):
                 filename = kwargs["save"]
             else:
                 filename = None
-            saved_rules = __salt__["iptables.get_saved_rules"](family=family)
+            saved_rules = __salt__["iptables.get_saved_rules"](
+                conf_file=filename, family=family
+            )
             _rules = __salt__["iptables.get_rules"](family=family)
             __rules = []
             for table in _rules:
@@ -438,8 +446,8 @@ def append(name, table="filter", family="ipv4", **kwargs):
                     __saved_rules.append(saved_rules[table][chain].get("rules"))
             # Only save if rules in memory are different than saved rules
             if __rules != __saved_rules:
-                out = __salt__["iptables.save"](filename, family=family)
-                ret["comment"] += ("\nSaved iptables rule {} for {}\n" "{}\n{}").format(
+                out = __salt__["iptables.save"](filename=filename, family=family)
+                ret["comment"] += "\nSaved iptables rule {} for {}\n{}\n{}".format(
                     name, family, command.strip(), out
                 )
         return ret
@@ -454,22 +462,23 @@ def append(name, table="filter", family="ipv4", **kwargs):
         ret["comment"] = "Set iptables rule for {} to: {} for {}".format(
             name, command.strip(), family
         )
-        if "save" in kwargs:
-            if kwargs["save"]:
-                if kwargs["save"] is not True:
-                    filename = kwargs["save"]
-                else:
-                    filename = None
-                out = __salt__["iptables.save"](filename, family=family)
-                ret["comment"] = (
-                    "Set and saved iptables rule {} for {}\n" "{}\n{}"
-                ).format(name, family, command.strip(), out)
+        if "save" in kwargs and kwargs["save"]:
+            if kwargs["save"] is not True:
+                filename = kwargs["save"]
+            else:
+                filename = None
+            out = __salt__["iptables.save"](filename=filename, family=family)
+            ret["comment"] = "Set and saved iptables rule {} for {}\n{}\n{}".format(
+                name, family, command.strip(), out
+            )
         return ret
     else:
         ret["result"] = False
-        ret["comment"] = (
-            "Failed to set iptables rule for {}.\n" "Attempted rule was {} for {}"
-        ).format(name, command.strip(), family)
+        ret[
+            "comment"
+        ] = "Failed to set iptables rule for {}.\nAttempted rule was {} for {}".format(
+            name, command.strip(), family
+        )
         return ret
 
 
@@ -527,7 +536,7 @@ def insert(name, table="filter", family="ipv4", **kwargs):
         if save:
             if save_file is True:
                 save_file = None
-            __salt__["iptables.save"](save_file, family=family)
+            __salt__["iptables.save"](filename=save_file, family=family)
         if not ret["changes"]["locale"]:
             del ret["changes"]["locale"]
         ret["comment"] = "\n".join(comments)
@@ -552,7 +561,9 @@ def insert(name, table="filter", family="ipv4", **kwargs):
                 filename = kwargs["save"]
             else:
                 filename = None
-            saved_rules = __salt__["iptables.get_saved_rules"](family=family)
+            saved_rules = __salt__["iptables.get_saved_rules"](
+                conf_file=filename, family=family
+            )
             _rules = __salt__["iptables.get_rules"](family=family)
             __rules = []
             for table in _rules:
@@ -564,8 +575,8 @@ def insert(name, table="filter", family="ipv4", **kwargs):
                     __saved_rules.append(saved_rules[table][chain].get("rules"))
             # Only save if rules in memory are different than saved rules
             if __rules != __saved_rules:
-                out = __salt__["iptables.save"](filename, family=family)
-                ret["comment"] += ("\nSaved iptables rule {} for {}\n" "{}\n{}").format(
+                out = __salt__["iptables.save"](filename=filename, family=family)
+                ret["comment"] += "\nSaved iptables rule {} for {}\n{}\n{}".format(
                     name, family, command.strip(), out
                 )
         return ret
@@ -582,18 +593,23 @@ def insert(name, table="filter", family="ipv4", **kwargs):
         ret["comment"] = "Set iptables rule for {} to: {} for {}".format(
             name, command.strip(), family
         )
-        if "save" in kwargs:
-            if kwargs["save"]:
-                out = __salt__["iptables.save"](filename=None, family=family)
-                ret["comment"] = (
-                    "Set and saved iptables rule {} for {}\n" "{}\n{}"
-                ).format(name, family, command.strip(), out)
+        if "save" in kwargs and kwargs["save"]:
+            if kwargs["save"] is not True:
+                filename = kwargs["save"]
+            else:
+                filename = None
+            out = __salt__["iptables.save"](filename=filename, family=family)
+            ret["comment"] = "Set and saved iptables rule {} for {}\n{}\n{}".format(
+                name, family, command.strip(), out
+            )
         return ret
     else:
         ret["result"] = False
-        ret["comment"] = (
-            "Failed to set iptables rule for {}.\n" "Attempted rule was {}"
-        ).format(name, command.strip())
+        ret[
+            "comment"
+        ] = "Failed to set iptables rule for {}.\nAttempted rule was {}".format(
+            name, command.strip()
+        )
         return ret
 
 
@@ -646,7 +662,7 @@ def delete(name, table="filter", family="ipv4", **kwargs):
         if save:
             if save_file is True:
                 save_file = None
-            __salt__["iptables.save"](save_file, family=family)
+            __salt__["iptables.save"](filename=save_file, family=family)
         if not ret["changes"]["locale"]:
             del ret["changes"]["locale"]
         ret["comment"] = "\n".join(comments)
@@ -688,18 +704,23 @@ def delete(name, table="filter", family="ipv4", **kwargs):
         ret["changes"] = {"locale": name}
         ret["result"] = True
         ret["comment"] = "Delete iptables rule for {} {}".format(name, command.strip())
-        if "save" in kwargs:
-            if kwargs["save"]:
-                out = __salt__["iptables.save"](filename=None, family=family)
-                ret["comment"] = (
-                    "Deleted and saved iptables rule {} for {}\n" "{}\n{}"
-                ).format(name, family, command.strip(), out)
+        if "save" in kwargs and kwargs["save"]:
+            if kwargs["save"] is not True:
+                filename = kwargs["save"]
+            else:
+                filename = None
+            out = __salt__["iptables.save"](filename=filename, family=family)
+            ret["comment"] = "Deleted and saved iptables rule {} for {}\n{}\n{}".format(
+                name, family, command.strip(), out
+            )
         return ret
     else:
         ret["result"] = False
-        ret["comment"] = (
-            "Failed to delete iptables rule for {}.\n" "Attempted rule was {}"
-        ).format(name, command.strip())
+        ret[
+            "comment"
+        ] = "Failed to delete iptables rule for {}.\nAttempted rule was {}".format(
+            name, command.strip()
+        )
         return ret
 
 
@@ -737,10 +758,9 @@ def set_policy(name, table="filter", family="ipv4", **kwargs):
         )
         return ret
     if __opts__["test"]:
-        ret[
-            "comment"
-        ] = "iptables default policy for chain {} on table {} for {} needs to be set to {}".format(
-            kwargs["chain"], table, family, kwargs["policy"]
+        ret["comment"] = (
+            "iptables default policy for chain {} on table {} for {} needs to be set"
+            " to {}".format(kwargs["chain"], table, family, kwargs["policy"])
         )
         return ret
     if not __salt__["iptables.set_policy"](
@@ -751,14 +771,17 @@ def set_policy(name, table="filter", family="ipv4", **kwargs):
         ret["comment"] = "Set default policy for {} to {} family {}".format(
             kwargs["chain"], kwargs["policy"], family
         )
-        if "save" in kwargs:
-            if kwargs["save"]:
-                __salt__["iptables.save"](filename=None, family=family)
-                ret[
-                    "comment"
-                ] = "Set and saved default policy for {} to {} family {}".format(
-                    kwargs["chain"], kwargs["policy"], family
-                )
+        if "save" in kwargs and kwargs["save"]:
+            if kwargs["save"] is not True:
+                filename = kwargs["save"]
+            else:
+                filename = None
+            __salt__["iptables.save"](filename=filename, family=family)
+            ret[
+                "comment"
+            ] = "Set and saved default policy for {} to {} family {}".format(
+                kwargs["chain"], kwargs["policy"], family
+            )
         return ret
     else:
         ret["result"] = False

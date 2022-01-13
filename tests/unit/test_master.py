@@ -129,6 +129,7 @@ class TransportMethodsTest(TestCase):
             "_send_ssh_pub",
             "get_method",
             "destroy",
+            "connect",
         ]
         for name in dir(clear_funcs):
             if name in clear_funcs.expose_methods:
@@ -185,8 +186,9 @@ class ClearFuncsTestCase(TestCase):
         mock_ret = {
             "error": {
                 "name": "TokenAuthenticationError",
-                "message": 'Authentication failure of type "token" occurred '
-                "for user test.",
+                "message": (
+                    'Authentication failure of type "token" occurred for user test.'
+                ),
             }
         }
 
@@ -230,8 +232,9 @@ class ClearFuncsTestCase(TestCase):
         mock_ret = {
             "error": {
                 "name": "EauthAuthenticationError",
-                "message": 'Authentication failure of type "eauth" occurred for '
-                "user UNKNOWN.",
+                "message": (
+                    'Authentication failure of type "eauth" occurred for user UNKNOWN.'
+                ),
             }
         }
         ret = self.clear_funcs.runner({"eauth": "foo"})
@@ -247,8 +250,9 @@ class ClearFuncsTestCase(TestCase):
         mock_ret = {
             "error": {
                 "name": "EauthAuthenticationError",
-                "message": 'Authentication failure of type "eauth" occurred for '
-                "user test.",
+                "message": (
+                    'Authentication failure of type "eauth" occurred for user test.'
+                ),
             }
         }
         with patch(
@@ -322,8 +326,9 @@ class ClearFuncsTestCase(TestCase):
         mock_ret = {
             "error": {
                 "name": "TokenAuthenticationError",
-                "message": 'Authentication failure of type "token" occurred '
-                "for user test.",
+                "message": (
+                    'Authentication failure of type "token" occurred for user test.'
+                ),
             }
         }
 
@@ -367,8 +372,9 @@ class ClearFuncsTestCase(TestCase):
         mock_ret = {
             "error": {
                 "name": "EauthAuthenticationError",
-                "message": 'Authentication failure of type "eauth" occurred for '
-                "user UNKNOWN.",
+                "message": (
+                    'Authentication failure of type "eauth" occurred for user UNKNOWN.'
+                ),
             }
         }
         ret = self.clear_funcs.wheel({"eauth": "foo"})
@@ -384,8 +390,9 @@ class ClearFuncsTestCase(TestCase):
         mock_ret = {
             "error": {
                 "name": "EauthAuthenticationError",
-                "message": 'Authentication failure of type "eauth" occurred for '
-                "user test.",
+                "message": (
+                    'Authentication failure of type "eauth" occurred for user test.'
+                ),
             }
         }
         with patch(

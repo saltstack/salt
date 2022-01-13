@@ -475,7 +475,7 @@ def reshard(
                     StreamName=stream_name,
                     ShardToSplit=shard_id,
                     NewStartingHashKey=str(expected_ending_hash_key + 1),
-                )  # future lint: disable=blacklisted-function
+                )
             else:
                 log.debug(
                     "%s should end at %s, actual %s would split",
