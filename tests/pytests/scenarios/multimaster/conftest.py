@@ -147,8 +147,8 @@ def run_salt_cmds():
                     if ret and ret.json:
                         assert ret.json
                         assert ret.exitcode == 0
-                        returned_minions.append(minion)
-                except FactoryTimeout as exc:
+                        returned_minions.append((cli, minion))
+                except FactoryTimeout:
                     log.debug(
                         "Failed to execute test.ping from %s to %s.",
                         cli.get_display_name(),
