@@ -4,6 +4,8 @@ Tests for salt.modules.linux_sysctl module
 :codeauthor: jmoney <justin@saltstack.com>
 """
 
+import os
+
 import pytest
 import salt.modules.linux_sysctl as linux_sysctl
 import salt.modules.systemd_service as systemd
@@ -134,6 +136,43 @@ def test_assign_success():
         )
 
 
+def test_sanitize_sysctl_value():
+    assert (
+        linux_sysctl._sanitize_sysctl_value("4096 131072  6291456")
+        == "4096\t131072\t6291456"
+    )
+
+
+def test_sanitize_sysctl_value_int():
+    assert linux_sysctl._sanitize_sysctl_value(1337) == "1337"
+
+
+def test_persist_int(tmp_path):
+    """
+    Tests linux_sysctl.persist for an integer that is already set.
+    """
+    config = str(tmp_path / "sysctl.conf")
+    config_file_content = "fs.suid_dumpable = 2\n"
+    with fopen(config, "w", encoding="utf-8") as config_file:
+        config_file.write(config_file_content)
+    mock_run = MagicMock(return_value="2")
+    mock_run_all = MagicMock()
+    with patch("os.path.exists", MagicMock(return_value=True)), patch.dict(
+        linux_sysctl.__salt__, {"cmd.run": mock_run, "cmd.run_all": mock_run_all}
+    ):
+        assert (
+            linux_sysctl.persist("fs.suid_dumpable", 2, config=config) == "Already set"
+        )
+        mock_run.assert_called_once_with(
+            ["sysctl", "-n", "fs.suid_dumpable"], python_shell=False
+        )
+        mock_run_all.assert_not_called()
+    assert os.path.isfile(config)
+    with fopen(config, encoding="utf-8") as config_file:
+        written = config_file.read()
+    assert written == config_file_content
+
+
 def test_persist_no_conf_failure():
     """
     Tests adding of config file failure
@@ -213,3 +252,232 @@ def test_persist_read_conf_success():
         mock_asn_cmd.assert_called_once_with(
             ["sysctl", "-w", "net.ipv4.ip_forward=1"], python_shell=False
         )
+
+
+def test_persist_parsing_file(tmp_path):
+    """
+    Tests linux_sysctl.persist to correctly parse the config file.
+    """
+    config = str(tmp_path / "sysctl.conf")
+    with fopen(config, "w", encoding="utf-8") as config_file:
+        config_file.write(
+            """\
+# Use dump-core from kdump-tools Debian package.
+kernel.core_pattern = |/usr/share/kdump-tools/dump-core %p %s %t %e
+ # Stop low-level messages on console = less logging
+ kernel.printk  = 3 4 1 3
+
+ net.ipv4.ip_forward=1
+net.ipv4.tcp_rmem	=	4096	131072	6291456
+"""
+        )
+    mock_run = MagicMock()
+    mock_run_all = MagicMock(
+        return_value={
+            "pid": 1337,
+            "retcode": 0,
+            "stderr": "",
+            "stdout": "net.ipv4.ip_forward = 0",
+        }
+    )
+
+    with patch("os.path.exists", MagicMock(return_value=True)), patch.dict(
+        linux_sysctl.__salt__, {"cmd.run": mock_run, "cmd.run_all": mock_run_all}
+    ):
+        assert (
+            linux_sysctl.persist("net.ipv4.ip_forward", "0", config=config) == "Updated"
+        )
+        mock_run.assert_not_called()
+        mock_run_all.assert_called_once_with(
+            ["sysctl", "-w", "net.ipv4.ip_forward=0"], python_shell=False
+        )
+    assert os.path.isfile(config)
+    with fopen(config, encoding="utf-8") as config_file:
+        written = config_file.read()
+    assert (
+        written
+        == """\
+# Use dump-core from kdump-tools Debian package.
+kernel.core_pattern = |/usr/share/kdump-tools/dump-core %p %s %t %e
+ # Stop low-level messages on console = less logging
+ kernel.printk  = 3 4 1 3
+
+net.ipv4.ip_forward = 0
+net.ipv4.tcp_rmem	=	4096	131072	6291456
+"""
+    )
+
+
+def test_persist_value_with_spaces_already_set(tmp_path):
+    """
+    Tests linux_sysctl.persist for a value with spaces that is already set.
+    """
+    config = str(tmp_path / "existing_sysctl_with_spaces.conf")
+    value = "|/usr/share/kdump-tools/dump-core %p %s %t %e"
+    config_file_content = "kernel.core_pattern = {}\n".format(value)
+    with fopen(config, "w", encoding="utf-8") as config_file:
+        config_file.write(config_file_content)
+    mock_run = MagicMock(return_value=value)
+    mock_run_all = MagicMock()
+    with patch("os.path.exists", MagicMock(return_value=True)), patch.dict(
+        linux_sysctl.__salt__, {"cmd.run": mock_run, "cmd.run_all": mock_run_all}
+    ):
+        assert (
+            linux_sysctl.persist("kernel.core_pattern", value, config=config)
+            == "Already set"
+        )
+        mock_run.assert_called_once_with(
+            ["sysctl", "-n", "kernel.core_pattern"], python_shell=False
+        )
+        mock_run_all.assert_not_called()
+    assert os.path.isfile(config)
+    with fopen(config, encoding="utf-8") as config_file:
+        written = config_file.read()
+    assert written == config_file_content
+
+
+def test_persist_value_with_spaces_already_configured(tmp_path):
+    """
+    Tests linux_sysctl.persist for a value with spaces that is only configured.
+    """
+    config = str(tmp_path / "existing_sysctl_with_spaces.conf")
+    value = "|/usr/share/kdump-tools/dump-core %p %s %t %e"
+    config_file_content = "kernel.core_pattern = {}\n".format(value)
+    with fopen(config, "w", encoding="utf-8") as config_file:
+        config_file.write(config_file_content)
+    mock_run = MagicMock(return_value="")
+    mock_run_all = MagicMock(
+        return_value={
+            "pid": 1337,
+            "retcode": 0,
+            "stderr": "",
+            "stdout": "kernel.core_pattern = " + value,
+        }
+    )
+    with patch("os.path.exists", MagicMock(return_value=True)), patch.dict(
+        linux_sysctl.__salt__, {"cmd.run": mock_run, "cmd.run_all": mock_run_all}
+    ):
+        assert (
+            linux_sysctl.persist("kernel.core_pattern", value, config=config)
+            == "Updated"
+        )
+        mock_run.assert_called_once_with(
+            ["sysctl", "-n", "kernel.core_pattern"], python_shell=False
+        )
+        mock_run_all.assert_called_once_with(
+            ["sysctl", "-w", "kernel.core_pattern=" + value], python_shell=False
+        )
+    assert os.path.isfile(config)
+    with fopen(config, encoding="utf-8") as config_file:
+        written = config_file.read()
+    assert written == config_file_content
+
+
+def test_persist_value_with_spaces_update_config(tmp_path):
+    """
+    Tests linux_sysctl.persist for a value with spaces that differs from the config.
+    """
+    config = str(tmp_path / "existing_sysctl_with_spaces.conf")
+    value = "|/usr/share/kdump-tools/dump-core %p %s %t %e"
+    with fopen(config, "w", encoding="utf-8") as config_file:
+        config_file.write("kernel.core_pattern =\n")
+    mock_run = MagicMock()
+    mock_run_all = MagicMock(
+        return_value={
+            "pid": 1337,
+            "retcode": 0,
+            "stderr": "",
+            "stdout": "kernel.core_pattern = " + value,
+        }
+    )
+    with patch("os.path.exists", MagicMock(return_value=True)), patch.dict(
+        linux_sysctl.__salt__, {"cmd.run": mock_run, "cmd.run_all": mock_run_all}
+    ):
+        assert (
+            linux_sysctl.persist("kernel.core_pattern", value, config=config)
+            == "Updated"
+        )
+        mock_run.assert_not_called()
+        mock_run_all.assert_called_once_with(
+            ["sysctl", "-w", "kernel.core_pattern=" + value], python_shell=False
+        )
+    assert os.path.isfile(config)
+    with fopen(config, encoding="utf-8") as config_file:
+        written = config_file.read()
+    assert written == "kernel.core_pattern = {}\n".format(value)
+
+
+def test_persist_value_with_spaces_new_file(tmp_path):
+    """
+    Tests linux_sysctl.persist for a value that contains spaces.
+    """
+    config = str(tmp_path / "sysctl_with_spaces.conf")
+    value = "|/usr/share/kdump-tools/dump-core %p %s %t %e"
+    mock_run_all = MagicMock(
+        return_value={
+            "pid": 1337,
+            "retcode": 0,
+            "stderr": "",
+            "stdout": "kernel.core_pattern = " + value,
+        }
+    )
+    with patch("os.path.exists", MagicMock(return_value=True)), patch.dict(
+        linux_sysctl.__salt__, {"cmd.run_all": mock_run_all}
+    ):
+        assert (
+            linux_sysctl.persist("kernel.core_pattern", value, config=config)
+            == "Updated"
+        )
+        mock_run_all.assert_called_once_with(
+            ["sysctl", "-w", "kernel.core_pattern=" + value], python_shell=False
+        )
+    assert os.path.isfile(config)
+    with fopen(config, encoding="utf-8") as config_file:
+        written = config_file.read()
+    assert (
+        written
+        == """\
+#
+# Kernel sysctl configuration
+#
+kernel.core_pattern = |/usr/share/kdump-tools/dump-core %p %s %t %e
+"""
+    )
+
+
+def test_persist_value_with_tabs_new_file(tmp_path):
+    """
+    Tests linux_sysctl.persist for a value that contains tabs.
+    """
+    config = str(tmp_path / "sysctl_with_tabs.conf")
+    value = "|/usr/share/kdump-tools/dump-core\t%p\t%s\t%t\t%e"
+    mock_run_all = MagicMock(
+        return_value={
+            "pid": 1337,
+            "retcode": 0,
+            "stderr": "",
+            "stdout": "kernel.core_pattern = " + value,
+        }
+    )
+    with patch("os.path.exists", MagicMock(return_value=True)), patch.dict(
+        linux_sysctl.__salt__, {"cmd.run_all": mock_run_all}
+    ):
+        assert (
+            linux_sysctl.persist("kernel.core_pattern", value, config=config)
+            == "Updated"
+        )
+        mock_run_all.assert_called_once_with(
+            ["sysctl", "-w", "kernel.core_pattern=" + value], python_shell=False
+        )
+    assert os.path.isfile(config)
+    with fopen(config, encoding="utf-8") as config_file:
+        written = config_file.read()
+    assert (
+        written
+        == """\
+#
+# Kernel sysctl configuration
+#
+kernel.core_pattern = |/usr/share/kdump-tools/dump-core	%p	%s	%t	%e
+"""
+    )

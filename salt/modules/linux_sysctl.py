@@ -150,6 +150,17 @@ def assign(name, value):
     return ret
 
 
+def _sanitize_sysctl_value(value):
+    """Replace separating whitespaces by exactly one tab.
+
+    On Linux procfs, files such as /proc/sys/net/ipv4/tcp_rmem or many
+    other sysctl with whitespace in it consistently use one tab. When
+    setting the value, spaces or tabs can be used and will be converted
+    to tabs by the kernel (when reading them again).
+    """
+    return re.sub(r"\s+", "\t", str(value))
+
+
 def persist(name, value, config=None):
     """
     Assign and persist a simple sysctl parameter for this minion. If ``config``
@@ -202,25 +213,15 @@ def persist(name, value, config=None):
             nlines.append(line)
             continue
 
-        # On Linux procfs, files such as /proc/sys/net/ipv4/tcp_rmem or any
-        # other sysctl with whitespace in it consistently uses 1 tab.  Lets
-        # allow our users to put a space or tab between multi-value sysctls
-        # and have salt not try to set it every single time.
-        if isinstance(comps[1], str) and " " in comps[1]:
-            comps[1] = re.sub(r"\s+", "\t", comps[1])
-
-        # Do the same thing for the value 'just in case'
-        if isinstance(value, str) and " " in value:
-            value = re.sub(r"\s+", "\t", value)
-
         if len(comps) < 2:
             nlines.append(line)
             continue
         if name == comps[0]:
             # This is the line to edit
-            if str(comps[1]) == str(value):
+            sanitized_value = _sanitize_sysctl_value(value)
+            if _sanitize_sysctl_value(comps[1]) == sanitized_value:
                 # It is correct in the config, check if it is correct in /proc
-                if str(get(name)) != str(value):
+                if _sanitize_sysctl_value(get(name)) != sanitized_value:
                     assign(name, value)
                     return "Updated"
                 else:
