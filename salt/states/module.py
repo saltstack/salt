@@ -297,7 +297,7 @@ Windows system:
               start_time: '11:59PM'
         }
 
-.. _file_roots: https://docs.saltstack.com/en/latest/ref/configuration/master.html#file-roots
+.. _file_roots: https://docs.saltproject.io/en/latest/ref/configuration/master.html#file-roots
 """
 
 import salt.loader

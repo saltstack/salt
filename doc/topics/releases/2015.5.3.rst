@@ -14,7 +14,16 @@ Statistics
 - Total Issue References: **69**
 - Total PR References: **207**
 
-- Contributors: **62** (`CameronNemo`_, `Lanzaa`_, `Starblade42`_, `The-Loeki`_, `TheScriptSage`_, `aboe76`_, `ahus1`_, `aneeshusa`_, `anlutro`_, `arthurlogilab`_, `basepi`_, `borutmrak`_, `cachedout`_, `cgtx`_, `codertux`_, `cro`_, `dkiser`_, `driskell`_, `eliasp`_, `garethgreenaway`_, `grischa`_, `gthb`_, `heewa`_, `infestdead`_, `jacksontj`_, `jacobhammons`_, `jayeshka`_, `jeanpralo`_, `jfindlay`_, `jodv`_, `joejulian`_, `justinta`_, `kartiksubbarao`_, `kev009`_, `kiorky`_, `lorengordon`_, `msciciel`_, `msteed`_, `nmadhok`_, `notpeter`_, `obestwalter`_, `pengyao`_, `pille`_, `porterjamesj`_, `pruiz`_, `quixoten`_, `rallytime`_, `rhertzog`_, `ruzarowski`_, `ryan-lane`_, `steverweber`_, `tankywoo`_, `tbaker57`_, `techhat`_, `terminalmage`_, `thatch45`_, `thenewwazoo`_, `trevor-h`_, `twangboy`_, `variia`_, `zefrog`_, `zhujinhe`_)
+- Contributors: **62** (`CameronNemo`_, `Lanzaa`_, `Starblade42`_, `The-Loeki`_, `TheScriptSage`_,
+  `aboe76`_, `ahus1`_, `aneeshusa`_, `anlutro`_, `arthurlogilab`_, `basepi`_, `borutmrak`_,
+  `cachedout`_, `cgtx`_, `codertux`_, `cro`_, `dkiser`_, `driskell`_, `eliasp`_,
+  `garethgreenaway`_, `grischa`_, `gthb`_, `heewa`_, `infestdead`_, `jacksontj`_, `jacobhammons`_,
+  `jayeshka`_, `jeanpralo`_, `jfindlay`_, `jodv`_, `joejulian`_, `justinta`_, `kartiksubbarao`_,
+  `kev009`_, `kiorky`_, `lorengordon`_, `msciciel`_, `msteed`_, `nmadhok`_, `notpeter`_,
+  `obestwalter`_, `pengyao`_, `pille`_, `porterjamesj`_, `pruiz`_, `quixoten`_, `rallytime`_,
+  `rhertzog`_, `ruzarowski`_, `ryan-lane`_, `steverweber`_, `tankywoo`_, `tbaker57`_, `techhat`_,
+  `terminalmage`_, `thatch45`_, `thenewwazoo`_, `trevor-h`_, `twangboy`_, `variia`_, `zefrog`_,
+  `zhujinhe`_)
 
 
 Changelog for v2015.5.2..v2015.5.3

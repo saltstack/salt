@@ -19,11 +19,10 @@ import time
 import traceback
 import weakref
 
+import salt.channel.client
 import salt.defaults.exitcodes
 import salt.ext.tornado.gen
 import salt.payload
-import salt.transport.client
-import salt.transport.frame
 import salt.utils.crypt
 import salt.utils.decorators
 import salt.utils.event
@@ -536,7 +535,6 @@ class AsyncAuth:
         """
         self.opts = opts
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
-        self.serial = salt.payload.Serial(self.opts)
         self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
         if self.opts["__role"] == "syndic":
@@ -641,7 +639,7 @@ class AsyncAuth:
             acceptance_wait_time_max = acceptance_wait_time
         creds = None
 
-        with salt.transport.client.AsyncReqChannel.factory(
+        with salt.channel.client.AsyncReqChannel.factory(
             self.opts, crypt="clear", io_loop=self.io_loop
         ) as channel:
             error = None
@@ -749,7 +747,7 @@ class AsyncAuth:
         close_channel = False
         if not channel:
             close_channel = True
-            channel = salt.transport.client.AsyncReqChannel.factory(
+            channel = salt.channel.client.AsyncReqChannel.factory(
                 self.opts, crypt="clear", io_loop=self.io_loop
             )
 
@@ -1253,7 +1251,6 @@ class SAuth(AsyncAuth):
         """
         self.opts = opts
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
-        self.serial = salt.payload.Serial(self.opts)
         self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
         if "syndic_master" in self.opts:
@@ -1291,7 +1288,7 @@ class SAuth(AsyncAuth):
         acceptance_wait_time_max = self.opts["acceptance_wait_time_max"]
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             self.opts, crypt="clear"
         ) as channel:
             while True:
@@ -1363,7 +1360,7 @@ class SAuth(AsyncAuth):
         close_channel = False
         if not channel:
             close_channel = True
-            channel = salt.transport.client.ReqChannel.factory(self.opts, crypt="clear")
+            channel = salt.channel.client.ReqChannel.factory(self.opts, crypt="clear")
 
         sign_in_payload = self.minion_sign_in_payload()
         try:
@@ -1469,7 +1466,6 @@ class Crypticle:
         self.key_string = key_string
         self.keys = self.extract_keys(self.key_string, key_size)
         self.key_size = key_size
-        self.serial = salt.payload.Serial(opts)
 
     @classmethod
     def generate_key_string(cls, key_size=192):
@@ -1543,7 +1539,7 @@ class Crypticle:
         """
         Serialize and encrypt a python object
         """
-        return self.encrypt(self.PICKLE_PAD + self.serial.dumps(obj))
+        return self.encrypt(self.PICKLE_PAD + salt.payload.dumps(obj))
 
     def loads(self, data, raw=False):
         """
@@ -1553,5 +1549,5 @@ class Crypticle:
         # simple integrity check to verify that we got meaningful data
         if not data.startswith(self.PICKLE_PAD):
             return {}
-        load = self.serial.loads(data[len(self.PICKLE_PAD) :], raw=raw)
+        load = salt.payload.loads(data[len(self.PICKLE_PAD) :], raw=raw)
         return load

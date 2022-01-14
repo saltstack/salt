@@ -29,6 +29,13 @@ try:
 except ImportError:
     HAS_RPMUTILS = False
 
+try:
+    import rpm_vercmp
+
+    HAS_PY_RPM = True
+except ImportError:
+    HAS_PY_RPM = False
+
 
 log = logging.getLogger(__name__)
 
@@ -720,6 +727,8 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                     "labelCompare function. Not using rpm.labelCompare for "
                     "version comparison."
                 )
+        elif HAS_PY_RPM:
+            cmp_func = rpm_vercmp.vercmp
         else:
             log.warning(
                 "Please install a package that provides rpm.labelCompare for "
@@ -790,7 +799,17 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
             if not ver1_r or not ver2_r:
                 ver1_r = ver2_r = ""
 
-            cmp_result = cmp_func((ver1_e, ver1_v, ver1_r), (ver2_e, ver2_v, ver2_r))
+            if HAS_PY_RPM:
+                # handle epoch version comparison first
+                # rpm_vercmp.vercmp does not handle epoch version comparison
+                ret = salt.utils.versions.version_cmp(ver1_e, ver2_e)
+                if ret in (1, -1):
+                    return ret
+                cmp_result = cmp_func(ver1, ver2)
+            else:
+                cmp_result = cmp_func(
+                    (ver1_e, ver1_v, ver1_r), (ver2_e, ver2_v, ver2_r)
+                )
             if cmp_result not in (-1, 0, 1):
                 raise CommandExecutionError(
                     "Comparison result '{}' is invalid".format(cmp_result)

@@ -163,7 +163,6 @@ import os
 import salt.utils.json
 import salt.utils.network
 import salt.utils.stringutils
-from salt.log.mixins import NewStyleClassMixIn
 from salt.log.setup import LOG_LEVELS
 
 try:
@@ -261,7 +260,7 @@ def setup_handlers():
         yield False
 
 
-class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
+class LogstashFormatter(logging.Formatter):
     def __init__(self, msg_type="logstash", msg_path="logstash", version=0):
         self.msg_path = msg_path
         self.msg_type = msg_type
@@ -410,7 +409,7 @@ class DatagramLogstashHandler(logging.handlers.DatagramHandler):
         return salt.utils.stringutils.to_bytes(self.format(record))
 
 
-class ZMQLogstashHander(logging.Handler, NewStyleClassMixIn):
+class ZMQLogstashHander(logging.Handler):
     """
     Logstash ZMQ logging handler.
     """
