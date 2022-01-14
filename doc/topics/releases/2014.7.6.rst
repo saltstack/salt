@@ -13,7 +13,14 @@ Statistics
 - Total Issue References: **66**
 - Total PR References: **166**
 
-- Contributors: **49** (`0xf10e`_, `Azidburn`_, `F30`_, `JaseFace`_, `JohannesEbke`_, `aletourneau`_, `aneeshusa`_, `basepi`_, `bastichelaar`_, `bersace`_, `cachedout`_, `cedwards`_, `cellscape`_, `chris-prince`_, `clan`_, `clinta`_, `cr1st1p`_, `cro`_, `dr4Ke`_, `ericfode`_, `ether42`_, `garethgreenaway`_, `gtmanfred`_, `hvnsweeting`_, `jfindlay`_, `jleroy`_, `joejulian`_, `justinta`_, `kaithar`_, `lorengordon`_, `martinhoefling`_, `mguegan`_, `multani`_, `notpeter`_, `panticz`_, `rallytime`_, `rominf`_, `rubic`_, `s0undt3ch`_, `skizunov`_, `slinu3d`_, `t0rrant`_, `techhat`_, `teizz`_, `terminalmage`_, `thatch45`_, `twangboy`_, `vdesjardins`_, `vr-jack`_)
+- Contributors: **49** (`0xf10e`_, `Azidburn`_, `F30`_, `JaseFace`_, `JohannesEbke`_,
+  `aletourneau`_, `aneeshusa`_, `basepi`_, `bastichelaar`_, `bersace`_, `cachedout`_, `cedwards`_,
+  `cellscape`_, `chris-prince`_, `clan`_, `clinta`_, `cr1st1p`_, `cro`_, `dr4Ke`_, `ericfode`_,
+  `ether42`_, `garethgreenaway`_, `gtmanfred`_, `hvnsweeting`_, `jfindlay`_, `jleroy`_,
+  `joejulian`_, `justinta`_, `kaithar`_, `lorengordon`_, `martinhoefling`_, `mguegan`_, `multani`_,
+  `notpeter`_, `panticz`_, `rallytime`_, `rominf`_, `rubic`_, `s0undt3ch`_, `skizunov`_,
+  `slinu3d`_, `t0rrant`_, `techhat`_, `teizz`_, `terminalmage`_, `thatch45`_, `twangboy`_,
+  `vdesjardins`_, `vr-jack`_)
 
 
 Security Fix

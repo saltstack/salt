@@ -6,6 +6,7 @@ The ``salt-key`` command makes use of this outputter to format its output.
 """
 
 import salt.output
+import salt.transport
 import salt.utils.color
 import salt.utils.data
 
@@ -22,7 +23,7 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     ident = 0
     if __opts__.get("__multi_key"):
         ident = 4
-    if __opts__["transport"] in ("zeromq", "tcp"):
+    if __opts__["transport"] in salt.transport.TRANSPORTS:
         acc = "minions"
         pend = "minions_pre"
         den = "minions_denied"

@@ -19,6 +19,7 @@ import types
 
 import salt
 import salt.beacons
+import salt.channel.client
 import salt.cli.daemons
 import salt.client
 import salt.crypt
@@ -35,7 +36,7 @@ import salt.payload
 import salt.pillar
 import salt.serializers.msgpack
 import salt.syspaths
-import salt.transport.client
+import salt.transport
 import salt.utils.args
 import salt.utils.context
 import salt.utils.crypt
@@ -735,7 +736,7 @@ class MinionBase:
 
                     self.opts = opts
 
-                    pub_channel = salt.transport.client.AsyncPubChannel.factory(
+                    pub_channel = salt.channel.client.AsyncPubChannel.factory(
                         opts, **factory_kwargs
                     )
                     try:
@@ -805,11 +806,11 @@ class MinionBase:
                 try:
                     if self.opts["transport"] == "detect":
                         self.opts["detect_mode"] = True
-                        for trans in ("zeromq", "tcp"):
+                        for trans in salt.transport.TRANSPORTS:
                             if trans == "zeromq" and not zmq:
                                 continue
                             self.opts["transport"] = trans
-                            pub_channel = salt.transport.client.AsyncPubChannel.factory(
+                            pub_channel = salt.channel.client.AsyncPubChannel.factory(
                                 self.opts, **factory_kwargs
                             )
                             yield pub_channel.connect()
@@ -818,7 +819,7 @@ class MinionBase:
                             del self.opts["detect_mode"]
                             break
                     else:
-                        pub_channel = salt.transport.client.AsyncPubChannel.factory(
+                        pub_channel = salt.channel.client.AsyncPubChannel.factory(
                             self.opts, **factory_kwargs
                         )
                         yield pub_channel.connect()
@@ -1319,13 +1320,10 @@ class Minion(MinionBase):
             # No custom signal handling was added, install our own
             signal.signal(signal.SIGTERM, self._handle_signals)
 
-    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+    def _handle_signals(self, signum, sigframe):
         self._running = False
         # escalate the signals to the process manager
-        self.process_manager.stop_restarting()
-        self.process_manager.send_signal_to_processes(signum)
-        # kill any remaining processes
-        self.process_manager.kill_children()
+        self.process_manager._handle_signals(signum, sigframe)
         time.sleep(1)
         sys.exit(0)
 
@@ -1594,7 +1592,7 @@ class Minion(MinionBase):
             )
             load["sig"] = sig
 
-        with salt.transport.client.ReqChannel.factory(self.opts) as channel:
+        with salt.channel.client.ReqChannel.factory(self.opts) as channel:
             return channel.send(
                 load, timeout=timeout, tries=self.opts["return_retry_tries"]
             )
@@ -1609,7 +1607,7 @@ class Minion(MinionBase):
             )
             load["sig"] = sig
 
-        with salt.transport.client.AsyncReqChannel.factory(self.opts) as channel:
+        with salt.channel.client.AsyncReqChannel.factory(self.opts) as channel:
             ret = yield channel.send(
                 load, timeout=timeout, tries=self.opts["return_retry_tries"]
             )
@@ -1741,6 +1739,7 @@ class Minion(MinionBase):
         # side.
         instance = self
         multiprocessing_enabled = self.opts.get("multiprocessing", True)
+        name = "ProcessPayload(jid={})".format(data["jid"])
         if multiprocessing_enabled:
             if sys.platform.startswith("win"):
                 # let python reconstruct the minion on the other side if we're
@@ -1749,7 +1748,7 @@ class Minion(MinionBase):
             with default_signals(signal.SIGINT, signal.SIGTERM):
                 process = SignalHandlingProcess(
                     target=self._target,
-                    name="ProcessPayload",
+                    name=name,
                     args=(instance, self.opts, data, self.connected),
                 )
                 process.register_after_fork_method(salt.utils.crypt.reinit_crypto)
@@ -1757,7 +1756,7 @@ class Minion(MinionBase):
             process = threading.Thread(
                 target=self._target,
                 args=(instance, self.opts, data, self.connected),
-                name=data["jid"],
+                name=name,
             )
 
         if multiprocessing_enabled:
@@ -1767,7 +1766,6 @@ class Minion(MinionBase):
                 process.start()
         else:
             process.start()
-        process.name = "{}-Job-{}".format(process.name, data["jid"])
         self.subprocess_list.add(process)
 
     def ctx(self):
@@ -1883,9 +1881,7 @@ class Minion(MinionBase):
         minion_instance.gen_modules()
         fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
-        salt.utils.process.appendproctitle(
-            "{}._thread_return {}".format(cls.__name__, data["jid"])
-        )
+        salt.utils.process.appendproctitle("{}._thread_return".format(cls.__name__))
 
         sdata = {"pid": os.getpid()}
         sdata.update(data)
@@ -2074,7 +2070,7 @@ class Minion(MinionBase):
         fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
         salt.utils.process.appendproctitle(
-            "{}._thread_multi_return {}".format(cls.__name__, data["jid"])
+            "{}._thread_multi_return".format(cls.__name__)
         )
 
         sdata = {"pid": os.getpid()}
@@ -2641,7 +2637,7 @@ class Minion(MinionBase):
         """
         Send mine data to the master
         """
-        with salt.transport.client.ReqChannel.factory(self.opts) as channel:
+        with salt.channel.client.ReqChannel.factory(self.opts) as channel:
             data["tok"] = self.tok
             try:
                 ret = channel.send(

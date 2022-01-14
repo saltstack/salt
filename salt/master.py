@@ -18,6 +18,7 @@ import time
 
 import salt.acl
 import salt.auth
+import salt.channel.server
 import salt.client
 import salt.client.ssh.client
 import salt.crypt
@@ -34,7 +35,6 @@ import salt.pillar
 import salt.runner
 import salt.serializers.msgpack
 import salt.state
-import salt.transport.server
 import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.crypt
@@ -58,7 +58,8 @@ import salt.wheel
 from salt.config import DEFAULT_INTERVAL
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.ext.tornado.stack_context import StackContext
-from salt.transport import iter_transport_opts
+from salt.transport import TRANSPORTS
+from salt.utils.channel import iter_transport_opts
 from salt.utils.ctx import RequestContext
 from salt.utils.debug import (
     enable_sigusr1_handler,
@@ -199,8 +200,6 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         This is where any data that needs to be cleanly maintained from the
         master is maintained.
         """
-        salt.utils.process.appendproctitle(self.__class__.__name__)
-
         # init things that need to be done after the process is forked
         self._post_fork_init()
 
@@ -236,7 +235,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         if self.opts["key_cache"] == "sched":
             keys = []
             # TODO DRY from CKMinions
-            if self.opts["transport"] in ("zeromq", "tcp"):
+            if self.opts["transport"] in TRANSPORTS:
                 acc = "minions"
             else:
                 acc = "accepted"
@@ -460,8 +459,6 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
         """
         Start the update threads
         """
-        salt.utils.process.appendproctitle(self.__class__.__name__)
-
         if (
             self.opts["fileserver_update_niceness"]
             and not salt.utils.platform.is_windows()
@@ -679,13 +676,15 @@ class Master(SMaster):
             log.info("Creating master publisher process")
             log_queue = salt.log.setup.get_multiprocessing_logging_queue()
             for _, opts in iter_transport_opts(self.opts):
-                chan = salt.transport.server.PubServerChannel.factory(opts)
+                chan = salt.channel.server.PubServerChannel.factory(opts)
                 chan.pre_fork(self.process_manager, kwargs={"log_queue": log_queue})
                 pub_channels.append(chan)
 
             log.info("Creating master event publisher process")
             self.process_manager.add_process(
-                salt.utils.event.EventPublisher, args=(self.opts,)
+                salt.utils.event.EventPublisher,
+                args=(self.opts,),
+                name="EventPublisher",
             )
 
             if self.opts.get("reactor"):
@@ -706,12 +705,14 @@ class Master(SMaster):
 
             # must be after channels
             log.info("Creating master maintenance process")
-            self.process_manager.add_process(Maintenance, args=(self.opts,))
+            self.process_manager.add_process(
+                Maintenance, args=(self.opts,), name="Maintenance"
+            )
 
             if self.opts.get("event_return"):
                 log.info("Creating master event return process")
                 self.process_manager.add_process(
-                    salt.utils.event.EventReturn, args=(self.opts,)
+                    salt.utils.event.EventReturn, args=(self.opts,), name="EventReturn"
                 )
 
             ext_procs = self.opts.get("ext_processes", [])
@@ -722,7 +723,8 @@ class Master(SMaster):
                     cls = proc.split(".")[-1]
                     _tmp = __import__(mod, globals(), locals(), [cls], -1)
                     cls = _tmp.__getattribute__(cls)
-                    self.process_manager.add_process(cls, args=(self.opts,))
+                    name = "ExtProcess({})".format(cls.__qualname__)
+                    self.process_manager.add_process(cls, args=(self.opts,), name=name)
                 except Exception:  # pylint: disable=broad-except
                     log.error("Error creating ext_processes process: %s", proc)
 
@@ -730,7 +732,9 @@ class Master(SMaster):
             if self.opts["con_cache"]:
                 log.info("Creating master concache process")
                 self.process_manager.add_process(
-                    salt.utils.master.ConnectedCache, args=(self.opts,)
+                    salt.utils.master.ConnectedCache,
+                    args=(self.opts,),
+                    name="ConnectedCache",
                 )
                 # workaround for issue #16315, race condition
                 log.debug("Sleeping for two seconds to let concache rest")
@@ -752,7 +756,9 @@ class Master(SMaster):
                 name="ReqServer",
             )
 
-            self.process_manager.add_process(FileserverUpdate, args=(self.opts,))
+            self.process_manager.add_process(
+                FileserverUpdate, args=(self.opts,), name="FileServerUpdate"
+            )
 
             # Fire up SSDP discovery publisher
             if self.opts["discovery"]:
@@ -764,7 +770,8 @@ class Master(SMaster):
                             answer={
                                 "mapping": self.opts["discovery"].get("mapping", {})
                             },
-                        ).run
+                        ).run,
+                        name="SSDPDiscoveryServer",
                     )
                 else:
                     log.error("Unable to load SSDP: asynchronous IO is not available.")
@@ -785,12 +792,9 @@ class Master(SMaster):
 
         self.process_manager.run()
 
-    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+    def _handle_signals(self, signum, sigframe):
         # escalate the signals to the process manager
-        self.process_manager.stop_restarting()
-        self.process_manager.send_signal_to_processes(signum)
-        # kill any remaining processes
-        self.process_manager.kill_children()
+        self.process_manager._handle_signals(signum, sigframe)
         time.sleep(1)
         sys.exit(0)
 
@@ -853,7 +857,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         req_channels = []
         tcp_only = True
         for transport, opts in iter_transport_opts(self.opts):
-            chan = salt.transport.server.ReqServerChannel.factory(opts)
+            chan = salt.channel.server.ReqServerChannel.factory(opts)
             chan.pre_fork(self.process_manager)
             req_channels.append(chan)
             if transport != "tcp":
@@ -879,7 +883,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
                 name = "MWorker-{}".format(ind)
                 self.process_manager.add_process(
                     MWorker,
-                    args=(self.opts, self.master_key, self.key, req_channels, name),
+                    args=(self.opts, self.master_key, self.key, req_channels),
                     kwargs=kwargs,
                     name=name,
                 )
@@ -910,7 +914,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
     salt master.
     """
 
-    def __init__(self, opts, mkey, key, req_channels, name, **kwargs):
+    def __init__(self, opts, mkey, key, req_channels, **kwargs):
         """
         Create a salt master worker process
 
@@ -921,8 +925,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         :rtype: MWorker
         :return: Master worker
         """
-        kwargs["name"] = name
-        self.name = name
         super().__init__(**kwargs)
         self.opts = opts
         self.req_channels = req_channels
@@ -1076,8 +1078,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         Start a Master Worker
         """
-        salt.utils.process.appendproctitle(self.name)
-
         # if we inherit req_server level without our own, reset it
         if not salt.utils.platform.is_windows():
             enforce_mworker_niceness = True
@@ -1109,6 +1109,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             self.opts,
             self.key,
         )
+        self.clear_funcs.connect()
         self.aes_funcs = AESFuncs(self.opts)
         salt.utils.crypt.reinit_crypto()
         self.__bind()
@@ -1170,6 +1171,7 @@ class AESFuncs(TransportMethods):
         "_dir_list",
         "_symlink_list",
         "_file_envs",
+        "_ext_nodes",  # To be removed in 3006 (Sulfur) #60980
     )
 
     def __init__(self, opts):
@@ -1367,6 +1369,10 @@ class AESFuncs(TransportMethods):
         if load is False:
             return {}
         return self.masterapi._master_tops(load, skip_verify=True)
+
+    # Needed so older minions can request master_tops
+    # To be removed in 3006 (Sulfur) #60980
+    _ext_nodes = _master_tops
 
     def _master_opts(self, load):
         """
@@ -1949,6 +1955,7 @@ class ClearFuncs(TransportMethods):
         self.wheel_ = salt.wheel.Wheel(opts)
         # Make a masterapi object
         self.masterapi = salt.daemons.masterapi.LocalFuncs(opts, key)
+        self.channels = []
 
     def runner(self, clear_load):
         """
@@ -2290,8 +2297,11 @@ class ClearFuncs(TransportMethods):
         """
         Take a load and send it across the network to connected minions
         """
-        for transport, opts in iter_transport_opts(self.opts):
-            chan = salt.transport.server.PubServerChannel.factory(opts)
+        if not self.channels:
+            for transport, opts in iter_transport_opts(self.opts):
+                chan = salt.channel.server.PubServerChannel.factory(opts)
+                self.channels.append(chan)
+        for chan in self.channels:
             chan.publish(load)
 
     @property
@@ -2462,3 +2472,13 @@ class ClearFuncs(TransportMethods):
         if self.local is not None:
             self.local.destroy()
             self.local = None
+        while self.channels:
+            chan = self.channels.pop()
+            chan.close()
+
+    def connect(self):
+        if self.channels:
+            return
+        for transport, opts in iter_transport_opts(self.opts):
+            chan = salt.channel.server.PubServerChannel.factory(opts)
+            self.channels.append(chan)
