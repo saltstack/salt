@@ -12,6 +12,7 @@ import salt.utils.templates as templates
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, Mock, mock_open, patch
 
+
 @pytest.fixture()
 def configure_loader_modules():
     return {cp: {}}
@@ -30,6 +31,7 @@ def test__render_filenames_undefined_template():
     pytest.raises(
         CommandExecutionError, cp._render_filenames, path, dest, saltenv, template
     )
+
 
 def test__render_filenames_render_failed():
     """
@@ -52,6 +54,7 @@ def test__render_filenames_render_failed():
                 template,
             )
 
+
 def test__render_filenames_success():
     """
     Test if _render_filenames succeeds.
@@ -67,6 +70,7 @@ def test__render_filenames_success():
         with patch("salt.utils.files.fopen", mock_open(read_data=file_data)):
             assert cp._render_filenames(path, dest, saltenv, template) == ret
 
+
 def test_get_file_not_found():
     """
     Test if get_file can't find the file.
@@ -76,6 +80,7 @@ def test_get_file_not_found():
         dest = "/srv/salt/cheese"
         ret = ""
         assert cp.get_file(path, dest) == ret
+
 
 def test_get_file_str_success():
     """
@@ -90,6 +95,7 @@ def test_get_file_str_success():
         with patch("salt.modules.cp.cache_file", MagicMock(return_value=dest)):
             assert cp.get_file_str(path, dest) == ret
 
+
 def test_push_non_absolute_path():
     """
     Test if push fails on a non absolute path.
@@ -99,6 +105,7 @@ def test_push_non_absolute_path():
 
     assert cp.push(path) == ret
 
+
 def test_push_dir_non_absolute_path():
     """
     Test if push_dir fails on a non absolute path.
@@ -107,6 +114,7 @@ def test_push_dir_non_absolute_path():
     ret = False
 
     assert cp.push_dir(path) == ret
+
 
 def test_push():
     """
