@@ -3,12 +3,12 @@
 """
 
 
-import pytest
 import copy
 import logging
 import os
 import subprocess
 
+import pytest
 import salt.modules.git as git_mod  # Don't potentially shadow GitPython
 from salt.utils.versions import LooseVersion
 from tests.support.mock import MagicMock, Mock, patch
@@ -60,11 +60,10 @@ def _git_version():
     log.debug("Detected git version %s", git_version)
     return LooseVersion(git_version.split()[-1])
 
+
 @pytest.fixture
 def configure_loader_modules():
-    return {
-        git_mod: {"__utils__": {"ssh.key_is_encrypted": Mock(return_value=False)}}
-    }
+    return {git_mod: {"__utils__": {"ssh.key_is_encrypted": Mock(return_value=False)}}}
 
 
 def test_list_worktrees():
@@ -128,21 +127,25 @@ def test_list_worktrees():
     with patch.dict(git_mod.__salt__, {"cmd.run_all": cmd_run_mock}):
         with patch.object(os.path, "isdir", isdir_mock):
             # Test all=True. Include all return data.
-            assert git_mod.list_worktrees(WORKTREE_ROOT, all=True, stale=False) == worktree_ret
+            assert (
+                git_mod.list_worktrees(WORKTREE_ROOT, all=True, stale=False)
+                == worktree_ret
+            )
             # Test all=False and stale=False. Exclude stale worktrees from
             # return data.
             assert git_mod.list_worktrees(WORKTREE_ROOT, all=False, stale=False) == {
-                    x: worktree_ret[x]
-                    for x in WORKTREE_INFO
-                    if not WORKTREE_INFO[x].get("stale", False)
-                }
+                x: worktree_ret[x]
+                for x in WORKTREE_INFO
+                if not WORKTREE_INFO[x].get("stale", False)
+            }
             # Test stale=True. Exclude non-stale worktrees from return
             # data.
             assert git_mod.list_worktrees(WORKTREE_ROOT, all=False, stale=True) == {
-                    x: worktree_ret[x]
-                    for x in WORKTREE_INFO
-                    if WORKTREE_INFO[x].get("stale", False)
-                }
+                x: worktree_ret[x]
+                for x in WORKTREE_INFO
+                if WORKTREE_INFO[x].get("stale", False)
+            }
+
 
 def test__git_run_tmp_wrapper():
     """
