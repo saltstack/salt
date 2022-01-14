@@ -16,7 +16,9 @@ LAST_STATUS = {}
 
 def __virtual__():
     if salt.utils.platform.is_windows():
-        return False
+        err_msg = "Not available for Windows systems."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
     else:
         return __virtualname__
 

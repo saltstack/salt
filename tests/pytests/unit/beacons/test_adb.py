@@ -21,7 +21,7 @@ def test_no_adb_command():
         ret = adb.__virtual__()
 
         mock.assert_called_once_with("adb")
-        assert not ret
+        assert ret == (False, "adb is missing.")
 
 
 def test_with_adb_command():
