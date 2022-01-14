@@ -9,6 +9,12 @@ import pytest
 log = logging.getLogger(__name__)
 
 
+@pytest.fixture(scope="package", autouse=True)
+def skip_on_tcp_transport(request):
+    if request.config.getoption("--transport") == "tcp":
+        pytest.skip("Deltaproxy under the TPC transport is not working. See #61367")
+
+
 @pytest.fixture(scope="module", autouse=True)
 def salt_delta_proxy(salt_delta_proxy):
     """
