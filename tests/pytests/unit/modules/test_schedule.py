@@ -4,7 +4,6 @@
 
 import datetime
 import logging
-import os
 
 import pytest
 import salt.modules.schedule as schedule
@@ -33,35 +32,13 @@ def sock_dir(tmp_path):
 
 
 @pytest.fixture
-def schedule_config_file():
-    config_dir = schedule.__opts__.get("conf_dir", None)
-    if config_dir is None and "conf_file" in schedule.__opts__:
-        config_dir = os.path.dirname(schedule.__opts__["conf_file"])
-    if config_dir is None:
-        config_dir = salt.syspaths.CONFIG_DIR
-
-    minion_d_dir = os.path.join(
-        config_dir,
-        os.path.dirname(
-            schedule.__opts__.get(
-                "default_include",
-                salt.config.DEFAULT_MINION_OPTS["default_include"],
-            )
-        ),
-    )
-
-    schedule_conf = os.path.join(minion_d_dir, "_schedule.conf")
-    return schedule_conf
-
-
-@pytest.fixture
 def configure_loader_modules():
     return {schedule: {}}
 
 
 # 'purge' function tests: 1
 @pytest.mark.slow_test
-def test_purge(sock_dir, job1, schedule_config_file):
+def test_purge(sock_dir, job1):
     """
     Test if it purge all the jobs currently scheduled on the minion.
     """
@@ -89,6 +66,7 @@ def test_purge(sock_dir, job1, schedule_config_file):
 
     changes = {"job1": "removed", "job2": "removed", "job3": "removed"}
 
+    schedule_config_file = schedule._get_schedule_config_file()
     with patch.dict(
         schedule.__opts__, {"schedule": {"job1": "salt"}, "sock_dir": sock_dir}
     ):
@@ -110,7 +88,7 @@ def test_purge(sock_dir, job1, schedule_config_file):
 
 # 'delete' function tests: 1
 @pytest.mark.slow_test
-def test_delete(sock_dir, job1, schedule_config_file):
+def test_delete(sock_dir, job1):
     """
     Test if it delete a job from the minion's schedule.
     """
@@ -128,6 +106,7 @@ def test_delete(sock_dir, job1, schedule_config_file):
     _schedule_data = {"job1": job1}
     comm = "Deleted Job job1 from schedule."
     changes = {"job1": "removed"}
+    schedule_config_file = schedule._get_schedule_config_file()
     with patch.dict(
         schedule.__opts__, {"schedule": {"job1": "salt"}, "sock_dir": sock_dir}
     ):
@@ -199,7 +178,7 @@ def test_build_schedule_item_invalid_when(sock_dir):
 
 
 @pytest.mark.slow_test
-def test_add(sock_dir, schedule_config_file):
+def test_add(sock_dir):
     """
     Test if it add a job to the schedule.
     """
@@ -242,6 +221,7 @@ def test_add(sock_dir, schedule_config_file):
                     "result": True,
                 }
 
+    schedule_config_file = schedule._get_schedule_config_file()
     comm1 = "Added job: job3 to schedule."
     changes1 = {"job3": "added"}
     with patch.dict(
@@ -542,7 +522,7 @@ def test_copy(sock_dir, job1):
 
 
 @pytest.mark.slow_test
-def test_modify(sock_dir, job1, schedule_config_file):
+def test_modify(sock_dir, job1):
     """
     Test if modifying job to the schedule.
     """
@@ -709,6 +689,7 @@ def test_modify(sock_dir, job1, schedule_config_file):
             ),
         }
     }
+    schedule_config_file = schedule._get_schedule_config_file()
     with patch.dict(
         schedule.__opts__, {"schedule": {"job1": "salt"}, "sock_dir": sock_dir}
     ):
