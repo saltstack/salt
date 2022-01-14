@@ -788,13 +788,13 @@ def status(filter):
 zombie, ...]
     """
     ret = []
-    if filter is not None and filter != "":
-        sanitize_name = str(filter)
+    if filter:
+        status = str(filter)
         try:
             ret = [
                 proc.info
                 for proc in psutil.process_iter(["pid", "name", "status"])
-                if proc.info["status"] == sanitize_name
+                if proc.info["status"] == status
             ]
         except psutil.AccessDenied:
             pass
