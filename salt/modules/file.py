@@ -3707,9 +3707,20 @@ def is_link(path):
     return os.path.islink(os.path.expanduser(path))
 
 
-def symlink(src, path):
+def symlink(src, path, force=False):
     """
     Create a symbolic link (symlink, soft link) to a file
+
+    Args:
+
+        src (str): The path to a file or directory
+
+        link (str): The path to the link. Must be an absolute path
+
+        force (bool): Overwrite an existing symlink with the same name
+
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -3719,22 +3730,37 @@ def symlink(src, path):
     """
     path = os.path.expanduser(path)
 
-    try:
-        if os.path.normpath(salt.utils.path.readlink(path)) == os.path.normpath(src):
-            log.debug("link already in correct state: %s -> %s", path, src)
-            return True
-    except OSError:
-        pass
+    if os.path.islink(path):
+        try:
+            if os.path.normpath(salt.utils.path.readlink(path)) == os.path.normpath(
+                src
+            ):
+                log.debug("link already in correct state: %s -> %s", path, src)
+                return True
+        except OSError:
+            pass
+
+        if force:
+            os.unlink(path)
+        else:
+            msg = "Found existing symlink: {}".format(path)
+            raise CommandExecutionError(msg)
+
+    if os.path.exists(link):
+        msg = "Existing path is not a symlink: {}".format(path)
+        raise CommandExecutionError(msg)
+
+    if not os.path.exists(src):
+        raise CommandExecutionError("Source path does not exist: {}".format(src))
 
     if not os.path.isabs(path):
-        raise SaltInvocationError("File path must be absolute.")
+        raise SaltInvocationError("Link path must be absolute: {}".format(path))
 
     try:
         os.symlink(src, path)
         return True
     except OSError:
         raise CommandExecutionError("Could not create '{}'".format(path))
-    return False
 
 
 def rename(src, dst):
@@ -3928,7 +3954,27 @@ def readlink(path, canonicalize=False):
     .. versionadded:: 2014.1.0
 
     Return the path that a symlink points to
-    If canonicalize is set to True, then it return the final target
+
+    Args:
+
+        path (str):
+            The path to the symlink
+
+        canonicalize (bool):
+            Get the canonical path eliminating any symbolic links encountered in
+            the path
+
+    Returns:
+
+        str: The path that the symlink points to
+
+    Raises:
+
+        SaltInvocationError: path is not absolute
+
+        SaltInvocationError: path is not a link
+
+        CommandExecutionError: error reading the symbolic link
 
     CLI Example:
 
@@ -3937,17 +3983,25 @@ def readlink(path, canonicalize=False):
         salt '*' file.readlink /path/to/link
     """
     path = os.path.expanduser(path)
+    path = os.path.expandvars(path)
 
     if not os.path.isabs(path):
-        raise SaltInvocationError("Path to link must be absolute.")
+        raise SaltInvocationError("Path to link must be absolute: {}".format(path))
 
     if not os.path.islink(path):
-        raise SaltInvocationError("A valid link was not specified.")
+        raise SaltInvocationError("A valid link was not specified: {}".format(path))
 
     if canonicalize:
         return os.path.realpath(path)
     else:
-        return salt.utils.path.readlink(path)
+        try:
+            return salt.utils.path.readlink(path)
+        except OSError as exc:
+            if exc.errno == errno.EINVAL:
+                raise CommandExecutionError("Not a symbolic link: {}".format(path))
+            raise CommandExecutionError(exc.__str__())
+        except Exception as exc:  # pylint: disable=broad-except
+            raise CommandExecutionError(exc)
 
 
 def readdir(path):
