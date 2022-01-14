@@ -11,7 +11,14 @@ Statistics
 - Total Issue References: **74**
 - Total PR References: **255**
 
-- Contributors: **55** (`Ch3LL`_, `DmitryKuzmenko`_, `Giandom`_, `Kimol`_, `L4rS6`_, `LukeCarrier`_, `OrlandoArcapix`_, `TamCore`_, `The-Loeki`_, `UtahDave`_, `aesposito91`_, `bbinet`_, `bdrung`_, `boltronics`_, `bosatsu`_, `clan`_, `corywright`_, `damon-atkins`_, `dincamihai`_, `dmurphy18`_, `dnABic`_, `douglasjreynolds`_, `dwoz`_, `edgan`_, `ejparker12`_, `esell`_, `ezh`_, `femnad`_, `folti`_, `garethgreenaway`_, `gtmanfred`_, `isbm`_, `jasperla`_, `johnj`_, `mateiw`_, `mcalmer`_, `mirceaulinic`_, `morganwillcock`_, `opdude`_, `pcn`_, `pruiz`_, `psagers`_, `psyer`_, `rallytime`_, `robinro`_, `s0undt3ch`_, `samodid`_, `shengis`_, `skjaro`_, `tankywoo`_, `terminalmage`_, `twangboy`_, `vutny`_, `yannj-fr`_, `zmedico`_)
+- Contributors: **55** (`Ch3LL`_, `DmitryKuzmenko`_, `Giandom`_, `Kimol`_, `L4rS6`_,
+  `LukeCarrier`_, `OrlandoArcapix`_, `TamCore`_, `The-Loeki`_, `UtahDave`_, `aesposito91`_,
+  `bbinet`_, `bdrung`_, `boltronics`_, `bosatsu`_, `clan`_, `corywright`_, `damon-atkins`_,
+  `dincamihai`_, `dmurphy18`_, `dnABic`_, `douglasjreynolds`_, `dwoz`_, `edgan`_, `ejparker12`_,
+  `esell`_, `ezh`_, `femnad`_, `folti`_, `garethgreenaway`_, `gtmanfred`_, `isbm`_, `jasperla`_,
+  `johnj`_, `mateiw`_, `mcalmer`_, `mirceaulinic`_, `morganwillcock`_, `opdude`_, `pcn`_, `pruiz`_,
+  `psagers`_, `psyer`_, `rallytime`_, `robinro`_, `s0undt3ch`_, `samodid`_, `shengis`_, `skjaro`_,
+  `tankywoo`_, `terminalmage`_, `twangboy`_, `vutny`_, `yannj-fr`_, `zmedico`_)
 
 
 .. warning::

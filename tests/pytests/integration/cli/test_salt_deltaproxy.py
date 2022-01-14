@@ -14,6 +14,12 @@ from tests.support.helpers import PRE_PYTEST_SKIP_REASON
 log = logging.getLogger(__name__)
 
 
+@pytest.fixture(scope="package", autouse=True)
+def skip_on_tcp_transport(request):
+    if request.config.getoption("--transport") == "tcp":
+        pytest.skip("Deltaproxy under the TPC transport is not working. See #61367")
+
+
 @pytest.fixture
 def proxy_minion_id(salt_master):
     _proxy_minion_id = random_string("proxy-minion-")

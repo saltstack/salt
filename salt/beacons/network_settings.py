@@ -24,7 +24,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-__virtual_name__ = "network_settings"
+__virtualname__ = "network_settings"
 
 ATTRS = [
     "family",
@@ -67,8 +67,10 @@ class Hashabledict(dict):
 
 def __virtual__():
     if HAS_PYROUTE2:
-        return __virtual_name__
-    return False
+        return __virtualname__
+    err_msg = "pyroute2 library is missing"
+    log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+    return False, err_msg
 
 
 def validate(config):
