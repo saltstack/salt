@@ -24,7 +24,9 @@ __virtualname__ = "swapusage"
 
 def __virtual__():
     if HAS_PSUTIL is False:
-        return False
+        err_msg = "psutil library is missing."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
     else:
         return __virtualname__
 
