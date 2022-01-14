@@ -1,21 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 integration tests for mac_system
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
-import salt.utils.path
-import salt.utils.platform
+import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    destructiveTest,
-    flaky,
-    random_string,
-    skip_if_not_root,
-)
+from tests.support.helpers import random_string
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
@@ -25,12 +16,11 @@ SET_COMPUTER_NAME = random_string("RS-", lowercase=False)
 SET_SUBNET_NAME = random_string("RS-", lowercase=False)
 
 
-@skip_if_not_root
-@flaky(attempts=10)
-@skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
-@skipIf(
-    not salt.utils.path.which("systemsetup"), "'systemsetup' binary not found in $PATH"
-)
+@pytest.mark.flaky(max_runs=10)
+@pytest.mark.skip_unless_on_darwin
+@pytest.mark.usefixtures("salt_sub_minion")
+@pytest.mark.skip_if_not_root
+@pytest.mark.skip_if_binaries_missing("systemsetup")
 class MacSystemModuleTest(ModuleCase):
     """
     Validate the mac_system module
@@ -69,8 +59,8 @@ class MacSystemModuleTest(ModuleCase):
             "system.set_disable_keyboard_on_lock", [self.KEYBOARD_DISABLED]
         )
 
-    @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_get_set_remote_login(self):
         """
         Test system.get_remote_login
@@ -98,8 +88,8 @@ class MacSystemModuleTest(ModuleCase):
             self.run_function("system.set_remote_login", ["spongebob"]),
         )
 
-    @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_get_set_remote_events(self):
         """
         Test system.get_remote_events
@@ -127,8 +117,8 @@ class MacSystemModuleTest(ModuleCase):
             self.run_function("system.set_remote_events", ["spongebob"]),
         )
 
-    @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_get_set_subnet_name(self):
         """
         Test system.get_subnet_name
@@ -137,7 +127,7 @@ class MacSystemModuleTest(ModuleCase):
         self.assertTrue(self.run_function("system.set_subnet_name", [SET_SUBNET_NAME]))
         self.assertEqual(self.run_function("system.get_subnet_name"), SET_SUBNET_NAME)
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_get_list_startup_disk(self):
         """
         Test system.get_startup_disk
@@ -174,7 +164,7 @@ class MacSystemModuleTest(ModuleCase):
             self.run_function("system.set_restart_delay", [70]),
         )
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_get_set_disable_keyboard_on_lock(self):
         """
         Test system.get_disable_keyboard_on_lock
@@ -240,8 +230,8 @@ class MacSystemModuleTest(ModuleCase):
         )
 
 
-@skip_if_not_root
-@skipIf(not salt.utils.platform.is_darwin(), "Test only available on macOS")
+@pytest.mark.skip_unless_on_darwin
+@pytest.mark.skip_if_not_root
 class MacSystemComputerNameTest(ModuleCase):
     def setUp(self):
         self.COMPUTER_NAME = self.run_function("system.get_computer_name")
@@ -255,8 +245,8 @@ class MacSystemComputerNameTest(ModuleCase):
     # something similar again we may want to skip this gain until we
     # investigate
     # @skipIf(salt.utils.platform.is_darwin() and six.PY3, 'This test hangs on OS X on Py3.  Skipping until #53566 is merged.')
-    @destructiveTest
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.destructive_test
+    @pytest.mark.slow_test
     def test_get_set_computer_name(self):
         """
         Test system.get_computer_name

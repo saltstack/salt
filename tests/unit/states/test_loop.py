@@ -1,18 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Tests for loop state(s)
 """
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
+import pytest
 import salt.states.loop
-from salt.ext.six.moves import range
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class LoopTestCase(TestCase, LoaderModuleMockMixin):
@@ -119,7 +113,7 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
                 },
             )
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_immediate_success(self):
         """
         Test for an immediate success.
@@ -234,7 +228,9 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
                     "name": "foo.bar",
                     "result": False,
                     "changes": {},
-                    "comment": "Call did not produce the expected result after 1 attempts",
+                    "comment": (
+                        "Call did not produce the expected result after 1 attempts"
+                    ),
                 },
             )
 
@@ -261,7 +257,7 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
         """
         with patch.dict(
             salt.states.loop.__salt__,  # pylint: disable=no-member
-            {"foo.bar": MagicMock(side_effect=KeyError(str("FOO")))},
+            {"foo.bar": MagicMock(side_effect=KeyError("FOO"))},
         ):
             self.assertDictEqual(
                 salt.states.loop.until_no_eval(name="foo.bar", expected=True),
@@ -269,8 +265,10 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
                     "name": "foo.bar",
                     "result": False,
                     "changes": {},
-                    "comment": "Exception occurred while executing foo.bar: {}:{}".format(
-                        type(KeyError()), "'FOO'"
+                    "comment": (
+                        "Exception occurred while executing foo.bar: {}:{}".format(
+                            type(KeyError()), "'FOO'"
+                        )
                     ),
                 },
             )
@@ -356,6 +354,8 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
                     "name": "foo.bar",
                     "result": False,
                     "changes": {},
-                    "comment": "Call did not produce the expected result after 3 attempts",
+                    "comment": (
+                        "Call did not produce the expected result after 3 attempts"
+                    ),
                 },
             )

@@ -1,0 +1,7 @@
+.. _release-3005:
+
+=============================================
+Salt 3005 Release Notes - Codename Phosphorus
+=============================================
+
+Salt 3005 is currently under development.

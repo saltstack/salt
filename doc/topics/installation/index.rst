@@ -50,6 +50,7 @@ These guides go into detail how to install Salt on a given platform.
     fedora
     freebsd
     gentoo
+    nxos
     openbsd
     osx
     rhel
@@ -81,13 +82,15 @@ Additional Installation Guides
     ../tutorials/standalone_minion
     ../tutorials/quickstart
 
+.. _installation-dependencies:
+
 Dependencies
 ------------
 
 Salt should run on any Unix-like platform so long as the dependencies are met.
 
 * `Python`_ - Python2 >= 2.7, Python3 >= 3.4
-* `msgpack-python`_ - High-performance message interchange format
+* `msgpack`_ - High-performance message interchange format
 * `YAML`_ - Python YAML bindings
 * `Jinja2`_ - parsing Salt States (configurable in the master settings)
 * `MarkupSafe`_ - Implements a XML/HTML/XHTML Markup safe string for Python
@@ -150,17 +153,17 @@ Optional Dependencies
   settings)
 * gcc - dynamic `Cython`_ module compiling
 
-.. _`Python`: http://python.org/download/
-.. _`ZeroMQ`: http://zeromq.org/
+.. _`Python`: https://www.python.org/downloads/
+.. _`ZeroMQ`: https://zeromq.org/
 .. _`pyzmq`: https://github.com/zeromq/pyzmq
-.. _`msgpack-python`:  https://pypi.python.org/pypi/msgpack-python/
+.. _`msgpack`:  https://pypi.python.org/project/msgpack/
 .. _`M2Crypto`: https://gitlab.com/m2crypto/m2crypto
 .. _`PyCrypto`: https://www.dlitz.net/software/pycrypto/
-.. _`YAML`: http://pyyaml.org/
-.. _`Jinja2`: http://jinja.pocoo.org/
-.. _`MarkupSafe`: https://pypi.python.org/pypi/MarkupSafe
-.. _`mako`: http://www.makotemplates.org/
-.. _`Cython`: http://cython.org/
+.. _`YAML`: https://pyyaml.org/
+.. _`Jinja2`: https://jinja.palletsprojects.com/en/2.11.x/
+.. _`MarkupSafe`: https://pypi.org/project/MarkupSafe/
+.. _`mako`: https://www.makotemplates.org/
+.. _`Cython`: https://cython.org/
 .. _`apache-libcloud`: http://libcloud.apache.org
 .. _`Requests`: http://docs.python-requests.org/en/latest
 .. _`Tornado`: http://www.tornadoweb.org/en/stable/

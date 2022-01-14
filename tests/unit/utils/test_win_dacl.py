@@ -1,14 +1,12 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 import tempfile
 
+import pytest
 import salt.utils.platform
 import salt.utils.win_dacl as win_dacl
 import salt.utils.win_reg as win_reg
-from tests.support.helpers import destructiveTest, random_string
+from salt.exceptions import CommandExecutionError
+from tests.support.helpers import TstSuiteLoggingHandler, random_string
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
@@ -21,7 +19,7 @@ try:
 except ImportError:
     HAS_WIN32 = False
 
-FAKE_KEY = "SOFTWARE\\{0}".format(random_string("SaltTesting-", lowercase=False))
+FAKE_KEY = "SOFTWARE\\{}".format(random_string("SaltTesting-", lowercase=False))
 
 
 @skipIf(not HAS_WIN32, "Requires pywin32")
@@ -67,18 +65,50 @@ class WinDaclTestCase(TestCase):
         self.assertTrue(isinstance(sid_obj, pywintypes.SIDType))
         self.assertEqual(win_dacl.get_sid_string(sid_obj), "S-1-0-0")
 
-    def test_get_name(self):
+    def test_get_name_odd_case(self):
         """
-        Get the name
+        Test get_name by passing a name with inconsistent case characters.
+        Should return the name in the correct case
         """
         # Case
         self.assertEqual(win_dacl.get_name("adMiniStrAtorS"), "Administrators")
+
+    def test_get_name_using_sid(self):
+        """
+        Test get_name passing a SID String. Should return the string name
+        """
         # SID String
         self.assertEqual(win_dacl.get_name("S-1-5-32-544"), "Administrators")
+
+    def test_get_name_using_sid_object(self):
+        """
+        Test get_name passing a SID Object. Should return the string name
+        """
         # SID Object
         sid_obj = win_dacl.get_sid("Administrators")
         self.assertTrue(isinstance(sid_obj, pywintypes.SIDType))
         self.assertEqual(win_dacl.get_name(sid_obj), "Administrators")
+
+    def test_get_name_capability_sid(self):
+        """
+        Test get_name with a compatibility SID. Should return `None` as we want
+        to ignore these SIDs
+        """
+        cap_sid = "S-1-15-3-1024-1065365936-1281604716-3511738428-1654721687-432734479-3232135806-4053264122-3456934681"
+        sid_obj = win32security.ConvertStringSidToSid(cap_sid)
+        self.assertIsNone(win_dacl.get_name(sid_obj))
+
+    def test_get_name_error(self):
+        """
+        Test get_name with an un mapped SID, should throw a
+        CommandExecutionError
+        """
+        test_sid = "S-1-2-3-4"
+        sid_obj = win32security.ConvertStringSidToSid(test_sid)
+        with TstSuiteLoggingHandler() as handler:
+            self.assertRaises(CommandExecutionError, win_dacl.get_name, sid_obj)
+            expected_message = 'ERROR:Error resolving "PySID:S-1-2-3-4"'
+            self.assertIn(expected_message, handler.messages[0])
 
 
 @skipIf(not HAS_WIN32, "Requires pywin32")
@@ -103,7 +133,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
     def tearDown(self):
         win_reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_owner(self):
         """
         Test the set_owner function
@@ -121,7 +151,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
             "Backup Operators",
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_primary_group(self):
         """
         Test the set_primary_group function
@@ -139,7 +169,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
             "Backup Operators",
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_permissions(self):
         """
         Test the set_permissions function
@@ -174,7 +204,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
             expected,
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_get_permissions(self):
         """
         Test the get_permissions function
@@ -209,7 +239,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
             expected,
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_has_permission(self):
         """
         Test the has_permission function
@@ -248,7 +278,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
             )
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_rm_permissions(self):
         """
         Test the rm_permissions function
@@ -280,7 +310,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
             {},
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_inheritance(self):
         """
         Test the set_inheritance function
@@ -309,7 +339,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
             win_dacl.get_inheritance(obj_name=self.obj_name, obj_type=self.obj_type)
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_check_perms(self):
         """
         Test the check_perms function
@@ -334,10 +364,16 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         expected = {
             "changes": {
                 "owner": "Users",
-                "perms": {
-                    "Backup Operators": {"grant": "read", "deny": ["delete"]},
+                "grant_perms": {"Backup Operators": {"permissions": "read"}},
+                "deny_perms": {
+                    "Backup Operators": {"permissions": ["delete"]},
                     "NETWORK SERVICE": {
-                        "deny": ["delete", "set_value", "write_dac", "write_owner"]
+                        "permissions": [
+                            "delete",
+                            "set_value",
+                            "write_dac",
+                            "write_owner",
+                        ]
                     },
                 },
             },
@@ -398,7 +434,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
             win_dacl.get_owner(obj_name=self.obj_name, obj_type=self.obj_type), "Users"
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_check_perms_test_true(self):
         """
         Test the check_perms function
@@ -423,10 +459,16 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         expected = {
             "changes": {
                 "owner": "Users",
-                "perms": {
-                    "Backup Operators": {"grant": "read", "deny": ["delete"]},
+                "grant_perms": {"Backup Operators": {"permissions": "read"}},
+                "deny_perms": {
+                    "Backup Operators": {"permissions": ["delete"]},
                     "NETWORK SERVICE": {
-                        "deny": ["delete", "set_value", "write_dac", "write_owner"]
+                        "permissions": [
+                            "delete",
+                            "set_value",
+                            "write_dac",
+                            "write_owner",
+                        ]
                     },
                 },
             },
@@ -499,7 +541,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
     def tearDown(self):
         os.remove(self.obj_name)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_owner(self):
         """
         Test the set_owner function
@@ -517,7 +559,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
             "Backup Operators",
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_primary_group(self):
         """
         Test the set_primary_group function
@@ -535,7 +577,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
             "Backup Operators",
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_permissions(self):
         """
         Test the set_permissions function
@@ -570,7 +612,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
             expected,
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_get_permissions(self):
         """
         Test the get_permissions function
@@ -605,7 +647,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
             expected,
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_has_permission(self):
         """
         Test the has_permission function
@@ -644,7 +686,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
             )
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_rm_permissions(self):
         """
         Test the rm_permissions function
@@ -676,7 +718,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
             {},
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_inheritance(self):
         """
         Test the set_inheritance function
@@ -705,7 +747,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
             win_dacl.get_inheritance(obj_name=self.obj_name, obj_type=self.obj_type)
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_check_perms(self):
         """
         Test the check_perms function
@@ -735,10 +777,11 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
         expected = {
             "changes": {
                 "owner": "Users",
-                "perms": {
-                    "Backup Operators": {"grant": "read", "deny": ["delete"]},
+                "grant_perms": {"Backup Operators": {"permissions": "read"}},
+                "deny_perms": {
+                    "Backup Operators": {"permissions": ["delete"]},
                     "NETWORK SERVICE": {
-                        "deny": [
+                        "permissions": [
                             "delete",
                             "change_permissions",
                             "write_attributes",
@@ -804,7 +847,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
             win_dacl.get_owner(obj_name=self.obj_name, obj_type=self.obj_type), "Users"
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_check_perms_test_true(self):
         """
         Test the check_perms function
@@ -829,10 +872,16 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
         expected = {
             "changes": {
                 "owner": "Users",
-                "perms": {
-                    "Backup Operators": {"grant": "read", "deny": ["delete"]},
+                "grant_perms": {"Backup Operators": {"permissions": "read"}},
+                "deny_perms": {
+                    "Backup Operators": {"permissions": ["delete"]},
                     "NETWORK SERVICE": {
-                        "deny": ["delete", "set_value", "write_dac", "write_owner"]
+                        "permissions": [
+                            "delete",
+                            "set_value",
+                            "write_dac",
+                            "write_owner",
+                        ]
                     },
                 },
             },

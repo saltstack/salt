@@ -1,18 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Run processes as a different user in Windows
 """
-from __future__ import absolute_import, unicode_literals
 
 # Import Python Libraries
 import ctypes
 import logging
 import os
+import time
 
-# Import Salt Libs
 from salt.exceptions import CommandExecutionError
 
-# Import Third Party Libs
 try:
     import psutil
 
@@ -62,6 +59,29 @@ def split_username(username):
     return username, domain
 
 
+def create_env(user_token, inherit, timeout=1):
+    """
+    CreateEnvironmentBlock might fail when we close a login session and then
+    try to re-open one very quickly. Run the method multiple times to work
+    around the async nature of logoffs.
+    """
+    start = time.time()
+    env = None
+    exc = None
+    while True:
+        try:
+            env = win32profile.CreateEnvironmentBlock(user_token, False)
+        except pywintypes.error as exc:
+            pass
+        else:
+            break
+        if time.time() - start > timeout:
+            break
+    if env is not None:
+        return env
+    raise exc
+
+
 def runas(cmdLine, username, password=None, cwd=None):
     """
     Run a command as another user. If the process is running as an admin or
@@ -88,9 +108,11 @@ def runas(cmdLine, username, password=None, cwd=None):
     # accounts have this permission by default.
     try:
         impersonation_token = salt.platform.win.impersonate_sid(
-            salt.platform.win.SYSTEM_SID, session_id=0, privs=["SeTcbPrivilege"],
+            salt.platform.win.SYSTEM_SID,
+            session_id=0,
+            privs=["SeTcbPrivilege"],
         )
-    except WindowsError:  # pylint: disable=undefined-variable
+    except OSError:
         log.debug("Unable to impersonate SYSTEM user")
         impersonation_token = None
         win32api.CloseHandle(th)
@@ -167,7 +189,7 @@ def runas(cmdLine, username, password=None, cwd=None):
     )
 
     # Create the environment for the user
-    env = win32profile.CreateEnvironmentBlock(user_token, False)
+    env = create_env(user_token, False)
 
     hProcess = None
     try:
@@ -230,7 +252,7 @@ def runas(cmdLine, username, password=None, cwd=None):
 
 def runas_unpriv(cmd, username, password, cwd=None):
     """
-    Runas that works for non-priviledged users
+    Runas that works for non-privileged users
     """
     # Validate the domain and sid exist for the username
     username, domain = split_username(username)
@@ -243,14 +265,18 @@ def runas_unpriv(cmd, username, password, cwd=None):
     # Create a pipe to set as stdout in the child. The write handle needs to be
     # inheritable.
     c2pread, c2pwrite = salt.platform.win.CreatePipe(
-        inherit_read=False, inherit_write=True,
+        inherit_read=False,
+        inherit_write=True,
     )
     errread, errwrite = salt.platform.win.CreatePipe(
-        inherit_read=False, inherit_write=True,
+        inherit_read=False,
+        inherit_write=True,
     )
 
     # Create inheritable copy of the stdin
-    stdin = salt.platform.win.kernel32.GetStdHandle(salt.platform.win.STD_INPUT_HANDLE,)
+    stdin = salt.platform.win.kernel32.GetStdHandle(
+        salt.platform.win.STD_INPUT_HANDLE,
+    )
     dupin = salt.platform.win.DuplicateHandle(srchandle=stdin, inherit=True)
 
     # Get startup info structure

@@ -1,20 +1,15 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Anthony Shaw <anthonyshaw@apache.org>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.modules.servicenow as servicenow
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
 from tests.support.unit import TestCase
 
 
-class MockServiceNowClient(object):
+class MockServiceNowClient:
     def __init__(self, instance_name, username, password):
         pass
 

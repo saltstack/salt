@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Support for Linux LVM2
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import os.path
 
-# Import salt libs
 import salt.utils.path
-from salt.exceptions import CommandExecutionError
-from salt.ext import six
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -28,7 +22,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The linux_lvm execution module cannot be loaded: the lvm binary is not in the path.",
+        "The linux_lvm execution module cannot be loaded: the lvm binary is not in the"
+        " path.",
     )
 
 
@@ -81,7 +76,6 @@ def pvdisplay(pvname="", real=False, quiet=False):
 
     quiet
         if the physical volume is not present, do not show any error
-
 
     CLI Examples:
 
@@ -223,7 +217,7 @@ def lvdisplay(lvname="", quiet=False):
     return ret
 
 
-def pvcreate(devices, override=True, **kwargs):
+def pvcreate(devices, override=True, force=True, **kwargs):
     """
     Set a physical device to be used as an LVM physical volume
 
@@ -239,19 +233,23 @@ def pvcreate(devices, override=True, **kwargs):
     """
     if not devices:
         return "Error: at least one device is required"
-    if isinstance(devices, six.string_types):
+    if isinstance(devices, str):
         devices = devices.split(",")
 
-    cmd = ["pvcreate", "-y"]
+    cmd = ["pvcreate"]
+
+    if force:
+        cmd.append("--yes")
+    else:
+        cmd.append("-qq")
+
     for device in devices:
         if not os.path.exists(device):
-            raise CommandExecutionError("{0} does not exist".format(device))
+            return "{} does not exist".format(device)
         if not pvdisplay(device, quiet=True):
             cmd.append(device)
         elif not override:
-            raise CommandExecutionError(
-                'Device "{0}" is already an LVM physical volume.'.format(device)
-            )
+            return 'Device "{}" is already an LVM physical volume.'.format(device)
 
     if not cmd[2:]:
         # All specified devices are already LVM volumes
@@ -269,26 +267,26 @@ def pvcreate(devices, override=True, **kwargs):
         "labelsector",
         "setphysicalvolumesize",
     )
-    no_parameter = ("force", "norestorefile")
+    no_parameter = "norestorefile"
     for var in kwargs:
         if kwargs[var] and var in valid:
-            cmd.extend(["--{0}".format(var), kwargs[var]])
+            cmd.extend(["--{}".format(var), kwargs[var]])
         elif kwargs[var] and var in no_parameter:
-            cmd.append("--{0}".format(var))
+            cmd.append("--{}".format(var))
 
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
     if out.get("retcode"):
-        raise CommandExecutionError(out.get("stderr"))
+        return out.get("stderr")
 
     # Verify pvcreate was successful
     for device in devices:
         if not pvdisplay(device):
-            raise CommandExecutionError('Device "{0}" was not affected.'.format(device))
+            return 'Device "{}" was not affected.'.format(device)
 
     return True
 
 
-def pvremove(devices, override=True):
+def pvremove(devices, override=True, force=True):
     """
     Remove a physical device being used as an LVM physical volume
 
@@ -301,15 +299,21 @@ def pvremove(devices, override=True):
 
         salt mymachine lvm.pvremove /dev/sdb1,/dev/sdb2
     """
-    if isinstance(devices, six.string_types):
+    if isinstance(devices, str):
         devices = devices.split(",")
 
-    cmd = ["pvremove", "-y"]
+    cmd = ["pvremove"]
+
+    if force:
+        cmd.append("--yes")
+    else:
+        cmd.append("-qq")
+
     for device in devices:
         if pvdisplay(device):
             cmd.append(device)
         elif not override:
-            raise CommandExecutionError("{0} is not a physical volume".format(device))
+            return "{} is not a physical volume".format(device)
 
     if not cmd[2:]:
         # Nothing to do
@@ -317,17 +321,17 @@ def pvremove(devices, override=True):
 
     out = __salt__["cmd.run_all"](cmd, python_shell=False)
     if out.get("retcode"):
-        raise CommandExecutionError(out.get("stderr"))
+        return out.get("stderr")
 
-    # Verify pvcremove was successful
+    # Verify pvremove was successful
     for device in devices:
         if pvdisplay(device, quiet=True):
-            raise CommandExecutionError('Device "{0}" was not affected.'.format(device))
+            return 'Device "{}" was not affected.'.format(device)
 
     return True
 
 
-def vgcreate(vgname, devices, **kwargs):
+def vgcreate(vgname, devices, force=False, **kwargs):
     """
     Create an LVM volume group
 
@@ -340,31 +344,48 @@ def vgcreate(vgname, devices, **kwargs):
     """
     if not vgname or not devices:
         return "Error: vgname and device(s) are both required"
-    if isinstance(devices, six.string_types):
+    if isinstance(devices, str):
         devices = devices.split(",")
 
     cmd = ["vgcreate", vgname]
     for device in devices:
         cmd.append(device)
+
+    if force:
+        cmd.append("--yes")
+    else:
+        cmd.append("-qq")
+
     valid = (
+        "addtag",
+        "alloc",
+        "autobackup",
         "clustered",
         "maxlogicalvolumes",
         "maxphysicalvolumes",
+        "metadatatype",
         "vgmetadatacopies",
         "metadatacopies",
         "physicalextentsize",
+        "zero",
     )
     for var in kwargs:
         if kwargs[var] and var in valid:
-            cmd.append("--{0}".format(var))
+            cmd.append("--{}".format(var))
             cmd.append(kwargs[var])
-    out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
+
+    cmd_ret = __salt__["cmd.run_all"](cmd, python_shell=False)
+    if cmd_ret.get("retcode"):
+        out = cmd_ret.get("stderr").strip()
+    else:
+        out = 'Volume group "{}" successfully created'.format(vgname)
+
     vgdata = vgdisplay(vgname)
-    vgdata["Output from vgcreate"] = out[0].strip()
+    vgdata["Output from vgcreate"] = out
     return vgdata
 
 
-def vgextend(vgname, devices):
+def vgextend(vgname, devices, force=False):
     """
     Add physical volumes to an LVM volume group
 
@@ -377,14 +398,26 @@ def vgextend(vgname, devices):
     """
     if not vgname or not devices:
         return "Error: vgname and device(s) are both required"
-    if isinstance(devices, six.string_types):
+    if isinstance(devices, str):
         devices = devices.split(",")
 
     cmd = ["vgextend", vgname]
+
+    if force:
+        cmd.append("--yes")
+    else:
+        cmd.append("-qq")
+
     for device in devices:
         cmd.append(device)
-    out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
-    vgdata = {"Output from vgextend": out[0].strip()}
+
+    cmd_ret = __salt__["cmd.run_all"](cmd, python_shell=False)
+    if cmd_ret.get("retcode"):
+        out = cmd_ret.get("stderr").strip()
+    else:
+        out = 'Volume group "{}" successfully extended'.format(vgname)
+
+    vgdata = {"Output from vgextend": out}
     return vgdata
 
 
@@ -411,7 +444,7 @@ def lvcreate(
         salt '*' lvm.lvcreate new_volume_name     vg_name extents=100 pv=/dev/sdb
         salt '*' lvm.lvcreate new_snapshot        vg_name snapshot=volume_name size=3G
 
-    .. versionadded:: to_complete
+    .. versionadded:: 0.12.0
 
     Support for thin pools and thin volumes
 
@@ -438,6 +471,7 @@ def lvcreate(
         "minor",
         "persistent",
         "mirrors",
+        "nosync",
         "noudevsync",
         "monitor",
         "ignoremonitoring",
@@ -450,6 +484,7 @@ def lvcreate(
         "zero",
     )
     no_parameter = (
+        "nosync",
         "noudevsync",
         "ignoremonitoring",
         "thin",
@@ -457,11 +492,11 @@ def lvcreate(
 
     extra_arguments = []
     if kwargs:
-        for k, v in six.iteritems(kwargs):
+        for k, v in kwargs.items():
             if k in no_parameter:
-                extra_arguments.append("--{0}".format(k))
+                extra_arguments.append("--{}".format(k))
             elif k in valid:
-                extra_arguments.extend(["--{0}".format(k), "{0}".format(v)])
+                extra_arguments.extend(["--{}".format(k), "{}".format(v)])
 
     cmd = [salt.utils.path.which("lvcreate")]
 
@@ -473,18 +508,18 @@ def lvcreate(
         cmd.extend(["-n", lvname])
 
     if snapshot:
-        cmd.extend(["-s", "{0}/{1}".format(vgname, snapshot)])
+        cmd.extend(["-s", "{}/{}".format(vgname, snapshot)])
     else:
         cmd.append(vgname)
 
     if size and thinvolume:
-        cmd.extend(["-V", "{0}".format(size)])
+        cmd.extend(["-V", "{}".format(size)])
     elif extents and thinvolume:
         return "Error: Thin volume size cannot be specified as extents"
     elif size:
-        cmd.extend(["-L", "{0}".format(size)])
+        cmd.extend(["-L", "{}".format(size)])
     elif extents:
-        cmd.extend(["-l", "{0}".format(extents)])
+        cmd.extend(["-l", "{}".format(extents)])
     else:
         return "Error: Either size or extents must be specified"
 
@@ -495,15 +530,22 @@ def lvcreate(
 
     if force:
         cmd.append("--yes")
+    else:
+        cmd.append("-qq")
 
-    out = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
-    lvdev = "/dev/{0}/{1}".format(vgname, lvname)
+    cmd_ret = __salt__["cmd.run_all"](cmd, python_shell=False)
+    if cmd_ret.get("retcode"):
+        out = cmd_ret.get("stderr").strip()
+    else:
+        out = 'Logical volume "{}" created.'.format(lvname)
+
+    lvdev = "/dev/{}/{}".format(vgname, lvname)
     lvdata = lvdisplay(lvdev)
-    lvdata["Output from lvcreate"] = out[0].strip()
+    lvdata["Output from lvcreate"] = out
     return lvdata
 
 
-def vgremove(vgname):
+def vgremove(vgname, force=True):
     """
     Remove an LVM volume group
 
@@ -514,12 +556,22 @@ def vgremove(vgname):
         salt mymachine lvm.vgremove vgname
         salt mymachine lvm.vgremove vgname force=True
     """
-    cmd = ["vgremove", "-f", vgname]
-    out = __salt__["cmd.run"](cmd, python_shell=False)
-    return out.strip()
+    cmd = ["vgremove", vgname]
+
+    if force:
+        cmd.append("--yes")
+    else:
+        cmd.append("-qq")
+
+    cmd_ret = __salt__["cmd.run_all"](cmd, python_shell=False)
+    if cmd_ret.get("retcode"):
+        out = cmd_ret.get("stderr").strip()
+    else:
+        out = 'Volume group "{}" successfully removed'.format(vgname)
+    return out
 
 
-def lvremove(lvname, vgname):
+def lvremove(lvname, vgname, force=True):
     """
     Remove a given existing logical volume from a named existing volume group
 
@@ -529,14 +581,25 @@ def lvremove(lvname, vgname):
 
         salt '*' lvm.lvremove lvname vgname force=True
     """
-    cmd = ["lvremove", "-f", "{0}/{1}".format(vgname, lvname)]
-    out = __salt__["cmd.run"](cmd, python_shell=False)
-    return out.strip()
+    cmd = ["lvremove", "{}/{}".format(vgname, lvname)]
+
+    if force:
+        cmd.append("--yes")
+    else:
+        cmd.append("-qq")
+
+    cmd_ret = __salt__["cmd.run_all"](cmd, python_shell=False)
+    if cmd_ret.get("retcode"):
+        out = cmd_ret.get("stderr").strip()
+    else:
+        out = 'Logical volume "{}" successfully removed'.format(lvname)
+
+    return out
 
 
-def lvresize(size=None, lvpath=None, extents=None):
+def lvresize(size=None, lvpath=None, extents=None, force=False, resizefs=False):
     """
-    Return information about the logical volume(s)
+    Resize a logical volume to specific size.
 
     CLI Examples:
 
@@ -553,14 +616,114 @@ def lvresize(size=None, lvpath=None, extents=None):
 
     cmd = ["lvresize"]
 
+    if force:
+        cmd.append("--force")
+    else:
+        cmd.append("-qq")
+
+    if resizefs:
+        cmd.append("--resizefs")
+
     if size:
-        cmd.extend(["-L", "{0}".format(size)])
+        cmd.extend(["-L", "{}".format(size)])
     elif extents:
-        cmd.extend(["-l", "{0}".format(extents)])
+        cmd.extend(["-l", "{}".format(extents)])
     else:
         log.error("Error: Either size or extents must be specified")
         return {}
 
     cmd.append(lvpath)
-    cmd_ret = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
-    return {"Output from lvresize": cmd_ret[0].strip()}
+
+    cmd_ret = __salt__["cmd.run_all"](cmd, python_shell=False)
+    if cmd_ret.get("retcode"):
+        out = cmd_ret.get("stderr").strip()
+    else:
+        out = 'Logical volume "{}" successfully resized.'.format(lvpath)
+
+    return {"Output from lvresize": out}
+
+
+def lvextend(size=None, lvpath=None, extents=None, force=False, resizefs=False):
+    """
+    Increase a logical volume to specific size.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+
+        salt '*' lvm.lvextend +12M /dev/mapper/vg1-test
+        salt '*' lvm.lvextend lvpath=/dev/mapper/vg1-test extents=+100%FREE
+
+    """
+    if size and extents:
+        log.error("Error: Please specify only one of size or extents")
+        return {}
+
+    cmd = ["lvextend"]
+
+    if force:
+        cmd.append("--yes")
+    else:
+        cmd.append("-qq")
+
+    if resizefs:
+        cmd.append("--resizefs")
+
+    if size:
+        cmd.extend(["-L", "{}".format(size)])
+    elif extents:
+        cmd.extend(["-l", "{}".format(extents)])
+    else:
+        log.error("Error: Either size or extents must be specified")
+        return {}
+
+    cmd.append(lvpath)
+
+    cmd_ret = __salt__["cmd.run_all"](cmd, python_shell=False)
+    if cmd_ret.get("retcode"):
+        out = cmd_ret.get("stderr").strip()
+    else:
+        out = 'Logical volume "{}" successfully extended.'.format(lvpath)
+
+    return {"Output from lvextend": out}
+
+
+def pvresize(devices, override=True, force=True):
+    """
+    Resize a LVM physical volume to the physical device size
+
+    override
+        Skip devices, if they are already not used as LVM physical volumes
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt mymachine lvm.pvresize /dev/sdb1,/dev/sdb2
+    """
+    if isinstance(devices, str):
+        devices = devices.split(",")
+
+    cmd = ["pvresize"]
+
+    if force:
+        cmd.append("--yes")
+    else:
+        cmd.append("-qq")
+
+    for device in devices:
+        if pvdisplay(device):
+            cmd.append(device)
+        elif not override:
+            return "{} is not a physical volume".format(device)
+
+    if not cmd[2:]:
+        # Nothing to do
+        return True
+
+    out = __salt__["cmd.run_all"](cmd, python_shell=False)
+    if out.get("retcode"):
+        return out.get("stderr")
+
+    return True

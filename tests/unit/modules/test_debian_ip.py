@@ -1,25 +1,22 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import tempfile
-from collections import OrderedDict as odict
 
-# Import third party libs
 import jinja2.exceptions
-
-# Import Salt Libs
+import pytest
 import salt.modules.debian_ip as debian_ip
-import salt.utils
-
-# Import Salt Testing Libs
+import salt.utils.files
+import salt.utils.platform
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
+
+try:
+    from salt.utils.odict import OrderedDict as odict
+except ImportError:
+    from collections import OrderedDict as odict
 
 # Big pile of interface data for unit tests
 #   To skip, search for 'DebianIpTestCase'
@@ -564,6 +561,41 @@ test_interfaces = [
                 '    mode 802.3ad\n',
                 '\n']},
 
+        # Bridged interface
+        {'iface_name': 'br0', 'iface_type': 'bridge', 'enabled': True,
+            'build_interface': {
+                'proto': 'static',
+                'ipaddr': '192.168.4.10',
+                'netmask': '255.255.255.0',
+                'gateway': '192.168.4.1',
+                'bridge_ports': 'eth1',
+                'enable_ipv6': False,
+                'noifupdown': True,
+                },
+           'get_interface': odict([('br0', odict([('enabled', True), ('data', odict([
+                ('inet', odict([
+                    ('addrfam', 'inet'),
+                    ('proto', 'static'),
+                    ('filename', None),
+                    ('address', '192.168.4.10'),
+                    ('netmask', '255.255.255.0'),
+                    ('gateway', '192.168.4.1'),
+                    ('bridging', odict([
+                        ('ports', 'eth1'),
+                    ])),
+                    ('bridging_keys', ['ports']),
+                    ])),
+                ]))]))]),
+            'return': [
+                'auto br0\n',
+                'iface br0 inet static\n',
+                '    address 192.168.4.10\n',
+                '    netmask 255.255.255.0\n',
+                '    gateway 192.168.4.1\n',
+                '    bridge_ports eth1\n',
+                '\n']},
+
+
         # DNS NS as list
         {'iface_name': 'eth13', 'iface_type': 'eth', 'enabled': True,
             'build_interface': {
@@ -777,6 +809,37 @@ test_interfaces = [
                 'iface eth19 inet6 static\n',
                 '    address 2001:db8:dead:c0::3/64\n',
                 '    gateway 2001:db8:dead:c0::1\n',
+                '\n']},
+
+        # IPv6-only; static with autoconf and accept_ra forced
+        {'iface_name': 'eth20', 'iface_type': 'eth', 'enabled': True,
+            'build_interface': {
+                'ipv6proto': 'static',
+                'ipv6ipaddr': '2001:db8:dead:beef::3/64',
+                'ipv6gateway': '2001:db8:dead:beef::1',
+                'enable_ipv6': True,
+                'autoconf': 1,
+                'accept_ra': 2,
+                'noifupdown': True,
+                },
+            'get_interface': odict([('eth20', odict([('enabled', True), ('data', odict([
+                ('inet6', odict([
+                    ('addrfam', 'inet6'),
+                    ('proto', 'static'),
+                    ('filename', None),
+                    ('autoconf', 1),
+                    ('address', '2001:db8:dead:beef::3/64'),
+                    ('gateway', '2001:db8:dead:beef::1'),
+                    ('accept_ra', 2),
+                    ])),
+                ]))]))]),
+            'return': [
+                'auto eth20\n',
+                'iface eth20 inet6 static\n',
+                '    autoconf 1\n',
+                '    address 2001:db8:dead:beef::3/64\n',
+                '    gateway 2001:db8:dead:beef::1\n',
+                '    accept_ra 2\n',
                 '\n']},
         ]
 # fmt: on
@@ -1051,7 +1114,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'apply_network_settings' function tests: 1
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_apply_network_settings(self):
         """
         Test if it apply global network configuration.

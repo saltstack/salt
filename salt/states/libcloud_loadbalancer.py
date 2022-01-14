@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Apache Libcloud Load Balancer State
 ===================================
@@ -46,13 +45,8 @@ Using States to deploy a load balancer with extended arguments to specify region
 :depends: apache-libcloud
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import salt libs
-import salt.utils.compat
 
 log = logging.getLogger(__name__)
 
@@ -61,10 +55,6 @@ def __virtual__():
     if "libcloud_loadbalancer.list_balancers" in __salt__:
         return True
     return (False, "libcloud_loadbalancer module could not be loaded")
-
-
-def __init__(opts):
-    salt.utils.compat.pack_dunder(__name__)
 
 
 def state_result(result, message, name, changes=None):
@@ -168,7 +158,7 @@ def member_present(ip, port, balancer_id, profile, **libcloud_kwargs):
     )
     return state_result(
         True,
-        "Member added to balancer, id: {0}".format(member["id"]),
+        "Member added to balancer, id: {}".format(member["id"]),
         balancer_id,
         member,
     )

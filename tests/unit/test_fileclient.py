@@ -1,23 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the salt fileclient
 """
 
-# Import Python libs
-from __future__ import absolute_import
 
 import errno
 import logging
 import os
 import shutil
 
-# Import Salt libs
 import salt.utils.files
 from salt import fileclient
-from salt.ext import six
-from salt.ext.six.moves import range
-
-# Import Salt Testing libs
 from tests.support.mixins import (
     AdaptedConfigurationTestCaseMixin,
     LoaderModuleMockMixin,
@@ -41,7 +33,7 @@ class FileclientTestCase(TestCase):
 
     def _fake_makedir(self, num=errno.EEXIST):
         def _side_effect(*args, **kwargs):
-            raise OSError(num, "Errno {0}".format(num))
+            raise OSError(num, "Errno {}".format(num))
 
         return Mock(side_effect=_side_effect)
 
@@ -70,6 +62,24 @@ class FileclientTestCase(TestCase):
                         "testfile"
                     ) as c_ref_itr:
                         assert c_ref_itr == "/__test__/files/base/testfile"
+
+    def test_cache_extrn_path_valid(self):
+        """
+        Tests for extrn_filepath for a given url
+        """
+        file_name = "http://localhost:8000/test/location/src/dev/usr/file"
+
+        ret = fileclient.Client(self.opts)._extrn_path(file_name, "base")
+        assert ret == os.path.join("__test__", "extrn_files", "base", ret)
+
+    def test_cache_extrn_path_invalid(self):
+        """
+        Tests for extrn_filepath for a given url
+        """
+        file_name = "http://localhost:8000/../../../../../usr/bin/bad"
+
+        ret = fileclient.Client(self.opts)._extrn_path(file_name, "base")
+        assert ret == "Invalid path"
 
     def test_extrn_path_with_long_filename(self):
         safe_file_name = os.path.split(
@@ -101,7 +111,7 @@ SUBDIR_FILES = ("foo.txt", "bar.txt", "baz.txt")
 
 
 def _get_file_roots(fs_root):
-    return dict([(x, [os.path.join(fs_root, x)]) for x in SALTENVS])
+    return {x: [os.path.join(fs_root, x)] for x in SALTENVS}
 
 
 class FileClientTest(
@@ -203,7 +213,7 @@ class FileclientCacheTest(
 
             path = os.path.join(saltenv_root, "foo.txt")
             with salt.utils.files.fopen(path, "w") as fp_:
-                fp_.write("This is a test file in the '{0}' saltenv.\n".format(saltenv))
+                fp_.write("This is a test file in the '{}' saltenv.\n".format(saltenv))
 
             subdir_abspath = os.path.join(saltenv_root, SUBDIR)
             os.makedirs(subdir_abspath)
@@ -211,8 +221,9 @@ class FileclientCacheTest(
                 path = os.path.join(subdir_abspath, subdir_file)
                 with salt.utils.files.fopen(path, "w") as fp_:
                     fp_.write(
-                        "This is file '{0}' in subdir '{1} from saltenv "
-                        "'{2}'".format(subdir_file, SUBDIR, saltenv)
+                        "This is file '{}' in subdir '{} from saltenv '{}'".format(
+                            subdir_file, SUBDIR, saltenv
+                        )
                     )
 
         # Create the CACHE_ROOT
@@ -222,16 +233,14 @@ class FileclientCacheTest(
         """
         Ensure entire directory is cached to correct location
         """
-        patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
+        patched_opts = {x: y for x, y in self.minion_opts.items()}
         patched_opts.update(self.MOCKED_OPTS)
 
         with patch.dict(fileclient.__opts__, patched_opts):
             client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
             for saltenv in SALTENVS:
                 self.assertTrue(
-                    client.cache_dir(
-                        "salt://{0}".format(SUBDIR), saltenv, cachedir=None
-                    )
+                    client.cache_dir("salt://{}".format(SUBDIR), saltenv, cachedir=None)
                 )
                 for subdir_file in SUBDIR_FILES:
                     cache_loc = os.path.join(
@@ -261,7 +270,7 @@ class FileclientCacheTest(
         Ensure entire directory is cached to correct location when an alternate
         cachedir is specified and that cachedir is an absolute path
         """
-        patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
+        patched_opts = {x: y for x, y in self.minion_opts.items()}
         patched_opts.update(self.MOCKED_OPTS)
         alt_cachedir = os.path.join(RUNTIME_VARS.TMP, "abs_cachedir")
 
@@ -270,7 +279,7 @@ class FileclientCacheTest(
             for saltenv in SALTENVS:
                 self.assertTrue(
                     client.cache_dir(
-                        "salt://{0}".format(SUBDIR), saltenv, cachedir=alt_cachedir
+                        "salt://{}".format(SUBDIR), saltenv, cachedir=alt_cachedir
                     )
                 )
                 for subdir_file in SUBDIR_FILES:
@@ -297,7 +306,7 @@ class FileclientCacheTest(
         Ensure entire directory is cached to correct location when an alternate
         cachedir is specified and that cachedir is a relative path
         """
-        patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
+        patched_opts = {x: y for x, y in self.minion_opts.items()}
         patched_opts.update(self.MOCKED_OPTS)
         alt_cachedir = "foo"
 
@@ -306,7 +315,7 @@ class FileclientCacheTest(
             for saltenv in SALTENVS:
                 self.assertTrue(
                     client.cache_dir(
-                        "salt://{0}".format(SUBDIR), saltenv, cachedir=alt_cachedir
+                        "salt://{}".format(SUBDIR), saltenv, cachedir=alt_cachedir
                     )
                 )
                 for subdir_file in SUBDIR_FILES:
@@ -337,7 +346,7 @@ class FileclientCacheTest(
         """
         Ensure file is cached to correct location
         """
-        patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
+        patched_opts = {x: y for x, y in self.minion_opts.items()}
         patched_opts.update(self.MOCKED_OPTS)
 
         with patch.dict(fileclient.__opts__, patched_opts):
@@ -367,7 +376,7 @@ class FileclientCacheTest(
         Ensure file is cached to correct location when an alternate cachedir is
         specified and that cachedir is an absolute path
         """
-        patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
+        patched_opts = {x: y for x, y in self.minion_opts.items()}
         patched_opts.update(self.MOCKED_OPTS)
         alt_cachedir = os.path.join(RUNTIME_VARS.TMP, "abs_cachedir")
 
@@ -396,7 +405,7 @@ class FileclientCacheTest(
         Ensure file is cached to correct location when an alternate cachedir is
         specified and that cachedir is a relative path
         """
-        patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
+        patched_opts = {x: y for x, y in self.minion_opts.items()}
         patched_opts.update(self.MOCKED_OPTS)
         alt_cachedir = "foo"
 
@@ -425,3 +434,43 @@ class FileclientCacheTest(
                 log.debug("cache_loc = %s", cache_loc)
                 log.debug("content = %s", content)
                 self.assertTrue(saltenv in content)
+
+    def test_cache_dest(self):
+        """
+        Tests functionality for cache_dest
+        """
+        patched_opts = {x: y for x, y in self.minion_opts.items()}
+        patched_opts.update(self.MOCKED_OPTS)
+
+        relpath = "foo.com/bar.txt"
+        cachedir = self.minion_opts["cachedir"]
+
+        def _external(saltenv="base"):
+            return salt.utils.path.join(
+                patched_opts["cachedir"], "extrn_files", saltenv, relpath
+            )
+
+        def _salt(saltenv="base"):
+            return salt.utils.path.join(
+                patched_opts["cachedir"], "files", saltenv, relpath
+            )
+
+        def _check(ret, expected):
+            assert ret == expected, "{} != {}".format(ret, expected)
+
+        with patch.dict(fileclient.__opts__, patched_opts):
+            client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
+
+            _check(client.cache_dest("https://" + relpath), _external())
+
+            _check(client.cache_dest("https://" + relpath, "dev"), _external("dev"))
+
+            _check(client.cache_dest("salt://" + relpath), _salt())
+
+            _check(client.cache_dest("salt://" + relpath, "dev"), _salt("dev"))
+
+            _check(
+                client.cache_dest("salt://" + relpath + "?saltenv=dev"), _salt("dev")
+            )
+
+            _check("/foo/bar", "/foo/bar")

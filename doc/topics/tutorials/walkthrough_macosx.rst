@@ -10,7 +10,7 @@ consisting of  one master, and one minion running on a local VM hosted on macOS.
 .. note::
     This guide is aimed at developers who wish to run Salt in a virtual machine.
     The official (Linux) walkthrough can be found
-    `here <http://docs.saltstack.com/topics/tutorials/walkthrough.html>`_.
+    `here <https://docs.saltproject.io/topics/tutorials/walkthrough.html>`_.
 
 The 5 Cent Salt Intro
 =====================
@@ -82,7 +82,7 @@ Step 1 - Configuring The Salt Master On Your Mac
 ================================================
 
 `Official Documentation
-<http://docs.saltstack.com/topics/installation/osx.html>`_
+<https://docs.saltproject.io/topics/installation/osx.html>`_
 
 Because Salt has a lot of dependencies that are not built in macOS, we will use
 Homebrew to install Salt. Homebrew is a package manager for Mac, it's great, use
@@ -115,7 +115,7 @@ it all over again. It also lets you *uninstall* things easily.
 Install Homebrew
 ----------------
 
-Install Homebrew here http://brew.sh/
+Install Homebrew here https://brew.sh/
 
 Or just type
 
@@ -163,7 +163,7 @@ Create The Master Configuration
 
 If the default /etc/salt/master configuration file was not created,
 copy-paste it from here:
-http://docs.saltstack.com/ref/configuration/examples.html#configuration-examples-master
+https://docs.saltproject.io/ref/configuration/examples.html#configuration-examples-master
 
 .. note::
 
@@ -217,13 +217,13 @@ customizing it using "provisioners". In our case, we'll use it to:
 Install VirtualBox
 ------------------
 
-Go get it here: https://www.virtualBox.org/wiki/Downloads (click on VirtualBox
+Go get it here: https://www.virtualbox.org/wiki/Downloads (click on VirtualBox
 for macOS hosts => x86/amd64)
 
 Install Vagrant
 ---------------
 
-Go get it here: http://downloads.vagrantup.com/ and choose the latest version
+Go get it here: https://www.vagrantup.com/downloads.html and choose the latest version
 (1.3.5 at time of writing), then the .dmg file. Double-click to install it.
 Make sure the ``vagrant`` command is found when run in the terminal. Type
 ``vagrant``. It should display a list of commands.
@@ -503,4 +503,4 @@ Where To Go From Here
 
 A full description of configuration management within Salt (sls files among
 other things) is available here:
-http://docs.saltstack.com/en/latest/index.html#configuration-management
+https://docs.saltproject.io/en/latest/index.html#configuration-management

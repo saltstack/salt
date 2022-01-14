@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
+import platform
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Testing Libs
+import pytest
 from tests.support.case import SSHCase
-from tests.support.unit import skipIf
 
 
 class SSHJinjaFiltersTest(SSHCase):
@@ -13,11 +9,13 @@ class SSHJinjaFiltersTest(SSHCase):
     testing Jinja filters are available via state system & salt-ssh
     """
 
-    @skipIf(True, "SLOWTEST skip")
+    @pytest.mark.slow_test
     def test_dateutils_strftime(self):
         """
         test jinja filter datautils.strftime
         """
+        if "debian-9" in platform.platform().lower():
+            pytest.skip("This test is broken on debian 9, skipping")
         arg = self._arg_str("state.sls", ["jinja_filters.dateutils_strftime"])
         ret = self.run_ssh(arg)
         import salt.utils.json

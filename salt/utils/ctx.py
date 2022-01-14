@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals, with_statement
-
 import threading
 
 
@@ -16,7 +11,7 @@ class ClassProperty(property):
         return self.fget.__get__(None, owner)()  # pylint: disable=no-member
 
 
-class RequestContext(object):
+class RequestContext:
     """
     A context manager that saves some per-thread state globally.
     Intended for use with Tornado's StackContext.

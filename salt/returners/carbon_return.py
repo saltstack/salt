@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Take data from salt and "return" it into a carbon receiver
 
@@ -81,24 +80,16 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-import collections
 import logging
+import pickle
 import socket
 import struct
 import time
+from collections.abc import Mapping
 from contextlib import contextmanager
 
 import salt.returners
-
-# Import salt libs
 import salt.utils.jid
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import cPickle, map
 
 log = logging.getLogger(__name__)
 
@@ -140,7 +131,7 @@ def _carbon(host, port):
         )
 
         carbon_sock.connect((host, port))
-    except socket.error as err:
+    except OSError as err:
         log.error("Error connecting to %s:%s, %s", host, port, err)
         raise
     else:
@@ -164,7 +155,7 @@ def _send_picklemetrics(metrics):
         (metric_name, (timestamp, value)) for (metric_name, value, timestamp) in metrics
     ]
 
-    data = cPickle.dumps(metrics, -1)
+    data = pickle.dumps(metrics, -1)
     payload = struct.pack(b"!L", len(data)) + data
 
     return payload
@@ -175,7 +166,7 @@ def _send_textmetrics(metrics):
     Format metrics for the carbon plaintext protocol
     """
 
-    data = [" ".join(map(six.text_type, metric)) for metric in metrics] + [""]
+    data = [" ".join(map(str, metric)) for metric in metrics] + [""]
 
     return "\n".join(data)
 
@@ -199,18 +190,18 @@ def _walk(path, value, metrics, timestamp, skip):
         to a float. Defaults to `False`.
     """
     log.trace(
-        "Carbon return walking path: %s, value: %s, metrics: %s, " "timestamp: %s",
+        "Carbon return walking path: %s, value: %s, metrics: %s, timestamp: %s",
         path,
         value,
         metrics,
         timestamp,
     )
-    if isinstance(value, collections.Mapping):
-        for key, val in six.iteritems(value):
-            _walk("{0}.{1}".format(path, key), val, metrics, timestamp, skip)
+    if isinstance(value, Mapping):
+        for key, val in value.items():
+            _walk("{}.{}".format(path, key), val, metrics, timestamp, skip)
     elif isinstance(value, list):
         for item in value:
-            _walk("{0}.{1}".format(path, item), item, metrics, timestamp, skip)
+            _walk("{}.{}".format(path, item), item, metrics, timestamp, skip)
 
     else:
         try:
@@ -219,7 +210,7 @@ def _walk(path, value, metrics, timestamp, skip):
         except (TypeError, ValueError):
             msg = (
                 "Error in carbon returner, when trying to convert metric: "
-                "{0}, with val: {1}".format(path, value)
+                "{}, with val: {}".format(path, value)
             )
             if skip:
                 log.debug(msg)

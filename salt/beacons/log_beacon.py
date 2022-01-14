@@ -1,20 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Beacon to fire events at specific log messages.
 
 .. versionadded:: 2017.7.0
 
 """
-
-# Import Python libs
-from __future__ import absolute_import, unicode_literals
-
 import logging
 
-# Import salt libs
+import salt.utils.beacons
 import salt.utils.files
 import salt.utils.platform
-from salt.ext.six.moves import map
 
 try:
     import re
@@ -39,7 +33,9 @@ log = logging.getLogger(__name__)
 def __virtual__():
     if not salt.utils.platform.is_windows() and HAS_REGEX:
         return __virtualname__
-    return False
+    err_msg = "Not available for Windows systems or when regex library is missing."
+    log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+    return False, err_msg
 
 
 def _get_loc():
@@ -54,15 +50,14 @@ def validate(config):
     """
     Validate the beacon configuration
     """
-    _config = {}
-    list(map(_config.update, config))
-
     # Configuration for log beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for log beacon must be a list.")
+        return False, "Configuration for log beacon must be a list."
 
-    if "file" not in _config:
-        return False, ("Configuration for log beacon must contain file option.")
+    config = salt.utils.beacons.list_to_dict(config)
+
+    if "file" not in config:
+        return False, "Configuration for log beacon must contain file option."
     return True, "Valid beacon configuration"
 
 
@@ -74,31 +69,42 @@ def beacon(config):
     .. code-block:: yaml
 
         beacons:
-            log:
-              - file: <path>
-              - tags:
-                  <tag>:
-                    regex: <pattern>
+          log:
+            - file: <path>
+            - tags:
+                <tag>:
+                  regex: <pattern>
 
     .. note::
 
         regex matching is based on the `re`_ module
 
     .. _re: https://docs.python.org/3.6/library/re.html#regular-expression-syntax
+
+    The defined tag is added to the beacon event tag.
+    This is not the tag in the log.
+
+    .. code-block:: yaml
+
+        beacons:
+          log:
+            - file: /var/log/messages #path to log.
+            - tags:
+                goodbye/world: # tag added to beacon event tag.
+                  regex: .*good-bye.* # match good-bye string anywhere in the log entry.
     """
-    _config = {}
-    list(map(_config.update, config))
+    config = salt.utils.beacons.list_to_dict(config)
 
     ret = []
 
-    if "file" not in _config:
+    if "file" not in config:
         event = SKEL.copy()
         event["tag"] = "global"
         event["error"] = "file not defined in config"
         ret.append(event)
         return ret
 
-    with salt.utils.files.fopen(_config["file"], "r") as fp_:
+    with salt.utils.files.fopen(config["file"], "r") as fp_:
         loc = __context__.get(LOC_KEY, 0)
         if loc == 0:
             fp_.seek(0, 2)
@@ -113,13 +119,13 @@ def beacon(config):
         log.info("txt %s", txt)
 
         d = {}
-        for tag in _config.get("tags", {}):
-            if "regex" not in _config["tags"][tag]:
+        for tag in config.get("tags", {}):
+            if "regex" not in config["tags"][tag]:
                 continue
-            if len(_config["tags"][tag]["regex"]) < 1:
+            if not config["tags"][tag]["regex"]:
                 continue
             try:
-                d[tag] = re.compile(r"{0}".format(_config["tags"][tag]["regex"]))
+                d[tag] = re.compile(r"{}".format(config["tags"][tag]["regex"]))
             except Exception as e:  # pylint: disable=broad-except
                 event = SKEL.copy()
                 event["tag"] = tag

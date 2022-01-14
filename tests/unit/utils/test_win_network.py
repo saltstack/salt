@@ -1,86 +1,10 @@
-# -*- coding: utf-8 -*-
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt Libs
 import salt.utils.platform
 import salt.utils.win_network as win_network
-
-# Import Salt Testing Libs
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
-mock_ip_base = MagicMock(
-    return_value={"dns_enabled": False, "dns_suffix": "", "dynamic_dns_enabled": False}
-)
 
-mock_unicast = MagicMock(
-    return_value={
-        "ip_addresses": [
-            {
-                "address": "172.18.87.49",
-                "broadcast": "172.18.87.63",
-                "loopback": "127.0.0.1",
-                "netmask": "255.255.255.240",
-                "prefix_length": 28,
-                "prefix_origin": "Manual",
-                "suffix_origin": "Manual",
-            }
-        ],
-        "ipv6_addresses": [
-            {
-                "address": "fe80::e8a4:1224:5548:2b81",
-                "interface_index": 32,
-                "prefix_length": 64,
-                "prefix_origin": "WellKnown",
-                "suffix_origin": "Router",
-            }
-        ],
-    }
-)
-
-mock_gateway = MagicMock(
-    return_value={
-        "ip_gateways": ["192.168.0.1"],
-        "ipv6_gateways": ["fe80::208:a2ff:fe0b:de70"],
-    }
-)
-
-mock_dns = MagicMock(
-    return_value={
-        "ip_dns": ["10.4.0.1", "10.1.0.1", "8.8.8.8"],
-        "ipv6_dns": ["2600:740a:1:304::1"],
-    }
-)
-
-mock_multicast = MagicMock(
-    return_value={
-        "ip_multicast": [
-            "224.0.0.1",
-            "224.0.0.251",
-            "224.0.0.252",
-            "230.230.230.230",
-            "239.0.0.250",
-            "239.255.255.250",
-        ],
-        "ipv6_multicast": [
-            "ff01::1",
-            "ff02::1",
-            "ff02::c",
-            "ff02::fb",
-            "ff02::1:3",
-            "ff02::1:ff0f:4c48",
-            "ff02::1:ffa6:f6e6",
-        ],
-    }
-)
-
-mock_anycast = MagicMock(return_value={"ip_anycast": [], "ipv6_anycast": []})
-
-mock_wins = MagicMock(return_value={"ip_wins": []})
-
-
-class PhysicalAddress(object):
+class PhysicalAddress:
     def __init__(self, address):
         self.address = address
 
@@ -88,7 +12,7 @@ class PhysicalAddress(object):
         return str(self.address)
 
 
-class Interface(object):
+class Interface:
     """
     Mocked interface object
     """
@@ -117,6 +41,76 @@ class Interface(object):
 
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
 class WinNetworkTestCase(TestCase):
+    def setUp(self):
+        self.mock_ip_base = MagicMock(
+            return_value={
+                "dns_enabled": False,
+                "dns_suffix": "",
+                "dynamic_dns_enabled": False,
+            }
+        )
+        self.mock_unicast = MagicMock(
+            return_value={
+                "ip_addresses": [
+                    {
+                        "address": "172.18.87.49",
+                        "broadcast": "172.18.87.63",
+                        "loopback": "127.0.0.1",
+                        "netmask": "255.255.255.240",
+                        "prefix_length": 28,
+                        "prefix_origin": "Manual",
+                        "suffix_origin": "Manual",
+                    }
+                ],
+                "ipv6_addresses": [
+                    {
+                        "address": "fe80::e8a4:1224:5548:2b81",
+                        "interface_index": 32,
+                        "prefix_length": 64,
+                        "prefix_origin": "WellKnown",
+                        "suffix_origin": "Router",
+                    }
+                ],
+            }
+        )
+        self.mock_gateway = MagicMock(
+            return_value={
+                "ip_gateways": ["192.168.0.1"],
+                "ipv6_gateways": ["fe80::208:a2ff:fe0b:de70"],
+            }
+        )
+        self.mock_dns = MagicMock(
+            return_value={
+                "ip_dns": ["10.4.0.1", "10.1.0.1", "8.8.8.8"],
+                "ipv6_dns": ["2600:740a:1:304::1"],
+            }
+        )
+        self.mock_multicast = MagicMock(
+            return_value={
+                "ip_multicast": [
+                    "224.0.0.1",
+                    "224.0.0.251",
+                    "224.0.0.252",
+                    "230.230.230.230",
+                    "239.0.0.250",
+                    "239.255.255.250",
+                ],
+                "ipv6_multicast": [
+                    "ff01::1",
+                    "ff02::1",
+                    "ff02::c",
+                    "ff02::fb",
+                    "ff02::1:3",
+                    "ff02::1:ff0f:4c48",
+                    "ff02::1:ffa6:f6e6",
+                ],
+            }
+        )
+        self.mock_anycast = MagicMock(
+            return_value={"ip_anycast": [], "ipv6_anycast": []}
+        )
+        self.mock_wins = MagicMock(return_value={"ip_wins": []})
+
     def test_get_interface_info_dot_net(self):
         expected = {
             "Ethernet": {
@@ -181,19 +175,19 @@ class WinNetworkTestCase(TestCase):
         with patch.object(
             win_network, "_get_network_interfaces", mock_int
         ), patch.object(
-            win_network, "_get_ip_base_properties", mock_ip_base
+            win_network, "_get_ip_base_properties", self.mock_ip_base
         ), patch.object(
-            win_network, "_get_ip_unicast_info", mock_unicast
+            win_network, "_get_ip_unicast_info", self.mock_unicast
         ), patch.object(
-            win_network, "_get_ip_gateway_info", mock_gateway
+            win_network, "_get_ip_gateway_info", self.mock_gateway
         ), patch.object(
-            win_network, "_get_ip_dns_info", mock_dns
+            win_network, "_get_ip_dns_info", self.mock_dns
         ), patch.object(
-            win_network, "_get_ip_multicast_info", mock_multicast
+            win_network, "_get_ip_multicast_info", self.mock_multicast
         ), patch.object(
-            win_network, "_get_ip_anycast_info", mock_anycast
+            win_network, "_get_ip_anycast_info", self.mock_anycast
         ), patch.object(
-            win_network, "_get_ip_wins_info", mock_wins
+            win_network, "_get_ip_wins_info", self.mock_wins
         ):
 
             # ret = win_network._get_base_properties()
@@ -218,6 +212,7 @@ class WinNetworkTestCase(TestCase):
                     {
                         "address": "fe80::e8a4:1224:5548:2b81",
                         "gateway": "fe80::208:a2ff:fe0b:de70",
+                        "prefixlen": 64,
                     }
                 ],
                 "up": True,
@@ -227,19 +222,19 @@ class WinNetworkTestCase(TestCase):
         with patch.object(
             win_network, "_get_network_interfaces", mock_int
         ), patch.object(
-            win_network, "_get_ip_base_properties", mock_ip_base
+            win_network, "_get_ip_base_properties", self.mock_ip_base
         ), patch.object(
-            win_network, "_get_ip_unicast_info", mock_unicast
+            win_network, "_get_ip_unicast_info", self.mock_unicast
         ), patch.object(
-            win_network, "_get_ip_gateway_info", mock_gateway
+            win_network, "_get_ip_gateway_info", self.mock_gateway
         ), patch.object(
-            win_network, "_get_ip_dns_info", mock_dns
+            win_network, "_get_ip_dns_info", self.mock_dns
         ), patch.object(
-            win_network, "_get_ip_multicast_info", mock_multicast
+            win_network, "_get_ip_multicast_info", self.mock_multicast
         ), patch.object(
-            win_network, "_get_ip_anycast_info", mock_anycast
+            win_network, "_get_ip_anycast_info", self.mock_anycast
         ), patch.object(
-            win_network, "_get_ip_wins_info", mock_wins
+            win_network, "_get_ip_wins_info", self.mock_wins
         ):
 
             # ret = win_network._get_base_properties()

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of nftables
 ======================
@@ -110,11 +109,9 @@ at some point be deprecated in favor of a more generic `firewall` state.
         - table: filter
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import salt libs
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
 log = logging.getLogger(__name__)
@@ -135,7 +132,9 @@ def chain_present(
     """
     .. versionadded:: 2014.7.0
 
-    Verify the chain is exist.
+    .. versionchanged:: 3002
+
+    Verify a chain exists in a table.
 
     name
         A user-defined chain name.
@@ -152,9 +151,15 @@ def chain_present(
     chain_check = __salt__["nftables.check_chain"](table, name, family=family)
     if chain_check["result"] is True:
         ret["result"] = True
+        ret["comment"] = "nftables {} chain is already exist in {} table for {}".format(
+            name, table, family
+        )
+        return ret
+
+    if __opts__["test"]:
         ret[
             "comment"
-        ] = "nftables {0} chain is already exist in {1} table for {2}".format(
+        ] = "nftables chain {} would be created in table {} for family {}".format(
             name, table, family
         )
         return ret
@@ -166,15 +171,13 @@ def chain_present(
     if res["result"] is True:
         ret["changes"] = {"locale": name}
         ret["result"] = True
-        ret[
-            "comment"
-        ] = "nftables {0} chain in {1} table create success for {2}".format(
+        ret["comment"] = "nftables {} chain in {} table create success for {}".format(
             name, table, family
         )
         return ret
     else:
         ret["result"] = False
-        ret["comment"] = "Failed to create {0} chain in {1} table: {2} for {3}".format(
+        ret["comment"] = "Failed to create {} chain in {} table: {} for {}".format(
             name, table, res["comment"].strip(), family
         )
         return ret
@@ -197,7 +200,7 @@ def chain_absent(name, table="filter", family="ipv4"):
         ret["result"] = True
         ret[
             "comment"
-        ] = "nftables {0} chain is already absent in {1} table for {2}".format(
+        ] = "nftables {} chain is already absent in {} table for {}".format(
             name, table, family
         )
         return ret
@@ -210,19 +213,17 @@ def chain_absent(name, table="filter", family="ipv4"):
             ret["result"] = True
             ret[
                 "comment"
-            ] = "nftables {0} chain in {1} table delete success for {2}".format(
+            ] = "nftables {} chain in {} table delete success for {}".format(
                 name, table, family
             )
         else:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Failed to delete {0} chain in {1} table: {2} for {3}".format(
+            ret["comment"] = "Failed to delete {} chain in {} table: {} for {}".format(
                 name, table, command.strip(), family
             )
     else:
         ret["result"] = False
-        ret["comment"] = "Failed to flush {0} chain in {1} table: {2} for {3}".format(
+        ret["comment"] = "Failed to flush {} chain in {} table: {} for {}".format(
             name, table, flush_chain.strip(), family
         )
     return ret
@@ -266,12 +267,12 @@ def append(name, family="ipv4", **kwargs):
     res = __salt__["nftables.check"](kwargs["table"], kwargs["chain"], rule, family)
     if res["result"]:
         ret["result"] = True
-        ret["comment"] = "nftables rule for {0} already set ({1}) for {2}".format(
+        ret["comment"] = "nftables rule for {} already set ({}) for {}".format(
             name, command.strip(), family
         )
         return ret
     if "test" in __opts__ and __opts__["test"]:
-        ret["comment"] = "nftables rule for {0} needs to be set ({1}) for {2}".format(
+        ret["comment"] = "nftables rule for {} needs to be set ({}) for {}".format(
             name, command.strip(), family
         )
         return ret
@@ -279,24 +280,25 @@ def append(name, family="ipv4", **kwargs):
     if res["result"]:
         ret["changes"] = {"locale": name}
         ret["result"] = True
-        ret["comment"] = "Set nftables rule for {0} to: {1} for {2}".format(
+        ret["comment"] = "Set nftables rule for {} to: {} for {}".format(
             name, command.strip(), family
         )
         if "save" in kwargs:
             if kwargs["save"]:
                 __salt__["nftables.save"](filename=None, family=family)
-                ret["comment"] = (
-                    "Set and Saved nftables rule for {0} to: "
-                    "{1} for {2}".format(name, command.strip(), family)
+                ret[
+                    "comment"
+                ] = "Set and Saved nftables rule for {} to: {} for {}".format(
+                    name, command.strip(), family
                 )
         return ret
     else:
         ret["result"] = False
-        ret["comment"] = (
-            "Failed to set nftables rule for {0}.\n"
-            "Attempted rule was {1} for {2}.\n"
-            "{3}"
-        ).format(name, command.strip(), family, res["comment"])
+        ret[
+            "comment"
+        ] = "Failed to set nftables rule for {}.\nAttempted rule was {} for {}.\n{}".format(
+            name, command.strip(), family, res["comment"]
+        )
         return ret
 
 
@@ -338,12 +340,12 @@ def insert(name, family="ipv4", **kwargs):
     res = __salt__["nftables.check"](kwargs["table"], kwargs["chain"], rule, family)
     if res["result"]:
         ret["result"] = True
-        ret["comment"] = "nftables rule for {0} already set for {1} ({2})".format(
+        ret["comment"] = "nftables rule for {} already set for {} ({})".format(
             name, family, command.strip()
         )
         return ret
     if "test" in __opts__ and __opts__["test"]:
-        ret["comment"] = "nftables rule for {0} needs to be set for {1} ({2})".format(
+        ret["comment"] = "nftables rule for {} needs to be set for {} ({})".format(
             name, family, command.strip()
         )
         return ret
@@ -353,22 +355,25 @@ def insert(name, family="ipv4", **kwargs):
     if res["result"]:
         ret["changes"] = {"locale": name}
         ret["result"] = True
-        ret["comment"] = "Set nftables rule for {0} to: {1} for {2}".format(
+        ret["comment"] = "Set nftables rule for {} to: {} for {}".format(
             name, command.strip(), family
         )
         if "save" in kwargs:
             if kwargs["save"]:
                 __salt__["nftables.save"](filename=None, family=family)
-                ret["comment"] = (
-                    "Set and Saved nftables rule for {0} to: "
-                    "{1} for {2}".format(name, command.strip(), family)
+                ret[
+                    "comment"
+                ] = "Set and Saved nftables rule for {} to: {} for {}".format(
+                    name, command.strip(), family
                 )
         return ret
     else:
         ret["result"] = False
-        ret["comment"] = (
-            "Failed to set nftables rule for {0}.\n" "Attempted rule was {1}"
-        ).format(name, command.strip())
+        ret[
+            "comment"
+        ] = "Failed to set nftables rule for {}.\nAttempted rule was {}".format(
+            name, command.strip()
+        )
         return ret
 
 
@@ -411,14 +416,12 @@ def delete(name, family="ipv4", **kwargs):
 
     if not res["result"]:
         ret["result"] = True
-        ret["comment"] = "nftables rule for {0} already absent for {1} ({2})".format(
+        ret["comment"] = "nftables rule for {} already absent for {} ({})".format(
             name, family, command.strip()
         )
         return ret
     if "test" in __opts__ and __opts__["test"]:
-        ret[
-            "comment"
-        ] = "nftables rule for {0} needs to be deleted for {1} ({2})".format(
+        ret["comment"] = "nftables rule for {} needs to be deleted for {} ({})".format(
             name, family, command.strip()
         )
         return ret
@@ -435,36 +438,49 @@ def delete(name, family="ipv4", **kwargs):
     if res["result"]:
         ret["changes"] = {"locale": name}
         ret["result"] = True
-        ret["comment"] = "Delete nftables rule for {0} {1}".format(
-            name, command.strip()
-        )
+        ret["comment"] = "Delete nftables rule for {} {}".format(name, command.strip())
         if "save" in kwargs:
             if kwargs["save"]:
                 __salt__["nftables.save"](filename=None, family=family)
-                ret["comment"] = (
-                    "Deleted and Saved nftables rule for {0} for {1}"
-                    "{2}".format(name, command.strip(), family)
+                ret[
+                    "comment"
+                ] = "Deleted and Saved nftables rule for {} for {}{}".format(
+                    name, command.strip(), family
                 )
         return ret
     else:
         ret["result"] = False
-        ret["comment"] = (
-            "Failed to delete nftables rule for {0}.\n" "Attempted rule was {1}"
-        ).format(name, command.strip())
+        ret[
+            "comment"
+        ] = "Failed to delete nftables rule for {}.\nAttempted rule was {}".format(
+            name, command.strip()
+        )
         return ret
 
 
-def flush(name, family="ipv4", **kwargs):
+def flush(name, family="ipv4", ignore_absence=False, **kwargs):
     """
     .. versionadded:: 2014.7.0
+
+    .. versionchanged:: 3002
 
     Flush current nftables state
 
     family
         Networking family, either ipv4 or ipv6
 
+    ignore_absence
+        If set to True, attempts to flush a non-existent table will not
+        result in a failed state.
+
+        .. versionadded:: 3002
+
     """
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
+
+    if __opts__["test"]:
+        ret["comment"] = "nftables flush not performed in test mode."
+        return ret
 
     for ignore in _STATE_INTERNAL_KEYWORDS:
         if ignore in kwargs:
@@ -473,12 +489,12 @@ def flush(name, family="ipv4", **kwargs):
     if "table" not in kwargs:
         kwargs["table"] = "filter"
 
-    res = __salt__["nftables.check_table"](kwargs["table"], family=family)
-    if not res["result"]:
+    check_table = __salt__["nftables.check_table"](kwargs["table"], family=family)
+    if not ignore_absence and not check_table["result"]:
         ret["result"] = False
         ret[
             "comment"
-        ] = "Failed to flush table {0} in family {1}, table does not exist.".format(
+        ] = "Failed to flush table {} in family {}, table does not exist.".format(
             kwargs["table"], family
         )
         return ret
@@ -486,25 +502,24 @@ def flush(name, family="ipv4", **kwargs):
     if "chain" not in kwargs:
         kwargs["chain"] = ""
     else:
-        res = __salt__["nftables.check_chain"](
+        check_chain = __salt__["nftables.check_chain"](
             kwargs["table"], kwargs["chain"], family=family
         )
-        if not res["result"]:
+        if not ignore_absence and not check_chain["result"]:
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Failed to flush chain {0} in table {1} in family {2}, chain does not exist.".format(
-                kwargs["chain"], kwargs["table"], family
+            ret["comment"] = (
+                "Failed to flush chain {} in table {} in family {}, chain does not"
+                " exist.".format(kwargs["chain"], kwargs["table"], family)
             )
             return ret
 
     res = __salt__["nftables.flush"](kwargs["table"], kwargs["chain"], family)
-    if res["result"]:
+    if res["result"] or (
+        ignore_absence and (not check_table["result"] or not check_chain["result"])
+    ):
         ret["changes"] = {"locale": name}
         ret["result"] = True
-        ret[
-            "comment"
-        ] = "Flush nftables rules in {0} table {1} chain {2} family".format(
+        ret["comment"] = "Flush nftables rules in {} table {} chain {} family".format(
             kwargs["table"], kwargs["chain"], family
         )
         return ret
@@ -512,3 +527,166 @@ def flush(name, family="ipv4", **kwargs):
         ret["result"] = False
         ret["comment"] = "Failed to flush nftables rules"
         return ret
+
+
+def set_policy(name, table="filter", family="ipv4", **kwargs):
+    """
+    .. versionadded:: 3002
+
+    Sets the default policy for nftables chains
+
+    table
+        The table that owns the chain that should be modified
+
+    family
+        Networking family, either ipv4 or ipv6
+
+    policy
+        The requested table policy (accept or drop)
+
+    save
+        Boolean to save the in-memory nftables settings to a file.
+
+    save_filename
+        The filename to save the nftables settings (default: /etc/nftables
+        or /etc/nftables/salt-all-in-one.nft if the former is a directory)
+
+    """
+    ret = {"name": name, "changes": {}, "result": None, "comment": ""}
+
+    for ignore in _STATE_INTERNAL_KEYWORDS:
+        if ignore in kwargs:
+            del kwargs[ignore]
+
+    policy = __salt__["nftables.get_policy"](table, kwargs["chain"], family)
+
+    if (policy or "").lower() == kwargs["policy"].lower():
+        ret["result"] = True
+        ret[
+            "comment"
+        ] = "nftables default policy for chain {} on table {} for {} already set to {}".format(
+            kwargs["chain"], table, family, kwargs["policy"]
+        )
+        return ret
+
+    if __opts__["test"]:
+        ret["comment"] = (
+            "nftables default policy for chain {} on table {} for {} needs to be set"
+            " to {}".format(kwargs["chain"], table, family, kwargs["policy"])
+        )
+        return ret
+
+    if __salt__["nftables.set_policy"](
+        table, kwargs["chain"], kwargs["policy"].lower(), family
+    ):
+        ret["changes"] = {"locale": name}
+        ret["result"] = True
+        ret["comment"] = "Set default policy for {} to {} family {}".format(
+            kwargs["chain"], kwargs["policy"], family
+        )
+
+        if "save" in kwargs:
+            if kwargs["save"]:
+                __salt__["nftables.save"](
+                    filename=kwargs.get("save_filename"), family=family
+                )
+                ret[
+                    "comment"
+                ] = "Set and saved default policy for {} to {} family {}".format(
+                    kwargs["chain"], kwargs["policy"], family
+                )
+    else:
+        ret["result"] = False
+        ret["comment"] = "Failed to set nftables default policy"
+
+    return ret
+
+
+def table_present(name, family="ipv4", **kwargs):
+    """
+    .. versionadded:: 3002
+
+    Ensure an nftables table is present
+
+    name
+        A user-defined table name.
+
+    family
+        Networking family, either ipv4 or ipv6
+    """
+
+    ret = {"name": name, "changes": {}, "result": None, "comment": ""}
+
+    table_check = __salt__["nftables.check_table"](name, family=family)
+
+    if table_check["result"] is True:
+        ret["result"] = True
+        ret["comment"] = "nftables table {} already exists in family {}".format(
+            name, family
+        )
+        return ret
+
+    if __opts__["test"]:
+        ret["comment"] = "nftables table {} would be created in family {}".format(
+            name, family
+        )
+        return ret
+
+    res = __salt__["nftables.new_table"](name, family=family)
+
+    if res["result"] is True:
+        ret["changes"] = {"locale": name}
+        ret["result"] = True
+        ret["comment"] = "nftables table {} successfully created in family {}".format(
+            name, family
+        )
+    else:
+        ret["result"] = False
+        ret["comment"] = "Failed to create table {} for family {}".format(name, family)
+
+    return ret
+
+
+def table_absent(name, family="ipv4", **kwargs):
+    """
+    .. versionadded:: 3002
+
+    Ensure an nftables table is absent
+
+    name
+        Name of the table to ensure is absent
+
+    family
+        Networking family, either ipv4 or ipv6
+    """
+
+    ret = {"name": name, "changes": {}, "result": None, "comment": ""}
+
+    table_check = __salt__["nftables.check_table"](name, family)
+
+    if table_check["result"] is False:
+        ret["result"] = True
+        ret["comment"] = "nftables table {} is already absent from family {}".format(
+            name, family
+        )
+        return ret
+
+    if __opts__["test"]:
+        ret["comment"] = "nftables table {} would be deleted from family {}".format(
+            name, family
+        )
+        return ret
+
+    res = __salt__["nftables.delete_table"](name, family=family)
+
+    if res["result"] is True:
+        ret["changes"] = {"locale": name}
+        ret["result"] = True
+        ret["comment"] = "nftables table {} successfully deleted from family {}".format(
+            name, family
+        )
+    else:
+        ret["result"] = False
+        ret["comment"] = "Failed to delete table {} from family {}".format(name, family)
+
+    return ret

@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 ACME / Let's Encrypt module
 ===========================
 
-.. versionadded: 2016.3
+.. versionadded:: 2016.3
 
 This module currently looks for certbot script in the $PATH as
 - certbot,
@@ -34,14 +33,11 @@ Make sure the appropriate certbot plugin for the wanted DNS provider is
 installed before using this module.
 
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import logging
 import os
 
-# Import salt libs
 import salt.utils.path
 from salt.exceptions import SaltInvocationError
 
@@ -76,7 +72,7 @@ def _cert_file(name, cert_type):
     """
     Return expected path of a Let's Encrypt live cert
     """
-    return os.path.join(LE_LIVE, name, "{0}.pem".format(cert_type))
+    return os.path.join(LE_LIVE, name, "{}.pem".format(cert_type))
 
 
 def _expires(name):
@@ -92,9 +88,9 @@ def _expires(name):
         expiry = __salt__["tls.cert_info"](cert_file).get("not_after", 0)
     # Cobble it together using the openssl binary
     else:
-        openssl_cmd = "openssl x509 -in {0} -noout -enddate".format(cert_file)
+        openssl_cmd = "openssl x509 -in {} -noout -enddate".format(cert_file)
         # No %e format on my Linux'es here
-        strptime_sux_cmd = 'date --date="$({0} | cut -d= -f2)" +%s'.format(openssl_cmd)
+        strptime_sux_cmd = 'date --date="$({} | cut -d= -f2)" +%s'.format(openssl_cmd)
         expiry = float(__salt__["cmd.shell"](strptime_sux_cmd, output_loglevel="quiet"))
         # expiry = datetime.datetime.strptime(expiry.split('=', 1)[-1], '%b %e %H:%M:%S %Y %Z')
     return datetime.datetime.fromtimestamp(expiry)
@@ -104,7 +100,7 @@ def _renew_by(name, window=None):
     """
     Date before a certificate should be renewed
 
-    :param str name: Common Name of the certificate (DNS name of certificate)
+    :param str name: Name of the certificate
     :param int window: days before expiry date to renew
     :rtype: datetime
     :return: First renewal date
@@ -176,7 +172,7 @@ def cert(
     :return: Dictionary with 'result' True/False/None, 'comment' and certificate's
         expiry date ('not_after')
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -185,22 +181,24 @@ def cert(
     """
 
     cmd = [LEA, "certonly", "--non-interactive", "--agree-tos"]
+    if certname is None:
+        certname = name
 
     supported_dns_plugins = ["cloudflare"]
 
-    cert_file = _cert_file(name, "cert")
+    cert_file = _cert_file(certname, "cert")
     if not __salt__["file.file_exists"](cert_file):
         log.debug("Certificate %s does not exist (yet)", cert_file)
         renew = False
-    elif needs_renewal(name, renew):
+    elif needs_renewal(certname, renew):
         log.debug("Certificate %s will be renewed", cert_file)
         cmd.append("--renew-by-default")
         renew = True
     if server:
-        cmd.append("--server {0}".format(server))
+        cmd.append("--server {}".format(server))
 
     if certname:
-        cmd.append("--cert-name {0}".format(certname))
+        cmd.append("--cert-name {}".format(certname))
 
     if test_cert:
         if server:
@@ -213,31 +211,29 @@ def cert(
     if webroot:
         cmd.append("--authenticator webroot")
         if webroot is not True:
-            cmd.append("--webroot-path {0}".format(webroot))
+            cmd.append("--webroot-path {}".format(webroot))
     elif dns_plugin in supported_dns_plugins:
         if dns_plugin == "cloudflare":
             cmd.append("--dns-cloudflare")
-            cmd.append(
-                "--dns-cloudflare-credentials {0}".format(dns_plugin_credentials)
-            )
+            cmd.append("--dns-cloudflare-credentials {}".format(dns_plugin_credentials))
         else:
             return {
                 "result": False,
-                "comment": "DNS plugin '{0}' is not supported".format(dns_plugin),
+                "comment": "DNS plugin '{}' is not supported".format(dns_plugin),
             }
     else:
         cmd.append("--authenticator standalone")
 
     if email:
-        cmd.append("--email {0}".format(email))
+        cmd.append("--email {}".format(email))
 
     if keysize:
-        cmd.append("--rsa-key-size {0}".format(keysize))
+        cmd.append("--rsa-key-size {}".format(keysize))
 
-    cmd.append("--domains {0}".format(name))
+    cmd.append("--domains {}".format(name))
     if aliases is not None:
         for dns in aliases:
-            cmd.append("--domains {0}".format(dns))
+            cmd.append("--domains {}".format(dns))
 
     if preferred_challenges:
         cmd.append("--preferred-challenges {}".format(preferred_challenges))
@@ -260,38 +256,36 @@ def cert(
             if res["retcode"] != 0:
                 return {
                     "result": False,
-                    "comment": (
-                        "Certificate {0} renewal failed with:\n{1}"
-                        "".format(name, res["stderr"])
+                    "comment": "Certificate {} renewal failed with:\n{}".format(
+                        name, res["stderr"]
                     ),
                 }
         else:
             return {
                 "result": False,
-                "comment": (
-                    "Certificate {0} renewal failed with:\n{1}"
-                    "".format(name, res["stderr"])
+                "comment": "Certificate {} renewal failed with:\n{}".format(
+                    name, res["stderr"]
                 ),
             }
 
     if "no action taken" in res["stdout"]:
-        comment = "Certificate {0} unchanged".format(cert_file)
+        comment = "Certificate {} unchanged".format(cert_file)
         result = None
     elif renew:
-        comment = "Certificate {0} renewed".format(name)
+        comment = "Certificate {} renewed".format(certname)
         result = True
     else:
-        comment = "Certificate {0} obtained".format(name)
+        comment = "Certificate {} obtained".format(certname)
         result = True
 
     ret = {
         "comment": comment,
-        "not_after": expires(name),
+        "not_after": expires(certname),
         "changes": {},
         "result": result,
     }
     ret, _ = __salt__["file.check_perms"](
-        _cert_file(name, "privkey"), ret, owner, group, mode, follow_symlinks=True
+        _cert_file(certname, "privkey"), ret, owner, group, mode, follow_symlinks=True
     )
 
     return ret
@@ -301,14 +295,16 @@ def certs():
     """
     Return a list of active certificates
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
         salt 'vhost.example.com' acme.certs
     """
     return [
-        item for item in __salt__["file.readdir"](LE_LIVE)[2:] if os.path.isdir(item)
+        item
+        for item in __salt__["file.readdir"](LE_LIVE)[2:]
+        if os.path.isdir(os.path.join(LE_LIVE, item))
     ]
 
 
@@ -316,14 +312,14 @@ def info(name):
     """
     Return information about a certificate
 
-    :param str name: CommonName of certificate
+    :param str name: Name of certificate
     :rtype: dict
     :return: Dictionary with information about the certificate.
         If neither the ``tls`` nor the ``x509`` module can be used to determine
         the certificate information, the information will be retrieved as one
         big text block under the key ``text`` using the openssl cli.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -338,12 +334,12 @@ def info(name):
         # Strip out the extensions object contents;
         # these trip over our poor state output
         # and they serve no real purpose here anyway
-        cert_info["extensions"] = cert_info["extensions"].keys()
+        cert_info["extensions"] = list(cert_info["extensions"])
     elif "x509.read_certificate" in __salt__:
         cert_info = __salt__["x509.read_certificate"](cert_file)
     else:
         # Cobble it together using the openssl binary
-        openssl_cmd = "openssl x509 -in {0} -noout -text".format(cert_file)
+        openssl_cmd = "openssl x509 -in {} -noout -text".format(cert_file)
         cert_info = {"text": __salt__["cmd.run"](openssl_cmd, output_loglevel="quiet")}
     return cert_info
 
@@ -352,11 +348,11 @@ def expires(name):
     """
     The expiry date of a certificate in ISO format
 
-    :param str name: CommonName of certificate
+    :param str name: Name of certificate
     :rtype: str
     :return: Expiry date in ISO format.
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -369,7 +365,7 @@ def has(name):
     """
     Test if a certificate is in the Let's Encrypt Live directory
 
-    :param str name: CommonName of certificate
+    :param str name: Name of certificate
     :rtype: bool
 
     Code example:
@@ -386,7 +382,7 @@ def renew_by(name, window=None):
     """
     Date in ISO format when a certificate should first be renewed
 
-    :param str name: CommonName of certificate
+    :param str name: Name of certificate
     :param int window: number of days before expiry when renewal should take place
     :rtype: str
     :return: Date of certificate renewal in ISO format.
@@ -398,7 +394,7 @@ def needs_renewal(name, window=None):
     """
     Check if a certificate needs renewal
 
-    :param str name: CommonName of certificate
+    :param str name: Name of certificate
     :param bool/str/int window: Window in days to renew earlier or True/force to just return True
     :rtype: bool
     :return: Whether or not the certificate needs to be renewed.

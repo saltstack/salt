@@ -1,11 +1,5 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Python libs
 import logging
 
-# Import pyrax (SDK for Rackspace cloud) third party libs
 # pylint: disable=3rd-party-module-not-gated
 import pyrax
 import pyrax.exceptions  # pylint: disable=no-name-in-module
@@ -19,7 +13,7 @@ log = logging.getLogger(__name__)
 # pylint: enable=3rd-party-module-not-gated
 
 
-class RackspaceQueues(object):
+class RackspaceQueues:
     def __init__(self, username, password, region, **kwargs):
         self.auth = authenticate.Authenticate(username, password, region, **kwargs)
         self.conn = self.auth.conn.queues
@@ -68,7 +62,7 @@ class RackspaceQueues(object):
             return False
         except pyrax.exceptions as err_msg:
             log.error(
-                "RackSpace API got some problems during " "existing queue check: %s",
+                "RackSpace API got some problems during existing queue check: %s",
                 err_msg,
             )
         return False
@@ -87,7 +81,7 @@ class RackspaceQueues(object):
                     return queue
         except pyrax.exceptions as err_msg:
             log.error(
-                "RackSpace API got some problems during existing" " queue check: %s",
+                "RackSpace API got some problems during existing queue check: %s",
                 err_msg,
             )
         return {}

@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Manage Glassfish/Payara server
-.. versionadded:: Carbon
+.. versionadded:: 2016.11.0
 
 Management of glassfish using its RESTful API
 You can setup connection parameters like this
@@ -15,12 +14,11 @@ You can setup connection parameters like this
       - user: admin
       - password: changeit
 """
-from __future__ import absolute_import, print_function, unicode_literals
+
+import salt.utils.json
+from salt.exceptions import CommandExecutionError
 
 try:
-    import salt.utils.json
-    from salt.ext import six
-    from salt.exceptions import CommandExecutionError
     import requests
 
     HAS_LIBS = True
@@ -43,11 +41,11 @@ def _json_to_unicode(data):
     """
     ret = {}
     for key, value in data.items():
-        if not isinstance(value, six.text_type):
+        if not isinstance(value, str):
             if isinstance(value, dict):
                 ret[key] = _json_to_unicode(value)
             else:
-                ret[key] = six.text_type(value).lower()
+                ret[key] = str(value).lower()
         else:
             ret[key] = value
     return ret
@@ -68,9 +66,9 @@ def _is_updated(old_conf, new_conf):
     )
 
     for key, value in old_conf.items():
-        oldval = six.text_type(value).lower()
+        oldval = str(value).lower()
         if key in new_conf:
-            newval = six.text_type(new_conf[key]).lower()
+            newval = str(new_conf[key]).lower()
         if oldval == "null" or oldval == "none":
             oldval = ""
         if key in new_conf and newval != oldval:
@@ -84,7 +82,7 @@ def _do_element_present(name, elem_type, data, server=None):
     """
     ret = {"changes": {}, "update": False, "create": False, "error": None}
     try:
-        elements = __salt__["glassfish.enum_{0}".format(elem_type)]()
+        elements = __salt__["glassfish.enum_{}".format(elem_type)]()
     except requests.ConnectionError as error:
         if __opts__["test"]:
             ret["changes"] = {"Name": name, "Params": data}
@@ -99,14 +97,14 @@ def _do_element_present(name, elem_type, data, server=None):
         ret["create"] = True
         if not __opts__["test"]:
             try:
-                __salt__["glassfish.create_{0}".format(elem_type)](
+                __salt__["glassfish.create_{}".format(elem_type)](
                     name, server=server, **data
                 )
             except CommandExecutionError as error:
                 ret["error"] = error
                 return ret
     elif elements and any(data):
-        current_data = __salt__["glassfish.get_{0}".format(elem_type)](
+        current_data = __salt__["glassfish.get_{}".format(elem_type)](
             name, server=server
         )
         data_diff = _is_updated(current_data, data)
@@ -115,7 +113,7 @@ def _do_element_present(name, elem_type, data, server=None):
             ret["changes"] = data_diff
             if not __opts__["test"]:
                 try:
-                    __salt__["glassfish.update_{0}".format(elem_type)](
+                    __salt__["glassfish.update_{}".format(elem_type)](
                         name, server=server, **data
                     )
                 except CommandExecutionError as error:
@@ -129,7 +127,7 @@ def _do_element_absent(name, elem_type, data, server=None):
     """
     ret = {"delete": False, "error": None}
     try:
-        elements = __salt__["glassfish.enum_{0}".format(elem_type)]()
+        elements = __salt__["glassfish.enum_{}".format(elem_type)]()
     except requests.ConnectionError as error:
         if __opts__["test"]:
             ret["create"] = True
@@ -142,7 +140,7 @@ def _do_element_absent(name, elem_type, data, server=None):
         ret["delete"] = True
         if not __opts__["test"]:
             try:
-                __salt__["glassfish.delete_{0}".format(elem_type)](
+                __salt__["glassfish.delete_{}".format(elem_type)](
                     name, server=server, **data
                 )
             except CommandExecutionError as error:
@@ -210,7 +208,7 @@ def connection_factory_present(
     # Manage parameters
     pool_data = {}
     res_data = {}
-    pool_name = "{0}-Connection-Pool".format(name)
+    pool_name = "{}-Connection-Pool".format(name)
     if restype == "topic_connection_factory":
         pool_data["connectionDefinitionName"] = "javax.jms.TopicConnectionFactory"
     elif restype == "queue_connection_factory":
@@ -271,7 +269,7 @@ def connection_factory_present(
             ret["comment"] = "Connection factory is already up-to-date"
     else:
         ret["result"] = False
-        ret["comment"] = "ERROR: {0} // {1}".format(pool_ret["error"], res_ret["error"])
+        ret["comment"] = "ERROR: {} // {}".format(pool_ret["error"], res_ret["error"])
 
     return ret
 
@@ -287,7 +285,7 @@ def connection_factory_absent(name, both=True, server=None):
         Delete both the pool and the resource, defaults to ``true``
     """
     ret = {"name": name, "result": None, "comment": None, "changes": {}}
-    pool_name = "{0}-Connection-Pool".format(name)
+    pool_name = "{}-Connection-Pool".format(name)
     pool_ret = _do_element_absent(
         pool_name, "connector_c_pool", {"cascade": both}, server
     )
@@ -303,7 +301,7 @@ def connection_factory_absent(name, both=True, server=None):
             ret["comment"] = "Connection Factory doesn't exist"
     else:
         ret["result"] = False
-        ret["comment"] = "Error: {0}".format(pool_ret["error"])
+        ret["comment"] = "Error: {}".format(pool_ret["error"])
     return ret
 
 
@@ -365,7 +363,7 @@ def destination_present(
             ret["comment"] = "JMS Queue already up-to-date"
     else:
         ret["result"] = False
-        ret["comment"] = "Error from API: {0}".format(jms_ret["error"])
+        ret["comment"] = "Error from API: {}".format(jms_ret["error"])
     return ret
 
 
@@ -389,7 +387,7 @@ def destination_absent(name, server=None):
             ret["comment"] = "JMS Queue doesn't exist"
     else:
         ret["result"] = False
-        ret["comment"] = "Error: {0}".format(jms_ret["error"])
+        ret["comment"] = "Error: {}".format(jms_ret["error"])
     return ret
 
 
@@ -468,7 +466,7 @@ def jdbc_datasource_present(
     ret = {"name": name, "result": None, "comment": None, "changes": {}}
 
     # Manage parameters
-    res_name = "jdbc/{0}".format(name)
+    res_name = "jdbc/{}".format(name)
     pool_data = {}
     pool_data_properties = {}
     res_data = {}
@@ -486,7 +484,9 @@ def jdbc_datasource_present(
         "driver": "com.mysql.jdbc.Driver",
         "datasource": "com.mysql.jdbc.jdbc2.optional.MysqlDataSource",
         "xa_datasource": "com.mysql.jdbc.jdbc2.optional.MysqlXADataSource",
-        "connection_pool_datasource": "com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource",
+        "connection_pool_datasource": (
+            "com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource"
+        ),
     }
     datasources["postgresql"] = {
         "driver": "org.postgresql.Driver",
@@ -498,7 +498,9 @@ def jdbc_datasource_present(
         "driver": "com.microsoft.sqlserver.jdbc.SQLServerDriver",
         "datasource": "com.microsoft.sqlserver.jdbc.SQLServerDataSource",
         "xa_datasource": "com.microsoft.sqlserver.jdbc.SQLServerXADataSource",
-        "connection_pool_datasource": "com.microsoft.sqlserver.jdbc.SQLServerConnectionPoolDataSource",
+        "connection_pool_datasource": (
+            "com.microsoft.sqlserver.jdbc.SQLServerConnectionPoolDataSource"
+        ),
     }
 
     if restype == "driver":
@@ -550,7 +552,7 @@ def jdbc_datasource_present(
             ret["comment"] = "JDBC Datasource is already up-to-date"
     else:
         ret["result"] = False
-        ret["comment"] = "ERROR: {0} // {1}".format(pool_ret["error"], res_ret["error"])
+        ret["comment"] = "ERROR: {} // {}".format(pool_ret["error"], res_ret["error"])
 
     return ret
 
@@ -580,7 +582,7 @@ def jdbc_datasource_absent(name, both=True, server=None):
             ret["comment"] = "JDBC Datasource doesn't exist"
     else:
         ret["result"] = False
-        ret["comment"] = "Error: {0}".format(pool_ret["error"])
+        ret["comment"] = "Error: {}".format(pool_ret["error"])
     return ret
 
 

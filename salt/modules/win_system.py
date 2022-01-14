@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for managing Windows systems and getting Windows system information.
 Support for reboot, shutdown, join domain, rename
@@ -10,23 +9,19 @@ Support for reboot, shutdown, join domain, rename
     - win32net
     - wmi
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import ctypes
 import logging
 import platform
 import time
 from datetime import datetime
 
-# Import salt libs
 import salt.utils.functools
 import salt.utils.locales
 import salt.utils.platform
 import salt.utils.win_system
 import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 
 try:
     import pywintypes
@@ -74,18 +69,6 @@ def _convert_date_time_string(dt_string):
     dt_string = dt_string.split(".")[0]
     dt_obj = datetime.strptime(dt_string, "%Y%m%d%H%M%S")
     return dt_obj.strftime("%Y-%m-%d %H:%M:%S")
-
-
-def _to_unicode(instr):
-    """
-    Converts from current users character encoding to unicode.
-    When instr has a value of None, the return value of the function
-    will also be None.
-    """
-    if instr is None or isinstance(instr, six.text_type):
-        return instr
-    else:
-        return six.text_type(instr, "utf8")
 
 
 def halt(timeout=5, in_seconds=False):
@@ -303,15 +286,12 @@ def shutdown(
 
         salt '*' system.shutdown "System will shutdown in 5 minutes"
     """
-    if six.PY2:
-        message = _to_unicode(message)
-
     timeout = _convert_minutes_seconds(timeout, in_seconds)
 
     if only_on_pending_reboot and not get_pending_reboot():
         return False
 
-    if message and not isinstance(message, six.string_types):
+    if message and not isinstance(message, str):
         message = message.decode("utf-8")
     try:
         win32api.InitiateSystemShutdown(
@@ -406,9 +386,6 @@ def set_computer_name(name):
 
         salt 'minion-id' system.set_computer_name 'DavesComputer'
     """
-    if six.PY2:
-        name = _to_unicode(name)
-
     if windll.kernel32.SetComputerNameExW(
         win32con.ComputerNamePhysicalDnsHostname, name
     ):
@@ -477,9 +454,6 @@ def set_computer_desc(desc=None):
 
         salt 'minion-id' system.set_computer_desc 'This computer belongs to Dave!'
     """
-    if six.PY2:
-        desc = _to_unicode(desc)
-
     # Make sure the system exists
     # Return an object containing current information array for the computer
     system_info = win32net.NetServerGetInfo(None, 101)
@@ -534,15 +508,15 @@ def get_system_info():
     def byte_calc(val):
         val = float(val)
         if val < 2 ** 10:
-            return "{0:.3f}B".format(val)
+            return "{:.3f}B".format(val)
         elif val < 2 ** 20:
-            return "{0:.3f}KB".format(val / 2 ** 10)
+            return "{:.3f}KB".format(val / 2 ** 10)
         elif val < 2 ** 30:
-            return "{0:.3f}MB".format(val / 2 ** 20)
+            return "{:.3f}MB".format(val / 2 ** 20)
         elif val < 2 ** 40:
-            return "{0:.3f}GB".format(val / 2 ** 30)
+            return "{:.3f}GB".format(val / 2 ** 30)
         else:
-            return "{0:.3f}TB".format(val / 2 ** 40)
+            return "{:.3f}TB".format(val / 2 ** 40)
 
     # Lookup dicts for Win32_OperatingSystem
     os_type = {1: "Work Station", 2: "Domain Controller", 3: "Server"}
@@ -598,7 +572,10 @@ def get_system_info():
             "os_version": system.Version,
             "windows_directory": system.WindowsDirectory,
         }
-
+        # Must get chassis_sku_number this way for backwards compatibility
+        # system.ChassisSKUNumber is only available on Windows 10/2016 and newer
+        product = conn.Win32_ComputerSystemProduct()[0]
+        ret.update({"chassis_sku_number": product.SKUNumber})
         system = conn.Win32_ComputerSystem()[0]
         # Get pc_system_type depending on Windows version
         if platform.release() in ["Vista", "7", "8"]:
@@ -613,7 +590,6 @@ def get_system_info():
                 "bootup_state": system.BootupState,
                 "caption": system.Caption,
                 "chassis_bootup_state": warning_states[system.ChassisBootupState],
-                "chassis_sku_number": system.ChassisSKUNumber,
                 "dns_hostname": system.DNSHostname,
                 "domain": system.Domain,
                 "domain_role": domain_role[system.DomainRole],
@@ -638,14 +614,19 @@ def get_system_info():
         ret["processor_cores"] = 0
         ret["processor_cores_enabled"] = 0
         ret["processor_manufacturer"] = processors[0].Manufacturer
-        ret["processor_max_clock_speed"] = (
-            six.text_type(processors[0].MaxClockSpeed) + "MHz"
-        )
+        ret["processor_max_clock_speed"] = str(processors[0].MaxClockSpeed) + "MHz"
         for processor in processors:
             ret["processors"] += 1
             ret["processors_logical"] += processor.NumberOfLogicalProcessors
             ret["processor_cores"] += processor.NumberOfCores
-            ret["processor_cores_enabled"] += processor.NumberOfEnabledCore
+            # Older versions of Windows do not have the NumberOfEnabledCore
+            # property. In that case, we'll just skip it
+            try:
+                ret["processor_cores_enabled"] += processor.NumberOfEnabledCore
+            except (AttributeError, TypeError):
+                pass
+        if ret["processor_cores_enabled"] == 0:
+            ret.pop("processor_cores_enabled", False)
 
         bios = conn.Win32_BIOS()[0]
         ret.update(
@@ -730,7 +711,7 @@ def set_hostname(hostname):
     with salt.utils.winapi.Com():
         conn = wmi.WMI()
         comp = conn.Win32_ComputerSystem()[0]
-    return comp.Rename(Name=hostname)
+        return comp.Rename(Name=hostname)
 
 
 def join_domain(
@@ -787,25 +768,19 @@ def join_domain(
                          account_ou='ou=clients,ou=org,dc=domain,dc=tld' \\
                          account_exists=False, restart=True
     """
-    if six.PY2:
-        domain = _to_unicode(domain)
-        username = _to_unicode(username)
-        password = _to_unicode(password)
-        account_ou = _to_unicode(account_ou)
-
     status = get_domain_workgroup()
     if "Domain" in status:
         if status["Domain"] == domain:
-            return "Already joined to {0}".format(domain)
+            return "Already joined to {}".format(domain)
 
     if username and "\\" not in username and "@" not in username:
-        username = "{0}@{1}".format(username, domain)
+        username = "{}@{}".format(username, domain)
 
     if username and password is None:
         return "Must specify a password if you pass a username"
 
     # remove any escape characters
-    if isinstance(account_ou, six.string_types):
+    if isinstance(account_ou, str):
         account_ou = account_ou.split("\\")
         account_ou = "".join(account_ou)
 
@@ -853,13 +828,6 @@ def _join_domain(
 
     Returns:
         int:
-
-    :param domain:
-    :param username:
-    :param password:
-    :param account_ou:
-    :param account_exists:
-    :return:
     """
     NETSETUP_JOIN_DOMAIN = 0x1  # pylint: disable=invalid-name
     NETSETUP_ACCOUNT_CREATE = 0x2  # pylint: disable=invalid-name
@@ -875,18 +843,18 @@ def _join_domain(
 
     with salt.utils.winapi.Com():
         conn = wmi.WMI()
-    comp = conn.Win32_ComputerSystem()[0]
+        comp = conn.Win32_ComputerSystem()[0]
 
-    # Return the results of the command as an error
-    # JoinDomainOrWorkgroup returns a strangely formatted value that looks like
-    # (0,) so return the first item
-    return comp.JoinDomainOrWorkgroup(
-        Name=domain,
-        Password=password,
-        UserName=username,
-        AccountOU=account_ou,
-        FJoinOptions=join_options,
-    )[0]
+        # Return the results of the command as an error
+        # JoinDomainOrWorkgroup returns a strangely formatted value that looks like
+        # (0,) so return the first item
+        return comp.JoinDomainOrWorkgroup(
+            Name=domain,
+            Password=password,
+            UserName=username,
+            AccountOU=account_ou,
+            FJoinOptions=join_options,
+        )[0]
 
 
 def unjoin_domain(
@@ -946,19 +914,14 @@ def unjoin_domain(
                          restart=True
     """
     # pylint: enable=anomalous-backslash-in-string
-    if six.PY2:
-        username = _to_unicode(username)
-        password = _to_unicode(password)
-        domain = _to_unicode(domain)
-
     status = get_domain_workgroup()
     if "Workgroup" in status:
         if status["Workgroup"] == workgroup:
-            return "Already joined to {0}".format(workgroup)
+            return "Already joined to {}".format(workgroup)
 
     if username and "\\" not in username and "@" not in username:
         if domain:
-            username = "{0}@{1}".format(username, domain)
+            username = "{}@{}".format(username, domain)
         else:
             return "Must specify domain if not supplied in username"
 
@@ -973,29 +936,29 @@ def unjoin_domain(
 
     with salt.utils.winapi.Com():
         conn = wmi.WMI()
-    comp = conn.Win32_ComputerSystem()[0]
-    err = comp.UnjoinDomainOrWorkgroup(
-        Password=password, UserName=username, FUnjoinOptions=unjoin_options
-    )
+        comp = conn.Win32_ComputerSystem()[0]
+        err = comp.UnjoinDomainOrWorkgroup(
+            Password=password, UserName=username, FUnjoinOptions=unjoin_options
+        )
 
-    # you have to do this because UnjoinDomainOrWorkgroup returns a
-    # strangely formatted value that looks like (0,)
-    if not err[0]:
-        err = comp.JoinDomainOrWorkgroup(Name=workgroup)
+        # you have to do this because UnjoinDomainOrWorkgroup returns a
+        # strangely formatted value that looks like (0,)
         if not err[0]:
-            ret = {"Workgroup": workgroup, "Restart": False}
-            if restart:
-                ret["Restart"] = reboot()
+            err = comp.JoinDomainOrWorkgroup(Name=workgroup)
+            if not err[0]:
+                ret = {"Workgroup": workgroup, "Restart": False}
+                if restart:
+                    ret["Restart"] = reboot()
 
-            return ret
+                return ret
+            else:
+                log.error(win32api.FormatMessage(err[0]).rstrip())
+                log.error("Failed to unjoin the computer from %s", workgroup)
+                return False
         else:
             log.error(win32api.FormatMessage(err[0]).rstrip())
-            log.error("Failed to join the computer to %s", workgroup)
+            log.error("Failed to unjoin computer from %s", status["Domain"])
             return False
-    else:
-        log.error(win32api.FormatMessage(err[0]).rstrip())
-        log.error("Failed to unjoin computer from %s", status["Domain"])
-        return False
 
 
 def get_domain_workgroup():
@@ -1027,7 +990,7 @@ def set_domain_workgroup(workgroup):
     """
     Set the domain or workgroup the computer belongs to.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``
@@ -1038,9 +1001,6 @@ def set_domain_workgroup(workgroup):
 
         salt 'minion-id' system.set_domain_workgroup LOCAL
     """
-    if six.PY2:
-        workgroup = _to_unicode(workgroup)
-
     # Initialize COM
     with salt.utils.winapi.Com():
         # Grab the first Win32_ComputerSystem object from wmi
@@ -1099,7 +1059,7 @@ def get_system_time():
     elif hours > 12:
         hours = hours - 12
         meridian = "PM"
-    return "{0:02d}:{1:02d}:{2:02d} {3}".format(hours, now[5], now[6], meridian)
+    return "{:02d}:{:02d}:{:02d} {}".format(hours, now[5], now[6], meridian)
 
 
 def set_system_time(newtime):
@@ -1238,7 +1198,7 @@ def get_system_date():
         salt '*' system.get_system_date
     """
     now = win32api.GetLocalTime()
-    return "{0:02d}/{1:02d}/{2:04d}".format(now[1], now[3], now[0])
+    return "{:02d}/{:02d}/{:04d}".format(now[1], now[3], now[0])
 
 
 def set_system_date(newdate):
@@ -1483,7 +1443,7 @@ def get_pending_reboot_details():
     Determine which check is signalling that the system is pending a reboot.
     Useful in determining why your system is signalling that it needs a reboot.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         dict: A dictionary of the results of each system that would indicate a
@@ -1505,7 +1465,7 @@ def get_pending_windows_update():
     This leverages the Windows Update System to determine if the system is
     pending a reboot.
 
-    .. versionadded:: Sodium
+    .. versionadded:: 3001
 
     Returns:
         bool: ``True`` if the Windows Update system reports a pending update,

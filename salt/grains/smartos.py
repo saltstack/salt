@@ -1,34 +1,25 @@
-# -*- coding: utf-8 -*-
 """
 SmartOS grain provider
 
 :maintainer:    Jorge Schrauwen <sjorge@blackdot.be>
 :maturity:      new
-:depends:       salt.utils, salt.ext.six, salt.module.cmdmod
+:depends:       salt.utils, salt.module.cmdmod
 :platform:      SmartOS
 
-.. versionadded:: nitrogen
+.. versionadded:: 2017.7.0
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import os
 import re
 
-# Solve the Chicken and egg problem where grains need to run before any
-# of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
-
-# Import salt libs
 import salt.utils.dictupdate
 import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.ext.six.moves import zip
 
 __virtualname__ = "smartos"
 __salt__ = {

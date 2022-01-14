@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Recursively display nested data
 ===============================
@@ -23,28 +22,17 @@ Example output::
                 - Hello
                 - World
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
+from collections.abc import Mapping
 from numbers import Number
 
-# Import salt libs
 import salt.output
 import salt.utils.color
 import salt.utils.odict
 import salt.utils.stringutils
-from salt.ext import six
-
-try:
-    from collections.abc import Mapping
-except ImportError:
-    # pylint: disable=no-name-in-module
-    from collections import Mapping
-
-    # pylint: enable=no-name-in-module
 
 
-class NestDisplay(object):
+class NestDisplay:
     """
     Manage the nested display contents
     """
@@ -79,9 +67,7 @@ class NestDisplay(object):
                 )
             except UnicodeDecodeError:
                 # msg contains binary data that can't be decoded
-                return str(fmt).format(  # future lint: disable=blacklisted-function
-                    indent, color, prefix, msg, endc, suffix
-                )
+                return str(fmt).format(indent, color, prefix, msg, endc, suffix)
 
     def display(self, ret, indent, prefix, out):
         """
@@ -104,7 +90,7 @@ class NestDisplay(object):
             out.append(
                 self.ustring(indent, self.LIGHT_YELLOW, repr(ret), prefix=prefix)
             )
-        elif isinstance(ret, six.string_types):
+        elif isinstance(ret, str):
             first_line = True
             for line in ret.splitlines():
                 line_prefix = " " * len(prefix) if not first_line else prefix
@@ -141,7 +127,13 @@ class NestDisplay(object):
             if isinstance(ret, salt.utils.odict.OrderedDict):
                 keys = ret.keys()
             else:
-                keys = sorted(ret)
+                try:
+                    keys = sorted(ret)
+                except TypeError:
+                    # Some of the keys must be non-string types
+                    ret = {str(k): v for k, v in ret.items()}
+                    keys = sorted(ret)
+
             color = self.CYAN
             if self.retcode != 0:
                 color = self.RED
@@ -165,6 +157,4 @@ def output(ret, **kwargs):
         return "\n".join(lines)
     except UnicodeDecodeError:
         # output contains binary data that can't be decoded
-        return str("\n").join(  # future lint: disable=blacklisted-function
-            [salt.utils.stringutils.to_str(x) for x in lines]
-        )
+        return "\n".join([salt.utils.stringutils.to_str(x) for x in lines])

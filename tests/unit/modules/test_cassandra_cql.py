@@ -1,19 +1,13 @@
-# -*- coding: utf-8 -*-
 """
     tests.unit.returners.cassandra_cql_test
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import ssl
 
-# Import salt libs
 import salt.modules.cassandra_cql as cassandra_cql
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -28,7 +22,8 @@ except ImportError:
 
 @skipIf(
     not HAS_CASSANDRA,
-    "Please install the cassandra datastax driver to run cassandra_cql module unit tests.",
+    "Please install the cassandra datastax driver to run cassandra_cql module unit"
+    " tests.",
 )
 class CassandraCQLReturnerTestCase(TestCase, LoaderModuleMockMixin):
     """
@@ -94,3 +89,47 @@ class CassandraCQLReturnerTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(
                 cassandra_cql._get_ssl_opts(), None  # pylint: disable=protected-access
             )
+
+    def test_valid_asynchronous_args(self):
+        mock_execute = MagicMock(return_value={})
+        mock_execute_async = MagicMock(return_value={})
+        mock_context = {
+            "cassandra_cql_returner_cluster": MagicMock(return_value={}),
+            "cassandra_cql_returner_session": MagicMock(
+                execute=mock_execute,
+                execute_async=mock_execute_async,
+                prepare=lambda _: MagicMock(
+                    bind=lambda _: None
+                ),  # mock prepared_statement
+                row_factory=None,
+            ),
+            "cassandra_cql_prepared": {},
+        }
+
+        with patch.dict(cassandra_cql.__context__, mock_context):
+            cassandra_cql.cql_query_with_prepare(
+                "SELECT now() from system.local;", "select_now", [], asynchronous=True
+            )
+            mock_execute_async.assert_called_once()
+
+    def test_valid_async_args(self):
+        mock_execute = MagicMock(return_value={})
+        mock_execute_async = MagicMock(return_value={})
+        mock_context = {
+            "cassandra_cql_returner_cluster": MagicMock(return_value={}),
+            "cassandra_cql_returner_session": MagicMock(
+                execute=mock_execute,
+                execute_async=mock_execute_async,
+                prepare=lambda _: MagicMock(bind=lambda _: None),
+                # mock prepared_statement
+                row_factory=None,
+            ),
+            "cassandra_cql_prepared": {},
+        }
+
+        kwargs = {"async": True}  # to avoid syntax error in python 3.7
+        with patch.dict(cassandra_cql.__context__, mock_context):
+            cassandra_cql.cql_query_with_prepare(
+                "SELECT now() from system.local;", "select_now", [], **kwargs
+            )
+            mock_execute_async.assert_called_once()

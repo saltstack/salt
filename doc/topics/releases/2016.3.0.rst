@@ -156,12 +156,11 @@ they are being loaded for the correct proxytype, example below:
 .. code-block:: python
 
     def __virtual__():
-        '''
+        """
         Only work on proxy
-        '''
+        """
         try:
-            if salt.utils.is_proxy() and \
-               __opts__['proxy']['proxytype'] == 'ssh_sample':
+            if salt.utils.is_proxy() and __opts__["proxy"]["proxytype"] == "ssh_sample":
                 return __virtualname__
         except KeyError:
             pass
@@ -185,10 +184,10 @@ to ``__proxy__``.  This enables patterns like
 .. code-block:: python
 
    def get_ip(proxy):
-       '''
+       """
        Ask the remote device what IP it has
-       '''
-       return {'ip':proxy['proxymodulename.get_ip']()}
+       """
+       return {"ip": proxy["proxymodulename.get_ip"]()}
 
 
 Then the grain ``ip`` will contain the result of calling the ``get_ip()`` function

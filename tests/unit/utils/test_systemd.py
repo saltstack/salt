@@ -1,28 +1,19 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import errno
-import os
+import subprocess
 
-# Import Salt libs
 import salt.utils.systemd as _systemd
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import Mock, patch
-
-# Import Salt Testing libs
 from tests.support.unit import TestCase
 
 
 def _booted_effect(path):
-    return True if path == "/run/systemd/system" else os.stat(path)
+    return path == "/run/systemd/system"
 
 
 def _not_booted_effect(path):
     if path == "/run/systemd/system":
         raise OSError(errno.ENOENT, "No such file or directory", path)
-    return os.stat(path)
 
 
 class SystemdTestCase(TestCase):
@@ -87,7 +78,7 @@ class SystemdTestCase(TestCase):
         """
         with patch("subprocess.Popen") as popen_mock:
             _version = 231
-            output = "systemd {0}\n-SYSVINIT".format(_version)
+            output = "systemd {}\n-SYSVINIT".format(_version)
             popen_mock.return_value = Mock(
                 communicate=lambda *args, **kwargs: (output, None),
                 pid=lambda: 12345,
@@ -171,7 +162,7 @@ class SystemdTestCase(TestCase):
         with patch("subprocess.Popen") as popen_mock:
             _expected = False
             _version = 204
-            _output = "systemd {0}\n-SYSVINIT".format(_version)
+            _output = "systemd {}\n-SYSVINIT".format(_version)
             popen_mock.return_value = Mock(
                 communicate=lambda *args, **kwargs: (_output, None),
                 pid=lambda: 12345,
@@ -205,7 +196,7 @@ class SystemdTestCase(TestCase):
         with patch("subprocess.Popen") as popen_mock:
             _expected = True
             _version = 205
-            _output = "systemd {0}\n-SYSVINIT".format(_version)
+            _output = "systemd {}\n-SYSVINIT".format(_version)
             popen_mock.return_value = Mock(
                 communicate=lambda *args, **kwargs: (_output, None),
                 pid=lambda: 12345,
@@ -239,7 +230,7 @@ class SystemdTestCase(TestCase):
         with patch("subprocess.Popen") as popen_mock:
             _expected = True
             _version = 206
-            _output = "systemd {0}\n-SYSVINIT".format(_version)
+            _output = "systemd {}\n-SYSVINIT".format(_version)
             popen_mock.return_value = Mock(
                 communicate=lambda *args, **kwargs: (_output, None),
                 pid=lambda: 12345,
@@ -308,3 +299,62 @@ class SystemdTestCase(TestCase):
         # Test with invalid context data
         with self.assertRaises(SaltInvocationError):
             _systemd.has_scope(99999)
+
+    @patch("salt.utils.systemd.dbus", False)
+    def test_pid_to_service_systemctl_valid_pid(self):
+        """
+        Test parsing of systemctl status output for a valid PID.
+        """
+        systemctl_output = """
+        ● firewalld.service - firewalld - dynamic firewall daemon
+        Loaded: loaded (/usr/lib/systemd/system/firewalld.service; enabled; vendor preset: disabled)
+        {"_CAP_EFFECTIVE":"ffffffffff","_SYSTEMD_UNIT":"firewalld.service"}
+        """
+        subprocess_mock = Mock(return_value=Mock(stdout=systemctl_output))
+        with patch("salt.utils.systemd.subprocess.run", subprocess_mock):
+            assert _systemd.pid_to_service(1374) == "firewalld"
+
+    @patch("salt.utils.systemd.dbus", False)
+    def test_pid_to_service_systemctl_invalid_pid(self):
+        """
+        Test parsing of systemctl status output for an invalid PID.
+        """
+        subprocess_mock = Mock(
+            side_effect=subprocess.CalledProcessError(
+                returncode=1, cmd=["systemctl", "--output", "json", "status", "999999"]
+            )
+        )
+        with patch("salt.utils.systemd.subprocess.run", subprocess_mock):
+            # breakpoint()
+            assert _systemd.pid_to_service(999999) is None
+
+    def test_pid_to_service_dbus_valid_pid(self):
+        """
+        Test translating a valid PID to a service name via DBUS.
+        """
+        dbus_mock = Mock()
+        dbus_interface_get_mock = Mock(return_value="firewalld.service")
+        dbus_mock.Interface().Get = dbus_interface_get_mock
+        with patch("salt.utils.systemd.dbus", dbus_mock):
+            assert _systemd.pid_to_service(1374) == "firewalld"
+            dbus_interface_get_mock.assert_called_with(
+                "org.freedesktop.systemd1.Unit", "Id"
+            )
+
+    def test_pid_to_service_dbus_invalid_pid(self):
+        """
+        Test translating an invalid PID to a service name via DBUS.
+        """
+
+        class DBusException(Exception):
+            """
+            Raised by DBUS, e.g. when a PID does not belong to a service
+            """
+
+            ...
+
+        dbus_mock = Mock()
+        dbus_mock.DBusException = DBusException()
+        dbus_mock.GetUnitByPID = Mock(site_effect=dbus_mock.DBusException)
+        with patch("salt.utils.systemd.dbus", dbus_mock):
+            assert _systemd.pid_to_service(99999) is None

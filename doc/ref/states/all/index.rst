@@ -109,7 +109,6 @@ state modules
     gem
     git
     github
-    glance
     glance_image
     glassfish
     glusterfs
@@ -131,6 +130,7 @@ state modules
     host
     http
     icinga2
+    idem
     ifttt
     incron
     influxdb08_database
@@ -225,6 +225,7 @@ state modules
     npm
     ntp
     nxos
+    nxos_upgrade
     openstack_config
     openvswitch_bridge
     openvswitch_port

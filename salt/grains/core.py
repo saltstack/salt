@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 The static grains, these are the core, or built in grains.
 
@@ -10,29 +9,28 @@ module can be overwritten just by returning dict keys with the same value
 as those returned here
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import datetime
+import hashlib
 import locale
 import logging
 import os
 import platform
 import re
 import socket
+import subprocess
 import sys
 import time
 import uuid
-import warnings
 from errno import EACCES, EPERM
 
-# Import salt libs
+import distro
 import salt.exceptions
 import salt.log
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
+import salt.modules.network
 import salt.modules.smbios
 import salt.utils.args
 import salt.utils.dns
@@ -42,57 +40,53 @@ import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.ext import six
-from salt.ext.six.moves import range
+from salt.utils.network import _clear_interfaces, _get_interfaces
 
-# pylint: disable=import-error
+
+# rewrite distro.linux_distribution to allow best=True kwarg in version(), needed to get the minor version numbers in CentOS
+def _linux_distribution():
+    return (
+        distro.id(),
+        distro.version(best=True),
+        distro.codename(),
+    )
+
+
+def __init__(opts):
+    _clear_interfaces()
+
+
 try:
-    import dateutil.tz
+    import dateutil.tz  # pylint: disable=import-error
 
     _DATEUTIL_TZ = True
 except ImportError:
     _DATEUTIL_TZ = False
 
-__proxyenabled__ = ["*"]
-__FQDN__ = None
+log = logging.getLogger(__name__)
 
-# linux_distribution deprecated in py3.7
-try:
-    from platform import linux_distribution as _deprecated_linux_distribution
-
-    # Extend the default list of supported distros. This will be used for the
-    # /etc/DISTRO-release checking that is part of linux_distribution()
-    from platform import _supported_dists
-
-    _supported_dists += (
-        "arch",
-        "mageia",
-        "meego",
-        "vmware",
-        "bluewhite64",
-        "slamd64",
-        "ovs",
-        "system",
-        "mint",
-        "oracle",
-        "void",
-    )
-
-    def linux_distribution(**kwargs):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            return _deprecated_linux_distribution(
-                supported_dists=_supported_dists, **kwargs
-            )
-
-
-except ImportError:
-    from distro import linux_distribution
-
-
+HAS_WMI = False
 if salt.utils.platform.is_windows():
     import salt.utils.win_osinfo
 
+    # attempt to import the python wmi module
+    # the Windows minion uses WMI for some of its grains
+    try:
+        import win32api
+        import wmi  # pylint: disable=import-error
+
+        import salt.utils.win_reg
+        import salt.utils.winapi
+
+        HAS_WMI = True
+    except ImportError:
+        log.exception(
+            "Unable to import Python wmi module, some core grains will be missing"
+        )
+
+
+__proxyenabled__ = ["*"]
+__FQDN__ = None
 
 __salt__ = {
     "cmd.run": salt.modules.cmdmod._run_quiet,
@@ -100,34 +94,33 @@ __salt__ = {
     "cmd.run_all": salt.modules.cmdmod._run_all_quiet,
     "smbios.records": salt.modules.smbios.records,
     "smbios.get": salt.modules.smbios.get,
+    "network.fqdns": salt.modules.network.fqdns,
 }
-log = logging.getLogger(__name__)
 
-HAS_WMI = False
-if salt.utils.platform.is_windows():
-    # attempt to import the python wmi module
-    # the Windows minion uses WMI for some of its grains
-    try:
-        import wmi  # pylint: disable=import-error
-        import salt.utils.winapi
-        import win32api
-        import salt.utils.win_reg
+HAS_UNAME = hasattr(os, "uname")
 
-        HAS_WMI = True
-    except ImportError:
-        log.exception(
-            "Unable to import Python wmi module, some core grains " "will be missing"
-        )
-
-HAS_UNAME = True
-if not hasattr(os, "uname"):
-    HAS_UNAME = False
-
-_INTERFACES = {}
 
 # Possible value for h_errno defined in netdb.h
 HOST_NOT_FOUND = 1
 NO_DATA = 4
+
+
+def _parse_junos_showver(txt):
+    showver = {}
+    for l in txt.splitlines():
+        decoded_line = l.decode("utf-8")
+        if decoded_line.startswith("Model"):
+            showver["model"] = decoded_line.split(" ")[1]
+        if decoded_line.startswith("Junos"):
+            showver["osrelease"] = decoded_line.split(" ")[1]
+            showver["osmajorrelease"] = decoded_line.split(".")[0]
+            showver["osrelease_info"] = decoded_line.split(".")
+        if decoded_line.startswith("JUNOS OS Kernel"):
+            showver["kernelversion"] = decoded_line
+            relno = re.search(r"\[(.*)\]", decoded_line)
+            if relno:
+                showver["kernelrelease"] = relno.group(1)
+    return showver
 
 
 def _windows_cpudata():
@@ -245,11 +238,11 @@ def _linux_gpu_data():
         "matrox",
         "aspeed",
     ]
-    gpu_classes = ("vga compatible controller", "3d controller")
+    gpu_classes = ("vga compatible controller", "3d controller", "display controller")
 
     devs = []
     try:
-        lspci_out = __salt__["cmd.run"]("{0} -vmm".format(lspci))
+        lspci_out = __salt__["cmd.run"]("{} -vmm".format(lspci))
 
         cur_dev = {}
         error = False
@@ -323,7 +316,7 @@ def _netbsd_gpu_data():
         for line in pcictl_out.splitlines():
             for vendor in known_vendors:
                 vendor_match = re.match(
-                    r"[0-9:]+ ({0}) (.+) \(VGA .+\)".format(vendor), line, re.IGNORECASE
+                    r"[0-9:]+ ({}) (.+) \(VGA .+\)".format(vendor), line, re.IGNORECASE
                 )
                 if vendor_match:
                     gpus.append(
@@ -385,22 +378,22 @@ def _bsd_cpudata(osdata):
     if sysctl:
         cmds.update(
             {
-                "num_cpus": "{0} -n hw.ncpu".format(sysctl),
-                "cpuarch": "{0} -n hw.machine".format(sysctl),
-                "cpu_model": "{0} -n hw.model".format(sysctl),
+                "num_cpus": "{} -n hw.ncpu".format(sysctl),
+                "cpuarch": "{} -n hw.machine".format(sysctl),
+                "cpu_model": "{} -n hw.model".format(sysctl),
             }
         )
 
     if arch and osdata["kernel"] == "OpenBSD":
-        cmds["cpuarch"] = "{0} -s".format(arch)
+        cmds["cpuarch"] = "{} -s".format(arch)
 
     if osdata["kernel"] == "Darwin":
-        cmds["cpu_model"] = "{0} -n machdep.cpu.brand_string".format(sysctl)
-        cmds["cpu_flags"] = "{0} -n machdep.cpu.features".format(sysctl)
+        cmds["cpu_model"] = "{} -n machdep.cpu.brand_string".format(sysctl)
+        cmds["cpu_flags"] = "{} -n machdep.cpu.features".format(sysctl)
 
-    grains = dict([(k, __salt__["cmd.run"](v)) for k, v in six.iteritems(cmds)])
+    grains = {k: __salt__["cmd.run"](v) for k, v in cmds.items()}
 
-    if "cpu_flags" in grains and isinstance(grains["cpu_flags"], six.string_types):
+    if "cpu_flags" in grains and isinstance(grains["cpu_flags"], str):
         grains["cpu_flags"] = grains["cpu_flags"].split(" ")
 
     if osdata["kernel"] == "NetBSD":
@@ -481,7 +474,7 @@ def _aix_cpudata():
     grains = {}
     cmd = salt.utils.path.which("prtconf")
     if cmd:
-        data = __salt__["cmd.run"]("{0}".format(cmd)) + os.linesep
+        data = __salt__["cmd.run"]("{}".format(cmd)) + os.linesep
         for dest, regstring in (
             ("cpuarch", r"(?im)^\s*Processor\s+Type:\s+(\S+)"),
             ("cpu_flags", r"(?im)^\s*Processor\s+Version:\s+(\S+)"),
@@ -527,9 +520,9 @@ def _osx_memdata():
 
     sysctl = salt.utils.path.which("sysctl")
     if sysctl:
-        mem = __salt__["cmd.run"]("{0} -n hw.memsize".format(sysctl))
+        mem = __salt__["cmd.run"]("{} -n hw.memsize".format(sysctl))
         swap_total = (
-            __salt__["cmd.run"]("{0} -n vm.swapusage".format(sysctl))
+            __salt__["cmd.run"]("{} -n vm.swapusage".format(sysctl))
             .split()[2]
             .replace(",", ".")
         )
@@ -554,20 +547,20 @@ def _bsd_memdata(osdata):
 
     sysctl = salt.utils.path.which("sysctl")
     if sysctl:
-        mem = __salt__["cmd.run"]("{0} -n hw.physmem".format(sysctl))
+        mem = __salt__["cmd.run"]("{} -n hw.physmem".format(sysctl))
         if osdata["kernel"] == "NetBSD" and mem.startswith("-"):
-            mem = __salt__["cmd.run"]("{0} -n hw.physmem64".format(sysctl))
+            mem = __salt__["cmd.run"]("{} -n hw.physmem64".format(sysctl))
         grains["mem_total"] = int(mem) // 1024 // 1024
 
         if osdata["kernel"] in ["OpenBSD", "NetBSD"]:
             swapctl = salt.utils.path.which("swapctl")
-            swap_data = __salt__["cmd.run"]("{0} -sk".format(swapctl))
+            swap_data = __salt__["cmd.run"]("{} -sk".format(swapctl))
             if swap_data == "no swap devices configured":
                 swap_total = 0
             else:
                 swap_total = swap_data.split(" ")[1]
         else:
-            swap_total = __salt__["cmd.run"]("{0} -n vm.swap_total".format(sysctl))
+            swap_total = __salt__["cmd.run"]("{} -n vm.swap_total".format(sysctl))
         grains["swap_total"] = int(swap_total) // 1024 // 1024
     return grains
 
@@ -585,7 +578,7 @@ def _sunos_memdata():
             grains["mem_total"] = int(comps[2].strip())
 
     swap_cmd = salt.utils.path.which("swap")
-    swap_data = __salt__["cmd.run"]("{0} -s".format(swap_cmd)).split()
+    swap_data = __salt__["cmd.run"]("{} -s".format(swap_cmd)).split()
     try:
         swap_avail = int(swap_data[-2][:-1])
         swap_used = int(swap_data[-4][:-1])
@@ -613,7 +606,7 @@ def _aix_memdata():
 
     swap_cmd = salt.utils.path.which("swap")
     if swap_cmd:
-        swap_data = __salt__["cmd.run"]("{0} -s".format(swap_cmd)).split()
+        swap_data = __salt__["cmd.run"]("{} -s".format(swap_cmd)).split()
         try:
             swap_total = (int(swap_data[-2]) + int(swap_data[-6])) * 4
         except ValueError:
@@ -666,7 +659,7 @@ def _aix_get_machine_id():
     grains = {}
     cmd = salt.utils.path.which("lsattr")
     if cmd:
-        data = __salt__["cmd.run"]("{0} -El sys0".format(cmd)) + os.linesep
+        data = __salt__["cmd.run"]("{} -El sys0".format(cmd)) + os.linesep
         uuid_regexes = [re.compile(r"(?im)^\s*os_uuid\s+(\S+)\s+(.*)")]
         for regex in uuid_regexes:
             res = regex.search(data)
@@ -789,7 +782,7 @@ def _virtual(osdata):
             virtinfo = salt.utils.path.which("virtinfo")
             if virtinfo:
                 try:
-                    ret = __salt__["cmd.run_all"]("{0} -a".format(virtinfo))
+                    ret = __salt__["cmd.run_all"](virtinfo)
                 except salt.exceptions.CommandExecutionError:
                     if salt.log.is_logging_configured():
                         failed_commands.add(virtinfo)
@@ -798,6 +791,7 @@ def _virtual(osdata):
                         command = "prtdiag"
                     else:
                         command = "virtinfo"
+                        args.append("-c current list -H -o name")
             else:
                 command = "prtdiag"
 
@@ -806,7 +800,7 @@ def _virtual(osdata):
         if not cmd:
             continue
 
-        cmd = "{0} {1}".format(cmd, " ".join(args))
+        cmd = "{} {}".format(cmd, " ".join(args))
 
         try:
             ret = __salt__["cmd.run_all"](cmd)
@@ -866,28 +860,28 @@ def _virtual(osdata):
                 grains["virtual"] = "VirtualPC"
                 break
             elif "lxc" in output:
-                grains["virtual"] = "LXC"
-                break
-            elif "systemd-nspawn" in output:
-                grains["virtual"] = "LXC"
+                grains["virtual"] = "container"
+                grains["virtual_subtype"] = "LXC"
                 break
         elif command == "virt-what":
-            try:
-                output = output.splitlines()[-1]
-            except IndexError:
-                pass
-            if output in ("kvm", "qemu", "uml", "xen", "lxc"):
-                grains["virtual"] = output
-                break
-            elif "vmware" in output:
-                grains["virtual"] = "VMware"
-                break
-            elif "parallels" in output:
-                grains["virtual"] = "Parallels"
-                break
-            elif "hyperv" in output:
-                grains["virtual"] = "HyperV"
-                break
+            for line in output.splitlines():
+                if line in ("kvm", "qemu", "uml", "xen"):
+                    grains["virtual"] = line
+                    break
+                elif "lxc" in line:
+                    grains["virtual"] = "container"
+                    grains["virtual_subtype"] = "LXC"
+                    break
+                elif "vmware" in line:
+                    grains["virtual"] = "VMware"
+                    break
+                elif "parallels" in line:
+                    grains["virtual"] = "Parallels"
+                    break
+                elif "hyperv" in line:
+                    grains["virtual"] = "HyperV"
+                    break
+            break
         elif command == "dmidecode":
             # Product Name: VirtualBox
             if "Vendor: QEMU" in output:
@@ -957,7 +951,26 @@ def _virtual(osdata):
                 grains["virtual"] = "kvm"
             break
         elif command == "virtinfo":
-            grains["virtual"] = "LDOM"
+            if output == "logical-domain":
+                grains["virtual"] = "LDOM"
+                roles = []
+                for role in ("control", "io", "root", "service"):
+                    subtype_cmd = "{} -c current get -H -o value {}-role".format(
+                        command, role
+                    )
+                    ret = __salt__["cmd.run"]("{}".format(subtype_cmd))
+                    if ret == "true":
+                        roles.append(role)
+                if roles:
+                    grains["virtual_subtype"] = roles
+            elif output == "non-global-zone":
+                grains["virtual"] = "zone"
+                grains["virtual_subtype"] = "non-global"
+            elif output == "kernel-zone":
+                grains["virtual"] = "zone"
+                grains["virtual_subtype"] = "kernel"
+            elif output == "vmware":
+                grains["virtual"] = "VMware"
             break
 
     choices = ("Linux", "HP-UX")
@@ -970,7 +983,7 @@ def _virtual(osdata):
                 init_root = os.stat("/proc/1/root/.")
                 if self_root != init_root:
                     grains["virtual_subtype"] = "chroot"
-            except (IOError, OSError):
+            except OSError:
                 pass
         if isdir("/proc/vz"):
             if os.path.isfile("/proc/vz/version"):
@@ -1012,35 +1025,15 @@ def _virtual(osdata):
                 # Tested on Fedora 10 / 2.6.27.30-170.2.82 with xen
                 # Tested on Fedora 15 / 2.6.41.4-1 without running xen
                 elif isdir("/sys/bus/xen"):
-                    if "xen:" in __salt__["cmd.run"]("dmesg").lower():
-                        grains["virtual_subtype"] = "Xen PV DomU"
-                    elif os.path.isfile("/sys/bus/xen/drivers/xenconsole"):
+                    if os.path.isdir("/sys/bus/xen/drivers/xenconsole"):
                         # An actual DomU will have the xenconsole driver
+                        grains["virtual_subtype"] = "Xen PV DomU"
+                    elif "xen:" in __salt__["cmd.run"]("dmesg").lower():
+                        # Fallback to parsing dmesg, might not be successful
                         grains["virtual_subtype"] = "Xen PV DomU"
             # If a Dom0 or DomU was detected, obviously this is xen
             if "dom" in grains.get("virtual_subtype", "").lower():
                 grains["virtual"] = "xen"
-        # Check container type after hypervisors, to avoid variable overwrite on containers running in virtual environment.
-        if os.path.isfile("/proc/1/cgroup"):
-            try:
-                with salt.utils.files.fopen("/proc/1/cgroup", "r") as fhr:
-                    fhr_contents = fhr.read()
-                if ":/lxc/" in fhr_contents:
-                    grains["virtual"] = "container"
-                    grains["virtual_subtype"] = "LXC"
-                elif ":/kubepods/" in fhr_contents:
-                    grains["virtual_subtype"] = "kubernetes"
-                elif ":/libpod_parent/" in fhr_contents:
-                    grains["virtual_subtype"] = "libpod"
-                else:
-                    if any(
-                        x in fhr_contents
-                        for x in (":/system.slice/docker", ":/docker/", ":/docker-ce/")
-                    ):
-                        grains["virtual"] = "container"
-                        grains["virtual_subtype"] = "Docker"
-            except IOError:
-                pass
         if os.path.isfile("/proc/cpuinfo"):
             with salt.utils.files.fopen("/proc/cpuinfo", "r") as fhr:
                 if "QEMU Virtual CPU" in fhr.read():
@@ -1048,7 +1041,7 @@ def _virtual(osdata):
         if os.path.isfile("/sys/devices/virtual/dmi/id/product_name"):
             try:
                 with salt.utils.files.fopen(
-                    "/sys/devices/virtual/dmi/id/product_name", "r"
+                    "/sys/devices/virtual/dmi/id/product_name", "rb"
                 ) as fhr:
                     output = salt.utils.stringutils.to_unicode(
                         fhr.read(), errors="replace"
@@ -1069,21 +1062,54 @@ def _virtual(osdata):
                 # Some firmwares provide non-valid 'product_name'
                 # files, ignore them
                 log.debug(
-                    "The content in /sys/devices/virtual/dmi/id/product_name is not valid"
+                    "The content in /sys/devices/virtual/dmi/id/product_name is not"
+                    " valid"
                 )
-            except IOError:
+            except OSError:
                 pass
+        # Check container type after hypervisors, to avoid variable overwrite on containers running in virtual environment.
+        if os.path.isfile("/proc/1/cgroup"):
+            try:
+                with salt.utils.files.fopen("/proc/1/cgroup", "r") as fhr:
+                    fhr_contents = fhr.read()
+                if ":/lxc/" in fhr_contents:
+                    grains["virtual"] = "container"
+                    grains["virtual_subtype"] = "LXC"
+                elif ":/kubepods/" in fhr_contents:
+                    grains["virtual_subtype"] = "kubernetes"
+                elif ":/libpod_parent/" in fhr_contents:
+                    grains["virtual_subtype"] = "libpod"
+                else:
+                    if any(
+                        x in fhr_contents
+                        for x in (":/system.slice/docker", ":/docker/", ":/docker-ce/")
+                    ):
+                        grains["virtual"] = "container"
+                        grains["virtual_subtype"] = "Docker"
+            except OSError:
+                pass
+        # Newer versions of LXC didn't have "lxc" in /proc/1/cgroup. Check environ
+        if ("virtual_subtype" not in grains) or (grains["virtual_subtype"] != "LXC"):
+            if os.path.isfile("/proc/1/environ"):
+                try:
+                    with salt.utils.files.fopen("/proc/1/environ", "r") as fhr:
+                        fhr_contents = fhr.read()
+                    if "container=lxc" in fhr_contents:
+                        grains["virtual"] = "container"
+                        grains["virtual_subtype"] = "LXC"
+                except OSError:
+                    pass
     elif osdata["kernel"] == "FreeBSD":
         kenv = salt.utils.path.which("kenv")
         if kenv:
-            product = __salt__["cmd.run"]("{0} smbios.system.product".format(kenv))
-            maker = __salt__["cmd.run"]("{0} smbios.system.maker".format(kenv))
+            product = __salt__["cmd.run"]("{} smbios.system.product".format(kenv))
+            maker = __salt__["cmd.run"]("{} smbios.system.maker".format(kenv))
             if product.startswith("VMware"):
                 grains["virtual"] = "VMware"
             if product.startswith("VirtualBox"):
                 grains["virtual"] = "VirtualBox"
             if maker.startswith("Xen"):
-                grains["virtual_subtype"] = "{0} {1}".format(maker, product)
+                grains["virtual_subtype"] = "{} {}".format(maker, product)
                 grains["virtual"] = "xen"
             if maker.startswith("Microsoft") and product.startswith("Virtual"):
                 grains["virtual"] = "VirtualPC"
@@ -1092,9 +1118,9 @@ def _virtual(osdata):
             if maker.startswith("Bochs"):
                 grains["virtual"] = "kvm"
         if sysctl:
-            hv_vendor = __salt__["cmd.run"]("{0} -n hw.hv_vendor".format(sysctl))
-            model = __salt__["cmd.run"]("{0} -n hw.model".format(sysctl))
-            jail = __salt__["cmd.run"]("{0} -n security.jail.jailed".format(sysctl))
+            hv_vendor = __salt__["cmd.run"]("{} -n hw.hv_vendor".format(sysctl))
+            model = __salt__["cmd.run"]("{} -n hw.model".format(sysctl))
+            jail = __salt__["cmd.run"]("{} -n security.jail.jailed".format(sysctl))
             if "bhyve" in hv_vendor:
                 grains["virtual"] = "bhyve"
             elif "QEMU Virtual CPU" in model:
@@ -1107,49 +1133,39 @@ def _virtual(osdata):
                 grains["virtual"] = "kvm"
             if osdata["manufacturer"] == "OpenBSD":
                 grains["virtual"] = "vmm"
-    elif osdata["kernel"] == "SunOS":
-        if grains["virtual"] == "LDOM":
-            roles = []
-            for role in ("control", "io", "root", "service"):
-                subtype_cmd = "{0} -c current get -H -o value {1}-role".format(
-                    cmd, role
-                )
-                ret = __salt__["cmd.run_all"]("{0}".format(subtype_cmd))
-                if ret["stdout"] == "true":
-                    roles.append(role)
-            if roles:
-                grains["virtual_subtype"] = roles
-        else:
-            # Check if it's a "regular" zone. (i.e. Solaris 10/11 zone)
-            zonename = salt.utils.path.which("zonename")
-            if zonename:
-                zone = __salt__["cmd.run"]("{0}".format(zonename))
-                if zone != "global":
-                    grains["virtual"] = "zone"
-            # Check if it's a branded zone (i.e. Solaris 8/9 zone)
-            if isdir("/.SUNWnative"):
-                grains["virtual"] = "zone"
     elif osdata["kernel"] == "NetBSD":
         if sysctl:
             if "QEMU Virtual CPU" in __salt__["cmd.run"](
-                "{0} -n machdep.cpu_brand".format(sysctl)
+                "{} -n machdep.cpu_brand".format(sysctl)
             ):
                 grains["virtual"] = "kvm"
             elif "invalid" not in __salt__["cmd.run"](
-                "{0} -n machdep.xen.suspend".format(sysctl)
+                "{} -n machdep.xen.suspend".format(sysctl)
             ):
                 grains["virtual"] = "Xen PV DomU"
             elif "VMware" in __salt__["cmd.run"](
-                "{0} -n machdep.dmi.system-vendor".format(sysctl)
+                "{} -n machdep.dmi.system-vendor".format(sysctl)
             ):
                 grains["virtual"] = "VMware"
             # NetBSD has Xen dom0 support
             elif (
-                __salt__["cmd.run"]("{0} -n machdep.idle-mechanism".format(sysctl))
+                __salt__["cmd.run"]("{} -n machdep.idle-mechanism".format(sysctl))
                 == "xen"
             ):
                 if os.path.isfile("/var/run/xenconsoled.pid"):
                     grains["virtual_subtype"] = "Xen Dom0"
+    elif osdata["kernel"] == "SunOS":
+        # we did not get any data from virtinfo or prtdiag
+        # check the zonename here as fallback
+        zonename = salt.utils.path.which("zonename")
+        if zonename:
+            zone = __salt__["cmd.run"]("{}".format(zonename))
+            if zone != "global":
+                grains["virtual"] = "zone"
+
+        # last ditch efford to check the brand identifier
+        elif os.path.isdir("/.SUNWnative"):
+            grains["virtual"] = "zone"
 
     # If we have a virtual_subtype, we're virtual, but maybe we couldn't
     # figure out what specific virtual type we were?
@@ -1196,7 +1212,7 @@ def _virtual_hv(osdata):
             version["minor"],
             version["extra"],
         ]
-    except (IOError, OSError, KeyError):
+    except (OSError, KeyError):
         pass
 
     # Try to read and decode the supported feature set of the hypervisor
@@ -1222,12 +1238,12 @@ def _virtual_hv(osdata):
         with salt.utils.files.fopen("/sys/hypervisor/properties/features", "r") as fhr:
             features = salt.utils.stringutils.to_unicode(fhr.read().strip())
         enabled_features = []
-        for bit, feat in six.iteritems(xen_feature_table):
+        for bit, feat in xen_feature_table.items():
             if int(features, 16) & (1 << bit):
                 enabled_features.append(feat)
         grains["virtual_hv_features"] = features
         grains["virtual_hv_features_list"] = enabled_features
-    except (IOError, OSError, KeyError):
+    except (OSError, KeyError):
         pass
 
     return grains
@@ -1308,7 +1324,8 @@ def _clean_value(key, val):
     else:
         # map unspecified, undefined, unknown & whatever to None
         if re.search(r"to be filled", val, flags=re.IGNORECASE) or re.search(
-            r"un(known|specified)|no(t|ne)? (asset|provided|defined|available|present|specified)",
+            r"un(known|specified)|no(t|ne)?"
+            r" (asset|provided|defined|available|present|specified)",
             val,
             flags=re.IGNORECASE,
         ):
@@ -1339,7 +1356,7 @@ def _windows_os_release_grain(caption, product_type):
                 # ie: R2
                 if re.match(r"^R\d+$", item):
                     release = item
-        os_release = "{0}Server{1}".format(version, release)
+        os_release = "{}Server{}".format(version, release)
     else:
         for item in caption.split(" "):
             # If it's a number, decimal number, Thin or Vista, then it's the
@@ -1390,6 +1407,7 @@ def _windows_platform_data():
     #    serialnumber
     #    osfullname
     #    timezone
+    #    uuid
     #    windowsdomain
     #    windowsdomaintype
     #    motherboard.productname
@@ -1409,6 +1427,8 @@ def _windows_platform_data():
         biosinfo = wmi_c.Win32_BIOS()[0]
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394498(v=vs.85).aspx
         timeinfo = wmi_c.Win32_TimeZone()[0]
+        # https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-computersystemproduct
+        csproductinfo = wmi_c.Win32_ComputerSystemProduct()[0]
 
         # http://msdn.microsoft.com/en-us/library/windows/desktop/aa394072(v=vs.85).aspx
         motherboard = {"product": None, "serial": None}
@@ -1425,7 +1445,7 @@ def _windows_platform_data():
 
         service_pack = None
         if info["ServicePackMajor"] > 0:
-            service_pack = "".join(["SP", six.text_type(info["ServicePackMajor"])])
+            service_pack = "".join(["SP", str(info["ServicePackMajor"])])
 
         os_release = _windows_os_release_grain(
             caption=osinfo.Caption, product_type=osinfo.ProductType
@@ -1446,6 +1466,7 @@ def _windows_platform_data():
             "serialnumber": _clean_value("serialnumber", biosinfo.SerialNumber),
             "osfullname": _clean_value("osfullname", osinfo.Caption),
             "timezone": _clean_value("timezone", timeinfo.Description),
+            "uuid": _clean_value("uuid", csproductinfo.UUID.lower()),
             "windowsdomain": _clean_value("windowsdomain", net_info["Domain"]),
             "windowsdomaintype": _clean_value(
                 "windowsdomaintype", net_info["DomainType"]
@@ -1523,15 +1544,18 @@ def id_():
 _REPLACE_LINUX_RE = re.compile(r"\W(?:gnu/)?linux", re.IGNORECASE)
 
 # This maps (at most) the first ten characters (no spaces, lowercased) of
-# 'osfullname' to the 'os' grain that Salt traditionally uses.
-# Please see os_data() and _supported_dists.
-# If your system is not detecting properly it likely needs an entry here.
+# 'osfullname' to the 'os' grain that Salt traditionally uses, and is used by
+# the os_data() function to create the "os" grain.
+#
+# If your system is not detecting the "os" grain properly, it likely needs an
+# entry in this dictionary.
 _OS_NAME_MAP = {
     "redhatente": "RedHat",
     "gentoobase": "Gentoo",
     "archarm": "Arch ARM",
     "arch": "Arch",
     "debian": "Debian",
+    "Junos": "Junos",
     "raspbian": "Raspbian",
     "fedoraremi": "Fedora",
     "chapeau": "Chapeau",
@@ -1542,6 +1566,7 @@ _OS_NAME_MAP = {
     "oracleserv": "OEL",
     "cloudserve": "CloudLinux",
     "cloudlinux": "CloudLinux",
+    "almalinux": "AlmaLinux",
     "pidora": "Fedora",
     "scientific": "ScientificLinux",
     "synology": "Synology",
@@ -1556,6 +1581,10 @@ _OS_NAME_MAP = {
     "slesexpand": "RES",
     "linuxmint": "Mint",
     "neon": "KDE neon",
+    "pop": "Pop",
+    "rocky": "Rocky",
+    "alibabaclo": "Alinux",
+    "mendel": "Mendel",
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -1569,10 +1598,12 @@ _OS_FAMILY_MAP = {
     "Korora": "RedHat",
     "FedBerry": "RedHat",
     "CentOS": "RedHat",
+    "CentOS Stream": "RedHat",
     "GoOSe": "RedHat",
     "Scientific": "RedHat",
     "Amazon": "RedHat",
     "CloudLinux": "RedHat",
+    "AlmaLinux": "RedHat",
     "OVS": "RedHat",
     "OEL": "RedHat",
     "XCP": "RedHat",
@@ -1580,6 +1611,7 @@ _OS_FAMILY_MAP = {
     "XenServer": "RedHat",
     "RES": "RedHat",
     "Sangoma": "RedHat",
+    "VMware Photon OS": "RedHat",
     "Mandrake": "Mandriva",
     "ESXi": "VMware",
     "Mint": "Debian",
@@ -1628,6 +1660,12 @@ _OS_FAMILY_MAP = {
     "Funtoo": "Gentoo",
     "AIX": "AIX",
     "TurnKey": "Debian",
+    "Pop": "Debian",
+    "Rocky": "RedHat",
+    "AstraLinuxCE": "Debian",
+    "AstraLinuxSE": "Debian",
+    "Alinux": "RedHat",
+    "Mendel": "Debian",
 }
 
 # Matches any possible format:
@@ -1638,10 +1676,8 @@ _OS_FAMILY_MAP = {
 #     DISTRIB_CODENAME='squeeze'
 #     DISTRIB_DESCRIPTION='Ubuntu 10.10'
 _LSB_REGEX = re.compile(
-    (
-        "^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:'|\")?"
-        "([\\w\\s\\.\\-_]+)(?:'|\")?"
-    )
+    "^(DISTRIB_(?:ID|RELEASE|CODENAME|DESCRIPTION))=(?:'|\")?"
+    "([\\w\\s\\.\\-_]+)(?:'|\")?"
 )
 
 
@@ -1651,14 +1687,14 @@ def _linux_bin_exists(binary):
     """
     for search_cmd in ("which", "type -ap"):
         try:
-            return __salt__["cmd.retcode"]("{0} {1}".format(search_cmd, binary)) == 0
+            return __salt__["cmd.retcode"]("{} {}".format(search_cmd, binary)) == 0
         except salt.exceptions.CommandExecutionError:
             pass
 
     try:
         return (
             len(
-                __salt__["cmd.run_all"]("whereis -b {0}".format(binary))[
+                __salt__["cmd.run_all"]("whereis -b {}".format(binary))[
                     "stdout"
                 ].split()
             )
@@ -1666,17 +1702,6 @@ def _linux_bin_exists(binary):
         )
     except salt.exceptions.CommandExecutionError:
         return False
-
-
-def _get_interfaces():
-    """
-    Provide a dict of the connected interfaces and their ip addresses
-    """
-
-    global _INTERFACES
-    if not _INTERFACES:
-        _INTERFACES = salt.utils.network.interfaces()
-    return _INTERFACES
 
 
 def _parse_lsb_release():
@@ -1691,8 +1716,8 @@ def _parse_lsb_release():
                     pass
                 else:
                     # Adds lsb_distrib_{id,release,codename,description}
-                    ret["lsb_{0}".format(key.lower())] = value.rstrip()
-    except (IOError, OSError) as exc:
+                    ret["lsb_{}".format(key.lower())] = value.rstrip()
+    except OSError as exc:
         log.trace("Failed to parse /etc/lsb-release: %s", exc)
     return ret
 
@@ -1718,7 +1743,7 @@ def _parse_os_release(*os_release_files):
                             r'\\([$"\'\\`])', r"\1", match.group(2)
                         )
             break
-        except (IOError, OSError):
+        except OSError:
             pass
 
     return ret
@@ -1791,7 +1816,18 @@ def os_data():
     ) = platform.uname()
     # pylint: enable=unpacking-non-sequence
 
-    if salt.utils.platform.is_proxy():
+    if salt.utils.platform.is_junos():
+        grains["kernel"] = "Junos"
+        grains["osfullname"] = "Junos"
+        grains["os"] = "Junos"
+        grains["os_family"] = "FreeBSD"
+        showver = _parse_junos_showver(
+            subprocess.run(
+                ["/usr/sbin/cli", "show", "version"], stdout=subprocess.PIPE, check=True
+            ).stdout
+        )
+        grains.update(showver)
+    elif salt.utils.platform.is_proxy():
         grains["kernel"] = "proxy"
         grains["kernelrelease"] = "proxy"
         grains["kernelversion"] = "proxy"
@@ -1854,11 +1890,11 @@ def os_data():
         try:
             os.stat("/run/systemd/system")
             grains["init"] = "systemd"
-        except (OSError, IOError):
+        except OSError:
             try:
                 with salt.utils.files.fopen("/proc/1/cmdline") as fhr:
                     init_cmdline = fhr.read().replace("\x00", " ").split()
-            except (IOError, OSError):
+            except OSError:
                 pass
             else:
                 try:
@@ -1883,14 +1919,13 @@ def os_data():
                                 buf = edge + buf
                                 for item in supported_inits:
                                     if item in buf:
-                                        if six.PY3:
-                                            item = item.decode("utf-8")
+                                        item = item.decode("utf-8")
                                         grains["init"] = item
                                         buf = b""
                                         break
                                 edge = buf[-edge_len:]
                                 buf = fp_.read(buf_size).lower()
-                    except (IOError, OSError) as exc:
+                    except OSError as exc:
                         log.error(
                             "Unable to read from init_bin (%s): %s", init_bin, exc
                         )
@@ -1923,9 +1958,9 @@ def os_data():
             import lsb_release  # pylint: disable=import-error
 
             release = lsb_release.get_distro_information()
-            for key, value in six.iteritems(release):
+            for key, value in release.items():
                 key = key.lower()
-                lsb_param = "lsb_{0}{1}".format(
+                lsb_param = "lsb_{}{}".format(
                     "" if key.startswith("distrib_") else "distrib_", key
                 )
                 grains[lsb_param] = value
@@ -2065,14 +2100,11 @@ def os_data():
                                 **synoinfo
                             )
 
-        # Use the already intelligent platform module to get distro info
-        # (though apparently it's not intelligent enough to strip quotes)
         log.trace(
-            "Getting OS name, release, and codename from "
-            "platform.linux_distribution()"
+            "Getting OS name, release, and codename from distro id, version, codename"
         )
         (osname, osrelease, oscodename) = [
-            x.strip('"').strip("'") for x in linux_distribution()
+            x.strip('"').strip("'") for x in _linux_distribution()
         ]
         # Try to assign these three names based on the lsb info, they tend to
         # be more accurate than what python gets from /etc/DISTRO-release.
@@ -2091,7 +2123,11 @@ def os_data():
             # /etc/os-release contains no minor distro release number so we fall back to parse
             # /etc/centos-release file instead.
             # Commit introducing this comment should be reverted after the upstream bug is released.
-            if "CentOS Linux 7" in grains.get("lsb_distrib_codename", ""):
+            # This also affects Centos 8
+            if any(
+                os in grains.get("lsb_distrib_codename", "")
+                for os in ["CentOS Linux 7", "CentOS Linux 8"]
+            ):
                 grains.pop("lsb_distrib_release", None)
             grains["osrelease"] = grains.get("lsb_distrib_release", osrelease).strip()
         grains["oscodename"] = (
@@ -2184,7 +2220,7 @@ def os_data():
         osbuild = __salt__["cmd.run"]("sw_vers -buildVersion")
         grains["os"] = "MacOS"
         grains["os_family"] = "MacOS"
-        grains["osfullname"] = "{0} {1}".format(osname, osrelease)
+        grains["osfullname"] = "{} {}".format(osname, osrelease)
         grains["osrelease"] = osrelease
         grains["osbuild"] = osbuild
         grains["init"] = "launchd"
@@ -2219,7 +2255,7 @@ def os_data():
         if grains["kernel"] == "NetBSD":
             grains.update(_netbsd_gpu_data())
     if not grains["os"]:
-        grains["os"] = "Unknown {0}".format(grains["kernel"])
+        grains["os"] = "Unknown {}".format(grains["kernel"])
         grains["os_family"] = "Unknown"
     else:
         # this assigns family names based on the os name
@@ -2277,7 +2313,7 @@ def os_data():
             in ("Debian", "FreeBSD", "OpenBSD", "NetBSD", "Mac", "Raspbian")
             else "osfullname"
         ]
-        grains["osfinger"] = "{0}-{1}".format(
+        grains["osfinger"] = "{}-{}".format(
             os_name,
             grains["osrelease"]
             if os_name in ("Ubuntu",)
@@ -2359,7 +2395,8 @@ def hostname():
     # Otherwise we would stacktrace below
     if __FQDN__ is None:  # still!
         log.error(
-            "Having trouble getting a hostname.  Does this machine have its hostname and domain set properly?"
+            "Having trouble getting a hostname.  Does this machine have its hostname"
+            " and domain set properly?"
         )
         __FQDN__ = "localhost.localdomain"
 
@@ -2387,34 +2424,23 @@ def fqdns():
     """
     Return all known FQDNs for the system by enumerating all interfaces and
     then trying to reverse resolve them (excluding 'lo' interface).
+    To disable the fqdns grain, set enable_fqdns_grains: False in the minion configuration file.
     """
     # Provides:
     # fqdns
-
-    grains = {}
-    fqdns = set()
-
-    addresses = salt.utils.network.ip_addrs(
-        include_loopback=False, interface_data=_INTERFACES
-    )
-    addresses.extend(
-        salt.utils.network.ip_addrs6(include_loopback=False, interface_data=_INTERFACES)
-    )
-    err_message = "An exception occurred resolving address '%s': %s"
-    for ip in addresses:
-        try:
-            fqdns.add(socket.getfqdn(socket.gethostbyaddr(ip)[0]))
-        except socket.herror as err:
-            if err.errno in (0, HOST_NOT_FOUND, NO_DATA):
-                # No FQDN for this IP address, so we don't need to know this all the time.
-                log.debug("Unable to resolve address %s: %s", ip, err)
-            else:
-                log.error(err_message, ip, err)
-        except (socket.error, socket.gaierror, socket.timeout) as err:
-            log.error(err_message, ip, err)
-
-    grains["fqdns"] = sorted(list(fqdns))
-    return grains
+    opt = {"fqdns": []}
+    if __opts__.get(
+        "enable_fqdns_grains",
+        False
+        if salt.utils.platform.is_windows()
+        or salt.utils.platform.is_proxy()
+        or salt.utils.platform.is_sunos()
+        or salt.utils.platform.is_aix()
+        or salt.utils.platform.is_junos()
+        else True,
+    ):
+        opt = __salt__["network.fqdns"]()
+    return opt
 
 
 def ip_fqdn():
@@ -2437,8 +2463,8 @@ def ip_fqdn():
             try:
                 start_time = datetime.datetime.utcnow()
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
-                ret[key] = list(set(item[4][0] for item in info))
-            except (socket.error, UnicodeError):
+                ret[key] = list({item[4][0] for item in info})
+            except (OSError, UnicodeError):
                 timediff = datetime.datetime.utcnow() - start_time
                 if timediff.seconds > 5 and __opts__["__role"] == "master":
                     log.warning(
@@ -2559,10 +2585,14 @@ def dns():
     if salt.utils.platform.is_windows() or "proxyminion" in __opts__:
         return {}
 
-    resolv = salt.utils.dns.parse_resolv()
+    if os.path.exists("/run/systemd/resolve/resolv.conf"):
+        resolv = salt.utils.dns.parse_resolv("/run/systemd/resolve/resolv.conf")
+    else:
+        resolv = salt.utils.dns.parse_resolv()
+
     for key in ("nameservers", "ip4_nameservers", "ip6_nameservers", "sortlist"):
         if key in resolv:
-            resolv[key] = [six.text_type(i) for i in resolv[key]]
+            resolv[key] = [str(i) for i in resolv[key]]
 
     return {"dns": resolv} if resolv else {}
 
@@ -2715,7 +2745,7 @@ def _hw_data(osdata):
             contents_file = os.path.join("/sys/class/dmi/id", fw_file)
             if os.path.exists(contents_file):
                 try:
-                    with salt.utils.files.fopen(contents_file, "r") as ifile:
+                    with salt.utils.files.fopen(contents_file, "rb") as ifile:
                         grains[key] = salt.utils.stringutils.to_unicode(
                             ifile.read().strip(), errors="replace"
                         )
@@ -2725,9 +2755,10 @@ def _hw_data(osdata):
                     # Some firmwares provide non-valid 'product_name'
                     # files, ignore them
                     log.debug(
-                        "The content in /sys/devices/virtual/dmi/id/product_name is not valid"
+                        "The content in /sys/devices/virtual/dmi/id/product_name is not"
+                        " valid"
                     )
-                except (IOError, OSError) as err:
+                except OSError as err:
                     # PermissionError is new to Python 3, but corresponds to the EACESS and
                     # EPERM error numbers. Use those instead here for PY2 compatibility.
                     if err.errno == EACCES or err.errno == EPERM:
@@ -2748,7 +2779,7 @@ def _hw_data(osdata):
             "biosreleasedate": __salt__["smbios.get"]("bios-release-date"),
             "uuid": __salt__["smbios.get"]("system-uuid"),
         }
-        grains = dict([(key, val) for key, val in grains.items() if val is not None])
+        grains = {key: val for key, val in grains.items() if val is not None}
         uuid = __salt__["smbios.get"]("system-uuid")
         if uuid is not None:
             grains["uuid"] = uuid.lower()
@@ -2768,8 +2799,8 @@ def _hw_data(osdata):
             "serialnumber": "serial#",
             "productname": "DeviceDesc",
         }
-        for grain_name, cmd_key in six.iteritems(hwdata):
-            result = __salt__["cmd.run_all"]("fw_printenv {0}".format(cmd_key))
+        for grain_name, cmd_key in hwdata.items():
+            result = __salt__["cmd.run_all"]("fw_printenv {}".format(cmd_key))
             if result["retcode"] == 0:
                 uboot_keyval = result["stdout"].split("=")
                 grains[grain_name] = _clean_value(grain_name, uboot_keyval[1])
@@ -2787,8 +2818,8 @@ def _hw_data(osdata):
                 "biosreleasedate": "smbios.bios.reldate",
                 "uuid": "smbios.system.uuid",
             }
-            for key, val in six.iteritems(fbsd_hwdata):
-                value = __salt__["cmd.run"]("{0} {1}".format(kenv, val))
+            for key, val in fbsd_hwdata.items():
+                value = __salt__["cmd.run"]("{} {}".format(kenv, val))
                 grains[key] = _clean_value(key, value)
     elif osdata["kernel"] == "OpenBSD":
         sysctl = salt.utils.path.which("sysctl")
@@ -2799,8 +2830,8 @@ def _hw_data(osdata):
             "serialnumber": "hw.serialno",
             "uuid": "hw.uuid",
         }
-        for key, oid in six.iteritems(hwdata):
-            value = __salt__["cmd.run"]("{0} -n {1}".format(sysctl, oid))
+        for key, oid in hwdata.items():
+            value = __salt__["cmd.run"]("{} -n {}".format(sysctl, oid))
             if not value.endswith(" value is not available"):
                 grains[key] = _clean_value(key, value)
     elif osdata["kernel"] == "NetBSD":
@@ -2813,8 +2844,8 @@ def _hw_data(osdata):
             "biosreleasedate": "machdep.dmi.bios-date",
             "uuid": "machdep.dmi.system-uuid",
         }
-        for key, oid in six.iteritems(nbsd_hwdata):
-            result = __salt__["cmd.run_all"]("{0} -n {1}".format(sysctl, oid))
+        for key, oid in nbsd_hwdata.items():
+            result = __salt__["cmd.run_all"]("{} -n {}".format(sysctl, oid))
             if result["retcode"] == 0:
                 grains[key] = _clean_value(key, result["stdout"])
     elif osdata["kernel"] == "Darwin":
@@ -2822,7 +2853,7 @@ def _hw_data(osdata):
         sysctl = salt.utils.path.which("sysctl")
         hwdata = {"productname": "hw.model"}
         for key, oid in hwdata.items():
-            value = __salt__["cmd.run"]("{0} -b {1}".format(sysctl, oid))
+            value = __salt__["cmd.run"]("{} -b {}".format(sysctl, oid))
             if not value.endswith(" is invalid"):
                 grains[key] = _clean_value(key, value)
     elif osdata["kernel"] == "SunOS" and osdata["cpuarch"].startswith("sparc"):
@@ -2836,7 +2867,7 @@ def _hw_data(osdata):
             ("/usr/sbin/virtinfo", "-a"),
         ):
             if salt.utils.path.which(cmd):  # Also verifies that cmd is executable
-                data += __salt__["cmd.run"]("{0} {1}".format(cmd, args))
+                data += __salt__["cmd.run"]("{} {}".format(cmd, args))
                 data += "\n"
 
         sn_regexes = [
@@ -2865,7 +2896,7 @@ def _hw_data(osdata):
             re.compile(r) for r in [r"(?im)^\s*Domain\s+UUID:\s*(\S+)"]  # virtinfo
         ]
 
-        manufacture_regexes = [
+        manufacturer_regexes = [
             re.compile(r)
             for r in [r"(?im)^\s*System\s+Configuration:\s*(.*)(?=sun)"]  # prtdiag
         ]
@@ -2934,10 +2965,12 @@ def _hw_data(osdata):
                 grains["uuid"] = res.group(1).strip().replace("'", "")
                 break
 
-        for regex in manufacture_regexes:
+        for regex in manufacturer_regexes:
             res = regex.search(data)
             if res and len(res.groups()) >= 1:
-                grains["manufacture"] = res.group(1).strip().replace("'", "")
+                grains["manufacturer"] = res.group(1).strip().replace("'", "")
+                # Remove manufacture in Sulfur: salt.utils.versions.warn_until("Sulfur")
+                grains["manufacture"] = grains["manufacturer"]
                 break
 
         for regex in product_regexes:
@@ -2951,7 +2984,7 @@ def _hw_data(osdata):
     elif osdata["kernel"] == "AIX":
         cmd = salt.utils.path.which("prtconf")
         if cmd:
-            data = __salt__["cmd.run"]("{0}".format(cmd)) + os.linesep
+            data = __salt__["cmd.run"]("{}".format(cmd)) + os.linesep
             for dest, regstring in (
                 ("serialnumber", r"(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)"),
                 ("systemfirmware", r"(?im)^\s*Firmware\s+Version:\s+(.*)"),
@@ -2987,29 +3020,8 @@ def get_server_id():
     if salt.utils.platform.is_proxy():
         return {}
     id_ = __opts__.get("id", "")
-    id_hash = None
-    py_ver = sys.version_info[:2]
-    if py_ver >= (3, 3):
-        # Python 3.3 enabled hash randomization, so we need to shell out to get
-        # a reliable hash.
-        id_hash = __salt__["cmd.run"](
-            [sys.executable, "-c", 'print(hash("{0}"))'.format(id_)],
-            env={"PYTHONHASHSEED": "0"},
-        )
-        try:
-            id_hash = int(id_hash)
-        except (TypeError, ValueError):
-            log.debug(
-                "Failed to hash the ID to get the server_id grain. Result of "
-                "hash command: %s",
-                id_hash,
-            )
-            id_hash = None
-    if id_hash is None:
-        # Python < 3.3 or error encountered above
-        id_hash = hash(id_)
-
-    return {"server_id": abs(id_hash % (2 ** 31))}
+    hash_ = int(hashlib.sha256(id_.encode()).hexdigest(), 16)
+    return {"server_id": abs(hash_ % (2 ** 31))}
 
 
 def get_master():
@@ -3054,14 +3066,14 @@ def default_gateway():
             for line in out.splitlines():
                 if line.startswith("default"):
                     grains["ip_gw"] = True
-                    grains["ip{0}_gw".format(ip_version)] = True
+                    grains["ip{}_gw".format(ip_version)] = True
                     try:
                         via, gw_ip = line.split()[1:3]
                     except ValueError:
                         pass
                     else:
                         if via == "via":
-                            grains["ip{0}_gw".format(ip_version)] = gw_ip
+                            grains["ip{}_gw".format(ip_version)] = gw_ip
                     break
         except Exception:  # pylint: disable=broad-except
             continue
@@ -3072,20 +3084,26 @@ def kernelparams():
     """
     Return the kernel boot parameters
     """
-    try:
-        with salt.utils.files.fopen("/proc/cmdline", "r") as fhr:
-            cmdline = fhr.read()
-            grains = {"kernelparams": []}
-            for data in [
-                item.split("=") for item in salt.utils.args.shlex_split(cmdline)
-            ]:
-                value = None
-                if len(data) == 2:
-                    value = data[1].strip('"')
+    if salt.utils.platform.is_windows():
+        # TODO: add grains using `bcdedit /enum {current}`
+        return {}
+    else:
+        try:
+            with salt.utils.files.fopen("/proc/cmdline", "r") as fhr:
+                cmdline = fhr.read()
+                grains = {"kernelparams": []}
+                for data in [
+                    item.split("=") for item in salt.utils.args.shlex_split(cmdline)
+                ]:
+                    value = None
+                    if len(data) == 2:
+                        value = data[1].strip('"')
 
-                grains["kernelparams"] += [(data[0], value)]
-    except IOError as exc:
-        grains = {}
-        log.debug("Failed to read /proc/cmdline: %s", exc)
+                    grains["kernelparams"] += [(data[0], value)]
+        except FileNotFoundError:
+            grains = {}
+        except OSError as exc:
+            grains = {}
+            log.debug("Failed to read /proc/cmdline: %s", exc)
 
-    return grains
+        return grains

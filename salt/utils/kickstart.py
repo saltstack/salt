@@ -1,24 +1,21 @@
-# -*- coding: utf-8 -*-
 """
 Utilities for managing kickstart
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 """
-from __future__ import absolute_import, unicode_literals
 
-import argparse  # pylint: disable=minimum-python-version
+import argparse
 import shlex
 
 import salt.utils.files
 import salt.utils.yaml
-from salt.ext.six.moves import range
 
 
 def clean_args(args):
     """
     Cleans up the args that weren't passed in
     """
-    for arg in args:
+    for arg in list(args):
         if not args[arg]:
             del args[arg]
     return args
@@ -67,7 +64,7 @@ def parse_auth(rule):
         "disablewins",
     )
     for arg in noargs:
-        parser.add_argument("--{0}".format(arg), dest=arg, action="store_true")
+        parser.add_argument("--{}".format(arg), dest=arg, action="store_true")
 
     parser.add_argument("--enablenis", dest="enablenis", action="store")
     parser.add_argument("--hesiodrhs", dest="hesiodrhs", action="store")
@@ -598,15 +595,15 @@ def parse_raid(rule):
 
     partitions = []
     newrules = []
-    for count in range(0, len(rules)):
+    for count, rule in enumerate(rules):
         if count == 0:
-            newrules.append(rules[count])
+            newrules.append(rule)
             continue
-        elif rules[count].startswith("--"):
-            newrules.append(rules[count])
+        elif rule.startswith("--"):
+            newrules.append(rule)
             continue
         else:
-            partitions.append(rules[count])
+            partitions.append(rule)
     rules = newrules
 
     parser.add_argument("mntpoint")
@@ -770,10 +767,7 @@ def parse_updates(rule):
     """
     rules = shlex.split(rule)
     rules.pop(0)
-    if len(rules) > 0:
-        return {"url": rules[0]}
-    else:
-        return True
+    return {"url": rules[0]} if rules else True
 
 
 def parse_upgrade(rule):
@@ -857,15 +851,15 @@ def parse_volgroup(rule):
 
     partitions = []
     newrules = []
-    for count in range(0, len(rules)):
+    for count, rule in enumerate(rules):
         if count == 0:
-            newrules.append(rules[count])
+            newrules.append(rule)
             continue
-        elif rules[count].startswith("--"):
-            newrules.append(rules[count])
+        elif rule.startswith("--"):
+            newrules.append(rule)
             continue
         else:
-            partitions.append(rules[count])
+            partitions.append(rule)
     rules = newrules
 
     parser.add_argument("name")
@@ -973,7 +967,7 @@ def mksls(src, dst=None):
                 elif line.startswith("lang"):
                     ks_opts["lang"] = parse_lang(line)
                 elif line.startswith("logvol"):
-                    if "logvol" not in ks_opts.keys():
+                    if "logvol" not in ks_opts:
                         ks_opts["logvol"] = []
                     ks_opts["logvol"].append(parse_logvol(line))
                 elif line.startswith("logging"):
@@ -985,19 +979,19 @@ def mksls(src, dst=None):
                 elif line.startswith("multipath"):
                     ks_opts["multipath"] = parse_multipath(line)
                 elif line.startswith("network"):
-                    if "network" not in ks_opts.keys():
+                    if "network" not in ks_opts:
                         ks_opts["network"] = []
                     ks_opts["network"].append(parse_network(line))
                 elif line.startswith("nfs"):
                     ks_opts["nfs"] = True
                 elif line.startswith("part ") or line.startswith("partition"):
-                    if "part" not in ks_opts.keys():
+                    if "part" not in ks_opts:
                         ks_opts["part"] = []
                     ks_opts["part"].append(parse_partition(line))
                 elif line.startswith("poweroff"):
                     ks_opts["poweroff"] = True
                 elif line.startswith("raid"):
-                    if "raid" not in ks_opts.keys():
+                    if "raid" not in ks_opts:
                         ks_opts["raid"] = []
                     ks_opts["raid"].append(parse_raid(line))
                 elif line.startswith("reboot"):
@@ -1055,7 +1049,7 @@ def mksls(src, dst=None):
 
             if line.startswith("%packages"):
                 mode = "packages"
-                if "packages" not in ks_opts.keys():
+                if "packages" not in ks_opts:
                     ks_opts["packages"] = {"packages": {}}
 
                 parser = argparse.ArgumentParser()
@@ -1137,11 +1131,11 @@ def mksls(src, dst=None):
 
     # Set timezone
     sls[ks_opts["timezone"]["timezone"]] = {"timezone": ["system"]}
-    if "utc" in ks_opts["timezone"].keys():
+    if "utc" in ks_opts["timezone"]:
         sls[ks_opts["timezone"]["timezone"]]["timezone"].append("utc")
 
     # Set network
-    if "network" in ks_opts.keys():
+    if "network" in ks_opts:
         for interface in ks_opts["network"]:
             device = interface.get("device", None)
             if device is not None:
@@ -1149,17 +1143,17 @@ def mksls(src, dst=None):
                 sls[device] = {"proto": interface["bootproto"]}
                 del interface["bootproto"]
 
-                if "onboot" in interface.keys():
+                if "onboot" in interface:
                     if "no" in interface["onboot"]:
                         sls[device]["enabled"] = False
                     else:
                         sls[device]["enabled"] = True
                     del interface["onboot"]
 
-                if "noipv4" in interface.keys():
+                if "noipv4" in interface:
                     sls[device]["ipv4"] = {"enabled": False}
                     del interface["noipv4"]
-                if "noipv6" in interface.keys():
+                if "noipv6" in interface:
                     sls[device]["ipv6"] = {"enabled": False}
                     del interface["noipv6"]
 
@@ -1178,7 +1172,7 @@ def mksls(src, dst=None):
                 }
 
     # Set selinux
-    if "selinux" in ks_opts.keys():
+    if "selinux" in ks_opts:
         for mode in ks_opts["selinux"]:
             sls[mode] = {"selinux": ["mode"]}
 

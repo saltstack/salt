@@ -1,21 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 integration tests for mac_ports
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt libs
-import salt.utils.path
-import salt.utils.platform
-
-# Import Salt Testing libs
+import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import runs_on
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
+@runs_on(kernel="Darwin")
+@pytest.mark.skip_if_binaries_missing("port")
 class MacPortsModuleTest(ModuleCase):
     """
     Validate the mac_ports module
@@ -27,12 +21,6 @@ class MacPortsModuleTest(ModuleCase):
         """
         Get current settings
         """
-        if not salt.utils.platform.is_darwin():
-            self.skipTest("Test only available on macOS")
-
-        if not salt.utils.path.which("port"):
-            self.skipTest("Test requires port binary")
-
         self.AGREE_INSTALLED = "agree" in self.run_function("pkg.list_pkgs")
         self.run_function("pkg.refresh_db")
 
@@ -43,7 +31,7 @@ class MacPortsModuleTest(ModuleCase):
         if not self.AGREE_INSTALLED:
             self.run_function("pkg.remove", ["agree"])
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_list_pkgs(self):
         """
         Test pkg.list_pkgs
@@ -52,7 +40,7 @@ class MacPortsModuleTest(ModuleCase):
         self.assertIsInstance(self.run_function("pkg.list_pkgs"), dict)
         self.assertIn("agree", self.run_function("pkg.list_pkgs"))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_latest_version(self):
         """
         Test pkg.latest_version
@@ -62,7 +50,7 @@ class MacPortsModuleTest(ModuleCase):
         self.assertIsInstance(result, dict)
         self.assertIn("agree", result)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_remove(self):
         """
         Test pkg.remove
@@ -72,7 +60,7 @@ class MacPortsModuleTest(ModuleCase):
         self.assertIsInstance(removed, dict)
         self.assertIn("agree", removed)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_install(self):
         """
         Test pkg.install
@@ -90,7 +78,7 @@ class MacPortsModuleTest(ModuleCase):
             self.run_function("pkg.list_upgrades", refresh=False), dict
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_upgrade_available(self):
         """
         Test pkg.upgrade_available
@@ -106,7 +94,7 @@ class MacPortsModuleTest(ModuleCase):
         """
         self.assertTrue(self.run_function("pkg.refresh_db"))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_upgrade(self):
         """
         Test pkg.upgrade

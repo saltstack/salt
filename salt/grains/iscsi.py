@@ -1,22 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 Grains for iSCSI Qualified Names (IQN).
 
 .. versionadded:: 2018.3.0
 
-To enable these grains set `iscsi_grains: True`.
+To enable these grains set `iscsi_grains: True` in the minion config.
 
 .. code-block:: yaml
 
     iscsi_grains: True
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import logging
 
-# Import Salt libs
 import salt.modules.cmdmod
 import salt.utils.files
 import salt.utils.path
@@ -63,7 +59,7 @@ def _linux_iqn():
                 line = line.strip()
                 if line.startswith("InitiatorName="):
                     ret.append(line.split("=", 1)[1])
-    except IOError as ex:
+    except OSError as ex:
         if ex.errno != errno.ENOENT:
             log.debug("Error while accessing '%s': %s", initiator, ex)
 
@@ -103,8 +99,9 @@ def _windows_iqn():
     get = "iSCSINodeName"
 
     cmd_ret = salt.modules.cmdmod.run_all(
-        "{0} /namespace:{1} path {2} get {3} /format:table"
-        "".format(wmic, namespace, path, get)
+        "{} /namespace:{} path {} get {} /format:table".format(
+            wmic, namespace, path, get
+        )
     )
 
     for line in cmd_ret["stdout"].splitlines():

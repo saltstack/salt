@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for Opkg
 
@@ -8,7 +7,7 @@ Support for Opkg
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 
-.. versionadded: 2016.3.0
+.. versionadded:: 2016.3.0
 
 .. note::
 
@@ -16,16 +15,15 @@ Support for Opkg
     must be installed.
 
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import errno
 import logging
 import os
+import pathlib
 import re
+import shlex
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.data
 import salt.utils.files
@@ -35,10 +33,6 @@ import salt.utils.pkg
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves import shlex_quote as _cmd_quote  # pylint: disable=import-error
 
 REPO_REGEXP = r'^#?\s*(src|src/gz)\s+([^\s<>]+|"[^<>]+")\s+[^\s<>]+'
 OPKG_CONFDIR = "/etc/opkg"
@@ -59,6 +53,14 @@ __virtualname__ = "pkg"
 NILRT_RESTARTCHECK_STATE_PATH = "/var/lib/salt/restartcheck_state"
 
 
+def _get_nisysapi_conf_d_path():
+    return "/usr/lib/{}/nisysapi/conf.d/experts/".format(
+        "arm-linux-gnueabi"
+        if "arm" in __grains__.get("cpuarch")
+        else "x86_64-linux-gnu"
+    )
+
+
 def _update_nilrt_restart_state():
     """
     NILRT systems determine whether to reboot after various package operations
@@ -70,30 +72,70 @@ def _update_nilrt_restart_state():
     and checksums to be used later by the restartcheck module.
 
     """
+    # TODO: This stat & md5sum should be replaced with _fingerprint_file call -W. Werner, 2020-08-18
+    uname = __salt__["cmd.run_stdout"]("uname -r")
     __salt__["cmd.shell"](
-        "stat -c %Y /lib/modules/$(uname -r)/modules.dep >{0}/modules.dep.timestamp".format(
-            NILRT_RESTARTCHECK_STATE_PATH
+        "stat -c %Y /lib/modules/{}/modules.dep >{}/modules.dep.timestamp".format(
+            uname, NILRT_RESTARTCHECK_STATE_PATH
         )
     )
     __salt__["cmd.shell"](
-        "md5sum /lib/modules/$(uname -r)/modules.dep >{0}/modules.dep.md5sum".format(
-            NILRT_RESTARTCHECK_STATE_PATH
+        "md5sum /lib/modules/{}/modules.dep >{}/modules.dep.md5sum".format(
+            uname, NILRT_RESTARTCHECK_STATE_PATH
         )
     )
 
     # We can't assume nisysapi.ini always exists like modules.dep
     nisysapi_path = "/usr/local/natinst/share/nisysapi.ini"
     if os.path.exists(nisysapi_path):
+        # TODO: This stat & md5sum should be replaced with _fingerprint_file call -W. Werner, 2020-08-18
         __salt__["cmd.shell"](
-            "stat -c %Y {0} >{1}/nisysapi.ini.timestamp".format(
+            "stat -c %Y {} >{}/nisysapi.ini.timestamp".format(
                 nisysapi_path, NILRT_RESTARTCHECK_STATE_PATH
             )
         )
         __salt__["cmd.shell"](
-            "md5sum {0} >{1}/nisysapi.ini.md5sum".format(
+            "md5sum {} >{}/nisysapi.ini.md5sum".format(
                 nisysapi_path, NILRT_RESTARTCHECK_STATE_PATH
             )
         )
+
+    # Expert plugin files get added to a conf.d dir, so keep track of the total
+    # no. of files, their timestamps and content hashes
+    nisysapi_conf_d_path = _get_nisysapi_conf_d_path()
+
+    if os.path.exists(nisysapi_conf_d_path):
+        with salt.utils.files.fopen(
+            "{}/sysapi.conf.d.count".format(NILRT_RESTARTCHECK_STATE_PATH), "w"
+        ) as fcount:
+            fcount.write(str(len(os.listdir(nisysapi_conf_d_path))))
+
+        for fexpert in os.listdir(nisysapi_conf_d_path):
+            _fingerprint_file(
+                filename=pathlib.Path(nisysapi_conf_d_path, fexpert),
+                fingerprint_dir=pathlib.Path(NILRT_RESTARTCHECK_STATE_PATH),
+            )
+
+
+def _fingerprint_file(*, filename, fingerprint_dir):
+    """
+    Compute stat & md5sum hash of provided ``filename``. Store
+    the hash and timestamp in ``fingerprint_dir``.
+
+    filename
+        ``Path`` to the file to stat & hash.
+
+    fingerprint_dir
+        ``Path`` of the directory to store the stat and hash output files.
+    """
+    __salt__["cmd.shell"](
+        "stat -c %Y {} > {}/{}.timestamp".format(
+            filename, fingerprint_dir, filename.name
+        )
+    )
+    __salt__["cmd.shell"](
+        "md5sum {} > {}/{}.md5sum".format(filename, fingerprint_dir, filename.name)
+    )
 
 
 def _get_restartcheck_result(errors):
@@ -134,19 +176,12 @@ def __virtual__():
             if exc.errno != errno.EEXIST:
                 return (
                     False,
-                    "Error creating {0} (-{1}): {2}".format(
+                    "Error creating {} (-{}): {}".format(
                         NILRT_RESTARTCHECK_STATE_PATH, exc.errno, exc.strerror
                     ),
                 )
-        # modules.dep always exists, make sure its restart state files also exist
-        if not (
-            os.path.exists(
-                os.path.join(NILRT_RESTARTCHECK_STATE_PATH, "modules.dep.timestamp")
-            )
-            and os.path.exists(
-                os.path.join(NILRT_RESTARTCHECK_STATE_PATH, "modules.dep.md5sum")
-            )
-        ):
+        # populate state dir if empty
+        if not os.listdir(NILRT_RESTARTCHECK_STATE_PATH):
             _update_nilrt_restart_state()
         return __virtualname__
 
@@ -278,7 +313,7 @@ def refresh_db(failhard=False, **kwargs):  # pylint: disable=unused-argument
 
     if failhard and error_repos:
         raise CommandExecutionError(
-            "Error getting repos: {0}".format(", ".join(error_repos))
+            "Error getting repos: {}".format(", ".join(error_repos))
         )
 
     # On a non-zero exit code where no failed repos were found, raise an
@@ -480,7 +515,7 @@ def install(
     elif pkg_type == "repository":
         if not kwargs.get("install_recommends", True):
             cmd_prefix.append("--no-install-recommends")
-        for pkgname, pkgversion in six.iteritems(pkg_params):
+        for pkgname, pkgversion in pkg_params.items():
             if name and pkgs is None and kwargs.get("version") and len(pkg_params) == 1:
                 # Only use the 'version' param if 'name' was not specified as a
                 # comma-separated list
@@ -496,7 +531,7 @@ def install(
                 else:
                     to_install.append(pkgname)
             else:
-                pkgstr = "{0}={1}".format(pkgname, version_num)
+                pkgstr = "{}={}".format(pkgname, version_num)
                 cver = old.get(pkgname, "")
                 if (
                     reinstall
@@ -555,7 +590,7 @@ def install(
                 # Just need the package name.
                 pkginfo_dict = _process_info_installed_output(out["stdout"], [])
                 if pkginfo_dict:
-                    to_reinstall.append(list(pkginfo_dict.keys())[0])
+                    to_reinstall.append(next(iter(pkginfo_dict)))
 
     for pkgname in to_reinstall:
         if pkgname not in ret or pkgname in old:
@@ -717,7 +752,6 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
 
-
     CLI Example:
 
     .. code-block:: bash
@@ -804,18 +838,18 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
 
         state = _get_state(target)
         if not state:
-            ret[target]["comment"] = "Package {0} not currently held.".format(target)
+            ret[target]["comment"] = "Package {} not currently held.".format(target)
         elif state != "hold":
             if "test" in __opts__ and __opts__["test"]:
                 ret[target].update(result=None)
-                ret[target]["comment"] = "Package {0} is set to be held.".format(target)
+                ret[target]["comment"] = "Package {} is set to be held.".format(target)
             else:
                 result = _set_state(target, "hold")
                 ret[target].update(changes=result[target], result=True)
-                ret[target]["comment"] = "Package {0} is now being held.".format(target)
+                ret[target]["comment"] = "Package {} is now being held.".format(target)
         else:
             ret[target].update(result=True)
-            ret[target]["comment"] = "Package {0} is already set to be held.".format(
+            ret[target]["comment"] = "Package {} is already set to be held.".format(
                 target
             )
     return ret
@@ -867,22 +901,22 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
         state = _get_state(target)
         if not state:
-            ret[target]["comment"] = "Package {0} does not have a state.".format(target)
+            ret[target]["comment"] = "Package {} does not have a state.".format(target)
         elif state == "hold":
             if "test" in __opts__ and __opts__["test"]:
                 ret[target].update(result=None)
-                ret["comment"] = "Package {0} is set not to be held.".format(target)
+                ret["comment"] = "Package {} is set not to be held.".format(target)
             else:
                 result = _set_state(target, "ok")
                 ret[target].update(changes=result[target], result=True)
-                ret[target][
-                    "comment"
-                ] = "Package {0} is no longer being " "held.".format(target)
+                ret[target]["comment"] = "Package {} is no longer being held.".format(
+                    target
+                )
         else:
             ret[target].update(result=True)
-            ret[target][
-                "comment"
-            ] = "Package {0} is already set not to be " "held.".format(target)
+            ret[target]["comment"] = "Package {} is already set not to be held.".format(
+                target
+            )
     return ret
 
 
@@ -925,7 +959,7 @@ def _set_state(pkg, state):
     ret = {}
     valid_states = ("hold", "noprune", "user", "ok", "installed", "unpacked")
     if state not in valid_states:
-        raise SaltInvocationError("Invalid state: {0}".format(state))
+        raise SaltInvocationError("Invalid state: {}".format(state))
     oldstate = _get_state(pkg)
     cmd = ["opkg", "flag"]
     cmd.append(state)
@@ -935,6 +969,18 @@ def _set_state(pkg, state):
     # Missing return value check due to opkg issue 160
     ret[pkg] = {"old": oldstate, "new": state}
     return ret
+
+
+def _list_pkgs_from_context(versions_as_list):
+    """
+    Use pkg list from __context__
+    """
+    if versions_as_list:
+        return __context__["pkg.list_pkgs"]
+    else:
+        ret = copy.deepcopy(__context__["pkg.list_pkgs"])
+        __salt__["pkg_resource.stringify"](ret)
+        return ret
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -958,12 +1004,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
         return {}
 
     if "pkg.list_pkgs" in __context__:
-        if versions_as_list:
-            return __context__["pkg.list_pkgs"]
-        else:
-            ret = copy.deepcopy(__context__["pkg.list_pkgs"])
-            __salt__["pkg_resource.stringify"](ret)
-            return ret
+        return _list_pkgs_from_context(versions_as_list)
 
     cmd = ["opkg", "list-installed"]
     ret = {}
@@ -1095,7 +1136,7 @@ def info_installed(*names, **kwargs):
             install_date_time_t, md5sum, packager, provides, recommends,
             replaces, size, source, suggests, url, version
 
-    CLI example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -1109,7 +1150,7 @@ def info_installed(*names, **kwargs):
     attr = kwargs.pop("attr", None)
     if attr is None:
         filter_attrs = None
-    elif isinstance(attr, six.string_types):
+    elif isinstance(attr, str):
         filter_attrs = set(attr.split(","))
     else:
         filter_attrs = set(attr)
@@ -1180,11 +1221,7 @@ def version_cmp(
 
         salt '*' pkg.version_cmp '0.2.4-0' '0.2.4.1-0'
     """
-    normalize = (
-        lambda x: six.text_type(x).split(":", 1)[-1]
-        if ignore_epoch
-        else six.text_type(x)
-    )
+    normalize = lambda x: str(x).split(":", 1)[-1] if ignore_epoch else str(x)
     pkg1 = normalize(pkg1)
     pkg2 = normalize(pkg2)
 
@@ -1200,22 +1237,85 @@ def version_cmp(
         cmd_compare = ["opkg-compare-versions"]
     else:
         log.warning(
-            "Unable to find a compare-versions utility installed. Either upgrade opkg to "
-            "version > 0.3.4 (preferred) or install the older opkg-compare-versions script."
+            "Unable to find a compare-versions utility installed. Either upgrade opkg"
+            " to version > 0.3.4 (preferred) or install the older opkg-compare-versions"
+            " script."
         )
         return None
 
     for oper, ret in (("<<", -1), ("=", 0), (">>", 1)):
         cmd = cmd_compare[:]
-        cmd.append(_cmd_quote(pkg1))
+        cmd.append(shlex.quote(pkg1))
         cmd.append(oper)
-        cmd.append(_cmd_quote(pkg2))
+        cmd.append(shlex.quote(pkg2))
         retcode = __salt__["cmd.retcode"](
             cmd, output_loglevel="trace", ignore_retcode=True, python_shell=False
         )
         if retcode == 0:
             return ret
     return None
+
+
+def _set_repo_option(repo, option):
+    """
+    Set the option to repo
+    """
+    if not option:
+        return
+    opt = option.split("=")
+    if len(opt) != 2:
+        return
+    if opt[0] == "trusted":
+        repo["trusted"] = opt[1] == "yes"
+    else:
+        repo[opt[0]] = opt[1]
+
+
+def _set_repo_options(repo, options):
+    """
+    Set the options to the repo.
+    """
+    delimiters = "[", "]"
+    pattern = "|".join(map(re.escape, delimiters))
+    for option in options:
+        splitted = re.split(pattern, option)
+        for opt in splitted:
+            _set_repo_option(repo, opt)
+
+
+def _create_repo(line, filename):
+    """
+    Create repo
+    """
+    repo = {}
+    if line.startswith("#"):
+        repo["enabled"] = False
+        line = line[1:]
+    else:
+        repo["enabled"] = True
+    cols = salt.utils.args.shlex_split(line.strip())
+    repo["compressed"] = not cols[0] in "src"
+    repo["name"] = cols[1]
+    repo["uri"] = cols[2]
+    repo["file"] = os.path.join(OPKG_CONFDIR, filename)
+    if len(cols) > 3:
+        _set_repo_options(repo, cols[3:])
+    return repo
+
+
+def _read_repos(conf_file, repos, filename, regex):
+    """
+    Read repos from configuration file
+    """
+    for line in conf_file:
+        line = salt.utils.stringutils.to_unicode(line)
+        if not regex.search(line):
+            continue
+        repo = _create_repo(line, filename)
+
+        # do not store duplicated uri's
+        if repo["uri"] not in repos:
+            repos[repo["uri"]] = [repo]
 
 
 def list_repos(**kwargs):  # pylint: disable=unused-argument
@@ -1231,30 +1331,10 @@ def list_repos(**kwargs):  # pylint: disable=unused-argument
     repos = {}
     regex = re.compile(REPO_REGEXP)
     for filename in os.listdir(OPKG_CONFDIR):
-        if filename.endswith(".conf"):
-            with salt.utils.files.fopen(
-                os.path.join(OPKG_CONFDIR, filename)
-            ) as conf_file:
-                for line in conf_file:
-                    line = salt.utils.stringutils.to_unicode(line)
-                    if regex.search(line):
-                        repo = {}
-                        if line.startswith("#"):
-                            repo["enabled"] = False
-                            line = line[1:]
-                        else:
-                            repo["enabled"] = True
-                        cols = salt.utils.args.shlex_split(line.strip())
-                        if cols[0] in "src":
-                            repo["compressed"] = False
-                        else:
-                            repo["compressed"] = True
-                        repo["name"] = cols[1]
-                        repo["uri"] = cols[2]
-                        repo["file"] = os.path.join(OPKG_CONFDIR, filename)
-                        # do not store duplicated uri's
-                        if repo["uri"] not in repos:
-                            repos[repo["uri"]] = [repo]
+        if not filename.endswith(".conf"):
+            continue
+        with salt.utils.files.fopen(os.path.join(OPKG_CONFDIR, filename)) as conf_file:
+            _read_repos(conf_file, repos, filename, regex)
     return repos
 
 
@@ -1271,7 +1351,7 @@ def get_repo(repo, **kwargs):  # pylint: disable=unused-argument
     repos = list_repos()
 
     if repos:
-        for source in six.itervalues(repos):
+        for source in repos.values():
             for sub in source:
                 if sub["name"] == repo:
                     return sub
@@ -1297,17 +1377,30 @@ def _del_repo_from_file(repo, filepath):
         fhandle.writelines(output)
 
 
-def _add_new_repo(repo, uri, compressed, enabled=True):
+def _set_trusted_option_if_needed(repostr, trusted):
+    """
+    Set trusted option to repo if needed
+    """
+    if trusted is True:
+        repostr += " [trusted=yes]"
+    elif trusted is False:
+        repostr += " [trusted=no]"
+    return repostr
+
+
+def _add_new_repo(repo, properties):
     """
     Add a new repo entry
     """
-    repostr = "# " if not enabled else ""
-    repostr += "src/gz " if compressed else "src "
+    repostr = "# " if not properties.get("enabled") else ""
+    repostr += "src/gz " if properties.get("compressed") else "src "
     if " " in repo:
         repostr += '"' + repo + '" '
     else:
         repostr += repo + " "
-    repostr += uri + "\n"
+    repostr += properties.get("uri")
+    repostr = _set_trusted_option_if_needed(repostr, properties.get("trusted"))
+    repostr += "\n"
     conffile = os.path.join(OPKG_CONFDIR, repo + ".conf")
 
     with salt.utils.files.fopen(conffile, "a") as fhandle:
@@ -1361,10 +1454,10 @@ def del_repo(repo, **kwargs):  # pylint: disable=unused-argument
                 source = repos[repository][0]
                 if source["file"] in deleted_from:
                     deleted_from[source["file"]] += 1
-            for repo_file, count in six.iteritems(deleted_from):
-                msg = "Repo '{0}' has been removed from {1}.\n"
+            for repo_file, count in deleted_from.items():
+                msg = "Repo '{}' has been removed from {}.\n"
                 if count == 1 and os.path.isfile(repo_file):
-                    msg = "File {1} containing repo '{0}' has been " "removed.\n"
+                    msg = "File {1} containing repo '{0}' has been removed.\n"
                     try:
                         os.remove(repo_file)
                     except OSError:
@@ -1374,7 +1467,7 @@ def del_repo(repo, **kwargs):  # pylint: disable=unused-argument
                 refresh_db()
             return ret
 
-    return "Repo {0} doesn't exist in the opkg repo lists".format(repo)
+    return "Repo {} doesn't exist in the opkg repo lists".format(repo)
 
 
 def mod_repo(repo, **kwargs):
@@ -1422,31 +1515,39 @@ def mod_repo(repo, **kwargs):
                 repostr += "src/gz" if source["compressed"] else "src"
             repo_alias = kwargs["alias"] if "alias" in kwargs else repo
             if " " in repo_alias:
-                repostr += ' "{0}"'.format(repo_alias)
+                repostr += ' "{}"'.format(repo_alias)
             else:
-                repostr += " {0}".format(repo_alias)
-            repostr += " {0}".format(
-                kwargs["uri"] if "uri" in kwargs else source["uri"]
+                repostr += " {}".format(repo_alias)
+            repostr += " {}".format(kwargs["uri"] if "uri" in kwargs else source["uri"])
+            trusted = kwargs.get("trusted")
+            repostr = (
+                _set_trusted_option_if_needed(repostr, trusted)
+                if trusted is not None
+                else _set_trusted_option_if_needed(repostr, source.get("trusted"))
             )
             _mod_repo_in_file(repo, repostr, source["file"])
         elif uri and source["uri"] == uri:
             raise CommandExecutionError(
-                "Repository '{0}' already exists as '{1}'.".format(uri, source["name"])
+                "Repository '{}' already exists as '{}'.".format(uri, source["name"])
             )
 
     if not found:
         # Need to add a new repo
         if "uri" not in kwargs:
             raise CommandExecutionError(
-                "Repository '{0}' not found and no URI passed to create one.".format(
+                "Repository '{}' not found and no URI passed to create one.".format(
                     repo
                 )
             )
+        properties = {"uri": kwargs["uri"]}
         # If compressed is not defined, assume True
-        compressed = kwargs["compressed"] if "compressed" in kwargs else True
+        properties["compressed"] = (
+            kwargs["compressed"] if "compressed" in kwargs else True
+        )
         # If enabled is not defined, assume True
-        enabled = kwargs["enabled"] if "enabled" in kwargs else True
-        _add_new_repo(repo, kwargs["uri"], compressed, enabled)
+        properties["enabled"] = kwargs["enabled"] if "enabled" in kwargs else True
+        properties["trusted"] = kwargs.get("trusted")
+        _add_new_repo(repo, properties)
 
     if "refresh" in kwargs:
         refresh_db()
@@ -1525,6 +1626,8 @@ def owner(*paths, **kwargs):  # pylint: disable=unused-argument
 
     CLI Example:
 
+    .. code-block:: bash
+
         salt '*' pkg.owner /usr/bin/apachectl
         salt '*' pkg.owner /usr/bin/apachectl /usr/bin/basename
     """
@@ -1543,7 +1646,7 @@ def owner(*paths, **kwargs):  # pylint: disable=unused-argument
         else:
             ret[path] = ""
     if len(ret) == 1:
-        return next(six.itervalues(ret))
+        return next(iter(ret.values()))
     return ret
 
 

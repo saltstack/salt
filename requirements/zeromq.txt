@@ -1,5 +1,6 @@
 -r base.txt
 -r crypto.txt
 
-pyzmq>=2.2.0; python_version < '3.8'
-pyzmq>=19.0.0; python_version >= '3.8'
+pyzmq<=20.0.0 ; python_version < "3.6"
+pyzmq>=17.0.0 ; python_version < "3.9"
+pyzmq>19.0.2 ; python_version >= "3.9"

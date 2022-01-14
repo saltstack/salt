@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 This module contains the function calls to execute command line scripts
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import functools
 import logging
@@ -17,39 +14,15 @@ import traceback
 from random import randint
 
 import salt.defaults.exitcodes  # pylint: disable=unused-import
-import salt.ext.six as six
-
-# Import salt libs
 from salt.exceptions import SaltClientError, SaltReqTimeoutError, SaltSystemExit
 
 log = logging.getLogger(__name__)
 
-
-def _handle_interrupt(exc, original_exc, hardfail=False, trace=""):
-    """
-    if hardfailing:
-        If we got the original stacktrace, log it
-        If all cases, raise the original exception
-        but this is logically part the initial
-        stack.
-    else just let salt exit gracefully
-
-    """
-    if hardfail:
-        if trace:
-            log.error(trace)
-        raise original_exc
-    else:
-        raise exc
+if sys.version_info < (3,):
+    raise SystemExit(salt.defaults.exitcodes.EX_GENERIC)
 
 
 def _handle_signals(client, signum, sigframe):
-    try:
-        # This raises AttributeError on Python 3.4 and 3.5 if there is no current exception.
-        # Ref: https://bugs.python.org/issue23003
-        trace = traceback.format_exc()
-    except AttributeError:
-        trace = ""
     try:
         hardcrash = client.options.hard_crash
     except (AttributeError, KeyError):
@@ -72,23 +45,31 @@ def _handle_signals(client, signum, sigframe):
     else:
         exit_msg = None
 
-    _handle_interrupt(
-        SystemExit(exit_msg),
-        Exception("\nExiting with hard crash on Ctrl-c"),
-        hardcrash,
-        trace=trace,
-    )
+    if exit_msg is None and hardcrash:
+        exit_msg = "\nExiting with hard crash on Ctrl-c"
+    if exit_msg:
+        print(exit_msg, file=sys.stderr, flush=True)
+    if hardcrash:
+        try:
+            # This raises AttributeError on Python 3.4 and 3.5 if there is no current exception.
+            # Ref: https://bugs.python.org/issue23003
+            trace = traceback.format_exc()
+            log.error(trace)
+        except AttributeError:
+            pass
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+    sys.exit(salt.defaults.exitcodes.EX_OK)
 
 
 def _install_signal_handlers(client):
     # Install the SIGINT/SIGTERM handlers if not done so far
-    if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
+    if signal.getsignal(signal.SIGINT) in (signal.SIG_DFL, signal.default_int_handler):
         # No custom signal handling was added, install our own
         signal.signal(signal.SIGINT, functools.partial(_handle_signals, client))
 
     if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
         # No custom signal handling was added, install our own
-        signal.signal(signal.SIGINT, functools.partial(_handle_signals, client))
+        signal.signal(signal.SIGTERM, functools.partial(_handle_signals, client))
 
 
 def salt_master():
@@ -103,19 +84,6 @@ def salt_master():
     if __name__ != "__main__":
         sys.modules["__main__"] = sys.modules[__name__]
 
-    # REMOVEME after Python 2.7 support is dropped (also the six import)
-    if six.PY2:
-        from salt.utils.versions import warn_until
-
-        # Message borrowed from pip's deprecation warning
-        warn_until(
-            "Sodium",
-            "Python 2.7 will reach the end of its life on January 1st,"
-            " 2020. Please upgrade your Python as Python 2.7 won't be"
-            " maintained after that date.  Salt will drop support for"
-            " Python 2.7 in the Sodium release or later.",
-        )
-    # END REMOVEME
     master = salt.cli.daemons.Master()
     master.start()
 
@@ -125,12 +93,9 @@ def minion_process():
     Start a minion process
     """
     import salt.utils.platform
-    import salt.utils.process
     import salt.cli.daemons
 
     # salt_minion spawns this function in a new process
-
-    salt.utils.process.appendproctitle("KeepAlive")
 
     def handle_hup(manager, sig, frame):
         manager.minion.reload()
@@ -212,19 +177,6 @@ def salt_minion():
         minion = salt.cli.daemons.Minion()
         minion.start()
         return
-    # REMOVEME after Python 2.7 support is dropped (also the six import)
-    elif six.PY2:
-        from salt.utils.versions import warn_until
-
-        # Message borrowed from pip's deprecation warning
-        warn_until(
-            "Sodium",
-            "Python 2.7 will reach the end of its life on January 1st,"
-            " 2020. Please upgrade your Python as Python 2.7 won't be"
-            " maintained after that date.  Salt will drop support for"
-            " Python 2.7 in the Sodium release or later.",
-        )
-    # END REMOVEME
 
     if "--disable-keepalive" in sys.argv:
         sys.argv.remove("--disable-keepalive")
@@ -247,7 +199,7 @@ def salt_minion():
     prev_sigterm_handler = signal.getsignal(signal.SIGTERM)
     while True:
         try:
-            process = multiprocessing.Process(target=minion_process)
+            process = multiprocessing.Process(target=minion_process, name="KeepAlive")
             process.start()
             signal.signal(
                 signal.SIGTERM,
@@ -330,7 +282,12 @@ def proxy_minion_process(queue):
         proxyminion = salt.cli.daemons.ProxyMinion()
         proxyminion.start()
         # pylint: disable=broad-except
-    except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit,) as exc:
+    except (
+        Exception,
+        SaltClientError,
+        SaltReqTimeoutError,
+        SaltSystemExit,
+    ) as exc:
         # pylint: enable=broad-except
         log.error("Proxy Minion failed to start: ", exc_info=True)
         restart = True
@@ -388,7 +345,9 @@ def salt_proxy():
             proxyminion = salt.cli.daemons.ProxyMinion()
             proxyminion.start()
             return
-        process = multiprocessing.Process(target=proxy_minion_process, args=(queue,))
+        process = multiprocessing.Process(
+            target=proxy_minion_process, args=(queue,), name="ProxyMinion"
+        )
         process.start()
         try:
             process.join()
@@ -443,7 +402,7 @@ def salt_key():
         _install_signal_handlers(client)
         client.run()
     except Exception as err:  # pylint: disable=broad-except
-        sys.stderr.write("Error: {0}\n".format(err))
+        sys.stderr.write("Error: {}\n".format(err))
 
 
 def salt_cp():
@@ -498,12 +457,14 @@ def salt_ssh():
         _install_signal_handlers(client)
         client.run()
     except SaltClientError as err:
-        trace = traceback.format_exc()
+        print(str(err), file=sys.stderr, flush=True)
         try:
-            hardcrash = client.options.hard_crash
+            if client.options.hard_crash:
+                trace = traceback.format_exc()
+                log.error(trace)
         except (AttributeError, KeyError):
-            hardcrash = False
-        _handle_interrupt(SystemExit(err), err, hardcrash, trace=trace)
+            pass
+        sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
 
 def salt_cloud():
@@ -599,7 +560,7 @@ def salt_unity():
     if len(sys.argv) < 2:
         msg = "Must pass in a salt command, available commands are:"
         for cmd in avail:
-            msg += "\n{0}".format(cmd)
+            msg += "\n{}".format(cmd)
         print(msg)
         sys.exit(1)
     cmd = sys.argv[1]
@@ -608,7 +569,7 @@ def salt_unity():
         sys.argv[0] = "salt"
         s_fun = salt_main
     else:
-        sys.argv[0] = "salt-{0}".format(cmd)
+        sys.argv[0] = "salt-{}".format(cmd)
         sys.argv.pop(1)
-        s_fun = getattr(sys.modules[__name__], "salt_{0}".format(cmd))
+        s_fun = getattr(sys.modules[__name__], "salt_{}".format(cmd))
     s_fun()

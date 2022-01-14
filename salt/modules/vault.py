@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Functions to interact with Hashicorp Vault.
 
@@ -26,6 +25,7 @@ Functions to interact with Hashicorp Vault.
             url: https://vault.service.domain:8200
             verify: /etc/ssl/certs/ca-certificates.crt
             role_name: minion_role
+            namespace:  vault_enterprice_namespace
             auth:
                 method: approle
                 role_id: 11111111-2222-3333-4444-1111111111111
@@ -46,9 +46,17 @@ Functions to interact with Hashicorp Vault.
 
     verify
         For details please see
-        http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
+        https://requests.readthedocs.io/en/master/user/advanced/#ssl-cert-verification
 
         .. versionadded:: 2018.3.0
+
+    namespaces
+        Optional Vault Namespace. Used with Vault enterprice
+
+        For detail please see:
+        https://www.vaultproject.io/docs/enterprise/namespaces
+
+        .. versionadded:: 3004
 
     role_name
         Role name for minion tokens created. If omitted, minion tokens will be
@@ -90,11 +98,43 @@ Functions to interact with Hashicorp Vault.
 
            export VAULT_TOKEN=11111111-1111-1111-1111-1111111111111
 
+        Configuration keys ``uses`` or ``ttl`` may also be specified under ``auth``
+        to configure the tokens generated on behalf of minions to be reused for the
+        defined number of uses or length of time in seconds. These settings may also be configured
+        on the minion when ``allow_minion_override`` is set to ``True`` in the master
+        config.
+
+        Defining ``uses`` will cause the salt master to generate a token with that number of uses rather
+        than a single use token. This multi-use token will be cached on the minion. The type of minion
+        cache can be specified with ``token_backend: session`` or ``token_backend: disk``. The value of
+        ``session`` is the default, and will store the vault information in memory only for that session.
+        The value of ``disk`` will write to an on disk file, and persist between state runs (most
+        helpful for multi-use tokens).
+
+        .. code-block:: bash
+
+          vault:
+            auth:
+              method: token
+              token: xxxxxx
+              uses: 10
+              ttl: 43200
+              allow_minion_override: True
+              token_backend: disk
+
+            .. versionchanged:: 3001
+
     policies
-        Policies that are assigned to minions when requesting a token. These can
-        either be static, eg saltstack/minions, or templated with grain values,
-        eg, ``my-policies/{grains[os]}``. ``{minion}`` is shorthand for grains[id],
-        ``saltstack/minion/{minion}``. .
+        Policies that are assigned to minions when requesting a token. These
+        can either be static, eg ``saltstack/minions``, or templated with grain
+        values, eg ``my-policies/{grains[os]}``. ``{minion}`` is shorthand for
+        ``grains[id]``, eg ``saltstack/minion/{minion}``.
+
+        .. important::
+
+            See :ref:`Is Targeting using Grain Data Secure?
+            <faq-grain-security>` for important security information. In short,
+            everything except ``grains[id]`` is minion-controlled.
 
         If a template contains a grain which evaluates to a list, it will be
         expanded into multiple policies. For example, given the template
@@ -110,15 +150,15 @@ Functions to interact with Hashicorp Vault.
         The minion will have the policies ``saltstack/by-role/web`` and
         ``saltstack/by-role/database``.
 
-        Optional. If policies is not configured, ``saltstack/minions`` and
-        ``saltstack/{minion}`` are used as defaults.
-
         .. note::
 
-            list members which do not have simple string representations,
+            List members which do not have simple string representations,
             such as dictionaries or objects, do not work and will
             throw an exception. Strings and numbers are examples of
             types which work well.
+
+        Optional. If policies is not configured, ``saltstack/minions`` and
+        ``saltstack/{minion}`` are used as defaults.
 
     keys
         List of keys to use to unseal vault server with the vault.unseal runner.
@@ -135,21 +175,26 @@ Functions to interact with Hashicorp Vault.
 
 .. _vault-setup:
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
+import os
+
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
 
-def read_secret(path, key=None, metadata=False):
+def read_secret(path, key=None, metadata=False, default=CommandExecutionError):
     """
+    .. versionchanged:: 3001
+        The ``default`` argument has been added. When the path or path/key
+        combination is not found, an exception will be raised, unless a default
+        is provided.
+
     Return the value of key at path in vault, or entire secret
 
     :param metadata: Optional - If using KV v2 backend, display full results, including metadata
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3001
 
     Jinja Example:
 
@@ -171,7 +216,7 @@ def read_secret(path, key=None, metadata=False):
         path = version2["data"]
     log.debug("Reading Vault secret for %s at %s", __grains__["id"], path)
     try:
-        url = "v1/{0}".format(path)
+        url = "v1/{}".format(path)
         response = __utils__["vault.make_request"]("GET", url)
         if response.status_code != 200:
             response.raise_for_status()
@@ -190,8 +235,11 @@ def read_secret(path, key=None, metadata=False):
 
         return data
     except Exception as err:  # pylint: disable=broad-except
-        log.error("Failed to read secret! %s: %s", type(err).__name__, err)
-        return None
+        if default is CommandExecutionError:
+            raise CommandExecutionError(
+                "Failed to read secret! {}: {}".format(type(err).__name__, err)
+            )
+        return default
 
 
 def write_secret(path, **kwargs):
@@ -205,13 +253,13 @@ def write_secret(path, **kwargs):
             salt '*' vault.write_secret "secret/my/secret" user="foo" password="bar"
     """
     log.debug("Writing vault secrets for %s at %s", __grains__["id"], path)
-    data = dict([(x, y) for x, y in kwargs.items() if not x.startswith("__")])
+    data = {x: y for x, y in kwargs.items() if not x.startswith("__")}
     version2 = __utils__["vault.is_v2"](path)
     if version2["v2"]:
         path = version2["data"]
         data = {"data": data}
     try:
-        url = "v1/{0}".format(path)
+        url = "v1/{}".format(path)
         response = __utils__["vault.make_request"]("POST", url, json=data)
         if response.status_code == 200:
             return response.json()["data"]
@@ -239,7 +287,7 @@ def write_raw(path, raw):
         path = version2["data"]
         raw = {"data": raw}
     try:
-        url = "v1/{0}".format(path)
+        url = "v1/{}".format(path)
         response = __utils__["vault.make_request"]("POST", url, json=raw)
         if response.status_code == 200:
             return response.json()["data"]
@@ -266,7 +314,7 @@ def delete_secret(path):
     if version2["v2"]:
         path = version2["data"]
     try:
-        url = "v1/{0}".format(path)
+        url = "v1/{}".format(path)
         response = __utils__["vault.make_request"]("DELETE", url)
         if response.status_code != 204:
             response.raise_for_status()
@@ -278,10 +326,10 @@ def delete_secret(path):
 
 def destroy_secret(path, *args):
     """
+    .. versionadded:: 3001
+
     Destroy specified secret version at the path in vault. The vault policy
     used must allow this. Only supported on Vault KV version 2
-
-    .. versionadded:: Sodium
 
     CLI Example:
 
@@ -298,7 +346,7 @@ def destroy_secret(path, *args):
         log.error("Destroy operation is only supported on KV version 2")
         return False
     try:
-        url = "v1/{0}".format(path)
+        url = "v1/{}".format(path)
         response = __utils__["vault.make_request"]("POST", url, json=data)
         if response.status_code != 204:
             response.raise_for_status()
@@ -308,8 +356,13 @@ def destroy_secret(path, *args):
         return False
 
 
-def list_secrets(path):
+def list_secrets(path, default=CommandExecutionError):
     """
+    .. versionchanged:: 3001
+        The ``default`` argument has been added. When the path or path/key
+        combination is not found, an exception will be raised, unless a default
+        is provided.
+
     List secret keys at the path in vault. The vault policy used must allow this.
     The path should end with a trailing slash.
 
@@ -324,11 +377,37 @@ def list_secrets(path):
     if version2["v2"]:
         path = version2["metadata"]
     try:
-        url = "v1/{0}".format(path)
+        url = "v1/{}".format(path)
         response = __utils__["vault.make_request"]("LIST", url)
         if response.status_code != 200:
             response.raise_for_status()
         return response.json()["data"]
     except Exception as err:  # pylint: disable=broad-except
-        log.error("Failed to list secrets! %s: %s", type(err).__name__, err)
-        return None
+        if default is CommandExecutionError:
+            raise CommandExecutionError(
+                "Failed to list secrets! {}: {}".format(type(err).__name__, err)
+            )
+        return default
+
+
+def clear_token_cache():
+    """
+    .. versionchanged:: 3001
+
+    Delete minion Vault token cache file
+
+    CLI Example:
+
+    .. code-block:: bash
+
+            salt '*' vault.clear_token_cache
+    """
+    log.debug("Deleting cache file")
+    cache_file = os.path.join(__opts__["cachedir"], "salt_vault_token")
+
+    if os.path.exists(cache_file):
+        os.remove(cache_file)
+        return True
+    else:
+        log.info("Attempted to delete vault cache file, but it does not exist.")
+        return False
