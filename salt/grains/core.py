@@ -3101,6 +3101,8 @@ def kernelparams():
                         value = data[1].strip('"')
 
                     grains["kernelparams"] += [(data[0], value)]
+        except FileNotFoundError:
+            grains = {}
         except OSError as exc:
             grains = {}
             log.debug("Failed to read /proc/cmdline: %s", exc)

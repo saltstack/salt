@@ -11,7 +11,14 @@ Statistics
 - Total Issue References: **48**
 - Total PR References: **279**
 
-- Contributors: **52** (`AVeenstra`_, `Ch3LL`_, `Circuitsoft`_, `DmitryKuzmenko`_, `KaiSforza`_, `Martin819`_, `OrlandoArcapix`_, `UtahDave`_, `Vaelatern`_, `abednarik`_, `asnell`_, `b1naryth1ef`_, `baniobloom`_, `basepi`_, `bdrung`_, `beornf`_, `bmcorser`_, `bowmanjd-lms`_, `damon-atkins`_, `darkpixel`_, `discogestalt`_, `doesitblend`_, `dqminh`_, `dubb-b`_, `dwoz`_, `frankiexyz`_, `frogunder`_, `fzipi`_, `garethgreenaway`_, `grokrecursion`_, `gtmanfred`_, `jacksontj`_, `jagguli`_, `lejambon`_, `lomeroe`_, `lordcirth`_, `lusche`_, `mbunkus`_, `meaksh`_, `mirceaulinic`_, `nbraud`_, `pritambaral`_, `ralex`_, `rallytime`_, `rmcintosh`_, `slaws`_, `terminalmage`_, `twangboy`_, `twellspring`_, `wyardley`_, `xetix`_, `zer0def`_)
+- Contributors: **52** (`AVeenstra`_, `Ch3LL`_, `Circuitsoft`_, `DmitryKuzmenko`_, `KaiSforza`_,
+  `Martin819`_, `OrlandoArcapix`_, `UtahDave`_, `Vaelatern`_, `abednarik`_, `asnell`_,
+  `b1naryth1ef`_, `baniobloom`_, `basepi`_, `bdrung`_, `beornf`_, `bmcorser`_, `bowmanjd-lms`_,
+  `damon-atkins`_, `darkpixel`_, `discogestalt`_, `doesitblend`_, `dqminh`_, `dubb-b`_, `dwoz`_,
+  `frankiexyz`_, `frogunder`_, `fzipi`_, `garethgreenaway`_, `grokrecursion`_, `gtmanfred`_,
+  `jacksontj`_, `jagguli`_, `lejambon`_, `lomeroe`_, `lordcirth`_, `lusche`_, `mbunkus`_,
+  `meaksh`_, `mirceaulinic`_, `nbraud`_, `pritambaral`_, `ralex`_, `rallytime`_, `rmcintosh`_,
+  `slaws`_, `terminalmage`_, `twangboy`_, `twellspring`_, `wyardley`_, `xetix`_, `zer0def`_)
 
 Security Fix
 ============

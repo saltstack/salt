@@ -47,6 +47,7 @@ import copy
 import logging
 import time
 
+import salt.payload
 import salt.utils.stringutils
 from salt.exceptions import SaltCacheError
 
@@ -89,7 +90,7 @@ def __virtual__():
     return bool(MySQLdb), "No python mysql client installed." if MySQLdb is None else ""
 
 
-def run_query(conn, query, retries=3, args=None):
+def run_query(conn, query, args=None, retries=3):
     """
     Get a cursor and run a query. Reconnect up to `retries` times if
     needed.
@@ -117,7 +118,9 @@ def run_query(conn, query, retries=3, args=None):
         else:
             log.info("mysql_cache: recreating db connection due to: %r", e)
         __context__["mysql_client"] = MySQLdb.connect(**__context__["mysql_kwargs"])
-        return run_query(__context__["mysql_client"], query, args, retries - 1)
+        return run_query(
+            __context__.get("mysql_client"), query, args=args, retries=(retries - 1)
+        )
     except Exception as e:  # pylint: disable=broad-except
         if len(query) > 150:
             query = query[:150] + "<...>"
@@ -150,7 +153,7 @@ def _create_table():
         __context__["mysql_table_name"]
     )
     log.info("mysql_cache: creating table %s", __context__["mysql_table_name"])
-    cur, _ = run_query(__context__["mysql_client"], query)
+    cur, _ = run_query(__context__.get("mysql_client"), query)
     cur.close()
 
 
@@ -198,14 +201,13 @@ def store(bank, key, data):
     Store a key value.
     """
     _init_client()
-    data = __context__["serial"].dumps(data)
+    data = salt.payload.dumps(data)
     query = "REPLACE INTO {} (bank, etcd_key, data) values(%s,%s,%s)".format(
         __context__["mysql_table_name"]
     )
-    query = salt.utils.stringutils.to_bytes(query)
     args = (bank, key, data)
 
-    cur, cnt = run_query(__context__.get("mysql_client"), query, args)
+    cur, cnt = run_query(__context__.get("mysql_client"), query, args=args)
     cur.close()
     if cnt not in (1, 2):
         raise SaltCacheError("Error storing {} {} returned {}".format(bank, key, cnt))
@@ -224,7 +226,7 @@ def fetch(bank, key):
     cur.close()
     if r is None:
         return {}
-    return __context__["serial"].loads(r[0])
+    return salt.payload.loads(r[0])
 
 
 def flush(bank, key=None):
