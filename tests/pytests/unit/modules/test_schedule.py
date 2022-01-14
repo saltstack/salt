@@ -96,11 +96,11 @@ def test_purge(sock_dir, job1, schedule_config_file):
             with patch.object(
                 schedule, "list_", MagicMock(return_value=_schedule_data)
             ):
-                assert schedule.purge(offline=True) == {
-                    "comment": comm,
-                    "changes": changes,
-                    "result": True,
-                }
+                ret = schedule.purge(offline=True)
+                assert any([True for item in comm if item in ret["comment"]])
+                assert ret["changes"] == changes
+                assert ret["result"]
+
                 _call = call(b"schedule: {}\n")
                 write_calls = fopen_mock.filehandles[schedule_config_file][
                     0
