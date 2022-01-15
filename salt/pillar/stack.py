@@ -403,7 +403,12 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
                     t, traverse.keys()
                 )
             )
-        cfgs = matchs.get(traverse[t](matcher, None), [])
+        traverse_out = traverse[t](matcher, None)
+        if isinstance(traverse_out, list):
+          list_match = [ key for key in matchs.keys() if key in traverse_out ]
+          cfgs = [ matchs.get(match) for match in list_match ]
+        else:
+          cfgs = matchs.get(traverse_out, [])
         if not isinstance(cfgs, list):
             cfgs = [cfgs]
         stack_config_files += cfgs
