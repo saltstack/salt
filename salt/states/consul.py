@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 
 def _acl_changes(name, id=None, type=None, rules=None, consul_url=None, token=None):
     """
-       return True if the acl need to be update, False if it doesn't need to be update
+    return True if the acl need to be update, False if it doesn't need to be update
     """
     info = __salt__["consul.acl_info"](id=id, token=token, consul_url=consul_url)
 
@@ -41,9 +41,9 @@ def _acl_changes(name, id=None, type=None, rules=None, consul_url=None, token=No
 
 def _acl_exists(name=None, id=None, token=None, consul_url=None):
     """
-       Check the acl exists by using the name or the ID,
-       name is ignored if ID is specified,
-       if only Name is used the ID associated with it is returned
+    Check the acl exists by using the name or the ID,
+    name is ignored if ID is specified,
+    if only Name is used the ID associated with it is returned
     """
 
     ret = {"result": False, "id": None}
