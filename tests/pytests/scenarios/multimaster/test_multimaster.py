@@ -1,3 +1,4 @@
+import itertools
 import logging
 import time
 
@@ -54,6 +55,25 @@ def _get_all_ret_events_after_time(masters, minions, event_listener, start_time)
     return tuple(events)
 
 
+def _ensure_ping(clis, minions, timeout=120):
+    rets = {}
+    start = time.time()
+    while time.time() - start < timeout:
+        for cli in clis:
+            clikey = str(cli)
+            if clikey not in rets:
+                rets[clikey] = {}
+            for minion in minions:
+                if minion.id not in rets[clikey]:
+                    rets[clikey][minion.id] = False
+                ret = cli.run("test.ping", minion_tgt=minion.id)
+                if ret and ret.json:
+                    rets[clikey][minion.id] = True
+        if all(itertools.chain(*[rets[y].values() for y in rets])):
+            return True
+    return False
+
+
 def test_basic_command_return(
     event_listener,
     salt_mm_master_1,
@@ -66,6 +86,10 @@ def test_basic_command_return(
     """
     Make sure minions return to both masters
     """
+    assert _ensure_ping(
+        [mm_master_1_salt_cli, mm_master_2_salt_cli],
+        [salt_mm_minion_1, salt_mm_minion_2],
+    )
     start_time = time.time()
 
     _run_salt_cmds(
@@ -97,6 +121,10 @@ def test_stopped_first_master(
     Make sure minions return only to the second master when the first is stopped
     """
     with salt_mm_master_1.stopped():
+        assert _ensure_ping(
+            [mm_master_2_salt_cli], [salt_mm_minion_1, salt_mm_minion_2]
+        )
+
         start_time = time.time()
 
         _run_salt_cmds([mm_master_2_salt_cli], [salt_mm_minion_1, salt_mm_minion_2])
@@ -128,6 +156,9 @@ def test_stopped_second_master(
     Make sure minions return only to the first master when the second is stopped
     """
     with salt_mm_master_2.stopped():
+        assert _ensure_ping(
+            [mm_master_1_salt_cli], [salt_mm_minion_1, salt_mm_minion_2]
+        )
         start_time = time.time()
 
         _run_salt_cmds([mm_master_1_salt_cli], [salt_mm_minion_1, salt_mm_minion_2])
@@ -164,9 +195,10 @@ def test_minion_reconnection_attempts(
         with salt_mm_master_1.stopped():
             # Force the minion to restart
             salt_mm_minion_1.terminate()
+            caplog.clear()
             with caplog.at_level(logging.DEBUG):
                 with pytest.raises(FactoryNotStarted):
-                    with salt_mm_minion_1.started(start_timeout=30):
+                    with salt_mm_minion_1.started(start_timeout=120):
                         pass
             assert (
                 "Trying to connect to: tcp://{}:{}".format(
@@ -186,18 +218,21 @@ def test_minion_reconnection_attempts(
         start_time = time.time()
         assert not salt_mm_minion_1.is_running()
 
-        salt_mm_minion_1.start()
+        salt_mm_minion_1.start(start_timeout=120)
 
         assert salt_mm_minion_1.is_running()
         assert salt_mm_minion_2.is_running()
 
         start_events = event_listener.wait_for_events(
             [(salt_mm_master_1.id, "salt/minion/{}/start".format(salt_mm_minion_1.id))],
-            timeout=30,
+            timeout=120,
             after_time=start_time,
         )
         assert not start_events.missed
         assert len(start_events.matches) == 1
+        assert _ensure_ping(
+            [mm_master_1_salt_cli], [salt_mm_minion_1, salt_mm_minion_2]
+        )
 
         start_time = time.time()
         _run_salt_cmds([mm_master_1_salt_cli], [salt_mm_minion_1, salt_mm_minion_2])
@@ -215,10 +250,11 @@ def test_minion_reconnection_attempts(
         assert len(minion_2_ret_events) == 1
         assert minion_1_ret_events.pop().daemon_id == salt_mm_master_1.id
         assert minion_2_ret_events.pop().daemon_id == salt_mm_master_1.id
+        start_time = time.time()
 
     start_events = event_listener.wait_for_events(
         [(salt_mm_master_2.id, "salt/minion/{}/start".format(salt_mm_minion_1.id))],
-        timeout=30,
+        timeout=120,
         after_time=start_time,
     )
     assert not start_events.missed
@@ -241,6 +277,11 @@ def test_minion_reconnection_attempts(
         assert len(minion_2_ret_events) == 1
         assert minion_1_ret_events.pop().daemon_id == salt_mm_master_2.id
         assert minion_2_ret_events.pop().daemon_id == salt_mm_master_2.id
+
+    assert _ensure_ping(
+        [mm_master_1_salt_cli, mm_master_2_salt_cli],
+        [salt_mm_minion_1, salt_mm_minion_2],
+    )
 
     # Make sure minions work normally
     start_time = time.time()
