@@ -2,6 +2,7 @@
     :codeauthor: Thomas Jackson <jacksontj.89@gmail.com>
 """
 
+import asyncio
 import hashlib
 
 import salt.channel.client

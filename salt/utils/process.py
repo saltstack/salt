@@ -28,10 +28,10 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.versions
 
-
 log = logging.getLogger(__name__)
 
 HAS_PSUTIL = False
+
 try:
     import psutil
 

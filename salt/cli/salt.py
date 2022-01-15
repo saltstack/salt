@@ -1,6 +1,6 @@
+import logging
 import os
 import sys
-import logging
 
 import salt.defaults.exitcodes
 import salt.log
@@ -23,6 +23,7 @@ sys.modules["pkg_resources"] = None
 
 
 log = logging.getLogger(__name__)
+
 
 class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
     """

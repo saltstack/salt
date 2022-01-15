@@ -7,7 +7,6 @@ authenticating peers
 import asyncio
 import base64
 import binascii
-import copy
 import getpass
 import hashlib
 import hmac
@@ -18,7 +17,6 @@ import stat
 import sys
 import time
 import traceback
-import weakref
 
 import salt.channel.client
 import salt.defaults.exitcodes
@@ -1164,7 +1162,7 @@ class SAuth(AsyncAuth):
     Set up an object to maintain authentication with the salt master
     """
 
-    def __init__(self, opts, io_loop=None):
+    def __init__(self, opts, io_loop=None):  # pylint: disable=super-init-not-called
         """
         Init an Auth instance
 

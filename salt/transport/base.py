@@ -1,5 +1,3 @@
-import salt.ext.tornado.gen
-
 TRANSPORTS = (
     "zeromq",
     "tcp",

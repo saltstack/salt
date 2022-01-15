@@ -219,7 +219,9 @@ def salt_minion():
             minion.start()
             break
 
+        log.error("*** KeepAlive Process JOIN***")
         process.join()
+        log.error("*** KeepAlive Process AFTER JOIN***")
 
         # Process exited or was terminated. Since we're going to try to restart
         # it, we MUST, reset signal handling to the previous handlers

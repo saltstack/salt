@@ -157,7 +157,7 @@ class IPCClient:
                 FileNotFoundError,
             ):
                 if timeout is None or time.time() - start > timeout:
-                        raise
+                    raise
                 await asyncio.sleep(1)
         if callback:
             callback(self)
@@ -288,8 +288,8 @@ class IPCMessageSubscriber(IPCClient):
     async def _read(self, timeout, callback=None):
         try:
             await asyncio.wait_for(self._read_lock.acquire(), timeout=0.0000001)
-        except Exception as exc:
-            log.error("Neet to exc %r", exc)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Unhandled exception %r", exc)
 
         exc_to_raise = None
         ret = None
@@ -301,13 +301,15 @@ class IPCMessageSubscriber(IPCClient):
                 try:
                     # Backwards compat
                     if timeout == 0:
-                        timeout = .3
+                        timeout = 0.3
                     if timeout is None:
                         wire_bytes = await self.reader.read(1024)
                     else:
-                        wire_bytes = await asyncio.wait_for(self.reader.read(1024), timeout=timeout)
+                        wire_bytes = await asyncio.wait_for(
+                            self.reader.read(1024), timeout=timeout
+                        )
                     if not wire_bytes:
-                        log.debug("%s Noting more to read", self.__class__.__name__)
+                        log.debug("%s Nothing more to read", self.__class__.__name__)
                         break
                 except asyncio.IncompleteReadError as e:
                     log.error("Incomplete read")

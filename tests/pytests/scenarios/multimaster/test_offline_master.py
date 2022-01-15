@@ -5,6 +5,7 @@ import pytest
 
 log = logging.getLogger(__name__)
 
+
 @pytest.mark.slow_test
 def test_minion_hangs_on_master_failure_50814(
     event_listener,
@@ -39,7 +40,7 @@ def test_minion_hangs_on_master_failure_50814(
         log.error("WAIT EVENTS - OVER")
         assert matched_events.found_all_events, (
             "Minion is not responding to the second master after the first one has"
-            " gone. Check #50814 for details. %r" % (matched_events)
+            " gone. Check #50814 for details. {!r}".format(matched_events)
         )
         event_count -= 1
         if event_count <= 0:

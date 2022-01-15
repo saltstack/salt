@@ -80,6 +80,7 @@ import salt.utils.zeromq
 
 log = logging.getLogger(__name__)
 
+
 # The SUB_EVENT set is for functions that require events fired based on
 # component executions, like the state system
 SUB_EVENT = ("state.highstate", "state.sls")
@@ -360,7 +361,7 @@ class SaltEvent:
                     self.subscriber = salt.utils.asynchronous.AIOSyncWrapper(
                         salt.transport.ipc.IPCMessageSubscriber,
                         args=(self.puburi,),
-                        #kwargs={"io_loop": self.io_loop},
+                        # kwargs={"io_loop": self.io_loop},
                         loop_kwarg="io_loop",
                     )
                 try:
@@ -952,7 +953,7 @@ class SaltEvent:
         """
         Invoke the event_handler callback each time an event arrives.
         """
-        #assert not self._run_io_loop_sync
+        # assert not self._run_io_loop_sync
 
         if not self.cpub:
             self.connect_pub()
@@ -1258,7 +1259,7 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
             self.puller = None
         if self.io_loop is not None:
             self.io_loop.stop()
-            #self.io_loop.close()
+            # self.io_loop.close()
             self.io_loop = None
 
     def _handle_signals(self, signum, sigframe):

@@ -216,6 +216,7 @@ from salt.ext.tornado.concurrent import Future
 from salt.utils.event import tagify
 
 _json = salt.utils.json.import_json()
+
 log = logging.getLogger(__name__)
 
 
@@ -275,7 +276,7 @@ class EventListener:
         self.opts = opts
         if io_loop is None:
             io_loop = asyncio.get_event_loop()
-        if hasattr(io_loop, 'asyncio_loop'):
+        if hasattr(io_loop, "asyncio_loop"):
             io_loop = io_loop.asyncio_loop
         self.event = salt.utils.event.get_event(
             "master",
@@ -283,7 +284,7 @@ class EventListener:
             opts["transport"],
             opts=opts,
             listen=True,
-            #io_loop=salt.ext.tornado.ioloop.IOLoop.current(),
+            # io_loop=salt.ext.tornado.ioloop.IOLoop.current(),
             io_loop=io_loop,
         )
 
@@ -447,9 +448,7 @@ class BaseSaltAPIHandler(salt.ext.tornado.web.RequestHandler):  # pylint: disabl
                 "local": local_client.run_job_async,
                 # not the actual client we'll use.. but its what we'll use to get args
                 "local_async": local_client.run_job_async,
-                "runner": salt.runner.RunnerClient(
-                    self.application.opts
-                ).cmd_async,
+                "runner": salt.runner.RunnerClient(self.application.opts).cmd_async,
                 "runner_async": None,  # empty, since we use the same client as `runner`
             }
         else:
@@ -1225,7 +1224,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         f_call = salt.utils.args.format_call(
             salt.client.LocalClient.run_job, chunk, is_class_method=True
         )
-        #f_call.get("kwargs", {})["io_loop"] = salt.ext.tornado.ioloop.IOLoop.current()
+        # f_call.get("kwargs", {})["io_loop"] = salt.ext.tornado.ioloop.IOLoop.current()
         f_call.get("kwargs", {})["io_loop"] = asyncio.get_event_loop()
         return f_call
 

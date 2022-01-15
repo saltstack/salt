@@ -23,6 +23,7 @@ from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.helpers import get_virtualenv_binary_path
 from tests.support.runtests import RUNTIME_VARS
 
+
 log = logging.getLogger(__name__)
 
 
@@ -491,7 +492,10 @@ def pytest_pyfunc_call(pyfuncitem):
         loop = asyncio.get_event_loop()
 
     salt.utils.asynchronous.run_sync(
-        CoroTestFunction, args=(pyfuncitem.obj, testargs), io_loop=loop, timeout=get_test_timeout(pyfuncitem)
+        CoroTestFunction,
+        args=(pyfuncitem.obj, testargs),
+        io_loop=loop,
+        timeout=get_test_timeout(pyfuncitem),
     )
     return True
 
@@ -505,8 +509,8 @@ def io_loop():
     try:
         yield loop
     finally:
-        #loop.clear_current()
-        #loop.close(all_fds=True)
+        # loop.clear_current()
+        # loop.close(all_fds=True)
         loop.close()
 
 

@@ -33,8 +33,7 @@ def patch_loglevel(module_name, level):
     try:
         yield
     finally:
-        logger.level=orig_level
-
+        logger.level = orig_level
 
 
 def __check_git_version(caller, min_version, skip_msg):
@@ -147,6 +146,7 @@ class WithGitMirror:
 
 with_git_mirror = WithGitMirror
 
+
 @ensure_min_git
 class GitTest(ModuleCase, SaltReturnAssertsMixin):
     """
@@ -197,7 +197,9 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
                 ret = self.run_state("git.latest", name=TEST_REPO, target=target)
                 self.assertSaltTrueReturn(ret)
                 self.assertTrue(os.path.isdir(os.path.join(target, ".git")))
-                assert any(ret_code_err in s for s in self.handler.messages) is False, False
+                assert (
+                    any(ret_code_err in s for s in self.handler.messages) is False
+                ), False
 
     @with_tempdir(create=False)
     @pytest.mark.slow_test

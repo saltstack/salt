@@ -432,7 +432,6 @@ def service_name():
 
 
 class MinionBase:
-
     def __init__(self, opts):
         self.opts = opts
         self.beacons_leader = opts.get("beacons_leader", True)
@@ -1101,7 +1100,7 @@ class MinionManager(MinionBase):
         """
         if not self.minions:
             log.error("Minion unable to successfully connect to a Salt Master.")
-            log.error("\n".join(traceback.format_stack()))
+            # log.error("\n".join(traceback.format_stack()))
 
     def _spawn_minions(self, timeout=60):
         """
@@ -1176,6 +1175,7 @@ class MinionManager(MinionBase):
                     minion.opts["master"],
                     exc_info=True,
                 )
+        log.error("**** CONNECT MINION END %r ****", minion)
 
     # Multi Master Tune In
     def tune_in(self):
@@ -1704,9 +1704,11 @@ class Minion(MinionBase):
                 timeout_handler = handle_timeout
 
             # XXX: Asyncio version
-            #with salt.ext.tornado.stack_context.ExceptionStackContext(timeout_handler):
+            # with salt.ext.tornado.stack_context.ExceptionStackContext(timeout_handler):
             # pylint: disable=unexpected-keyword-arg
-            self.io_loop.create_task(self._send_req_async(load, timeout)) #, callback=lambda f: None)
+            self.io_loop.create_task(
+                self._send_req_async(load, timeout)
+            )  # , callback=lambda f: None)
             # pylint: enable=unexpected-keyword-arg
         return True
 
@@ -3170,7 +3172,7 @@ class Minion(MinionBase):
         log.error("MINION GOT %r", payload)
         if payload is not None and payload["enc"] == "aes":
             if self._target_load(payload["load"]):
-                #self.io_loop.create_task(self._handle_decoded_payload(payload["load"]))
+                # self.io_loop.create_task(self._handle_decoded_payload(payload["load"]))
                 await self._handle_decoded_payload(payload["load"])
             elif self.opts["zmq_filtering"]:
                 # In the filtering enabled case, we'd like to know when minion sees something it shouldn't

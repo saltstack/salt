@@ -5,9 +5,9 @@
     Integration tests PyTest configuration/fixtures
 """
 import logging
-import saltfactories.exceptions
 
 import pytest
+import saltfactories.exceptions
 
 log = logging.getLogger(__name__)
 

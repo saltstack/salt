@@ -1,13 +1,15 @@
+import logging
 import os
 import sys
-import logging
+import threading
+
 import pytest
 import salt.ext.tornado.iostream
 import salt.transport.ipc
 import salt.utils.asynchronous
 import salt.utils.platform
-from tests.support.runtests import RUNTIME_VARS
 from saltfactories.utils.ports import get_unused_localhost_port
+from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [
     pytest.mark.skip_on_darwin,
@@ -81,8 +83,8 @@ async def test_sync_reading(pub_channel, opts, socket_path):
     pub_channel.publish("TEST")
     ret1 = client1.read_sync()
     ret2 = client2.read_sync()
-    self.assertEqual(ret1, "TEST")
-    self.assertEqual(ret2, "TEST")
+    assert ret1 == "TEST"
+    assert ret2 == "TEST"
 
 
 async def test_multi_client_reading(pub_channel, opts, socket_path):
@@ -109,10 +111,10 @@ async def test_multi_client_reading(pub_channel, opts, socket_path):
     # Now let both waiting data at once
     await client1.read_async(handler)
     await client2.read_async(handler)
-    self.pub_channel.publish("TEST")
-    self.assertEqual(len(call_cnt), 2)
-    self.assertEqual(call_cnt[0], "TEST")
-    self.assertEqual(call_cnt[1], "TEST")
+    pub_channel.publish("TEST")
+    assert len(call_cnt) == 2
+    assert call_cnt[0] == "TEST"
+    assert call_cnt[1] == "TEST"
 
 
 if sys.version_info > (3, 5):
@@ -126,7 +128,7 @@ if sys.version_info > (3, 5):
         await channel.connect()
         try:
             yield channel
-        except:
+        finally:
             channel.close()
 
     async def test_async_reading_streamclosederror(sub_channel):
@@ -140,7 +142,6 @@ if sys.version_info > (3, 5):
             if evt.wait(0.001):
                 return
             client1.close()
-            self.stop()
 
         watchdog = threading.Thread(target=close_server)
         watchdog.start()
@@ -151,5 +152,5 @@ if sys.version_info > (3, 5):
 
         try:
             ret1 = await client1.read_async(handler)
-        except StreamClosedError as ex:
+        except salt.ext.tornado.iostream.StreamClosedError as ex:
             assert False, "StreamClosedError was raised inside the Future"

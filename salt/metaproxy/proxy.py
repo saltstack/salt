@@ -2,8 +2,9 @@
 # Proxy minion metaproxy modules
 #
 
-import logging
+import asyncio
 import functools
+import logging
 import os
 import signal
 import sys
@@ -162,7 +163,12 @@ async def post_master_init(self, master):
     # This is because we need to inject the __proxy__ variable but
     # it is not setup until now.
     self.io_loop.call_soon(
-        functools.partial(salt.engines.start_engines, self.opts, self.process_manager, proxy=self.proxy)
+        functools.partial(
+            salt.engines.start_engines,
+            self.opts,
+            self.process_manager,
+            proxy=self.proxy,
+        )
     )
 
     if (
@@ -809,7 +815,7 @@ async def handle_decoded_payload(self, data):
                 data["jid"],
             )
             await asyncio.sleep(10)
-            #time.sleep(.05)
+            # time.sleep(.05)
             process_count = len(salt.utils.minion.running(self.opts))
 
     # We stash an instance references to allow for the socket

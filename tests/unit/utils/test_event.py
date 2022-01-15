@@ -6,7 +6,6 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-import asyncio
 import hashlib
 import os
 import shutil
@@ -320,61 +319,61 @@ class TestSaltEvent(TestCase):
                 )
 
 
-#class TestAsyncEventPublisher(AsyncTestCase):
-#    def get_new_ioloop(self):
-#        #return salt.ext.tornado.ioloop.IOLoop()
-#        return asyncio.get_event_loop()
-#
-#    def setUp(self):
-#        #super().setUp()
-#        self.io_loop = self.get_new_ioloop()
-#        self.sock_dir = os.path.join(RUNTIME_VARS.TMP, "test-socks")
-#        if not os.path.exists(self.sock_dir):
-#            os.makedirs(self.sock_dir)
-#        self.addCleanup(shutil.rmtree, self.sock_dir, ignore_errors=True)
-#        self.opts = {"sock_dir": self.sock_dir}
-#        self.publisher = salt.utils.event.AsyncEventPublisher(
-#            self.opts,
-#            self.io_loop,
-#        )
-#        self.event = salt.utils.event.get_event(
-#            "minion", opts=self.opts, io_loop=self.io_loop
-#        )
-#        self.event.subscribe("")
-#        self.event.set_event_handler(self._handle_publish)
-#
-#    def stop(self, _arg=None, **kwargs):
-#        self.publisher.close()
-#        self.event.destroy()
-#        #super().stop(_arg=_arg, **kwargs)
-#
-#    def tearDown(self):
-#        pass
-#
-#    def _handle_publish(self, raw):
-#        self.tag, self.data = salt.utils.event.SaltEvent.unpack(raw)
-#        self.stop()
-#
-#    def test_event_subscription(self):
-#        """Test a single event is received"""
-#        with salt.utils.event.MinionEvent(self.opts, listen=True) as me:
-#            me.fire_event({"data": "foo1"}, "evt1")
-#            #self.wait()
-#            evt1 = me.get_event(tag="evt1")
-#            self.assertEqual(self.tag, "evt1")
-#            self.data.pop("_stamp")  # drop the stamp
-#            self.assertEqual(self.data, {"data": "foo1"})
-#
-#    def test_event_unsubscribe_remove_error(self):
-#        with salt.utils.event.MinionEvent(self.opts, listen=True) as me:
-#            tag = "evt1"
-#            me.fire_event({"data": "foo1"}, tag)
-#
-#            # Make sure no remove error is raised when tag is not found
-#            for _ in range(2):
-#                me.unsubscribe(tag)
-#
-#            me.unsubscribe("tag_does_not_exist")
+class TestAsyncEventPublisher(AsyncTestCase):
+    def get_new_ioloop(self):
+        return salt.ext.tornado.ioloop.IOLoop()
+        # return asyncio.get_event_loop()
+
+    def setUp(self):
+        # super().setUp()
+        self.io_loop = self.get_new_ioloop()
+        self.sock_dir = os.path.join(RUNTIME_VARS.TMP, "test-socks")
+        if not os.path.exists(self.sock_dir):
+            os.makedirs(self.sock_dir)
+        self.addCleanup(shutil.rmtree, self.sock_dir, ignore_errors=True)
+        self.opts = {"sock_dir": self.sock_dir}
+        self.publisher = salt.utils.event.AsyncEventPublisher(
+            self.opts,
+            self.io_loop,
+        )
+        self.event = salt.utils.event.get_event(
+            "minion", opts=self.opts, io_loop=self.io_loop
+        )
+        self.event.subscribe("")
+        self.event.set_event_handler(self._handle_publish)
+
+    def stop(self, _arg=None, **kwargs):
+        self.publisher.close()
+        self.event.destroy()
+        # super().stop(_arg=_arg, **kwargs)
+
+    def tearDown(self):
+        pass
+
+    def _handle_publish(self, raw):
+        self.tag, self.data = salt.utils.event.SaltEvent.unpack(raw)
+        self.stop()
+
+    def test_event_subscription(self):
+        """Test a single event is received"""
+        with salt.utils.event.MinionEvent(self.opts, listen=True) as me:
+            me.fire_event({"data": "foo1"}, "evt1")
+            # self.wait()
+            evt1 = me.get_event(tag="evt1")
+            self.assertEqual(self.tag, "evt1")
+            self.data.pop("_stamp")  # drop the stamp
+            self.assertEqual(self.data, {"data": "foo1"})
+
+    def test_event_unsubscribe_remove_error(self):
+        with salt.utils.event.MinionEvent(self.opts, listen=True) as me:
+            tag = "evt1"
+            me.fire_event({"data": "foo1"}, tag)
+
+            # Make sure no remove error is raised when tag is not found
+            for _ in range(2):
+                me.unsubscribe(tag)
+
+            me.unsubscribe("tag_does_not_exist")
 
 
 class TestEventReturn(TestCase):

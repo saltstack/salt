@@ -415,17 +415,15 @@ async def test_process_count_max():
             class SleepCalledException(Exception):
                 """Thrown when sleep is called"""
 
-            asyncio.sleep.set_exception(
-                SleepCalledException()
-            )
+            asyncio.sleep.set_exception(SleepCalledException())
 
             # up until process_count_max: gen.sleep does not get called, processes are started normally
             for i in range(process_count_max):
                 mock_data = {"fun": "foo.bar", "jid": i}
-                #salt.utils.asynchronous.run_sync(
+                # salt.utils.asynchronous.run_sync(
                 #    lambda data=mock_data: minion._handle_decoded_payload(data)
-                #)
-                await minion._handle_decoded_payload(data)
+                # )
+                await minion._handle_decoded_payload(mock_data)
                 assert (
                     salt.utils.process.SignalHandlingProcess.start.call_count == i + 1
                 )
@@ -729,7 +727,9 @@ def test_reinit_crypto_on_fork(def_mock):
         # pylint: enable=comparison-with-callable
 
     with patch.object(salt.utils.process.SignalHandlingProcess, "start", mock_start):
-        salt.utils.asynchronous.run_sync(lambda: minion._handle_decoded_payload(job_data))
+        salt.utils.asynchronous.run_sync(
+            lambda: minion._handle_decoded_payload(job_data)
+        )
 
 
 def test_minion_manage_schedule():

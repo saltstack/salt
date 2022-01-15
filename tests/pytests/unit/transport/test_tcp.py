@@ -40,8 +40,8 @@ async def test_message_client_cleanup_on_close(client_socket, temp_salt_master):
     """
     test message client cleanup on close
     """
-    #orig_loop = salt.ext.tornado.ioloop.IOLoop()
-    #orig_loop.make_current()
+    # orig_loop = salt.ext.tornado.ioloop.IOLoop()
+    # orig_loop.make_current()
     orig_loop = asyncio.get_event_loop()
 
     opts = dict(temp_salt_master.config.copy(), transport="tcp")

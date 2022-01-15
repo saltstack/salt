@@ -78,6 +78,7 @@ except ImportError:
     # resource is not available on windows
     HAS_RESOURCE = False
 
+
 log = logging.getLogger(__name__)
 
 
@@ -985,7 +986,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
 
         :param dict payload: The payload route to the appropriate handler
         """
-        #log.error("%s HANDLE PAYLOAD %r", self.name, payload)
+        # log.error("%s HANDLE PAYLOAD %r", self.name, payload)
         key = payload["enc"]
         load = payload["load"]
         ret = {"aes": self._handle_aes, "clear": self._handle_clear}[key](load)
