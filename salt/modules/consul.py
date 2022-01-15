@@ -2172,7 +2172,6 @@ def acl_update(consul_url=None, token=None, **kwargs):
         ret["res"] = False
         ret["message"] = "Updating ACL " "{} failed.".format(kwargs["name"])
 
-
     return ret
 
 
