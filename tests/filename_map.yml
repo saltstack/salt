@@ -251,9 +251,6 @@ salt/(cli/spm\.py|spm/.+):
   - integration.spm.test_remove
   - integration.spm.test_repo
 
-salt/transport/*:
-  - unit.test_transport
-
 salt/utils/docker/*:
   - unit.utils.test_dockermod
 

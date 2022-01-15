@@ -4462,6 +4462,7 @@ def get_managed(
     defaults,
     skip_verify=False,
     verify_ssl=True,
+    use_etag=False,
     **kwargs
 ):
     """
@@ -4517,6 +4518,15 @@ def get_managed(
         will not attempt to validate the servers certificate. Default is True.
 
         .. versionadded:: 3002
+
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
 
     CLI Example:
 
@@ -4589,7 +4599,7 @@ def get_managed(
                         )
                     except CommandExecutionError as exc:
                         return "", {}, exc.strerror
-                else:
+                elif not use_etag:
                     msg = (
                         "Unable to verify upstream hash of source file {}, "
                         "please set source_hash or set skip_verify to True".format(
@@ -4602,7 +4612,7 @@ def get_managed(
         # Check if we have the template or remote file cached
         cache_refetch = False
         cached_dest = __salt__["cp.is_cached"](source, saltenv)
-        if cached_dest and (source_hash or skip_verify):
+        if cached_dest and (source_hash or skip_verify or use_etag):
             htype = source_sum.get("hash_type", "sha256")
             cached_sum = get_hash(cached_dest, form=htype)
             if skip_verify:
@@ -4610,7 +4620,9 @@ def get_managed(
                 # but `cached_sum == source_sum['hsum']` is elliptical as prev if
                 sfn = cached_dest
                 source_sum = {"hsum": cached_sum, "hash_type": htype}
-            elif cached_sum != source_sum.get("hsum", __opts__["hash_type"]):
+            elif use_etag or cached_sum != source_sum.get(
+                "hsum", __opts__["hash_type"]
+            ):
                 cache_refetch = True
             else:
                 sfn = cached_dest
@@ -4624,6 +4636,7 @@ def get_managed(
                     saltenv,
                     source_hash=source_sum.get("hsum"),
                     verify_ssl=verify_ssl,
+                    use_etag=use_etag,
                 )
             except Exception as exc:  # pylint: disable=broad-except
                 # A 404 or other error code may raise an exception, catch it
@@ -5812,6 +5825,7 @@ def manage_file(
     setype=None,
     serange=None,
     verify_ssl=True,
+    use_etag=False,
     **kwargs
 ):
     """
@@ -5932,6 +5946,15 @@ def manage_file(
 
         .. versionadded:: 3002
 
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
+
     CLI Example:
 
     .. code-block:: bash
@@ -5943,6 +5966,12 @@ def manage_file(
 
     """
     name = os.path.expanduser(name)
+    check_web_source_hash = bool(
+        source
+        and urllib.parse.urlparse(source).scheme != "salt"
+        and not skip_verify
+        and not use_etag
+    )
 
     if not ret:
         ret = {"name": name, "changes": {}, "comment": "", "result": True}
@@ -5988,13 +6017,15 @@ def manage_file(
             or source_sum.get("hsum", __opts__["hash_type"]) != name_sum
         ):
             if not sfn:
-                sfn = __salt__["cp.cache_file"](source, saltenv, verify_ssl=verify_ssl)
+                sfn = __salt__["cp.cache_file"](
+                    source, saltenv, verify_ssl=verify_ssl, use_etag=use_etag
+                )
             if not sfn:
                 return _error(ret, "Source file '{}' not found".format(source))
             # If the downloaded file came from a non salt server or local
             # source, and we are not skipping checksum verification, then
             # verify that it matches the specified checksum.
-            if not skip_verify and urllib.parse.urlparse(source).scheme != "salt":
+            if check_web_source_hash:
                 dl_sum = get_hash(sfn, source_sum["hash_type"])
                 if dl_sum != source_sum["hsum"]:
                     ret["comment"] = (
@@ -6016,9 +6047,9 @@ def manage_file(
                 ret["changes"]["diff"] = "<show_changes=False>"
             else:
                 try:
-                    ret["changes"]["diff"] = get_diff(
-                        real_name, sfn, show_filenames=False
-                    )
+                    file_diff = get_diff(real_name, sfn, show_filenames=False)
+                    if file_diff:
+                        ret["changes"]["diff"] = file_diff
                 except CommandExecutionError as exc:
                     ret["changes"]["diff"] = exc.strerror
 
@@ -6091,7 +6122,7 @@ def manage_file(
                 return _error(ret, "Source file '{}' not found".format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if not skip_verify and urllib.parse.urlparse(source).scheme != "salt":
+            if check_web_source_hash:
                 dl_sum = get_hash(sfn, source_sum["hash_type"])
                 if dl_sum != source_sum["hsum"]:
                     ret["comment"] = (
@@ -6200,7 +6231,7 @@ def manage_file(
                 return _error(ret, "Source file '{}' not found".format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if not skip_verify and urllib.parse.urlparse(source).scheme != "salt":
+            if check_web_source_hash:
                 dl_sum = get_hash(sfn, source_sum["hash_type"])
                 if dl_sum != source_sum["hsum"]:
                     ret["comment"] = (

@@ -1,3 +1,10 @@
+"""
+Encapsulate the different transports available to Salt.
+
+This includes server side transport, for the ReqServer and the Publisher
+"""
+
+
 import binascii
 import ctypes
 import hashlib
@@ -11,6 +18,7 @@ import salt.ext.tornado.gen
 import salt.master
 import salt.payload
 import salt.transport.frame
+import salt.utils.channel
 import salt.utils.event
 import salt.utils.files
 import salt.utils.minions
@@ -33,48 +41,27 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-# TODO: rename
-class AESPubClientMixin:
-    def _verify_master_signature(self, payload):
-        if self.opts.get("sign_pub_messages"):
-            if not payload.get("sig", False):
-                raise salt.crypt.AuthenticationError(
-                    "Message signing is enabled but the payload has no signature."
-                )
-
-            # Verify that the signature is valid
-            master_pubkey_path = os.path.join(self.opts["pki_dir"], "minion_master.pub")
-            if not salt.crypt.verify_signature(
-                master_pubkey_path, payload["load"], payload.get("sig")
-            ):
-                raise salt.crypt.AuthenticationError(
-                    "Message signature failed to validate."
-                )
-
-    @salt.ext.tornado.gen.coroutine
-    def _decode_payload(self, payload):
-        # we need to decrypt it
-        log.trace("Decoding payload: %s", payload)
-        if payload["enc"] == "aes":
-            self._verify_master_signature(payload)
-            try:
-                payload["load"] = self.auth.crypticle.loads(payload["load"])
-            except salt.crypt.AuthenticationError:
-                yield self.auth.authenticate()
-                payload["load"] = self.auth.crypticle.loads(payload["load"])
-
-        raise salt.ext.tornado.gen.Return(payload)
-
-
-# TODO: rename?
-class AESReqServerMixin:
+class ReqServerChannel:
     """
-    Mixin to house all of the master-side auth crypto
+    ReqServerChannel handles request/reply messages from ReqChannels.
     """
 
-    def pre_fork(self, _):
+    @classmethod
+    def factory(cls, opts, **kwargs):
+        if "master_uri" not in opts and "master_uri" in kwargs:
+            opts["master_uri"] = kwargs["master_uri"]
+        transport = salt.transport.request_server(opts, **kwargs)
+        return cls(opts, transport)
+
+    def __init__(self, opts, transport):
+        self.opts = opts
+        self.transport = transport
+        self.event = None
+
+    def pre_fork(self, process_manager):
         """
-        Pre-fork we need to create the zmq router device
+        Do anything necessary pre-fork. Since this is on the master side this will
+        primarily be bind and listen (or the equivalent for your network library)
         """
         if "aes" not in salt.master.SMaster.secrets:
             # TODO: This is still needed only for the unit tests
@@ -89,19 +76,33 @@ class AESReqServerMixin:
                 ),
                 "reload": salt.crypt.Crypticle.generate_key_string,
             }
+        if hasattr(self.transport, "pre_fork"):
+            self.transport.pre_fork(process_manager)
 
-    def post_fork(self, _, __):
+    def post_fork(self, payload_handler, io_loop):
+        """
+        Do anything you need post-fork. This should handle all incoming payloads
+        and call payload_handler. You will also be passed io_loop, for all of your
+        asynchronous needs
+        """
+        import salt.master
+
+        if self.opts["pub_server_niceness"] and not salt.utils.platform.is_windows():
+            log.info(
+                "setting Publish daemon niceness to %i",
+                self.opts["pub_server_niceness"],
+            )
+            os.nice(self.opts["pub_server_niceness"])
+        self.io_loop = io_loop
         self.crypticle = salt.crypt.Crypticle(
             self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
         )
-
         # other things needed for _auth
         # Create the event manager
         self.event = salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
         )
         self.auto_key = salt.daemons.masterapi.AutoKey(self.opts)
-
         # only create a con_cache-client if the con_cache is active
         if self.opts["con_cache"]:
             self.cache_cli = CacheCli(self.opts)
@@ -109,8 +110,79 @@ class AESReqServerMixin:
             self.cache_cli = False
             # Make an minion checker object
             self.ckminions = salt.utils.minions.CkMinions(self.opts)
-
         self.master_key = salt.crypt.MasterKeys(self.opts)
+        self.payload_handler = payload_handler
+        if hasattr(self.transport, "post_fork"):
+            self.transport.post_fork(self.handle_message, io_loop)
+
+    @salt.ext.tornado.gen.coroutine
+    def handle_message(self, payload):
+        try:
+            payload = self._decode_payload(payload)
+        except Exception as exc:  # pylint: disable=broad-except
+            exc_type = type(exc).__name__
+            if exc_type == "AuthenticationError":
+                log.debug(
+                    "Minion failed to auth to master. Since the payload is "
+                    "encrypted, it is not known which minion failed to "
+                    "authenticate. It is likely that this is a transient "
+                    "failure due to the master rotating its public key."
+                )
+            else:
+                log.error("Bad load from minion: %s: %s", exc_type, exc)
+            raise salt.ext.tornado.gen.Return("bad load")
+
+        # TODO helper functions to normalize payload?
+        if not isinstance(payload, dict) or not isinstance(payload.get("load"), dict):
+            log.error(
+                "payload and load must be a dict. Payload was: %s and load was %s",
+                payload,
+                payload.get("load"),
+            )
+            raise salt.ext.tornado.gen.Return("payload and load must be a dict")
+
+        try:
+            id_ = payload["load"].get("id", "")
+            if "\0" in id_:
+                log.error("Payload contains an id with a null byte: %s", payload)
+                raise salt.ext.tornado.gen.Return("bad load: id contains a null byte")
+        except TypeError:
+            log.error("Payload contains non-string id: %s", payload)
+            raise salt.ext.tornado.gen.Return(
+                "bad load: id {} is not a string".format(id_)
+            )
+
+        # intercept the "_auth" commands, since the main daemon shouldn't know
+        # anything about our key auth
+        if payload["enc"] == "clear" and payload.get("load", {}).get("cmd") == "_auth":
+            raise salt.ext.tornado.gen.Return(self._auth(payload["load"]))
+
+        # TODO: test
+        try:
+            # Take the payload_handler function that was registered when we created the channel
+            # and call it, returning control to the caller until it completes
+            ret, req_opts = yield self.payload_handler(payload)
+        except Exception as e:  # pylint: disable=broad-except
+            # always attempt to return an error to the minion
+            log.error("Some exception handling a payload from minion", exc_info=True)
+            raise salt.ext.tornado.gen.Return("Some exception handling minion payload")
+
+        req_fun = req_opts.get("fun", "send")
+        if req_fun == "send_clear":
+            raise salt.ext.tornado.gen.Return(ret)
+        elif req_fun == "send":
+            raise salt.ext.tornado.gen.Return(self.crypticle.dumps(ret))
+        elif req_fun == "send_private":
+            raise salt.ext.tornado.gen.Return(
+                self._encrypt_private(
+                    ret,
+                    req_opts["key"],
+                    req_opts["tgt"],
+                ),
+            )
+        log.error("Unknown req_fun %s", req_fun)
+        # always attempt to return an error to the minion
+        salt.ext.tornado.Return("Server-side exception handling payload")
 
     def _encrypt_private(self, ret, dictkey, target):
         """
@@ -143,6 +215,8 @@ class AESReqServerMixin:
         Check to see if a fresh AES key is available and update the components
         of the worker
         """
+        import salt.master
+
         if (
             salt.master.SMaster.secrets["aes"]["secret"].value
             != self.crypticle.key_string
@@ -179,6 +253,7 @@ class AESReqServerMixin:
             - Encrypt the AES key as an encrypted salt.payload
             - Package the return and return it
         """
+        import salt.master
 
         if not salt.utils.verify.valid_id(self.opts, load["id"]):
             log.info("Authentication request from invalid id %s", load["id"])
@@ -539,3 +614,216 @@ class AESReqServerMixin:
         if self.opts.get("auth_events") is True:
             self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
         return ret
+
+    def close(self):
+        self.transport.close()
+        if self.event is not None:
+            self.event.destroy()
+
+
+class PubServerChannel:
+    """
+    Factory class to create subscription channels to the master's Publisher
+    """
+
+    @classmethod
+    def factory(cls, opts, **kwargs):
+        if "master_uri" not in opts and "master_uri" in kwargs:
+            opts["master_uri"] = kwargs["master_uri"]
+        presence_events = False
+        if opts.get("presence_events", False):
+            tcp_only = True
+            for transport, _ in salt.utils.channel.iter_transport_opts(opts):
+                if transport != "tcp":
+                    tcp_only = False
+            if tcp_only:
+                # Only when the transport is TCP only, the presence events will
+                # be handled here. Otherwise, it will be handled in the
+                # 'Maintenance' process.
+                presence_events = True
+        transport = salt.transport.publish_server(opts, **kwargs)
+        return cls(opts, transport, presence_events=presence_events)
+
+    def __init__(self, opts, transport, presence_events=False):
+        self.opts = opts
+        self.ckminions = salt.utils.minions.CkMinions(self.opts)
+        self.transport = transport
+        self.aes_funcs = salt.master.AESFuncs(self.opts)
+        self.present = {}
+        self.presence_events = presence_events
+        self.event = salt.utils.event.get_event("master", opts=self.opts, listen=False)
+
+    def __getstate__(self):
+        return {
+            "opts": self.opts,
+            "transport": self.transport,
+            "presence_events": self.presence_events,
+        }
+
+    def __setstate__(self, state):
+        self.opts = state["opts"]
+        self.state = state["presence_events"]
+        self.transport = state["transport"]
+        self.event = salt.utils.event.get_event("master", opts=self.opts, listen=False)
+        self.ckminions = salt.utils.minions.CkMinions(self.opts)
+        self.present = {}
+
+    def close(self):
+        self.transport.close()
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
+        if self.aes_funcs is not None:
+            self.aes_funcs.destroy()
+            self.aes_funcs = None
+
+    def pre_fork(self, process_manager, kwargs=None):
+        """
+        Do anything necessary pre-fork. Since this is on the master side this will
+        primarily be used to create IPC channels and create our daemon process to
+        do the actual publishing
+
+        :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
+        """
+        if hasattr(self.transport, "publish_daemon"):
+            process_manager.add_process(self._publish_daemon, kwargs=kwargs)
+
+    def _publish_daemon(self, log_queue=None, log_queue_level=None):
+        salt.utils.process.appendproctitle(self.__class__.__name__)
+        if self.opts["pub_server_niceness"] and not salt.utils.platform.is_windows():
+            log.info(
+                "setting Publish daemon niceness to %i",
+                self.opts["pub_server_niceness"],
+            )
+            os.nice(self.opts["pub_server_niceness"])
+
+        if log_queue:
+            salt.log.setup.set_multiprocessing_logging_queue(log_queue)
+        if log_queue_level is not None:
+            salt.log.setup.set_multiprocessing_logging_level(log_queue_level)
+        salt.log.setup.setup_multiprocessing_logging(log_queue)
+        try:
+            self.transport.publish_daemon(self.publish_payload, self.presence_callback)
+        finally:
+            salt.log.setup.shutdown_multiprocessing_logging()
+
+    def presence_callback(self, subscriber, msg):
+        if msg["enc"] != "aes":
+            # We only accept 'aes' encoded messages for 'id'
+            return
+        crypticle = salt.crypt.Crypticle(
+            self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
+        )
+        load = crypticle.loads(msg["load"])
+        load = salt.transport.frame.decode_embedded_strs(load)
+        if not self.aes_funcs.verify_minion(load["id"], load["tok"]):
+            return
+        subscriber.id_ = load["id"]
+        self._add_client_present(subscriber)
+
+    def remove_presence_callback(self, subscriber):
+        self._remove_client_present(subscriber)
+
+    def _add_client_present(self, client):
+        id_ = client.id_
+        if id_ in self.present:
+            clients = self.present[id_]
+            clients.add(client)
+        else:
+            self.present[id_] = {client}
+            if self.presence_events:
+                data = {"new": [id_], "lost": []}
+                self.event.fire_event(
+                    data, salt.utils.event.tagify("change", "presence")
+                )
+                data = {"present": list(self.present.keys())}
+                self.event.fire_event(
+                    data, salt.utils.event.tagify("present", "presence")
+                )
+
+    def _remove_client_present(self, client):
+        id_ = client.id_
+        if id_ is None or id_ not in self.present:
+            # This is possible if _remove_client_present() is invoked
+            # before the minion's id is validated.
+            return
+
+        clients = self.present[id_]
+        if client not in clients:
+            # Since _remove_client_present() is potentially called from
+            # _stream_read() and/or publish_payload(), it is possible for
+            # it to be called twice, in which case we will get here.
+            # This is not an abnormal case, so no logging is required.
+            return
+
+        clients.remove(client)
+        if len(clients) == 0:
+            del self.present[id_]
+            if self.presence_events:
+                data = {"new": [], "lost": [id_]}
+                self.event.fire_event(
+                    data, salt.utils.event.tagify("change", "presence")
+                )
+                data = {"present": list(self.present.keys())}
+                self.event.fire_event(
+                    data, salt.utils.event.tagify("present", "presence")
+                )
+
+    @salt.ext.tornado.gen.coroutine
+    def publish_payload(self, unpacked_package, *args):
+        try:
+            payload = salt.payload.loads(unpacked_package["payload"])
+        except KeyError:
+            log.error("Invalid package %r", unpacked_package)
+            raise
+        if "topic_lst" in unpacked_package:
+            topic_list = unpacked_package["topic_lst"]
+            ret = yield self.transport.publish_payload(payload, topic_list)
+        else:
+            ret = yield self.transport.publish_payload(payload)
+        raise salt.ext.tornado.gen.Return(ret)
+
+    def wrap_payload(self, load):
+        payload = {"enc": "aes"}
+        crypticle = salt.crypt.Crypticle(
+            self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
+        )
+        payload["load"] = crypticle.dumps(load)
+        if self.opts["sign_pub_messages"]:
+            master_pem_path = os.path.join(self.opts["pki_dir"], "master.pem")
+            log.debug("Signing data packet")
+            payload["sig"] = salt.crypt.sign_message(master_pem_path, payload["load"])
+        int_payload = {"payload": salt.payload.dumps(payload)}
+
+        # add some targeting stuff for lists only (for now)
+        if load["tgt_type"] == "list":
+            int_payload["topic_lst"] = load["tgt"]
+
+        # If topics are upported, target matching has to happen master side
+        match_targets = ["pcre", "glob", "list"]
+        if self.transport.topic_support and load["tgt_type"] in match_targets:
+            if isinstance(load["tgt"], str):
+                # Fetch a list of minions that match
+                _res = self.ckminions.check_minions(
+                    load["tgt"], tgt_type=load["tgt_type"]
+                )
+                match_ids = _res["minions"]
+                log.debug("Publish Side Match: %s", match_ids)
+                # Send list of miions thru so zmq can target them
+                int_payload["topic_lst"] = match_ids
+            else:
+                int_payload["topic_lst"] = load["tgt"]
+
+        return int_payload
+
+    def publish(self, load):
+        """
+        Publish "load" to minions
+        """
+        payload = self.wrap_payload(load)
+        log.debug(
+            "Sending payload to publish daemon. jid=%s load=%r",
+            load.get("jid", None),
+            load,
+        )
+        self.transport.publish(payload)
