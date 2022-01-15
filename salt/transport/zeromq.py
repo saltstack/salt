@@ -92,7 +92,7 @@ def _get_master_uri(master_ip, master_port, source_ip=None, source_port=None):
             log.warning("Consider upgrading to pyzmq >= 16.0.1 and libzmq >= 4.1.6")
             log.warning(
                 "Specific source IP / port for connecting to master returner port:"
-                " configuraion ignored"
+                " configuration ignored"
             )
 
     return master_uri
@@ -204,7 +204,12 @@ class PublishClient(salt.transport.base.PublishClient):
 
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
     @salt.ext.tornado.gen.coroutine
-    def connect(self, publish_port, connect_callback=None, disconnect_callback=None):
+    def connect(
+        self, publish_port=None, connect_callback=None, disconnect_callback=None
+    ):
+        if not publish_port:
+            raise ValueError("publish_port must be set")
+
         self.publish_port = publish_port
         log.debug(
             "Connecting the Minion to the Master publish port, using the URI: %s",
@@ -595,22 +600,22 @@ class AsyncReqMessageClient:
                     message,
                     timeout=future.timeout,
                     tries=future.tries,
-                    future=future,
+                    reply_future=future,
                 )
 
             else:
                 future.set_exception(SaltReqTimeoutError("Message timed out"))
 
     @salt.ext.tornado.gen.coroutine
-    def send(self, message, timeout=None, tries=3, future=None, callback=None):
+    def send(self, message, timeout=None, tries=3, reply_future=None, callback=None):
         """
         Return a future which will be completed when the message has a response
         """
-        if future is None:
-            future = salt.ext.tornado.concurrent.Future()
-            future.tries = tries
-            future.attempts = 0
-            future.timeout = timeout
+        if reply_future is None:
+            reply_future = salt.ext.tornado.concurrent.Future()
+            reply_future.tries = tries
+            reply_future.attempts = 0
+            reply_future.timeout = timeout
             # if a future wasn't passed in, we need to serialize the message
             message = salt.payload.dumps(message)
         if callback is not None:
@@ -619,9 +624,9 @@ class AsyncReqMessageClient:
                 response = future.result()
                 self.io_loop.add_callback(callback, response)
 
-            future.add_done_callback(handle_future)
+            reply_future.add_done_callback(handle_future)
         # Add this future to the mapping
-        self.send_future_map[message] = future
+        self.send_future_map[message] = reply_future
 
         if self.opts.get("detect_mode") is True:
             timeout = 1
@@ -632,14 +637,14 @@ class AsyncReqMessageClient:
             )
 
         def mark_future(msg):
-            if not future.done():
+            if not reply_future.done():
                 data = salt.payload.loads(msg[0])
-                future.set_result(data)
+                reply_future.set_result(data)
                 self.send_future_map.pop(message)
 
         self.stream.on_recv(mark_future)
         yield self.stream.send(message)
-        recv = yield future
+        recv = yield reply_future
         raise salt.ext.tornado.gen.Return(recv)
 
 

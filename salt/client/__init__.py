@@ -192,13 +192,13 @@ class LocalClient:
                                will be synchronous.
 
         :param bool keep_loop: Do not destroy the event loop when closing the event
-                               subsriber.
+                               subscriber.
 
         :param bool auto_reconnect: When True the event subscriber will reconnect
                                     automatically if a disconnect error is raised.
 
         .. versionadded:: 3004
-        :param bool listen: Listen for events indefinitly. When option is set the
+        :param bool listen: Listen for events indefinitely. When option is set the
                             LocalClient object will listen for events until it's
                             destroy method is called.
 
@@ -1873,7 +1873,7 @@ class LocalClient:
                 A set, the targets that the tgt passed should match.
         """
         # Make sure the publisher is running by checking the unix socket
-        if self.opts.get("ipc_mode", "") != "tcp" and not os.path.exists(
+        if self.opts.get("ipc_mode", "") == "zeromq" and not os.path.exists(
             os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
         ):
             log.error(

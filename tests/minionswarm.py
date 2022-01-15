@@ -12,6 +12,7 @@ import os
 import random
 import shutil
 import signal
+import socket
 import subprocess
 import sys
 import tempfile
@@ -191,7 +192,7 @@ class Swarm:
                 prefix="mswarm-root", suffix=".d", dir=tmpdir
             )
 
-        if self.opts["transport"] == "zeromq":
+        if self.opts["transport"] == "zeromq" or "rabbitmq":
             self.pki = self._pki_dir()
         self.zfill = len(str(self.opts["minions"]))
 
@@ -291,7 +292,7 @@ class MinionSwarm(Swarm):
             if self.opts["foreground"]:
                 cmd += " -l debug &"
             else:
-                cmd += " -d &"
+                cmd += " -l debug -d &"
             subprocess.call(cmd, shell=True)
             time.sleep(self.opts["start_delay"])
 
@@ -304,7 +305,9 @@ class MinionSwarm(Swarm):
             spath = os.path.join(self.opts["config_dir"], "minion")
             with salt.utils.files.fopen(spath) as conf:
                 data = salt.utils.yaml.safe_load(conf) or {}
-        minion_id = "{}-{}".format(self.opts["name"], str(idx).zfill(self.zfill))
+        minion_id = "{}-{}-{}".format(
+            socket.gethostname(), self.opts["name"], str(idx).zfill(self.zfill)
+        )
 
         dpath = os.path.join(self.swarm_root, minion_id)
         if not os.path.exists(dpath):
@@ -321,7 +324,7 @@ class MinionSwarm(Swarm):
             }
         )
 
-        if self.opts["transport"] == "zeromq":
+        if self.opts["transport"] == "zeromq" or "rabbitmq":
             minion_pkidir = os.path.join(dpath, "pki")
             if not os.path.exists(minion_pkidir):
                 os.makedirs(minion_pkidir)
@@ -332,6 +335,12 @@ class MinionSwarm(Swarm):
             data["pki_dir"] = minion_pkidir
         elif self.opts["transport"] == "tcp":
             data["transport"] = "tcp"
+
+        if self.opts["transport"] == "rabbitmq":
+            # only update the keys that need to be unique per minion
+            data["transport_rabbitmq_consumer_queue_name"] = "{}_{}_{}".format(
+                "salt_minion_command_queue", socket.gethostname(), minion_id
+            )
 
         if self.opts["root_dir"]:
             data["root_dir"] = self.opts["root_dir"]
