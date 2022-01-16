@@ -134,8 +134,8 @@ def test_network_grains_secondary_ip(tmp_path):
         "extension_modules": str(extmods),
         "optimization_order": [0],
     }
-    with patch.object(
-        salt.utils.network, "_interfaces_ip", Mock(return_value=data)
+    with patch(
+        "salt.utils.network.interfaces", side_effect=[data]
     ):
         grains = salt.loader.grain_funcs(opts)
         ret_ip4 = grains["core.ip4_interfaces"]()
