@@ -1435,6 +1435,8 @@ def test_xen_virtual():
     ), patch.dict(core.__salt__, {"cmd.run": MagicMock(return_value="")}), patch.dict(
         core.__salt__,
         {"cmd.run_all": MagicMock(return_value={"retcode": 0, "stdout": ""})},
+    ), patch.object(os.path, "isfile", MagicMock(side_effect=lambda x: True if x == "/proc/1/cgroup" else False)
+    ), patch("salt.utils.files.fopen", mock_open(read_data="")
     ):
         assert (
             core._virtual({"kernel": "Linux"}).get("virtual_subtype") == "Xen PV DomU"
