@@ -70,7 +70,9 @@ class Handler(FileSystemEventHandler):
 def __virtual__():
     if HAS_WATCHDOG:
         return __virtualname__
-    return False
+    err_msg = "watchdog library is missing."
+    log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+    return False, err_msg
 
 
 def _get_queue(config):

@@ -210,7 +210,7 @@ def test_cached_file_client(get_loader, minion_opts):
     """
     Multiple instantiations of SaltCacheLoader use the cached file client
     """
-    with patch("salt.transport.client.ReqChannel.factory", Mock()):
+    with patch("salt.channel.client.ReqChannel.factory", Mock()):
         loader_a = SaltCacheLoader(minion_opts)
         loader_b = SaltCacheLoader(minion_opts)
     assert loader_a._file_client is loader_b._file_client
