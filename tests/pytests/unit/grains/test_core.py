@@ -176,6 +176,59 @@ def test_network_grains_cache(tmp_path):
         assert ret["ip_interfaces"]["wlo1"] == ["172.16.13.86"]
 
 
+def test_network_grains_secondary_ip():
+    """
+    Secondary IP should be added to IPv4 or IPv6 address list depending on type
+    """
+    data = {
+        "wlo1": {
+            "up": True,
+            "hwaddr": "29:9f:9f:e9:67:f4",
+            "inet": [
+                {
+                    "address": "172.16.13.85",
+                    "netmask": "255.255.248.0",
+                    "broadcast": "172.16.15.255",
+                    "label": "wlo1",
+                }
+            ],
+            "inet6": [
+                {
+                    "address": "2001:4860:4860::8844",
+                    "prefixlen": "64",
+                    "scope": "fe80::6238:e0ff:fe06:3f6b%enp2s0",
+                }
+            ],
+            "secondary": [
+                {
+                    "type": "inet",
+                    "address": "172.16.13.86",
+                    "netmask": "255.255.248.0",
+                    "broadcast": "172.16.15.255",
+                    "label": "wlo1",
+                },{
+                    "type": "inet6",
+                    "address": "2001:4860:4860::8888",
+                    "netmask": "64",
+                    "broadcast": "fe80::6238:e0ff:fe06:3f6b%enp2s0",
+                    "label": "wlo1",
+                }
+            ]
+        }
+    }
+    with patch.object(
+        salt.utils.network, "_interfaces_ip", Mock(return_value=data)
+    ):
+        ret_ip4 = core.ip4_interfaces()
+        assert ret_ip4["ip4_interfaces"]["wlo1"] == ["172.16.13.85","172.16.13.86"]
+
+        ret_ip6 = core.ip6_interfaces()
+        assert ret_ip6["ip6_interfaces"]["wlo1"] == ["2001:4860:4860::8844","2001:4860:4860::8888"]
+
+        ret_ip = core.ip_interfaces()
+        assert ret_ip["ip_interfaces"]["wlo1"] == ["172.16.13.85","2001:4860:4860::8844","172.16.13.86","2001:4860:4860::8888"]
+
+
 @pytest.mark.parametrize(
     "cpe,cpe_ret",
     (
