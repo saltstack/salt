@@ -88,7 +88,7 @@ def test_parse_etc_os_release(os_release_dir):
     }
 
 
-def test_network_grains_secondary_ip():
+def test_network_grains_secondary_ip(tmp_path):
     """
     Secondary IP should be added to IPv4 or IPv6 address list depending on type
     """
@@ -127,16 +127,24 @@ def test_network_grains_secondary_ip():
             ]
         }
     }
+    cache_dir = tmp_path / "cache"
+    extmods = tmp_path / "extmods"
+    opts = {
+        "cachedir": str(cache_dir),
+        "extension_modules": str(extmods),
+        "optimization_order": [0],
+    }
     with patch.object(
         salt.utils.network, "_interfaces_ip", Mock(return_value=data)
     ):
-        ret_ip4 = core.ip4_interfaces()
+        grains = salt.loader.grain_funcs(opts)
+        ret_ip4 = grains["core.ip4_interfaces"]()
         assert ret_ip4["ip4_interfaces"]["wlo1"] == ["172.16.13.85","172.16.13.86"]
 
-        ret_ip6 = core.ip6_interfaces()
+        ret_ip6 = grains["core.ip6_interfaces"]()
         assert ret_ip6["ip6_interfaces"]["wlo1"] == ["2001:4860:4860::8844","2001:4860:4860::8888"]
 
-        ret_ip = core.ip_interfaces()
+        ret_ip = grains["core.ip_interfaces"]()
         assert ret_ip["ip_interfaces"]["wlo1"] == ["172.16.13.85","2001:4860:4860::8844","172.16.13.86","2001:4860:4860::8888"]
 
 
