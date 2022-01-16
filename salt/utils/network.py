@@ -743,12 +743,12 @@ def _interfaces_ip(out):
                 type_, value = tuple(cols[0:2])
                 iflabel = cols[-1:][0]
                 if type_ in ("inet", "inet6"):
+                    ipaddr, netmask, broadcast, scope = parse_network(value, cols)
+                    addr_obj = dict()
                     if "secondary" not in cols:
-                        ipaddr, netmask, broadcast, scope = parse_network(value, cols)
                         if type_ == "inet":
                             if "inet" not in data:
                                 data["inet"] = list()
-                            addr_obj = dict()
                             addr_obj["address"] = ipaddr
                             addr_obj["netmask"] = netmask
                             addr_obj["broadcast"] = broadcast
@@ -757,25 +757,28 @@ def _interfaces_ip(out):
                         elif type_ == "inet6":
                             if "inet6" not in data:
                                 data["inet6"] = list()
-                            addr_obj = dict()
                             addr_obj["address"] = ipaddr
                             addr_obj["prefixlen"] = netmask
                             addr_obj["scope"] = scope
                             data["inet6"].append(addr_obj)
                     else:
-                        if "secondary" not in data:
-                            data["secondary"] = list()
-                        ip_, mask, brd, scp = parse_network(value, cols)
-                        data["secondary"].append(
-                            {
-                                "type": type_,
-                                "address": ip_,
-                                "netmask": mask,
-                                "broadcast": brd,
-                                "label": iflabel,
-                            }
-                        )
-                        del ip_, mask, brd, scp
+                        if type_ == "inet":
+                            if "secondary" not in data:
+                                data["secondary"] = list()
+                            addr_obj["type"] = type_
+                            addr_obj["address"] = ipaddr
+                            addr_obj["netmask"] = netmask
+                            addr_obj["broadcast"] = broadcast
+                            addr_obj["label"] = iflabel
+                            data["secondary"].append(addr_obj)
+                        elif type_ == "inet6":
+                            if "secondary" not in data:
+                                data["secondary"] = list()
+                            addr_obj["type"] = type_
+                            addr_obj["address"] = ipaddr
+                            addr_obj["prefixlen"] = netmask
+                            addr_obj["scope"] = scope
+                            data["secondary"].append(addr_obj)
                 elif type_.startswith("link"):
                     data["hwaddr"] = value
         if iface:
