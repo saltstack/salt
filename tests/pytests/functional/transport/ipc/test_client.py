@@ -3,9 +3,7 @@ import sys
 
 import attr
 import pytest
-import salt.transport.client
 import salt.transport.ipc
-import salt.transport.server
 import salt.utils.platform
 from salt.ext.tornado import locks
 
