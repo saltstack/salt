@@ -121,9 +121,8 @@ def test_network_grains_secondary_ip():
                 },{
                     "type": "inet6",
                     "address": "2001:4860:4860::8888",
-                    "netmask": "64",
-                    "broadcast": "fe80::6238:e0ff:fe06:3f6b%enp2s0",
-                    "label": "wlo1",
+                    "prefixlen": "64",
+                    "scope": "fe80::6238:e0ff:fe06:3f6b%enp2s0",
                 }
             ]
         }
