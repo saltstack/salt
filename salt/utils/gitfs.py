@@ -1215,7 +1215,7 @@ class GitPython(GitProvider):
         """
         tgt_ref = self.get_checkout_target()
 
-        # Fetch references if in case provider is new
+        # Fetch references in case provider is new
         if self.new:
             self.fetch()
 
@@ -1548,7 +1548,7 @@ class Pygit2(GitProvider):
         remote_ref = "refs/remotes/origin/" + tgt_ref
         tag_ref = "refs/tags/" + tgt_ref
 
-        # Fetch references if in case provider is new
+        # Fetch references in case provider is new
         if self.new:
             self.fetch()
 
@@ -2434,7 +2434,6 @@ class GitBase:
                     envs = repo_obj.envs()
                     log.debug("Adding available envs as new remotes: {}".format(envs))
                     for env in envs:
-                        log.debug("__env --> {}".format(env))
                         if isinstance(remote, dict):
                             key = next(iter(remote))
                             _, _url = key.split(None, 1)
