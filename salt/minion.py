@@ -2721,6 +2721,7 @@ class Minion(MinionBase):
         """
         Send mine data to the master
         """
+        # Consider using a long-running req channel to send mine data
         with salt.channel.client.ReqChannel.factory(self.opts) as channel:
             data["tok"] = self.tok
             try:
