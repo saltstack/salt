@@ -2438,16 +2438,25 @@ class GitBase:
                         if isinstance(remote, dict):
                             key = next(iter(remote))
                             _, _url = key.split(None, 1)
-                            new_remote = {"{} {}".format(env, _url): remote[key]}
+                            remote_conf = salt.utils.data.repack_dictlist(remote[key])
+                            # Remove "base" as it is only valid for parent __env__ remote
+                            remote_conf.pop("base", True)
+                            # If name is defined, append "env" to avoid collisions
+                            # in the generated cachedir for the different envs
+                            if "name" in remote_conf:
+                                remote_conf["name"] = "{}_{}".format(
+                                    remote_conf["name"], env
+                                )
+                            remote_conf = [{k: v} for k, v in remote_conf.items()]
+                            if remote_conf:
+                                new_remote = {"{} {}".format(env, _url): remote_conf}
+                            else:
+                                new_remote = "{} {}".format(env, _url)
                         else:
                             _, _url = remote.split(None, 1)
                             new_remote = "{} {}".format(env, _url)
                         remotes_to_process.append(new_remote)
 
-                # Do not add '__env__' as remote since new remotes for
-                # available refs have been already added to be processed
-                if hasattr(repo_obj, "branch") and repo_obj.branch == "__env__":
-                    continue
                 self.remotes.append(repo_obj)
 
         # Don't allow collisions in cachedir naming
