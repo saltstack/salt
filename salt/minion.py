@@ -1364,10 +1364,40 @@ class Minion(MinionBase):
         """
         Return a future which will complete when you are connected to a master
         """
+        # Consider refactoring so that eval_master does not have a subtle side-effect on the contents of the opts array
         master, self.pub_channel = yield self.eval_master(
             self.opts, self.timeout, self.safe, failed
         )
+
+        # Create a single ipc channel that will aggregate job completion results
+        self.ipc_job_completion_channel = self._create_job_completion_channel()
+
+        # a long-running req channel
+        self.req_channel = salt.transport.client.AsyncReqChannel.factory(
+            self.opts, io_loop=self.io_loop
+        )
+
+        if hasattr(
+            self.req_channel, "connect"
+        ):  # TODO: consider generalizing this for all channels
+            log.debug("Connecting minion's long-running req channel")
+            yield self.req_channel.connect()
+
         yield self._post_master_init(master)
+
+    @salt.ext.tornado.gen.coroutine
+    def handle_payload(self, payload, reply_func):
+        self.payloads.append(payload)
+        yield reply_func(payload)
+        self.payload_ack.notify()
+
+    @salt.ext.tornado.gen.coroutine
+    def handle_job_completion_payload(self, payload, reply_func):
+        yield self.req_channel.send(
+            payload,
+            timeout=60,  # this is the hard-coded timeout used throughout this file
+            tries=self.opts["return_retry_tries"],
+        )
 
     # TODO: better name...
     @salt.ext.tornado.gen.coroutine
@@ -1486,6 +1516,49 @@ class Minion(MinionBase):
             )
             self.schedule.delete_job(master_event(type="failback"), persist=True)
 
+    def _get_job_completion_ipc_path(self):
+        """
+        Get IPC path (TCP port or UXD socket) for IPC channel used to forward minion job completion results from spawned
+        minion job processes to the parent process
+        :return:
+        """
+        if self.opts["ipc_mode"] == "tcp":
+            # try to find the port and fallback to something if not configured
+            uxd_path_or_tcp_port = int(
+                self.opts.get("tcp_job_completion_port", self.opts["tcp_pub_port"] + 1)
+            )
+        else:
+            uxd_path_or_tcp_port = os.path.join(
+                self.opts["sock_dir"],
+                "job_completion_minion-{}.ipc".format(self.opts["id"]),
+            )
+
+        return uxd_path_or_tcp_port
+
+    def _create_job_completion_channel(self):
+        """
+        Channel that will forward/proxy results from spawned minion processes to the parent process that will,
+        in turn, use the long-running req channel
+        :return:
+        """
+        job_completion_ipc_path = self._get_job_completion_ipc_path()
+        log.trace(
+            "Job completion IPCMessageServer will listen on [%s]",
+            job_completion_ipc_path,
+        )
+
+        # Create a single ipc channel that will aggregate job completion results
+        ipc_job_completion_channel = salt.transport.ipc.IPCMessageServer(
+            job_completion_ipc_path,
+            io_loop=self.io_loop,
+            payload_handler=self.handle_job_completion_payload,
+        )
+
+        with salt.utils.files.set_umask(0o177):
+            ipc_job_completion_channel.start()
+
+        return ipc_job_completion_channel
+
     def _prep_mod_opts(self):
         """
         Returns a copy of the opts with key bits stripped out
@@ -1592,10 +1665,17 @@ class Minion(MinionBase):
             )
             load["sig"] = sig
 
-        with salt.channel.client.ReqChannel.factory(self.opts) as channel:
-            return channel.send(
+        with salt.channel.client.PushChannel.factory(
+            self._get_job_completion_ipc_path(),
+            io_loop=self.io_loop,
+        ) as channel:
+            channel.connect()
+            # TODO: IPC implementation does not support timeout/retries count.
+            # DW: we do not really need retries/timeout here because IPC is reliable enough
+            res = channel.send(
                 load, timeout=timeout, tries=self.opts["return_retry_tries"]
             )
+            return res
 
     @salt.ext.tornado.gen.coroutine
     def _send_req_async(self, load, timeout):
@@ -1607,11 +1687,15 @@ class Minion(MinionBase):
             )
             load["sig"] = sig
 
-        with salt.channel.client.AsyncReqChannel.factory(self.opts) as channel:
+        with salt.channel.client.AsyncPushChannel.factory(
+            self._get_job_completion_ipc_path(),
+            io_loop=self.io_loop,
+        ) as channel:
+            # TODO: IPC does not support timeout/retries count
             ret = yield channel.send(
                 load, timeout=timeout, tries=self.opts["return_retry_tries"]
             )
-            raise salt.ext.tornado.gen.Return(ret)
+        raise salt.ext.tornado.gen.Return(ret)
 
     def _fire_master(
         self,
@@ -2028,7 +2112,7 @@ class Minion(MinionBase):
             )
 
         # Add default returners from minion config
-        # Should have been coverted to comma-delimited string already
+        # Should have been converted to comma-delimited string already
         if isinstance(opts.get("return"), str):
             if data["ret"]:
                 data["ret"] = ",".join((data["ret"], opts["return"]))
@@ -3134,7 +3218,7 @@ class Minion(MinionBase):
             if self._target_load(payload["load"]):
                 self._handle_decoded_payload(payload["load"])
             elif self.opts["zmq_filtering"]:
-                # In the filtering enabled case, we'd like to know when minion sees something it shouldnt
+                # In the filtering enabled case, we'd like to know when minion sees something it shouldn't
                 log.trace(
                     "Broadcast message received not for this minion, Load: %s",
                     payload["load"],
