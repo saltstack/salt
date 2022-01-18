@@ -20,7 +20,9 @@ __virtualname__ = "ps"
 
 def __virtual__():
     if not HAS_PSUTIL:
-        return (False, "cannot load ps beacon: psutil not available")
+        err_msg = "psutil library is missing."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
     return __virtualname__
 
 

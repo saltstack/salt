@@ -45,7 +45,7 @@ IS_DARWIN = sys.platform.lower().startswith("darwin")
 IS_WINDOWS = sys.platform.lower().startswith("win")
 IS_FREEBSD = sys.platform.lower().startswith("freebsd")
 # Python versions to run against
-_PYTHON_VERSIONS = ("3", "3.5", "3.6", "3.7", "3.8", "3.9")
+_PYTHON_VERSIONS = ("3", "3.5", "3.6", "3.7", "3.8", "3.9", "3.10")
 
 # Nox options
 #  Reuse existing virtualenvs
