@@ -83,7 +83,7 @@ def test_readlink_canonical(file, source):
     target.symlink_to(intermediate)
     try:
         result = file.readlink(path=target, canonicalize=True)
-        assert result == str(source)
+        assert result == str(source.resolve())
     finally:
         intermediate.unlink()
         target.unlink()

@@ -3715,7 +3715,7 @@ def symlink(src, path, force=False):
 
         src (str): The path to a file or directory
 
-        link (str): The path to the link. Must be an absolute path
+        path (str): The path to the link. Must be an absolute path
 
         force (bool): Overwrite an existing symlink with the same name
 
@@ -3746,12 +3746,9 @@ def symlink(src, path, force=False):
             msg = "Found existing symlink: {}".format(path)
             raise CommandExecutionError(msg)
 
-    if os.path.exists(link):
+    if os.path.exists(path):
         msg = "Existing path is not a symlink: {}".format(path)
         raise CommandExecutionError(msg)
-
-    if not os.path.exists(src):
-        raise CommandExecutionError("Source path does not exist: {}".format(src))
 
     if not os.path.isabs(path):
         raise SaltInvocationError("Link path must be absolute: {}".format(path))
