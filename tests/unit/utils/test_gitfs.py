@@ -317,6 +317,81 @@ class TestPygit2(TestCase):
         )
         return provider
 
+    def _prepare_cache_repository_git_pillar(self, remote, cache):
+        opts = {
+            "__role": "git_pillar",
+            "cachedir": cache,
+            "environment": None,
+            "pillarenv": None,
+            "hash_type": "sha256",
+            "file_roots": {},
+            "state_top": "top.sls",
+            "state_top_saltenv": None,
+            "renderer": "yaml_jinja",
+            "renderer_whitelist": [],
+            "renderer_blacklist": [],
+            "pillar_merge_lists": False,
+            "git_pillar_update_interval": 180,
+            "git_pillar_base": "master",
+            "git_pillar_env": "",
+            "git_pillar_fallback": "",
+            "git_pillar_root": "",
+            "git_pillar_ssl_verify": True,
+            "git_pillar_global_lock": True,
+            "git_pillar_user": "",
+            "git_pillar_password": "",
+            "git_pillar_insecure_auth": False,
+            "git_pillar_privkey": "",
+            "git_pillar_pubkey": "",
+            "git_pillar_passphrase": "",
+            "git_pillar_refspecs": [
+                "+refs/heads/*:refs/remotes/origin/*",
+                "+refs/tags/*:refs/tags/*",
+            ],
+            "git_pillar_includes": True,
+            "git_pillar_disable_saltenv_mapping": False,
+            "git_pillar_mountpoint": "",
+            "git_pillar_provider": "pygit2",
+            "git_pillar_ref_types": ["branch", "tag", "sha"],
+            "git_pillar_saltenv_blacklist": [],
+            "git_pillar_saltenv_whitelist": [],
+            "verified_git_pillar_provider": "pygit2",
+        }
+        per_remote_defaults = {
+            "base": "master",
+            "disable_saltenv_mapping": False,
+            "insecure_auth": False,
+            "ref_types": ["branch", "tag", "sha"],
+            "passphrase": "",
+            "mountpoint": "",
+            "password": "",
+            "privkey": "",
+            "pubkey": "",
+            "refspecs": [
+                "+refs/heads/*:refs/remotes/origin/*",
+                "+refs/tags/*:refs/tags/*",
+            ],
+            "root": "",
+            "saltenv_blacklist": [],
+            "saltenv_whitelist": [],
+            "ssl_verify": True,
+            "update_interval": 60,
+            "user": "",
+        }
+        per_remote_only = ("all_saltenvs", "name", "saltenv")
+        override_params = tuple(per_remote_defaults.keys())
+        cache_root = os.path.join(cache, "gitfs")
+        role = "git_pillar"
+        shutil.rmtree(cache_root, ignore_errors=True)
+        git_pillar = salt.utils.gitfs.GitPillar(
+            opts,
+            [remote],
+            per_remote_overrides=override_params,
+            per_remote_only=per_remote_only,
+            cache_root=cache_root,
+        )
+        return git_pillar
+
     def test_checkout(self):
         remote = os.path.join(tests.support.paths.TMP, "pygit2-repo")
         cache = os.path.join(tests.support.paths.TMP, "pygit2-repo-cache")
@@ -334,3 +409,31 @@ class TestPygit2(TestCase):
         self.assertIn(provider.cachedir, provider.checkout())
         provider.branch = "does_not_exist"
         self.assertIsNone(provider.checkout())
+
+    def test_git_pillar_with_single_branch(self):
+        remote = os.path.join(tests.support.paths.TMP, "pygit2-repo")
+        cache = os.path.join(tests.support.paths.TMP, "pygit2-repo-cache")
+        self._prepare_remote_repository(remote)
+        git_pillar = self._prepare_cache_repository_git_pillar(
+            "base {}".format(remote), cache
+        )
+        self.assertEqual(len(git_pillar.remotes), 1)
+        self.assertEqual(git_pillar.remotes[0].branch, "base")
+
+    def test_git_pillar_using___env__(self):
+        remote = os.path.join(tests.support.paths.TMP, "pygit2-repo")
+        cache = os.path.join(tests.support.paths.TMP, "pygit2-repo-cache")
+        self._prepare_remote_repository(remote)
+        git_pillar = self._prepare_cache_repository_git_pillar(
+            "__env__ {}".format(remote), cache
+        )
+
+        # New remotes should be added after expanding __env__
+        self.assertEqual(len(git_pillar.remotes), 4)
+        remotes_branches = [x.branch for x in git_pillar.remotes]
+        for ref in ["__env__", "base", "simple_tag", "annotated_tag"]:
+            self.assertIn(ref, remotes_branches)
+
+        # Each remote cachedir should be different
+        remotes_cachedirs = [x.cachedir for x in git_pillar.remotes]
+        self.assertEqual(len(remotes_cachedirs), len(set(remotes_cachedirs)), 4)
