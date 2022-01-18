@@ -15,35 +15,44 @@ from tests.support.mock import MagicMock, Mock, patch
 
 log = logging.getLogger(__name__)
 
-WORKTREE_ROOT = "/tmp/salt-tests-tmpdir/main"
-WORKTREE_INFO = {
-    WORKTREE_ROOT: {
-        "HEAD": "119f025073875a938f2456f5ffd7d04e79e5a427",
-        "branch": "refs/heads/master",
-        "stale": False,
-    },
-    "/tmp/salt-tests-tmpdir/worktree1": {
-        "HEAD": "d8d19cf75d7cc3bdc598dc2d472881d26b51a6bf",
-        "branch": "refs/heads/worktree1",
-        "stale": False,
-    },
-    "/tmp/salt-tests-tmpdir/worktree2": {
-        "HEAD": "56332ca504aa8b37bb62b54272d52b1d6d832629",
-        "branch": "refs/heads/worktree2",
-        "stale": True,
-    },
-    "/tmp/salt-tests-tmpdir/worktree3": {
-        "HEAD": "e148ea2d521313579f661373fbb93a48a5a6d40d",
-        "branch": "detached",
-        "tags": ["v1.1"],
-        "stale": False,
-    },
-    "/tmp/salt-tests-tmpdir/worktree4": {
-        "HEAD": "6bbac64d3ad5582b3147088a708952df185db020",
-        "branch": "detached",
-        "stale": True,
-    },
-}
+
+@pytest.fixture(scope="module")
+def worktree_root():
+    return "/tmp/salt-tests-tmpdir/main"
+
+
+@pytest.fixture(scope="module")
+def worktree_info(worktree_root):
+    worktree_info = {
+        worktree_root: {
+            "HEAD": "119f025073875a938f2456f5ffd7d04e79e5a427",
+            "branch": "refs/heads/master",
+            "stale": False,
+        },
+        "/tmp/salt-tests-tmpdir/worktree1": {
+            "HEAD": "d8d19cf75d7cc3bdc598dc2d472881d26b51a6bf",
+            "branch": "refs/heads/worktree1",
+            "stale": False,
+        },
+        "/tmp/salt-tests-tmpdir/worktree2": {
+            "HEAD": "56332ca504aa8b37bb62b54272d52b1d6d832629",
+            "branch": "refs/heads/worktree2",
+            "stale": True,
+        },
+        "/tmp/salt-tests-tmpdir/worktree3": {
+            "HEAD": "e148ea2d521313579f661373fbb93a48a5a6d40d",
+            "branch": "detached",
+            "tags": ["v1.1"],
+            "stale": False,
+        },
+        "/tmp/salt-tests-tmpdir/worktree4": {
+            "HEAD": "6bbac64d3ad5582b3147088a708952df185db020",
+            "branch": "detached",
+            "stale": True,
+        },
+    }
+
+    return worktree_info
 
 
 def _git_version():
@@ -66,7 +75,7 @@ def configure_loader_modules():
     return {git_mod: {"__utils__": {"ssh.key_is_encrypted": Mock(return_value=False)}}}
 
 
-def test_list_worktrees():
+def test_list_worktrees(worktree_info, worktree_root):
     """
     This tests git.list_worktrees
     """
@@ -77,9 +86,9 @@ def test_list_worktrees():
         """
         return "worktree {}\nHEAD {}\n{}\n".format(
             path,
-            WORKTREE_INFO[path]["HEAD"],
-            "branch {}".format(WORKTREE_INFO[path]["branch"])
-            if WORKTREE_INFO[path]["branch"] != "detached"
+            worktree_info[path]["HEAD"],
+            "branch {}".format(worktree_info[path]["branch"])
+            if worktree_info[path]["branch"] != "detached"
             else "detached",
         )
 
@@ -87,17 +96,17 @@ def test_list_worktrees():
     # 'git worktree list'.
     _cmd_run_values = {
         "git worktree list --porcelain": "\n".join(
-            [_build_worktree_output(x) for x in WORKTREE_INFO]
+            [_build_worktree_output(x) for x in worktree_info]
         ),
         "git --version": "git version 2.7.0",
     }
     # Add 'git tag --points-at' output for detached HEAD worktrees with
     # tags pointing at HEAD.
-    for path in WORKTREE_INFO:
-        if WORKTREE_INFO[path]["branch"] != "detached":
+    for path in worktree_info:
+        if worktree_info[path]["branch"] != "detached":
             continue
-        key = "git tag --points-at " + WORKTREE_INFO[path]["HEAD"]
-        _cmd_run_values[key] = "\n".join(WORKTREE_INFO[path].get("tags", []))
+        key = "git tag --points-at " + worktree_info[path]["HEAD"]
+        _cmd_run_values[key] = "\n".join(worktree_info[path].get("tags", []))
 
     def _cmd_run_side_effect(key, **kwargs):
         # Not using dict.get() here because we want to know if
@@ -111,10 +120,10 @@ def test_list_worktrees():
 
     def _isdir_side_effect(key):
         # os.path.isdir() would return True on a non-stale worktree
-        return not WORKTREE_INFO[key].get("stale", False)
+        return not worktree_info[key].get("stale", False)
 
     # Build return dict for comparison
-    worktree_ret = copy.deepcopy(WORKTREE_INFO)
+    worktree_ret = copy.deepcopy(worktree_info)
     for key in worktree_ret:
         ptr = worktree_ret.get(key)
         ptr["detached"] = ptr["branch"] == "detached"
@@ -128,22 +137,22 @@ def test_list_worktrees():
         with patch.object(os.path, "isdir", isdir_mock):
             # Test all=True. Include all return data.
             assert (
-                git_mod.list_worktrees(WORKTREE_ROOT, all=True, stale=False)
+                git_mod.list_worktrees(worktree_root, all=True, stale=False)
                 == worktree_ret
             )
             # Test all=False and stale=False. Exclude stale worktrees from
             # return data.
-            assert git_mod.list_worktrees(WORKTREE_ROOT, all=False, stale=False) == {
+            assert git_mod.list_worktrees(worktree_root, all=False, stale=False) == {
                 x: worktree_ret[x]
-                for x in WORKTREE_INFO
-                if not WORKTREE_INFO[x].get("stale", False)
+                for x in worktree_info
+                if not worktree_info[x].get("stale", False)
             }
             # Test stale=True. Exclude non-stale worktrees from return
             # data.
-            assert git_mod.list_worktrees(WORKTREE_ROOT, all=False, stale=True) == {
+            assert git_mod.list_worktrees(worktree_root, all=False, stale=True) == {
                 x: worktree_ret[x]
-                for x in WORKTREE_INFO
-                if WORKTREE_INFO[x].get("stale", False)
+                for x in worktree_info
+                if worktree_info[x].get("stale", False)
             }
 
 
