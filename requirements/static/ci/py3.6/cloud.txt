@@ -472,7 +472,7 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
-lxml==4.6.3
+lxml==4.7.1
     # via
     #   junos-eznc
     #   ncclient
@@ -674,6 +674,8 @@ pytest-tempdir==2019.10.12
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
+pytest-timeout==2.0.2
+    # via -r requirements/pytest.txt
 pytest==6.2.5 ; python_version <= "3.9"
     # via
     #   -r requirements/pytest.txt
@@ -681,6 +683,7 @@ pytest==6.2.5 ; python_version <= "3.9"
     #   pytest-salt-factories
     #   pytest-subtests
     #   pytest-tempdir
+    #   pytest-timeout
 python-dateutil==2.8.2
     # via
     #   -r requirements/static/pkg/linux.in

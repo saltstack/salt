@@ -12,6 +12,7 @@ import os
 import re
 import time
 
+import salt.channel
 import salt.config
 import salt.minion
 import salt.utils.event
@@ -1744,7 +1745,7 @@ def ping_master(master):
     load = {"cmd": "ping"}
 
     result = False
-    with salt.transport.client.ReqChannel.factory(opts, crypt="clear") as channel:
+    with salt.channel.client.ReqChannel.factory(opts, crypt="clear") as channel:
         try:
             payload = channel.send(load, tries=0, timeout=timeout)
             result = True
