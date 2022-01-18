@@ -342,7 +342,7 @@ def returner(ret):
             if not state_return["result"]:
                 key = (
                     'salt_failed{state_id="'
-                    + state_return["__id__"]
+                    + state_id.split("_|-")[1]
                     + '",state_comment="'
                     + state_return["comment"].replace('"', "").replace("\n", " ")
                 )
