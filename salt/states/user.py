@@ -496,15 +496,15 @@ def present(
             password = __salt__["shadow.gen_password"](password)
 
     if fullname is not None:
-        fullname = salt.utils.data.decode(fullname)
+        fullname = salt.utils.data.decode(str(fullname))
     if roomnumber is not None:
-        roomnumber = salt.utils.data.decode(roomnumber)
+        roomnumber = salt.utils.data.decode(str(roomnumber))
     if workphone is not None:
-        workphone = salt.utils.data.decode(workphone)
+        workphone = salt.utils.data.decode(str(workphone))
     if homephone is not None:
-        homephone = salt.utils.data.decode(homephone)
+        homephone = salt.utils.data.decode(str(homephone))
     if other is not None:
-        other = salt.utils.data.decode(other)
+        other = salt.utils.data.decode(str(other))
 
     # createhome not supported on Windows
     if __grains__["kernel"] == "Windows":
