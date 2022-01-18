@@ -98,18 +98,6 @@ def test_symlink_exists_different_force(file, source):
         target.unlink()
 
 
-def test_symlink_source_not_exist(file, source):
-    """
-    Test symlink when the source file does not exist
-    Should throw a CommandExecutionError
-    """
-    target = source.parent / "symlink.lnk"
-    fake_source = source.parent / "fake_source.txt"
-    with pytest.raises(CommandExecutionError) as exc:
-        file.symlink(fake_source, target)
-    assert "Source path does not exist" in exc.value.message
-
-
 def test_symlink_target_relative_path(file, source):
     """
     Test symlink when the target file is a relative path

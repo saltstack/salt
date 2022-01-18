@@ -47,7 +47,7 @@ def multiline_file(tmp_path_factory, multiline_string):
 
 def test_no_backup(file, multiline_file):
     # Backup file should NOT be created
-    bak_file = f"{multiline_file}.bak"
+    bak_file = "{}.bak".format(multiline_file)
     assert "Salticus" not in multiline_file.read_text()
     file.replace(multiline_file, "Etiam", "Salticus", backup=False)
     assert "Salticus" in multiline_file.read_text()
@@ -56,7 +56,7 @@ def test_no_backup(file, multiline_file):
 
 def test_backup(file, multiline_file):
     # Should create a backup file. This is basically the default
-    bak_file = f"{multiline_file}.bak"
+    bak_file = "{}.bak".format(multiline_file)
     file.replace(multiline_file, "Etiam", "Salticus")
     assert "Salticus" in multiline_file.read_text()
     assert os.path.exists(bak_file)
