@@ -2432,7 +2432,7 @@ class GitBase:
                     log.debug("Fetching all refs to resolve '__env__' dynamically")
                     repo_obj.fetch()
                     envs = repo_obj.envs()
-                    log.debug("Adding available envs as new remotes: {}".format(envs))
+                    log.debug("Adding available envs as new remotes: %s", envs)
                     for env in envs:
                         if isinstance(remote, dict):
                             key = next(iter(remote))
