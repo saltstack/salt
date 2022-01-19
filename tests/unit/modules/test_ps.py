@@ -9,6 +9,7 @@ import pytest
 import salt.modules.ps as ps
 import salt.utils.data
 import salt.utils.psutil_compat as psutil
+from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, Mock, call, patch
 from tests.support.unit import TestCase
 
@@ -341,7 +342,20 @@ class PsTestCase(TestCase):
                 result = ps.top(num_processes=1, interval=0)
                 assert len(result) == 1
 
-    # def test_status(self):
+    def test_status_when_no_filter_is_provided_then_raise_invocation_error(self):
+        with self.assertRaises(SaltInvocationError) as invoc_issue:
+            actual_result = salt.modules.ps.status(filter="")
+
+    def test_status_when_access_denied_from_psutil_then_raise_exception(self):
+        with patch(
+            "salt.utils.psutil_compat.process_iter",
+            autospec=True,
+            return_value=salt.utils.psutil_compat.AccessDenied(
+                pid="9999", name="whatever"
+            ),
+        ):
+            with self.assertRaises(Exception) as general_issue:
+                actual_result = salt.modules.ps.status(filter="fnord")
 
     ## This is commented out pending discussion on https://github.com/saltstack/salt/commit/2e5c3162ef87cca8a2c7b12ade7c7e1b32028f0a
     # @pytest.mark.skipif(not HAS_UTMP, reason="The utmp module must be installed to run test_get_users_utmp()")
