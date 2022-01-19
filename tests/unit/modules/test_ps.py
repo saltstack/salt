@@ -341,6 +341,8 @@ class PsTestCase(TestCase):
                 result = ps.top(num_processes=1, interval=0)
                 assert len(result) == 1
 
+    # def test_status(self):
+
     ## This is commented out pending discussion on https://github.com/saltstack/salt/commit/2e5c3162ef87cca8a2c7b12ade7c7e1b32028f0a
     # @pytest.mark.skipif(not HAS_UTMP, reason="The utmp module must be installed to run test_get_users_utmp()")
     # @patch('salt.utils.psutil_compat.get_users', new=MagicMock(return_value=None))  # This will force the function to use utmp
