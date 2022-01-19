@@ -75,7 +75,7 @@ class SaltVersionsInfo(type):
     SODIUM        = SaltVersion("Sodium"       , info=3001,       released=True)
     MAGNESIUM     = SaltVersion("Magnesium"    , info=3002,       released=True)
     ALUMINIUM     = SaltVersion("Aluminium"    , info=3003,       released=True)
-    SILICON       = SaltVersion("Silicon"      , info=3004)
+    SILICON       = SaltVersion("Silicon"      , info=3004,       released=True)
     PHOSPHORUS    = SaltVersion("Phosphorus"   , info=3005)
     SULFUR        = SaltVersion("Sulfur"       , info=3006)
     CHLORINE      = SaltVersion("Chlorine"     , info=3007)
@@ -599,7 +599,6 @@ def __discover_version(saltstack_version):
                 "describe",
                 "--tags",
                 "--long",
-                "--first-parent",
                 "--match",
                 "v[0-9]*",
                 "--always",
@@ -609,22 +608,6 @@ def __discover_version(saltstack_version):
 
         out, err = process.communicate()
 
-        if process.returncode != 0:
-            # The git version running this might not support --first-parent
-            # Revert to old command
-            process = subprocess.Popen(
-                [
-                    "git",
-                    "describe",
-                    "--tags",
-                    "--long",
-                    "--match",
-                    "v[0-9]*",
-                    "--always",
-                ],
-                **kwargs
-            )
-            out, err = process.communicate()
         out = out.decode().strip()
         err = err.decode().strip()
 
