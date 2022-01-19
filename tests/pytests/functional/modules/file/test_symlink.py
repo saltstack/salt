@@ -31,8 +31,8 @@ def test_symlink(file, source):
     """
     target = source.parent / "symlink.lnk"
     try:
-        file.symlink(source, target)
-        assert salt.utils.path.islink(target)
+        file.symlink(str(source), str(target))
+        assert salt.utils.path.islink(str(target))
     finally:
         target.unlink()
 
@@ -45,9 +45,9 @@ def test_symlink_exists_same(file, source):
     target = source.parent / "symlink.lnk"
     target.symlink_to(source)
     try:
-        before_time = os.stat(target).st_mtime
-        ret = file.symlink(source, target)
-        after_time = os.stat(target).st_mtime
+        before_time = os.stat(str(target)).st_mtime
+        ret = file.symlink(str(source), str(target))
+        after_time = os.stat(str(target)).st_mtime
         assert before_time == after_time
         assert ret is True
     finally:
@@ -64,7 +64,7 @@ def test_symlink_exists_different(file, source):
     target.symlink_to(dif_source)
     try:
         with pytest.raises(CommandExecutionError) as exc:
-            file.symlink(source, target)
+            file.symlink(str(source), str(target))
         assert "Found existing symlink:" in exc.value.message
     finally:
         target.unlink()
@@ -78,7 +78,7 @@ def test_symlink_exists_file(file, source):
     """
     with pytest.helpers.temp_file("symlink.txt", contents="Source content") as target:
         with pytest.raises(CommandExecutionError) as exc:
-            file.symlink(source, target)
+            file.symlink(str(source), str(target))
         assert "Existing path is not a symlink:" in exc.value.message
 
 
@@ -92,8 +92,8 @@ def test_symlink_exists_different_force(file, source):
     target = source.parent / "symlink.lnk"
     target.symlink_to(dif_source)
     try:
-        file.symlink(source, target, force=True)
-        assert salt.utils.path.readlink(target) == str(source)
+        file.symlink(str(source), str(target), force=True)
+        assert salt.utils.path.readlink(str(target)) == str(source)
     finally:
         target.unlink()
 
@@ -105,5 +105,5 @@ def test_symlink_target_relative_path(file, source):
     """
     target = "..{}symlink.lnk".format(os.path.sep)
     with pytest.raises(SaltInvocationError) as exc:
-        file.symlink(source, target)
+        file.symlink(str(source), str(target))
     assert "Link path must be absolute" in exc.value.message
