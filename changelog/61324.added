@@ -1,0 +1,1 @@
+Adding the ability to add, delete, purge, and modify Salt scheduler jobs when the Salt minion is not running.
