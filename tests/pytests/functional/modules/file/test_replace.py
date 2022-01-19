@@ -49,7 +49,7 @@ def test_no_backup(file, multiline_file):
     # Backup file should NOT be created
     bak_file = "{}.bak".format(multiline_file)
     assert "Salticus" not in multiline_file.read_text()
-    file.replace(multiline_file, "Etiam", "Salticus", backup=False)
+    file.replace(str(multiline_file), "Etiam", "Salticus", backup=False)
     assert "Salticus" in multiline_file.read_text()
     assert not os.path.exists(bak_file)
 
@@ -57,7 +57,7 @@ def test_no_backup(file, multiline_file):
 def test_backup(file, multiline_file):
     # Should create a backup file. This is basically the default
     bak_file = "{}.bak".format(multiline_file)
-    file.replace(multiline_file, "Etiam", "Salticus")
+    file.replace(str(multiline_file), "Etiam", "Salticus")
     assert "Salticus" in multiline_file.read_text()
     assert os.path.exists(bak_file)
 
@@ -67,7 +67,7 @@ def test_append_if_not_found_no_match_newline(file):
     expected = "foo=1\nbar=2\nbaz=\\g<value>\n"
     with pytest.helpers.temp_file("test_file.txt", contents) as target:
         file.replace(
-            path=target,
+            path=str(target),
             pattern="#*baz=(?P<value>.*)",
             repl="baz=\\g<value>",
             append_if_not_found=True,
@@ -80,7 +80,7 @@ def test_append_if_not_found_no_match_no_newline(file):
     expected = "foo=1\nbar=2\nbaz=\\g<value>\n"
     with pytest.helpers.temp_file("test_file.txt", contents) as target:
         file.replace(
-            path=target,
+            path=str(target),
             pattern="#*baz=(?P<value>.*)",
             repl="baz=\\g<value>",
             append_if_not_found=True,
@@ -94,7 +94,7 @@ def test_append_if_not_found_empty_file(file):
     expected = "baz=\\g<value>\n"
     with pytest.helpers.temp_file("test_file.txt", contents) as target:
         file.replace(
-            path=target,
+            path=str(target),
             pattern="#*baz=(?P<value>.*)",
             repl="baz=\\g<value>",
             append_if_not_found=True,
@@ -108,7 +108,7 @@ def test_append_if_not_found_content(file):
     expected = "baz=3\n"
     with pytest.helpers.temp_file("test_file.txt", contents) as target:
         file.replace(
-            path=target,
+            path=str(target),
             pattern="#*baz=(?P<value>.*)",
             repl="baz=\\g<value>",
             append_if_not_found=True,
@@ -122,7 +122,7 @@ def test_append_if_not_found_no_append_on_match(file):
     contents = "foo=1\nbaz=42\nbar=2"
     with pytest.helpers.temp_file("test_file.txt", contents) as target:
         file.replace(
-            path=target,
+            path=str(target),
             pattern="#*baz=(?P<value>.*)",
             repl="baz=\\g<value>",
             append_if_not_found=True,
@@ -132,32 +132,32 @@ def test_append_if_not_found_no_append_on_match(file):
 
 
 def test_dry_run(file, multiline_file):
-    before_time = os.stat(multiline_file).st_mtime
-    file.replace(multiline_file, r"Etiam", "Salticus", dry_run=True)
-    after_time = os.stat(multiline_file).st_mtime
+    before_time = os.stat(str(multiline_file)).st_mtime
+    file.replace(str(multiline_file), r"Etiam", "Salticus", dry_run=True)
+    after_time = os.stat(str(multiline_file)).st_mtime
     assert before_time == after_time
 
 
 def test_show_changes(file, multiline_file):
-    ret = file.replace(multiline_file, r"Etiam", "Salticus", show_changes=True)
+    ret = file.replace(str(multiline_file), r"Etiam", "Salticus", show_changes=True)
     assert ret.startswith("---")  # looks like a diff
 
 
 def test_no_show_changes(file, multiline_file):
-    ret = file.replace(multiline_file, r"Etiam", "Salticus", show_changes=False)
+    ret = file.replace(str(multiline_file), r"Etiam", "Salticus", show_changes=False)
     assert isinstance(ret, bool)
 
 
 def test_re_str_flags(file, multiline_file):
     file.replace(
-        multiline_file, r"etiam", "Salticus", flags=["MULTILINE", "ignorecase"]
+        str(multiline_file), r"etiam", "Salticus", flags=["MULTILINE", "ignorecase"]
     )
     assert "Salticus" in multiline_file.read_text()
 
 
 def test_re_int_flags(file, multiline_file):
     # flag for multiline and ignore case is 10
-    file.replace(multiline_file, r"etiam", "Salticus", flags=10)
+    file.replace(str(multiline_file), r"etiam", "Salticus", flags=10)
     assert "Salticus" in multiline_file.read_text()
 
 
@@ -168,18 +168,18 @@ def test_numeric_repl(file, multiline_file):
     type in file.replace, a TypeError occurs when the replace is attempted. See
     https://github.com/saltstack/salt/issues/9097 for more information.
     """
-    file.replace(multiline_file, r"Etiam", 123)
+    file.replace(str(multiline_file), r"Etiam", 123)
     assert "123" in multiline_file.read_text()
 
 
 def test_search_only_return_true(file, multiline_file):
-    ret = file.replace(multiline_file, r"Etiam", "Salticus", search_only=True)
+    ret = file.replace(str(multiline_file), r"Etiam", "Salticus", search_only=True)
     assert isinstance(ret, bool)
     assert ret is True
 
 
 def test_search_only_return_false(file, multiline_file):
-    ret = file.replace(multiline_file, r"Etian", "Salticus", search_only=True)
+    ret = file.replace(str(multiline_file), r"Etian", "Salticus", search_only=True)
     assert isinstance(ret, bool)
     assert ret is False
 
@@ -191,9 +191,9 @@ def test_symlink(file, multiline_file):
         sym_link = multiline_file.parent / "symlink.lnk"
         sym_link.symlink_to(multiline_file)
         # file.replace on the symlink
-        file.replace(sym_link, r"Etiam", "Salticus")
+        file.replace(str(sym_link), r"Etiam", "Salticus")
         # test that the target was changed
         assert "Salticus" in multiline_file.read_text()
     finally:
-        if os.path.exists(sym_link):
+        if os.path.exists(str(sym_link)):
             sym_link.unlink()

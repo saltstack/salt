@@ -120,7 +120,7 @@ def test_source_is_link(file, source):
         file.rename(name=str(new_name), source=str(link_source))
         assert new_name.exists()
         assert new_name.is_symlink()
-        assert salt.utils.path.readlink(new_name) == str(source)
+        assert salt.utils.path.readlink(str(new_name)) == str(source)
         assert new_name.read_text() == "Source content"
         assert not link_source.exists()
     finally:

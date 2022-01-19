@@ -29,7 +29,7 @@ def test_readlink(file, source):
     target = source.parent / "symlink.lnk"
     target.symlink_to(source)
     try:
-        result = file.readlink(path=target)
+        result = file.readlink(path=str(target))
         assert result == str(source)
     finally:
         target.unlink()
@@ -51,7 +51,7 @@ def test_readlink_not_a_link(file, source):
     Should throw a SaltInvocationError
     """
     with pytest.raises(SaltInvocationError) as exc:
-        file.readlink(path=source)
+        file.readlink(path=str(source))
     assert "A valid link was not specified" in exc.value.message
 
 
@@ -65,7 +65,7 @@ def test_readlink_non_canonical(file, source):
     target = source.parent / "symlink.lnk"
     target.symlink_to(intermediate)
     try:
-        result = file.readlink(path=target)
+        result = file.readlink(path=str(target))
         assert result == str(intermediate)
     finally:
         intermediate.unlink()
@@ -82,7 +82,7 @@ def test_readlink_canonical(file, source):
     target = source.parent / "symlink.lnk"
     target.symlink_to(intermediate)
     try:
-        result = file.readlink(path=target, canonicalize=True)
+        result = file.readlink(path=str(target), canonicalize=True)
         assert result == str(source.resolve())
     finally:
         intermediate.unlink()
