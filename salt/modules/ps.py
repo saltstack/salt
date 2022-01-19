@@ -10,6 +10,7 @@ See http://code.google.com/p/psutil.
 import datetime
 import re
 import time
+import types
 
 import salt.utils.data
 import salt.utils.decorators.path
@@ -788,16 +789,23 @@ def status(filter):
 zombie, ...]
     """
     ret = []
-    if filter:
+    if not filter:
+        raise SaltInvocationError("Filter is required for ps.status")
+    else:
         status = str(filter)
         try:
-            ret = [
-                proc.info
-                for proc in psutil.process_iter(["pid", "name", "status"])
-                if proc.info["status"] == status
-            ]
-        except psutil.AccessDenied:
-            pass
+            list_of_processes = psutil.process_iter(["pid", "name", "status"])
+            # probably unnecessary
+            if isinstance(list_of_processes, types.GeneratorType):
+                ret = [
+                    proc.info
+                    for proc in list_of_processes
+                    if proc.info["status"] == status
+                ]
+        except (TypeError, psutil.AccessDenied, psutil.NoSuchProcess):
+            # AccessDenied may be returned from old versions of psutil on Windows systems
+            raise Exception("Psutil did not return a list of processes")
+    # remove desired status (eg. "{status: idle}") from each output
     for i in ret:
         i.pop("status")
     return ret
