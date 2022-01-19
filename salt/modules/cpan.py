@@ -1,18 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Manage Perl modules using CPAN
 
 .. versionadded:: 2015.5.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import os
 import os.path
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
 
@@ -48,7 +43,7 @@ def install(module):
 
     old_info = show(module)
 
-    cmd = "cpan -i {0}".format(module)
+    cmd = "cpan -i {}".format(module)
     out = __salt__["cmd.run"](cmd)
 
     if "don't know what it is" in out:
@@ -158,7 +153,7 @@ def show(module):
     ret["name"] = module
 
     # This section parses out details from CPAN, if possible
-    cmd = "cpan -D {0}".format(module)
+    cmd = "cpan -D {}".format(module)
     out = __salt__["cmd.run"](cmd).splitlines()
     mode = "skip"
     info = []

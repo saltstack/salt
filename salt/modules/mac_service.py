@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 The service module for macOS
 
@@ -21,23 +20,22 @@ This module has support for services in the following locations.
     path and a ``runas`` user is NOT specified, the current console user will
     be used to properly interact with the service.
 
-"""
-from __future__ import absolute_import, print_function, unicode_literals
+.. note::
+    As of the 3002 release, if a service name of ``salt-minion`` is passed this
+    module will convert it over to it's macOS equivalent name, in this case
+    to ``com.saltstack.salt.minion``. This is true for ``salt-master``
+    ``salt-api``, and ``salt-syndic`` as well.
 
-# Import python libs
+"""
+
 import logging
 import os
-import re
 
-# Import salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd party libs
-from salt.ext import six
 from salt.utils.versions import LooseVersion as _LooseVersion
 
 # Define the module's virtual name
@@ -49,6 +47,13 @@ __func_alias__ = {
 
 log = logging.getLogger(__name__)
 
+SALT_MAC_SERVICES = {
+    "salt-minion": "com.saltstack.salt.minion",
+    "salt-master": "com.saltstack.salt.master",
+    "salt-api": "com.saltstack.salt.api",
+    "salt-syndic": "com.saltstack.salt.syndic",
+}
+
 
 def __virtual__():
     """
@@ -57,8 +62,7 @@ def __virtual__():
     if not salt.utils.platform.is_darwin():
         return (
             False,
-            "Failed to load the mac_service module:\n"
-            "Only available on macOS systems.",
+            "Failed to load the mac_service module:\nOnly available on macOS systems.",
         )
 
     if not salt.utils.path.which("launchctl"):
@@ -101,7 +105,7 @@ def _name_in_services(name, services):
         # Match on label
         return services[name]
 
-    for service in six.itervalues(services):
+    for service in services.values():
         if service["file_path"].lower() == name:
             # Match on full path
             return service
@@ -124,7 +128,9 @@ def _get_service(name):
     :rtype: dict
     """
     services = __utils__["mac_utils.available_services"]()
-    name = name.lower()
+    # fix the name differences between platforms
+    # salt-minion becomes com.saltstack.salt.minion
+    name = SALT_MAC_SERVICES.get(name, name).lower()
 
     service = _name_in_services(name, services)
 
@@ -137,9 +143,15 @@ def _get_service(name):
     # so we need to raise that the service could not be found.
     try:
         if not __context__["using_cached_services"]:
-            raise CommandExecutionError("Service not found: {0}".format(name))
+            raise CommandExecutionError("Service not found: {}".format(name))
     except KeyError:
         pass
+
+    # if we can't find a service and we are being run from a service.dead
+    # state then there is no reason to check again.
+    # fixes https://github.com/saltstack/salt/issues/57907
+    if __context__.get("service.state") == "dead":
+        raise CommandExecutionError("Service not found: {}".format(name))
 
     # we used a cached version to check, a service could have been made
     # between now and then, we should refresh our available services.
@@ -150,7 +162,7 @@ def _get_service(name):
 
     if not service:
         # Could not find the service after refresh raise.
-        raise CommandExecutionError("Service not found: {0}".format(name))
+        raise CommandExecutionError("Service not found: {}".format(name))
 
     # found it :)
     return service
@@ -184,7 +196,7 @@ def _always_running_service(name):
 
     if isinstance(keep_alive, dict):
         # check for pathstate
-        for _file, value in six.iteritems(keep_alive.get("PathState", {})):
+        for _file, value in keep_alive.get("PathState", {}).items():
             if value is True and os.path.exists(_file):
                 return True
             elif value is False and not os.path.exists(_file):
@@ -467,27 +479,29 @@ def restart(name, runas=None):
         salt '*' service.restart org.cups.cupsd
     """
     # Restart the service: will raise an error if it fails
-    if enabled(name):
-        stop(name, runas=runas)
-    start(name, runas=runas)
-
-    return True
+    if __salt__["service.loaded"](name, runas=runas):
+        __salt__["service.stop"](name, runas=runas)
+    return __salt__["service.start"](name, runas=runas)
 
 
 def status(name, sig=None, runas=None):
     """
     Return the status for a service.
 
-    :param str name: Used to find the service from launchctl.  Can be any part
-        of the service name or a regex expression.
+    .. note::
+        Previously this function would return a PID for a running service with
+        a PID or 'loaded' for a loaded service without a PID. This was changed
+        to have better parity with other service modules that return True/False.
+
+    :param str name: Used to find the service from launchctl.  Can be the
+        service Label, file name, or path to the service file. (normally a plist)
 
     :param str sig: Find the service with status.pid instead.  Note that
         ``name`` must still be provided.
 
-    :param str runas: User to run launchctl commands
+    :param str runas: User to run launchctl commands.
 
-    :return: The PID for the service if it is running, or 'loaded' if the
-        service should not always have a PID, or otherwise an empty string
+    :return: True if running, otherwise False.
 
     :rtype: str
 
@@ -505,32 +519,22 @@ def status(name, sig=None, runas=None):
         _get_service(name)
     except CommandExecutionError as msg:
         log.error(msg)
-        return ""
+        return False
 
     if not runas and _launch_agent(name):
         runas = __utils__["mac_utils.console_user"](username=True)
 
-    output = list_(runas=runas)
+    try:
+        output = __salt__["service.list"](name, runas=runas)
+    except CommandExecutionError:
+        return False
 
-    # Used a string here instead of a list because that's what the linux version
-    # of this module does
-    pids = ""
-    for line in output.splitlines():
-        if "PID" in line:
-            continue
-        if re.search(name, line.split()[-1]):
-            if line.split()[0].isdigit():
-                if pids:
-                    pids += "\n"
-                pids += line.split()[0]
+    # we should only check for a PID if it's supposed to have one.
+    # If we can't find a PID then something is wrong with the service.
+    if _always_running_service(name):
+        return True if '"PID" =' in output else False
 
-    # mac services are a little different than other platforms as they may be
-    # set to run on intervals and may not always active with a PID. This will
-    # return a string 'loaded' if it shouldn't always be running and is enabled.
-    if not _always_running_service(name) and enabled(name) and not pids:
-        return "loaded"
-
-    return pids
+    return True
 
 
 def available(name):
@@ -576,11 +580,19 @@ def missing(name):
 
 def enabled(name, runas=None):
     """
-    Check if the specified service is enabled
+    Check if the specified service is enabled (not disabled, capable of being
+    loaded/bootstrapped).
 
-    :param str name: The name of the service to look up
+    .. note::
+        Previously this function would see if the service is loaded via
+        ``launchctl list`` to determine if the service is enabled. This was not
+        an accurate way to do so. The new behavior checks to make sure its not
+        disabled to determine the status. Please use ``service.loaded`` for the
+        previous behavior.
 
-    :param str runas: User to run launchctl commands
+    :param str name: The name of the service to look up.
+
+    :param str runas: User to run launchctl commands.
 
     :return: True if the specified service enabled, otherwise False
     :rtype: bool
@@ -591,12 +603,9 @@ def enabled(name, runas=None):
 
         salt '*' service.enabled org.cups.cupsd
     """
-    # Try to list the service.  If it can't be listed, it's not enabled
-    try:
-        list_(name=name, runas=runas)
-        return True
-    except CommandExecutionError:
-        return False
+    # There isn't a direct way to get enabled, but if its not disabled
+    # then its enabled.
+    return not __salt__["service.disabled"](name, runas)
 
 
 def disabled(name, runas=None, domain="system"):
@@ -619,6 +628,7 @@ def disabled(name, runas=None, domain="system"):
 
         salt '*' service.disabled org.cups.cupsd
     """
+    domain = _get_domain_target(name, service_target=True)[0]
 
     disabled = launchctl("print-disabled", domain, return_stdout=True, runas=runas)
     for service in disabled.split("\n"):
@@ -690,3 +700,28 @@ def get_enabled(runas=None):
         enabled.append(label)
 
     return sorted(set(enabled))
+
+
+def loaded(name, runas=None):
+    """
+    Check if the specified service is loaded.
+
+    :param str name: The name of the service to look up
+
+    :param str runas: User to run launchctl commands
+
+    :return: ``True`` if the specified service is loaded, otherwise ``False``
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.loaded org.cups.cupsd
+    """
+    # Try to list the service.  If it can't be listed, it's not enabled
+    try:
+        __salt__["service.list"](name=name, runas=runas)
+        return True
+    except CommandExecutionError:
+        return False

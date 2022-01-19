@@ -12,7 +12,16 @@ Statistics
 - Total Issue References: **63**
 - Total PR References: **223**
 
-- Contributors: **62** (`Ch3LL`_, `DennisHarper`_, `DmitryKuzmenko`_, `L4rS6`_, `MasterNayru`_, `Seb-Solon`_, `The-Loeki`_, `UtahDave`_, `aabognah`_, `alankrita`_, `amontalban`_, `ardakuyumcu`_, `attiasr`_, `bdrung`_, `bewing`_, `cachedout`_, `cro`_, `defanator`_, `discountbin`_, `dmurphy18`_, `drawsmcgraw`_, `eldadru`_, `garethgreenaway`_, `githubcdr`_, `gtmanfred`_, `hkrist`_, `isbm`_, `jbadson`_, `jeanpralo`_, `jettero`_, `jinm`_, `joe-niland`_, `kaszuba`_, `lomeroe`_, `lorengordon`_, `mateiw`_, `mcalmer`_, `mchugh19`_, `meaksh`_, `mirceaulinic`_, `mlalpho`_, `narendraingale2`_, `nmadhok`_, `rallytime`_, `redbaron4`_, `roaldnefs`_, `s0undt3ch`_, `skazi0`_, `skizunov`_, `smarsching`_, `sofixa`_, `sp1r`_, `sthrasher`_, `techhat`_, `terminalmage`_, `thatch45`_, `thor`_, `ticosax`_, `twangboy`_, `vutny`_, `whiteinge`_, `zer0def`_)
+- Contributors: **62** (`Ch3LL`_, `DennisHarper`_, `DmitryKuzmenko`_, `L4rS6`_, `MasterNayru`_,
+  `Seb-Solon`_, `The-Loeki`_, `UtahDave`_, `aabognah`_, `alankrita`_, `amontalban`_,
+  `ardakuyumcu`_, `attiasr`_, `bdrung`_, `bewing`_, `cachedout`_, `cro`_, `defanator`_,
+  `discountbin`_, `dmurphy18`_, `drawsmcgraw`_, `eldadru`_, `garethgreenaway`_, `githubcdr`_,
+  `gtmanfred`_, `hkrist`_, `isbm`_, `jbadson`_, `jeanpralo`_, `jettero`_, `jinm`_, `joe-niland`_,
+  `kaszuba`_, `lomeroe`_, `lorengordon`_, `mateiw`_, `mcalmer`_, `mchugh19`_, `meaksh`_,
+  `mirceaulinic`_, `mlalpho`_, `narendraingale2`_, `nmadhok`_, `rallytime`_, `redbaron4`_,
+  `roaldnefs`_, `s0undt3ch`_, `skazi0`_, `skizunov`_, `smarsching`_, `sofixa`_, `sp1r`_,
+  `sthrasher`_, `techhat`_, `terminalmage`_, `thatch45`_, `thor`_, `ticosax`_, `twangboy`_,
+  `vutny`_, `whiteinge`_, `zer0def`_)
 
 
 AIX Support Expanded

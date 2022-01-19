@@ -1,23 +1,18 @@
-# -*- coding: utf-8 -*-
 """
 Minion side functions for salt-cp
 """
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import base64
 import errno
 import fnmatch
 import logging
 import os
+import urllib.parse
 
+import salt.channel.client
 import salt.crypt
 import salt.fileclient
-
-# Import salt libs
 import salt.minion
-import salt.transport.client
 import salt.utils.data
 import salt.utils.files
 import salt.utils.gzip_util
@@ -25,10 +20,6 @@ import salt.utils.path
 import salt.utils.templates
 import salt.utils.url
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
-from salt.ext import six
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse
 
 log = logging.getLogger(__name__)
 
@@ -68,9 +59,15 @@ def recv(files, dest):
 
     This function receives small fast copy files from the master via salt-cp.
     It does not work via the CLI.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cp.recv
     """
     ret = {}
-    for path, data in six.iteritems(files):
+    for path, data in files.items():
         if os.path.basename(path) == os.path.basename(dest) and not os.path.isdir(dest):
             final = dest
         elif os.path.isdir(dest):
@@ -84,7 +81,7 @@ def recv(files, dest):
             with salt.utils.files.fopen(final, "w+") as fp_:
                 fp_.write(data)
             ret[final] = True
-        except IOError:
+        except OSError:
             ret[final] = False
 
     return ret
@@ -94,6 +91,12 @@ def recv_chunked(dest, chunk, append=False, compressed=True, mode=None):
     """
     This function receives files copied to the minion using ``salt-cp`` and is
     not intended to be used directly on the CLI.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cp.recv_chunked
     """
     if "retcode" not in __context__:
         __context__["retcode"] = 0
@@ -119,13 +122,13 @@ def recv_chunked(dest, chunk, append=False, compressed=True, mode=None):
     open_mode = "ab" if append else "wb"
     try:
         fh_ = salt.utils.files.fopen(dest, open_mode)  # pylint: disable=W8470
-    except (IOError, OSError) as exc:
+    except OSError as exc:
         if exc.errno != errno.ENOENT:
             # Parent dir does not exist, we need to create it
             return _error(exc.__str__())
         try:
             os.makedirs(os.path.dirname(dest))
-        except (IOError, OSError) as makedirs_exc:
+        except OSError as makedirs_exc:
             # Failed to make directory
             return _error(makedirs_exc.__str__())
         fh_ = salt.utils.files.fopen(dest, open_mode)  # pylint: disable=W8470
@@ -133,7 +136,7 @@ def recv_chunked(dest, chunk, append=False, compressed=True, mode=None):
     try:
         # Write the chunk to disk
         fh_.write(salt.utils.gzip_util.uncompress(chunk) if compressed else chunk)
-    except (IOError, OSError) as exc:
+    except OSError as exc:
         # Write failed
         return _error(exc.__str__())
     else:
@@ -162,9 +165,9 @@ def _mk_client():
     of the opts dictionary, therefore it's hashed by the
     id of the __opts__ dict
     """
-    if "cp.fileclient_{0}".format(id(__opts__)) not in __context__:
+    if "cp.fileclient_{}".format(id(__opts__)) not in __context__:
         __context__[
-            "cp.fileclient_{0}".format(id(__opts__))
+            "cp.fileclient_{}".format(id(__opts__))
         ] = salt.fileclient.get_file_client(__opts__)
 
 
@@ -173,7 +176,7 @@ def _client():
     Return a client, hashed by the list of masters
     """
     _mk_client()
-    return __context__["cp.fileclient_{0}".format(id(__opts__))]
+    return __context__["cp.fileclient_{}".format(id(__opts__))]
 
 
 def _render_filenames(path, dest, saltenv, template, **kw):
@@ -188,8 +191,7 @@ def _render_filenames(path, dest, saltenv, template, **kw):
     # render the path as a template using path_template_engine as the engine
     if template not in salt.utils.templates.TEMPLATE_REGISTRY:
         raise CommandExecutionError(
-            "Attempted to render file paths with unavailable engine "
-            "{0}".format(template)
+            "Attempted to render file paths with unavailable engine {}".format(template)
         )
 
     kwargs = {}
@@ -219,7 +221,7 @@ def _render_filenames(path, dest, saltenv, template, **kw):
         if not data["result"]:
             # Failed to render the template
             raise CommandExecutionError(
-                "Failed to render file path with error: {0}".format(data["data"])
+                "Failed to render file path with error: {}".format(data["data"])
             )
         else:
             return data["data"]
@@ -293,7 +295,7 @@ def envs():
     """
     List available environments for fileserver
 
-    CLI Example
+    CLI Example:
 
     .. code-block:: bash
 
@@ -375,7 +377,7 @@ def get_url(path, dest="", saltenv="base", makedirs=False, source_hash=None):
             ``https://`` will not be cached.
 
     saltenv : base
-        Salt fileserver envrionment from which to retrieve the file. Ignored if
+        Salt fileserver environment from which to retrieve the file. Ignored if
         ``path`` is not a ``salt://`` URL.
 
     source_hash
@@ -392,7 +394,7 @@ def get_url(path, dest="", saltenv="base", makedirs=False, source_hash=None):
         salt '*' cp.get_url salt://my/file /tmp/this_file_is_mine
         salt '*' cp.get_url http://www.slashdot.org /tmp/index.html
     """
-    if isinstance(dest, six.string_types):
+    if isinstance(dest, str):
         result = _client().get_url(
             path, dest, makedirs, saltenv, source_hash=source_hash
         )
@@ -425,16 +427,16 @@ def get_file_str(path, saltenv="base"):
         salt '*' cp.get_file_str salt://my/file
     """
     fn_ = cache_file(path, saltenv)
-    if isinstance(fn_, six.string_types):
+    if isinstance(fn_, str):
         try:
             with salt.utils.files.fopen(fn_, "r") as fp_:
                 return salt.utils.stringutils.to_unicode(fp_.read())
-        except IOError:
+        except OSError:
             return False
     return fn_
 
 
-def cache_file(path, saltenv="base", source_hash=None):
+def cache_file(path, saltenv="base", source_hash=None, verify_ssl=True, use_etag=False):
     """
     Used to cache a single file on the Minion
 
@@ -446,6 +448,21 @@ def cache_file(path, saltenv="base", source_hash=None):
         re-downloading the file if the cached copy matches the specified hash.
 
         .. versionadded:: 2018.3.0
+
+    verify_ssl
+        If ``False``, remote https file sources (``https://``) and source_hash
+        will not attempt to validate the servers certificate. Default is True.
+
+        .. versionadded:: 3002
+
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
 
     CLI Example:
 
@@ -473,9 +490,11 @@ def cache_file(path, saltenv="base", source_hash=None):
     path = salt.utils.data.decode(path)
     saltenv = salt.utils.data.decode(saltenv)
 
-    contextkey = "{0}_|-{1}_|-{2}".format("cp.cache_file", path, saltenv)
+    contextkey = "{}_|-{}_|-{}".format("cp.cache_file", path, saltenv)
 
-    path_is_remote = _urlparse(path).scheme in salt.utils.files.REMOTE_PROTOS
+    path_is_remote = (
+        urllib.parse.urlparse(path).scheme in salt.utils.files.REMOTE_PROTOS
+    )
     try:
         if path_is_remote and contextkey in __context__:
             # Prevent multiple caches in the same salt run. Affects remote URLs
@@ -497,8 +516,10 @@ def cache_file(path, saltenv="base", source_hash=None):
     if senv:
         saltenv = senv
 
-    result = _client().cache_file(path, saltenv, source_hash=source_hash)
-    if not result:
+    result = _client().cache_file(
+        path, saltenv, source_hash=source_hash, verify_ssl=verify_ssl, use_etag=use_etag
+    )
+    if not result and not use_etag:
         log.error("Unable to cache file '%s' from saltenv '%s'.", path, saltenv)
     if path_is_remote:
         # Cache was successful, store the result in __context__ to prevent
@@ -509,7 +530,7 @@ def cache_file(path, saltenv="base", source_hash=None):
 
 def cache_dest(url, saltenv="base"):
     """
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     Returns the expected cache path for the file, if cached using
     :py:func:`cp.cache_file <salt.modules.cp.cache_file>`.
@@ -594,7 +615,6 @@ def cache_dir(
             excluded from the subset of files defined by ``include_pat``.
 
         .. versionadded:: 2014.7.0
-
 
     CLI Examples:
 
@@ -836,7 +856,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
         "tok": auth.gen_token(b"salt"),
     }
 
-    with salt.transport.client.ReqChannel.factory(__opts__) as channel:
+    with salt.channel.client.ReqChannel.factory(__opts__) as channel:
         with salt.utils.files.fopen(path, "rb") as fp_:
             init_send = False
             while True:
@@ -847,7 +867,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
                         try:
                             salt.utils.files.rm_rf(path)
                             log.debug("Removing source file '%s'", path)
-                        except IOError:
+                        except OSError:
                             log.error("cp.push failed to remove file '%s'", path)
                             return False
                     return True

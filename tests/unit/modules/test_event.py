@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.event as event
 import salt.utils.event
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
@@ -37,7 +31,7 @@ class EventTestCase(TestCase, LoaderModuleMockMixin):
         Test for Fire an event off up to the master server
         """
         with patch("salt.crypt.SAuth") as salt_crypt_sauth, patch(
-            "salt.transport.client.ReqChannel.factory"
+            "salt.channel.client.ReqChannel.factory"
         ) as salt_transport_channel_factory:
 
             preload = {

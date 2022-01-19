@@ -1,23 +1,19 @@
-# -*- coding: utf-8 -*-
 """
 Grains for Fibre Channel WWN's. On Windows this runs a PowerShell command that
 queries WMI to get the Fibre Channel WWN's available.
 
 .. versionadded:: 2018.3.0
 
-To enable these grains set ``fibre_channel_grains: True``.
+To enable these grains set ``fibre_channel_grains: True`` in the minion config.
 
 .. code-block:: yaml
 
     fibre_channel_grains: True
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import glob
 import logging
 
-# Import Salt libs
 import salt.modules.cmdmod
 import salt.utils.files
 import salt.utils.platform

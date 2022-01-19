@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for working with Windows PowerShell DSC (Desired State Configuration)
 
@@ -15,13 +14,10 @@ the Minion.
 :depends:
     - PowerShell 5.0
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import logging
 import os
 
-# Import Salt libs
 import salt.utils.json
 import salt.utils.platform
 import salt.utils.versions
@@ -64,7 +60,7 @@ def _pshell(cmd, cwd=None, json_depth=2, ignore_retcode=False):
     CommandExecutionError.
     """
     if "convertto-json" not in cmd.lower():
-        cmd = "{0} | ConvertTo-Json -Depth {1}".format(cmd, json_depth)
+        cmd = "{} | ConvertTo-Json -Depth {}".format(cmd, json_depth)
     log.debug("DSC: %s", cmd)
     results = __salt__["cmd.run_all"](
         cmd,
@@ -80,7 +76,7 @@ def _pshell(cmd, cwd=None, json_depth=2, ignore_retcode=False):
     if "retcode" not in results or results["retcode"] != 0:
         # run_all logs an error to log.error, fail hard back to the user
         raise CommandExecutionError(
-            "Issue executing PowerShell {0}".format(cmd), info=results
+            "Issue executing PowerShell {}".format(cmd), info=results
         )
 
     # Sometimes Powershell returns an empty string, which isn't valid JSON
@@ -92,7 +88,7 @@ def _pshell(cmd, cwd=None, json_depth=2, ignore_retcode=False):
     except ValueError:
         raise CommandExecutionError("No JSON results from PowerShell", info=results)
 
-    log.info('DSC: Returning "{0}"'.format(ret))
+    log.info('DSC: Returning "%s"', ret)
     return ret
 
 
@@ -263,8 +259,8 @@ def compile_config(
             path=source, dest=path, saltenv=salt_env, makedirs=True
         )
         if not cached_files:
-            error = "Failed to cache {0}".format(source)
-            log.error("DSC: {0}".format(error))
+            error = "Failed to cache {}".format(source)
+            log.error("DSC: %s", error)
             raise CommandExecutionError(error)
 
     if config_data_source:
@@ -273,14 +269,14 @@ def compile_config(
             path=config_data_source, dest=config_data, saltenv=salt_env, makedirs=True
         )
         if not cached_files:
-            error = "Failed to cache {0}".format(config_data_source)
-            log.error("DSC: {0}".format(error))
+            error = "Failed to cache {}".format(config_data_source)
+            log.error("DSC: %s", error)
             raise CommandExecutionError(error)
 
     # Make sure the path exists
     if not os.path.exists(path):
-        error = '"{0}" not found'.format(path)
-        log.error("DSC: {0}".format(error))
+        error = '"{}" not found'.format(path)
+        log.error("DSC: %s", error)
         raise CommandExecutionError(error)
 
     if config_name is None:
@@ -335,8 +331,8 @@ def compile_config(
             log.info("DSC: Compile Config: %s", ret)
             return ret
 
-    error = "Failed to compile config: {0}".format(path)
-    error += "\nReturned: {0}".format(ret)
+    error = "Failed to compile config: {}".format(path)
+    error += "\nReturned: {}".format(ret)
     log.error("DSC: %s", error)
     raise CommandExecutionError(error)
 
@@ -388,7 +384,7 @@ def apply_config(path, source=None, salt_env="base"):
         source_name = os.path.basename(os.path.normpath(source))
         if path_name.lower() != source_name.lower():
             # Append the Source name to the Path
-            path = "{0}\\{1}".format(path, source_name)
+            path = "{}\\{}".format(path, source_name)
             log.debug("DSC: %s appended to the path.", source_name)
 
         # Destination path minus the basename
@@ -396,21 +392,21 @@ def apply_config(path, source=None, salt_env="base"):
         log.info("DSC: Caching %s", source)
         cached_files = __salt__["cp.get_dir"](source, dest_path, salt_env)
         if not cached_files:
-            error = "Failed to copy {0}".format(source)
-            log.error("DSC: {0}".format(error))
+            error = "Failed to copy {}".format(source)
+            log.error("DSC: %s", error)
             raise CommandExecutionError(error)
         else:
             config = os.path.dirname(cached_files[0])
 
     # Make sure the path exists
     if not os.path.exists(config):
-        error = "{0} not found".format(config)
-        log.error("DSC: {0}".format(error))
+        error = "{} not found".format(config)
+        log.error("DSC: %s", error)
         raise CommandExecutionError(error)
 
     # Run the DSC Configuration
     # Putting quotes around the parameter protects against command injection
-    cmd = 'Start-DscConfiguration -Path "{0}" -Wait -Force'.format(config)
+    cmd = 'Start-DscConfiguration -Path "{}" -Wait -Force'.format(config)
     _pshell(cmd)
 
     cmd = "$status = Get-DscConfigurationStatus; $status.Status"
@@ -507,10 +503,10 @@ def remove_config(reset=False):
             raise CommandExecutionError(
                 "Failed to Stop DSC Configuration", info=exc.info
             )
-        log.info("DSC: {0}".format(exc.info["stdout"]))
+        log.info("DSC: %s", exc.info["stdout"])
 
     # Remove configuration files
-    cmd = "Remove-DscConfigurationDocument -Stage Current, Pending, Previous " "-Force"
+    cmd = "Remove-DscConfigurationDocument -Stage Current, Pending, Previous -Force"
     log.info("DSC: Removing Configuration")
     try:
         _pshell(cmd)
@@ -519,31 +515,31 @@ def remove_config(reset=False):
             raise CommandExecutionError(
                 "Failed to remove DSC Configuration", info=exc.info
             )
-        log.info("DSC: {0}".format(exc.info["stdout"]))
+        log.info("DSC: %s", exc.info["stdout"])
 
     if not reset:
         return True
 
     def _remove_fs_obj(path):
         if os.path.exists(path):
-            log.info("DSC: Removing {0}".format(path))
+            log.info("DSC: Removing %s", path)
             if not __salt__["file.remove"](path):
-                error = "Failed to remove {0}".format(path)
-                log.error("DSC: {0}".format(error))
+                error = "Failed to remove {}".format(path)
+                log.error("DSC: %s", error)
                 raise CommandExecutionError(error)
 
-    dsc_config_dir = "{0}\\System32\\Configuration" "".format(
+    dsc_config_dir = "{}\\System32\\Configuration".format(
         os.getenv("SystemRoot", "C:\\Windows")
     )
 
     # Remove History
-    _remove_fs_obj("{0}\\DSCStatusHistory.mof".format(dsc_config_dir))
+    _remove_fs_obj("{}\\DSCStatusHistory.mof".format(dsc_config_dir))
 
     # Remove Engine Cache
-    _remove_fs_obj("{0}\\DSCEngineCache.mof".format(dsc_config_dir))
+    _remove_fs_obj("{}\\DSCEngineCache.mof".format(dsc_config_dir))
 
     # Remove Status Directory
-    _remove_fs_obj("{0}\\ConfigurationStatus".format(dsc_config_dir))
+    _remove_fs_obj("{}\\ConfigurationStatus".format(dsc_config_dir))
 
     return True
 
@@ -731,7 +727,7 @@ def set_lcm_config(
 
         salt '*' dsc.set_lcm_config ApplyOnly
     """
-    temp_dir = os.getenv("TEMP", "{0}\\temp".format(os.getenv("WINDIR")))
+    temp_dir = os.getenv("TEMP", "{}\\temp".format(os.getenv("WINDIR")))
     cmd = "Configuration SaltConfig {"
     cmd += "    Node localhost {"
     cmd += "        LocalConfigurationManager {"
@@ -739,17 +735,17 @@ def set_lcm_config(
         if config_mode not in ("ApplyOnly", "ApplyAndMonitor", "ApplyAndAutoCorrect"):
             error = (
                 "config_mode must be one of ApplyOnly, ApplyAndMonitor, "
-                "or ApplyAndAutoCorrect. Passed {0}".format(config_mode)
+                "or ApplyAndAutoCorrect. Passed {}".format(config_mode)
             )
             raise SaltInvocationError(error)
-        cmd += '            ConfigurationMode = "{0}";'.format(config_mode)
+        cmd += '            ConfigurationMode = "{}";'.format(config_mode)
     if config_mode_freq:
         if not isinstance(config_mode_freq, int):
-            error = "config_mode_freq must be an integer. Passed {0}".format(
+            error = "config_mode_freq must be an integer. Passed {}".format(
                 config_mode_freq
             )
             raise SaltInvocationError(error)
-        cmd += "            ConfigurationModeFrequencyMins = {0};".format(
+        cmd += "            ConfigurationModeFrequencyMins = {};".format(
             config_mode_freq
         )
     if refresh_mode:
@@ -757,11 +753,11 @@ def set_lcm_config(
             raise SaltInvocationError(
                 "refresh_mode must be one of Disabled, Push, or Pull"
             )
-        cmd += '            RefreshMode = "{0}";'.format(refresh_mode)
+        cmd += '            RefreshMode = "{}";'.format(refresh_mode)
     if refresh_freq:
         if not isinstance(refresh_freq, int):
             raise SaltInvocationError("refresh_freq must be an integer")
-        cmd += "            RefreshFrequencyMins = {0};".format(refresh_freq)
+        cmd += "            RefreshFrequencyMins = {};".format(refresh_freq)
     if reboot_if_needed is not None:
         if not isinstance(reboot_if_needed, bool):
             raise SaltInvocationError("reboot_if_needed must be a boolean value")
@@ -769,22 +765,22 @@ def set_lcm_config(
             reboot_if_needed = "$true"
         else:
             reboot_if_needed = "$false"
-        cmd += "            RebootNodeIfNeeded = {0};".format(reboot_if_needed)
+        cmd += "            RebootNodeIfNeeded = {};".format(reboot_if_needed)
     if action_after_reboot:
         if action_after_reboot not in ("ContinueConfiguration", "StopConfiguration"):
             raise SaltInvocationError(
                 "action_after_reboot must be one of "
                 "ContinueConfiguration or StopConfiguration"
             )
-        cmd += '            ActionAfterReboot = "{0}"'.format(action_after_reboot)
+        cmd += '            ActionAfterReboot = "{}"'.format(action_after_reboot)
     if certificate_id is not None:
         if certificate_id == "":
             certificate_id = None
-        cmd += '            CertificateID = "{0}";'.format(certificate_id)
+        cmd += '            CertificateID = "{}";'.format(certificate_id)
     if configuration_id is not None:
         if configuration_id == "":
             configuration_id = None
-        cmd += '            ConfigurationID = "{0}";'.format(configuration_id)
+        cmd += '            ConfigurationID = "{}";'.format(configuration_id)
     if allow_module_overwrite is not None:
         if not isinstance(allow_module_overwrite, bool):
             raise SaltInvocationError("allow_module_overwrite must be a boolean value")
@@ -792,7 +788,7 @@ def set_lcm_config(
             allow_module_overwrite = "$true"
         else:
             allow_module_overwrite = "$false"
-        cmd += "            AllowModuleOverwrite = {0};".format(allow_module_overwrite)
+        cmd += "            AllowModuleOverwrite = {};".format(allow_module_overwrite)
     if debug_mode is not False:
         if debug_mode is None:
             debug_mode = "None"
@@ -801,25 +797,23 @@ def set_lcm_config(
                 "debug_mode must be one of None, ForceModuleImport, "
                 "ResourceScriptBreakAll, or All"
             )
-        cmd += '            DebugMode = "{0}";'.format(debug_mode)
+        cmd += '            DebugMode = "{}";'.format(debug_mode)
     if status_retention_days:
         if not isinstance(status_retention_days, int):
             raise SaltInvocationError("status_retention_days must be an integer")
-        cmd += "            StatusRetentionTimeInDays = {0};".format(
+        cmd += "            StatusRetentionTimeInDays = {};".format(
             status_retention_days
         )
     cmd += "        }}};"
-    cmd += r'SaltConfig -OutputPath "{0}\SaltConfig"'.format(temp_dir)
+    cmd += r'SaltConfig -OutputPath "{}\SaltConfig"'.format(temp_dir)
 
     # Execute Config to create the .mof
     _pshell(cmd)
 
     # Apply the config
-    cmd = r'Set-DscLocalConfigurationManager -Path "{0}\SaltConfig"' r"".format(
-        temp_dir
-    )
+    cmd = r'Set-DscLocalConfigurationManager -Path "{}\SaltConfig"' r"".format(temp_dir)
     ret = __salt__["cmd.run_all"](cmd, shell="powershell", python_shell=True)
-    __salt__["file.remove"](r"{0}\SaltConfig".format(temp_dir))
+    __salt__["file.remove"](r"{}\SaltConfig".format(temp_dir))
     if not ret["retcode"]:
         log.info("DSC: LCM config applied successfully")
         return True

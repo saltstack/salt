@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 StatusPage
 ==========
@@ -19,13 +18,8 @@ In the minion configuration file, the following block is required:
 .. versionadded:: 2017.7.0
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
-# import python std lib
 import logging
-
-# import salt
-from salt.ext import six
 
 # import third party
 try:
@@ -100,9 +94,9 @@ def _validate_api_params(params):
     Validate the API params as specified in the config file.
     """
     # page_id and API key are mandatory and they must be string/unicode
-    return isinstance(
-        params["api_page_id"], (six.string_types, six.text_type)
-    ) and isinstance(params["api_key"], (six.string_types, six.text_type))
+    return isinstance(params["api_page_id"], ((str,), str)) and isinstance(
+        params["api_key"], ((str,), str)
+    )
 
 
 def _get_headers(params):
@@ -214,7 +208,7 @@ def create(
         endpoint=endpoint,
     )
     change_request = {}
-    for karg, warg in six.iteritems(kwargs):
+    for karg, warg in kwargs.items():
         if warg is None or karg.startswith("__") or karg in INSERT_FORBIDDEN_FILEDS:
             continue
         change_request_key = "{endpoint_sg}[{karg}]".format(
@@ -367,7 +361,7 @@ def update(
     Update attribute(s) of a specific endpoint.
 
     id
-        The unique ID of the enpoint entry.
+        The unique ID of the endpoint entry.
 
     endpoint: incidents
         Endpoint name.
@@ -445,7 +439,7 @@ def update(
         id=id,
     )
     change_request = {}
-    for karg, warg in six.iteritems(kwargs):
+    for karg, warg in kwargs.items():
         if warg is None or karg.startswith("__") or karg in UPDATE_FORBIDDEN_FILEDS:
             continue
         change_request_key = "{endpoint_sg}[{karg}]".format(

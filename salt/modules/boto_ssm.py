@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connection module for Amazon SSM
 
@@ -13,14 +12,10 @@ Connection module for Amazon SSM
 
 :depends: boto3
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
+import salt.utils.boto3mod
 import salt.utils.json as json
-
-# Import Salt libs
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
@@ -32,7 +27,7 @@ def __virtual__():
     """
     has_boto_reqs = salt.utils.versions.check_boto_reqs()
     if has_boto_reqs is True:
-        __utils__["boto3.assign_funcs"](__name__, "ssm")
+        salt.utils.boto3mod.assign_funcs(__name__, "ssm")
     return has_boto_reqs
 
 

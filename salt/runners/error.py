@@ -1,14 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 Error generator to enable integration testing of salt runner error handling
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.utils.error
-
-# Import python libs
 
 
 def error(name=None, message=""):

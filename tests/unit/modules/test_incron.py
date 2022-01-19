@@ -1,18 +1,16 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
+import logging
+
 import salt.modules.incron as incron
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, call, patch
 from tests.support.unit import TestCase
+
+log = logging.getLogger(__name__)
 
 
 class IncronTestCase(TestCase, LoaderModuleMockMixin):
@@ -68,10 +66,21 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
         Test if it return the contents of the user's incrontab
         """
         mock = MagicMock(return_value="incrontab")
+        expected_calls = [
+            call(
+                "incrontab -l cybage", python_shell=False, rstrip=False, runas="cybage"
+            )
+        ]
+
         with patch.dict(incron.__grains__, {"os_family": mock}):
-            mock = MagicMock(return_value="salt")
-            with patch.dict(incron.__salt__, {"cmd.run_stdout": mock}):
+            cmd_run_mock = MagicMock(return_value="salt")
+            with patch.dict(incron.__salt__, {"cmd.run_stdout": cmd_run_mock}):
                 self.assertEqual(incron.raw_incron("cybage"), "salt")
+                cmd_run_mock.assert_has_calls(expected_calls)
+
+                cmd = cmd_run_mock.call_args[0][0]
+                self.assertEqual("incrontab -l cybage", cmd)
+                self.assertNotIn("-u", cmd)
 
     # 'list_tab' function tests: 1
 

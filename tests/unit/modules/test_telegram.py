@@ -1,19 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the Telegram execution module.
 
 :codeauthor: :email:`Roald Nefs (info@roaldnefs.com)`
 """
 
-# Import Python Libs
-from __future__ import absolute_import
 
 import logging
 
-# Import Salt Libs
 import salt.modules.telegram as telegram
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock
 from tests.support.unit import TestCase

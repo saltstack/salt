@@ -1,12 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 sysrc module for FreeBSD
 """
 
-# Import Python libs
-from __future__ import absolute_import
-
-# Import Salt libs
 import salt.utils.path
 from salt.exceptions import CommandExecutionError
 
@@ -23,7 +18,8 @@ def __virtual__():
         return True
     return (
         False,
-        "The sysrc execution module failed to load: the sysrc binary is not in the path.",
+        "The sysrc execution module failed to load: the sysrc binary is not in the"
+        " path.",
     )
 
 
@@ -109,10 +105,13 @@ def set_(name, value, **kwargs):
 
     cmd += " " + name + '="' + value + '"'
 
-    sysrcs = __salt__["cmd.run"](cmd)
+    r = __salt__["cmd.run_all"](cmd)
+
+    if r["retcode"] != 0:
+        raise CommandExecutionError("sysrc failed: {}".format(r["stderr"]))
 
     ret = {}
-    for sysrc in sysrcs.split("\n"):
+    for sysrc in r["stdout"].split("\n"):
         rcfile = sysrc.split(": ")[0]
         var = sysrc.split(": ")[1]
         oldval = sysrc.split(": ")[2].strip().split("->")[0]

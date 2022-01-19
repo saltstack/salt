@@ -1,15 +1,7 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt libs
 import salt.fileserver.hgfs as hgfs
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 class HgfsFileTest(TestCase, LoaderModuleMockMixin):
@@ -37,3 +29,21 @@ class HgfsFileTest(TestCase, LoaderModuleMockMixin):
             {"hgfs_saltenv_whitelist": "", "hgfs_saltenv_blacklist": "base"},
         ):
             assert not hgfs._env_is_exposed("base")
+
+    @skipIf(not hgfs.HAS_HG, "hglib needs to be installed")
+    def test_fix_58852(self):
+        """
+        test to make sure python 3 can init hgfs
+        """
+        with patch.dict(
+            hgfs.__opts__,
+            {
+                "cachedir": "/tmp/barf",
+                "hgfs_base": "fnord",
+                "hgfs_branch_method": "fnord",
+                "hgfs_mountpoint": "fnord",
+                "hgfs_root": "fnord",
+                "hgfs_remotes": "fnord",
+            },
+        ):
+            self.assertIsInstance(hgfs.init(), list)

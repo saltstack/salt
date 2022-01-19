@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 Pepa
 ====
@@ -263,9 +262,7 @@ For more examples and information see <https://github.com/mickep76/pepa>.
 """
 
 # Import futures
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import glob
 import logging
 import os
@@ -276,17 +273,12 @@ import jinja2
 import salt.utils.files
 import salt.utils.yaml
 
-# Import Salt libs
-from salt.ext import six
-from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
-
 __author__ = "Michael Persson <michael.ake.persson@gmail.com>"
 __copyright__ = "Copyright (c) 2013 Michael Persson"
 __license__ = "Apache License, Version 2.0"
 __version__ = "0.6.6"
 
 
-# Import 3rd-party libs
 try:
     import requests
 
@@ -333,7 +325,8 @@ if __name__ == "__main__":
             import colorlog  # pylint: disable=import-error
 
             formatter = colorlog.ColoredFormatter(
-                "[%(log_color)s%(levelname)-8s%(reset)s] %(log_color)s%(message)s%(reset)s"
+                "[%(log_color)s%(levelname)-8s%(reset)s]"
+                " %(log_color)s%(message)s%(reset)s"
             )
         except ImportError:
             formatter = logging.Formatter("[%(levelname)-8s] %(message)s")
@@ -374,7 +367,7 @@ def key_value_to_tree(data):
     Convert key/value to tree
     """
     tree = {}
-    for flatkey, value in six.iteritems(data):
+    for flatkey, value in data.items():
         t = tree
         keys = flatkey.split(__opts__["pepa_delimiter"])
         for i, key in enumerate(keys, 1):
@@ -408,7 +401,7 @@ def ext_pillar(minion_id, pillar, resource, sequence, subkey=False, subkey_only=
     output["pepa_templates"] = []
     immutable = {}
 
-    for categ, info in [next(six.iteritems(s)) for s in sequence]:
+    for categ, info in [next(iter(s.items())) for s in sequence]:
         if categ not in inp:
             log.warning("Category is not defined: %s", categ)
             continue
@@ -561,7 +554,7 @@ def validate(output, resource):
 
     val = cerberus.Validator()
     if not val.validate(output["pepa_keys"], all_schemas):
-        for ekey, error in six.iteritems(val.errors):
+        for ekey, error in val.errors.items():
             log.warning("Validation failed for key %s: %s", ekey, error)
 
     output["pepa_schema_keys"] = all_schemas
@@ -620,7 +613,7 @@ if __name__ == "__main__":
 
         if not request.ok:
             raise RuntimeError(
-                "Failed to authenticate to SaltStack REST API: {0}".format(request.text)
+                "Failed to authenticate to SaltStack REST API: {}".format(request.text)
             )
 
         response = request.json()

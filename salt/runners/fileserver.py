@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Directly manage the Salt fileserver plugins
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt libs
 import salt.fileserver
 
 
@@ -322,7 +319,7 @@ def empty_dir_list(saltenv="base", backend=None):
     return fileserver.file_list_emptydirs(load=load)
 
 
-def update(backend=None):
+def update(backend=None, **kwargs):
     """
     Update the fileserver cache. If no backend is provided, then the cache for
     all configured backends will be updated.
@@ -341,15 +338,19 @@ def update(backend=None):
             comma-separated list. In earlier versions, they needed to be passed
             as a python list (ex: ``backend="['roots', 'git']"``)
 
+    kwargs
+        Pass additional arguments to backend. See example below
+
     CLI Example:
 
     .. code-block:: bash
 
         salt-run fileserver.update
         salt-run fileserver.update backend=roots,git
+        salt-run fileserver.update backend=git remotes=myrepo,yourrepo
     """
     fileserver = salt.fileserver.Fileserver(__opts__)
-    fileserver.update(back=backend)
+    fileserver.update(back=backend, **kwargs)
     return True
 
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of Heat
 ==================
@@ -39,21 +38,15 @@ mysql:
     The `enviroment` spelling mistake has been removed in Salt 3000.
 
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.exceptions
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.versions
 import salt.utils.yaml
-
-# Import 3rd-party libs
-from salt.ext import six
 
 # pylint: disable=import-error
 HAS_OSLO = False
@@ -92,7 +85,7 @@ def _parse_template(tmpl_str):
         try:
             tpl = salt.utils.yaml.safe_load(tmpl_str)
         except salt.utils.yaml.YAMLError as exc:
-            raise ValueError(six.text_type(exc))
+            raise ValueError(str(exc))
         else:
             if tpl is None:
                 tpl = {}
@@ -101,7 +94,7 @@ def _parse_template(tmpl_str):
         or "heat_template_version" in tpl
         or "AWSTemplateFormatVersion" in tpl
     ):
-        raise ValueError(("Template format version not found."))
+        raise ValueError("Template format version not found.")
     return tpl
 
 
@@ -175,7 +168,7 @@ def deployed(
     existing_stack = __salt__["heat.show_stack"](name, profile=profile)
 
     if existing_stack["result"] and not update:
-        ret["comment"] = "Stack {0} is deployed".format(name)
+        ret["comment"] = "Stack {} is deployed".format(name)
         return ret
     if existing_stack["result"] and update:
         if template:
@@ -230,10 +223,10 @@ def deployed(
                         salt.utils.files.safe_rm(template_tmp_file)
                     except ValueError as ex:
                         ret["result"] = False
-                        ret["comment"] = "Error parsing template {0}".format(ex)
+                        ret["comment"] = "Error parsing template {}".format(ex)
             else:
                 ret["result"] = False
-                ret["comment"] = "Can not open template: {0} {1}".format(
+                ret["comment"] = "Can not open template: {} {}".format(
                     template, comment_
                 )
         else:
@@ -252,17 +245,17 @@ def deployed(
             checksum_stack = __salt__["hashutil.digest"](template_stack["template"])
         except salt.exceptions.CommandExecutionError as cmdexc:
             ret["result"] = False
-            ret["comment"] = "{0}".format(cmdexc)
+            ret["comment"] = "{}".format(cmdexc)
 
         if ret["result"] is True:
             if checksum_template == checksum_stack:
                 if __opts__["test"]:
                     ret["result"] = True
-                    ret["comment"] = "Stack {0} is deployed".format(name)
+                    ret["comment"] = "Stack {} is deployed".format(name)
                     return ret
                 else:
                     ret["result"] = False
-                    ret["comment"] = "Templates have same checksum: {0} {1}".format(
+                    ret["comment"] = "Templates have same checksum: {} {}".format(
                         checksum_template, checksum_stack
                     )
         if ret["result"] is False:
@@ -270,7 +263,7 @@ def deployed(
         if __opts__["test"]:
             stack = {
                 "result": None,
-                "comment": "Stack {0} is set to be updated".format(name),
+                "comment": "Stack {} is set to be updated".format(name),
             }
         else:
             stack = __salt__["heat.update_stack"](
@@ -289,7 +282,7 @@ def deployed(
         if __opts__["test"]:
             stack = {
                 "result": None,
-                "comment": "Stack {0} is set to be created".format(name),
+                "comment": "Stack {} is set to be created".format(name),
             }
         else:
             stack = __salt__["heat.create_stack"](
@@ -344,7 +337,7 @@ def absent(name, poll=5, timeout=60, profile=None):
         return ret
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Stack {0} is set to be removed".format(name)
+        ret["comment"] = "Stack {} is set to be removed".format(name)
         return ret
 
     stack = __salt__["heat.delete_stack"](

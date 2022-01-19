@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Thomas Stoner <tmstoner@cisco.com>
 """
@@ -16,10 +15,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-from __future__ import absolute_import
-
 from tests.unit.modules.nxos.nxos_platform import NXOSPlatform
 
 # pylint: disable-msg=C0103
@@ -27,7 +22,7 @@ from tests.unit.modules.nxos.nxos_platform import NXOSPlatform
 
 class N95KPlatform(NXOSPlatform):
 
-    """ Cisco Systems N9K Platform Unit Test Object """
+    """Cisco Systems N9K Platform Unit Test Object"""
 
     chassis = "Nexus9000 C9508 (8 Slot) Chassis"
 

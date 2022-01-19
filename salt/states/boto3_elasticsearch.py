@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Manage Elasticsearch Service
 ============================
 
-.. versionadded:: Natrium
+.. versionadded:: 3001
 
 :configuration: This module accepts explicit AWS credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.
@@ -44,16 +43,11 @@ Manage Elasticsearch Service
 :depends: boto3
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.utils.json
 from salt.utils.versions import LooseVersion
-
-# Import 3rd-party libs
 
 log = logging.getLogger(__name__)
 __virtualname__ = "boto3_elasticsearch"
@@ -95,8 +89,7 @@ def _check_return_value(ret):
     if ret["result"] == "oops":
         ret["result"] = False
         ret["comment"].append(
-            "An internal error has occurred: The result value was "
-            "not properly changed."
+            "An internal error has occurred: The result value was not properly changed."
         )
     return ret
 
@@ -216,7 +209,7 @@ def present(
         (create/update/upgrade) to be completed. Default: ``True``
     :param dict tags: Dict of tags to ensure are present on the Elasticsearch domain.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     Example:
 
@@ -339,8 +332,9 @@ def present(
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"].append(
-                'The Elasticsearch Domain "{}" would have been {}d.'
-                "".format(name, action)
+                'The Elasticsearch Domain "{}" would have been {}d.'.format(
+                    name, action
+                )
             )
             ret["changes"] = config_diff
         else:
@@ -374,8 +368,9 @@ def present(
                     if item in boto_kwargs:
                         del boto_kwargs[item]
             res = __salt__[
-                "boto3_elasticsearch.{}_elasticsearch_domain{}"
-                "".format(action, "_config" if action == "update" else "")
+                "boto3_elasticsearch.{}_elasticsearch_domain{}".format(
+                    action, "_config" if action == "update" else ""
+                )
             ](name, **boto_kwargs)
             if "error" in res:
                 ret["result"] = False
@@ -437,7 +432,7 @@ def absent(name, blocking=True, region=None, keyid=None, key=None, profile=None)
     :param bool blocking: Whether or not the state should wait for the deletion
         to be completed. Default: ``True``
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     Example:
 
@@ -460,7 +455,7 @@ def absent(name, blocking=True, region=None, keyid=None, key=None, profile=None)
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"].append(
-                'Elasticsearch domain "{}" would have been removed.' "".format(name)
+                'Elasticsearch domain "{}" would have been removed.'.format(name)
             )
             ret["changes"] = {"old": name, "new": None}
         else:
@@ -475,19 +470,20 @@ def absent(name, blocking=True, region=None, keyid=None, key=None, profile=None)
             if "error" in res:
                 ret["result"] = False
                 ret["comment"].append(
-                    'Error deleting Elasticsearch domain "{}": {}'
-                    "".format(name, res["error"])
+                    'Error deleting Elasticsearch domain "{}": {}'.format(
+                        name, res["error"]
+                    )
                 )
             else:
                 ret["result"] = True
                 ret["comment"].append(
-                    'Elasticsearch domain "{}" has been deleted.' "".format(name)
+                    'Elasticsearch domain "{}" has been deleted.'.format(name)
                 )
                 ret["changes"] = {"old": name, "new": None}
     else:
         ret["result"] = True
         ret["comment"].append(
-            'Elasticsearch domain "{}" is already absent.' "".format(name)
+            'Elasticsearch domain "{}" is already absent.'.format(name)
         )
     ret = _check_return_value(ret)
     return ret
@@ -513,7 +509,7 @@ def upgraded(
     :param str elasticsearch_version: String of format X.Y to specify version for
         the Elasticsearch domain eg. "1.5" or "2.3".
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     Example:
 
@@ -534,7 +530,7 @@ def upgraded(
         ret["result"] = False
         if "ResourceNotFoundException" in res["error"]:
             ret["comment"].append(
-                'The Elasticsearch domain "{}" does not exist.' "".format(name)
+                'The Elasticsearch domain "{}" does not exist.'.format(name)
             )
         else:
             ret["comment"].append(res["error"])
@@ -565,8 +561,9 @@ def upgraded(
     if "error" in res:
         ret["result"] = False
         ret["comment"].append(
-            "Error determining current upgrade status "
-            'of domain "{}": {}'.format(name, res["error"])
+            'Error determining current upgrade status of domain "{}": {}'.format(
+                name, res["error"]
+            )
         )
         return ret
     if res["response"].get("StepStatus") == "IN_PROGRESS":
@@ -578,18 +575,18 @@ def upgraded(
             if "error" in res2:
                 ret["result"] = False
                 ret["comment"].append(
-                    "Error waiting for upgrade of domain "
-                    '"{}" to complete: {}'
-                    "".format(name, res2["error"])
+                    'Error waiting for upgrade of domain "{}" to complete: {}'.format(
+                        name, res2["error"]
+                    )
                 )
             elif (
                 res2["response"].get("UpgradeName", "").endswith(elasticsearch_version)
             ):
                 ret["result"] = True
                 ret["comment"].append(
-                    'Elasticsearch Domain "{}" is '
-                    'already at version "{}".'
-                    "".format(name, elasticsearch_version)
+                    'Elasticsearch Domain "{}" is already at version "{}".'.format(
+                        name, elasticsearch_version
+                    )
                 )
         else:
             # We are not going to wait for it to complete, so bail.
@@ -615,8 +612,9 @@ def upgraded(
     if "error" in res:
         ret["result"] = False
         ret["comment"].append(
-            "Error checking upgrade eligibility for "
-            'domain "{}": {}'.format(name, res["error"])
+            'Error checking upgrade eligibility for domain "{}": {}'.format(
+                name, res["error"]
+            )
         )
     elif not res["response"]:
         ret["result"] = False
@@ -650,8 +648,9 @@ def upgraded(
             if "error" in res:
                 ret["result"] = False
                 ret["comment"].append(
-                    'Error upgrading Elasticsearch domain "{}": {}'
-                    "".format(name, res["error"])
+                    'Error upgrading Elasticsearch domain "{}": {}'.format(
+                        name, res["error"]
+                    )
                 )
             else:
                 ret["result"] = True
@@ -678,7 +677,7 @@ def latest(name, minor_only=True, region=None, keyid=None, key=None, profile=Non
     :param str name: The name of the Elasticsearch domain to upgrade.
     :param bool minor_only: Only upgrade to the latest minor version.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     Example:
 
@@ -702,8 +701,9 @@ def latest(name, minor_only=True, region=None, keyid=None, key=None, profile=Non
     if "error" in res:
         ret["result"] = False
         ret["comment"].append(
-            'Error getting information of Elasticsearch domain "{}": {}'
-            "".format(name, res["error"])
+            'Error getting information of Elasticsearch domain "{}": {}'.format(
+                name, res["error"]
+            )
         )
     else:
         current_version = res["response"]["ElasticsearchVersion"]
@@ -728,7 +728,7 @@ def latest(name, minor_only=True, region=None, keyid=None, key=None, profile=Non
     if not current_version:
         ret["result"] = True
         ret["comment"].append(
-            'The Elasticsearch domain "{}" can not be upgraded.' "".format(name)
+            'The Elasticsearch domain "{}" can not be upgraded.'.format(name)
         )
     elif not latest_version:
         ret["result"] = True
@@ -795,7 +795,7 @@ def tagged(
     :param bool replace: Whether or not to replace (``True``) all existing tags
         on the Elasticsearch domain, or add (``False``) tags to the ES domain.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3001
 
     """
     ret = {"name": name, "result": "oops", "comment": [], "changes": {}}
@@ -811,16 +811,15 @@ def tagged(
         if "error" in res:
             ret["result"] = False
             ret["comment"].append(
-                "Error fetching tags of Elasticsearch domain "
-                '"{}": {}'.format(name, res["error"])
+                'Error fetching tags of Elasticsearch domain "{}": {}'.format(
+                    name, res["error"]
+                )
             )
         else:
             current_tags = res["response"] or {}
     else:
         ret["result"] = False
-        ret["comment"].append(
-            'Elasticsearch domain "{}" does not exist.' "".format(name)
-        )
+        ret["comment"].append('Elasticsearch domain "{}" does not exist.'.format(name))
     if isinstance(ret["result"], bool):
         return ret
 
@@ -828,7 +827,7 @@ def tagged(
     if not diff_tags:
         ret["result"] = True
         ret["comment"].append(
-            'Elasticsearch domain "{}" already has the specified ' "tags.".format(name)
+            'Elasticsearch domain "{}" already has the specified tags.'.format(name)
         )
     else:
         if replace:
@@ -838,8 +837,9 @@ def tagged(
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"].append(
-                'Tags on Elasticsearch domain "{}" would have '
-                "been {}ed.".format(name, "replac" if replace else "add")
+                'Tags on Elasticsearch domain "{}" would have been {}ed.'.format(
+                    name, "replac" if replace else "add"
+                )
             )
         else:
             if replace:
@@ -871,15 +871,17 @@ def tagged(
             if "error" in res:
                 ret["result"] = False
                 ret["comment"].append(
-                    "Error tagging Elasticsearch domain "
-                    '"{}": {}'.format(name, res["error"])
+                    'Error tagging Elasticsearch domain "{}": {}'.format(
+                        name, res["error"]
+                    )
                 )
                 ret["changes"] = {}
             else:
                 ret["result"] = True
                 ret["comment"].append(
-                    'Tags on Elasticsearch domain "{}" have been '
-                    "{}ed.".format(name, "replac" if replace else "add")
+                    'Tags on Elasticsearch domain "{}" have been {}ed.'.format(
+                        name, "replac" if replace else "add"
+                    )
                 )
     ret = _check_return_value(ret)
     return ret

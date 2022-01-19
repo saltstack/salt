@@ -1,22 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 integration tests for mac_ports
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
-
+import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    destructiveTest,
-    runs_on,
-    skip_if_binaries_missing,
-    skip_if_not_root,
-)
+from tests.support.helpers import runs_on
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @runs_on(kernel="Darwin")
-@skip_if_binaries_missing("port")
+@pytest.mark.skip_if_binaries_missing("port")
 class MacPortsModuleTest(ModuleCase):
     """
     Validate the mac_ports module
@@ -38,7 +31,7 @@ class MacPortsModuleTest(ModuleCase):
         if not self.AGREE_INSTALLED:
             self.run_function("pkg.remove", ["agree"])
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_list_pkgs(self):
         """
         Test pkg.list_pkgs
@@ -47,7 +40,7 @@ class MacPortsModuleTest(ModuleCase):
         self.assertIsInstance(self.run_function("pkg.list_pkgs"), dict)
         self.assertIn("agree", self.run_function("pkg.list_pkgs"))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_latest_version(self):
         """
         Test pkg.latest_version
@@ -57,7 +50,7 @@ class MacPortsModuleTest(ModuleCase):
         self.assertIsInstance(result, dict)
         self.assertIn("agree", result)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_remove(self):
         """
         Test pkg.remove
@@ -67,7 +60,7 @@ class MacPortsModuleTest(ModuleCase):
         self.assertIsInstance(removed, dict)
         self.assertIn("agree", removed)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_install(self):
         """
         Test pkg.install
@@ -85,7 +78,7 @@ class MacPortsModuleTest(ModuleCase):
             self.run_function("pkg.list_upgrades", refresh=False), dict
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_upgrade_available(self):
         """
         Test pkg.upgrade_available
@@ -101,7 +94,7 @@ class MacPortsModuleTest(ModuleCase):
         """
         self.assertTrue(self.run_function("pkg.refresh_db"))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_upgrade(self):
         """
         Test pkg.upgrade

@@ -1,19 +1,10 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import
-
-# Import Salt Libs
 import salt.auth.ldap
-
-# Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
 
-salt.auth.ldap.__opts__ = {}
 
-
-class Bind(object):
+class Bind:
     """
     fake search_s return
     """
@@ -29,14 +20,17 @@ class Bind(object):
 
 
 @skipIf(not salt.auth.ldap.HAS_LDAP, "Install python-ldap for this test")
-class LDAPAuthTestCase(TestCase):
+class LDAPAuthTestCase(TestCase, LoaderModuleMockMixin):
     """
     Unit tests for salt.auth.ldap
     """
 
-    def setUp(self):
-        self.opts = {
-            "auth.ldap.binddn": "uid={{username}},cn=users,cn=compat,dc=saltstack,dc=com",
+    @classmethod
+    def setUpClass(cls):
+        cls.config = {
+            "auth.ldap.binddn": (
+                "uid={{username}},cn=users,cn=compat,dc=saltstack,dc=com"
+            ),
             "auth.ldap.port": 389,
             "auth.ldap.tls": False,
             "auth.ldap.server": "172.18.0.2",
@@ -44,27 +38,35 @@ class LDAPAuthTestCase(TestCase):
             "auth.ldap.groupattribute": "memberOf",
             "auth.ldap.group_basedn": "cn=groups,cn=compat,dc=saltstack,dc=com",
             "auth.ldap.basedn": "dc=saltstack,dc=com",
-            "auth.ldap.group_filter": "(&(memberUid={{ username }})(objectClass=posixgroup))",
+            "auth.ldap.group_filter": (
+                "(&(memberUid={{ username }})(objectClass=posixgroup))"
+            ),
         }
 
+    @classmethod
+    def tearDownClass(cls):
+        cls.config = cls.opts = None
+
+    def setUp(self):
+        self.opts = self.config.copy()
+
     def tearDown(self):
-        self.opts["auth.ldap.freeipa"] = False
-        self.opts["auth.ldap.activedirectory"] = False
+        self.opts = None
+
+    def setup_loader_modules(self):
+        return {salt.auth.ldap: {"__opts__": self.config.copy()}}
 
     def test_config(self):
         """
         Test that the _config function works correctly
         """
-        with patch.dict(salt.auth.ldap.__opts__, self.opts):
-            self.assertEqual(salt.auth.ldap._config("basedn"), "dc=saltstack,dc=com")
-            self.assertEqual(
-                salt.auth.ldap._config("group_filter"),
-                "(&(memberUid={{ username }})(objectClass=posixgroup))",
-            )
-            self.assertEqual(
-                salt.auth.ldap._config("accountattributename"), "memberUid"
-            )
-            self.assertEqual(salt.auth.ldap._config("groupattribute"), "memberOf")
+        self.assertEqual(salt.auth.ldap._config("basedn"), "dc=saltstack,dc=com")
+        self.assertEqual(
+            salt.auth.ldap._config("group_filter"),
+            "(&(memberUid={{ username }})(objectClass=posixgroup))",
+        )
+        self.assertEqual(salt.auth.ldap._config("accountattributename"), "memberUid")
+        self.assertEqual(salt.auth.ldap._config("groupattribute"), "memberOf")
 
     def test_groups_freeipa(self):
         """
@@ -81,11 +83,10 @@ class LDAPAuthTestCase(TestCase):
         """
         test groups in ldap
         """
-        with patch.dict(salt.auth.ldap.__opts__, self.opts):
-            with patch("salt.auth.ldap._bind", return_value=Bind):
-                self.assertIn(
-                    "saltusers", salt.auth.ldap.groups("saltuser", password="password")
-                )
+        with patch("salt.auth.ldap._bind", return_value=Bind):
+            self.assertIn(
+                "saltusers", salt.auth.ldap.groups("saltuser", password="password")
+            )
 
     def test_groups_activedirectory(self):
         """

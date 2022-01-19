@@ -1,5 +1,5 @@
-salt.states.pcs module
-======================
+salt.states.pcs
+===============
 
 .. automodule:: salt.states.pcs
     :members:

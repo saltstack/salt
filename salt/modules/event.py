@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Use the :ref:`Salt Event System <events>` to fire events from the
 master to the minion and vice-versa.
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
@@ -12,9 +10,9 @@ import sys
 import traceback
 from collections.abc import Mapping
 
+import salt.channel.client
 import salt.crypt
 import salt.payload
-import salt.transport.client
 import salt.utils.event
 import salt.utils.zeromq
 
@@ -26,7 +24,7 @@ def _dict_subset(keys, master_dict):
     """
     Return a dictionary of only the subset of keys/values specified in keys
     """
-    return dict([(k, v) for k, v in master_dict.items() if k in keys])
+    return {k: v for k, v in master_dict.items() if k in keys}
 
 
 def fire_master(data, tag, preload=None):
@@ -74,7 +72,7 @@ def fire_master(data, tag, preload=None):
             load.update(preload)
 
         for master in masters:
-            with salt.transport.client.ReqChannel.factory(
+            with salt.channel.client.ReqChannel.factory(
                 __opts__, master_uri=master
             ) as channel:
                 try:
@@ -218,13 +216,13 @@ def send(
         if isinstance(with_grains, list):
             data_dict["grains"] = _dict_subset(with_grains, __grains__)
         else:
-            data_dict["grains"] = __grains__
+            data_dict["grains"] = __grains__.value()
 
     if with_pillar:
         if isinstance(with_pillar, list):
             data_dict["pillar"] = _dict_subset(with_pillar, __pillar__)
         else:
-            data_dict["pillar"] = __pillar__
+            data_dict["pillar"] = __pillar__.value()
 
     if with_env_opts:
         data_dict["saltenv"] = __opts__.get("saltenv", "base")

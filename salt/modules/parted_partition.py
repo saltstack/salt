@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for managing partitions on POSIX-like systems.
 
@@ -15,21 +14,16 @@ In light of parted not directly supporting partition IDs, some of this module
 has been written to utilize sfdisk instead. For further information, please
 reference the man page for ``sfdisk(8)``.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import python libs
 import os
 import re
 import stat
 import string
 
-# Import Salt libs
 import salt.utils.path
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -42,49 +36,45 @@ __func_alias__ = {
     "list_": "list",
 }
 
-VALID_UNITS = set(
-    [
-        "s",
-        "B",
-        "kB",
-        "MB",
-        "MiB",
-        "GB",
-        "GiB",
-        "TB",
-        "TiB",
-        "%",
-        "cyl",
-        "chs",
-        "compact",
-    ]
-)
+VALID_UNITS = {
+    "s",
+    "B",
+    "kB",
+    "MB",
+    "MiB",
+    "GB",
+    "GiB",
+    "TB",
+    "TiB",
+    "%",
+    "cyl",
+    "chs",
+    "compact",
+}
 
-VALID_DISK_FLAGS = set(["cylinder_alignment", "pmbr_boot", "implicit_partition_table"])
+VALID_DISK_FLAGS = {"cylinder_alignment", "pmbr_boot", "implicit_partition_table"}
 
-VALID_PARTITION_FLAGS = set(
-    [
-        "boot",
-        "root",
-        "swap",
-        "hidden",
-        "raid",
-        "lvm",
-        "lba",
-        "hp-service",
-        "palo",
-        "prep",
-        "msftres",
-        "bios_grub",
-        "atvrecv",
-        "diag",
-        "legacy_boot",
-        "msftdata",
-        "irst",
-        "esp",
-        "type",
-    ]
-)
+VALID_PARTITION_FLAGS = {
+    "boot",
+    "root",
+    "swap",
+    "hidden",
+    "raid",
+    "lvm",
+    "lba",
+    "hp-service",
+    "palo",
+    "prep",
+    "msftres",
+    "bios_grub",
+    "atvrecv",
+    "diag",
+    "legacy_boot",
+    "msftdata",
+    "irst",
+    "esp",
+    "type",
+}
 
 
 def __virtual__():
@@ -144,14 +134,14 @@ def _validate_partition_boundary(boundary):
     """
     Ensure valid partition boundaries are supplied.
     """
-    boundary = six.text_type(boundary)
+    boundary = str(boundary)
     match = re.search(r"^([\d.]+)(\D*)$", boundary)
     if match:
         unit = match.group(2)
         if not unit or unit in VALID_UNITS:
             return
     raise CommandExecutionError(
-        'Invalid partition boundary passed: "{0}"'.format(boundary)
+        'Invalid partition boundary passed: "{}"'.format(boundary)
     )
 
 
@@ -174,7 +164,7 @@ def probe(*devices):
     for device in devices:
         _validate_device(device)
 
-    cmd = "partprobe -- {0}".format(" ".join(devices))
+    cmd = "partprobe -- {}".format(" ".join(devices))
     out = __salt__["cmd.run"](cmd).splitlines()
     return out
 
@@ -196,9 +186,9 @@ def list_(device, unit=None):
     if unit:
         if unit not in VALID_UNITS:
             raise CommandExecutionError("Invalid unit passed to partition.part_list")
-        cmd = "parted -m -s {0} unit {1} print".format(device, unit)
+        cmd = "parted -m -s {} unit {} print".format(device, unit)
     else:
-        cmd = "parted -m -s {0} print".format(device)
+        cmd = "parted -m -s {} print".format(device)
 
     out = __salt__["cmd.run_stdout"](cmd).splitlines()
     ret = {"info": {}, "partitions": {}}
@@ -249,7 +239,7 @@ def list_(device, unit=None):
             else:
                 fields.extend(["file system", "name", "flags"])
             if len(fields) == len(cols):
-                ret["partitions"][cols[0]] = dict(six.moves.zip(fields, cols))
+                ret["partitions"][cols[0]] = dict(zip(fields, cols))
             else:
                 raise CommandExecutionError(
                     "Problem encountered while parsing output from parted"
@@ -270,7 +260,7 @@ def align_check(device, part_type, partition):
     """
     _validate_device(device)
 
-    if part_type not in set(["minimal", "optimal"]):
+    if part_type not in {"minimal", "optimal"}:
         raise CommandExecutionError("Invalid part_type passed to partition.align_check")
 
     try:
@@ -278,7 +268,7 @@ def align_check(device, part_type, partition):
     except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError("Invalid partition passed to partition.align_check")
 
-    cmd = "parted -m {0} align-check {1} {2}".format(device, part_type, partition)
+    cmd = "parted -m {} align-check {} {}".format(device, part_type, partition)
     out = __salt__["cmd.run"](cmd).splitlines()
     return out
 
@@ -300,7 +290,7 @@ def check(device, minor):
     except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError("Invalid minor number passed to partition.check")
 
-    cmd = "parted -m -s {0} check {1}".format(device, minor)
+    cmd = "parted -m -s {} check {}".format(device, minor)
     out = __salt__["cmd.run"](cmd).splitlines()
     return out
 
@@ -325,7 +315,7 @@ def cp(device, from_minor, to_minor):  # pylint: disable=C0103
     except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError("Invalid minor number passed to partition.cp")
 
-    cmd = "parted -m -s {0} cp {1} {2}".format(device, from_minor, to_minor)
+    cmd = "parted -m -s {} cp {} {}".format(device, from_minor, to_minor)
     out = __salt__["cmd.run"](cmd).splitlines()
     return out
 
@@ -354,7 +344,7 @@ def get_id(device, minor):
     except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError("Invalid minor number passed to partition.get_id")
 
-    cmd = "sfdisk --print-id {0} {1}".format(device, minor)
+    cmd = "sfdisk --print-id {} {}".format(device, minor)
     out = __salt__["cmd.run"](cmd).splitlines()
     return out
 
@@ -386,7 +376,7 @@ def set_id(device, minor, system_id):
     if system_id not in system_types():
         raise CommandExecutionError("Invalid system_id passed to partition.set_id")
 
-    cmd = "sfdisk --change-id {0} {1} {2}".format(device, minor, system_id)
+    cmd = "sfdisk --change-id {} {} {}".format(device, minor, system_id)
     out = __salt__["cmd.run"](cmd).splitlines()
     return out
 
@@ -461,11 +451,11 @@ def mkfs(device, fs_type):
     if fs_type == "linux-swap":
         mkfs_cmd = "mkswap"
     else:
-        mkfs_cmd = "mkfs.{0}".format(fs_type)
+        mkfs_cmd = "mkfs.{}".format(fs_type)
 
     if not salt.utils.path.which(mkfs_cmd):
-        return "Error: {0} is unavailable.".format(mkfs_cmd)
-    cmd = "{0} {1}".format(mkfs_cmd, device)
+        return "Error: {} is unavailable.".format(mkfs_cmd)
+    cmd = "{} {}".format(mkfs_cmd, device)
     out = __salt__["cmd.run"](cmd).splitlines()
     return out
 
@@ -483,9 +473,18 @@ def mklabel(device, label_type):
 
         salt '*' partition.mklabel /dev/sda msdos
     """
-    if label_type not in set(
-        ["aix", "amiga", "bsd", "dvh", "gpt", "loop", "mac", "msdos", "pc98", "sun"]
-    ):
+    if label_type not in {
+        "aix",
+        "amiga",
+        "bsd",
+        "dvh",
+        "gpt",
+        "loop",
+        "mac",
+        "msdos",
+        "pc98",
+        "sun",
+    }:
         raise CommandExecutionError("Invalid label_type passed to partition.mklabel")
 
     cmd = ("parted", "-m", "-s", device, "mklabel", label_type)
@@ -506,10 +505,12 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
         salt '*' partition.mkpart /dev/sda primary fs_type=fat32 start=0 end=639
         salt '*' partition.mkpart /dev/sda primary start=0 end=639
     """
-    if part_type not in set(["primary", "logical", "extended"]):
+    _validate_device(device)
+
+    if part_type not in {"primary", "logical", "extended"}:
         raise CommandExecutionError("Invalid part_type passed to partition.mkpart")
 
-    if not _is_fstype(fs_type):
+    if fs_type and not _is_fstype(fs_type):
         raise CommandExecutionError("Invalid fs_type passed to partition.mkpart")
 
     if start is not None and end is not None:
@@ -542,36 +543,19 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
     return out
 
 
-def mkpartfs(device, part_type, fs_type, start, end):
+def mkpartfs(device, part_type, fs_type=None, start=None, end=None):
     """
-    Make a <part_type> partition with a new filesystem of <fs_type>, beginning
-    at <start> and ending at <end> (by default in megabytes).
+    The mkpartfs actually is an alias to mkpart and is kept for compatibility.
+    To know the valid options and usage syntax read mkpart documentation.
 
-    <part_type> should be one of "primary", "logical", or "extended". <fs_type>
-    must be one of "ext2", "fat32", "fat16", "linux-swap" or "reiserfs" (if
-    libreiserfs is installed)
-
-    CLI Example:
+    CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' partition.mkpartfs /dev/sda logical ext2 440 670
+        salt '*' partition.mkpartfs /dev/sda primary fs_type=fat32 start=0 end=639
+        salt '*' partition.mkpartfs /dev/sda primary start=0 end=639
     """
-    _validate_device(device)
-
-    if part_type not in set(["primary", "logical", "extended"]):
-        raise CommandExecutionError("Invalid part_type passed to partition.mkpartfs")
-
-    if not _is_fstype(fs_type):
-        raise CommandExecutionError("Invalid fs_type passed to partition.mkpartfs")
-
-    _validate_partition_boundary(start)
-    _validate_partition_boundary(end)
-
-    cmd = "parted -m -s -- {0} mkpart {1} {2} {3} {4}".format(
-        device, part_type, fs_type, start, end
-    )
-    out = __salt__["cmd.run"](cmd).splitlines()
+    out = mkpart(device, part_type, fs_type, start, end)
     return out
 
 
@@ -598,7 +582,7 @@ def name(device, partition, name):
         if letter not in valid:
             raise CommandExecutionError("Invalid characters passed to partition.name")
 
-    cmd = '''parted -m -s {0} name {1} "'{2}'"'''.format(device, partition, name)
+    cmd = '''parted -m -s {} name {} "'{}'"'''.format(device, partition, name)
     out = __salt__["cmd.run"](cmd).splitlines()
     return out
 
@@ -619,7 +603,7 @@ def rescue(device, start, end):
     _validate_partition_boundary(start)
     _validate_partition_boundary(end)
 
-    cmd = "parted -m -s {0} rescue {1} {2}".format(device, start, end)
+    cmd = "parted -m -s {} rescue {} {}".format(device, start, end)
     out = __salt__["cmd.run"](cmd).splitlines()
     return out
 
@@ -650,7 +634,7 @@ def resize(device, minor, start, end):
     _validate_partition_boundary(end)
 
     out = __salt__["cmd.run"](
-        "parted -m -s -- {0} resize {1} {2} {3}".format(device, minor, start, end)
+        "parted -m -s -- {} resize {} {} {}".format(device, minor, start, end)
     )
     return out.splitlines()
 
@@ -672,7 +656,7 @@ def rm(device, minor):  # pylint: disable=C0103
     except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError("Invalid minor number passed to partition.rm")
 
-    cmd = "parted -m -s {0} rm {1}".format(device, minor)
+    cmd = "parted -m -s {} rm {}".format(device, minor)
     out = __salt__["cmd.run"](cmd).splitlines()
     return out
 
@@ -722,10 +706,10 @@ def set_(device, minor, flag, state):
     if flag not in VALID_PARTITION_FLAGS:
         raise CommandExecutionError("Invalid flag passed to partition.set")
 
-    if state not in set(["on", "off"]):
+    if state not in {"on", "off"}:
         raise CommandExecutionError("Invalid state passed to partition.set")
 
-    cmd = "parted -m -s {0} set {1} {2} {3}".format(device, minor, flag, state)
+    cmd = "parted -m -s {} set {} {} {}".format(device, minor, flag, state)
     out = __salt__["cmd.run"](cmd).splitlines()
     return out
 
@@ -753,7 +737,7 @@ def toggle(device, partition, flag):
     if flag not in VALID_PARTITION_FLAGS:
         raise CommandExecutionError("Invalid flag passed to partition.toggle")
 
-    cmd = "parted -m -s {0} toggle {1} {2}".format(device, partition, flag)
+    cmd = "parted -m -s {} toggle {} {}".format(device, partition, flag)
     out = __salt__["cmd.run"](cmd).splitlines()
     return out
 
@@ -783,7 +767,7 @@ def disk_set(device, flag, state):
     if flag not in VALID_DISK_FLAGS:
         raise CommandExecutionError("Invalid flag passed to partition.disk_set")
 
-    if state not in set(["on", "off"]):
+    if state not in {"on", "off"}:
         raise CommandExecutionError("Invalid state passed to partition.disk_set")
 
     cmd = ["parted", "-m", "-s", device, "disk_set", flag, state]

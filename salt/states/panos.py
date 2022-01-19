@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 A state module to manage Palo Alto network devices.
 
@@ -83,14 +82,10 @@ greater than the passed version. For example, proxy['panos.is_required_version']
 
 """
 
-# Import Python Libs
-from __future__ import absolute_import
-
 import logging
+import xml.etree.ElementTree as ET
 
-# Import salt libs
 import salt.utils.xmlutil as xml
-from salt._compat import ElementTree as ET
 
 log = logging.getLogger(__name__)
 
@@ -113,10 +108,10 @@ def _build_members(members, anycheck=False):
             return "<member>any</member>"
         response = ""
         for m in members:
-            response += "<member>{0}</member>".format(m)
+            response += "<member>{}</member>".format(m)
         return response
     else:
-        return "<member>{0}</member>".format(members)
+        return "<member>{}</member>".format(members)
 
 
 def _default_ret(name):
@@ -359,19 +354,19 @@ def address_exists(
 
     # Verify the arguments
     if ipnetmask:
-        element = "<ip-netmask>{0}</ip-netmask>".format(ipnetmask)
+        element = "<ip-netmask>{}</ip-netmask>".format(ipnetmask)
     elif iprange:
-        element = "<ip-range>{0}</ip-range>".format(iprange)
+        element = "<ip-range>{}</ip-range>".format(iprange)
     elif fqdn:
-        element = "<fqdn>{0}</fqdn>".format(fqdn)
+        element = "<fqdn>{}</fqdn>".format(fqdn)
     else:
         ret.update({"comment": "A valid address type must be specified."})
         return ret
 
     if description:
-        element += "<description>{0}</description>".format(description)
+        element += "<description>{}</description>".format(description)
 
-    full_element = "<entry name='{0}'>{1}</entry>".format(addressname, element)
+    full_element = "<entry name='{}'>{}</entry>".format(addressname, element)
 
     new_address = xml.to_dict(ET.fromstring(full_element), True)
 
@@ -385,8 +380,8 @@ def address_exists(
         return ret
     else:
         xpath = (
-            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{0}']/address/"
-            "entry[@name='{1}']".format(vsys, addressname)
+            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{}']/address/"
+            "entry[@name='{}']".format(vsys, addressname)
         )
 
         result, msg = _edit_config(xpath, full_element)
@@ -472,15 +467,15 @@ def address_group_exists(
 
     # Verify the arguments
     if members:
-        element = "<static>{0}</static>".format(_build_members(members, True))
+        element = "<static>{}</static>".format(_build_members(members, True))
     else:
         ret.update({"comment": "The group members must be provided."})
         return ret
 
     if description:
-        element += "<description>{0}</description>".format(description)
+        element += "<description>{}</description>".format(description)
 
-    full_element = "<entry name='{0}'>{1}</entry>".format(groupname, element)
+    full_element = "<entry name='{}'>{}</entry>".format(groupname, element)
 
     new_group = xml.to_dict(ET.fromstring(full_element), True)
 
@@ -494,8 +489,8 @@ def address_group_exists(
         return ret
     else:
         xpath = (
-            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{0}']/address-group/"
-            "entry[@name='{1}']".format(vsys, groupname)
+            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{}']/address-group/"
+            "entry[@name='{}']".format(vsys, groupname)
         )
 
         result, msg = _edit_config(xpath, full_element)
@@ -1122,25 +1117,25 @@ def security_rule_exists(
     # Build the rule element
     element = ""
     if sourcezone:
-        element += "<from>{0}</from>".format(_build_members(sourcezone, True))
+        element += "<from>{}</from>".format(_build_members(sourcezone, True))
     else:
         ret.update({"comment": "The sourcezone field must be provided."})
         return ret
 
     if destinationzone:
-        element += "<to>{0}</to>".format(_build_members(destinationzone, True))
+        element += "<to>{}</to>".format(_build_members(destinationzone, True))
     else:
         ret.update({"comment": "The destinationzone field must be provided."})
         return ret
 
     if source:
-        element += "<source>{0}</source>".format(_build_members(source, True))
+        element += "<source>{}</source>".format(_build_members(source, True))
     else:
         ret.update({"comment": "The source field must be provided."})
         return
 
     if destination:
-        element += "<destination>{0}</destination>".format(
+        element += "<destination>{}</destination>".format(
             _build_members(destination, True)
         )
     else:
@@ -1148,7 +1143,7 @@ def security_rule_exists(
         return ret
 
     if application:
-        element += "<application>{0}</application>".format(
+        element += "<application>{}</application>".format(
             _build_members(application, True)
         )
     else:
@@ -1156,13 +1151,13 @@ def security_rule_exists(
         return ret
 
     if service:
-        element += "<service>{0}</service>".format(_build_members(service, True))
+        element += "<service>{}</service>".format(_build_members(service, True))
     else:
         ret.update({"comment": "The service field must be provided."})
         return ret
 
     if action:
-        element += "<action>{0}</action>".format(action)
+        element += "<action>{}</action>".format(action)
     else:
         ret.update({"comment": "The action field must be provided."})
         return ret
@@ -1174,10 +1169,10 @@ def security_rule_exists(
             element += "<disabled>no</disabled>"
 
     if description:
-        element += "<description>{0}</description>".format(description)
+        element += "<description>{}</description>".format(description)
 
     if logsetting:
-        element += "<log-setting>{0}</log-setting>".format(logsetting)
+        element += "<log-setting>{}</log-setting>".format(logsetting)
 
     if logstart is not None:
         if logstart:
@@ -1206,40 +1201,46 @@ def security_rule_exists(
     # Build the profile settings
     profile_string = None
     if profilegroup:
-        profile_string = "<group><member>{0}</member></group>".format(profilegroup)
+        profile_string = "<group><member>{}</member></group>".format(profilegroup)
     else:
         member_string = ""
         if datafilter:
-            member_string += "<data-filtering><member>{0}</member></data-filtering>".format(
-                datafilter
+            member_string += (
+                "<data-filtering><member>{}</member></data-filtering>".format(
+                    datafilter
+                )
             )
         if fileblock:
-            member_string += "<file-blocking><member>{0}</member></file-blocking>".format(
-                fileblock
+            member_string += (
+                "<file-blocking><member>{}</member></file-blocking>".format(fileblock)
             )
         if spyware:
-            member_string += "<spyware><member>{0}</member></spyware>".format(spyware)
+            member_string += "<spyware><member>{}</member></spyware>".format(spyware)
         if urlfilter:
-            member_string += "<url-filtering><member>{0}</member></url-filtering>".format(
-                urlfilter
+            member_string += (
+                "<url-filtering><member>{}</member></url-filtering>".format(urlfilter)
             )
         if virus:
-            member_string += "<virus><member>{0}</member></virus>".format(virus)
+            member_string += "<virus><member>{}</member></virus>".format(virus)
         if vulnerability:
-            member_string += "<vulnerability><member>{0}</member></vulnerability>".format(
-                vulnerability
+            member_string += (
+                "<vulnerability><member>{}</member></vulnerability>".format(
+                    vulnerability
+                )
             )
         if wildfire:
-            member_string += "<wildfire-analysis><member>{0}</member></wildfire-analysis>".format(
-                wildfire
+            member_string += (
+                "<wildfire-analysis><member>{}</member></wildfire-analysis>".format(
+                    wildfire
+                )
             )
         if member_string != "":
-            profile_string = "<profiles>{0}</profiles>".format(member_string)
+            profile_string = "<profiles>{}</profiles>".format(member_string)
 
     if profile_string:
-        element += "<profile-setting>{0}</profile-setting>".format(profile_string)
+        element += "<profile-setting>{}</profile-setting>".format(profile_string)
 
-    full_element = "<entry name='{0}'>{1}</entry>".format(rulename, element)
+    full_element = "<entry name='{}'>{}</entry>".format(rulename, element)
 
     new_rule = xml.to_dict(ET.fromstring(full_element), True)
 
@@ -1250,8 +1251,8 @@ def security_rule_exists(
     else:
         config_change = True
         xpath = (
-            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{0}']/rulebase/"
-            "security/rules/entry[@name='{1}']".format(vsys, rulename)
+            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{}']/rulebase/"
+            "security/rules/entry[@name='{}']".format(vsys, rulename)
         )
 
         result, msg = _edit_config(xpath, full_element)
@@ -1269,8 +1270,8 @@ def security_rule_exists(
 
     if move:
         movepath = (
-            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{0}']/rulebase/"
-            "security/rules/entry[@name='{1}']".format(vsys, rulename)
+            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{}']/rulebase/"
+            "security/rules/entry[@name='{}']".format(vsys, rulename)
         )
         move_result = False
         move_msg = ""
@@ -1379,9 +1380,9 @@ def service_exists(
     element = "<protocol><{0}><port>{1}</port></{0}></protocol>".format(protocol, port)
 
     if description:
-        element += "<description>{0}</description>".format(description)
+        element += "<description>{}</description>".format(description)
 
-    full_element = "<entry name='{0}'>{1}</entry>".format(servicename, element)
+    full_element = "<entry name='{}'>{}</entry>".format(servicename, element)
 
     new_service = xml.to_dict(ET.fromstring(full_element), True)
 
@@ -1395,8 +1396,8 @@ def service_exists(
         return ret
     else:
         xpath = (
-            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{0}']/service/"
-            "entry[@name='{1}']".format(vsys, servicename)
+            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{}']/service/"
+            "entry[@name='{}']".format(vsys, servicename)
         )
 
         result, msg = _edit_config(xpath, full_element)
@@ -1482,15 +1483,15 @@ def service_group_exists(
 
     # Verify the arguments
     if members:
-        element = "<members>{0}</members>".format(_build_members(members, True))
+        element = "<members>{}</members>".format(_build_members(members, True))
     else:
         ret.update({"comment": "The group members must be provided."})
         return ret
 
     if description:
-        element += "<description>{0}</description>".format(description)
+        element += "<description>{}</description>".format(description)
 
-    full_element = "<entry name='{0}'>{1}</entry>".format(groupname, element)
+    full_element = "<entry name='{}'>{}</entry>".format(groupname, element)
 
     new_group = xml.to_dict(ET.fromstring(full_element), True)
 
@@ -1504,8 +1505,8 @@ def service_group_exists(
         return ret
     else:
         xpath = (
-            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{0}']/service-group/"
-            "entry[@name='{1}']".format(vsys, groupname)
+            "/config/devices/entry[@name='localhost.localdomain']/vsys/entry[@name='vsys{}']/service-group/"
+            "entry[@name='{}']".format(vsys, groupname)
         )
 
         result, msg = _edit_config(xpath, full_element)

@@ -1,14 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Wrap the cp module allowing for managed ssh file transfers
 """
-# Import Python libs
-from __future__ import absolute_import, print_function
 
 import logging
 import os
 
-# Import salt libs
 import salt.client.ssh
 import salt.utils.files
 import salt.utils.stringutils
@@ -28,7 +24,7 @@ def get_file(path, dest, saltenv="base", makedirs=False, template=None, gzip=Non
         cp.get_file. The argument is only accepted for interface compatibility.
     """
     if gzip is not None:
-        log.warning("The gzip argument to cp.get_file in salt-ssh is " "unsupported")
+        log.warning("The gzip argument to cp.get_file in salt-ssh is unsupported")
 
     if template is not None:
         (path, dest) = _render_filenames(path, dest, saltenv, template)
@@ -106,14 +102,13 @@ def _render_filenames(path, dest, saltenv, template):
     # render the path as a template using path_template_engine as the engine
     if template not in salt.utils.templates.TEMPLATE_REGISTRY:
         raise CommandExecutionError(
-            "Attempted to render file paths with unavailable engine "
-            "{0}".format(template)
+            "Attempted to render file paths with unavailable engine {}".format(template)
         )
 
     kwargs = {}
-    kwargs["salt"] = __salt__
-    kwargs["pillar"] = __pillar__
-    kwargs["grains"] = __grains__
+    kwargs["salt"] = __salt__.value()
+    kwargs["pillar"] = __pillar__.value()
+    kwargs["grains"] = __grains__.value()
     kwargs["opts"] = __opts__
     kwargs["saltenv"] = saltenv
 
@@ -133,7 +128,7 @@ def _render_filenames(path, dest, saltenv, template):
         if not data["result"]:
             # Failed to render the template
             raise CommandExecutionError(
-                "Failed to render file path with error: {0}".format(data["data"])
+                "Failed to render file path with error: {}".format(data["data"])
             )
         else:
             return data["data"]
