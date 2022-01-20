@@ -12,7 +12,13 @@ Statistics
 - Total Issue References: **34**
 - Total PR References: **116**
 
-- Contributors: **45** (`Ch3LL`_, `Cybolic`_, `DmitryKuzmenko`_, `UtahDave`_, `Vaelatern`_, `alex-zel`_, `alxwr`_, `amendlik`_, `anlutro`_, `aosagie`_, `basdusee`_, `bbinet`_, `benediktwerner`_, `cachedout`_, `clinta`_, `cro`_, `dereckson`_, `disaster123`_, `ewapptus`_, `ezh`_, `folti`_, `gmacon`_, `gqgunhed`_, `gtmanfred`_, `kkoppel`_, `lorengordon`_, `martintamare`_, `mcalmer`_, `meaksh`_, `mirceaulinic`_, `mostafahussein`_, `mvdwalle`_, `rallytime`_, `rbjorklin`_, `scthi`_, `sjorge`_, `techhat`_, `terminalmage`_, `tsaridas`_, `twangboy`_, `vutny`_, `wolfpackmars2`_, `yhekma`_, `yopito`_, `yue9944882`_)
+- Contributors: **45** (`Ch3LL`_, `Cybolic`_, `DmitryKuzmenko`_, `UtahDave`_, `Vaelatern`_,
+  `alex-zel`_, `alxwr`_, `amendlik`_, `anlutro`_, `aosagie`_, `basdusee`_, `bbinet`_,
+  `benediktwerner`_, `cachedout`_, `clinta`_, `cro`_, `dereckson`_, `disaster123`_, `ewapptus`_,
+  `ezh`_, `folti`_, `gmacon`_, `gqgunhed`_, `gtmanfred`_, `kkoppel`_, `lorengordon`_,
+  `martintamare`_, `mcalmer`_, `meaksh`_, `mirceaulinic`_, `mostafahussein`_, `mvdwalle`_,
+  `rallytime`_, `rbjorklin`_, `scthi`_, `sjorge`_, `techhat`_, `terminalmage`_, `tsaridas`_,
+  `twangboy`_, `vutny`_, `wolfpackmars2`_, `yhekma`_, `yopito`_, `yue9944882`_)
 
 
 Security Fixes

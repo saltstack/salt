@@ -15,9 +15,16 @@ import salt.utils.beacons
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = "sensehat"
+
 
 def __virtual__():
-    return "sensehat.get_pressure" in __salt__
+    if "sensehat.get_pressure" in __salt__:
+        return __virtualname__
+    else:
+        err_msg = "sensehat.get_pressure is missing."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
 
 
 def validate(config):

@@ -12,7 +12,12 @@ Statistics
 - Total Issue References: **26**
 - Total PR References: **115**
 
-- Contributors: **36** (`The-Loeki`_, `abednarik`_, `cachedout`_, `cro`_, `deniszh`_, `dkruger`_, `dmurphy18`_, `eliasp`_, `farcaller`_, `galet`_, `gtmanfred`_, `hu-dabao`_, `isbm`_, `jacobhammons`_, `jacobweinstock`_, `jfindlay`_, `justinta`_, `kstreee`_, `lubyou`_, `markuskramerIgitt`_, `meaksh`_, `miihael`_, `mzupan`_, `nishigori`_, `rallytime`_, `s0undt3ch`_, `skizunov`_, `tankywoo`_, `terminalmage`_, `thatch45`_, `theredcat`_, `ticosax`_, `tonybaloney`_, `twangboy`_, `vutny`_, `whiteinge`_)
+- Contributors: **36** (`The-Loeki`_, `abednarik`_, `cachedout`_, `cro`_, `deniszh`_, `dkruger`_,
+  `dmurphy18`_, `eliasp`_, `farcaller`_, `galet`_, `gtmanfred`_, `hu-dabao`_, `isbm`_,
+  `jacobhammons`_, `jacobweinstock`_, `jfindlay`_, `justinta`_, `kstreee`_, `lubyou`_,
+  `markuskramerIgitt`_, `meaksh`_, `miihael`_, `mzupan`_, `nishigori`_, `rallytime`_, `s0undt3ch`_,
+  `skizunov`_, `tankywoo`_, `terminalmage`_, `thatch45`_, `theredcat`_, `ticosax`_, `tonybaloney`_,
+  `twangboy`_, `vutny`_, `whiteinge`_)
 
 
 Known Issues
