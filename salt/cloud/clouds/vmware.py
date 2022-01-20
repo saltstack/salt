@@ -3032,8 +3032,10 @@ def create(vm_):
                     )
 
                     # get recommended datastores
-                    recommended_datastores = si.content.storageResourceManager.RecommendDatastores(
-                        storageSpec=storage_spec
+                    recommended_datastores = (
+                        si.content.storageResourceManager.RecommendDatastores(
+                            storageSpec=storage_spec
+                        )
                     )
 
                     # apply storage DRS recommendations
