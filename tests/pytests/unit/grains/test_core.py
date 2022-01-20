@@ -1438,7 +1438,7 @@ def test_xen_virtual():
     ), patch.object(
         os.path,
         "isfile",
-        MagicMock(side_effect=lambda x: True if x == "/proc/1/cgroup" else False)
+        MagicMock(side_effect=lambda x: True if x == "/proc/1/cgroup" else False),
     ), patch(
         "salt.utils.files.fopen", mock_open(read_data="")
     ):
