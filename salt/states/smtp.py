@@ -34,6 +34,7 @@ def send_msg(
     profile=None,
     use_ssl="True",
     attachments=None,
+    is_html=False,
 ):
     """
     Send a message via SMTP
@@ -76,6 +77,7 @@ def send_msg(
         sender=sender,
         use_ssl=use_ssl,
         attachments=attachments,
+        is_html=is_html,
     )
 
     if command:

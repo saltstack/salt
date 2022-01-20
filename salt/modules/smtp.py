@@ -84,6 +84,7 @@ def send_msg(
     password=None,
     profile=None,
     attachments=None,
+    is_html=False,
 ):
     """
     Send a message to an SMTP recipient. To send a message to multiple \
@@ -106,12 +107,19 @@ def send_msg(
         sender = creds.get("smtp.sender")
         username = creds.get("smtp.username")
         password = creds.get("smtp.password")
+        port = creds.get("smtp.port", 0)
 
     if attachments:
         msg = email.mime.multipart.MIMEMultipart()
-        msg.attach(email.mime.text.MIMEText(message))
+        if is_html:
+            msg.attach(email.mime.text.MIMEText(message, "html"))
+        else:
+            msg.attach(email.mime.text.MIMEText(message))
     else:
-        msg = email.mime.text.MIMEText(message)
+        if is_html:
+            msg = email.mime.text.MIMEText(message, "html")
+        else:
+            msg = email.mime.text.MIMEText(message)
     msg["Subject"] = subject
     msg["From"] = sender
     msg["To"] = recipient
@@ -119,9 +127,9 @@ def send_msg(
 
     try:
         if use_ssl in ["True", "true"]:
-            smtpconn = smtplib.SMTP_SSL(server)
+            smtpconn = smtplib.SMTP_SSL(server, port=port)
         else:
-            smtpconn = smtplib.SMTP(server)
+            smtpconn = smtplib.SMTP(server, port=port)
 
     except socket.gaierror as _error:
         log.debug("Exception: %s", _error)
