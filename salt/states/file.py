@@ -1882,8 +1882,8 @@ def absent(name, **kwargs):
     be deleted. This will work to reverse any of the functions in the file
     state module. If a directory is supplied, it will be recursively deleted.
 
-    If only the contents of the directory need to be deleted but not the directory itself, use :mod:`file.directory
-    <salt.states.file.directory>` with ``clean=True``
+    If only the contents of the directory need to be deleted but not the directory
+    itself, use :mod:`file.directory <salt.states.file.directory>` with ``clean=True``
 
     name
         The path which should be deleted
