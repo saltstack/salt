@@ -127,9 +127,9 @@ def send_msg(
 
     try:
         if use_ssl in ["True", "true"]:
-            smtpconn = smtplib.SMTP_SSL(server, port=port)
+            smtpconn = smtplib.SMTP_SSL(server, port)
         else:
-            smtpconn = smtplib.SMTP(server, port=port)
+            smtpconn = smtplib.SMTP(server, port)
 
     except socket.gaierror as _error:
         log.debug("Exception: %s", _error)
