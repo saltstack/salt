@@ -13,7 +13,18 @@ log = logging.getLogger(__name__)
 
 @pytest.fixture
 def configure_loader_modules():
-    return {user: {}}
+    shadow_info = MagicMock(
+        return_value={"min": 2, "max": 88888, "inact": 77, "warn": 14, "passwd": ""}
+    )
+    shadow_hash = MagicMock(return_value="abcd")
+    dunder_salt = {
+        "shadow.info": shadow_info,
+        "shadow.default_hash": shadow_hash,
+        "file.group_to_gid": MagicMock(side_effect=["foo"]),
+        "file.gid_to_group": MagicMock(side_effect=[5000, 5000]),
+        # "user.chhomephone": MagicMock(return_value=True),
+    }
+    return {user: {"__salt__": dunder_salt}}
 
 
 def test_present():
@@ -291,16 +302,16 @@ def test_gecos_field_changes_in_user_present():
         ]
     )
     mock_changes = MagicMock(side_effect=[{"homephone": "667788"}, None])
-    shadow_info = MagicMock(
-        return_value={"min": 2, "max": 88888, "inact": 77, "warn": 14, "passwd": ""}
-    )
-    shadow_hash = MagicMock(return_value="abcd")
+    # shadow_info = MagicMock(
+    #     return_value={"min": 2, "max": 88888, "inact": 77, "warn": 14, "passwd": ""}
+    # )
+    # shadow_hash = MagicMock(return_value="abcd")
     dunder_salt = {
         "user.info": mock_info,
-        "shadow.info": shadow_info,
-        "shadow.default_hash": shadow_hash,
-        "file.group_to_gid": MagicMock(side_effect=["foo"]),
-        "file.gid_to_group": MagicMock(side_effect=[5000, 5000]),
+        # "shadow.info": shadow_info,
+        # "shadow.default_hash": shadow_hash,
+        # "file.group_to_gid": MagicMock(side_effect=["foo"]),
+        # "file.gid_to_group": MagicMock(side_effect=[5000, 5000]),
         "user.chhomephone": MagicMock(return_value=True),
     }
     with patch.dict(user.__grains__, {"kernel": "Linux"}), patch.dict(
