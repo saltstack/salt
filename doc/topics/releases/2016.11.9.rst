@@ -12,7 +12,15 @@ Statistics
 - Total Issue References: **60**
 - Total PR References: **167**
 
-- Contributors: **54** (`Ch3LL`_, `UtahDave`_, `VertigoRay`_, `akissa`_, `aogier`_, `arthtux`_, `austinpapp`_, `basepi`_, `benediktwerner`_, `bobrik`_, `brejoc`_, `cachedout`_, `cetanu`_, `corywright`_, `creideiki`_, `cro`_, `cruscio`_, `damon-atkins`_, `dayid`_, `defanator`_, `dereckson`_, `dijit`_, `doesitblend`_, `garethgreenaway`_, `gtmanfred`_, `gurubert`_, `gvengel`_, `jfindlay`_, `johnj`_, `jubrad`_, `junovitch`_, `lomeroe`_, `lordcirth`_, `lorengordon`_, `mattLLVW`_, `meaksh`_, `moio`_, `msummers42`_, `mtkennerly`_, `nicholasmhughes`_, `oeuftete`_, `rallytime`_, `rasathus`_, `roaldnefs`_, `rossengeorgiev`_, `seanjnkns`_, `senthilkumar-e`_, `techhat`_, `terminalmage`_, `twangboy`_, `vernondcole`_, `vutny`_, `whiteinge`_, `whytewolf`_)
+- Contributors: **54** (`Ch3LL`_, `UtahDave`_, `VertigoRay`_, `akissa`_, `aogier`_, `arthtux`_,
+  `austinpapp`_, `basepi`_, `benediktwerner`_, `bobrik`_, `brejoc`_, `cachedout`_, `cetanu`_,
+  `corywright`_, `creideiki`_, `cro`_, `cruscio`_, `damon-atkins`_, `dayid`_, `defanator`_,
+  `dereckson`_, `dijit`_, `doesitblend`_, `garethgreenaway`_, `gtmanfred`_, `gurubert`_,
+  `gvengel`_, `jfindlay`_, `johnj`_, `jubrad`_, `junovitch`_, `lomeroe`_, `lordcirth`_,
+  `lorengordon`_, `mattLLVW`_, `meaksh`_, `moio`_, `msummers42`_, `mtkennerly`_,
+  `nicholasmhughes`_, `oeuftete`_, `rallytime`_, `rasathus`_, `roaldnefs`_, `rossengeorgiev`_,
+  `seanjnkns`_, `senthilkumar-e`_, `techhat`_, `terminalmage`_, `twangboy`_, `vernondcole`_,
+  `vutny`_, `whiteinge`_, `whytewolf`_)
 
 
 Windows Changes

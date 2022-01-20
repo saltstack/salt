@@ -12,7 +12,10 @@ Statistics
 - Total Issue References: **23**
 - Total PR References: **58**
 
-- Contributors: **25** (`abednarik`_, `amontalban`_, `anlutro`_, `babilen`_, `cachedout`_, `clburlison`_, `danslimmon`_, `eliasp`_, `glomium`_, `jacobhammons`_, `jfindlay`_, `kev009`_, `lomeroe`_, `michalsuba`_, `neil-williamson`_, `onorua`_, `opdude`_, `rallytime`_, `sjorge`_, `terminalmage`_, `thatch45`_, `ticosax`_, `tomlaredo`_, `twangboy`_, `zigarn`_)
+- Contributors: **25** (`abednarik`_, `amontalban`_, `anlutro`_, `babilen`_, `cachedout`_,
+  `clburlison`_, `danslimmon`_, `eliasp`_, `glomium`_, `jacobhammons`_, `jfindlay`_, `kev009`_,
+  `lomeroe`_, `michalsuba`_, `neil-williamson`_, `onorua`_, `opdude`_, `rallytime`_, `sjorge`_,
+  `terminalmage`_, `thatch45`_, `ticosax`_, `tomlaredo`_, `twangboy`_, `zigarn`_)
 
 
 Final Release of Debian 7 Packages

@@ -3294,10 +3294,10 @@ def _serial_or_concole_equal(old, new):
         """
         return {
             "type": item.attrib["type"],
-            "port": item.find("source").attrib["service"]
+            "port": item.find("source").get("service")
             if item.find("source") is not None
             else None,
-            "protocol": item.find("protocol").attrib["type"]
+            "protocol": item.find("protocol").get("type")
             if item.find("protocol") is not None
             else None,
         }
