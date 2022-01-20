@@ -3717,7 +3717,9 @@ def symlink(src, path, force=False):
 
         path (str): The path to the link. Must be an absolute path
 
-        force (bool): Overwrite an existing symlink with the same name
+        force (bool):
+            Overwrite an existing symlink with the same name
+            .. versionadded:: 3005
 
     Returns:
         bool: True if successful, otherwise False
@@ -3997,8 +3999,6 @@ def readlink(path, canonicalize=False):
             if exc.errno == errno.EINVAL:
                 raise CommandExecutionError("Not a symbolic link: {}".format(path))
             raise CommandExecutionError(exc.__str__())
-        except Exception as exc:  # pylint: disable=broad-except
-            raise CommandExecutionError(exc)
 
 
 def readdir(path):

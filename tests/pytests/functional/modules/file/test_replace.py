@@ -1,7 +1,6 @@
 """
 Tests for file.rename function
 """
-# nox -e pytest-zeromq-3.8(coverage=False) -- -vvv --run-slow --run-destructive tests\pytests\functional\modules\file\test_replace.py
 import os
 import shutil
 
