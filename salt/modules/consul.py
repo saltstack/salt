@@ -5,7 +5,6 @@ https://www.consul.io
 
 """
 
-
 import base64
 import http.client
 import logging
@@ -94,9 +93,14 @@ def _query(
         ret["data"] = result.get("dict", result)
         ret["res"] = True
     elif result.get("status", None) == http.client.NO_CONTENT:
+        ret["data"] = "No content available."
         ret["res"] = False
     elif result.get("status", None) == http.client.NOT_FOUND:
         ret["data"] = "Key not found."
+        ret["res"] = False
+    elif result.get("error", None):
+        ret["data"] = "An error occurred."
+        ret["error"] = result["error"]
         ret["res"] = False
     else:
         if result:
@@ -271,7 +275,7 @@ def put(consul_url=None, token=None, key=None, value=None, **kwargs):
     query_params = {}
 
     available_sessions = session_list(consul_url=consul_url, return_list=True)
-    _current = get(consul_url=consul_url, key=key)
+    _current = get(consul_url=consul_url, token=token, key=key)
 
     if "flags" in kwargs:
         if kwargs["flags"] >= 0 and kwargs["flags"] <= 2 ** 64:
@@ -323,7 +327,7 @@ def put(consul_url=None, token=None, key=None, value=None, **kwargs):
     data = value
     function = "kv/{}".format(key)
     method = "PUT"
-    ret = _query(
+    res = _query(
         consul_url=consul_url,
         token=token,
         function=function,
@@ -332,12 +336,14 @@ def put(consul_url=None, token=None, key=None, value=None, **kwargs):
         query_params=query_params,
     )
 
-    if ret["res"]:
+    if res["res"]:
         ret["res"] = True
         ret["data"] = "Added key {} with value {}.".format(key, value)
     else:
         ret["res"] = False
         ret["data"] = "Unable to add key {} with value {}.".format(key, value)
+        if "error" in res:
+            ret["error"] = res["error"]
     return ret
 
 
@@ -389,7 +395,7 @@ def delete(consul_url=None, token=None, key=None, **kwargs):
             return ret
 
     function = "kv/{}".format(key)
-    ret = _query(
+    res = _query(
         consul_url=consul_url,
         token=token,
         function=function,
@@ -397,12 +403,14 @@ def delete(consul_url=None, token=None, key=None, **kwargs):
         query_params=query_params,
     )
 
-    if ret["res"]:
+    if res["res"]:
         ret["res"] = True
         ret["message"] = "Deleted key {}.".format(key)
     else:
         ret["res"] = False
         ret["message"] = "Unable to delete key {}.".format(key)
+        if "error" in res:
+            ret["error"] = res["error"]
     return ret
 
 
@@ -1343,14 +1351,18 @@ def session_destroy(consul_url=None, token=None, session=None, **kwargs):
 
     function = "session/destroy/{}".format(session)
     res = _query(
-        consul_url=consul_url, function=function, token=token, query_params=query_params
+        consul_url=consul_url,
+        function=function,
+        token=token,
+        method="PUT",
+        query_params=query_params,
     )
     if res["res"]:
         ret["res"] = True
-        ret["message"] = "Created Service {}.".format(kwargs["name"])
+        ret["message"] = "Destroyed Session {}.".format(session)
     else:
         ret["res"] = False
-        ret["message"] = "Unable to create service {}.".format(kwargs["name"])
+        ret["message"] = "Unable to destroy session {}.".format(session)
     return ret
 
 
@@ -2071,6 +2083,9 @@ def acl_create(consul_url=None, token=None, **kwargs):
             ret["res"] = False
             return ret
 
+    if "id" in kwargs:
+        data["id"] = kwargs["id"]
+
     if "name" in kwargs:
         data["Name"] = kwargs["name"]
     else:
@@ -2155,7 +2170,7 @@ def acl_update(consul_url=None, token=None, **kwargs):
         ret["message"] = "ACL {} created.".format(kwargs["name"])
     else:
         ret["res"] = False
-        ret["message"] = "Adding ACL {} failed.".format(kwargs["name"])
+        ret["message"] = "Updating ACL {} failed.".format(kwargs["name"])
 
     return ret
 
@@ -2190,7 +2205,7 @@ def acl_delete(consul_url=None, token=None, **kwargs):
         ret["res"] = False
         return ret
 
-    function = "acl/delete/{}".format(kwargs["id"])
+    function = "acl/destroy/{}".format(kwargs["id"])
     res = _query(
         consul_url=consul_url, token=token, data=data, method="PUT", function=function
     )
@@ -2309,14 +2324,9 @@ def acl_list(consul_url=None, token=None, **kwargs):
             ret["res"] = False
             return ret
 
-    if "id" not in kwargs:
-        ret["message"] = 'Required parameter "id" is missing.'
-        ret["res"] = False
-        return ret
-
     function = "acl/list"
     ret = _query(
-        consul_url=consul_url, token=token, data=data, method="PUT", function=function
+        consul_url=consul_url, token=token, data=data, method="GET", function=function
     )
     return ret
 
