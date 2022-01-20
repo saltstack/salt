@@ -4,7 +4,9 @@ import salt.utils.msgpack
 from salt.client import ssh
 from tests.support.mock import MagicMock, patch
 
-pytestmark = [pytest.mark.skip_if_binaries_missing("ssh", "ssh-keygen", check_all=True)]
+pytestmark = [
+    pytest.mark.skip_if_binaries_missing("ssh", "ssh-keygen", check_all=True),
+]
 
 
 @pytest.fixture
@@ -98,8 +100,6 @@ def test_cmd_block_python_version_error(ssh_target):
         ("ssh_wipe", True, True),
         ("rand_thin_dir", True, True),
         ("regen_thin", True, True),
-        ("python2_bin", "python2", True),
-        ("python3_bin", "python3", True),
         ("ssh_run_pre_flight", True, True),
         ("no_host_keys", True, True),
         ("saltfile", "/tmp/test", True),
@@ -130,6 +130,8 @@ def test_ssh_kwargs(test_opts):
         ssh_kwargs = salt.utils.parsers.SaltSSHOptionParser().defaults
         assert opt_key in ssh_kwargs
 
-    with patch("salt.roster.get_roster_file", MagicMock(return_value="")):
+    with patch("salt.roster.get_roster_file", MagicMock(return_value="")), patch(
+        "salt.client.ssh.shell.gen_key"
+    ), patch("salt.fileserver.Fileserver.update"), patch("salt.utils.thin.gen_thin"):
         ssh_obj = client._prep_ssh(**opts)
         assert ssh_obj.opts.get(opt_key, None) == opt_value

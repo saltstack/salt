@@ -8,7 +8,7 @@ For now this will only clone existing VMs. It's best to create a template
 from which we will clone.
 
 Followed
-https://docs.saltstack.com/en/latest/topics/cloud/cloud.html#non-libcloud-based-modules
+https://docs.saltproject.io/en/latest/topics/cloud/cloud.html#non-libcloud-based-modules
 to create this.
 
 Dicts provided by salt:
@@ -71,7 +71,8 @@ def __virtual__():
     if get_configured_provider() is False:
         return (
             False,
-            "The virtualbox driver cannot be loaded: 'virtualbox' provider is not configured.",
+            "The virtualbox driver cannot be loaded: 'virtualbox' provider is not"
+            " configured.",
         )
 
     # If the name of the driver used does not match the filename,
@@ -271,7 +272,7 @@ def list_nodes_full(kwargs=None, call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes_full function must be called " "with -f or --function."
+            "The list_nodes_full function must be called with -f or --function."
         )
 
     machines = {}
@@ -316,7 +317,7 @@ def list_nodes(kwargs=None, call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes function must be called " "with -f or --function."
+            "The list_nodes function must be called with -f or --function."
         )
 
     attributes = [
@@ -328,7 +329,9 @@ def list_nodes(kwargs=None, call=None):
         "public_ips",
     ]
     return __utils__["cloud.list_nodes_select"](
-        list_nodes_full("function"), attributes, call,
+        list_nodes_full("function"),
+        attributes,
+        call,
     )
 
 
@@ -337,7 +340,9 @@ def list_nodes_select(call=None):
     Return a list of the VMs that are on the provider, with select fields
     """
     return __utils__["cloud.list_nodes_select"](
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 

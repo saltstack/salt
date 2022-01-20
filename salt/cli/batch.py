@@ -19,18 +19,31 @@ log = logging.getLogger(__name__)
 class Batch:
     """
     Manage the execution of batch runs
+
     """
 
-    def __init__(self, opts, eauth=None, quiet=False, parser=None):
+    def __init__(self, opts, eauth=None, quiet=False, _parser=None):
+        """
+        :param dict opts: A config options dictionary.
+
+        :param dict eauth: An eauth config to use.
+
+                           The default is an empty dict.
+
+        :param bool quiet: Suppress printing to stdout
+
+                           The default is False.
+        """
         self.opts = opts
         self.eauth = eauth if eauth else {}
         self.pub_kwargs = eauth if eauth else {}
         self.quiet = quiet
-        self.local = salt.client.get_local_client(opts["conf_file"])
-        self.minions, self.ping_gen, self.down_minions = self.__gather_minions()
-        self.options = parser
+        self.options = _parser
+        # Passing listen True to local client will prevent it from purging
+        # cahced events while iterating over the batches.
+        self.local = salt.client.get_local_client(opts["conf_file"], listen=True)
 
-    def __gather_minions(self):
+    def gather_minions(self):
         """
         Return a list of minions to use for the batch run
         """
@@ -106,6 +119,7 @@ class Batch:
         """
         Execute the batch run
         """
+        self.minions, self.ping_gen, self.down_minions = self.gather_minions()
         args = [
             [],
             self.opts["fun"],
@@ -227,9 +241,8 @@ class Batch:
                                 )
                             else:
                                 salt.utils.stringutils.print_cli(
-                                    "minion {} was already deleted from tracker, probably a duplicate key".format(
-                                        part["id"]
-                                    )
+                                    "minion {} was already deleted from tracker,"
+                                    " probably a duplicate key".format(part["id"])
                                 )
                         else:
                             parts.update(part)
@@ -238,9 +251,8 @@ class Batch:
                                     minion_tracker[queue]["minions"].remove(id)
                                 else:
                                     salt.utils.stringutils.print_cli(
-                                        "minion {} was already deleted from tracker, probably a duplicate key".format(
-                                            id
-                                        )
+                                        "minion {} was already deleted from tracker,"
+                                        " probably a duplicate key".format(id)
                                     )
                 except StopIteration:
                     # if a iterator is done:

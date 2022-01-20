@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage SNS Topics
 
@@ -54,7 +53,6 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                 keyid: GKTADJGHEIQSXMKKRBJ08H
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 # Standard Libs
 import re
@@ -108,10 +106,10 @@ def present(name, subscriptions=None, region=None, key=None, keyid=None, profile
     )
     if is_present:
         ret["result"] = True
-        ret["comment"] = "AWS SNS topic {0} present.".format(name)
+        ret["comment"] = "AWS SNS topic {} present.".format(name)
     else:
         if __opts__["test"]:
-            msg = "AWS SNS topic {0} is set to be created.".format(name)
+            msg = "AWS SNS topic {} is set to be created.".format(name)
             ret["comment"] = msg
             ret["result"] = None
             return ret
@@ -120,13 +118,13 @@ def present(name, subscriptions=None, region=None, key=None, keyid=None, profile
             name, region=region, key=key, keyid=keyid, profile=profile
         )
         if created:
-            msg = "AWS SNS topic {0} created.".format(name)
+            msg = "AWS SNS topic {} created.".format(name)
             ret["comment"] = msg
             ret["changes"]["old"] = None
             ret["changes"]["new"] = {"topic": name, "subscriptions": []}
             ret["result"] = True
         else:
-            ret["comment"] = "Failed to create {0} AWS SNS topic".format(name)
+            ret["comment"] = "Failed to create {} AWS SNS topic".format(name)
             ret["result"] = False
             return ret
 
@@ -159,11 +157,11 @@ def present(name, subscriptions=None, region=None, key=None, keyid=None, profile
 
         if subscription not in _subscriptions:
             # Ensure the endpoint is set back to its original value,
-            # incase we starred out a password
+            # in case we starred out a password
             subscription["endpoint"] = _endpoint
 
             if __opts__["test"]:
-                msg = " AWS SNS subscription {0}:{1} to be set on topic {2}.".format(
+                msg = " AWS SNS subscription {}:{} to be set on topic {}.".format(
                     subscription["protocol"], subscription["endpoint"], name
                 )
                 ret["comment"] += msg
@@ -180,7 +178,7 @@ def present(name, subscriptions=None, region=None, key=None, keyid=None, profile
                 profile=profile,
             )
             if created:
-                msg = " AWS SNS subscription {0}:{1} set on topic {2}.".format(
+                msg = " AWS SNS subscription {}:{} set on topic {}.".format(
                     subscription["protocol"], subscription["endpoint"], name
                 )
                 ret["comment"] += msg
@@ -193,7 +191,7 @@ def present(name, subscriptions=None, region=None, key=None, keyid=None, profile
                 ret["result"] = False
                 return ret
         else:
-            msg = " AWS SNS subscription {0}:{1} already set on topic {2}.".format(
+            msg = " AWS SNS subscription {}:{} already set on topic {}.".format(
                 subscription["protocol"], subscription["endpoint"], name
             )
             ret["comment"] += msg
@@ -244,8 +242,8 @@ def absent(name, region=None, key=None, keyid=None, profile=None, unsubscribe=Fa
 
         if __opts__.get("test"):
             ret["comment"] = (
-                "AWS SNS topic {0} is set to be removed.  "
-                "{1} subscription(s) will be removed.".format(name, len(subscriptions))
+                "AWS SNS topic {} is set to be removed.  "
+                "{} subscription(s) will be removed.".format(name, len(subscriptions))
             )
             ret["result"] = None
             return ret
@@ -266,7 +264,7 @@ def absent(name, region=None, key=None, keyid=None, profile=None, unsubscribe=Fa
             name, region=region, key=key, keyid=keyid, profile=profile
         )
         if deleted:
-            ret["comment"] = "AWS SNS topic {0} deleted.".format(name)
+            ret["comment"] = "AWS SNS topic {} deleted.".format(name)
             ret["changes"]["new"] = None
             if unsubscribe is False:
                 ret["changes"]["old"] = {"topic": name}
@@ -278,8 +276,8 @@ def absent(name, region=None, key=None, keyid=None, profile=None, unsubscribe=Fa
                     }
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to delete {0} AWS SNS topic.".format(name)
+            ret["comment"] = "Failed to delete {} AWS SNS topic.".format(name)
     else:
-        ret["comment"] = "AWS SNS topic {0} does not exist.".format(name)
+        ret["comment"] = "AWS SNS topic {} does not exist.".format(name)
 
     return ret

@@ -12,7 +12,8 @@ Statistics
 - Total Issue References: **12**
 - Total PR References: **31**
 
-- Contributors: **11** (`Ch3LL`_, `TiteiKo`_, `garethgreenaway`_, `gtmanfred`_, `llua`_, `rallytime`_, `seedickcode`_, `skizunov`_, `terminalmage`_, `twangboy`_, `whiteinge`_)
+- Contributors: **11** (`Ch3LL`_, `TiteiKo`_, `garethgreenaway`_, `gtmanfred`_, `llua`_,
+  `rallytime`_, `seedickcode`_, `skizunov`_, `terminalmage`_, `twangboy`_, `whiteinge`_)
 
 
 Security Fix

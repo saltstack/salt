@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Simple returner for CouchDB. Optional configuration
 settings are listed below, along with sane defaults:
@@ -52,27 +51,17 @@ otherwise multi-minion targeting can lead to losing output:
 * other minions fail with ``{'error': 'HTTP Error 409: Conflict'}``
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import time
+from urllib.error import HTTPError
+from urllib.request import HTTPHandler as _HTTPHandler
+from urllib.request import Request as _Request
+from urllib.request import build_opener as _build_opener
 
 import salt.returners
-
-# Import Salt libs
 import salt.utils.jid
 import salt.utils.json
-
-# Import 3rd-party libs
-# pylint: disable=no-name-in-module,import-error
-from salt.ext.six.moves.urllib.error import HTTPError
-from salt.ext.six.moves.urllib.request import HTTPHandler as _HTTPHandler
-from salt.ext.six.moves.urllib.request import Request as _Request
-from salt.ext.six.moves.urllib.request import build_opener as _build_opener
-
-# pylint: enable=no-name-in-module,import-error
-
 
 log = logging.getLogger(__name__)
 
@@ -134,7 +123,7 @@ def _request(method, url, content_type=None, _data=None):
     try:
         handler = opener.open(request)
     except HTTPError as exc:
-        return {"error": "{0}".format(exc)}
+        return {"error": "{}".format(exc)}
     return salt.utils.json.loads(handler.read())
 
 
@@ -237,14 +226,10 @@ def get_fun(fun):
         # to 1.
         _response = _request(
             "GET",
-            options["url"]
-            + options["db"]
-            + (
-                "/_design/salt/_view/by-minion-fun-times"
-                'tamp?descending=true&endkey=["{0}","{1}'
-                '",0]&startkey=["{0}","{1}",9999999999]&'
-                "limit=1"
-            ).format(minion, fun),
+            options["url"] + options["db"] + "/_design/salt/_view/by-minion-fun-times"
+            'tamp?descending=true&endkey=["{0}","{1}'
+            '",0]&startkey=["{0}","{1}",9999999999]&'
+            "limit=1".format(minion, fun),
         )
         # Skip the minion if we got an error..
         if "error" in _response:

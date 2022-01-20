@@ -79,16 +79,14 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 )
 
                 with patch.dict(mount.__opts__, {"test": True}):
-                    comt = (
-                        "Remount would be forced because" " options (noowners) changed"
-                    )
+                    comt = "Remount would be forced because options (noowners) changed"
                     ret.update({"comment": comt, "result": None})
                     self.assertDictEqual(mount.mounted(name, device, fstype), ret)
 
                 with patch.dict(mount.__opts__, {"test": False}):
                     comt = "Unable to unmount {}: False.".format(name)
                     umount = (
-                        "Forced unmount and mount because" " options (noowners) changed"
+                        "Forced unmount and mount because options (noowners) changed"
                     )
                     ret.update(
                         {
@@ -154,10 +152,9 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                         "os.path.exists", MagicMock(return_value=False)
                     ):
                         comt = (
-                            "{0} does not exist and would neither be created nor mounted. "
-                            "{0} needs to be written to the fstab in order to be made persistent.".format(
-                                name
-                            )
+                            "{0} does not exist and would neither be created nor"
+                            " mounted. {0} needs to be written to the fstab in order to"
+                            " be made persistent.".format(name)
                         )
                         ret.update({"comment": comt, "result": None})
                         self.assertDictEqual(
@@ -237,8 +234,18 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     "group.info": mock_group,
                 },
             ):
-                with patch.dict(mount.__opts__, {"test": True}):
-                    with patch.object(os.path, "exists", mock_t):
+                with patch.dict(mount.__opts__, {"test": True}), patch.object(
+                    os.path, "exists", mock_t
+                ):
+                    # Starting with Python 3.8 the os.path.realpath function attempts to resolve
+                    # symbolic links and junctions on Windows. So, since were using a share
+                    # that doesn't exist, we need to mock
+                    # https://docs.python.org/3/library/os.path.html?highlight=ntpath%20realpath#os.path.realpath
+                    with patch.object(
+                        os.path,
+                        "realpath",
+                        MagicMock(side_effect=[name2, device2, device2]),
+                    ):
                         comt = "Target was already mounted. Entry already exists in the fstab."
                         ret.update({"name": name2, "result": True})
                         ret.update({"comment": comt, "changes": {}})
@@ -280,7 +287,10 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 with patch.dict(mount.__opts__, {"test": True}):
                     with patch.object(os.path, "exists", mock_t):
-                        comt = "Target was already mounted. Entry already exists in the fstab."
+                        comt = (
+                            "Target was already mounted. Entry already exists in the"
+                            " fstab."
+                        )
                         ret.update({"name": name3, "result": True})
                         ret.update({"comment": comt, "changes": {}})
                         self.assertDictEqual(
@@ -512,7 +522,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                 },
             ):
                 with patch.dict(mount.__opts__, {"test": True}):
-                    comt = "Mount point {} is mounted but should not " "be".format(name)
+                    comt = "Mount point {} is mounted but should not be".format(name)
                     ret.update({"comment": comt})
                     self.assertDictEqual(mount.unmounted(name, device), ret)
 
@@ -559,7 +569,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                     )
 
                     with patch.dict(mount.__salt__, {"mount.filesystems": mock_dev}):
-                        comt = "Mount point {} is mounted but should not " "be".format(
+                        comt = "Mount point {} is mounted but should not be".format(
                             name3
                         )
                         ret.update({"comment": comt, "result": None, "name": name3})

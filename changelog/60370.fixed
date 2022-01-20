@@ -1,0 +1,1 @@
+Fixed issue with ansible roster __virtual__ when ansible is not installed.

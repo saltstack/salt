@@ -175,6 +175,13 @@ The type of the :conf_minion:`master` variable. Can be ``str``, ``failover``,
 
 .. code-block:: yaml
 
+    master_type: str
+
+If this option is ``str`` (default), multiple hot masters are configured.    
+Minions can connect to multiple masters simultaneously (all master are "hot").
+
+.. code-block:: yaml
+
     master_type: failover
 
 If this option is set to ``failover``, :conf_minion:`master` must be a list of
@@ -2291,6 +2298,20 @@ will be shown for each state run.
 
     state_output_profile: True
 
+.. conf_minion:: state_output_pct
+
+``state_output_pct``
+------------------------
+
+Default: ``False``
+
+The ``state_output_pct`` setting changes whether success and failure information
+as a percent of total actions will be shown for each state run.
+
+.. code-block:: yaml
+
+    state_output_pct: False
+
 .. conf_minion:: autoload_dynamic_modules
 
 ``autoload_dynamic_modules``
@@ -2876,7 +2897,7 @@ Default: ``False``
 
 Enables verification of the master-public-signature returned by the master in
 auth-replies. Please see the tutorial on how to configure this properly
-`Multimaster-PKI with Failover Tutorial <http://docs.saltstack.com/en/latest/topics/tutorials/multimaster_pki.html>`_
+`Multimaster-PKI with Failover Tutorial <https://docs.saltproject.io/en/latest/topics/tutorials/multimaster_pki.html>`_
 
 .. versionadded:: 2014.7.0
 

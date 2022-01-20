@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 HTTP monitoring states
 
@@ -7,8 +6,6 @@ Perform an HTTP query and statefully return the result
 .. versionadded:: 2015.5.0
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import re
@@ -132,48 +129,48 @@ def query(
         if match_type == "string":
             if str(match) in data.get("text", ""):
                 ret["result"] = True
-                ret["comment"] += ' Match text "{0}" was found.'.format(match)
+                ret["comment"] += ' Match text "{}" was found.'.format(match)
             else:
                 ret["result"] = False
-                ret["comment"] += ' Match text "{0}" was not found.'.format(match)
+                ret["comment"] += ' Match text "{}" was not found.'.format(match)
         elif match_type == "pcre":
             if re.search(str(match), str(data.get("text", ""))):
                 ret["result"] = True
-                ret["comment"] += ' Match pattern "{0}" was found.'.format(match)
+                ret["comment"] += ' Match pattern "{}" was found.'.format(match)
             else:
                 ret["result"] = False
-                ret["comment"] += ' Match pattern "{0}" was not found.'.format(match)
+                ret["comment"] += ' Match pattern "{}" was not found.'.format(match)
 
     if status is not None:
         # Deals with case of status_type as a list of strings representing statuses
         if status_type == "list":
             for stat in status:
                 if str(data.get("status", "")) == str(stat):
-                    ret["comment"] += " Status {0} was found.".format(stat)
+                    ret["comment"] += " Status {} was found.".format(stat)
                     if ret["result"] is None:
                         ret["result"] = True
             if ret["result"] is not True:
-                ret["comment"] += " Statuses {0} were not found.".format(status)
+                ret["comment"] += " Statuses {} were not found.".format(status)
                 ret["result"] = False
 
         # Deals with the case of status_type representing a regex
         elif status_type == "pcre":
             if re.search(str(status), str(data.get("status", ""))):
-                ret["comment"] += ' Status pattern "{0}" was found.'.format(status)
+                ret["comment"] += ' Status pattern "{}" was found.'.format(status)
                 if ret["result"] is None:
                     ret["result"] = True
             else:
-                ret["comment"] += ' Status pattern "{0}" was not found.'.format(status)
+                ret["comment"] += ' Status pattern "{}" was not found.'.format(status)
                 ret["result"] = False
 
         # Deals with the case of status_type as a single string representing a status
         elif status_type == "string":
             if str(data.get("status", "")) == str(status):
-                ret["comment"] += " Status {0} was found.".format(status)
+                ret["comment"] += " Status {} was found.".format(status)
                 if ret["result"] is None:
                     ret["result"] = True
             else:
-                ret["comment"] += " Status {0} was not found.".format(status)
+                ret["comment"] += " Status {} was not found.".format(status)
                 ret["result"] = False
 
     # cleanup spaces in comment
@@ -183,7 +180,7 @@ def query(
         ret["result"] = None
         ret["comment"] += " (TEST MODE"
         if "test_url" in kwargs:
-            ret["comment"] += ", TEST URL WAS: {0}".format(kwargs["test_url"])
+            ret["comment"] += ", TEST URL WAS: {}".format(kwargs["test_url"])
         ret["comment"] += ")"
 
     ret["data"] = data

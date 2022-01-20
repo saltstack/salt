@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of OpenStack Neutron Security Group Rules
 ====================================================
@@ -29,7 +28,6 @@ Example States
         - project_id: 1dcac318a83b4610b7a7f7ba01465548
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 __virtualname__ = "neutron_secgroup_rule"
 
@@ -39,8 +37,7 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The neutronng execution module failed to load:\
-                    shade python module is not available",
+        "The neutronng execution module failed to load: shade python module is not available",
     )
 
 

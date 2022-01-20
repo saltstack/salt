@@ -5,6 +5,7 @@
 """
 
 import builtins
+import getpass
 import logging
 import os
 import re
@@ -22,7 +23,7 @@ from tests.support.mock import MagicMock, Mock, MockTimedProc, mock_open, patch
 from tests.support.runtests import RUNTIME_VARS
 
 DEFAULT_SHELL = "foo/bar"
-MOCK_SHELL_FILE = "# List of acceptable shells\n" "\n" "/bin/bash\n"
+MOCK_SHELL_FILE = "# List of acceptable shells\n\n/bin/bash\n"
 
 
 @pytest.fixture
@@ -191,7 +192,11 @@ def test_run_invalid_umask():
             with patch("os.path.isfile", MagicMock(return_value=True)):
                 with patch("os.access", MagicMock(return_value=True)):
                     pytest.raises(
-                        CommandExecutionError, cmdmod._run, "foo", "bar", umask="baz",
+                        CommandExecutionError,
+                        cmdmod._run,
+                        "foo",
+                        "bar",
+                        umask="baz",
                     )
 
 
@@ -445,7 +450,7 @@ def test_run_cwd_in_combination_with_runas():
     """
     cmd = "pwd"
     cwd = "/tmp"
-    runas = os.getlogin()
+    runas = getpass.getuser()
 
     with patch.dict(cmdmod.__grains__, {"os": "Darwin", "os_family": "Solaris"}):
         stdout = cmdmod._run(cmd, cwd=cwd, runas=runas).get("stdout")
@@ -660,3 +665,31 @@ def test_cve_2021_25284(caplog):
         with caplog.at_level(logging.DEBUG, logger="salt.modules.cmdmod"):
             cmdmod.run("testcmd -p ImAPassword", output_loglevel="error")
         assert "ImAPassword" not in caplog.text
+
+
+def test__log_cmd_str():
+    "_log_cmd function handles strings"
+    assert cmdmod._log_cmd("foo bar") == "foo"
+
+
+def test__log_cmd_list():
+    "_log_cmd function handles lists"
+    assert cmdmod._log_cmd(["foo", "bar"]) == "foo"
+
+
+def test_log_cmd_tuple():
+    "_log_cmd function handles tuples"
+    assert cmdmod._log_cmd(("foo", "bar")) == "foo"
+
+
+def test_log_cmd_non_str_tuple_list():
+    "_log_cmd function casts objects to strings"
+
+    class cmd:
+        def __init__(self, cmd):
+            self.cmd = cmd
+
+        def __str__(self):
+            return self.cmd
+
+    assert cmdmod._log_cmd(cmd("foo bar")) == "foo"
