@@ -401,7 +401,7 @@ def check_stray(ctx, files):
         DOCS_DIR / "ref" / "states" / "writing.rst",
         DOCS_DIR / "topics",
     )
-    exclude_paths = tuple([str(p.relative_to(CODE_DIR)) for p in exclude_paths])
+    exclude_paths = tuple(str(p.relative_to(CODE_DIR)) for p in exclude_paths)
     files = build_docs_paths(files)
     for path in files:
         if not str(path).startswith(str((DOCS_DIR / "ref").relative_to(CODE_DIR))):

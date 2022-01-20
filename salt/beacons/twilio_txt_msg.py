@@ -9,7 +9,7 @@ try:
     import twilio
 
     # Grab version, ensure elements are ints
-    twilio_version = tuple([int(x) for x in twilio.__version_info__])
+    twilio_version = tuple(int(x) for x in twilio.__version_info__)
     if twilio_version > (5,):
         from twilio.rest import Client as TwilioRestClient
     else:

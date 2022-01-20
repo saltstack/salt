@@ -145,7 +145,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
             user = None
 
         if user:
-            octal_sum = sum([_octal.get(i, i) for i in perms])
+            octal_sum = sum(_octal.get(i, i) for i in perms)
             need_refresh = False
             # If recursive check all paths retrieved via acl.getfacl
             if recurse:
@@ -169,7 +169,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
                         break
 
             # Check the permissions from the already located file
-            elif user[_search_name]["octal"] == sum([_octal.get(i, i) for i in perms]):
+            elif user[_search_name]["octal"] == sum(_octal.get(i, i) for i in perms):
                 need_refresh = False
             # If they don't match then refresh
             else:
@@ -402,7 +402,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
     ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
     _octal = {"r": 4, "w": 2, "x": 1, "-": 0}
-    _octal_perms = sum([_octal.get(i, i) for i in perms])
+    _octal_perms = sum(_octal.get(i, i) for i in perms)
     if not os.path.exists(name):
         ret["comment"] = "{} does not exist".format(name)
         ret["result"] = False
@@ -475,7 +475,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
             for count, search_name in enumerate(_search_names):
                 if search_name in users:
                     if users[search_name]["octal"] == sum(
-                        [_octal.get(i, i) for i in perms]
+                        _octal.get(i, i) for i in perms
                     ):
                         ret["comment"] = "Permissions are in the desired state"
                     else:

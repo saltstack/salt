@@ -11,6 +11,7 @@ attrs==20.3.0
     #   jsonschema
     #   pytest
     #   pytest-salt-factories
+    #   pytest-skip-markers
 aws-sam-translator==1.33.0
     # via cfn-lint
 aws-xray-sdk==0.95
@@ -264,8 +265,10 @@ pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
-pytest-salt-factories==0.907.0
+pytest-salt-factories==0.912.0
     # via -r requirements/pytest.txt
+pytest-skip-markers==1.0.0
+    # via pytest-salt-factories
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
 pytest-tempdir==2019.10.12
@@ -279,6 +282,7 @@ pytest==6.1.2 ; python_version <= "3.9"
     #   -r requirements/pytest.txt
     #   pytest-helpers-namespace
     #   pytest-salt-factories
+    #   pytest-skip-markers
     #   pytest-subtests
     #   pytest-tempdir
     #   pytest-timeout
@@ -306,6 +310,7 @@ pywin32==301
     # via
     #   -r requirements/windows.txt
     #   cherrypy
+    #   pytest-skip-markers
     #   wmi
 pywinrm==0.4.1
     # via -r requirements/static/ci/windows.in
