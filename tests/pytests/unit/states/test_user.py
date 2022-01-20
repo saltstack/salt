@@ -264,3 +264,49 @@ def test_changes():
             "warndays": 7,
             "inactdays": 0,
         }
+
+
+def test_gecos_field_changes_in_user_present():
+    """
+    Test if the gecos fields change in salt.states.user.present
+    """
+    mock_info = MagicMock(
+        side_effect=[
+            {
+                "uid": 5000,
+                "gid": 5000,
+                "groups": ["foo"],
+                "home": "/home/foo",
+                "fullname": "Foo Bar",
+                "homephone": "667788",
+            },
+            {
+                "uid": 5000,
+                "gid": 5000,
+                "groups": ["foo"],
+                "home": "/home/foo",
+                "fullname": "Bar Bar",
+                "homephone": "44566",
+            },
+        ]
+    )
+    mock_changes = MagicMock(side_effect=[{"homephone": "667788"}, None])
+    shadow_info = MagicMock(
+        return_value={"min": 2, "max": 88888, "inact": 77, "warn": 14, "passwd": ""}
+    )
+    shadow_hash = MagicMock(return_value="abcd")
+    dunder_salt = {
+        "user.info": mock_info,
+        "shadow.info": shadow_info,
+        "shadow.default_hash": shadow_hash,
+        "file.group_to_gid": MagicMock(side_effect=["foo"]),
+        "file.gid_to_group": MagicMock(side_effect=[5000, 5000]),
+        "user.chhomephone": MagicMock(return_value=True),
+    }
+    with patch.dict(user.__grains__, {"kernel": "Linux"}), patch.dict(
+        user.__salt__, dunder_salt
+    ), patch.dict(user.__opts__, {"test": False}), patch.object(
+        user, "_changes", mock_changes
+    ):
+        res = user.present("Foo", homephone=44566, fullname="Bar Bar")
+        assert res["changes"] == {"homephone": "44566", "fullname": "Bar Bar"}
