@@ -242,6 +242,7 @@ class SmtpTestCase(TestCase, LoaderModuleMockMixin):
                 "smtp.sender": "",
                 "smtp.username": "",
                 "smtp.password": "",
+                "smtp.port": 0,
             }
         )
         with patch.dict(smtp.__salt__, {"config.option": mock}):
@@ -296,6 +297,7 @@ class SmtpTestCase(TestCase, LoaderModuleMockMixin):
                 "smtp.sender": "",
                 "smtp.username": "",
                 "smtp.password": "",
+                "smtp.port": 0,
             }
         )
         with patch.dict(smtp.__salt__, {"config.option": mock}):
