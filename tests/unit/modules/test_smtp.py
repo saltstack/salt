@@ -201,12 +201,14 @@ class MockSmtplib:
         self.SMTPException = SMTPException
         self.SMTPAuthenticationError = SMTPAuthenticationError
         self.server = None
+        self.port = 0
 
     def SMTP_SSL(self, server, port):
         """
         Mock SMTP_SSL method
         """
         self.server = server
+        self.port = port
         if self.flag == 1:
             raise MockGaierror("gaierror")
         return MockSMTPSSL("server", port)
@@ -216,6 +218,7 @@ class MockSmtplib:
         Mock SMTP method
         """
         self.server = server
+        self.port = port
         if self.flag == 1:
             raise MockGaierror("gaierror")
         return MockSMTP("server", port)
