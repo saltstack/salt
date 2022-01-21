@@ -1229,6 +1229,8 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
     allow_downgrades
         Allow apt to downgrade packages without a prompt.
 
+        .. versionadded:: 3005
+
     CLI Example:
 
     .. code-block:: bash
