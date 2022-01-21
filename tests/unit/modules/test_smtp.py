@@ -76,7 +76,7 @@ class MockSMTPSSL:
 
     flag = None
 
-    def __init__(self, server):
+    def __init__(self, server, port):
         pass
 
     def sendmail(self, sender, recipient, msg):
@@ -116,7 +116,7 @@ class MockSMTP:
 
     flag = None
 
-    def __init__(self, server):
+    def __init__(self, server, port):
         pass
 
     @staticmethod
@@ -202,23 +202,23 @@ class MockSmtplib:
         self.SMTPAuthenticationError = SMTPAuthenticationError
         self.server = None
 
-    def SMTP_SSL(self, server):
+    def SMTP_SSL(self, server, port):
         """
         Mock SMTP_SSL method
         """
         self.server = server
         if self.flag == 1:
             raise MockGaierror("gaierror")
-        return MockSMTPSSL("server")
+        return MockSMTPSSL("server", port)
 
-    def SMTP(self, server):
+    def SMTP(self, server, port):
         """
         Mock SMTP method
         """
         self.server = server
         if self.flag == 1:
             raise MockGaierror("gaierror")
-        return MockSMTP("server")
+        return MockSMTP("server", port)
 
 
 class SmtpTestCase(TestCase, LoaderModuleMockMixin):
