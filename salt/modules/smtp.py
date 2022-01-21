@@ -85,6 +85,7 @@ def send_msg(
     profile=None,
     attachments=None,
     is_html=False,
+    port=0,
 ):
     """
     Send a message to an SMTP recipient. To send a message to multiple \
