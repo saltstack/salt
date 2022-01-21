@@ -185,7 +185,7 @@ def installed(name, updates=None):
         if not salt.utils.data.is_true(post_info[item]["Installed"]):
             ret["changes"]["failed"] = {
                 item: {
-                    "Title": post_info[item]["Title"][:40] + "...",
+                    "Title": post_info[item]["Title"],
                     "KBs": post_info[item]["KBs"],
                 }
             }
@@ -193,7 +193,7 @@ def installed(name, updates=None):
         else:
             ret["changes"]["installed"] = {
                 item: {
-                    "Title": post_info[item]["Title"][:40] + "...",
+                    "Title": post_info[item]["Title"],
                     "NeedsReboot": post_info[item]["NeedsReboot"],
                     "KBs": post_info[item]["KBs"],
                 }
@@ -309,7 +309,7 @@ def removed(name, updates=None):
         if salt.utils.data.is_true(post_info[item]["Installed"]):
             ret["changes"]["failed"] = {
                 item: {
-                    "Title": post_info[item]["Title"][:40] + "...",
+                    "Title": post_info[item]["Title"],
                     "KBs": post_info[item]["KBs"],
                 }
             }
@@ -317,7 +317,7 @@ def removed(name, updates=None):
         else:
             ret["changes"]["removed"] = {
                 item: {
-                    "Title": post_info[item]["Title"][:40] + "...",
+                    "Title": post_info[item]["Title"],
                     "NeedsReboot": post_info[item]["NeedsReboot"],
                     "KBs": post_info[item]["KBs"],
                 }
@@ -494,7 +494,7 @@ def uptodate(
             if not salt.utils.data.is_true(post_info[item]["Installed"]):
                 ret["changes"]["failed"] = {
                     item: {
-                        "Title": post_info[item]["Title"][:40] + "...",
+                        "Title": post_info[item]["Title"],
                         "KBs": post_info[item]["KBs"],
                     }
                 }
@@ -502,7 +502,7 @@ def uptodate(
             else:
                 ret["changes"]["installed"] = {
                     item: {
-                        "Title": post_info[item]["Title"][:40] + "...",
+                        "Title": post_info[item]["Title"],
                         "NeedsReboot": post_info[item]["NeedsReboot"],
                         "KBs": post_info[item]["KBs"],
                     }
