@@ -8,8 +8,8 @@ manager.
 """
 
 import logging
-import re
 import os
+import re
 
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
@@ -48,7 +48,7 @@ def get_cert_serial(cert_file, saltenv="base"):
 
     # Since we're allowing a path, let's make sure it exists
     if not os.path.exists(cert_file):
-        msg = "cert_file not found: ".format(cert_file)
+        msg = "cert_file not found: {}".format(cert_file)
         raise CommandExecutionError(msg)
 
     cmd = 'certutil.exe -silent -verify "{}"'.format(cert_file)
@@ -86,7 +86,7 @@ def get_stored_cert_serials(store):
 
 def add_store(source, store, retcode=False, saltenv="base"):
     """
-    Add the given cert into the given Certificate Store
+    Add the cert to the given Certificate Store
 
     source (str):
         The source certificate file. This is either the path to a local file or
@@ -112,7 +112,7 @@ def add_store(source, store, retcode=False, saltenv="base"):
 
     # Since we're allowing a path, let's make sure it exists
     if not os.path.exists(source):
-        msg = "cert_file not found: ".format(source)
+        msg = "cert_file not found: {}".format(source)
         raise CommandExecutionError(msg)
 
     cmd = 'certutil.exe -addstore {} "{}"'.format(store, source)
@@ -124,7 +124,7 @@ def add_store(source, store, retcode=False, saltenv="base"):
 
 def del_store(source, store, retcode=False, saltenv="base"):
     """
-    Delete the given cert into the given Certificate Store
+    Delete the cert from the given Certificate Store
 
     source (str):
         The source certificate file. This is either the path to a local file or
@@ -150,7 +150,7 @@ def del_store(source, store, retcode=False, saltenv="base"):
 
     # Since we're allowing a path, let's make sure it exists
     if not os.path.exists(source):
-        msg = "cert_file not found: ".format(source)
+        msg = "cert_file not found: {}".format(source)
         raise CommandExecutionError(msg)
 
     serial = get_cert_serial(source)
