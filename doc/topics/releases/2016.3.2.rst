@@ -12,7 +12,14 @@ Statistics
 - Total Issue References: **66**
 - Total PR References: **177**
 
-- Contributors: **52** (`Ch3LL`_, `DarkKnightCZ`_, `DmitryKuzmenko`_, `Inveracity`_, `abalashov`_, `abednarik`_, `adelcast`_, `ajacoutot`_, `amendlik`_, `anlutro`_, `aphor`_, `artxki`_, `bbinet`_, `bensherman`_, `cachedout`_, `christoe`_, `clinta`_, `cro`_, `dmurphy18`_, `dongweiming`_, `eliasp`_, `eradman`_, `farcaller`_, `garethgreenaway`_, `glomium`_, `gtmanfred`_, `isbm`_, `jacobhammons`_, `jacobweinstock`_, `jfindlay`_, `jmacfar`_, `jnhmcknight`_, `justinta`_, `l2ol33rt`_, `lomeroe`_, `meaksh`_, `nulfox`_, `opdude`_, `peterdemin`_, `rallytime`_, `s0undt3ch`_, `secumod`_, `sjmh`_, `sjorge`_, `terminalmage`_, `thatch45`_, `themalkolm`_, `ticosax`_, `tmehlinger`_, `twangboy`_, `vutny`_, `whiteinge`_)
+- Contributors: **52** (`Ch3LL`_, `DarkKnightCZ`_, `DmitryKuzmenko`_, `Inveracity`_, `abalashov`_,
+  `abednarik`_, `adelcast`_, `ajacoutot`_, `amendlik`_, `anlutro`_, `aphor`_, `artxki`_, `bbinet`_,
+  `bensherman`_, `cachedout`_, `christoe`_, `clinta`_, `cro`_, `dmurphy18`_, `dongweiming`_,
+  `eliasp`_, `eradman`_, `farcaller`_, `garethgreenaway`_, `glomium`_, `gtmanfred`_, `isbm`_,
+  `jacobhammons`_, `jacobweinstock`_, `jfindlay`_, `jmacfar`_, `jnhmcknight`_, `justinta`_,
+  `l2ol33rt`_, `lomeroe`_, `meaksh`_, `nulfox`_, `opdude`_, `peterdemin`_, `rallytime`_,
+  `s0undt3ch`_, `secumod`_, `sjmh`_, `sjorge`_, `terminalmage`_, `thatch45`_, `themalkolm`_,
+  `ticosax`_, `tmehlinger`_, `twangboy`_, `vutny`_, `whiteinge`_)
 
 
 Returner Changes
