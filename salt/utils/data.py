@@ -1541,3 +1541,61 @@ def get_value(obj, path, default=None):
         else:
             return [{"value": default if obj is not None else obj}]
     return res
+
+
+@jinja_filter("flatten")
+def flatten(data, levels=None, preserve_nulls=False):
+    """
+    .. versionadded:: 3005
+
+    Flatten a list.
+
+    :param data: A list to flatten
+
+    :param levels: The number of levels in sub-lists to descend
+
+    :param preserve_nulls: Preserve nulls in a list, by default flatten removes them
+
+    :returns: A flat(ter) list of values
+
+    .. code-block:: jinja
+
+        {{ [3, [4, 2] ] | flatten }}
+        # => [3, 4, 2]
+
+    Flatten only the first level of a list:
+
+    .. code-block:: jinja
+
+        {{ [3, [4, [2]] ] | flatten(levels=1) }}
+        # => [3, 4, [2]]
+
+    Preserve nulls in a list, by default flatten removes them.
+
+    .. code-block:: jinja
+
+        {{ [3, None, [4, [2]] ] | flatten(levels=1, preserve_nulls=True) }}
+        # => [3, None, 4, [2]]
+    """
+    ret = []
+
+    for element in data:
+        if not preserve_nulls and element in (None, "None", "null"):
+            # ignore null items
+            continue
+        elif is_iter(element):
+            if levels is None:
+                ret.extend(flatten(element, preserve_nulls=preserve_nulls))
+            elif levels >= 1:
+                # decrement as we go down the stack
+                ret.extend(
+                    flatten(
+                        element, levels=(int(levels) - 1), preserve_nulls=preserve_nulls
+                    )
+                )
+            else:
+                ret.append(element)
+        else:
+            ret.append(element)
+
+    return ret
