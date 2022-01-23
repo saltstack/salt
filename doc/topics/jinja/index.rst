@@ -279,7 +279,7 @@ that YAML only allows special escapes inside double quotes so
 use ``yaml_encode`` or ``yaml_dquote``).
 
 
-.. jinja_ref:: append_dict_key_value
+.. jinja_ref:: dict_to_sls_yaml_params
 
 ``dict_to_sls_yaml_params``
 ---------------------------
