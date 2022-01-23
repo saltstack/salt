@@ -728,8 +728,6 @@ Invokes the ``combinations`` function from the ``itertools`` library.
 
 See the `itertools documentation`_ for more information.
 
-.. _itertools documentation: https://docs.python.org/3/library/itertools.html#itertools.combinations
-
 .. code-block:: jinja
 
     {% for one, two in "ABCD" | combinations(2) %}{{ one~two }} {% endfor %}
@@ -746,8 +744,6 @@ See the `itertools documentation`_ for more information.
 Invokes the ``combinations_with_replacement`` function from the ``itertools`` library.
 
 See the `itertools documentation`_ for more information.
-
-.. _itertools documentation: https://docs.python.org/3/library/itertools.html#itertools.combinations_with_replacement
 
 .. code-block:: jinja
 
@@ -766,8 +762,6 @@ Invokes the ``compress`` function from the ``itertools`` library.
 
 See the `itertools documentation`_ for more information.
 
-.. _itertools documentation: https://docs.python.org/3/library/itertools.html#itertools.compress
-
 .. code-block:: jinja
 
     {% for val in "ABCDEF" | compress([1,0,1,0,1,1]) %}{{ val }} {% endfor %}
@@ -785,8 +779,6 @@ Invokes the ``permutations`` function from the ``itertools`` library.
 
 See the `itertools documentation`_ for more information.
 
-.. _itertools documentation: https://docs.python.org/3/library/itertools.html#itertools.permutations
-
 .. code-block:: jinja
 
     {% for one, two in "ABCD" | permutations(2) %}{{ one~two }} {% endfor %}
@@ -803,8 +795,6 @@ See the `itertools documentation`_ for more information.
 Invokes the ``product`` function from the ``itertools`` library.
 
 See the `itertools documentation`_ for more information.
-
-.. _itertools documentation: https://docs.python.org/3/library/itertools.html#itertools.product
 
 .. code-block:: jinja
 
