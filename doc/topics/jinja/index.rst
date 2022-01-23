@@ -282,7 +282,7 @@ use ``yaml_encode`` or ``yaml_dquote``).
 .. jinja_ref:: append_dict_key_value
 
 ``dict_to_sls_yaml_params``
--------------------------
+---------------------------
 
 .. versionadded:: 3005
 
