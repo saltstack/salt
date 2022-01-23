@@ -691,7 +691,7 @@ Returns:
 .. jinja_ref:: flatten
 
 ``flatten``
-------------------------
+-----------
 
 .. versionadded:: 3005
 
@@ -720,7 +720,7 @@ Preserve nulls in a list, by default ``flatten`` removes them.
 .. jinja_ref:: combinations
 
 ``combinations``
-------------------------
+----------------
 
 .. versionadded:: 3005
 
@@ -739,7 +739,7 @@ See the `itertools documentation`_ for more information.
 .. jinja_ref:: combinations_with_replacement
 
 ``combinations_with_replacement``
-------------------------
+---------------------------------
 
 .. versionadded:: 3005
 
@@ -758,7 +758,7 @@ See the `itertools documentation`_ for more information.
 .. jinja_ref:: compress
 
 ``compress``
-------------------------
+------------
 
 .. versionadded:: 3005
 
@@ -777,7 +777,7 @@ See the `itertools documentation`_ for more information.
 .. jinja_ref:: permutations
 
 ``permutations``
-------------------------
+----------------
 
 .. versionadded:: 3005
 
@@ -796,7 +796,7 @@ See the `itertools documentation`_ for more information.
 .. jinja_ref:: product
 
 ``product``
-------------------------
+-----------
 
 .. versionadded:: 3005
 
@@ -815,7 +815,7 @@ See the `itertools documentation`_ for more information.
 .. jinja_ref:: zip
 
 ``zip``
-------------------------
+-------
 
 .. versionadded:: 3005
 
@@ -837,7 +837,7 @@ items decides the length of the new iterator.
 .. jinja_ref:: zip_longest
 
 ``zip_longest``
-------------------------
+---------------
 
 .. versionadded:: 3005
 
