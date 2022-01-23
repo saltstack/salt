@@ -3,6 +3,7 @@ Tests for salt.utils.jinja
 """
 
 import ast
+import itertools
 import os
 import pprint
 import random
@@ -1109,17 +1110,12 @@ def test_dict_to_sls_yaml_params(minion_opts, local_salt):
     """
     Test the `dict_to_sls_yaml_params` Jinja filter.
     """
-    expected = (
-        "- name: donkey\n"
-        + "- list:\n"
-        + "  - one\n"
-        + "  - two\n"
-        + "- dict:\n"
-        + "    one: two\n"
-        + "- nested:\n"
-        + "  - one\n"
-        + "  - two: three"
-    )
+    expected = [
+        "- name: donkey",
+        "- list:\n  - one\n  - two",
+        "- dict:\n    one: two",
+        "- nested:\n  - one\n  - two: three",
+    ]
     source = (
         "{% set myparams = {'name': 'donkey', 'list': ['one', 'two'], 'dict': {'one': 'two'}, 'nested': ['one', {'two': 'three'}]} %}"
         + "{{ myparams | dict_to_sls_yaml_params }}"
@@ -1127,7 +1123,7 @@ def test_dict_to_sls_yaml_params(minion_opts, local_salt):
     rendered = render_jinja_tmpl(
         source, dict(opts=minion_opts, saltenv="test", salt=local_salt)
     )
-    assert rendered == expected
+    assert rendered in ["\n".join(combo) for combo in itertools.permutations(expected)]
 
 
 def test_combinations(minion_opts, local_salt):
