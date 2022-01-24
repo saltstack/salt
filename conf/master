@@ -766,13 +766,6 @@
 # files on the Master will not be returned to the Minion.
 #fileserver_ignoresymlinks: True
 #
-# By default, the Salt fileserver recurses fully into all defined environments
-# to attempt to find files. To limit this behavior so that the fileserver only
-# traverses directories with SLS files and special Salt directories like _modules,
-# enable the option below. This might be useful for installations where a file root
-# has a very large number of files and performance is impacted. Default is False.
-# fileserver_limit_traversal: False
-#
 # The fileserver can fire events off every time the fileserver is updated,
 # these are disabled by default, but can be easily turned on by setting this
 # flag to True
