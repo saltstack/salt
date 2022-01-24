@@ -1,4 +1,5 @@
 import logging
+import sys
 
 import salt.modules.status as status
 from tests.support.mock import MagicMock, patch
@@ -33,6 +34,10 @@ def configure_loader_modules():
     }
 
 
+@pytest.mark.skipif(
+    sys.version_info[0] == 3 and sys.version_info[1] <= 5,
+    reason="run on Python 3.6 or greater where OrderedDict is default",
+)
 def test_netdev():
     """
     Test status.netdev for AIX
@@ -111,7 +116,7 @@ lo0    16896 ::1%1                           25611     0    25611     0     0
         netstats_out.assert_any_call("netstat -i -n -I lo0 -f inet")
         netstats_out.assert_any_call("netstat -i -n -I en0 -f inet6")
         netstats_out.assert_any_call("netstat -i -n -I en1 -f inet6")
-        netstats_out.assert_called_with("netstat -i -n -I lo0 -f inet6")
+        netstats_out.assert_any_call("netstat -i -n -I lo0 -f inet6")
         expected = {
             "en0": [
                 {
