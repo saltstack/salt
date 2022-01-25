@@ -8,6 +8,7 @@ import os
 import signal
 import sys
 import threading
+import uuid
 from random import randint
 
 import salt.auth
@@ -211,22 +212,27 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         return {
             "enc": self.crypt,
             "load": load,
+            "version": 2,
         }
 
     @salt.ext.tornado.gen.coroutine
     def crypted_transfer_decode_dictentry(
         self, load, dictkey=None, tries=3, timeout=60
     ):
+        nonce = uuid.uuid4().hex
+        load["nonce"] = nonce
         if not self.auth.authenticated:
             # Return control back to the caller, continue when authentication succeeds
             yield self.auth.authenticate()
-        # Return control to the caller. When send() completes, resume by populating ret with the Future.result
+
+        # Return control to the caller. When send() completes, resume by
+        # populating ret with the Future.result
         ret = yield self.message_client.send(
             self._package_load(self.auth.crypticle.dumps(load)),
             timeout=timeout,
             tries=tries,
         )
-        key = self.auth.get_keys()
+
         if "key" not in ret:
             # Reauth in the case our key is deleted on the master side.
             yield self.auth.authenticate()
@@ -235,15 +241,36 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
                 timeout=timeout,
                 tries=tries,
             )
+
+        key = self.auth.get_keys()
         if HAS_M2:
             aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
         else:
             cipher = PKCS1_OAEP.new(key)
             aes = cipher.decrypt(ret["key"])
+
+        # Decrypt using the public key.
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
-        data = pcrypt.loads(ret[dictkey])
-        data = salt.transport.frame.decode_embedded_strs(data)
-        raise salt.ext.tornado.gen.Return(data)
+        signed_msg = pcrypt.loads(ret[dictkey])
+
+        # Validate the master's signature.
+        master_pubkey_path = os.path.join(self.opts["pki_dir"], "minion_master.pub")
+        if not salt.crypt.verify_signature(
+            master_pubkey_path, signed_msg["data"], signed_msg["sig"]
+        ):
+            raise salt.crypt.AuthenticationError(
+                "Pillar payload signature failed to validate."
+            )
+
+        # Make sure the signed key matches the key we used to decrypt the data.
+        data = salt.payload.loads(signed_msg["data"])
+        if data["key"] != ret["key"]:
+            raise salt.crypt.AuthenticationError("Key verification failed.")
+
+        # Validate the nonce.
+        if data["nonce"] != nonce:
+            raise salt.crypt.AuthenticationError("Pillar nonce verification failed.")
+        raise salt.ext.tornado.gen.Return(data["pillar"])
 
     @salt.ext.tornado.gen.coroutine
     def _crypted_transfer(self, load, tries=3, timeout=60, raw=False):
@@ -735,6 +762,10 @@ class ZeroMQReqServerChannel(
             )
             raise salt.ext.tornado.gen.Return()
 
+        version = 0
+        if "version" in payload:
+            version = payload["version"]
+
         # intercept the "_auth" commands, since the main daemon shouldn't know
         # anything about our key auth
         if payload["enc"] == "clear" and payload.get("load", {}).get("cmd") == "_auth":
@@ -758,12 +789,19 @@ class ZeroMQReqServerChannel(
         elif req_fun == "send":
             stream.send(salt.payload.dumps(self.crypticle.dumps(ret)))
         elif req_fun == "send_private":
+            sign_messages = False
+            nonce = None
+            if version > 1:
+                sign_messages = True
+                nonce = payload["load"]["nonce"]
             stream.send(
                 salt.payload.dumps(
                     self._encrypt_private(
                         ret,
                         req_opts["key"],
                         req_opts["tgt"],
+                        nonce,
+                        sign_messages,
                     )
                 )
             )

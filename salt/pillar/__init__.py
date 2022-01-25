@@ -9,6 +9,7 @@ import logging
 import os
 import sys
 import traceback
+import uuid
 
 import salt.ext.tornado.gen
 import salt.fileclient
