@@ -288,7 +288,7 @@ def _xfs_prune_output(out, uuid):
             cnt.append(line)
 
     for kset in [e for e in cnt[1:] if ":" in e]:
-        key, val = [t.strip() for t in kset.split(":", 1)]
+        key, val = (t.strip() for t in kset.split(":", 1))
         data[key.lower().replace(" ", "_")] = val
 
     return data.get("uuid") == uuid and data or {}
