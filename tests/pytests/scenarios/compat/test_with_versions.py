@@ -10,6 +10,7 @@ import pathlib
 
 import attr
 import pytest
+import salt.utils.platform
 from saltfactories.daemons.container import SaltMinion
 from saltfactories.utils import random_string
 from tests.support.runtests import RUNTIME_VARS
@@ -17,6 +18,11 @@ from tests.support.runtests import RUNTIME_VARS
 docker = pytest.importorskip("docker")
 
 log = logging.getLogger(__name__)
+
+
+pytestmark = pytest.mark.skipif(
+    salt.utils.platform.is_photonos() is True, reason="Skip on PhotonOS"
+)
 
 
 @attr.s(kw_only=True, slots=True)
