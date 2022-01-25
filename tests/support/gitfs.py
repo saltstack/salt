@@ -453,6 +453,12 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
                 "minion", {}, *ext_pillar_opts["ext_pillar"][0]["git"]
             )
 
+    def recursive_chmod(self, path, owner):
+        for dirpath, dirnames, filenames in os.walk(path):
+            os.chmod(dirpath, 0o755)
+            for filename in filenames:
+                os.chmod(os.path.join(dirpath, filename), 0o644)
+
     def make_repo(self, root_dir, user="root"):
         log.info("Creating test Git repo....")
         self.bare_repo = os.path.join(root_dir, "repo.git")
@@ -468,6 +474,10 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
         ):
             shutil.copytree(self.bare_repo_backup, self.bare_repo)
             shutil.copytree(self.admin_repo_backup, self.admin_repo)
+
+            self.recursive_chmod(self.bare_repo, user)
+            self.recursive_chmod(self.admin_repo, user)
+
             return
 
         # Create bare repo
@@ -533,6 +543,7 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
             os.path.join(self.admin_repo, "subdir", "bar.sls"), "w"
         ) as fp_:
             fp_.write("from_subdir: True\n")
+        self.recursive_chmod(self.admin_repo, user)
         _push("master", "initial commit")
 
         # Do the same with different values for "dev" branch
@@ -569,6 +580,7 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
             """
                 )
             )
+        self.recursive_chmod(self.admin_repo, user)
         _push("dev", "add dev branch")
 
         # Create just a top file in a separate repo, to be mapped to the base
@@ -594,6 +606,7 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
             """
                 )
             )
+        self.recursive_chmod(self.admin_repo, user)
         _push("top_only", "add top_only branch")
 
         # Create just another top file in a separate repo, to be mapped to the base
@@ -614,6 +627,7 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
             """
                 )
             )
+        self.recursive_chmod(self.admin_repo, user)
         _push("top_mounted", "add top_mounted branch")
         shutil.copytree(self.bare_repo, self.bare_repo_backup)
         shutil.copytree(self.admin_repo, self.admin_repo_backup)
@@ -634,6 +648,10 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
         ):
             shutil.copytree(self.bare_extra_repo_backup, self.bare_extra_repo)
             shutil.copytree(self.admin_extra_repo_backup, self.admin_extra_repo)
+
+            self.recursive_chmod(self.bare_extra_repo, user)
+            self.recursive_chmod(self.admin_extra_repo, user)
+
             return
 
         # Create bare extra repo
@@ -683,9 +701,14 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
             """
                 )
             )
+        self.recursive_chmod(self.admin_extra_repo, user)
         _push("master", "initial commit")
         shutil.copytree(self.bare_extra_repo, self.bare_extra_repo_backup)
         shutil.copytree(self.admin_extra_repo, self.admin_extra_repo_backup)
+
+        self.recursive_chmod(self.bare_extra_repo_backup, user)
+        self.recursive_chmod(self.admin_extra_repo_backup, user)
+
         log.info("Extra test Git repo created.")
 
     @classmethod

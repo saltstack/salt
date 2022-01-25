@@ -255,6 +255,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
             if (
                 grains["osfinger"] == "CentOS Linux-7"
                 or grains["osfinger"] == "Amazon Linux-2"
+                or grains["os"] == "VMware Photon OS"
             ):
                 self.skipTest("copr plugin not installed on Centos 7 CI")
             kwargs = {

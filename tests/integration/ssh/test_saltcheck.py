@@ -31,6 +31,7 @@ class SSHSaltcheckTest(SSHCase):
         """
         saltcheck_test = "validate-saltcheck"
         ret = self.run_function("saltcheck.run_state_tests", [saltcheck_test])
+        breakpoint()
         self.assertDictContainsSubset(
             {"status": "Pass"}, ret[0]["validate-saltcheck"]["echo_test_hello"]
         )
