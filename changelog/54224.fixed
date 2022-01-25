@@ -1,1 +1,0 @@
-Fix invalid dnf command when obsoletes=True in pkg.update function

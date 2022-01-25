@@ -1,15 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Eric Radman <ericshane@eradman.com>
 """
 
-# Import Salt Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 from salt.cloud.clouds import joyent
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf

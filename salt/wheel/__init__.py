@@ -4,10 +4,10 @@ Modules used to control the master itself
 
 from collections.abc import Mapping
 
+import salt.channel.client
 import salt.client.mixins
 import salt.config
 import salt.loader
-import salt.transport.client
 import salt.utils.error
 import salt.utils.zeromq
 
@@ -68,9 +68,10 @@ class WheelClient(
         if interface == "0.0.0.0":
             interface = "127.0.0.1"
         master_uri = "tcp://{}:{}".format(
-            salt.utils.zeromq.ip_bracket(interface), str(self.opts["ret_port"]),
+            salt.utils.zeromq.ip_bracket(interface),
+            str(self.opts["ret_port"]),
         )
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             self.opts, crypt="clear", master_uri=master_uri, usage="master_call"
         ) as channel:
             ret = channel.send(load)

@@ -886,7 +886,7 @@ class SupportsProxiesTestCase(TestCase, LoaderModuleMockMixin):
             with self.assertRaises(CommandExecutionError) as excinfo:
                 mock_function()
         self.assertEqual(
-            "'unsupported' proxy is not supported by " "function mock_function",
+            "'unsupported' proxy is not supported by function mock_function",
             excinfo.exception.strerror,
         )
 
@@ -1695,7 +1695,7 @@ class EraseDiskPartitionsTestCase(TestCase, LoaderModuleMockMixin):
         with self.assertRaises(ArgumentValueError) as excinfo:
             vsphere.erase_disk_partitions()
         self.assertEqual(
-            "Either 'disk_id' or 'scsi_address' needs to " "be specified",
+            "Either 'disk_id' or 'scsi_address' needs to be specified",
             excinfo.exception.strerror,
         )
 
@@ -2086,7 +2086,7 @@ class RemoveCapacityFromDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
                     safety_checks=True,
                 )
         self.assertEqual(
-            "No disk with id 'fake_disk4' was found " "in ESXi host 'fake_host'",
+            "No disk with id 'fake_disk4' was found in ESXi host 'fake_host'",
             excinfo.exception.strerror,
         )
 
@@ -2453,7 +2453,7 @@ class _GetProxyTargetTestCase(TestCase, LoaderModuleMockMixin):
                 vsphere._get_proxy_target(self.mock_si)
             self.assertEqual(
                 excinfo.exception.strerror,
-                "'_get_proxy_target' not supported when " "connected via the ESXi host",
+                "'_get_proxy_target' not supported when connected via the ESXi host",
             )
 
     def test_get_cluster_call(self):
@@ -2534,23 +2534,27 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
 
     # Expected returns
     create_tag_category = {
-        "Category created": "urn:vmomi:InventoryServiceTag:"
-        "bb0350b4-85db-46b0-a726-e7c5989fc857:GLOBAL"
+        "Category created": (
+            "urn:vmomi:InventoryServiceTag:bb0350b4-85db-46b0-a726-e7c5989fc857:GLOBAL"
+        )
     }
 
     create_tag = {
-        "Tag created": "urn:vmomi:InventoryServiceTag:"
-        "bb0350b4-85db-46b0-a726-e7c5989fc857:GLOBAL"
+        "Tag created": (
+            "urn:vmomi:InventoryServiceTag:bb0350b4-85db-46b0-a726-e7c5989fc857:GLOBAL"
+        )
     }
 
     delete_tag_category = {
-        "Category deleted": "urn:vmomi:InventoryServiceTag:"
-        "bb0350b4-85db-46b0-a726-e7c5989fc857:GLOBAL"
+        "Category deleted": (
+            "urn:vmomi:InventoryServiceTag:bb0350b4-85db-46b0-a726-e7c5989fc857:GLOBAL"
+        )
     }
 
     delete_tag = {
-        "Tag deleted": "urn:vmomi:InventoryServiceTag:"
-        "bb0350b4-85db-46b0-a726-e7c5989fc857:GLOBAL"
+        "Tag deleted": (
+            "urn:vmomi:InventoryServiceTag:bb0350b4-85db-46b0-a726-e7c5989fc857:GLOBAL"
+        )
     }
 
     list_tag_categories_return = [
@@ -2582,18 +2586,17 @@ class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
     ]
 
     list_create_category_return = [
-        "urn:vmomi:InventoryServiceCategory:"
-        "0af54c2d-e8cd-4248-931e-2f5807d8c477:GLOBAL"
+        "urn:vmomi:InventoryServiceCategory:0af54c2d-e8cd-4248-931e-2f5807d8c477:GLOBAL"
     ]
 
     list_create_tag_return = [
-        "urn:vmomi:InventoryServiceCategory:"
-        "0af54c2d-e8cd-4248-931e-2f5807d8c477:GLOBAL"
+        "urn:vmomi:InventoryServiceCategory:0af54c2d-e8cd-4248-931e-2f5807d8c477:GLOBAL"
     ]
 
     attach_tags_return = {
-        "Tag attached": "urn:vmomi:InventoryServiceTag:"
-        "bb0350b4-85db-46b0-a726-e7c5989fc857:GLOBAL"
+        "Tag attached": (
+            "urn:vmomi:InventoryServiceTag:bb0350b4-85db-46b0-a726-e7c5989fc857:GLOBAL"
+        )
     }
 
     def test_create_tag_category_client_none(self):

@@ -14,7 +14,14 @@ Statistics
 - Total Issue References: **30**
 - Total PR References: **177**
 
-- Contributors: **49** (`Arabus`_, `Lothiraldan`_, `Snergster`_, `TaiSHiNet`_, `The-Loeki`_, `UtahDave`_, `aboe76`_, `ahus1`_, `basepi`_, `bastiaanb`_, `bradthurber`_, `cachedout`_, `cellscape`_, `corywright`_, `cro`_, `dennisjac`_, `dmyerscough`_, `galet`_, `garethgreenaway`_, `gladiatr72`_, `gtmanfred`_, `iggy`_, `ionutbalutoiu`_, `jacobhammons`_, `jayeshka`_, `jfindlay`_, `joejulian`_, `jpic`_, `justinta`_, `kaidokert`_, `kaithar`_, `kiorky`_, `lisa2lisa`_, `msciciel`_, `nleib`_, `notpeter`_, `optix2000`_, `rahulhan`_, `rallytime`_, `rubic`_, `ryan-lane`_, `s0undt3ch`_, `slinu3d`_, `steverweber`_, `techhat`_, `terminalmage`_, `ticosax`_, `twangboy`_, `whiteinge`_)
+- Contributors: **49** (`Arabus`_, `Lothiraldan`_, `Snergster`_, `TaiSHiNet`_, `The-Loeki`_,
+  `UtahDave`_, `aboe76`_, `ahus1`_, `basepi`_, `bastiaanb`_, `bradthurber`_, `cachedout`_,
+  `cellscape`_, `corywright`_, `cro`_, `dennisjac`_, `dmyerscough`_, `galet`_, `garethgreenaway`_,
+  `gladiatr72`_, `gtmanfred`_, `iggy`_, `ionutbalutoiu`_, `jacobhammons`_, `jayeshka`_,
+  `jfindlay`_, `joejulian`_, `jpic`_, `justinta`_, `kaidokert`_, `kaithar`_, `kiorky`_,
+  `lisa2lisa`_, `msciciel`_, `nleib`_, `notpeter`_, `optix2000`_, `rahulhan`_, `rallytime`_,
+  `rubic`_, `ryan-lane`_, `s0undt3ch`_, `slinu3d`_, `steverweber`_, `techhat`_, `terminalmage`_,
+  `ticosax`_, `twangboy`_, `whiteinge`_)
 
 
 Cloud Runner Changes

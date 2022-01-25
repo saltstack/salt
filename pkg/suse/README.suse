@@ -28,5 +28,5 @@ Running the salt-master daemon as a root user is considers by some a security ri
 running as root, enables the pam external auth system, as this system needs root access to check authentication.
 
 For more information:
-http://docs.saltstack.com/en/latest/ref/configuration/nonroot.html
+https://docs.saltproject.io/en/latest/ref/configuration/nonroot.html
 
