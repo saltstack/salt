@@ -260,7 +260,7 @@ def pytest_configure(config):
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
 
     # Make sure config._tempdir.tempdir is world readable
-    os.chmod(config._tempdir.tempdir, 0o755)
+    os.chmod(str(config._tempdir.tempdir), 0o755)
 
 
 # <---- Register Markers ---------------------------------------------------------------------------------------------
