@@ -1,13 +1,9 @@
 import logging
 import sys
 
+import pytest
 import salt.modules.status as status
 from tests.support.mock import MagicMock, patch
-
-try:
-    import pytest
-except ImportError:
-    pytest = None
 
 log = logging.getLogger(__name__)
 
