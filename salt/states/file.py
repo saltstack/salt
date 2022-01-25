@@ -7437,9 +7437,7 @@ def rename(name, source, force=False, makedirs=False, **kwargs):
 
     """
     name = os.path.expanduser(name)
-    name = os.path.expandvars(name)
     source = os.path.expanduser(source)
-    source = os.path.expandvars(source)
 
     ret = {"name": name, "changes": {}, "comment": "", "result": True}
     if not name:
@@ -7488,7 +7486,7 @@ def rename(name, source, force=False, makedirs=False, **kwargs):
     # All tests pass, move the file into place
     try:
         if os.path.islink(source):
-            linkto = salt.utils.path.readlink(source)
+            linkto = os.readlink(source)
             os.symlink(linkto, name)
             os.unlink(source)
         else:

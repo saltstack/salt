@@ -2,6 +2,7 @@ import os
 
 import pytest
 import salt.modules.tls as tls
+import salt.utils.platform
 from tests.support.mock import MagicMock, patch
 
 
@@ -28,8 +29,24 @@ def tls_test_data():
     }
 
 
+@pytest.fixture(scope="module")
+def check_csrp_mode():
+    if salt.utils.platform.is_photonos():
+        return 0o640
+    else:
+        return 0o644
+
+
+@pytest.fixture(scope="module")
+def check_certp_mode():
+    if salt.utils.platform.is_photonos():
+        return 0o640
+    else:
+        return 0o644
+
+
 @pytest.mark.skip_on_windows(reason="Skipping on Windows per Shane's suggestion")
-def test_create_ca_permissions_on_cert_and_key(tmpdir, tls_test_data):
+def test_create_ca_permissions_on_cert_and_key(tmpdir, tls_test_data, check_certp_mode):
     ca_name = "test_ca"
     certp = tmpdir.join(ca_name).join("{}_ca_cert.crt".format(ca_name)).strpath
     certk = tmpdir.join(ca_name).join("{}_ca_cert.key".format(ca_name)).strpath
@@ -43,12 +60,12 @@ def test_create_ca_permissions_on_cert_and_key(tmpdir, tls_test_data):
         certp_mode = os.stat(certp).st_mode & 0o7777
         certk_mode = os.stat(certk).st_mode & 0o7777
 
-        assert 0o644 == certp_mode
+        assert check_certp_mode == certp_mode
         assert 0o600 == certk_mode
 
 
 @pytest.mark.skip_on_windows(reason="Skipping on Windows per Shane's suggestion")
-def test_create_csr_permissions_on_csr_and_key(tmpdir, tls_test_data):
+def test_create_csr_permissions_on_csr_and_key(tmpdir, tls_test_data, check_csrp_mode):
     ca_name = "test_ca"
     csrp = (
         tmpdir.join(ca_name)
@@ -77,12 +94,14 @@ def test_create_csr_permissions_on_csr_and_key(tmpdir, tls_test_data):
         csrp_mode = os.stat(csrp).st_mode & 0o7777
         keyp_mode = os.stat(keyp).st_mode & 0o7777
 
-        assert 0o644 == csrp_mode
+        assert check_csrp_mode == csrp_mode
         assert 0o600 == keyp_mode
 
 
 @pytest.mark.skip_on_windows(reason="Skipping on Windows per Shane's suggestion")
-def test_create_self_signed_cert_permissions_on_csr_cert_and_key(tmpdir, tls_test_data):
+def test_create_self_signed_cert_permissions_on_csr_cert_and_key(
+    tmpdir, tls_test_data, check_certp_mode
+):
     ca_name = "test_ca"
     certp = (
         tmpdir.join(ca_name)
@@ -110,5 +129,5 @@ def test_create_self_signed_cert_permissions_on_csr_cert_and_key(tmpdir, tls_tes
         certp_mode = os.stat(certp).st_mode & 0o7777
         keyp_mode = os.stat(keyp).st_mode & 0o7777
 
-        assert 0o644 == certp_mode
+        assert check_certp_mode == certp_mode
         assert 0o600 == keyp_mode
