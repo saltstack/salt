@@ -1911,7 +1911,7 @@ class _policy_info:
                         "Registry": {
                             "Hive": "HKEY_LOCAL_MACHINE",
                             "Path": "SYSTEM\\CurrentControlSet\\Control\\Lsa",
-                            "Value": "AuditBaseObjects",
+                            "Value": "SCENoApplyLegacyAuditPolicy",
                             "Type": "REG_DWORD",
                         },
                         "Transform": self.enabled_one_disabled_zero_transform,
