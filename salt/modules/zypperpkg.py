@@ -1837,6 +1837,14 @@ def upgrade(
         salt '*' pkg.upgrade dist_upgrade=True fromrepo='["MyRepoName"]' novendorchange=True
         salt '*' pkg.upgrade dist_upgrade=True dryrun=True
     """
+    if novendorchange is not None:
+        warn_until(
+            "Phosphorus",
+            "'novendorchange' OPTION is deprecated in favor of 'allowvendorchange'."
+        )
+    else:
+        novendorchange = not allowvendorchange
+
     cmd_update = (["dist-upgrade"] if dist_upgrade else ["update"]) + [
         "--auto-agree-with-licenses"
     ]
