@@ -5721,7 +5721,8 @@ def _write_secedit_data(inf_data):
     Helper function to write secedit data to the database
     """
     # Set file names
-    f_sdb = os.path.join(__opts__["cachedir"], "secedit-{}.sdb".format(UUID))
+    # The database must persist in order for the settings to remain in effect
+    f_sdb = os.path.join(__opts__["cachedir"], "lgpo", "secedit.sdb")
     f_inf = os.path.join(__opts__["cachedir"], "secedit-{}.inf".format(UUID))
 
     try:
@@ -5738,9 +5739,7 @@ def _write_secedit_data(inf_data):
         # Failure
         return False
     finally:
-        # Cleanup our scratch files
-        if __salt__["file.file_exists"](f_sdb):
-            __salt__["file.remove"](f_sdb)
+        # Cleanup our scratch files, but not the database file
         if __salt__["file.file_exists"](f_inf):
             __salt__["file.remove"](f_inf)
 
@@ -8790,10 +8789,9 @@ def get_policy_info(policy_name, policy_class, adml_language="en-US"):
         return ret
     else:
         for pol in policy_data.policies[policy_class]["policies"]:
-            if (
-                policy_data.policies[policy_class]["policies"][pol]["Policy"].lower()
-                == policy_name.lower()
-            ):
+            _p = policy_data.policies[policy_class]["policies"][pol]["Policy"]
+            # Case-sensitive search first
+            if _p == policy_name or _p.lower() == policy_name.lower():
                 ret["policy_aliases"].append(pol)
                 ret["policy_found"] = True
                 ret["message"] = ""
@@ -8900,12 +8898,9 @@ def get(
                 _pol = _policydata.policies[p_class]["policies"][policy_name]
             else:
                 for policy in _policydata.policies[p_class]["policies"]:
-                    if (
-                        _policydata.policies[p_class]["policies"][policy][
-                            "Policy"
-                        ].upper()
-                        == policy_name.upper()
-                    ):
+                    _p = _policydata.policies[p_class]["policies"][policy]["Policy"]
+                    # Case-sensitive search first
+                    if _p == policy_name or _p.lower() == policy_name.lower():
                         _pol = _policydata.policies[p_class]["policies"][policy]
                         policy_name = policy
             if _pol:
@@ -9798,10 +9793,9 @@ def get_policy(
         policy_definition = policy_data.policies[policy_class]["policies"][policy_name]
     else:
         for pol in policy_data.policies[policy_class]["policies"]:
-            if (
-                policy_data.policies[policy_class]["policies"][pol]["Policy"].lower()
-                == policy_name.lower()
-            ):
+            _p = policy_data.policies[policy_class]["policies"][pol]["Policy"]
+            # Case-sensitive search first
+            if _p == policy_name or _p.lower() == policy_name.lower():
                 policy_definition = policy_data.policies[policy_class]["policies"][pol]
                 break
     if policy_definition:
@@ -10033,12 +10027,9 @@ def set_(
                         _pol = _policydata.policies[p_class]["policies"][policy_name]
                     else:
                         for policy in _policydata.policies[p_class]["policies"]:
-                            if (
-                                _policydata.policies[p_class]["policies"][policy][
-                                    "Policy"
-                                ].upper()
-                                == policy_name.upper()
-                            ):
+                            _p = _policydata.policies[p_class]["policies"][policy]["Policy"]
+                            # Case-sensitive search first
+                            if _p == policy_name or _p.lower() == policy_name.lower():
                                 _pol = _policydata.policies[p_class]["policies"][policy]
                                 policy_key_name = policy
                     if _pol:
