@@ -74,7 +74,7 @@ def list_installed():
     prefix_len = len(_package_prefix()) + 1
 
     return sorted(
-        [pkg[prefix_len:] for pkg in result], key=functools.cmp_to_key(_cmp_version)
+        (pkg[prefix_len:] for pkg in result), key=functools.cmp_to_key(_cmp_version)
     )
 
 
