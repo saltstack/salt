@@ -487,10 +487,10 @@ def set_(
                     changes = False
                     requested_policy_json = salt.utils.json.dumps(
                         p_data["requested_policy"][p_name], sort_keys=True
-                    ).lower()
+                    )
                     current_policy_json = salt.utils.json.dumps(
                         current_policy[class_map[p_class]][p_name], sort_keys=True
-                    ).lower()
+                    )
 
                     requested_policy_check = salt.utils.json.loads(
                         requested_policy_json
