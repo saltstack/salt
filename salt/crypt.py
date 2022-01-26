@@ -1491,13 +1491,17 @@ class Crypticle:
             data = cypher.decrypt(data)
         return data[: -data[-1]]
 
-    def dumps(self, obj):
+    def dumps(self, obj, nonce=None):
         """
         Serialize and encrypt a python object
         """
-        return self.encrypt(self.PICKLE_PAD + salt.payload.dumps(obj))
+        if nonce:
+            toencrypt = self.PICKLE_PAD + nonce.encode() + salt.payload.dumps(obj)
+        else:
+            toencrypt = self.PICKLE_PAD + salt.payload.dumps(obj)
+        return self.encrypt(toencrypt)
 
-    def loads(self, data, raw=False):
+    def loads(self, data, raw=False, nonce=None):
         """
         Decrypt and un-serialize a python object
         """
@@ -1505,5 +1509,10 @@ class Crypticle:
         # simple integrity check to verify that we got meaningful data
         if not data.startswith(self.PICKLE_PAD):
             return {}
-        load = salt.payload.loads(data[len(self.PICKLE_PAD) :], raw=raw)
-        return load
+        data = data[len(self.PICKLE_PAD) :]
+        if nonce:
+            ret_nonce = data[:32].decode()
+            data = data[32:]
+            if ret_nonce != nonce:
+                raise SaltClientError("Nonce verification error")
+        return salt.payload.loads(data, raw=raw)

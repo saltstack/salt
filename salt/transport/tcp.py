@@ -321,6 +321,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
         Indeed, we can fail too early in case of a master restart during a
         minion state execution call
         """
+        load["nonce"] = uuid.uuid4().hex
 
         @salt.ext.tornado.gen.coroutine
         def _do_transfer():
@@ -334,7 +335,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             # communication, we do not subscribe to return events, we just
             # upload the results to the master
             if data:
-                data = self.auth.crypticle.loads(data)
+                data = self.auth.crypticle.loads(data, nonce=load.get("nonce"))
                 data = salt.transport.frame.decode_embedded_strs(data)
             raise salt.ext.tornado.gen.Return(data)
 
@@ -757,9 +758,12 @@ class TCPReqServerChannel(
             if req_fun == "send_clear":
                 stream.write(salt.transport.frame.frame_msg(ret, header=header))
             elif req_fun == "send":
+                nonce = None
+                if version > 1:
+                    nonce = payload["load"]["nonce"]
                 stream.write(
                     salt.transport.frame.frame_msg(
-                        self.crypticle.dumps(ret), header=header
+                        self.crypticle.dumps(ret, nonce), header=header
                     )
                 )
             elif req_fun == "send_private":
