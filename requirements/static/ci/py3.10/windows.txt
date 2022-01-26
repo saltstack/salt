@@ -307,7 +307,7 @@ pytz==2021.1
     #   tempora
 pyvmomi==6.7.1.2018.12
     # via -r requirements/static/ci/common.in
-pywin32==300
+pywin32==301
     # via
     #   -r requirements/static/pkg/py3.10/windows.txt
     #   cherrypy
