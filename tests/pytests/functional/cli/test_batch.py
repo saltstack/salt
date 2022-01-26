@@ -181,4 +181,4 @@ def test_batch_issue_56273():
     for val in ret:
         values = list(val.values())
         assert len(values) == 1
-        assert values[0] is True
+        assert values[0]["ret"] is True
