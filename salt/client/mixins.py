@@ -11,11 +11,11 @@ import traceback
 import weakref
 from collections.abc import Mapping, MutableMapping
 
+import salt.channel.client
 import salt.exceptions
 import salt.ext.tornado.stack_context
 import salt.log.setup
 import salt.minion
-import salt.transport.client
 import salt.utils.args
 import salt.utils.doc
 import salt.utils.error
@@ -137,7 +137,7 @@ class SyncClientMixin:
         load = kwargs
         load["cmd"] = self.client
 
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             self.opts, crypt="clear", usage="master_call"
         ) as channel:
             ret = channel.send(load)

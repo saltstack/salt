@@ -43,6 +43,7 @@ salt/modules/augeas_cfg.py:
   - pytests.unit.states.test_augeas
 
 salt/modules/cp.py:
+  - pytests.functional.modules.file.test_replace
   - pytests.unit.modules.file.test_file_basics
   - pytests.unit.modules.file.test_file_block_replace
   - pytests.unit.modules.file.test_file_chattr
@@ -51,7 +52,6 @@ salt/modules/cp.py:
   - pytests.unit.modules.file.test_file_line
   - pytests.unit.modules.file.test_file_lsattr
   - pytests.unit.modules.file.test_file_module
-  - pytests.unit.modules.file.test_file_replace
   - pytests.unit.modules.file.test_file_selinux
   - pytests.unit.states.file.test_copy
   - integration.modules.test_file
@@ -250,9 +250,6 @@ salt/(cli/spm\.py|spm/.+):
   - integration.spm.test_install
   - integration.spm.test_remove
   - integration.spm.test_repo
-
-salt/transport/*:
-  - unit.test_transport
 
 salt/utils/docker/*:
   - unit.utils.test_dockermod
