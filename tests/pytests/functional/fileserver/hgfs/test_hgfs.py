@@ -2,13 +2,13 @@ import shutil
 import tempfile
 from pathlib import Path
 
+import pytest
 import salt.config
+import salt.fileserver.hgfs as hgfs
 from tests.support.mock import patch
 
 try:
     import hglib
-    import salt.fileserver.hgfs as hgfs
-    import pytest
 
     HAS_HG = True
 except ImportError:
@@ -38,8 +38,8 @@ def hgfs_setup_and_teardown():
     for file in source_dir.iterdir():
         to_file = tempdirPath / file.name
         to_file2 = tempsubdir / file.name
-        shutil.copy(file, to_file)
-        shutil.copy(file, to_file2)
+        shutil.copy(file.as_posix(), to_file.as_posix())
+        shutil.copy(file.as_posix(), to_file2.as_posix())
 
     hglib.init(bytes(tempdirPath.as_posix(), encoding="utf8"))
     repo = hglib.open(bytes(tempdirPath.as_posix(), encoding="utf8"))
