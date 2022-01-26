@@ -1,0 +1,1 @@
+Fixed error on multiple module execution in batched run and returned proper retcodes.
