@@ -275,17 +275,15 @@ class Batch:
                     active.remove(minion)
                     if bwait:
                         wait.append(datetime.now() + timedelta(seconds=bwait))
-                # Munge retcode into return data
                 failhard = False
-                if (
-                    "retcode" in data
-                    and isinstance(data["ret"], dict)
-                    and "retcode" not in data["ret"]
-                ):
-                    data["ret"]["retcode"] = data["retcode"]
-                    if self.opts.get("failhard") and data["ret"]["retcode"] > 0:
-                        failhard = True
-                else:
+                # If we are executing multiple modules with the same cmd,
+                # We use the highest retcode.
+                if "retcode" in data:
+                    if isinstance(data["retcode"], dict):
+                        try:
+                            data["retcode"] = max(data["retcode"].values())
+                        except ValueError:
+                            data["retcode"] = 0
                     if self.opts.get("failhard") and data["retcode"] > 0:
                         failhard = True
 
@@ -293,8 +291,8 @@ class Batch:
                     ret[minion] = data
                     yield data
                 else:
-                    ret[minion] = data["ret"]
-                    yield {minion: data["ret"]}
+                    ret[minion] = {minion: data}
+                    yield {minion: data}
                 if not self.quiet:
                     ret[minion] = data["ret"]
                     data[minion] = data.pop("ret")
