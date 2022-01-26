@@ -17,6 +17,7 @@ import salt.ext.tornado.ioloop
 import salt.log.setup
 import salt.transport.client
 import salt.transport.server
+import salt.transport.zeromq
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
@@ -214,7 +215,6 @@ AES_KEY = "8wxWlOaMMQ4d3yT74LL4+hGrGTf65w8VgrcNjLJeLRQ2Q6zMa8ItY2EQUgMKKDb7JY+Rn
 @pytest.fixture
 def pki_dir(tmpdir):
     madir = tmpdir.mkdir("master")
-
     mapriv = madir.join("master.pem")
     mapriv.write(MASTER_PRIV_KEY.strip())
     mapub = madir.join("master.pub")
@@ -225,8 +225,6 @@ def pki_dir(tmpdir):
     maspub = madir.join("master_sign.pub")
     maspub.write(MASTER_SIGNING_PUB.strip())
 
-    mipub = madir.mkdir("minions").join("minion")
-    mipub.write(MINION_PUB_KEY.strip())
     for sdir in [
         "minions_autosign",
         "minions_denied",
@@ -234,6 +232,9 @@ def pki_dir(tmpdir):
         "minions_rejected",
     ]:
         madir.mkdir(sdir)
+
+    mipub = madir.mkdir("minions").join("minion")
+    mipub.write(MINION_PUB_KEY.strip())
 
     midir = tmpdir.mkdir("minion")
     mipub = midir.join("minion.pub")
