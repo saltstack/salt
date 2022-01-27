@@ -43,3 +43,27 @@ def test_pillar_get_tops_should_not_error_when_merging_strategy_is_none_and_no_p
     )
     tops, errors = pillar.get_tops()
     assert not errors
+
+
+@pytest.mark.parametrize(
+    "env",
+    ("base", "something-else", "cool_path_123"),
+)
+def test_pillar_envs_path_substitution(env, temp_salt_minion, tmp_path):
+    """
+    Test pillar access to a dynamic path using __env__
+    """
+    opts = temp_salt_minion.config.copy()
+    expected = {env: [str(tmp_path / env)]}
+    # Stop using OrderedDict once we drop Py3.5 support
+    opts["pillar_roots"] = OrderedDict()
+    opts["pillar_roots"][env] = [str(tmp_path / "__env__")]
+    grains = salt.loader.grains(opts)
+    pillar = salt.pillar.Pillar(
+        opts,
+        grains,
+        temp_salt_minion.id,
+        env,
+    )
+    # The __env__ string in the path has been substituted for the actual env
+    assert pillar.opts["pillar_roots"] == expected

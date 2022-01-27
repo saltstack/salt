@@ -657,6 +657,11 @@ class Pillar:
                     env,
                 )
                 opts["pillar_roots"].pop("__env__")
+        for env in opts["pillar_roots"]:
+            for idx, root in enumerate(opts["pillar_roots"][env]):
+                opts["pillar_roots"][env][idx] = opts["pillar_roots"][env][idx].replace(
+                    "__env__", env
+                )
         return opts
 
     def _get_envs(self):

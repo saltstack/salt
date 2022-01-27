@@ -2857,6 +2857,8 @@ roots: Master's Local File Server
 ``file_roots``
 **************
 
+.. versionchanged:: 3005
+
 Default:
 
 .. code-block:: yaml
@@ -2890,6 +2892,29 @@ Example:
         - /srv/salt/prod/states
       __env__:
         - /srv/salt/default
+
+Taking dynamic environments one step further, ``__env__`` can also be used in
+the ``file_roots`` filesystem path as of version 3005. It will be replaced with
+the actual ``saltenv`` and searched for states and data to provide to the
+minion. For instance, this configuration:
+
+.. code-block:: yaml
+
+    file_roots:
+      __env__:
+        - /srv/__env__/salt
+
+is equivalent to this static configuration:
+
+.. code-block:: yaml
+
+    file_roots:
+      dev:
+        - /srv/dev/salt
+      test:
+        - /srv/test/salt
+      prod:
+        - /srv/prod/salt
 
 .. note::
     For masterless Salt, this parameter must be specified in the minion config
@@ -3996,6 +4021,8 @@ Pillar Configuration
 ``pillar_roots``
 ----------------
 
+.. versionchanged:: 3005
+
 Default:
 
 .. code-block:: yaml
@@ -4021,6 +4048,29 @@ Example:
         - /srv/pillar/prod
       __env__:
         - /srv/pillar/others
+
+Taking dynamic environments one step further, ``__env__`` can also be used in
+the ``pillar_roots`` filesystem path as of version 3005. It will be replaced
+with the actual ``pillarenv`` and searched for Pillar data to provide to the
+minion. For instance, this configuration:
+
+.. code-block:: yaml
+
+    pillar_roots:
+      __env__:
+        - /srv/__env__/pillar
+
+is equivalent to this static configuration:
+
+.. code-block:: yaml
+
+    pillar_roots:
+      dev:
+        - /srv/dev/pillar
+      test:
+        - /srv/test/pillar
+      prod:
+        - /srv/prod/pillar
 
 .. conf_master:: on_demand_ext_pillar
 
