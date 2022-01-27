@@ -62,7 +62,7 @@ def test_show_states_missing_sls(state, state_tree):
         - core
         - does-not-exist
     """
-    with pytest.helpers.temp_file("top.sls", top_sls_contents, state_tree):
+    with state_tree.base.temp_file("top.sls", top_sls_contents):
         states = state.show_states()
         assert isinstance(states, list)
         assert states == ["No matching sls found for 'does-not-exist' in env 'base'"]
@@ -86,7 +86,7 @@ def test_catch_recurse(state, state_tree):
         - require:
           - service: mysql
     """
-    with pytest.helpers.temp_file("recurse-fail.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("recurse-fail.sls", sls_contents):
         ret = state.sls("recurse-fail")
         assert ret.failed
         assert (
@@ -144,7 +144,7 @@ def test_no_recurse(state, state_tree, sls_contents, expected_in_output):
     """
     verify that a sls structure is NOT a recursive ref
     """
-    with pytest.helpers.temp_file("recurse-ok.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("recurse-ok.sls", sls_contents):
         ret = state.show_sls("recurse-ok")
         assert expected_in_output in ret
 
@@ -183,7 +183,7 @@ def test_running_dictionary_key_sls(state, state_tree):
     gndn:
       test.succeed_with_changes
     """
-    with pytest.helpers.temp_file("gndn.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("gndn.sls", sls_contents):
         sls2 = state.sls(mods="gndn")
 
     for state_return in sls2:
@@ -212,9 +212,7 @@ def requested_sls_key(minion_opts, state_tree):
             r" %{$_.Count}_|-run"
         )
     try:
-        with pytest.helpers.temp_file(
-            "requested.sls", sls_contents, state_tree
-        ) as sls_path:
+        with state_tree.base.temp_file("requested.sls", sls_contents) as sls_path:
             yield sls_key
     finally:
         cache_file = os.path.join(minion_opts["cachedir"], "req_state.p")
@@ -303,7 +301,7 @@ def test_issue_1876_syntax_error(state, state_tree, tmp_path):
     """.format(
         testfile
     )
-    with pytest.helpers.temp_file("issue-1876.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("issue-1876.sls", sls_contents):
         ret = state.sls("issue-1876")
         assert ret.failed
         errmsg = (
@@ -360,13 +358,12 @@ def test_issue_1879_too_simple_contains_check(state, state_tree, tmp_path):
         """
     )
 
-    issue_1879_dir = state_tree / "issue-1879"
-    with pytest.helpers.temp_file(
-        "init.sls", init_sls_contents, issue_1879_dir
-    ), pytest.helpers.temp_file(
-        "step-1.sls", step1_sls_contents, issue_1879_dir
-    ), pytest.helpers.temp_file(
-        "step-2.sls", step2_sls_contents, issue_1879_dir
+    with state_tree.base.temp_file(
+        "issue-1879/init.sls", init_sls_contents
+    ), state_tree.base.temp_file(
+        "issue-1879/step-1.sls", step1_sls_contents
+    ), state_tree.base.temp_file(
+        "issue-1879/step-2.sls", step2_sls_contents
     ):
         # Create the file
         ret = state.sls("issue-1879")
@@ -424,13 +421,9 @@ def test_include(state, state_tree, tmp_path):
     """.format(
         include_test_path
     )
-    with pytest.helpers.temp_file(
-        "testfile", "foo", state_tree
-    ), pytest.helpers.temp_file(
-        "to-include-test.sls", to_include_sls_contents, state_tree
-    ), pytest.helpers.temp_file(
-        "include-test.sls", include_sls_contents, state_tree
-    ):
+    with state_tree.base.temp_file("testfile", "foo"), state_tree.base.temp_file(
+        "to-include-test.sls", to_include_sls_contents
+    ), state_tree.base.temp_file("include-test.sls", include_sls_contents):
         ret = state.sls("include-test")
         for staterun in ret:
             assert staterun.result is True
@@ -476,14 +469,12 @@ def test_exclude(state, state_tree, tmp_path):
     """.format(
         exclude_test_path
     )
-    with pytest.helpers.temp_file(
-        "testfile", "foo", state_tree
-    ), pytest.helpers.temp_file(
-        "to-include-test.sls", to_include_sls_contents, state_tree
-    ), pytest.helpers.temp_file(
-        "include-test.sls", include_sls_contents, state_tree
-    ), pytest.helpers.temp_file(
-        "exclude-test.sls", exclude_sls_contents, state_tree
+    with state_tree.base.temp_file("testfile", "foo"), state_tree.base.temp_file(
+        "to-include-test.sls", to_include_sls_contents
+    ), state_tree.base.temp_file(
+        "include-test.sls", include_sls_contents
+    ), state_tree.base.temp_file(
+        "exclude-test.sls", exclude_sls_contents
     ):
         ret = state.sls("exclude-test")
         for staterun in ret:
@@ -514,10 +505,10 @@ def test_issue_2068_template_str(state, state_tree):
         - require:
           - test: required_state
     """
-    with pytest.helpers.temp_file(
-        "issue-2068-no-dot.sls", template_str_no_dot_sls_contents, state_tree
-    ) as template_str_no_dot_path, pytest.helpers.temp_file(
-        "issue-2068.sls", template_str_sls_contents, state_tree
+    with state_tree.base.temp_file(
+        "issue-2068-no-dot.sls", template_str_no_dot_sls_contents
+    ) as template_str_no_dot_path, state_tree.base.temp_file(
+        "issue-2068.sls", template_str_sls_contents
     ) as template_str_path:
         # If running this state with state.sls works, so should using state.template_str
         ret = state.sls("issue-2068-no-dot")
@@ -593,7 +584,7 @@ def test_pydsl(state, state_tree, tmp_path):
     """.format(
         testfile
     )
-    with pytest.helpers.temp_file("pydsl.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("pydsl.sls", sls_contents):
         ret = state.sls("pydsl")
         for staterun in ret:
             assert staterun.result is True
@@ -630,9 +621,9 @@ def test_issues_7905_and_8174_sls_syntax_error(state, state_tree):
       /foo/bar/foobar:
         file.exist
     """
-    with pytest.helpers.temp_file(
-        "badlist1.sls", badlist_1_sls_contents, state_tree
-    ), pytest.helpers.temp_file("badlist2.sls", badlist_2_sls_contents, state_tree):
+    with state_tree.base.temp_file(
+        "badlist1.sls", badlist_1_sls_contents
+    ), state_tree.base.temp_file("badlist2.sls", badlist_2_sls_contents):
         ret = state.sls("badlist1")
         assert ret.failed
         assert ret.errors == ["State 'A' in SLS 'badlist1' is not formed as a list"]
@@ -663,7 +654,7 @@ def test_retry_option(state, state_tree):
         'Attempt 1: Returned a result of "False", with the following '
         'comment: "Specified path /path/to/a/non-existent/file.txt does not exist"'
     )
-    with pytest.helpers.temp_file("retry.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("retry.sls", sls_contents):
         ret = state.sls("retry")
         for state_return in ret:
             assert state_return.result is False
@@ -693,7 +684,7 @@ def test_retry_option_success(state, state_tree, tmp_path):
     if salt.utils.platform.is_windows():
         duration = 16
 
-    with pytest.helpers.temp_file("retry.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("retry.sls", sls_contents):
         ret = state.sls("retry")
         for state_return in ret:
             assert state_return.result is True
@@ -737,7 +728,7 @@ def test_retry_option_eventual_success(state, state_tree, tmp_path):
     """.format(
         testfile1, testfile2
     )
-    with pytest.helpers.temp_file("retry.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("retry.sls", sls_contents):
         thread.start()
         ret = state.sls("retry")
         for state_return in ret:
@@ -748,7 +739,7 @@ def test_retry_option_eventual_success(state, state_tree, tmp_path):
 
 
 @pytest.mark.slow_test
-def test_state_non_base_environment(state, state_tree_prod, tmp_path):
+def test_state_non_base_environment(state, state_tree, tmp_path):
     """
     test state.sls with saltenv using a nonbase environment
     with a salt source
@@ -761,7 +752,7 @@ def test_state_non_base_environment(state, state_tree_prod, tmp_path):
     """.format(
         testfile
     )
-    with pytest.helpers.temp_file("non-base-env.sls", sls_contents, state_tree_prod):
+    with state_tree.prod.temp_file("non-base-env.sls", sls_contents):
         ret = state.sls("non-base-env", saltenv="prod")
         for state_return in ret:
             assert state_return.result is True
@@ -799,7 +790,7 @@ def test_parallel_state_with_long_tag(state, state_tree):
     """.format(
         short_command, long_command
     )
-    with pytest.helpers.temp_file("issue-49738.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("issue-49738.sls", sls_contents):
         ret = state.sls(
             "issue-49738",
             __pub_jid="1",  # Because these run in parallel we need a fake JID
@@ -828,7 +819,7 @@ def test_state_sls_unicode_characters(state, state_tree):
       cmd.run:
         - name: "echo 'This is Æ test!'"
     """
-    with pytest.helpers.temp_file("issue-46672.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("issue-46672.sls", sls_contents):
         ret = state.sls("issue-46672")
         expected = "cmd_|-echo1_|-echo 'This is Æ test!'_|-run"
         assert expected in ret
@@ -844,7 +835,7 @@ def test_state_sls_integer_name(state, state_tree):
       test.succeed_without_changes
     """
     state_id = "test_|-always-passes_|-always-passes_|-succeed_without_changes"
-    with pytest.helpers.temp_file("12345.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("12345.sls", sls_contents):
         ret = state.sls("12345")
         assert state_id in ret
         for state_return in ret:
@@ -872,7 +863,7 @@ def test_state_sls_lazyloader_allows_recursion(state, state_tree):
         - name: foo
     """
     state_id = "test_|-always-passes_|-foo_|-succeed_without_changes"
-    with pytest.helpers.temp_file("issue-51499.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("issue-51499.sls", sls_contents):
         ret = state.sls("issue-51499")
         assert state_id in ret
         for state_return in ret:

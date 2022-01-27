@@ -58,7 +58,7 @@ def etc_docker_container(salt_call_cli, sdb_etcd_port):
 
 
 @pytest.fixture(scope="module")
-def pillar_tree(base_env_pillar_tree_root_dir, salt_minion):
+def module_pillar_tree(pillar_tree, salt_minion):
     top_file = """
     base:
       '{}':
@@ -70,15 +70,11 @@ def pillar_tree(base_env_pillar_tree_root_dir, salt_minion):
     test_vault_pillar_sdb: sdb://sdbvault/secret/test/test_pillar_sdb/foo
     test_etcd_pillar_sdb: sdb://sdbetcd/secret/test/test_pillar_sdb/foo
     """
-    top_tempfile = pytest.helpers.temp_file(
-        "top.sls", top_file, base_env_pillar_tree_root_dir
-    )
-    sdb_tempfile = pytest.helpers.temp_file(
-        "sdb.sls", sdb_pillar_file, base_env_pillar_tree_root_dir
-    )
+    top_tempfile = pillar_tree.base.temp_file("top.sls", top_file)
+    sdb_tempfile = pillar_tree.base.temp_file("sdb.sls", sdb_pillar_file)
 
     with top_tempfile, sdb_tempfile:
-        yield
+        yield pillar_tree
 
 
 @pytest.mark.slow_test
@@ -112,7 +108,8 @@ def test_sdb_runner(salt_run_cli):
 
 
 @pytest.mark.slow_test
-def test_config(salt_call_cli, pillar_tree):
+@pytest.mark.usefixtures("module_pillar_tree")
+def test_config(salt_call_cli):
     ret = salt_call_cli.run(
         "sdb.set", uri="sdb://sdbetcd/secret/test/test_pillar_sdb/foo", value="bar"
     )

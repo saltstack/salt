@@ -5,7 +5,7 @@ import pytest
 
 
 @pytest.fixture(scope="module")
-def pillar_include_tree(base_env_pillar_tree_root_dir, salt_minion, salt_call_cli):
+def pillar_include_tree(pillar_tree, salt_minion, salt_call_cli):
     top_file = """
     base:
       '{}':
@@ -40,23 +40,19 @@ def pillar_include_tree(base_env_pillar_tree_root_dir, salt_minion, salt_call_cl
       - include-c:
           key: element:d
     """
-    top_tempfile = pytest.helpers.temp_file(
-        "top.sls", top_file, base_env_pillar_tree_root_dir
+    top_tempfile = pillar_tree.base.temp_file("top.sls", top_file)
+    include_tempfile = pillar_tree.base.temp_file("include.sls", include_pillar_file)
+    include_a_tempfile = pillar_tree.base.temp_file(
+        "include-a.sls", include_a_pillar_file
     )
-    include_tempfile = pytest.helpers.temp_file(
-        "include.sls", include_pillar_file, base_env_pillar_tree_root_dir
+    include_b_tempfile = pillar_tree.base.temp_file(
+        "include-b.sls", include_b_pillar_file
     )
-    include_a_tempfile = pytest.helpers.temp_file(
-        "include-a.sls", include_a_pillar_file, base_env_pillar_tree_root_dir
+    include_c_tempfile = pillar_tree.base.temp_file(
+        "include-c.sls", include_c_pillar_file
     )
-    include_b_tempfile = pytest.helpers.temp_file(
-        "include-b.sls", include_b_pillar_file, base_env_pillar_tree_root_dir
-    )
-    include_c_tempfile = pytest.helpers.temp_file(
-        "include-c.sls", include_c_pillar_file, base_env_pillar_tree_root_dir
-    )
-    include_d_tempfile = pytest.helpers.temp_file(
-        "include-d.sls", include_d_pillar_file, base_env_pillar_tree_root_dir
+    include_d_tempfile = pillar_tree.base.temp_file(
+        "include-d.sls", include_d_pillar_file
     )
     glob_include_pillar_file = """
     include:
@@ -70,17 +66,15 @@ def pillar_include_tree(base_env_pillar_tree_root_dir, salt_minion, salt_call_cl
     glob-b:
       - 'Entry B'
     """
-    top_tempfile = pytest.helpers.temp_file(
-        "top.sls", top_file, base_env_pillar_tree_root_dir
+    top_tempfile = pillar_tree.base.temp_file("top.sls", top_file)
+    glob_include_tempfile = pillar_tree.base.temp_file(
+        "glob-include.sls", glob_include_pillar_file
     )
-    glob_include_tempfile = pytest.helpers.temp_file(
-        "glob-include.sls", glob_include_pillar_file, base_env_pillar_tree_root_dir
+    glob_include_a_tempfile = pillar_tree.base.temp_file(
+        "glob-include-a.sls", glob_include_a_pillar_file
     )
-    glob_include_a_tempfile = pytest.helpers.temp_file(
-        "glob-include-a.sls", glob_include_a_pillar_file, base_env_pillar_tree_root_dir
-    )
-    glob_include_b_tempfile = pytest.helpers.temp_file(
-        "glob-include-b.sls", glob_include_b_pillar_file, base_env_pillar_tree_root_dir
+    glob_include_b_tempfile = pillar_tree.base.temp_file(
+        "glob-include-b.sls", glob_include_b_pillar_file
     )
     try:
         with top_tempfile, include_tempfile, include_a_tempfile, include_b_tempfile, include_c_tempfile, include_d_tempfile:

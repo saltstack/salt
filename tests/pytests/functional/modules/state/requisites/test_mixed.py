@@ -61,7 +61,7 @@ def test_requisites_mixed_require_prereq_use_1(state, state_tree):
         - prereq:
             - cmd: B
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         result = normalize_ret(ret.raw)
         assert result == expected_simple_result
@@ -155,7 +155,7 @@ def test_requisites_mixed_require_prereq_use_2(state, state_tree):
     }
     # undetected infinite loops prevents this test from running...
     # TODO: this is actually failing badly
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         result = normalize_ret(ret.raw)
         assert result == expected_result
@@ -187,7 +187,7 @@ def test_requisites_mixed_require_prereq_use_3(state, state_tree):
     """
     expected_result = ['A recursive requisite was found, SLS "requisite" ID "B" ID "A"']
     # TODO: this is actually failing badly
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert isinstance(ret, list)  # Error
         assert ret == expected_result
@@ -230,7 +230,7 @@ def test_requisites_mixed_require_prereq_use_4(state, state_tree):
     """
     expected_result = ['A recursive requisite was found, SLS "requisite" ID "B" ID "A"']
     # TODO: this is actually failing badly
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert isinstance(ret, list)  # Error
         assert ret == expected_result
@@ -270,7 +270,7 @@ def test_requisites_mixed_require_prereq_use_5(state, state_tree):
     """
     expected_result = ['A recursive requisite was found, SLS "requisite" ID "B" ID "A"']
     # TODO: this is actually failing badly, and expected result is maybe not a recursion
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert isinstance(ret, list)  # Error
         assert ret == expected_result
@@ -301,7 +301,7 @@ def test_issue_46762_prereqs_on_a_state_with_unfulfilled_requirements(
       - require:
         - a
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
 
     state_id = "test_|-a_|-a_|-fail_without_changes"
@@ -359,7 +359,7 @@ def test_issue_30161_unless_and_onlyif_together(state, state_tree, tmp_path):
         test_false=pytest.helpers.shell_test_false(),
         test_txt_path=test_txt_path,
     )
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         for state_entry in ret:
             assert state_entry.result is True

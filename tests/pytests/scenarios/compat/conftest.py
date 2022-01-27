@@ -12,6 +12,7 @@ import pytest
 import salt.utils.path
 from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
+from saltfactories.utils.tempfiles import SaltPillarTree, SaltStateTree
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
 
@@ -73,7 +74,7 @@ def salt_factories_config(salt_factories_config, host_docker_network_ip_address)
     return config
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture(scope="session")
 def integration_files_dir(tmp_path_factory):
     """
     Fixture which returns the salt integration files directory path.
@@ -86,26 +87,34 @@ def integration_files_dir(tmp_path_factory):
         shutil.rmtree(str(dirname), ignore_errors=True)
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture(scope="session")
 def state_tree(integration_files_dir):
-    """
-    Fixture which returns the salt state tree root directory path.
-    Creates the directory if it does not yet exist.
-    """
-    dirname = integration_files_dir / "state-tree"
-    dirname.mkdir(exist_ok=True)
-    return dirname
+    state_tree_path = integration_files_dir / "state-tree"
+    state_tree_path.mkdir(exist_ok=True)
+    base_state_tree_path = state_tree_path / "base"
+    base_state_tree_path.mkdir(exist_ok=True)
+    envs = {
+        "base": [str(base_state_tree_path)],
+    }
+    try:
+        yield SaltStateTree(envs=envs)
+    finally:
+        shutil.rmtree(str(state_tree_path), ignore_errors=True)
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture(scope="session")
 def pillar_tree(integration_files_dir):
-    """
-    Fixture which returns the salt pillar tree root directory path.
-    Creates the directory if it does not yet exist.
-    """
-    dirname = integration_files_dir / "pillar-tree"
-    dirname.mkdir(exist_ok=True)
-    return dirname
+    pillar_tree_path = integration_files_dir / "pillar-tree"
+    pillar_tree_path.mkdir(exist_ok=True)
+    base_pillar_tree_path = pillar_tree_path / "base"
+    base_pillar_tree_path.mkdir(exist_ok=True)
+    envs = {
+        "base": [str(base_pillar_tree_path)],
+    }
+    try:
+        yield SaltPillarTree(envs=envs)
+    finally:
+        shutil.rmtree(str(pillar_tree_path), ignore_errors=True)
 
 
 @pytest.fixture(scope="package")
@@ -144,8 +153,8 @@ def salt_master(
     config_overrides.update(
         {
             "extension_modules": extension_modules_path,
-            "file_roots": {"base": [str(state_tree)]},
-            "pillar_roots": {"base": [str(pillar_tree)]},
+            "file_roots": state_tree.as_dict(),
+            "pillar_roots": pillar_tree.as_dict(),
         }
     )
     factory = salt_factories.salt_master_daemon(

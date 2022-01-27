@@ -36,6 +36,7 @@ import salt.utils.platform
 import salt.utils.win_functions
 from salt.serializers import yaml
 from salt.utils.immutabletypes import freeze
+from saltfactories.utils.tempfiles import SaltPillarTree, SaltStateTree
 from tests.support.helpers import (
     PRE_PYTEST_SKIP_OR_NOT,
     PRE_PYTEST_SKIP_REASON,
@@ -648,96 +649,161 @@ def integration_files_dir(salt_factories):
 
 
 @pytest.fixture(scope="session")
-def state_tree_root_dir(integration_files_dir):
+def state_tree(integration_files_dir):
+    state_tree_path = integration_files_dir / "state-tree"
+    state_tree_path.mkdir(exist_ok=True)
+
+    base_env_path = state_tree_path / "base"
+    base_env_path.mkdir(exist_ok=True)
+    RUNTIME_VARS.TMP_STATE_TREE = str(base_env_path.resolve())
+    RUNTIME_VARS.TMP_BASEENV_STATE_TREE = RUNTIME_VARS.TMP_STATE_TREE
+
+    prod_env_path = state_tree_path / "prod"
+    prod_env_path.mkdir(exist_ok=True)
+    RUNTIME_VARS.TMP_PRODENV_STATE_TREE = str(prod_env_path.resolve())
+
+    envs = {
+        "base": [
+            str(base_env_path),
+            os.path.join(RUNTIME_VARS.FILES, "file", "base"),
+        ],
+        # Alternate root to test __env__ choices
+        "prod": [
+            str(prod_env_path),
+            os.path.join(RUNTIME_VARS.FILES, "file", "prod"),
+        ],
+    }
+    return SaltStateTree(envs=envs)
+
+
+@pytest.fixture(scope="session")
+def pillar_tree(integration_files_dir):
+    pillar_tree_path = integration_files_dir / "pillar-tree"
+    pillar_tree_path.mkdir(exist_ok=True)
+
+    base_env_path = pillar_tree_path / "base"
+    base_env_path.mkdir(exist_ok=True)
+    RUNTIME_VARS.TMP_PILLAR_TREE = str(base_env_path.resolve())
+    RUNTIME_VARS.TMP_BASEENV_PILLAR_TREE = RUNTIME_VARS.TMP_PILLAR_TREE
+
+    prod_env_path = pillar_tree_path / "prod"
+    prod_env_path.mkdir(exist_ok=True)
+    RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE = str(prod_env_path.resolve())
+
+    envs = {
+        "base": [
+            str(base_env_path),
+            os.path.join(RUNTIME_VARS.FILES, "pillar", "base"),
+        ],
+        # Alternate root to test __env__ choices
+        "prod": [
+            str(prod_env_path),
+        ],
+    }
+    return SaltPillarTree(envs=envs)
+
+
+@pytest.fixture(scope="session")
+def state_tree_root_dir():
     """
     Fixture which returns the salt state tree root directory path.
     Creates the directory if it does not yet exist.
     """
-    dirname = integration_files_dir / "state-tree"
-    dirname.mkdir(exist_ok=True)
-    return dirname
+    raise pytest.UsageError(
+        "The 'state_tree_root_dir' fixture is no longer available. "
+        "Please use the 'state_tree' fixture."
+    )
 
 
 @pytest.fixture(scope="session")
-def pillar_tree_root_dir(integration_files_dir):
+def pillar_tree_root_dir():
     """
     Fixture which returns the salt pillar tree root directory path.
     Creates the directory if it does not yet exist.
     """
-    dirname = integration_files_dir / "pillar-tree"
-    dirname.mkdir(exist_ok=True)
-    return dirname
+    raise pytest.UsageError(
+        "The 'pillar_tree_root_dir' fixture is no longer available. "
+        "Please use the 'pillar_tree' fixture."
+    )
 
 
 @pytest.fixture(scope="session")
-def base_env_state_tree_root_dir(state_tree_root_dir):
+def base_env_state_tree_root_dir():
     """
     Fixture which returns the salt base environment state tree directory path.
     Creates the directory if it does not yet exist.
     """
-    dirname = state_tree_root_dir / "base"
-    dirname.mkdir(exist_ok=True)
-    RUNTIME_VARS.TMP_STATE_TREE = str(dirname.resolve())
-    RUNTIME_VARS.TMP_BASEENV_STATE_TREE = RUNTIME_VARS.TMP_STATE_TREE
-    return dirname
+    raise pytest.UsageError(
+        "The 'base_env_state_tree_root_dir' fixture is no longer available. "
+        "Please use the 'state_tree' fixture. To create temporary state tree "
+        "files use 'state_tree.base.temp_file()'. See "
+        "https://pytest-salt-factories.readthedocs.io/en/latest/ref/saltfactories/utils/tempfiles.html#saltfactories.utils.tempfiles.SaltStateTree "
+        "for additional information."
+    )
 
 
 @pytest.fixture(scope="session")
-def prod_env_state_tree_root_dir(state_tree_root_dir):
+def prod_env_state_tree_root_dir():
     """
     Fixture which returns the salt prod environment state tree directory path.
     Creates the directory if it does not yet exist.
     """
-    dirname = state_tree_root_dir / "prod"
-    dirname.mkdir(exist_ok=True)
-    RUNTIME_VARS.TMP_PRODENV_STATE_TREE = str(dirname.resolve())
-    return dirname
+    raise pytest.UsageError(
+        "The 'prod_env_state_tree_root_dir' fixture is no longer available. "
+        "Please use the 'state_tree' fixture. To create temporary state tree "
+        "files use 'state_tree.prod.temp_file()'. See "
+        "https://pytest-salt-factories.readthedocs.io/en/latest/ref/saltfactories/utils/tempfiles.html#saltfactories.utils.tempfiles.SaltStateTree "
+        "for additional information."
+    )
 
 
 @pytest.fixture(scope="session")
-def base_env_pillar_tree_root_dir(pillar_tree_root_dir):
+def base_env_pillar_tree_root_dir():
     """
     Fixture which returns the salt base environment pillar tree directory path.
     Creates the directory if it does not yet exist.
     """
-    dirname = pillar_tree_root_dir / "base"
-    dirname.mkdir(exist_ok=True)
-    RUNTIME_VARS.TMP_PILLAR_TREE = str(dirname.resolve())
-    RUNTIME_VARS.TMP_BASEENV_PILLAR_TREE = RUNTIME_VARS.TMP_PILLAR_TREE
-    return dirname
+    raise pytest.UsageError(
+        "The 'base_env_pillar_tree_root_dir' fixture is no longer available. "
+        "Please use the 'pillar_tree' fixture. To create temporary pillar tree "
+        "files use 'pillar_tree.base.temp_file()'. See "
+        "https://pytest-salt-factories.readthedocs.io/en/latest/ref/saltfactories/utils/tempfiles.html#saltfactories.utils.tempfiles.SaltPillarTree "
+        "for additional information."
+    )
 
 
 @pytest.fixture(scope="session")
-def ext_pillar_file_tree_root_dir(pillar_tree_root_dir):
+def ext_pillar_file_tree_root_dir(integration_files_dir):
     """
     Fixture which returns the salt pillar file tree directory path.
     Creates the directory if it does not yet exist.
     """
-    dirname = pillar_tree_root_dir / "file-tree"
+    dirname = integration_files_dir / "ext-pillar-tree"
     dirname.mkdir(exist_ok=True)
     return dirname
 
 
 @pytest.fixture(scope="session")
-def prod_env_pillar_tree_root_dir(pillar_tree_root_dir):
+def prod_env_pillar_tree_root_dir():
     """
     Fixture which returns the salt prod environment pillar tree directory path.
     Creates the directory if it does not yet exist.
     """
-    dirname = pillar_tree_root_dir / "prod"
-    dirname.mkdir(exist_ok=True)
-    RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE = str(dirname.resolve())
-    return dirname
+    raise pytest.UsageError(
+        "The 'prod_env_pillar_tree_root_dir' fixture is no longer available. "
+        "Please use the 'pillar_tree' fixture. To create temporary pillar tree "
+        "files use 'pillar_tree.prod.temp_file()'. See "
+        "https://pytest-salt-factories.readthedocs.io/en/latest/ref/saltfactories/utils/tempfiles.html#saltfactories.utils.tempfiles.SaltPillarTree "
+        "for additional information."
+    )
 
 
 @pytest.fixture(scope="session")
 def salt_syndic_master_factory(
     request,
     salt_factories,
-    base_env_state_tree_root_dir,
-    base_env_pillar_tree_root_dir,
-    prod_env_state_tree_root_dir,
-    prod_env_pillar_tree_root_dir,
+    state_tree,
+    pillar_tree,
 ):
     root_dir = salt_factories.get_root_dir_for_daemon("syndic_master")
     conf_dir = root_dir / "conf"
@@ -792,24 +858,8 @@ def salt_syndic_master_factory(
         {
             "ext_pillar": ext_pillar,
             "extension_modules": extension_modules_path,
-            "file_roots": {
-                "base": [
-                    str(base_env_state_tree_root_dir),
-                    os.path.join(RUNTIME_VARS.FILES, "file", "base"),
-                ],
-                # Alternate root to test __env__ choices
-                "prod": [
-                    str(prod_env_state_tree_root_dir),
-                    os.path.join(RUNTIME_VARS.FILES, "file", "prod"),
-                ],
-            },
-            "pillar_roots": {
-                "base": [
-                    str(base_env_pillar_tree_root_dir),
-                    os.path.join(RUNTIME_VARS.FILES, "pillar", "base"),
-                ],
-                "prod": [str(prod_env_pillar_tree_root_dir)],
-            },
+            "file_roots": state_tree.as_dict(),
+            "pillar_roots": pillar_tree.as_dict(),
         }
     )
 
@@ -847,10 +897,8 @@ def salt_syndic_factory(salt_factories, salt_syndic_master_factory):
 def salt_master_factory(
     salt_factories,
     salt_syndic_master_factory,
-    base_env_state_tree_root_dir,
-    base_env_pillar_tree_root_dir,
-    prod_env_state_tree_root_dir,
-    prod_env_pillar_tree_root_dir,
+    state_tree,
+    pillar_tree,
     ext_pillar_file_tree_root_dir,
 ):
     root_dir = salt_factories.get_root_dir_for_daemon("master")
@@ -914,24 +962,8 @@ def salt_master_factory(
         {
             "ext_pillar": ext_pillar,
             "extension_modules": extension_modules_path,
-            "file_roots": {
-                "base": [
-                    str(base_env_state_tree_root_dir),
-                    os.path.join(RUNTIME_VARS.FILES, "file", "base"),
-                ],
-                # Alternate root to test __env__ choices
-                "prod": [
-                    str(prod_env_state_tree_root_dir),
-                    os.path.join(RUNTIME_VARS.FILES, "file", "prod"),
-                ],
-            },
-            "pillar_roots": {
-                "base": [
-                    str(base_env_pillar_tree_root_dir),
-                    os.path.join(RUNTIME_VARS.FILES, "pillar", "base"),
-                ],
-                "prod": [str(prod_env_pillar_tree_root_dir)],
-            },
+            "file_roots": state_tree.as_dict(),
+            "pillar_roots": pillar_tree.as_dict(),
         }
     )
 

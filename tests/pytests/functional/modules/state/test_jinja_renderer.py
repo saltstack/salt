@@ -31,9 +31,9 @@ def test_jinja_renderer_argline(state, state_tree):
       cmd.run:
         - name: echo {{ salt.cmd.run('whoami') }}
     """
-    with pytest.helpers.temp_file(
-        "issue51499.py", renderer_contents, state_tree / "_renderers"
-    ), pytest.helpers.temp_file("issue-55124.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file(
+        "_renderers/issue51499.py", renderer_contents
+    ), state_tree.base.temp_file("issue-55124.sls", sls_contents):
         ret = state.sls("issue-55124")
         for state_return in ret:
             assert state_return.result is True

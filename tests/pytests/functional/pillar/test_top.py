@@ -6,7 +6,7 @@ pytestmark = [
 ]
 
 
-def test_pillar_top_compound_match(salt_master, pillar_state_tree, grains):
+def test_pillar_top_compound_match(salt_master, pillar_tree, grains):
     """
     Test that a compound match topfile that refers to a nodegroup via N@ works
     as expected.
@@ -20,12 +20,12 @@ def test_pillar_top_compound_match(salt_master, pillar_state_tree, grains):
     """
     ng1_pillar_contents = "pillar_from_nodegroup: True"
     ng2_pillar_contents = "pillar_from_nodegroup_with_ghost: True"
-    with pytest.helpers.temp_file(
-        "top.sls", top_file_contents, pillar_state_tree
-    ), pytest.helpers.temp_file(
-        "ng1.sls", ng1_pillar_contents, pillar_state_tree
-    ), pytest.helpers.temp_file(
-        "ng2.sls", ng2_pillar_contents, pillar_state_tree
+    with pillar_tree.base.temp_file(
+        "top.sls", top_file_contents
+    ), pillar_tree.base.temp_file(
+        "ng1.sls", ng1_pillar_contents
+    ), pillar_tree.base.temp_file(
+        "ng2.sls", ng2_pillar_contents
     ):
         opts = salt_master.config.copy()
         opts["nodegroups"] = {

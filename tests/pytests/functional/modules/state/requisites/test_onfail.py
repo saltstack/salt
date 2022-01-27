@@ -104,7 +104,7 @@ def test_requisites_onfail_any(state, state_tree):
             "result": True,
         },
     }
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         result = normalize_ret(ret.raw)
         assert result == expected_result
@@ -234,7 +234,7 @@ def test_requisites_onfail_all(state, state_tree):
             "result": True,
         },
     }
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         result = normalize_ret(ret.raw)
         assert result == expected_result
@@ -265,7 +265,7 @@ def test_onfail_requisite(state, state_tree):
         - onfail:
           - cmd: non_failing_state
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert (
             ret['cmd_|-test_failing_state_|-echo "Success!"_|-run'].comment
@@ -300,7 +300,7 @@ def test_multiple_onfail_requisite(state, state_tree):
           - cmd: a
           - cmd: b
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert ret["cmd_|-c_|-echo itworked_|-run"].changes["retcode"] == 0
         assert ret["cmd_|-c_|-echo itworked_|-run"].changes["stdout"] == "itworked"
@@ -331,7 +331,7 @@ def test_onfail_in_requisite(state, state_tree):
       cmd.run:
         - name: echo "Should not run"
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert (
             ret['cmd_|-test_failing_state_|-echo "Success!"_|-run'].comment
@@ -368,7 +368,7 @@ def test_onfail_requisite_no_state_module(state, state_tree):
         - onfail:
           - non_failing_state
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert (
             ret['cmd_|-test_failing_state_|-echo "Success!"_|-run'].comment
@@ -405,7 +405,7 @@ def test_onfail_requisite_with_duration(state, state_tree):
         - onfail:
           - cmd: non_failing_state
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert (
             "duration"
@@ -467,7 +467,7 @@ def test_multiple_onfail_requisite_with_required(state, state_tree):
         - onchanges:
           - cmd: b
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
 
         assert ret["cmd_|-b_|-echo b_|-run"].changes["retcode"] == 0
@@ -522,7 +522,7 @@ def test_multiple_onfail_requisite_with_required_no_run(state, state_tree):
           - cmd: c
     """
     expected = "State was not run because onfail req did not change"
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert ret["cmd_|-b_|-echo b_|-run"].comment == expected
         assert ret["cmd_|-c_|-echo c_|-run"].comment == expected

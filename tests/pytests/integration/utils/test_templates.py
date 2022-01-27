@@ -3,14 +3,8 @@ Tests for the templates utils
 """
 import os
 
-import pytest
 
-
-def test_issue_60083(
-    salt_call_cli,
-    tmp_path,
-    base_env_state_tree_root_dir,
-):
+def test_issue_60083(salt_call_cli, tmp_path, state_tree):
     """
     Validate that we can serialize pillars to json in states.
     Issue #60083
@@ -24,9 +18,7 @@ def test_issue_60083(
         - contents: |
             {{ pillar|json }}
     """
-    sls_tempfile = pytest.helpers.temp_file(
-        "{}.sls".format(sls_name), sls_contents, base_env_state_tree_root_dir
-    )
+    sls_tempfile = state_tree.base.temp_file("{}.sls".format(sls_name), sls_contents)
     with sls_tempfile:  # , issue_50221_ext_pillar_tempfile:
         ret = salt_call_cli.run(
             "state.apply", sls_name, pillar={"target-path": str(target_path)}

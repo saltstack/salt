@@ -186,7 +186,7 @@ GPG_PILLAR_DECRYPTED = {
 
 
 @pytest.fixture(scope="package", autouse=True)
-def gpg_homedir(salt_master, pillar_state_tree):
+def gpg_homedir(salt_master, pillar_tree):
     _gpg_homedir = pathlib.Path(salt_master.config_dir) / "gpgkeys"
     _gpg_homedir.mkdir(0o700)
     agent_started = False
@@ -233,9 +233,9 @@ def gpg_homedir(salt_master, pillar_state_tree):
           '*':
             - gpg
         """
-        with pytest.helpers.temp_file(
-            "top.sls", top_file_contents, pillar_state_tree
-        ), pytest.helpers.temp_file("gpg.sls", GPG_PILLAR_YAML, pillar_state_tree):
+        with pillar_tree.base.temp_file(
+            "top.sls", top_file_contents
+        ), pillar_tree.base.temp_file("gpg.sls", GPG_PILLAR_YAML):
             yield _gpg_homedir
     finally:
         if agent_started:

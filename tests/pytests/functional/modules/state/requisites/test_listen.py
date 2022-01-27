@@ -44,7 +44,7 @@ def test_listen_requisite(state, state_tree):
         - listen:
           - cmd: successful_changing_state
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         listener_state = (
             'cmd_|-listener_test_listening_change_state_|-echo "Listening'
@@ -101,7 +101,7 @@ def test_listen_in_requisite(state, state_tree):
         - listen_in:
           - cmd: test_listen_in_resolution
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
 
         listener_state = (
@@ -158,7 +158,7 @@ def test_listen_in_requisite_resolution(state, state_tree):
         - listen_in:
           - cmd: test_listen_in_resolution
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         listener_state = (
             'cmd_|-listener_test_listen_in_resolution_|-echo "Successful listen_in'
@@ -206,7 +206,7 @@ def test_listen_requisite_resolution(state, state_tree):
         - listen:
           - cmd: successful_changing_state
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         listener_state = (
             'cmd_|-listener_test_listening_resolution_one_|-echo "Successful listen'
@@ -254,7 +254,7 @@ def test_listen_requisite_no_state_module(state, state_tree):
         - listen:
           - successful_changing_state
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         listener_state = (
             'cmd_|-listener_test_listening_change_state_|-echo "Listening'
@@ -287,7 +287,7 @@ def test_listen_in_requisite_resolution_names(state, state_tree):
           - nginx
           - crond
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert "test_|-listener_service_|-nginx_|-mod_watch" in ret
         assert "test_|-listener_service_|-crond_|-mod_watch" in ret
@@ -311,7 +311,7 @@ def test_listen_requisite_resolution_names(state, state_tree):
         - listen:
           - test: test
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert "test_|-listener_service_|-nginx_|-mod_watch" in ret
         assert "test_|-listener_service_|-crond_|-mod_watch" in ret

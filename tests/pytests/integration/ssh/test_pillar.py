@@ -5,8 +5,8 @@ pytestmark = [
 ]
 
 
-@pytest.fixture(scope="module")
-def pillar_tree(base_env_pillar_tree_root_dir):
+@pytest.fixture(scope="module", autouse=True)
+def module_pillar_tree(pillar_tree):
     top_file = """
     base:
       'localhost':
@@ -22,19 +22,15 @@ def pillar_tree(base_env_pillar_tree_root_dir):
       - Bedevere
       - Robin
     """
-    top_tempfile = pytest.helpers.temp_file(
-        "top.sls", top_file, base_env_pillar_tree_root_dir
-    )
-    basic_tempfile = pytest.helpers.temp_file(
-        "basic.sls", basic_pillar_file, base_env_pillar_tree_root_dir
-    )
+    top_tempfile = pillar_tree.base.temp_file("top.sls", top_file)
+    basic_tempfile = pillar_tree.base.temp_file("basic.sls", basic_pillar_file)
 
     with top_tempfile, basic_tempfile:
-        yield
+        yield pillar_tree
 
 
 @pytest.mark.slow_test
-def test_pillar_items(salt_ssh_cli, pillar_tree):
+def test_pillar_items(salt_ssh_cli):
     """
     test pillar.items with salt-ssh
     """
@@ -49,7 +45,7 @@ def test_pillar_items(salt_ssh_cli, pillar_tree):
 
 
 @pytest.mark.slow_test
-def test_pillar_get(salt_ssh_cli, pillar_tree):
+def test_pillar_get(salt_ssh_cli):
     """
     test pillar.get with salt-ssh
     """
@@ -60,7 +56,7 @@ def test_pillar_get(salt_ssh_cli, pillar_tree):
 
 
 @pytest.mark.slow_test
-def test_pillar_get_doesnotexist(salt_ssh_cli, pillar_tree):
+def test_pillar_get_doesnotexist(salt_ssh_cli):
     """
     test pillar.get when pillar does not exist with salt-ssh
     """

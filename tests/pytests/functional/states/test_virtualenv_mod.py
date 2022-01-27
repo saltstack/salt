@@ -20,9 +20,8 @@ def test_issue_1959_virtualenv_runas(tmp_path, state_tree, states):
     with pytest.helpers.create_account(create_group=True) as account:
 
         state_tree_dirname = account.username
-        state_tree_path = state_tree / state_tree_dirname
-        with pytest.helpers.temp_file(
-            "requirements.txt", contents="pep8==1.3.3\n", directory=state_tree_path
+        with state_tree.base.temp_file(
+            "{}/requirements.txt".format(state_tree_dirname), contents="pep8==1.3.3\n"
         ):
             venv_dir = tmp_path / "venv"
             ret = states.virtualenv.managed(
@@ -40,9 +39,8 @@ def test_issue_1959_virtualenv_runas(tmp_path, state_tree, states):
 @pytest.mark.parametrize("requirement", ["pep8==1.3.3", "zope.interface==5.0.0"])
 def test_issue_2594_non_invalidated_cache(tmp_path, state_tree, modules, requirement):
     state_tree_dirname = "issue-2594"
-    state_tree_path = state_tree / state_tree_dirname
-    with pytest.helpers.temp_file(
-        "requirements.txt", contents=requirement, directory=state_tree_path
+    with state_tree.base.temp_file(
+        "{}/requirements.txt".format(state_tree_dirname), contents=requirement
     ):
         venv_dir = tmp_path / "venv"
 

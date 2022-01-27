@@ -1,15 +1,16 @@
 import shutil
 
 import pytest
+from saltfactories.utils.tempfiles import SaltPillarTree
 
 
 @pytest.fixture(scope="package")
-def pillar_state_tree(tmp_path_factory):
-    _pillar_state_tree = tmp_path_factory.mktemp("pillar")
+def pillar_tree(tmp_path_factory):
+    _pillar_tree = tmp_path_factory.mktemp("pillar")
     try:
-        yield _pillar_state_tree
+        yield SaltPillarTree(envs={"base": [str(_pillar_tree)]})
     finally:
-        shutil.rmtree(str(_pillar_state_tree), ignore_errors=True)
+        shutil.rmtree(str(_pillar_tree), ignore_errors=True)
 
 
 @pytest.fixture(scope="package")
@@ -22,9 +23,9 @@ def extension_modules(tmp_path_factory):
 
 
 @pytest.fixture(scope="package")
-def salt_master(salt_factories, pillar_state_tree, extension_modules):
+def salt_master(salt_factories, pillar_tree, extension_modules):
     config_defaults = {
-        "pillar_roots": {"base": [str(pillar_state_tree)]},
+        "pillar_roots": pillar_tree.as_dict(),
         "open_mode": True,
         "extension_modules": str(extension_modules),
         "ext_pillar_first": False,

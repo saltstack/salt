@@ -85,7 +85,7 @@ def test_requisites_onchanges_any(state, state_tree):
             "result": True,
         },
     }
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         result = normalize_ret(ret.raw)
         assert result == expected_result
@@ -116,7 +116,7 @@ def test_onchanges_requisite(state, state_tree):
         - onchanges:
           - test: non_changing_state
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert (
             ret['cmd_|-test_changing_state_|-echo "Success!"_|-run'].comment
@@ -170,7 +170,7 @@ def test_onchanges_requisite_multiple(state, state_tree):
           - cmd: changing_state
           - test: non_changing_state
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert (
             ret['cmd_|-test_two_changing_states_|-echo "Success!"_|-run'].comment
@@ -215,7 +215,7 @@ def test_onchanges_in_requisite(state, state_tree):
       cmd.run:
         - name: echo "Should not run"
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert (
             ret['cmd_|-test_changes_expected_|-echo "Success!"_|-run'].comment
@@ -253,7 +253,7 @@ def test_onchanges_requisite_no_state_module(state, state_tree):
         - onchanges:
           - non_changing_state
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert (
             ret['cmd_|-test_changing_state_|-echo "Success!"_|-run'].comment
@@ -287,7 +287,7 @@ def test_onchanges_requisite_with_duration(state, state_tree):
         - onchanges:
           - test: non_changing_state
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert (
             "duration"

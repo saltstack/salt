@@ -24,11 +24,11 @@ def test_get_file_from_env_in_top_match(salt_cli, salt_sub_minion):
             os.unlink(tgt)
 
 
-def test_issue_56131(salt_minion, base_env_state_tree_root_dir, tmp_path):
+def test_issue_56131(salt_minion, state_tree, tmp_path):
     """
     archive.extracted fails if setting an unless clause and pip is not installed.
     """
-    zipfile_path = base_env_state_tree_root_dir / "issue-56131.zip"
+    zipfile_path = state_tree.base.write_path / "issue-56131.zip"
     with zipfile.ZipFile(
         str(zipfile_path), "w", compression=zipfile.ZIP_DEFLATED
     ) as myzip:
@@ -62,9 +62,7 @@ def test_issue_56131(salt_minion, base_env_state_tree_root_dir, tmp_path):
     extract_path = tmp_path / "issue-56131.txt"
     try:
         assert extract_path.exists() is False
-        with pytest.helpers.temp_file(
-            "issue-56131.sls", sls_contents, base_env_state_tree_root_dir
-        ):
+        with state_tree.base.temp_file("issue-56131.sls", sls_contents):
             ret = salt_call_cli.run("state.sls", "issue-56131")
             assert ret.exitcode == 0
             for state_return in MultiStateResult(ret.json):
@@ -77,7 +75,7 @@ def test_issue_56131(salt_minion, base_env_state_tree_root_dir, tmp_path):
 @pytest.mark.skip_unless_on_windows(
     reason="Tested in tests/pytests/functional/modules/state/test_state.py"
 )
-def test_pydsl(salt_call_cli, base_env_state_tree_root_dir, tmp_path):
+def test_pydsl(salt_call_cli, state_tree, tmp_path):
     """
     Test the basics of the pydsl
     """
@@ -89,9 +87,7 @@ def test_pydsl(salt_call_cli, base_env_state_tree_root_dir, tmp_path):
     """.format(
         testfile
     )
-    with pytest.helpers.temp_file(
-        "pydsl.sls", sls_contents, base_env_state_tree_root_dir
-    ):
+    with state_tree.base.temp_file("pydsl.sls", sls_contents):
         ret = salt_call_cli.run("state.sls", "pydsl")
         assert ret.exitcode == 0
         assert ret.json
@@ -103,7 +99,7 @@ def test_pydsl(salt_call_cli, base_env_state_tree_root_dir, tmp_path):
 @pytest.mark.skip_unless_on_windows(
     reason="Tested in tests/pytests/functional/modules/state/test_state.py"
 )
-def test_state_sls_unicode_characters(salt_call_cli, base_env_state_tree_root_dir):
+def test_state_sls_unicode_characters(salt_call_cli, state_tree):
     """
     test state.sls when state file contains non-ascii characters
     """
@@ -112,9 +108,7 @@ def test_state_sls_unicode_characters(salt_call_cli, base_env_state_tree_root_di
       cmd.run:
         - name: "echo 'This is Æ test!'"
     """
-    with pytest.helpers.temp_file(
-        "issue-46672.sls", sls_contents, base_env_state_tree_root_dir
-    ):
+    with state_tree.base.temp_file("issue-46672.sls", sls_contents):
         ret = salt_call_cli.run("state.sls", "issue-46672")
         assert ret.exitcode == 0
         assert ret.json

@@ -74,9 +74,7 @@ def inotify_file_path(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
-def pillar_tree(
-    base_env_pillar_tree_root_dir, salt_minion, salt_call_cli, inotify_file_path
-):
+def beacon_pillar_tree(pillar_tree, salt_minion, salt_call_cli, inotify_file_path):
     top_file = """
     base:
       '{}':
@@ -96,18 +94,14 @@ def pillar_tree(
     """.format(
         inotify_file_path
     )
-    top_tempfile = pytest.helpers.temp_file(
-        "top.sls", top_file, base_env_pillar_tree_root_dir
-    )
-    beacon_tempfile = pytest.helpers.temp_file(
-        "beacons.sls", beacon_pillar_file, base_env_pillar_tree_root_dir
-    )
+    top_tempfile = pillar_tree.base.temp_file("top.sls", top_file)
+    beacon_tempfile = pillar_tree.base.temp_file("beacons.sls", beacon_pillar_file)
     try:
         with top_tempfile, beacon_tempfile:
             ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
             assert ret.exitcode == 0
             assert ret.json is True
-            yield
+            yield pillar_tree
     finally:
         # Refresh pillar again to cleaup the temp pillar
         ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
@@ -279,7 +273,7 @@ def test_enabled_beacons(salt_call_cli, beacon):
         pytest.fail("Did not find the beacon data with the 'enabled' key")
 
 
-@pytest.mark.usefixtures("pillar_tree")
+@pytest.mark.usefixtures("beacon_pillar_tree")
 def test_list(salt_call_cli, beacon, inotify_file_path):
     """
     Test listing the beacons
@@ -300,7 +294,7 @@ def test_list(salt_call_cli, beacon, inotify_file_path):
     }
 
 
-@pytest.mark.usefixtures("pillar_tree")
+@pytest.mark.usefixtures("beacon_pillar_tree")
 def test_list_only_include_opts(salt_call_cli, beacon):
     """
     Test listing the beacons which only exist in opts
@@ -321,7 +315,7 @@ def test_list_only_include_opts(salt_call_cli, beacon):
     assert ret.json == {beacon.name: beacon.data}
 
 
-@pytest.mark.usefixtures("pillar_tree", "beacon")
+@pytest.mark.usefixtures("beacon_pillar_tree", "beacon")
 def test_list_only_include_pillar(salt_call_cli, inotify_file_path):
     """
     Test listing the beacons which only exist in pillar

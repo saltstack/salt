@@ -70,7 +70,7 @@ def dunder_opts(saltenv_roots, saltenvs):
 
 
 @pytest.fixture(autouse=True)
-def state_tree(saltenv_roots, saltenvs):
+def module_state_tree(saltenv_roots, saltenvs):
     # Write top files for all but the "baz" environment
     for env, path in saltenv_roots.items():
         path.mkdir()

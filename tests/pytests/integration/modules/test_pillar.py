@@ -11,7 +11,7 @@ pytestmark = [
 
 
 @pytest.fixture(scope="module")
-def pillar_tree(salt_master, salt_minion, salt_call_cli):
+def module_pillar_tree(salt_master, salt_minion, salt_call_cli):
     top_file = """
     base:
       '{}':
@@ -56,7 +56,8 @@ def pillar_tree(salt_master, salt_minion, salt_call_cli):
 
 
 @pytest.mark.slow_test
-def test_data(salt_call_cli, pillar_tree):
+@pytest.mark.usefixtures("module_pillar_tree")
+def test_data(salt_call_cli):
     """
     pillar.data
     """
@@ -77,9 +78,8 @@ def test_data(salt_call_cli, pillar_tree):
 
 
 @pytest.mark.slow_test
-def test_issue_5449_report_actual_file_roots_in_pillar(
-    salt_call_cli, pillar_tree, base_env_state_tree_root_dir
-):
+@pytest.mark.usefixtures("module_pillar_tree")
+def test_issue_5449_report_actual_file_roots_in_pillar(salt_call_cli, state_tree):
     """
     pillar['master']['file_roots'] is overwritten by the master
     in order to use the fileclient interface to read the pillar
@@ -90,13 +90,14 @@ def test_issue_5449_report_actual_file_roots_in_pillar(
     assert ret.exitcode == 0
     assert ret.json
     file_roots = ret.json["master"]["file_roots"]["base"]
-    assert pathlib.Path(base_env_state_tree_root_dir).resolve() in [
+    assert state_tree.base.write_path.resolve() in [
         pathlib.Path(p).resolve() for p in file_roots
     ]
 
 
 @pytest.mark.slow_test
-def test_ext_cmd_yaml(salt_call_cli, pillar_tree):
+@pytest.mark.usefixtures("module_pillar_tree")
+def test_ext_cmd_yaml(salt_call_cli):
     """
     pillar.data for ext_pillar cmd.yaml
     """
@@ -108,21 +109,21 @@ def test_ext_cmd_yaml(salt_call_cli, pillar_tree):
 
 
 @pytest.mark.slow_test
-def test_issue_5951_actual_file_roots_in_opts(
-    salt_call_cli, pillar_tree, base_env_state_tree_root_dir
-):
+@pytest.mark.usefixtures("module_pillar_tree")
+def test_issue_5951_actual_file_roots_in_opts(salt_call_cli, state_tree):
     ret = salt_call_cli.run("pillar.data")
     assert ret.exitcode == 0
     assert ret.json
     pillar_data = ret.json
     file_roots = pillar_data["ext_pillar_opts"]["file_roots"]["base"]
-    assert pathlib.Path(base_env_state_tree_root_dir).resolve() in [
+    assert state_tree.base.write_path.resolve() in [
         pathlib.Path(p).resolve() for p in file_roots
     ]
 
 
 @pytest.mark.slow_test
-def test_pillar_items(salt_call_cli, pillar_tree):
+@pytest.mark.usefixtures("module_pillar_tree")
+def test_pillar_items(salt_call_cli):
     """
     Test to ensure we get expected output
     from pillar.items
@@ -138,7 +139,8 @@ def test_pillar_items(salt_call_cli, pillar_tree):
 
 
 @pytest.mark.slow_test
-def test_pillar_command_line(salt_call_cli, pillar_tree):
+@pytest.mark.usefixtures("module_pillar_tree")
+def test_pillar_command_line(salt_call_cli):
     """
     Test to ensure when using pillar override
     on command line works
@@ -160,7 +162,8 @@ def test_pillar_command_line(salt_call_cli, pillar_tree):
     assert pillar_items["new"] == "additional"
 
 
-def test_pillar_get_integer_key(salt_call_cli, pillar_tree):
+@pytest.mark.usefixtures("module_pillar_tree")
+def test_pillar_get_integer_key(salt_call_cli):
     """
     Test to ensure we get expected output
     from pillar.items

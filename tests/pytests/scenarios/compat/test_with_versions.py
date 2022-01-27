@@ -198,16 +198,12 @@ def populated_state_tree(pysaltcombo, minion_id, package_name, state_tree, unico
             pkg.installed:
               - name: {{ salt.pkgnames.get_test_package_name() }}
         """
-    with pytest.helpers.temp_file(
-        "_modules/pkgnames.py",
-        module_contents,
-        state_tree,
-    ), pytest.helpers.temp_file(
-        "top.sls", top_file_contents, state_tree
-    ), pytest.helpers.temp_file(
-        "install-package.sls",
-        install_package_sls_contents,
-        state_tree,
+    with state_tree.base.temp_file(
+        "_modules/pkgnames.py", module_contents
+    ), state_tree.base.temp_file(
+        "top.sls", top_file_contents
+    ), state_tree.base.temp_file(
+        "install-package.sls", install_package_sls_contents
     ):
         # Run the test
         yield

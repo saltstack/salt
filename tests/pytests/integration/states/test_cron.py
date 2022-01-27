@@ -27,7 +27,7 @@ def cron_account():
 @pytest.mark.skip_on_windows
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_if_binaries_missing("crontab")
-def test_managed(cron_account, salt_cli, salt_minion, base_env_state_tree_root_dir):
+def test_managed(cron_account, salt_cli, salt_minion, state_tree):
     """
     file.managed
     """
@@ -39,9 +39,7 @@ def test_managed(cron_account, salt_cli, salt_minion, base_env_state_tree_root_d
         "--- \n+++ \n@@ -1 +1,2 @@\n-\n+# Lines below here are managed by Salt, do not"
         " edit\n+@hourly touch /tmp/test-file\n"
     )
-    with pytest.helpers.temp_file(
-        "issue-46881/cron", cron_contents, base_env_state_tree_root_dir
-    ):
+    with state_tree.base.temp_file("issue-46881/cron", cron_contents):
         ret = salt_cli.run(
             "state.single",
             "cron.file",

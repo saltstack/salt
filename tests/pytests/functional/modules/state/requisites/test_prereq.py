@@ -48,9 +48,9 @@ def test_requisites_full_sls_prereq(state, state_tree):
             "changes": True,
         },
     }
-    with pytest.helpers.temp_file(
-        "requisite.sls", sls_contents, state_tree
-    ), pytest.helpers.temp_file("fullsls.sls", full_sls_contents, state_tree):
+    with state_tree.base.temp_file(
+        "requisite.sls", sls_contents
+    ), state_tree.base.temp_file("fullsls.sls", full_sls_contents):
         ret = state.sls("requisite")
         result = normalize_ret(ret.raw)
         assert result == expected_result
@@ -138,7 +138,7 @@ def test_requisites_prereq_simple_ordering_and_errors_1(state, state_tree):
             "changes": False,
         },
     }
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         result = normalize_ret(ret.raw)
         assert result == expected_result
@@ -183,7 +183,7 @@ def test_requisites_prereq_simple_ordering_and_errors_2(state, state_tree):
         "The prereq statement in state 'B' in SLS 'requisite' needs to be formed as a"
         " list"
     )
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert ret.failed
         assert ret.errors == [errmsg]
@@ -259,7 +259,7 @@ def test_requisites_prereq_simple_ordering_and_errors_3(state, state_tree):
         },
     }
 
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         result = normalize_ret(ret.raw)
         assert result == expected_result
@@ -352,7 +352,7 @@ def test_requisites_prereq_simple_ordering_and_errors_4(state, state_tree):
         },
     }
 
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         result = normalize_ret(ret.raw)
         assert result == expected_result
@@ -411,7 +411,7 @@ def test_requisites_prereq_simple_ordering_and_errors_5(state, state_tree):
         },
     }
 
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         result = normalize_ret(ret.raw)
         assert result == expected_result
@@ -507,7 +507,7 @@ def test_requisites_prereq_simple_ordering_and_errors_6(state, state_tree):
         },
     }
 
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         result = normalize_ret(ret.raw)
         assert result == expected_result
@@ -533,7 +533,7 @@ def test_requisites_prereq_simple_ordering_and_errors_7(state, state_tree):
         "                   prereq:\n"
         "                       cmd: Z\n"
     )
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert ret["cmd_|-I_|-echo I_|-run"].comment == errmsg
 
@@ -560,7 +560,7 @@ def test_requisites_prereq_simple_ordering_and_errors_8(state, state_tree):
         "                   prereq:\n"
         "                       foobar: A\n"
     )
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert ret["cmd_|-B_|-echo B_|-run"].comment == errmsg
 
@@ -587,7 +587,7 @@ def test_requisites_prereq_simple_ordering_and_errors_9(state, state_tree):
         "                   prereq:\n"
         "                       foobar: C\n"
     )
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert ret["cmd_|-B_|-echo B_|-run"].comment == errmsg
 
@@ -615,7 +615,7 @@ def test_requisites_prereq_simple_ordering_and_errors_10(state, state_tree):
         'A recursive requisite was found, SLS "requisites.prereq_recursion_error" ID'
         ' "B" ID "A"'
     )
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert ret.failed
         assert ret.errors == [errmsg]
@@ -636,9 +636,9 @@ def test_infinite_recursion_sls_prereq(state, state_tree):
       test.succeed_without_changes:
         - name: B
     """
-    with pytest.helpers.temp_file(
-        "requisite.sls", sls_contents, state_tree
-    ), pytest.helpers.temp_file("requisite2.sls", sls_2_contents, state_tree):
+    with state_tree.base.temp_file(
+        "requisite.sls", sls_contents
+    ), state_tree.base.temp_file("requisite2.sls", sls_2_contents):
         ret = state.sls("requisite")
         for state_return in ret:
             assert state_return.result is True

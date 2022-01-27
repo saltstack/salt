@@ -6,7 +6,7 @@ pytestmark = [
 
 
 @pytest.fixture(scope="module")
-def state_tree(base_env_state_tree_root_dir):
+def module_state_tree(salt_master):
     top_file = """
     base:
       'localhost':
@@ -23,22 +23,19 @@ def state_tree(base_env_state_tree_root_dir):
     Ok with {{ abc }}:
       test.succeed_without_changes
     """
-    top_tempfile = pytest.helpers.temp_file(
-        "top.sls", top_file, base_env_state_tree_root_dir
-    )
-    map_tempfile = pytest.helpers.temp_file(
-        "map.jinja", map_file, base_env_state_tree_root_dir
-    )
-    state_tempfile = pytest.helpers.temp_file(
-        "test.sls", state_file, base_env_state_tree_root_dir
-    )
-
-    with top_tempfile, map_tempfile, state_tempfile:
+    with salt_master.state_tree.base.temp_file(
+        "top.sls", top_file
+    ), salt_master.state_tree.base.temp_file(
+        "map.jinja", map_file
+    ), salt_master.state_tree.base.temp_file(
+        "test.sls", state_file
+    ):
         yield
 
 
 @pytest.mark.slow_test
-def test_state_with_import(salt_ssh_cli, state_tree):
+@pytest.mark.usefixtures("module_state_tree")
+def test_state_with_import(salt_ssh_cli):
     """
     verify salt-ssh can use imported map files in states
     """

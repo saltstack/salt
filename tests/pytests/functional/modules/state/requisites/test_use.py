@@ -67,7 +67,7 @@ def test_requisites_use(state, state_tree):
     #    - use:
     #        - cmd: E
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         for state_return in ret:
             assert state_return.comment == "onlyif condition is false"
@@ -99,7 +99,7 @@ def test_requisites_use_recursion_1(state, state_tree):
             cmd: A
     """
     errmsg = 'A recursive requisite was found, SLS "requisite" ID "B" ID "A"'
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert ret.failed
         assert ret.errors == [errmsg]
@@ -142,7 +142,7 @@ def test_requisites_use_recursion_2(state, state_tree):
             cmd: A
     """
     errmsg = 'A recursive requisite was found, SLS "requisite" ID "C" ID "A"'
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert ret.failed
         assert ret.errors == [errmsg]
@@ -166,7 +166,7 @@ def test_requisites_use_recursion_3(state, state_tree):
             cmd: A
     """
     errmsg = 'A recursive requisite was found, SLS "requisite" ID "A" ID "A"'
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert ret.failed
         assert ret.errors == [errmsg]
@@ -232,7 +232,7 @@ def test_requisites_use_no_state_module(state, state_tree):
     #    - use:
     #        - cmd: E
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         for state_return in ret:
             assert state_return.comment == "onlyif condition is false"

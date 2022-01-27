@@ -33,12 +33,12 @@ def state_tree(state_tree, state_testfile_dest_path):
     """.format(
         state_testfile_dest_path
     )
-    with pytest.helpers.temp_file(
-        "top.sls", top_sls_contents, state_tree
-    ), pytest.helpers.temp_file(
-        "core.sls", core_sls_contents, state_tree
-    ), pytest.helpers.temp_file(
-        "testfile", "testfile base env contents", state_tree
+    with state_tree.base.temp_file(
+        "top.sls", top_sls_contents
+    ), state_tree.base.temp_file(
+        "core.sls", core_sls_contents
+    ), state_tree.base.temp_file(
+        "testfile", "testfile base env contents"
     ):
         yield state_tree
 

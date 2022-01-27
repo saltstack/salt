@@ -5,6 +5,8 @@ import logging
 import os
 import pathlib
 import re
+import shutil
+import subprocess
 import textwrap
 
 import pytest
@@ -50,9 +52,31 @@ def content():
     return numbers_file_contents, math_file_contents
 
 
+@pytest.fixture(scope="module")
+def check_patch():
+    patch_path = shutil.which("patch")
+    if patch_path is None:
+        pytest.skip("The 'patch' binary was not found")
+
+    ret = subprocess.run(
+        [patch_path, "--version"],
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
+        shell=False,
+        check=True,
+    )
+    patch_version = ret.stdout.split()[2]
+    minimum_patch_ver = "2.6"
+    if _LooseVersion(patch_version) < _LooseVersion(minimum_patch_ver):
+        pytest.xfail(
+            "Minimum version of patch not found,"
+            " expecting {}, found {}".format(minimum_patch_ver, patch_version)
+        )
+
+
 @pytest.fixture
-def patch_file_dest(base_env_state_tree_root_dir):
-    yield pathlib.Path(base_env_state_tree_root_dir).resolve()
+def patch_file_dest(salt_master):
+    yield salt_master.state_tree.base.write_path
 
 
 @pytest.fixture
@@ -81,7 +105,7 @@ def all_patch_template():
 
 
 @pytest.fixture(scope="module")
-def pillar_tree(salt_master, salt_minion, salt_call_cli):
+def module_pillar_tree(salt_master, salt_minion, salt_call_cli):
     top_file = """
     base:
       '{}':
@@ -197,9 +221,7 @@ def test_verify_ssl_skip_verify_false(
     false_content = true_content + "    - verify_ssl: False"
 
     # test when verify_ssl is True
-    with salt_master.state_tree.base.temp_file(
-        "verify_ssl.sls", true_content
-    ) as sfpath:
+    with salt_master.state_tree.base.temp_file("verify_ssl.sls", true_content):
         ret = salt_call_cli.run("--local", "state.apply", "verify_ssl")
         assert ret.exitcode == 1
         assert (
@@ -208,9 +230,7 @@ def test_verify_ssl_skip_verify_false(
         )
 
     # test when verify_ssl is False
-    with salt_master.state_tree.base.temp_file(
-        "verify_ssl.sls", false_content
-    ) as sfpath:
+    with salt_master.state_tree.base.temp_file("verify_ssl.sls", false_content):
         ret = salt_call_cli.run("--local", "state.apply", "verify_ssl")
         assert ret.exitcode == 0
         assert ret.json[next(iter(ret.json))]["changes"] == {
@@ -219,9 +239,8 @@ def test_verify_ssl_skip_verify_false(
         }
 
 
-def test_contents_pillar_with_pillar_list(
-    salt_master, salt_call_cli, pillar_tree, tmp_path
-):
+@pytest.mark.usefixtures("module_pillar_tree")
+def test_contents_pillar_with_pillar_list(salt_master, salt_call_cli, tmp_path):
     """
     This tests for any regressions for this issue:
     https://github.com/saltstack/salt/issues/30934
@@ -249,9 +268,8 @@ def test_contents_pillar_with_pillar_list(
         assert target_path.is_file()
 
 
-def test_managed_file_with_pillar_sls(
-    salt_master, salt_call_cli, pillar_tree, tmp_path
-):
+@pytest.mark.usefixtures("module_pillar_tree")
+def test_managed_file_with_pillar_sls(salt_master, salt_call_cli, tmp_path):
     """
     Test to ensure pillar data in sls file
     is rendered properly and file is created.
@@ -286,10 +304,10 @@ def test_managed_file_with_pillar_sls(
         assert target_path.is_file()
 
 
+@pytest.mark.usefixtures("module_pillar_tree")
 def test_issue_50221(
     salt_master,
     salt_call_cli,
-    pillar_tree,
     tmp_path,
     salt_minion,
     ext_pillar_file_tree_root_dir,
@@ -329,14 +347,13 @@ def test_issue_50221(
         assert target_path.read_text().replace("\r\n", "\n") == expected_content
 
 
+@pytest.mark.usefixtures("module_pillar_tree", "salt_minion")
 def test_issue_60426(
     salt_master,
     salt_call_cli,
-    pillar_tree,
     tmp_path,
-    salt_minion,
 ):
-    target_path = tmp_path / "/etc/foo/bar"
+    target_path = tmp_path / "etc/foo/bar"
     jinja_name = "foo_bar"
     jinja_contents = (
         "{% for item in accumulator['accumulated configstuff'] %}{{ item }}{% endfor %}"
@@ -364,15 +381,11 @@ def test_issue_60426(
         target_path=target_path
     )
 
-    sls_tempfile = salt_master.state_tree.base.temp_file(
+    with salt_master.state_tree.base.temp_file(
         "{}.sls".format(sls_name), sls_contents
-    )
-
-    jinja_tempfile = salt_master.state_tree.base.temp_file(
+    ), salt_master.state_tree.base.temp_file(
         "{}.jinja".format(jinja_name), jinja_contents
-    )
-
-    with sls_tempfile, jinja_tempfile:
+    ):
         ret = salt_call_cli.run("state.apply", sls_name)
         assert ret.exitcode == 0
         assert ret.json
@@ -429,17 +442,18 @@ def test_issue_60203(
     salt_master,
     salt_call_cli,
     tmp_path,
-    salt_minion,
 ):
-    target_path = tmp_path / "issue-60203-target.txt"
+    target_path = tmp_path / "test.tar.gz"
     sls_name = "issue-60203"
     sls_contents = """
     credentials exposed via file:
       file.managed:
-        - name: /tmp/test.tar.gz
+        - name: {}
         - source: 'https://account:dontshowme@notahost.saltstack.io/files/test.tar.gz'
         - source_hash: 'https://account:dontshowme@notahost.saltstack.io/files/test.tar.gz.sha256'
-    """
+    """.format(
+        target_path
+    )
     sls_tempfile = salt_master.state_tree.base.temp_file(
         "{}.sls".format(sls_name), sls_contents
     )
@@ -447,58 +461,22 @@ def test_issue_60203(
         ret = salt_call_cli.run("state.apply", sls_name)
         assert ret.exitcode == 1
         assert ret.json
-        assert (
-            "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
-            in ret.json
+        state_id = "file_|-credentials exposed via file_|-{}_|-managed".format(
+            target_path
         )
-        assert (
-            "comment"
-            in ret.json[
-                "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
-            ]
-        )
-        assert (
-            "Unable to manage"
-            in ret.json[
-                "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
-            ]["comment"]
-        )
-        assert (
-            "/files/test.tar.gz.sha256"
-            in ret.json[
-                "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
-            ]["comment"]
-        )
-        assert (
-            "dontshowme"
-            not in ret.json[
-                "file_|-credentials exposed via file_|-/tmp/test.tar.gz_|-managed"
-            ]["comment"]
-        )
-
-
-@pytest.fixture
-def min_patch_ver():
-    return "2.6"
-
-
-def _check_minimum_version(salt_call_cli, minimum_patch_ver):
-    version = salt_call_cli.run("--local", "cmd.run", "patch --version")
-    version = version.json.split()[2]
-    if _LooseVersion(version) < _LooseVersion(minimum_patch_ver):
-        pytest.xfail(
-            "Minimum version of patch not found,"
-            " expecting {}, found {}".format(minimum_patch_ver, version)
-        )
+        assert state_id in ret.json
+        assert "comment" in ret.json[state_id]
+        assert "Unable to manage" in ret.json[state_id]["comment"]
+        assert "/files/test.tar.gz.sha256" in ret.json[state_id]["comment"]
+        assert "dontshowme" not in ret.json[state_id]["comment"]
 
 
 @pytest.mark.skip_unless_on_windows
-@pytest.mark.skip_if_binaries_missing("patch")
-def test_patch_single_file(salt_call_cli, min_patch_ver, patch_file_dest):
+@pytest.mark.usefixtures("check_patch")
+def test_patch_single_file(salt_call_cli, patch_file_dest):
     """
     Test file.patch using a patch applied to a single file
     """
-    _check_minimum_version(salt_call_cli, min_patch_ver)
     name_file = patch_file_dest / "name_file.txt"
     source_file = patch_file_dest / "source_file.patch"
     name_file_contents = """
@@ -556,21 +534,19 @@ def test_patch_single_file(salt_call_cli, min_patch_ver, patch_file_dest):
 
 
 @pytest.mark.skip_unless_on_windows
-@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+@pytest.mark.usefixtures("check_patch")
 def test_patch_directory(
     salt_call_cli,
     content,
     all_patch_file,
-    min_patch_ver,
     patch_file_dest,
 ):
     """
     Test file.patch using a patch applied to a directory, with changes
     spanning multiple files.
     """
-    _check_minimum_version(salt_call_cli, min_patch_ver)
     # Create a new unpatched set of files
-    os.makedirs(patch_file_dest / "foo" / "bar")
+    patch_file_dest.joinpath("foo", "bar").mkdir()
     numbers_file = patch_file_dest / "foo" / "numbers.txt"
     math_file = patch_file_dest / "foo" / "bar" / "math.txt"
 
@@ -614,20 +590,18 @@ def test_patch_directory(
 
 
 @pytest.mark.skip_unless_on_windows
-@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+@pytest.mark.usefixtures("check_patch")
 def test_patch_strip_parsing(
     salt_call_cli,
     content,
     all_patch_file,
-    min_patch_ver,
     patch_file_dest,
 ):
     """
     Test that we successfuly parse -p/--strip when included in the options
     """
-    _check_minimum_version(salt_call_cli, min_patch_ver)
     # Create a new unpatched set of files
-    os.makedirs(patch_file_dest / "foo" / "bar")
+    patch_file_dest.joinpath("foo", "bar").mkdir()
     numbers_file = patch_file_dest / "foo" / "numbers.txt"
     math_file = patch_file_dest / "foo" / "bar" / "math.txt"
 
@@ -684,12 +658,11 @@ def test_patch_strip_parsing(
 
 
 @pytest.mark.skip_unless_on_windows
-@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+@pytest.mark.usefixtures("check_patch")
 def test_patch_saltenv(
     salt_call_cli,
     content,
     math_patch_file,
-    min_patch_ver,
     patch_file_dest,
 ):
     """
@@ -698,9 +671,8 @@ def test_patch_saltenv(
     # This state will fail because we don't have a patch file in that
     # environment, but that is OK, we just want to test that we're looking
     # in an environment other than base.
-    _check_minimum_version(salt_call_cli, min_patch_ver)
     # Create a new unpatched set of files
-    os.makedirs(patch_file_dest / "foo" / "bar")
+    patch_file_dest.joinpath("foo", "bar").mkdir()
     math_file = patch_file_dest / "foo" / "bar" / "math.txt"
 
     sls_contents = """
@@ -731,21 +703,19 @@ def test_patch_saltenv(
 
 
 @pytest.mark.skip_unless_on_windows
-@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+@pytest.mark.usefixtures("check_patch")
 def test_patch_single_file_failure(
     salt_call_cli,
     content,
     numbers_patch_file,
-    min_patch_ver,
     patch_file_dest,
 ):
     """
     Test file.patch using a patch applied to a single file. This tests a
     failed patch.
     """
-    _check_minimum_version(salt_call_cli, min_patch_ver)
     # Create a new unpatched set of files
-    os.makedirs(patch_file_dest / "foo" / "bar")
+    patch_file_dest.joinpath("foo", "bar").mkdir()
     numbers_file = patch_file_dest / "foo" / "numbers.txt"
     math_file = patch_file_dest / "foo" / "bar" / "math.txt"
     reject_file = patch_file_dest / "reject.txt"
@@ -813,21 +783,19 @@ def test_patch_single_file_failure(
 
 
 @pytest.mark.skip_unless_on_windows
-@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+@pytest.mark.usefixtures("check_patch")
 def test_patch_directory_failure(
     salt_call_cli,
     content,
     all_patch_file,
-    min_patch_ver,
     patch_file_dest,
 ):
     """
     Test file.patch using a patch applied to a directory, with changes
     spanning multiple files.
     """
-    _check_minimum_version(salt_call_cli, min_patch_ver)
     # Create a new unpatched set of files
-    os.makedirs(patch_file_dest / "foo" / "bar")
+    patch_file_dest.joinpath("foo", "bar").mkdir()
     numbers_file = patch_file_dest / "foo" / "numbers.txt"
     math_file = patch_file_dest / "foo" / "bar" / "math.txt"
     reject_file = patch_file_dest / "reject.txt"
@@ -894,13 +862,12 @@ def test_patch_directory_failure(
 
 
 @pytest.mark.skip_unless_on_windows
-@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+@pytest.mark.usefixtures("check_patch")
 def test_patch_single_file_template(
     salt_call_cli,
     context,
     content,
     numbers_patch_template,
-    min_patch_ver,
     patch_file_dest,
 ):
     """
@@ -908,9 +875,7 @@ def test_patch_single_file_template(
     templating applied to the patch file.
     """
     # Create a new unpatched set of files
-    _check_minimum_version(salt_call_cli, min_patch_ver)
-
-    os.makedirs(patch_file_dest / "foo" / "bar", exist_ok=True)
+    patch_file_dest.joinpath("foo", "bar").mkdir(exist_ok=True)
     numbers_file = patch_file_dest / "foo" / "numbers.txt"
 
     sls_contents = """
@@ -955,13 +920,12 @@ def test_patch_single_file_template(
 
 
 @pytest.mark.skip_unless_on_windows
-@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+@pytest.mark.usefixtures("check_patch")
 def test_patch_directory_template(
     salt_call_cli,
     context,
     content,
     all_patch_template,
-    min_patch_ver,
     patch_file_dest,
 ):
     """
@@ -970,8 +934,7 @@ def test_patch_directory_template(
     file.
     """
     # Create a new unpatched set of files
-    _check_minimum_version(salt_call_cli, min_patch_ver)
-    os.makedirs(patch_file_dest / "foo" / "bar", exist_ok=True)
+    patch_file_dest.joinpath("foo", "bar").mkdir(exist_ok=True)
     numbers_file = patch_file_dest / "foo" / "numbers.txt"
     math_file = patch_file_dest / "foo" / "bar" / "math.txt"
 
@@ -1016,20 +979,18 @@ def test_patch_directory_template(
 
 
 @pytest.mark.skip_unless_on_windows
-@pytest.mark.skipif(not salt.utils.path.which("patch"), reason="patch is not installed")
+@pytest.mark.usefixtures("check_patch")
 def test_patch_test_mode(
     salt_call_cli,
     content,
     numbers_patch_file,
-    min_patch_ver,
     patch_file_dest,
 ):
     """
     Test file.patch using test=True
     """
-    _check_minimum_version(salt_call_cli, min_patch_ver)
     # Create a new unpatched set of files
-    os.makedirs(patch_file_dest / "foo" / "bar")
+    patch_file_dest.joinpath("foo", "bar").mkdir()
     numbers_file = patch_file_dest / "foo" / "numbers.txt"
 
     sls_patch_contents = """

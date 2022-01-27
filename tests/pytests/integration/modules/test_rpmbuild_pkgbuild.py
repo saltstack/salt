@@ -151,7 +151,7 @@ pytestmark = [
 
 
 @pytest.fixture(scope="module")
-def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_call_cli):
+def module_pillar_tree(pillar_tree, salt_minion, salt_call_cli):
     top_file = """
     base:
       '{}':
@@ -177,11 +177,9 @@ def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_call_cli):
         textwrap.indent(GPG_TEST_PUB_KEY, "      ").lstrip(),
         GPG_TEST_KEY_PASSPHRASE,
     )
-    top_tempfile = pytest.helpers.temp_file(
-        "top.sls", top_file, base_env_pillar_tree_root_dir
-    )
-    packaging_tempfile = pytest.helpers.temp_file(
-        "packaging.sls", packaging_pillar_file, base_env_pillar_tree_root_dir
+    top_tempfile = pillar_tree.base.temp_file("top.sls", top_file)
+    packaging_tempfile = pillar_tree.base.temp_file(
+        "packaging.sls", packaging_pillar_file
     )
 
     try:
@@ -189,7 +187,7 @@ def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_call_cli):
             ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
             assert ret.exitcode == 0
             assert ret.json is True
-            yield
+            yield pillar_tree
     finally:
         # Refresh pillar again to cleaup the temp pillar
         ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
@@ -338,7 +336,8 @@ def gpg_agent(request, gpghome):
 
 
 @pytest.mark.slow_test
-def test_make_repo(grains, gpghome, repodir, gpg_agent, salt_call_cli, pillar_tree):
+@pytest.mark.usefixtures("module_pillar_tree")
+def test_make_repo(grains, gpghome, repodir, gpg_agent, salt_call_cli):
     """
     test make repo, signing rpm
     """

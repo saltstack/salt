@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_sub_minion, salt_cli):
+def module_pillar_tree(pillar_tree, salt_minion, salt_sub_minion, salt_cli):
     top_file = """
     base:
       '{}':
@@ -27,12 +27,8 @@ def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_sub_minion, sal
     basic_pillar_file = """
     monty: python
     """
-    top_tempfile = pytest.helpers.temp_file(
-        "top.sls", top_file, base_env_pillar_tree_root_dir
-    )
-    basic_tempfile = pytest.helpers.temp_file(
-        "basic.sls", basic_pillar_file, base_env_pillar_tree_root_dir
-    )
+    top_tempfile = pillar_tree.base.temp_file("top.sls", top_file)
+    basic_tempfile = pillar_tree.base.temp_file("basic.sls", basic_pillar_file)
     try:
         with top_tempfile, basic_tempfile:
             ret = salt_cli.run("saltutil.refresh_pillar", wait=True, minion_tgt="*")
@@ -41,7 +37,7 @@ def pillar_tree(base_env_pillar_tree_root_dir, salt_minion, salt_sub_minion, sal
             assert ret.json[salt_minion.id] is True
             assert salt_sub_minion.id in ret.json
             assert ret.json[salt_sub_minion.id] is True
-            yield
+            yield pillar_tree
     finally:
         # Refresh pillar again to cleaup the temp pillar
         ret = salt_cli.run("saltutil.refresh_pillar", wait=True, minion_tgt="*")
@@ -93,7 +89,8 @@ def test_cache_invalid(salt_run_cli):
     assert "Passed invalid arguments:" in ret.stdout
 
 
-def test_grains(salt_run_cli, pillar_tree, salt_minion):
+@pytest.mark.usefixtures("module_pillar_tree")
+def test_grains(salt_run_cli, salt_minion):
     """
     Test cache.grains
     """
@@ -102,7 +99,8 @@ def test_grains(salt_run_cli, pillar_tree, salt_minion):
     assert salt_minion.id in ret.json
 
 
-def test_pillar(salt_run_cli, pillar_tree, salt_minion, salt_sub_minion):
+@pytest.mark.usefixtures("module_pillar_tree")
+def test_pillar(salt_run_cli, salt_minion, salt_sub_minion):
     """
     Test cache.pillar
     """
@@ -112,7 +110,8 @@ def test_pillar(salt_run_cli, pillar_tree, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id not in ret.json
 
 
-def test_pillar_no_tgt(salt_run_cli, pillar_tree, salt_minion, salt_sub_minion):
+@pytest.mark.usefixtures("module_pillar_tree")
+def test_pillar_no_tgt(salt_run_cli, salt_minion, salt_sub_minion):
     """
     Test cache.pillar when no tgt is
     supplied. This should return pillar
@@ -124,7 +123,8 @@ def test_pillar_no_tgt(salt_run_cli, pillar_tree, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id in ret.json
 
 
-def test_pillar_minion_noexist(salt_run_cli, pillar_tree, salt_minion, salt_sub_minion):
+@pytest.mark.usefixtures("module_pillar_tree")
+def test_pillar_minion_noexist(salt_run_cli, salt_minion, salt_sub_minion):
     """
     Test cache.pillar when the target does not exist
     """
@@ -134,9 +134,8 @@ def test_pillar_minion_noexist(salt_run_cli, pillar_tree, salt_minion, salt_sub_
     assert salt_sub_minion.id not in ret.json
 
 
-def test_pillar_minion_tgt_type_pillar(
-    salt_run_cli, pillar_tree, salt_minion, salt_sub_minion
-):
+@pytest.mark.usefixtures("module_pillar_tree")
+def test_pillar_minion_tgt_type_pillar(salt_run_cli, salt_minion, salt_sub_minion):
     """
     Test cache.pillar when the target exists
     and tgt_type is pillar

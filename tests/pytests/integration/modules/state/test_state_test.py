@@ -8,7 +8,7 @@ pytestmark = [
 ]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="module", autouse=True)
 def reset_pillar(salt_call_cli):
     try:
         # Run tests
@@ -21,9 +21,7 @@ def reset_pillar(salt_call_cli):
 
 
 @pytest.fixture(scope="module")
-def pillar_test_true(
-    base_env_pillar_tree_root_dir, salt_minion, salt_call_cli, reset_pillar
-):
+def pillar_test_true(pillar_tree, salt_minion, salt_call_cli):
     top_file = """
     base:
       '{}':
@@ -34,10 +32,8 @@ def pillar_test_true(
     basic_pillar_file = """
     test: true
     """
-    with pytest.helpers.temp_file(
-        "top.sls", top_file, base_env_pillar_tree_root_dir
-    ), pytest.helpers.temp_file(
-        "basic.sls", basic_pillar_file, base_env_pillar_tree_root_dir
+    with pillar_tree.base.temp_file("top.sls", top_file), pillar_tree.base.temp_file(
+        "basic.sls", basic_pillar_file
     ):
         ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
         assert ret.exitcode == 0
@@ -46,9 +42,7 @@ def pillar_test_true(
 
 
 @pytest.fixture(scope="module")
-def pillar_test_empty(
-    base_env_pillar_tree_root_dir, salt_minion, salt_call_cli, reset_pillar
-):
+def pillar_test_empty(pillar_tree, salt_minion, salt_call_cli):
     top_file = """
     base:
       '{}':
@@ -57,10 +51,8 @@ def pillar_test_empty(
         salt_minion.id
     )
     basic_pillar_file = ""
-    with pytest.helpers.temp_file(
-        "top.sls", top_file, base_env_pillar_tree_root_dir
-    ), pytest.helpers.temp_file(
-        "basic.sls", basic_pillar_file, base_env_pillar_tree_root_dir
+    with pillar_tree.base.temp_file("top.sls", top_file), pillar_tree.base.temp_file(
+        "basic.sls", basic_pillar_file
     ):
         ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
         assert ret.exitcode == 0
@@ -69,9 +61,7 @@ def pillar_test_empty(
 
 
 @pytest.fixture(scope="module")
-def pillar_test_false(
-    base_env_pillar_tree_root_dir, salt_minion, salt_call_cli, reset_pillar
-):
+def pillar_test_false(pillar_tree, salt_minion, salt_call_cli):
     top_file = """
     base:
       '{}':
@@ -82,10 +72,8 @@ def pillar_test_false(
     basic_pillar_file = """
     test: false
     """
-    with pytest.helpers.temp_file(
-        "top.sls", top_file, base_env_pillar_tree_root_dir
-    ), pytest.helpers.temp_file(
-        "basic.sls", basic_pillar_file, base_env_pillar_tree_root_dir
+    with pillar_tree.base.temp_file("top.sls", top_file), pillar_tree.base.temp_file(
+        "basic.sls", basic_pillar_file
     ):
         ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
         assert ret.exitcode == 0
@@ -94,7 +82,7 @@ def pillar_test_false(
 
 
 @pytest.fixture
-def testfile_path(tmp_path, base_env_state_tree_root_dir):
+def testfile_path(tmp_path, state_tree):
     testfile = tmp_path / "testfile"
     sls_contents = """
     {}:
@@ -105,9 +93,7 @@ def testfile_path(tmp_path, base_env_state_tree_root_dir):
     """.format(
         testfile
     )
-    with pytest.helpers.temp_file(
-        "sls-id-test.sls", sls_contents, base_env_state_tree_root_dir
-    ):
+    with state_tree.base.temp_file("sls-id-test.sls", sls_contents):
         yield testfile
 
 

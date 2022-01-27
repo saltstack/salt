@@ -10,7 +10,7 @@ pytestmark = [
 
 
 @pytest.fixture(scope="module")
-def pillar_tree(salt_master, salt_minion, salt_sub_minion, salt_cli):
+def module_pillar_tree(salt_master, salt_minion, salt_sub_minion, salt_cli):
     top_file = """
     base:
       '{}':
@@ -161,7 +161,8 @@ def test_coumpound_pcre_grain_regex(salt_cli, salt_minion, salt_sub_minion):
     assert salt_sub_minion.id in ret.json
 
 
-def test_compound_pillar(salt_cli, salt_minion, salt_sub_minion, pillar_tree):
+@pytest.mark.usefixtures("module_pillar_tree")
+def test_compound_pillar(salt_cli, salt_minion, salt_sub_minion):
     # FYI, This test was previously being skipped because it was unreliable
     ret = salt_cli.run("-C", "test.ping", minion_tgt="I%@companions%three%sarah*")
     assert ret.exitcode == 0
@@ -169,7 +170,8 @@ def test_compound_pillar(salt_cli, salt_minion, salt_sub_minion, pillar_tree):
     assert salt_sub_minion.id in ret.json
 
 
-def test_compound_pillar_pcre(salt_cli, salt_minion, salt_sub_minion, pillar_tree):
+@pytest.mark.usefixtures("module_pillar_tree")
+def test_compound_pillar_pcre(salt_cli, salt_minion, salt_sub_minion):
     # FYI, This test was previously being skipped because it was unreliable
     ret = salt_cli.run("-C", "test.ping", minion_tgt="J%@knights%^(Lancelot|Galahad)$")
     assert ret.exitcode == 0
@@ -412,7 +414,8 @@ def test_regrain(salt_cli, salt_minion, salt_sub_minion):
     assert salt_minion.id not in ret.json
 
 
-def test_pillar(salt_cli, salt_minion, salt_sub_minion, pillar_tree):
+@pytest.mark.usefixtures("module_pillar_tree")
+def test_pillar(salt_cli, salt_minion, salt_sub_minion):
     """
     test pillar matcher
     """
@@ -445,7 +448,8 @@ def test_pillar(salt_cli, salt_minion, salt_sub_minion, pillar_tree):
     assert salt_sub_minion.id in ret.json
 
 
-def test_repillar(salt_cli, salt_minion, salt_sub_minion, pillar_tree):
+@pytest.mark.usefixtures("module_pillar_tree")
+def test_repillar(salt_cli, salt_minion, salt_sub_minion):
     """
     test salt pillar PCRE matcher
     """

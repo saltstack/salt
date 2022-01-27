@@ -50,9 +50,9 @@ def test_requisites_full_sls_require(state, state_tree):
             "changes": True,
         },
     }
-    with pytest.helpers.temp_file(
-        "requisite.sls", sls_contents, state_tree
-    ), pytest.helpers.temp_file("fullsls.sls", full_sls_contents, state_tree):
+    with state_tree.base.temp_file(
+        "requisite.sls", sls_contents
+    ), state_tree.base.temp_file("fullsls.sls", full_sls_contents):
         ret = state.sls("requisite")
         result = normalize_ret(ret.raw)
         assert result == expected_result
@@ -171,7 +171,7 @@ def test_requisites_require_no_state_module(state, state_tree):
             "changes": False,
         },
     }
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         result = normalize_ret(ret.raw)
         assert result == expected_result
@@ -304,7 +304,7 @@ def test_requisites_require_ordering_and_errors_1(state, state_tree):
         - require:
           - cmd: Z
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         result = normalize_ret(ret.raw)
         assert result == expected_result
@@ -330,7 +330,7 @@ def test_requisites_require_ordering_and_errors_2(state, state_tree):
         " typed ID.\nEnsure that a state with an ID of 'W' is available\nin environment"
         " 'base' and to SLS 'requisite'"
     )
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert ret.failed
         assert ret.errors == [errmsg]
@@ -362,7 +362,7 @@ def test_requisites_require_ordering_and_errors_3(state, state_tree):
         "Ensure that a state with an ID of 'A' is available\n"
         "in environment 'base' and to SLS 'requisite'"
     )
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert ret.failed
         assert ret.errors == [errmsg]
@@ -399,7 +399,7 @@ def test_requisites_require_ordering_and_errors_4(state, state_tree):
         "The require statement in state 'B' in SLS 'requisite' needs to be formed as a"
         " list"
     )
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert ret.failed
         assert ret.errors == [errmsg]
@@ -429,7 +429,7 @@ def test_requisites_require_ordering_and_errors_5(state, state_tree):
     # And why preventing it?
     # Currently this state fails, should return C/B/A
     errmsg = 'A recursive requisite was found, SLS "requisite" ID "B" ID "A"'
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert ret.failed
         assert ret.errors == [errmsg]
@@ -503,7 +503,7 @@ def test_requisites_require_any(state, state_tree):
             "changes": True,
         },
     }
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         result = normalize_ret(ret.raw)
         assert result == expected_result
@@ -532,7 +532,7 @@ def test_requisites_require_any_fail(state, state_tree):
           - cmd: E
           - cmd: F
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert "One or more requisite failed" in ret["cmd_|-D_|-echo D_|-run"].comment
 
@@ -563,7 +563,7 @@ def test_issue_38683_require_order_failhard_combination(state, state_tree):
         - failhard: True
     """
     state_id = "test_|-b_|-b_|-fail_with_changes"
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert state_id in ret
         assert ret[state_id].result is False
@@ -594,7 +594,7 @@ def test_parallel_state_with_requires(state, state_tree):
     barrier2:
       test.nop
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         start_time = time.time()
         state.sls(
             "requisite",
@@ -649,7 +649,7 @@ def test_issue_59922_conflict_in_name_and_id_for_require_in(state, state_tree):
             "changes": True,
         },
     }
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         result = normalize_ret(ret.raw)
         assert result == expected_result

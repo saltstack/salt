@@ -23,7 +23,7 @@ def test_watch_in(state, state_tree):
     """
     changes = "test_|-return_changes_|-return_changes_|-succeed_with_changes"
     watch = "test_|-watch_states_|-watch_states_|-succeed_without_changes"
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert ret[changes].full_return["__run_num__"] == 0
         assert ret[changes].changes["testing"]["new"] == "Something pretended to change"
@@ -46,7 +46,7 @@ def test_watch_in_failure(state, state_tree):
     """
     fail = "test_|-return_changes_|-return_changes_|-fail_with_changes"
     watch = "test_|-watch_states_|-watch_states_|-succeed_without_changes"
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert ret[fail].result is False
         assert (
@@ -161,7 +161,7 @@ def test_requisites_watch_any(state, state_tree):
             "changes": True,
         },
     }
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         result = normalize_ret(ret.raw)
         assert result == expected_result
@@ -189,7 +189,7 @@ def test_requisites_watch_any_fail(state, state_tree):
       cmd.run:
         - name: 'false'
     """
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert "One or more requisite failed" in ret["cmd_|-A_|-true_|-wait"].comment
 
@@ -211,7 +211,7 @@ def test_issue_30820_requisite_in_match_by_name(state, state_tree):
           - cmd: 'echo bar'
     """
     bar_state = "cmd_|-bar state_|-echo bar_|-wait"
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         assert bar_state in ret
         assert ret[bar_state].comment == 'Command "echo bar" run'

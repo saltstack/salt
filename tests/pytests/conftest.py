@@ -88,10 +88,8 @@ def salt_master_factory(
     salt_factories,
     salt_minion_id,
     salt_sub_minion_id,
-    base_env_state_tree_root_dir,
-    base_env_pillar_tree_root_dir,
-    prod_env_state_tree_root_dir,
-    prod_env_pillar_tree_root_dir,
+    state_tree,
+    pillar_tree,
     ext_pillar_file_tree_root_dir,
     sdb_etcd_port,
     vault_port,
@@ -195,24 +193,8 @@ def salt_master_factory(
         {
             "ext_pillar": ext_pillar,
             "extension_modules": extension_modules_path,
-            "file_roots": {
-                "base": [
-                    str(base_env_state_tree_root_dir),
-                    os.path.join(RUNTIME_VARS.FILES, "file", "base"),
-                ],
-                # Alternate root to test __env__ choices
-                "prod": [
-                    str(prod_env_state_tree_root_dir),
-                    os.path.join(RUNTIME_VARS.FILES, "file", "prod"),
-                ],
-            },
-            "pillar_roots": {
-                "base": [
-                    str(base_env_pillar_tree_root_dir),
-                    os.path.join(RUNTIME_VARS.FILES, "pillar", "base"),
-                ],
-                "prod": [str(prod_env_pillar_tree_root_dir)],
-            },
+            "file_roots": state_tree.as_dict(),
+            "pillar_roots": pillar_tree.as_dict(),
         }
     )
 

@@ -115,7 +115,7 @@ def test_grains_items(salt_cli, proxy_id):
 
 
 @pytest.mark.parametrize("proxy_id", ["dummy_proxy_one", "dummy_proxy_two"])
-def test_state_apply(salt_cli, tmp_path, base_env_state_tree_root_dir, proxy_id):
+def test_state_apply(salt_cli, tmp_path, state_tree, proxy_id):
     test_file = tmp_path / "testfile"
     core_state = """
     {}:
@@ -127,7 +127,7 @@ def test_state_apply(salt_cli, tmp_path, base_env_state_tree_root_dir, proxy_id)
         test_file
     )
 
-    with pytest.helpers.temp_file("core.sls", core_state, base_env_state_tree_root_dir):
+    with state_tree.base.temp_file("core.sls", core_state):
         ret = salt_cli.run("state.apply", "core", minion_tgt=proxy_id)
         for value in ret.json.values():
             assert value["result"] is True
@@ -135,7 +135,7 @@ def test_state_apply(salt_cli, tmp_path, base_env_state_tree_root_dir, proxy_id)
 
 @pytest.mark.slow_test
 @pytest.mark.parametrize("proxy_id", ["dummy_proxy_one", "dummy_proxy_two"])
-def test_state_highstate(salt_cli, tmp_path, base_env_state_tree_root_dir, proxy_id):
+def test_state_highstate(salt_cli, tmp_path, state_tree, proxy_id):
     test_file = tmp_path / "testfile"
     top_sls = """
     base:
@@ -153,9 +153,9 @@ def test_state_highstate(salt_cli, tmp_path, base_env_state_tree_root_dir, proxy
         test_file
     )
 
-    with pytest.helpers.temp_file(
-        "top.sls", top_sls, base_env_state_tree_root_dir
-    ), pytest.helpers.temp_file("core.sls", core_state, base_env_state_tree_root_dir):
+    with state_tree.base.temp_file("top.sls", top_sls), state_tree.base.temp_file(
+        "core.sls", core_state
+    ):
         ret = salt_cli.run("state.highstate", minion_tgt=proxy_id)
         for value in ret.json.values():
             assert value["result"] is True
