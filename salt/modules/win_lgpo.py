@@ -5752,7 +5752,6 @@ def _write_secedit_data(inf_data):
 
     try:
         # Write the changes to the inf file
-        print(f_inf)
         with salt.utils.files.fopen(f_inf, "w", encoding="utf-16") as fp:
             fp.write(inf_data)
         # Import the template data into a database
@@ -9856,7 +9855,9 @@ def get_policy(
             for pol in policy_data.policies[policy_class]["policies"]:
                 _p = policy_data.policies[policy_class]["policies"][pol]["Policy"]
                 if _p.lower() == policy_name.lower():
-                    policy_definition = policy_data.policies[policy_class]["policies"][pol]
+                    policy_definition = policy_data.policies[policy_class]["policies"][
+                        pol
+                    ]
                     break
     if policy_definition:
         if return_value_only:
@@ -10088,17 +10089,23 @@ def set_(
                     else:
                         # Case-sensitive search first
                         for policy in _policydata.policies[p_class]["policies"]:
-                            _p = _policydata.policies[p_class]["policies"][policy]["Policy"]
+                            _p = _policydata.policies[p_class]["policies"][policy][
+                                "Policy"
+                            ]
                             if _p == policy_name:
                                 _pol = _policydata.policies[p_class]["policies"][policy]
                                 policy_key_name = policy
                         if _pol is None:
                             # Still not found, case-insensitive search
                             for policy in _policydata.policies[p_class]["policies"]:
-                                _p = _policydata.policies[p_class]["policies"][policy]["Policy"]
+                                _p = _policydata.policies[p_class]["policies"][policy][
+                                    "Policy"
+                                ]
                                 # Case-sensitive search first
                                 if _p.lower() == policy_name.lower():
-                                    _pol = _policydata.policies[p_class]["policies"][policy]
+                                    _pol = _policydata.policies[p_class]["policies"][
+                                        policy
+                                    ]
                                     policy_key_name = policy
                     if _pol:
                         # transform and validate the setting
