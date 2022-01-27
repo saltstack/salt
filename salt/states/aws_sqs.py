@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage SQS Queues
 
@@ -15,7 +14,6 @@ information.
         aws_sqs.exists:
             - region: eu-west-1
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -50,7 +48,7 @@ def exists(name, region, user=None, opts=False):
     if not does_exist:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "AWS SQS queue {0} is set to be created".format(name)
+            ret["comment"] = "AWS SQS queue {} is set to be created".format(name)
             return ret
         created = __salt__["aws_sqs.create_queue"](name, region, opts, user)
         if created["retcode"] == 0:
@@ -60,7 +58,7 @@ def exists(name, region, user=None, opts=False):
             ret["comment"] = created["stderr"]
 
     else:
-        ret["comment"] = "{0} exists in {1}".format(name, region)
+        ret["comment"] = "{} exists in {}".format(name, region)
 
     return ret
 
@@ -88,7 +86,7 @@ def absent(name, region, user=None, opts=False):
     if does_exist:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "AWS SQS queue {0} is set to be removed".format(name)
+            ret["comment"] = "AWS SQS queue {} is set to be removed".format(name)
             return ret
         removed = __salt__["aws_sqs.delete_queue"](name, region, opts, user)
         if removed["retcode"] == 0:
@@ -97,6 +95,6 @@ def absent(name, region, user=None, opts=False):
             ret["result"] = False
             ret["comment"] = removed["stderr"]
     else:
-        ret["comment"] = "{0} does not exist in {1}".format(name, region)
+        ret["comment"] = "{} does not exist in {}".format(name, region)
 
     return ret

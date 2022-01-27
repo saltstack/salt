@@ -644,13 +644,13 @@ def super_(dev):
         if not line:
             continue
 
-        key, val = [val.strip() for val in re.split(r"[\s]+", line, maxsplit=1)]
+        key, val = (val.strip() for val in re.split(r"[\s]+", line, maxsplit=1))
         if not (key and val):
             continue
 
         mval = None
         if " " in val:
-            rval, mval = [val.strip() for val in re.split(r"[\s]+", val, maxsplit=1)]
+            rval, mval = (val.strip() for val in re.split(r"[\s]+", val, maxsplit=1))
             mval = mval[1:-1]
         else:
             rval = val
@@ -985,7 +985,8 @@ def _wipe(dev):
         wiper = "dd"
     elif not HAS_BLKDISCARD:
         log.warning(
-            "blkdiscard binary not available, properly wipe the dev manually for optimal results"
+            "blkdiscard binary not available, properly wipe the dev manually for"
+            " optimal results"
         )
         wiper = "dd"
     else:

@@ -39,7 +39,8 @@ warnings.filterwarnings(
 # Filter the backports package UserWarning about being re-imported
 warnings.filterwarnings(
     "ignore",
-    "^Module backports was already imported from (.*), but (.*) is being added to sys.path$",
+    "^Module backports was already imported from (.*), but (.*) is being added to"
+    " sys.path$",
     UserWarning,
     append=True,
 )
@@ -125,13 +126,10 @@ class Master(
     Creates a master server
     """
 
-    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+    def _handle_signals(self, signum, sigframe):
         if hasattr(self.master, "process_manager"):
             # escalate signal to the process manager processes
-            self.master.process_manager.stop_restarting()
-            self.master.process_manager.send_signal_to_processes(signum)
-            # kill any remaining processes
-            self.master.process_manager.kill_children()
+            self.master.process_manager._handle_signals(signum, sigframe)
         super()._handle_signals(signum, sigframe)
 
     def prepare(self):
@@ -302,8 +300,7 @@ class Minion(
 
         transport = self.config.get("transport").lower()
 
-        # TODO: AIO core is separate from transport
-        if transport in ("zeromq", "tcp", "detect"):
+        try:
             # Late import so logging works correctly
             import salt.minion
 
@@ -316,11 +313,9 @@ class Minion(
             if self.config.get("master_type") == "func":
                 salt.minion.eval_master_func(self.config)
             self.minion = salt.minion.MinionManager(self.config)
-        else:
+        except Exception:  # pylint: disable=broad-except
             log.error(
-                "The transport '%s' is not supported. Please use one of "
-                "the following: tcp, zeromq, or detect.",
-                transport,
+                "An error occured while setting up the minion manager", exc_info=True
             )
             self.shutdown(1)
 

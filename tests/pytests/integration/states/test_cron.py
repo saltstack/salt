@@ -31,8 +31,14 @@ def test_managed(cron_account, salt_cli, salt_minion, base_env_state_tree_root_d
     """
     file.managed
     """
-    cron_contents = "# Lines below here are managed by Salt, do not edit\n@hourly touch /tmp/test-file\n"
-    expected = "--- \n+++ \n@@ -1 +1,2 @@\n-\n+# Lines below here are managed by Salt, do not edit\n+@hourly touch /tmp/test-file\n"
+    cron_contents = (
+        "# Lines below here are managed by Salt, do not edit\n@hourly touch"
+        " /tmp/test-file\n"
+    )
+    expected = (
+        "--- \n+++ \n@@ -1 +1,2 @@\n-\n+# Lines below here are managed by Salt, do not"
+        " edit\n+@hourly touch /tmp/test-file\n"
+    )
     with pytest.helpers.temp_file(
         "issue-46881/cron", cron_contents, base_env_state_tree_root_dir
     ):

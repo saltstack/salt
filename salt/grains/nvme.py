@@ -9,12 +9,10 @@ To enable these grains set `nvme_grains: True` in the minion config.
 
     nvme_grains: True
 """
-# Import Python libs
 
 import errno
 import logging
 
-# Import Salt libs
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform

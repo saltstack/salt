@@ -27,7 +27,8 @@ def test_present():
             "changes": {},
             "comment": (
                 "Devices are a mix of RAID constituents with multiple MD_UUIDs:"
-                " ['6be5fc45:05802bba:1c2d6722:666f0e03', 'ffffffff:ffffffff:ffffffff:ffffffff']."
+                " ['6be5fc45:05802bba:1c2d6722:666f0e03',"
+                " 'ffffffff:ffffffff:ffffffff:ffffffff']."
             ),
             "name": "salt",
             "result": False,

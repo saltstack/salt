@@ -187,7 +187,11 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         Test - Install packages.
         """
         with patch("salt.modules.opkg.list_pkgs", MagicMock(side_effect=({}, {}))):
-            std_out = "Downloading http://feedserver/feeds/test/vim_7.4_arch.ipk.\n\nInstalling vim (7.4) on root\n"
+            std_out = (
+                "Downloading"
+                " http://feedserver/feeds/test/vim_7.4_arch.ipk.\n\nInstalling vim"
+                " (7.4) on root\n"
+            )
             ret_value = {"retcode": 0, "stdout": std_out}
             mock = MagicMock(return_value=ret_value)
             patch_kwargs = {

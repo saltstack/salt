@@ -8,6 +8,7 @@ import logging
 import os
 import shutil
 import stat
+import sys
 
 import attr
 import pytest
@@ -142,7 +143,14 @@ def salt_master_factory(
         "auth": {"method": "token", "token": "testsecret", "uses": 0},
         "policies": ["testpolicy"],
     }
-    config_overrides = {}
+
+    # Config settings to test `event_return`
+    config_defaults["returner_dirs"] = []
+    config_defaults["returner_dirs"].append(
+        os.path.join(RUNTIME_VARS.FILES, "returners")
+    )
+    config_defaults["event_return"] = "runtests_noop"
+    config_overrides = {"pytest-master": {"log": {"level": "DEBUG"}}}
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
@@ -297,15 +305,13 @@ def salt_sub_minion_factory(salt_master_factory, salt_sub_minion_id):
 
 
 @pytest.fixture(scope="session")
-def salt_proxy_factory(salt_master_factory, grains):
+def salt_proxy_factory(salt_master_factory):
     proxy_minion_id = random_string("proxytest-")
 
     config_overrides = {
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
     }
-    if salt.utils.platform.is_darwin() and tuple(grains["osrelease_info"]) < (10, 50):
-        config_overrides["pytest-minion"] = {"log": {"disabled": True}}
 
     factory = salt_master_factory.salt_proxy_minion_daemon(
         proxy_minion_id,
@@ -319,9 +325,42 @@ def salt_proxy_factory(salt_master_factory, grains):
     return factory
 
 
+@pytest.fixture(scope="session")
+def salt_delta_proxy_factory(salt_factories, salt_master_factory):
+    proxy_minion_id = random_string("proxytest-")
+    root_dir = salt_factories.get_root_dir_for_daemon(proxy_minion_id)
+    conf_dir = root_dir / "conf"
+    conf_dir.mkdir(parents=True, exist_ok=True)
+
+    config_defaults = {
+        "root_dir": str(root_dir),
+        "hosts.file": os.path.join(
+            RUNTIME_VARS.TMP, "hosts"
+        ),  # Do we really need this for these tests?
+        "aliases.file": os.path.join(
+            RUNTIME_VARS.TMP, "aliases"
+        ),  # Do we really need this for these tests?
+        "transport": salt_master_factory.config["transport"],
+        "user": salt_master_factory.config["user"],
+        "metaproxy": "deltaproxy",
+        "master": "127.0.0.1",
+    }
+    factory = salt_master_factory.salt_proxy_minion_daemon(
+        proxy_minion_id,
+        defaults=config_defaults,
+        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        start_timeout=240,
+    )
+    factory.after_terminate(
+        pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
+    )
+    return factory
+
+
 @pytest.fixture
 def temp_salt_master(
-    request, salt_factories,
+    request,
+    salt_factories,
 ):
     config_defaults = {
         "open_mode": True,
@@ -350,6 +389,44 @@ def temp_salt_minion(temp_salt_master):
         pytest.helpers.remove_stale_minion_key, temp_salt_master, factory.id
     )
     return factory
+
+
+@pytest.fixture(scope="session")
+def get_python_executable():
+    """
+    Return the path to the python executable.
+
+    This is particularly important when running the test suite within a virtualenv, while trying
+    to create virtualenvs on windows.
+    """
+    try:
+        if salt.utils.platform.is_windows():
+            python_binary = os.path.join(
+                sys.real_prefix, os.path.basename(sys.executable)
+            )
+        else:
+            python_binary = os.path.join(
+                sys.real_prefix, "bin", os.path.basename(sys.executable)
+            )
+            if not os.path.exists(python_binary):
+                if not python_binary[-1].isdigit():
+                    versioned_python_binary = "{}{}".format(
+                        python_binary, *sys.version_info
+                    )
+                    log.info(
+                        "Python binary could not be found at %s. Trying %s",
+                        python_binary,
+                        versioned_python_binary,
+                    )
+                    if os.path.exists(versioned_python_binary):
+                        python_binary = versioned_python_binary
+        if not os.path.exists(python_binary):
+            log.warning("Python binary could not be found at %s", python_binary)
+            python_binary = None
+    except AttributeError:
+        # We're not running inside a virtualenv
+        python_binary = sys.executable
+    return python_binary
 
 
 @pytest.fixture(scope="session")

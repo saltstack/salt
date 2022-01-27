@@ -25,6 +25,7 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
         cmd_name = "crontab"
         os_family = self.run_function("grains.get", ["os_family"])
         os_release = self.run_function("grains.get", ["osrelease"])
+        is_systemd = self.run_function("grains.get", ["systemd"])
         self.stopped = False
         self.running = True
         if os_family == "RedHat":
@@ -51,6 +52,9 @@ class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
 
         if os_family != "Windows" and salt.utils.path.which(cmd_name) is None:
             self.skipTest("{} is not installed".format(cmd_name))
+
+        if is_systemd and self.run_function("service.offline"):
+            self.skipTest("systemd is OFFLINE")
 
     def tearDown(self):
         if self.post_srv_disable:

@@ -17,6 +17,7 @@ import time
 import urllib.error
 
 import salt
+import salt.channel.client
 import salt.client
 import salt.client.ssh.client
 import salt.config
@@ -24,7 +25,6 @@ import salt.defaults.events
 import salt.payload
 import salt.runner
 import salt.state
-import salt.transport.client
 import salt.utils.args
 import salt.utils.event
 import salt.utils.extmods
@@ -78,15 +78,17 @@ def _get_top_file_envs():
     try:
         return __context__["saltutil._top_file_envs"]
     except KeyError:
-        try:
-            st_ = salt.state.HighState(__opts__, initial_pillar=__pillar__.value())
-            top = st_.get_top()
-            if top:
-                envs = list(st_.top_matches(top).keys()) or "base"
-            else:
-                envs = "base"
-        except SaltRenderError as exc:
-            raise CommandExecutionError("Unable to render top file(s): {}".format(exc))
+        with salt.state.HighState(__opts__, initial_pillar=__pillar__.value()) as st_:
+            try:
+                top = st_.get_top()
+                if top:
+                    envs = list(st_.top_matches(top).keys()) or "base"
+                else:
+                    envs = "base"
+            except SaltRenderError as exc:
+                raise CommandExecutionError(
+                    "Unable to render top file(s): {}".format(exc)
+                )
         __context__["saltutil._top_file_envs"] = envs
         return envs
 
@@ -127,7 +129,7 @@ def update(version=None):
     """
     Update the salt minion from the URL defined in opts['update_url']
     SaltStack, Inc provides the latest builds here:
-    update_url: https://repo.saltstack.com/windows/
+    update_url: https://repo.saltproject.io/windows/
 
     Be aware that as of 2014-8-11 there's a bug in esky such that only the
     latest version available in the update_url can be downloaded and installed.
@@ -1118,7 +1120,7 @@ def refresh_matchers():
     return ret
 
 
-def refresh_pillar(wait=False, timeout=30):
+def refresh_pillar(wait=False, timeout=30, clean_cache=True):
     """
     Signal the minion to refresh the in-memory pillar data. See :ref:`pillar-in-memory`.
 
@@ -1126,6 +1128,9 @@ def refresh_pillar(wait=False, timeout=30):
     :type wait:             bool, optional
     :param timeout:         How long to wait in seconds, only used when wait is True, defaults to 30.
     :type timeout:          int, optional
+    :param clean_cache:     Clean the pillar cache, only used when `pillar_cache` is True. Defaults to True
+    :type clean_cache:      bool, optional
+        .. versionadded:: 3005
     :return:                Boolean status, True when the pillar_refresh event was fired successfully.
 
     CLI Example:
@@ -1135,13 +1140,14 @@ def refresh_pillar(wait=False, timeout=30):
         salt '*' saltutil.refresh_pillar
         salt '*' saltutil.refresh_pillar wait=True timeout=60
     """
+    data = {"clean_cache": clean_cache}
     try:
         if wait:
             #  If we're going to block, first setup a listener
             with salt.utils.event.get_event(
                 "minion", opts=__opts__, listen=True
             ) as eventer:
-                ret = __salt__["event.fire"]({}, "pillar_refresh")
+                ret = __salt__["event.fire"](data, "pillar_refresh")
                 # Wait for the finish event to fire
                 log.trace("refresh_pillar waiting for pillar refresh to complete")
                 # Blocks until we hear this event or until the timeout expires
@@ -1154,7 +1160,7 @@ def refresh_pillar(wait=False, timeout=30):
                         "Pillar refresh did not complete within timeout %s", timeout
                     )
         else:
-            ret = __salt__["event.fire"]({}, "pillar_refresh")
+            ret = __salt__["event.fire"](data, "pillar_refresh")
     except KeyError:
         log.error("Event module not available. Pillar refresh failed.")
         ret = False  # Effectively a no-op, since we can't really return without an event system
@@ -1255,8 +1261,7 @@ def clear_cache():
                 os.remove(os.path.join(root, name))
             except OSError as exc:
                 log.error(
-                    "Attempt to clear cache with saltutil.clear_cache "
-                    "FAILED with: %s",
+                    "Attempt to clear cache with saltutil.clear_cache FAILED with: %s",
                     exc,
                 )
                 return False
@@ -1290,7 +1295,8 @@ def clear_job_cache(hours=24):
                     shutil.rmtree(directory)
             except OSError as exc:
                 log.error(
-                    "Attempt to clear cache with saltutil.clear_job_cache FAILED with: %s",
+                    "Attempt to clear cache with saltutil.clear_job_cache FAILED"
+                    " with: %s",
                     exc,
                 )
                 return False
@@ -1360,7 +1366,6 @@ def find_cached_job(jid):
 
         salt '*' saltutil.find_cached_job <job id>
     """
-    serial = salt.payload.Serial(__opts__)
     proc_dir = os.path.join(__opts__["cachedir"], "minion_jobs")
     job_dir = os.path.join(proc_dir, str(jid))
     if not os.path.isdir(job_dir):
@@ -1376,7 +1381,7 @@ def find_cached_job(jid):
         buf = fp_.read()
     if buf:
         try:
-            data = serial.loads(buf)
+            data = salt.payload.loads(buf)
         except NameError:
             # msgpack error in salt-ssh
             pass
@@ -1422,9 +1427,9 @@ def signal_job(jid, sig):
                 path = os.path.join(__opts__["cachedir"], "proc", str(jid))
                 if os.path.isfile(path):
                     os.remove(path)
-                return (
-                    "Job {} was not running and job data has been " " cleaned up"
-                ).format(jid)
+                return "Job {} was not running and job data has been cleaned up".format(
+                    jid
+                )
     return ""
 
 
@@ -1508,7 +1513,7 @@ def regen_keys():
             pass
     # TODO: move this into a channel function? Or auth?
     # create a channel again, this will force the key regen
-    with salt.transport.client.ReqChannel.factory(__opts__) as channel:
+    with salt.channel.client.ReqChannel.factory(__opts__) as channel:
         log.debug("Recreating channel to force key regen")
 
 
@@ -1536,7 +1541,7 @@ def revoke_auth(preserve_minion_cache=False):
         masters.append(__opts__["master_uri"])
 
     for master in masters:
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             __opts__, master_uri=master
         ) as channel:
             tok = channel.auth.gen_token(b"salt")

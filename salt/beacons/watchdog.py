@@ -10,6 +10,8 @@ Watch files and translate the changes into salt events.
 import collections
 import logging
 
+import salt.utils.beacons
+
 try:
     from watchdog.observers import Observer
     from watchdog.events import FileSystemEventHandler
@@ -19,7 +21,7 @@ except ImportError:
     HAS_WATCHDOG = False
 
     class FileSystemEventHandler:
-        """ A dummy class to make the import work """
+        """A dummy class to make the import work"""
 
         def __init__(self):
             pass
@@ -68,7 +70,9 @@ class Handler(FileSystemEventHandler):
 def __virtual__():
     if HAS_WATCHDOG:
         return __virtualname__
-    return False
+    err_msg = "watchdog library is missing."
+    log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+    return False, err_msg
 
 
 def _get_queue(config):
@@ -124,7 +128,7 @@ def _validate(config):
 
     if not isinstance(_config["directories"], dict):
         raise ValidationError(
-            "Configuration for watchdog beacon directories must be a " "dictionary."
+            "Configuration for watchdog beacon directories must be a dictionary."
         )
 
     for path in _config["directories"]:
@@ -134,7 +138,7 @@ def _validate(config):
 def _validate_path(path_config):
     if not isinstance(path_config, dict):
         raise ValidationError(
-            "Configuration for watchdog beacon directory path must be " "a dictionary."
+            "Configuration for watchdog beacon directory path must be a dictionary."
         )
 
     if "mask" in path_config:
@@ -190,10 +194,9 @@ def beacon(config):
     * move    - File or directory is moved or renamed in the watched directory
     """
 
-    _config = {}
-    list(map(_config.update, config))
+    config = salt.utils.beacons.list_to_dict(config)
 
-    queue = _get_queue(_config)
+    queue = _get_queue(config)
 
     ret = []
     while queue:

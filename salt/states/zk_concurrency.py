@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Control concurrency of steps within state execution using zookeeper
 ===================================================================
@@ -46,8 +45,6 @@ This example would allow the file state to change, but would limit the
 concurrency of the trafficserver service restart to 4.
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 # TODO: use depends decorator to make these per function deps, instead of all or nothing
 REQUIRED_FUNCS = (
@@ -161,7 +158,7 @@ def unlock(
     if unlocked:
         ret["result"] = True
     else:
-        ret["comment"] = "Unable to find lease for path {0}".format(name)
+        ret["comment"] = "Unable to find lease for path {}".format(name)
 
     return ret
 
@@ -199,7 +196,7 @@ def min_party(
     )
     if not isinstance(nodes, list):
         raise Exception(
-            "Error from zk_concurrency.party_members, return was not a list: {0}".format(
+            "Error from zk_concurrency.party_members, return was not a list: {}".format(
                 nodes
             )
         )
@@ -209,18 +206,17 @@ def min_party(
     if num_nodes >= min_nodes or blocking:
         ret["result"] = None if __opts__["test"] else True
         if not blocking:
-            ret["comment"] = "Currently {0} nodes, which is >= {1}".format(
+            ret["comment"] = "Currently {} nodes, which is >= {}".format(
                 num_nodes, min_nodes
             )
         else:
-            ret[
-                "comment"
-            ] = "Blocked until {0} nodes were available. Unblocked after {1} nodes became available".format(
-                min_nodes, num_nodes
+            ret["comment"] = (
+                "Blocked until {} nodes were available. Unblocked after {} nodes became"
+                " available".format(min_nodes, num_nodes)
             )
     else:
         ret["result"] = False
-        ret["comment"] = "Currently {0} nodes, which is < {1}".format(
+        ret["comment"] = "Currently {} nodes, which is < {}".format(
             num_nodes, min_nodes
         )
 

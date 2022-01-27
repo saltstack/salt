@@ -149,7 +149,7 @@ $( document ).ready(function() {
     $("#notifications").on('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        $.get('//docs.saltstack.com/en/announcements.html?id=1', function (data) {
+        $.get('//docs.saltproject.io/en/announcements.html?id=1', function (data) {
             box = bootbox.dialog({
                 title: "Announcements",
                 message: data
@@ -274,4 +274,3 @@ function getMetaStatus() {
 
     $(document).ready($.proxy(anchorScrolls, 'init'));
 })(window.document, window.history, window.location);
-

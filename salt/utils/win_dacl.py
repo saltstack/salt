@@ -1222,8 +1222,20 @@ def get_name(principal):
                 sid_obj = principal
 
     # By now we should have a valid PySID object
+    str_sid = get_sid_string(sid_obj)
+
     try:
-        return win32security.LookupAccountSid(None, sid_obj)[0]
+        name = win32security.LookupAccountSid(None, sid_obj)[0]
+
+        # Let's Check for Virtual Service Accounts
+        # Virtual Accounts must be prepended with NT Service in order to resolve
+        # properly
+        # https://docs.microsoft.com/en-us/previous-versions/technet-magazine/cc138011(v=msdn.10)
+        # https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2008-R2-and-2008/dd548356(v=ws.10)
+        if str_sid.startswith("S-1-5-80"):
+            name = "NT Service\\{}".format(name)
+
+        return name
     except (pywintypes.error, TypeError) as exc:
         # Microsoft introduced the concept of Capability SIDs in Windows 8
         # https://docs.microsoft.com/en-us/windows/security/identity-protection/access-control/security-identifiers#capability-sids
@@ -1232,7 +1244,6 @@ def get_name(principal):
         # These types of SIDs do not resolve, so we'll just ignore them for this
         # All capability SIDs begin with `S-1-15-3`, so we'll only throw an
         # error when the sid does not begin with `S-1-15-3`
-        str_sid = get_sid_string(sid_obj)
         if not str_sid.startswith("S-1-15-3"):
             message = 'Error resolving "{}"'.format(principal)
             if type(exc) == pywintypes.error:
@@ -2152,7 +2163,7 @@ def copy_security(
 
     if not security_flags:
         raise SaltInvocationError(
-            "One of copy_owner, copy_group, copy_dacl, or copy_sacl must be " "True"
+            "One of copy_owner, copy_group, copy_dacl, or copy_sacl must be True"
         )
 
     # To set the owner to something other than the logged in user requires
@@ -2241,8 +2252,9 @@ def _check_perms(obj_name, obj_type, new_perms, access_mode, ret, test_mode=Fals
             user_name = get_name(principal=user)
         except CommandExecutionError:
             ret["comment"].append(
-                '{} Perms: User "{}" missing from Target System'
-                "".format(access_mode.capitalize(), user)
+                '{} Perms: User "{}" missing from Target System'.format(
+                    access_mode.capitalize(), user
+                )
             )
             continue
 
@@ -2457,8 +2469,9 @@ def check_perms(
                 except CommandExecutionError:
                     ret["result"] = False
                     ret["comment"].append(
-                        'Failed to set inheritance for "{}" to {}'
-                        "".format(obj_name, inheritance)
+                        'Failed to set inheritance for "{}" to {}'.format(
+                            obj_name, inheritance
+                        )
                     )
 
     # Check reset
