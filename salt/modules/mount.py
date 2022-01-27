@@ -778,7 +778,7 @@ def set_fstab(
     test=False,
     match_on="auto",
     not_change=False,
-    **kwargs,
+    **kwargs
 ):
     """
     Verify that this mount is represented in the fstab, change the mount
@@ -915,7 +915,7 @@ def set_vfstab(
     test=False,
     match_on="auto",
     not_change=False,
-    **kwargs,
+    **kwargs
 ):
     """
     .. versionadded:: 2016.3.2
@@ -1102,7 +1102,7 @@ def set_automaster(
     config="/etc/auto_salt",
     test=False,
     not_change=False,
-    **kwargs,
+    **kwargs
 ):
     """
     Verify that this mount is represented in the auto_salt, change the mount
@@ -1764,7 +1764,7 @@ def set_filesystems(
     test=False,
     match_on="auto",
     not_change=False,
-    **kwargs,
+    **kwargs
 ):
     """
     .. versionadded:: 2018.3.3
