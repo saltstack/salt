@@ -31,7 +31,7 @@ pytestmark = [
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def docker_client():
     if salt.utils.path.which("docker") is None:
         pytest.skip("The docker binary is not available")
@@ -45,7 +45,7 @@ def docker_client():
         pytest.skip("Failed to get a connection to docker running on the system")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def host_docker_network_ip_address(docker_client):
     sminion = create_sminion()
     network_name = "salt-e2e"
@@ -87,7 +87,7 @@ def integration_files_dir(tmp_path_factory):
         shutil.rmtree(str(dirname), ignore_errors=True)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def state_tree(integration_files_dir):
     state_tree_path = integration_files_dir / "state-tree"
     state_tree_path.mkdir(exist_ok=True)
@@ -102,7 +102,7 @@ def state_tree(integration_files_dir):
         shutil.rmtree(str(state_tree_path), ignore_errors=True)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def pillar_tree(integration_files_dir):
     pillar_tree_path = integration_files_dir / "pillar-tree"
     pillar_tree_path.mkdir(exist_ok=True)

@@ -8,7 +8,6 @@ import logging
 import os
 import shutil
 import stat
-import sys
 
 import attr
 import pytest
@@ -18,28 +17,78 @@ import salt.utils.platform
 from salt.serializers import yaml
 from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
+from saltfactories.utils.tempfiles import SaltPillarTree, SaltStateTree
 from tests.support.helpers import get_virtualenv_binary_path
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
+def state_tree(integration_files_dir):
+    state_tree_path = integration_files_dir / "state-tree"
+    state_tree_path.mkdir(exist_ok=True)
+
+    base_env_path = state_tree_path / "base"
+    base_env_path.mkdir(exist_ok=True)
+
+    prod_env_path = state_tree_path / "prod"
+    prod_env_path.mkdir(exist_ok=True)
+
+    envs = {
+        "base": [
+            str(base_env_path),
+            os.path.join(RUNTIME_VARS.FILES, "file", "base"),
+        ],
+        # Alternate root to test __env__ choices
+        "prod": [
+            str(prod_env_path),
+            os.path.join(RUNTIME_VARS.FILES, "file", "prod"),
+        ],
+    }
+    return SaltStateTree(envs=envs)
+
+
+@pytest.fixture(scope="package")
+def pillar_tree(integration_files_dir):
+    pillar_tree_path = integration_files_dir / "pillar-tree"
+    pillar_tree_path.mkdir(exist_ok=True)
+
+    base_env_path = pillar_tree_path / "base"
+    base_env_path.mkdir(exist_ok=True)
+
+    prod_env_path = pillar_tree_path / "prod"
+    prod_env_path.mkdir(exist_ok=True)
+
+    envs = {
+        "base": [
+            str(base_env_path),
+            os.path.join(RUNTIME_VARS.FILES, "pillar", "base"),
+        ],
+        # Alternate root to test __env__ choices
+        "prod": [
+            str(prod_env_path),
+        ],
+    }
+    return SaltPillarTree(envs=envs)
+
+
+@pytest.fixture(scope="package")
 def salt_minion_id():
     return random_string("minion-")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def salt_sub_minion_id():
     return random_string("sub-minion-")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def sdb_etcd_port():
     return get_unused_localhost_port()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def vault_port():
     return get_unused_localhost_port()
 
@@ -51,7 +100,7 @@ class ReactorEvent:
     event_tag = attr.ib()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def reactor_event(tmp_path_factory):
 
     reactor_tag = "salt/event/test"
@@ -76,13 +125,13 @@ def reactor_event(tmp_path_factory):
         shutil.rmtree(str(reactors_dir), ignore_errors=True)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def master_id():
     master_id = random_string("master-")
     yield master_id
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def salt_master_factory(
     request,
     salt_factories,
@@ -218,7 +267,7 @@ def salt_master_factory(
     return factory
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vault_port):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "minion")) as rfh:
         config_defaults = yaml.deserialize(rfh.read())
@@ -256,7 +305,7 @@ def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vaul
     return factory
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def salt_sub_minion_factory(salt_master_factory, salt_sub_minion_id):
     with salt.utils.files.fopen(
         os.path.join(RUNTIME_VARS.CONF_DIR, "sub_minion")
@@ -286,7 +335,7 @@ def salt_sub_minion_factory(salt_master_factory, salt_sub_minion_id):
     return factory
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def salt_proxy_factory(salt_master_factory):
     proxy_minion_id = random_string("proxytest-")
 
@@ -307,7 +356,7 @@ def salt_proxy_factory(salt_master_factory):
     return factory
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def salt_delta_proxy_factory(salt_factories, salt_master_factory):
     proxy_minion_id = random_string("proxytest-")
     root_dir = salt_factories.get_root_dir_for_daemon(proxy_minion_id)
@@ -371,51 +420,6 @@ def temp_salt_minion(temp_salt_master):
         pytest.helpers.remove_stale_minion_key, temp_salt_master, factory.id
     )
     return factory
-
-
-@pytest.fixture(scope="session")
-def get_python_executable():
-    """
-    Return the path to the python executable.
-
-    This is particularly important when running the test suite within a virtualenv, while trying
-    to create virtualenvs on windows.
-    """
-    try:
-        if salt.utils.platform.is_windows():
-            python_binary = os.path.join(
-                sys.real_prefix, os.path.basename(sys.executable)
-            )
-        else:
-            python_binary = os.path.join(
-                sys.real_prefix, "bin", os.path.basename(sys.executable)
-            )
-            if not os.path.exists(python_binary):
-                if not python_binary[-1].isdigit():
-                    versioned_python_binary = "{}{}".format(
-                        python_binary, *sys.version_info
-                    )
-                    log.info(
-                        "Python binary could not be found at %s. Trying %s",
-                        python_binary,
-                        versioned_python_binary,
-                    )
-                    if os.path.exists(versioned_python_binary):
-                        python_binary = versioned_python_binary
-        if not os.path.exists(python_binary):
-            log.warning("Python binary could not be found at %s", python_binary)
-            python_binary = None
-    except AttributeError:
-        # We're not running inside a virtualenv
-        python_binary = sys.executable
-    return python_binary
-
-
-@pytest.fixture(scope="session")
-def bridge_pytest_and_runtests():
-    """
-    We're basically overriding the same fixture defined in tests/conftest.py
-    """
 
 
 # ----- Async Test Fixtures ----------------------------------------------------------------------------------------->

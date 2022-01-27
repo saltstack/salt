@@ -13,7 +13,7 @@ def minion_id():
     return "func-tests-minion"
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="package")
 def state_tree(tmp_path_factory):
     state_tree_path = tmp_path_factory.mktemp("state-tree")
     state_tree_path.mkdir(exist_ok=True)
