@@ -3534,8 +3534,8 @@ class BaseHighState:
             opts["env_order"] = mopts.get("env_order", opts.get("env_order", []))
             opts["default_top"] = mopts.get("default_top", opts.get("default_top"))
             opts["state_events"] = mopts.get("state_events")
-            opts["state_aggregate"] = mopts.get(
-                "state_aggregate", opts.get("state_aggregate", False)
+            opts["state_aggregate"] = (
+                opts.get("state_aggregate") or mopts.get("state_aggregate") or False
             )
             opts["jinja_env"] = mopts.get("jinja_env", {})
             opts["jinja_sls_env"] = mopts.get("jinja_sls_env", {})

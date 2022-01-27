@@ -67,7 +67,7 @@ def virtualenv_ver(venv_bin, user=None, **kwargs):
             [x for x in ret["stdout"].strip().split() if re.search(r"^\d.\d*", x)]
         )
     virtualenv_version_info = tuple(
-        [int(i) for i in re.sub(r"(rc|\+ds).*$", "", version).split(".")]
+        int(i) for i in re.sub(r"(rc|\+ds).*$", "", version).split(".")
     )
     return virtualenv_version_info
 

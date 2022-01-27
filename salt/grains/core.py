@@ -1775,15 +1775,15 @@ def _parse_cpe_name(cpe):
             ret["phase"] = cpe[5] if len(cpe) > 5 else None
             ret["part"] = part.get(cpe[1][1:])
         elif len(cpe) == 6 and cpe[1] == "2.3":  # WFN to a string
-            ret["vendor"], ret["product"], ret["version"] = [
+            ret["vendor"], ret["product"], ret["version"] = (
                 x if x != "*" else None for x in cpe[3:6]
-            ]
+            )
             ret["phase"] = None
             ret["part"] = part.get(cpe[2])
         elif len(cpe) > 7 and len(cpe) <= 13 and cpe[1] == "2.3":  # WFN to a string
-            ret["vendor"], ret["product"], ret["version"], ret["phase"] = [
+            ret["vendor"], ret["product"], ret["version"], ret["phase"] = (
                 x if x != "*" else None for x in cpe[3:7]
-            ]
+            )
             ret["part"] = part.get(cpe[2])
 
     return ret
@@ -2103,9 +2103,9 @@ def os_data():
         log.trace(
             "Getting OS name, release, and codename from distro id, version, codename"
         )
-        (osname, osrelease, oscodename) = [
+        (osname, osrelease, oscodename) = (
             x.strip('"').strip("'") for x in _linux_distribution()
-        ]
+        )
         # Try to assign these three names based on the lsb info, they tend to
         # be more accurate than what python gets from /etc/DISTRO-release.
         # It's worth noting that Ubuntu has patched their Python distribution
