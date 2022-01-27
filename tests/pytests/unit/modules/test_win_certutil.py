@@ -21,9 +21,12 @@ def test_get_serial():
             "OtherStuff"
         )
     )
-    with patch.dict(certutil.__salt__, {"cmd.run": mock}):
+    with patch.dict(certutil.__salt__, {"cmd.run": mock}), patch.dict(
+        certutil.__salt__,
+        {"cp.cache_file": MagicMock(return_value="/path/to/cert.cer")},
+    ), patch("os.path.exists", MagicMock(return_value=True)):
         out = certutil.get_cert_serial("/path/to/cert.cer")
-        mock.assert_called_once_with("certutil.exe -silent -verify /path/to/cert.cer")
+        mock.assert_called_once_with('certutil.exe -silent -verify "/path/to/cert.cer"')
         assert expected == out
 
 
@@ -49,7 +52,7 @@ def test_get_serials():
     )
     with patch.dict(certutil.__salt__, {"cmd.run": mock}):
         out = certutil.get_stored_cert_serials("TrustedPublisher")
-        mock.assert_called_once_with("certutil.exe -store TrustedPublisher")
+        mock.assert_called_once_with('certutil.exe -store "TrustedPublisher"')
         assert expected == out
 
 
@@ -68,10 +71,10 @@ def test_add_store():
     cache_mock = MagicMock(return_value="/tmp/cert.cer")
     with patch.dict(
         certutil.__salt__, {"cmd.run": cmd_mock, "cp.cache_file": cache_mock}
-    ):
+    ), patch("os.path.exists", MagicMock(return_value=True)):
         certutil.add_store("salt://path/to/file", "TrustedPublisher")
         cmd_mock.assert_called_once_with(
-            "certutil.exe -addstore TrustedPublisher /tmp/cert.cer"
+            'certutil.exe -addstore TrustedPublisher "/tmp/cert.cer"'
         )
         cache_mock.assert_called_once_with("salt://path/to/file", "base")
 
@@ -93,9 +96,9 @@ def test_del_store():
         cert_serial_mock.return_value = "ABCDEF"
         with patch.dict(
             certutil.__salt__, {"cmd.run": cmd_mock, "cp.cache_file": cache_mock}
-        ):
+        ), patch("os.path.exists", MagicMock(return_value=True)):
             certutil.del_store("salt://path/to/file", "TrustedPublisher")
             cmd_mock.assert_called_once_with(
-                "certutil.exe -delstore TrustedPublisher ABCDEF"
+                'certutil.exe -delstore TrustedPublisher "ABCDEF"'
             )
             cache_mock.assert_called_once_with("salt://path/to/file", "base")
