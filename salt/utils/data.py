@@ -1544,7 +1544,7 @@ def get_value(obj, path, default=None):
 
 
 @jinja_filter("flatten")
-def flatten(data, levels=None, preserve_nulls=False):
+def flatten(data, levels=None, preserve_nulls=False, _ids=None):
     """
     .. versionadded:: 3005
 
@@ -1554,7 +1554,11 @@ def flatten(data, levels=None, preserve_nulls=False):
 
     :param levels: The number of levels in sub-lists to descend
 
-    :param preserve_nulls: Preserve nulls in a list, by default flatten removes them
+    :param preserve_nulls: Preserve nulls in a list, by default flatten removes
+                           them
+
+    :param _ids: Parameter used internally within the function to detect
+                 reference cycles.
 
     :returns: A flat(ter) list of values
 
@@ -1577,6 +1581,12 @@ def flatten(data, levels=None, preserve_nulls=False):
         {{ [3, None, [4, [2]] ] | flatten(levels=1, preserve_nulls=True) }}
         # => [3, None, 4, [2]]
     """
+    if _ids is None:
+        _ids = set()
+    if id(data) in _ids:
+        raise RecursionError("Reference cycle detected. Check input list.")
+    _ids.add(id(data))
+
     ret = []
 
     for element in data:
@@ -1585,12 +1595,15 @@ def flatten(data, levels=None, preserve_nulls=False):
             continue
         elif is_iter(element):
             if levels is None:
-                ret.extend(flatten(element, preserve_nulls=preserve_nulls))
+                ret.extend(flatten(element, preserve_nulls=preserve_nulls, _ids=_ids))
             elif levels >= 1:
                 # decrement as we go down the stack
                 ret.extend(
                     flatten(
-                        element, levels=(int(levels) - 1), preserve_nulls=preserve_nulls
+                        element,
+                        levels=(int(levels) - 1),
+                        preserve_nulls=preserve_nulls,
+                        _ids=_ids,
                     )
                 )
             else:
