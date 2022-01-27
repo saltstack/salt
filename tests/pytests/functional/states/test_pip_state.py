@@ -9,7 +9,6 @@
 import glob
 import logging
 import os
-import pprint
 import shutil
 import sys
 
@@ -21,7 +20,7 @@ import salt.utils.versions
 import salt.utils.win_dacl
 import salt.utils.win_functions
 import salt.utils.win_runas
-from tests.support.helpers import patched_environ
+from tests.support.helpers import VirtualEnv, patched_environ
 
 try:
     import pwd
@@ -53,34 +52,9 @@ def create_virtualenv(modules):
         virtualenv because it will fail otherwise
         """
         if "python" not in kwargs:
-            try:
-                if salt.utils.platform.is_windows():
-                    python = os.path.join(
-                        sys.real_prefix, os.path.basename(sys.executable)
-                    )
-                else:
-                    python_binary_names = [
-                        "python{}.{}".format(*sys.version_info),
-                        "python{}".format(*sys.version_info),
-                        "python",
-                    ]
-                    for binary_name in python_binary_names:
-                        python = os.path.join(sys.real_prefix, "bin", binary_name)
-                        if os.path.exists(python):
-                            break
-                    else:
-                        pytest.fail(
-                            "Couldn't find a python binary name under '{}' matching: {}".format(
-                                os.path.join(sys.real_prefix, "bin"),
-                                python_binary_names,
-                            )
-                        )
-                # We're running off a virtualenv, and we don't want to create a virtualenv off of
-                # a virtualenv, let's point to the actual python that created the virtualenv
-                kwargs["python"] = python
-            except AttributeError:
-                # We're running off of the system python
-                pass
+            python_exeutable = VirtualEnv.get_real_python()
+            if python_exeutable != sys.executable:
+                kwargs["python"] = python_exeutable
         return modules.virtualenv.create(path, **kwargs)
 
     return run_command
@@ -101,14 +75,14 @@ def test_pip_installed_removed(modules, states):
 
 
 @pytest.mark.slow_test
-def test_pip_installed_removed_venv(tmp_path, create_virtualenv, states):
+def test_pip_installed_removed_venv(tmp_path, states):
     venv_dir = tmp_path / "pip_installed_removed"
-    create_virtualenv(str(venv_dir))
     name = "pudb"
-    ret = states.pip.installed(name=name, bin_env=str(venv_dir))
-    assert ret.result is True
-    ret = states.pip.removed(name=name, bin_env=str(venv_dir))
-    assert ret.result is True
+    with VirtualEnv(venv_dir=str(venv_dir)):
+        ret = states.pip.installed(name=name, bin_env=str(venv_dir))
+        assert ret.result is True
+        ret = states.pip.removed(name=name, bin_env=str(venv_dir))
+        assert ret.result is True
 
 
 @pytest.mark.slow_test
@@ -148,39 +122,34 @@ pep8-pip:
                 assert state_return.result is True
 
 
-def test_pip_installed_name_test_mode(tmp_path, create_virtualenv, states):
+def test_pip_installed_name_test_mode(tmp_path, states):
     """
     Test pip.installed state while test=true
     """
     venv_dir = tmp_path / "pip_installed_test_mode_name"
-    create_virtualenv(str(venv_dir))
-
-    name = "pudb"
-    msg = "Python package(s) set to be installed:\npudb"
-    ret = states.pip.installed(name=name, bin_env=str(venv_dir), test=True)
-    assert name in ret.comment
+    with VirtualEnv(venv_dir=str(venv_dir)):
+        name = "pudb"
+        ret = states.pip.installed(name=name, bin_env=str(venv_dir), test=True)
+        assert name in ret.comment
 
 
-def test_pip_installed_pkgs_test_mode(tmp_path, create_virtualenv, states):
+def test_pip_installed_pkgs_test_mode(tmp_path, states):
     """
     Test pip.installed state while test=true
     """
     venv_dir = tmp_path / "pip_installed_test_mode_pkgs"
-    create_virtualenv(str(venv_dir))
-
-    pkgs = ["boto", "pudb", "black"]
-    msg = "Python package(s) set to be installed:\nboto\npudb\nblack"
-    ret = states.pip.installed(name=None, pkgs=pkgs, bin_env=str(venv_dir), test=True)
-    assert msg in ret.comment
+    with VirtualEnv(venv_dir=venv_dir):
+        pkgs = ["boto", "pudb", "black"]
+        msg = "Python package(s) set to be installed:\nboto\npudb\nblack"
+        ret = states.pip.installed(
+            name=None, pkgs=pkgs, bin_env=str(venv_dir), test=True
+        )
+        assert msg in ret.comment
 
 
 @pytest.mark.slow_test
-def test_issue_2028_pip_installed_state(
-    tmp_path, modules, state_tree, get_python_executable
-):
-
+def test_issue_2028_pip_installed_state(tmp_path, modules, state_tree):
     venv_dir = tmp_path / "issue-2028-pip-installed"
-    python_executable = get_python_executable
 
     sls_contents = """
 {%- set virtualenv_base = salt['pillar.get']('venv_dir') %}
@@ -217,7 +186,7 @@ pep8-pip:
             mods="issue-2028-pip-installed",
             pillar={
                 "venv_dir": str(venv_dir),
-                "python_exeutable": get_python_executable,
+                "python_exeutable": VirtualEnv.get_real_python(),
             },
         )
 
@@ -233,7 +202,7 @@ pep8-pip:
 
 
 @pytest.mark.slow_test
-def test_issue_2087_missing_pip(tmp_path, create_virtualenv, modules):
+def test_issue_2087_missing_pip(tmp_path, modules):
     venv_dir = tmp_path / "issue-2087-missing-pip"
 
     sls_contents = """pep8-pip:
@@ -244,34 +213,32 @@ pip.installed:
         str(venv_dir)
     )
 
-    # Let's create the testing virtualenv
-    ret = create_virtualenv(str(venv_dir))
-    assert ret["retcode"] == 0
+    with VirtualEnv(venv_dir=venv_dir) as venv:
+        # Let's remove the pip binary
+        if salt.utils.platform.is_windows():
+            pip_bin = venv.venv_bin_dir / "pip.exe"
+            site_dir = venv_dir / "lib" / "site-packages"
+        else:
+            pip_bin = venv.venv_bin_dir / "pip"
+            site_dir = modules.virtualenv.get_distribution_path(str(venv_dir), "pip")
+        if not pip_bin.exists():
+            pytest.skip("Failed to find the pip binary to the test virtualenv")
+        pip_bin.unlink()
 
-    # Let's remove the pip binary
-    pip_bin = venv_dir / "bin" / "pip"
-    site_dir = modules.virtualenv.get_distribution_path(str(venv_dir), "pip")
-    if salt.utils.platform.is_windows():
-        pip_bin = venv_dir / "Scripts" / "pip.exe"
-        site_dir = venv_dir / "lib" / "site-packages"
-    if not os.path.isfile(str(pip_bin)):
-        pytest.skip("Failed to find the pip binary to the test virtualenv")
-    os.remove(str(pip_bin))
+        # Also remove the pip dir from site-packages
+        # This is needed now that we're using python -m pip instead of the
+        # pip binary directly. python -m pip will still work even if the
+        # pip binary is missing
+        shutil.rmtree(os.path.join(str(site_dir), "pip"))
 
-    # Also remove the pip dir from site-packages
-    # This is needed now that we're using python -m pip instead of the
-    # pip binary directly. python -m pip will still work even if the
-    # pip binary is missing
-    shutil.rmtree(os.path.join(str(site_dir), "pip"))
-
-    # Let's run the state which should fail because pip is missing
-    ret = modules.state.sls(mods="issue-2087-missing-pip")
-    for state_return in ret:
-        assert state_return.result is True
-        assert (
-            "Error installing 'pep8': Could not find a `pip` binary"
-            in state_return.comment
-        )
+        # Let's run the state which should fail because pip is missing
+        ret = modules.state.sls(mods="issue-2087-missing-pip")
+        for state_return in ret:
+            assert state_return.result is True
+            assert (
+                "Error installing 'pep8': Could not find a `pip` binary"
+                in state_return.comment
+            )
 
 
 @pytest.mark.destructive_test
@@ -416,7 +383,7 @@ def test_issue_6912_wrong_owner_requirements_file(
 
 @pytest.mark.destructive_test
 @pytest.mark.slow_test
-def test_issue_6833_pip_upgrade_pip(tmp_path, create_virtualenv, modules, states):
+def test_issue_6833_pip_upgrade_pip(tmp_path, modules, states):
     # Create the testing virtualenv
     if sys.platform == "win32":
         # To keeps the path short, we'll create this directory on the root
@@ -428,53 +395,32 @@ def test_issue_6833_pip_upgrade_pip(tmp_path, create_virtualenv, modules, states
         venv_dir = os.sep.join([os.environ["SystemDrive"], "tmp-6833-pip-upgrade-pip"])
     else:
         venv_dir = str(tmp_path / "6833-pip-upgrade-pip")
-    ret = create_virtualenv(venv_dir)
 
-    assert ret["retcode"] == 0
+    with VirtualEnv(venv_dir=venv_dir) as venv:
+        # Let's install a fixed version pip over whatever pip was
+        # previously installed
+        ret = venv.install("-U", "pip==9.0.1", check=False)
+        assert ret.exitcode == 0
+        assert "Successfully installed pip" in ret.stdout
 
-    if not (
-        "New python executable" in ret["stdout"]
-        or "created virtual environment" in ret["stdout"]
-    ):
-        assert (
-            False
-        ), "Expected STDOUT did not match. Full return dictionary:\n{}".format(
-            pprint.pformat(ret)
-        )
+        # Let's make sure we have pip 9.0.1 installed
+        assert modules.pip.list("pip", bin_env=venv_dir) == {"pip": "9.0.1"}
 
-    # Let's install a fixed version pip over whatever pip was
-    # previously installed
-    ret = modules.pip.install("pip==9.0.1", upgrade=True, bin_env=venv_dir)
+        # Now the actual pip upgrade pip test
+        ret = states.pip.installed(name="pip==20.0.1", upgrade=True, bin_env=venv_dir)
 
-    if not isinstance(ret, dict):
-        pytest.fail(
-            "The 'pip.install' command did not return the excepted dictionary."
-            " Output:\n{}".format(ret)
-        )
+        if not isinstance(ret.raw, dict):
+            pytest.fail(
+                "The 'pip.install' command did not return the excepted dictionary."
+                " Output:\n{}".format(ret)
+            )
 
-    assert ret["retcode"] == 0
-    assert "Successfully installed pip" in ret["stdout"]
-
-    # Let's make sure we have pip 9.0.1 installed
-    assert modules.pip.list("pip", bin_env=venv_dir) == {"pip": "9.0.1"}
-
-    # Now the actual pip upgrade pip test
-    ret = states.pip.installed(name="pip==20.0.1", upgrade=True, bin_env=venv_dir)
-
-    if not isinstance(ret.raw, dict):
-        pytest.fail(
-            "The 'pip.install' command did not return the excepted dictionary."
-            " Output:\n{}".format(ret)
-        )
-
-    assert ret.result is True
-    assert ret.changes == {"pip==20.0.1": "Installed"}
+        assert ret.result is True
+        assert ret.changes == {"pip==20.0.1": "Installed"}
 
 
 @pytest.mark.slow_test
-def test_pip_installed_specific_env(
-    tmp_path, state_tree_prod, states, create_virtualenv
-):
+def test_pip_installed_specific_env(tmp_path, state_tree_prod, states):
     # Create the testing virtualenv
     venv_dir = tmp_path / "pip-installed-specific-env"
 
@@ -485,58 +431,49 @@ def test_pip_installed_specific_env(
         "prod-env-requirements.txt", contents, state_tree_prod
     ):
 
-        create_virtualenv(str(venv_dir))
+        with VirtualEnv(venv_dir=venv_dir):
+            # The requirements file should not be found the base environment
+            ret = states.pip.installed(
+                name="",
+                bin_env=str(venv_dir),
+                requirements="salt://prod-env-requirements.txt",
+            )
+            assert ret.result is False
+            assert "'salt://prod-env-requirements.txt' not found" in ret.comment
 
-        # The requirements file should not be found the base environment
-        ret = states.pip.installed(
-            name="",
-            bin_env=str(venv_dir),
-            requirements="salt://prod-env-requirements.txt",
-        )
-        assert ret.result is False
-        assert "'salt://prod-env-requirements.txt' not found" in ret.comment
+            # The requirements file must be found in the prod environment
+            ret = states.pip.installed(
+                name="",
+                bin_env=str(venv_dir),
+                saltenv="prod",
+                requirements="salt://prod-env-requirements.txt",
+            )
+            assert ret.result is True
+            assert (
+                "Successfully processed requirements file salt://prod-env-requirements.txt"
+                in ret.comment
+            )
 
-        # The requirements file must be found in the prod environment
-        ret = states.pip.installed(
-            name="",
-            bin_env=str(venv_dir),
-            saltenv="prod",
-            requirements="salt://prod-env-requirements.txt",
-        )
-        assert ret.result is True
-        assert (
-            "Successfully processed requirements file salt://prod-env-requirements.txt"
-            in ret.comment
-        )
-
-        # We're using the base environment but we're passing the prod
-        # environment as an url arg to salt://
-        ret = states.pip.installed(
-            name="",
-            bin_env=str(venv_dir),
-            requirements="salt://prod-env-requirements.txt?saltenv=prod",
-        )
-        assert ret.result is True
-        assert "Requirements were already installed." in ret.comment
+            # We're using the base environment but we're passing the prod
+            # environment as an url arg to salt://
+            ret = states.pip.installed(
+                name="",
+                bin_env=str(venv_dir),
+                requirements="salt://prod-env-requirements.txt?saltenv=prod",
+            )
+            assert ret.result is True
+            assert "Requirements were already installed." in ret.comment
 
 
 @pytest.mark.slow_test
-def test_22359_pip_installed_unless_does_not_trigger_warnings(
-    create_virtualenv, tmp_path, states
-):
+def test_22359_pip_installed_unless_does_not_trigger_warnings(tmp_path, states):
     # This test case should be moved to a format_call unit test specific to
     # the state internal keywords
     venv_dir = str(tmp_path / "pip-installed-unless")
-    venv_create = create_virtualenv(venv_dir)
-    if venv_create["retcode"] > 0:
-        pytest.skip(
-            "Failed to create testcase virtual environment: {}".format(venv_create)
-        )
-
-    false_cmd = salt.utils.path.which("false")
-    if salt.utils.platform.is_windows():
-        false_cmd = "exit 1 >nul"
-    try:
+    with VirtualEnv(venv_dir=venv_dir):
+        false_cmd = salt.utils.path.which("false")
+        if salt.utils.platform.is_windows():
+            false_cmd = "exit 1 >nul"
         ret = states.pip.installed(
             name="pep8",
             bin_env=str(venv_dir),
@@ -545,9 +482,6 @@ def test_22359_pip_installed_unless_does_not_trigger_warnings(
         )
         assert ret.result is True
         assert "warnings" not in next(iter(ret.raw.values()))
-    finally:
-        if os.path.isdir(str(venv_dir)):
-            shutil.rmtree(str(venv_dir), ignore_errors=True)
 
 
 @pytest.mark.windows_whitelisted

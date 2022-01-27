@@ -685,7 +685,7 @@ def test_issue_61121_extend_is_to_strict(state, state_tree):
             "comment": 'Command "echo A" run',
         },
     }
-    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+    with state_tree.base.temp_file("requisite.sls", sls_contents):
         ret = state.sls("requisite")
         result = normalize_ret(ret.raw)
         assert result == expected_result
