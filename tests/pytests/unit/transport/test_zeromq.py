@@ -2,9 +2,12 @@
     :codeauthor: Thomas Jackson <jacksontj.89@gmail.com>
 """
 
+import ctypes
 import hashlib
 import logging
+import multiprocessing
 import os
+import uuid
 
 import pytest
 import salt.config
@@ -18,6 +21,7 @@ import salt.transport.server
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
+from salt.master import SMaster
 from salt.transport.zeromq import AsyncReqMessageClientPool
 from tests.support.mock import MagicMock, patch
 
@@ -77,6 +81,91 @@ OwIDAQAB
 -----END PUBLIC KEY-----
 """
 
+MASTER2_PRIV_KEY = """
+-----BEGIN RSA PRIVATE KEY-----
+MIIEogIBAAKCAQEAp+8cTxguO6Vg+YO92VfHgNld3Zy8aM3JbZvpJcjTnis+YFJ7
+Zlkcc647yPRRwY9nYBNywahnt5kIeuT1rTvTsMBZWvmUoEVUj1Xg8XXQkBvb9Ozy
+Gqy/G/p8KDDpzMP/U+XCnUeHiXTZrgnqgBIc2cKeCVvWFqDi0GRFGzyaXLaX3PPm
+M7DJ0MIPL1qgmcDq6+7Ze0gJ9SrDYFAeLmbuT1OqDfufXWQl/82JXeiwU2cOpqWq
+7n5fvPOWim7l1tzQ+dSiMRRm0xa6uNexCJww3oJSwvMbAmgzvOhqqhlqv+K7u0u7
+FrFFojESsL36Gq4GBrISnvu2tk7u4GGNTYYQbQIDAQABAoIBAADrqWDQnd5DVZEA
+lR+WINiWuHJAy/KaIC7K4kAMBgbxrz2ZbiY9Ok/zBk5fcnxIZDVtXd1sZicmPlro
+GuWodIxdPZAnWpZ3UtOXUayZK/vCP1YsH1agmEqXuKsCu6Fc+K8VzReOHxLUkmXn
+FYM+tixGahXcjEOi/aNNTWitEB6OemRM1UeLJFzRcfyXiqzHpHCIZwBpTUAsmzcG
+QiVDkMTKubwo/m+PVXburX2CGibUydctgbrYIc7EJvyx/cpRiPZXo1PhHQWdu4Y1
+SOaC66WLsP/wqvtHo58JQ6EN/gjSsbAgGGVkZ1xMo66nR+pLpR27coS7o03xCks6
+DY/0mukCgYEAuLIGgBnqoh7YsOBLd/Bc1UTfDMxJhNseo+hZemtkSXz2Jn51322F
+Zw/FVN4ArXgluH+XsOhvG/MFFpojwZSrb0Qq5b1MRdo9qycq8lGqNtlN1WHqosDQ
+zW29kpL0tlRrSDpww3wRESsN9rH5XIrJ1b3ZXuO7asR+KBVQMy/+NcUCgYEA6MSC
+c+fywltKPgmPl5j0DPoDe5SXE/6JQy7w/vVGrGfWGf/zEJmhzS2R+CcfTTEqaT0T
+Yw8+XbFgKAqsxwtE9MUXLTVLI3sSUyE4g7blCYscOqhZ8ItCUKDXWkSpt++rG0Um
+1+cEJP/0oCazG6MWqvBC4NpQ1nzh46QpjWqMwokCgYAKDLXJ1p8rvx3vUeUJW6zR
+dfPlEGCXuAyMwqHLxXgpf4EtSwhC5gSyPOtx2LqUtcrnpRmt6JfTH4ARYMW9TMef
+QEhNQ+WYj213mKP/l235mg1gJPnNbUxvQR9lkFV8bk+AGJ32JRQQqRUTbU+yN2MQ
+HEptnVqfTp3GtJIultfwOQKBgG+RyYmu8wBP650izg33BXu21raEeYne5oIqXN+I
+R5DZ0JjzwtkBGroTDrVoYyuH1nFNEh7YLqeQHqvyufBKKYo9cid8NQDTu+vWr5UK
+tGvHnwdKrJmM1oN5JOAiq0r7+QMAOWchVy449VNSWWV03aeftB685iR5BXkstbIQ
+EVopAoGAfcGBTAhmceK/4Q83H/FXBWy0PAa1kZGg/q8+Z0KY76AqyxOVl0/CU/rB
+3tO3sKhaMTHPME/MiQjQQGoaK1JgPY6JHYvly2KomrJ8QTugqNGyMzdVJkXAK2AM
+GAwC8ivAkHf8CHrHa1W7l8t2IqBjW1aRt7mOW92nfG88Hck0Mbo=
+-----END RSA PRIVATE KEY-----
+"""
+
+
+MASTER2_PUB_KEY = """
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAp+8cTxguO6Vg+YO92VfH
+gNld3Zy8aM3JbZvpJcjTnis+YFJ7Zlkcc647yPRRwY9nYBNywahnt5kIeuT1rTvT
+sMBZWvmUoEVUj1Xg8XXQkBvb9OzyGqy/G/p8KDDpzMP/U+XCnUeHiXTZrgnqgBIc
+2cKeCVvWFqDi0GRFGzyaXLaX3PPmM7DJ0MIPL1qgmcDq6+7Ze0gJ9SrDYFAeLmbu
+T1OqDfufXWQl/82JXeiwU2cOpqWq7n5fvPOWim7l1tzQ+dSiMRRm0xa6uNexCJww
+3oJSwvMbAmgzvOhqqhlqv+K7u0u7FrFFojESsL36Gq4GBrISnvu2tk7u4GGNTYYQ
+bQIDAQAB
+-----END PUBLIC KEY-----
+"""
+
+
+MASTER_SIGNING_PRIV = """
+-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEAtieqrBMTM0MSIbhPKkDcozHqyXKyL/+bXYYw+iVPsns7c7bJ
+zBqenLQlWoRVyrVyBFrrwQSrKu/0Mqn3l639iOGPlUoR3I7aZKIpyEdDkqd3xGIC
+e+BtNNDqhUai67L63hEdG+iYAchi8UZw3LZGtcGpJ3FkBH4cYFX9EOam2QjbD7WY
+EO7m1+j6XEYIOTCmAP9dGAvBbU0Jblc+wYxG3qNr+2dBWsK76QXWEqib2VSOGP+z
+gjJa8tqY7PXXdOJpalQXNphmD/4o4pHKR4Euy0yL/1oMkpacmrV61LWB8Trnx9nS
+9gdVrUteQF/cL1KAGwOsdVmiLpHfvqLLRqSAAQIDAQABAoIBABjB+HEN4Kixf4fk
+wKHKEhL+SF6b/7sFX00NXZ/KLXRhSnnWSMQ8g/1hgMg2P2DfW4FbCDsCUu9xkLvI
+HTZY+CJAIh9U42uaYPWXkt09TmJi76TZ+2Nx4/XvRUjbCm7Fs1I2ekHeUbbAUS5g
++BsPjTnL+h05zLHNoDa5yT0gVGIgFsQcX/w38arZCe8Rjp9le7PXUB5IIqASsDiw
+t8zJvdyWToeXd0WswCHTQu5coHvKo5MCjIZZ1Ink1yJcCCc3rKDc+q3jB2z9T9oW
+cUsKzJ4VuleiYj1eRxFITBmXbjKrb/GPRRUkeqCQbs68Hyj2d3UtOFDPeF4vng/3
+jGsHPq8CgYEA0AHAbwykVC6NMa37BTvEqcKoxbjTtErxR+yczlmVDfma9vkwtZvx
+FJdbS/+WGA/ucDby5x5b2T5k1J9ueMR86xukb+HnyS0WKsZ94Ie8WnJAcbp+38M6
+7LD0u74Cgk93oagDAzUHqdLq9cXxv/ppBpxVB1Uvu8DfVMHj+wt6ie8CgYEA4C7u
+u+6b8EmbGqEdtlPpScKG0WFstJEDGXRARDCRiVP2w6wm25v8UssCPvWcwf8U1Hoq
+lhMY+H6a5dnRRiNYql1MGQAsqMi7VeJNYb0B1uxi7X8MPM+SvXoAglX7wm1z0cVy
+O4CE5sEKbBg6aQabx1x9tzdrm80SKuSsLc5HRQ8CgYEAp/mCKSuQWNru8ruJBwTp
+IB4upN1JOUN77ZVKW+lD0XFMjz1U9JPl77b65ziTQQM8jioRpkqB6cHVM088qxIh
+vssn06Iex/s893YrmPKETJYPLMhqRNEn+JQ+To53ADykY0uGg0SD18SYMbmULHBP
++CKvF6jXT0vGDnA1ZzoxzskCgYEA2nQhYrRS9EVlhP93KpJ+A8gxA5tCCHo+YPFt
+JoWFbCKLlYUNoHZR3IPCPoOsK0Zbj+kz0mXtsUf9vPkR+py669haLQqEejyQgFIz
+QYiiYEKc6/0feapzvXtDP751w7JQaBtVAzJrT0jQ1SCO2oT8C7rPLlgs3fdpOq72
+MPSPcnUCgYBWHm6bn4HvaoUSr0v2hyD9fHZS/wDTnlXVe5c1XXgyKlJemo5dvycf
+HUCmN/xIuO6AsiMdqIzv+arNJdboz+O+bNtS43LkTJfEH3xj2/DdUogdvOgG/iPM
+u9KBT1h+euws7PqC5qt4vqLwCTTCZXmUS8Riv+62RCC3kZ5AbpT3ZA==
+-----END RSA PRIVATE KEY-----
+"""
+
+MASTER_SIGNING_PUB = """
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtieqrBMTM0MSIbhPKkDc
+ozHqyXKyL/+bXYYw+iVPsns7c7bJzBqenLQlWoRVyrVyBFrrwQSrKu/0Mqn3l639
+iOGPlUoR3I7aZKIpyEdDkqd3xGICe+BtNNDqhUai67L63hEdG+iYAchi8UZw3LZG
+tcGpJ3FkBH4cYFX9EOam2QjbD7WYEO7m1+j6XEYIOTCmAP9dGAvBbU0Jblc+wYxG
+3qNr+2dBWsK76QXWEqib2VSOGP+zgjJa8tqY7PXXdOJpalQXNphmD/4o4pHKR4Eu
+y0yL/1oMkpacmrV61LWB8Trnx9nS9gdVrUteQF/cL1KAGwOsdVmiLpHfvqLLRqSA
+AQIDAQAB
+-----END PUBLIC KEY-----
+"""
 
 MINION_PRIV_KEY = """
 -----BEGIN RSA PRIVATE KEY-----
@@ -127,12 +216,27 @@ AES_KEY = "8wxWlOaMMQ4d3yT74LL4+hGrGTf65w8VgrcNjLJeLRQ2Q6zMa8ItY2EQUgMKKDb7JY+Rn
 @pytest.fixture
 def pki_dir(tmpdir):
     madir = tmpdir.mkdir("master")
+
     mapriv = madir.join("master.pem")
     mapriv.write(MASTER_PRIV_KEY.strip())
     mapub = madir.join("master.pub")
     mapub.write(MASTER_PUB_KEY.strip())
+
+    maspriv = madir.join("master_sign.pem")
+    maspriv.write(MASTER_SIGNING_PRIV.strip())
+    maspub = madir.join("master_sign.pub")
+    maspub.write(MASTER_SIGNING_PUB.strip())
+
     mipub = madir.mkdir("minions").join("minion")
     mipub.write(MINION_PUB_KEY.strip())
+    for sdir in [
+        "minions_autosign",
+        "minions_denied",
+        "minions_pre",
+        "minions_rejected",
+    ]:
+        madir.mkdir(sdir)
+
     midir = tmpdir.mkdir("minion")
     mipub = midir.join("minion.pub")
     mipub.write(MINION_PUB_KEY.strip())
@@ -140,6 +244,8 @@ def pki_dir(tmpdir):
     mipriv.write(MINION_PRIV_KEY.strip())
     mimapriv = midir.join("minion_master.pub")
     mimapriv.write(MASTER_PUB_KEY.strip())
+    mimaspriv = midir.join("master_sign.pub")
+    mimaspriv.write(MASTER_SIGNING_PUB.strip())
     try:
         yield tmpdir
     finally:
@@ -766,3 +872,235 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(pki_dir):
             dictkey="pillar",
         )
     assert "Key verification failed." == excinfo.value.message
+
+
+async def test_req_serv_auth_v1(pki_dir):
+    mockloop = MagicMock()
+    opts = {
+        "master_uri": "tcp://127.0.0.1:4506",
+        "interface": "127.0.0.1",
+        "ret_port": 4506,
+        "ipv6": False,
+        "sock_dir": ".",
+        "pki_dir": str(pki_dir.join("minion")),
+        "id": "minion",
+        "__role": "minion",
+        "keysize": 4096,
+        "max_minions": 0,
+        "auto_accept": False,
+        "open_mode": False,
+        "key_pass": None,
+        "master_sign_pubkey": False,
+        "publish_port": 4505,
+        "auth_mode": 1,
+    }
+    SMaster.secrets["aes"] = {
+        "secret": multiprocessing.Array(
+            ctypes.c_char,
+            salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
+        ),
+        "reload": salt.crypt.Crypticle.generate_key_string,
+    }
+    master_opts = dict(opts, pki_dir=str(pki_dir.join("master")))
+    server = salt.transport.zeromq.ZeroMQReqServerChannel(master_opts)
+    server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
+    server.cache_cli = False
+    server.master_key = salt.crypt.MasterKeys(server.opts)
+
+    pub = salt.crypt.get_rsa_pub_key(str(pki_dir.join("minion", "minion.pub")))
+    token = salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string())
+    nonce = uuid.uuid4().hex
+    load = {
+        "cmd": "_auth",
+        "id": "minion",
+        "token": token,
+        "pub": MINION_PUB_KEY.strip(),
+    }
+    ret = server._auth(load, sign_messages=False)
+    assert "load" not in ret
+
+
+async def test_req_serv_auth_v2(pki_dir):
+    mockloop = MagicMock()
+    opts = {
+        "master_uri": "tcp://127.0.0.1:4506",
+        "interface": "127.0.0.1",
+        "ret_port": 4506,
+        "ipv6": False,
+        "sock_dir": ".",
+        "pki_dir": str(pki_dir.join("minion")),
+        "id": "minion",
+        "__role": "minion",
+        "keysize": 4096,
+        "max_minions": 0,
+        "auto_accept": False,
+        "open_mode": False,
+        "key_pass": None,
+        "master_sign_pubkey": False,
+        "publish_port": 4505,
+        "auth_mode": 1,
+    }
+    SMaster.secrets["aes"] = {
+        "secret": multiprocessing.Array(
+            ctypes.c_char,
+            salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
+        ),
+        "reload": salt.crypt.Crypticle.generate_key_string,
+    }
+    master_opts = dict(opts, pki_dir=str(pki_dir.join("master")))
+    server = salt.transport.zeromq.ZeroMQReqServerChannel(master_opts)
+    server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
+    server.cache_cli = False
+    server.master_key = salt.crypt.MasterKeys(server.opts)
+
+    pub = salt.crypt.get_rsa_pub_key(str(pki_dir.join("minion", "minion.pub")))
+    token = salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string())
+    nonce = uuid.uuid4().hex
+    load = {
+        "cmd": "_auth",
+        "id": "minion",
+        "nonce": nonce,
+        "token": token,
+        "pub": MINION_PUB_KEY.strip(),
+    }
+    ret = server._auth(load, sign_messages=True)
+    assert "sig" in ret
+    assert "load" in ret
+
+
+async def test_req_chan_auth_v2(pki_dir, io_loop):
+    mockloop = MagicMock()
+    opts = {
+        "master_uri": "tcp://127.0.0.1:4506",
+        "interface": "127.0.0.1",
+        "ret_port": 4506,
+        "ipv6": False,
+        "sock_dir": ".",
+        "pki_dir": str(pki_dir.join("minion")),
+        "id": "minion",
+        "__role": "minion",
+        "keysize": 4096,
+        "max_minions": 0,
+        "auto_accept": False,
+        "open_mode": False,
+        "key_pass": None,
+        "publish_port": 4505,
+        "auth_mode": 1,
+    }
+    SMaster.secrets["aes"] = {
+        "secret": multiprocessing.Array(
+            ctypes.c_char,
+            salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
+        ),
+        "reload": salt.crypt.Crypticle.generate_key_string,
+    }
+    master_opts = dict(opts, pki_dir=str(pki_dir.join("master")))
+    master_opts["master_sign_pubkey"] = False
+    server = salt.transport.zeromq.ZeroMQReqServerChannel(master_opts)
+    server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
+    server.cache_cli = False
+    server.master_key = salt.crypt.MasterKeys(server.opts)
+    opts["verify_master_pubkey_sign"] = False
+    opts["always_verify_signature"] = False
+    client = salt.transport.zeromq.AsyncZeroMQReqChannel(opts, io_loop=io_loop)
+    signin_payload = client.auth.minion_sign_in_payload()
+    pload = client._package_load(signin_payload)
+    assert "version" in pload
+    assert pload["version"] == 2
+
+    ret = server._auth(pload["load"], sign_messages=True)
+    assert "sig" in ret
+    ret = client.auth.handle_signin_response(signin_payload, ret)
+    assert "aes" in ret
+    assert "master_uri" in ret
+    assert "publish_port" in ret
+
+
+async def test_req_chan_auth_v2_with_master_signing(pki_dir, io_loop):
+    mockloop = MagicMock()
+    opts = {
+        "master_uri": "tcp://127.0.0.1:4506",
+        "interface": "127.0.0.1",
+        "ret_port": 4506,
+        "ipv6": False,
+        "sock_dir": ".",
+        "pki_dir": str(pki_dir.join("minion")),
+        "id": "minion",
+        "__role": "minion",
+        "keysize": 4096,
+        "max_minions": 0,
+        "auto_accept": False,
+        "open_mode": False,
+        "key_pass": None,
+        "publish_port": 4505,
+        "auth_mode": 1,
+    }
+    SMaster.secrets["aes"] = {
+        "secret": multiprocessing.Array(
+            ctypes.c_char,
+            salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
+        ),
+        "reload": salt.crypt.Crypticle.generate_key_string,
+    }
+    master_opts = dict(opts, pki_dir=str(pki_dir.join("master")))
+    master_opts["master_sign_pubkey"] = True
+    master_opts["master_use_pubkey_signature"] = False
+    master_opts["signing_key_pass"] = True
+    master_opts["master_sign_key_name"] = "master_sign"
+    server = salt.transport.zeromq.ZeroMQReqServerChannel(master_opts)
+    server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
+    server.cache_cli = False
+    server.master_key = salt.crypt.MasterKeys(server.opts)
+    opts["verify_master_pubkey_sign"] = True
+    opts["always_verify_signature"] = True
+    opts["master_sign_key_name"] = "master_sign"
+    opts["master"] = "master"
+
+    assert (
+        pki_dir.join("minion", "minion_master.pub").read()
+        == pki_dir.join("master", "master.pub").read()
+    )
+
+    client = salt.transport.zeromq.AsyncZeroMQReqChannel(opts, io_loop=io_loop)
+    signin_payload = client.auth.minion_sign_in_payload()
+    pload = client._package_load(signin_payload)
+    assert "version" in pload
+    assert pload["version"] == 2
+
+    server_reply = server._auth(pload["load"], sign_messages=True)
+    # With version 2 we always get a clear signed response
+    assert "enc" in server_reply
+    assert server_reply["enc"] == "clear"
+    assert "sig" in server_reply
+    assert "load" in server_reply
+    ret = client.auth.handle_signin_response(signin_payload, server_reply)
+    assert "aes" in ret
+    assert "master_uri" in ret
+    assert "publish_port" in ret
+
+    # Now create a new master key pair and try auth with it.
+    mapriv = pki_dir.join("master", "master.pem")
+    mapriv.remove()
+    mapriv.write(MASTER2_PRIV_KEY.strip())
+    mapub = pki_dir.join("master", "master.pub")
+    mapub.remove()
+    mapub.write(MASTER2_PUB_KEY.strip())
+
+    server = salt.transport.zeromq.ZeroMQReqServerChannel(master_opts)
+    server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
+    server.cache_cli = False
+    server.master_key = salt.crypt.MasterKeys(server.opts)
+
+    signin_payload = client.auth.minion_sign_in_payload()
+    pload = client._package_load(signin_payload)
+    server_reply = server._auth(pload["load"], sign_messages=True)
+    ret = client.auth.handle_signin_response(signin_payload, server_reply)
+
+    assert "aes" in ret
+    assert "master_uri" in ret
+    assert "publish_port" in ret
+
+    assert (
+        pki_dir.join("minion", "minion_master.pub").read()
+        == pki_dir.join("master", "master.pub").read()
+    )
