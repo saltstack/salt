@@ -451,7 +451,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         else:
             namespace = None
         if not os.path.isfile(cfg):
-            log.warning("Ignoring MakoStack cfg `{}`: file not found".format(cfg))
+            log.warning("Ignoring MakoStack cfg %r: file not found", cfg)
             continue
         stack = _process_stack_cfg(cfg, stack, minion_id, pillar, namespace, config)
     return stack
@@ -492,15 +492,17 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar, namespace, config):
                 for sub in namespace.split(":")[::-1]:
                     obj = {sub: obj}
             stack = _merge_dict(stack, obj)
-            log.debug("MakoStack template `{}` parsed".format(line))
+            log.debug("MakoStack template %r parsed", line)
         except exceptions.TopLevelLookupException as err:
             if config.get("fail_on_missing_file"):
-                msg = "MakoStack template `{}` not found - aborting compilation.".format(
-                    line
+                msg = (
+                    "MakoStack template {!r} not found - aborting compilation.".format(
+                        line
+                    )
                 )
                 log.error(msg)
                 raise CommandExecutionError(msg)
-            log.info("MakoStack template `{}` not found.".format(line))
+            log.info("MakoStack template %r not found.", line)
             continue
         except Exception as err:  # pylint: disable=broad-except
             # Catches the above KeyError, and any other parsing errors...
@@ -533,7 +535,7 @@ def _merge_dict(stack, obj):
     strategy = obj.pop("__", "merge-last")
     if strategy not in strategies:
         raise Exception(
-            'Unknown strategy {!r}, should be one of {}'.format(strategy, strategies)
+            "Unknown strategy {!r}, should be one of {}".format(strategy, strategies)
         )
     if strategy == "overwrite":
         return _cleanup(obj)
@@ -551,9 +553,11 @@ def _merge_dict(stack, obj):
                     v = stack_k
                 if type(stack[k]) != type(v):
                     log.debug(
-                        "Force overwrite, types differ: `{}` != `{}`".format(
-                            stack[k], v
-                        )
+                        "Force overwrite, types %r != %r (%r != %r) differ",
+                        type(stack[k]),
+                        type(v),
+                        stack[k],
+                        v,
                     )
                     stack[k] = _cleanup(v)
                 elif isinstance(v, dict):
@@ -574,7 +578,7 @@ def _merge_list(stack, obj):
         del obj[0]
     if strategy not in strategies:
         raise Exception(
-            'Unknown strategy {!r}, should be one of {}'.format(strategy, strategies)
+            "Unknown strategy {!r}, should be one of {}".format(strategy, strategies)
         )
     if strategy == "overwrite":
         return obj
@@ -593,9 +597,9 @@ def _parse_top_cfg(content, filename):
     try:
         obj = salt.utils.yaml.safe_load(content)
         if isinstance(obj, list):
-            log.debug("MakoStack cfg `{}` parsed as YAML".format(filename))
+            log.debug("MakoStack cfg %r parsed as YAML", filename)
             return obj
     except Exception as err:  # pylint: disable=broad-except
         pass
-    log.debug("MakoStack cfg `{}` parsed as plain text".format(filename))
-    return content.splitlines()
+    log.debug("MakoStack cfg %r parsed as plain text", filename)
+    return [line for line in (l.strip() for l in content.splitlines()) if line]

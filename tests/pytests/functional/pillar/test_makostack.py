@@ -50,7 +50,7 @@ def config_with_broken_file(makostack_basic_config):
 def makostack_with_missing_file(makostack_basic_pillar, config_with_missing_file):
     expected_error = {
         "_errors": [
-            "Failed to load ext_pillar makostack: MakoStack template `missing.yml` not found - aborting compilation."
+            "Failed to load ext_pillar makostack: MakoStack template 'missing.yml' not found - aborting compilation."
         ]
     }
     yield makostack_basic_pillar, expected_error
@@ -109,7 +109,6 @@ def test_makostack_with_missing_and_broken_files_but_default_behavior_should_ign
     assert ret == expected_pillar
 
 
-@pytest.mark.xfail(reason="not yet supported")
 def test_makostack_with_fail_on_missing_file_should_produce_expected_error(
     makostack_with_missing_file,
 ):
@@ -121,7 +120,6 @@ def test_makostack_with_fail_on_missing_file_should_produce_expected_error(
     assert ret == expected_error
 
 
-@pytest.mark.xfail(reason="not yet supported")
 def test_makostack_with_fail_on_parse_error_should_produce_expected_error(
     makostack_borked_pillar,
 ):
