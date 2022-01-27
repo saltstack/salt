@@ -395,7 +395,7 @@ class PillarTestCase(TestCase):
         pillar = salt.pillar.Pillar(opts, {}, "mocked-minion", "base", pillarenv="dev")
         self.assertEqual(
             pillar.opts["pillar_roots"],
-            {"base": ["/srv/pillar/base"], "dev": ["/srv/pillar/__env__"]},
+            {"base": ["/srv/pillar/base"], "dev": ["/srv/pillar/dev"]},
         )
 
     def test_ignored_dynamic_pillarenv(self):
