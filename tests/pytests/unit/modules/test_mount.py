@@ -400,6 +400,9 @@ def test_set_filesystems():
     sys.version_info[0] == 3 and sys.version_info[1] <= 5,
     reason="run on Python 3.6 or greater where OrderedDict is default",
 )
+@pytest.mark.skip_on_windows(
+    reason="Not supported on Windows, does not handle tabs well"
+)
 def test_set_filesystems_with_data(tmp_sub_dir, config_file):
     """
     Tests to verify set_filesystems reads and adjusts file /etc/filesystems correctly
