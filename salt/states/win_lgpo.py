@@ -577,9 +577,10 @@ def set_(
                         "\n".join(policy_changes)
                     )
                 else:
-                    msg = "The following policies are in the correct state:\n{}".format(
+                    msg = "Failed to set the following policies:\n{}".format(
                         "\n".join(policy_changes)
                     )
+                    ret["result"] = False
             else:
                 msg = (
                     "Errors occurred while attempting to configure policies: {}".format(
