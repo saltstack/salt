@@ -846,7 +846,6 @@ class AsyncAuth:
                 )
                 return "retry"
 
-        log.error("WTF 2")
         if self.opts.get("syndic_master", False):  # Is syndic
             syndic_finger = self.opts.get(
                 "syndic_finger", self.opts.get("master_finger", False)
