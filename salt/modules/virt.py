@@ -1780,11 +1780,7 @@ def _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps):
                         int(re.sub("[a-z]+", "", vol_name)) for vol_name in all_volumes
                     ] or [0]
                     index = min(
-                        [
-                            idx
-                            for idx in range(1, max(indexes) + 2)
-                            if idx not in indexes
-                        ]
+                        idx for idx in range(1, max(indexes) + 2) if idx not in indexes
                     )
                     disk["filename"] = "{}{}".format(os.path.basename(device), index)
 
