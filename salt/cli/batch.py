@@ -278,6 +278,7 @@ class Batch:
                 failhard = False
                 # If we are executing multiple modules with the same cmd,
                 # We use the highest retcode.
+                retcode = 0
                 if "retcode" in data:
                     if isinstance(data["retcode"], dict):
                         try:
@@ -286,13 +287,14 @@ class Batch:
                             data["retcode"] = 0
                     if self.opts.get("failhard") and data["retcode"] > 0:
                         failhard = True
+                    retcode = data["retcode"]
 
                 if self.opts.get("raw"):
                     ret[minion] = data
-                    yield data
+                    yield data, retcode
                 else:
-                    ret[minion] = {minion: data}
-                    yield {minion: data}
+                    ret[minion] = data["ret"]
+                    yield {minion: data["ret"]}, retcode
                 if not self.quiet:
                     ret[minion] = data["ret"]
                     data[minion] = data.pop("ret")
