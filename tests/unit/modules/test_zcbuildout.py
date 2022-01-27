@@ -287,7 +287,7 @@ class BuildoutTestCase(Base):
     @pytest.mark.slow_test
     def test__find_cfgs(self):
         result = sorted(
-            [a.replace(self.root, "") for a in buildout._find_cfgs(self.root)]
+            a.replace(self.root, "") for a in buildout._find_cfgs(self.root)
         )
         assertlist = sorted(
             [

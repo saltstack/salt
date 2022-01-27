@@ -17,7 +17,7 @@ import salt.utils.vt
 
 log = logging.getLogger(__name__)
 
-SSH_PASSWORD_PROMPT_RE = re.compile(r"(?:.*)[Pp]assword(?: for .*)?:", re.M)
+SSH_PASSWORD_PROMPT_RE = re.compile(r"(?:.*)[Pp]assword(?: for .*)?:\s*$", re.M)
 KEY_VALID_RE = re.compile(r".*\(yes\/no\).*")
 SSH_PRIVATE_KEY_PASSWORD_PROMPT_RE = re.compile(r"Enter passphrase for key", re.M)
 

@@ -797,10 +797,10 @@ def bootstrap_psexec(
             '>(Salt-Minion-(.+?)-(.+)-Setup.exe)</a></td><td align="right">(.*?)\\s*<'
         )
         source_list = sorted(
-            [
+            (
                 [path, ver, plat, time.strptime(date, "%d-%b-%Y %H:%M")]
                 for path, ver, plat, date in salty_rx.findall(source)
-            ],
+            ),
             key=operator.itemgetter(3),
             reverse=True,
         )
