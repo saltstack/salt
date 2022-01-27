@@ -1,5 +1,5 @@
-salt.modules.win_iis module
-===========================
+salt.modules.win_iis
+====================
 
 .. automodule:: salt.modules.win_iis
     :members:

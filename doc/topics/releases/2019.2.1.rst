@@ -60,7 +60,14 @@ Statistics
 - Total Issue References: **70**
 - Total PR References: **355**
 
-- Contributors: **49** (`Akm0d`_, `Ch3LL`_, `DmitryKuzmenko`_, `Ethyling`_, `FireGrace`_, `KChandrashekhar`_, `ScoreUnder`_, `amendlik`_, `aplanas`_, `arsiesys`_, `bbinet`_, `bryceml`_, `cbosdo`_, `cdalvaro`_, `chdamianos`_, `cmcmarrow`_, `cro`_, `damianosSemmle`_, `dmurphy18`_, `doesitblend`_, `dwoz`_, `felippeb`_, `frogunder`_, `garethgreenaway`_, `github-abcde`_, `isbm`_, `jfindlay`_, `lomeroe`_, `mattLLVW`_, `mattp-`_, `mirceaulinic`_, `nicholasmhughes`_, `rbthomp`_, `rombert`_, `rsmekala`_, `s0undt3ch`_, `sathieu`_, `sbrennan4`_, `sdodsley`_, `simonflood`_, `sjorge`_, `soer7022`_, `stratusjerry`_, `tanlingyun2005`_, `terminalmage`_, `twangboy`_, `waynew`_, `weswhet`_, `xuhcc`_)
+- Contributors: **49** (`Akm0d`_, `Ch3LL`_, `DmitryKuzmenko`_, `Ethyling`_, `FireGrace`_,
+  `KChandrashekhar`_, `ScoreUnder`_, `amendlik`_, `aplanas`_, `arsiesys`_, `bbinet`_, `bryceml`_,
+  `cbosdo`_, `cdalvaro`_, `chdamianos`_, `cmcmarrow`_, `cro`_, `damianosSemmle`_, `dmurphy18`_,
+  `doesitblend`_, `dwoz`_, `felippeb`_, `frogunder`_, `garethgreenaway`_, `github-abcde`_, `isbm`_,
+  `jfindlay`_, `lomeroe`_, `mattLLVW`_, `mattp-`_, `mirceaulinic`_, `nicholasmhughes`_, `rbthomp`_,
+  `rombert`_, `rsmekala`_, `s0undt3ch`_, `sathieu`_, `sbrennan4`_, `sdodsley`_, `simonflood`_,
+  `sjorge`_, `soer7022`_, `stratusjerry`_, `tanlingyun2005`_, `terminalmage`_, `twangboy`_,
+  `waynew`_, `weswhet`_, `xuhcc`_)
 
 Changelog for v2019.2.0..v2019.2.1
 ==================================
@@ -288,7 +295,9 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 993c341 Merge pull request `#54235`_ from ogd-software/fix_46034-2019.2.1
 
-  * 93bd30d Add alternative fix for "!" stomping Apparently (after watching Jenkins tests fail), what yaml.safe_load returns depends not on the version of salt, but on some other external dependency. Because of this, fix both possible return values.
+  * 93bd30d Add alternative fix for "!" stomping Apparently (after watching Jenkins tests fail),
+    what yaml.safe_load returns depends not on the version of salt, but on some other external
+    dependency. Because of this, fix both possible return values.
 
   * c95dd4d Add test for this specific bugfix
 
@@ -309,7 +318,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 23beab4 clean up renamed instances in the teardown
 
-* **PR** `#54252`_: (`s0undt3ch`_) [2019.2.1] More control on spun test deamons on git pillar tests
+* **PR** `#54252`_: (`s0undt3ch`_) [2019.2.1] More control on spun test daemons on git pillar tests
   @ *2019-08-22 22:13:08 UTC*
 
   * c181f5a Merge pull request `#54252`_ from s0undt3ch/hotfix/git-pillar-2019.2.1
@@ -2620,7 +2629,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 0372718 Fix lint issues on salt
 
-  * 9eab9f4 Add nox session/env/target to run lint against Salt and it's test suite
+  * 9eab9f4 Add nox session/env/target to run lint against Salt and its test suite
 
   * 123f771 Lock lint requirements
 

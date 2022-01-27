@@ -165,7 +165,7 @@ def main():
     add_parse_callback(
         lambda: logging.getLogger().handlers[0].addFilter(log_counter))
 
-    import tornado.testing
+    import salt.ext.tornado.testing
     kwargs = {}
     if sys.version_info >= (3, 2):
         # HACK:  unittest.main will make its own changes to the warning
@@ -176,7 +176,7 @@ def main():
         kwargs['warnings'] = False
     kwargs['testRunner'] = TornadoTextTestRunner
     try:
-        tornado.testing.main(**kwargs)
+        salt.ext.tornado.testing.main(**kwargs)
     finally:
         # The tests should run clean; consider it a failure if they logged
         # any warnings or errors. We'd like to ban info logs too, but

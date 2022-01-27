@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT" "1" "Jan 15, 2020" "3000"  "Salt"
+.TH "SALT" "1" "Sep 27, 2021" "3004" "Salt"
 .SH NAME
 salt \- salt
 .
@@ -122,6 +122,23 @@ minions to execute on.
 .UNINDENT
 .INDENT 0.0
 .TP
+.B \-\-batch\-wait=BATCH_WAIT
+Wait the specified time in seconds after each job is done before
+freeing the slot in the batch of the next one.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-batch\-safe\-limit=BATCH_SAFE_LIMIT
+Execute the salt job in batch mode if the job would have executed
+on at least this many minions.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-batch\-safe\-size=BATCH_SAFE_SIZE
+Batch size to use for batch jobs created by \-\-batch\-safe\-limit.
+.UNINDENT
+.INDENT 0.0
+.TP
 .B \-a EAUTH, \-\-auth=EAUTH
 Pass in an external authentication medium to validate against. The
 credentials will be prompted for. The options are \fIauto\fP,
@@ -183,7 +200,7 @@ Logfile logging log level. One of \fBall\fP, \fBgarbage\fP, \fBtrace\fP,
 .SS Target Selection
 .sp
 The default matching that Salt utilizes is shell\-style globbing around the
-minion id. See \fI\%https://docs.python.org/2/library/fnmatch.html#module\-fnmatch\fP\&.
+minion id. See \fI\%https://docs.python.org/3/library/fnmatch.html#module\-fnmatch\fP\&.
 .INDENT 0.0
 .TP
 .B \-E, \-\-pcre
@@ -267,17 +284,6 @@ Some outputters are formatted only for data returned from specific functions.
 If an outputter is used that does not support the data passed into it, then
 Salt will fall back on the \fBpprint\fP outputter and display the return data
 using the Python \fBpprint\fP standard library module.
-.sp
-\fBNOTE:\fP
-.INDENT 7.0
-.INDENT 3.5
-If using \fB\-\-out=json\fP, you will probably want \fB\-\-static\fP as well.
-Without the static option, you will get a separate JSON string per minion
-which makes JSON output invalid as a whole.
-This is due to using an iterative outputter. So if you want to feed it
-to a JSON parser, use \fB\-\-static\fP as well.
-.UNINDENT
-.UNINDENT
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -328,6 +334,17 @@ output. One of \(aqfull\(aq, \(aqterse\(aq, \(aqmixed\(aq, \(aqchanges\(aq or
 .B \-\-state\-verbose=STATE_VERBOSE, \-\-state_verbose=STATE_VERBOSE
 Override the configured state_verbose value for minion
 output. Set to True or False. Default: none.
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+If using \fB\-\-out=json\fP, you will probably want \fB\-\-static\fP as well.
+Without the static option, you will get a separate JSON string per minion
+which makes JSON output invalid as a whole.
+This is due to using an iterative outputter. So if you want to feed it
+to a JSON parser, use \fB\-\-static\fP as well.
+.UNINDENT
 .UNINDENT
 .SH SEE ALSO
 .sp

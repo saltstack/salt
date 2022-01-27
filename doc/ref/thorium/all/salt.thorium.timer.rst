@@ -1,5 +1,5 @@
-salt.thorium.timer module
-=========================
+salt.thorium.timer
+==================
 
 .. automodule:: salt.thorium.timer
     :members:

@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-'''
+"""
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
     :copyright: Copyright 2014 by the SaltStack Team, see AUTHORS for more details.
     :license: Apache 2.0, see LICENSE for more details.
@@ -9,11 +8,10 @@
     ~~~~~~~~~~~~~~~~~~~
 
     XML Unit Tests
-'''
+"""
 # pylint: disable=wrong-import-order,wrong-import-position
 
-# Import python libs
-from __future__ import absolute_import
+
 import io
 import logging
 
@@ -23,6 +21,7 @@ log = logging.getLogger(__name__)
 try:
     import xmlrunner.runner
     import xmlrunner.result
+
     HAS_XMLRUNNER = True
 
     class _DuplicateWriter(io.TextIOBase):
@@ -32,7 +31,7 @@ try:
         """
 
         def __init__(self, first, second):
-            super(_DuplicateWriter, self).__init__()
+            super().__init__()
             self._first = first
             self._second = second
 
@@ -70,33 +69,31 @@ try:
 
     class _XMLTestResult(xmlrunner.result._XMLTestResult):
         def startTest(self, test):
-            log.debug('>>>>> START >>>>> %s', test.id())
+            log.debug(">>>>> START >>>>> %s", test.id())
             # xmlrunner classes are NOT new-style classes
             xmlrunner.result._XMLTestResult.startTest(self, test)
 
         def stopTest(self, test):
-            log.debug('<<<<< END <<<<<<< %s', test.id())
+            log.debug("<<<<< END <<<<<<< %s", test.id())
             # xmlrunner classes are NOT new-style classes
             return xmlrunner.result._XMLTestResult.stopTest(self, test)
 
     class XMLTestRunner(xmlrunner.runner.XMLTestRunner):
         def _make_result(self):
             return _XMLTestResult(
-                self.stream,
-                self.descriptions,
-                self.verbosity,
-                self.elapsed_times
+                self.stream, self.descriptions, self.verbosity, self.elapsed_times
             )
 
         def run(self, test):
             result = xmlrunner.runner.XMLTestRunner.run(self, test)
-            self.stream.writeln('Finished generating XML reports')
+            self.stream.writeln("Finished generating XML reports")
             return result
+
 
 except ImportError:
     HAS_XMLRUNNER = False
 
-    class XMLTestRunner(object):
-        '''
+    class XMLTestRunner:
+        """
         This is a dumb class just so we don't break projects at import time
-        '''
+        """

@@ -67,8 +67,9 @@ The contents of the master configuration file can be made available to minion
 pillar files. This makes global configuration of services and systems very easy,
 but note that this may not be desired or appropriate if sensitive data is stored
 in the master's configuration file. To enable the master configuration file to be
-available to a minion's pillar files, set ``pillar_opts`` to ``True`` in the
-minion configuration file.
+available to minion as pillar, set ``pillar_opts: True`` in the master
+configuration file, and then for appropriate minions also set ``pillar_opts: True``
+in the minion(s) configuration file.
 
 Similar to the state tree, the pillar is comprised of sls files and has a top file.
 The default location for the pillar is in /srv/pillar.
@@ -141,7 +142,7 @@ This example sets up user data with a UID:
 
     The same directory lookups that exist in states exist in pillar, so the
     file ``users/init.sls`` can be referenced with ``users`` in the :term:`top
-    file`.
+    file <Top File>`.
 
 The top file will need to be updated to include this sls file:
 

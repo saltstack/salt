@@ -15,7 +15,7 @@ from salt.ext.tornado.test.util import unittest, skipBefore35, exec_test
 from salt.ext.tornado.web import Application, RequestHandler
 
 try:
-    import tornado.websocket  # noqa
+    import salt.ext.tornado.websocket  # noqa
     from salt.ext.tornado.util import _websocket_mask_python
 except ImportError:
     # The unittest module presents misleading errors on ImportError

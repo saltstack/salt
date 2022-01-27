@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2011-2012, Sylvain Hellegouarch
 # All rights reserved.
 
@@ -28,23 +27,19 @@
 # Modified from the original. See the Git history of this file for details.
 # https://bitbucket.org/Lawouach/cherrypy-recipes/src/50aff88dc4e24206518ec32e1c32af043f2729da/testing/unit/serverless/cptestcase.py
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Testing libs
+# pylint: disable=import-error
+import io
+
+import cherrypy  # pylint: disable=3rd-party-module-not-gated
+import salt.utils.stringutils
 from tests.support.case import TestCase
 
-# Import 3rd-party libs
-# pylint: disable=import-error
-import cherrypy  # pylint: disable=3rd-party-module-not-gated
-from salt.ext import six
-from salt.ext.six import BytesIO
 # pylint: enable=import-error
 
-import salt.utils.stringutils
 
 # Not strictly speaking mandatory but just makes sense
-cherrypy.config.update({'environment': "test_suite"})
+cherrypy.config.update({"environment": "test_suite"})
 
 # This is mandatory so that the HTTP server isn't started
 # if you need to actually start (why would you?), simply
@@ -52,15 +47,25 @@ cherrypy.config.update({'environment': "test_suite"})
 cherrypy.server.unsubscribe()
 
 # simulate fake socket address... they are irrelevant in our context
-local = cherrypy.lib.httputil.Host('127.0.0.1', 50000, "")
-remote = cherrypy.lib.httputil.Host('127.0.0.1', 50001, "")
+local = cherrypy.lib.httputil.Host("127.0.0.1", 50000, "")
+remote = cherrypy.lib.httputil.Host("127.0.0.1", 50001, "")
 
-__all__ = ['BaseCherryPyTestCase']
+__all__ = ["BaseCherryPyTestCase"]
 
 
 class BaseCherryPyTestCase(TestCase):
-    def request(self, path='/', method='GET', app_path='', scheme='http',
-                proto='HTTP/1.1', body=None, qs=None, headers=None, **kwargs):
+    def request(
+        self,
+        path="/",
+        method="GET",
+        app_path="",
+        scheme="http",
+        proto="HTTP/1.1",
+        body=None,
+        qs=None,
+        headers=None,
+        **kwargs
+    ):
         """
         CherryPy does not have a facility for serverless unit testing.
         However this recipe demonstrates a way of doing it by
@@ -87,14 +92,14 @@ class BaseCherryPyTestCase(TestCase):
         .. seealso: http://docs.cherrypy.org/stable/refman/_cprequest.html#cherrypy._cprequest.Response
         """
         # This is a required header when running HTTP/1.1
-        h = {'Host': '127.0.0.1'}
+        h = {"Host": "127.0.0.1"}
 
         # if we had some data passed as the request entity
         # let's make sure we have the content-length set
         fd = None
         if body is not None:
-            h['content-length'] = '{0}'.format(len(body))
-            fd = BytesIO(salt.utils.stringutils.to_bytes(body))
+            h["content-length"] = "{}".format(len(body))
+            fd = io.BytesIO(salt.utils.stringutils.to_bytes(body))
 
         if headers is not None:
             h.update(headers)
@@ -103,7 +108,7 @@ class BaseCherryPyTestCase(TestCase):
         app = cherrypy.tree.apps.get(app_path)
         if not app:
             # XXX: perhaps not the best exception to raise?
-            raise AssertionError("No application mounted at '{0}'".format(app_path))
+            raise AssertionError("No application mounted at '{}'".format(app_path))
 
         # Cleanup any previous returned response
         # between calls to this method
@@ -112,17 +117,16 @@ class BaseCherryPyTestCase(TestCase):
         # Let's fake the local and remote addresses
         request, response = app.get_serving(local, remote, scheme, proto)
         try:
-            h = [(k, v) for k, v in six.iteritems(h)]
+            h = [(k, v) for k, v in h.items()]
             response = request.run(method, path, qs, proto, h, fd)
         finally:
             if fd:
                 fd.close()
                 fd = None
 
-        if response.output_status.startswith(b'500'):
+        if response.output_status.startswith(b"500"):
             response_body = response.collapse_body()
-            if six.PY3:
-                response_body = response_body.decode(__salt_system_encoding__)
+            response_body = response_body.decode(__salt_system_encoding__)
             print(response_body)
             raise AssertionError("Unexpected error")
 

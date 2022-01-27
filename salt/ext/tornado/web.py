@@ -75,12 +75,12 @@ import stat
 import sys
 import threading
 import time
-import salt.ext.tornado as tornado
 import traceback
 import types
 from inspect import isclass
 from io import BytesIO
 
+import salt.ext.tornado
 from salt.ext.tornado.concurrent import Future
 from salt.ext.tornado import escape
 from salt.ext.tornado import gen
@@ -288,7 +288,7 @@ class RequestHandler(object):
     def clear(self):
         """Resets all headers and content for this response."""
         self._headers = httputil.HTTPHeaders({
-            "Server": "TornadoServer/%s" % tornado.version,
+            "Server": "TornadoServer/%s" % salt.ext.tornado.version,
             "Content-Type": "text/html; charset=UTF-8",
             "Date": httputil.format_timestamp(time.time()),
         })

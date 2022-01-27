@@ -120,7 +120,7 @@ class ProcessTest(unittest.TestCase):
 
                     # Now kill them normally so they won't be restarted
                     fetch("/?exit=0", fail_ok=True)
-                    # One process left; watch it's pid change
+                    # One process left; watch its pid change
                     pid = int(fetch("/").body)
                     fetch("/?exit=4", fail_ok=True)
                     pid2 = int(fetch("/").body)

@@ -12,19 +12,23 @@ cloud modules
 
     aliyun
     azurearm
+    clc
     cloudstack
     digitalocean
     dimensiondata
     ec2
     gce
     gogrid
+    hetzner
     joyent
+    libvirt
     linode
     lxc
     msazure
     oneandone
     opennebula
     openstack
+    packet
     parallels
     profitbricks
     proxmox

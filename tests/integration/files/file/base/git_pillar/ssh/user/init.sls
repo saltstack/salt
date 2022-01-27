@@ -2,7 +2,7 @@
 
 {{ user }}:
   user.present:
-    - gid_from_name: True
+    - usergroup: False
     - password: '$6$saYbZFw2$rtmvt2LOYchvlM22y34mCs7FiIN4Fq27rmv/whr/M.oPrgfCDhP5uJqnfe6uwFj90FvwA45rhZplnRNMgiY.J.'
     - require:
       - group: {{ user }}
@@ -42,26 +42,42 @@
   file.managed:
     - source: salt://git_pillar/ssh/user/files/id_rsa_nopass
     - user: root
+    {% if grains['os_family'] == 'FreeBSD' %}
+    - group: wheel
+    {% else %}
     - group: root
+    {% endif %}
     - mode: 600
 
 /root/.ssh/{{ pillar['git_pillar']['id_rsa_nopass'] }}.pub:
   file.managed:
     - source: salt://git_pillar/ssh/user/files/id_rsa_nopass.pub
     - user: root
+    {% if grains['os_family'] == 'FreeBSD' %}
+    - group: wheel
+    {% else %}
     - group: root
+    {% endif %}
     - mode: 644
 
 /root/.ssh/{{ pillar['git_pillar']['id_rsa_withpass'] }}:
   file.managed:
     - source: salt://git_pillar/ssh/user/files/id_rsa_withpass
     - user: root
+    {% if grains['os_family'] == 'FreeBSD' %}
+    - group: wheel
+    {% else %}
     - group: root
+    {% endif %}
     - mode: 600
 
 /root/.ssh/{{ pillar['git_pillar']['id_rsa_withpass'] }}.pub:
   file.managed:
     - source: salt://git_pillar/ssh/user/files/id_rsa_withpass.pub
     - user: root
+    {% if grains['os_family'] == 'FreeBSD' %}
+    - group: wheel
+    {% else %}
     - group: root
+    {% endif %}
     - mode: 644
