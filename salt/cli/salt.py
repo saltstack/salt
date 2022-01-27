@@ -3,7 +3,6 @@ import sys
 
 import salt.defaults.exitcodes
 import salt.log
-import salt.utils.job
 import salt.utils.parsers
 import salt.utils.stringutils
 from salt.exceptions import (
@@ -280,7 +279,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
 
             ret = {}
 
-            for res in batch.run():
+            for res, _ in batch.run():
                 ret.update(res)
 
             self._output_ret(ret, "")
@@ -296,12 +295,10 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                 sys.exit(1)
             # Printing the output is already taken care of in run() itself
             retcode = 0
-            for res in batch.run():
-                for ret in res.values():
-                    job_retcode = salt.utils.job.get_retcode(ret)
-                    if job_retcode > retcode:
-                        # Exit with the highest retcode we find
-                        retcode = job_retcode
+            for res, job_retcode in batch.run():
+                if job_retcode > retcode:
+                    # Exit with the highest retcode we find
+                    retcode = job_retcode
             sys.exit(retcode)
 
     def _print_errors_summary(self, errors):
