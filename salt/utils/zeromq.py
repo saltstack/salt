@@ -21,10 +21,8 @@ LIBZMQ_VERSION_INFO = (-1, -1, -1)
 
 try:
     if zmq:
-        ZMQ_VERSION_INFO = tuple([int(v_el) for v_el in zmq.__version__.split(".")])
-        LIBZMQ_VERSION_INFO = tuple(
-            [int(v_el) for v_el in zmq.zmq_version().split(".")]
-        )
+        ZMQ_VERSION_INFO = tuple(int(v_el) for v_el in zmq.__version__.split("."))
+        LIBZMQ_VERSION_INFO = tuple(int(v_el) for v_el in zmq.zmq_version().split("."))
 except Exception:  # pylint: disable=broad-except
     log.exception("Error while getting LibZMQ/PyZMQ library version")
 

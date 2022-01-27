@@ -440,9 +440,9 @@ def managed(name, ppa=None, copr=None, **kwargs):
                 # split the line and sort everything after the URL
                 sanitizedsplit = sanitizedkwargs[kwarg].split()
                 sanitizedsplit[3:] = sorted(sanitizedsplit[3:])
-                reposplit, _, pre_comments = [
+                reposplit, _, pre_comments = (
                     x.strip() for x in pre[kwarg].partition("#")
-                ]
+                )
                 reposplit = reposplit.split()
                 reposplit[3:] = sorted(reposplit[3:])
                 if sanitizedsplit != reposplit:
