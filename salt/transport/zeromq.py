@@ -766,10 +766,14 @@ class ZeroMQReqServerChannel(
         if "version" in payload:
             version = payload["version"]
 
+        sign_messages = False
+        if version > 1:
+            sign_messages = True
+
         # intercept the "_auth" commands, since the main daemon shouldn't know
         # anything about our key auth
         if payload["enc"] == "clear" and payload.get("load", {}).get("cmd") == "_auth":
-            stream.send(salt.payload.dumps(self._auth(payload["load"])))
+            stream.send(salt.payload.dumps(self._auth(payload["load"], sign_messages)))
             raise salt.ext.tornado.gen.Return()
 
         # TODO: test
