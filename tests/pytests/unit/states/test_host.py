@@ -77,7 +77,7 @@ def test_present():
         assert ret["changes"] == {
             "added": {ip_list[0]: [hostname], ip_list[1]: [hostname]}
         }, ret["changes"]
-        expected = sorted([call(x, hostname) for x in ip_list])
+        expected = sorted(call(x, hostname) for x in ip_list)
         assert sorted(add_host.mock_calls) == expected, add_host.mock_calls
         assert rm_host.mock_calls == [], rm_host.mock_calls
 
@@ -161,7 +161,7 @@ def test_present():
         assert ret["changes"] == {
             "added": {ip_list[0]: [hostname], ip_list[1]: [hostname]},
         }, ret["changes"]
-        expected = sorted([call(x, hostname) for x in ip_list])
+        expected = sorted(call(x, hostname) for x in ip_list)
         assert sorted(add_host.mock_calls) == expected, add_host.mock_calls
         assert rm_host.mock_calls == [], rm_host.mock_calls
 
@@ -185,7 +185,7 @@ def test_present():
             "added": {ip_list[0]: [hostname], ip_list[1]: [hostname]},
             "removed": {cur_ip: [hostname]},
         }, ret["changes"]
-        expected = sorted([call(x, hostname) for x in ip_list])
+        expected = sorted(call(x, hostname) for x in ip_list)
         assert sorted(add_host.mock_calls) == expected, add_host.mock_calls
         expected = [call(cur_ip, hostname)]
         assert rm_host.mock_calls == expected, rm_host.mock_calls
@@ -331,10 +331,10 @@ def test_present():
             "added": {ip_list[0]: [hostname], ip_list[1]: [hostname]},
             "comment_added": {ip_list[0]: ["A comment"], ip_list[1]: ["A comment"]},
         }, ret["changes"]
-        expected = sorted([call(x, hostname) for x in ip_list])
+        expected = sorted(call(x, hostname) for x in ip_list)
         assert sorted(add_host_mock.mock_calls) == expected, add_host_mock.mock_calls
 
-        expected = sorted([call(x, "A comment") for x in ip_list])
+        expected = sorted(call(x, "A comment") for x in ip_list)
         assert (
             sorted(set_comment_mock.mock_calls) == expected
         ), set_comment_mock.mock_calls

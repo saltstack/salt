@@ -2511,26 +2511,6 @@ Master will not be returned to the Minion.
 
     fileserver_ignoresymlinks: False
 
-.. conf_minion:: fileserver_limit_traversal
-
-``fileserver_limit_traversal``
-------------------------------
-
-.. versionadded:: 2014.1.0
-
-Default: ``False``
-
-By default, the Salt fileserver recurses fully into all defined environments
-to attempt to find files. To limit this behavior so that the fileserver only
-traverses directories with SLS files and special Salt directories like _modules,
-set ``fileserver_limit_traversal`` to ``True``. This might be useful for
-installations where a file root has a very large number of files and performance
-is impacted.
-
-.. code-block:: yaml
-
-    fileserver_limit_traversal: False
-
 .. conf_minion:: hash_type
 
 ``hash_type``

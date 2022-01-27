@@ -1472,9 +1472,9 @@ def list_pkgs(
     for line in out.splitlines():
         cols = line.split()
         try:
-            linetype, status, name, version_num, arch = [
+            linetype, status, name, version_num, arch = (
                 cols[x] for x in (0, 2, 3, 4, 5)
-            ]
+            )
         except (ValueError, IndexError):
             continue
         if __grains__.get("cpuarch", "") == "x86_64":
@@ -2997,7 +2997,7 @@ def show(*names, **kwargs):
         line = line.strip()
         if line:
             try:
-                key, val = [x.strip() for x in line.split(":", 1)]
+                key, val = (x.strip() for x in line.split(":", 1))
             except ValueError:
                 pass
             else:

@@ -874,7 +874,7 @@ def list_users(root=None):
     else:
         getpwall = functools.partial(pwd.getpwall)
 
-    return sorted([user.pw_name for user in getpwall()])
+    return sorted(user.pw_name for user in getpwall())
 
 
 def rename(name, new_name, root=None):
