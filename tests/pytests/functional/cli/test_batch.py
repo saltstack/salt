@@ -178,7 +178,7 @@ def test_batch_issue_56273():
             ):
                 ret = list(batch.run())
     assert len(ret) == 4
-    for val in ret:
+    for val, _ in ret:
         values = list(val.values())
         assert len(values) == 1
-        assert values[0]["ret"] is True
+        assert values[0] is True
