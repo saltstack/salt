@@ -1,0 +1,1 @@
+Added fail_on_parse_error and fail_on_missing_file options to MakoStack ext_pillar.
