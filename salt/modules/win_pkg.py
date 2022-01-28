@@ -1316,7 +1316,7 @@ def _get_source_sum(source_hash, file_path, saltenv):
             )
             raise SaltInvocationError(invalid_hash_msg)
 
-        ret["hash_type"], ret["hsum"] = [item.strip().lower() for item in items]
+        ret["hash_type"], ret["hsum"] = (item.strip().lower() for item in items)
 
     return ret
 

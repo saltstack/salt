@@ -358,7 +358,7 @@ def _sort_policy(doc):
     the likelihood of false negatives.
     """
     if isinstance(doc, list):
-        return sorted([_sort_policy(i) for i in doc])
+        return sorted(_sort_policy(i) for i in doc)
     elif isinstance(doc, (dict, OrderedDict)):
         return {k: _sort_policy(v) for k, v in doc.items()}
     return doc
