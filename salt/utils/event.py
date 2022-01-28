@@ -111,6 +111,7 @@ def get_event(
     io_loop=None,
     keep_loop=False,
     raise_errors=False,
+    **kwargs,
 ):
     """
     Return an event object suitable for the named transport
@@ -120,6 +121,14 @@ def get_event(
                            set_event_handler() API. Otherwise, operation
                            will be synchronous.
     """
+    if "transport" in kwargs:
+        salt.utils.versions.warn_until(
+            "3006",
+            "The 'transport' kwarg has been deprecated and its "
+            "functionality removed, as such, its usage is no longer "
+            "required.",
+        )
+
     sock_dir = sock_dir or opts["sock_dir"]
     # TODO: AIO core is separate from transport
     if node == "master":
