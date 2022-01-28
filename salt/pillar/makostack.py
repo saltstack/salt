@@ -63,7 +63,7 @@ Select config files through grains|pillar|opts matching
 
 You can also use a much more flexible configuration:  MakoStack allows one to
 select the config files for the current minion based on matching values from
-either grains, or pillar, or opts.
+either grains, pillar, or opts.
 
 Here is an example of such a configuration, which should hopefully speak for
 itself:
@@ -200,10 +200,10 @@ other MakoStack values that have already been parsed and evaluated (from
 ``yaml`` files earlier in the configuration) through the ``stack`` variable.
 
 Once a ``yaml`` file is processed by mako, we obtain a Python dict - let's call
-it ``yml_data``.  This ``yml_data`` dict is then merged into in the main
-``stack`` dict (which itself is the already merged MakoStack pillar data),
-based on the declared ``merge-strategy``.  By default, MakoStack will deeply
-merge ``yml_data`` into ``stack`` (much like the ``recurse`` option for Salt's
+it ``yml_data``.  This ``yml_data`` dict is then merged into the main ``stack``
+dict (which itself is the already merged MakoStack pillar data), based on the
+declared ``merge-strategy``.  By default, MakoStack will deeply merge
+``yml_data`` into ``stack`` (much like the ``recurse`` option for Salt's
 ``pillar_source_merging_strategy``), but 3 other merging strategies (see next
 section) are also available, on a per-object basis, to give you full control
 over the rendered data.
