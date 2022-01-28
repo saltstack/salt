@@ -946,24 +946,3 @@ def test_config_cache_path_overrides():
 
     mminion = salt.minion.MasterMinion(opts)
     assert mminion.opts["cachedir"] == cachedir
-
-
-async def test_minion_old_jid(tmpdir, caplog):
-    """
-    Minion does not generate grains when load_grains is False
-    """
-    opts = {
-        "random_startup_delay": 0,
-        "grains": {"foo": "bar"},
-        "cachedir": str(tmpdir),
-    }
-    minion = salt.minion.Minion(opts, load_grains=False)
-    jid1 = salt.utils.jid.gen_jid(opts)
-    jid2 = salt.utils.jid.gen_jid(opts)
-    last_jid_path = os.path.join(opts["cachedir"], ".last_jid")
-    with salt.utils.files.fopen(last_jid_path, "w") as fp:
-        fp.write(jid2)
-    with caplog.at_level(logging.INFO):
-        ret = await minion._handle_decoded_payload({"jid": jid1})
-        assert ret is None
-    assert "Received old JID, doing nothing" in caplog.text

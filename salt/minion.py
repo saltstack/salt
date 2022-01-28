@@ -1687,19 +1687,6 @@ class Minion(MinionBase):
         Override this method if you wish to handle the decoded data
         differently.
         """
-        # Do not re-play old jobs
-        last_jid_path = os.path.join(self.opts["cachedir"], ".last_jid")
-        if os.path.exists(last_jid_path):
-            with salt.utils.files.fopen(last_jid_path, "r") as fp:
-                last_jid = fp.read()
-            last_dt = salt.utils.jid.jid_to_datetime(last_jid)
-            this_dt = salt.utils.jid.jid_to_datetime(data["jid"])
-            if last_dt >= this_dt:
-                log.error("Received old JID, doing nothing: %r %r", last_jid, data["jid"])
-                return
-
-        with salt.utils.files.fopen(last_jid_path, "w") as fp:
-            fp.write(data["jid"])
 
         # Ensure payload is unicode. Disregard failure to decode binary blobs.
         if "user" in data:
