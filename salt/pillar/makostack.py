@@ -18,7 +18,8 @@ It supports the following features:
   dereferencing.
 - all these rendered files are then parsed as ``yaml``.
 - then all yaml dicts are merged in order, with support for the following
-  merging strategies: ``merge-first``
+  merging strategies:
+  ``merge-first``
   ``merge-last``
   ``remove``
   ``overwrite``
@@ -179,7 +180,7 @@ running Debian Jessie and that pillar ``roles`` is ``["db"]``, the following
 - ``roles/db.yml``
 - ``minions/test-1-dev.yml``
 
-Before merging, every files above will be preprocessed as mako templates.  The
+Before merging, ever file above will be preprocessed as mako templates.  The
 following variables are available in mako templating of ``yaml`` files:
 
 - ``stack``: the MakoStack pillar data object under construction (e.g. data
@@ -200,15 +201,15 @@ other MakoStack values that have already been parsed and evaluated (from
 
 Once a ``yaml`` file is processed by mako, we obtain a Python dict - let's call
 it ``yml_data``.  This ``yml_data`` dict is then merged into in the main
-``stack`` dict (which itself is the already merged MakoStack pillar data).,
+``stack`` dict (which itself is the already merged MakoStack pillar data),
 based on the declared ``merge-strategy``.  By default, MakoStack will deeply
-merge ``yml_data`` into ``stack`` (much like the ``recurse`` option for salt's
+merge ``yml_data`` into ``stack`` (much like the ``recurse`` option for Salt's
 ``pillar_source_merging_strategy``), but 3 other merging strategies (see next
 section) are also available, on a per-object basis, to give you full control
 over the rendered data.
 
 Once all ``yaml`` files have been processed, the ``stack`` dict will contain
-MakoStack's copmlete pillar data.  At this point the MakoStack ``ext_pillar``
+MakoStack's complete pillar data.  At this point the MakoStack ``ext_pillar``
 returns the ``stack`` dict to Salt, which then merges it in with any other
 pillars, finally returning the whole pillar to the minion.
 
@@ -223,7 +224,7 @@ strategies are:
 - ``remove``
 - ``overwrite``
 
-Note that scalar values like strings, integers, booleans, etc. (`leaf nodes` in
+Note that scalar values like strings, integers, booleans, etc. (leaf nodes in
 yaml parlance) are always (necessarily) evaluated using ``overwrite`` (other
 strategies don't make sense in that case).
 
@@ -348,7 +349,7 @@ Then you can select a custom merging strategy using the ``__`` key in a dict:
 |                      |         uid: 1001     |                         |
 +----------------------+-----------------------+-------------------------+
 
-Similarly, list allow a custom merging strategy using a ``__`` item:
+Similarly, lists allow a custom merging strategy using a ``__`` item:
 
 +----------------+-------------------------+-------------------------+
 | ``stack``      | ``yaml_data``           | ``stack`` (after merge) |
@@ -386,7 +387,7 @@ Tweaking MakoStack
 
 Out of the box, MakoStack (following the ``stack`` module it was cribbed from),
 will more or less silently pass over template files it cannot load due to mako
-or yaml parsing errors.  This is convenient, but arguably WRONG, behaviour; but
+or yaml parsing errors.  This is convenient, but arguably WRONG, behavior; but
 for backwards compatibility, it is maintained as the default.
 
 If desired, a configuration option may be set via a ``config`` entry under the
