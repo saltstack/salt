@@ -2910,7 +2910,8 @@ Example:
 Taking dynamic environments one step further, ``__env__`` can also be used in
 the ``file_roots`` filesystem path as of version 3005. It will be replaced with
 the actual ``saltenv`` and searched for states and data to provide to the
-minion. For instance, this configuration:
+minion. Note this substitution ONLY occurs for the ``__env__`` environment. For
+instance, this configuration:
 
 .. code-block:: yaml
 
@@ -4066,7 +4067,8 @@ Example:
 Taking dynamic environments one step further, ``__env__`` can also be used in
 the ``pillar_roots`` filesystem path as of version 3005. It will be replaced
 with the actual ``pillarenv`` and searched for Pillar data to provide to the
-minion. For instance, this configuration:
+minion. Note this substitution ONLY occurs for the ``__env__`` environment. For
+instance, this configuration:
 
 .. code-block:: yaml
 

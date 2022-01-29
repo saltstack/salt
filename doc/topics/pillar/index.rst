@@ -218,7 +218,8 @@ pillar applying to all environments. For example:
 
 Taking it one step further, ``__env__`` can also be used in the ``pillar_root``
 filesystem path. It will be replaced with the actual ``pillarenv`` and searched
-for Pillar data to provide to the minion. For instance, this configuration:
+for Pillar data to provide to the minion. Note this substitution ONLY occurs for
+the ``__env__`` environment. For instance, this configuration:
 
 .. code-block:: yaml
 
