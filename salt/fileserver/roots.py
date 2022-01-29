@@ -95,7 +95,8 @@ def find_file(path, saltenv="base", **kwargs):
             return _add_file_stat(fnd)
         return fnd
     for root in __opts__["file_roots"][saltenv]:
-        root = root.replace("__env__", actual_saltenv)
+        if saltenv == "__env__":
+            root = root.replace("__env__", actual_saltenv)
         full = os.path.join(root, path)
         if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
             fnd["path"] = full
@@ -407,7 +408,8 @@ def _file_lists(load, form):
                             ret["links"][rel_path] = link_dest
 
         for path in __opts__["file_roots"][saltenv]:
-            path = path.replace("__env__", actual_saltenv)
+            if saltenv == "__env__":
+                path = path.replace("__env__", actual_saltenv)
             for root, dirs, files in salt.utils.path.os_walk(
                 path, followlinks=__opts__["fileserver_followsymlinks"]
             ):

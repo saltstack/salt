@@ -47,23 +47,37 @@ def test_pillar_get_tops_should_not_error_when_merging_strategy_is_none_and_no_p
 
 @pytest.mark.parametrize(
     "env",
-    ("base", "something-else", "cool_path_123"),
+    ("base", "something-else", "cool_path_123", "__env__"),
 )
 def test_pillar_envs_path_substitution(env, temp_salt_minion, tmp_path):
     """
     Test pillar access to a dynamic path using __env__
     """
     opts = temp_salt_minion.config.copy()
-    expected = {env: [str(tmp_path / env)]}
+
+    if env == "__env__":
+        # __env__ saltenv will pass "dynamic" as saltenv and
+        # expect to be routed to the "dynamic" directory
+        actual_env = "dynamic"
+        leaf_dir = actual_env
+    else:
+        # any other saltenv will pass saltenv normally and
+        # expect to be routed to a static "__env__" directory
+        actual_env = env
+        leaf_dir = "__env__"
+
+    expected = {actual_env: [str(tmp_path / leaf_dir)]}
+
     # Stop using OrderedDict once we drop Py3.5 support
     opts["pillar_roots"] = OrderedDict()
-    opts["pillar_roots"][env] = [str(tmp_path / "__env__")]
+    opts["pillar_roots"][env] = [str(tmp_path / leaf_dir)]
     grains = salt.loader.grains(opts)
     pillar = salt.pillar.Pillar(
         opts,
         grains,
         temp_salt_minion.id,
-        env,
+        actual_env,
     )
+
     # The __env__ string in the path has been substituted for the actual env
     assert pillar.opts["pillar_roots"] == expected
