@@ -106,7 +106,7 @@ def beacon(config):
             mount_re = mount_re.upper()
 
         for part in parts:
-            if re.match(mount_re, part.mountpoint):
+            if (mount == "*") or (re.match(mount_re, part.mountpoint)):
                 _mount = part.mountpoint
 
                 try:
