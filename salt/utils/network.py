@@ -991,10 +991,11 @@ def _junos_interfaces_ifconfig(out):
     pmac = re.compile("curr media .*? ([0-9a-f:]+)")
 
     pip = re.compile(
-        r".*?inet\s*(primary)*\s+mtu (\d+)\s+local=[^\d]*(.*?)\s+dest=[^\d]*(.*?)\/([\d]*)\s+bcast=((?:[0-9]{1,3}\.){3}[0-9]{1,3})"
+        r".*?inet\s*(primary)*\s+mtu"
+        r" (\d+)\s+local=[^\d]*(.*?)\s{0,40}dest=[^\d]*(.*?)\/([\d]*)\s{0,40}bcast=((?:[0-9]{1,3}\.){3}[0-9]{1,3})"
     )
     pip6 = re.compile(
-        r".*?inet6 mtu [^\d]+\s+local=([0-9a-f:]+)%([a-zA-Z0-9]*)/([\d]*)\s"
+        r".*?inet6 mtu [^\d]+\s{0,40}local=([0-9a-f:]+)%([a-zA-Z0-9]*)/([\d]*)\s"
     )
 
     pupdown = re.compile("UP")
