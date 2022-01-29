@@ -490,7 +490,7 @@ more-itertools==5.0.0
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
-moto==2.2.17 ; python_version >= "3.10"
+moto==3.0.1 ; python_version >= "3.6"
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
     # via
@@ -818,7 +818,7 @@ urllib3==1.26.6
     #   kubernetes
     #   python-etcd
     #   requests
-vcert==0.7.3 ; sys_platform != "win32"
+vcert==0.7.4 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 virtualenv==20.7.2
     # via
