@@ -8,26 +8,35 @@ Grains from cloud metadata servers at 169.254.169.254
 To enable these grains that pull from the http://169.254.169.254/latest
 metadata server set `metadata_server_grains: True` in the minion config.
 
+Optionally set 'metadata_server_host: <metadata server host IP/FQDN, 
+e.g. TencentCloud metadata server is metadata.tencentyun.com>' to spec-
+ify the custom metadata server.
+
 .. code-block:: yaml
 
     metadata_server_grains: True
-
+    metadata_server_host: metadata.tencentyun.com
 """
 
+# Import python libs
 import os
 import socket
+from telnetlib import IP
 
+# Import salt libs
 import salt.utils.data
 import salt.utils.http as http
 import salt.utils.json
 import salt.utils.stringutils
 
-# metadata server information
-IP = "169.254.169.254"
-HOST = "http://{}/".format(IP)
-
 
 def __virtual__():
+    global IP
+    global HOST
+    # metadata server information
+    IP = "169.254.169.254"
+    IP = __opts__.get("metadata_server_host", "169.254.169.254")
+    HOST = "http://{}/".format(IP)
     if __opts__.get("metadata_server_grains", False) is False:
         return False
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -57,6 +66,9 @@ def _search(prefix="latest/"):
     for line in body.split("\n"):
         if line.endswith("/"):
             ret[line[:-1]] = _search(prefix=os.path.join(prefix, line))
+        elif line.endswith(("user-data")):
+            retdata = http.query(os.path.join(HOST, prefix, line)).get("body", None)
+            ret[line] = retdata
         elif prefix == "latest/":
             # (gtmanfred) The first level should have a forward slash since
             # they have stuff underneath. This will not be doubled up though,
