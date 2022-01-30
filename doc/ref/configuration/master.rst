@@ -2568,7 +2568,7 @@ will be shown for each state run.
 .. conf_master:: state_output_pct
 
 ``state_output_pct``
-------------------------
+--------------------
 
 Default: ``False``
 
@@ -2578,6 +2578,20 @@ as a percent of total actions will be shown for each state run.
 .. code-block:: yaml
 
     state_output_pct: False
+
+.. conf_master:: state_compress_ids
+
+``state_compress_ids``
+----------------------
+
+Default: ``False``
+
+The ``state_compress_ids`` setting aggregates information about states which
+have multiple "names" under the same state ID in the highstate output.
+
+.. code-block:: yaml
+
+    state_compress_ids: False
 
 .. conf_master:: state_aggregate
 

@@ -374,6 +374,9 @@ VALID_OPTS = immutabletypes.freeze(
         "state_output_profile": bool,
         # Tells the highstate outputter whether success and failure percents will be shown for each state run
         "state_output_pct": bool,
+        # Tells the highstate outputter to aggregate information about states which
+        # have multiple "names" under the same state ID in the highstate output.
+        "state_compress_ids": bool,
         # When true, states run in the order defined in an SLS file, unless requisites re-order them
         "state_auto_order": bool,
         # Fire events as state chunks are processed by the state compiler
