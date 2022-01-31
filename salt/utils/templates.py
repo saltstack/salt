@@ -212,6 +212,19 @@ def generate_sls_context(tmplpath, sls):
 
 
 def wrap_tmpl_func(render_str):
+    """
+    Each template processing function below, ``render_*_tmpl``, is wrapped by
+    ``render_tmpl`` before being inserted into the ``TEMPLATE_REGISTRY``.  Some
+    actions are taken here that are common to all renderers.  Perhaps a
+    standard decorator construct would have been more legible.
+
+    :param function render_str: Template rendering function to be wrapped.
+        Each function is responsible for rendering the source data for its
+        repective template language.
+
+    :returns function render_tmpl: The wrapper function
+    """
+
     def render_tmpl(
         tmplsrc, from_str=False, to_str=False, context=None, tmplpath=None, **kws
     ):
@@ -378,6 +391,18 @@ def _get_jinja_error(trace, context=None):
 
 
 def render_jinja_tmpl(tmplstr, context, tmplpath=None):
+    """
+    Render a Jinja template.
+
+    :param str tmplstr: A string containing the source to be rendered.
+
+    :param dict context: Any additional context data used by the renderer.
+
+    :param str tmplpath: Base path from which ``tmplstr`` may load additional
+        template files.
+
+    :returns str: The string rendered by the template.
+    """
     opts = context["opts"]
     saltenv = context["saltenv"]
     loader = None
@@ -557,6 +582,18 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
 # pylint: disable=3rd-party-module-not-gated
 def render_mako_tmpl(tmplstr, context, tmplpath=None):
+    """
+    Render a Mako template.
+
+    :param str tmplstr: A string containing the source to be rendered.
+
+    :param dict context: Any additional context data used by the renderer.
+
+    :param str tmplpath: Base path from which ``tmplstr`` may load additional
+        template files.
+
+    :returns str: The string rendered by the template.
+    """
     import mako.exceptions  # pylint: disable=no-name-in-module
     from mako.template import Template  # pylint: disable=no-name-in-module
     from salt.utils.mako import SaltMakoTemplateLookup
@@ -585,6 +622,17 @@ def render_mako_tmpl(tmplstr, context, tmplpath=None):
 
 
 def render_wempy_tmpl(tmplstr, context, tmplpath=None):
+    """
+    Render a Wempy template.
+
+    :param str tmplstr: A string containing the source to be rendered.
+
+    :param dict context: Any additional context data used by the renderer.
+
+    :param str tmplpath: Unused.
+
+    :returns str: The string rendered by the template.
+    """
     from wemplate.wemplate import TemplateParser as Template
 
     return Template(tmplstr).render(**context)
