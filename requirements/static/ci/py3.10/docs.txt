@@ -435,15 +435,17 @@ imagesize==1.2.0
     # via sphinx
 immutables==0.15
     # via contextvars
-importlib-metadata==4.6.4
-    # via moto
+importlib_metadata==4.6.3 ; python_version >= "3.10"
+    # via
+    #   -r requirements/static/pkg/linux.in
+    #   moto
 ipaddress==1.0.23
     # via kubernetes
 isodate==0.6.0
     # via msrest
 jaraco.functools==2.0
     # via tempora
-jinja2==2.11.3
+jinja2==3.0.3
     # via
     #   -r requirements/base.txt
     #   ansible-core
@@ -458,7 +460,7 @@ jmespath==0.10.0
     #   botocore
 jsonschema==3.2.0
     # via -r requirements/static/ci/common.in
-junos-eznc==2.4.0 ; sys_platform != "win32"
+junos-eznc==2.6.0 ; sys_platform != "win32" and python_version >= "3.10"
     # via
     #   -r requirements/static/ci/common.in
     #   napalm
@@ -474,14 +476,14 @@ libnacl==1.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
 loguru==0.5.3
     # via ciscoconfparse
-lxml==4.6.3
+lxml==4.7.1
     # via
     #   junos-eznc
     #   napalm
     #   ncclient
 mako==1.1.5
     # via -r requirements/static/ci/common.in
-markupsafe==1.1.1
+markupsafe==2.0.1
     # via
     #   -r requirements/base.txt
     #   jinja2
@@ -493,7 +495,7 @@ more-itertools==5.0.0
     #   cherrypy
     #   jaraco.functools
     #   moto
-moto==2.2.4
+moto==2.2.4 ; python_version >= "3.10"
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
     # via -r requirements/base.txt
@@ -591,7 +593,7 @@ msrestazure==0.6.4
     #   azure-mgmt-web
 napalm==3.3.1 ; sys_platform != "win32" and python_version > "3.6"
     # via -r requirements/static/ci/common.in
-ncclient==0.6.12
+ncclient==0.6.9
     # via
     #   junos-eznc
     #   napalm
@@ -603,9 +605,7 @@ netaddr==0.8.0
 netmiko==3.4.0
     # via napalm
 ntc-templates==2.2.2
-    # via
-    #   junos-eznc
-    #   netmiko
+    # via netmiko
 oauthlib==3.1.1
     # via requests-oauthlib
 oscrypto==1.2.1
@@ -642,11 +642,11 @@ pycparser==2.17
     # via cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
-pycurl==7.44.1
+pycurl==7.44.1 ; python_version >= "3.10"
     # via -r requirements/static/ci/common.in
 pyeapi==0.8.4
     # via napalm
-pygit2==1.6.1 ; python_version > "3.8"
+pygit2==1.7.1 ; python_version >= "3.10"
     # via -r requirements/static/ci/linux.in
 pygments==2.8.1
     # via sphinx
@@ -754,7 +754,7 @@ scp==0.13.6
     #   junos-eznc
     #   napalm
     #   netmiko
-setproctitle==1.1.10
+setproctitle==1.2.2 ; python_version >= "3.10"
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
     # via

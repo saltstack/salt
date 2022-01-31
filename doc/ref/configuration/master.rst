@@ -853,7 +853,7 @@ that does not send executions to minions.
 Default: False
 
 When checking the minions connected to a master, also include the master's
-connections to minions on the port specfied in the setting `remote_minions_port`.
+connections to minions on the port specified in the setting `remote_minions_port`.
 This is particularly useful when checking if the master is connected to any Heist-Salt
 minions. If this setting is set to True, the master will check all connections on port 22
 by default unless a user also configures a different port with the setting
@@ -2706,32 +2706,6 @@ Master will not be returned to the Minion.
 .. code-block:: yaml
 
     fileserver_ignoresymlinks: False
-
-.. conf_master:: fileserver_limit_traversal
-
-``fileserver_limit_traversal``
-------------------------------
-
-.. versionadded:: 2014.1.0
-.. deprecated:: 2018.3.4
-   This option is now ignored. Firstly, it only traversed
-   :conf_master:`file_roots`, which means it did not work for the other
-   fileserver backends. Secondly, since this option was added we have added
-   caching to the code that traverses the file_roots (and gitfs, etc.), which
-   greatly reduces the amount of traversal that is done.
-
-Default: ``False``
-
-By default, the Salt fileserver recurses fully into all defined environments
-to attempt to find files. To limit this behavior so that the fileserver only
-traverses directories with SLS files and special Salt directories like _modules,
-set ``fileserver_limit_traversal`` to ``True``. This might be useful for
-installations where a file root has a very large number of files and performance
-is impacted.
-
-.. code-block:: yaml
-
-    fileserver_limit_traversal: False
 
 .. conf_master:: fileserver_list_cache_time
 

@@ -209,20 +209,20 @@ def wait_until(name, state, timeout=300):
     Wait until a specific state has been reached on  a node
     """
     start_time = time.time()
-    node = show_instance(name, call="function")
+    node = show_instance(name, call="action")
     while True:
         if node["state"] == state:
             return True
         time.sleep(1)
         if time.time() - start_time > timeout:
             return False
-        node = show_instance(name, call="function")
+        node = show_instance(name, call="action")
 
 
 def show_instance(name, call=None):
-    if call == "action":
+    if call != "action":
         raise SaltCloudSystemExit(
-            "The show_instance function must be called with -f or --function"
+            "The show_instance function must be called with -a or --action."
         )
 
     try:
@@ -500,7 +500,7 @@ def destroy(name, call=None):
         transport=__opts__["transport"],
     )
 
-    node = show_instance(name, call="function")
+    node = show_instance(name, call="action")
     if node["state"] == "running":
         stop(name, call="action", wait=False)
         if not wait_until(name, "off"):
@@ -565,7 +565,7 @@ def resize(name, kwargs, call=None):
         transport=__opts__["transport"],
     )
 
-    node = show_instance(name, call="function")
+    node = show_instance(name, call="action")
     if node["state"] == "running":
         stop(name, call="action", wait=False)
         if not wait_until(name, "off"):

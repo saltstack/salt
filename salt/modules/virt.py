@@ -1780,11 +1780,7 @@ def _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps):
                         int(re.sub("[a-z]+", "", vol_name)) for vol_name in all_volumes
                     ] or [0]
                     index = min(
-                        [
-                            idx
-                            for idx in range(1, max(indexes) + 2)
-                            if idx not in indexes
-                        ]
+                        idx for idx in range(1, max(indexes) + 2) if idx not in indexes
                     )
                     disk["filename"] = "{}{}".format(os.path.basename(device), index)
 
@@ -3294,10 +3290,10 @@ def _serial_or_concole_equal(old, new):
         """
         return {
             "type": item.attrib["type"],
-            "port": item.find("source").attrib["service"]
+            "port": item.find("source").get("service")
             if item.find("source") is not None
             else None,
-            "protocol": item.find("protocol").attrib["type"]
+            "protocol": item.find("protocol").get("type")
             if item.find("protocol") is not None
             else None,
         }

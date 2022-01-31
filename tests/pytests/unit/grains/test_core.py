@@ -1878,7 +1878,7 @@ def test_fqdns_return():
 
 
 @pytest.mark.skip_unless_on_linux
-def test_fqdns_socket_error():
+def test_fqdns_socket_error(caplog):
     """
     test the behavior on non-critical socket errors of the dns grain
     """
@@ -1907,17 +1907,12 @@ def test_fqdns_socket_error():
                 mock_log.debug.assert_called()
                 mock_log.error.assert_not_called()
 
-        mock_log = MagicMock()
+        caplog.set_level(logging.WARNING)
         with patch.dict(
             core.__salt__, {"network.fqdns": salt.modules.network.fqdns}
-        ), patch.object(
-            socket, "gethostbyaddr", side_effect=_gen_gethostbyaddr(-1)
-        ), patch(
-            "salt.modules.network.log", mock_log
-        ):
+        ), patch.object(socket, "gethostbyaddr", side_effect=_gen_gethostbyaddr(-1)):
             assert core.fqdns() == {"fqdns": []}
-            mock_log.debug.assert_called_once()
-            mock_log.error.assert_called()
+        assert "Failed to resolve address 1.2.3.4:" in caplog.text
 
 
 def test_core_virtual():

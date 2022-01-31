@@ -519,10 +519,7 @@ def list_users(root=None):
         getspall = functools.partial(spwd.getspall)
 
     return sorted(
-        [
-            user.sp_namp if hasattr(user, "sp_namp") else user.sp_nam
-            for user in getspall()
-        ]
+        user.sp_namp if hasattr(user, "sp_namp") else user.sp_nam for user in getspall()
     )
 
 
