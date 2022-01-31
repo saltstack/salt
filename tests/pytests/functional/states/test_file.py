@@ -3,6 +3,7 @@ import hashlib
 import http.server
 import multiprocessing
 import os
+import random
 import shutil
 import socket
 import sys
@@ -53,7 +54,13 @@ class TestRequestHandler(http.server.SimpleHTTPRequestHandler):
 
         # Return the Etag header if we have the checksum
         if checksum:
-            self.send_header("Etag", checksum)
+            # IMPORTANT: This introduces randomness into the tests. The Etag header key
+            # will be converted to lowercase in the code... but if someone breaks that,
+            # it'll rear it's head here as random failures that are hard to reproduce.
+            # Any alternatives seem overly complex. So... don't break the case insensitivity
+            # in the code.
+            possible_etags = ["Etag", "ETag"]
+            self.send_header(random.choice(possible_etags), checksum)
             self.end_headers()
 
         # Return file content

@@ -458,7 +458,7 @@ def test_extend_dict_key_value(minion_opts, local_salt):
 
     # Test incorrect usage
     template = "{{ {} | extend_dict_key_value('bar:baz', 42) }}"
-    expected = r"Cannot extend {} with a {}.".format(type([]), type(42))
+    expected = r"Cannot extend {} with a {}.".format(type([]), int)
     with pytest.raises(SaltRenderError, match=expected):
         render_jinja_tmpl(
             template, dict(opts=minion_opts, saltenv="test", salt=local_salt)

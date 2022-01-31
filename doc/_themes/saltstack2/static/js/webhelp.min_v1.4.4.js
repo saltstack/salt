@@ -274,4 +274,3 @@ function getMetaStatus() {
 
     $(document).ready($.proxy(anchorScrolls, 'init'));
 })(window.document, window.history, window.location);
-
