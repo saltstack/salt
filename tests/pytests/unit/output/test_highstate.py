@@ -3,6 +3,7 @@ import copy
 import pytest
 import salt.config
 import salt.output.highstate as highstate
+import salt.utils.data
 from salt.utils.odict import OrderedDict
 from tests.support.mock import patch
 
@@ -501,8 +502,8 @@ def test__compress_ids():
     )
     actual_output = highstate._compress_ids(data)
 
-    # return properly compressed data
-    assert actual_output == expected_output
+    # return properly compressed data. empty dict means identical to expected
+    assert not salt.utils.data.compare_dicts(actual_output, expected_output)
 
     # check output text for formatting
     opts = copy.deepcopy(highstate.__opts__)
@@ -545,8 +546,8 @@ def test__compress_ids():
     data["local"]["cmd_|-mix-matched results_|-/bin/false_|-run"].pop("__run_num__")
     actual_output = highstate._compress_ids(data)
 
-    # expecting return of original data to let the outputter figure it out
-    assert actual_output == data
+    # expecting return of original data to let the outputter figure it out. empty dict means identical to original
+    assert not salt.utils.data.compare_dicts(actual_output, data)
 
 
 def test__compress_ids_not_dict():
