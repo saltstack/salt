@@ -187,6 +187,15 @@ def _compress_ids(data):
     # Stop using OrderedDict once we drop Py3.5 support
     compressed = OrderedDict()
 
+    def _orderify(udict):
+        """
+        Utility function to preserve dict order
+        """
+        if isinstance(udict, dict):
+            return OrderedDict({key: _orderify(val) for key, val in udict.items()})
+        else:
+            return udict
+
     # any failures to compress result in passing the original data
     # to the highstate outputter without modification
     try:
@@ -208,7 +217,7 @@ def _compress_ids(data):
                 )
                 # state does not need to be compressed
                 if id_count[_id] == 1:
-                    compressed[host][tname] = info
+                    compressed[host][tname] = _orderify(info)
                     continue
 
                 # replace name to create a single key by sls and result
@@ -229,7 +238,7 @@ def _compress_ids(data):
 
                 # store the first entry as-is
                 if tname not in compressed[host]:
-                    compressed[host][tname] = info
+                    compressed[host][tname] = _orderify(info)
                     continue
 
                 # subsequent entries for compression will use the lowest
@@ -248,20 +257,22 @@ def _compress_ids(data):
                 # changes are turned into a dict of changes keyed by name
                 if compressed[host][tname].get("changes") and info.get("changes"):
                     if not compressed[host][tname]["changes"].get("compressed changes"):
-                        compressed[host][tname]["changes"] = {
-                            "compressed changes": {
-                                compressed[host][tname]["name"]: compressed[host][
-                                    tname
-                                ]["changes"]
+                        compressed[host][tname]["changes"] = _orderify(
+                            {
+                                "compressed changes": {
+                                    compressed[host][tname]["name"]: compressed[host][
+                                        tname
+                                    ]["changes"]
+                                }
                             }
-                        }
+                        )
                     compressed[host][tname]["changes"]["compressed changes"].update(
-                        {info["name"]: info["changes"]}
+                        _orderify({info["name"]: info["changes"]})
                     )
                 elif info.get("changes"):
-                    compressed[host][tname]["changes"] = {
-                        "compressed changes": {info["name"]: info["changes"]}
-                    }
+                    compressed[host][tname]["changes"] = _orderify(
+                        {"compressed changes": {info["name"]: info["changes"]}}
+                    )
     except Exception:  # pylint: disable=broad-except
         log.warning("Unable to compress state output by ID! Returning output normally.")
         return data

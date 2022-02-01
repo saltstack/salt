@@ -171,6 +171,13 @@ def test_pct_summary_output():
     assert "                  file2" in actual_output
 
 
+def _orderify(udict):
+    if isinstance(udict, dict):
+        return OrderedDict({key: _orderify(val) for key, val in udict.items()})
+    else:
+        return udict
+
+
 def test__compress_ids():
     """
     Tests for expected data return for _compress_ids
@@ -178,7 +185,7 @@ def test__compress_ids():
     """
     # raw data entering the outputter
     # Stop using OrderedDict once we drop Py3.5 support
-    data = OrderedDict(
+    data = _orderify(
         {
             "local": {
                 "cmd_|-mix-matched results_|-/bin/false_|-run": {
@@ -371,7 +378,7 @@ def test__compress_ids():
     )
     # expected compressed raw data for outputter
     # Stop using OrderedDict once we drop Py3.5 support
-    expected_output = OrderedDict(
+    expected_output = _orderify(
         {
             "local": {
                 "cmd_|-mix-matched results (2)_|-state_compressed_compress_test_mix-matched results_False_|-run": {
