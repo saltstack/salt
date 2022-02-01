@@ -45,6 +45,47 @@ def test_pillar_get_tops_should_not_error_when_merging_strategy_is_none_and_no_p
     assert not errors
 
 
+def test_dynamic_pillarenv():
+    opts = {
+        "optimization_order": [0, 1, 2],
+        "renderer": "json",
+        "renderer_blacklist": [],
+        "renderer_whitelist": [],
+        "state_top": "",
+        "pillar_roots": {
+            "__env__": ["/srv/pillar/__env__"],
+            "base": ["/srv/pillar/base"],
+            "test": ["/srv/pillar/__env__"],
+        },
+        "file_roots": {"base": ["/srv/salt/base"], "__env__": ["/srv/salt/__env__"]},
+        "extension_modules": "",
+    }
+    pillar = salt.pillar.Pillar(opts, {}, "mocked-minion", "base", pillarenv="dev")
+    assert pillar.opts["pillar_roots"] == {
+        "base": ["/srv/pillar/base"],
+        "dev": ["/srv/pillar/dev"],
+        "test": ["/srv/pillar/__env__"],
+    }
+
+
+def test_ignored_dynamic_pillarenv():
+    opts = {
+        "optimization_order": [0, 1, 2],
+        "renderer": "json",
+        "renderer_blacklist": [],
+        "renderer_whitelist": [],
+        "state_top": "",
+        "pillar_roots": {
+            "__env__": ["/srv/pillar/__env__"],
+            "base": ["/srv/pillar/base"],
+        },
+        "file_roots": {"base": ["/srv/salt/base"], "dev": ["/svr/salt/dev"]},
+        "extension_modules": "",
+    }
+    pillar = salt.pillar.Pillar(opts, {}, "mocked-minion", "base", pillarenv="base")
+    assert pillar.opts["pillar_roots"] == {"base": ["/srv/pillar/base"]}
+
+
 @pytest.mark.parametrize(
     "env",
     ("base", "something-else", "cool_path_123", "__env__"),
