@@ -48,7 +48,6 @@ def test_config_kwargs_empty():
     ):
         test_kwargs = {}
         ret = napalm_mod.pyeapi_nxos_api_args(kwargs=test_kwargs)
-        log.debug(f"DGM test_config post ret '{ret}', test_kwargs '{test_kwargs}'")
         assert ret["transport"] == "https"
         assert ret["port"] == 443
 
@@ -75,7 +74,6 @@ def test_config_kwargs_none():
     ):
         test_kwargs = {}
         ret = napalm_mod.pyeapi_nxos_api_args(kwargs=test_kwargs)
-        log.debug(f"DGM test_config post ret '{ret}', test_kwargs '{test_kwargs}'")
         assert ret["transport"] == "https"
         assert ret["port"] == 443
 
@@ -101,7 +99,6 @@ def test_config_kwargs_http_no_port():
     ):
         test_kwargs = {}
         ret = napalm_mod.pyeapi_nxos_api_args(kwargs=test_kwargs)
-        log.debug(f"DGM test_config post ret '{ret}', test_kwargs '{test_kwargs}'")
         assert ret["transport"] == "http"
         assert ret["port"] == 80
 
@@ -128,7 +125,6 @@ def test_config_kwargs_http_and_port():
     ):
         test_kwargs = {}
         ret = napalm_mod.pyeapi_nxos_api_args(kwargs=test_kwargs)
-        log.debug(f"DGM test_config post ret '{ret}', test_kwargs '{test_kwargs}'")
         assert ret["transport"] == "http"
         assert ret["port"] == 8080
 
@@ -154,7 +150,6 @@ def test_config_kwargs_https_no_port():
     ):
         test_kwargs = {}
         ret = napalm_mod.pyeapi_nxos_api_args(kwargs=test_kwargs)
-        log.debug(f"DGM test_config post ret '{ret}', test_kwargs '{test_kwargs}'")
         assert ret["transport"] == "https"
         assert ret["port"] == 443
 
@@ -181,7 +176,6 @@ def test_config_kwargs_https_and_port():
     ):
         test_kwargs = {}
         ret = napalm_mod.pyeapi_nxos_api_args(kwargs=test_kwargs)
-        log.debug(f"DGM test_config post ret '{ret}', test_kwargs '{test_kwargs}'")
         assert ret["transport"] == "https"
         assert ret["port"] == 5432
 
@@ -208,6 +202,5 @@ def test_config_kwargs_werid_transport_port():
     ):
         test_kwargs = {}
         ret = napalm_mod.pyeapi_nxos_api_args(kwargs=test_kwargs)
-        log.debug(f"DGM test_config post ret '{ret}', test_kwargs '{test_kwargs}'")
         assert ret["transport"] == "nxos_protocol"
         assert ret["port"] == 2080
