@@ -30,7 +30,6 @@ def non_blackout_minion(salt_minion, salt_master, salt_call_cli):
         yield op
 
 
-@pytest.mark.xfail
 def test_when_manage_versions_runs_and_the_minion_errors_out_it_should_not_(
     salt_run_cli, blackout_minion
 ):
