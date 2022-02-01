@@ -11,6 +11,7 @@ import pytest
 import salt.utils.files
 import salt.utils.path
 from salt.utils.versions import LooseVersion as _LooseVersion
+from saltfactories.utils.ports import get_unused_localhost_port
 
 log = logging.getLogger(__name__)
 
@@ -112,6 +113,66 @@ def pillar_tree(salt_master, salt_minion, salt_call_cli):
         ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
         assert ret.exitcode == 0
         assert ret.json is True
+
+
+@pytest.fixture(scope="module")
+def salt_secondary_master(request, salt_factories):
+    #
+    # Enable a secondary Salt master so we can disable follow_symlinks
+    #
+    publish_port = get_unused_localhost_port()
+    ret_port = get_unused_localhost_port()
+
+    config_defaults = {
+        "open_mode": True,
+        "transport": request.config.getoption("--transport"),
+    }
+    config_overrides = {
+        "interface": "127.0.0.1",
+        "fileserver_followsymlinks": False,
+        "publish_port": publish_port,
+        "ret_port": ret_port,
+    }
+
+    factory = salt_factories.salt_master_daemon(
+        "secondary-master",
+        defaults=config_defaults,
+        overrides=config_overrides,
+        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+    )
+    with factory.started(start_timeout=120):
+        yield factory
+
+
+@pytest.fixture(scope="module")
+def salt_secondary_minion(salt_secondary_master):
+    #
+    # Enable a secondary Salt minion so we can
+    # point it at athe secondary Salt master
+    #
+    config_defaults = {}
+    config_overrides = {
+        "master": salt_secondary_master.config["interface"],
+        "master_port": salt_secondary_master.config["ret_port"],
+    }
+
+    factory = salt_secondary_master.salt_minion_daemon(
+        "secondary-minion",
+        defaults=config_defaults,
+        overrides=config_overrides,
+        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+    )
+    with factory.started(start_timeout=120):
+        yield factory
+
+
+@pytest.fixture(scope="module")
+def salt_cli_secondary_wrapper(salt_secondary_master, salt_secondary_minion):
+    def run_command(*command, **kwargs):
+        salt_cli = salt_secondary_master.salt_cli()
+        return salt_cli.run(*command, minion_tgt=salt_secondary_minion.id, **kwargs)
+
+    return run_command
 
 
 @pytest.mark.skip_on_windows
@@ -1037,3 +1098,160 @@ def test_patch_test_mode(
         state_run = next(iter(ret.json.values()))
         assert state_run["result"] is False
         assert "Patch would not apply cleanly" in state_run["comment"]
+
+
+def test_recurse(
+    salt_master,
+    salt_call_cli,
+    pillar_tree,
+    tmp_path,
+    salt_minion,
+):
+    target_path = tmp_path / "test_recurse"
+
+    sls_name = "file_recurse_test"
+    sls_contents = """
+    tmp_recurse_dir_dir:
+      file.recurse:
+        - name: {target_path}
+        - source: salt://tmp_dir/
+        - keep_symlinks: True
+    """.format(
+        target_path=target_path
+    )
+
+    test_tempdir = salt_master.state_tree.base.paths[0] / "tmp_dir"
+    test_tempdir.mkdir(parents=True, exist_ok=True)
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_name), sls_contents
+    )
+
+    with sls_tempfile, test_tempdir:
+        for _dir in "test1", "test2", "test3":
+            test_tempdir.joinpath(_dir).mkdir(parents=True, exist_ok=True)
+
+            for _file in range(1, 4):
+                test_tempdir.joinpath(_dir, str(_file)).touch()
+
+        ret = salt_call_cli.run("state.apply", sls_name)
+        assert ret.exitcode == 0
+        assert ret.json
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is True
+
+        # Check to make sure the directories and files were created
+        for _dir in "test1", "test2", "test3":
+            assert test_tempdir.joinpath(_dir).is_dir()
+            for _file in range(1, 4):
+                assert test_tempdir.joinpath(_dir, str(_file)).is_file()
+
+
+@pytest.mark.skip_on_windows
+def test_recurse_keep_symlinks_in_fileserver_root(
+    salt_master,
+    salt_call_cli,
+    pillar_tree,
+    tmp_path,
+    salt_minion,
+):
+    target_path = tmp_path / "test_recurse"
+
+    sls_name = "file_recurse_test"
+    sls_contents = """
+    tmp_recurse_dir_dir:
+      file.recurse:
+        - name: {target_path}
+        - source: salt://tmp_dir/
+        - keep_symlinks: True
+    """.format(
+        target_path=target_path
+    )
+
+    test_tempdir = salt_master.state_tree.base.paths[0] / "tmp_dir"
+    test_tempdir.mkdir(parents=True, exist_ok=True)
+    sls_tempfile = salt_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_name), sls_contents
+    )
+
+    with sls_tempfile, test_tempdir:
+        for _dir in "test1", "test2", "test3":
+            test_tempdir.joinpath(_dir).mkdir(parents=True, exist_ok=True)
+
+            for _file in range(1, 4):
+                test_tempdir.joinpath(_dir, str(_file)).touch()
+
+        cwd = os.getcwd()
+        os.chdir(str(test_tempdir))
+        pathlib.Path("test").symlink_to("test3", target_is_directory=True)
+        os.chdir(str(cwd))
+
+        ret = salt_call_cli.run("state.apply", sls_name)
+        assert ret.exitcode == 0
+        assert ret.json
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is True
+
+        # Check to make sure the directories and files were created
+        for _dir in "test1", "test2", "test3":
+            assert target_path.joinpath(_dir).is_dir()
+            for _file in range(1, 4):
+                assert target_path.joinpath(_dir, str(_file)).is_file()
+
+        assert target_path.joinpath("test").is_symlink()
+
+
+@pytest.mark.skip_on_windows
+def test_recurse_keep_symlinks_outside_fileserver_root(
+    salt_secondary_minion,
+    salt_secondary_master,
+    salt_cli_secondary_wrapper,
+    pillar_tree,
+    tmp_path,
+):
+    target_path = tmp_path / "test_recurse"
+
+    sls_name = "file_recurse_test"
+    sls_contents = """
+    tmp_recurse_dir_dir:
+      file.recurse:
+        - name: {target_path}
+        - source: salt://tmp_dir/
+        - keep_symlinks: True
+    """.format(
+        target_path=target_path
+    )
+
+    test_tempdir = salt_secondary_master.state_tree.base.paths[0] / "tmp_dir"
+    test_tempdir.mkdir(parents=True, exist_ok=True)
+    sls_tempfile = salt_secondary_master.state_tree.base.temp_file(
+        "{}.sls".format(sls_name), sls_contents
+    )
+
+    with sls_tempfile, test_tempdir:
+        for _dir in "test1", "test2", "test3":
+            test_tempdir.joinpath(_dir).mkdir(parents=True, exist_ok=True)
+
+            for _file in range(1, 4):
+                test_tempdir.joinpath(_dir, str(_file)).touch()
+
+        cwd = os.getcwd()
+        os.chdir(str(test_tempdir))
+        pathlib.Path("/tmp/test_recurse_outside").mkdir(parents=True, exist_ok=True)
+        pathlib.Path("test4").symlink_to(
+            "/tmp/test_recurse_outside", target_is_directory=True
+        )
+        os.chdir(str(cwd))
+
+        ret = salt_cli_secondary_wrapper("state.apply", sls_name)
+        assert ret.exitcode == 0
+        assert ret.json
+        state_run = next(iter(ret.json.values()))
+        assert state_run["result"] is True
+
+        # Check to make sure the directories and files were created
+        for _dir in "test1", "test2", "test3":
+            assert target_path.joinpath(_dir).is_dir()
+            for _file in range(1, 4):
+                assert target_path.joinpath(_dir, str(_file)).is_file()
+
+        assert target_path.joinpath("test4").is_symlink()

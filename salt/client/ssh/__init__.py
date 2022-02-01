@@ -372,7 +372,11 @@ class SSH:
                 roster_data = self.__parsed_rosters[roster_filename]
                 if not isinstance(roster_data, bool):
                     for host_id in roster_data:
-                        if hostname in [host_id, roster_data[host_id].get("host")]:
+                        try:
+                            roster_host = roster_data[host_id].get("host")
+                        except AttributeError:
+                            roster_host = roster_data[host_id]
+                        if hostname in [host_id, roster_host]:
                             if hostname != self.opts["tgt"]:
                                 self.opts["tgt"] = hostname
                             self.__parsed_rosters[self.ROSTER_UPDATE_FLAG] = False

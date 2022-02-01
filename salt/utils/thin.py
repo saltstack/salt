@@ -934,7 +934,10 @@ def gen_min(
         "salt/cli/call.py",
         "salt/fileserver",
         "salt/fileserver/__init__.py",
-        "salt/transport",
+        "salt/channel",
+        "salt/channel/__init__.py",
+        "salt/channel/client.py",
+        "salt/transport",  # XXX Are the transport imports still needed?
         "salt/transport/__init__.py",
         "salt/transport/client.py",
         "salt/exceptions.py",

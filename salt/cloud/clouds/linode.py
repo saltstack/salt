@@ -1813,10 +1813,8 @@ class LinodeAPIv3(LinodeAPI):
                     vm_["name"],
                     pprint.pprint(
                         sorted(
-                            [
-                                distro["LABEL"].encode(__salt_system_encoding__)
-                                for distro in distributions
-                            ]
+                            distro["LABEL"].encode(__salt_system_encoding__)
+                            for distro in distributions
                         )
                     ),
                 )

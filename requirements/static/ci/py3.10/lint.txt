@@ -425,8 +425,10 @@ idna==3.2
     # via requests
 immutables==0.16
     # via contextvars
-importlib-metadata==4.6.4
-    # via moto
+importlib_metadata==4.6.3 ; python_version >= "3.10"
+    # via
+    #   -r requirements/static/pkg/linux.in
+    #   moto
 ipaddress==1.0.23
     # via kubernetes
 isodate==0.6.0
@@ -444,7 +446,7 @@ jaraco.functools==3.3.0
     #   tempora
 jaraco.text==3.5.1
     # via jaraco.collections
-jinja2==3.0.1
+jinja2==3.0.3
     # via
     #   -r requirements/base.txt
     #   ansible-core
@@ -458,7 +460,7 @@ jmespath==0.10.0
     #   botocore
 jsonschema==3.2.0
     # via -r requirements/static/ci/common.in
-junos-eznc==2.4.0 ; sys_platform != "win32"
+junos-eznc==2.6.0 ; sys_platform != "win32" and python_version >= "3.10"
     # via
     #   -r requirements/static/ci/common.in
     #   napalm
@@ -476,7 +478,7 @@ libnacl==1.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
 loguru==0.5.3
     # via ciscoconfparse
-lxml==4.6.3
+lxml==4.7.1
     # via
     #   junos-eznc
     #   napalm
@@ -500,7 +502,7 @@ more-itertools==8.8.0
     #   jaraco.classes
     #   jaraco.functools
     #   moto
-moto==2.2.4
+moto==2.2.4 ; python_version >= "3.10"
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
     # via -r requirements/base.txt
@@ -598,7 +600,7 @@ msrestazure==0.6.4
     #   azure-mgmt-web
 napalm==3.3.1 ; sys_platform != "win32" and python_version > "3.6"
     # via -r requirements/static/ci/common.in
-ncclient==0.6.12
+ncclient==0.6.9
     # via
     #   junos-eznc
     #   napalm
@@ -610,9 +612,7 @@ netaddr==0.8.0
 netmiko==3.4.0
     # via napalm
 ntc-templates==2.2.2
-    # via
-    #   junos-eznc
-    #   netmiko
+    # via netmiko
 oauthlib==3.1.1
     # via requests-oauthlib
 oscrypto==1.2.1
@@ -649,11 +649,11 @@ pycparser==2.20
     # via cffi
 pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
-pycurl==7.44.1
+pycurl==7.44.1 ; python_version >= "3.10"
     # via -r requirements/static/ci/common.in
 pyeapi==0.8.4
     # via napalm
-pygit2==1.6.1 ; python_version > "3.8"
+pygit2==1.7.1 ; python_version >= "3.10"
     # via -r requirements/static/ci/linux.in
 pyiface==0.0.11
     # via -r requirements/static/ci/linux.in
@@ -763,7 +763,7 @@ scp==0.13.6
     #   junos-eznc
     #   napalm
     #   netmiko
-setproctitle==1.2.2
+setproctitle==1.2.2 ; python_version >= "3.10"
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
     # via

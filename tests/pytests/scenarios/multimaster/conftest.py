@@ -2,17 +2,13 @@ import logging
 import os
 import shutil
 import subprocess
+import time
 
 import pytest
 import salt.utils.platform
+from saltfactories.exceptions import FactoryTimeout
 
 log = logging.getLogger(__name__)
-
-
-@pytest.fixture(scope="package", autouse=True)
-def skip_on_tcp_transport(request):
-    if request.config.getoption("--transport") == "tcp":
-        pytest.skip("Multimaster under the TPC transport is not working. See #59053")
 
 
 @pytest.fixture(scope="package")
@@ -134,3 +130,61 @@ def salt_mm_minion_2(salt_mm_master_1, salt_mm_master_2):
     )
     with factory.started(start_timeout=120):
         yield factory
+
+
+@pytest.fixture(scope="package")
+def run_salt_cmds():
+    def _run_salt_cmds_fn(clis, minions):
+        """
+        Run test.ping from all clis to all minions
+        """
+        returned_minions = []
+
+        for cli in clis:
+            for minion in minions:
+                try:
+                    ret = cli.run("test.ping", minion_tgt=minion.id, _timeout=20)
+                    if ret and ret.json:
+                        assert ret.json
+                        assert ret.exitcode == 0
+                        returned_minions.append((cli, minion))
+                except FactoryTimeout:
+                    log.debug(
+                        "Failed to execute test.ping from %s to %s.",
+                        cli.get_display_name(),
+                        minion.id,
+                    )
+
+        return returned_minions
+
+    return _run_salt_cmds_fn
+
+
+@pytest.fixture(autouse=True)
+def ensure_connections(
+    salt_mm_minion_1,
+    salt_mm_minion_2,
+    mm_master_1_salt_cli,
+    mm_master_2_salt_cli,
+    run_salt_cmds,
+):
+    # define the function
+    def _ensure_connections_fn(clis, minions):
+        retries = 3
+        while retries:
+            returned = run_salt_cmds(clis, minions)
+            if len(returned) == len(clis) * len(minions):
+                break
+            time.sleep(10)
+            retries -= 1
+        else:
+            pytest.fail("Could not ensure the connections were okay.")
+
+    # run the function to ensure initial connections
+    _ensure_connections_fn(
+        [mm_master_1_salt_cli, mm_master_2_salt_cli],
+        [salt_mm_minion_1, salt_mm_minion_2],
+    )
+
+    # Give this function back for further use in test fn bodies
+    return _ensure_connections_fn
