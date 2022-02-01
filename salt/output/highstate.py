@@ -134,6 +134,7 @@ import salt.output
 import salt.utils.color
 import salt.utils.data
 import salt.utils.stringutils
+from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
@@ -183,13 +184,14 @@ def _compress_ids(data):
     if not isinstance(data, dict):
         return data
 
-    compressed = {}
+    # Stop using OrderedDict once we drop Py3.5 support
+    compressed = OrderedDict()
 
     # any failures to compress result in passing the original data
     # to the highstate outputter without modification
     try:
         for host, hostdata in data.items():
-            compressed[host] = {}
+            compressed[host] = OrderedDict()
             # count the number of unique IDs. use sls name and result in the key
             # so differences can be shown separately in the output
             id_count = collections.Counter(
