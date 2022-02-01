@@ -29,7 +29,7 @@ def hg_setup_and_teardown():
     build up and tear down hg repos to test with.
     """
     sourcedirPath = Path(__file__).resolve().parent.joinpath("files")
-    tempdir = tempfile.TemporaryDirectory(dir="/tmp")
+    tempdir = tempfile.TemporaryDirectory()
     tempsubdir = tempdir.name / Path("test2/")
     tempsubdir2 = tempdir.name / Path("subdir/")
     tempsubdir3 = tempdir.name / Path("subdir/test2/")
@@ -61,7 +61,6 @@ def hg_setup_and_teardown():
 
 
 @pytest.mark.slow_test
-@pytest.mark.skip_unless_on_linux
 def test_ext_pillar(hg_setup_and_teardown):
     data = hg_pillar.ext_pillar("*", None, hg_setup_and_teardown)
     assert data == {"testinfo": "info", "testinfo2": "info"}

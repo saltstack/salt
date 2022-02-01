@@ -421,6 +421,8 @@ gitpython==3.1.12
     # via -r requirements/static/ci/common.in
 google-auth==1.6.3
     # via kubernetes
+hglib==2.6.1
+    # via -r requirements/static/ci/common.in
 idna==2.8
     # via requests
 immutables==0.15
@@ -482,6 +484,8 @@ markupsafe==2.0.1
     #   jinja2
     #   mako
     #   moto
+mercurial==6.0.1
+    # via -r requirements/static/ci/common.in
 mock==3.0.5
     # via -r requirements/pytest.txt
 more-itertools==5.0.0

@@ -424,7 +424,7 @@ gitpython==3.1.18
 google-auth==2.0.1
     # via kubernetes
 hglib==2.6.1
-    # via -r requirements/static/ci/linux.in
+    # via -r requirements/static/ci/common.in
 idna==3.2
     # via requests
 immutables==0.16
@@ -496,7 +496,7 @@ markupsafe==2.0.1
 mccabe==0.6.1
     # via pylint
 mercurial==6.0.1
-    # via -r requirements/static/ci/linux.in
+    # via -r requirements/static/ci/common.in
 modernize==0.5
     # via saltpylint
 more-itertools==8.8.0
