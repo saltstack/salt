@@ -482,7 +482,7 @@ lazy-object-proxy==1.4.3
     # via astroid
 libnacl==1.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
-loguru==0.5.3
+loguru==0.6.0
     # via ciscoconfparse
 lxml==4.7.1
     # via
