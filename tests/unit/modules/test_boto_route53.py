@@ -22,7 +22,7 @@ try:
     boto.ENDPOINTS_PATH = os.path.join(
         RUNTIME_VARS.TESTS_DIR, "unit/files/endpoints.json"
     )
-    from moto import mock_route53_deprecated
+    from moto import mock_route53_deprecated  # pylint: disable=no-name-in-module
 
     HAS_MOTO = True
 except ImportError:
