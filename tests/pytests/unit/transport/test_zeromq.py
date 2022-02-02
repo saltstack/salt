@@ -390,7 +390,7 @@ def test_req_server_chan_encrypt_v2(pki_dir):
     assert "key" in ret
     assert dictkey in ret
 
-    key = salt.crypt.get_rsa_key(pki_dir.join("minion", "minion.pem"), None)
+    key = salt.crypt.get_rsa_key(str(pki_dir.join("minion", "minion.pem")), None)
     if HAS_M2:
         aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
     else:
@@ -435,7 +435,7 @@ def test_req_server_chan_encrypt_v1(pki_dir):
     assert "key" in ret
     assert dictkey in ret
 
-    key = salt.crypt.get_rsa_key(pki_dir.join("minion", "minion.pem"), None)
+    key = salt.crypt.get_rsa_key(str(pki_dir.join("minion", "minion.pem")), None)
     if HAS_M2:
         aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
     else:
