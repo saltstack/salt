@@ -208,7 +208,7 @@ class PublishClient:
 
     def on_recv(self, callback):
         """
-        Add a message handler when we recieve a message from the PublishServer
+        Add a message handler when we receive a message from the PublishServer
         """
         raise NotImplementedError
 

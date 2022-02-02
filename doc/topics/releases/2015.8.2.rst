@@ -891,7 +891,7 @@ Changelog for v2015.8.1..v2015.8.2
 
   * 730d0f95e7 Fix typo an transfered -> transferred
 
-  * c7e7884de2 Fix typo an recieved -> received
+  * c7e7884de2 Fix typo of received
 
   * 50eea287f3 Fix typo an managment -> management
 
