@@ -696,7 +696,7 @@ def replace(old_value, new_value, full_match=False, **kwargs):
     if lines["old"]:
         delete_config(lines["old"], **kwargs)
     if lines["new"]:
-        add_config(lines["new"], **kwargs)
+        config(lines["new"], **kwargs)
 
     return lines
 
