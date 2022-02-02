@@ -1,5 +1,5 @@
 apache-libcloud==2.0.0
-azure>=4.0.0
+azure==4.0.0; sys_platform != "win32"
 boto3>=1.13.5
 boto>=2.46.0
 certifi
@@ -19,10 +19,10 @@ keyring==5.7.1
 kubernetes<4.0
 libnacl>=1.7.1
 mock>=3.0.5
-moto
+moto; python_version >= '3.6'
 napalm; python_version >= '3.6'
 passlib
-paramiko>=2.1.6
+paramiko>=2.1.6; python_version >= '3.6'
 pycurl
 pygit2<=0.28.2; python_version < '3.8'
 pygit2>=1.2.0; python_version >= '3.8'
