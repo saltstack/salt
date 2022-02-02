@@ -826,7 +826,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
                 "salt.modules.nxos.delete_config", autospec=True, return_value=None
             ):
                 with patch(
-                    "salt.modules.nxos.add_config", autospec=True, return_value=None
+                    "salt.modules.nxos.config", autospec=True, return_value=None
                 ):
                     result = nxos_module.replace(old_value, new_value)
                     self.assertEqual(result["old"], ["feature bgp"])
@@ -848,7 +848,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
                 "salt.modules.nxos.delete_config", autospec=True, return_value=None
             ):
                 with patch(
-                    "salt.modules.nxos.add_config", autospec=True, return_value=None
+                    "salt.modules.nxos.config", autospec=True, return_value=None
                 ):
                     result = nxos_module.replace(old_value, new_value, full_match=True)
                     self.assertEqual(result["old"], ["feature bgp"])
@@ -870,7 +870,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
                 "salt.modules.nxos.delete_config", autospec=True, return_value=None
             ):
                 with patch(
-                    "salt.modules.nxos.add_config", autospec=True, return_value=None
+                    "salt.modules.nxos.config", autospec=True, return_value=None
                 ):
                     result = nxos_module.replace(old_value, new_value)
                     self.assertEqual(result["old"], [])

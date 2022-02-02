@@ -248,7 +248,7 @@ def config_present(name):
         ret["changes"]["new"] = name
 
     else:
-        __salt__["nxos.add_config"](name)
+        __salt__["nxos.config"](name)
         matches = __salt__["nxos.find"](name)
         if matches:
             ret["result"] = True
