@@ -7,11 +7,13 @@ import collections
 import copy
 import datetime
 import fnmatch
+import itertools
 import logging
 import os
 import re
 import time
 
+import salt.channel
 import salt.config
 import salt.minion
 import salt.utils.event
@@ -235,7 +237,10 @@ def uptime():
             raise CommandExecutionError("Cannot find kern.boottime system parameter")
         data = bt_data.split("{")[-1].split("}")[0].strip().replace(" ", "")
         uptime = {
-            k: int(v,) for k, v in [p.strip().split("=") for p in data.split(",")]
+            k: int(
+                v,
+            )
+            for k, v in [p.strip().split("=") for p in data.split(",")]
         }
         seconds = int(curr_seconds - uptime["sec"])
     elif salt.utils.platform.is_aix():
@@ -1365,7 +1370,9 @@ def netdev():
         """
         ret = {}
         ##NOTE: we cannot use hwaddr_interfaces here, so we grab both ip4 and ip6
-        for dev in __grains__["ip4_interfaces"].keys() + __grains__["ip6_interfaces"]:
+        for dev in itertools.chain(
+            __grains__["ip4_interfaces"].keys(), __grains__["ip6_interfaces"].keys()
+        ):
             # fetch device info
             netstat_ipv4 = __salt__["cmd.run"](
                 "netstat -i -I {dev} -n -f inet".format(dev=dev)
@@ -1406,15 +1413,15 @@ def netdev():
         ret = {}
         fields = []
         procn = None
-        for dev in (
-            __grains__["ip4_interfaces"].keys() + __grains__["ip6_interfaces"].keys()
+        for dev in itertools.chain(
+            __grains__["ip4_interfaces"].keys(), __grains__["ip6_interfaces"].keys()
         ):
             # fetch device info
-            # root@la68pp002_pub:/opt/salt/lib/python2.7/site-packages/salt/modules# netstat -i -n -I en0 -f inet6
+            # root@la68pp002_pub:# netstat -i -n -I en0 -f inet
             # Name  Mtu   Network     Address            Ipkts Ierrs    Opkts Oerrs  Coll
             # en0   1500  link#3      e2.eb.32.42.84.c 10029668     0   446490     0     0
             # en0   1500  172.29.128  172.29.149.95    10029668     0   446490     0     0
-            # root@la68pp002_pub:/opt/salt/lib/python2.7/site-packages/salt/modules# netstat -i -n -I en0 -f inet6
+            # root@la68pp002_pub:# netstat -i -n -I en0 -f inet6
             # Name  Mtu   Network     Address            Ipkts Ierrs    Opkts Oerrs  Coll
             # en0   1500  link#3      e2.eb.32.42.84.c 10029731     0   446499     0     0
 
@@ -1741,7 +1748,7 @@ def ping_master(master):
     load = {"cmd": "ping"}
 
     result = False
-    with salt.transport.client.ReqChannel.factory(opts, crypt="clear") as channel:
+    with salt.channel.client.ReqChannel.factory(opts, crypt="clear") as channel:
         try:
             payload = channel.send(load, tries=0, timeout=timeout)
             result = True

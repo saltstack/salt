@@ -54,7 +54,9 @@ def _zfs_pool_data():
 
     # collect zpool data
     zpool_list_cmd = __utils__["zfs.zpool_command"](
-        "list", flags=["-H"], opts={"-o": "name,size"},
+        "list",
+        flags=["-H"],
+        opts={"-o": "name,size"},
     )
     for zpool in __salt__["cmd.run"](zpool_list_cmd, ignore_retcode=True).splitlines():
         if "zpool" not in grains:

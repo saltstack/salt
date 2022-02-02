@@ -123,8 +123,9 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
         m = self._set_up_test_uptime()
 
         kern_boottime = (
-            "{{ sec = {0}, usec = {1:0<6} }} Mon Oct 03 03:09:18.23 2016"
-            "".format(*str(m.now - m.ut).split("."))
+            "{{ sec = {0}, usec = {1:0<6} }} Mon Oct 03 03:09:18.23 2016".format(
+                *str(m.now - m.ut).split(".")
+            )
         )
         with patch.multiple(
             salt.utils.platform,
@@ -201,11 +202,10 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
         m = self._set_up_test_cpustats_openbsd()
 
         systat = (
-            "\n"
-            "\n"
-            "   1 users Load 0.20 0.07 0.05                        salt.localdomain 09:42:42\n"
-            "CPU                User           Nice        System     Interrupt          Idle\n"
-            "0                  0.0%           0.0%          4.5%          0.5%         95.0%\n"
+            "\n\n   1 users Load 0.20 0.07 0.05                        salt.localdomain"
+            " 09:42:42\nCPU                User           Nice        System    "
+            " Interrupt          Idle\n0                  0.0%           0.0%         "
+            " 4.5%          0.5%         95.0%\n"
         )
 
         with patch.multiple(
@@ -284,9 +284,10 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
     def test_meminfo_openbsd(self):
         m = self._set_up_test_meminfo_openbsd()
         vmstat = (
-            " procs    memory       page                    disks    traps          cpu\n"
-            " r   s   avm     fre  flt  re  pi  po  fr  sr cd0 sd0  int   sys   cs us sy id\n"
-            " 2 103  355M    305M  845   1   2   3   4   5   0   1   21   682   86  1  1 98"
+            " procs    memory       page                    disks    traps         "
+            " cpu\n r   s   avm     fre  flt  re  pi  po  fr  sr cd0 sd0  int   sys  "
+            " cs us sy id\n 2 103  355M    305M  845   1   2   3   4   5   0   1   21  "
+            " 682   86  1  1 98"
         )
 
         with patch.dict(status.__grains__, {"kernel": "OpenBSD"}):
@@ -381,18 +382,18 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
     def test_status_pid_linux(self):
         m = self._set_up_test_status_pid_linux()
         ps = (
-            "UID      PID PPID  C STIME TTY      TIME CMD\n"
-            "root     360    2  0 Jun08 ?    00:00:00   [jbd2/dm-0-8]\n"
-            "root     947    2  0 Jun08 ?    00:00:00   [jbd2/dm-1-8]\n"
-            "root     949    2  0 Jun08 ?    00:00:09   [jbd2/dm-3-8]\n"
-            "root     951    2  0 Jun08 ?    00:00:00   [jbd2/dm-4-8]\n"
-            "root    2701    1  0 Jun08 ?    00:00:28   /usr/sbin/httpd -k start\n"
-            "apache  7539 2701  0 04:40 ?    00:00:04     /usr/sbin/httpd -k start\n"
-            "apache  7540 2701  0 04:40 ?    00:00:02     /usr/sbin/httpd -k start\n"
-            "apache  7542 2701  0 04:40 ?    00:01:46     /usr/sbin/httpd -k start\n"
-            "apache  7623 2701  0 04:40 ?    00:02:41     /usr/sbin/httpd -k start\n"
-            "root    1564    1  0 Jun11 ?    00:07:19   /usr/bin/python3 /usr/bin/salt-minion -d\n"
-            "root    6674 1564  0 19:53 ?    00:00:00     /usr/bin/python3 /usr/bin/salt-call status.pid httpd -l debug"
+            "UID      PID PPID  C STIME TTY      TIME CMD\nroot     360    2  0 Jun08 ?"
+            "    00:00:00   [jbd2/dm-0-8]\nroot     947    2  0 Jun08 ?    00:00:00  "
+            " [jbd2/dm-1-8]\nroot     949    2  0 Jun08 ?    00:00:09  "
+            " [jbd2/dm-3-8]\nroot     951    2  0 Jun08 ?    00:00:00  "
+            " [jbd2/dm-4-8]\nroot    2701    1  0 Jun08 ?    00:00:28   /usr/sbin/httpd"
+            " -k start\napache  7539 2701  0 04:40 ?    00:00:04     /usr/sbin/httpd -k"
+            " start\napache  7540 2701  0 04:40 ?    00:00:02     /usr/sbin/httpd -k"
+            " start\napache  7542 2701  0 04:40 ?    00:01:46     /usr/sbin/httpd -k"
+            " start\napache  7623 2701  0 04:40 ?    00:02:41     /usr/sbin/httpd -k"
+            " start\nroot    1564    1  0 Jun11 ?    00:07:19   /usr/bin/python3"
+            " /usr/bin/salt-minion -d\nroot    6674 1564  0 19:53 ?    00:00:00    "
+            " /usr/bin/python3 /usr/bin/salt-call status.pid httpd -l debug"
         )
 
         with patch.dict(status.__grains__, {"ps": "ps -efHww"}):

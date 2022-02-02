@@ -90,7 +90,10 @@ def test_user_exists(salt_call_cli_wrapper):
     assert ret.json
 
     ret = salt_call_cli_wrapper(
-        "mysql.user_exists", "george", "hostname", "badpassword",
+        "mysql.user_exists",
+        "george",
+        "hostname",
+        "badpassword",
     )
     assert not ret.json
 
@@ -139,12 +142,18 @@ def test_user_info(salt_call_cli_wrapper):
 
 def test_user_create_chpass_delete(salt_call_cli_wrapper):
     ret = salt_call_cli_wrapper(
-        "mysql.user_create", "george", host="localhost", password="badpassword",
+        "mysql.user_create",
+        "george",
+        host="localhost",
+        password="badpassword",
     )
     assert ret.json
 
     ret = salt_call_cli_wrapper(
-        "mysql.user_chpass", "george", host="localhost", password="different_password",
+        "mysql.user_chpass",
+        "george",
+        host="localhost",
+        password="different_password",
     )
     assert ret.json
 
@@ -164,7 +173,10 @@ def test_grant_add_revoke(salt_call_cli_wrapper):
 
     # Create a user
     ret = salt_call_cli_wrapper(
-        "mysql.user_create", "george", host="localhost", password="badpassword",
+        "mysql.user_create",
+        "george",
+        host="localhost",
+        password="badpassword",
     )
     assert ret.json
 

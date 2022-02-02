@@ -2430,8 +2430,9 @@ def route_present(
                 "new": next_hop_type,
             }
 
-        if next_hop_type.lower() == "virtualappliance" and next_hop_ip_address != route.get(
-            "next_hop_ip_address"
+        if (
+            next_hop_type.lower() == "virtualappliance"
+            and next_hop_ip_address != route.get("next_hop_ip_address")
         ):
             ret["changes"]["next_hop_ip_address"] = {
                 "old": route.get("next_hop_ip_address"),

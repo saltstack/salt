@@ -89,7 +89,8 @@ from salt.state import HighState
 from salt.utils.odict import OrderedDict
 
 REQUISITES = set(
-    "listen require watch prereq use listen_in require_in watch_in prereq_in use_in onchanges onfail".split()
+    "listen require watch prereq use listen_in require_in watch_in prereq_in use_in"
+    " onchanges onfail".split()
 )
 
 
@@ -342,10 +343,8 @@ class StateModule:
                 if name not in REQUISITES:
                     if self._func.name:
                         raise PyDslError(
-                            (
-                                "Multiple state functions({}) not allowed in a "
-                                "state module({})!"
-                            ).format(name, self._name)
+                            "Multiple state functions({}) not allowed in a "
+                            "state module({})!".format(name, self._name)
                         )
                     self._func.name = name
                     return self._func

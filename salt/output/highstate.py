@@ -10,10 +10,11 @@ Two configurations can be set to modify the highstate outputter. These values
 can be set in the master config to change the output of the ``salt`` command or
 set in the minion config to change the output of the ``salt-call`` command.
 
-state_verbose
+state_verbose:
     By default `state_verbose` is set to `True`, setting this to `False` will
     instruct the highstate outputter to omit displaying anything in green, this
     means that nothing with a result of True and no changes will not be printed
+
 state_output:
     The highstate outputter has six output modes,
     ``full``, ``terse``, ``mixed``, ``changes`` and ``filter``
@@ -54,6 +55,10 @@ state_tabular:
     If `state_output` uses the terse output, set this to `True` for an aligned
     output format.  If you wish to use a custom format, this can be set to a
     string.
+
+state_output_pct:
+    Set `state_output_pct` to `True` in order to add "Success %" and "Failure %"
+    to the "Summary" section at the end of the highstate output.
 
 Example usage:
 
@@ -479,6 +484,46 @@ def _format_host(host, data, indent_level=1):
             )
         )
 
+        if __opts__.get("state_output_pct", False):
+            # Add success percentages to the summary output
+            try:
+                success_pct = round(
+                    (
+                        (rcounts.get(True, 0) + rcounts.get(None, 0))
+                        / (sum(rcounts.values()) - rcounts.get("warnings", 0))
+                    )
+                    * 100,
+                    2,
+                )
+
+                hstrs.append(
+                    colorfmt.format(
+                        colors["GREEN"],
+                        _counts("Success %", success_pct),
+                        colors,
+                    )
+                )
+            except ZeroDivisionError:
+                pass
+
+            # Add failure percentages to the summary output
+            try:
+                failed_pct = round(
+                    (num_failed / (sum(rcounts.values()) - rcounts.get("warnings", 0)))
+                    * 100,
+                    2,
+                )
+
+                hstrs.append(
+                    colorfmt.format(
+                        colors["RED"] if num_failed else colors["CYAN"],
+                        _counts("Failure %", failed_pct),
+                        colors,
+                    )
+                )
+            except ZeroDivisionError:
+                pass
+
         num_warnings = rcounts.get("warnings", 0)
         if num_warnings:
             hstrs.append(
@@ -509,7 +554,7 @@ def _format_host(host, data, indent_level=1):
 
     if strip_colors:
         host = salt.output.strip_esc_sequence(host)
-    hstrs.insert(0, ("{0}{1}:{2[ENDC]}".format(hcolor, host, colors)))
+    hstrs.insert(0, "{0}{1}:{2[ENDC]}".format(hcolor, host, colors))
     return "\n".join(hstrs), nchanges > 0
 
 

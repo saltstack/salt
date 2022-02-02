@@ -48,6 +48,7 @@ value to ``consul``:
 
 import logging
 
+import salt.payload
 from salt.exceptions import SaltCacheError
 
 try:
@@ -94,7 +95,8 @@ def __virtual__():
     except AttributeError:
         return (
             False,
-            "Failed to invoke consul.Consul, please make sure you have python-consul >= 0.2.0 installed",
+            "Failed to invoke consul.Consul, please make sure you have python-consul >="
+            " 0.2.0 installed",
         )
 
     return __virtualname__
@@ -106,7 +108,7 @@ def store(bank, key, data):
     """
     c_key = "{}/{}".format(bank, key)
     try:
-        c_data = __context__["serial"].dumps(data)
+        c_data = salt.payload.dumps(data)
         api.kv.put(c_key, c_data)
     except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
@@ -123,7 +125,7 @@ def fetch(bank, key):
         _, value = api.kv.get(c_key)
         if value is None:
             return {}
-        return __context__["serial"].loads(value["Value"])
+        return salt.payload.loads(value["Value"])
     except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
             "There was an error reading the key, {}: {}".format(c_key, exc)

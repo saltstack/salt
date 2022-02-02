@@ -297,7 +297,7 @@ Windows system:
               start_time: '11:59PM'
         }
 
-.. _file_roots: https://docs.saltstack.com/en/latest/ref/configuration/master.html#file-roots
+.. _file_roots: https://docs.saltproject.io/en/latest/ref/configuration/master.html#file-roots
 """
 
 import salt.loader
@@ -399,15 +399,13 @@ def run(**kwargs):
         ret["comment"] = " ".join(
             [
                 missing
-                and "Unavailable function{plr}: "
-                "{func}.".format(
+                and "Unavailable function{plr}: {func}.".format(
                     plr=(len(missing) > 1 or ""), func=(", ".join(missing) or "")
                 )
                 or "",
                 tests
-                and "Function{plr} {func} to be "
-                "executed.".format(
-                    plr=(len(tests) > 1 or ""), func=(", ".join(tests)) or ""
+                and "Function{plr} {func} to be executed.".format(
+                    plr=(len(tests) > 1 or ""), func=", ".join(tests) or ""
                 )
                 or "",
             ]

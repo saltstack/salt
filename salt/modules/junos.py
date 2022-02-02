@@ -1210,14 +1210,16 @@ def install_config(path=None, **kwargs):
                 elif not check:
                     try:
                         cu.rollback()
-                        ret[
-                            "message"
-                        ] = "Loaded configuration but commit check failed, hence rolling back configuration."
+                        ret["message"] = (
+                            "Loaded configuration but commit check failed, hence"
+                            " rolling back configuration."
+                        )
                     except Exception as exception:  # pylint: disable=broad-except
-                        ret[
-                            "message"
-                        ] = 'Loaded configuration but commit check failed, and exception occurred during rolling back configuration "{}"'.format(
-                            exception
+                        ret["message"] = (
+                            "Loaded configuration but commit check failed, and"
+                            ' exception occurred during rolling back configuration "{}"'.format(
+                                exception
+                            )
                         )
                         _restart_connection()
 
@@ -1225,15 +1227,17 @@ def install_config(path=None, **kwargs):
                 else:
                     try:
                         cu.rollback()
-                        ret[
-                            "message"
-                        ] = "Commit check passed, but skipping commit for dry-run and rolling back configuration."
+                        ret["message"] = (
+                            "Commit check passed, but skipping commit for dry-run and"
+                            " rolling back configuration."
+                        )
                         ret["out"] = True
                     except Exception as exception:  # pylint: disable=broad-except
-                        ret[
-                            "message"
-                        ] = 'Commit check passed, but skipping commit for dry-run andi while rolling back configuration exception occurred "{}"'.format(
-                            exception
+                        ret["message"] = (
+                            "Commit check passed, but skipping commit for dry-run and"
+                            ' while rolling back configuration exception occurred "{}"'.format(
+                                exception
+                            )
                         )
                         ret["out"] = False
                         _restart_connection()
@@ -1909,9 +1913,10 @@ def get_table(
                     ret["table"][table]["args"] = args
                     ret["table"][table]["command"] = data.GET_CMD
     except ConnectClosedError:
-        ret["message"] = (
-            "Got ConnectClosedError exception. Connection lost "
-            "with {}".format(str(conn))
+        ret[
+            "message"
+        ] = "Got ConnectClosedError exception. Connection lost with {}".format(
+            str(conn)
         )
         ret["out"] = False
         _restart_connection()
@@ -2298,9 +2303,10 @@ def dir_copy(source, dest, force=False, **kwargs):
         return ret
 
     if not (dest.endswith(":") or dest.startswith("/")):
-        ret[
-            "message"
-        ] = "Destination must be a routing engine reference (e.g. re1:) or a fully qualified path."
+        ret["message"] = (
+            "Destination must be a routing engine reference (e.g. re1:) or a fully"
+            " qualified path."
+        )
         ret["success"] = False
         return ret
 

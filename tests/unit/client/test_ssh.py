@@ -177,8 +177,7 @@ class SSHSingleTests(TestCase):
         }
 
     def test_single_opts(self):
-        """ Sanity check for ssh.Single options
-        """
+        """Sanity check for ssh.Single options"""
 
         single = ssh.Single(
             self.opts,
@@ -504,6 +503,31 @@ class SSHTests(ShellCase):
             "salt.client.ssh.compile_template",
             MagicMock(return_value=salt.utils.yaml.safe_load(self.roster)),
         ):
+            client._expand_target()
+        assert opts["tgt"] == host
+
+    def test_expand_target_no_host(self):
+        """
+        test expand_target when host is not included in the rosterdata
+        """
+        host = "127.0.0.1"
+        user = "test-user@"
+        opts = self.opts
+        opts["tgt"] = user + host
+
+        roster = """
+            localhost: 127.0.0.1
+            """
+        roster_file = os.path.join(RUNTIME_VARS.TMP, "test_roster_no_host")
+        with salt.utils.files.fopen(roster_file, "w") as fp:
+            salt.utils.yaml.safe_dump(salt.utils.yaml.safe_load(roster), fp)
+
+        with patch(
+            "salt.utils.network.is_reachable_host", MagicMock(return_value=False)
+        ):
+            client = ssh.SSH(opts)
+        assert opts["tgt"] == user + host
+        with patch("salt.roster.get_roster_file", MagicMock(return_value=roster_file)):
             client._expand_target()
         assert opts["tgt"] == host
 

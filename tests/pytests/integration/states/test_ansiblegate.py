@@ -8,7 +8,7 @@ import pytest
 import salt.utils.files
 import salt.utils.path
 import yaml
-from tests.support.pytest.helpers import StateReturnAsserts
+from saltfactories.utils.functional import StateResult
 from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [
@@ -68,8 +68,7 @@ def test_ansible_playbook(salt_call_cli, ansible_inventory):
         ansible_kwargs={"inventory": ansible_inventory},
     )
     assert ret.exitcode == 0
-    state_asserts = StateReturnAsserts(ret.json)
-    state_asserts.assert_state_true_return()
+    assert StateResult(ret.json).result is True
 
     ret = salt_call_cli.run(
         "state.single",
@@ -79,5 +78,4 @@ def test_ansible_playbook(salt_call_cli, ansible_inventory):
         ansible_kwargs={"inventory": ansible_inventory},
     )
     assert ret.exitcode == 0
-    state_asserts = StateReturnAsserts(ret.json)
-    state_asserts.assert_state_true_return()
+    assert StateResult(ret.json).result is True

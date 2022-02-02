@@ -61,16 +61,14 @@ def _get_active_provider_name():
 
 
 def get_configured_provider():
-    """ Return the first configured instance.
-    """
+    """Return the first configured instance."""
     return config.is_provider_configured(
         __opts__, _get_active_provider_name() or __virtualname__, ("token",)
     )
 
 
 def avail_images(call=None):
-    """ Return a list of the images that are on the provider.
-    """
+    """Return a list of the images that are on the provider."""
     if call == "action":
         raise SaltCloudSystemExit(
             "The avail_images function must be called with "
@@ -88,8 +86,7 @@ def avail_images(call=None):
 
 
 def list_nodes(call=None):
-    """ Return a list of the BareMetal servers that are on the provider.
-    """
+    """Return a list of the BareMetal servers that are on the provider."""
     if call == "action":
         raise SaltCloudSystemExit(
             "The list_nodes function must be called with -f or --function."
@@ -124,8 +121,7 @@ def list_nodes(call=None):
 
 
 def list_nodes_full(call=None):
-    """ Return a list of the BareMetal servers that are on the provider.
-    """
+    """Return a list of the BareMetal servers that are on the provider."""
     if call == "action":
         raise SaltCloudSystemExit(
             "list_nodes_full must be called with -f or --function"
@@ -144,17 +140,18 @@ def list_nodes_full(call=None):
 
 
 def list_nodes_select(call=None):
-    """ Return a list of the BareMetal servers that are on the provider, with
+    """Return a list of the BareMetal servers that are on the provider, with
     select fields.
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 
 def get_image(server_):
-    """ Return the image object to use.
-    """
+    """Return the image object to use."""
     images = avail_images()
     server_image = str(
         config.get_cloud_config_value("image", server_, __opts__, search_global=False)
@@ -168,8 +165,7 @@ def get_image(server_):
 
 
 def create_node(args):
-    """ Create a node.
-    """
+    """Create a node."""
     node = query(method="servers", args=args, http_method="POST")
 
     action = query(
@@ -269,8 +265,7 @@ def create(server_):
         return False
 
     def __query_node_data(server_name):
-        """ Called to check if the server has a public IP address.
-        """
+        """Called to check if the server has a public IP address."""
         data = show_instance(server_name, "action")
         if data and data.get("public_ip"):
             return data
@@ -332,8 +327,7 @@ def query(
     http_method="GET",
     root="api_root",
 ):
-    """ Make a call to the Scaleway API.
-    """
+    """Make a call to the Scaleway API."""
 
     if root == "api_root":
         default_url = "https://cp-par1.scaleway.com"
@@ -344,7 +338,11 @@ def query(
 
     base_path = str(
         config.get_cloud_config_value(
-            root, vm_, __opts__, search_global=False, default=default_url,
+            root,
+            vm_,
+            __opts__,
+            search_global=False,
+            default=default_url,
         )
     )
 
@@ -387,8 +385,7 @@ def query(
 
 
 def script(server_):
-    """ Return the script deployment object.
-    """
+    """Return the script deployment object."""
     return salt.utils.cloud.os_script(
         config.get_cloud_config_value("script", server_, __opts__),
         server_,
@@ -400,8 +397,7 @@ def script(server_):
 
 
 def show_instance(name, call=None):
-    """ Show the details from a Scaleway BareMetal server.
-    """
+    """Show the details from a Scaleway BareMetal server."""
     if call != "action":
         raise SaltCloudSystemExit(
             "The show_instance action must be called with -a or --action."
@@ -417,7 +413,7 @@ def _get_node(name):
             return list_nodes_full()[name]
         except KeyError:
             log.debug(
-                "Failed to get the data for node '%s'. Remaining " "attempts: %s",
+                "Failed to get the data for node '%s'. Remaining attempts: %s",
                 name,
                 attempt,
             )
@@ -427,7 +423,7 @@ def _get_node(name):
 
 
 def destroy(name, call=None):
-    """ Destroy a node. Will check termination protection and warn if enabled.
+    """Destroy a node. Will check termination protection and warn if enabled.
 
     CLI Example:
 
@@ -437,7 +433,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](

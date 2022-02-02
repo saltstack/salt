@@ -546,7 +546,7 @@ class AddressTestCase_v6(BaseTestCase, CommonTestMixin_v6):
         assertBadAddressPart("::1.2.3.4.5", "Expected 4 octets in '1.2.3.4.5'")
         assertBadAddressPart(
             "3ffe::1.1.1.net",
-            "Only decimal digits permitted in 'net' " "in '1.1.1.net'",
+            "Only decimal digits permitted in 'net' in '1.1.1.net'",
         )
 
         assertBadAddressPart("3ffe::1.net%scope", "Expected 4 octets in '1.net'")
@@ -555,7 +555,7 @@ class AddressTestCase_v6(BaseTestCase, CommonTestMixin_v6):
         assertBadAddressPart("::1.2.3.4.5%scope", "Expected 4 octets in '1.2.3.4.5'")
         assertBadAddressPart(
             "3ffe::1.1.1.net%scope",
-            "Only decimal digits permitted in 'net' " "in '1.1.1.net'",
+            "Only decimal digits permitted in 'net' in '1.1.1.net'",
         )
 
     def test_invalid_characters(self):
@@ -1366,7 +1366,7 @@ class IpaddrUnitTest(TestCase):
         self.assertEqual(
             self.ipv6_interface.ip,
             ipaddress.ip_interface(
-                b"\x20\x01\x06\x58\x02\x2a\xca\xfe" b"\x02\x00\x00\x00\x00\x00\x00\x01"
+                b"\x20\x01\x06\x58\x02\x2a\xca\xfe\x02\x00\x00\x00\x00\x00\x00\x01"
             ).ip,
         )
         self.assertEqual(
@@ -2369,7 +2369,7 @@ class IpaddrUnitTest(TestCase):
         )
         self.assertEqual(
             self.ipv6_address.packed,
-            b"\x20\x01\x06\x58\x02\x2a\xca\xfe" b"\x02\x00\x00\x00\x00\x00\x00\x01",
+            b"\x20\x01\x06\x58\x02\x2a\xca\xfe\x02\x00\x00\x00\x00\x00\x00\x01",
         )
         self.assertEqual(
             ipaddress.IPv6Interface("ffff:2:3:4:ffff::").packed,
@@ -2381,7 +2381,7 @@ class IpaddrUnitTest(TestCase):
         )
         self.assertEqual(
             self.ipv6_scoped_address.packed,
-            b"\x20\x01\x06\x58\x02\x2a\xca\xfe" b"\x02\x00\x00\x00\x00\x00\x00\x01",
+            b"\x20\x01\x06\x58\x02\x2a\xca\xfe\x02\x00\x00\x00\x00\x00\x00\x01",
         )
         self.assertEqual(
             ipaddress.IPv6Interface("ffff:2:3:4:ffff::%scope").packed,

@@ -13,12 +13,14 @@ from tests.support.mixins import SaltReturnAssertsMixin
 class LxdProfileTestCase(ModuleCase, SaltReturnAssertsMixin):
     def tearDown(self):
         self.run_state(
-            "lxd_profile.absent", name="test-profile",
+            "lxd_profile.absent",
+            name="test-profile",
         )
 
     def test_02__create_profile(self):
         self.run_state(
-            "lxd_profile.absent", name="test-profile",
+            "lxd_profile.absent",
+            name="test-profile",
         )
         ret = self.run_state(
             "lxd_profile.present",
@@ -59,7 +61,10 @@ class LxdProfileTestCase(ModuleCase, SaltReturnAssertsMixin):
             name="test-profile",
             config=[{"key": "boot.autostart", "value": 1}],
         )
-        ret = self.run_state("lxd_profile.absent", name="test-profile",)
+        ret = self.run_state(
+            "lxd_profile.absent",
+            name="test-profile",
+        )
         name = "lxd_profile_|-test-profile_|-test-profile_|-absent"
         self.assertSaltTrueReturn(ret)
         assert name in ret

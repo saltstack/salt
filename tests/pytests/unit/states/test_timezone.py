@@ -31,7 +31,9 @@ def test_system():
     ):
         ret.update(
             {
-                "comment": "Unable to compare desired timezone 'salt' to system timezone: ",
+                "comment": (
+                    "Unable to compare desired timezone 'salt' to system timezone: "
+                ),
                 "result": False,
             }
         )

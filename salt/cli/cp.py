@@ -120,9 +120,9 @@ class SaltCP:
                 files.update(self._file_dict(fn_))
             elif os.path.isdir(fn_):
                 salt.utils.stringutils.print_cli(
-                    fn_ + " is a directory, only files are supported "
+                    "{} is a directory, only files are supported "
                     'in non-chunked mode. Use "--chunked" command '
-                    "line argument."
+                    "line argument.".format(fn_)
                 )
                 sys.exit(1)
         return files

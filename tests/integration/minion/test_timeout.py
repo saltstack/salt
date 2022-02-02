@@ -37,11 +37,12 @@ class MinionTimeoutTestCase(ShellCase):
         )
         self.assertTrue(
             isinstance(ret[0], list),
-            "Return is not a list. Minion" " may have returned error: {}".format(ret),
+            "Return is not a list. Minion may have returned error: {}".format(ret),
         )
         self.assertEqual(len(ret[0]), 2, "Standard out wrong length {}".format(ret))
         self.assertTrue(
             "True" in ret[0][1],
-            "Minion did not return True after "
-            "{} seconds. ret={}".format(sleep_length, ret),
+            "Minion did not return True after {} seconds. ret={}".format(
+                sleep_length, ret
+            ),
         )

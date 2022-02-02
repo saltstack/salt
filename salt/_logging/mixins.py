@@ -5,18 +5,8 @@
     Logging related mix-ins
 """
 
-
 import logging
 import sys
-
-
-class NewStyleClassMixin:
-    """
-    Simple new style class to make pylint shut up!
-    This is required because SaltLoggingClass can't subclass object directly:
-
-        'Cannot create a consistent method resolution order (MRO) for bases'
-    """
 
 
 class LoggingProfileMixin:
@@ -61,6 +51,8 @@ class LoggingMixinMeta(type):
         bases = list(bases)
         if name == "SaltLoggingClass":
             for base in bases:
+                if hasattr(base, "profile"):
+                    include_profile = False
                 if hasattr(base, "trace"):
                     include_trace = False
                 if hasattr(base, "garbage"):

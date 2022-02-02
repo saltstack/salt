@@ -84,15 +84,14 @@ def _check_for_changes(entity_type, ret, existing, modified):
             del existing["content"]["generation"]
 
         if modified["content"] == existing["content"]:
-            ret[
-                "comment"
-            ] = "{entity_type} is currently enforced to the desired state.  No changes made.".format(
-                entity_type=entity_type
+            ret["comment"] = (
+                "{entity_type} is currently enforced to the desired state.  No changes"
+                " made.".format(entity_type=entity_type)
             )
         else:
             ret["comment"] = (
-                "{entity_type} was enforced to the desired state.  Note: Only parameters specified "
-                "were enforced. See changes for details.".format(
+                "{entity_type} was enforced to the desired state.  Note: Only"
+                " parameters specified were enforced. See changes for details.".format(
                     entity_type=entity_type
                 )
             )
@@ -101,15 +100,14 @@ def _check_for_changes(entity_type, ret, existing, modified):
 
     else:
         if modified == existing:
-            ret[
-                "comment"
-            ] = "{entity_type} is currently enforced to the desired state.  No changes made.".format(
-                entity_type=entity_type
+            ret["comment"] = (
+                "{entity_type} is currently enforced to the desired state.  No changes"
+                " made.".format(entity_type=entity_type)
             )
         else:
             ret["comment"] = (
-                "{entity_type} was enforced to the desired state.  Note: Only parameters specified "
-                "were enforced. See changes for details.".format(
+                "{entity_type} was enforced to the desired state.  Note: Only"
+                " parameters specified were enforced. See changes for details.".format(
                     entity_type=entity_type
                 )
             )
@@ -129,22 +127,25 @@ def _test_output(ret, action, params):
             "comment"
         ] += "The list action will just list an entity and will make no changes.\n"
     elif action == "create" or action == "add":
-        ret[
-            "comment"
-        ] += "The create action will attempt to create an entity if it does not already exist.\n"
+        ret["comment"] += (
+            "The create action will attempt to create an entity if it does not already"
+            " exist.\n"
+        )
     elif action == "delete":
-        ret[
-            "comment"
-        ] += "The delete action will attempt to delete an existing entity if it exists.\n"
+        ret["comment"] += (
+            "The delete action will attempt to delete an existing entity if it"
+            " exists.\n"
+        )
     elif action == "manage":
         ret["comment"] += (
-            "The manage action will create a new entity if it does not exist.  If it does exist, it will be enforced"
-            "to the desired state.\n"
+            "The manage action will create a new entity if it does not exist.  If it"
+            " does exist, it will be enforcedto the desired state.\n"
         )
     elif action == "modify":
-        ret[
-            "comment"
-        ] += "The modify action will attempt to modify an existing entity only if it exists.\n"
+        ret["comment"] += (
+            "The modify action will attempt to modify an existing entity only if it"
+            " exists.\n"
+        )
 
     ret["comment"] += "An iControl REST Request will be made using the parameters:\n"
     ret["comment"] += salt.utils.json.dumps(params, indent=4)
@@ -385,8 +386,8 @@ def manage_node(
 
                 ret["result"] = True
                 ret["comment"] = (
-                    "Node was created and enforced to the desired state.  Note: Only parameters specified "
-                    "were enforced.  See changes for details."
+                    "Node was created and enforced to the desired state.  Note: Only"
+                    " parameters specified were enforced.  See changes for details."
                 )
                 ret["changes"]["old"] = {}
                 ret["changes"]["new"] = modified["content"]
@@ -400,16 +401,19 @@ def manage_node(
                 # did we get rid of it?
                 if deleted["code"] == 200:
                     ret["comment"] = (
-                        "Node was successfully created but an error occurred during modification. "
-                        "The creation of the node has been rolled back. Message is as follows:\n"
-                        "{message}".format(message=modified["content"]["message"])
+                        "Node was successfully created but an error occurred during"
+                        " modification. The creation of the node has been rolled back."
+                        " Message is as follows:\n{message}".format(
+                            message=modified["content"]["message"]
+                        )
                     )
                 # something bad happened
                 else:
                     ret["comment"] = (
-                        "Node was successfully created but an error occurred during modification. "
-                        "The creation of the node was not able to be rolled back. Message is as follows:"
-                        "\n {message}\n{message_two}".format(
+                        "Node was successfully created but an error occurred during"
+                        " modification. The creation of the node was not able to be"
+                        " rolled back. Message is as follows:\n"
+                        " {message}\n{message_two}".format(
                             message=modified["content"]["message"],
                             message_two=deleted["content"]["message"],
                         )
@@ -1031,8 +1035,8 @@ def manage_pool(
         if new["code"] == 200:
             ret["result"] = True
             ret["comment"] = (
-                "Pool was created and enforced to the desired state.  Note: Only parameters specified "
-                "were enforced.  See changes for details."
+                "Pool was created and enforced to the desired state.  Note: Only"
+                " parameters specified were enforced.  See changes for details."
             )
             ret["changes"]["old"] = {}
             ret["changes"]["new"] = new["content"]
@@ -1355,8 +1359,8 @@ def manage_pool_members(hostname, username, password, name, members):
             if new_listing["code"] != 200:
                 ret = _load_result(new_listing, ret)
                 ret["comment"] = (
-                    "modification of the pool was successful but an error occurred upon retrieving new"
-                    " listing."
+                    "modification of the pool was successful but an error occurred upon"
+                    " retrieving new listing."
                 )
                 return ret
 

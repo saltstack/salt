@@ -490,7 +490,8 @@ def present(
             )
         except ValueError:
             log.info(
-                "No existing shadow salt found, defaulting to a randomly generated new one"
+                "No existing shadow salt found, defaulting to a randomly generated"
+                " new one"
             )
             password = __salt__["shadow.gen_password"](password)
 
@@ -527,7 +528,7 @@ def present(
     if groups:
         missing_groups = [x for x in groups if not __salt__["group.info"](x)]
         if missing_groups:
-            ret["comment"] = "The following group(s) are not present: " "{}".format(
+            ret["comment"] = "The following group(s) are not present: {}".format(
                 ",".join(missing_groups)
             )
             ret["result"] = False
@@ -605,7 +606,7 @@ def present(
     if changes:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "The following user attributes are set to be " "changed:\n"
+            ret["comment"] = "The following user attributes are set to be changed:\n"
             for key, val in changes.items():
                 if key == "passwd":
                     val = "XXX-REDACTED-XXX"
@@ -837,10 +838,10 @@ def present(
                     __salt__["shadow.set_password"](name, password)
                     spost = __salt__["shadow.info"](name)
                     if spost["passwd"] != password:
-                        ret["comment"] = (
-                            "User {} created but failed to set"
-                            " password to"
-                            " {}".format(name, "XXX-REDACTED-XXX")
+                        ret[
+                            "comment"
+                        ] = "User {} created but failed to set password to {}".format(
+                            name, "XXX-REDACTED-XXX"
                         )
                         ret["result"] = False
                     ret["changes"]["password"] = "XXX-REDACTED-XXX"
@@ -848,10 +849,9 @@ def present(
                     __salt__["shadow.del_password"](name)
                     spost = __salt__["shadow.info"](name)
                     if spost["passwd"] != "":
-                        ret["comment"] = (
-                            "User {} created but failed to "
-                            "empty password".format(name)
-                        )
+                        ret[
+                            "comment"
+                        ] = "User {} created but failed to empty password".format(name)
                         ret["result"] = False
                     ret["changes"]["password"] = ""
                 if date is not None:
@@ -902,10 +902,10 @@ def present(
                     __salt__["shadow.set_warndays"](name, warndays)
                     spost = __salt__["shadow.info"](name)
                     if spost["warn"] != warndays:
-                        ret["comment"] = (
-                            "User {} created but failed to set"
-                            " warn days to"
-                            " {}".format(name, warndays)
+                        ret[
+                            "comment"
+                        ] = "User {} created but failed to set warn days to {}".format(
+                            name, warndays
                         )
                         ret["result"] = False
                     ret["changes"]["warndays"] = warndays
@@ -923,10 +923,10 @@ def present(
             elif salt.utils.platform.is_windows():
                 if password and not empty_password:
                     if not __salt__["user.setpassword"](name, password):
-                        ret["comment"] = (
-                            "User {} created but failed to set"
-                            " password to"
-                            " {}".format(name, "XXX-REDACTED-XXX")
+                        ret[
+                            "comment"
+                        ] = "User {} created but failed to set password to {}".format(
+                            name, "XXX-REDACTED-XXX"
                         )
                         ret["result"] = False
                     ret["changes"]["passwd"] = "XXX-REDACTED-XXX"
@@ -945,10 +945,10 @@ def present(
                     ret["changes"]["expiration_date"] = spost["expire"]
             elif salt.utils.platform.is_darwin() and password and not empty_password:
                 if not __salt__["shadow.set_password"](name, password):
-                    ret["comment"] = (
-                        "User {} created but failed to set"
-                        " password to"
-                        " {}".format(name, "XXX-REDACTED-XXX")
+                    ret[
+                        "comment"
+                    ] = "User {} created but failed to set password to {}".format(
+                        name, "XXX-REDACTED-XXX"
                     )
                     ret["result"] = False
                 ret["changes"]["passwd"] = "XXX-REDACTED-XXX"

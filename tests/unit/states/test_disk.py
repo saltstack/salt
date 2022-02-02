@@ -68,7 +68,10 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         mock_ret = {
             "name": mock_fs,
             "result": False,
-            "comment": "Disk mount /mnt/cheese not present. Directory /mnt/cheese does not exist or is not a directory",
+            "comment": (
+                "Disk mount /mnt/cheese not present. Directory /mnt/cheese does not"
+                " exist or is not a directory"
+            ),
             "changes": {},
             "data": {},
         }
@@ -233,7 +236,10 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(disk.__salt__, {"disk.usage": mock}):
             mock = MagicMock(return_value=False)
             with patch.object(path, "isdir", mock):
-                comt = "Disk mount / not present. Directory / does not exist or is not a directory"
+                comt = (
+                    "Disk mount / not present. Directory / does not exist or is not a"
+                    " directory"
+                )
                 ret.update({"comment": comt})
                 self.assertDictEqual(disk.status(mock_fs), ret)
 
@@ -266,8 +272,9 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         mock_ret = {
             "name": mock_fs,
             "result": False,
-            "comment": "Disk mount {0} not present. Directory {0} does not exist or is not a directory".format(
-                mock_fs
+            "comment": (
+                "Disk mount {0} not present. Directory {0} does not exist or is not a"
+                " directory".format(mock_fs)
             ),
             "changes": {},
             "data": {},
@@ -490,7 +497,9 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         mock_ret = {
             "name": mock_fs,
             "result": False,
-            "comment": "Disk available space is below minimum of 37087977 KB at 37087976 KB",
+            "comment": (
+                "Disk available space is below minimum of 37087977 KB at 37087976 KB"
+            ),
             "changes": {},
             "data": self.mock_data[mock_fs],
         }
@@ -607,7 +616,9 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         mock_ret = {
             "name": mock_fs,
             "result": False,
-            "comment": "Disk available space is above maximum of 37087975 KB at 37087976 KB",
+            "comment": (
+                "Disk available space is above maximum of 37087975 KB at 37087976 KB"
+            ),
             "changes": {},
             "data": self.mock_data[mock_fs],
         }

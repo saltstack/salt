@@ -17,13 +17,11 @@ class JinjaFilter:
     salt_jinja_filters = {}
 
     def __init__(self, name=None):
-        """
-        """
+        """ """
         self.name = name
 
     def __call__(self, function):
-        """
-        """
+        """ """
         name = self.name or function.__name__
         if name not in self.salt_jinja_filters:
             log.debug("Marking '%s' as a jinja filter", name)
@@ -43,13 +41,11 @@ class JinjaTest:
     salt_jinja_tests = {}
 
     def __init__(self, name=None):
-        """
-        """
+        """ """
         self.name = name
 
     def __call__(self, function):
-        """
-        """
+        """ """
         name = self.name or function.__name__
         if name not in self.salt_jinja_tests:
             log.debug("Marking '%s' as a jinja test", name)
@@ -69,13 +65,11 @@ class JinjaGlobal:
     salt_jinja_globals = {}
 
     def __init__(self, name=None):
-        """
-        """
+        """ """
         self.name = name
 
     def __call__(self, function):
-        """
-        """
+        """ """
         name = self.name or function.__name__
         if name not in self.salt_jinja_globals:
             log.debug("Marking '%s' as a jinja global", name)

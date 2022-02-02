@@ -414,7 +414,8 @@ def _make_regex(pem_type):
     return re.compile(
         r"\s*(?P<pem_header>-----BEGIN {0}-----)\s+"
         r"(?:(?P<proc_type>Proc-Type: 4,ENCRYPTED)\s*)?"
-        r"(?:(?P<dek_info>DEK-Info: (?:DES-[3A-Z\-]+,[0-9A-F]{{16}}|[0-9A-Z\-]+,[0-9A-F]{{32}}))\s*)?"
+        r"(?:(?P<dek_info>DEK-Info:"
+        r" (?:DES-[3A-Z\-]+,[0-9A-F]{{16}}|[0-9A-Z\-]+,[0-9A-F]{{32}}))\s*)?"
         r"(?P<pem_body>.+?)\s+(?P<pem_footer>"
         r"-----END {0}-----)\s*".format(pem_type),
         re.DOTALL,
@@ -486,7 +487,7 @@ def get_pem_entry(text, pem_type=None):
 
     errmsg = "PEM text not valid:\n{}".format(text)
     if pem_type:
-        errmsg = "PEM does not contain a single entry of type {}:\n" "{}".format(
+        errmsg = "PEM does not contain a single entry of type {}:\n{}".format(
             pem_type, text
         )
 
@@ -1648,8 +1649,7 @@ def create_certificate(path=None, text=False, overwrite=True, ca_server=None, **
         public_key=signing_cert,
     ):
         raise salt.exceptions.SaltInvocationError(
-            "signing_private_key: {} "
-            "does no match signing_cert: {}".format(
+            "signing_private_key: {} does no match signing_cert: {}".format(
                 kwargs["signing_private_key"], kwargs.get("signing_cert", "")
             )
         )

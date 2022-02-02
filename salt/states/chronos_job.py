@@ -48,7 +48,9 @@ def config(name, config):
     if existing_config:
         update_config = copy.deepcopy(existing_config)
         salt.utils.configcomparer.compare_and_update_config(
-            config, update_config, ret["changes"],
+            config,
+            update_config,
+            ret["changes"],
         )
     else:
         # the job is not configured--we need to create it from scratch
@@ -76,10 +78,12 @@ def config(name, config):
                     log.debug("_old schedule: %s", _old)
                     if len(_new) == 3 and len(_old) == 3:
                         log.debug(
-                            "_new[0] == _old[0]: %s", str(_new[0]) == str(_old[0]),
+                            "_new[0] == _old[0]: %s",
+                            str(_new[0]) == str(_old[0]),
                         )
                         log.debug(
-                            "_new[2] == _old[2]: %s", str(_new[2]) == str(_old[2]),
+                            "_new[2] == _old[2]: %s",
+                            str(_new[2]) == str(_old[2]),
                         )
                         if str(_new[0]) == str(_old[0]) and str(_new[2]) == str(
                             _old[2]
@@ -100,7 +104,8 @@ def config(name, config):
         if "exception" in update_result:
             ret["result"] = False
             ret["comment"] = "Failed to update job config for {}: {}".format(
-                name, update_result["exception"],
+                name,
+                update_result["exception"],
             )
             return ret
         else:

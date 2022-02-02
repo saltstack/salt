@@ -26,7 +26,7 @@ from string import Template
 
 class NXOSPlatform:
 
-    """ Cisco Systems Base Platform Unit Test Object """
+    """Cisco Systems Base Platform Unit Test Object"""
 
     chassis = "Unknown NXOS Chassis"
 
@@ -108,10 +108,10 @@ Module       Image                  Running-Version(pri:alt)           New-Versi
     def __init__(self, *args, **kwargs):
 
         """
-         ckimage - current kickstart image
-         cimage - current system image
-         nkimage - new kickstart image
-         nimage - new system image
+        ckimage - current kickstart image
+        cimage - current system image
+        nkimage - new kickstart image
+        nimage - new system image
         """
 
         self.ckimage = kwargs.get("ckimage", None)
@@ -164,14 +164,14 @@ Module       Image                  Running-Version(pri:alt)           New-Versi
     @staticmethod
     def templatize(template, values):
 
-        """ Substitute variables in template with their corresponding values """
+        """Substitute variables in template with their corresponding values"""
 
         return Template(template).substitute(values)
 
     @staticmethod
     def version_from_image(image):
 
-        """ Given a NXOS image named image decompose to appropriate image version """
+        """Given a NXOS image named image decompose to appropriate image version"""
 
         ver = None
         if image:

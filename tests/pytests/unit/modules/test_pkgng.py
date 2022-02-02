@@ -107,9 +107,7 @@ def test_lock():
     """
     Test pkgng.lock
     """
-    lock_cmd = MagicMock(
-        return_value={"stdout": ("pkga-1.0\n" "pkgb-2.0\n"), "retcode": 0}
-    )
+    lock_cmd = MagicMock(return_value={"stdout": "pkga-1.0\npkgb-2.0\n", "retcode": 0})
     with patch.dict(pkgng.__salt__, {"cmd.run_all": lock_cmd}):
 
         result = pkgng.lock("pkga")
@@ -134,7 +132,7 @@ def test_unlock():
     Test pkgng.unlock
     """
     unlock_cmd = MagicMock(
-        return_value={"stdout": ("pkga-1.0\n" "pkgb-2.0\n"), "retcode": 0}
+        return_value={"stdout": "pkga-1.0\npkgb-2.0\n", "retcode": 0}
     )
     with patch.dict(pkgng.__salt__, {"cmd.run_all": unlock_cmd}):
 
@@ -159,9 +157,7 @@ def test_locked():
     """
     Test pkgng.unlock
     """
-    lock_cmd = MagicMock(
-        return_value={"stdout": ("pkga-1.0\n" "pkgb-2.0\n"), "retcode": 0}
-    )
+    lock_cmd = MagicMock(return_value={"stdout": "pkga-1.0\npkgb-2.0\n", "retcode": 0})
     with patch.dict(pkgng.__salt__, {"cmd.run_all": lock_cmd}):
 
         result = pkgng.locked("pkga")
@@ -274,7 +270,9 @@ def test_upgrade_without_fromrepo(pkgs):
             }
             assert result == expected
             pkg_cmd.assert_called_with(
-                ["pkg", "upgrade", "-y"], output_loglevel="trace", python_shell=False,
+                ["pkg", "upgrade", "-y"],
+                output_loglevel="trace",
+                python_shell=False,
             )
 
 
@@ -316,7 +314,9 @@ def test_upgrade_with_fetchonly(pkgs):
             }
             assert result == expected
             pkg_cmd.assert_called_with(
-                ["pkg", "upgrade", "-Fy"], output_loglevel="trace", python_shell=False,
+                ["pkg", "upgrade", "-Fy"],
+                output_loglevel="trace",
+                python_shell=False,
             )
 
 
@@ -337,7 +337,9 @@ def test_upgrade_with_local(pkgs):
             }
             assert result == expected
             pkg_cmd.assert_called_with(
-                ["pkg", "upgrade", "-Uy"], output_loglevel="trace", python_shell=False,
+                ["pkg", "upgrade", "-Uy"],
+                output_loglevel="trace",
+                python_shell=False,
             )
 
 
@@ -351,7 +353,9 @@ def test_stats_with_local():
         result = pkgng.stats(local=True)
         assert result == []
         pkg_cmd.assert_called_with(
-            ["pkg", "stats", "-l"], output_loglevel="trace", python_shell=False,
+            ["pkg", "stats", "-l"],
+            output_loglevel="trace",
+            python_shell=False,
         )
 
 
@@ -365,7 +369,9 @@ def test_stats_with_remote():
         result = pkgng.stats(remote=True)
         assert result == []
         pkg_cmd.assert_called_with(
-            ["pkg", "stats", "-r"], output_loglevel="trace", python_shell=False,
+            ["pkg", "stats", "-r"],
+            output_loglevel="trace",
+            python_shell=False,
         )
 
 
@@ -379,7 +385,9 @@ def test_stats_with_bytes_remote():
         result = pkgng.stats(remote=True, bytes=True)
         assert result == []
         pkg_cmd.assert_called_with(
-            ["pkg", "stats", "-rb"], output_loglevel="trace", python_shell=False,
+            ["pkg", "stats", "-rb"],
+            output_loglevel="trace",
+            python_shell=False,
         )
 
 
@@ -393,7 +401,9 @@ def test_stats_with_bytes_local():
         result = pkgng.stats(local=True, bytes=True)
         assert result == []
         pkg_cmd.assert_called_with(
-            ["pkg", "stats", "-lb"], output_loglevel="trace", python_shell=False,
+            ["pkg", "stats", "-lb"],
+            output_loglevel="trace",
+            python_shell=False,
         )
 
 
@@ -685,7 +695,9 @@ def test_check_depends():
         result = pkgng.check(depends=True)
         assert result == ""
         pkg_cmd.assert_called_with(
-            ["pkg", "check", "-dy"], output_loglevel="trace", python_shell=False,
+            ["pkg", "check", "-dy"],
+            output_loglevel="trace",
+            python_shell=False,
         )
 
 
@@ -699,7 +711,9 @@ def test_check_checksum():
         result = pkgng.check(checksum=True)
         assert result == ""
         pkg_cmd.assert_called_with(
-            ["pkg", "check", "-s"], output_loglevel="trace", python_shell=False,
+            ["pkg", "check", "-s"],
+            output_loglevel="trace",
+            python_shell=False,
         )
 
 
@@ -713,7 +727,9 @@ def test_check_recompute():
         result = pkgng.check(recompute=True)
         assert result == ""
         pkg_cmd.assert_called_with(
-            ["pkg", "check", "-r"], output_loglevel="trace", python_shell=False,
+            ["pkg", "check", "-r"],
+            output_loglevel="trace",
+            python_shell=False,
         )
 
 
@@ -727,7 +743,9 @@ def test_check_checklibs():
         result = pkgng.check(checklibs=True)
         assert result == ""
         pkg_cmd.assert_called_with(
-            ["pkg", "check", "-B"], output_loglevel="trace", python_shell=False,
+            ["pkg", "check", "-B"],
+            output_loglevel="trace",
+            python_shell=False,
         )
 
 
@@ -741,7 +759,9 @@ def test_autoremove_with_dryrun():
         result = pkgng.autoremove(dryrun=True)
         assert result == ""
         pkg_cmd.assert_called_with(
-            ["pkg", "autoremove", "-n"], output_loglevel="trace", python_shell=False,
+            ["pkg", "autoremove", "-n"],
+            output_loglevel="trace",
+            python_shell=False,
         )
 
 
@@ -756,7 +776,9 @@ def test_autoremove():
         result = pkgng.autoremove()
         assert result == ""
         pkg_cmd.assert_called_with(
-            ["pkg", "autoremove", "-y"], output_loglevel="trace", python_shell=False,
+            ["pkg", "autoremove", "-y"],
+            output_loglevel="trace",
+            python_shell=False,
         )
 
 
@@ -771,7 +793,9 @@ def test_audit():
         result = pkgng.audit()
         assert result == ""
         pkg_cmd.assert_called_with(
-            ["pkg", "audit", "-F"], output_loglevel="trace", python_shell=False,
+            ["pkg", "audit", "-F"],
+            output_loglevel="trace",
+            python_shell=False,
         )
 
 
@@ -798,7 +822,8 @@ def test_refresh_db_without_forced_flag():
             result = pkgng.refresh_db()
             assert result is True
             pkg_cmd.assert_called_with(
-                ["pkg", "update"], python_shell=False,
+                ["pkg", "update"],
+                python_shell=False,
             )
 
 
@@ -813,7 +838,8 @@ def test_refresh_db_with_forced_flag():
             result = pkgng.refresh_db(force=True)
             assert result is True
             pkg_cmd.assert_called_with(
-                ["pkg", "update", "-f"], python_shell=False,
+                ["pkg", "update", "-f"],
+                python_shell=False,
             )
 
 
@@ -933,7 +959,7 @@ def test_which_with_default_flags():
     """
     which_cmd = MagicMock(
         return_value={
-            "stdout": ("/usr/local/bin/mutt was installed by package mutt-2.0.6"),
+            "stdout": "/usr/local/bin/mutt was installed by package mutt-2.0.6",
             "retcode": 0,
         }
     )
@@ -954,7 +980,7 @@ def test_which_with_origin_flag():
     """
     which_cmd = MagicMock(
         return_value={
-            "stdout": ("/usr/local/bin/mutt was installed by package mail/mutt"),
+            "stdout": "/usr/local/bin/mutt was installed by package mail/mutt",
             "retcode": 0,
         }
     )

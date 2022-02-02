@@ -11,7 +11,9 @@ log = logging.getLogger(__name__)
 
 @pytest.fixture(scope="module")
 def salt_proxy(salt_proxy):
-    cachefile = os.path.join(salt_proxy.config["cachedir"], "dummy-proxy.cache")
+    cachefile = os.path.join(
+        salt_proxy.config["cachedir"], "dummy-proxy-{}.cache".format(salt_proxy.id)
+    )
     if os.path.exists(cachefile):
         os.unlink(cachefile)
     return salt_proxy

@@ -129,14 +129,14 @@ class RecursiveDictDiffer(DictDiffer):
     Note:
         The <_null_> value is a reserved value
 
-.. code-block:: text
+    .. code-block:: text
 
-            common_key1:
-              common_key2:
-                changed_key1 from '<old_str>' to '<new_str>'
-                changed_key2 from '[<old_elem1>, ..]' to '[<new_elem1>, ..]'
-            common_key3:
-              changed_key3 from <old_int> to <new_int>
+        common_key1:
+          common_key2:
+            changed_key1 from '<old_str>' to '<new_str>'
+            changed_key2 from '[<old_elem1>, ..]' to '[<new_elem1>, ..]'
+        common_key3:
+          changed_key3 from <old_int> to <new_int>
 
     """
 

@@ -232,7 +232,9 @@ def _acl_to_grant(ACL, owner_canonical_id):
                 {
                     "Grantee": {
                         "Type": "Group",
-                        "URI": "http://acs.amazonaws.com/groups/global/AuthenticatedUsers",
+                        "URI": (
+                            "http://acs.amazonaws.com/groups/global/AuthenticatedUsers"
+                        ),
                     },
                     "Permission": "READ",
                 }
@@ -685,8 +687,9 @@ def present(
     # the things are correct by the time we fail here. Fail so the user will
     # notice something mismatches their desired state.
     if _describe.get("Location", {}).get("LocationConstraint") != LocationConstraint:
-        msg = "Bucket {} location does not match desired configuration, but cannot be changed".format(
-            LocationConstraint
+        msg = (
+            "Bucket {} location does not match desired configuration, but cannot be"
+            " changed".format(LocationConstraint)
         )
         log.warning(msg)
         ret["result"] = False

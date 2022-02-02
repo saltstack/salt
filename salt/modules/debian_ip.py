@@ -833,7 +833,7 @@ def _parse_settings_bond(opts, iface):
         return _parse_settings_bond_3(opts, iface, bond_def)
     elif opts["mode"] in ["802.3ad", "4"]:
         log.info(
-            "Device: %s Bonding Mode: IEEE 802.3ad Dynamic link " "aggregation", iface
+            "Device: %s Bonding Mode: IEEE 802.3ad Dynamic link aggregation", iface
         )
         return _parse_settings_bond_4(opts, iface, bond_def)
     elif opts["mode"] in ["balance-tlb", "5"]:
@@ -1483,9 +1483,9 @@ def _write_file_network(data, filename, create=False):
     argument is True
     """
     if not os.path.exists(filename) and not create:
-        msg = "{0} cannot be written. {0} does not exist\
-                and create is set to False"
-        msg = msg.format(filename)
+        msg = "{0} cannot be written. {0} does not exist and create is setto False".format(
+            filename
+        )
         log.error(msg)
         raise AttributeError(msg)
     with salt.utils.files.flopen(filename, "w") as fout:

@@ -230,14 +230,13 @@ def returner(ret):
                 )
         else:
             log.error(
-                "gnupg python module is required in order to user gpgowner in smtp returner ; ignoring gpgowner configuration for now"
+                "gnupg python module is required in order to user gpgowner in smtp"
+                " returner ; ignoring gpgowner configuration for now"
             )
     if isinstance(content, io.StringIO):
         content = content.read()
 
-    message = (
-        "From: {}\r\n" "To: {}\r\n" "Date: {}\r\n" "Subject: {}\r\n" "\r\n" "{}"
-    ).format(
+    message = "From: {}\r\nTo: {}\r\nDate: {}\r\nSubject: {}\r\n\r\n{}".format(
         from_addr, ", ".join(to_addrs), formatdate(localtime=True), subject, content
     )
 

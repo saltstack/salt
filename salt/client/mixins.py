@@ -11,11 +11,11 @@ import traceback
 import weakref
 from collections.abc import Mapping, MutableMapping
 
+import salt.channel.client
 import salt.exceptions
 import salt.ext.tornado.stack_context
 import salt.log.setup
 import salt.minion
-import salt.transport.client
 import salt.utils.args
 import salt.utils.doc
 import salt.utils.error
@@ -137,7 +137,7 @@ class SyncClientMixin:
         load = kwargs
         load["cmd"] = self.client
 
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             self.opts, crypt="clear", usage="master_call"
         ) as channel:
             ret = channel.send(load)
@@ -409,7 +409,9 @@ class SyncClientMixin:
                     data["return"] = str(ex)
                 else:
                     data["return"] = "Exception occurred in {} {}: {}".format(
-                        self.client, fun, traceback.format_exc(),
+                        self.client,
+                        fun,
+                        traceback.format_exc(),
                     )
                 data["success"] = False
 
@@ -561,7 +563,9 @@ class AsyncClientMixin:
         async_pub = pub if pub is not None else self._gen_async_pub()
         proc = salt.utils.process.SignalHandlingProcess(
             target=proc_func,
-            name="ProcessFunc",
+            name="ProcessFunc(func={}, jid={})".format(
+                proc_func.__qualname__, async_pub["jid"]
+            ),
             args=(fun, low, user, async_pub["tag"], async_pub["jid"]),
         )
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):

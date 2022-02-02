@@ -136,7 +136,7 @@ def ext_pillar(
         minion_id = re.sub(re_pattern, re_replace, minion_id)
 
     log.info(
-        "ext_pillar.mongo: looking up pillar def for {'%s': '%s'} " "in mongo",
+        "ext_pillar.mongo: looking up pillar def for {'%s': '%s'} in mongo",
         id_field,
         minion_id,
     )

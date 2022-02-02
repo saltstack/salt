@@ -1,1 +1,0 @@
-Ensure proper access to the created temporary file when ``runas`` is passed to ``cmd.exec_code_all``

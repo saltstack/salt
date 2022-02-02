@@ -9,10 +9,10 @@ import logging
 import os
 import urllib.parse
 
+import salt.channel.client
 import salt.crypt
 import salt.fileclient
 import salt.minion
-import salt.transport.client
 import salt.utils.data
 import salt.utils.files
 import salt.utils.gzip_util
@@ -59,6 +59,12 @@ def recv(files, dest):
 
     This function receives small fast copy files from the master via salt-cp.
     It does not work via the CLI.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cp.recv
     """
     ret = {}
     for path, data in files.items():
@@ -85,6 +91,12 @@ def recv_chunked(dest, chunk, append=False, compressed=True, mode=None):
     """
     This function receives files copied to the minion using ``salt-cp`` and is
     not intended to be used directly on the CLI.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cp.recv_chunked
     """
     if "retcode" not in __context__:
         __context__["retcode"] = 0
@@ -179,8 +191,7 @@ def _render_filenames(path, dest, saltenv, template, **kw):
     # render the path as a template using path_template_engine as the engine
     if template not in salt.utils.templates.TEMPLATE_REGISTRY:
         raise CommandExecutionError(
-            "Attempted to render file paths with unavailable engine "
-            "{}".format(template)
+            "Attempted to render file paths with unavailable engine {}".format(template)
         )
 
     kwargs = {}
@@ -284,7 +295,7 @@ def envs():
     """
     List available environments for fileserver
 
-    CLI Example
+    CLI Example:
 
     .. code-block:: bash
 
@@ -425,7 +436,7 @@ def get_file_str(path, saltenv="base"):
     return fn_
 
 
-def cache_file(path, saltenv="base", source_hash=None, verify_ssl=True):
+def cache_file(path, saltenv="base", source_hash=None, verify_ssl=True, use_etag=False):
     """
     Used to cache a single file on the Minion
 
@@ -443,6 +454,15 @@ def cache_file(path, saltenv="base", source_hash=None, verify_ssl=True):
         will not attempt to validate the servers certificate. Default is True.
 
         .. versionadded:: 3002
+
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
 
     CLI Example:
 
@@ -497,9 +517,9 @@ def cache_file(path, saltenv="base", source_hash=None, verify_ssl=True):
         saltenv = senv
 
     result = _client().cache_file(
-        path, saltenv, source_hash=source_hash, verify_ssl=verify_ssl
+        path, saltenv, source_hash=source_hash, verify_ssl=verify_ssl, use_etag=use_etag
     )
-    if not result:
+    if not result and not use_etag:
         log.error("Unable to cache file '%s' from saltenv '%s'.", path, saltenv)
     if path_is_remote:
         # Cache was successful, store the result in __context__ to prevent
@@ -836,7 +856,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
         "tok": auth.gen_token(b"salt"),
     }
 
-    with salt.transport.client.ReqChannel.factory(__opts__) as channel:
+    with salt.channel.client.ReqChannel.factory(__opts__) as channel:
         with salt.utils.files.fopen(path, "rb") as fp_:
             init_send = False
             while True:

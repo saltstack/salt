@@ -123,14 +123,9 @@ if Defined x (
 :: Define Variables
 @echo %0 :: Defining Variables...
 @echo ---------------------------------------------------------------------
-if %Python%==3 (
-    Set "PyDir=C:\Python37"
-    Set "PyVerMajor=3"
-    Set "PyVerMinor=7"
-) else (
-    :: Placeholder for future version
-    :: Set "PyDir=C:\Python4"
-)
+if "%PyDir%"=="" (Set "PyDir=C:\Python38")
+if "%PyVerMajor%"=="" (Set "PyVerMajor=3")
+if "%PyDirMinor%"=="" (Set "PyVerMinor=8")
 Set "PATH=%PATH%;%PyDir%;%PyDir%\Scripts"
 
 Set "CurDir=%~dp0"

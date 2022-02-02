@@ -72,7 +72,7 @@ def test_escape_argument_path_with_space():
 @pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
 def test_broadcast_setting_change():
     """
-        Test to rehash the Environment variables
+    Test to rehash the Environment variables
     """
     assert win_functions.broadcast_setting_change()
 

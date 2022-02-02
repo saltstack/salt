@@ -209,7 +209,6 @@ import re
 import shutil
 import string
 import subprocess
-import sys
 import time
 import uuid
 
@@ -312,16 +311,14 @@ def __virtual__():
             else:
                 return (
                     False,
-                    "Insufficient Docker version (required: {}, "
-                    "installed: {})".format(
+                    "Insufficient Docker version (required: {}, installed: {})".format(
                         ".".join(map(str, MIN_DOCKER)),
                         ".".join(map(str, docker_versioninfo)),
                     ),
                 )
         return (
             False,
-            "Insufficient docker-py version (required: {}, "
-            "installed: {})".format(
+            "Insufficient docker-py version (required: {}, installed: {})".format(
                 ".".join(map(str, MIN_DOCKER_PY)),
                 ".".join(map(str, docker_py_versioninfo)),
             ),
@@ -364,7 +361,7 @@ def _get_client(timeout=NOTSET, **kwargs):
         client_kwargs["base_url"] = os.environ.get("DOCKER_HOST")
 
     if "version" not in client_kwargs:
-        # Let docker-py auto detect docker version incase
+        # Let docker-py auto detect docker version in case
         # it's not defined by user.
         client_kwargs["version"] = "auto"
 
@@ -661,8 +658,7 @@ def _client_wrapper(attr, *args, **kwargs):
     err = ""
     try:
         log.debug(
-            'Attempting to run docker-py\'s "%s" function '
-            "with args=%s and kwargs=%s",
+            'Attempting to run docker-py\'s "%s" function with args=%s and kwargs=%s',
             attr,
             args,
             kwargs,
@@ -811,7 +807,8 @@ def _error_detail(data, item):
             )
         except TypeError:
             msg = "{}: {}".format(
-                item["errorDetail"]["code"], item["errorDetail"]["message"],
+                item["errorDetail"]["code"],
+                item["errorDetail"]["message"],
             )
     else:
         msg = item["errorDetail"]["message"]
@@ -903,7 +900,7 @@ def _get_create_kwargs(
             client_args = get_client_args(["create_container", "host_config"])
         except CommandExecutionError as exc:
             log.error(
-                "docker.create: Error getting client args: '%s'", exc, exc_info=True,
+                "docker.create: Error getting client args: '%s'", exc, exc_info=True
             )
             raise CommandExecutionError("Failed to get client args: {}".format(exc))
 
@@ -1443,8 +1440,9 @@ def login(*registries):
             registry_auth.update(reg_conf)
         except TypeError:
             errors.append(
-                "Docker registry '{}' was not specified as a "
-                "dictionary".format(reg_name)
+                "Docker registry '{}' was not specified as a dictionary".format(
+                    reg_name
+                )
             )
 
     # If no registries passed, we will auth to all of them
@@ -1473,7 +1471,9 @@ def login(*registries):
                 username,
             )
             login_cmd = __salt__["cmd.run_all"](
-                cmd, python_shell=False, output_loglevel="quiet",
+                cmd,
+                python_shell=False,
+                output_loglevel="quiet",
             )
             results[registry] = login_cmd["retcode"] == 0
             if not results[registry]:
@@ -1534,8 +1534,9 @@ def logout(*registries):
             registry_auth.update(reg_conf)
         except TypeError:
             errors.append(
-                "Docker registry '{}' was not specified as a "
-                "dictionary".format(reg_name)
+                "Docker registry '{}' was not specified as a dictionary".format(
+                    reg_name
+                )
             )
 
     # If no registries passed, we will logout of all known registries
@@ -1553,7 +1554,9 @@ def logout(*registries):
                 cmd.append(registry)
             log.debug("Attempting to logout of docker registry '%s'", registry)
             logout_cmd = __salt__["cmd.run_all"](
-                cmd, python_shell=False, output_loglevel="quiet",
+                cmd,
+                python_shell=False,
+                output_loglevel="quiet",
             )
             results[registry] = logout_cmd["retcode"] == 0
             if not results[registry]:
@@ -1977,7 +1980,7 @@ def list_containers(**kwargs):
 
     .. code-block:: bash
 
-        salt myminion docker.inspect_image <image>
+        salt myminion docker.list_containers
     """
     ret = set()
     for item in ps_(all=kwargs.get("all", False)).values():
@@ -2031,7 +2034,7 @@ def resolve_image_id(name):
         pass
     except KeyError:
         log.error(
-            "Inspecting docker image '%s' returned an unexpected data " "structure: %s",
+            "Inspecting docker image '%s' returned an unexpected data structure: %s",
             name,
             inspect_result,
         )
@@ -2502,11 +2505,11 @@ def version():
     if "Version" in ret:
         match = version_re.match(str(ret["Version"]))
         if match:
-            ret["VersionInfo"] = tuple([int(x) for x in match.group(1).split(".")])
+            ret["VersionInfo"] = tuple(int(x) for x in match.group(1).split("."))
     if "ApiVersion" in ret:
         match = version_re.match(str(ret["ApiVersion"]))
         if match:
-            ret["ApiVersionInfo"] = tuple([int(x) for x in match.group(1).split(".")])
+            ret["ApiVersionInfo"] = tuple(int(x) for x in match.group(1).split("."))
     return ret
 
 
@@ -4475,9 +4478,9 @@ def load(path, repository=None, tag=None):
                 result = tag_(top_level_images[0], repository=repository, tag=tag)
                 ret["Image"] = tagged_image
             except IndexError:
-                ret["Warning"] = (
-                    "No top-level image layers were loaded, no " "image was tagged"
-                )
+                ret[
+                    "Warning"
+                ] = "No top-level image layers were loaded, no image was tagged"
             except Exception as exc:  # pylint: disable=broad-except
                 ret["Warning"] = "Failed to tag {} as {}: {}".format(
                     top_level_images[0], tagged_image, exc
@@ -6657,27 +6660,26 @@ def _compile_state(sls_opts, mods=None):
     """
     Generates the chunks of lowdata from the list of modules
     """
-    st_ = HighState(sls_opts)
+    with HighState(sls_opts) as st_:
+        if not mods:
+            return st_.compile_low_chunks()
 
-    if not mods:
-        return st_.compile_low_chunks()
+        high_data, errors = st_.render_highstate({sls_opts["saltenv"]: mods})
+        high_data, ext_errors = st_.state.reconcile_extend(high_data)
+        errors += ext_errors
+        errors += st_.state.verify_high(high_data)
+        if errors:
+            return errors
 
-    high_data, errors = st_.render_highstate({sls_opts["saltenv"]: mods})
-    high_data, ext_errors = st_.state.reconcile_extend(high_data)
-    errors += ext_errors
-    errors += st_.state.verify_high(high_data)
-    if errors:
-        return errors
+        high_data, req_in_errors = st_.state.requisite_in(high_data)
+        errors += req_in_errors
+        high_data = st_.state.apply_exclude(high_data)
+        # Verify that the high data is structurally sound
+        if errors:
+            return errors
 
-    high_data, req_in_errors = st_.state.requisite_in(high_data)
-    errors += req_in_errors
-    high_data = st_.state.apply_exclude(high_data)
-    # Verify that the high data is structurally sound
-    if errors:
-        return errors
-
-    # Compile and verify the raw chunks
-    return st_.state.compile_high_data(high_data)
+        # Compile and verify the raw chunks
+        return st_.state.compile_high_data(high_data)
 
 
 def call(name, function, *args, **kwargs):
@@ -6725,12 +6727,25 @@ def call(name, function, *args, **kwargs):
         name, thin_path, os.path.join(thin_dest_path, os.path.basename(thin_path))
     )
 
+    # figure out available python interpreter inside the container (only Python3)
+    pycmds = ("python3", "/usr/libexec/platform-python")
+    container_python_bin = None
+    for py_cmd in pycmds:
+        cmd = [py_cmd] + ["--version"]
+        ret = run_all(name, subprocess.list2cmdline(cmd))
+        if ret["retcode"] == 0:
+            container_python_bin = py_cmd
+            break
+    if not container_python_bin:
+        raise CommandExecutionError(
+            "Python interpreter cannot be found inside the container. Make sure Python is installed in the container"
+        )
+
     # untar archive
     untar_cmd = [
-        "python",
+        container_python_bin,
         "-c",
-        "import tarfile; "
-        'tarfile.open("{0}/{1}").extractall(path="{0}")'.format(
+        'import tarfile; tarfile.open("{0}/{1}").extractall(path="{0}")'.format(
             thin_dest_path, os.path.basename(thin_path)
         ),
     ]
@@ -6741,7 +6756,7 @@ def call(name, function, *args, **kwargs):
     try:
         salt_argv = (
             [
-                "python{}".format(sys.version_info[0]),
+                container_python_bin,
                 os.path.join(thin_dest_path, "salt-call"),
                 "--metadata",
                 "--local",

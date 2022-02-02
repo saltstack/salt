@@ -25,7 +25,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The saltcloudmod execution module failed to load: requires the saltcloud library.",
+        "The saltcloudmod execution module failed to load: requires the saltcloud"
+        " library.",
     )
 
 

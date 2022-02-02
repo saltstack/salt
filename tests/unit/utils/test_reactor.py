@@ -449,7 +449,9 @@ class TestReactor(TestCase, AdaptedConfigurationTestCaseMixin):
                                     MagicMock(return_value=self.render_pipe),
                                 ):
                                     reactions = self.reactor.reactions(
-                                        tag, REACTOR_DATA[rtype], reactors,
+                                        tag,
+                                        REACTOR_DATA[rtype],
+                                        reactors,
                                     )
                                     log.debug(
                                         "test_reactions: %s reactions: %s",

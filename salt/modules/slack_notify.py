@@ -160,7 +160,13 @@ def find_user(name, api_key=None):
 
 
 def post_message(
-    channel, message, from_name, api_key=None, icon=None, attachments=None, blocks=None,
+    channel,
+    message,
+    from_name,
+    api_key=None,
+    icon=None,
+    attachments=None,
+    blocks=None,
 ):
     """
     Send a message to a Slack channel.

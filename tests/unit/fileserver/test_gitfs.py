@@ -556,7 +556,9 @@ class GitFSTestBase:
                 raise
 
         shutil.copytree(
-            str(RUNTIME_VARS.BASE_FILES), str(cls.tmp_repo_dir + "/"), symlinks=True,
+            str(RUNTIME_VARS.BASE_FILES),
+            str(cls.tmp_repo_dir + "/"),
+            symlinks=True,
         )
 
         repo = git.Repo.init(cls.tmp_repo_dir)

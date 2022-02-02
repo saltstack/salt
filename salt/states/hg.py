@@ -121,10 +121,12 @@ def _update_repo(ret, name, target, clean, user, identity, rev, opts, update_hea
         return _fail(ret, "Seems that {} is not a valid hg repo".format(target))
 
     if __opts__["test"]:
-        test_result = (
-            "Repository {} update is probably required (current " "revision is {})"
-        ).format(target, current_rev)
-        return _neutral_test(ret, test_result)
+        return _neutral_test(
+            ret,
+            "Repository {} update is probably required (current revision is {})".format(
+                target, current_rev
+            ),
+        )
 
     try:
         pull_out = __salt__["hg.pull"](
@@ -138,9 +140,10 @@ def _update_repo(ret, name, target, clean, user, identity, rev, opts, update_hea
     if update_head is False:
         changes = "no changes found" not in pull_out
         if changes:
-            ret[
-                "comment"
-            ] = "Update is probably required but update_head=False so we will skip updating."
+            ret["comment"] = (
+                "Update is probably required but update_head=False so we will skip"
+                " updating."
+            )
         else:
             ret[
                 "comment"

@@ -10,7 +10,12 @@ Pacemaker/Cororsync conifguration system (PCS)
 .. versionadded:: 2016.3.0
 """
 
+
+import logging
+
 import salt.utils.path
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -20,6 +25,23 @@ def __virtual__():
     if salt.utils.path.which("pcs"):
         return "pcs"
     return (False, "Missing dependency: pcs")
+
+
+def __use_new_commands():
+    """
+    The command line arguments of pcs changed after version 0.10
+    This will return True if the new arguments are needed and
+    false if the old ones are needed
+    """
+    pcs_version = __salt__["pkg.version"]("pcs")
+    log.debug("PCS package version %s", pcs_version)
+
+    if __salt__["pkg.version_cmp"](pcs_version, "0.10") == 1:
+        log.debug("New version, new command")
+        return True
+    else:
+        log.debug("Old Version")
+        return False
 
 
 def item_show(
@@ -36,12 +58,15 @@ def item_show(
     item_type
         item type
     show
-        show command (probably None, default: show)
+        show command (probably None, default: show or status for newer implementation)
     extra_args
         additional options for the pcs command
     cibfile
         use cibfile instead of the live CIB
     """
+
+    new_commands = __use_new_commands()
+
     cmd = ["pcs"]
 
     if isinstance(cibfile, str):
@@ -55,6 +80,17 @@ def item_show(
     # constraint command follows a different order
     if item in ["constraint"]:
         cmd += [item_type]
+
+    # New implementions use config instead of show. This resolves that issue.
+    if new_commands and (
+        item != "config" and item != "constraint" and item != "property"
+    ):
+        if show == "show":
+            show = "config"
+        elif isinstance(show, (list, tuple)):
+            for index, value in enumerate(show):
+                if show[index] == "show":
+                    show[index] = "config"
 
     if isinstance(show, str):
         cmd += [show]
@@ -71,7 +107,7 @@ def item_show(
     if item in ["constraint"]:
         if not isinstance(extra_args, (list, tuple)) or "--full" not in extra_args:
             cmd += ["--full"]
-
+    log.debug("Running item show %s", cmd)
     return __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
 
 
@@ -141,43 +177,51 @@ def auth(nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=None):
     pcspasswd
         password for pcsuser (default: hacluster)
     extra_args
-        list of extra option for the \'pcs cluster auth\' command
+        list of extra option for the \'pcs cluster auth\' command. The newer cluster host command has no extra args and so will ignore it.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' pcs.auth nodes='[ node1.example.org node2.example.org ]' pcsuser=hacluster pcspasswd=hoonetorg extra_args="[ '--force' ]"
+        salt '*' pcs.auth nodes='[ node1.example.org node2.example.org ]' pcsuser=hacluster pcspasswd=hoonetorg extra_args=[ '--force' ]
     """
-    cmd = ["pcs", "cluster", "auth"]
+    if __use_new_commands():
+        cmd = ["pcs", "host", "auth"]
+    else:
+        cmd = ["pcs", "cluster", "auth"]
 
-    if pcsuser:
-        cmd += ["-u", pcsuser]
+    cmd.extend(["-u", pcsuser, "-p", pcspasswd])
 
-    if pcspasswd:
-        cmd += ["-p", pcspasswd]
-
-    if isinstance(extra_args, (list, tuple)):
+    if not __use_new_commands() and isinstance(extra_args, (list, tuple)):
         cmd += extra_args
+
     cmd += nodes
 
     return __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
 
 
-def is_auth(nodes):
+def is_auth(nodes, pcsuser="hacluster", pcspasswd="hacluster"):
     """
     Check if nodes are already authorized
 
     nodes
         a list of nodes to be checked for authorization to the cluster
+    pcsuser
+        user for communitcation with PCS (default: hacluster)
+    pcspasswd
+        password for pcsuser (default: hacluster)
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' pcs.is_auth nodes='[node1.example.org node2.example.org]'
+        salt '*' pcs.is_auth nodes='[node1.example.org node2.example.org]' pcsuser=hacluster pcspasswd=hoonetorg
     """
-    cmd = ["pcs", "cluster", "auth"]
+    if __use_new_commands():
+        cmd = ["pcs", "host", "auth", "-u", pcsuser, "-p", pcspasswd]
+    else:
+        cmd = ["pcs", "cluster", "auth"]
+
     cmd += nodes
 
     return __salt__["cmd.run_all"](
@@ -204,11 +248,39 @@ def cluster_setup(nodes, pcsclustername="pcscluster", extra_args=None):
     """
     cmd = ["pcs", "cluster", "setup"]
 
-    cmd += ["--name", pcsclustername]
+    if __use_new_commands():
+        cmd += [pcsclustername]
+    else:
+        cmd += ["--name", pcsclustername]
 
     cmd += nodes
     if isinstance(extra_args, (list, tuple)):
         cmd += extra_args
+
+    log.debug("Running cluster setup: %s", cmd)
+
+    return __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
+
+
+def cluster_destroy(extra_args=None):
+    """
+    Destroy corosync cluster using the pcs command
+
+    extra_args
+        list of extra option for the \'pcs cluster destroy\' command (only really --all)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pcs.cluster_destroy extra_args=--all
+    """
+    cmd = ["pcs", "cluster", "destroy"]
+
+    if isinstance(extra_args, (list, tuple)):
+        cmd += extra_args
+
+    log.debug("Running cluster destroy: %s", cmd)
 
     return __salt__["cmd.run_all"](cmd, output_loglevel="trace", python_shell=False)
 

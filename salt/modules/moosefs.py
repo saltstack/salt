@@ -13,7 +13,8 @@ def __virtual__():
         return "moosefs"
     return (
         False,
-        "The moosefs execution module cannot be loaded: the mfsgetgoal binary is not in the path.",
+        "The moosefs execution module cannot be loaded: the mfsgetgoal binary is not in"
+        " the path.",
     )
 
 

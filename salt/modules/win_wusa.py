@@ -139,8 +139,9 @@ def install(path, restart=False):
     file_name = os.path.basename(path)
     errors = {
         2359302: "{} is already installed".format(file_name),
-        3010: "{} correctly installed but server reboot is needed to complete installation".format(
-            file_name
+        3010: (
+            "{} correctly installed but server reboot is needed to complete"
+            " installation".format(file_name)
         ),
         87: "Unknown error",
     }

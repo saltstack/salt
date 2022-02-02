@@ -191,7 +191,8 @@ def get_printout(out, opts=None, **kwargs):
         # error when old minions are asking for it
         if out != "grains":
             log.error(
-                "Invalid outputter %s specified, fall back to nested", out,
+                "Invalid outputter %s specified, fall back to nested",
+                out,
             )
         return outputters["nested"]
     return outputters[out]

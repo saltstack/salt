@@ -188,9 +188,9 @@ def present(
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = (
-                "The privilege(s): {} are set to be granted to {}"
-            ).format(_privs, name)
+            ret["comment"] = "The privilege(s): {} are set to be granted to {}".format(
+                _privs, name
+            )
             return ret
 
         if __salt__["postgres.privileges_grant"](

@@ -30,7 +30,7 @@ class Batch:
 
                            The default is an empty dict.
 
-        :param bool quiet: Supress printing to stdout
+        :param bool quiet: Suppress printing to stdout
 
                            The default is False.
         """
@@ -241,9 +241,8 @@ class Batch:
                                 )
                             else:
                                 salt.utils.stringutils.print_cli(
-                                    "minion {} was already deleted from tracker, probably a duplicate key".format(
-                                        part["id"]
-                                    )
+                                    "minion {} was already deleted from tracker,"
+                                    " probably a duplicate key".format(part["id"])
                                 )
                         else:
                             parts.update(part)
@@ -252,9 +251,8 @@ class Batch:
                                     minion_tracker[queue]["minions"].remove(id)
                                 else:
                                     salt.utils.stringutils.print_cli(
-                                        "minion {} was already deleted from tracker, probably a duplicate key".format(
-                                            id
-                                        )
+                                        "minion {} was already deleted from tracker,"
+                                        " probably a duplicate key".format(id)
                                     )
                 except StopIteration:
                     # if a iterator is done:

@@ -68,7 +68,8 @@ def __virtual__():
     if salt.utils.systemd.booted(__context__):
         return (
             False,
-            "The upstart execution module failed to load: this system was booted with systemd.",
+            "The upstart execution module failed to load: this system was booted with"
+            " systemd.",
         )
     elif __grains__["os"] in ("Ubuntu", "Linaro", "elementary OS", "Mint"):
         return __virtualname__

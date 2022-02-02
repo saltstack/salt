@@ -55,10 +55,13 @@ def ping():
     """
     try:
         response = salt.utils.http.query(
-            "{}/ping".format(CONFIG[CONFIG_BASE_URL]), decode_type="plain", decode=True,
+            "{}/ping".format(CONFIG[CONFIG_BASE_URL]),
+            decode_type="plain",
+            decode=True,
         )
         log.debug(
-            "marathon.info returned successfully: %s", response,
+            "marathon.info returned successfully: %s",
+            response,
         )
         if "text" in response and response["text"].strip() == "pong":
             return True

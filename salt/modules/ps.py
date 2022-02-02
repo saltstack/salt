@@ -44,9 +44,8 @@ def __virtual__():
         return True
     return (
         False,
-        "The ps execution module cannot be loaded: the psutil python module version {} is less than 0.3.0".format(
-            psutil.version_info
-        ),
+        "The ps execution module cannot be loaded: the psutil python module version {}"
+        " is less than 0.3.0".format(psutil.version_info),
     )
 
 

@@ -147,7 +147,7 @@ def cluster_remove(version, name="main", stop=False):
     if ret.get("retcode", 0) != 0:
         log.error("Error removing a Postgresql cluster %s/%s", version, name)
     else:
-        ret["changes"] = ("Successfully removed" " cluster {}/{}").format(version, name)
+        ret["changes"] = "Successfully removed cluster {}/{}".format(version, name)
     return ret
 
 

@@ -72,11 +72,20 @@ def test_present():
         ret.update(
             {
                 "result": True,
-                "comment": "Created GRE tunnel interface salt with remote ip 10.0.0.1  and key 1 on bridge br-salt.",
+                "comment": (
+                    "Created GRE tunnel interface salt with remote ip 10.0.0.1  and key"
+                    " 1 on bridge br-salt."
+                ),
                 "changes": {
                     "salt": {
-                        "new": "Created GRE tunnel interface salt with remote ip 10.0.0.1 and key 1 on bridge br-salt.",
-                        "old": "No GRE tunnel interface salt with remote ip 10.0.0.1 and key 1 on bridge br-salt present.",
+                        "new": (
+                            "Created GRE tunnel interface salt with remote ip 10.0.0.1"
+                            " and key 1 on bridge br-salt."
+                        ),
+                        "old": (
+                            "No GRE tunnel interface salt with remote ip 10.0.0.1 and"
+                            " key 1 on bridge br-salt present."
+                        ),
                     },
                 },
             }

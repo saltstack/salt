@@ -101,7 +101,7 @@ class GetProfileManagerTestCase(TestCase):
             salt.utils.pbm.get_profile_manager(self.mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_profile_manager_raises_vim_fault(self):
@@ -189,7 +189,7 @@ class GetPlacementSolverTestCase(TestCase):
             salt.utils.pbm.get_placement_solver(self.mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_placement_solver_raises_vim_fault(self):
@@ -259,7 +259,7 @@ class GetCapabilityDefinitionsTestCase(TestCase):
             salt.utils.pbm.get_capability_definitions(self.mock_prof_mgr)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_fetch_capabilities_raises_vim_fault(self):
@@ -310,7 +310,7 @@ class GetPoliciesByIdTestCase(TestCase):
             salt.utils.pbm.get_policies_by_id(self.mock_prof_mgr, self.policy_ids)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_retrieve_policies_raises_vim_fault(self):
@@ -400,7 +400,7 @@ class GetStoragePoliciesTestCase(TestCase):
             salt.utils.pbm.get_storage_policies(self.mock_prof_mgr)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_retrieve_policy_ids_raises_vim_fault(self):
@@ -466,7 +466,7 @@ class CreateStoragePolicyTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_create_policy_raises_vim_fault(self):
@@ -521,7 +521,7 @@ class UpdateStoragePolicyTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_create_policy_raises_vim_fault(self):
@@ -610,7 +610,7 @@ class GetDefaultStoragePolicyOfDatastoreTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_query_default_requirement_profile_raises_vim_fault(self):
@@ -652,7 +652,7 @@ class GetDefaultStoragePolicyOfDatastoreTestCase(TestCase):
                 )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Storage policy with id 'fake_policy_id' was not " "found",
+            "Storage policy with id 'fake_policy_id' was not found",
         )
 
     def test_return_policy_ref(self):
@@ -717,7 +717,7 @@ class AssignDefaultStoragePolicyToDatastoreTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_assign_default_requirement_profile_raises_vim_fault(self):

@@ -92,7 +92,7 @@ def _get_blade():
     2) From environment (PUREFB_IP and PUREFB_API)
     3) From the pillar (PUREFB_IP and PUREFB_API)
 
-  """
+    """
 
     try:
         blade_name = __opts__["pure_tags"]["fb"].get("san_ip")

@@ -19,7 +19,6 @@ from salt._logging.mixins import LoggingGarbageMixin as LoggingGarbageMixIn
 from salt._logging.mixins import LoggingMixinMeta as LoggingMixInMeta
 from salt._logging.mixins import LoggingProfileMixin as LoggingProfileMixIn
 from salt._logging.mixins import LoggingTraceMixin as LoggingTraceMixIn
-from salt._logging.mixins import NewStyleClassMixin as NewStyleClassMixIn
 
 # pylint: enable=unused-import
 # from salt.utils.versions import warn_until_date

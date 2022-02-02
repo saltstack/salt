@@ -70,8 +70,7 @@ def test_installed_cache_fail(kb):
         returned = wusa.installed(name=kb, source="salt://{}.msu".format(kb))
         expected = {
             "changes": {},
-            "comment": "Unable to cache salt://{}.msu from "
-            'saltenv "base"'.format(kb),
+            "comment": 'Unable to cache salt://{}.msu from saltenv "base"'.format(kb),
             "name": kb,
             "result": False,
         }

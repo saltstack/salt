@@ -179,8 +179,9 @@ class StateFactory:
     def __getattr__(self, func):
         if self.valid_funcs and func not in self.valid_funcs:
             raise InvalidFunction(
-                "The function '{}' does not exist in the "
-                "StateFactory for '{}'".format(func, self.module)
+                "The function '{}' does not exist in the StateFactory for '{}'".format(
+                    func, self.module
+                )
             )
 
         def make_state(id_, **kwargs):

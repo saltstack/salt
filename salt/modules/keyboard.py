@@ -24,7 +24,8 @@ def __virtual__():
     return (
         False,
         "The keyboard exeuction module cannot be loaded: "
-        "only works on Redhat, Debian or Gentoo systems or if localectl binary in path.",
+        "only works on Redhat, Debian or Gentoo systems or if localectl binary in"
+        " path.",
     )
 
 

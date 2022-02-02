@@ -167,7 +167,10 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 
         ret.update(
             {
-                "comment": "States ran successfully. No changes made to minion1, minion3, minion2."
+                "comment": (
+                    "States ran successfully. No changes made to minion1, minion3,"
+                    " minion2."
+                )
             }
         )
         del ret["__jid__"]
@@ -203,7 +206,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
             "name": name,
             "changes": {},
             "result": None,
-            "comment": "Function state would be executed " "on target {}".format(tgt),
+            "comment": "Function state would be executed on target {}".format(tgt),
         }
 
         with patch.dict(saltmod.__opts__, {"test": True}):
@@ -213,8 +216,9 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
             {
                 "result": True,
                 "changes": {"out": "highstate", "ret": {tgt: ""}},
-                "comment": "Function ran successfully."
-                " Function state ran on {}.".format(tgt),
+                "comment": (
+                    "Function ran successfully. Function state ran on {}.".format(tgt)
+                ),
             }
         )
         with patch.dict(saltmod.__opts__, {"test": False}):
@@ -348,7 +352,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
     @pytest.mark.slow_test
     def test_state_ssh(self):
         """
-        Test saltmod passes roster to saltutil.cmd
+        Test saltmod state passes roster to saltutil.cmd
         """
         origcmd = saltmod.__salt__["saltutil.cmd"]
         cmd_kwargs = {}
@@ -363,6 +367,27 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
             ret = saltmod.state(
                 "state.sls", tgt="*", ssh=True, highstate=True, roster="my_roster"
             )
+        assert "roster" in cmd_kwargs
+        assert cmd_kwargs["roster"] == "my_roster"
+
+    @pytest.mark.slow_test
+    def test_function_ssh(self):
+        """
+        Test saltmod function passes roster to saltutil.cmd
+        """
+        origcmd = saltmod.__salt__["saltutil.cmd"]
+        cmd_kwargs = {}
+        cmd_args = []
+
+        def cmd_mock(*args, **kwargs):
+            cmd_args.extend(args)
+            cmd_kwargs.update(kwargs)
+            return origcmd(*args, **kwargs)
+
+        with patch.dict(saltmod.__opts__, {"test": False}), patch.dict(
+            saltmod.__salt__, {"saltutil.cmd": cmd_mock}
+        ):
+            saltmod.function("state", tgt="*", ssh=True, roster="my_roster")
         assert "roster" in cmd_kwargs
         assert cmd_kwargs["roster"] == "my_roster"
 
@@ -386,9 +411,9 @@ class StatemodTests(TestCase, LoaderModuleMockMixin):
         }
 
     def test_statemod_state(self):
-        """ Smoke test for for salt.states.statemod.state().  Ensures that we
-            don't take an exception if optional parameters are not specified in
-            __opts__ or __env__.
+        """Smoke test for for salt.states.statemod.state().  Ensures that we
+        don't take an exception if optional parameters are not specified in
+        __opts__ or __env__.
         """
         args = ("webserver_setup", "webserver2")
         kwargs = {

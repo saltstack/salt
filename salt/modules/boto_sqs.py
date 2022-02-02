@@ -118,7 +118,12 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
 
 
 def create(
-    name, attributes=None, region=None, key=None, keyid=None, profile=None,
+    name,
+    attributes=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
 ):
     """
     Create an SQS queue.
@@ -210,7 +215,12 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
 
 
 def set_attributes(
-    name, attributes, region=None, key=None, keyid=None, profile=None,
+    name,
+    attributes,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
 ):
     """
     Set attributes on an SQS queue.

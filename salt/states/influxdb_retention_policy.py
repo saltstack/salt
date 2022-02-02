@@ -142,9 +142,9 @@ def absent(name, database, **client_args):
     if __salt__["influxdb.retention_policy_exists"](database, name, **client_args):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = (
-                "retention policy {} is present and needs to be removed"
-            ).format(name)
+            ret[
+                "comment"
+            ] = "retention policy {} is present and needs to be removed".format(name)
             return ret
         if __salt__["influxdb.drop_retention_policy"](database, name, **client_args):
             ret["comment"] = "retention policy {} has been removed".format(name)

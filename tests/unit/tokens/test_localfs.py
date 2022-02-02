@@ -53,9 +53,10 @@ class TestLocalFS(TestCase):
     @with_tempdir()
     def test_get_token_should_return_token_if_exists(self, tempdir):
         opts = {"token_dir": tempdir}
-        tok = salt.tokens.localfs.mk_token(opts=opts, tdata=self.expected_data,)[
-            "token"
-        ]
+        tok = salt.tokens.localfs.mk_token(
+            opts=opts,
+            tdata=self.expected_data,
+        )["token"]
         actual_data = salt.tokens.localfs.get_token(opts=opts, tok=tok)
         self.assertDictEqual(self.expected_data, actual_data)
 
@@ -64,9 +65,10 @@ class TestLocalFS(TestCase):
         self, tempdir
     ):
         opts = {"token_dir": tempdir}
-        tok = salt.tokens.localfs.mk_token(opts=opts, tdata=self.expected_data,)[
-            "token"
-        ]
+        tok = salt.tokens.localfs.mk_token(
+            opts=opts,
+            tdata=self.expected_data,
+        )["token"]
         with salt.utils.files.fopen(os.path.join(tempdir, tok), "w") as f:
             f.truncate()
         with self.assertRaises(salt.exceptions.SaltDeserializationError) as e:
@@ -77,9 +79,10 @@ class TestLocalFS(TestCase):
         self, tempdir
     ):
         opts = {"token_dir": tempdir}
-        tok = salt.tokens.localfs.mk_token(opts=opts, tdata=self.expected_data,)[
-            "token"
-        ]
+        tok = salt.tokens.localfs.mk_token(
+            opts=opts,
+            tdata=self.expected_data,
+        )["token"]
         with salt.utils.files.fopen(os.path.join(tempdir, tok), "w") as f:
             f.truncate()
             f.write("this is not valid msgpack data")

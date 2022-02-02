@@ -33,7 +33,8 @@ def __virtual__():
     if not salt.utils.path.which("mdadm"):
         return (
             False,
-            "The mdadm execution module cannot be loaded: the mdadm binary is not in the path.",
+            "The mdadm execution module cannot be loaded: the mdadm binary is not in"
+            " the path.",
         )
     return __virtualname__
 

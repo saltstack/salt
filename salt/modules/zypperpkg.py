@@ -83,12 +83,19 @@ class _Zypper:
     WARNING_EXIT_CODES = {
         6: "No repositories are defined.",
         7: "The ZYPP library is locked.",
-        106: "Some repository had to be disabled temporarily because it failed to refresh. "
-        "You should check your repository configuration (e.g. zypper ref -f).",
-        107: "Installation basically succeeded, but some of the packages %post install scripts returned an error. "
-        "These packages were successfully unpacked to disk and are registered in the rpm database, "
-        "but due to the failed install script they may not work as expected. The failed scripts output might "
-        "reveal what actually went wrong. Any scripts output is also logged to /var/log/zypp/history.",
+        106: (
+            "Some repository had to be disabled temporarily because it failed to"
+            " refresh. You should check your repository configuration (e.g. zypper ref"
+            " -f)."
+        ),
+        107: (
+            "Installation basically succeeded, but some of the packages %post install"
+            " scripts returned an error. These packages were successfully unpacked to"
+            " disk and are registered in the rpm database, but due to the failed"
+            " install script they may not work as expected. The failed scripts output"
+            " might reveal what actually went wrong. Any scripts output is also logged"
+            " to /var/log/zypp/history."
+        ),
     }
 
     LOCK_EXIT_CODE = 7
@@ -306,7 +313,9 @@ class _Zypper:
         if self.__no_lock:
             kwargs["env"][
                 "ZYPP_READONLY_HACK"
-            ] = "1"  # Disables locking for read-only operations. Do not try that at home!
+            ] = (  # Disables locking for read-only operations. Do not try that at home!
+                "1"
+            )
 
         # Zypper call will stuck here waiting, if another zypper hangs until forever.
         # However, Zypper lock needs to be always respected.
@@ -337,8 +346,10 @@ class _Zypper:
                         data["success"] = True
                 except Exception as err:  # pylint: disable=broad-except
                     data = {
-                        "info": "Unable to retrieve information about blocking process: {}".format(
-                            err.message
+                        "info": (
+                            "Unable to retrieve information about blocking process: {}".format(
+                                err.message
+                            )
                         ),
                         "success": False,
                     }
@@ -424,10 +435,8 @@ class Wildcard:
             self.name = pkg_name
             self._set_version(pkg_version)  # Dissects possible operator
             versions = sorted(
-                [
-                    LooseVersion(vrs)
-                    for vrs in self._get_scope_versions(self._get_available_versions())
-                ]
+                LooseVersion(vrs)
+                for vrs in self._get_scope_versions(self._get_available_versions())
             )
             return versions and "{}{}".format(self._op or "", versions[-1]) or None
 
@@ -1069,7 +1078,7 @@ def list_repo_pkgs(*args, **kwargs):
             # Sort versions newest to oldest
             for pkgname in ret[reponame]:
                 sorted_versions = sorted(
-                    [LooseVersion(x) for x in ret[reponame][pkgname]], reverse=True
+                    (LooseVersion(x) for x in ret[reponame][pkgname]), reverse=True
                 )
                 ret[reponame][pkgname] = [x.vstring for x in sorted_versions]
         return ret
@@ -1080,7 +1089,7 @@ def list_repo_pkgs(*args, **kwargs):
                 byrepo_ret.setdefault(pkgname, []).extend(ret[reponame][pkgname])
         for pkgname in byrepo_ret:
             sorted_versions = sorted(
-                [LooseVersion(x) for x in byrepo_ret[pkgname]], reverse=True
+                (LooseVersion(x) for x in byrepo_ret[pkgname]), reverse=True
             )
             byrepo_ret[pkgname] = [x.vstring for x in sorted_versions]
         return byrepo_ret
@@ -2036,7 +2045,7 @@ def list_locks(root=None):
                 for element in [el for el in meta if el]:
                     if ":" in element:
                         lock.update(
-                            dict([tuple([i.strip() for i in element.split(":", 1)])])
+                            dict([tuple(i.strip() for i in element.split(":", 1))])
                         )
                 if lock.get("solvable_name"):
                     locks[lock.pop("solvable_name")] = lock
@@ -2090,7 +2099,6 @@ def unhold(name=None, pkgs=None, **kwargs):
     pkgs
         A list of packages to unhold.  The ``name`` parameter will be ignored if
         this option is passed.
-
 
     CLI Example:
 
@@ -2189,7 +2197,6 @@ def hold(name=None, pkgs=None, **kwargs):
     pkgs
         A list of packages to hold.  The ``name`` parameter will be ignored if
         this option is passed.
-
 
     CLI Example:
 

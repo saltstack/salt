@@ -118,6 +118,16 @@ class SSHHighState(salt.state.BaseHighState):
                 )
         return ret
 
+    def destroy(self):
+        if self.client:
+            self.client.destroy()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.destroy()
+
 
 def lowstate_file_refs(chunks, extras=""):
     """
@@ -236,7 +246,7 @@ def prep_trans_tar(
                         fn = filename[
                             len(file_client.get_cachedir(cache_dest)) :
                         ].strip("/")
-                        tgt = os.path.join(env_root, short, fn,)
+                        tgt = os.path.join(env_root, short, fn)
                         tgt_dir = os.path.dirname(tgt)
                         if not os.path.isdir(tgt_dir):
                             os.makedirs(tgt_dir)

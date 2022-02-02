@@ -76,8 +76,7 @@ def __virtual__():
     else:
         return (
             False,
-            "The netacl state cannot be loaded: \
-                Please install capirca and napalm.",
+            "The netacl state cannot be loaded: Please install capirca and napalm.",
         )
 
 

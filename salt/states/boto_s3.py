@@ -187,12 +187,18 @@ def object_present(
         digest = salt.utils.hashutils.get_hash(source, form=hash_type)
     except OSError as e:
         ret["result"] = False
-        ret["comment"] = "Could not read local file {}: {}".format(source, e,)
+        ret["comment"] = "Could not read local file {}: {}".format(
+            source,
+            e,
+        )
         return ret
     except ValueError as e:
         # Invalid hash type exception from get_hash
         ret["result"] = False
-        ret["comment"] = "Could not hash local file {}: {}".format(source, e,)
+        ret["comment"] = "Could not hash local file {}: {}".format(
+            source,
+            e,
+        )
         return ret
 
     HASH_METADATA_KEY = "salt_managed_content_hash"
@@ -203,8 +209,10 @@ def object_present(
             ret["result"] = False
             ret["comment"] = (
                 "Salt uses the {} metadata key internally,"
-                "do not pass it to the boto_s3.object_present state."
-            ).format(HASH_METADATA_KEY)
+                "do not pass it to the boto_s3.object_present state.".format(
+                    HASH_METADATA_KEY
+                )
+            )
             return ret
     combined_extra_args["Metadata"][HASH_METADATA_KEY] = digest
     # Remove upload-only keys from full set of extra_args
@@ -227,7 +235,9 @@ def object_present(
     )
     if "error" in r:
         ret["result"] = False
-        ret["comment"] = "Failed to check if S3 object exists: {}.".format(r["error"],)
+        ret["comment"] = "Failed to check if S3 object exists: {}.".format(
+            r["error"],
+        )
         return ret
 
     if r["result"]:
@@ -284,7 +294,10 @@ def object_present(
 
     if "error" in r:
         ret["result"] = False
-        ret["comment"] = "Failed to {} S3 object: {}.".format(action, r["error"],)
+        ret["comment"] = "Failed to {} S3 object: {}.".format(
+            action,
+            r["error"],
+        )
         return ret
 
     ret["result"] = True

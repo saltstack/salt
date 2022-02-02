@@ -31,7 +31,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The glanceng execution module failed to load: shade python module is not available",
+        "The glanceng execution module failed to load: shade python module is not"
+        " available",
     )
 
 

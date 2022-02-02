@@ -22,8 +22,10 @@ def test_jid_in_logs(caplog, salt_call_cli):
             assert ret.exitcode == 0
             assert ret.json is True
 
-            assert_error_msg = "'{}' not found in log messages:\n>>>>>>>>>{}\n<<<<<<<<<".format(
-                jid_formatted_str, caplog.text
+            assert_error_msg = (
+                "'{}' not found in log messages:\n>>>>>>>>>{}\n<<<<<<<<<".format(
+                    jid_formatted_str, caplog.text
+                )
             )
             assert jid_formatted_str in caplog.text, assert_error_msg
         finally:

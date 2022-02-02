@@ -20,7 +20,8 @@ def __virtual__():
         return True
     return (
         False,
-        "The monit execution module cannot be loaded: the monit binary is not in the path.",
+        "The monit execution module cannot be loaded: the monit binary is not in the"
+        " path.",
     )
 
 

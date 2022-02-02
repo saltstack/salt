@@ -478,7 +478,10 @@ def managed(
         ret.update(
             {
                 "result": False,
-                "comment": "Cannot remove everything. To allow this, please set the option `allow_empty` as True.",
+                "comment": (
+                    "Cannot remove everything. To allow this, please set the option"
+                    " `allow_empty` as True."
+                ),
             }
         )
         return ret
@@ -504,7 +507,10 @@ def managed(
         ret.update(
             {
                 "result": False,
-                "comment": "Cannot remove everything. To allow this, please set the option `allow_empty` as True.",
+                "comment": (
+                    "Cannot remove everything. To allow this, please set the option"
+                    " `allow_empty` as True."
+                ),
             }
         )
         return ret

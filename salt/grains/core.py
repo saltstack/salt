@@ -40,7 +40,7 @@ import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.utils.network import _get_interfaces
+from salt.utils.network import _clear_interfaces, _get_interfaces
 
 
 # rewrite distro.linux_distribution to allow best=True kwarg in version(), needed to get the minor version numbers in CentOS
@@ -50,6 +50,10 @@ def _linux_distribution():
         distro.version(best=True),
         distro.codename(),
     )
+
+
+def __init__(opts):
+    _clear_interfaces()
 
 
 try:
@@ -77,7 +81,7 @@ if salt.utils.platform.is_windows():
         HAS_WMI = True
     except ImportError:
         log.exception(
-            "Unable to import Python wmi module, some core grains " "will be missing"
+            "Unable to import Python wmi module, some core grains will be missing"
         )
 
 
@@ -1058,7 +1062,8 @@ def _virtual(osdata):
                 # Some firmwares provide non-valid 'product_name'
                 # files, ignore them
                 log.debug(
-                    "The content in /sys/devices/virtual/dmi/id/product_name is not valid"
+                    "The content in /sys/devices/virtual/dmi/id/product_name is not"
+                    " valid"
                 )
             except OSError:
                 pass
@@ -1319,7 +1324,8 @@ def _clean_value(key, val):
     else:
         # map unspecified, undefined, unknown & whatever to None
         if re.search(r"to be filled", val, flags=re.IGNORECASE) or re.search(
-            r"un(known|specified)|no(t|ne)? (asset|provided|defined|available|present|specified)",
+            r"un(known|specified)|no(t|ne)?"
+            r" (asset|provided|defined|available|present|specified)",
             val,
             flags=re.IGNORECASE,
         ):
@@ -1769,15 +1775,15 @@ def _parse_cpe_name(cpe):
             ret["phase"] = cpe[5] if len(cpe) > 5 else None
             ret["part"] = part.get(cpe[1][1:])
         elif len(cpe) == 6 and cpe[1] == "2.3":  # WFN to a string
-            ret["vendor"], ret["product"], ret["version"] = [
+            ret["vendor"], ret["product"], ret["version"] = (
                 x if x != "*" else None for x in cpe[3:6]
-            ]
+            )
             ret["phase"] = None
             ret["part"] = part.get(cpe[2])
         elif len(cpe) > 7 and len(cpe) <= 13 and cpe[1] == "2.3":  # WFN to a string
-            ret["vendor"], ret["product"], ret["version"], ret["phase"] = [
+            ret["vendor"], ret["product"], ret["version"], ret["phase"] = (
                 x if x != "*" else None for x in cpe[3:7]
-            ]
+            )
             ret["part"] = part.get(cpe[2])
 
     return ret
@@ -2097,9 +2103,9 @@ def os_data():
         log.trace(
             "Getting OS name, release, and codename from distro id, version, codename"
         )
-        (osname, osrelease, oscodename) = [
+        (osname, osrelease, oscodename) = (
             x.strip('"').strip("'") for x in _linux_distribution()
-        ]
+        )
         # Try to assign these three names based on the lsb info, they tend to
         # be more accurate than what python gets from /etc/DISTRO-release.
         # It's worth noting that Ubuntu has patched their Python distribution
@@ -2389,7 +2395,8 @@ def hostname():
     # Otherwise we would stacktrace below
     if __FQDN__ is None:  # still!
         log.error(
-            "Having trouble getting a hostname.  Does this machine have its hostname and domain set properly?"
+            "Having trouble getting a hostname.  Does this machine have its hostname"
+            " and domain set properly?"
         )
         __FQDN__ = "localhost.localdomain"
 
@@ -2748,7 +2755,8 @@ def _hw_data(osdata):
                     # Some firmwares provide non-valid 'product_name'
                     # files, ignore them
                     log.debug(
-                        "The content in /sys/devices/virtual/dmi/id/product_name is not valid"
+                        "The content in /sys/devices/virtual/dmi/id/product_name is not"
+                        " valid"
                     )
                 except OSError as err:
                     # PermissionError is new to Python 3, but corresponds to the EACESS and
@@ -3092,6 +3100,8 @@ def kernelparams():
                         value = data[1].strip('"')
 
                     grains["kernelparams"] += [(data[0], value)]
+        except FileNotFoundError:
+            grains = {}
         except OSError as exc:
             grains = {}
             log.debug("Failed to read /proc/cmdline: %s", exc)

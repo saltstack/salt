@@ -188,7 +188,8 @@ def _resolve_image(ret, image, client_timeout):
             # Image not pulled locally, so try pulling it
             try:
                 pull_result = __salt__["docker.pull"](
-                    image, client_timeout=client_timeout,
+                    image,
+                    client_timeout=client_timeout,
                 )
             except Exception as exc:  # pylint: disable=broad-except
                 raise CommandExecutionError("Failed to pull {}: {}".format(image, exc))
@@ -1843,7 +1844,9 @@ def running(
 
         if not skip_comparison:
             container_changes = __salt__["docker.compare_containers"](
-                name, temp_container_name, ignore="Hostname",
+                name,
+                temp_container_name,
+                ignore="Hostname",
             )
             if container_changes:
                 if _check_diff(container_changes):
@@ -2232,10 +2235,9 @@ def run(
             if remove is not None:
                 if not ignore_collisions:
                     ret["result"] = False
-                    ret["comment"] = (
-                        "'rm' is an alias for 'auto_remove', they cannot "
-                        "both be used"
-                    )
+                    ret[
+                        "comment"
+                    ] = "'rm' is an alias for 'auto_remove', they cannot both be used"
                     return ret
             else:
                 remove = bool(val)
@@ -2273,10 +2275,9 @@ def run(
                 pass
             else:
                 ret["result"] = False if failhard and retcode != 0 else True
-                ret["comment"] = (
-                    "Container ran and exited with a return code of "
-                    "{}".format(retcode)
-                )
+                ret[
+                    "comment"
+                ] = "Container ran and exited with a return code of {}".format(retcode)
 
     if remove:
         id_ = ret.get("changes", {}).get("Id")
@@ -2474,9 +2475,7 @@ def absent(name, force=False):
 
     pre_state = __salt__["docker.state"](name)
     if pre_state != "stopped" and not force:
-        ret["comment"] = (
-            "Container is running, set force to True to " "forcibly remove it"
-        )
+        ret["comment"] = "Container is running, set force to True to forcibly remove it"
         return ret
 
     if __opts__["test"]:

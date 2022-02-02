@@ -210,10 +210,9 @@ def min_party(
                 num_nodes, min_nodes
             )
         else:
-            ret[
-                "comment"
-            ] = "Blocked until {} nodes were available. Unblocked after {} nodes became available".format(
-                min_nodes, num_nodes
+            ret["comment"] = (
+                "Blocked until {} nodes were available. Unblocked after {} nodes became"
+                " available".format(min_nodes, num_nodes)
             )
     else:
         ret["result"] = False

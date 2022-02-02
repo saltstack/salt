@@ -151,7 +151,7 @@ class FunctionWrapper:
             # containing only 'cmd' module calls, in that case. We don't
             # support assigning directly to prefixes in this way
             raise KeyError(
-                "Cannot assign to module key {} in the " "FunctionWrapper".format(cmd)
+                "Cannot assign to module key {} in the FunctionWrapper".format(cmd)
             )
 
         if self.cmd_prefix:

@@ -431,7 +431,8 @@ def test_replace():
             assert result["changes"]["old"] == changes["old"]
             assert (
                 result["comment"]
-                == 'Successfully replaced all instances of "randomSNMPstringHERE" with "NEWrandoSNMPstringHERE"'
+                == 'Successfully replaced all instances of "randomSNMPstringHERE" with'
+                ' "NEWrandoSNMPstringHERE"'
             )
 
 

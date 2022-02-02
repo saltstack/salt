@@ -228,7 +228,7 @@ def install(feature, recurse=False, restart=False, source=None, exclude=None):
         command = "Install-WindowsFeature"
         management_tools = "-IncludeManagementTools"
 
-    cmd = "{} -Name {} {} {} {} " "-WarningAction SilentlyContinue".format(
+    cmd = "{} -Name {} {} {} {} -WarningAction SilentlyContinue".format(
         command,
         _cmd_quote(feature),
         management_tools,
@@ -372,7 +372,7 @@ def remove(feature, remove_payload=False, restart=False):
         if remove_payload:
             _remove_payload = "-Remove"
 
-    cmd = "{} -Name {} {} {} {} " "-WarningAction SilentlyContinue".format(
+    cmd = "{} -Name {} {} {} {} -WarningAction SilentlyContinue".format(
         command,
         _cmd_quote(feature),
         management_tools,

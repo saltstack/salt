@@ -274,9 +274,8 @@ class CloudTest(ShellCase):
                     self.assertDestroyInstance(instance_name)
                     return (
                         False,
-                        'The instance "{}" was deleted during the tearDown, not the test.'.format(
-                            instance_name
-                        ),
+                        'The instance "{}" was deleted during the tearDown, not the'
+                        " test.".format(instance_name),
                     )
                 except AssertionError as e:
                     log.error(

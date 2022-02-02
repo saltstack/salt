@@ -98,12 +98,14 @@ def _get_technologies():
     tech = ""
     technologies = pyconnman.ConnManager().get_technologies()
     for path, params in technologies:
-        tech += "{}\n\tName = {}\n\tType = {}\n\tPowered = {}\n\tConnected = {}\n".format(
-            path,
-            params["Name"],
-            params["Type"],
-            params["Powered"] == 1,
-            params["Connected"] == 1,
+        tech += (
+            "{}\n\tName = {}\n\tType = {}\n\tPowered = {}\n\tConnected = {}\n".format(
+                path,
+                params["Name"],
+                params["Type"],
+                params["Powered"] == 1,
+                params["Connected"] == 1,
+            )
         )
     return tech
 

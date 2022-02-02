@@ -232,7 +232,12 @@ def _new_serial(ca_name):
     """
     hashnum = int(
         binascii.hexlify(
-            b"_".join((salt.utils.stringutils.to_bytes(_microtime()), os.urandom(5),))
+            b"_".join(
+                (
+                    salt.utils.stringutils.to_bytes(_microtime()),
+                    os.urandom(5),
+                )
+            )
         ),
         16,
     )
@@ -336,7 +341,7 @@ def maybe_fix_ssl_version(ca_name, cacert_path=None, ca_filename=None):
     with salt.utils.files.fopen(certp) as fic:
         cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, fic.read())
         if cert.get_version() == 3:
-            log.info("Regenerating wrong x509 version " "for certificate %s", certp)
+            log.info("Regenerating wrong x509 version for certificate %s", certp)
             with salt.utils.files.fopen(ca_keyp) as fic2:
                 try:
                     # try to determine the key bits
@@ -750,8 +755,7 @@ def create_ca(
                 )
             except OpenSSL.crypto.Error as err:
                 log.warning(
-                    "Error loading existing private key"
-                    " %s, generating a new key: %s",
+                    "Error loading existing private key %s, generating a new key: %s",
                     ca_keyp,
                     err,
                 )
@@ -838,10 +842,10 @@ def create_ca(
 
     _write_cert_to_database(ca_name, ca)
 
-    ret = ('Created Private Key: "{}/{}/{}.key." ').format(
+    ret = 'Created Private Key: "{}/{}/{}.key." '.format(
         cert_base_path(), ca_name, ca_filename
     )
-    ret += ('Created CA "{0}": "{1}/{0}/{2}.crt."').format(
+    ret += 'Created CA "{0}": "{1}/{0}/{2}.crt."'.format(
         ca_name, cert_base_path(), ca_filename
     )
 
@@ -1067,9 +1071,9 @@ def create_csr(
         ca_filename = "{}_ca_cert".format(ca_name)
 
     if not ca_exists(ca_name, ca_filename=ca_filename):
-        return (
-            'Certificate for CA named "{}" does not exist, please create ' "it first."
-        ).format(ca_name)
+        return 'Certificate for CA named "{}" does not exist, please create it first.'.format(
+            ca_name
+        )
 
     if not csr_path:
         csr_path = "{}/{}/certs/".format(cert_base_path(), ca_name)
@@ -1432,7 +1436,7 @@ def create_ca_signed_cert(
     if type_ext:
         if not cert_type:
             log.error(
-                "type_ext = True but cert_type is unset. " "Certificate not written."
+                "type_ext = True but cert_type is unset. Certificate not written."
             )
             return ret
         elif cert_type:
@@ -1627,8 +1631,10 @@ def create_pkcs12(ca_name, CN, passphrase="", cacert_path=None, replace=False):
             pkcs12.export(passphrase=salt.utils.stringutils.to_bytes(passphrase))
         )
 
-    return ('Created PKCS#12 Certificate for "{0}": ' '"{1}/{2}/certs/{0}.p12"').format(
-        CN, cert_base_path(), ca_name,
+    return 'Created PKCS#12 Certificate for "{0}": "{1}/{2}/certs/{0}.p12"'.format(
+        CN,
+        cert_base_path(),
+        ca_name,
     )
 
 
@@ -1711,7 +1717,7 @@ def cert_info(cert, digest="sha256"):
             entry, name = name.split(":", 1)
             if entry not in valid_entries:
                 log.error(
-                    "Cert %s has an entry (%s) which does not start " "with %s",
+                    "Cert %s has an entry (%s) which does not start with %s",
                     ret["subject"],
                     name,
                     "/".join(valid_entries),
@@ -1797,7 +1803,9 @@ def create_empty_crl(
 
     crl = OpenSSL.crypto.CRL()
     crl_text = crl.export(
-        ca_cert, ca_key, digest=salt.utils.stringutils.to_bytes(digest),
+        ca_cert,
+        ca_key,
+        digest=salt.utils.stringutils.to_bytes(digest),
     )
 
     with salt.utils.files.fopen(crl_file, "w") as f:
@@ -1913,14 +1921,15 @@ def revoke_cert(
                 revoke_date = line.split("\t")[2]
                 try:
                     datetime.strptime(revoke_date, two_digit_year_fmt)
-                    return (
-                        '"{}/{}.crt" was already revoked, ' "serial number: {}"
-                    ).format(cert_path, cert_filename, serial_number)
+                    return '"{}/{}.crt" was already revoked, serial number: {}'.format(
+                        cert_path, cert_filename, serial_number
+                    )
                 except ValueError:
                     ret["retcode"] = 1
-                    ret["comment"] = (
-                        "Revocation date '{}' does not match"
-                        "format '{}'".format(revoke_date, two_digit_year_fmt)
+                    ret[
+                        "comment"
+                    ] = "Revocation date '{}' does not matchformat '{}'".format(
+                        revoke_date, two_digit_year_fmt
                     )
                     return ret
             elif index_serial_subject in line:
@@ -1961,7 +1970,7 @@ def revoke_cert(
     with salt.utils.files.fopen(crl_file, "w") as fp_:
         fp_.write(salt.utils.stringutils.to_str(crl_text))
 
-    return ('Revoked Certificate: "{}/{}.crt", ' "serial number: {}").format(
+    return 'Revoked Certificate: "{}/{}.crt", serial number: {}'.format(
         cert_path, cert_filename, serial_number
     )
 

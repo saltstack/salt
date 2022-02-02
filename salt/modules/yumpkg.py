@@ -1010,7 +1010,7 @@ def list_repo_pkgs(*args, **kwargs):
             # Sort versions newest to oldest
             for pkgname in ret[reponame]:
                 sorted_versions = sorted(
-                    [_LooseVersion(x) for x in ret[reponame][pkgname]], reverse=True
+                    (_LooseVersion(x) for x in ret[reponame][pkgname]), reverse=True
                 )
                 ret[reponame][pkgname] = [x.vstring for x in sorted_versions]
         return ret
@@ -1021,7 +1021,7 @@ def list_repo_pkgs(*args, **kwargs):
                 byrepo_ret.setdefault(pkgname, []).extend(ret[reponame][pkgname])
         for pkgname in byrepo_ret:
             sorted_versions = sorted(
-                [_LooseVersion(x) for x in byrepo_ret[pkgname]], reverse=True
+                (_LooseVersion(x) for x in byrepo_ret[pkgname]), reverse=True
             )
             byrepo_ret[pkgname] = [x.vstring for x in sorted_versions]
         return byrepo_ret
@@ -2043,6 +2043,8 @@ def update(
     See :py:func:`pkg.upgrade <salt.modules.yumpkg.upgrade>` for
     further documentation.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' pkg.update
@@ -2120,12 +2122,11 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
 
     for target in pkg_params:
         version_to_remove = pkg_params[target]
-        installed_versions = old[target].split(",")
 
         # Check if package version set to be removed is actually installed:
         if target in old and not version_to_remove:
             targets.append(target)
-        elif target in old and version_to_remove in installed_versions:
+        elif target in old and version_to_remove in old[target].split(","):
             arch = ""
             pkgname = target
             try:
@@ -2565,7 +2566,7 @@ def group_info(name, expand=False, ignore_groups=None):
     g_info = {}
     for line in salt.utils.itertools.split(out, "\n"):
         try:
-            key, value = [x.strip() for x in line.split(":")]
+            key, value = (x.strip() for x in line.split(":"))
             g_info[key.lower()] = value
         except ValueError:
             continue
@@ -3433,7 +3434,6 @@ def services_need_restart(**kwargs):
     package manager. It might be needed to restart them.
 
     Requires systemd.
-
 
     CLI Examples:
 

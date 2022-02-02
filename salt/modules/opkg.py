@@ -909,14 +909,14 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
             else:
                 result = _set_state(target, "ok")
                 ret[target].update(changes=result[target], result=True)
-                ret[target][
-                    "comment"
-                ] = "Package {} is no longer being " "held.".format(target)
+                ret[target]["comment"] = "Package {} is no longer being held.".format(
+                    target
+                )
         else:
             ret[target].update(result=True)
-            ret[target][
-                "comment"
-            ] = "Package {} is already set not to be " "held.".format(target)
+            ret[target]["comment"] = "Package {} is already set not to be held.".format(
+                target
+            )
     return ret
 
 
@@ -1237,8 +1237,9 @@ def version_cmp(
         cmd_compare = ["opkg-compare-versions"]
     else:
         log.warning(
-            "Unable to find a compare-versions utility installed. Either upgrade opkg to "
-            "version > 0.3.4 (preferred) or install the older opkg-compare-versions script."
+            "Unable to find a compare-versions utility installed. Either upgrade opkg"
+            " to version > 0.3.4 (preferred) or install the older opkg-compare-versions"
+            " script."
         )
         return None
 

@@ -137,7 +137,7 @@ def freeze(name=None, force=False, **kwargs):
 
     if status(name) and not force:
         raise CommandExecutionError(
-            "The state is already present. Use " "force parameter to overwrite."
+            "The state is already present. Use force parameter to overwrite."
         )
     safe_kwargs = clean_kwargs(**kwargs)
     pkgs = __salt__["pkg.list_pkgs"](**safe_kwargs)

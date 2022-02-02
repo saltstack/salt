@@ -119,9 +119,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(
                 grains.__grains__, {"a": "aval", "foo": {"is": {"nested": "bar"}}}
             )
-            self.assertGrainFileContent(
-                "a: aval\n" "foo:\n" "  is:\n" "    nested: bar\n"
-            )
+            self.assertGrainFileContent("a: aval\nfoo:\n  is:\n    nested: bar\n")
 
         # Set a non existing nested dict grain
         with self.setGrains({"a": "aval"}):
@@ -234,7 +232,8 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(ret["changes"], {})
             self.assertEqual(
                 ret["comment"],
-                "The key 'foo:is' exists but is a dict or a list. Use 'force=True' to overwrite.",
+                "The key 'foo:is' exists but is a dict or a list. Use 'force=True' to"
+                " overwrite.",
             )
             self.assertEqual(
                 grains.__grains__, {"a": "aval", "foo": {"is": {"nested": "val"}}}
@@ -247,7 +246,8 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(ret["changes"], {})
             self.assertEqual(
                 ret["comment"],
-                "The key 'foo:is' exists but is a dict or a list. Use 'force=True' to overwrite.",
+                "The key 'foo:is' exists but is a dict or a list. Use 'force=True' to"
+                " overwrite.",
             )
             self.assertEqual(
                 grains.__grains__, {"a": "aval", "foo": {"is": {"nested": "val"}}}
@@ -564,7 +564,8 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(ret["result"], False)
             self.assertEqual(
                 ret["comment"],
-                "The key 'foo:is' exists but is a dict or a list. Use 'force=True' to overwrite.",
+                "The key 'foo:is' exists but is a dict or a list. Use 'force=True' to"
+                " overwrite.",
             )
             self.assertEqual(ret["changes"], {})
             self.assertEqual(

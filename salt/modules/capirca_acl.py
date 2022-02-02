@@ -255,7 +255,8 @@ def _get_services_mapping():
                 log.error("Did not read that properly:")
                 log.error(line)
                 log.error(
-                    "Please report the above error: %s does not seem a valid port value!",
+                    "Please report the above error: %s does not seem a valid port"
+                    " value!",
                     port,
                 )
             _SERVICES[srv_name]["protocol"].append(protocol)
@@ -372,7 +373,8 @@ def _clean_term_opts(term_opts):
                         clean_opts, "protocol", _services[service]["protocol"]
                     )
             log.debug(
-                "Built source_port field, after processing special destination services:"
+                "Built source_port field, after processing special destination"
+                " services:"
             )
             log.debug(clean_opts.get("destination_service"))
             log.debug(

@@ -136,10 +136,10 @@ def _check_min_max(absolute, free, available, used, maximum, minimum, ret):
                 return ret
         else:
             if used < minimum:
-                ret["comment"] = (
-                    "Disk used space is below minimum"
-                    " of {0} {2} at {1} {2}"
-                    "".format(minimum, used, unit)
+                ret[
+                    "comment"
+                ] = "Disk used space is below minimum of {0} {2} at {1} {2}".format(
+                    minimum, used, unit
                 )
                 return ret
     if maximum is not None:
@@ -153,10 +153,10 @@ def _check_min_max(absolute, free, available, used, maximum, minimum, ret):
                 return ret
         else:
             if used > maximum:
-                ret["comment"] = (
-                    "Disk used space is above maximum"
-                    " of {0} {2} at {1} {2}"
-                    "".format(maximum, used, unit)
+                ret[
+                    "comment"
+                ] = "Disk used space is above maximum of {0} {2} at {1} {2}".format(
+                    maximum, used, unit
                 )
                 return ret
     ret["comment"] = "Disk used space in acceptable range"

@@ -67,10 +67,9 @@ def present(
         name
     )
     comments["changes_port_internal"] = {"internal": {"old": False, "new": True}}
-    comments[
-        "comment_port_internal_not_changed"
-    ] = "Port {} already exists, but the interface type could not be changed to internal.".format(
-        name
+    comments["comment_port_internal_not_changed"] = (
+        "Port {} already exists, but the interface type could not be changed to"
+        " internal.".format(name)
     )
 
     if tunnel_type:
@@ -90,16 +89,21 @@ def present(
             ] = "Created port {} with access to VLAN {} on bridge {}.".format(
                 name, id, bridge
             )
-            comments["comment_vlan_notcreated"] = (
-                "Unable to create port {} with access to VLAN {} on "
-                "bridge {}.".format(name, id, bridge)
+            comments[
+                "comment_vlan_notcreated"
+            ] = "Unable to create port {} with access to VLAN {} on bridge {}.".format(
+                name, id, bridge
             )
             comments["changes_vlan_created"] = {
                 name: {
-                    "old": "No port named {} with access to VLAN {} present on "
-                    "bridge {} present.".format(name, id, bridge),
-                    "new": "Created port {1} with access to VLAN {2} on "
-                    "bridge {0}.".format(bridge, name, id),
+                    "old": (
+                        "No port named {} with access to VLAN {} present on "
+                        "bridge {} present.".format(name, id, bridge)
+                    ),
+                    "new": (
+                        "Created port {1} with access to VLAN {2} on "
+                        "bridge {0}.".format(bridge, name, id)
+                    ),
                 }
             }
 
@@ -121,10 +125,14 @@ def present(
             )
             comments["changes_gre_created"] = {
                 name: {
-                    "old": "No GRE tunnel interface {} with remote ip {} and key {} "
-                    "on bridge {} present.".format(name, remote, id, bridge),
-                    "new": "Created GRE tunnel interface {} with remote ip {} and key {} "
-                    "on bridge {}.".format(name, remote, id, bridge),
+                    "old": (
+                        "No GRE tunnel interface {} with remote ip {} and key {} "
+                        "on bridge {} present.".format(name, remote, id, bridge)
+                    ),
+                    "new": (
+                        "Created GRE tunnel interface {} with remote ip {} and key {} "
+                        "on bridge {}.".format(name, remote, id, bridge)
+                    ),
                 }
             }
         elif tunnel_type == "vxlan":
@@ -147,20 +155,24 @@ def present(
                 )
             )
             comments["comment_vxlan_notcreated"] = (
-                "Unable to create VXLAN tunnel interface {} with remote ip {} and key {} "
-                "on bridge {}{}.".format(
+                "Unable to create VXLAN tunnel interface {} with remote ip {} and key"
+                " {} on bridge {}{}.".format(
                     name, remote, id, bridge, comments["comment_dstport"]
                 )
             )
             comments["changes_vxlan_created"] = {
                 name: {
-                    "old": "No VXLAN tunnel interface {} with remote ip {} and key {} "
-                    "on bridge {}{} present.".format(
-                        name, remote, id, bridge, comments["comment_dstport"]
+                    "old": (
+                        "No VXLAN tunnel interface {} with remote ip {} and key {} "
+                        "on bridge {}{} present.".format(
+                            name, remote, id, bridge, comments["comment_dstport"]
+                        )
                     ),
-                    "new": "Created VXLAN tunnel interface {} with remote ip {} and key {} "
-                    "on bridge {}{}.".format(
-                        name, remote, id, bridge, comments["comment_dstport"]
+                    "new": (
+                        "Created VXLAN tunnel interface {} with remote ip {} and key {}"
+                        " on bridge {}{}.".format(
+                            name, remote, id, bridge, comments["comment_dstport"]
+                        )
                     ),
                 }
             }

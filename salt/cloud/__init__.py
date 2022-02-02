@@ -559,8 +559,7 @@ class Cloud:
 
         if not providers:
             raise SaltCloudSystemExit(
-                "No cloud providers matched '{}'. "
-                "Available selections: {}".format(
+                "No cloud providers matched '{}'. Available selections: {}".format(
                     lookup, ", ".join(self.get_configured_providers())
                 )
             )
@@ -624,8 +623,7 @@ class Cloud:
                         pmap[alias][driver] = self.clouds[fun]()
                 except Exception as err:  # pylint: disable=broad-except
                     log.debug(
-                        "Failed to execute '%s()' while querying for "
-                        "running nodes: %s",
+                        "Failed to execute '%s()' while querying for running nodes: %s",
                         fun,
                         err,
                         exc_info_on_loglevel=logging.DEBUG,
@@ -1325,8 +1323,7 @@ class Cloud:
                 output = self.clouds[fun](**extra_)
         except KeyError as exc:
             log.exception(
-                "Failed to perform %s.%s on %s. "
-                "Configuration value %s needs to be set",
+                "Failed to perform %s.%s on %s. Configuration value %s needs to be set",
                 extra_["provider"],
                 extra_["action"],
                 extra_["name"],
@@ -1395,8 +1392,9 @@ class Cloud:
                 process = multiprocessing.Process(target=self.create, args=(vm_,))
                 process.start()
                 ret[name] = {
-                    "Provisioning": "VM being provisioned in parallel. "
-                    "PID: {}".format(process.pid)
+                    "Provisioning": "VM being provisioned in parallel. PID: {}".format(
+                        process.pid
+                    )
                 }
                 continue
 
@@ -1447,7 +1445,7 @@ class Cloud:
                             vm_name = vm_details["id"]
                         else:
                             log.debug(
-                                "vm:%s in provider:%s is not in name " "list:'%s'",
+                                "vm:%s in provider:%s is not in name list:'%s'",
                                 vm_name,
                                 driver,
                                 names,
@@ -1521,8 +1519,7 @@ class Cloud:
         matches = self.lookup_providers(prov)
         if len(matches) > 1:
             raise SaltCloudSystemExit(
-                "More than one results matched '{}'. Please specify "
-                "one of: {}".format(
+                "More than one results matched '{}'. Please specify one of: {}".format(
                     prov,
                     ", ".join(
                         ["{}:{}".format(alias, driver) for (alias, driver) in matches]
@@ -1784,9 +1781,9 @@ class Map(Cloud):
                             overrides.setdefault("name", name)
                         except AttributeError:
                             log.error(
-                                "Cannot use 'name' as a minion id in a cloud map as it "
-                                "is a reserved word. Please change 'name' to a different "
-                                "minion id reference."
+                                "Cannot use 'name' as a minion id in a cloud map as it"
+                                " is a reserved word. Please change 'name' to a"
+                                " different minion id reference."
                             )
                             return {}
                         entries[name] = overrides
@@ -1975,7 +1972,7 @@ class Map(Cloud):
                             break
 
                         log.warning(
-                            "%r already exists, removing from the create map.", name,
+                            "%r already exists, removing from the create map.", name
                         )
 
                         if "existing" not in ret:
@@ -2134,8 +2131,9 @@ class Map(Cloud):
             )
             if master_host is None:
                 raise SaltCloudSystemExit(
-                    "Host for new master {} was not found, "
-                    "aborting map".format(master_name)
+                    "Host for new master {} was not found, aborting map".format(
+                        master_name
+                    )
                 )
             output[master_name] = out
         except StopIteration:

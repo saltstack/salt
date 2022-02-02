@@ -1,16 +1,22 @@
 """
+tests.pytests.unit.grains.test_core
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     :codeauthor: Erik Johnson <erik@saltstack.com>
     :codeauthor: David Murphy <damurphy@vmware.com>
 """
 
 import logging
 import os
+import pathlib
 import platform
 import socket
 import textwrap
+from collections import namedtuple
 
 import pytest
 import salt.grains.core as core
+import salt.loader
 import salt.modules.cmdmod
 import salt.modules.network
 import salt.modules.smbios
@@ -21,7 +27,6 @@ import salt.utils.path
 import salt.utils.platform
 from salt._compat import ipaddress
 from tests.support.mock import MagicMock, Mock, mock_open, patch
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +34,7 @@ log = logging.getLogger(__name__)
 @pytest.fixture
 def ipv4_tuple():
     """
-        return tuple of IPv4 local, addr1, addr2
+    return tuple of IPv4 local, addr1, addr2
     """
     return ("127.0.0.1", "10.0.0.1", "10.0.0.2")
 
@@ -37,7 +42,7 @@ def ipv4_tuple():
 @pytest.fixture
 def ipv6_tuple():
     """
-        return tuple of IPv6 local, addr1, addr2, scope
+    return tuple of IPv6 local, addr1, addr2, scope
     """
     return (
         "::1",
@@ -48,13 +53,13 @@ def ipv6_tuple():
 
 
 @pytest.fixture
-def os_release_dir(autouse=True):
-    return os.path.join(os.path.dirname(__file__), "os-releases")
+def os_release_dir():
+    return pathlib.Path(__file__).parent.joinpath("os-releases")
 
 
 @pytest.fixture
-def solaris_dir(autouse=True):
-    return os.path.join(os.path.dirname(__file__), "solaris")
+def solaris_dir():
+    return pathlib.Path(__file__).parent.joinpath("solaris")
 
 
 @pytest.fixture
@@ -62,13 +67,9 @@ def configure_loader_modules():
     return {core: {}}
 
 
-@patch("os.path.isfile")
-def test_parse_etc_os_release(path_isfile_mock, os_release_dir):
-    path_isfile_mock.side_effect = lambda x: x == "/usr/lib/os-release"
-    with salt.utils.files.fopen(
-        os.path.join(os_release_dir, "ubuntu-17.10")
-    ) as os_release_file:
-        os_release_content = os_release_file.read()
+def test_parse_etc_os_release(os_release_dir):
+    with patch("os.path.isfile", return_value="/usr/lib/os-release"):
+        os_release_content = os_release_dir.joinpath("ubuntu-17.10").read_text()
     with patch("salt.utils.files.fopen", mock_open(read_data=os_release_content)):
         os_release = core._parse_os_release("/etc/os-release", "/usr/lib/os-release")
     assert os_release == {
@@ -87,12 +88,97 @@ def test_parse_etc_os_release(path_isfile_mock, os_release_dir):
     }
 
 
-def test_parse_cpe_name_wfn():
+def test_network_grains_cache(tmp_path):
     """
-    Parse correct CPE_NAME data WFN formatted
-    :return:
+    Network interfaces are cache is cleared by the loader
     """
-    for cpe, cpe_ret in [
+    call_1 = {
+        "lo": {
+            "up": True,
+            "hwaddr": "00:00:00:00:00:00",
+            "inet": [
+                {
+                    "address": "127.0.0.1",
+                    "netmask": "255.0.0.0",
+                    "broadcast": None,
+                    "label": "lo",
+                }
+            ],
+            "inet6": [],
+        },
+        "wlo1": {
+            "up": True,
+            "hwaddr": "29:9f:9f:e9:67:f4",
+            "inet": [
+                {
+                    "address": "172.16.13.85",
+                    "netmask": "255.255.248.0",
+                    "broadcast": "172.16.15.255",
+                    "label": "wlo1",
+                }
+            ],
+            "inet6": [],
+        },
+    }
+    call_2 = {
+        "lo": {
+            "up": True,
+            "hwaddr": "00:00:00:00:00:00",
+            "inet": [
+                {
+                    "address": "127.0.0.1",
+                    "netmask": "255.0.0.0",
+                    "broadcast": None,
+                    "label": "lo",
+                }
+            ],
+            "inet6": [],
+        },
+        "wlo1": {
+            "up": True,
+            "hwaddr": "29:9f:9f:e9:67:f4",
+            "inet": [
+                {
+                    "address": "172.16.13.86",
+                    "netmask": "255.255.248.0",
+                    "broadcast": "172.16.15.255",
+                    "label": "wlo1",
+                }
+            ],
+            "inet6": [],
+        },
+    }
+    cache_dir = tmp_path / "cache"
+    extmods = tmp_path / "extmods"
+    opts = {
+        "cachedir": str(cache_dir),
+        "extension_modules": str(extmods),
+        "optimization_order": [0],
+    }
+    with patch(
+        "salt.utils.network.interfaces", side_effect=[call_1, call_2]
+    ) as interfaces:
+        grains = salt.loader.grain_funcs(opts)
+        assert interfaces.call_count == 0
+        ret = grains["core.ip_interfaces"]()
+        # interfaces has been called
+        assert interfaces.call_count == 1
+        assert ret["ip_interfaces"]["wlo1"] == ["172.16.13.85"]
+        # interfaces has been cached
+        ret = grains["core.ip_interfaces"]()
+        assert interfaces.call_count == 1
+        assert ret["ip_interfaces"]["wlo1"] == ["172.16.13.85"]
+
+        grains = salt.loader.grain_funcs(opts)
+        ret = grains["core.ip_interfaces"]()
+        # A new loader clears the cache and interfaces is called again
+        assert interfaces.call_count == 2
+        assert ret["ip_interfaces"]["wlo1"] == ["172.16.13.86"]
+
+
+@pytest.mark.parametrize(
+    "cpe,cpe_ret",
+    (
         (
             "cpe:/o:opensuse:leap:15.0",
             {
@@ -113,19 +199,22 @@ def test_parse_cpe_name_wfn():
                 "part": "operating system",
             },
         ),
-    ]:
-        ret = core._parse_cpe_name(cpe)
-        for key in cpe_ret:
-            assert key in ret
-            assert cpe_ret[key] == ret[key]
-
-
-def test_parse_cpe_name_v23():
+    ),
+)
+def test_parse_cpe_name_wfn(cpe, cpe_ret):
     """
-    Parse correct CPE_NAME data v2.3 formatted
+    Parse correct CPE_NAME data WFN formatted
     :return:
     """
-    for cpe, cpe_ret in [
+    ret = core._parse_cpe_name(cpe)
+    for key, value in cpe_ret.items():
+        assert key in ret
+        assert ret[key] == value
+
+
+@pytest.mark.parametrize(
+    "cpe,cpe_ret",
+    (
         (
             "cpe:2.3:o:microsoft:windows_xp:5.1.601:beta:*:*:*:*:*:*",
             {
@@ -156,25 +245,34 @@ def test_parse_cpe_name_v23():
                 "part": None,
             },
         ),
-    ]:
-        ret = core._parse_cpe_name(cpe)
-        for key in cpe_ret:
-            assert key in ret
-            assert cpe_ret[key] == ret[key]
-
-
-def test_parse_cpe_name_broken():
+    ),
+)
+def test_parse_cpe_name_v23(cpe, cpe_ret):
     """
-    Parse broken CPE_NAME data
+    Parse correct CPE_NAME data v2.3 formatted
     :return:
     """
-    for cpe in [
+    ret = core._parse_cpe_name(cpe)
+    for key, value in cpe_ret.items():
+        assert key in ret
+        assert ret[key] == value
+
+
+@pytest.mark.parametrize(
+    "cpe",
+    (
         "cpe:broken",
         "cpe:broken:in:all:ways:*:*:*:*",
         "cpe:x:still:broken:123",
         "who:/knows:what:is:here",
-    ]:
-        assert core._parse_cpe_name(cpe) == {}
+    ),
+)
+def test_parse_cpe_name_broken(cpe):
+    """
+    Parse broken CPE_NAME data
+    :return:
+    """
+    assert core._parse_cpe_name(cpe) == {}
 
 
 def test_missing_os_release():
@@ -183,7 +281,7 @@ def test_missing_os_release():
     assert os_release == {}
 
 
-@pytest.mark.skip_unless_on_windows(reason="System is not Windows")
+@pytest.mark.skip_unless_on_windows
 def test__windows_platform_data():
     grains = core._windows_platform_data()
     keys = [
@@ -208,7 +306,7 @@ def test__windows_platform_data():
         assert key in grains
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_gnu_slash_linux_in_os_name():
     """
     Test to return a list of all enabled services
@@ -280,7 +378,7 @@ def test_gnu_slash_linux_in_os_name():
     assert os_grains.get("os_family") == "Debian"
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_suse_os_from_cpe_data():
     """
     Test if 'os' grain is parsed from CPE_NAME of /etc/os-release
@@ -363,10 +461,11 @@ def _run_os_grains_tests(
     osarch_mock = MagicMock(return_value="amd64")
     if os_release_filename:
         os_release_data = core._parse_os_release(
-            os.path.join(os_release_dir, os_release_filename)
+            str(os_release_dir / os_release_filename)
         )
     else:
         os_release_data = os_release_map.get("os_release_file", {})
+
     os_release_mock = MagicMock(return_value=os_release_data)
 
     orig_import = __import__
@@ -445,7 +544,7 @@ def _run_suse_os_grains_tests(os_release_dir, os_release_map, expectation):
     _run_os_grains_tests(os_release_dir, None, os_release_map, expectation)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_suse_os_grains_sles11sp3(os_release_dir):
     """
     Test if OS grains are parsed correctly in SLES 11 SP3
@@ -471,7 +570,7 @@ def test_suse_os_grains_sles11sp3(os_release_dir):
     _run_suse_os_grains_tests(os_release_dir, _os_release_map, expectation)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_suse_os_grains_sles11sp4(os_release_dir):
     """
     Test if OS grains are parsed correctly in SLES 11 SP4
@@ -498,7 +597,7 @@ def test_suse_os_grains_sles11sp4(os_release_dir):
     _run_suse_os_grains_tests(os_release_dir, _os_release_map, expectation)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_suse_os_grains_sles12(os_release_dir):
     """
     Test if OS grains are parsed correctly in SLES 12
@@ -525,7 +624,7 @@ def test_suse_os_grains_sles12(os_release_dir):
     _run_suse_os_grains_tests(os_release_dir, _os_release_map, expectation)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_suse_os_grains_sles12sp1(os_release_dir):
     """
     Test if OS grains are parsed correctly in SLES 12 SP1
@@ -552,7 +651,7 @@ def test_suse_os_grains_sles12sp1(os_release_dir):
     _run_suse_os_grains_tests(os_release_dir, _os_release_map, expectation)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_suse_os_grains_opensuse_leap_42_1(os_release_dir):
     """
     Test if OS grains are parsed correctly in openSUSE Leap 42.1
@@ -579,7 +678,7 @@ def test_suse_os_grains_opensuse_leap_42_1(os_release_dir):
     _run_suse_os_grains_tests(os_release_dir, _os_release_map, expectation)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_suse_os_grains_tumbleweed(os_release_dir):
     """
     Test if OS grains are parsed correctly in openSUSE Tumbleweed
@@ -606,7 +705,7 @@ def test_suse_os_grains_tumbleweed(os_release_dir):
     _run_suse_os_grains_tests(os_release_dir, _os_release_map, expectation)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_debian_7_os_grains(os_release_dir):
     """
     Test if OS grains are parsed correctly in Debian 7 "wheezy"
@@ -627,7 +726,7 @@ def test_debian_7_os_grains(os_release_dir):
     _run_os_grains_tests(os_release_dir, "debian-7", _os_release_map, expectation)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_debian_8_os_grains(os_release_dir):
     """
     Test if OS grains are parsed correctly in Debian 8 "jessie"
@@ -648,7 +747,7 @@ def test_debian_8_os_grains(os_release_dir):
     _run_os_grains_tests(os_release_dir, "debian-8", _os_release_map, expectation)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_debian_9_os_grains(os_release_dir):
     """
     Test if OS grains are parsed correctly in Debian 9 "stretch"
@@ -669,7 +768,7 @@ def test_debian_9_os_grains(os_release_dir):
     _run_os_grains_tests(os_release_dir, "debian-9", _os_release_map, expectation)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_centos_8_os_grains(os_release_dir):
     """
     Test if OS grains are parsed correctly in Centos 8
@@ -700,7 +799,7 @@ def test_centos_8_os_grains(os_release_dir):
     _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_alinux2_os_grains(os_release_dir):
     """
     Test if OS grains are parsed correctly in Alibaba Cloud Linux
@@ -730,7 +829,7 @@ def test_alinux2_os_grains(os_release_dir):
     _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_centos_stream_8_os_grains(os_release_dir):
     """
     Test if OS grains are parsed correctly in Centos 8
@@ -761,7 +860,7 @@ def test_centos_stream_8_os_grains(os_release_dir):
     _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_rocky_8_os_grains(os_release_dir):
     """
     Test if OS grains are parsed correctly in Rocky 8
@@ -784,14 +883,14 @@ def test_rocky_8_os_grains(os_release_dir):
         "oscodename": "Rocky Linux 8.4 (Green Obsidian)",
         "osfullname": "Rocky Linux",
         "osrelease": "8.4",
-        "osrelease_info": (8, 4,),
+        "osrelease_info": (8, 4),
         "osmajorrelease": 8,
         "osfinger": "Rocky Linux-8",
     }
     _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_mendel_os_grains(os_release_dir):
     """
     Test if OS grains are parsed correctly in Mendel Linux
@@ -813,7 +912,7 @@ def test_mendel_os_grains(os_release_dir):
     _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_almalinux_8_os_grains(os_release_dir):
     """
     Test if OS grains are parsed correctly in AlmaLinux 8
@@ -836,7 +935,7 @@ def test_almalinux_8_os_grains(os_release_dir):
         "oscodename": "AlmaLinux 8",
         "osfullname": "AlmaLinux",
         "osrelease": "8.3",
-        "osrelease_info": (8, 3,),
+        "osrelease_info": (8, 3),
         "osmajorrelease": 8,
         "osfinger": "AlmaLinux-8",
     }
@@ -845,13 +944,14 @@ def test_almalinux_8_os_grains(os_release_dir):
 
 def test_unicode_error():
     raise_unicode_mock = MagicMock(name="raise_unicode_error", side_effect=UnicodeError)
-    with patch("salt.grains.core.hostname"):
-        with patch("socket.getaddrinfo", raise_unicode_mock):
-            ret = salt.grains.core.ip_fqdn()
-            assert ret["fqdn_ip4"] == ret["fqdn_ip6"] == []
+    with patch("salt.grains.core.hostname"), patch(
+        "socket.getaddrinfo", raise_unicode_mock
+    ):
+        ret = core.ip_fqdn()
+        assert ret["fqdn_ip4"] == ret["fqdn_ip6"] == []
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_ubuntu_xenial_os_grains(os_release_dir):
     """
     Test if OS grains are parsed correctly in Ubuntu 16.04 "Xenial Xerus"
@@ -872,7 +972,7 @@ def test_ubuntu_xenial_os_grains(os_release_dir):
     _run_os_grains_tests(os_release_dir, "ubuntu-16.04", _os_release_map, expectation)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_ubuntu_artful_os_grains(os_release_dir):
     """
     Test if OS grains are parsed correctly in Ubuntu 17.10 "Artful Aardvark"
@@ -893,7 +993,7 @@ def test_ubuntu_artful_os_grains(os_release_dir):
     _run_os_grains_tests(os_release_dir, "ubuntu-17.10", _os_release_map, expectation)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_pop_focal_os_grains(os_release_dir):
     """
     Test if OS grains are parsed correctly in Pop!_OS 20.04 "Focal Fossa"
@@ -914,7 +1014,7 @@ def test_pop_focal_os_grains(os_release_dir):
     _run_os_grains_tests(os_release_dir, "pop-20.04", _os_release_map, expectation)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_pop_groovy_os_grains(os_release_dir):
     """
     Test if OS grains are parsed correctly in Pop!_OS 20.10 "Groovy Gorilla"
@@ -935,7 +1035,7 @@ def test_pop_groovy_os_grains(os_release_dir):
     _run_os_grains_tests(os_release_dir, "pop-20.10", _os_release_map, expectation)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_astralinuxce_os_grains(os_release_dir):
     """
     Test that OS grains are parsed correctly for Astra Linux Orel
@@ -956,7 +1056,7 @@ def test_astralinuxce_os_grains(os_release_dir):
     _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_astralinuxse_os_grains(os_release_dir):
     """
     Test that OS grains are parsed correctly for Astra Linux Smolensk
@@ -977,7 +1077,7 @@ def test_astralinuxse_os_grains(os_release_dir):
     _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
 
 
-@pytest.mark.skip_unless_on_windows(reason="System is not Windows")
+@pytest.mark.skip_unless_on_windows
 def test_windows_platform_data():
     """
     Test the _windows_platform_data function
@@ -1022,7 +1122,7 @@ def test_windows_platform_data():
     assert returned_grains["osrelease"] in valid_releases
 
 
-def test__windows_os_release_grain():
+def test__windows_os_release_grain(subtests):
     versions = {
         "Windows 10 Home": "10",
         "Windows 10 Pro": "10",
@@ -1094,9 +1194,10 @@ def test__windows_os_release_grain():
         "Windows Storage Server 2008": "2008Server",
         "Windows Web Server 2008": "2008Server",
     }
-    for caption in versions:
-        version = core._windows_os_release_grain(caption, 1)
-        assert version == versions[caption]
+    for caption, expected_version in versions.items():
+        with subtests.test(caption):
+            version = core._windows_os_release_grain(caption, 1)
+            assert version == expected_version
 
     embedded_versions = {
         "Windows Embedded 8.1 Industry Pro": "8.1",
@@ -1107,25 +1208,28 @@ def test__windows_os_release_grain():
         "Windows Embedded Standard 2009": "2009",
         "Windows XP Embedded": "XP",
     }
-    for caption in embedded_versions:
-        version = core._windows_os_release_grain(caption, 1)
-        assert version == embedded_versions[caption]
+    for caption, expected_version in embedded_versions.items():
+        with subtests.test(caption):
+            version = core._windows_os_release_grain(caption, 1)
+            assert version == expected_version
 
     # Special Cases
     # Windows Embedded Standard is Windows 7
     caption = "Windows Embedded Standard"
-    with patch("platform.release", MagicMock(return_value="7")):
-        version = core._windows_os_release_grain(caption, 1)
-        assert version == "7"
+    with subtests.test(caption):
+        with patch("platform.release", MagicMock(return_value="7")):
+            version = core._windows_os_release_grain(caption, 1)
+            assert version == "7"
 
     # Microsoft Hyper-V Server 2019
     # Issue https://github.com/saltstack/salt/issue/55212
     caption = "Microsoft Hyper-V Server"
-    version = core._windows_os_release_grain(caption, 1)
-    assert version == "2019Server"
+    with subtests.test(caption):
+        version = core._windows_os_release_grain(caption, 1)
+        assert version == "2019Server"
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_linux_memdata():
     """
     Test memdata on Linux systems
@@ -1141,13 +1245,12 @@ def test_linux_memdata():
     assert memdata.get("swap_total") == 4676
 
 
-@pytest.mark.skip_on_windows(reason="System is Windows")
+@pytest.mark.skip_on_windows
 def test_bsd_memdata():
     """
     Test to memdata on *BSD systems
     """
     _path_exists_map = {}
-    _path_isfile_map = {}
     _cmd_run_map = {
         "freebsd-version -u": "10.3-RELEASE",
         "/sbin/sysctl -n hw.physmem": "2121781248",
@@ -1155,11 +1258,8 @@ def test_bsd_memdata():
     }
 
     path_exists_mock = MagicMock(side_effect=lambda x: _path_exists_map[x])
-    path_isfile_mock = MagicMock(side_effect=lambda x: _path_isfile_map.get(x, False))
     cmd_run_mock = MagicMock(side_effect=lambda x: _cmd_run_map[x])
     empty_mock = MagicMock(return_value={})
-
-    from collections import namedtuple
 
     nt_uname = namedtuple(
         "nt_uname", ["system", "node", "release", "version", "machine", "processor"]
@@ -1174,160 +1274,154 @@ def test_bsd_memdata():
             "amd64",
         )
     )
-    with patch.object(platform, "uname", mock_freebsd_uname):
-        with patch.object(
-            salt.utils.platform, "is_linux", MagicMock(return_value=False)
+    with patch.object(platform, "uname", mock_freebsd_uname), patch.object(
+        salt.utils.platform, "is_linux", MagicMock(return_value=False)
+    ), patch.object(
+        salt.utils.platform, "is_freebsd", MagicMock(return_value=True)
+    ), patch.object(
+        # Skip the first if statement
+        salt.utils.platform,
+        "is_proxy",
+        MagicMock(return_value=False),
+    ), patch.object(
+        # Skip the init grain compilation (not pertinent)
+        os.path,
+        "exists",
+        path_exists_mock,
+    ), patch(
+        "salt.utils.path.which", return_value="/sbin/sysctl"
+    ):
+        # Make a bunch of functions return empty dicts,
+        # we don't care about these grains for the
+        # purposes of this test.
+        with patch.object(core, "_bsd_cpudata", empty_mock), patch.object(
+            core, "_hw_data", empty_mock
+        ), patch.object(core, "_virtual", empty_mock), patch.object(
+            core, "_ps", empty_mock
+        ), patch.dict(
+            # Mock the osarch
+            core.__salt__,
+            {"cmd.run": cmd_run_mock},
         ):
-            with patch.object(
-                salt.utils.platform, "is_freebsd", MagicMock(return_value=True)
-            ):
-                # Skip the first if statement
-                with patch.object(
-                    salt.utils.platform, "is_proxy", MagicMock(return_value=False)
-                ):
-                    # Skip the init grain compilation (not pertinent)
-                    with patch.object(os.path, "exists", path_exists_mock):
-                        with patch("salt.utils.path.which") as mock:
-                            mock.return_value = "/sbin/sysctl"
-                            # Make a bunch of functions return empty dicts,
-                            # we don't care about these grains for the
-                            # purposes of this test.
-                            with patch.object(core, "_bsd_cpudata", empty_mock):
-                                with patch.object(core, "_hw_data", empty_mock):
-                                    with patch.object(core, "_virtual", empty_mock):
-                                        with patch.object(core, "_ps", empty_mock):
-                                            # Mock the osarch
-                                            with patch.dict(
-                                                core.__salt__,
-                                                {"cmd.run": cmd_run_mock},
-                                            ):
-                                                os_grains = core.os_data()
+            os_grains = core.os_data()
 
     assert os_grains.get("mem_total") == 2023
     assert os_grains.get("swap_total") == 400
 
 
-@pytest.mark.skip_on_windows(reason="System is Windows")
-def test_docker_virtual():
+@pytest.mark.skip_on_windows
+@pytest.mark.parametrize(
+    "cgroup_substr",
+    (
+        ":/system.slice/docker",
+        ":/docker/",
+        ":/docker-ce/",
+    ),
+)
+def test_docker_virtual(cgroup_substr):
     """
     Test if virtual grains are parsed correctly in Docker.
     """
-    with patch.object(os.path, "isdir", MagicMock(return_value=False)):
-        with patch.object(
-            os.path,
-            "isfile",
-            MagicMock(side_effect=lambda x: True if x == "/proc/1/cgroup" else False),
-        ):
-            for cgroup_substr in (
-                ":/system.slice/docker",
-                ":/docker/",
-                ":/docker-ce/",
-            ):
-                cgroup_data = "10:memory{}a_long_sha256sum".format(cgroup_substr)
-                log.debug("Testing Docker cgroup substring '%s'", cgroup_substr)
-                with patch("salt.utils.files.fopen", mock_open(read_data=cgroup_data)):
-                    with patch.dict(core.__salt__, {"cmd.run_all": MagicMock()}):
-                        grains = core._virtual({"kernel": "Linux"})
-                        assert grains.get("virtual_subtype") == "Docker"
-                        assert grains.get("virtual") == "container"
+    cgroup_data = "10:memory{}a_long_sha256sum".format(cgroup_substr)
+    log.debug("Testing Docker cgroup substring '%s'", cgroup_substr)
+    with patch.object(os.path, "isdir", MagicMock(return_value=False)), patch.object(
+        os.path,
+        "isfile",
+        MagicMock(side_effect=lambda x: True if x == "/proc/1/cgroup" else False),
+    ), patch("salt.utils.files.fopen", mock_open(read_data=cgroup_data)), patch.dict(
+        core.__salt__, {"cmd.run_all": MagicMock()}
+    ):
+        grains = core._virtual({"kernel": "Linux"})
+        assert grains.get("virtual_subtype") == "Docker"
+        assert grains.get("virtual") == "container"
 
 
-@pytest.mark.skip_on_windows(reason="System is Windows")
+@pytest.mark.skip_on_windows
 def test_lxc_virtual():
     """
     Test if virtual grains are parsed correctly in LXC.
     """
-    with patch.object(os.path, "isdir", MagicMock(return_value=False)):
-        with patch.object(
-            os.path,
-            "isfile",
-            MagicMock(side_effect=lambda x: True if x == "/proc/1/cgroup" else False),
-        ):
-            cgroup_data = "10:memory:/lxc/a_long_sha256sum"
-            with patch("salt.utils.files.fopen", mock_open(read_data=cgroup_data)):
-                with patch.dict(core.__salt__, {"cmd.run_all": MagicMock()}):
-                    grains = core._virtual({"kernel": "Linux"})
-                    assert grains.get("virtual_subtype") == "LXC"
-                    assert grains.get("virtual") == "container"
+    cgroup_data = "10:memory:/lxc/a_long_sha256sum"
+    with patch.object(os.path, "isdir", MagicMock(return_value=False)), patch.object(
+        os.path,
+        "isfile",
+        MagicMock(side_effect=lambda x: True if x == "/proc/1/cgroup" else False),
+    ), patch("salt.utils.files.fopen", mock_open(read_data=cgroup_data)), patch.dict(
+        core.__salt__, {"cmd.run_all": MagicMock()}
+    ):
+        grains = core._virtual({"kernel": "Linux"})
+        assert grains.get("virtual_subtype") == "LXC"
+        assert grains.get("virtual") == "container"
 
-    with patch.object(os.path, "isdir", MagicMock(return_value=False)):
-        with patch.object(
-            os.path,
-            "isfile",
-            MagicMock(
-                side_effect=lambda x: True
-                if x in ("/proc/1/cgroup", "/proc/1/environ")
-                else False
-            ),
-        ):
-            file_contents = {
-                "/proc/1/cgroup": "10:memory",
-                "/proc/1/environ": "container=lxc",
-            }
-            with patch("salt.utils.files.fopen", mock_open(read_data=file_contents)):
-                with patch.dict(core.__salt__, {"cmd.run_all": MagicMock()}):
-                    grains = core._virtual({"kernel": "Linux"})
-                    assert grains.get("virtual_subtype") == "LXC"
-                    assert grains.get("virtual") == "container"
+    file_contents = {
+        "/proc/1/cgroup": "10:memory",
+        "/proc/1/environ": "container=lxc",
+    }
+    with patch.object(os.path, "isdir", MagicMock(return_value=False)), patch.object(
+        os.path,
+        "isfile",
+        MagicMock(
+            side_effect=lambda x: True
+            if x in ("/proc/1/cgroup", "/proc/1/environ")
+            else False
+        ),
+    ), patch("salt.utils.files.fopen", mock_open(read_data=file_contents)), patch.dict(
+        core.__salt__, {"cmd.run_all": MagicMock()}
+    ):
+        grains = core._virtual({"kernel": "Linux"})
+        assert grains.get("virtual_subtype") == "LXC"
+        assert grains.get("virtual") == "container"
 
 
-@pytest.mark.skip_on_windows(reason="System is Windows")
+@pytest.mark.skip_on_windows
 def test_lxc_virtual_with_virt_what():
     """
     Test if virtual grains are parsed correctly in LXC using virt-what.
     """
     virt = "lxc\nkvm"
-    with patch.object(salt.utils.platform, "is_windows", MagicMock(return_value=False)):
-        with patch.object(salt.utils.path, "which", MagicMock(return_value=True)):
-            with patch.dict(
-                core.__salt__,
-                {
-                    "cmd.run_all": MagicMock(
-                        return_value={
-                            "pid": 78,
-                            "retcode": 0,
-                            "stderr": "",
-                            "stdout": virt,
-                        }
-                    )
-                },
-            ):
-                osdata = {
-                    "kernel": "test",
-                }
-                ret = core._virtual(osdata)
-                assert ret["virtual"] == "container"
-                assert ret["virtual_subtype"] == "LXC"
+    with patch.object(
+        salt.utils.platform, "is_windows", MagicMock(return_value=False)
+    ), patch.object(salt.utils.path, "which", MagicMock(return_value=True)), patch.dict(
+        core.__salt__,
+        {
+            "cmd.run_all": MagicMock(
+                return_value={"pid": 78, "retcode": 0, "stderr": "", "stdout": virt}
+            )
+        },
+    ):
+        osdata = {"kernel": "test"}
+        ret = core._virtual(osdata)
+        assert ret["virtual"] == "container"
+        assert ret["virtual_subtype"] == "LXC"
 
 
-@pytest.mark.skip_on_windows(reason="System is Windows")
+@pytest.mark.skip_on_windows
 def test_container_inside_virtual_machine():
     """
     Test if a container inside an hypervisor is shown as a container
     """
-    with patch.object(os.path, "isdir", MagicMock(return_value=False)):
-        with patch.object(
-            os.path,
-            "isfile",
-            MagicMock(
-                side_effect=lambda x: True
-                if x in ("/proc/cpuinfo", "/proc/1/cgroup", "/proc/1/environ")
-                else False
-            ),
-        ):
-            file_contents = {
-                "/proc/cpuinfo": "QEMU Virtual CPU",
-                "/proc/1/cgroup": "10:memory",
-                "/proc/1/environ": "container=lxc",
-            }
-            with patch("salt.utils.files.fopen", mock_open(read_data=file_contents)):
-                with patch.dict(core.__salt__, {"cmd.run_all": MagicMock()}):
-                    grains = core._virtual({"kernel": "Linux"})
-                    assert grains.get("virtual_subtype") == "LXC"
-                    assert grains.get("virtual") == "container"
+    file_contents = {
+        "/proc/cpuinfo": "QEMU Virtual CPU",
+        "/proc/1/cgroup": "10:memory",
+        "/proc/1/environ": "container=lxc",
+    }
+    with patch.object(os.path, "isdir", MagicMock(return_value=False)), patch.object(
+        os.path,
+        "isfile",
+        MagicMock(
+            side_effect=lambda x: True
+            if x in ("/proc/cpuinfo", "/proc/1/cgroup", "/proc/1/environ")
+            else False
+        ),
+    ), patch("salt.utils.files.fopen", mock_open(read_data=file_contents)), patch.dict(
+        core.__salt__, {"cmd.run_all": MagicMock()}
+    ):
+        grains = core._virtual({"kernel": "Linux"})
+        assert grains.get("virtual_subtype") == "LXC"
+        assert grains.get("virtual") == "container"
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_xen_virtual():
     """
     Test if OS grains are parsed correctly for Xen hypervisors
@@ -1338,20 +1432,22 @@ def test_xen_virtual():
             side_effect=lambda x: x
             in ["/sys/bus/xen", "/sys/bus/xen/drivers/xenconsole"]
         ),
+    ), patch.dict(core.__salt__, {"cmd.run": MagicMock(return_value="")}), patch.dict(
+        core.__salt__,
+        {"cmd.run_all": MagicMock(return_value={"retcode": 0, "stdout": ""})},
+    ), patch.object(
+        os.path,
+        "isfile",
+        MagicMock(side_effect=lambda x: True if x == "/proc/1/cgroup" else False),
+    ), patch(
+        "salt.utils.files.fopen", mock_open(read_data="")
     ):
-        with patch.dict(
-            core.__salt__, {"cmd.run": MagicMock(return_value="")}
-        ), patch.dict(
-            core.__salt__,
-            {"cmd.run_all": MagicMock(return_value={"retcode": 0, "stdout": ""})},
-        ):
-            assert (
-                core._virtual({"kernel": "Linux"}).get("virtual_subtype")
-                == "Xen PV DomU"
-            )
+        assert (
+            core._virtual({"kernel": "Linux"}).get("virtual_subtype") == "Xen PV DomU"
+        )
 
 
-@pytest.mark.skip_on_windows(reason="System is Windows")
+@pytest.mark.skip_on_windows
 def test_illumos_virtual():
     """
     Test if virtual grains are parsed correctly inside illumos/solaris zone
@@ -1374,8 +1470,7 @@ def test_illumos_virtual():
                 "stdout": "",
                 "stderr": "prtdiag can only be run in the global zone",
             }
-        mylogdebug = "cmd.run_all: '{}'".format(cmd)
-        log.debug(mylogdebug)
+        log.debug("cmd.run_all: '%s'", cmd)
 
     def _which_side_effect(path):
         if path == "prtdiag":
@@ -1390,13 +1485,12 @@ def test_illumos_virtual():
             "cmd.run": MagicMock(side_effect=_cmd_side_effect),
             "cmd.run_all": MagicMock(side_effect=_cmd_all_side_effect),
         },
-    ):
-        with patch("salt.utils.path.which", MagicMock(side_effect=_which_side_effect)):
-            grains = core._virtual({"kernel": "SunOS"})
-            assert grains.get("virtual") == "zone"
+    ), patch("salt.utils.path.which", MagicMock(side_effect=_which_side_effect)):
+        grains = core._virtual({"kernel": "SunOS"})
+        assert grains.get("virtual") == "zone"
 
 
-@pytest.mark.skip_on_windows(reason="System is Windows")
+@pytest.mark.skip_on_windows
 def test_illumos_fallback_virtual():
     """
     Test if virtual grains are parsed correctly inside illumos/solaris zone
@@ -1412,8 +1506,7 @@ def test_illumos_fallback_virtual():
                 "stdout": "",
                 "stderr": "prtdiag can only be run in the global zone",
             }
-        mylogdebug = "cmd.run_all: '{}'".format(cmd)
-        log.debug(mylogdebug)
+        log.debug("cmd.run_all: '%s'", cmd)
 
     def _which_side_effect(path):
         if path == "prtdiag":
@@ -1426,12 +1519,13 @@ def test_illumos_fallback_virtual():
         return False
 
     with patch.dict(
-        core.__salt__, {"cmd.run_all": MagicMock(side_effect=_cmd_all_side_effect)},
+        core.__salt__,
+        {"cmd.run_all": MagicMock(side_effect=_cmd_all_side_effect)},
+    ), patch("salt.utils.path.which", MagicMock(side_effect=_which_side_effect)), patch(
+        "os.path.isdir", MagicMock(side_effect=_isdir_side_effect)
     ):
-        with patch("salt.utils.path.which", MagicMock(side_effect=_which_side_effect)):
-            with patch("os.path.isdir", MagicMock(side_effect=_isdir_side_effect)):
-                grains = core._virtual({"kernel": "SunOS"})
-                assert grains.get("virtual") == "zone"
+        grains = core._virtual({"kernel": "SunOS"})
+        assert grains.get("virtual") == "zone"
 
 
 def test_if_virtual_subtype_exists_virtual_should_fallback_to_virtual():
@@ -1448,18 +1542,17 @@ def test_if_virtual_subtype_exists_virtual_should_fallback_to_virtual():
             "cmd.run": MagicMock(return_value=""),
             "cmd.run_all": MagicMock(return_value={"retcode": 0, "stdout": ""}),
         },
+    ), patch.multiple(
+        os.path,
+        isfile=MagicMock(return_value=False),
+        isdir=MagicMock(side_effect=lambda x: x == "/proc"),
+    ), patch.multiple(
+        os,
+        stat=MagicMock(side_effect=mockstat),
     ):
-        with patch.multiple(
-            os.path,
-            isfile=MagicMock(return_value=False),
-            isdir=MagicMock(side_effect=lambda x: x == "/proc"),
-        ):
-            with patch.multiple(
-                os, stat=MagicMock(side_effect=mockstat),
-            ):
-                grains = core._virtual({"kernel": "Linux"})
-                assert grains.get("virtual_subtype") is not None
-                assert grains.get("virtual") == "virtual"
+        grains = core._virtual({"kernel": "Linux"})
+        assert grains.get("virtual_subtype") is not None
+        assert grains.get("virtual") == "virtual"
 
 
 def _check_ipaddress(value, ip_v):
@@ -1492,7 +1585,7 @@ def _check_ip_fqdn_set(value, empty, _set=None):
         assert sorted(value) == sorted(_set)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_fqdn_return(ipv4_tuple, ipv6_tuple):
     """
     test ip4 and ip6 return values
@@ -1513,7 +1606,7 @@ def test_fqdn_return(ipv4_tuple, ipv6_tuple):
     )
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_fqdn6_empty(ipv4_tuple, ipv6_tuple):
     """
     test when ip6 is empty
@@ -1525,7 +1618,7 @@ def test_fqdn6_empty(ipv4_tuple, ipv6_tuple):
     _run_fqdn_tests(ipv4_tuple, ipv6_tuple, net_ip4_mock, net_ip6_mock, ip4_empty=False)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_fqdn4_empty(ipv4_tuple, ipv6_tuple):
     """
     test when ip4 is empty
@@ -1537,7 +1630,7 @@ def test_fqdn4_empty(ipv4_tuple, ipv6_tuple):
     _run_fqdn_tests(ipv4_tuple, ipv6_tuple, net_ip4_mock, net_ip6_mock, ip6_empty=False)
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
+@pytest.mark.skip_unless_on_linux
 def test_fqdn_all_empty(ipv4_tuple, ipv6_tuple):
     """
     test when both ip4 and ip6 are empty
@@ -1596,9 +1689,9 @@ def _run_fqdn_tests(
     with patch.object(
         salt.utils.network, "ip_addrs", MagicMock(return_value=net_ip4_mock)
     ), patch.object(
-        salt.utils.network, "ip_addrs6", MagicMock(return_value=net_ip6_mock),
+        salt.utils.network, "ip_addrs6", MagicMock(return_value=net_ip6_mock)
     ), patch.object(
-        core.socket, "getaddrinfo", side_effect=_getaddrinfo,
+        core.socket, "getaddrinfo", side_effect=_getaddrinfo
     ):
         get_fqdn = core.ip_fqdn()
         ret_keys = ["fqdn_ip4", "fqdn_ip6", "ipv4", "ipv6"]
@@ -1612,9 +1705,7 @@ def _run_fqdn_tests(
                     _check_ip_fqdn_set(value, ip6_empty, _set=[ipv6_addr1, ipv6_addr2])
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
-@patch.object(salt.utils.platform, "is_windows", MagicMock(return_value=False))
-@patch("salt.grains.core.__opts__", {"ipv6": False})
+@pytest.mark.skip_unless_on_linux
 def test_dns_return(ipv4_tuple, ipv6_tuple):
     """
     test the return for a dns grain. test for issue:
@@ -1648,14 +1739,17 @@ def test_dns_return(ipv4_tuple, ipv6_tuple):
         }
     }
     with patch.object(
-        salt.utils.dns, "parse_resolv", MagicMock(return_value=resolv_mock)
-    ):
-        assert core.dns() == ret
+        salt.utils.platform, "is_windows", MagicMock(return_value=False)
+    ), patch("salt.grains.core.__opts__", {"ipv6": False}):
+        with patch.object(
+            salt.utils.dns, "parse_resolv", MagicMock(return_value=resolv_mock)
+        ):
+            assert core.dns() == ret
 
-    with patch("os.path.exists", return_value=True), patch.object(
-        salt.utils.dns, "parse_resolv", MagicMock(return_value=resolv_mock)
-    ):
-        assert core.dns() == ret
+        with patch("os.path.exists", return_value=True), patch.object(
+            salt.utils.dns, "parse_resolv", MagicMock(return_value=resolv_mock)
+        ):
+            assert core.dns() == ret
 
 
 def test_enable_fqdns_false():
@@ -1673,9 +1767,8 @@ def test_enable_fqdns_true():
     with patch.dict(
         "salt.grains.core.__salt__",
         {"network.fqdns": MagicMock(return_value="my.fake.domain")},
-    ):
-        with patch.dict("salt.grains.core.__opts__", {"enable_fqdns_grains": True}):
-            assert core.fqdns() == "my.fake.domain"
+    ), patch.dict("salt.grains.core.__opts__", {"enable_fqdns_grains": True}):
+        assert core.fqdns() == "my.fake.domain"
 
 
 def test_enable_fqdns_none():
@@ -1705,63 +1798,59 @@ def test_enable_fqdns_false_is_proxy():
     """
     testing fqdns grains is disabled by default for proxy minions
     """
-    with patch("salt.utils.platform.is_proxy", return_value=True, autospec=True):
-        with patch.dict(
-            "salt.grains.core.__salt__",
-            {"network.fqdns": MagicMock(return_value="my.fake.domain")},
-        ):
-            # fqdns is disabled by default on proxy minions
-            assert core.fqdns() == {"fqdns": []}
+    with patch(
+        "salt.utils.platform.is_proxy", return_value=True, autospec=True
+    ), patch.dict(
+        "salt.grains.core.__salt__",
+        {"network.fqdns": MagicMock(return_value="my.fake.domain")},
+    ):
+        # fqdns is disabled by default on proxy minions
+        assert core.fqdns() == {"fqdns": []}
 
 
 def test_enable_fqdns_false_is_aix():
     """
     testing fqdns grains is disabled by default for minions on AIX
     """
-    with patch("salt.utils.platform.is_aix", return_value=True, autospec=True):
-        with patch.dict(
-            "salt.grains.core.__salt__",
-            {"network.fqdns": MagicMock(return_value="my.fake.domain")},
-        ):
-            # fqdns is disabled by default on minions on AIX
-            assert core.fqdns() == {"fqdns": []}
+    with patch(
+        "salt.utils.platform.is_aix", return_value=True, autospec=True
+    ), patch.dict(
+        "salt.grains.core.__salt__",
+        {"network.fqdns": MagicMock(return_value="my.fake.domain")},
+    ):
+        # fqdns is disabled by default on minions on AIX
+        assert core.fqdns() == {"fqdns": []}
 
 
 def test_enable_fqdns_false_is_sunos():
     """
     testing fqdns grains is disabled by default for minions on Solaris platforms
     """
-    with patch("salt.utils.platform.is_sunos", return_value=True, autospec=True):
-        with patch.dict(
-            "salt.grains.core.__salt__",
-            {"network.fqdns": MagicMock(return_value="my.fake.domain")},
-        ):
-            # fqdns is disabled by default on minions on Solaris platforms
-            assert core.fqdns() == {"fqdns": []}
+    with patch(
+        "salt.utils.platform.is_sunos", return_value=True, autospec=True
+    ), patch.dict(
+        "salt.grains.core.__salt__",
+        {"network.fqdns": MagicMock(return_value="my.fake.domain")},
+    ):
+        # fqdns is disabled by default on minions on Solaris platforms
+        assert core.fqdns() == {"fqdns": []}
 
 
 def test_enable_fqdns_false_is_junos():
     """
     testing fqdns grains is disabled by default for minions on Junos
     """
-    with patch("salt.utils.platform.is_junos", return_value=True, autospec=True):
-        with patch.dict(
-            "salt.grains.core.__salt__",
-            {"network.fqdns": MagicMock(return_value="my.fake.domain")},
-        ):
-            # fqdns is disabled by default on minions on Junos (Juniper)
-            assert core.fqdns() == {"fqdns": []}
+    with patch(
+        "salt.utils.platform.is_junos", return_value=True, autospec=True
+    ), patch.dict(
+        "salt.grains.core.__salt__",
+        {"network.fqdns": MagicMock(return_value="my.fake.domain")},
+    ):
+        # fqdns is disabled by default on minions on Junos (Juniper)
+        assert core.fqdns() == {"fqdns": []}
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
-@patch("salt.utils.network.ip_addrs", MagicMock(return_value=["1.2.3.4", "5.6.7.8"]))
-@patch(
-    "salt.utils.network.ip_addrs6",
-    MagicMock(return_value=["fe80::a8b2:93ff:fe00:0", "fe80::a8b2:93ff:dead:beef"]),
-)
-@patch(
-    "salt.utils.network.socket.getfqdn", MagicMock(side_effect=lambda v: v)
-)  # Just pass-through
+@pytest.mark.skip_unless_on_linux
 def test_fqdns_return():
     """
     test the return for a dns grain. test for issue:
@@ -1774,18 +1863,28 @@ def test_fqdns_return():
         ("bluesniff.foo.bar", [], ["fe80::a8b2:93ff:dead:beef"]),
     ]
     ret = {"fqdns": ["bluesniff.foo.bar", "foo.bar.baz", "rinzler.evil-corp.com"]}
-    with patch.dict(core.__salt__, {"network.fqdns": salt.modules.network.fqdns}):
-        with patch.object(socket, "gethostbyaddr", side_effect=reverse_resolv_mock):
-            fqdns = core.fqdns()
-            assert "fqdns" in fqdns
-            assert len(fqdns["fqdns"]) == len(ret["fqdns"])
-            assert set(fqdns["fqdns"]) == set(ret["fqdns"])
+    with patch(
+        "salt.utils.network.ip_addrs", MagicMock(return_value=["1.2.3.4", "5.6.7.8"])
+    ), patch(
+        "salt.utils.network.ip_addrs6",
+        MagicMock(return_value=["fe80::a8b2:93ff:fe00:0", "fe80::a8b2:93ff:dead:beef"]),
+    ), patch(
+        # Just pass-through
+        "salt.utils.network.socket.getfqdn",
+        MagicMock(side_effect=lambda v: v),
+    ), patch.dict(
+        core.__salt__, {"network.fqdns": salt.modules.network.fqdns}
+    ), patch.object(
+        socket, "gethostbyaddr", side_effect=reverse_resolv_mock
+    ):
+        fqdns = core.fqdns()
+        assert "fqdns" in fqdns
+        assert len(fqdns["fqdns"]) == len(ret["fqdns"])
+        assert set(fqdns["fqdns"]) == set(ret["fqdns"])
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
-@patch("salt.utils.network.ip_addrs", MagicMock(return_value=["1.2.3.4"]))
-@patch("salt.utils.network.ip_addrs6", MagicMock(return_value=[]))
-def test_fqdns_socket_error():
+@pytest.mark.skip_unless_on_linux
+def test_fqdns_socket_error(caplog):
     """
     test the behavior on non-critical socket errors of the dns grain
     """
@@ -1798,24 +1897,28 @@ def test_fqdns_socket_error():
 
         return _gethostbyaddr
 
-    for errno in (0, core.HOST_NOT_FOUND, core.NO_DATA):
-        mock_log = MagicMock()
-        with patch.dict(core.__salt__, {"network.fqdns": salt.modules.network.fqdns}):
-            with patch.object(
+    with patch(
+        "salt.utils.network.ip_addrs", MagicMock(return_value=["1.2.3.4"])
+    ), patch("salt.utils.network.ip_addrs6", MagicMock(return_value=[])):
+        for errno in (0, core.HOST_NOT_FOUND, core.NO_DATA):
+            mock_log = MagicMock()
+            with patch.dict(
+                core.__salt__, {"network.fqdns": salt.modules.network.fqdns}
+            ), patch.object(
                 socket, "gethostbyaddr", side_effect=_gen_gethostbyaddr(errno)
+            ), patch(
+                "salt.modules.network.log", mock_log
             ):
-                with patch("salt.modules.network.log", mock_log):
-                    assert core.fqdns() == {"fqdns": []}
-                    mock_log.debug.assert_called()
-                    mock_log.error.assert_not_called()
-
-    mock_log = MagicMock()
-    with patch.dict(core.__salt__, {"network.fqdns": salt.modules.network.fqdns}):
-        with patch.object(socket, "gethostbyaddr", side_effect=_gen_gethostbyaddr(-1)):
-            with patch("salt.modules.network.log", mock_log):
                 assert core.fqdns() == {"fqdns": []}
-                mock_log.debug.assert_called_once()
-                mock_log.error.assert_called()
+                mock_log.debug.assert_called()
+                mock_log.error.assert_not_called()
+
+        caplog.set_level(logging.WARNING)
+        with patch.dict(
+            core.__salt__, {"network.fqdns": salt.modules.network.fqdns}
+        ), patch.object(socket, "gethostbyaddr", side_effect=_gen_gethostbyaddr(-1)):
+            assert core.fqdns() == {"fqdns": []}
+        assert "Failed to resolve address 1.2.3.4:" in caplog.text
 
 
 def test_core_virtual():
@@ -1823,45 +1926,36 @@ def test_core_virtual():
     test virtual grain with cmd virt-what
     """
     virt = "kvm"
-    with patch.object(salt.utils.platform, "is_windows", MagicMock(return_value=False)):
-        with patch.object(salt.utils.path, "which", MagicMock(return_value=True)):
-            with patch.dict(
-                core.__salt__,
-                {
-                    "cmd.run_all": MagicMock(
-                        return_value={
-                            "pid": 78,
-                            "retcode": 0,
-                            "stderr": "",
-                            "stdout": virt,
-                        }
-                    )
-                },
-            ):
-                osdata = {
-                    "kernel": "test",
-                }
-                ret = core._virtual(osdata)
-                assert ret["virtual"] == virt
+    with patch.object(
+        salt.utils.platform, "is_windows", MagicMock(return_value=False)
+    ), patch.object(salt.utils.path, "which", MagicMock(return_value=True)), patch.dict(
+        core.__salt__,
+        {
+            "cmd.run_all": MagicMock(
+                return_value={"pid": 78, "retcode": 0, "stderr": "", "stdout": virt}
+            )
+        },
+    ):
+        osdata = {"kernel": "test"}
+        ret = core._virtual(osdata)
+        assert ret["virtual"] == virt
 
-            with patch.dict(
-                core.__salt__,
-                {
-                    "cmd.run_all": MagicMock(
-                        return_value={
-                            "pid": 78,
-                            "retcode": 0,
-                            "stderr": "",
-                            "stdout": "\n\n{}".format(virt),
-                        }
-                    )
-                },
-            ):
-                osdata = {
-                    "kernel": "test",
-                }
-                ret = core._virtual(osdata)
-                assert ret["virtual"] == virt
+        with patch.dict(
+            core.__salt__,
+            {
+                "cmd.run_all": MagicMock(
+                    return_value={
+                        "pid": 78,
+                        "retcode": 0,
+                        "stderr": "",
+                        "stdout": "\n\n{}".format(virt),
+                    }
+                )
+            },
+        ):
+            osdata = {"kernel": "test"}
+            ret = core._virtual(osdata)
+            assert ret["virtual"] == virt
 
 
 def test_solaris_sparc_s7zone(os_release_dir, solaris_dir):
@@ -1871,9 +1965,10 @@ def test_solaris_sparc_s7zone(os_release_dir, solaris_dir):
     expectation = {
         "productname": "SPARC S7-2",
         "product": "SPARC S7-2",
+        "manufacturer": "Oracle Corporation",
     }
     with salt.utils.files.fopen(
-        os.path.join(solaris_dir, "prtconf.s7-zone")
+        str(solaris_dir / "prtconf.s7-zone")
     ) as sparc_return_data:
         this_sparc_return_data = "\n".join(sparc_return_data.readlines())
         this_sparc_return_data += "\n"
@@ -1889,10 +1984,9 @@ def test_solaris_sparc_s7(os_release_dir, solaris_dir):
     expectation = {
         "productname": "SPARC S7-2",
         "product": "SPARC S7-2",
+        "manufacturer": "Oracle Corporation",
     }
-    with salt.utils.files.fopen(
-        os.path.join(solaris_dir, "prtdiag.s7")
-    ) as sparc_return_data:
+    with salt.utils.files.fopen(str(solaris_dir / "prtdiag.s7")) as sparc_return_data:
         this_sparc_return_data = "\n".join(sparc_return_data.readlines())
         this_sparc_return_data += "\n"
     _check_solaris_sparc_productname_grains(
@@ -1907,9 +2001,10 @@ def test_solaris_sparc_t5220(os_release_dir, solaris_dir):
     expectation = {
         "productname": "SPARC Enterprise T5220",
         "product": "SPARC Enterprise T5220",
+        "manufacturer": "Oracle Corporation",
     }
     with salt.utils.files.fopen(
-        os.path.join(solaris_dir, "prtdiag.t5220")
+        str(solaris_dir / "prtdiag.t5220")
     ) as sparc_return_data:
         this_sparc_return_data = "\n".join(sparc_return_data.readlines())
         this_sparc_return_data += "\n"
@@ -1925,9 +2020,10 @@ def test_solaris_sparc_t5220zone(os_release_dir, solaris_dir):
     expectation = {
         "productname": "SPARC Enterprise T5220",
         "product": "SPARC Enterprise T5220",
+        "manufacturer": "Oracle Corporation",
     }
     with salt.utils.files.fopen(
-        os.path.join(solaris_dir, "prtconf.t5220-zone")
+        str(solaris_dir / "prtconf.t5220-zone")
     ) as sparc_return_data:
         this_sparc_return_data = "\n".join(sparc_return_data.readlines())
         this_sparc_return_data += "\n"
@@ -1940,11 +2036,10 @@ def _check_solaris_sparc_productname_grains(os_release_dir, prtdata, expectation
     """
     verify product grains on solaris sparc
     """
-    import platform
 
     path_isfile_mock = MagicMock(side_effect=lambda x: x in ["/etc/release"])
     with salt.utils.files.fopen(
-        os.path.join(os_release_dir, "solaris-11.3")
+        str(os_release_dir / "solaris-11.3")
     ) as os_release_file:
         os_release_content = os_release_file.readlines()
     uname_mock = MagicMock(
@@ -1987,13 +2082,15 @@ def _check_solaris_sparc_productname_grains(os_release_dir, prtdata, expectation
         core.__salt__, {"cmd.run": MagicMock(return_value=prtdata)}
     ):
         os_grains = core.os_data()
-    grains = {k: v for k, v in os_grains.items() if k in {"product", "productname"}}
+    grains = {
+        k: v
+        for k, v in os_grains.items()
+        if k in {"product", "productname", "manufacturer"}
+    }
     assert grains == expectation
 
 
-@patch("os.path.isfile")
-@patch("os.path.isdir")
-def test_core_virtual_unicode(mock_file, mock_dir):
+def test_core_virtual_unicode():
     """
     test virtual grain with unicode character in product_name file
     """
@@ -2004,39 +2101,34 @@ def test_core_virtual_unicode(mock_file, mock_dir):
         return False
 
     virt = "kvm"
-    mock_file.side_effect = path_side_effect
-    mock_dir.side_effect = path_side_effect
-    with patch.object(salt.utils.platform, "is_windows", MagicMock(return_value=False)):
-        with patch.object(salt.utils.path, "which", MagicMock(return_value=True)):
-            with patch.dict(
-                core.__salt__,
-                {
-                    "cmd.run_all": MagicMock(
-                        return_value={
-                            "pid": 78,
-                            "retcode": 0,
-                            "stderr": "",
-                            "stdout": virt,
-                        }
-                    )
-                },
-            ):
-                with patch(
-                    "salt.utils.files.fopen", mock_open(read_data="嗨".encode()),
-                ):
-                    osdata = {
-                        "kernel": "Linux",
-                    }
-                    osdata = {
-                        "kernel": "Linux",
-                    }
-                    ret = core._virtual(osdata)
-                    assert ret["virtual"] == virt
+    with patch("os.path.isfile", side_effect=path_side_effect), patch(
+        "os.path.isdir", side_effect=path_side_effect
+    ), patch.object(
+        salt.utils.platform, "is_windows", MagicMock(return_value=False)
+    ), patch.object(
+        salt.utils.path, "which", MagicMock(return_value=True)
+    ), patch.dict(
+        core.__salt__,
+        {
+            "cmd.run_all": MagicMock(
+                return_value={"pid": 78, "retcode": 0, "stderr": "", "stdout": virt}
+            )
+        },
+    ), patch(
+        "salt.utils.files.fopen",
+        mock_open(read_data="嗨".encode()),
+    ):
+        osdata = {
+            "kernel": "Linux",
+        }
+        osdata = {
+            "kernel": "Linux",
+        }
+        ret = core._virtual(osdata)
+        assert ret["virtual"] == virt
 
 
-@patch("os.path.isfile")
-@patch("os.path.isdir")
-def test_core_virtual_invalid(mock_file, mock_dir):
+def test_core_virtual_invalid():
     """
     test virtual grain with an invalid unicode character in product_name file
     """
@@ -2047,32 +2139,27 @@ def test_core_virtual_invalid(mock_file, mock_dir):
         return False
 
     virt = "kvm"
-    mock_file.side_effect = path_side_effect
-    mock_dir.side_effect = path_side_effect
-    with patch.object(salt.utils.platform, "is_windows", MagicMock(return_value=False)):
-        with patch.object(salt.utils.path, "which", MagicMock(return_value=True)):
-            with patch.dict(
-                core.__salt__,
-                {
-                    "cmd.run_all": MagicMock(
-                        return_value={
-                            "pid": 78,
-                            "retcode": 0,
-                            "stderr": "",
-                            "stdout": virt,
-                        }
-                    )
-                },
-            ):
-                with patch("salt.utils.files.fopen", mock_open(read_data=b"\xff")):
-                    osdata = {
-                        "kernel": "Linux",
-                    }
-                    ret = core._virtual(osdata)
-                    assert ret["virtual"] == virt
+    with patch("os.path.isfile", side_effect=path_side_effect), patch(
+        "os.path.isdir", side_effect=path_side_effect
+    ), patch.object(
+        salt.utils.platform, "is_windows", MagicMock(return_value=False)
+    ), patch.object(
+        salt.utils.path, "which", MagicMock(return_value=True)
+    ), patch.dict(
+        core.__salt__,
+        {
+            "cmd.run_all": MagicMock(
+                return_value={"pid": 78, "retcode": 0, "stderr": "", "stdout": virt}
+            )
+        },
+    ), patch(
+        "salt.utils.files.fopen", mock_open(read_data=b"\xff")
+    ):
+        osdata = {"kernel": "Linux"}
+        ret = core._virtual(osdata)
+        assert ret["virtual"] == virt
 
 
-@patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/sysctl"))
 def test_osx_memdata_with_comma():
     """
     test osx memdata method when comma returns
@@ -2086,13 +2173,12 @@ def test_osx_memdata_with_comma():
 
     with patch.dict(
         core.__salt__, {"cmd.run": MagicMock(side_effect=_cmd_side_effect)}
-    ):
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/sysctl")):
         ret = core._osx_memdata()
         assert ret["swap_total"] == 1024
         assert ret["mem_total"] == 4096
 
 
-@patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/sysctl"))
 def test_osx_memdata():
     """
     test osx memdata
@@ -2106,13 +2192,13 @@ def test_osx_memdata():
 
     with patch.dict(
         core.__salt__, {"cmd.run": MagicMock(side_effect=_cmd_side_effect)}
-    ):
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/sysctl")):
         ret = core._osx_memdata()
         assert ret["swap_total"] == 0
         assert ret["mem_total"] == 4096
 
 
-@skipIf(not core._DATEUTIL_TZ, "Missing dateutil.tz")
+@pytest.mark.skipif(not core._DATEUTIL_TZ, reason="Missing dateutil.tz")
 def test_locale_info_tzname():
     # mock datetime.now().tzname()
     # cant just mock now because it is read only
@@ -2121,25 +2207,27 @@ def test_locale_info_tzname():
     now = Mock(return_value=now_ret_object)
     datetime = Mock(now=now)
 
-    with patch.object(core, "datetime", datetime=datetime) as datetime_module:
-        with patch.object(core.dateutil.tz, "tzlocal", return_value=object) as tzlocal:
-            with patch.object(
-                salt.utils.platform, "is_proxy", return_value=False
-            ) as is_proxy:
-                ret = core.locale_info()
+    with patch.object(
+        core, "datetime", datetime=datetime
+    ) as datetime_module, patch.object(
+        core.dateutil.tz, "tzlocal", return_value=object
+    ) as tzlocal, patch.object(
+        salt.utils.platform, "is_proxy", return_value=False
+    ) as is_proxy:
+        ret = core.locale_info()
 
-                tzname.assert_called_once_with()
-                assert len(now_ret_object.method_calls) == 1
-                now.assert_called_once_with(object)
-                assert len(datetime.method_calls) == 1
-                assert len(datetime_module.method_calls) == 1
-                tzlocal.assert_called_once_with()
-                is_proxy.assert_called_once_with()
+        tzname.assert_called_once_with()
+        assert len(now_ret_object.method_calls) == 1
+        now.assert_called_once_with(object)
+        assert len(datetime.method_calls) == 1
+        assert len(datetime_module.method_calls) == 1
+        tzlocal.assert_called_once_with()
+        is_proxy.assert_called_once_with()
 
-                assert ret["locale_info"]["timezone"] == "MDT_FAKE"
+        assert ret["locale_info"]["timezone"] == "MDT_FAKE"
 
 
-@skipIf(not core._DATEUTIL_TZ, "Missing dateutil.tz")
+@pytest.mark.skipif(not core._DATEUTIL_TZ, reason="Missing dateutil.tz")
 def test_locale_info_unicode_error_tzname():
     # UnicodeDecodeError most have the default string encoding
     unicode_error = UnicodeDecodeError("fake", b"\x00\x00", 1, 2, "fake")
@@ -2153,45 +2241,46 @@ def test_locale_info_unicode_error_tzname():
 
     # mock tzname[0].decode()
     decode = Mock(return_value="CST_FAKE")
-    tzname2 = (Mock(decode=decode,),)
+    tzname2 = [Mock(decode=decode)]
 
-    with patch.object(core, "datetime", datetime=datetime) as datetime_module:
-        with patch.object(
-            core.dateutil.tz, "tzlocal", side_effect=unicode_error
-        ) as tzlocal:
-            with patch.object(
-                salt.utils.platform, "is_proxy", return_value=False
-            ) as is_proxy:
-                with patch.object(
-                    core.salt.utils.platform, "is_windows", return_value=True
-                ) as is_windows:
-                    with patch.object(core, "time", tzname=tzname2):
-                        ret = core.locale_info()
+    with patch.object(
+        core, "datetime", datetime=datetime
+    ) as datetime_module, patch.object(
+        core.dateutil.tz, "tzlocal", side_effect=unicode_error
+    ) as tzlocal, patch.object(
+        salt.utils.platform, "is_proxy", return_value=False
+    ) as is_proxy, patch.object(
+        core.salt.utils.platform, "is_windows", return_value=True
+    ) as is_windows, patch.object(
+        core, "time", tzname=tzname2
+    ):
+        ret = core.locale_info()
 
-                        tzname.assert_not_called()
-                        assert len(now_ret_object.method_calls) == 0
-                        now.assert_not_called()
-                        assert len(datetime.method_calls) == 0
-                        decode.assert_called_once_with("mbcs")
-                        assert len(tzname2[0].method_calls) == 1
-                        assert len(datetime_module.method_calls) == 0
-                        tzlocal.assert_called_once_with()
-                        is_proxy.assert_called_once_with()
-                        is_windows.assert_called_once_with()
+        tzname.assert_not_called()
+        assert len(now_ret_object.method_calls) == 0
+        now.assert_not_called()
+        assert len(datetime.method_calls) == 0
+        decode.assert_called_once_with("mbcs")
+        assert len(tzname2[0].method_calls) == 1
+        assert len(datetime_module.method_calls) == 0
+        tzlocal.assert_called_once_with()
+        is_proxy.assert_called_once_with()
+        is_windows.assert_called_once_with()
 
-                        assert ret["locale_info"]["timezone"] == "CST_FAKE"
+        assert ret["locale_info"]["timezone"] == "CST_FAKE"
 
 
-@skipIf(core._DATEUTIL_TZ, "Not Missing dateutil.tz")
+@pytest.mark.skipif(core._DATEUTIL_TZ, reason="Not Missing dateutil.tz")
 def test_locale_info_no_tz_tzname():
-    with patch.object(salt.utils.platform, "is_proxy", return_value=False) as is_proxy:
-        with patch.object(
-            core.salt.utils.platform, "is_windows", return_value=True
-        ) as is_windows:
-            ret = core.locale_info()
-            is_proxy.assert_called_once_with()
-            is_windows.assert_not_called()
-            assert ret["locale_info"]["timezone"] == "unknown"
+    with patch.object(
+        salt.utils.platform, "is_proxy", return_value=False
+    ) as is_proxy, patch.object(
+        core.salt.utils.platform, "is_windows", return_value=True
+    ) as is_windows:
+        ret = core.locale_info()
+        is_proxy.assert_called_once_with()
+        is_windows.assert_not_called()
+        assert ret["locale_info"]["timezone"] == "unknown"
 
 
 def test_cwd_exists():
@@ -2273,7 +2362,7 @@ def test_virtual_has_virtual_grain():
     assert virtual_grains["virtual"] != "physical"
 
 
-@pytest.mark.skip_unless_on_windows(reason="System is not Windows")
+@pytest.mark.skip_unless_on_windows
 def test_windows_virtual_set_virtual_grain():
     osdata = {}
 
@@ -2301,7 +2390,7 @@ def test_windows_virtual_set_virtual_grain():
     assert "virtual" in virtual_grains
 
 
-@pytest.mark.skip_unless_on_windows(reason="System is not Windows")
+@pytest.mark.skip_unless_on_windows
 def test_windows_virtual_has_virtual_grain():
     osdata = {"virtual": "something"}
 
@@ -2330,7 +2419,7 @@ def test_windows_virtual_has_virtual_grain():
     assert virtual_grains["virtual"] != "physical"
 
 
-@pytest.mark.skip_unless_on_windows(reason="System is not Windows")
+@pytest.mark.skip_unless_on_windows
 def test_osdata_virtual_key_win():
     with patch.dict(
         core.__salt__,
@@ -2356,7 +2445,7 @@ def test_osdata_virtual_key_win():
         assert osdata_grains["virtual"] != "physical"
 
 
-@pytest.mark.skip_on_windows(reason="System is Windows")
+@pytest.mark.skip_on_windows
 def test_bsd_osfullname():
     """
     Test to ensure osfullname exists on *BSD systems
@@ -2374,8 +2463,6 @@ def test_bsd_osfullname():
     cmd_run_mock = MagicMock(side_effect=lambda x: _cmd_run_map[x])
     empty_mock = MagicMock(return_value={})
 
-    from collections import namedtuple
-
     nt_uname = namedtuple(
         "nt_uname", ["system", "node", "release", "version", "machine", "processor"]
     )
@@ -2390,34 +2477,34 @@ def test_bsd_osfullname():
         )
     )
 
-    with patch.object(platform, "uname", mock_freebsd_uname):
-        with patch.object(
-            salt.utils.platform, "is_linux", MagicMock(return_value=False)
+    with patch.object(platform, "uname", mock_freebsd_uname), patch.object(
+        salt.utils.platform, "is_linux", MagicMock(return_value=False)
+    ), patch.object(
+        salt.utils.platform, "is_freebsd", MagicMock(return_value=True)
+    ), patch.object(
+        # Skip the first if statement
+        salt.utils.platform,
+        "is_proxy",
+        MagicMock(return_value=False),
+    ), patch.object(
+        # Skip the init grain compilation (not pertinent)
+        os.path,
+        "exists",
+        path_exists_mock,
+    ), patch(
+        "salt.utils.path.which", return_value="/sbin/sysctl"
+    ):
+        # Make a bunch of functions return empty dicts,
+        # we don't care about these grains for the
+        # purposes of this test.
+        with patch.object(core, "_bsd_cpudata", empty_mock), patch.object(
+            core, "_hw_data", empty_mock
+        ), patch.object(core, "_virtual", empty_mock), patch.object(
+            core, "_ps", empty_mock
+        ), patch.dict(
+            core.__salt__, {"cmd.run": cmd_run_mock}
         ):
-            with patch.object(
-                salt.utils.platform, "is_freebsd", MagicMock(return_value=True)
-            ):
-                # Skip the first if statement
-                with patch.object(
-                    salt.utils.platform, "is_proxy", MagicMock(return_value=False)
-                ):
-                    # Skip the init grain compilation (not pertinent)
-                    with patch.object(os.path, "exists", path_exists_mock):
-                        with patch("salt.utils.path.which") as mock:
-                            mock.return_value = "/sbin/sysctl"
-                            # Make a bunch of functions return empty dicts,
-                            # we don't care about these grains for the
-                            # purposes of this test.
-                            with patch.object(
-                                core, "_bsd_cpudata", empty_mock
-                            ), patch.object(core, "_hw_data", empty_mock), patch.object(
-                                core, "_virtual", empty_mock
-                            ), patch.object(
-                                core, "_ps", empty_mock
-                            ), patch.dict(
-                                core.__salt__, {"cmd.run": cmd_run_mock}
-                            ):
-                                os_grains = core.os_data()
+            os_grains = core.os_data()
 
     assert "osfullname" in os_grains
     assert os_grains.get("osfullname") == "FreeBSD"
@@ -2448,13 +2535,11 @@ def test_path():
     assert result == {"path": path, "systempath": comps}, result
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
-@patch("os.path.exists")
-@patch("salt.utils.platform.is_proxy")
-def test__hw_data_linux_empty(is_proxy, exists):
-    is_proxy.return_value = False
-    exists.return_value = True
-    with patch("salt.utils.files.fopen", mock_open(read_data=b"")):
+@pytest.mark.skip_unless_on_linux
+def test__hw_data_linux_empty():
+    with patch("os.path.exists", return_value=True), patch(
+        "salt.utils.platform.is_proxy", return_value=False
+    ), patch("salt.utils.files.fopen", mock_open(read_data=b"")):
         assert core._hw_data({"kernel": "Linux"}) == {
             "biosreleasedate": "",
             "biosversion": "",
@@ -2465,10 +2550,8 @@ def test__hw_data_linux_empty(is_proxy, exists):
         }
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
-@patch("os.path.exists")
-@patch("salt.utils.platform.is_proxy")
-def test__hw_data_linux_unicode_error(is_proxy, exists):
+@pytest.mark.skip_unless_on_linux
+def test__hw_data_linux_unicode_error():
     def _fopen(*args):
         class _File:
             def __enter__(self):
@@ -2482,13 +2565,13 @@ def test__hw_data_linux_unicode_error(is_proxy, exists):
 
         return _File()
 
-    is_proxy.return_value = False
-    exists.return_value = True
-    with patch("salt.utils.files.fopen", _fopen):
+    with patch("os.path.exists", return_value=True), patch(
+        "salt.utils.platform.is_proxy"
+    ), patch("salt.utils.files.fopen", _fopen):
         assert core._hw_data({"kernel": "Linux"}) == {}
 
 
-@pytest.mark.skip_unless_on_windows(reason="System is not Windows")
+@pytest.mark.skip_unless_on_windows
 def test_kernelparams_return_windows():
     """
     Should return empty dictionary on Windows
@@ -2496,9 +2579,10 @@ def test_kernelparams_return_windows():
     assert core.kernelparams() == {}
 
 
-@pytest.mark.skip_unless_on_linux(reason="System is not Linux")
-def test_kernelparams_return_linux():
-    expectations = [
+@pytest.mark.skip_unless_on_linux
+@pytest.mark.parametrize(
+    "cmdline,expectation",
+    (
         (
             "BOOT_IMAGE=/vmlinuz-3.10.0-693.2.2.el7.x86_64",
             {"kernelparams": [("BOOT_IMAGE", "/vmlinuz-3.10.0-693.2.2.el7.x86_64")]},
@@ -2545,14 +2629,13 @@ def test_kernelparams_return_linux():
                 ]
             },
         ),
-    ]
+    ),
+)
+def test_kernelparams_return_linux(cmdline, expectation):
+    with patch("salt.utils.files.fopen", mock_open(read_data=cmdline)):
+        assert core.kernelparams() == expectation
 
-    for cmdline, expectation in expectations:
-        with patch("salt.utils.files.fopen", mock_open(read_data=cmdline)):
-            assert core.kernelparams() == expectation
 
-
-@patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/lspci"))
 def test_linux_gpus():
     """
     Test GPU detection on Linux systems
@@ -2618,9 +2701,9 @@ def test_linux_gpus():
             "intel",
         ],  # Display controller
     ]
-    with patch.dict(
-        core.__salt__, {"cmd.run": MagicMock(side_effect=_cmd_side_effect)}
-    ):
+    with patch(
+        "salt.utils.path.which", MagicMock(return_value="/usr/sbin/lspci")
+    ), patch.dict(core.__salt__, {"cmd.run": MagicMock(side_effect=_cmd_side_effect)}):
         ret = core._linux_gpu_data()["gpus"]
         count = 0
         for device in devices:

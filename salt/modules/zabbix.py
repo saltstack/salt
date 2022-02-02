@@ -371,8 +371,8 @@ def compare_params(defined, existing, return_old_value=False):
     # Comparison of data types
     if not isinstance(defined, type(existing)):
         raise SaltException(
-            "Zabbix object comparison failed (data type mismatch). Expecting {}, got {}. "
-            'Existing value: "{}", defined value: "{}").'.format(
+            "Zabbix object comparison failed (data type mismatch). Expecting {}, got"
+            ' {}. Existing value: "{}", defined value: "{}").'.format(
                 type(existing), type(defined), existing, defined
             )
         )
@@ -429,8 +429,8 @@ def compare_params(defined, existing, return_old_value=False):
 
         except TypeError:
             raise SaltException(
-                "Zabbix object comparison failed (data type mismatch). Expecting {}, got {}. "
-                'Existing value: "{}", defined value: "{}").'.format(
+                "Zabbix object comparison failed (data type mismatch). Expecting {},"
+                ' got {}. Existing value: "{}", defined value: "{}").'.format(
                     type(existing), type(defined), existing, defined
                 )
             )
@@ -457,9 +457,10 @@ def get_object_id_by_params(obj, params=None, **connection_args):
         return str(res[0][ZABBIX_ID_MAPPER[obj]])
     else:
         raise SaltException(
-            "Zabbix API: Object does not exist or bad Zabbix user permissions or other unexpected "
-            "result. Called method {} with params {}. "
-            "Result: {}".format(obj + ".get", params, res)
+            "Zabbix API: Object does not exist or bad Zabbix user permissions or other"
+            " unexpected result. Called method {} with params {}. Result: {}".format(
+                obj + ".get", params, res
+            )
         )
 
 
@@ -646,7 +647,9 @@ def user_get(alias=None, userids=None, **connection_args):
             if not userids and not alias:
                 return {
                     "result": False,
-                    "comment": "Please submit alias or userids parameter to retrieve users.",
+                    "comment": (
+                        "Please submit alias or userids parameter to retrieve users."
+                    ),
                 }
             if alias:
                 params["filter"].setdefault("alias", alias)
@@ -987,8 +990,10 @@ def usergroup_exists(name=None, node=None, nodeids=None, **connection_args):
                 if not name and not node and not nodeids:
                     return {
                         "result": False,
-                        "comment": "Please submit name, node or nodeids parameter to check if "
-                        "at least one user group exists.",
+                        "comment": (
+                            "Please submit name, node or nodeids parameter to check if "
+                            "at least one user group exists."
+                        ),
                     }
                 if name:
                     params["name"] = name
@@ -1289,9 +1294,11 @@ def host_exists(
                 if not hostid and not host and not name and not node and not nodeids:
                     return {
                         "result": False,
-                        "comment": "Please submit hostid, host, name, node or nodeids parameter to"
-                        "check if at least one host that matches the given filter "
-                        "criteria exists.",
+                        "comment": (
+                            "Please submit hostid, host, name, node or nodeids"
+                            " parameter tocheck if at least one host that matches the"
+                            " given filter criteria exists."
+                        ),
                     }
                 ret = _query(method, params, conn_args["url"], conn_args["auth"])
                 return ret["result"]
@@ -1405,12 +1412,12 @@ def host_inventory_get(hostids, **connection_args):
 
     .. versionadded:: 2019.2.0
 
-    :param hostids: Return only host interfaces used by the given hosts.
+    :param hostids: ID of the host to query
     :param _connection_user: Optional - zabbix user (can also be set in opts or pillar, see module's docstring)
     :param _connection_password: Optional - zabbix password (can also be set in opts or pillar, see module's docstring)
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
-    :return: Array with host interfaces details, False if no convenient host interfaces found or on failure.
+    :return: Array with host inventory fields, populated or not, False if host inventory is disabled or on failure.
 
     CLI Example:
 
@@ -1430,7 +1437,7 @@ def host_inventory_get(hostids, **connection_args):
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
             return (
                 ret["result"][0]["inventory"]
-                if len(ret["result"][0]["inventory"]) > 0
+                if ret["result"] and ret["result"][0]["inventory"]
                 else False
             )
         else:
@@ -1471,8 +1478,10 @@ def host_inventory_set(hostid, **connection_args):
 
             if connection_args.get("clear_old"):
                 clear_old = True
-
             connection_args.pop("clear_old", None)
+
+            inventory_mode = connection_args.pop("inventory_mode", "0")
+
             inventory_params = dict(_params_extend(params, **connection_args))
             for key in inventory_params:
                 params.pop(key, None)
@@ -1485,7 +1494,7 @@ def host_inventory_set(hostid, **connection_args):
                 ret = _query(method, params, conn_args["url"], conn_args["auth"])
 
             # Set inventory mode to manual in order to submit inventory data
-            params["inventory_mode"] = "0"
+            params["inventory_mode"] = inventory_mode
             params["inventory"] = inventory_params
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
             return ret["result"]
@@ -1659,9 +1668,11 @@ def hostgroup_exists(
                 if not groupid and not name and not node and not nodeids:
                     return {
                         "result": False,
-                        "comment": "Please submit groupid, name, node or nodeids parameter to"
-                        "check if at least one host group that matches the given filter"
-                        " criteria exists.",
+                        "comment": (
+                            "Please submit groupid, name, node or nodeids parameter"
+                            " tocheck if at least one host group that matches the given"
+                            " filter criteria exists."
+                        ),
                     }
                 ret = _query(method, params, conn_args["url"], conn_args["auth"])
                 return ret["result"]
@@ -2683,8 +2694,7 @@ def configuration_import(config_file, rules=None, file_format="xml", **connectio
         return {
             "name": config_file,
             "result": True,
-            "message": 'Zabbix API "configuration.import" method '
-            "called successfully.",
+            "message": 'Zabbix API "configuration.import" method called successfully.',
         }
     except SaltException as exc:
         return {"name": config_file, "result": False, "message": str(exc)}

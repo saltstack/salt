@@ -462,7 +462,9 @@ class NodegroupCompTest(TestCase):
         Test a case where one nodegroup contains a second nodegroup
         """
         referenced_nodegroups = {
-            "group1": "L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com",
+            "group1": (
+                "L@foo.domain.com,bar.domain.com,baz.domain.com or bl*.domain.com"
+            ),
             "group2": "G@os:Debian and N@group1",
         }
 

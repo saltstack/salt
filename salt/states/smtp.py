@@ -63,7 +63,10 @@ def send_msg(
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "Need to send message to {}: {}".format(recipient, name,)
+        ret["comment"] = "Need to send message to {}: {}".format(
+            recipient,
+            name,
+        )
         return ret
     command = __salt__["smtp.send_msg"](
         message=name,

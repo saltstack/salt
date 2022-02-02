@@ -94,7 +94,9 @@ def minion_image(
     log.warning("GENERATED Dockerfile:\n%s", dockerfile_contents)
     dockerfile_fh = io.BytesIO(dockerfile_contents.encode("utf-8"))
     _, logs = docker_client.images.build(
-        fileobj=dockerfile_fh, tag=minion_image_name, pull=True,
+        fileobj=dockerfile_fh,
+        tag=minion_image_name,
+        pull=True,
     )
     log.warning("Image %s built. Logs:\n%s", minion_image_name, list(logs))
     return minion_image_name
@@ -197,11 +199,15 @@ def populated_state_tree(pysaltcombo, minion_id, package_name, state_tree, unico
               - name: {{ salt.pkgnames.get_test_package_name() }}
         """
     with pytest.helpers.temp_file(
-        "_modules/pkgnames.py", module_contents, state_tree,
+        "_modules/pkgnames.py",
+        module_contents,
+        state_tree,
     ), pytest.helpers.temp_file(
         "top.sls", top_file_contents, state_tree
     ), pytest.helpers.temp_file(
-        "install-package.sls", install_package_sls_contents, state_tree,
+        "install-package.sls",
+        install_package_sls_contents,
+        state_tree,
     ):
         # Run the test
         yield
@@ -231,9 +237,8 @@ def cp_file_source(pysaltcombo, unicode):
     if unicode and pysaltcombo.python_version == "2":
         if pysaltcombo.salt_version.startswith(("2019.2", "3000.")):
             pytest.xfail(
-                "Salt {} is know to fail with unicode issues under Py2 when copying files".format(
-                    pysaltcombo.salt_version
-                )
+                "Salt {} is know to fail with unicode issues under Py2 when copying"
+                " files".format(pysaltcombo.salt_version)
             )
     source = pathlib.Path(RUNTIME_VARS.BASE_FILES) / "cheese"
     contents = source.read_text()

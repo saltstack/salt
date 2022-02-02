@@ -50,8 +50,10 @@ def test_present():
                 with patch.dict(user.__opts__, {"test": True}):
                     ret.update(
                         {
-                            "comment": "The following user attributes are set to be changed:\n"
-                            "key: value\n",
+                            "comment": (
+                                "The following user attributes are set to be changed:\n"
+                                "key: value\n"
+                            ),
                             "result": None,
                         }
                     )
@@ -208,7 +210,8 @@ def test_absent():
     mock = MagicMock(side_effect=[True, True, False])
     mock1 = MagicMock(return_value=False)
     with patch.dict(
-        user.__salt__, {"user.info": mock, "user.delete": mock1, "group.info": mock1},
+        user.__salt__,
+        {"user.info": mock, "user.delete": mock1, "group.info": mock1},
     ):
         with patch.dict(user.__opts__, {"test": True}):
             ret.update({"comment": "User salt set for removal"})

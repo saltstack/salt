@@ -304,7 +304,8 @@ class ArtifactoryTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_get_latest_release_username_password(self):
         with patch(
-            "salt.modules.artifactory.__find_latest_version", return_value="1.1",
+            "salt.modules.artifactory.__find_latest_version",
+            return_value="1.1",
         ), patch(
             "salt.modules.artifactory._get_release_url",
             return_value=(

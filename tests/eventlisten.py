@@ -53,13 +53,13 @@ def parse():
         "-i",
         "--id",
         default="",
-        help=("If connecting to a live master or minion, pass in the id"),
+        help="If connecting to a live master or minion, pass in the id",
     )
     parser.add_option(
         "-t",
         "--transport",
         default="zeromq",
-        help=("Transport to use. (Default: 'zeromq'"),
+        help="Transport to use. (Default: 'zeromq'",
     )
 
     options, args = parser.parse_args()
@@ -97,8 +97,9 @@ def check_access_and_print_warning(sock_dir):
         return
     else:
         print(
-            "WARNING: Events will not be reported"
-            " (not able to access {})".format(sock_dir)
+            "WARNING: Events will not be reported (not able to access {})".format(
+                sock_dir
+            )
         )
 
 

@@ -77,7 +77,8 @@ def test_manage_file_verify_ssl(salt_call_cli, tmpdir, ssl_webserver, verify_ssl
         "",
         "",
         ssl_webserver.url("this.txt"),
-        "{hash_type: 'sha256', 'hsum': 'f2ca1bb6c7e907d06dafe4687e579fce76b37e4e93b7605022da52e6ccc26fd2'}",
+        "{hash_type: 'sha256', 'hsum':"
+        " 'f2ca1bb6c7e907d06dafe4687e579fce76b37e4e93b7605022da52e6ccc26fd2'}",
         "",
         "",
         "",
@@ -143,7 +144,8 @@ def test_check_file_meta_verify_ssl(salt_call_cli, tmpdir, ssl_webserver, verify
         test_file,
         "",
         web_url,
-        "{hash_type: 'sha256', 'hsum': 'f2ca1bb6c7e907d06dafe4687e579fce76b37e4e93b7605022da52e6ccc26fd2'}",
+        "{hash_type: 'sha256', 'hsum':"
+        " 'f2ca1bb6c7e907d06dafe4687e579fce76b37e4e93b7605022da52e6ccc26fd2'}",
         "",
         "",
         "",

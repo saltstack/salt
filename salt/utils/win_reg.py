@@ -554,7 +554,7 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
                 ret["vdata"] = "(value not set)"
                 ret["vtype"] = "REG_SZ"
             elif exc.winerror == 2:
-                msg = "Cannot find {} in {}\\{}" "".format(
+                msg = "Cannot find {} in {}\\{}".format(
                     local_vname, local_hive, local_key
                 )
                 log.trace(exc)

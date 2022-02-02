@@ -271,7 +271,7 @@ def gpg_agent(request, gpghome):
         check=True,
         universal_newlines=True,
     )
-    if tuple([int(p) for p in gpg_version_proc.stdout.split(".")]) >= (2, 1):
+    if tuple(int(p) for p in gpg_version_proc.stdout.split(".")) >= (2, 1):
         kill_option_supported = True
     else:
         kill_option_supported = False
@@ -303,11 +303,14 @@ def gpg_agent(request, gpghome):
     try:
         # launch gpg-agent
         gpg_tty_info_path = gpghome / "gpg_tty_info"
-        gpg_agent_cmd = "gpg-agent --homedir {} --allow-preset-passphrase --max-cache-ttl 600 --daemon".format(
-            gpghome
+        gpg_agent_cmd = (
+            "gpg-agent --homedir {} --allow-preset-passphrase --max-cache-ttl 600"
+            " --daemon".format(gpghome)
         )
-        echo_gpg_tty_cmd = "GPG_TTY=$(tty) ; export GPG_TTY ; echo $GPG_TTY=$(tty) > {}".format(
-            gpg_tty_info_path
+        echo_gpg_tty_cmd = (
+            "GPG_TTY=$(tty) ; export GPG_TTY ; echo $GPG_TTY=$(tty) > {}".format(
+                gpg_tty_info_path
+            )
         )
         subprocess.run(  # nosec
             "{}; {}".format(gpg_agent_cmd, echo_gpg_tty_cmd), shell=True, check=True

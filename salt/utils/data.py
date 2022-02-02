@@ -759,7 +759,7 @@ def filter_by(lookup_dict, lookup, traverse, merge=None, default="default", base
         elif isinstance(base_values, Mapping):
             if not isinstance(ret, Mapping):
                 raise SaltException(
-                    "filter_by default and look-up values must both be " "dictionaries."
+                    "filter_by default and look-up values must both be dictionaries."
                 )
             ret = salt.utils.dictupdate.update(copy.deepcopy(base_values), ret)
 
@@ -1071,7 +1071,7 @@ def repack_dictlist(data, strict=False, recurse=False, key_cb=None, val_cb=None)
                 return {}
     else:
         log.error(
-            "Invalid input for repack_dictlist, data passed is not a list " "(%s)", data
+            "Invalid input for repack_dictlist, data passed is not a list (%s)", data
         )
         return {}
 

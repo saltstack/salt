@@ -54,7 +54,8 @@ class BuildoutTestCase(Base):
     def test_installed(self):
         if salt.modules.virtualenv_mod.virtualenv_ver(self.ppy_st) >= (20, 0, 0):
             self.skipTest(
-                "Skiping until upstream resolved https://github.com/pypa/virtualenv/issues/1715"
+                "Skiping until upstream resolved"
+                " https://github.com/pypa/virtualenv/issues/1715"
             )
         b_dir = os.path.join(self.tdir, "b")
         ret = buildout.installed(

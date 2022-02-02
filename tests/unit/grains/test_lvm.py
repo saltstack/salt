@@ -24,9 +24,14 @@ class LvmGrainsTestCase(TestCase, LoaderModuleMockMixin):
         Should return a populated dictionary
         """
 
-        vgs_out = "  vg00\n  vg01"
-        lvs_out_vg00 = "  root\n  swap\n  tmp \n  usr \n  var"
-        lvs_out_vg01 = "  opt \n"
+        vgs_out = {"pid": 123, "retcode": 0, "stdout": "  vg00\n  vg01", "stderr": ""}
+        lvs_out_vg00 = {
+            "pid": 456,
+            "retcode": 0,
+            "stdout": "  root\n  swap\n  tmp \n  usr \n  var",
+            "stderr": "",
+        }
+        lvs_out_vg01 = {"pid": 789, "retcode": 0, "stdout": "  opt", "stderr": ""}
         cmd_out = MagicMock(
             autospec=True, side_effect=[vgs_out, lvs_out_vg00, lvs_out_vg01]
         )
@@ -34,7 +39,80 @@ class LvmGrainsTestCase(TestCase, LoaderModuleMockMixin):
         patch_which = patch(
             "salt.utils.path.which", autospec=True, return_value="/usr/sbin/lvm"
         )
-        patch_cmd_lvm = patch.dict(lvm.__salt__, {"cmd.run": cmd_out})
+        patch_cmd_lvm = patch.dict(lvm.__salt__, {"cmd.run_all": cmd_out})
+        with patch_which, patch_cmd_lvm:
+            ret = lvm._linux_lvm()
+
+        assert ret == {
+            "lvm": {"vg00": ["root", "swap", "tmp", "usr", "var"], "vg01": ["opt"]}
+        }, ret
+
+    def test__linux_lvm_with_WARNINGs(self):
+        """
+        Test grains._linux_lvm, with WARNINGs in lvm command output
+        Should return a populated dictionary
+        """
+
+        vgs_out = {
+            "pid": 123,
+            "retcode": 0,
+            "stdout": "  vg00\n  vg01",
+            "stderr": "WARNING: Something wrong is not right",
+        }
+        lvs_out_vg00 = {
+            "pid": 456,
+            "retcode": 0,
+            "stdout": "  root\n  swap\n  tmp \n  usr \n  var",
+            "stderr": "WARNING: Something wrong is not right",
+        }
+        lvs_out_vg01 = {
+            "pid": 789,
+            "retcode": 0,
+            "stdout": "  opt",
+            "stderr": "WARNING: Something wrong is not right",
+        }
+        cmd_out = MagicMock(
+            autospec=True, side_effect=[vgs_out, lvs_out_vg00, lvs_out_vg01]
+        )
+
+        patch_which = patch(
+            "salt.utils.path.which", autospec=True, return_value="/usr/sbin/lvm"
+        )
+        patch_cmd_lvm = patch.dict(lvm.__salt__, {"cmd.run_all": cmd_out})
+        with patch_which, patch_cmd_lvm:
+            ret = lvm._linux_lvm()
+
+        assert ret == {
+            "lvm": {"vg00": ["root", "swap", "tmp", "usr", "var"], "vg01": ["opt"]}
+        }, ret
+
+    def test__linux_lvm_with_non_zero_exit_codes(self):
+        """
+        Test grains._linux_lvm, with non-zero exit codes for lvm command
+        Should return a populated dictionary
+        """
+
+        vgs_out = {
+            "pid": 123,
+            "retcode": 5,
+            "stdout": "  vg00\n  vg01",
+            "stderr": "  Skipping clustered volume vgcluster\n  Skipping volume group vgcluster",
+        }
+        lvs_out_vg00 = {
+            "pid": 456,
+            "retcode": 0,
+            "stdout": "  root\n  swap\n  tmp \n  usr \n  var",
+            "stderr": "",
+        }
+        lvs_out_vg01 = {"pid": 789, "retcode": 0, "stdout": "  opt", "stderr": ""}
+        cmd_out = MagicMock(
+            autospec=True, side_effect=[vgs_out, lvs_out_vg00, lvs_out_vg01]
+        )
+
+        patch_which = patch(
+            "salt.utils.path.which", autospec=True, return_value="/usr/sbin/lvm"
+        )
+        patch_cmd_lvm = patch.dict(lvm.__salt__, {"cmd.run_all": cmd_out})
         with patch_which, patch_cmd_lvm:
             ret = lvm._linux_lvm()
 
@@ -48,37 +126,62 @@ class LvmGrainsTestCase(TestCase, LoaderModuleMockMixin):
         Should return nothing
         """
 
-        vgs_out = "  vg00\n  vg01"
-        lvs_out_vg00 = "  root\n  swap\n  tmp \n  usr \n  var"
-        lvs_out_vg01 = "  opt \n"
+        vgs_out = {"pid": 123, "retcode": 0, "stdout": "  vg00\n  vg01", "stderr": ""}
+        lvs_out_vg00 = {
+            "pid": 456,
+            "retcode": 0,
+            "stdout": "  root\n  swap\n  tmp \n  usr \n  var",
+            "stderr": "",
+        }
+        lvs_out_vg01 = {"pid": 789, "retcode": 0, "stdout": "  opt", "stderr": ""}
         cmd_out = MagicMock(
             autospec=True, side_effect=[vgs_out, lvs_out_vg00, lvs_out_vg01]
         )
 
         patch_which = patch("salt.utils.path.which", autospec=True, return_value="")
-        patch_cmd_lvm = patch.dict(lvm.__salt__, {"cmd.run": cmd_out})
+        patch_cmd_lvm = patch.dict(lvm.__salt__, {"cmd.run_all": cmd_out})
         with patch_which, patch_cmd_lvm:
             ret = lvm._linux_lvm()
 
         assert ret is None, ret
 
-    def test__linux_lvm_no_logical_volumes(self):
+    def test__linux_lvm_no_volume_groups(self):
         """
-        Test grains._linux_lvm, lvm is installed but no volumes
+        Test grains._linux_lvm, lvm is installed but no volume groups created.
         Should return a dictionary only with the header
         """
 
-        vgs_out = ""
+        vgs_out = {"pid": 123, "retcode": 0, "stdout": "", "stderr": ""}
         cmd_out = MagicMock(autospec=True, side_effect=[vgs_out])
 
         patch_which = patch(
             "salt.utils.path.which", autospec=True, return_value="/usr/sbin/lvm"
         )
-        patch_cmd_lvm = patch.dict(lvm.__salt__, {"cmd.run": cmd_out})
+        patch_cmd_lvm = patch.dict(lvm.__salt__, {"cmd.run_all": cmd_out})
         with patch_which, patch_cmd_lvm:
             ret = lvm._linux_lvm()
 
         assert ret == {"lvm": {}}, ret
+
+    def test__linux_lvm_no_logical_volumes(self):
+        """
+        Test grains._linux_lvm, lvm is installed, volume groups created but
+        no logical volumes present.
+        Should return a dictionary only with the header
+        """
+
+        vgs_out = {"pid": 123, "retcode": 0, "stdout": "  vg00\n  vg01", "stderr": ""}
+        lvs_out = {"pid": 456, "retcode": 0, "stdout": "", "stderr": ""}
+        cmd_out = MagicMock(autospec=True, side_effect=[vgs_out, lvs_out, lvs_out])
+
+        patch_which = patch(
+            "salt.utils.path.which", autospec=True, return_value="/usr/sbin/lvm"
+        )
+        patch_cmd_lvm = patch.dict(lvm.__salt__, {"cmd.run_all": cmd_out})
+        with patch_which, patch_cmd_lvm:
+            ret = lvm._linux_lvm()
+
+        assert ret == {"lvm": {"vg00": [], "vg01": []}}, ret
 
     def test__aix_lvm(self):
         """
@@ -87,21 +190,25 @@ class LvmGrainsTestCase(TestCase, LoaderModuleMockMixin):
         """
 
         lsvg_out = "rootvg\nothervg"
-        lsvg_out_rootvg = "rootvg:\n\
-LV NAME             TYPE       LPs     PPs     PVs  LV STATE      MOUNT POINT\n\
-hd5                 boot       1       1       1    closed/syncd  N/A\n\
-hd6                 paging     32      32      1    open/syncd    N/A\n\
-hd8                 jfs2log    1       1       1    open/syncd    N/A\n\
-hd4                 jfs2       32      32      1    open/syncd    /\n\
-hd2                 jfs2       16      16      1    open/syncd    /usr\n\
-hd9var              jfs2       32      32      1    open/syncd    /var\n\
-hd3                 jfs2       32      32      1    open/syncd    /tmp\n\
-hd1                 jfs2       16      16      1    open/syncd    /home\n\
-hd10opt             jfs2       16      16      1    open/syncd    /opt"
-        lsvg_out_othervg = "othervg:\n\
-LV NAME             TYPE       LPs     PPs     PVs  LV STATE      MOUNT POINT\n\
-loglv01             jfs2log    1       1       1    open/syncd    N/A\n\
-datalv              jfs2       16      16      1    open/syncd    /data"
+        lsvg_out_rootvg = (
+            "rootvg:\nLV NAME             TYPE       LPs     PPs     PVs  LV STATE     "
+            " MOUNT POINT\nhd5                 boot       1       1       1   "
+            " closed/syncd  N/A\nhd6                 paging     32      32      1   "
+            " open/syncd    N/A\nhd8                 jfs2log    1       1       1   "
+            " open/syncd    N/A\nhd4                 jfs2       32      32      1   "
+            " open/syncd    /\nhd2                 jfs2       16      16      1   "
+            " open/syncd    /usr\nhd9var              jfs2       32      32      1   "
+            " open/syncd    /var\nhd3                 jfs2       32      32      1   "
+            " open/syncd    /tmp\nhd1                 jfs2       16      16      1   "
+            " open/syncd    /home\nhd10opt             jfs2       16      16      1   "
+            " open/syncd    /opt"
+        )
+        lsvg_out_othervg = (
+            "othervg:\nLV NAME             TYPE       LPs     PPs     PVs  LV STATE    "
+            "  MOUNT POINT\nloglv01             jfs2log    1       1       1   "
+            " open/syncd    N/A\ndatalv              jfs2       16      16      1   "
+            " open/syncd    /data"
+        )
         cmd_out = MagicMock(
             autospec=True, side_effect=[lsvg_out, lsvg_out_rootvg, lsvg_out_othervg]
         )

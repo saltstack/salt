@@ -54,12 +54,21 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_active_provider_name():
+    try:
+        return __active_provider_name__.value()
+    except AttributeError:
+        return __active_provider_name__
+
+
 def get_configured_provider():
     """
     Return the first configured instance.
     """
     return config.is_provider_configured(
-        __opts__, __active_provider_name__ or __virtualname__, ("key",),
+        __opts__,
+        _get_active_provider_name() or __virtualname__,
+        ("key",),
     )
 
 
@@ -68,7 +77,8 @@ def get_dependencies():
     Warn if dependencies aren't met.
     """
     return config.check_driver_dependencies(
-        __active_provider_name__ or __virtualname__, {"hcloud": HAS_HCLOUD},
+        _get_active_provider_name() or __virtualname__,
+        {"hcloud": HAS_HCLOUD},
     )
 
 
@@ -104,7 +114,7 @@ def _connect_client():
 def avail_locations(call=None):
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_locations function must be called with " "-f or --function"
+            "The list_locations function must be called with -f or --function"
         )
 
     client = _connect_client()
@@ -117,7 +127,7 @@ def avail_locations(call=None):
 def avail_images(call=None):
     if call == "action":
         raise SaltCloudSystemExit(
-            "The avail_images function must be called with " "-f or --function"
+            "The avail_images function must be called with -f or --function"
         )
 
     client = _connect_client()
@@ -130,7 +140,7 @@ def avail_images(call=None):
 def avail_sizes(call=None):
     if call == "action":
         raise SaltCloudSystemExit(
-            "The avail_sizes function must be called with " "-f or --function"
+            "The avail_sizes function must be called with -f or --function"
         )
 
     client = _connect_client()
@@ -143,7 +153,7 @@ def avail_sizes(call=None):
 def list_ssh_keys(call=None):
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_ssh_keys function must be called with " "-f or --function"
+            "The list_ssh_keys function must be called with -f or --function"
         )
 
     client = _connect_client()
@@ -156,7 +166,7 @@ def list_ssh_keys(call=None):
 def list_nodes_full(call=None):
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes_full function must be called with " "-f or --function"
+            "The list_nodes_full function must be called with -f or --function"
         )
 
     client = _connect_client()
@@ -181,7 +191,7 @@ def list_nodes_full(call=None):
 def list_nodes(call=None):
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes function must be called with " "-f or --function"
+            "The list_nodes function must be called with -f or --function"
         )
 
     ret = {}
@@ -199,20 +209,20 @@ def wait_until(name, state, timeout=300):
     Wait until a specific state has been reached on  a node
     """
     start_time = time.time()
-    node = show_instance(name, call="function")
+    node = show_instance(name, call="action")
     while True:
         if node["state"] == state:
             return True
         time.sleep(1)
         if time.time() - start_time > timeout:
             return False
-        node = show_instance(name, call="function")
+        node = show_instance(name, call="action")
 
 
 def show_instance(name, call=None):
-    if call == "action":
+    if call != "action":
         raise SaltCloudSystemExit(
-            "The show_instance function must be called with " "-f or --function"
+            "The show_instance function must be called with -a or --action."
         )
 
     try:
@@ -222,7 +232,9 @@ def show_instance(name, call=None):
         node = {}
 
     __utils__["cloud.cache_node"](
-        node, __active_provider_name__ or __virtualname__, __opts__,
+        node,
+        _get_active_provider_name() or __virtualname__,
+        __opts__,
     )
 
     return node
@@ -238,7 +250,7 @@ def create(vm_):
             vm_.get("profile")
             and config.is_profile_configured(
                 __opts__,
-                __active_provider_name__ or __virtualname__,
+                _get_active_provider_name() or __virtualname__,
                 vm_["profile"],
                 vm_=vm_,
             )
@@ -268,7 +280,9 @@ def create(vm_):
         "starting create",
         "salt/cloud/{}/creating".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
-            "creating", vm_, ["name", "profile", "provider", "driver"],
+            "creating",
+            vm_,
+            ["name", "profile", "provider", "driver"],
         ),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -348,7 +362,9 @@ def create(vm_):
         "created instance",
         "salt/cloud/{}/created".format(vm_["name"]),
         args=__utils__["cloud.filter_event"](
-            "created", vm_, ["name", "profile", "provider", "driver"],
+            "created",
+            vm_,
+            ["name", "profile", "provider", "driver"],
         ),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
@@ -467,7 +483,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     client = _connect_client()
@@ -484,7 +500,7 @@ def destroy(name, call=None):
         transport=__opts__["transport"],
     )
 
-    node = show_instance(name, call="function")
+    node = show_instance(name, call="action")
     if node["state"] == "running":
         stop(name, call="action", wait=False)
         if not wait_until(name, "off"):
@@ -503,7 +519,9 @@ def destroy(name, call=None):
 
     if __opts__.get("update_cachedir", False) is True:
         __utils__["cloud.delete_minion_cachedir"](
-            name, __active_provider_name__.split(":")[0], __opts__,
+            name,
+            _get_active_provider_name().split(":")[0],
+            __opts__,
         )
 
     return {"Destroyed": "{} was destroyed.".format(name)}
@@ -547,7 +565,7 @@ def resize(name, kwargs, call=None):
         transport=__opts__["transport"],
     )
 
-    node = show_instance(name, call="function")
+    node = show_instance(name, call="action")
     if node["state"] == "running":
         stop(name, call="action", wait=False)
         if not wait_until(name, "off"):

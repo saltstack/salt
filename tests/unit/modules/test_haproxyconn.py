@@ -58,14 +58,14 @@ class Mockcmds:
         """
         Mock of showFrontends method
         """
-        return "frontend-alpha\n" "frontend-beta\n" "frontend-gamma"
+        return "frontend-alpha\nfrontend-beta\nfrontend-gamma"
 
     @staticmethod
     def showBackends():
         """
         Mock of showBackends method
         """
-        return "backend-alpha\n" "backend-beta\n" "backend-gamma"
+        return "backend-alpha\nbackend-beta\nbackend-gamma"
 
 
 class Mockhaproxy:

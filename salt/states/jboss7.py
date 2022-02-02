@@ -279,7 +279,8 @@ def bindings_exist(name, jboss_config, bindings, profile=None):
 
     """
     log.debug(
-        " ======================== STATE: jboss7.bindings_exist (name: %s) (profile: %s) ",
+        " ======================== STATE: jboss7.bindings_exist (name: %s) (profile:"
+        " %s) ",
         name,
         profile,
     )
@@ -505,9 +506,10 @@ def __find_deployment(jboss_config, salt_source=None):
                 if result is not None:
                     success = False
                     comment = (
-                        "More than one deployment matches regular expression: {}. \n"
-                        "For deployments from Salt file system deployments on JBoss are searched to find one that matches regular expression in 'undeploy' parameter.\n"
-                        "Existing deployments: {}".format(
+                        "More than one deployment matches regular expression: {}. \nFor"
+                        " deployments from Salt file system deployments on JBoss are"
+                        " searched to find one that matches regular expression in"
+                        " 'undeploy' parameter.\nExisting deployments: {}".format(
                             salt_source["undeploy"], ",".join(deployments)
                         )
                     )
@@ -619,9 +621,10 @@ def reloaded(name, jboss_config, timeout=60, interval=5):
     status = __salt__["jboss7.status"](jboss_config)
     if not status["success"] or status["result"] not in ("running", "reload-required"):
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "Cannot reload server configuration, it should be up and in 'running' or 'reload-required' state."
+        ret["comment"] = (
+            "Cannot reload server configuration, it should be up and in 'running' or"
+            " 'reload-required' state."
+        )
         return ret
 
     result = __salt__["jboss7.reload"](jboss_config)
@@ -657,7 +660,7 @@ def reloaded(name, jboss_config, timeout=60, interval=5):
                 )
             else:
                 ret["comment"] = __append_comment(
-                    ("Server is in {} state".format(status["result"])), ret["comment"]
+                    "Server is in {} state".format(status["result"]), ret["comment"]
                 )
     else:
         ret["result"] = False
