@@ -1710,14 +1710,14 @@ Changelog for v2016.3.1..v2016.3.2
 
   * 887a415138 Adds new Understanding Jinja topic, and fixes several Jinja doc issues. Removes the "Full list of builtin ..." from each module reference list, leaving just the module type for scanability.
 
-* **PR** `#33900`_: (`amendlik`_) Document sudo policy for gitfs post-recieve hook
+* **PR** `#33900`_: (`amendlik`_) Document sudo policy for gitfs post-receive hook
   @ *2016-06-14 01:04:35 UTC*
 
   * a400f6a6c3 Merge pull request `#33900`_ from amendlik/gitfs-hook-doc
 
   * b4a28e2684 Add clarifying documentation about the need for sudo in the git hook
 
-  * 1046279cb7 Document sudo policy for gitfs post-recieve hook
+  * 1046279cb7 Document sudo policy for gitfs post-receive hook
 
 * **PR** `#33980`_: (`twangboy`_) Use full path to python.exe
   @ *2016-06-14 00:46:14 UTC*
