@@ -168,7 +168,7 @@ def test_batch_state_stopping_after_error(
 
 def test_batch_retcode(salt_cli, salt_minion, salt_sub_minion, run_timeout):
     """
-    Ensure that running multiple modules at the same time works in batch.
+    Ensure that the correct retcode is given in batch runs.
 
     See issue #60361
     """
