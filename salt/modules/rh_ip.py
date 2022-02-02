@@ -712,7 +712,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         result["ipaddrs"] = []
         for opt in opts["ipaddrs"]:
             if salt.utils.validate.net.ipv4_addr(opt):
-                ip, prefix = [i.strip() for i in opt.split("/")]
+                ip, prefix = (i.strip() for i in opt.split("/"))
                 result["ipaddrs"].append({"ipaddr": ip, "prefix": prefix})
             else:
                 msg = "ipv4 CIDR is invalid"
