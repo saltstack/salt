@@ -601,6 +601,8 @@ def _get_disks(conn, dom):
                             extra_properties = {"error": stderr}
                     except FileNotFoundError:
                         extra_properties = {"error": "qemu-img not found"}
+                    except ValueError:
+                        extra_properties = {"error": "qemu-img is too old"}
             elif disk_type == "block":
                 qemu_target = source.get("dev", "")
                 # If the qemu_target is a known path, output a volume

@@ -1,0 +1,1 @@
+Don't fail is qemu-img doesn't support -U parameter when extracting disk infos

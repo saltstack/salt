@@ -425,6 +425,37 @@ def test_get_disk_no_qemuimg(make_mock_vm):
         }
 
 
+def test_get_disk_old_qemuimg(make_mock_vm):
+    """
+    Test virt.get_disks when qemu_img is too old
+    """
+    vm_def = """<domain type='kvm' id='3'>
+      <name>srv01</name>
+      <devices>
+        <disk type='file' device='disk'>
+          <driver name='qemu' type='qcow2' cache='none' io='native'/>
+          <source file='/path/to/default/srv01_system'/>
+          <target dev='vda' bus='virtio'/>
+        </disk>
+      </devices>
+    </domain>
+    """
+    make_mock_vm(vm_def)
+
+    subprocess_mock = MagicMock()
+    subprocess_mock.Popen = MagicMock(side_effect=ValueError())
+
+    with patch.dict(virt.__dict__, {"subprocess": subprocess_mock}):
+        assert virt.get_disks("srv01") == {
+            "vda": {
+                "type": "disk",
+                "file": "/path/to/default/srv01_system",
+                "file format": "qcow2",
+                "error": "qemu-img is too old",
+            },
+        }
+
+
 def test_update_approx_mem(make_mock_vm):
     """
     test virt.update with memory parameter unchanged thought not exactly equals to the current value.
