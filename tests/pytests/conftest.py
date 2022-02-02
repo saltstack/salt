@@ -8,6 +8,7 @@ import logging
 import os
 import shutil
 import stat
+import sys
 
 import attr
 import pytest
@@ -388,6 +389,44 @@ def temp_salt_minion(temp_salt_master):
         pytest.helpers.remove_stale_minion_key, temp_salt_master, factory.id
     )
     return factory
+
+
+@pytest.fixture(scope="session")
+def get_python_executable():
+    """
+    Return the path to the python executable.
+
+    This is particularly important when running the test suite within a virtualenv, while trying
+    to create virtualenvs on windows.
+    """
+    try:
+        if salt.utils.platform.is_windows():
+            python_binary = os.path.join(
+                sys.real_prefix, os.path.basename(sys.executable)
+            )
+        else:
+            python_binary = os.path.join(
+                sys.real_prefix, "bin", os.path.basename(sys.executable)
+            )
+            if not os.path.exists(python_binary):
+                if not python_binary[-1].isdigit():
+                    versioned_python_binary = "{}{}".format(
+                        python_binary, *sys.version_info
+                    )
+                    log.info(
+                        "Python binary could not be found at %s. Trying %s",
+                        python_binary,
+                        versioned_python_binary,
+                    )
+                    if os.path.exists(versioned_python_binary):
+                        python_binary = versioned_python_binary
+        if not os.path.exists(python_binary):
+            log.warning("Python binary could not be found at %s", python_binary)
+            python_binary = None
+    except AttributeError:
+        # We're not running inside a virtualenv
+        python_binary = sys.executable
+    return python_binary
 
 
 @pytest.fixture(scope="session")

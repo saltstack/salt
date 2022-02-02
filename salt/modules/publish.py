@@ -5,9 +5,10 @@ Publish a command from a minion to a target
 import logging
 import time
 
+import salt.channel.client
 import salt.crypt
 import salt.payload
-import salt.transport.client
+import salt.transport
 import salt.utils.args
 from salt.exceptions import SaltInvocationError, SaltReqTimeoutError
 
@@ -18,7 +19,9 @@ __virtualname__ = "publish"
 
 def __virtual__():
     return (
-        __virtualname__ if __opts__.get("transport", "") in ("zeromq", "tcp") else False
+        __virtualname__
+        if __opts__.get("transport", "") in salt.transport.TRANSPORTS
+        else False
     )
 
 
@@ -135,7 +138,7 @@ def _publish(
         "no_parse": __opts__.get("no_parse", []),
     }
 
-    with salt.transport.client.ReqChannel.factory(
+    with salt.channel.client.ReqChannel.factory(
         __opts__, master_uri=master_uri
     ) as channel:
         try:
@@ -341,7 +344,7 @@ def runner(fun, arg=None, timeout=5):
         "no_parse": __opts__.get("no_parse", []),
     }
 
-    with salt.transport.client.ReqChannel.factory(__opts__) as channel:
+    with salt.channel.client.ReqChannel.factory(__opts__) as channel:
         try:
             return channel.send(load)
         except SaltReqTimeoutError:

@@ -238,7 +238,7 @@ def test_show_instance():
         "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
     ) as connect:
         with pytest.raises(SaltCloudSystemExit):
-            hetzner.show_instance("myvm", "action")
+            hetzner.show_instance("myvm")
 
         mock = MagicMock()
         mock.id = 123456
@@ -249,10 +249,10 @@ def test_show_instance():
         mock.labels = "abc"
         connect.return_value.servers.get_all.return_value = [mock]
 
-        nodes = hetzner.show_instance(mock.name)
+        nodes = hetzner.show_instance(mock.name, "action")
         assert nodes["id"] == mock.id
 
-        nodes = hetzner.show_instance("not-existing")
+        nodes = hetzner.show_instance("not-existing", "action")
         assert nodes == {}
 
 

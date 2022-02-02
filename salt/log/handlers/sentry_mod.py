@@ -108,20 +108,29 @@ __virtualname__ = "sentry"
 
 
 def __virtual__():
-    if HAS_RAVEN is True:
-        return __virtualname__
-    return False
+    load_err_msg = []
+    if not HAS_RAVEN:
+        load_err_msg.append("Cannot find 'raven' python library")
+    if not __opts__.get("sentry_handler"):
+        load_err_msg.append("'sentry_handler' config is empty or not defined")
+    if load_err_msg:
+        return False, ", ".join(load_err_msg)
+    return __virtualname__
 
 
 def setup_handlers():
     """
     sets up the sentry handler
     """
+    if not __opts__.get("sentry_handler"):
+        log.debug("'sentry_handler' config is empty or not defined")
+        return False
+
+    # Regenerating dunders can be expensive, so only do it if the user enables
+    # `sentry_handler` as checked above
     __grains__ = salt.loader.grains(__opts__)
     __salt__ = salt.loader.minion_mods(__opts__)
-    if "sentry_handler" not in __opts__:
-        log.debug("No 'sentry_handler' key was found in the configuration")
-        return False
+
     options = {}
     dsn = get_config_value("dsn")
     if dsn is not None:

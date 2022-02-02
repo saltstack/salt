@@ -1,10 +1,11 @@
 """
-Read in an Ansible inventory file or script
+Read in an Ansible inventory file or script.
 
 Flat inventory files should be in the regular ansible inventory format.
 
 .. code-block:: ini
 
+    # /tmp/example_roster
     [servers]
     salt.gtmanfred.com ansible_ssh_user=gtmanfred ansible_ssh_host=127.0.0.1 ansible_ssh_port=22 ansible_ssh_pass='password'
 
@@ -22,20 +23,20 @@ then salt-ssh can be used to hit any of them
 
 .. code-block:: bash
 
-    [~]# salt-ssh -N all test.ping
+    [~]# salt-ssh --roster=ansible --roster-file=/tmp/example_roster -N all test.ping
     salt.gtmanfred.com:
         True
     home:
         True
-    [~]# salt-ssh -N desktop test.ping
+    [~]# salt-ssh --roster=ansible --roster-file=/tmp/example_roster -N desktop test.ping
     home:
         True
-    [~]# salt-ssh -N computers test.ping
+    [~]# salt-ssh --roster=ansible --roster-file=/tmp/example_roster -N computers test.ping
     salt.gtmanfred.com:
         True
     home:
         True
-    [~]# salt-ssh salt.gtmanfred.com test.ping
+    [~]# salt-ssh --roster=ansible --roster-file=/tmp/example_roster salt.gtmanfred.com test.ping
     salt.gtmanfred.com:
         True
 
@@ -44,6 +45,7 @@ There is also the option of specifying a dynamic inventory, and generating it on
 .. code-block:: bash
 
     #!/bin/bash
+    # filename: /etc/salt/hosts
     echo '{
       "servers": [
         "salt.gtmanfred.com"
@@ -80,9 +82,14 @@ This is the format that an inventory script needs to output to work with ansible
 
 .. code-block:: bash
 
-    [~]# salt-ssh --roster-file /etc/salt/hosts salt.gtmanfred.com test.ping
+    [~]# salt-ssh --roster=ansible --roster-file /etc/salt/hosts salt.gtmanfred.com test.ping
     salt.gtmanfred.com:
             True
+
+.. note::
+
+    A dynamic inventory script must have the executable bit set. In the above
+    example, ``chmod +x /etc/salt/hosts``.
 
 Any of the [groups] or direct hostnames will return.  The 'all' is special, and returns everything.
 """
@@ -106,10 +113,10 @@ __virtualname__ = "ansible"
 
 
 def __virtual__():
-    return (
-        salt.utils.path.which("ansible-inventory") and __virtualname__,
-        "Install `ansible` to use inventory",
-    )
+    if salt.utils.path.which("ansible-inventory"):
+        return __virtualname__
+    else:
+        return False, "Install `ansible` to use inventory"
 
 
 def targets(tgt, tgt_type="glob", **kwargs):

@@ -1837,7 +1837,7 @@ Function parseInstallerCommandLineSwitches
         FileWrite $0 "$\t$\t$\ta timestamp and a .bak extension. That includes$\n"
         FileWrite $0 "$\t$\t$\tthe minion file and the minion.d directory$\n"
         FileWrite $0 "$\n"
-        FileWrite $0 "/install-dir=$\tSpecify the installation location for the Salt binaries.$\n"
+        FileWrite $0 "/install-dir=$\t$\tSpecify the installation location for the Salt binaries.$\n"
         FileWrite $0 "$\t$\t$\tThis will be ignored for existing installations.$\n"
         FileWrite $0 "$\n"
         FileWrite $0 "/move-config$\t$\tIf config is found at C:\salt it will be moved to %ProgramData%$\n"

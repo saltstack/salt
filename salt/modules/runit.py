@@ -383,7 +383,7 @@ def _get_svc_list(name="*", status=None):
         'DISABLED' : available service that is not enabled
         'ENABLED'  : enabled service (whether started on boot or not)
     """
-    return sorted([os.path.basename(el) for el in _get_svc_path(name, status)])
+    return sorted(os.path.basename(el) for el in _get_svc_path(name, status))
 
 
 def get_svc_alias():
