@@ -11,7 +11,7 @@ import re
 
 
 def __virtual__():
-    if "nxos.cmd" in __salt__:
+    if "nxos.get_user" in __salt__:
         return True
     return (False, "nxos module could not be loaded")
 
@@ -79,16 +79,16 @@ def user_present(
 
     change_password = False
     if password is not None:
-        change_password = not __salt__["nxos.cmd"](
-            "check_password", username=name, password=password, encrypted=encrypted
+        change_password = not __salt__["nxos.check_password"](
+            name, password, encrypted=encrypted
         )
 
     change_roles = False
     if roles is not None:
-        cur_roles = __salt__["nxos.cmd"]("get_roles", username=name)
+        cur_roles = __salt__["nxos.get_roles"](name)
         change_roles = set(roles) != set(cur_roles)
 
-    old_user = __salt__["nxos.cmd"]("get_user", username=name)
+    old_user = __salt__["nxos.get_user"](name)
 
     if not any([change_password, change_roles, not old_user]):
         ret["result"] = True
@@ -123,10 +123,9 @@ def user_present(
         return ret
 
     if change_password is True:
-        new_user = __salt__["nxos.cmd"](
-            "set_password",
-            username=name,
-            password=password,
+        new_user = __salt__["nxos.set_password"](
+            name,
+            password,
             encrypted=encrypted,
             role=roles[0] if roles else None,
             crypt_salt=crypt_salt,
@@ -138,23 +137,23 @@ def user_present(
         }
     if change_roles is True:
         for role in add_roles:
-            __salt__["nxos.cmd"]("set_role", username=name, role=role)
+            __salt__["nxos.set_role"](name, role)
         for role in remove_roles:
-            __salt__["nxos.cmd"]("unset_role", username=name, role=role)
+            __salt__["nxos.unset_role"](name, role)
         ret["changes"]["roles"] = {
-            "new": __salt__["nxos.cmd"]("get_roles", username=name),
+            "new": __salt__["nxos.get_roles"](name),
             "old": cur_roles,
         }
 
     correct_password = True
     if password is not None:
-        correct_password = __salt__["nxos.cmd"](
-            "check_password", username=name, password=password, encrypted=encrypted
+        correct_password = __salt__["nxos.check_password"](
+            name, password, encrypted=encrypted
         )
 
     correct_roles = True
     if roles is not None:
-        cur_roles = __salt__["nxos.cmd"]("get_roles", username=name)
+        cur_roles = __salt__["nxos.get_roles"](name)
         correct_roles = set(roles) == set(cur_roles)
 
     if not correct_roles:
@@ -186,7 +185,7 @@ def user_absent(name):
 
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
-    old_user = __salt__["nxos.cmd"]("get_user", username=name)
+    old_user = __salt__["nxos.get_user"](name)
 
     if not old_user:
         ret["result"] = True
@@ -200,9 +199,9 @@ def user_absent(name):
         ret["changes"]["new"] = ""
         return ret
 
-    __salt__["nxos.cmd"]("remove_user", username=name)
+    __salt__["nxos.remove_user"](name)
 
-    if __salt__["nxos.cmd"]("get_user", username=name):
+    if __salt__["nxos.get_user"](name):
         ret["comment"] = "Failed to remove user"
     else:
         ret["result"] = True
@@ -237,7 +236,7 @@ def config_present(name):
     """
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
-    matches = __salt__["nxos.cmd"]("find", name)
+    matches = __salt__["nxos.find"](name)
 
     if matches:
         ret["result"] = True
@@ -249,8 +248,8 @@ def config_present(name):
         ret["changes"]["new"] = name
 
     else:
-        __salt__["nxos.cmd"]("add_config", name)
-        matches = __salt__["nxos.cmd"]("find", name)
+        __salt__["nxos.add_config"](name)
+        matches = __salt__["nxos.find"](name)
         if matches:
             ret["result"] = True
             ret["comment"] = "Successfully added config"
@@ -288,7 +287,7 @@ def config_absent(name):
     """
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
-    matches = __salt__["nxos.cmd"]("find", name)
+    matches = __salt__["nxos.find"](name)
 
     if not matches:
         ret["result"] = True
@@ -300,8 +299,8 @@ def config_absent(name):
         ret["changes"]["new"] = name
 
     else:
-        __salt__["nxos.cmd"]("delete_config", name)
-        matches = __salt__["nxos.cmd"]("find", name)
+        __salt__["nxos.delete_config"](name)
+        matches = __salt__["nxos.find"](name)
         if not matches:
             ret["result"] = True
             ret["comment"] = "Successfully deleted config"
@@ -357,7 +356,7 @@ def replace(name, repl, full_match=False):
     else:
         search = name
 
-    matches = __salt__["nxos.cmd"]("find", search)
+    matches = __salt__["nxos.find"](search)
 
     if not matches:
         ret["result"] = True
@@ -371,9 +370,9 @@ def replace(name, repl, full_match=False):
         ret["changes"]["new"] = [re.sub(name, repl, match) for match in matches]
         return ret
 
-    ret["changes"] = __salt__["nxos.cmd"]("replace", name, repl, full_match=full_match)
+    ret["changes"] = __salt__["nxos.replace"](name, repl, full_match=full_match)
 
-    matches = __salt__["nxos.cmd"]("find", search)
+    matches = __salt__["nxos.find"](search)
 
     if matches:
         ret["result"] = False
