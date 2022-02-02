@@ -305,10 +305,8 @@ def test_config_present():
     ]
 
     salt_mock = {
+        "nxos.config": MagicMock(side_effect=["add_snmp_config1", "add_snmp_config2"]),
         "nxos.find": MagicMock(side_effect=[[], snmp_matches1, snmp_matches2]),
-        "nxos.add_config": MagicMock(
-            side_effect=["add_snmp_config1", "add_snmp_config2"]
-        ),
     }
 
     with patch.dict(nxos_state.__opts__, {"test": False}):
@@ -362,10 +360,8 @@ def test_config_present_test_opts():
     ]
 
     salt_mock = {
+        "nxos.config": MagicMock(side_effect=["add_snmp_config1", "add_snmp_config2"]),
         "nxos.find": MagicMock(side_effect=[[], snmp_matches1, snmp_matches2]),
-        "nxos.add_config": MagicMock(
-            side_effect=["add_snmp_config1", "add_snmp_config2"]
-        ),
     }
 
     with patch.dict(nxos_state.__opts__, {"test": True}):
@@ -396,10 +392,8 @@ def test_config_present_fail_to_add():
     ]
 
     salt_mock = {
+        "nxos.config": MagicMock(side_effect=["add_snmp_config1", "add_snmp_config2"]),
         "nxos.find": MagicMock(side_effect=[[], "", ""]),
-        "nxos.add_config": MagicMock(
-            side_effect=["add_snmp_config1", "add_snmp_config2"]
-        ),
     }
 
     with patch.dict(nxos_state.__opts__, {"test": False}):
