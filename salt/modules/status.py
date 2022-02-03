@@ -69,21 +69,21 @@ def _get_boot_time_aix():
     case $t in *-*) d=${t%%-*}; t=${t#*-};; esac
     case $t in *:*:*) h=${t%%:*}; t=${t#*:};; esac
     s=$((d*86400 + h*3600 + ${t%%:*}*60 + ${t#*:}))
-
-    t is 7-20:46:46
     """
-    boot_secs = 0
     res = __salt__["cmd.run_all"]("ps -o etime= -p 1")
     if res["retcode"] > 0:
         raise CommandExecutionError("Unable to find boot_time for pid 1.")
     bt_time = res["stdout"]
-    days = bt_time.split("-")
-    hms = days[1].split(":")
+    match = re.match(r"\s*(?:(\d+)-)?(?:(\d\d):)?(\d\d):(\d\d)\s*", bt_time)
+    if not match:
+        raise CommandExecutionError("Unexpected time format.")
+
+    groups = match.groups(default="00")
     boot_secs = (
-        _number(days[0]) * 86400
-        + _number(hms[0]) * 3600
-        + _number(hms[1]) * 60
-        + _number(hms[2])
+        _number(groups[0]) * 86400
+        + _number(groups[1]) * 3600
+        + _number(groups[2]) * 60
+        + _number(groups[3])
     )
     return boot_secs
 
