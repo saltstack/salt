@@ -54,6 +54,7 @@ def hgfs_setup_and_teardown():
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_on_windows(reason="testing break in windows")
 def test_fix_58852(hgfs_setup_and_teardown):
     with patch.dict(
         hgfs.__opts__,
@@ -72,6 +73,7 @@ def test_fix_58852(hgfs_setup_and_teardown):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_on_windows(reason="testing break in windows")
 def test_all_branches(hgfs_setup_and_teardown):
     with patch.dict(
         hgfs.__opts__,
@@ -95,6 +97,7 @@ def test_all_branches(hgfs_setup_and_teardown):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_on_windows(reason="testing break in windows")
 def test_get_branch(hgfs_setup_and_teardown):
     with patch.dict(
         hgfs.__opts__,
@@ -118,6 +121,7 @@ def test_get_branch(hgfs_setup_and_teardown):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_on_windows(reason="testing break in windows")
 def test_all_bookmarks(hgfs_setup_and_teardown):
     with patch.dict(
         hgfs.__opts__,
@@ -141,6 +145,7 @@ def test_all_bookmarks(hgfs_setup_and_teardown):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_on_windows(reason="testing break in windows")
 def test_get_bookmark(hgfs_setup_and_teardown):
     with patch.dict(
         hgfs.__opts__,
@@ -164,6 +169,7 @@ def test_get_bookmark(hgfs_setup_and_teardown):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_on_windows(reason="testing break in windows")
 def test_all_tags(hgfs_setup_and_teardown):
     with patch.dict(
         hgfs.__opts__,
@@ -189,6 +195,7 @@ def test_all_tags(hgfs_setup_and_teardown):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_on_windows(reason="testing break in windows")
 def test_get_tag(hgfs_setup_and_teardown):
     with patch.dict(
         hgfs.__opts__,
@@ -216,6 +223,7 @@ def test_get_tag(hgfs_setup_and_teardown):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_on_windows(reason="testing break in windows")
 def test_get_ref(hgfs_setup_and_teardown):
     with patch.dict(
         hgfs.__opts__,
@@ -267,6 +275,7 @@ def test_get_ref(hgfs_setup_and_teardown):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_on_windows(reason="testing break in windows")
 def test_get_manifest(hgfs_setup_and_teardown):
     with patch.dict(
         hgfs.__opts__,
@@ -296,6 +305,7 @@ def test_get_manifest(hgfs_setup_and_teardown):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_on_windows(reason="testing break in windows")
 def test_envs(hgfs_setup_and_teardown):
     with patch.dict(
         hgfs.__opts__,
@@ -353,6 +363,7 @@ def test_env_is_exposed_whitelist():
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_on_windows(reason="testing break in windows")
 def test_find_file(hgfs_setup_and_teardown):
     with patch.dict(
         hgfs.__opts__,
@@ -371,6 +382,7 @@ def test_find_file(hgfs_setup_and_teardown):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_on_windows(reason="testing break in windows")
 def test_serve_file(hgfs_setup_and_teardown):
     with patch.dict(
         hgfs.__opts__,
@@ -390,6 +402,7 @@ def test_serve_file(hgfs_setup_and_teardown):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_on_windows(reason="testing break in windows")
 def test_file_hash(hgfs_setup_and_teardown):
     with patch.dict(
         hgfs.__opts__,
@@ -409,6 +422,7 @@ def test_file_hash(hgfs_setup_and_teardown):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_on_windows(reason="testing break in windows")
 def test_file_list(hgfs_setup_and_teardown):
     with patch.dict(
         hgfs.__opts__,
@@ -430,6 +444,7 @@ def test_file_list(hgfs_setup_and_teardown):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_on_windows(reason="testing break in windows")
 def test_dir_list(hgfs_setup_and_teardown):
     with patch.dict(
         hgfs.__opts__,
