@@ -2674,6 +2674,32 @@ List of renderers which are permitted to be used for pillar decryption.
       - gpg
       - my_custom_renderer
 
+.. conf_minion:: gpg_decrypt_must_succeed
+
+``gpg_decrypt_must_succeed``
+----------------------------
+
+.. versionadded:: 3005
+
+Default: ``False``
+
+If this is ``True`` and the ciphertext could not be decrypted, then an error is
+raised.
+
+Sending the ciphertext through basically is *never* desired, for example if a
+state is setting a database password from pillar and gpg rendering fails, then
+the state will update the password to the ciphertext, which by definition is
+not encrypted.
+
+.. warning::
+
+    The value defaults to ``False`` for backwards compatibility.  In the
+    ``Chlorine`` release, this option will default to ``True``.
+
+.. code-block:: yaml
+
+    gpg_decrypt_must_succeed: False
+
 .. conf_minion:: pillarenv
 
 ``pillarenv``

@@ -877,6 +877,10 @@
 #decrypt_pillar_renderers:
 #  - gpg
 
+# If this is `True` and the ciphertext could not be decrypted, then an error is
+# raised.
+#gpg_decrypt_must_succeed: False
+
 # The ext_pillar_first option allows for external pillar sources to populate
 # before file system pillar. This allows for targeting file system pillar from
 # ext_pillar.
