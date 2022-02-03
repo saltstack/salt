@@ -496,7 +496,7 @@ markupsafe==2.0.1
 mccabe==0.6.1
     # via pylint
 mercurial==6.0.1
-    # via -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/linux.in
 modernize==0.5
     # via saltpylint
 more-itertools==8.8.0
