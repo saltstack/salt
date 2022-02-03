@@ -61,6 +61,9 @@ def hg_setup_and_teardown():
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_on_windows(
+    reason="just testing if this or hgfs causes the issue with total crash"
+)
 def test_ext_pillar(hg_setup_and_teardown):
     data = hg_pillar.ext_pillar("*", None, hg_setup_and_teardown)
     assert data == {"testinfo": "info", "testinfo2": "info"}
