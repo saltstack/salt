@@ -1015,8 +1015,6 @@ def pyeapi_nxos_api_args(**prev_kwargs):
     kwargs["username"] = napalm_opts["USERNAME"]
     kwargs["password"] = napalm_opts["PASSWORD"]
     kwargs["timeout"] = napalm_opts["TIMEOUT"]
-    # kwargs["transport"] = optional_args.get("transport", "https")
-    # kwargs["port"] = optional_args.get("port", 443)
 
     if "transport" in optional_args and optional_args["transport"]:
         kwargs["transport"] = optional_args["transport"]
