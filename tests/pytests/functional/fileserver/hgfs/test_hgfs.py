@@ -338,6 +338,7 @@ def test_envs(hgfs_setup_and_teardown):
         assert envs == ["base", "test"]
 
 
+@pytest.mark.skip_on_windows(reason="testing break in windows")
 def test_env_is_exposed_blacklist():
     with patch.dict(
         hgfs.__opts__,
@@ -350,6 +351,7 @@ def test_env_is_exposed_blacklist():
         assert hgfs._env_is_exposed("unset") is True
 
 
+@pytest.mark.skip_on_windows(reason="testing break in windows")
 def test_env_is_exposed_whitelist():
     with patch.dict(
         hgfs.__opts__,
