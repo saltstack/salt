@@ -2,9 +2,11 @@ import logging
 import os
 import shutil
 import subprocess
+import time
 
 import pytest
 import salt.utils.platform
+from saltfactories.exceptions import FactoryNotStarted, FactoryTimeout
 
 log = logging.getLogger(__name__)
 
@@ -93,7 +95,7 @@ def salt_mm_failover_minion_1(salt_mm_failover_master_1, salt_mm_failover_master
         ],
         "publish_port": salt_mm_failover_master_1.config["publish_port"],
         "master_type": "failover",
-        "master_alive_interval": 15,
+        "master_alive_interval": 30,
         "master_tries": -1,
         "verify_master_pubkey_sign": True,
     }
@@ -130,7 +132,7 @@ def salt_mm_failover_minion_2(salt_mm_failover_master_1, salt_mm_failover_master
         ],
         "publish_port": salt_mm_failover_master_1.config["publish_port"],
         "master_type": "failover",
-        "master_alive_interval": 15,
+        "master_alive_interval": 30,
         "master_tries": -1,
         "verify_master_pubkey_sign": True,
     }
@@ -147,3 +149,99 @@ def salt_mm_failover_minion_2(salt_mm_failover_master_1, salt_mm_failover_master
     )
     with factory.started(start_timeout=120):
         yield factory
+
+
+@pytest.fixture(scope="package")
+def run_salt_cmds():
+    def _run_salt_cmds_fn(clis, minions):
+        """
+        Run test.ping from all clis to all minions
+        """
+        returned_minions = []
+
+        for cli in clis:
+            for minion in minions:
+                try:
+                    ret = cli.run("test.ping", minion_tgt=minion.id, _timeout=20)
+                    if ret and ret.json:
+                        assert ret.json
+                        assert ret.exitcode == 0
+                        returned_minions.append((cli, minion))
+                except FactoryTimeout:
+                    log.debug(
+                        "Failed to execute test.ping from %s to %s.",
+                        cli.get_display_name(),
+                        minion.id,
+                    )
+
+        return returned_minions
+
+    return _run_salt_cmds_fn
+
+
+@pytest.fixture(autouse=True)
+def ensure_connections(
+    salt_mm_failover_master_1,
+    salt_mm_failover_master_2,
+    mm_failover_master_1_salt_cli,
+    mm_failover_master_2_salt_cli,
+    salt_mm_failover_minion_1,
+    salt_mm_failover_minion_2,
+    run_salt_cmds,
+):
+    """
+    This will make sure that the minions are connected to their original masters.
+
+    At the beginning of each test in this package, you can assume...
+        - minion-1 and master-1 are connected
+        - minion-2 and master-2 are connected
+    """
+
+    def _ensure_connections_fn(
+        salt_mm_failover_master_1,
+        salt_mm_failover_master_2,
+        mm_failover_master_1_salt_cli,
+        mm_failover_master_2_salt_cli,
+        salt_mm_failover_minion_1,
+        salt_mm_failover_minion_2,
+        run_salt_cmds,
+    ):
+        # Force the minions to reconnect if needed
+        retries = 3
+        while retries:
+            try:
+                minion_1_alive = run_salt_cmds(
+                    [mm_failover_master_1_salt_cli], [salt_mm_failover_minion_1]
+                )
+                minion_2_alive = run_salt_cmds(
+                    [mm_failover_master_2_salt_cli], [salt_mm_failover_minion_2]
+                )
+
+                if not (minion_1_alive and minion_2_alive):
+                    with salt_mm_failover_minion_1.stopped(), salt_mm_failover_minion_2.stopped():
+                        with salt_mm_failover_master_1.stopped(), salt_mm_failover_master_2.stopped():
+                            pass
+            except FactoryNotStarted:
+                log.debug("One or more minions failed to start, retrying")
+            else:
+                # Each minion should return to EXACTLY one master
+                if minion_1_alive and minion_2_alive:
+                    break
+            time.sleep(10)
+            retries -= 1
+        else:
+            pytest.fail("Could not ensure the connections were okay.")
+
+    # run the function to ensure initial connections
+    _ensure_connections_fn(
+        salt_mm_failover_master_1,
+        salt_mm_failover_master_2,
+        mm_failover_master_1_salt_cli,
+        mm_failover_master_2_salt_cli,
+        salt_mm_failover_minion_1,
+        salt_mm_failover_minion_2,
+        run_salt_cmds,
+    )
+
+    # Give this function back for further use in test fn bodies
+    return _ensure_connections_fn

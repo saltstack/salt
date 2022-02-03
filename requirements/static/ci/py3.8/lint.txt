@@ -480,7 +480,7 @@ libnacl==1.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
 loguru==0.5.3
     # via ciscoconfparse
-lxml==4.6.3
+lxml==4.7.1
     # via
     #   junos-eznc
     #   napalm
