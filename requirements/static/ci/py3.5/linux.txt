@@ -18,13 +18,12 @@ attrs==21.4.0
     # via
     #   jsonschema
     #   pytest
-    #   pytest-salt-factories
     #   pytest-skip-markers
 azure-applicationinsights==0.1.0
     # via azure
 azure-batch==4.1.3
     # via azure
-azure-common==1.1.27
+azure-common==1.1.28
     # via
     #   azure-applicationinsights
     #   azure-batch
@@ -621,17 +620,16 @@ pyrsistent==0.17.3
     # via jsonschema
 pyserial==3.5
     # via junos-eznc
-pytest-helpers-namespace==2019.1.8
+pytest-helpers-namespace==2019.1.8 ; python_version <= "3.5"
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt
-    #   pytest-salt-factories
-pytest-salt-factories==0.912.0
+pytest-salt-factories==0.93.0 ; python_version <= "3.5"
     # via -r requirements/pytest.txt
 pytest-salt==2020.1.27
     # via -r requirements/pytest.txt
-pytest-skip-markers==1.1.0
-    # via pytest-salt-factories
+pytest-skip-markers==1.0.0 ; python_version <= "3.5"
+    # via -r requirements/pytest.txt
 pytest-tempdir==2019.10.12
     # via
     #   -r requirements/pytest.txt
@@ -753,9 +751,7 @@ urllib3==1.26.8
 vcert==0.7.4
     # via -r requirements/static/ci/linux.in
 virtualenv==20.13.0
-    # via
-    #   -r requirements/static/ci/linux.in
-    #   pytest-salt-factories
+    # via -r requirements/static/ci/linux.in
 watchdog==0.10.7
     # via -r requirements/static/ci/linux.in
 websocket-client==0.40.0
