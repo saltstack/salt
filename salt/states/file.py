@@ -3403,13 +3403,13 @@ def directory(
         file.
 
     clean
-        Make sure that only files that are set up by salt and required by this
-        function are kept. If this option is set then everything in this
-        directory will be deleted unless it is required.
-        'clean' and 'max_depth' are mutually exclusive.
+        Remove any files that are not referenced by a required ``file`` state.
+        See examples below for more info. If this option is set then everything
+        in this directory will be deleted unless it is required. 'clean' and
+        'max_depth' are mutually exclusive.
 
     require
-        Require other resources such as packages or files
+        Require other resources such as packages or files.
 
     exclude_pat
         When 'clean' is set to True, exclude this pattern from removal list
@@ -3522,6 +3522,135 @@ def directory(
                 fred_snuffy:
                   perms: full_control
             - win_inheritance: False
+
+
+    For ``clean: True`` there is no mechanism that allows all states and
+    modules to enumerate the files that they manage, so for file.directory to
+    know what files are managed by Salt, a ``file`` state targeting managed
+    files is required. To use a contrived example, the following states will
+    always have changes, despite the file named ``okay`` being created by a
+    Salt state:
+
+    .. code-block:: yaml
+
+        silly_way_of_creating_a_file:
+          cmd.run:
+             - name: mkdir -p /tmp/dont/do/this && echo "seriously" > /tmp/dont/do/this/okay
+             - unless: grep seriously /tmp/dont/do/this/okay
+
+        will_always_clean:
+          file.directory:
+            - name: /tmp/dont/do/this
+            - clean: True
+
+    Because ``cmd.run`` has no way of communicating that it's creating a file,
+    ``will_always_clean`` will remove the newly created file. Of course, every
+    time the states run the same thing will happen - the
+    ``silly_way_of_creating_a_file`` will crete the file and
+    ``will_always_clean`` will always remove it. Over and over again, no matter
+    how many times you run it.
+
+    To make this example work correctly, we need to add a ``file`` state that
+    targets the file, and a ``require`` between the file states.
+
+    .. code-block:: yaml
+
+        silly_way_of_creating_a_file:
+          cmd.run:
+             - name: mkdir -p /tmp/dont/do/this && echo "seriously" > /tmp/dont/do/this/okay
+             - unless: grep seriously /tmp/dont/do/this/okay
+          file.managed:
+             - name: /tmp/dont/do/this/okay
+             - create: False
+             - replace: False
+             - require_in:
+               - file: will_always_clean
+
+    Now there is a ``file`` state that ``clean`` can check, so running those
+    states will work as expected. The file will be created with the specific
+    contents, and ``clean`` will ignore the file because it is being managed by
+    a salt ``file`` state. Note that if ``require_in`` was placed under
+    ``cmd.run``, it would **not** work, because the requisite is for the cmd,
+    not the file.
+
+    .. code-block:: yaml
+
+        silly_way_of_creating_a_file:
+          cmd.run:
+             - name: mkdir -p /tmp/dont/do/this && echo "seriously" > /tmp/dont/do/this/okay
+             - unless: grep seriously /tmp/dont/do/this/okay
+             # This part should be under file.managed
+             - require_in:
+               - file: will_always_clean
+          file.managed:
+             - name: /tmp/dont/do/this/okay
+             - create: False
+             - replace: False
+
+
+    Any other state that creates a file as a result, for example ``pkgrepo``,
+    must have the resulting files referenced in a file state in order for
+    ``clean: True`` to ignore them.  Also note that the requisite
+    (``require_in`` vs ``require``) works in both directions:
+
+    .. code-block:: yaml
+
+        clean_dir:
+          file.directory:
+            - name: /tmp/a/better/way
+            - require:
+              - file: a_better_way
+
+        a_better_way:
+          file.managed:
+            - name: /tmp/a/better/way/truely
+            - makedirs: True
+            - contents: a much better way
+
+    Works the same as this:
+
+    .. code-block:: yaml
+
+        clean_dir:
+          file.directory:
+            - name: /tmp/a/better/way
+            - clean: True
+
+        a_better_way:
+          file.managed:
+            - name: /tmp/a/better/way/truely
+            - makedirs: True
+            - contents: a much better way
+            - require_in:
+              - file: clean_dir
+
+    A common mistake here is to forget the state name and id are both required for requisites:
+
+    .. code-block:: yaml
+
+        # Correct:
+        /path/to/some/file:
+          file.managed:
+            - contents: Cool
+            - require_in:
+              - file: clean_dir
+
+        # Incorrect
+        /path/to/some/file:
+          file.managed:
+            - contents: Cool
+            - require_in:
+              # should be `- file: clean_dir`
+              - clean_dir
+
+        # Also incorrect
+        /path/to/some/file:
+          file.managed:
+            - contents: Cool
+            - require_in:
+              # should be `- file: clean_dir`
+              - file
+
     """
     name = os.path.expanduser(name)
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
