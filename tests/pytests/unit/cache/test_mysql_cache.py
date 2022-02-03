@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.skipif(
         mysql_cache.MySQLdb is None, reason="No python mysql client installed."
-    ),
+    )
 ]
 
 

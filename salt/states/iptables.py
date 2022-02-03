@@ -189,6 +189,7 @@ at some point be deprecated in favor of a more generic ``firewall`` state.
     appearance of ``-m policy``, it is interpreted as the ``--proto`` option of
     the policy extension (see the iptables-extensions(8) man page).
 
+
 Example rules for IPSec policy:
 
 .. code-block:: yaml
@@ -230,6 +231,11 @@ Example rules for IPSec policy:
         - use:
           - iptables: accept_esp_out
         - chain: FORWARD
+
+.. note::
+
+    ``name`` is reserved for the Salt state name. To pass ``--name EXAMPLE`` to
+    iptables, provide it with ``- name_: EXAMPLE``.
 
 .. note::
 

@@ -348,6 +348,11 @@ def post_master_init(self, master):
         ).compile_pillar()
 
         proxyopts["proxy"] = self.proxy_pillar[_id].get("proxy", {})
+        if not proxyopts["proxy"]:
+            log.warn(
+                "Pillar data for proxy minion %s could not be loaded, skipping.", _id
+            )
+            continue
 
         # Remove ids
         proxyopts["proxy"].pop("ids", None)
@@ -869,9 +874,12 @@ def handle_payload(self, payload):
         # The following handles the sub-proxies
         sub_ids = self.opts["proxy"].get("ids", [self.opts["id"]])
         for _id in sub_ids:
-            instance = self.deltaproxy_objs[_id]
-            if instance._target_load(payload["load"]):
-                instance._handle_decoded_payload(payload["load"])
+            if _id in self.deltaproxy_objs:
+                instance = self.deltaproxy_objs[_id]
+                if instance._target_load(payload["load"]):
+                    instance._handle_decoded_payload(payload["load"])
+            else:
+                log.warn("Proxy minion %s is not loaded, skipping.", _id)
 
     elif self.opts["zmq_filtering"]:
         # In the filtering enabled case, we"d like to know when minion sees something it shouldnt

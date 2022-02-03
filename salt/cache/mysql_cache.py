@@ -107,7 +107,7 @@ def force_reconnect():
         pass
 
 
-def run_query(conn, query, retries=3, args=None):
+def run_query(conn, query, args=None, retries=3):
     """
     Get a cursor and run a query. Reconnect up to ``retries`` times if
     needed.
@@ -138,10 +138,10 @@ def run_query(conn, query, retries=3, args=None):
             log.info("mysql_cache: recreating db connection due to: %r", e)
         __context__["mysql_client"] = MySQLdb.connect(**__context__["mysql_kwargs"])
         return run_query(
-            conn=__context__["mysql_client"],
+            conn=__context__.get("mysql_client"),
             query=query,
             args=args,
-            retries=retries - 1,
+            retries=(retries - 1),
         )
     except Exception as e:  # pylint: disable=broad-except
         if len(query) > 150:
@@ -212,7 +212,7 @@ def _create_table():
         __context__["mysql_table_name"]
     )
     log.info("mysql_cache: creating table %s", __context__["mysql_table_name"])
-    cur, _ = run_query(__context__["mysql_client"], query)
+    cur, _ = run_query(__context__.get("mysql_client"), query)
     cur.close()
 
 

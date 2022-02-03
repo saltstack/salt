@@ -315,7 +315,7 @@ def playbooks(
 
     .. code-block:: bash
 
-        salt 'ansiblehost'  ansible.playbook playbook=/srv/playbooks/play.yml
+        salt 'ansiblehost'  ansible.playbooks playbook=/srv/playbooks/play.yml
     """
     command = ["ansible-playbook", playbook]
     if check:

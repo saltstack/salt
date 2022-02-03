@@ -43,7 +43,7 @@ if not sys.platform.startswith("win"):
     PIP_PATH = pathlib.Path(f"{os.sep}opt", "saltstack", "salt", "pypath")
     with contextlib.suppress(PermissionError):
         PIP_PATH.mkdir(mode=0o755, parents=True, exist_ok=True)
-    tiamatpip.configure.set_user_site_packages_path(PIP_PATH)
+    tiamatpip.configure.set_user_base_path(PIP_PATH)
 
 
 def redirect(argv):

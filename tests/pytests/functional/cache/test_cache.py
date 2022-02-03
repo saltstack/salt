@@ -174,7 +174,7 @@ def ensure_deps(states):
     )
     assert (
         installation_result.result is True
-    ), f"unable to pip install requirements {installation_result.comment}"
+    ), "unable to pip install requirements {}".format(installation_result.comment)
 
 
 @pytest.fixture

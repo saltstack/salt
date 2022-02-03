@@ -12,7 +12,14 @@ Statistics
 - Total Issue References: **70**
 - Total PR References: **221**
 
-- Contributors: **48** (`AAbouZaid`_, `BlaineAtAffirm`_, `DmitryKuzmenko`_, `The-Loeki`_, `abednarik`_, `babilen`_, `bebehei`_, `cachedout`_, `clinta`_, `complexsplit`_, `cro`_, `danslimmon`_, `dcolish`_, `dincamihai`_, `edgan`_, `gerhardqux`_, `ghedo`_, `isbm`_, `jacobhammons`_, `jfindlay`_, `jodv`_, `justinta`_, `l13t`_, `lomeroe`_, `lorengordon`_, `lvg01`_, `mcalmer`_, `meaksh`_, `morganwillcock`_, `oeuftete`_, `opdude`_, `phistrom`_, `rallytime`_, `rmarcinik`_, `ryan-lane`_, `sacren`_, `steverweber`_, `techhat`_, `tegbert`_, `terminalmage`_, `thatch45`_, `the-glu`_, `thegoodduke`_, `ticosax`_, `tveastman`_, `twangboy`_, `vutny`_, `zer0def`_)
+- Contributors: **48** (`AAbouZaid`_, `BlaineAtAffirm`_, `DmitryKuzmenko`_, `The-Loeki`_,
+  `abednarik`_, `babilen`_, `bebehei`_, `cachedout`_, `clinta`_, `complexsplit`_, `cro`_,
+  `danslimmon`_, `dcolish`_, `dincamihai`_, `edgan`_, `gerhardqux`_, `ghedo`_, `isbm`_,
+  `jacobhammons`_, `jfindlay`_, `jodv`_, `justinta`_, `l13t`_, `lomeroe`_, `lorengordon`_,
+  `lvg01`_, `mcalmer`_, `meaksh`_, `morganwillcock`_, `oeuftete`_, `opdude`_, `phistrom`_,
+  `rallytime`_, `rmarcinik`_, `ryan-lane`_, `sacren`_, `steverweber`_, `techhat`_, `tegbert`_,
+  `terminalmage`_, `thatch45`_, `the-glu`_, `thegoodduke`_, `ticosax`_, `tveastman`_, `twangboy`_,
+  `vutny`_, `zer0def`_)
 
 
 Ubuntu 16.04 Packages

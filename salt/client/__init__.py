@@ -26,13 +26,13 @@ import time
 from datetime import datetime
 
 import salt.cache
+import salt.channel.client
 import salt.config
 import salt.defaults.exitcodes
 import salt.ext.tornado.gen
 import salt.loader
 import salt.payload
 import salt.syspaths as syspaths
-import salt.transport.client
 import salt.utils.args
 import salt.utils.event
 import salt.utils.files
@@ -1891,7 +1891,7 @@ class LocalClient:
             str(self.opts["ret_port"]),
         )
 
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             self.opts, crypt="clear", master_uri=master_uri
         ) as channel:
             try:
@@ -1995,7 +1995,7 @@ class LocalClient:
             + str(self.opts["ret_port"])
         )
 
-        with salt.transport.client.AsyncReqChannel.factory(
+        with salt.channel.client.AsyncReqChannel.factory(
             self.opts, io_loop=io_loop, crypt="clear", master_uri=master_uri
         ) as channel:
             try:

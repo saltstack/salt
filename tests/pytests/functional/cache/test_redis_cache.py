@@ -18,7 +18,7 @@ def ensure_deps(states):
     )
     assert (
         installation_result.result is True
-    ), f"unable to pip install requirements {installation_result.comment}"
+    ), "unable to pip install requirements {}".format(installation_result.comment)
 
 
 def test_redis_cluster_cache_should_import_correctly(redis_cluster_cache):
