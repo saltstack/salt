@@ -1,2 +1,2 @@
 # FreeBSD static CI requirements
-pygit2==1.5.0; python_version >= '3.7'
+pygit2==1.7.1; python_version >= '3.7'
