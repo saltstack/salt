@@ -492,7 +492,7 @@ markupsafe==2.0.1
     #   mako
     #   moto
 mercurial==6.0.1
-    # via -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/linux.in
 more-itertools==5.0.0
     # via
     #   cheroot

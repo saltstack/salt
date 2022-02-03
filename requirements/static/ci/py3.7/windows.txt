@@ -193,8 +193,6 @@ markupsafe==1.1.1
     #   jinja2
     #   mako
     #   moto
-mercurial==6.0.1
-    # via -r requirements/static/ci/common.in
 mock==3.0.5
     # via
     #   -r requirements/pytest.txt
