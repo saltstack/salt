@@ -118,13 +118,14 @@ def test_network_grains_secondary_ip(tmp_path):
                     "netmask": "255.255.248.0",
                     "broadcast": "172.16.15.255",
                     "label": "wlo1",
-                },{
+                },
+                {
                     "type": "inet6",
                     "address": "2001:4860:4860::8888",
                     "prefixlen": "64",
                     "scope": "fe80::6238:e0ff:fe06:3f6b%enp2s0",
-                }
-            ]
+                },
+            ],
         }
     }
     cache_dir = tmp_path / "cache"
@@ -134,18 +135,24 @@ def test_network_grains_secondary_ip(tmp_path):
         "extension_modules": str(extmods),
         "optimization_order": [0],
     }
-    with patch(
-        "salt.utils.network.interfaces", side_effect=[data]
-    ):
+    with patch("salt.utils.network.interfaces", side_effect=[data]):
         grains = salt.loader.grain_funcs(opts)
         ret_ip4 = grains["core.ip4_interfaces"]()
-        assert ret_ip4["ip4_interfaces"]["wlo1"] == ["172.16.13.85","172.16.13.86"]
+        assert ret_ip4["ip4_interfaces"]["wlo1"] == ["172.16.13.85", "172.16.13.86"]
 
         ret_ip6 = grains["core.ip6_interfaces"]()
-        assert ret_ip6["ip6_interfaces"]["wlo1"] == ["2001:4860:4860::8844","2001:4860:4860::8888"]
+        assert ret_ip6["ip6_interfaces"]["wlo1"] == [
+            "2001:4860:4860::8844",
+            "2001:4860:4860::8888",
+        ]
 
         ret_ip = grains["core.ip_interfaces"]()
-        assert ret_ip["ip_interfaces"]["wlo1"] == ["172.16.13.85","2001:4860:4860::8844","172.16.13.86","2001:4860:4860::8888"]
+        assert ret_ip["ip_interfaces"]["wlo1"] == [
+            "172.16.13.85",
+            "2001:4860:4860::8844",
+            "172.16.13.86",
+            "2001:4860:4860::8888",
+        ]
 
 
 def test_network_grains_cache(tmp_path):
