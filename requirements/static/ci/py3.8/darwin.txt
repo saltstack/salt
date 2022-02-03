@@ -21,6 +21,7 @@ attrs==20.3.0
     #   jsonschema
     #   pytest
     #   pytest-salt-factories
+    #   pytest-skip-markers
 aws-sam-translator==1.33.0
     # via cfn-lint
 aws-xray-sdk==0.95
@@ -717,21 +718,27 @@ pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
-pytest-salt-factories==0.907.0
+pytest-salt-factories==0.912.0
     # via -r requirements/pytest.txt
+pytest-skip-markers==1.0.0
+    # via pytest-salt-factories
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
 pytest-tempdir==2019.10.12
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
+pytest-timeout==1.4.2
+    # via -r requirements/pytest.txt
 pytest==6.1.2 ; python_version <= "3.9"
     # via
     #   -r requirements/pytest.txt
     #   pytest-helpers-namespace
     #   pytest-salt-factories
+    #   pytest-skip-markers
     #   pytest-subtests
     #   pytest-tempdir
+    #   pytest-timeout
 python-dateutil==2.8.0
     # via
     #   -r requirements/darwin.txt

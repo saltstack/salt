@@ -255,6 +255,8 @@ VALID_OPTS = immutabletypes.freeze(
         "decrypt_pillar_default": str,
         # List of renderers available for decrypt_pillar
         "decrypt_pillar_renderers": list,
+        # Treat GPG decryption errors as renderer errors
+        "gpg_decrypt_must_succeed": bool,
         # The type of hashing algorithm to use when doing file comparisons
         "hash_type": str,
         # Order of preference for optimized .pyc files (PY3 only)
@@ -640,7 +642,6 @@ VALID_OPTS = immutabletypes.freeze(
         "fileserver_backend": list,
         "fileserver_followsymlinks": bool,
         "fileserver_ignoresymlinks": bool,
-        "fileserver_limit_traversal": bool,
         "fileserver_verify_config": bool,
         # Optionally apply '*' permissioins to any user. By default '*' is a fallback case that is
         # applied only if the user didn't matched by other matchers.
@@ -1043,7 +1044,6 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "top_file_merging_strategy": "merge",
         "env_order": [],
         "default_top": "base",
-        "fileserver_limit_traversal": False,
         "file_recv": False,
         "file_recv_max_size": 100,
         "file_ignore_regex": [],
@@ -1059,6 +1059,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "decrypt_pillar_delimiter": ":",
         "decrypt_pillar_default": "gpg",
         "decrypt_pillar_renderers": ["gpg"],
+        "gpg_decrypt_must_succeed": False,
         # Update intervals
         "roots_update_interval": DEFAULT_INTERVAL,
         "azurefs_update_interval": DEFAULT_INTERVAL,
@@ -1296,6 +1297,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "decrypt_pillar_delimiter": ":",
         "decrypt_pillar_default": "gpg",
         "decrypt_pillar_renderers": ["gpg"],
+        "gpg_decrypt_must_succeed": False,
         "thoriumenv": None,
         "thorium_top": "top.sls",
         "thorium_interval": 0.5,
@@ -1422,7 +1424,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "fileserver_backend": ["roots"],
         "fileserver_followsymlinks": True,
         "fileserver_ignoresymlinks": False,
-        "fileserver_limit_traversal": False,
         "fileserver_verify_config": True,
         "max_open_files": 100000,
         "hash_type": "sha256",

@@ -5,113 +5,14 @@ import pytest
 import salt.utils.platform
 import salt.utils.win_dacl as win_dacl
 import salt.utils.win_reg as win_reg
-from salt.exceptions import CommandExecutionError
-from tests.support.helpers import TstSuiteLoggingHandler, random_string
+from tests.support.helpers import random_string
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
 
-try:
-    import pywintypes
-    import win32security
-
-    HAS_WIN32 = True
-except ImportError:
-    HAS_WIN32 = False
-
 FAKE_KEY = "SOFTWARE\\{}".format(random_string("SaltTesting-", lowercase=False))
 
 
-@skipIf(not HAS_WIN32, "Requires pywin32")
-@skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
-class WinDaclTestCase(TestCase):
-    """
-    Test cases for salt.utils.win_dacl in the registry
-    """
-
-    def test_get_sid_string(self):
-        """
-        Validate getting a pysid object from a name
-        """
-        sid_obj = win_dacl.get_sid("Administrators")
-        self.assertTrue(isinstance(sid_obj, pywintypes.SIDType))
-        self.assertEqual(
-            win32security.LookupAccountSid(None, sid_obj)[0], "Administrators"
-        )
-
-    def test_get_sid_sid_string(self):
-        """
-        Validate getting a pysid object from a SID string
-        """
-        sid_obj = win_dacl.get_sid("S-1-5-32-544")
-        self.assertTrue(isinstance(sid_obj, pywintypes.SIDType))
-        self.assertEqual(
-            win32security.LookupAccountSid(None, sid_obj)[0], "Administrators"
-        )
-
-    def test_get_sid_string_name(self):
-        """
-        Validate getting a pysid object from a SID string
-        """
-        sid_obj = win_dacl.get_sid("Administrators")
-        self.assertTrue(isinstance(sid_obj, pywintypes.SIDType))
-        self.assertEqual(win_dacl.get_sid_string(sid_obj), "S-1-5-32-544")
-
-    def test_get_sid_string_none(self):
-        """
-        Validate getting a pysid object from None (NULL SID)
-        """
-        sid_obj = win_dacl.get_sid(None)
-        self.assertTrue(isinstance(sid_obj, pywintypes.SIDType))
-        self.assertEqual(win_dacl.get_sid_string(sid_obj), "S-1-0-0")
-
-    def test_get_name_odd_case(self):
-        """
-        Test get_name by passing a name with inconsistent case characters.
-        Should return the name in the correct case
-        """
-        # Case
-        self.assertEqual(win_dacl.get_name("adMiniStrAtorS"), "Administrators")
-
-    def test_get_name_using_sid(self):
-        """
-        Test get_name passing a SID String. Should return the string name
-        """
-        # SID String
-        self.assertEqual(win_dacl.get_name("S-1-5-32-544"), "Administrators")
-
-    def test_get_name_using_sid_object(self):
-        """
-        Test get_name passing a SID Object. Should return the string name
-        """
-        # SID Object
-        sid_obj = win_dacl.get_sid("Administrators")
-        self.assertTrue(isinstance(sid_obj, pywintypes.SIDType))
-        self.assertEqual(win_dacl.get_name(sid_obj), "Administrators")
-
-    def test_get_name_capability_sid(self):
-        """
-        Test get_name with a compatibility SID. Should return `None` as we want
-        to ignore these SIDs
-        """
-        cap_sid = "S-1-15-3-1024-1065365936-1281604716-3511738428-1654721687-432734479-3232135806-4053264122-3456934681"
-        sid_obj = win32security.ConvertStringSidToSid(cap_sid)
-        self.assertIsNone(win_dacl.get_name(sid_obj))
-
-    def test_get_name_error(self):
-        """
-        Test get_name with an un mapped SID, should throw a
-        CommandExecutionError
-        """
-        test_sid = "S-1-2-3-4"
-        sid_obj = win32security.ConvertStringSidToSid(test_sid)
-        with TstSuiteLoggingHandler() as handler:
-            self.assertRaises(CommandExecutionError, win_dacl.get_name, sid_obj)
-            expected_message = 'ERROR:Error resolving "PySID:S-1-2-3-4"'
-            self.assertIn(expected_message, handler.messages[0])
-
-
-@skipIf(not HAS_WIN32, "Requires pywin32")
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
 class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
     obj_name = "HKLM\\" + FAKE_KEY
@@ -520,7 +421,6 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         self.assertDictEqual(result, expected)
 
 
-@skipIf(not HAS_WIN32, "Requires pywin32")
 @skipIf(not salt.utils.platform.is_windows(), "System is not Windows")
 class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
     obj_name = ""
