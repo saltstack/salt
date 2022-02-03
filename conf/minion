@@ -271,7 +271,7 @@
 
 # To auto recover minions if master changes IP address (DDNS)
 #    auth_tries: 10
-#    auth_safemode: False
+#    auth_safemode: True
 #    ping_interval: 2
 #
 # Minions won't know master is missing until a ping fails. After the ping fail,
