@@ -247,7 +247,7 @@ def list_sites():
                     filtered_binding.update({key.lower(): binding[key]})
 
             binding_info = binding["bindingInformation"].split(":", 2)
-            ipaddress, port, hostheader = [element.strip() for element in binding_info]
+            ipaddress, port, hostheader = (element.strip() for element in binding_info)
             filtered_binding.update(
                 {"hostheader": hostheader, "ipaddress": ipaddress, "port": port}
             )

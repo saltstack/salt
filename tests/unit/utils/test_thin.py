@@ -223,7 +223,7 @@ class SSHThinTestCase(TestCase):
         with pytest.raises(salt.exceptions.SaltSystemExit):
             thin.get_ext_tops(cfg)
         assert len(thin.log.warning.mock_calls) == 4
-        assert sorted([x[1][1] for x in thin.log.warning.mock_calls]) == [
+        assert sorted(x[1][1] for x in thin.log.warning.mock_calls) == [
             "jinja2",
             "msgpack",
             "tornado",
