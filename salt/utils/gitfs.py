@@ -904,18 +904,20 @@ class GitProvider:
                                 "cache, the lock may have been obtained "
                                 "by another master."
                             )
-                    log.warning(msg)
+                    if not lock_type == "repo":
+                        log.warning(msg)
                     if failhard:
                         raise
                     return
                 elif pid and pid_exists(pid):
-                    log.warning(
-                        "Process %d has a %s %s lock (%s)",
-                        pid,
-                        self.role,
-                        lock_type,
-                        lock_file,
-                    )
+                    if not lock_type == "repo":
+                        log.warning(
+                            "Process %d has a %s %s lock (%s)",
+                            pid,
+                            self.role,
+                            lock_type,
+                            lock_file,
+                        )
                     if failhard:
                         raise
                     return
