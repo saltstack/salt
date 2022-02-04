@@ -1310,6 +1310,7 @@ repos:
         args:
           - docs.check
         additional_dependencies:
+          - tornado
           - blessings
           - pyyaml
           - distro
@@ -1327,6 +1328,7 @@ repos:
         args:
           - filemap.check
         additional_dependencies:
+          - tornado
           - blessings
           - pyyaml
           - distro
@@ -1348,6 +1350,7 @@ repos:
         args:
           - loader.check-virtual
         additional_dependencies:
+          - tornado
           - blessings
           - pyyaml
           - distro
@@ -1369,6 +1372,7 @@ repos:
         args:
           - docstrings.check
         additional_dependencies:
+          - tornado
           - blessings
           - pyyaml
           - distro
@@ -1392,6 +1396,7 @@ repos:
           - docstrings.check
           - --error-on-known-failures
         additional_dependencies:
+          - tornado
           - blessings
           - pyyaml
           - distro

@@ -267,6 +267,10 @@ def _run_sync_target(func, args, kwargs, results, io_loop, timeout=None):
 
 
 def run_sync(func, args=None, kwargs=None, io_loop=None, timeout=None):
+    """
+    Run the given coroutine function syncronously in a thread using a new
+    asyncio event loop.
+    """
     ioloop = io_loop or asyncio.new_event_loop()
     results = []
     thread = threading.Thread(

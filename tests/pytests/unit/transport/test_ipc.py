@@ -117,7 +117,7 @@ async def test_multi_client_reading(pub_channel, opts, socket_path):
     assert call_cnt[1] == "TEST"
 
 
-if sys.version_info > (3, 5):
+if sys.version_info > (3, 6):
 
     @pytest.fixture
     async def sub_channel(opts, socket_path):

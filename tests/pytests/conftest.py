@@ -23,7 +23,6 @@ from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.helpers import get_virtualenv_binary_path
 from tests.support.runtests import RUNTIME_VARS
 
-
 log = logging.getLogger(__name__)
 
 

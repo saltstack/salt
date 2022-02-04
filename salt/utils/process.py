@@ -149,6 +149,9 @@ def daemonize_if(opts):
 
 
 def systemd_notify_call(action):
+    """
+    Call systemd-notify with the given action.
+    """
     process = subprocess.Popen(
         ["systemd-notify", action], stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
@@ -1177,6 +1180,9 @@ class SignalHandlingMultiprocessingProcess(SignalHandlingProcess):
 
 @contextlib.contextmanager
 def default_signals(*signals):
+    """
+    Setup Salt's default signal handlers
+    """
     old_signals = {}
     for signum in signals:
         try:

@@ -18,6 +18,7 @@ from salt._compat import ipaddress
 from salt.exceptions import SaltClientError, SaltMasterUnresolvableError, SaltSystemExit
 from tests.support.mock import MagicMock, patch
 
+
 log = logging.getLogger(__name__)
 
 
@@ -61,12 +62,12 @@ def test_minion_load_grains_default():
             "fire_event",
             lambda data, tag, cb=None, timeout=60: True,
         ),
-        #(
+        # (
         #    "fire_event_async",
         #    lambda data, tag, cb=None, timeout=60: salt.ext.tornado.gen.maybe_future(
         #        True
         #    ),
-        #),
+        # ),
     ],
 )
 def test_send_req_fires_completion_event(event):

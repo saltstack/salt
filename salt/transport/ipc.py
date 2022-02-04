@@ -311,6 +311,10 @@ class IPCMessageSubscriber(IPCClient):
                     if not wire_bytes:
                         log.debug("%s Nothing more to read", self.__class__.__name__)
                         break
+                except ConnectionResetError as e:
+                    # XXX This only happens on windows?
+                    log.error("Connection reset by peer")
+                    break
                 except asyncio.IncompleteReadError as e:
                     log.error("Incomplete read")
                     stop = True

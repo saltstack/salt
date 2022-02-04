@@ -10,7 +10,6 @@ import hashlib
 import os
 import shutil
 import time
-import asyncio
 
 import pytest
 import salt.config
@@ -19,7 +18,6 @@ import salt.utils.event
 import salt.utils.stringutils
 import zmq
 import zmq.eventloop.ioloop
-from salt.ext.tornado.testing import AsyncTestCase
 from saltfactories.utils.processes import terminate_process
 from tests.support.events import eventpublisher_process, eventsender_process
 from tests.support.runtests import RUNTIME_VARS

@@ -838,7 +838,7 @@ class MessageClient:
 
         item = salt.transport.frame.frame_msg(msg, header=header)
 
-        async _do_send():
+        async def _do_send():
             await self.connect()
             # If the _writer is None, we failed to connect.
             if self._writer:
@@ -1159,7 +1159,7 @@ class RequestClient(salt.transport.base.RequestClient):
         await self.message_client.connect()
 
     async def send(self, load, timeout=60):
-        return await self.message_client.send(load, tries=3, timeout=60)
+        return await self.message_client.send(load, timeout=60)
 
     def close(self):
         return self.message_client.close()

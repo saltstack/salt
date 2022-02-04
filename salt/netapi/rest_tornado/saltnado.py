@@ -352,7 +352,6 @@ class EventListener:
         if callback is not None:
 
             def handle_future(future):
-                log.error("HANDLE FUTURE")
                 salt.ext.tornado.ioloop.IOLoop.current().add_callback(
                     callback, future
                 )  # pylint: disable=E1102
@@ -386,7 +385,6 @@ class EventListener:
         """
         Callback for events on the event sub socket
         """
-        log.error("SOC RECV")
         mtag, data = self.event.unpack(raw)
 
         # see if we have any futures that need this info:
@@ -442,7 +440,6 @@ class BaseSaltAPIHandler(salt.ext.tornado.web.RequestHandler):  # pylint: disabl
             )
 
         if not hasattr(self, "saltclients"):
-            log.error("WTF YES %r", salt.runner.RunnerClient)
             local_client = salt.client.get_local_client(mopts=self.application.opts)
             self.saltclients = {
                 "local": local_client.run_job_async,
@@ -451,8 +448,6 @@ class BaseSaltAPIHandler(salt.ext.tornado.web.RequestHandler):  # pylint: disabl
                 "runner": salt.runner.RunnerClient(self.application.opts).cmd_async,
                 "runner_async": None,  # empty, since we use the same client as `runner`
             }
-        else:
-            log.error("WTF NO")
 
         if not hasattr(self, "ckminions"):
             self.ckminions = salt.utils.minions.CkMinions(self.application.opts)

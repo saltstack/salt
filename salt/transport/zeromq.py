@@ -709,38 +709,16 @@ class AsyncReqMessageClient:
         if self.opts.get("detect_mode") is True:
             timeout = 1
 
-        # if timeout is not None:
-        #    log.warning("Timeout ignored")
-        #    send_timeout = self.io_loop.call_later(
-        #        timeout, self.timeout_message, message
-        #    )
-
-        # def mark_future(msg):
-        #    if not future.done():
-        #        data = salt.payload.loads(msg[0])
-        #        future.set_result(data)
-        #        self.send_future_map.pop(message)
-
         async def sendrecv():
-            await self.socket.send(message)
-            return await self.socket.recv()
+            while True:
+                try:
+                    await self.socket.send(message)
+                except zmq.error.ZMQError:
+                    await asyncio.sleep(0.3)
+                else:
+                    return await self.socket.recv()
 
         # self.stream.on_recv(mark_future)
-        # if timeout and tries and False:
-        #    try_ = 1
-        #    while True:
-        #        try:
-        #            ret = await asyncio.wait_for(sendrecv(), timeout=timeout)
-        #        except asyncio.TimeoutError:
-        #            if try_ > tries:
-        #                raise
-        #            try_ += 1
-        #        else:
-        #            break
-        # elif timeout and False:
-        #     ret = await asyncio.wait_for(sendrecv(), timeout=timeout)
-        # else:
-        #     ret = await sendrecv()
         await self.socket.send(message)
         ret = await self.socket.recv()
         load = salt.payload.loads(ret)
@@ -1077,7 +1055,7 @@ class RequestClient(salt.transport.base.RequestClient):
     async def send(self, load, timeout=60):
         # XXX Is this blocking?
         self.connect()
-        ret = await self.message_client.send(load, tries=tries, timeout=timeout)
+        ret = await self.message_client.send(load, timeout=timeout)
         log.debug("Client got ret %d", len(ret))
         return ret
 

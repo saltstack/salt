@@ -20,6 +20,7 @@ import types
 
 import salt
 import salt.beacons
+import salt.channel
 import salt.channel.client
 import salt.cli.daemons
 import salt.client
@@ -836,8 +837,8 @@ class MinionBase:
                         if pub_channel:
                             pub_channel.close()
                         raise
-            # if pub_channel:
-            #    pub_channel.close()
+            if pub_channel:
+                pub_channel.close()
 
     def _discover_masters(self):
         """
@@ -1175,7 +1176,6 @@ class MinionManager(MinionBase):
                     minion.opts["master"],
                     exc_info=True,
                 )
-        log.error("**** CONNECT MINION END %r ****", minion)
 
     # Multi Master Tune In
     def tune_in(self):
@@ -1377,7 +1377,7 @@ class Minion(MinionBase):
         )
 
         # a long-running req channel
-        self.req_channel = salt.transport.client.AsyncReqChannel.factory(
+        self.req_channel = salt.channel.client.AsyncReqChannel.factory(
             self.opts, io_loop=self.io_loop
         )
 
@@ -2698,7 +2698,7 @@ class Minion(MinionBase):
                 notify=data.get("notify", False),
             )
         elif tag.startswith("__master_req_channel_payload"):
-            yield self.req_channel.send(
+            await self.req_channel.send(
                 data,
                 timeout=self._return_retry_timer(),
                 tries=self.opts["return_retry_tries"],
@@ -2819,10 +2819,8 @@ class Minion(MinionBase):
                             self.opts["master"],
                         )
 
-                        self.req_channel = (
-                            salt.transport.client.AsyncReqChannel.factory(
-                                self.opts, io_loop=self.io_loop
-                            )
+                        self.req_channel = salt.channel.client.AsyncReqChannel.factory(
+                            self.opts, io_loop=self.io_loop
                         )
 
                         # put the current schedule into the new loaders
@@ -3169,7 +3167,6 @@ class Minion(MinionBase):
                 self.destroy()
 
     async def _handle_payload(self, payload):
-        log.error("MINION GOT %r", payload)
         if payload is not None and payload["enc"] == "aes":
             if self._target_load(payload["load"]):
                 # self.io_loop.create_task(self._handle_decoded_payload(payload["load"]))
@@ -3751,7 +3748,6 @@ class ProxyMinionManager(MinionManager):
         """
         Helper function to return the correct type of object
         """
-        log.error("CREATE MINION OBJECT")
         return ProxyMinion(
             opts,
             timeout,
@@ -3801,7 +3797,6 @@ class ProxyMinion(Minion):
         which is why the differences are not factored out into separate helper
         functions.
         """
-        log.error("*** WTF %r", master)
         mp_call = _metaproxy_call(self.opts, "post_master_init")
         return await mp_call(self, master)
 

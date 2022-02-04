@@ -684,7 +684,6 @@ class Master(SMaster):
             self.process_manager.add_process(
                 salt.utils.event.EventPublisher,
                 args=(self.opts,),
-                kwargs={"log_queue": log_queue},
                 name="EventPublisher",
             )
             log.info("publisher started")
@@ -986,7 +985,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
 
         :param dict payload: The payload route to the appropriate handler
         """
-        # log.error("%s HANDLE PAYLOAD %r", self.name, payload)
         key = payload["enc"]
         load = payload["load"]
         ret = {"aes": self._handle_aes, "clear": self._handle_clear}[key](load)
