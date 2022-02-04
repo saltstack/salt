@@ -472,6 +472,32 @@ class GitProvider:
             log.critical(msg, exc_info=True)
             failhard(self.role)
 
+        # In case "__env__" is used we need to prevent other GitProvider instances
+        # for the same remote to run at the same time to avoid race conditions and
+        # leaks between different branches that are being processed in the same cachedir
+        if "__env__" in self.id:
+            self.acquire_repo_lock()
+
+    def acquire_repo_lock(self):
+        while True:
+            try:
+                result = self._lock(lock_type="repo", failhard=True)
+                break
+            except (OSError, GitLockError) as exc:
+                log.debug(
+                    "Repo lock is present for remote: '{}', sleeping 0.5 seconds before trying again.".format(
+                        self.id
+                    )
+                )
+                time.sleep(0.5)
+                continue
+
+    def __del__(self):
+        try:
+            self.clear_lock(lock_type="repo")
+        except Exception:  # pylint: disable=broad-except
+            pass
+
     def _get_envs_from_ref_paths(self, refs):
         """
         Return the names of remote refs (stripped of the remote name) and tags
