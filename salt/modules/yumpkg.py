@@ -2121,6 +2121,8 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     pkg_params.update(pkg_matches)
 
     for target in pkg_params:
+        if target not in old:
+            continue
         version_to_remove = pkg_params[target]
 
         # Check if package version set to be removed is actually installed:
