@@ -414,8 +414,6 @@ gitpython==3.1.18
     # via -r requirements/static/ci/common.in
 google-auth==2.1.0
     # via kubernetes
-hglib==2.6.1
-    # via -r requirements/static/ci/common.in
 idna==2.8
     # via requests
 immutables==0.16

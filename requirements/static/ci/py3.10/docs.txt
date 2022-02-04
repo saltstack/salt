@@ -430,7 +430,7 @@ gitpython==3.1.18
 google-auth==2.0.1
     # via kubernetes
 hglib==2.6.1
-    # via -r requirements/static/ci/common.in
+    # via -r requirements/static/ci/linux.in
 idna==2.8
     # via requests
 imagesize==1.2.0
