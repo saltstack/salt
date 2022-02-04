@@ -74,7 +74,10 @@ def test_get_name_capability_sid():
     Test get_name with a compatibility SID. Should return `None` as we want to
     ignore these SIDs
     """
-    cap_sid = "S-1-15-3-1024-1065365936-1281604716-3511738428-1654721687-432734479-3232135806-4053264122-3456934681"
+    cap_sid = (
+        "S-1-15-3-1024-1065365936-1281604716-3511738428-1654721687-432734479-"
+        "3232135806-4053264122-3456934681"
+    )
     sid_obj = win32security.ConvertStringSidToSid(cap_sid)
     assert salt.utils.win_dacl.get_name(sid_obj) is None
 
