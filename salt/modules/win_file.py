@@ -1244,9 +1244,6 @@ def symlink(src, link, force=False):
         msg = "Existing path is not a symlink: {}".format(link)
         raise CommandExecutionError(msg)
 
-    if not os.path.exists(src):
-        raise CommandExecutionError("Source path does not exist: {}".format(src))
-
     if not os.path.isabs(link):
         raise SaltInvocationError("Link path must be absolute: {}".format(link))
 
