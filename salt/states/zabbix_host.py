@@ -151,11 +151,18 @@ def present(host, groups, interfaces, **kwargs):
                     details_community = val_details.get(
                         "community", "{$SNMP_COMMUNITY}"
                     )
-                details = {
-                    "version": details_version,
-                    "bulk": details_bulk,
-                    "community": details_community,
-                }
+                # a community string should only be provided in legacy versions of SNMP
+                if details_version == '3':
+                    details = { 
+                            "version": details_version,
+                            "bulk": details_bulk,
+                    }
+                else:
+                    details = { 
+                            "version": details_version,
+                            "bulk": details_bulk,
+                            "community": details_community,
+                    }
                 if details_version == "3":
                     details_securitylevel = val_details.get("securitylevel", "0")
                     details_securityname = val_details.get("securityname", "")
