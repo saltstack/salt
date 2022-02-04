@@ -172,8 +172,6 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         self.event = salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
         )
-        # Init any values needed by the git ext pillar
-        self.git_pillar = salt.daemons.masterapi.init_git_pillar(self.opts)
 
         if self.opts["maintenance_niceness"] and not salt.utils.platform.is_windows():
             log.info(
@@ -299,8 +297,10 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         """
         Update git pillar
         """
+        # Init any values needed by the git ext pillar
+        git_pillar = salt.daemons.masterapi.init_git_pillar(self.opts)
         try:
-            for pillar in self.git_pillar:
+            for pillar in git_pillar:
                 pillar.fetch_remotes()
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Exception caught while updating git_pillar", exc_info=True)
