@@ -1,7 +1,7 @@
-'''
+"""
 Module for testing that a __virtual__ function returning False will not be
 available via the Salt Loader.
-'''
+"""
 
 
 def __virtual__():
