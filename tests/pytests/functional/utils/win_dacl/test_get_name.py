@@ -4,10 +4,7 @@ tests.pytests.unit.utils.win_dacl.test_get_name
 
 Test the get_name function in the win_dacl utility module
 """
-# Python libs
 import pytest
-
-# Salt libs
 import salt.exceptions
 import salt.utils.win_dacl
 
@@ -22,10 +19,10 @@ except ImportError:
 pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_unless_on_windows,
+    pytest.mark.skipif(not HAS_WIN32, reason="Requires Win32 libraries"),
 ]
 
 
-@pytest.mark.skipif(not HAS_WIN32, reason="Requires Win32 libraries")
 @pytest.mark.parametrize(
     "principal",
     (
@@ -43,7 +40,7 @@ def test_get_name(principal):
     assert result == expected
 
 
-def test_get_name_pysid_ob():
+def test_get_name_pysid_obj():
     """
     Test get_name with various input methods
     We can't parametrize this one as it gets evaluated before the test runs
@@ -55,7 +52,6 @@ def test_get_name_pysid_ob():
     assert result == expected
 
 
-@pytest.mark.skipif(not HAS_WIN32, reason="Requires Win32 libraries")
 @pytest.mark.parametrize(
     "principal",
     (
@@ -73,7 +69,6 @@ def test_get_name_virtual_account(principal):
     assert result == expected
 
 
-@pytest.mark.skipif(not HAS_WIN32, reason="Requires Win32 libraries")
 def test_get_name_capability_sid():
     """
     Test get_name with a compatibility SID. Should return `None` as we want to
@@ -84,7 +79,6 @@ def test_get_name_capability_sid():
     assert salt.utils.win_dacl.get_name(sid_obj) is None
 
 
-@pytest.mark.skipif(not HAS_WIN32, reason="Requires Win32 libraries")
 def test_get_name_error():
     """
     Test get_name with an un mapped SID, should throw a CommandExecutionError
