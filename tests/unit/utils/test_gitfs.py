@@ -6,7 +6,8 @@ any remotes.
 
 import os
 import shutil
-from time import time
+import threading
+import time
 
 import salt.fileserver.gitfs
 import salt.utils.files
@@ -217,7 +218,7 @@ class TestPygit2(TestCase):
         filename = "README"
 
         signature = pygit2.Signature(
-            "Dummy Commiter", "dummy@dummy.com", int(time()), 0
+            "Dummy Commiter", "dummy@dummy.com", int(time.time()), 0
         )
 
         repository = pygit2.init_repository(path, False)
@@ -317,6 +318,82 @@ class TestPygit2(TestCase):
         )
         return provider
 
+    def _prepare_cache_repository_git_pillar(self, remote, cache, wipe_cache=True):
+        opts = {
+            "__role": "git_pillar",
+            "cachedir": cache,
+            "environment": None,
+            "pillarenv": None,
+            "hash_type": "sha256",
+            "file_roots": {},
+            "state_top": "top.sls",
+            "state_top_saltenv": None,
+            "renderer": "yaml_jinja",
+            "renderer_whitelist": [],
+            "renderer_blacklist": [],
+            "pillar_merge_lists": False,
+            "git_pillar_update_interval": 180,
+            "git_pillar_base": "master",
+            "git_pillar_env": "",
+            "git_pillar_fallback": "",
+            "git_pillar_root": "",
+            "git_pillar_ssl_verify": True,
+            "git_pillar_global_lock": True,
+            "git_pillar_user": "",
+            "git_pillar_password": "",
+            "git_pillar_insecure_auth": False,
+            "git_pillar_privkey": "",
+            "git_pillar_pubkey": "",
+            "git_pillar_passphrase": "",
+            "git_pillar_refspecs": [
+                "+refs/heads/*:refs/remotes/origin/*",
+                "+refs/tags/*:refs/tags/*",
+            ],
+            "git_pillar_includes": True,
+            "git_pillar_disable_saltenv_mapping": False,
+            "git_pillar_mountpoint": "",
+            "git_pillar_provider": "pygit2",
+            "git_pillar_ref_types": ["branch", "tag", "sha"],
+            "git_pillar_saltenv_blacklist": [],
+            "git_pillar_saltenv_whitelist": [],
+            "verified_git_pillar_provider": "pygit2",
+        }
+        per_remote_defaults = {
+            "base": "master",
+            "disable_saltenv_mapping": False,
+            "insecure_auth": False,
+            "ref_types": ["branch", "tag", "sha"],
+            "passphrase": "",
+            "mountpoint": "",
+            "password": "",
+            "privkey": "",
+            "pubkey": "",
+            "refspecs": [
+                "+refs/heads/*:refs/remotes/origin/*",
+                "+refs/tags/*:refs/tags/*",
+            ],
+            "root": "",
+            "saltenv_blacklist": [],
+            "saltenv_whitelist": [],
+            "ssl_verify": True,
+            "update_interval": 60,
+            "user": "",
+        }
+        per_remote_only = ("all_saltenvs", "name", "saltenv")
+        override_params = tuple(per_remote_defaults.keys())
+        cache_root = os.path.join(cache, "gitfs")
+        role = "git_pillar"
+        if wipe_cache:
+            shutil.rmtree(cache_root, ignore_errors=True)
+        git_pillar = salt.utils.gitfs.GitPillar(
+            opts,
+            [remote],
+            per_remote_overrides=override_params,
+            per_remote_only=per_remote_only,
+            cache_root=cache_root,
+        )
+        return git_pillar
+
     def test_checkout(self):
         remote = os.path.join(tests.support.paths.TMP, "pygit2-repo")
         cache = os.path.join(tests.support.paths.TMP, "pygit2-repo-cache")
@@ -334,3 +411,66 @@ class TestPygit2(TestCase):
         self.assertIn(provider.cachedir, provider.checkout())
         provider.branch = "does_not_exist"
         self.assertIsNone(provider.checkout())
+
+    def test_git_pillar_repo_lock_when_not_using___env__(self):
+        remote = os.path.join(tests.support.paths.TMP, "pygit2-repo")
+        cache = os.path.join(tests.support.paths.TMP, "pygit2-repo-cache")
+        self._prepare_remote_repository(remote)
+        git_pillar = self._prepare_cache_repository_git_pillar(
+            "base {}".format(remote), cache
+        )
+
+        # As "__env__" is not used on remote, no repo lock should be created
+        repo_lock = os.path.join(git_pillar.remotes[0].cachedir, ".git/repo.lk")
+        self.assertFalse(os.path.isfile(repo_lock))
+
+    def test_git_pillar_repo_lock_when_using___env___exists(self):
+        remote = os.path.join(tests.support.paths.TMP, "pygit2-repo")
+        cache = os.path.join(tests.support.paths.TMP, "pygit2-repo-cache")
+        self._prepare_remote_repository(remote)
+        git_pillar = self._prepare_cache_repository_git_pillar(
+            "__env__ {}".format(remote), cache
+        )
+
+        # Here, we expect a "repo.lk" since __env__ is being used
+        repo_lock = os.path.join(git_pillar.remotes[0].cachedir, ".git/repo.lk")
+        self.assertTrue(os.path.isfile(repo_lock))
+
+        # The repo lock is deleted as soon as GitProvider instance is destroyed
+        del git_pillar
+        self.assertFalse(os.path.isfile(repo_lock))
+
+    def test_git_pillar_is_waiting_for_repo_lock_when_using___env__(self):
+        remote = os.path.join(tests.support.paths.TMP, "pygit2-repo")
+        cache = os.path.join(tests.support.paths.TMP, "pygit2-repo-cache")
+        self._prepare_remote_repository(remote)
+        git_pillar = self._prepare_cache_repository_git_pillar(
+            "__env__ {}".format(remote), cache
+        )
+
+        # Here, we expect a "repo.lk" since __env__ is being used
+        repo_lock = os.path.join(git_pillar.remotes[0].cachedir, ".git/repo.lk")
+        self.assertTrue(os.path.isfile(repo_lock))
+
+        # Getting another instance for the same remote in a different thread
+        def second_git_pillar_instance(remote, cache):
+            extra_git_pillar = self._prepare_cache_repository_git_pillar(
+                "__env__ {}".format(remote), cache, wipe_cache=False
+            )
+            del extra_git_pillar
+
+        th = threading.Thread(target=second_git_pillar_instance, args=[remote, cache])
+        th.start()
+        th.join(1)
+
+        # at this point, thread should be stuck because of other instance lock
+        self.assertTrue(th.is_alive())
+
+        # as soon as we clear the previous lock by removing the instance
+        # then the thread is able to proceed and finish
+        del git_pillar
+        th.join(1)
+        self.assertFalse(th.is_alive())
+
+        # no lock should exist at this point, all instances were cleared
+        self.assertFalse(os.path.isfile(repo_lock))
