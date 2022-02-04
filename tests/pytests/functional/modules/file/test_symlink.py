@@ -36,6 +36,19 @@ def test_symlink(file, source):
         target.unlink()
 
 
+def test_symlink_missing_src(file, source):
+    """
+    Test symlink when src is missing should still create the link
+    """
+    target = source.parent / "symlink.lnk"
+    missing_source = source.parent / "missing.txt"
+    try:
+        file.symlink(str(missing_source), str(target))
+        assert salt.utils.path.islink(str(target))
+    finally:
+        target.unlink()
+
+
 def test_symlink_exists_same(file, source):
     """
     Test symlink with an existing symlink to the correct file

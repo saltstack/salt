@@ -3,6 +3,7 @@ Tests for salt.utils.jinja
 """
 
 import ast
+import itertools
 import os
 import pprint
 import random
@@ -458,7 +459,7 @@ def test_extend_dict_key_value(minion_opts, local_salt):
 
     # Test incorrect usage
     template = "{{ {} | extend_dict_key_value('bar:baz', 42) }}"
-    expected = r"Cannot extend {} with a {}.".format(type([]), type(42))
+    expected = r"Cannot extend {} with a {}.".format(type([]), int)
     with pytest.raises(SaltRenderError, match=expected):
         render_jinja_tmpl(
             template, dict(opts=minion_opts, saltenv="test", salt=local_salt)
@@ -1070,3 +1071,133 @@ def test_json_query(minion_opts, local_salt):
         dict(opts=minion_opts, saltenv="test", salt=local_salt),
     )
     assert rendered == "2"
+
+
+def test_flatten_simple(minion_opts, local_salt):
+    """
+    Test the `flatten` Jinja filter.
+    """
+    rendered = render_jinja_tmpl(
+        "{{ [1, 2, [3]] | flatten }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "[1, 2, 3]"
+
+
+def test_flatten_single_level(minion_opts, local_salt):
+    """
+    Test the `flatten` Jinja filter.
+    """
+    rendered = render_jinja_tmpl(
+        "{{ [1, 2, [None, 3, [4]]] | flatten(levels=1) }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "[1, 2, 3, [4]]"
+
+
+def test_flatten_preserve_nulls(minion_opts, local_salt):
+    """
+    Test the `flatten` Jinja filter.
+    """
+    rendered = render_jinja_tmpl(
+        "{{ [1, 2, [None, 3, [4]]] | flatten(preserve_nulls=True) }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "[1, 2, None, 3, 4]"
+
+
+def test_dict_to_sls_yaml_params(minion_opts, local_salt):
+    """
+    Test the `dict_to_sls_yaml_params` Jinja filter.
+    """
+    expected = [
+        "- name: donkey",
+        "- list:\n  - one\n  - two",
+        "- dict:\n    one: two",
+        "- nested:\n  - one\n  - two: three",
+    ]
+    source = (
+        "{% set myparams = {'name': 'donkey', 'list': ['one', 'two'], 'dict': {'one': 'two'}, 'nested': ['one', {'two': 'three'}]} %}"
+        + "{{ myparams | dict_to_sls_yaml_params }}"
+    )
+    rendered = render_jinja_tmpl(
+        source, dict(opts=minion_opts, saltenv="test", salt=local_salt)
+    )
+    assert rendered in ["\n".join(combo) for combo in itertools.permutations(expected)]
+
+
+def test_combinations(minion_opts, local_salt):
+    """
+    Test the `combinations` Jinja filter.
+    """
+    rendered = render_jinja_tmpl(
+        "{% for one, two in 'ABCD' | combinations(2) %}{{ one~two }} {% endfor %}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "AB AC AD BC BD CD "
+
+
+def test_combinations_with_replacement(minion_opts, local_salt):
+    """
+    Test the `combinations_with_replacement` Jinja filter.
+    """
+    rendered = render_jinja_tmpl(
+        "{% for one, two in 'ABC' | combinations_with_replacement(2) %}{{ one~two }} {% endfor %}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "AA AB AC BB BC CC "
+
+
+def test_compress(minion_opts, local_salt):
+    """
+    Test the `compress` Jinja filter.
+    """
+    rendered = render_jinja_tmpl(
+        "{% for val in 'ABCDEF' | compress([1,0,1,0,1,1]) %}{{ val }} {% endfor %}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "A C E F "
+
+
+def test_permutations(minion_opts, local_salt):
+    """
+    Test the `permutations` Jinja filter.
+    """
+    rendered = render_jinja_tmpl(
+        "{% for one, two in 'ABCD' | permutations(2) %}{{ one~two }} {% endfor %}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "AB AC AD BA BC BD CA CB CD DA DB DC "
+
+
+def test_product(minion_opts, local_salt):
+    """
+    Test the `product` Jinja filter.
+    """
+    rendered = render_jinja_tmpl(
+        "{% for one, two in 'ABCD' | product('xy') %}{{ one~two }} {% endfor %}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "Ax Ay Bx By Cx Cy Dx Dy "
+
+
+def test_zip(minion_opts, local_salt):
+    """
+    Test the `zip` Jinja filter.
+    """
+    rendered = render_jinja_tmpl(
+        "{% for one, two in 'ABCD' | zip('xy') %}{{ one~two }} {% endfor %}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "Ax By "
+
+
+def test_zip_longest(minion_opts, local_salt):
+    """
+    Test the `zip_longest` Jinja filter.
+    """
+    rendered = render_jinja_tmpl(
+        "{% for one, two in 'ABCD' | zip_longest('xy', fillvalue='-') %}{{ one~two }} {% endfor %}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "Ax By C- D- "
