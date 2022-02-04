@@ -349,10 +349,17 @@ def present(host, groups, interfaces, **kwargs):
                         }
                     else:
                         hostintf["details"] = []
-            interface_diff = [
-                x for x in interfaces_formated if x not in hostinterfaces_copy
-            ] + [y for y in hostinterfaces_copy if y not in interfaces_formated]
-            if interface_diff:
+            # cycle through all of the interfaces from both the API and the SLS and keep track of how many "match"
+            # This doesn't look for exact matches, but looks for subsets. This allows more items to come from the API
+            # than from the SLS and we don't need to worry about not being able to set options like 'error'
+            # Once we have the count of how many interfaces match, we compare that to the number of interfaces that
+            # are already on the host. If the number is different, we trigger an update. Otherwise we just let it be
+            matching_interfaces = 0
+            for interface_formated in interfaces_formated:
+                for hostinterface_copy in hostinterfaces_copy:
+                    if hostinterface_copy.items() >= interface_formated.items():
+                        matching_interfaces += 1
+            if matching_interfaces != len(hostinterfaces_copy):
                 update_interfaces = True
 
         elif not hostinterfaces and interfaces:
