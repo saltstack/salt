@@ -931,9 +931,9 @@ class GitProvider:
                             lock_type,
                             lock_file,
                         )
-                    success, fail = self.clear_lock()
+                    success, fail = self.clear_lock(lock_type=lock_type)
                     if success:
-                        return self._lock(lock_type="update", failhard=failhard)
+                        return self._lock(lock_type=lock_type, failhard=failhard)
                     elif failhard:
                         raise
                     return
