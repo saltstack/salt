@@ -195,14 +195,25 @@ def _compress_ids(data):
             id_count = collections.Counter(
                 [
                     "_".join(
-                        map(str, [info["__id__"], info["__sls__"], info["result"]])
+                        map(
+                            str,
+                            [
+                                tname.split("_|-")[0],
+                                info["__id__"],
+                                info["__sls__"],
+                                info["result"],
+                            ],
+                        )
                     )
                     for tname, info in hostdata.items()
                 ]
             )
             for tname, info in hostdata.items():
+                comps = tname.split("_|-")
                 _id = "_".join(
-                    map(str, [info["__id__"], info["__sls__"], info["result"]])
+                    map(
+                        str, [comps[0], info["__id__"], info["__sls__"], info["result"]]
+                    )
                 )
                 # state does not need to be compressed
                 if id_count[_id] == 1:
@@ -210,7 +221,6 @@ def _compress_ids(data):
                     continue
 
                 # replace name to create a single key by sls and result
-                comps = tname.split("_|-")
                 comps[2] = "_".join(
                     map(
                         str,

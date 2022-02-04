@@ -548,3 +548,48 @@ def test__compress_ids_not_dict():
     data = ["malformed"]
     actual_output = highstate._compress_ids(data)
     assert actual_output == data
+
+
+def test__compress_ids_multiple_module_functions():
+    """
+    Tests for expected data return for _compress_ids
+    when using multiple mod.fun combos under the ID
+    """
+    # raw data entering the outputter
+    data = {
+        "local": {
+            "cmd_|-try_this_|-echo 'hi'_|-run": {
+                "__id__": "try_this",
+                "__run_num__": 1,
+                "__sls__": "wayne",
+                "changes": {"pid": 32615, "retcode": 0, "stderr": "", "stdout": "hi"},
+                "comment": 'Command "echo ' "'hi'\" run",
+                "duration": 8.218,
+                "name": "echo 'hi'",
+                "result": True,
+                "start_time": "23:43:25.715842",
+            },
+            "test_|-try_this_|-asdf_|-nop": {
+                "__id__": "try_this",
+                "__run_num__": 0,
+                "__sls__": "wayne",
+                "changes": {},
+                "comment": "Success!",
+                "duration": 0.906,
+                "name": "asdf",
+                "result": True,
+                "start_time": "23:43:25.714010",
+            },
+        }
+    }
+
+    # check output text for formatting
+    opts = copy.deepcopy(highstate.__opts__)
+    opts["state_compress_ids"] = True
+    with patch("salt.output.highstate.__opts__", opts, create=True):
+        actual_output = highstate.output(data)
+
+    # if we only cared about the ID/SLS/Result combo, this would be 4 not 2
+    assert "Succeeded: 2 (changed=1)" in actual_output
+    assert "Failed:    0" in actual_output
+    assert "Total states run:     2" in actual_output
