@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import multiprocessing
 
@@ -6,7 +7,6 @@ import salt.channel.client
 import salt.channel.server
 import salt.config
 import salt.exceptions
-import salt.ext.tornado.gen
 import salt.log.setup
 import salt.utils.platform
 import salt.utils.process
@@ -33,12 +33,11 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self.running = multiprocessing.Event()
 
     def run(self):
-        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
-        self.io_loop.make_current()
+        self.io_loop = asyncio.get_event_loop()
         self.req_server_channel.post_fork(self._handle_payload, io_loop=self.io_loop)
-        self.io_loop.add_callback(self.running.set)
+        self.io_loop.call_soon(self.running.set)
         try:
-            self.io_loop.start()
+            self.io_loop.run_forever()
         except KeyboardInterrupt:
             pass
 
@@ -69,11 +68,10 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
                 terminate_process(pid=pid, kill_children=True, slow_stop=False)
             self.process_manager = None
 
-    @salt.ext.tornado.gen.coroutine
-    def _handle_payload(self, payload):
+    async def _handle_payload(self, payload):
         if self.req_channel_crypt == "clear":
-            raise salt.ext.tornado.gen.Return((payload, {"fun": "send_clear"}))
-        raise salt.ext.tornado.gen.Return((payload, {"fun": "send"}))
+            return (payload, {"fun": "send_clear"})
+        return (payload, {"fun": "send"})
 
 
 @pytest.fixture
