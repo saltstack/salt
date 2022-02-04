@@ -378,7 +378,6 @@ def flags(instantiated=True):
         ace_prop = {
             "file": {
                 # for report
-                None: "Not Inherited (file)",
                 0x0000: "This folder only",
                 0x0001: "This folder and files",
                 0x0002: "This folder and subfolders",

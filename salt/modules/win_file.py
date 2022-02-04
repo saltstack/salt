@@ -1734,7 +1734,7 @@ def set_perms(path, grant_perms=None, deny_perms=None, inheritance=True, reset=F
             grant, ie: ``{'user': {'perms': 'basic_permission'}}``. You can also
             set the ``applies_to`` setting here for directories. The default for
             ``applies_to`` is ``this_folder_subfolders_files``. Specify another
-             ``applies_to`` setting like this:
+            ``applies_to`` setting like this:
 
             .. code-block:: yaml
 
