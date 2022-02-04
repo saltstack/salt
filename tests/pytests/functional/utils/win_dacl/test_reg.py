@@ -28,7 +28,7 @@ def fake_key():
 @pytest.fixture(scope="function")
 def reg_key(fake_key):
     win_reg.set_value(hive="HKLM", key=fake_key, vname="fake_name", vdata="fake_data")
-    yield f"HKLM\\{fake_key}"
+    yield "HKLM\\{}".format(fake_key)
     win_reg.delete_key_recursive(hive="HKLM", key=fake_key)
 
 
@@ -472,7 +472,7 @@ def test_check_perms_test_true(reg_key):
     assert result == expected
 
     result = win_dacl.get_owner(obj_name=reg_key, obj_type="registry")
-    assert not result == "Users"
+    assert result != "Users"
 
     result = win_dacl.get_permissions(
         obj_name=reg_key,
