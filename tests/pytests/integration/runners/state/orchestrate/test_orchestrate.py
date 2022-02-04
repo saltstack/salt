@@ -90,7 +90,9 @@ def test_orchestrate_state_output_with_salt_function(
     with pytest.helpers.temp_file(
         "orch-function-test.sls", sls_contents, base_env_state_tree_root_dir
     ):
-        ret = salt_run_cli.run("--out=highstate", "state.orchestrate", "orch-function-test")
+        ret = salt_run_cli.run(
+            "--out=highstate", "state.orchestrate", "orch-function-test"
+        )
         assert ret.exitcode == 0
         ret_output = [line.strip() for line in ret.stdout.splitlines()]
 
