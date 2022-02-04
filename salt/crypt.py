@@ -818,7 +818,7 @@ class AsyncAuth:
                         "The Salt Master has rejected this minion's public "
                         "key.\nTo repair this issue, delete the public key "
                         "for this minion on the Salt Master.\nThe Salt "
-                        "Minion will attempt to to re-authenicate."
+                        "Minion will attempt to re-authenicate."
                     )
                     return "retry"
                 else:
