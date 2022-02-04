@@ -344,9 +344,7 @@ class Minion(
             if check_user(self.config["user"]):
                 self.action_log_info("Starting up")
                 self.verify_hash_type()
-                log.error("CLI D tune_in")
                 self.minion.tune_in()
-                log.error("CLI D after tune_in")
                 if self.minion.restart:
                     raise SaltClientError("Minion could not connect to Master")
         except (KeyboardInterrupt, SaltSystemExit) as error:
