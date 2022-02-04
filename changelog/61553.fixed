@@ -1,0 +1,1 @@
+Print jinja error context on `UndefinedError`.  Previously `jinja2.exceptions.UndefinedError` resulted in a `SaltRenderError` without source file context, unlike all of the other Jinja exceptions handled in `salt/utils/templates.py`.
