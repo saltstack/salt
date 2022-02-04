@@ -696,9 +696,19 @@ class Client:
                     # Try to find out what content type encoding is used if
                     # this is a text file
                     write_body[1].parse_line(hdr)  # pylint: disable=no-member
-                    if use_etag and "Etag" in write_body[1]:
+                    # Case insensitive Etag header checking below. Don't break case
+                    # insensitivity unless you really want to mess with people's heads
+                    # in the tests. Note: http.server and apache2 use "Etag" and nginx
+                    # uses "ETag" as the header key. Yay standards!
+                    if use_etag and "etag" in map(str.lower, write_body[1]):
                         with salt.utils.files.fopen(dest_etag, "w") as etagfp:
-                            etag = etagfp.write(write_body[1].get("Etag"))
+                            etag = etagfp.write(
+                                [
+                                    val
+                                    for key, val in write_body[1].items()
+                                    if key.lower() == "etag"
+                                ][0]
+                            )
                     elif "Content-Type" in write_body[1]:
                         content_type = write_body[1].get(
                             "Content-Type"

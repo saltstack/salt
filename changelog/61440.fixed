@@ -1,0 +1,1 @@
+Fix use_etag support in fileclient by removing case sensitivity of expected header
