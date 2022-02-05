@@ -2,10 +2,6 @@ mock >= 3.0.0
 # PyTest
 pytest >= 6.1.0
 pytest-salt
-pytest-salt-factories >= 0.93.0; python_version > "3.5"
-pytest-salt-factories==0.93.0; python_version <= "3.5"
+pytest-salt-factories >= 0.93.0
 pytest-tempdir >= 2019.10.12
-pytest-helpers-namespace >= 2019.1.8; python_version > "3.5"
-pytest-helpers-namespace==2019.1.8; python_version <= "3.5"
-pytest-skip-markers==1.0.0; python_version <= "3.5"
-pytest-skip-markers >= 1.0.0; python_version > "3.5"
+pytest-helpers-namespace >= 2019.1.8
