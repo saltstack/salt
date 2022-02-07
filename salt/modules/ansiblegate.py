@@ -45,14 +45,14 @@ hosts:
 """
 DEFAULT_TIMEOUT = 1200  # seconds (20 minutes)
 
-__load__ = __non_ansible_functions__ = [
+__load__ = __non_ansible_functions__[:] = [
     "help",
     "list_",
     "call",
     "playbooks",
     "discover_playbooks",
     "targets",
-][:]
+]
 
 
 def _set_callables(modules):
