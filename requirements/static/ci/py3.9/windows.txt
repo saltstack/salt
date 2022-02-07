@@ -221,7 +221,7 @@ psutil==5.8.0
     # via
     #   -r requirements/base.txt
     #   pytest-salt-factories
-py==1.9.0
+py==1.10.0
     # via pytest
 pyasn1-modules==0.2.4
     # via google-auth
