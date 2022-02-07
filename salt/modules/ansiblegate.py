@@ -45,6 +45,8 @@ hosts:
 """
 DEFAULT_TIMEOUT = 1200  # seconds (20 minutes)
 
+__non_ansible_functions__ = []
+
 __load__ = __non_ansible_functions__[:] = [
     "help",
     "list_",
