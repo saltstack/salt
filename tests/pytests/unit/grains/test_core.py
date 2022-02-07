@@ -799,81 +799,17 @@ def test_suse_os_grains_tumbleweed():
 
 
 @pytest.mark.skip_unless_on_linux
-def test_debian_7_os_grains():
-    """
-    Test if OS grains are parsed correctly in Debian 7 "wheezy"
-    """
-    # /etc/os-release data taken from base-files 7.1wheezy11
-    _os_release_data = {
-        "PRETTY_NAME": "Debian GNU/Linux 7 (wheezy)",
-        "NAME": "Debian GNU/Linux",
-        "VERSION_ID": "7",
-        "VERSION": "7 (wheezy)",
-        "ID": "debian",
-        "ANSI_COLOR": "1;31",
-        "HOME_URL": "http://www.debian.org/",
-        "SUPPORT_URL": "http://www.debian.org/support/",
-        "BUG_REPORT_URL": "http://bugs.debian.org/",
-    }
-    _os_release_map = {
-        "_linux_distribution": ("debian", "7.11", ""),
-    }
-    expectation = {
-        "os": "Debian",
-        "os_family": "Debian",
-        "oscodename": "wheezy",
-        "osfullname": "Debian GNU/Linux",
-        "osrelease": "7",
-        "osrelease_info": (7,),
-        "osmajorrelease": 7,
-        "osfinger": "Debian-7",
-    }
-    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
-
-
-@pytest.mark.skip_unless_on_linux
-def test_debian_8_os_grains():
-    """
-    Test if OS grains are parsed correctly in Debian 8 "jessie"
-    """
-    # /etc/os-release data taken from base-files 8+deb8u10
-    _os_release_data = {
-        "PRETTY_NAME": "Debian GNU/Linux 8 (jessie)",
-        "NAME": "Debian GNU/Linux",
-        "VERSION_ID": "8",
-        "VERSION": "8 (jessie)",
-        "ID": "debian",
-        "HOME_URL": "http://www.debian.org/",
-        "SUPPORT_URL": "http://www.debian.org/support",
-        "BUG_REPORT_URL": "https://bugs.debian.org/",
-    }
-    _os_release_map = {
-        "_linux_distribution": ("debian", "8.10", ""),
-    }
-    expectation = {
-        "os": "Debian",
-        "os_family": "Debian",
-        "oscodename": "jessie",
-        "osfullname": "Debian GNU/Linux",
-        "osrelease": "8",
-        "osrelease_info": (8,),
-        "osmajorrelease": 8,
-        "osfinger": "Debian-8",
-    }
-    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
-
-
-@pytest.mark.skip_unless_on_linux
 def test_debian_9_os_grains():
     """
     Test if OS grains are parsed correctly in Debian 9 "stretch"
     """
-    # /etc/os-release data taken from base-files 9.9+deb9u3
+    # /etc/os-release data taken from base-files 9.9+deb9u13
     _os_release_data = {
         "PRETTY_NAME": "Debian GNU/Linux 9 (stretch)",
         "NAME": "Debian GNU/Linux",
         "VERSION_ID": "9",
         "VERSION": "9 (stretch)",
+        "VERSION_CODENAME": "stretch",
         "ID": "debian",
         "HOME_URL": "https://www.debian.org/",
         "SUPPORT_URL": "https://www.debian.org/support",
@@ -891,6 +827,72 @@ def test_debian_9_os_grains():
         "osrelease_info": (9,),
         "osmajorrelease": 9,
         "osfinger": "Debian-9",
+    }
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_debian_10_os_grains():
+    """
+    Test if OS grains are parsed correctly in Debian 10 "buster"
+    """
+    # /etc/os-release data taken from base-files 10.3+deb10u11
+    _os_release_data = {
+        "PRETTY_NAME": "Debian GNU/Linux 10 (buster)",
+        "NAME": "Debian GNU/Linux",
+        "VERSION_ID": "10",
+        "VERSION": "10 (buster)",
+        "VERSION_CODENAME": "buster",
+        "ID": "debian",
+        "HOME_URL": "https://www.debian.org/",
+        "SUPPORT_URL": "https://www.debian.org/support",
+        "BUG_REPORT_URL": "https://bugs.debian.org/",
+    }
+    _os_release_map = {
+        "_linux_distribution": ("debian", "10", "buster"),
+    }
+    expectation = {
+        "os": "Debian",
+        "os_family": "Debian",
+        "oscodename": "buster",
+        "osfullname": "Debian GNU/Linux",
+        "osrelease": "10",
+        "osrelease_info": (10,),
+        "osmajorrelease": 10,
+        "osfinger": "Debian-10",
+    }
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_debian_11_os_grains():
+    """
+    Test if OS grains are parsed correctly in Debian 11 "bullseye"
+    """
+    # /etc/os-release data taken from base-files 11.1+deb11u2
+    _os_release_data = {
+        "PRETTY_NAME": "Debian GNU/Linux 11 (bullseye)",
+        "NAME": "Debian GNU/Linux",
+        "VERSION_ID": "11",
+        "VERSION": "11 (bullseye)",
+        "VERSION_CODENAME": "bullseye",
+        "ID": "debian",
+        "HOME_URL": "https://www.debian.org/",
+        "SUPPORT_URL": "https://www.debian.org/support",
+        "BUG_REPORT_URL": "https://bugs.debian.org/",
+    }
+    _os_release_map = {
+        "_linux_distribution": ("debian", "11", "bullseye"),
+    }
+    expectation = {
+        "os": "Debian",
+        "os_family": "Debian",
+        "oscodename": "bullseye",
+        "osfullname": "Debian GNU/Linux",
+        "osrelease": "11",
+        "osrelease_info": (11,),
+        "osmajorrelease": 11,
+        "osfinger": "Debian-11",
     }
     _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
@@ -1101,73 +1103,73 @@ def test_unicode_error():
 
 
 @pytest.mark.skip_unless_on_linux
-def test_ubuntu_xenial_os_grains():
+def test_ubuntu_focal_os_grains():
     """
-    Test if OS grains are parsed correctly in Ubuntu 16.04 "Xenial Xerus"
+    Test if OS grains are parsed correctly in Ubuntu 20.04 LTS "Focal Fossa"
     """
-    # /etc/os-release data taken from base-files 9.4ubuntu4.5
+    # /etc/os-release data taken from base-files 11ubuntu5.4
     _os_release_data = {
         "NAME": "Ubuntu",
-        "VERSION": "16.04.3 LTS (Xenial Xerus)",
+        "VERSION": "20.04.3 LTS (Focal Fossa)",
         "ID": "ubuntu",
         "ID_LIKE": "debian",
-        "PRETTY_NAME": "Ubuntu 16.04.3 LTS",
-        "VERSION_ID": "16.04",
-        "HOME_URL": "http://www.ubuntu.com/",
-        "SUPPORT_URL": "http://help.ubuntu.com/",
-        "BUG_REPORT_URL": "http://bugs.launchpad.net/ubuntu/",
-        "VERSION_CODENAME": "xenial",
-        "UBUNTU_CODENAME": "xenial",
+        "PRETTY_NAME": "Ubuntu 20.04.3 LTS",
+        "VERSION_ID": "20.04",
+        "HOME_URL": "https://www.ubuntu.com/",
+        "SUPPORT_URL": "https://help.ubuntu.com/",
+        "BUG_REPORT_URL": "https://bugs.launchpad.net/ubuntu/",
+        "PRIVACY_POLICY_URL": "https://www.ubuntu.com/legal/terms-and-policies/privacy-policy",
+        "VERSION_CODENAME": "focal",
+        "UBUNTU_CODENAME": "focal",
     }
-
     _os_release_map = {
-        "_linux_distribution": ("Ubuntu", "16.04", "xenial"),
+        "_linux_distribution": ("ubuntu", "20.04", "focal"),
     }
     expectation = {
         "os": "Ubuntu",
         "os_family": "Debian",
-        "oscodename": "xenial",
+        "oscodename": "focal",
         "osfullname": "Ubuntu",
-        "osrelease": "16.04",
-        "osrelease_info": (16, 4),
-        "osmajorrelease": 16,
-        "osfinger": "Ubuntu-16.04",
+        "osrelease": "20.04",
+        "osrelease_info": (20, 4),
+        "osmajorrelease": 20,
+        "osfinger": "Ubuntu-20.04",
     }
     _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_ubuntu_artful_os_grains():
+def test_ubuntu_impish_os_grains():
     """
-    Test if OS grains are parsed correctly in Ubuntu 17.10 "Artful Aardvark"
+    Test if OS grains are parsed correctly in Ubuntu 21.10 "Impish Indri"
     """
-    # /etc/os-release data taken from base-files 9.6ubuntu102
+    # /etc/os-release data taken from base-files 11.1ubuntu5
     _os_release_data = {
+        "PRETTY_NAME": "Ubuntu 21.10",
         "NAME": "Ubuntu",
-        "VERSION": "17.10 (Artful Aardvark)",
+        "VERSION_ID": "21.10",
+        "VERSION": "21.10 (Impish Indri)",
+        "VERSION_CODENAME": "impish",
         "ID": "ubuntu",
         "ID_LIKE": "debian",
-        "PRETTY_NAME": "Ubuntu 17.10",
-        "VERSION_ID": "17.10",
         "HOME_URL": "https://www.ubuntu.com/",
         "SUPPORT_URL": "https://help.ubuntu.com/",
         "BUG_REPORT_URL": "https://bugs.launchpad.net/ubuntu/",
         "PRIVACY_POLICY_URL": "https://www.ubuntu.com/legal/terms-and-policies/privacy-policy",
-        "VERSION_CODENAME": "artful",
-        "UBUNTU_CODENAME": "artful",
+        "UBUNTU_CODENAME": "impish",
     }
     _os_release_map = {
-        "_linux_distribution": ("Ubuntu", "17.10", "artful"),
+        "_linux_distribution": ("ubuntu", "21.10", "impish"),
     }
     expectation = {
         "os": "Ubuntu",
         "os_family": "Debian",
-        "oscodename": "artful",
+        "oscodename": "impish",
         "osfullname": "Ubuntu",
-        "osrelease": "17.10",
-        "osrelease_info": (17, 10),
-        "osmajorrelease": 17,
-        "osfinger": "Ubuntu-17.10",
+        "osrelease": "21.10",
+        "osrelease_info": (21, 10),
+        "osmajorrelease": 21,
+        "osfinger": "Ubuntu-21.10",
     }
     _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
