@@ -10,7 +10,7 @@ adal==1.2.3
     #   msrestazure
 ansible-base==2.10.9
     # via ansible
-ansible==3.4.0
+ansible==4.2.0
     # via -r requirements/static/ci/linux.in
 apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
