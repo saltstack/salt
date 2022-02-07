@@ -359,7 +359,7 @@ def present(host, groups, interfaces, **kwargs):
                 for hostinterface_copy in hostinterfaces_copy:
                     if hostinterface_copy.items() >= interface_formated.items():
                         matching_interfaces += 1
-            if matching_interfaces != len(hostinterfaces_copy):
+            if not (matching_interfaces == len(hostinterfaces_copy) == len(interfaces_formated)):
                 update_interfaces = True
 
         elif not hostinterfaces and interfaces:
