@@ -1249,22 +1249,22 @@ def test_pop_focal_os_grains():
 
 
 @pytest.mark.skip_unless_on_linux
-def test_pop_groovy_os_grains():
+def test_pop_impish_os_grains():
     """
-    Test if OS grains are parsed correctly in Pop!_OS 20.10 "Groovy Gorilla"
+    Test if OS grains are parsed correctly in Pop!_OS 21.10 "Impish Indri"
     """
     _os_release_map = {
-        "_linux_distribution": ("Pop", "20.10", "groovy"),
+        "_linux_distribution": ("Pop", "21.10", "impish"),
     }
     expectation = {
         "os": "Pop",
         "os_family": "Debian",
-        "oscodename": "groovy",
+        "oscodename": "impish",
         "osfullname": "Pop",
-        "osrelease": "20.10",
-        "osrelease_info": (20, 10),
-        "osmajorrelease": 20,
-        "osfinger": "Pop-20",
+        "osrelease": "21.10",
+        "osrelease_info": (21, 10),
+        "osmajorrelease": 21,
+        "osfinger": "Pop-21",
     }
     _run_os_grains_tests(None, _os_release_map, expectation)
 
