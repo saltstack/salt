@@ -97,6 +97,7 @@ Any of the [groups] or direct hostnames will return.  The 'all' is special, and 
 import copy
 import fnmatch
 
+import salt.utils.ansible
 import salt.utils.path
 from salt.roster import get_roster_file
 
@@ -124,8 +125,8 @@ def targets(tgt, tgt_type="glob", **kwargs):
     Return the targets from the ansible inventory_file
     Default: /etc/salt/roster
     """
-    __context__["inventory"] = __utils__["ansible.targets"](
-        inventory=get_roster_file(__opts__), **kwargs
+    __context__["inventory"] = salt.utils.ansible.targets(
+        inventory=get_roster_file(__opts__)
     )
 
     if tgt_type == "glob":

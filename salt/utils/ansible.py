@@ -18,7 +18,7 @@ def __virtual__():  # pylint: disable=expected-2-blank-lines-found-0
     return (False, "Install `ansible` to use inventory")
 
 
-def targets(inventory="/etc/ansible/hosts", **kwargs):
+def targets(inventory="/etc/ansible/hosts", yaml=False, export=False):
     """
     Return the targets from the ansible inventory_file
     Default: /etc/salt/roster
@@ -29,14 +29,14 @@ def targets(inventory="/etc/ansible/hosts", **kwargs):
         raise CommandExecutionError("Path to inventory file must be an absolute path")
 
     extra_cmd = []
-    if "export" in kwargs:
+    if export:
         extra_cmd.append("--export")
-    if "yaml" in kwargs:
+    if yaml:
         extra_cmd.append("--yaml")
     inv = salt.modules.cmdmod.run(
         "ansible-inventory -i {} --list {}".format(inventory, " ".join(extra_cmd))
     )
-    if kwargs.get("yaml", False):
+    if yaml:
         return salt.utils.stringutils.to_str(inv)
     else:
         try:

@@ -22,6 +22,7 @@ import subprocess
 import sys
 from tempfile import NamedTemporaryFile
 
+import salt.utils.ansible
 import salt.utils.decorators.path
 import salt.utils.json
 import salt.utils.path
@@ -384,7 +385,7 @@ def playbooks(
     return retdata
 
 
-def targets(**kwargs):
+def targets(inventory="/etc/ansible/hosts", yaml=False, export=False):
     """
     Return the inventory from an Ansible inventory_file
 
@@ -405,7 +406,7 @@ def targets(**kwargs):
         salt 'ansiblehost' ansible.targets inventory=my_custom_inventory
 
     """
-    return __utils__["ansible.targets"](**kwargs)
+    return salt.utils.ansible.targets(inventory=inventory, yaml=yaml, export=export)
 
 
 def discover_playbooks(
