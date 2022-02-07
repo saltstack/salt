@@ -780,17 +780,17 @@ class AsyncAuth:
                     if self.opts["rejected_retry"]:
                         log.error(
                             "The Salt Master has rejected this minion's public "
-                            "key. To repair this issue, delete the public key "
-                            "for this minion on the Salt Master. The Salt "
+                            "key.\nTo repair this issue, delete the public key "
+                            "for this minion on the Salt Master.\nThe Salt "
                             "Minion will attempt to to re-authenicate."
                         )
                         raise salt.ext.tornado.gen.Return("retry")
                     else:
                         log.critical(
                             "The Salt Master has rejected this minion's public "
-                            "key! To repair this issue, delete the public key "
+                            "key!\nTo repair this issue, delete the public key "
                             "for this minion on the Salt Master and restart this "
-                            "minion. Or restart the Salt Master in open mode to "
+                            "minion.\nOr restart the Salt Master in open mode to "
                             "clean out the keys. The Salt Minion will now exit."
                         )
                         # Add a random sleep here for systems that are using a
@@ -812,13 +812,13 @@ class AsyncAuth:
         auth["aes"] = self.verify_master(payload, master_pub="token" in sign_in_payload)
         if not auth["aes"]:
             log.critical(
-                "The Salt Master server's public key did not authenticate! "
+                "The Salt Master server's public key did not authenticate!\n"
                 "The master may need to be updated if it is a version of Salt "
-                "lower than %s, or "
+                "lower than %s, or\n"
                 "If you are confident that you are connecting to a valid Salt "
                 "Master, then remove the master public key and restart the "
-                "Salt Minion. The master public key can be found "
-                "at: %s",
+                "Salt Minion.\nThe master public key can be found "
+                "at:\n%s",
                 salt.version.__version__,
                 m_pub_fn,
             )
@@ -1196,8 +1196,8 @@ class AsyncAuth:
     def _finger_fail(self, finger, master_key):
         log.critical(
             "The specified fingerprint in the master configuration "
-            "file: %s Does not match the authenticating master's "
-            "key: %s Verify that the configured fingerprint "
+            "file:\n%s\nDoes not match the authenticating master's "
+            "key:\n%s\nVerify that the configured fingerprint "
             "matches the fingerprint of the correct master and that "
             "this minion is not subject to a man-in-the-middle attack.",
             finger,
@@ -1385,17 +1385,17 @@ class SAuth(AsyncAuth):
                     if self.opts["rejected_retry"]:
                         log.error(
                             "The Salt Master has rejected this minion's public "
-                            "key. To repair this issue, delete the public key "
-                            "for this minion on the Salt Master. The Salt "
+                            "key.\nTo repair this issue, delete the public key "
+                            "for this minion on the Salt Master.\nThe Salt "
                             "Minion will attempt to to re-authenicate."
                         )
                         return "retry"
                     else:
                         log.critical(
                             "The Salt Master has rejected this minion's public "
-                            "key! To repair this issue, delete the public key "
+                            "key!\nTo repair this issue, delete the public key "
                             "for this minion on the Salt Master and restart this "
-                            "minion. Or restart the Salt Master in open mode to "
+                            "minion.\nOr restart the Salt Master in open mode to "
                             "clean out the keys. The Salt Minion will now exit."
                         )
                         sys.exit(salt.defaults.exitcodes.EX_NOPERM)
@@ -1417,13 +1417,13 @@ class SAuth(AsyncAuth):
         auth["aes"] = self.verify_master(payload, master_pub="token" in sign_in_payload)
         if not auth["aes"]:
             log.critical(
-                "The Salt Master server's public key did not authenticate! "
+                "The Salt Master server's public key did not authenticate!\n"
                 "The master may need to be updated if it is a version of Salt "
-                "lower than %s, or "
+                "lower than %s, or\n"
                 "If you are confident that you are connecting to a valid Salt "
                 "Master, then remove the master public key and restart the "
-                "Salt Minion. The master public key can be found "
-                "at: %s",
+                "Salt Minion.\nThe master public key can be found "
+                "at:\n%s",
                 salt.version.__version__,
                 m_pub_fn,
             )
