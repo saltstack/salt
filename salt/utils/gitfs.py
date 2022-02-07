@@ -485,13 +485,13 @@ class GitProvider:
                 break
             except (OSError, GitLockError) as exc:
                 log.debug(
-                    "Repo lock is present for remote: '{}', sleeping 0.5 seconds before trying again.".format(
-                        self.id
-                    )
+                    "Repo lock is present for remote: '%s', sleeping 0.5 seconds before trying again.",
+                    self.id,
                 )
                 time.sleep(0.5)
                 continue
 
+    # pylint: disable=W1701
     def __del__(self):
         try:
             self.clear_lock(lock_type="repo")
@@ -904,13 +904,13 @@ class GitProvider:
                                 "cache, the lock may have been obtained "
                                 "by another master."
                             )
-                    if not lock_type == "repo":
+                    if lock_type != "repo":
                         log.warning(msg)
                     if failhard:
                         raise
                     return
                 elif pid and pid_exists(pid):
-                    if not lock_type == "repo":
+                    if lock_type != "repo":
                         log.warning(
                             "Process %d has a %s %s lock (%s)",
                             pid,
