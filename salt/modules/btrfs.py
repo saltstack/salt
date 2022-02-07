@@ -58,7 +58,7 @@ def _parse_btrfs_info(data):
     for line in [line for line in data.split("\n") if line][:-1]:
         if line.startswith("Label:"):
             line = re.sub(r"Label:\s+", "", line)
-            label, uuid_ = [tkn.strip() for tkn in line.split("uuid:")]
+            label, uuid_ = (tkn.strip() for tkn in line.split("uuid:"))
             ret["label"] = label != "none" and label or None
             ret["uuid"] = uuid_
             continue
