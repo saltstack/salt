@@ -67,7 +67,7 @@ python-gnupg==0.4.4
     # via -r requirements/static/pkg/freebsd.in
 pytz==2021.1
     # via tempora
-pyyaml==5.4.1
+pyyaml==5.4
     # via -r requirements/base.txt
 pyzmq==21.0.2 ; python_version >= "3.9"
     # via -r requirements/zeromq.txt
