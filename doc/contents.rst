@@ -10,6 +10,7 @@ Salt Table of Contents
     topics/about_salt_project
     topics/index
     topics/salt_system_architecture
+    topics/community/index
     topics/installation/index
     topics/configuration/index
     topics/using_salt

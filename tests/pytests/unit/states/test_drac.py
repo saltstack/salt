@@ -76,7 +76,8 @@ def test_network():
     mock_info = MagicMock(return_value=net_info)
     mock_bool = MagicMock(side_effect=[True, False])
     with patch.dict(
-        drac.__salt__, {"drac.network_info": mock_info, "drac.set_network": mock_bool},
+        drac.__salt__,
+        {"drac.network_info": mock_info, "drac.set_network": mock_bool},
     ):
         with patch.dict(drac.__opts__, {"test": True}):
             assert drac.network(ip_, netmask, gateway) == ret

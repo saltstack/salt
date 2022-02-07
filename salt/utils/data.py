@@ -17,9 +17,6 @@ import salt.utils.stringutils
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
-from salt.ext import six
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
-from salt.ext.six.moves import zip  # pylint: disable=redefined-builtin
 from salt.utils.decorators.jinja import jinja_filter
 from salt.utils.odict import OrderedDict
 
@@ -762,7 +759,7 @@ def filter_by(lookup_dict, lookup, traverse, merge=None, default="default", base
         elif isinstance(base_values, Mapping):
             if not isinstance(ret, Mapping):
                 raise SaltException(
-                    "filter_by default and look-up values must both be " "dictionaries."
+                    "filter_by default and look-up values must both be dictionaries."
                 )
             ret = salt.utils.dictupdate.update(copy.deepcopy(base_values), ret)
 
@@ -890,15 +887,9 @@ def subdict_match(
     """
 
     def _match(target, pattern, regex_match=False, exact_match=False):
-        # The reason for using six.text_type first and _then_ using
-        # to_unicode as a fallback is because we want to eventually have
-        # unicode types for comparison below. If either value is numeric then
-        # six.text_type will turn it into a unicode string. However, if the
-        # value is a PY2 str type with non-ascii chars, then the result will be
-        # a UnicodeDecodeError. In those cases, we simply use to_unicode to
-        # decode it to unicode. The reason we can't simply use to_unicode to
-        # begin with is that (by design) to_unicode will raise a TypeError if a
-        # non-string/bytestring/bytearray value is passed.
+        # XXX: A lot of this logic is here because of supporting PY2 and PY3,
+        # now that we only support PY3 we should probably re-visit what's going
+        # on here.
         try:
             target = str(target).lower()
         except UnicodeDecodeError:
@@ -1080,7 +1071,7 @@ def repack_dictlist(data, strict=False, recurse=False, key_cb=None, val_cb=None)
                 return {}
     else:
         log.error(
-            "Invalid input for repack_dictlist, data passed is not a list " "(%s)", data
+            "Invalid input for repack_dictlist, data passed is not a list (%s)", data
         )
         return {}
 
@@ -1193,8 +1184,8 @@ def mysql_to_dict(data, key):
         if line.startswith("+"):
             continue
         comps = line.split("|")
-        for comp in range(len(comps)):
-            comps[comp] = comps[comp].strip()
+        for idx, comp in enumerate(comps):
+            comps[idx] = comp.strip()
         if len(headers) > 1:
             index = len(headers) - 1
             row = {}
@@ -1252,9 +1243,7 @@ def stringify(data):
     """
     ret = []
     for item in data:
-        if six.PY2 and isinstance(item, str):
-            item = salt.utils.stringutils.to_unicode(item)
-        elif not isinstance(item, str):
+        if not isinstance(item, str):
             item = str(item)
         ret.append(item)
     return ret
@@ -1552,3 +1541,74 @@ def get_value(obj, path, default=None):
         else:
             return [{"value": default if obj is not None else obj}]
     return res
+
+
+@jinja_filter("flatten")
+def flatten(data, levels=None, preserve_nulls=False, _ids=None):
+    """
+    .. versionadded:: 3005
+
+    Flatten a list.
+
+    :param data: A list to flatten
+
+    :param levels: The number of levels in sub-lists to descend
+
+    :param preserve_nulls: Preserve nulls in a list, by default flatten removes
+                           them
+
+    :param _ids: Parameter used internally within the function to detect
+                 reference cycles.
+
+    :returns: A flat(ter) list of values
+
+    .. code-block:: jinja
+
+        {{ [3, [4, 2] ] | flatten }}
+        # => [3, 4, 2]
+
+    Flatten only the first level of a list:
+
+    .. code-block:: jinja
+
+        {{ [3, [4, [2]] ] | flatten(levels=1) }}
+        # => [3, 4, [2]]
+
+    Preserve nulls in a list, by default flatten removes them.
+
+    .. code-block:: jinja
+
+        {{ [3, None, [4, [2]] ] | flatten(levels=1, preserve_nulls=True) }}
+        # => [3, None, 4, [2]]
+    """
+    if _ids is None:
+        _ids = set()
+    if id(data) in _ids:
+        raise RecursionError("Reference cycle detected. Check input list.")
+    _ids.add(id(data))
+
+    ret = []
+
+    for element in data:
+        if not preserve_nulls and element in (None, "None", "null"):
+            # ignore null items
+            continue
+        elif is_iter(element):
+            if levels is None:
+                ret.extend(flatten(element, preserve_nulls=preserve_nulls, _ids=_ids))
+            elif levels >= 1:
+                # decrement as we go down the stack
+                ret.extend(
+                    flatten(
+                        element,
+                        levels=(int(levels) - 1),
+                        preserve_nulls=preserve_nulls,
+                        _ids=_ids,
+                    )
+                )
+            else:
+                ret.append(element)
+        else:
+            ret.append(element)
+
+    return ret

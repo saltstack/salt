@@ -1,18 +1,12 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import sys
 
-# Import Salt Libs
 import salt.modules.pam as pam
 from tests.support.mock import mock_open, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
 MOCK_FILE = "ok ok ignore "

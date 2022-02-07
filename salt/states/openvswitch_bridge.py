@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Management of Open vSwitch bridges.
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -27,13 +23,13 @@ def present(name):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     # Comment and change messages
-    comment_bridge_created = "Bridge {0} created.".format(name)
-    comment_bridge_notcreated = "Unable to create bridge: {0}.".format(name)
-    comment_bridge_exists = "Bridge {0} already exists.".format(name)
+    comment_bridge_created = "Bridge {} created.".format(name)
+    comment_bridge_notcreated = "Unable to create bridge: {}.".format(name)
+    comment_bridge_exists = "Bridge {} already exists.".format(name)
     changes_bridge_created = {
         name: {
-            "old": "Bridge {0} does not exist.".format(name),
-            "new": "Bridge {0} created".format(name),
+            "old": "Bridge {} does not exist.".format(name),
+            "new": "Bridge {} created".format(name),
         }
     }
 
@@ -78,13 +74,13 @@ def absent(name):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     # Comment and change messages
-    comment_bridge_deleted = "Bridge {0} deleted.".format(name)
-    comment_bridge_notdeleted = "Unable to delete bridge: {0}.".format(name)
-    comment_bridge_notexists = "Bridge {0} does not exist.".format(name)
+    comment_bridge_deleted = "Bridge {} deleted.".format(name)
+    comment_bridge_notdeleted = "Unable to delete bridge: {}.".format(name)
+    comment_bridge_notexists = "Bridge {} does not exist.".format(name)
     changes_bridge_deleted = {
         name: {
-            "old": "Bridge {0} exists.".format(name),
-            "new": "Bridge {0} deleted.".format(name),
+            "old": "Bridge {} exists.".format(name),
+            "new": "Bridge {} deleted.".format(name),
         }
     }
 

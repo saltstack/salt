@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 General management and processing of queues.
 ============================================
@@ -62,13 +61,9 @@ run them.  And it will do this every minute, unless there are any jobs that are
 still running from the last time the process_runner task was executed.
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import salt libs
 import salt.loader
 from salt.exceptions import SaltInvocationError
-from salt.ext import six
 from salt.utils.event import get_event, tagify
 
 
@@ -86,9 +81,9 @@ def insert(queue, items, backend="sqlite"):
         salt-run queue.insert myqueue "['item1', 'item2', 'item3']" backend=sqlite
     """
     queue_funcs = salt.loader.queues(__opts__)
-    cmd = "{0}.insert".format(backend)
+    cmd = "{}.insert".format(backend)
     if cmd not in queue_funcs:
-        raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
+        raise SaltInvocationError('Function "{}" is not available'.format(cmd))
     ret = queue_funcs[cmd](items=items, queue=queue)
     return ret
 
@@ -106,9 +101,9 @@ def delete(queue, items, backend="sqlite"):
         salt-run queue.delete myqueue "['item1', 'item2', 'item3']"
     """
     queue_funcs = salt.loader.queues(__opts__)
-    cmd = "{0}.delete".format(backend)
+    cmd = "{}.delete".format(backend)
     if cmd not in queue_funcs:
-        raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
+        raise SaltInvocationError('Function "{}" is not available'.format(cmd))
     ret = queue_funcs[cmd](items=items, queue=queue)
     return ret
 
@@ -125,9 +120,9 @@ def list_queues(backend="sqlite"):
         salt-run queue.list_queues backend=sqlite
     """
     queue_funcs = salt.loader.queues(__opts__)
-    cmd = "{0}.list_queues".format(backend)
+    cmd = "{}.list_queues".format(backend)
     if cmd not in queue_funcs:
-        raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
+        raise SaltInvocationError('Function "{}" is not available'.format(cmd))
     ret = queue_funcs[cmd]()
     return ret
 
@@ -144,9 +139,9 @@ def list_length(queue, backend="sqlite"):
         salt-run queue.list_length myqueue backend=sqlite
     """
     queue_funcs = salt.loader.queues(__opts__)
-    cmd = "{0}.list_length".format(backend)
+    cmd = "{}.list_length".format(backend)
     if cmd not in queue_funcs:
-        raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
+        raise SaltInvocationError('Function "{}" is not available'.format(cmd))
     ret = queue_funcs[cmd](queue=queue)
     return ret
 
@@ -163,9 +158,9 @@ def list_items(queue, backend="sqlite"):
         salt-run queue.list_items myqueue backend=sqlite
     """
     queue_funcs = salt.loader.queues(__opts__)
-    cmd = "{0}.list_items".format(backend)
+    cmd = "{}.list_items".format(backend)
     if cmd not in queue_funcs:
-        raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
+        raise SaltInvocationError('Function "{}" is not available'.format(cmd))
     ret = queue_funcs[cmd](queue=queue)
     return ret
 
@@ -185,9 +180,9 @@ def pop(queue, quantity=1, backend="sqlite", is_runner=False):
         salt-run queue.pop myqueue all backend=sqlite
     """
     queue_funcs = salt.loader.queues(__opts__)
-    cmd = "{0}.pop".format(backend)
+    cmd = "{}.pop".format(backend)
     if cmd not in queue_funcs:
-        raise SaltInvocationError('Function "{0}" is not available'.format(cmd))
+        raise SaltInvocationError('Function "{}" is not available'.format(cmd))
     ret = queue_funcs[cmd](quantity=quantity, queue=queue, is_runner=is_runner)
     return ret
 
@@ -218,7 +213,7 @@ def process_queue(queue, quantity=1, backend="sqlite", is_runner=False):
                 queue=queue, quantity=quantity, backend=backend, is_runner=is_runner
             )
         except SaltInvocationError as exc:
-            error_txt = "{0}".format(exc)
+            error_txt = "{}".format(exc)
             __jid_event__.fire_event({"errors": error_txt}, "progress")
             return False
 
@@ -271,7 +266,7 @@ def insert_runner(fun, args=None, kwargs=None, queue=None, backend=None):
     """
     if args is None:
         args = []
-    elif isinstance(args, six.string_types):
+    elif isinstance(args, str):
         args = args.split(",")
     if kwargs is None:
         kwargs = {}

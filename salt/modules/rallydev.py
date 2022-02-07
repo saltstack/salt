@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for RallyDev
 
@@ -13,15 +12,11 @@ Requires a ``username`` and a ``password`` in ``/etc/salt/minion``:
       password: 123pass
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.utils.http
 import salt.utils.json
-
-# Import salt libs
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -34,12 +29,14 @@ def __virtual__():
     if not __opts__.get("rallydev", {}).get("username", None):
         return (
             False,
-            "The rallydev execution module failed to load: rallydev:username not defined in config.",
+            "The rallydev execution module failed to load: rallydev:username not"
+            " defined in config.",
         )
     if not __opts__.get("rallydev", {}).get("password", None):
         return (
             False,
-            "The rallydev execution module failed to load: rallydev:password not defined in config.",
+            "The rallydev execution module failed to load: rallydev:password not"
+            " defined in config.",
         )
     return True
 
@@ -84,7 +81,7 @@ def _query(
         path += action
 
     if command:
-        path += "/{0}".format(command)
+        path += "/{}".format(command)
 
     log.debug("RallyDev URL: %s", path)
 
@@ -199,11 +196,14 @@ def update_item(name, id_, field=None, value=None, postdata=None):
 
     if postdata is None:
         raise SaltInvocationError(
-            "Either a field and a value, or a chunk of " "POST data must be specified."
+            "Either a field and a value, or a chunk of POST data must be specified."
         )
 
     status, result = _query(
-        action=name, command=id_, method="POST", data=salt.utils.json.dumps(postdata),
+        action=name,
+        command=id_,
+        method="POST",
+        data=salt.utils.json.dumps(postdata),
     )
     return result
 

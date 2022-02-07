@@ -1,4 +1,3 @@
-# -*- strcoding: utf-8 -*-
 """
 A module to pull data from Foreman via its API into the Pillar dictionary
 
@@ -38,12 +37,8 @@ Further information can be found on `GitHub <https://github.com/theforeman/forem
 Module Documentation
 ====================
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
-
-from salt.ext import six
 
 try:
     import requests
@@ -105,7 +100,7 @@ def ext_pillar(minion_id, pillar, key=None, only=()):  # pylint: disable=W0613
             )
             raise Exception
 
-        headers = {"accept": "version=" + six.text_type(api) + ",application/json"}
+        headers = {"accept": "version=" + str(api) + ",application/json"}
 
         if verify and cafile is not None:
             verify = cafile
@@ -129,7 +124,7 @@ def ext_pillar(minion_id, pillar, key=None, only=()):  # pylint: disable=W0613
             result["parameters"] = parameters
 
         if only:
-            result = dict((k, result[k]) for k in only if k in result)
+            result = {k: result[k] for k in only if k in result}
 
     except Exception:  # pylint: disable=broad-except
         log.exception("Could not fetch host data via Foreman API:")

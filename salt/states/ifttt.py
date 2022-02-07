@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Trigger an event in IFTTT
 =========================
@@ -23,9 +22,6 @@ The api key can be specified in the master or minion configuration like below:
       secret_key: bzMRb-KKIAaNOwKEEw792J7Eb-B3z7muhdhYblJn4V6
 
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -72,7 +68,7 @@ def trigger_event(name, event, value1=None, value2=None, value3=None):
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
     if __opts__["test"]:
-        ret["comment"] = "The following trigger would be sent to IFTTT: {0}".format(
+        ret["comment"] = "The following trigger would be sent to IFTTT: {}".format(
             event
         )
         ret["result"] = None
@@ -84,8 +80,8 @@ def trigger_event(name, event, value1=None, value2=None, value3=None):
 
     if ret and ret["result"]:
         ret["result"] = True
-        ret["comment"] = "Triggered Event: {0}".format(name)
+        ret["comment"] = "Triggered Event: {}".format(name)
     else:
-        ret["comment"] = "Failed to trigger event: {0}".format(name)
+        ret["comment"] = "Failed to trigger event: {}".format(name)
 
     return ret

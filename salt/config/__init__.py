@@ -9,6 +9,7 @@ import re
 import sys
 import time
 import types
+import urllib.parse
 from copy import deepcopy
 
 import salt.defaults.exitcodes
@@ -28,12 +29,6 @@ import salt.utils.xdg
 import salt.utils.yaml
 import salt.utils.zeromq
 
-# pylint: disable=import-error,no-name-in-module
-from salt.ext.six.moves.urllib.parse import urlparse
-
-# pylint: enable=import-error,no-name-in-module
-
-
 try:
     import psutil
 
@@ -48,7 +43,10 @@ log = logging.getLogger(__name__)
 _DFLT_LOG_DATEFMT = "%H:%M:%S"
 _DFLT_LOG_DATEFMT_LOGFILE = "%Y-%m-%d %H:%M:%S"
 _DFLT_LOG_FMT_CONSOLE = "[%(levelname)-8s] %(message)s"
-_DFLT_LOG_FMT_LOGFILE = "%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(levelname)-8s][%(process)d] %(message)s"
+_DFLT_LOG_FMT_LOGFILE = (
+    "%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(levelname)-8s][%(process)d]"
+    " %(message)s"
+)
 _DFLT_LOG_FMT_JID = "[JID: %(jid)s]"
 _DFLT_REFSPECS = ["+refs/heads/*:refs/remotes/origin/*", "+refs/tags/*:refs/tags/*"]
 DEFAULT_INTERVAL = 60
@@ -257,6 +255,8 @@ VALID_OPTS = immutabletypes.freeze(
         "decrypt_pillar_default": str,
         # List of renderers available for decrypt_pillar
         "decrypt_pillar_renderers": list,
+        # Treat GPG decryption errors as renderer errors
+        "gpg_decrypt_must_succeed": bool,
         # The type of hashing algorithm to use when doing file comparisons
         "hash_type": str,
         # Order of preference for optimized .pyc files (PY3 only)
@@ -374,6 +374,11 @@ VALID_OPTS = immutabletypes.freeze(
         "state_output_diff": bool,
         # Tells the highstate outputter whether profile information will be shown for each state run
         "state_output_profile": bool,
+        # Tells the highstate outputter whether success and failure percents will be shown for each state run
+        "state_output_pct": bool,
+        # Tells the highstate outputter to aggregate information about states which
+        # have multiple "names" under the same state ID in the highstate output.
+        "state_compress_ids": bool,
         # When true, states run in the order defined in an SLS file, unless requisites re-order them
         "state_auto_order": bool,
         # Fire events as state chunks are processed by the state compiler
@@ -640,7 +645,6 @@ VALID_OPTS = immutabletypes.freeze(
         "fileserver_backend": list,
         "fileserver_followsymlinks": bool,
         "fileserver_ignoresymlinks": bool,
-        "fileserver_limit_traversal": bool,
         "fileserver_verify_config": bool,
         # Optionally apply '*' permissioins to any user. By default '*' is a fallback case that is
         # applied only if the user didn't matched by other matchers.
@@ -685,7 +689,7 @@ VALID_OPTS = immutabletypes.freeze(
         "minion_data_cache": bool,
         # The number of seconds between AES key rotations on the master
         "publish_session": int,
-        # Defines a salt reactor. See http://docs.saltstack.com/en/latest/topics/reactor/
+        # Defines a salt reactor. See https://docs.saltproject.io/en/latest/topics/reactor/
         "reactor": list,
         # The TTL for the cache of the reactor configuration
         "reactor_refresh_interval": int,
@@ -693,14 +697,14 @@ VALID_OPTS = immutabletypes.freeze(
         "reactor_worker_threads": int,
         # The queue size for workers in the reactor
         "reactor_worker_hwm": int,
-        # Defines engines. See https://docs.saltstack.com/en/latest/topics/engines/
+        # Defines engines. See https://docs.saltproject.io/en/latest/topics/engines/
         "engines": list,
         # Whether or not to store runner returns in the job cache
         "runner_returns": bool,
         "serial": str,
         "search": str,
         # A compound target definition.
-        # See: http://docs.saltstack.com/en/latest/topics/targeting/nodegroups.html
+        # See: https://docs.saltproject.io/en/latest/topics/targeting/nodegroups.html
         "nodegroups": (dict, list),
         # List-only nodegroups for salt-ssh. Each group must be formed as either a
         # comma-separated list, or a YAML list.
@@ -953,6 +957,12 @@ VALID_OPTS = immutabletypes.freeze(
         # Feature flag config
         "features": dict,
         "fips_mode": bool,
+        # Feature flag to enable checking if master is connected to a host
+        # on a given port
+        "detect_remote_minions": bool,
+        # The port to be used when checking if a master is connected to a
+        # minion
+        "remote_minions_port": int,
     }
 )
 
@@ -1037,7 +1047,6 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "top_file_merging_strategy": "merge",
         "env_order": [],
         "default_top": "base",
-        "fileserver_limit_traversal": False,
         "file_recv": False,
         "file_recv_max_size": 100,
         "file_ignore_regex": [],
@@ -1053,6 +1062,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "decrypt_pillar_delimiter": ":",
         "decrypt_pillar_default": "gpg",
         "decrypt_pillar_renderers": ["gpg"],
+        "gpg_decrypt_must_succeed": False,
         # Update intervals
         "roots_update_interval": DEFAULT_INTERVAL,
         "azurefs_update_interval": DEFAULT_INTERVAL,
@@ -1290,6 +1300,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "decrypt_pillar_delimiter": ":",
         "decrypt_pillar_default": "gpg",
         "decrypt_pillar_renderers": ["gpg"],
+        "gpg_decrypt_must_succeed": False,
         "thoriumenv": None,
         "thorium_top": "top.sls",
         "thorium_interval": 0.5,
@@ -1416,7 +1427,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "fileserver_backend": ["roots"],
         "fileserver_followsymlinks": True,
         "fileserver_ignoresymlinks": False,
-        "fileserver_limit_traversal": False,
         "fileserver_verify_config": True,
         "max_open_files": 100000,
         "hash_type": "sha256",
@@ -1567,8 +1577,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "http_connect_timeout": 20.0,  # tornado default - 20 seconds
         "http_request_timeout": 1 * 60 * 60.0,  # 1 hour
         "http_max_body": 100 * 1024 * 1024 * 1024,  # 100GB
-        "python2_bin": "python2",
-        "python3_bin": "python3",
         "cache": "localfs",
         "memcache_expire_seconds": 0,
         "memcache_max_items": 1024,
@@ -1593,6 +1601,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "enable_ssh_minions": False,
         "netapi_allow_raw_shell": False,
         "fips_mode": False,
+        "detect_remote_minions": False,
+        "remote_minions_port": 22,
     }
 )
 
@@ -1658,7 +1668,7 @@ DEFAULT_CLOUD_OPTS = immutabletypes.freeze(
         "log_granular_levels": {},
         "log_rotate_max_bytes": 0,
         "log_rotate_backup_count": 0,
-        "bootstrap_delay": None,
+        "bootstrap_delay": 0,
         "cache": "localfs",
     }
 )
@@ -1731,7 +1741,7 @@ def _validate_pillar_roots(pillar_roots):
     """
     if not isinstance(pillar_roots, dict):
         log.warning(
-            "The pillar_roots parameter is not properly formatted," " using defaults"
+            "The pillar_roots parameter is not properly formatted, using defaults"
         )
         return {"base": _expand_glob_path([salt.syspaths.BASE_PILLAR_ROOTS_DIR])}
     return _normalize_roots(pillar_roots)
@@ -1744,7 +1754,7 @@ def _validate_file_roots(file_roots):
     """
     if not isinstance(file_roots, dict):
         log.warning(
-            "The file_roots parameter is not properly formatted," " using defaults"
+            "The file_roots parameter is not properly formatted, using defaults"
         )
         return {"base": _expand_glob_path([salt.syspaths.BASE_FILE_ROOTS_DIR])}
     return _normalize_roots(file_roots)
@@ -1963,7 +1973,7 @@ def _absolute_path(path, relative_to=None):
         _abspath = os.path.join(relative_to, path)
         if os.path.isfile(_abspath):
             log.debug(
-                "Relative path '%s' converted to existing absolute path " "'%s'",
+                "Relative path '%s' converted to existing absolute path '%s'",
                 path,
                 _abspath,
             )
@@ -2387,7 +2397,7 @@ def syndic_config(
     ]
     for config_key in ("log_file", "key_logfile", "syndic_log_file"):
         # If this is not a URI and instead a local path
-        if urlparse(opts.get(config_key, "")).scheme == "":
+        if urllib.parse.urlparse(opts.get(config_key, "")).scheme == "":
             prepend_root_dirs.append(config_key)
     prepend_root_dir(opts, prepend_root_dirs)
     return opts
@@ -2568,7 +2578,7 @@ def cloud_config(
 
     if providers_config_path is not None and providers_config is not None:
         raise salt.exceptions.SaltCloudConfigError(
-            "Only pass `providers_config` or `providers_config_path`, " "not both."
+            "Only pass `providers_config` or `providers_config_path`, not both."
         )
     elif providers_config_path is None and providers_config is None:
         providers_config_path = overrides.get(
@@ -2638,7 +2648,7 @@ def cloud_config(
 
     # prepend root_dir
     prepend_root_dirs = ["cachedir"]
-    if "log_file" in opts and urlparse(opts["log_file"]).scheme == "":
+    if "log_file" in opts and urllib.parse.urlparse(opts["log_file"]).scheme == "":
         prepend_root_dirs.append(opts["log_file"])
     prepend_root_dir(opts, prepend_root_dirs)
 
@@ -3448,7 +3458,7 @@ def call_id_function(opts):
                 type(newid),
             )
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
-        log.info("Evaluated minion ID from module: %s", mod_fun)
+        log.info("Evaluated minion ID from module: %s %s", mod_fun, newid)
         return newid
     except TypeError:
         log.error(
@@ -3573,7 +3583,8 @@ def _update_ssl_config(opts):
             or not hasattr(ssl, val)
         ):
             message = "SSL option '{}' must be set to one of the following values: '{}'.".format(
-                key, "', '".join([val for val in dir(ssl) if val.startswith(prefix)])
+                key,
+                "', '".join([val for val in dir(ssl) if val.startswith(prefix)]),
             )
             log.error(message)
             raise salt.exceptions.SaltConfigurationError(message)
@@ -3707,7 +3718,7 @@ def apply_minion_config(
 
     # These can be set to syslog, so, not actual paths on the system
     for config_key in ("log_file", "key_logfile"):
-        if urlparse(opts.get(config_key, "")).scheme == "":
+        if urllib.parse.urlparse(opts.get(config_key, "")).scheme == "":
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)
@@ -3915,7 +3926,7 @@ def apply_master_config(overrides=None, defaults=None):
         if log_setting is None:
             continue
 
-        if urlparse(log_setting).scheme == "":
+        if urllib.parse.urlparse(log_setting).scheme == "":
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)
@@ -4116,7 +4127,7 @@ def apply_spm_config(overrides, defaults):
         if log_setting is None:
             continue
 
-        if urlparse(log_setting).scheme == "":
+        if urllib.parse.urlparse(log_setting).scheme == "":
             prepend_root_dirs.append(config_key)
 
     prepend_root_dir(opts, prepend_root_dirs)

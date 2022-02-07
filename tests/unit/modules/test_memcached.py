@@ -1,18 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.memcached as memcached
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six import integer_types
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase
 
 
@@ -28,7 +21,7 @@ class MemcachedTestCase(TestCase):
         Test if it gets memcached status
         """
 
-        class MockMemcache(object):
+        class MockMemcache:
             """
             Mock of memcache
             """
@@ -50,7 +43,7 @@ class MemcachedTestCase(TestCase):
         Test if it gets memcached status
         """
 
-        class MockMemcache(object):
+        class MockMemcache:
             """
             Mock of memcache
             """
@@ -74,7 +67,7 @@ class MemcachedTestCase(TestCase):
         Test if it retrieve value for a key
         """
 
-        class MockMemcache(object):
+        class MockMemcache:
             """
             Mock of memcache
             """
@@ -105,7 +98,7 @@ class MemcachedTestCase(TestCase):
         Test if it set a key on the memcached server
         """
 
-        class MockMemcache(object):
+        class MockMemcache:
             """
             Mock of memcache
             """
@@ -157,7 +150,7 @@ class MemcachedTestCase(TestCase):
         Test if it delete a key from memcache server
         """
 
-        class MockMemcache(object):
+        class MockMemcache:
             """
             Mock of memcache
             """
@@ -197,7 +190,7 @@ class MemcachedTestCase(TestCase):
         Test if it add a key from memcache server
         """
 
-        class MockMemcache(object):
+        class MockMemcache:
             """
             Mock of memcache
             """
@@ -249,7 +242,7 @@ class MemcachedTestCase(TestCase):
         Test if it replace a key from memcache server
         """
 
-        class MockMemcache(object):
+        class MockMemcache:
             """
             Mock of memcache
             """
@@ -301,7 +294,7 @@ class MemcachedTestCase(TestCase):
         Test if it increment the value of a key
         """
 
-        class MockMemcache(object):
+        class MockMemcache:
             """
             Mock of memcache
             """
@@ -328,7 +321,7 @@ class MemcachedTestCase(TestCase):
                 Mock of incr method
                 """
                 self.key = key
-                if not isinstance(delta, integer_types):
+                if not isinstance(delta, int):
                     raise SaltInvocationError("Delta value must be an integer")
                 return key
 
@@ -346,7 +339,7 @@ class MemcachedTestCase(TestCase):
         Test if it increment the value of a key
         """
 
-        class MockMemcache(object):
+        class MockMemcache:
             """
             Mock of memcache
             """
@@ -378,7 +371,7 @@ class MemcachedTestCase(TestCase):
         Test if it increment the value of a key
         """
 
-        class MockMemcache(object):
+        class MockMemcache:
             """
             Mock of memcache
             """
@@ -412,7 +405,7 @@ class MemcachedTestCase(TestCase):
         Test if it decrement the value of a key
         """
 
-        class MockMemcache(object):
+        class MockMemcache:
             """
             Mock of memcache
             """
@@ -439,7 +432,7 @@ class MemcachedTestCase(TestCase):
                 Mock of decr method
                 """
                 self.key = key
-                if not isinstance(delta, integer_types):
+                if not isinstance(delta, int):
                     raise SaltInvocationError("Delta value must be an integer")
                 return key
 
@@ -457,7 +450,7 @@ class MemcachedTestCase(TestCase):
         Test if it decrement the value of a key
         """
 
-        class MockMemcache(object):
+        class MockMemcache:
             """
             Mock of memcache
             """
@@ -489,7 +482,7 @@ class MemcachedTestCase(TestCase):
         Test if it decrement the value of a key
         """
 
-        class MockMemcache(object):
+        class MockMemcache:
             """
             Mock of memcache
             """

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage PagerDuty users.
 
@@ -13,9 +12,6 @@ Example:
             - requester_id: P1GV5NT
 
 """
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():

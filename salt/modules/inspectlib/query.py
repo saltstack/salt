@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright 2015 SUSE LLC
 #
@@ -14,14 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Import Python Libs
-from __future__ import absolute_import
 
 import logging
 import os
 import time
 
-# Import Salt Libs
 import salt.utils.files
 import salt.utils.fsutils
 import salt.utils.network
@@ -32,14 +28,14 @@ from salt.modules.inspectlib.exceptions import InspectorQueryException, SIExcept
 log = logging.getLogger(__name__)
 
 
-class SysInfo(object):
+class SysInfo:
     """
     System information.
     """
 
     def __init__(self, systype):
         if systype.lower() == "solaris":
-            raise SIException("Platform {0} not (yet) supported.".format(systype))
+            raise SIException("Platform {} not (yet) supported.".format(systype))
 
     def _grain(self, grain):
         """
@@ -51,15 +47,15 @@ class SysInfo(object):
         """
         Get a size of a disk.
         """
-        out = __salt__["cmd.run_all"]("df {0}".format(device))
+        out = __salt__["cmd.run_all"]("df {}".format(device))
         if out["retcode"]:
-            msg = "Disk size info error: {0}".format(out["stderr"])
+            msg = "Disk size info error: {}".format(out["stderr"])
             log.error(msg)
             raise SIException(msg)
 
-        devpath, blocks, used, available, used_p, mountpoint = [
+        devpath, blocks, used, available, used_p, mountpoint = (
             elm for elm in out["stdout"].split(os.linesep)[-1].split(" ") if elm
-        ]
+        )
         return {
             "device": devpath,
             "blocks": blocks,
@@ -110,7 +106,7 @@ class SysInfo(object):
         """
         out = __salt__["cmd.run_all"]("vmstat -s")
         if out["retcode"]:
-            raise SIException("Memory info error: {0}".format(out["stderr"]))
+            raise SIException("Memory info error: {}".format(out["stderr"]))
 
         ret = dict()
         for line in out["stdout"].split(os.linesep):
@@ -182,13 +178,13 @@ class Query(EnvLoader):
         """
         if scope and scope not in self.SCOPES:
             raise InspectorQueryException(
-                "Unknown scope: {0}. Must be one of: {1}".format(
+                "Unknown scope: {}. Must be one of: {}".format(
                     repr(scope), ", ".join(self.SCOPES)
                 )
             )
         elif not scope:
             raise InspectorQueryException(
-                "Scope cannot be empty. Must be one of: {0}".format(
+                "Scope cannot be empty. Must be one of: {}".format(
                     ", ".join(self.SCOPES)
                 )
             )
@@ -468,13 +464,13 @@ class Query(EnvLoader):
 
             fmt = fmt.lower()
             if fmt == "b":
-                return "{0} Bytes".format(size)
+                return "{} Bytes".format(size)
             elif fmt == "kb":
-                return "{0} Kb".format(round((float(size) / 0x400), 2))
+                return "{} Kb".format(round((float(size) / 0x400), 2))
             elif fmt == "mb":
-                return "{0} Mb".format(round((float(size) / 0x400 / 0x400), 2))
+                return "{} Mb".format(round((float(size) / 0x400 / 0x400), 2))
             elif fmt == "gb":
-                return "{0} Gb".format(round((float(size) / 0x400 / 0x400 / 0x400), 2))
+                return "{} Gb".format(round((float(size) / 0x400 / 0x400 / 0x400), 2))
 
         filter = kwargs.get("filter")
         offset = kwargs.get("offset", 0)
@@ -482,7 +478,7 @@ class Query(EnvLoader):
         timeformat = kwargs.get("time", "tz")
         if timeformat not in ["ticks", "tz"]:
             raise InspectorQueryException(
-                'Unknown "{0}" value for parameter "time"'.format(timeformat)
+                'Unknown "{}" value for parameter "time"'.format(timeformat)
             )
         tfmt = (
             lambda param: timeformat == "tz"
@@ -493,14 +489,14 @@ class Query(EnvLoader):
         size_fmt = kwargs.get("size")
         if size_fmt is not None and size_fmt.lower() not in ["b", "kb", "mb", "gb"]:
             raise InspectorQueryException(
-                'Unknown "{0}" value for parameter "size". '
+                'Unknown "{}" value for parameter "size". '
                 "Should be either B, Kb, Mb or Gb".format(timeformat)
             )
 
         owners = kwargs.get("owners", "id")
         if owners not in ["name", "id"]:
             raise InspectorQueryException(
-                'Unknown "{0}" value for parameter "owners". '
+                'Unknown "{}" value for parameter "owners". '
                 "Should be either name or id (default)".format(owners)
             )
 
@@ -511,7 +507,7 @@ class Query(EnvLoader):
         for i_type in incl_type:
             if i_type not in ["directory", "dir", "d", "file", "f", "link", "l"]:
                 raise InspectorQueryException(
-                    'Unknown "{0}" values for parameter "type". '
+                    'Unknown "{}" values for parameter "type". '
                     "Should be comma separated one or more of "
                     "dir, file and/or link.".format(", ".join(incl_type))
                 )

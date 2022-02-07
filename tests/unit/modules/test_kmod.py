@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 
-# Import Salt Libs
 import salt.modules.kmod as kmod
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -83,7 +77,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
         """
         mod = "cheese"
         err_msg = "Module too moldy, refusing to load"
-        mock_persist = MagicMock(return_value=set([mod]))
+        mock_persist = MagicMock(return_value={mod})
         mock_lsmod = MagicMock(
             return_value=[{"size": 100, "module": None, "depcount": 10, "deps": None}]
         )
@@ -97,7 +91,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
 
                 with patch.dict(kmod.__salt__, {"cmd.run_all": mock_run_all_1}):
                     self.assertEqual(
-                        "Error loading module {0}: {1}".format(mod, err_msg),
+                        "Error loading module {}: {}".format(mod, err_msg),
                         kmod.load(mod),
                     )
 
@@ -107,7 +101,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
         """
         Tests if specified kernel module is loaded.
         """
-        with patch("salt.modules.kmod.mod_list", MagicMock(return_value=set(["lp"]))):
+        with patch("salt.modules.kmod.mod_list", MagicMock(return_value={"lp"})):
             self.assertTrue(kmod.is_loaded("lp"))
 
     # 'remove' function tests: 1
@@ -118,7 +112,7 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
         """
         mod = "cheese"
         err_msg = "Cannot find module: it has been eaten"
-        mock_persist = MagicMock(return_value=set([mod]))
+        mock_persist = MagicMock(return_value={mod})
         mock_lsmod = MagicMock(
             return_value=[{"size": 100, "module": None, "depcount": 10, "deps": None}]
         )
@@ -134,6 +128,6 @@ class KmodTestCase(TestCase, LoaderModuleMockMixin):
 
                 with patch.dict(kmod.__salt__, {"cmd.run_all": mock_run_all_1}):
                     self.assertEqual(
-                        "Error removing module {0}: {1}".format(mod, err_msg),
+                        "Error removing module {}: {}".format(mod, err_msg),
                         kmod.remove(mod, True),
                     )

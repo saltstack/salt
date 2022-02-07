@@ -4,8 +4,6 @@ ZMQ-specific functions
 
 import logging
 
-import salt.ext.tornado
-import salt.ext.tornado.ioloop
 from salt._compat import ipaddress
 from salt.exceptions import SaltSystemExit
 
@@ -23,43 +21,10 @@ LIBZMQ_VERSION_INFO = (-1, -1, -1)
 
 try:
     if zmq:
-        ZMQ_VERSION_INFO = tuple([int(v_el) for v_el in zmq.__version__.split(".")])
-        LIBZMQ_VERSION_INFO = tuple(
-            [int(v_el) for v_el in zmq.zmq_version().split(".")]
-        )
-        if ZMQ_VERSION_INFO[0] > 16:  # 17.0.x+ deprecates zmq's ioloops
-            ZMQDefaultLoop = salt.ext.tornado.ioloop.IOLoop
+        ZMQ_VERSION_INFO = tuple(int(v_el) for v_el in zmq.__version__.split("."))
+        LIBZMQ_VERSION_INFO = tuple(int(v_el) for v_el in zmq.zmq_version().split("."))
 except Exception:  # pylint: disable=broad-except
     log.exception("Error while getting LibZMQ/PyZMQ library version")
-
-if ZMQDefaultLoop is None:
-    try:
-        import zmq.eventloop.ioloop
-
-        # Support for ZeroMQ 13.x
-        if not hasattr(zmq.eventloop.ioloop, "ZMQIOLoop"):
-            zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
-        if salt.ext.tornado.version_info < (5,):
-            ZMQDefaultLoop = zmq.eventloop.ioloop.ZMQIOLoop
-    except ImportError:
-        ZMQDefaultLoop = None
-    if ZMQDefaultLoop is None:
-        ZMQDefaultLoop = salt.ext.tornado.ioloop.IOLoop
-
-
-def install_zmq():
-    """
-    While pyzmq 17 no longer needs any special integration for tornado,
-    older version still need one.
-    :return:
-    """
-    # The zmq module is mocked in Sphinx, so when we build the docs
-    # ZMQ_VERSION_INFO ends up being an empty tuple. Using a tuple comparison
-    # instead of checking the first element of ZMQ_VERSION_INFO will prevent an
-    # IndexError when this function is invoked during the docs build.
-    if zmq and ZMQ_VERSION_INFO < (17,):
-        if salt.ext.tornado.version_info < (5,):
-            zmq.eventloop.ioloop.install()
 
 
 def check_ipc_path_max_len(uri):

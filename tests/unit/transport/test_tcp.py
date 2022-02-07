@@ -6,13 +6,13 @@ import logging
 import threading
 
 import pytest
+import salt.channel.client
+import salt.channel.server
 import salt.config
 import salt.exceptions
 import salt.ext.tornado.concurrent
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
-import salt.transport.client
-import salt.transport.server
 import salt.utils.platform
 import salt.utils.process
 from salt.ext.tornado.testing import AsyncTestCase
@@ -30,7 +30,7 @@ log = logging.getLogger(__name__)
 
 
 @skipIf(True, "Skip until we can devote time to fix this test")
-class AsyncPubChannelTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
+class AsyncPubServerTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
     """
     Tests around the publish system
     """
@@ -72,13 +72,13 @@ class AsyncPubChannelTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
             name="ReqServer_ProcessManager"
         )
 
-        cls.server_channel = salt.transport.server.PubServerChannel.factory(
+        cls.server_channel = salt.channel.server.PubServerChannel.factory(
             cls.master_config
         )
         cls.server_channel.pre_fork(cls.process_manager)
 
         # we also require req server for auth
-        cls.req_server_channel = salt.transport.server.ReqServerChannel.factory(
+        cls.req_server_channel = salt.channel.server.ReqServerChannel.factory(
             cls.master_config
         )
         cls.req_server_channel.pre_fork(cls.process_manager)
@@ -86,7 +86,11 @@ class AsyncPubChannelTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         cls.stop = threading.Event()
         cls.req_server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
         cls.server_thread = threading.Thread(
-            target=run_loop_in_thread, args=(cls.io_loop, cls.stop,),
+            target=run_loop_in_thread,
+            args=(
+                cls.io_loop,
+                cls.stop,
+            ),
         )
         cls.server_thread.start()
 
@@ -103,7 +107,7 @@ class AsyncPubChannelTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         cls.server_channel.close()
         cls.stop.set()
         cls.server_thread.join()
-        cls.process_manager.kill_children()
+        cls.process_manager.terminate()
         del cls.req_server_channel
 
     def setUp(self):
@@ -128,7 +132,7 @@ class AsyncPubChannelTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
             self.pub = ret
             self.stop()  # pylint: disable=not-callable
 
-        self.pub_channel = salt.transport.client.AsyncPubChannel.factory(
+        self.pub_channel = salt.channel.client.AsyncPubChannel.factory(
             self.minion_opts, io_loop=self.io_loop
         )
         connect_future = self.pub_channel.connect()

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Support for VictorOps
 
@@ -12,8 +11,6 @@ Requires an ``api_key`` in ``/etc/salt/minion``:
       api_key: '280d4699-a817-4719-ba6f-ca56e573e44f'
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import logging
@@ -21,8 +18,6 @@ import time
 
 import salt.utils.http
 import salt.utils.json
-
-# Import salt libs
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -54,10 +49,10 @@ def _query(
     path = "https://alert.victorops.com/integrations/generic/20131114/"
 
     if action:
-        path += "{0}/".format(action)
+        path += "{}/".format(action)
 
     if api_key:
-        path += "{0}/".format(api_key)
+        path += "{}/".format(api_key)
 
     if routing_key:
         path += routing_key
@@ -176,7 +171,8 @@ def create_event(message_type=None, routing_key="everybody", **kwargs):
         "RECOVERY",
     ]:
         raise SaltInvocationError(
-            '"message_type" must be INFO, WARNING, ACKNOWLEDGEMENT, CRITICAL, or RECOVERY.'
+            '"message_type" must be INFO, WARNING, ACKNOWLEDGEMENT, CRITICAL, or'
+            " RECOVERY."
         )
 
     data["message_type"] = message_type
@@ -191,7 +187,7 @@ def create_event(message_type=None, routing_key="everybody", **kwargs):
             data["timestamp"] = int(time.mktime(timestamp.timetuple()))
         except (TypeError, ValueError):
             raise SaltInvocationError(
-                "Date string could not be parsed: {0}, {1}".format(
+                "Date string could not be parsed: {}, {}".format(
                     kwargs["timestamp"], timestamp_fmt
                 )
             )
@@ -206,7 +202,7 @@ def create_event(message_type=None, routing_key="everybody", **kwargs):
             data["state_start_time"] = int(time.mktime(state_start_time.timetuple()))
         except (TypeError, ValueError):
             raise SaltInvocationError(
-                "Date string could not be parsed: {0}, {1}".format(
+                "Date string could not be parsed: {}, {}".format(
                     kwargs["state_start_time"], state_start_time_fmt
                 )
             )

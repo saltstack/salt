@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Compare lists of dictionaries by a specified key.
 
@@ -16,9 +15,7 @@ The following can be retrieved:
 
 Note: All dictionaries keys are expected to be strings
 """
-from __future__ import absolute_import, unicode_literals
 
-from salt.ext import six
 from salt.utils.dictdiffer import recursive_diff
 
 
@@ -26,7 +23,7 @@ def list_diff(list_a, list_b, key):
     return ListDictDiffer(list_a, list_b, key)
 
 
-class ListDictDiffer(object):
+class ListDictDiffer:
     """
     Calculates the differences between two lists of dictionaries.
 
@@ -44,16 +41,16 @@ class ListDictDiffer(object):
         for current_item in current_list:
             if key not in current_item:
                 raise ValueError(
-                    "The supplied key '{0}' does not "
-                    "exist in item, the available keys are: {1}"
+                    "The supplied key '{}' does not "
+                    "exist in item, the available keys are: {}"
                     "".format(key, current_item.keys())
                 )
             for next_item in next_list:
                 if key not in next_item:
                     raise ValueError(
-                        "The supplied key '{0}' does not "
+                        "The supplied key '{}' does not "
                         "exist in item, the available keys are: "
-                        "{1}".format(key, next_item.keys())
+                        "{}".format(key, next_item.keys())
                     )
                 if next_item[key] == current_item[key]:
                     item = {key: next_item[key], "old": current_item, "new": next_item}
@@ -97,7 +94,7 @@ class ListDictDiffer(object):
             return recursive_list
         else:
             raise ValueError(
-                "The given type for recursive list matching " "is not supported."
+                "The given type for recursive list matching is not supported."
             )
 
     @property
@@ -152,7 +149,7 @@ class ListDictDiffer(object):
                         # Tabulate comment deeper, show the key attribute and the value
                         # Next line should be tabulated even deeper,
                         #  every change should be tabulated 1 deeper
-                        "\tidentified by {0} {1}:\n\t{2}\n".format(
+                        "\tidentified by {} {}:\n\t{}\n".format(
                             self._key,
                             item.past_dict[self._key],
                             item.changes_str.replace("\n", "\n\t"),
@@ -165,8 +162,7 @@ class ListDictDiffer(object):
                     [
                         changes,
                         # Tabulate comment deeper, show the key attribute and the value
-                        "\tidentified by {0} {1}:"
-                        "\n\twill be removed\n".format(
+                        "\tidentified by {} {}:\n\twill be removed\n".format(
                             self._key, item.past_dict[self._key]
                         ),
                     ]
@@ -177,8 +173,7 @@ class ListDictDiffer(object):
                     [
                         changes,
                         # Tabulate comment deeper, show the key attribute and the value
-                        "\tidentified by {0} {1}:"
-                        "\n\twill be added\n".format(
+                        "\tidentified by {} {}:\n\twill be added\n".format(
                             self._key, item.current_dict[self._key]
                         ),
                     ]
@@ -196,8 +191,7 @@ class ListDictDiffer(object):
         for item in self._get_recursive_difference(type="intersect"):
             if item.diffs:
                 changes.append(
-                    "{tab}{0}={1} (updated):\n{tab}{tab}{2}"
-                    "".format(
+                    "{tab}{0}={1} (updated):\n{tab}{tab}{2}".format(
                         self._key,
                         item.past_dict[self._key],
                         item.changes_str.replace("\n", "\n{0}{0}".format(tab_string)),
@@ -274,9 +268,9 @@ class ListDictDiffer(object):
                 # We want the unset values as well
                 recursive_item.ignore_unset_values = False
                 key_val = (
-                    six.text_type(recursive_item.past_dict[self._key])
+                    str(recursive_item.past_dict[self._key])
                     if self._key in recursive_item.past_dict
-                    else six.text_type(recursive_item.current_dict[self._key])
+                    else str(recursive_item.current_dict[self._key])
                 )
 
                 for change in recursive_item.changed():
@@ -288,9 +282,9 @@ class ListDictDiffer(object):
             for recursive_item in self._get_recursive_difference(type="intersect"):
                 recursive_item.ignore_unset_values = False
                 key_val = (
-                    six.text_type(recursive_item.past_dict[self._key])
+                    str(recursive_item.past_dict[self._key])
                     if self._key in recursive_item.past_dict
-                    else six.text_type(recursive_item.current_dict[self._key])
+                    else str(recursive_item.current_dict[self._key])
                 )
 
                 for change in recursive_item.changed():

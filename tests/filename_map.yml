@@ -1,9 +1,8 @@
 '*':
-  - pytests.integration.modules.test_sysmod
+  - pytests.unit.utils.test_versions
   - unit.test_module_names
   - unit.test_virtualname
   - unit.utils.test_doc
-  - unit.utils.test_versions
 
 setup.py:
   - pytests.scenarios.setup.test_man
@@ -11,13 +10,13 @@ setup.py:
 
 salt/modules/(apkpkg|aptpkg|ebuildpkg|dpkg_lowpkg|freebsdpkg|mac_brew_pkg|mac_ports_pkg|openbsdpkg|opkg|pacmanpkg|pkgin|pkgng|pkg_resource|rpm_lowpkg|solarisipspkg|solarispkg|win_pkg|xbpspkg|yumpkg|zypperpkg)\.py:
   - pytests.unit.states.test_pkg
-  - integration.modules.test_pkg
-  - integration.states.test_pkg
+  - pytests.functional.modules.test_pkg
+  - pytests.functional.states.test_pkg
   - integration.states.test_pkgrepo
 
 salt/modules/(mac_user|useradd|pw_user|solaris_user|win_useradd)\.py:
   - pytests.unit.states.test_user
-  - integration.states.test_user
+  - pytests.functional.states.test_user
 
 salt/modules/(aix_group|groupadd|mac_group|pw_group|solaris_group|win_groupadd)\.py:
   - unit.states.test_group
@@ -26,6 +25,13 @@ salt/modules/(debian_service|freebsdservice|gentoo_service|launchctl_service|mac
   - pytests.unit.states.test_service
   - integration.modules.test_service
   - integration.states.test_service
+
+
+salt/modules/ansiblegate.py:
+  - pytests.unit.states.test_ansiblegate
+  - pytests.integration.states.test_ansiblegate
+  - pytests.functional.modules.test_ansiblegate
+  - pytests.unit.modules.test_ansiblegate
 
 salt/modules/*apache.py:
   - pytests.unit.states.apache.test_apache
@@ -37,8 +43,17 @@ salt/modules/augeas_cfg.py:
   - pytests.unit.states.test_augeas
 
 salt/modules/cp.py:
-  - unit.modules.test_file
-  - unit.states.test_file
+  - pytests.functional.modules.file.test_replace
+  - pytests.unit.modules.file.test_file_basics
+  - pytests.unit.modules.file.test_file_block_replace
+  - pytests.unit.modules.file.test_file_chattr
+  - pytests.unit.modules.file.test_file_comment_line
+  - pytests.unit.modules.file.test_file_grep
+  - pytests.unit.modules.file.test_file_line
+  - pytests.unit.modules.file.test_file_lsattr
+  - pytests.unit.modules.file.test_file_module
+  - pytests.unit.modules.file.test_file_selinux
+  - pytests.unit.states.file.test_copy
   - integration.modules.test_file
   - integration.states.test_file
 
@@ -121,6 +136,9 @@ salt/cloud/*:
 salt/cloud/__init__.py:
   - pytests.functional.cli.test_salt_cloud
 
+salt/engines/*:
+  - pytests.unit.engines.test_engines
+
 salt/grains/*:
   - integration.grains.test_custom
 
@@ -176,7 +194,7 @@ salt/(client/ssh/.+|cli/ssh\.py):
 salt/config/*:
   - unit.test_config
 
-salt/loader.py:
+salt/loader/*:
   - integration.loader.test_ext_grains
   - integration.loader.test_ext_modules
   - pytests.functional.test_loader
@@ -223,7 +241,8 @@ salt/serializers/*:
   - pytests.unit.serializers.test_serializers
 
 salt/(cli/spm\.py|spm/.+):
-  - unit.test_spm
+  - pytests.unit.spm.test_spm
+  - pytests.unit.spm.test_pkgfiles
   - integration.shell.test_spm
   - integration.spm.test_build
   - integration.spm.test_files
@@ -231,9 +250,6 @@ salt/(cli/spm\.py|spm/.+):
   - integration.spm.test_install
   - integration.spm.test_remove
   - integration.spm.test_repo
-
-salt/transport/*:
-  - unit.test_transport
 
 salt/utils/docker/*:
   - unit.utils.test_dockermod

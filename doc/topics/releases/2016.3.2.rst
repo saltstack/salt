@@ -12,7 +12,14 @@ Statistics
 - Total Issue References: **66**
 - Total PR References: **177**
 
-- Contributors: **52** (`Ch3LL`_, `DarkKnightCZ`_, `DmitryKuzmenko`_, `Inveracity`_, `abalashov`_, `abednarik`_, `adelcast`_, `ajacoutot`_, `amendlik`_, `anlutro`_, `aphor`_, `artxki`_, `bbinet`_, `bensherman`_, `cachedout`_, `christoe`_, `clinta`_, `cro`_, `dmurphy18`_, `dongweiming`_, `eliasp`_, `eradman`_, `farcaller`_, `garethgreenaway`_, `glomium`_, `gtmanfred`_, `isbm`_, `jacobhammons`_, `jacobweinstock`_, `jfindlay`_, `jmacfar`_, `jnhmcknight`_, `justinta`_, `l2ol33rt`_, `lomeroe`_, `meaksh`_, `nulfox`_, `opdude`_, `peterdemin`_, `rallytime`_, `s0undt3ch`_, `secumod`_, `sjmh`_, `sjorge`_, `terminalmage`_, `thatch45`_, `themalkolm`_, `ticosax`_, `tmehlinger`_, `twangboy`_, `vutny`_, `whiteinge`_)
+- Contributors: **52** (`Ch3LL`_, `DarkKnightCZ`_, `DmitryKuzmenko`_, `Inveracity`_, `abalashov`_,
+  `abednarik`_, `adelcast`_, `ajacoutot`_, `amendlik`_, `anlutro`_, `aphor`_, `artxki`_, `bbinet`_,
+  `bensherman`_, `cachedout`_, `christoe`_, `clinta`_, `cro`_, `dmurphy18`_, `dongweiming`_,
+  `eliasp`_, `eradman`_, `farcaller`_, `garethgreenaway`_, `glomium`_, `gtmanfred`_, `isbm`_,
+  `jacobhammons`_, `jacobweinstock`_, `jfindlay`_, `jmacfar`_, `jnhmcknight`_, `justinta`_,
+  `l2ol33rt`_, `lomeroe`_, `meaksh`_, `nulfox`_, `opdude`_, `peterdemin`_, `rallytime`_,
+  `s0undt3ch`_, `secumod`_, `sjmh`_, `sjorge`_, `terminalmage`_, `thatch45`_, `themalkolm`_,
+  `ticosax`_, `tmehlinger`_, `twangboy`_, `vutny`_, `whiteinge`_)
 
 
 Returner Changes
@@ -1428,7 +1435,7 @@ Changelog for v2016.3.1..v2016.3.2
 
   * 68092cdc8c When specifying the SSH identity to use with Git as a salt URL, eg. salt://files/identity, if that file exists outside of the default base environment the file won't be accessible so we need to include the saltenv.
 
-* **ISSUE** `#34120`_: (`rmohta`_) Correct package name to systemd-python for RHEL 7 in docs.saltstack.com (refs: `#34138`_)
+* **ISSUE** `#34120`_: (`rmohta`_) Correct package name to systemd-python for RHEL 7 in docs.saltproject.io (refs: `#34138`_)
 
 * **ISSUE** `#31402`_: (`vutny`_) [repo] systemd-python required package is missing from RHEL7 archive (refs: `#34138`_)
 

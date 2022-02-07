@@ -74,7 +74,12 @@ def test_run():
         ret.update({"comment": comt, "result": True})
         assert (
             mysql_query.run(
-                name, database, query, output="grain", grain="grain", overwrite=False,
+                name,
+                database,
+                query,
+                output="grain",
+                grain="grain",
+                overwrite=False,
             )
             == ret
         )

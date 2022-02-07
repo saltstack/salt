@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 .. versionadded:: 2017.7
 
@@ -6,19 +5,11 @@ Management of Zabbix Action object over Zabbix API.
 
 :codeauthor: Jakub Sliva <jakub.sliva@ultimum.io>
 """
-from __future__ import absolute_import, unicode_literals
 
 import json
 import logging
 
-try:
-    from salt.ext import six
-    from salt.exceptions import SaltException
-
-    IMPORTS_OK = True
-except ImportError:
-    IMPORTS_OK = False
-
+from salt.exceptions import SaltException
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +19,7 @@ def __virtual__():
     Only make these states available if Zabbix module and run_query function is available
     and all 3rd party modules imported.
     """
-    if "zabbix.run_query" in __salt__ and IMPORTS_OK:
+    if "zabbix.run_query" in __salt__:
         return True
     return False, "Import zabbix or other needed modules failed."
 
@@ -91,7 +82,7 @@ def present(name, params, **kwargs):
     input_params = __salt__["zabbix.substitute_params"](params, **kwargs)
     log.info(
         "Zabbix Action: input params: %s",
-        six.text_type(json.dumps(input_params, indent=4)),
+        str(json.dumps(input_params, indent=4)),
     )
 
     search = {
@@ -104,7 +95,7 @@ def present(name, params, **kwargs):
     action_get = __salt__["zabbix.run_query"]("action.get", search, **kwargs)
     log.info(
         "Zabbix Action: action.get result: %s",
-        six.text_type(json.dumps(action_get, indent=4)),
+        str(json.dumps(action_get, indent=4)),
     )
 
     existing_obj = (
@@ -117,11 +108,11 @@ def present(name, params, **kwargs):
         diff_params = __salt__["zabbix.compare_params"](input_params, existing_obj)
         log.info(
             "Zabbix Action: input params: {%s",
-            six.text_type(json.dumps(input_params, indent=4)),
+            str(json.dumps(input_params, indent=4)),
         )
         log.info(
             "Zabbix Action: Object comparison result. Differences: %s",
-            six.text_type(diff_params),
+            str(diff_params),
         )
 
         if diff_params:
@@ -131,18 +122,22 @@ def present(name, params, **kwargs):
             # diff_params['name'] = 'VMs' - BUG - https://support.zabbix.com/browse/ZBX-12078
             log.info(
                 "Zabbix Action: update params: %s",
-                six.text_type(json.dumps(diff_params, indent=4)),
+                str(json.dumps(diff_params, indent=4)),
             )
 
             if dry_run:
                 ret["result"] = True
-                ret["comment"] = 'Zabbix Action "{0}" would be fixed.'.format(name)
+                ret["comment"] = 'Zabbix Action "{}" would be fixed.'.format(name)
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Action "{0}" differs '
-                        "in following parameters: {1}".format(name, diff_params),
-                        "new": 'Zabbix Action "{0}" would correspond to definition.'.format(
-                            name
+                        "old": (
+                            'Zabbix Action "{}" differs '
+                            "in following parameters: {}".format(name, diff_params)
+                        ),
+                        "new": (
+                            'Zabbix Action "{}" would correspond to definition.'.format(
+                                name
+                            )
                         ),
                     }
                 }
@@ -152,16 +147,18 @@ def present(name, params, **kwargs):
                 )
                 log.info(
                     "Zabbix Action: action.update result: %s",
-                    six.text_type(action_update),
+                    str(action_update),
                 )
                 if action_update:
                     ret["result"] = True
-                    ret["comment"] = 'Zabbix Action "{0}" updated.'.format(name)
+                    ret["comment"] = 'Zabbix Action "{}" updated.'.format(name)
                     ret["changes"] = {
                         name: {
-                            "old": 'Zabbix Action "{0}" differed '
-                            "in following parameters: {1}".format(name, diff_params),
-                            "new": 'Zabbix Action "{0}" fixed.'.format(name),
+                            "old": (
+                                'Zabbix Action "{}" differed '
+                                "in following parameters: {}".format(name, diff_params)
+                            ),
+                            "new": 'Zabbix Action "{}" fixed.'.format(name),
                         }
                     }
 
@@ -169,19 +166,21 @@ def present(name, params, **kwargs):
             ret["result"] = True
             ret[
                 "comment"
-            ] = 'Zabbix Action "{0}" already exists and corresponds to a definition.'.format(
+            ] = 'Zabbix Action "{}" already exists and corresponds to a definition.'.format(
                 name
             )
 
     else:
         if dry_run:
             ret["result"] = True
-            ret["comment"] = 'Zabbix Action "{0}" would be created.'.format(name)
+            ret["comment"] = 'Zabbix Action "{}" would be created.'.format(name)
             ret["changes"] = {
                 name: {
-                    "old": 'Zabbix Action "{0}" does not exist.'.format(name),
-                    "new": 'Zabbix Action "{0}" would be created according definition.'.format(
-                        name
+                    "old": 'Zabbix Action "{}" does not exist.'.format(name),
+                    "new": (
+                        'Zabbix Action "{}" would be created according definition.'.format(
+                            name
+                        )
                     ),
                 }
             }
@@ -190,18 +189,18 @@ def present(name, params, **kwargs):
             action_create = __salt__["zabbix.run_query"](
                 "action.create", input_params, **kwargs
             )
-            log.info(
-                "Zabbix Action: action.create result: %s", six.text_type(action_create)
-            )
+            log.info("Zabbix Action: action.create result: %s", str(action_create))
 
             if action_create:
                 ret["result"] = True
-                ret["comment"] = 'Zabbix Action "{0}" created.'.format(name)
+                ret["comment"] = 'Zabbix Action "{}" created.'.format(name)
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Action "{0}" did not exist.'.format(name),
-                        "new": 'Zabbix Action "{0}" created according definition.'.format(
-                            name
+                        "old": 'Zabbix Action "{}" did not exist.'.format(name),
+                        "new": (
+                            'Zabbix Action "{}" created according definition.'.format(
+                                name
+                            )
                         ),
                     }
                 }
@@ -236,15 +235,15 @@ def absent(name, **kwargs):
 
     if not object_id:
         ret["result"] = True
-        ret["comment"] = 'Zabbix Action "{0}" does not exist.'.format(name)
+        ret["comment"] = 'Zabbix Action "{}" does not exist.'.format(name)
     else:
         if dry_run:
             ret["result"] = True
-            ret["comment"] = 'Zabbix Action "{0}" would be deleted.'.format(name)
+            ret["comment"] = 'Zabbix Action "{}" would be deleted.'.format(name)
             ret["changes"] = {
                 name: {
-                    "old": 'Zabbix Action "{0}" exists.'.format(name),
-                    "new": 'Zabbix Action "{0}" would be deleted.'.format(name),
+                    "old": 'Zabbix Action "{}" exists.'.format(name),
+                    "new": 'Zabbix Action "{}" would be deleted.'.format(name),
                 }
             }
         else:
@@ -254,11 +253,11 @@ def absent(name, **kwargs):
 
             if action_delete:
                 ret["result"] = True
-                ret["comment"] = 'Zabbix Action "{0}" deleted.'.format(name)
+                ret["comment"] = 'Zabbix Action "{}" deleted.'.format(name)
                 ret["changes"] = {
                     name: {
-                        "old": 'Zabbix Action "{0}" existed.'.format(name),
-                        "new": 'Zabbix Action "{0}" deleted.'.format(name),
+                        "old": 'Zabbix Action "{}" existed.'.format(name),
+                        "new": 'Zabbix Action "{}" deleted.'.format(name),
                     }
                 }
 

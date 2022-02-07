@@ -386,6 +386,22 @@ updated pillar data, but :py:func:`pillar.item <salt.modules.pillar.item>`,
 <salt.modules.pillar.raw>` will not see this data unless refreshed using
 :py:func:`saltutil.refresh_pillar <salt.modules.saltutil.refresh_pillar>`.
 
+If you are using the Pillar Cache and have set :conf_master:`pillar_cache` to `True`,
+the pillar cache can be updated either when you run :py:func:`saltutil.refresh_pillar
+<salt.modules.saltutil.refresh_pillar>`, or using the pillar runner function
+:py:func:`pillar.clear_pillar_cache <salt.runners.pillar.clear_pillar_cache>`:
+
+.. code-block:: bash
+
+    salt-run pillar.clear_pillar_cache 'minion'
+
+The pillar will not be updated when running :py:func:`pillar.items
+<salt.modules.pillar.items>` or a state for example. If you are
+using a Salt version before 3003, you would need to manually delete the cache
+file, located in Salt's master cache. For example, on linux the file would be
+in this directory: /var/cache/salt/master/pillar_cache/
+
+
 .. _pillar-environments:
 
 How Pillar Environments Are Handled

@@ -74,7 +74,8 @@ class GuestfsTestCase(TestCase, LoaderModuleMockMixin):
         ):
             self.assertTrue(guestfs.mount("/srv/images/fedora.qcow"))
             run_mock.assert_called_once_with(
-                "guestmount -i -a /srv/images/fedora.qcow --rw /tmp/guest/fedora.qcowabc",
+                "guestmount -i -a /srv/images/fedora.qcow --rw"
+                " /tmp/guest/fedora.qcowabc",
                 python_shell=False,
             )
             makedirs_mock.assert_called_once()

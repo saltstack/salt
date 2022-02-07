@@ -56,7 +56,9 @@ def configure_loader_modules():
     opts["grains"] = salt.loader.grains(opts)
     ctx = {}
     utils = salt.loader.utils(
-        opts, whitelist=["boto3", "args", "systemd", "path", "platform"], context=ctx,
+        opts,
+        whitelist=["boto3", "args", "systemd", "path", "platform"],
+        context=ctx,
     )
     serializers = salt.loader.serializers(opts)
     funcs = funcs = salt.loader.minion_mods(

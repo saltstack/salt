@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.data as data
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase
@@ -43,7 +37,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
             mocked_fopen.__enter__ = MagicMock(return_value=mocked_fopen)
             mocked_fopen.__exit__ = MagicMock()
             with patch("salt.utils.files.fopen", MagicMock(return_value=mocked_fopen)):
-                with patch("salt.payload.Serial.loads", MagicMock(return_value=True)):
+                with patch("salt.payload.loads", MagicMock(return_value=True)):
                     with patch.dict(data.__opts__, {"cachedir": "/"}):
                         self.assertTrue(data.load())
 

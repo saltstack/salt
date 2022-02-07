@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 States for managing Hashicorp Vault.
 Currently handles policies. Configuration instructions are documented in the execution module docs.
@@ -10,8 +9,6 @@ Currently handles policies. Configuration instructions are documented in the exe
 .. versionadded:: 2017.7.0
 
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import difflib
 import logging
@@ -44,7 +41,7 @@ def policy_present(name, rules):
                 }
 
     """
-    url = "v1/sys/policy/{0}".format(name)
+    url = "v1/sys/policy/{}".format(name)
     response = __utils__["vault.make_request"]("GET", url)
     try:
         if response.status_code == 200:
@@ -58,7 +55,7 @@ def policy_present(name, rules):
             "name": name,
             "changes": {},
             "result": False,
-            "comment": "Failed to get policy: {0}".format(e),
+            "comment": "Failed to get policy: {}".format(e),
         }
 
 
@@ -72,14 +69,14 @@ def _create_new_policy(name, rules):
         }
 
     payload = {"rules": rules}
-    url = "v1/sys/policy/{0}".format(name)
+    url = "v1/sys/policy/{}".format(name)
     response = __utils__["vault.make_request"]("PUT", url, json=payload)
     if response.status_code not in [200, 204]:
         return {
             "name": name,
             "changes": {},
             "result": False,
-            "comment": "Failed to create policy: {0}".format(response.reason),
+            "comment": "Failed to create policy: {}".format(response.reason),
         }
 
     return {
@@ -111,14 +108,14 @@ def _handle_existing_policy(name, new_rules, existing_rules):
 
     payload = {"rules": new_rules}
 
-    url = "v1/sys/policy/{0}".format(name)
+    url = "v1/sys/policy/{}".format(name)
     response = __utils__["vault.make_request"]("PUT", url, json=payload)
     if response.status_code not in [200, 204]:
         return {
             "name": name,
             "changes": {},
             "result": False,
-            "comment": "Failed to change policy: {0}".format(response.reason),
+            "comment": "Failed to change policy: {}".format(response.reason),
         }
 
     ret["result"] = True

@@ -1,8 +1,10 @@
 mock >= 3.0.0
 # PyTest
-pytest >= 6.1.0
-pytest-salt-factories >= 0.903.2
+pytest >= 6.1.0; python_version <= "3.9"
+pytest == 6.2.5; python_version >= "3.10"
+pytest-salt-factories >= 0.912.0
 pytest-tempdir >= 2019.10.12
 pytest-helpers-namespace >= 2019.1.8
 pytest-subtests
+pytest-timeout
 flaky

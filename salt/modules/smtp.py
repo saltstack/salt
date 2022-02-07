@@ -133,18 +133,14 @@ def send_msg(
             try:
                 smtpconn.starttls()
             except smtplib.SMTPHeloError:
-                log.debug(
-                    "The server didn’t reply properly \
-                        to the HELO greeting."
-                )
+                log.debug("The server didn’t reply properly to the HELO greeting.")
                 return False
             except smtplib.SMTPException:
                 log.debug("The server does not support the STARTTLS extension.")
                 return False
             except RuntimeError:
                 log.debug(
-                    "SSL/TLS support is not available \
-                        to your Python interpreter."
+                    "SSL/TLS support is not available to your Python interpreter."
                 )
                 return False
             smtpconn.ehlo()

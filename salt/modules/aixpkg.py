@@ -11,6 +11,7 @@ Package support for AIX
 import copy
 import logging
 import os
+import pathlib
 
 import salt.utils.data
 import salt.utils.functools
@@ -39,33 +40,40 @@ def _check_pkg(target):
     """
     ret = {}
     cmd = ["/usr/bin/lslpp", "-Lc", target]
-    lines = __salt__["cmd.run"](cmd, python_shell=False).splitlines()
+    result = __salt__["cmd.run_all"](cmd, python_shell=False)
 
-    name = ""
-    version_num = ""
-    rpmpkg = False
-    for line in lines:
-        if line.startswith("#"):
-            continue
+    if 0 == result["retcode"]:
+        name = ""
+        version_num = ""
+        rpmpkg = False
+        lines = result["stdout"].splitlines()
+        for line in lines:
+            if line.startswith("#"):
+                continue
 
-        comps = line.split(":")
-        if len(comps) < 7:
-            raise CommandExecutionError(
-                "Error occurred finding fileset/package",
-                info={"errors": comps[1].strip()},
-            )
+            comps = line.split(":")
+            if len(comps) < 7:
+                raise CommandExecutionError(
+                    "Error occurred finding fileset/package",
+                    info={"errors": comps[1].strip()},
+                )
 
-        # handle first matching line
-        if "R" in comps[6]:
-            name = comps[0]
-            rpmpkg = True
-        else:
-            name = comps[1]  # use fileset rather than rpm package
+            # handle first matching line
+            if "R" in comps[6]:
+                name = comps[0]
+                rpmpkg = True
+            else:
+                name = comps[1]  # use fileset rather than rpm package
 
-        version_num = comps[2]
-        break
+            version_num = comps[2]
+            break
 
-    return name, version_num, rpmpkg
+        return name, version_num, rpmpkg
+    else:
+        raise CommandExecutionError(
+            "Error occurred finding fileset/package",
+            info={"errors": result["stderr"].strip()},
+        )
 
 
 def _is_installed_rpm(name):
@@ -154,16 +162,62 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
 def version(*names, **kwargs):
     """
-    Common interface for obtaining the version of installed fileset/rpm package.
+    Return the current installed version of the named fileset/rpm package
+    If more than one fileset/rpm package name is specified a dict of
+    name/version pairs is returned.
+
+    .. versionchanged:: 3005
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' pkg.version vim
-        salt '*' pkg.version foo bar baz
+        salt '*' pkg.latest_version <package name>
+        salt '*' pkg.latest_version <package1> <package2> <package3> ...
+
     """
-    return __salt__["pkg_resource.version"](*names, **kwargs)
+    kwargs.pop("refresh", True)
+
+    ret = {}
+    if not names:
+        return ""
+    for name in names:
+        # AIX packaging includes info on filesets and rpms
+        version_found = ""
+        cmd = "lslpp -Lq {}".format(name)
+        aix_info = __salt__["cmd.run_all"](cmd, python_shell=False)
+        if 0 == aix_info["retcode"]:
+            aix_info_list = aix_info["stdout"].split("\n")
+            log.debug(
+                "Returned AIX packaging information aix_info_list %s for name %s",
+                aix_info_list,
+                name,
+            )
+            for aix_line in aix_info_list:
+                if name in aix_line:
+                    aix_ver_list = aix_line.split()
+                    log.debug(
+                        "Processing name %s with AIX packaging version information %s",
+                        name,
+                        aix_ver_list,
+                    )
+                    version_found = aix_ver_list[1]
+                    if version_found:
+                        log.debug(
+                            "Found name %s in AIX packaging information, version %s",
+                            name,
+                            version_found,
+                        )
+                        break
+        else:
+            log.debug("Could not find name %s in AIX packaging information", name)
+
+        ret[name] = version_found
+
+    # Return a string if only one package name passed
+    if len(names) == 1:
+        return ret[names[0]]
+    return ret
 
 
 def _is_installed(name, **kwargs):
@@ -184,14 +238,38 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
     """
     Install the named fileset(s)/rpm package(s).
 
+    .. versionchanged:: 3005
+
+        preference to install rpm packages are to use in the following order:
+            /opt/freeware/bin/dnf
+            /opt/freeware/bin/yum
+            /usr/bin/yum
+            /usr/bin/rpm
+
+    .. note:
+        use of rpm to install implies that rpm's dependencies must have been previously installed.
+        dnf and yum automatically install rpm's dependencies as part of the install process
+
+        Alogrithm to install filesets or rpms is as follows:
+            if ends with '.rte' or '.bff'
+                process as fileset
+            if ends with '.rpm'
+                process as rpm
+            if unrecognised or no file extension
+                attempt process with dnf | yum
+                failure implies attempt process as fileset
+
+        Fileset needs to be available as a single path and filename
+        compound filesets are not handled and are not supported.
+        An example is bos.adt.insttools which is part of bos.adt.other and is installed as follows
+        /usr/bin/installp -acXYg /cecc/repos/aix72/TL4/BASE/installp/ppc/bos.adt.other bos.adt.insttools
+
     name
         The name of the fileset or rpm package to be installed.
 
     refresh
         Whether or not to update the yum database before executing.
 
-
-    Multiple Package Installation Options:
 
     pkgs
         A list of filesets and/or rpm packages to install.
@@ -203,7 +281,7 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
         (Unused at present).
 
     test
-        Verify that command functions correctly:
+        Verify that command functions correctly.
 
     Returns a dict containing the new fileset(s)/rpm package(s) names and versions:
 
@@ -217,37 +295,123 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
         salt '*' pkg.install /stage/middleware/AIX/bash-4.2-3.aix6.1.ppc.rpm
         salt '*' pkg.install /stage/middleware/AIX/bash-4.2-3.aix6.1.ppc.rpm refresh=True
         salt '*' pkg.install /stage/middleware/AIX/VIOS2211_update/tpc_4.1.1.85.bff
+        salt '*' pkg.install /cecc/repos/aix72/TL3/BASE/installp/ppc/bos.rte.printers_7.2.2.0.bff
         salt '*' pkg.install /stage/middleware/AIX/Xlc/usr/sys/inst.images/xlC.rte
         salt '*' pkg.install /stage/middleware/AIX/Firefox/ppc-AIX53/Firefox.base
+        salt '*' pkg.install /cecc/repos/aix72/TL3/BASE/installp/ppc/bos.net
         salt '*' pkg.install pkgs='["foo", "bar"]'
+        salt '*' pkg.install libxml2
     """
     targets = salt.utils.args.split_input(pkgs) if pkgs else [name]
     if not targets:
         return {}
 
     if pkgs:
-        log.debug("Removing these fileset(s)/rpm package(s) %s: %s", name, targets)
+        log.debug("Installing these fileset(s)/rpm package(s) %s: %s", name, targets)
 
     # Get a list of the currently installed pkgs.
     old = list_pkgs()
 
-    # Install the fileset or rpm package(s)
+    # Install the fileset (normally ends with bff or rte) or rpm package(s)
     errors = []
     for target in targets:
         filename = os.path.basename(target)
-        if filename.endswith(".rpm"):
-            if _is_installed_rpm(filename.split(".aix")[0]):
-                continue
-
-            cmdflags = " -Uivh "
-            if test:
-                cmdflags += " --test"
-
-            cmd = ["/usr/bin/rpm", cmdflags, target]
-            out = __salt__["cmd.run_all"](cmd, output_loglevel="trace")
+        flag_fileset = False
+        flag_actual_rpm = False
+        flag_try_rpm_failed = False
+        cmd = ""
+        out = {}
+        if filename.endswith(".bff") or filename.endswith(".rte"):
+            flag_fileset = True
+            log.debug("install identified %s as fileset", filename)
         else:
-            if _is_installed(target):
-                continue
+            if filename.endswith(".rpm"):
+                flag_actual_rpm = True
+                log.debug("install identified %s as rpm", filename)
+            else:
+                log.debug("install filename %s trying install as rpm", filename)
+
+            # assume use dnf or yum
+            cmdflags = "install "
+            libpathenv = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
+            if pathlib.Path("/opt/freeware/bin/dnf").is_file():
+                cmdflags += "--allowerasing "
+                cmdexe = "/opt/freeware/bin/dnf"
+                if test:
+                    cmdflags += "--assumeno "
+                else:
+                    cmdflags += "--assumeyes "
+                if refresh:
+                    cmdflags += "--refresh "
+
+                cmd = "{} {} {}".format(cmdexe, cmdflags, target)
+                out = __salt__["cmd.run_all"](
+                    cmd,
+                    python_shell=False,
+                    env=libpathenv,
+                    ignore_retcode=True,
+                )
+
+            elif pathlib.Path("/usr/bin/yum").is_file():
+                # check for old yum first, removed if new dnf or yum
+                cmdexe = "/usr/bin/yum"
+                if test:
+                    cmdflags += "--assumeno "
+                else:
+                    cmdflags += "--assumeyes "
+
+                cmd = "{} {} {}".format(cmdexe, cmdflags, target)
+                out = __salt__["cmd.run_all"](
+                    cmd,
+                    python_shell=False,
+                    env=libpathenv,
+                    ignore_retcode=True,
+                )
+
+            elif pathlib.Path("/opt/freeware/bin/yum").is_file():
+                cmdflags += "--allowerasing "
+                cmdexe = "/opt/freeware/bin/yum"
+                if test:
+                    cmdflags += "--assumeno "
+                else:
+                    cmdflags += "--assumeyes "
+                if refresh:
+                    cmdflags += "--refresh "
+
+                cmd = "{} {} {}".format(cmdexe, cmdflags, target)
+                out = __salt__["cmd.run_all"](
+                    cmd,
+                    python_shell=False,
+                    env=libpathenv,
+                    ignore_retcode=True,
+                )
+
+            else:
+                cmdexe = "/usr/bin/rpm"
+                cmdflags = "-Uivh "
+                if test:
+                    cmdflags += "--test"
+
+                cmd = "{} {} {}".format(cmdexe, cmdflags, target)
+                out = __salt__["cmd.run_all"](cmd, python_shell=False)
+
+        if "retcode" in out and not (0 == out["retcode"] or 100 == out["retcode"]):
+            if not flag_actual_rpm:
+                flag_try_rpm_failed = True
+                log.debug(
+                    "install tried filename %s as rpm and failed, trying as fileset",
+                    filename,
+                )
+            else:
+                errors.append(out["stderr"])
+                log.debug(
+                    "install error rpm path, returned result %s, resultant errors %s",
+                    out,
+                    errors,
+                )
+
+        if flag_fileset or flag_try_rpm_failed:
+            # either identified as fileset, or failed trying install as rpm, try as fileset
 
             cmd = "/usr/sbin/installp -acYXg"
             if test:
@@ -255,10 +419,15 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
             cmd += " -d "
             dirpath = os.path.dirname(target)
             cmd += dirpath + " " + filename
-            out = __salt__["cmd.run_all"](cmd, output_loglevel="trace")
-
-        if 0 != out["retcode"]:
-            errors.append(out["stderr"])
+            log.debug("install fileset commanda to attempt %s", cmd)
+            out = __salt__["cmd.run_all"](cmd, python_shell=False)
+            if 0 != out["retcode"]:
+                errors.append(out["stderr"])
+                log.debug(
+                    "install error fileset path, returned result %s, resultant errors %s",
+                    out,
+                    errors,
+                )
 
     # Get a list of the packages after the uninstall
     __context__.pop("pkg.list_pkgs", None)
@@ -285,8 +454,13 @@ def remove(name=None, pkgs=None, **kwargs):
     name
         The name of the fileset or rpm package to be deleted.
 
+    .. versionchanged:: 3005
 
-    Multiple Package Options:
+        preference to install rpm packages are to use in the following order:
+            /opt/freeware/bin/dnf
+            /opt/freeware/bin/yum
+            /usr/bin/yum
+            /usr/bin/rpm
 
     pkgs
         A list of filesets and/or rpm packages to delete.
@@ -320,6 +494,8 @@ def remove(name=None, pkgs=None, **kwargs):
 
     # Remove the fileset or rpm package(s)
     for target in targets:
+        cmd = ""
+        out = {}
         try:
             named, versionpkg, rpmpkg = _check_pkg(target)
         except CommandExecutionError as exc:
@@ -328,11 +504,47 @@ def remove(name=None, pkgs=None, **kwargs):
             continue
 
         if rpmpkg:
-            cmd = ["/usr/bin/rpm", "-e", named]
-            out = __salt__["cmd.run_all"](cmd, output_loglevel="trace")
+
+            # assume use dnf or yum
+            cmdflags = "-y remove"
+            libpathenv = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
+            if pathlib.Path("/opt/freeware/bin/dnf").is_file():
+                cmdexe = "/opt/freeware/bin/dnf"
+                cmd = "{} {} {}".format(cmdexe, cmdflags, target)
+                out = __salt__["cmd.run_all"](
+                    cmd,
+                    python_shell=False,
+                    env=libpathenv,
+                    ignore_retcode=True,
+                )
+            elif pathlib.Path("/opt/freeware/bin/yum").is_file():
+                cmdexe = "/opt/freeware/bin/yum"
+                cmd = "{} {} {}".format(cmdexe, cmdflags, target)
+                out = __salt__["cmd.run_all"](
+                    cmd,
+                    python_shell=False,
+                    env=libpathenv,
+                    ignore_retcode=True,
+                )
+            elif pathlib.Path("/usr/bin/yum").is_file():
+                cmdexe = "/usr/bin/yum"
+                cmd = "{} {} {}".format(cmdexe, cmdflags, target)
+                out = __salt__["cmd.run_all"](
+                    cmd,
+                    python_shell=False,
+                    env=libpathenv,
+                    ignore_retcode=True,
+                )
+            else:
+                cmdexe = "/usr/bin/rpm"
+                cmdflags = "-e"
+                cmd = "{} {} {}".format(cmdexe, cmdflags, target)
+                out = __salt__["cmd.run_all"](cmd, python_shell=False)
         else:
             cmd = ["/usr/sbin/installp", "-u", named]
-            out = __salt__["cmd.run_all"](cmd, output_loglevel="trace")
+            out = __salt__["cmd.run_all"](cmd, python_shell=False)
+
+        log.debug("result of removal command %s, returned result %s", cmd, out)
 
     # Get a list of the packages after the uninstall
     __context__.pop("pkg.list_pkgs", None)
@@ -350,12 +562,14 @@ def remove(name=None, pkgs=None, **kwargs):
 
 def latest_version(*names, **kwargs):
     """
-    Return the latest version of the named fileset/rpm package available for
+    Return the latest available version of the named fileset/rpm package available for
     upgrade or installation. If more than one fileset/rpm package name is
     specified, a dict of name/version pairs is returned.
 
     If the latest version of a given fileset/rpm package is already installed,
     an empty string will be returned for that package.
+
+    .. versionchanged:: 3005
 
     CLI Example:
 
@@ -364,9 +578,10 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
 
-    NOTE: Repositories are not presently supported for AIX.
-    This function will always return an empty string for a given
-    fileset/rpm package.
+    Note: currently only functional for rpm packages due to filesets do not have a specific location to check
+        Requires yum of dnf available in order to query a repository
+
+    This function will always return an empty string for unfound fileset/rpm package.
     """
     kwargs.pop("refresh", True)
 
@@ -374,7 +589,64 @@ def latest_version(*names, **kwargs):
     if not names:
         return ""
     for name in names:
-        ret[name] = ""
+        # AIX packaging includes info on filesets and rpms
+        version_found = ""
+        libpathenv = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
+        if pathlib.Path("/opt/freeware/bin/dnf").is_file():
+            cmdexe = "/opt/freeware/bin/dnf"
+            cmd = "{} check-update {}".format(cmdexe, name)
+            available_info = __salt__["cmd.run_all"](
+                cmd, python_shell=False, env=libpathenv, ignore_retcode=True
+            )
+        elif pathlib.Path("/opt/freeware/bin/yum").is_file():
+            cmdexe = "/opt/freeware/bin/yum"
+            cmd = "{} check-update {}".format(cmdexe, name)
+            available_info = __salt__["cmd.run_all"](
+                cmd, python_shell=False, env=libpathenv, ignore_retcode=True
+            )
+        elif pathlib.Path("/usr/bin/yum").is_file():
+            cmdexe = "/usr/bin/yum"
+            cmd = "{} check-update {}".format(cmdexe, name)
+            available_info = __salt__["cmd.run_all"](
+                cmd, python_shell=False, env=libpathenv, ignore_retcode=True
+            )
+        else:
+            # no yum found implies no repository support
+            available_info = None
+
+        log.debug(
+            "latest_version dnf|yum check-update command returned information %s",
+            available_info,
+        )
+        if available_info and (
+            0 == available_info["retcode"] or 100 == available_info["retcode"]
+        ):
+            available_output = available_info["stdout"]
+            if available_output:
+                available_list = available_output.split()
+                flag_found = False
+                for name_chk in available_list:
+                    # have viable check, note .ppc or .noarch
+                    if name_chk.startswith(name):
+                        # check full name
+                        pkg_label = name_chk.split(".")
+                        if name == pkg_label[0]:
+                            flag_found = True
+                    elif flag_found:
+                        # version comes after name found
+                        version_found = name_chk
+                        break
+
+        if version_found:
+            log.debug(
+                "latest_version result for name %s found version %s",
+                name,
+                version_found,
+            )
+        else:
+            log.debug("Could not find AIX / RPM packaging version for %s", name)
+
+        ret[name] = version_found
 
     # Return a string if only one package name passed
     if len(names) == 1:
@@ -392,10 +664,77 @@ def upgrade_available(name, **kwargs):
     """
     Check whether or not an upgrade is available for a given package
 
+    .. versionchanged:: 3005
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.upgrade_available <package name>
+
+    Note: currently only functional for rpm packages due to filesets do not have a specific location to check
+        Requires yum of dnf available in order to query a repository
+
     """
-    return latest_version(name) != ""
+    # AIX packaging includes info on filesets and rpms
+    rpm_found = False
+    version_found = ""
+
+    libpathenv = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
+    if pathlib.Path("/opt/freeware/bin/dnf").is_file():
+        cmdexe = "/opt/freeware/bin/dnf"
+        cmd = "{} check-update {}".format(cmdexe, name)
+        available_info = __salt__["cmd.run_all"](
+            cmd, python_shell=False, env=libpathenv, ignore_retcode=True
+        )
+    elif pathlib.Path("/opt/freeware/bin/yum").is_file():
+        cmdexe = "/opt/freeware/bin/yum"
+        cmd = "{} check-update {}".format(cmdexe, name)
+        available_info = __salt__["cmd.run_all"](
+            cmd, python_shell=False, env=libpathenv, ignore_retcode=True
+        )
+    elif pathlib.Path("/usr/bin/yum").is_file():
+        cmdexe = "/usr/bin/yum"
+        cmd = "{} check-update {}".format(cmdexe, name)
+        available_info = __salt__["cmd.run_all"](
+            cmd, python_shell=False, env=libpathenv, ignore_retcode=True
+        )
+    else:
+        # no yum found implies no repository support
+        return False
+
+    log.debug(
+        "upgrade_available yum check-update command %s, returned information %s",
+        cmd,
+        available_info,
+    )
+    if 0 == available_info["retcode"] or 100 == available_info["retcode"]:
+        available_output = available_info["stdout"]
+        if available_output:
+            available_list = available_output.split()
+            flag_found = False
+            for name_chk in available_list:
+                # have viable check, note .ppc or .noarch
+                if name_chk.startswith(name):
+                    # check full name
+                    pkg_label = name_chk.split(".")
+                    if name == pkg_label[0]:
+                        flag_found = True
+                elif flag_found:
+                    # version comes after name found
+                    version_found = name_chk
+                    break
+
+        current_version = version(name)
+        log.debug(
+            "upgrade_available result for name %s, found current version %s, available version %s",
+            name,
+            current_version,
+            version_found,
+        )
+
+    if version_found:
+        return current_version != version_found
+    else:
+        log.debug("upgrade_available information for name %s was not found", name)
+        return False

@@ -1,17 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 unit tests for the jobs runner
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.minion
-
-# Import Salt Libs
 import salt.runners.jobs as jobs
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase
@@ -55,7 +48,7 @@ class JobsTest(TestCase, LoaderModuleMockMixin):
         def return_mock_jobs():
             return mock_jobs_cache
 
-        class MockMasterMinion(object):
+        class MockMasterMinion:
 
             returners = {"local_cache.get_jids": return_mock_jobs}
 

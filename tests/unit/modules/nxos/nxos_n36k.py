@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Thomas Stoner <tmstoner@cisco.com>
 """
@@ -16,16 +15,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-from __future__ import absolute_import
-
 from tests.unit.modules.nxos.nxos_platform import NXOSPlatform
 
 
 class N36KPlatform(NXOSPlatform):
 
-    """ Cisco Systems N36K Platform Unit Test Object """
+    """Cisco Systems N36K Platform Unit Test Object"""
 
     chassis = "Nexus3000 N3K-C36180YC-R Chassis"
 

@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 Create ssh executor system
 """
-from __future__ import absolute_import, print_function
 
-# Import python libs
 import logging
 import os
 import shutil
@@ -13,8 +10,6 @@ import tempfile
 from contextlib import closing
 
 import salt.client.ssh
-
-# Import salt libs
 import salt.client.ssh.shell
 import salt.loader
 import salt.minion
@@ -28,9 +23,6 @@ import salt.utils.thin
 import salt.utils.url
 import salt.utils.verify
 
-# Import 3rd-party libs
-from salt.ext import six
-
 log = logging.getLogger(__name__)
 
 
@@ -41,7 +33,7 @@ class SSHState(salt.state.State):
 
     def __init__(self, opts, pillar=None, wrapper=None):
         self.wrapper = wrapper
-        super(SSHState, self).__init__(opts, pillar)
+        super().__init__(opts, pillar)
 
     def load_modules(self, data=None, proxy=None):
         """
@@ -126,6 +118,16 @@ class SSHHighState(salt.state.BaseHighState):
                 )
         return ret
 
+    def destroy(self):
+        if self.client:
+            self.client.destroy()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.destroy()
+
 
 def lowstate_file_refs(chunks, extras=""):
     """
@@ -163,7 +165,7 @@ def salt_refs(data, ret=None):
     proto = "salt://"
     if ret is None:
         ret = []
-    if isinstance(data, six.string_types):
+    if isinstance(data, str):
         if data.startswith(proto) and data not in ret:
             ret.append(data)
     if isinstance(data, list):
@@ -211,7 +213,7 @@ def prep_trans_tar(
         cachedir = os.path.join("salt-ssh", id_).rstrip(os.sep)
     except AttributeError:
         # Minion ID should always be a str, but don't let an int break this
-        cachedir = os.path.join("salt-ssh", six.text_type(id_)).rstrip(os.sep)
+        cachedir = os.path.join("salt-ssh", str(id_)).rstrip(os.sep)
 
     for saltenv in file_refs:
         # Location where files in this saltenv will be cached
@@ -226,7 +228,7 @@ def prep_trans_tar(
                 cache_dest = os.path.join(cache_dest_root, short)
                 try:
                     path = file_client.cache_file(name, saltenv, cachedir=cachedir)
-                except IOError:
+                except OSError:
                     path = ""
                 if path:
                     tgt = os.path.join(env_root, short)
@@ -237,14 +239,14 @@ def prep_trans_tar(
                     continue
                 try:
                     files = file_client.cache_dir(name, saltenv, cachedir=cachedir)
-                except IOError:
+                except OSError:
                     files = ""
                 if files:
                     for filename in files:
                         fn = filename[
                             len(file_client.get_cachedir(cache_dest)) :
                         ].strip("/")
-                        tgt = os.path.join(env_root, short, fn,)
+                        tgt = os.path.join(env_root, short, fn)
                         tgt_dir = os.path.dirname(tgt)
                         if not os.path.isdir(tgt_dir):
                             os.makedirs(tgt_dir)

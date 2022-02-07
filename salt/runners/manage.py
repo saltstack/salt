@@ -540,9 +540,10 @@ def safe_accept(target, tgt_type="glob"):
             elif minion not in pending:
                 failures[minion] = "Minion key {} not found by salt-key".format(minion)
             elif pending[minion] != finger:
-                failures[minion] = (
-                    "Minion key {} does not match the key in "
-                    "salt-key: {}".format(finger, pending[minion])
+                failures[
+                    minion
+                ] = "Minion key {} does not match the key in salt-key: {}".format(
+                    finger, pending[minion]
                 )
             else:
                 subprocess.call(["salt-key", "-qya", minion])
@@ -771,7 +772,7 @@ def bootstrap_psexec(
 
     installer_url
         URL of minion installer executable. Defaults to the latest version from
-        https://repo.saltstack.com/windows/
+        https://repo.saltproject.io/windows/
 
     username
         Optional user name for login on remote computer.
@@ -790,16 +791,16 @@ def bootstrap_psexec(
     """
 
     if not installer_url:
-        base_url = "https://repo.saltstack.com/windows/"
+        base_url = "https://repo.saltproject.io/windows/"
         source = urllib.request.urlopen(base_url).read()
         salty_rx = re.compile(
             '>(Salt-Minion-(.+?)-(.+)-Setup.exe)</a></td><td align="right">(.*?)\\s*<'
         )
         source_list = sorted(
-            [
+            (
                 [path, ver, plat, time.strptime(date, "%d-%b-%Y %H:%M")]
                 for path, ver, plat, date in salty_rx.findall(source)
-            ],
+            ),
             key=operator.itemgetter(3),
             reverse=True,
         )
@@ -874,7 +875,10 @@ objShell.Exec("{1}{2}")"""
     # This is to accommodate for reinstalling Salt over an old or broken build,
     # e.g. if the master address is changed, the salt-minion process will fail
     # to authenticate and quit; which means infinite restarts under Windows.
-    batch = "cd /d %TEMP%\nnet stop salt-minion\ndel c:\\salt\\conf\\pki\\minion\\minion_master.pub\n"
+    batch = (
+        "cd /d %TEMP%\nnet stop salt-minion\ndel"
+        " c:\\salt\\conf\\pki\\minion\\minion_master.pub\n"
+    )
 
     # Speaking of command-line hostile, cscript only supports reading a script
     # from a file. Glue it together line by line.

@@ -12,7 +12,13 @@ Statistics
 - Total Issue References: **39**
 - Total PR References: **135**
 
-- Contributors: **40** (`DmitryKuzmenko`_, `The-Loeki`_, `TheBigBear`_, `basepi`_, `bechtoldt`_, `bernieke`_, `blueyed`_, `cachedout`_, `cedwards`_, `clinta`_, `cro`_, `deuscapturus`_, `dmurphy18`_, `dsumsky`_, `eliasp`_, `flowhamster`_, `isbm`_, `jacksontj`_, `jacobhammons`_, `jfindlay`_, `justinta`_, `l2ol33rt`_, `macgyver13`_, `meggiebot`_, `msteed`_, `multani`_, `nasenbaer13`_, `perfinion`_, `pprkut`_, `rallytime`_, `rhealitycheck`_, `ruzarowski`_, `ryan-lane`_, `s0undt3ch`_, `systembell`_, `techhat`_, `terminalmage`_, `ticosax`_, `twangboy`_, `whiteinge`_)
+- Contributors: **40** (`DmitryKuzmenko`_, `The-Loeki`_, `TheBigBear`_, `basepi`_, `bechtoldt`_,
+  `bernieke`_, `blueyed`_, `cachedout`_, `cedwards`_, `clinta`_, `cro`_, `deuscapturus`_,
+  `dmurphy18`_, `dsumsky`_, `eliasp`_, `flowhamster`_, `isbm`_, `jacksontj`_, `jacobhammons`_,
+  `jfindlay`_, `justinta`_, `l2ol33rt`_, `macgyver13`_, `meggiebot`_, `msteed`_, `multani`_,
+  `nasenbaer13`_, `perfinion`_, `pprkut`_, `rallytime`_, `rhealitycheck`_, `ruzarowski`_,
+  `ryan-lane`_, `s0undt3ch`_, `systembell`_, `techhat`_, `terminalmage`_, `ticosax`_, `twangboy`_,
+  `whiteinge`_)
 
 
 Security Fixes

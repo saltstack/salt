@@ -10,7 +10,7 @@ consisting of  one master, and one minion running on a local VM hosted on macOS.
 .. note::
     This guide is aimed at developers who wish to run Salt in a virtual machine.
     The official (Linux) walkthrough can be found
-    `here <http://docs.saltstack.com/topics/tutorials/walkthrough.html>`_.
+    `here <https://docs.saltproject.io/topics/tutorials/walkthrough.html>`_.
 
 The 5 Cent Salt Intro
 =====================
@@ -82,7 +82,7 @@ Step 1 - Configuring The Salt Master On Your Mac
 ================================================
 
 `Official Documentation
-<http://docs.saltstack.com/topics/installation/osx.html>`_
+<https://docs.saltproject.io/topics/installation/osx.html>`_
 
 Because Salt has a lot of dependencies that are not built in macOS, we will use
 Homebrew to install Salt. Homebrew is a package manager for Mac, it's great, use
@@ -163,7 +163,7 @@ Create The Master Configuration
 
 If the default /etc/salt/master configuration file was not created,
 copy-paste it from here:
-http://docs.saltstack.com/ref/configuration/examples.html#configuration-examples-master
+https://docs.saltproject.io/ref/configuration/examples.html#configuration-examples-master
 
 .. note::
 
@@ -503,4 +503,4 @@ Where To Go From Here
 
 A full description of configuration management within Salt (sls files among
 other things) is available here:
-http://docs.saltstack.com/en/latest/index.html#configuration-management
+https://docs.saltproject.io/en/latest/index.html#configuration-management

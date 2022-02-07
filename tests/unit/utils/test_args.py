@@ -1,19 +1,9 @@
-# -*- coding: utf-8 -*-
-
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 from collections import namedtuple
 
 import salt.utils.args
-
-# Import Salt Libs
 from salt.exceptions import SaltInvocationError
-from salt.ext import six
 from tests.support.mock import DEFAULT, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
@@ -31,7 +21,7 @@ class ArgsTestCase(TestCase):
         cmd = salt.utils.args.condition_input(
             ["*", "foo.bar", 20141020201325675584], None
         )
-        self.assertIsInstance(cmd[2], six.text_type)
+        self.assertIsInstance(cmd[2], str)
 
     def test_clean_kwargs(self):
         self.assertDictEqual(salt.utils.args.clean_kwargs(foo="bar"), {"foo": "bar"})
@@ -42,7 +32,7 @@ class ArgsTestCase(TestCase):
         )
 
     def test_get_function_argspec(self):
-        class DummyClass(object):
+        class DummyClass:
             def __init__(self, first):
                 pass
 
@@ -64,7 +54,10 @@ class ArgsTestCase(TestCase):
 
         # Callable class instance
         expected_argspec = _ArgSpec(
-            args=["first"], varargs=None, keywords=None, defaults=None,
+            args=["first"],
+            varargs=None,
+            keywords=None,
+            defaults=None,
         )
         ret = salt.utils.args.get_function_argspec(dummy_class)
         self.assertEqual(ret, expected_argspec)
@@ -91,7 +84,10 @@ class ArgsTestCase(TestCase):
 
         # Function with both varargs and keywords
         expected_argspec = _ArgSpec(
-            args=[], varargs="args", keywords="kwargs", defaults=None,
+            args=[],
+            varargs="args",
+            keywords="kwargs",
+            defaults=None,
         )
         ret = salt.utils.args.get_function_argspec(dummy_func_varargs_keywords)
         self.assertEqual(ret, expected_argspec)
@@ -101,7 +97,10 @@ class ArgsTestCase(TestCase):
         # this case, but we're testing for the behavior we expect, which is
         # that the first argument is popped off of the args.
         expected_argspec = _ArgSpec(
-            args=["second", "third"], varargs=None, keywords=None, defaults=None,
+            args=["second", "third"],
+            varargs=None,
+            keywords=None,
+            defaults=None,
         )
         ret = salt.utils.args.get_function_argspec(
             dummy_func_nodefault, is_class_method=True
@@ -303,7 +302,8 @@ class ArgsTestCase(TestCase):
 
     def test_parse_function_quotes(self):
         fun, args, kwargs = salt.utils.args.parse_function(
-            'amod.afunc("double \\" single \'", \'double " single \\\'\', kw1="equal=equal", kw2=val2)'
+            "amod.afunc(\"double \\\" single '\", 'double \" single \\'',"
+            ' kw1="equal=equal", kw2=val2)'
         )
         self.assertEqual(fun, "amod.afunc")
         self.assertEqual(args, ["double \" single '", "double \" single '"])

@@ -53,7 +53,8 @@ class TestEtcdSDB(LoaderModuleMockMixin, TestCase):
         )
 
         self.assertEqual(
-            self.instance.get.call_args_list, [call("sdb://myetcd/path/to/foo/bar")],
+            self.instance.get.call_args_list,
+            [call("sdb://myetcd/path/to/foo/bar")],
         )
 
     def test_get(self):
@@ -64,5 +65,6 @@ class TestEtcdSDB(LoaderModuleMockMixin, TestCase):
             etcd_db.get("sdb://myetcd/path/to/foo/bar")
 
         self.assertEqual(
-            self.instance.get.call_args_list, [call("sdb://myetcd/path/to/foo/bar")],
+            self.instance.get.call_args_list,
+            [call("sdb://myetcd/path/to/foo/bar")],
         )

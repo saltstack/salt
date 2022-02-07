@@ -3,11 +3,13 @@ Beacon to emit Twilio text messages
 """
 import logging
 
+import salt.utils.beacons
+
 try:
     import twilio
 
     # Grab version, ensure elements are ints
-    twilio_version = tuple([int(x) for x in twilio.__version_info__])
+    twilio_version = tuple(int(x) for x in twilio.__version_info__)
     if twilio_version > (5,):
         from twilio.rest import Client as TwilioRestClient
     else:
@@ -25,7 +27,9 @@ def __virtual__():
     if HAS_TWILIO:
         return __virtualname__
     else:
-        return False
+        err_msg = "twilio library is missing."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
 
 
 def validate(config):
@@ -34,21 +38,16 @@ def validate(config):
     """
     # Configuration for twilio_txt_msg beacon should be a list of dicts
     if not isinstance(config, list):
-        return False, ("Configuration for twilio_txt_msg beacon must be a list.")
+        return False, "Configuration for twilio_txt_msg beacon must be a list."
     else:
-        _config = {}
-        list(map(_config.update, config))
+        config = salt.utils.beacons.list_to_dict(config)
 
-        if not all(
-            x in _config for x in ("account_sid", "auth_token", "twilio_number")
-        ):
+        if not all(x in config for x in ("account_sid", "auth_token", "twilio_number")):
             return (
                 False,
-                (
-                    "Configuration for twilio_txt_msg beacon "
-                    "must contain account_sid, auth_token "
-                    "and twilio_number items."
-                ),
+                "Configuration for twilio_txt_msg beacon "
+                "must contain account_sid, auth_token "
+                "and twilio_number items.",
             )
     return True, "Valid beacon configuration"
 
@@ -70,18 +69,15 @@ def beacon(config):
     """
     log.trace("twilio_txt_msg beacon starting")
 
-    _config = {}
-    list(map(_config.update, config))
+    config = salt.utils.beacons.list_to_dict(config)
 
     ret = []
-    if not all(
-        [_config["account_sid"], _config["auth_token"], _config["twilio_number"]]
-    ):
+    if not all([config["account_sid"], config["auth_token"], config["twilio_number"]]):
         return ret
     output = {}
     output["texts"] = []
-    client = TwilioRestClient(_config["account_sid"], _config["auth_token"])
-    messages = client.messages.list(to=_config["twilio_number"])
+    client = TwilioRestClient(config["account_sid"], config["auth_token"])
+    messages = client.messages.list(to=config["twilio_number"])
     log.trace("Num messages: %d", len(messages))
     if not messages:
         log.trace("Twilio beacon has no texts")

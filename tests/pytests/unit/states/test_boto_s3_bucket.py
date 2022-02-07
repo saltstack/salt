@@ -57,7 +57,9 @@ class GlobalConfig:
         "NotificationConfiguration": {
             "LambdaFunctionConfigurations": [
                 {
-                    "LambdaFunctionArn": "arn:aws:lambda:us-east-1:111111222222:function:my-function",
+                    "LambdaFunctionArn": (
+                        "arn:aws:lambda:us-east-1:111111222222:function:my-function"
+                    ),
                     "Id": "zxcvbnmlkjhgfdsa",
                     "Events": ["s3:ObjectCreated:*"],
                     "Filter": {
@@ -130,7 +132,9 @@ class GlobalConfig:
         "get_bucket_notification_configuration": {
             "LambdaFunctionConfigurations": [
                 {
-                    "LambdaFunctionArn": "arn:aws:lambda:us-east-1:111111222222:function:my-function",
+                    "LambdaFunctionArn": (
+                        "arn:aws:lambda:us-east-1:111111222222:function:my-function"
+                    ),
                     "Id": "zxcvbnmlkjhgfdsa",
                     "Events": ["s3:ObjectCreated:*"],
                     "Filter": {

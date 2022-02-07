@@ -1,10 +1,5 @@
-"""
-tests.pytests.integration.cli.test_salt_minion
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-"""
 import logging
 import os
-import time
 
 import pytest
 import salt.defaults.exitcodes
@@ -21,7 +16,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def minion_id(salt_factories, salt_master):
+def minion_id(salt_master):
     _minion_id = random_string("minion-")
 
     try:
@@ -65,7 +60,7 @@ def test_exit_status_unknown_argument(salt_master, minion_id):
 
 
 @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
-def test_exit_status_correct_usage(salt_master, minion_id):
+def test_exit_status_correct_usage(salt_master, minion_id, salt_cli):
     factory = salt_master.salt_minion_daemon(
         minion_id,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
@@ -73,6 +68,10 @@ def test_exit_status_correct_usage(salt_master, minion_id):
     )
     factory.start()
     assert factory.is_running()
-    time.sleep(0.5)
+    # Let's issue a ping before terminating
+    ret = salt_cli.run("test.ping", minion_tgt=minion_id)
+    assert ret.exitcode == 0
+    assert ret.json is True
+    # Terminate
     ret = factory.terminate()
     assert ret.exitcode == salt.defaults.exitcodes.EX_OK, ret

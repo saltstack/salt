@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 Run processes as a different user in Windows
 """
-from __future__ import absolute_import, unicode_literals
 
 # Import Python Libraries
 import ctypes
@@ -10,10 +8,8 @@ import logging
 import os
 import time
 
-# Import Salt Libs
 from salt.exceptions import CommandExecutionError
 
-# Import Third Party Libs
 try:
     import psutil
 
@@ -112,9 +108,11 @@ def runas(cmdLine, username, password=None, cwd=None):
     # accounts have this permission by default.
     try:
         impersonation_token = salt.platform.win.impersonate_sid(
-            salt.platform.win.SYSTEM_SID, session_id=0, privs=["SeTcbPrivilege"],
+            salt.platform.win.SYSTEM_SID,
+            session_id=0,
+            privs=["SeTcbPrivilege"],
         )
-    except WindowsError:  # pylint: disable=undefined-variable
+    except OSError:
         log.debug("Unable to impersonate SYSTEM user")
         impersonation_token = None
         win32api.CloseHandle(th)
@@ -254,7 +252,7 @@ def runas(cmdLine, username, password=None, cwd=None):
 
 def runas_unpriv(cmd, username, password, cwd=None):
     """
-    Runas that works for non-priviledged users
+    Runas that works for non-privileged users
     """
     # Validate the domain and sid exist for the username
     username, domain = split_username(username)
@@ -267,14 +265,18 @@ def runas_unpriv(cmd, username, password, cwd=None):
     # Create a pipe to set as stdout in the child. The write handle needs to be
     # inheritable.
     c2pread, c2pwrite = salt.platform.win.CreatePipe(
-        inherit_read=False, inherit_write=True,
+        inherit_read=False,
+        inherit_write=True,
     )
     errread, errwrite = salt.platform.win.CreatePipe(
-        inherit_read=False, inherit_write=True,
+        inherit_read=False,
+        inherit_write=True,
     )
 
     # Create inheritable copy of the stdin
-    stdin = salt.platform.win.kernel32.GetStdHandle(salt.platform.win.STD_INPUT_HANDLE,)
+    stdin = salt.platform.win.kernel32.GetStdHandle(
+        salt.platform.win.STD_INPUT_HANDLE,
+    )
     dupin = salt.platform.win.DuplicateHandle(srchandle=stdin, inherit=True)
 
     # Get startup info structure

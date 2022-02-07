@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Concurrency controls in zookeeper
 =========================================================================
@@ -10,7 +9,6 @@ This module allows you to acquire and release a slot. This is primarily useful
 for ensureing that no more than N hosts take a specific action at once. This can
 also be used to coordinate between masters.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import sys
@@ -30,7 +28,12 @@ try:
     # https://github.com/python-zk/kazoo/pull/206
     class _Semaphore(kazoo.recipe.lock.Semaphore):
         def __init__(
-            self, client, path, identifier=None, max_leases=1, ephemeral_lease=True,
+            self,
+            client,
+            path,
+            identifier=None,
+            max_leases=1,
+            ephemeral_lease=True,
         ):
             identifier = identifier or gethostname()
             kazoo.recipe.lock.Semaphore.__init__(

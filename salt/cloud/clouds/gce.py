@@ -246,12 +246,6 @@ def _expand_address(addy):
     return ret
 
 
-def _expand_region(region):
-    ret = {}
-    ret["name"] = region.name
-    return ret
-
-
 def _expand_balancer(lb):
     """
     Convert the libcloud load-balancer object into something more serializable.
@@ -1186,7 +1180,7 @@ def create_address(kwargs=None, call=None):
     name = kwargs["name"]
     ex_region = kwargs["region"]
     ex_address = kwargs.get("address", None)
-    kwargs["region"] = _expand_region(kwargs["region"])
+    kwargs["region"] = {"name": ex_region.name}
 
     conn = get_conn()
 
@@ -2260,7 +2254,7 @@ def create_attach_volumes(name, kwargs, call=None):
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The create_attach_volumes action must be called with " "-a or --action."
+            "The create_attach_volumes action must be called with -a or --action."
         )
 
     volumes = literal_eval(kwargs["volumes"])
@@ -2294,8 +2288,8 @@ def request_instance(vm_):
     """
     if not GCE_VM_NAME_REGEX.match(vm_["name"]):
         raise SaltCloudSystemExit(
-            "VM names must start with a letter, only contain letters, numbers, or dashes "
-            "and cannot end in a dash."
+            "VM names must start with a letter, only contain letters, numbers, or"
+            " dashes and cannot end in a dash."
         )
 
     try:

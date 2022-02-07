@@ -1,7 +1,4 @@
-# import Salt Libs
 import salt.modules.boto_elbv2 as boto_elbv2
-
-# Import Salt Testing Libs
 from tests.support.mock import patch
 from tests.support.unit import TestCase
 

@@ -1,22 +1,16 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 from datetime import datetime
 
-# Import Salt Libs
 import salt.modules.redismod as redismod
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock
 from tests.support.unit import TestCase
 
 
-class Mockredis(object):
+class Mockredis:
     """
     Mock redis class
     """
@@ -27,7 +21,7 @@ class Mockredis(object):
         """
 
 
-class MockConnect(object):
+class MockConnect:
     """
     Mock Connect class
     """

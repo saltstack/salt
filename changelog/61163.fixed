@@ -1,0 +1,1 @@
+Remove max zeromq pinned version due to issues on FreeBSD

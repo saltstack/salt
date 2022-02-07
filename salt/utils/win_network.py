@@ -23,7 +23,6 @@ depending on the version of Windows this is run on. Once support for Windows
 import platform
 
 from salt._compat import ipaddress
-from salt.ext.six.moves import range
 from salt.utils.versions import StrictVersion
 
 IS_WINDOWS = platform.system() == "Windows"
@@ -260,7 +259,7 @@ def get_interface_info_dot_net_formatted():
                     {
                         "address": ip["address"],
                         "gateway": interfaces[i_face].get("ipv6_gateways", [""])[0],
-                        # Add prefix length
+                        "prefixlen": ip["prefix_length"],
                     }
                 )
 
@@ -335,9 +334,11 @@ def get_interface_info_wmi():
                             if broadcast:
                                 item["broadcast"] = broadcast
                         if i_face.IPSubnet:
-                            netmask = next((i for i in i_face.IPSubnet if ":" in i), "")
-                            if netmask:
-                                item["netmask"] = netmask
+                            prefixlen = next(
+                                (int(i) for i in i_face.IPSubnet if "." not in i), None
+                            )
+                            if prefixlen:
+                                item["prefixlen"] = prefixlen
                         i_faces[i_face.Description]["inet6"].append(item)
             else:
                 i_faces[i_face.Description]["up"] = False

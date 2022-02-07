@@ -14,7 +14,14 @@ Statistics
 - Total Issue References: **66**
 - Total PR References: **135**
 
-- Contributors: **46** (`0xf10e`_, `JaseFace`_, `MasterNayru`_, `MrCitron`_, `Sacro`_, `ajacoutot`_, `arthurlogilab`_, `basepi`_, `belvedere-trading`_, `beverlcl`_, `blast-hardcheese`_, `blueyed`_, `bogdanr`_, `cachedout`_, `cbuechler`_, `chrigl`_, `dmyerscough`_, `eguven`_, `eliasp`_, `erchn`_, `eyj`_, `garethgreenaway`_, `gashev`_, `gnubyexample`_, `gracinet`_, `gravyboat`_, `gwaters`_, `hedinfaok`_, `iggy`_, `jacksontj`_, `jacobhammons`_, `jfindlay`_, `lorengordon`_, `mbologna`_, `msciciel`_, `nmadhok`_, `pass-by-value`_, `plastikos`_, `rallytime`_, `rominf`_, `s0undt3ch`_, `silenius`_, `sjmh`_, `stephen144`_, `terminalmage`_, `twangboy`_)
+- Contributors: **46** (`0xf10e`_, `JaseFace`_, `MasterNayru`_, `MrCitron`_, `Sacro`_,
+  `ajacoutot`_, `arthurlogilab`_, `basepi`_, `belvedere-trading`_, `beverlcl`_,
+  `blast-hardcheese`_, `blueyed`_, `bogdanr`_, `cachedout`_, `cbuechler`_, `chrigl`_,
+  `dmyerscough`_, `eguven`_, `eliasp`_, `erchn`_, `eyj`_, `garethgreenaway`_, `gashev`_,
+  `gnubyexample`_, `gracinet`_, `gravyboat`_, `gwaters`_, `hedinfaok`_, `iggy`_, `jacksontj`_,
+  `jacobhammons`_, `jfindlay`_, `lorengordon`_, `mbologna`_, `msciciel`_, `nmadhok`_,
+  `pass-by-value`_, `plastikos`_, `rallytime`_, `rominf`_, `s0undt3ch`_, `silenius`_, `sjmh`_,
+  `stephen144`_, `terminalmage`_, `twangboy`_)
 
 
 .. important::
@@ -868,7 +875,7 @@ Changelog for v2015.5.6..v2015.5.7
 
   * 8f1fa9e78e Chocolatey doesn't have a help command.
 
-* **PR** `#27733`_: (`jacobhammons`_) hardening topic - updates to docs.saltstack.com theme
+* **PR** `#27733`_: (`jacobhammons`_) hardening topic - updates to docs.saltproject.io theme
   @ *2015-10-07 01:44:00 UTC*
 
   * 4e48651de0 Merge pull request `#27733`_ from jacobhammons/bug-fixes

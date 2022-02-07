@@ -85,7 +85,7 @@ class MysqlDatabaseStateTest(ModuleCase, SaltReturnAssertsMixin):
             if not isinstance(ret, dict) or "results" not in ret:
                 raise AssertionError(
                     (
-                        "Unexpected result while testing connection" " on db '{}': {}"
+                        "Unexpected result while testing connection on db '{}': {}"
                     ).format(db_name, repr(ret))
                 )
             self.assertEqual([["1"]], ret["results"])
@@ -181,9 +181,9 @@ class MysqlDatabaseStateTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function("state.sls", mods="mysql_utf8")
         if not isinstance(ret, dict):
             raise AssertionError(
-                (
-                    "Unexpected result while testing external mysql utf8 sls" ": {}"
-                ).format(repr(ret))
+                ("Unexpected result while testing external mysql utf8 sls: {}").format(
+                    repr(ret)
+                )
             )
         for item, descr in ret.items():
             result[item] = {

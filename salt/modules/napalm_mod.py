@@ -152,7 +152,10 @@ def _junos_prep_fun(napalm_device):
         return {
             "out": None,
             "result": False,
-            "comment": "Please install jxmlease (``pip install jxmlease``) to be able to use this function.",
+            "comment": (
+                "Please install jxmlease (``pip install jxmlease``) to be able to use"
+                " this function."
+            ),
         }
     _inject_junos_proxy(napalm_device)
     return {"result": True}
@@ -1012,8 +1015,17 @@ def pyeapi_nxos_api_args(**prev_kwargs):
     kwargs["username"] = napalm_opts["USERNAME"]
     kwargs["password"] = napalm_opts["PASSWORD"]
     kwargs["timeout"] = napalm_opts["TIMEOUT"]
-    kwargs["transport"] = optional_args.get("transport")
-    kwargs["port"] = optional_args.get("port")
+
+    if "transport" in optional_args and optional_args["transport"]:
+        kwargs["transport"] = optional_args["transport"]
+    else:
+        kwargs["transport"] = "https"
+
+    if "port" in optional_args and optional_args["port"]:
+        kwargs["port"] = optional_args["port"]
+    else:
+        kwargs["port"] = 80 if kwargs["transport"] == "http" else 443
+
     kwargs["verify"] = optional_args.get("verify")
     prev_kwargs.update(kwargs)
     return prev_kwargs
@@ -1067,7 +1079,7 @@ def pyeapi_call(method, *args, **kwargs):
 
         salt '*' napalm.pyeapi_call run_commands 'show version' encoding=text
         salt '*' napalm.pyeapi_call get_config as_string=True
-   """
+    """
     pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
     return __salt__["pyeapi.call"](method, *args, **pyeapi_kwargs)
 
@@ -1154,7 +1166,7 @@ def pyeapi_config(
     .. code-block:: bash
 
         salt '*' napalm.pyeapi_config 'ntp server 1.2.3.4'
-   """
+    """
     pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
     return __salt__["pyeapi.config"](
         commands=commands,

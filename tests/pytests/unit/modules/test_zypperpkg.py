@@ -40,9 +40,11 @@ def test_list_pkgs_no_context():
         "perseus-dummy_|-(none)_|-1.1_|-1.1_|-i586_|-(none)_|-1529936062",
     ]
     with patch.dict(zypper.__grains__, {"osarch": "x86_64"}), patch.dict(
-        zypper.__salt__, {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
+        zypper.__salt__,
+        {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
     ), patch.dict(zypper.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
-        zypper.__salt__, {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
+        zypper.__salt__,
+        {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
     ), patch.dict(
         zypper.__salt__, {"pkg_resource.stringify": MagicMock()}
     ), patch.object(
@@ -55,3 +57,24 @@ def test_list_pkgs_no_context():
         pkgs = zypper.list_pkgs(versions_as_list=True, use_context=False)
         list_pkgs_context_mock.assert_not_called()
         list_pkgs_context_mock.reset_mock()
+
+
+def test_normalize_name():
+    """
+    Test that package is normalized only when it should be
+    """
+    with patch.dict(zypper.__grains__, {"osarch": "x86_64"}):
+        result = zypper.normalize_name("foo")
+        assert result == "foo", result
+        result = zypper.normalize_name("foo.x86_64")
+        assert result == "foo", result
+        result = zypper.normalize_name("foo.noarch")
+        assert result == "foo", result
+
+    with patch.dict(zypper.__grains__, {"osarch": "aarch64"}):
+        result = zypper.normalize_name("foo")
+        assert result == "foo", result
+        result = zypper.normalize_name("foo.aarch64")
+        assert result == "foo", result
+        result = zypper.normalize_name("foo.noarch")
+        assert result == "foo", result

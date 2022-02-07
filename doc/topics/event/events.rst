@@ -232,7 +232,7 @@ easily done using the normal cross-calling syntax:
         # do something!
         __salt__["event.send"](
             "myco/my_custom_module/finished",
-            {"finished": True, "message": "The something is finished!",},
+            {"finished": True, "message": "The something is finished!"},
         )
 
 From Custom Python Scripts

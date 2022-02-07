@@ -10,7 +10,7 @@ import salt.serializers.python as python
 import salt.serializers.toml as toml
 import salt.serializers.yaml as yaml
 import salt.serializers.yamlex as yamlex
-import yaml as _yaml  # future lint: disable=blacklisted-import
+import yaml as _yaml
 from salt.serializers import SerializationError
 from salt.serializers.yaml import EncryptedString
 from salt.utils.odict import OrderedDict
@@ -374,7 +374,8 @@ def test_serialize_plist():
     serialized = plist.serialize(data)
     expected = (
         b'<?xml version="1.0" encoding="UTF-8"?>\n'
-        b'<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
+        b'<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"'
+        b' "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
         b'<plist version="1.0">\n'
         b"<dict>\n"
         b"\t<key>foo</key>\n"

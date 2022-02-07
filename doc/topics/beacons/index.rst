@@ -60,7 +60,7 @@ Multiple copies of a particular Salt beacon can be configured by including the `
 .. code-block:: yaml
 
     beacons:
-      watch_importand_file:
+      watch_important_file:
         - files:
             /etc/important_file: {}
         - beacon_module: inotify

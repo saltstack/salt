@@ -160,7 +160,8 @@ def _load_properties(property_name, config_option, set_default=False, default=No
                 loaded_property = default
             else:
                 log.error(
-                    "No cassandra %s specified in the configuration or passed to the module.",
+                    "No cassandra %s specified in the configuration or passed to the"
+                    " module.",
                     config_option,
                 )
                 raise CommandExecutionError(
@@ -732,11 +733,13 @@ def keyspace_exists(
         salt 'minion1' cassandra_cql.keyspace_exists keyspace=system
     """
     query = {
-        "2": "select keyspace_name from system.schema_keyspaces where keyspace_name = '{}';".format(
-            keyspace
+        "2": (
+            "select keyspace_name from system.schema_keyspaces where keyspace_name ="
+            " '{}';".format(keyspace)
         ),
-        "3": "select keyspace_name from system_schema.keyspaces where keyspace_name = '{}';".format(
-            keyspace
+        "3": (
+            "select keyspace_name from system_schema.keyspaces where keyspace_name ="
+            " '{}';".format(keyspace)
         ),
     }
 

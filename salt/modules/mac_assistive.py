@@ -65,8 +65,9 @@ def install(app_id, enable=True):
     client_type = _client_type(app_id)
     enable_str = "1" if enable else "0"
     cmd = (
-        'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" '
-        "\"INSERT or REPLACE INTO access VALUES('kTCCServiceAccessibility','{}',{},{},1,NULL{}{})\"".format(
+        'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "INSERT or'
+        " REPLACE INTO access"
+        " VALUES('kTCCServiceAccessibility','{}',{},{},1,NULL{}{})\"".format(
             app_id,
             client_type,
             enable_str,
@@ -222,7 +223,10 @@ def _get_assistive_access():
     Get a list of all of the assistive access applications installed,
     returns as a ternary showing whether each app is enabled or not.
     """
-    cmd = 'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "SELECT * FROM access"'
+    cmd = (
+        'sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "SELECT * FROM'
+        ' access"'
+    )
     call = __salt__["cmd.run_all"](cmd, output_loglevel="debug", python_shell=False)
 
     if call["retcode"] != 0:

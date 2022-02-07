@@ -1,16 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Read in the roster from a flat file using the renderer system
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.config
-
-# Import Salt libs
 import salt.loader
-from salt.ext import six
 from salt.roster import get_roster_file
 from salt.template import compile_template
 
@@ -36,5 +31,5 @@ def targets(tgt, tgt_type="glob", **kwargs):
     )
     conditioned_raw = {}
     for minion in raw:
-        conditioned_raw[six.text_type(minion)] = salt.config.apply_sdb(raw[minion])
+        conditioned_raw[str(minion)] = salt.config.apply_sdb(raw[minion])
     return __utils__["roster_matcher.targets"](conditioned_raw, tgt, tgt_type, "ipv4")

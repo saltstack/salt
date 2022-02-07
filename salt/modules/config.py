@@ -476,7 +476,7 @@ def get(
     else:
         if merge not in ("recurse", "overwrite"):
             log.warning(
-                "Unsupported merge strategy '%s'. Falling back " "to 'recurse'.", merge
+                "Unsupported merge strategy '%s'. Falling back to 'recurse'.", merge
             )
             merge = "recurse"
 

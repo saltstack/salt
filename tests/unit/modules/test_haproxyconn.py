@@ -1,20 +1,14 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.modules.haproxyconn as haproxyconn
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 
 
-class Mockcmds(object):
+class Mockcmds:
     """
     Mock of cmds
     """
@@ -64,17 +58,17 @@ class Mockcmds(object):
         """
         Mock of showFrontends method
         """
-        return "frontend-alpha\n" "frontend-beta\n" "frontend-gamma"
+        return "frontend-alpha\nfrontend-beta\nfrontend-gamma"
 
     @staticmethod
     def showBackends():
         """
         Mock of showBackends method
         """
-        return "backend-alpha\n" "backend-beta\n" "backend-gamma"
+        return "backend-alpha\nbackend-beta\nbackend-gamma"
 
 
-class Mockhaproxy(object):
+class Mockhaproxy:
     """
     Mock of haproxy
     """
@@ -83,7 +77,7 @@ class Mockhaproxy(object):
         self.cmds = Mockcmds()
 
 
-class MockHaConn(object):
+class MockHaConn:
     """
     Mock of HaConn
     """

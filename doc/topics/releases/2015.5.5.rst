@@ -14,7 +14,10 @@ Statistics
 - Total Issue References: **28**
 - Total PR References: **39**
 
-- Contributors: **20** (`TheBigBear`_, `arthurlogilab`_, `basepi`_, `bastiaanb`_, `cachedout`_, `driskell`_, `garethgreenaway`_, `jacobhammons`_, `jahamn`_, `jfindlay`_, `rallytime`_, `s0undt3ch`_, `scottjpack`_, `silenius`_, `sixninetynine`_, `stanislavb`_, `terminalmage`_, `thusoy`_, `twangboy`_, `vr-jack`_)
+- Contributors: **20** (`TheBigBear`_, `arthurlogilab`_, `basepi`_, `bastiaanb`_, `cachedout`_,
+  `driskell`_, `garethgreenaway`_, `jacobhammons`_, `jahamn`_, `jfindlay`_, `rallytime`_,
+  `s0undt3ch`_, `scottjpack`_, `silenius`_, `sixninetynine`_, `stanislavb`_, `terminalmage`_,
+  `thusoy`_, `twangboy`_, `vr-jack`_)
 
 
 Changelog for v2015.5.4..v2015.5.5

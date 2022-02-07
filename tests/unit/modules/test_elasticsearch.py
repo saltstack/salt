@@ -3,12 +3,8 @@
 """
 
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-
-# Import Salt Libs
 from salt.modules import elasticsearch
 from tests.support.mock import MagicMock, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
 # Import elasticsearch exceptions

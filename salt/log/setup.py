@@ -12,7 +12,6 @@
     logger instance uses our ``salt.log.setup.SaltLoggingClass``.
 """
 
-
 import logging
 import logging.handlers
 import multiprocessing
@@ -150,7 +149,7 @@ def setup_temp_logger(log_level="error"):
         LOGGING_NULL_HANDLER.sync_with_handlers([handler])
     else:
         logging.getLogger(__name__).debug(
-            "LOGGING_NULL_HANDLER is already None, can't sync messages " "with it"
+            "LOGGING_NULL_HANDLER is already None, can't sync messages with it"
         )
 
     # Remove the temporary null logging handler
@@ -468,7 +467,7 @@ def setup_extended_logging(opts):
         LOGGING_STORE_HANDLER.sync_with_handlers(additional_handlers)
     else:
         logging.getLogger(__name__).debug(
-            "LOGGING_STORE_HANDLER is already None, can't sync messages " "with it"
+            "LOGGING_STORE_HANDLER is already None, can't sync messages with it"
         )
 
     # Remove the temporary queue logging handler
@@ -550,8 +549,12 @@ def setup_multiprocessing_logging_listener(opts, queue=None):
 
     __MP_MAINPROCESS_ID = os.getpid()
     __MP_LOGGING_QUEUE_PROCESS = multiprocessing.Process(
+        name="MultiprocessingLoggingQueue",
         target=__process_multiprocessing_logging_queue,
-        args=(opts, queue or get_multiprocessing_logging_queue(),),
+        args=(
+            opts,
+            queue or get_multiprocessing_logging_queue(),
+        ),
     )
     __MP_LOGGING_QUEUE_PROCESS.daemon = True
     __MP_LOGGING_QUEUE_PROCESS.start()
@@ -750,11 +753,6 @@ def patch_python_logging_handlers():
 
 
 def __process_multiprocessing_logging_queue(opts, queue):
-    # Avoid circular import
-    import salt.utils.process
-
-    salt.utils.process.appendproctitle("MultiprocessingLoggingQueue")
-
     # Assign UID/GID of user to proc if set
     from salt.utils.verify import check_user
 
@@ -797,8 +795,7 @@ def __process_multiprocessing_logging_queue(opts, queue):
             break
         except Exception as exc:  # pylint: disable=broad-except
             logging.getLogger(__name__).warning(
-                "An exception occurred in the multiprocessing logging "
-                "queue thread: %r",
+                "An exception occurred in the multiprocessing logging queue thread: %r",
                 exc,
                 exc_info_on_loglevel=logging.DEBUG,
             )
@@ -901,7 +898,9 @@ def __global_logging_exception_handler(
         )
     except Exception:  # pylint: disable=broad-except
         msg = "{}\n{}: {}\n(UNABLE TO FORMAT TRACEBACK)".format(
-            msg, exc_type.__name__, exc_value,
+            msg,
+            exc_type.__name__,
+            exc_value,
         )
     try:
         _logger.error(msg)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage S3 Buckets
 =================
@@ -138,17 +137,11 @@ config:
 
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import logging
 
-# Import Salt libs
 import salt.utils.json
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -239,7 +232,9 @@ def _acl_to_grant(ACL, owner_canonical_id):
                 {
                     "Grantee": {
                         "Type": "Group",
-                        "URI": "http://acs.amazonaws.com/groups/global/AuthenticatedUsers",
+                        "URI": (
+                            "http://acs.amazonaws.com/groups/global/AuthenticatedUsers"
+                        ),
                     },
                     "Permission": "READ",
                 }
@@ -304,7 +299,7 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
         region = profile["region"]
     if region is None:
         region = "us-east-1"
-    return "arn:aws:iam::{0}:role/{1}".format(account_id, name)
+    return "arn:aws:iam::{}:role/{}".format(account_id, name)
 
 
 def _compare_json(current, desired, region, key, keyid, profile):
@@ -430,7 +425,7 @@ def present(
     if RequestPayment is None:
         RequestPayment = {"Payer": "BucketOwner"}
     if Policy:
-        if isinstance(Policy, six.string_types):
+        if isinstance(Policy, str):
             Policy = salt.utils.json.loads(Policy)
         Policy = __utils__["boto3.ordered"](Policy)
 
@@ -440,12 +435,12 @@ def present(
 
     if "error" in r:
         ret["result"] = False
-        ret["comment"] = "Failed to create bucket: {0}.".format(r["error"]["message"])
+        ret["comment"] = "Failed to create bucket: {}.".format(r["error"]["message"])
         return ret
 
     if not r.get("exists"):
         if __opts__["test"]:
-            ret["comment"] = "S3 bucket {0} is set to be created.".format(Bucket)
+            ret["comment"] = "S3 bucket {} is set to be created.".format(Bucket)
             ret["result"] = None
             return ret
         r = __salt__["boto_s3_bucket.create"](
@@ -458,7 +453,7 @@ def present(
         )
         if not r.get("created"):
             ret["result"] = False
-            ret["comment"] = "Failed to create bucket: {0}.".format(
+            ret["comment"] = "Failed to create bucket: {}.".format(
                 r["error"]["message"]
             )
             return ret
@@ -486,7 +481,7 @@ def present(
             ("put_website", Website, Website),
         ):
             if testval is not None:
-                r = __salt__["boto_s3_bucket.{0}".format(setter)](
+                r = __salt__["boto_s3_bucket.{}".format(setter)](
                     Bucket=Bucket,
                     region=region,
                     key=key,
@@ -496,7 +491,7 @@ def present(
                 )
                 if not r.get("updated"):
                     ret["result"] = False
-                    ret["comment"] = "Failed to create bucket: {0}.".format(
+                    ret["comment"] = "Failed to create bucket: {}.".format(
                         r["error"]["message"]
                     )
                     return ret
@@ -506,13 +501,13 @@ def present(
         )
         ret["changes"]["old"] = {"bucket": None}
         ret["changes"]["new"] = _describe
-        ret["comment"] = "S3 bucket {0} created.".format(Bucket)
+        ret["comment"] = "S3 bucket {} created.".format(Bucket)
 
         return ret
 
     # bucket exists, ensure config matches
     ret["comment"] = " ".join(
-        [ret["comment"], "S3 bucket {0} is present.".format(Bucket)]
+        [ret["comment"], "S3 bucket {} is present.".format(Bucket)]
     )
     ret["changes"] = {}
     _describe = __salt__["boto_s3_bucket.describe"](
@@ -520,7 +515,7 @@ def present(
     )
     if "error" in _describe:
         ret["result"] = False
-        ret["comment"] = "Failed to update bucket: {0}.".format(
+        ret["comment"] = "Failed to update bucket: {}.".format(
             _describe["error"]["message"]
         )
         ret["changes"] = {}
@@ -635,7 +630,7 @@ def present(
                 temp = current.get("Policy")
                 # Policy description is always returned as a JSON string.
                 # Convert it to JSON now for ease of comparisons later.
-                if isinstance(temp, six.string_types):
+                if isinstance(temp, str):
                     current = __utils__["boto3.ordered"](
                         {"Policy": salt.utils.json.loads(temp)}
                     )
@@ -652,7 +647,7 @@ def present(
             if not __opts__["test"]:
                 if deleter and desired is None:
                     # Setting can be deleted, so use that to unset it
-                    r = __salt__["boto_s3_bucket.{0}".format(deleter)](
+                    r = __salt__["boto_s3_bucket.{}".format(deleter)](
                         Bucket=Bucket,
                         region=region,
                         key=key,
@@ -661,13 +656,13 @@ def present(
                     )
                     if not r.get("deleted"):
                         ret["result"] = False
-                        ret["comment"] = "Failed to update bucket: {0}.".format(
+                        ret["comment"] = "Failed to update bucket: {}.".format(
                             r["error"]["message"]
                         )
                         ret["changes"] = {}
                         return ret
                 else:
-                    r = __salt__["boto_s3_bucket.{0}".format(setter)](
+                    r = __salt__["boto_s3_bucket.{}".format(setter)](
                         Bucket=Bucket,
                         region=region,
                         key=key,
@@ -677,13 +672,13 @@ def present(
                     )
                     if not r.get("updated"):
                         ret["result"] = False
-                        ret["comment"] = "Failed to update bucket: {0}.".format(
+                        ret["comment"] = "Failed to update bucket: {}.".format(
                             r["error"]["message"]
                         )
                         ret["changes"] = {}
                         return ret
     if update and __opts__["test"]:
-        msg = "S3 bucket {0} set to be modified.".format(Bucket)
+        msg = "S3 bucket {} set to be modified.".format(Bucket)
         ret["comment"] = msg
         ret["result"] = None
         return ret
@@ -692,12 +687,13 @@ def present(
     # the things are correct by the time we fail here. Fail so the user will
     # notice something mismatches their desired state.
     if _describe.get("Location", {}).get("LocationConstraint") != LocationConstraint:
-        msg = "Bucket {0} location does not match desired configuration, but cannot be changed".format(
-            LocationConstraint
+        msg = (
+            "Bucket {} location does not match desired configuration, but cannot be"
+            " changed".format(LocationConstraint)
         )
         log.warning(msg)
         ret["result"] = False
-        ret["comment"] = "Failed to update bucket: {0}.".format(msg)
+        ret["comment"] = "Failed to update bucket: {}.".format(msg)
         return ret
 
     return ret
@@ -737,15 +733,15 @@ def absent(name, Bucket, Force=False, region=None, key=None, keyid=None, profile
     )
     if "error" in r:
         ret["result"] = False
-        ret["comment"] = "Failed to delete bucket: {0}.".format(r["error"]["message"])
+        ret["comment"] = "Failed to delete bucket: {}.".format(r["error"]["message"])
         return ret
 
     if r and not r["exists"]:
-        ret["comment"] = "S3 bucket {0} does not exist.".format(Bucket)
+        ret["comment"] = "S3 bucket {} does not exist.".format(Bucket)
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "S3 bucket {0} is set to be removed.".format(Bucket)
+        ret["comment"] = "S3 bucket {} is set to be removed.".format(Bucket)
         ret["result"] = None
         return ret
     r = __salt__["boto_s3_bucket.delete"](
@@ -753,9 +749,9 @@ def absent(name, Bucket, Force=False, region=None, key=None, keyid=None, profile
     )
     if not r["deleted"]:
         ret["result"] = False
-        ret["comment"] = "Failed to delete bucket: {0}.".format(r["error"]["message"])
+        ret["comment"] = "Failed to delete bucket: {}.".format(r["error"]["message"])
         return ret
     ret["changes"]["old"] = {"bucket": Bucket}
     ret["changes"]["new"] = {"bucket": None}
-    ret["comment"] = "S3 bucket {0} deleted.".format(Bucket)
+    ret["comment"] = "S3 bucket {} deleted.".format(Bucket)
     return ret

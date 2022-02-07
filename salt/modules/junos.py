@@ -143,10 +143,10 @@ class HandleFileCopy:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         if self._cached_file is not None:
             salt.utils.files.safe_rm(self._cached_file)
-            log.debug("Deleted cached file: {}".format(self._cached_file))
+            log.debug("Deleted cached file: %s", self._cached_file)
         if self._cached_folder is not None:
             __salt__["file.rmdir"](self._cached_folder)
-            log.debug("Deleted cached folder: {}".format(self._cached_folder))
+            log.debug("Deleted cached folder: %s", self._cached_folder)
 
 
 def _timeout_decorator(function):
@@ -225,16 +225,14 @@ def _timeout_decorator_cleankwargs(function):
 def _restart_connection():
     minion_id = __opts__.get("proxyid", "") or __opts__.get("id", "")
     log.info(
-        "Junos exception occurred {} (junos proxy) is down. Restarting.".format(
-            minion_id
-        )
+        "Junos exception occurred %s (junos proxy) is down. Restarting.", minion_id
     )
     __salt__["event.fire_master"](
         {}, "junos/proxy/{}/stop".format(__opts__["proxy"]["host"])
     )
     __proxy__["junos.shutdown"](__opts__)  # safely close connection
     __proxy__["junos.init"](__opts__)  # reopen connection
-    log.debug("Junos exception occurred, restarted {} (junos proxy)!".format(minion_id))
+    log.debug("Junos exception occurred, restarted %s (junos proxy)!", minion_id)
 
 
 @_timeout_decorator_cleankwargs
@@ -382,7 +380,7 @@ def rpc(cmd=None, dest=None, **kwargs):
             log.warning('Filter ignored as it is only used with "get-config" rpc')
 
         if "dest" in op:
-            log.warning("dest in op, rpc may reject this for cmd {}".format(cmd))
+            log.warning("dest in op, rpc may reject this for cmd '%s'", cmd)
 
         try:
             reply = getattr(conn.rpc, cmd.replace("-", "_"))({"format": format_}, **op)
@@ -654,8 +652,10 @@ def rollback(**kwargs):
         ids_passed = ids_passed + 1
 
     if ids_passed > 1:
-        log.warning("junos.rollback called with more than one possible ID.")
-        log.warning("Use only one of the positional argument, `id`, or `d_id` kwargs")
+        log.warning(
+            "junos.rollback called with more than one possible ID. "
+            "Use only one of the positional argument, `id`, or `d_id` kwargs"
+        )
 
     ret = {}
     conn = __proxy__["junos.conn"]()
@@ -689,8 +689,8 @@ def rollback(**kwargs):
                 fp.write(salt.utils.stringutils.to_str(diff))
         else:
             log.info(
-                "No diff between current configuration and \
-                rollbacked configuration, so no diff file created"
+                "No diff between current configuration and "
+                "rollbacked configuration, so no diff file created"
             )
 
     try:
@@ -755,8 +755,10 @@ def diff(**kwargs):
         id_ = kwargs.pop("id", 0)
         ids_passed = ids_passed + 1
     if ids_passed > 1:
-        log.warning("junos.rollback called with more than one possible ID.")
-        log.warning("Use only one of the positional argument, `id`, or `d_id` kwargs")
+        log.warning(
+            "junos.rollback called with more than one possible ID. "
+            "Use only one of the positional argument, `id`, or `d_id` kwargs"
+        )
 
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
@@ -1208,14 +1210,16 @@ def install_config(path=None, **kwargs):
                 elif not check:
                     try:
                         cu.rollback()
-                        ret[
-                            "message"
-                        ] = "Loaded configuration but commit check failed, hence rolling back configuration."
+                        ret["message"] = (
+                            "Loaded configuration but commit check failed, hence"
+                            " rolling back configuration."
+                        )
                     except Exception as exception:  # pylint: disable=broad-except
-                        ret[
-                            "message"
-                        ] = 'Loaded configuration but commit check failed, and exception occurred during rolling back configuration "{}"'.format(
-                            exception
+                        ret["message"] = (
+                            "Loaded configuration but commit check failed, and"
+                            ' exception occurred during rolling back configuration "{}"'.format(
+                                exception
+                            )
                         )
                         _restart_connection()
 
@@ -1223,15 +1227,17 @@ def install_config(path=None, **kwargs):
                 else:
                     try:
                         cu.rollback()
-                        ret[
-                            "message"
-                        ] = "Commit check passed, but skipping commit for dry-run and rolling back configuration."
+                        ret["message"] = (
+                            "Commit check passed, but skipping commit for dry-run and"
+                            " rolling back configuration."
+                        )
                         ret["out"] = True
                     except Exception as exception:  # pylint: disable=broad-except
-                        ret[
-                            "message"
-                        ] = 'Commit check passed, but skipping commit for dry-run andi while rolling back configuration exception occurred "{}"'.format(
-                            exception
+                        ret["message"] = (
+                            "Commit check passed, but skipping commit for dry-run and"
+                            ' while rolling back configuration exception occurred "{}"'.format(
+                                exception
+                            )
                         )
                         ret["out"] = False
                         _restart_connection()
@@ -1907,9 +1913,10 @@ def get_table(
                     ret["table"][table]["args"] = args
                     ret["table"][table]["command"] = data.GET_CMD
     except ConnectClosedError:
-        ret["message"] = (
-            "Got ConnectClosedError exception. Connection lost "
-            "with {}".format(str(conn))
+        ret[
+            "message"
+        ] = "Got ConnectClosedError exception. Connection lost with {}".format(
+            str(conn)
         )
         ret["out"] = False
         _restart_connection()
@@ -2296,9 +2303,10 @@ def dir_copy(source, dest, force=False, **kwargs):
         return ret
 
     if not (dest.endswith(":") or dest.startswith("/")):
-        ret[
-            "message"
-        ] = "Destination must be a routing engine reference (e.g. re1:) or a fully qualified path."
+        ret["message"] = (
+            "Destination must be a routing engine reference (e.g. re1:) or a fully"
+            " qualified path."
+        )
         ret["success"] = False
         return ret
 

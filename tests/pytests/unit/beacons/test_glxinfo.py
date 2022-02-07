@@ -21,7 +21,7 @@ def test_no_glxinfo_command():
         ret = glxinfo.__virtual__()
 
         mock.assert_called_once_with("glxinfo")
-        assert not ret
+        assert ret == (False, "glxinfo is missing.")
 
 
 def test_with_glxinfo_command():
@@ -46,7 +46,8 @@ def test_no_user():
 
     _expected = (
         False,
-        "Configuration for glxinfo beacon must include a user as glxinfo is not available to root.",
+        "Configuration for glxinfo beacon must include a user as glxinfo is not"
+        " available to root.",
     )
 
     ret = glxinfo.validate(config)

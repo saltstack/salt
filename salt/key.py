@@ -3,12 +3,12 @@ The Salt Key backend API and interface used by the CLI. The Key class can be
 used to manage salt keys directly without interfacing with the CLI.
 """
 
-
 import fnmatch
 import itertools
 import logging
 import os
 import shutil
+import sys
 
 import salt.cache
 import salt.client
@@ -643,17 +643,28 @@ class Key:
             keydirs.append(self.REJ)
         if include_denied:
             keydirs.append(self.DEN)
+        invalid_keys = []
         for keydir in keydirs:
             for key in matches.get(keydir, []):
+                key_path = os.path.join(self.opts["pki_dir"], keydir, key)
+                try:
+                    salt.crypt.get_rsa_pub_key(key_path)
+                except salt.exceptions.InvalidKeyError:
+                    log.error("Invalid RSA public key: %s", key)
+                    invalid_keys.append((keydir, key))
+                    continue
                 try:
                     shutil.move(
-                        os.path.join(self.opts["pki_dir"], keydir, key),
+                        key_path,
                         os.path.join(self.opts["pki_dir"], self.ACC, key),
                     )
                     eload = {"result": True, "act": "accept", "id": key}
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="key"))
                 except OSError:
                     pass
+        for keydir, key in invalid_keys:
+            matches[keydir].remove(key)
+            sys.stderr.write("Unable to accept invalid key for {}.\n".format(key))
         return self.name_match(match) if match is not None else self.dict_match(matches)
 
     def accept_all(self):
@@ -695,8 +706,9 @@ class Key:
                         if revoke_auth:
                             if self.opts.get("rotate_aes_key") is False:
                                 print(
-                                    "Immediate auth revocation specified but AES key rotation not allowed. "
-                                    "Minion will not be disconnected until the master AES key is rotated."
+                                    "Immediate auth revocation specified but AES key"
+                                    " rotation not allowed. Minion will not be"
+                                    " disconnected until the master AES key is rotated."
                                 )
                             else:
                                 try:

@@ -55,7 +55,6 @@ import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import FileserverConfigError
-from salt.ext import six
 from salt.utils.event import tagify
 
 VALID_BRANCH_METHODS = ("branches", "bookmarks", "mixed")
@@ -294,7 +293,7 @@ def init():
             _failhard()
         except Exception as exc:  # pylint: disable=broad-except
             log.error(
-                "Exception '%s' encountered while initializing hgfs " "remote %s",
+                "Exception '%s' encountered while initializing hgfs remote %s",
                 exc,
                 repo_url,
             )
@@ -565,9 +564,8 @@ def update():
         if not os.path.exists(env_cachedir):
             os.makedirs(env_cachedir)
         new_envs = envs(ignore_cache=True)
-        serial = salt.payload.Serial(__opts__)
         with salt.utils.files.fopen(env_cache, "wb+") as fp_:
-            fp_.write(serial.dumps(new_envs))
+            fp_.write(salt.payload.dumps(new_envs))
             log.trace("Wrote env cache data to %s", env_cache)
 
     # if there is a change, fire an event
@@ -748,7 +746,7 @@ def serve_file(load, fnd):
     with salt.utils.files.fopen(fpath, "rb") as fp_:
         fp_.seek(load["loc"])
         data = fp_.read(__opts__["file_buffer_size"])
-        if data and six.PY3 and not salt.utils.files.is_binary(fpath):
+        if data and not salt.utils.files.is_binary(fpath):
             data = data.decode(__salt_system_encoding__)
         if gzip and data:
             data = salt.utils.gzip_util.compress(data, gzip)
