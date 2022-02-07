@@ -68,6 +68,7 @@ def _get_master_uri(master_ip, master_port, source_ip=None, source_port=None):
     rc = zmq_connect(socket, "tcp://192.168.1.17:5555;192.168.1.1:5555"); assert (rc == 0);
     Source: http://api.zeromq.org/4-1:zmq-tcp
     """
+
     from salt.utils.zeromq import ip_bracket
 
     master_uri = "tcp://{master_ip}:{master_port}".format(
@@ -287,7 +288,9 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         :param int tries: The number of times to make before failure
         :param int timeout: The number of seconds on a response before failing
         """
-        load["nonce"] = uuid.uuid4().hex
+        nonce = uuid.uuid4().hex
+        if load and isinstance(load, dict):
+            load["nonce"] = nonce
 
         @salt.ext.tornado.gen.coroutine
         def _do_transfer():
@@ -302,7 +305,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             # communication, we do not subscribe to return events, we just
             # upload the results to the master
             if data:
-                data = self.auth.crypticle.loads(data, raw, load.get("nonce"))
+                data = self.auth.crypticle.loads(data, raw, nonce)
             if not raw:
                 data = salt.transport.frame.decode_embedded_strs(data)
             raise salt.ext.tornado.gen.Return(data)
@@ -777,6 +780,10 @@ class ZeroMQReqServerChannel(
             stream.send(salt.payload.dumps(self._auth(payload["load"], sign_messages)))
             raise salt.ext.tornado.gen.Return()
 
+        nonce = None
+        if version > 1:
+            nonce = payload["load"].pop("nonce", None)
+
         # TODO: test
         try:
             # Take the payload_handler function that was registered when we created the channel
@@ -792,9 +799,6 @@ class ZeroMQReqServerChannel(
         if req_fun == "send_clear":
             stream.send(salt.payload.dumps(ret))
         elif req_fun == "send":
-            nonce = None
-            if version > 1:
-                nonce = payload["load"]["nonce"]
             stream.send(salt.payload.dumps(self.crypticle.dumps(ret, nonce)))
         elif req_fun == "send_private":
             sign_messages = False
@@ -1064,6 +1068,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         :param dict load: A load to be sent across the wire to minions
         """
         payload = {"enc": "aes"}
+        load["serial"] = salt.master.SMaster.get_serial()
         crypticle = salt.crypt.Crypticle(
             self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
         )

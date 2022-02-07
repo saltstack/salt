@@ -531,7 +531,7 @@ class AsyncAuth:
     def __init__(self, opts, io_loop=None):
         pass
 
-    # an init for the singleton instance to call
+    ## an init for the singleton instance to call
     def __singleton_init__(self, opts, io_loop=None):
         """
         Init an Auth instance
@@ -702,9 +702,17 @@ class AsyncAuth:
                 self._authenticate_future.set_exception(error)
             else:
                 key = self.__key(self.opts)
-                AsyncAuth.creds_map[key] = creds
-                self._creds = creds
-                self._crypticle = Crypticle(self.opts, creds["aes"])
+                if key not in AsyncAuth.creds_map:
+                    log.error("%s Got new master aes key.", self)
+                    AsyncAuth.creds_map[key] = creds
+                    self._creds = creds
+                    self._crypticle = Crypticle(self.opts, creds["aes"])
+                elif self._creds["aes"] != creds["aes"]:
+                    log.error("%s The master's aes key has changed.", self)
+                    AsyncAuth.creds_map[key] = creds
+                    self._creds = creds
+                    self._crypticle = Crypticle(self.opts, creds["aes"])
+
                 self._authenticate_future.set_result(
                     True
                 )  # mark the sign-in as complete
@@ -1280,6 +1288,7 @@ class SAuth(AsyncAuth):
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
         self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
+        self._creds = None
         if "syndic_master" in self.opts:
             self.mpub = "syndic_master.pub"
         elif "alert_master" in self.opts:
@@ -1349,8 +1358,14 @@ class SAuth(AsyncAuth):
                         )
                     continue
                 break
-            self._creds = creds
-            self._crypticle = Crypticle(self.opts, creds["aes"])
+            if self._creds is None:
+                log.error("%s Got new master aes key.", self)
+                self._creds = creds
+                self._crypticle = Crypticle(self.opts, creds["aes"])
+            elif self._creds["aes"] != creds["aes"]:
+                log.error("%s The master's aes key has changed.", self)
+                self._creds = creds
+                self._crypticle = Crypticle(self.opts, creds["aes"])
 
     def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
         """
@@ -1418,10 +1433,11 @@ class Crypticle:
     AES_BLOCK_SIZE = 16
     SIG_SIZE = hashlib.sha256().digest_size
 
-    def __init__(self, opts, key_string, key_size=192):
+    def __init__(self, opts, key_string, key_size=192, serial=0):
         self.key_string = key_string
         self.keys = self.extract_keys(self.key_string, key_size)
         self.key_size = key_size
+        self.serial = serial
 
     @classmethod
     def generate_key_string(cls, key_size=192):
@@ -1515,4 +1531,19 @@ class Crypticle:
             data = data[32:]
             if ret_nonce != nonce:
                 raise SaltClientError("Nonce verification error")
-        return salt.payload.loads(data, raw=raw)
+        payload = salt.payload.loads(data, raw=raw)
+        if isinstance(payload, dict):
+            if "serial" in payload:
+                serial = payload.pop("serial")
+                if serial <= self.serial:
+                    log.critical(
+                        "A message with an invalid serial was received.\n"
+                        "this serial: %d\n"
+                        "last serial: %d\n"
+                        "The minion will not honor this request.",
+                        serial,
+                        self.serial,
+                    )
+                    return {}
+                self.serial = serial
+        return payload
