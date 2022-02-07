@@ -4,20 +4,21 @@ Test the winrepo runner
 
 
 import textwrap
-import pytest
 
+import pytest
 import salt.runners.winrepo as winrepo
 import salt.utils.files
 import salt.utils.stringutils
-
 
 # Can't use raw string with unicode_literals, since the \u in the uninstaller
 # will be interpreted as a unicode code point and the interpreter will raise a
 # SyntaxError.
 
+
 @pytest.fixture
 def winrepo_sls():
-    _winrepo_sls = textwrap.dedent("""
+    _winrepo_sls = textwrap.dedent(
+        """
     winscp_x86:
       5.7.5:
           full_name: 'WinSCP 5.7.5'
@@ -37,7 +38,8 @@ def winrepo_sls():
           msiexec: False
           locale: en_US
           reboot: False
-    """)
+    """
+    )
     return _winrepo_sls
 
 
@@ -110,6 +112,7 @@ def configure_loader_modules(winrepo_dir, extmods_dir):
             }
         }
     }
+
 
 def test_genrepo(winrepo_sls, winrepo_genrepo_data, winrepo_sls_dir):
     """

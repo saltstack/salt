@@ -6,10 +6,10 @@
 
 
 import logging
-import pytest
 
-from salt.exceptions import CommandExecutionError
+import pytest
 import salt.states.git as git_state  # Don't potentially shadow GitPython
+from salt.exceptions import CommandExecutionError
 from tests.support.mock import DEFAULT, MagicMock, Mock, patch
 
 log = logging.getLogger(__name__)
@@ -17,9 +17,7 @@ log = logging.getLogger(__name__)
 
 @pytest.fixture
 def configure_loader_modules():
-    return {
-        git_state: {"__env__": "base", "__opts__": {"test": False}, "__salt__": {}}
-    }
+    return {git_state: {"__env__": "base", "__opts__": {"test": False}, "__salt__": {}}}
 
 
 def test_latest_no_diff_for_bare_repo(tmp_path):
@@ -29,9 +27,7 @@ def test_latest_no_diff_for_bare_repo(tmp_path):
     """
     name = "https://foo.com/bar/baz.git"
     gitdir = str(tmp_path / "refs")
-    isdir_mock = MagicMock(
-        side_effect=lambda path: DEFAULT if path != gitdir else True
-    )
+    isdir_mock = MagicMock(side_effect=lambda path: DEFAULT if path != gitdir else True)
 
     branches = ["foo", "bar", "baz"]
     tags = ["v1.1.0", "v.1.1.1", "v1.2.0"]
@@ -80,13 +76,17 @@ def test_error_msg_without_git_dependencies(tmp_path):
             git_state.latest(name=name, target=tmp_path)
             assert "You may need to install" in repr(exc)
 
+
 def test_latest_without_target():
     """
     Test latest when called without passing target
     """
     name = "https://foo.com/bar/baz.git"
     with pytest.raises(TypeError):
+        # pylint: disable=E1120
         git_state.latest(name)
+        # pylint: enable=E1120
+
 
 def test_detached_without_target():
     """
@@ -94,7 +94,10 @@ def test_detached_without_target():
     """
     name = "https://foo.com/bar/baz.git"
     with pytest.raises(TypeError):
+        # pylint: disable=E1120
         git_state.detached(name)
+        # pylint: enable=E1120
+
 
 def test_cloned_without_target():
     """
@@ -102,4 +105,6 @@ def test_cloned_without_target():
     """
     name = "https://foo.com/bar/baz.git"
     with pytest.raises(TypeError):
+        # pylint: disable=E1120
         git_state.cloned(name)
+        # pylint: enable=E1120
