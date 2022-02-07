@@ -12,6 +12,7 @@ import os
 import pathlib
 import platform
 import socket
+import sys
 import tempfile
 import textwrap
 from collections import namedtuple
@@ -70,9 +71,28 @@ def configure_loader_modules():
     return {core: {}}
 
 
-def test_parse_etc_os_release(os_release_dir):
+@pytest.mark.skipif(
+    sys.version_info >= (3, 10), reason="_parse_os_release() not defined/used"
+)
+def test_parse_etc_os_release():
     with patch("os.path.isfile", return_value="/usr/lib/os-release"):
-        os_release_content = os_release_dir.joinpath("ubuntu-17.10").read_text()
+        # /etc/os-release file taken from base-files 9.6ubuntu102
+        os_release_content = textwrap.dedent(
+            """
+            NAME="Ubuntu"
+            VERSION="17.10 (Artful Aardvark)"
+            ID=ubuntu
+            ID_LIKE=debian
+            PRETTY_NAME="Ubuntu 17.10"
+            VERSION_ID="17.10"
+            HOME_URL="https://www.ubuntu.com/"
+            SUPPORT_URL="https://help.ubuntu.com/"
+            BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+            PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+            VERSION_CODENAME=artful
+            UBUNTU_CODENAME=artful
+            """
+        )
     with patch("salt.utils.files.fopen", mock_open(read_data=os_release_content)):
         os_release = core._parse_os_release("/etc/os-release", "/usr/lib/os-release")
     assert os_release == {
@@ -345,6 +365,9 @@ def test_parse_cpe_name_broken(cpe):
     assert core._parse_cpe_name(cpe) == {}
 
 
+@pytest.mark.skipif(
+    sys.version_info >= (3, 10), reason="_parse_os_release() not defined/used"
+)
 def test_missing_os_release():
     with patch("salt.utils.files.fopen", mock_open(read_data={})):
         with pytest.raises(OSError):
@@ -433,7 +456,7 @@ def test_gnu_slash_linux_in_os_name():
     ), patch.object(
         core, "_parse_lsb_release", empty_mock
     ), patch.object(
-        core, "_parse_os_release", missing_os_release_mock
+        core, "_freedesktop_os_release", missing_os_release_mock
     ), patch.object(
         core, "_parse_lsb_release", empty_mock
     ), patch.object(
@@ -509,7 +532,7 @@ def test_suse_os_from_cpe_data():
     ), patch.object(
         os.path, "isfile", MagicMock(return_value=False)
     ), patch.object(
-        core, "_parse_os_release", os_release_mock
+        core, "_freedesktop_os_release", os_release_mock
     ), patch.object(
         core, "_parse_lsb_release", empty_mock
     ), patch.object(
@@ -531,25 +554,17 @@ def test_suse_os_from_cpe_data():
     assert os_grains.get("os") == "SUSE"
 
 
-def _run_os_grains_tests(
-    os_release_dir, os_release_filename, os_release_map, expectation
-):
+def _run_os_grains_tests(os_release_data, os_release_map, expectation):
     path_isfile_mock = MagicMock(
         side_effect=lambda x: x in os_release_map.get("files", [])
     )
     empty_mock = MagicMock(return_value={})
     osarch_mock = MagicMock(return_value="amd64")
-    if os_release_filename:
-        os_release_data = core._parse_os_release(
-            str(os_release_dir / os_release_filename)
-        )
-    else:
-        os_release_data = os_release_map.get("os_release_file", {})
 
     if os_release_data:
-        os_release_mock = MagicMock(return_value=os_release_data)
+        freedesktop_os_release_mock = MagicMock(return_value=os_release_data)
     else:
-        os_release_mock = MagicMock(
+        freedesktop_os_release_mock = MagicMock(
             side_effect=OSError(
                 errno.ENOENT,
                 "Unable to read files /etc/os-release, /usr/lib/os-release",
@@ -589,7 +604,7 @@ def _run_os_grains_tests(
     ), patch.object(
         os.path, "isfile", path_isfile_mock
     ), patch.object(
-        core, "_parse_os_release", os_release_mock
+        core, "_freedesktop_os_release", freedesktop_os_release_mock
     ), patch.object(
         core, "_parse_lsb_release", empty_mock
     ), patch(
@@ -625,15 +640,15 @@ def _run_os_grains_tests(
     assert grains == expectation
 
 
-def _run_suse_os_grains_tests(os_release_dir, os_release_map, expectation):
+def _run_suse_os_grains_tests(os_release_data, os_release_map, expectation):
     os_release_map["_linux_distribution"] = ("SUSE test", "version", "arch")
     expectation["os"] = "SUSE"
     expectation["os_family"] = "Suse"
-    _run_os_grains_tests(os_release_dir, None, os_release_map, expectation)
+    _run_os_grains_tests(os_release_data, os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_suse_os_grains_sles11sp3(os_release_dir):
+def test_suse_os_grains_sles11sp3():
     """
     Test if OS grains are parsed correctly in SLES 11 SP3
     """
@@ -655,24 +670,22 @@ def test_suse_os_grains_sles11sp3(os_release_dir):
         "osmajorrelease": 11,
         "osfinger": "SLES-11",
     }
-    _run_suse_os_grains_tests(os_release_dir, _os_release_map, expectation)
+    _run_suse_os_grains_tests(None, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_suse_os_grains_sles11sp4(os_release_dir):
+def test_suse_os_grains_sles11sp4():
     """
     Test if OS grains are parsed correctly in SLES 11 SP4
     """
-    _os_release_map = {
-        "os_release_file": {
-            "NAME": "SLES",
-            "VERSION": "11.4",
-            "VERSION_ID": "11.4",
-            "PRETTY_NAME": "SUSE Linux Enterprise Server 11 SP4",
-            "ID": "sles",
-            "ANSI_COLOR": "0;32",
-            "CPE_NAME": "cpe:/o:suse:sles:11:4",
-        },
+    _os_release_data = {
+        "NAME": "SLES",
+        "VERSION": "11.4",
+        "VERSION_ID": "11.4",
+        "PRETTY_NAME": "SUSE Linux Enterprise Server 11 SP4",
+        "ID": "sles",
+        "ANSI_COLOR": "0;32",
+        "CPE_NAME": "cpe:/o:suse:sles:11:4",
     }
     expectation = {
         "oscodename": "SUSE Linux Enterprise Server 11 SP4",
@@ -682,24 +695,22 @@ def test_suse_os_grains_sles11sp4(os_release_dir):
         "osmajorrelease": 11,
         "osfinger": "SLES-11",
     }
-    _run_suse_os_grains_tests(os_release_dir, _os_release_map, expectation)
+    _run_suse_os_grains_tests(_os_release_data, {}, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_suse_os_grains_sles12(os_release_dir):
+def test_suse_os_grains_sles12():
     """
     Test if OS grains are parsed correctly in SLES 12
     """
-    _os_release_map = {
-        "os_release_file": {
-            "NAME": "SLES",
-            "VERSION": "12",
-            "VERSION_ID": "12",
-            "PRETTY_NAME": "SUSE Linux Enterprise Server 12",
-            "ID": "sles",
-            "ANSI_COLOR": "0;32",
-            "CPE_NAME": "cpe:/o:suse:sles:12",
-        },
+    _os_release_data = {
+        "NAME": "SLES",
+        "VERSION": "12",
+        "VERSION_ID": "12",
+        "PRETTY_NAME": "SUSE Linux Enterprise Server 12",
+        "ID": "sles",
+        "ANSI_COLOR": "0;32",
+        "CPE_NAME": "cpe:/o:suse:sles:12",
     }
     expectation = {
         "oscodename": "SUSE Linux Enterprise Server 12",
@@ -709,24 +720,22 @@ def test_suse_os_grains_sles12(os_release_dir):
         "osmajorrelease": 12,
         "osfinger": "SLES-12",
     }
-    _run_suse_os_grains_tests(os_release_dir, _os_release_map, expectation)
+    _run_suse_os_grains_tests(_os_release_data, {}, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_suse_os_grains_sles12sp1(os_release_dir):
+def test_suse_os_grains_sles12sp1():
     """
     Test if OS grains are parsed correctly in SLES 12 SP1
     """
-    _os_release_map = {
-        "os_release_file": {
-            "NAME": "SLES",
-            "VERSION": "12-SP1",
-            "VERSION_ID": "12.1",
-            "PRETTY_NAME": "SUSE Linux Enterprise Server 12 SP1",
-            "ID": "sles",
-            "ANSI_COLOR": "0;32",
-            "CPE_NAME": "cpe:/o:suse:sles:12:sp1",
-        },
+    _os_release_data = {
+        "NAME": "SLES",
+        "VERSION": "12-SP1",
+        "VERSION_ID": "12.1",
+        "PRETTY_NAME": "SUSE Linux Enterprise Server 12 SP1",
+        "ID": "sles",
+        "ANSI_COLOR": "0;32",
+        "CPE_NAME": "cpe:/o:suse:sles:12:sp1",
     }
     expectation = {
         "oscodename": "SUSE Linux Enterprise Server 12 SP1",
@@ -736,24 +745,22 @@ def test_suse_os_grains_sles12sp1(os_release_dir):
         "osmajorrelease": 12,
         "osfinger": "SLES-12",
     }
-    _run_suse_os_grains_tests(os_release_dir, _os_release_map, expectation)
+    _run_suse_os_grains_tests(_os_release_data, {}, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_suse_os_grains_opensuse_leap_42_1(os_release_dir):
+def test_suse_os_grains_opensuse_leap_42_1():
     """
     Test if OS grains are parsed correctly in openSUSE Leap 42.1
     """
-    _os_release_map = {
-        "os_release_file": {
-            "NAME": "openSUSE Leap",
-            "VERSION": "42.1",
-            "VERSION_ID": "42.1",
-            "PRETTY_NAME": "openSUSE Leap 42.1 (x86_64)",
-            "ID": "opensuse",
-            "ANSI_COLOR": "0;32",
-            "CPE_NAME": "cpe:/o:opensuse:opensuse:42.1",
-        },
+    _os_release_data = {
+        "NAME": "openSUSE Leap",
+        "VERSION": "42.1",
+        "VERSION_ID": "42.1",
+        "PRETTY_NAME": "openSUSE Leap 42.1 (x86_64)",
+        "ID": "opensuse",
+        "ANSI_COLOR": "0;32",
+        "CPE_NAME": "cpe:/o:opensuse:opensuse:42.1",
     }
     expectation = {
         "oscodename": "openSUSE Leap 42.1 (x86_64)",
@@ -763,24 +770,22 @@ def test_suse_os_grains_opensuse_leap_42_1(os_release_dir):
         "osmajorrelease": 42,
         "osfinger": "Leap-42",
     }
-    _run_suse_os_grains_tests(os_release_dir, _os_release_map, expectation)
+    _run_suse_os_grains_tests(_os_release_data, {}, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_suse_os_grains_tumbleweed(os_release_dir):
+def test_suse_os_grains_tumbleweed():
     """
     Test if OS grains are parsed correctly in openSUSE Tumbleweed
     """
-    _os_release_map = {
-        "os_release_file": {
-            "NAME": "openSUSE",
-            "VERSION": "Tumbleweed",
-            "VERSION_ID": "20160504",
-            "PRETTY_NAME": "openSUSE Tumbleweed (20160504) (x86_64)",
-            "ID": "opensuse",
-            "ANSI_COLOR": "0;32",
-            "CPE_NAME": "cpe:/o:opensuse:opensuse:20160504",
-        },
+    _os_release_data = {
+        "NAME": "openSUSE",
+        "VERSION": "Tumbleweed",
+        "VERSION_ID": "20160504",
+        "PRETTY_NAME": "openSUSE Tumbleweed (20160504) (x86_64)",
+        "ID": "opensuse",
+        "ANSI_COLOR": "0;32",
+        "CPE_NAME": "cpe:/o:opensuse:opensuse:20160504",
     }
     expectation = {
         "oscodename": "openSUSE Tumbleweed (20160504) (x86_64)",
@@ -790,14 +795,26 @@ def test_suse_os_grains_tumbleweed(os_release_dir):
         "osmajorrelease": 20160504,
         "osfinger": "Tumbleweed-20160504",
     }
-    _run_suse_os_grains_tests(os_release_dir, _os_release_map, expectation)
+    _run_suse_os_grains_tests(_os_release_data, {}, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_debian_7_os_grains(os_release_dir):
+def test_debian_7_os_grains():
     """
     Test if OS grains are parsed correctly in Debian 7 "wheezy"
     """
+    # /etc/os-release data taken from base-files 7.1wheezy11
+    _os_release_data = {
+        "PRETTY_NAME": "Debian GNU/Linux 7 (wheezy)",
+        "NAME": "Debian GNU/Linux",
+        "VERSION_ID": "7",
+        "VERSION": "7 (wheezy)",
+        "ID": "debian",
+        "ANSI_COLOR": "1;31",
+        "HOME_URL": "http://www.debian.org/",
+        "SUPPORT_URL": "http://www.debian.org/support/",
+        "BUG_REPORT_URL": "http://bugs.debian.org/",
+    }
     _os_release_map = {
         "_linux_distribution": ("debian", "7.11", ""),
     }
@@ -811,14 +828,25 @@ def test_debian_7_os_grains(os_release_dir):
         "osmajorrelease": 7,
         "osfinger": "Debian-7",
     }
-    _run_os_grains_tests(os_release_dir, "debian-7", _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_debian_8_os_grains(os_release_dir):
+def test_debian_8_os_grains():
     """
     Test if OS grains are parsed correctly in Debian 8 "jessie"
     """
+    # /etc/os-release data taken from base-files 8+deb8u10
+    _os_release_data = {
+        "PRETTY_NAME": "Debian GNU/Linux 8 (jessie)",
+        "NAME": "Debian GNU/Linux",
+        "VERSION_ID": "8",
+        "VERSION": "8 (jessie)",
+        "ID": "debian",
+        "HOME_URL": "http://www.debian.org/",
+        "SUPPORT_URL": "http://www.debian.org/support",
+        "BUG_REPORT_URL": "https://bugs.debian.org/",
+    }
     _os_release_map = {
         "_linux_distribution": ("debian", "8.10", ""),
     }
@@ -832,14 +860,25 @@ def test_debian_8_os_grains(os_release_dir):
         "osmajorrelease": 8,
         "osfinger": "Debian-8",
     }
-    _run_os_grains_tests(os_release_dir, "debian-8", _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_debian_9_os_grains(os_release_dir):
+def test_debian_9_os_grains():
     """
     Test if OS grains are parsed correctly in Debian 9 "stretch"
     """
+    # /etc/os-release data taken from base-files 9.9+deb9u3
+    _os_release_data = {
+        "PRETTY_NAME": "Debian GNU/Linux 9 (stretch)",
+        "NAME": "Debian GNU/Linux",
+        "VERSION_ID": "9",
+        "VERSION": "9 (stretch)",
+        "ID": "debian",
+        "HOME_URL": "https://www.debian.org/",
+        "SUPPORT_URL": "https://www.debian.org/support",
+        "BUG_REPORT_URL": "https://bugs.debian.org/",
+    }
     _os_release_map = {
         "_linux_distribution": ("debian", "9.3", ""),
     }
@@ -853,24 +892,24 @@ def test_debian_9_os_grains(os_release_dir):
         "osmajorrelease": 9,
         "osfinger": "Debian-9",
     }
-    _run_os_grains_tests(os_release_dir, "debian-9", _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_centos_8_os_grains(os_release_dir):
+def test_centos_8_os_grains():
     """
     Test if OS grains are parsed correctly in Centos 8
     """
+    _os_release_data = {
+        "NAME": "CentOS Linux",
+        "VERSION": "8 (Core)",
+        "VERSION_ID": "8",
+        "PRETTY_NAME": "CentOS Linux 8 (Core)",
+        "ID": "centos",
+        "ANSI_COLOR": "0;31",
+        "CPE_NAME": "cpe:/o:centos:centos:8",
+    }
     _os_release_map = {
-        "os_release_file": {
-            "NAME": "CentOS Linux",
-            "VERSION": "8 (Core)",
-            "VERSION_ID": "8",
-            "PRETTY_NAME": "CentOS Linux 8 (Core)",
-            "ID": "centos",
-            "ANSI_COLOR": "0;31",
-            "CPE_NAME": "cpe:/o:centos:centos:8",
-        },
         "_linux_distribution": ("centos", "8.1.1911", "Core"),
     }
 
@@ -884,23 +923,23 @@ def test_centos_8_os_grains(os_release_dir):
         "osmajorrelease": 8,
         "osfinger": "CentOS Linux-8",
     }
-    _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_alinux2_os_grains(os_release_dir):
+def test_alinux2_os_grains():
     """
     Test if OS grains are parsed correctly in Alibaba Cloud Linux
     """
+    _os_release_data = {
+        "NAME": "Alibaba Cloud Linux (Aliyun Linux)",
+        "VERSION": "2.1903 LTS (Hunting Beagle)",
+        "VERSION_ID": "2.1903",
+        "PRETTY_NAME": "Alibaba Cloud Linux (Aliyun Linux) 2.1903 LTS (Hunting Beagle)",
+        "ID": "alinux",
+        "ANSI_COLOR": "0;31",
+    }
     _os_release_map = {
-        "os_release_file": {
-            "NAME": "Alibaba Cloud Linux (Aliyun Linux)",
-            "VERSION": "2.1903 LTS (Hunting Beagle)",
-            "VERSION_ID": "2.1903",
-            "PRETTY_NAME": "Alibaba Cloud Linux (Aliyun Linux) 2.1903 LTS (Hunting Beagle)",
-            "ID": "alinux",
-            "ANSI_COLOR": "0;31",
-        },
         "_linux_distribution": ("alinux", "2.1903", "LTS"),
     }
 
@@ -914,24 +953,24 @@ def test_alinux2_os_grains(os_release_dir):
         "osmajorrelease": 2,
         "osfinger": "Alibaba Cloud Linux (Aliyun Linux)-2",
     }
-    _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_centos_stream_8_os_grains(os_release_dir):
+def test_centos_stream_8_os_grains():
     """
     Test if OS grains are parsed correctly in Centos 8
     """
+    _os_release_data = {
+        "NAME": "CentOS Stream",
+        "VERSION": "8",
+        "VERSION_ID": "8",
+        "PRETTY_NAME": "CentOS Stream 8",
+        "ID": "centos",
+        "ANSI_COLOR": "0;31",
+        "CPE_NAME": "cpe:/o:centos:centos:8",
+    }
     _os_release_map = {
-        "os_release_file": {
-            "NAME": "CentOS Stream",
-            "VERSION": "8",
-            "VERSION_ID": "8",
-            "PRETTY_NAME": "CentOS Stream 8",
-            "ID": "centos",
-            "ANSI_COLOR": "0;31",
-            "CPE_NAME": "cpe:/o:centos:centos:8",
-        },
         "_linux_distribution": ("centos", "8", ""),
     }
 
@@ -945,23 +984,23 @@ def test_centos_stream_8_os_grains(os_release_dir):
         "osmajorrelease": 8,
         "osfinger": "CentOS Stream-8",
     }
-    _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_rocky_8_os_grains(os_release_dir):
+def test_rocky_8_os_grains():
     """
     Test if OS grains are parsed correctly in Rocky 8
     """
+    _os_release_data = {
+        "NAME": "Rocky Linux",
+        "VERSION_ID": "8.4",
+        "PRETTY_NAME": "Rocky Linux 8.4 (Green Obsidian)",
+        "ID": "rocky",
+        "ANSI_COLOR": "0;32",
+        "CPE_NAME": "cpe:/o:rocky:rocky:8.4:GA",
+    }
     _os_release_map = {
-        "os_release_file": {
-            "NAME": "Rocky Linux",
-            "VERSION_ID": "8.4",
-            "PRETTY_NAME": "Rocky Linux 8.4 (Green Obsidian)",
-            "ID": "rocky",
-            "ANSI_COLOR": "0;32",
-            "CPE_NAME": "cpe:/o:rocky:rocky:8.4:GA",
-        },
         "_linux_distribution": ("rocky", "8.4", ""),
     }
 
@@ -975,11 +1014,11 @@ def test_rocky_8_os_grains(os_release_dir):
         "osmajorrelease": 8,
         "osfinger": "Rocky Linux-8",
     }
-    _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_osmc_os_grains(os_release_dir):
+def test_osmc_os_grains():
     """
     Test if OS grains are parsed correctly in OSMC
     """
@@ -997,11 +1036,11 @@ def test_osmc_os_grains(os_release_dir):
         "osmajorrelease": 2022,
         "osfinger": "OSMC-2022",
     }
-    _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
+    _run_os_grains_tests(None, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_mendel_os_grains(os_release_dir):
+def test_mendel_os_grains():
     """
     Test if OS grains are parsed correctly in Mendel Linux
     """
@@ -1019,23 +1058,23 @@ def test_mendel_os_grains(os_release_dir):
         "osmajorrelease": 10,
         "osfinger": "Mendel-10",
     }
-    _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
+    _run_os_grains_tests(None, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_almalinux_8_os_grains(os_release_dir):
+def test_almalinux_8_os_grains():
     """
     Test if OS grains are parsed correctly in AlmaLinux 8
     """
+    _os_release_data = {
+        "NAME": "AlmaLinux",
+        "VERSION_ID": "8.3",
+        "PRETTY_NAME": "AlmaLinux 8",
+        "ID": "almalinux",
+        "ANSI_COLOR": "0;31",
+        "CPE_NAME": "cpe:/o:almalinux:almalinux:8.3",
+    }
     _os_release_map = {
-        "os_release_file": {
-            "NAME": "AlmaLinux",
-            "VERSION_ID": "8.3",
-            "PRETTY_NAME": "AlmaLinux 8",
-            "ID": "almalinux",
-            "ANSI_COLOR": "0;31",
-            "CPE_NAME": "cpe:/o:almalinux:almalinux:8.3",
-        },
         "_linux_distribution": ("almaLinux", "8.3", ""),
     }
 
@@ -1049,7 +1088,7 @@ def test_almalinux_8_os_grains(os_release_dir):
         "osmajorrelease": 8,
         "osfinger": "AlmaLinux-8",
     }
-    _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
 
 def test_unicode_error():
@@ -1062,10 +1101,25 @@ def test_unicode_error():
 
 
 @pytest.mark.skip_unless_on_linux
-def test_ubuntu_xenial_os_grains(os_release_dir):
+def test_ubuntu_xenial_os_grains():
     """
     Test if OS grains are parsed correctly in Ubuntu 16.04 "Xenial Xerus"
     """
+    # /etc/os-release data taken from base-files 9.4ubuntu4.5
+    _os_release_data = {
+        "NAME": "Ubuntu",
+        "VERSION": "16.04.3 LTS (Xenial Xerus)",
+        "ID": "ubuntu",
+        "ID_LIKE": "debian",
+        "PRETTY_NAME": "Ubuntu 16.04.3 LTS",
+        "VERSION_ID": "16.04",
+        "HOME_URL": "http://www.ubuntu.com/",
+        "SUPPORT_URL": "http://help.ubuntu.com/",
+        "BUG_REPORT_URL": "http://bugs.launchpad.net/ubuntu/",
+        "VERSION_CODENAME": "xenial",
+        "UBUNTU_CODENAME": "xenial",
+    }
+
     _os_release_map = {
         "_linux_distribution": ("Ubuntu", "16.04", "xenial"),
     }
@@ -1079,14 +1133,29 @@ def test_ubuntu_xenial_os_grains(os_release_dir):
         "osmajorrelease": 16,
         "osfinger": "Ubuntu-16.04",
     }
-    _run_os_grains_tests(os_release_dir, "ubuntu-16.04", _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_ubuntu_artful_os_grains(os_release_dir):
+def test_ubuntu_artful_os_grains():
     """
     Test if OS grains are parsed correctly in Ubuntu 17.10 "Artful Aardvark"
     """
+    # /etc/os-release data taken from base-files 9.6ubuntu102
+    _os_release_data = {
+        "NAME": "Ubuntu",
+        "VERSION": "17.10 (Artful Aardvark)",
+        "ID": "ubuntu",
+        "ID_LIKE": "debian",
+        "PRETTY_NAME": "Ubuntu 17.10",
+        "VERSION_ID": "17.10",
+        "HOME_URL": "https://www.ubuntu.com/",
+        "SUPPORT_URL": "https://help.ubuntu.com/",
+        "BUG_REPORT_URL": "https://bugs.launchpad.net/ubuntu/",
+        "PRIVACY_POLICY_URL": "https://www.ubuntu.com/legal/terms-and-policies/privacy-policy",
+        "VERSION_CODENAME": "artful",
+        "UBUNTU_CODENAME": "artful",
+    }
     _os_release_map = {
         "_linux_distribution": ("Ubuntu", "17.10", "artful"),
     }
@@ -1100,11 +1169,11 @@ def test_ubuntu_artful_os_grains(os_release_dir):
         "osmajorrelease": 17,
         "osfinger": "Ubuntu-17.10",
     }
-    _run_os_grains_tests(os_release_dir, "ubuntu-17.10", _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_pop_focal_os_grains(os_release_dir):
+def test_pop_focal_os_grains():
     """
     Test if OS grains are parsed correctly in Pop!_OS 20.04 "Focal Fossa"
     """
@@ -1121,11 +1190,11 @@ def test_pop_focal_os_grains(os_release_dir):
         "osmajorrelease": 20,
         "osfinger": "Pop-20",
     }
-    _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
+    _run_os_grains_tests(None, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_pop_groovy_os_grains(os_release_dir):
+def test_pop_groovy_os_grains():
     """
     Test if OS grains are parsed correctly in Pop!_OS 20.10 "Groovy Gorilla"
     """
@@ -1142,11 +1211,11 @@ def test_pop_groovy_os_grains(os_release_dir):
         "osmajorrelease": 20,
         "osfinger": "Pop-20",
     }
-    _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
+    _run_os_grains_tests(None, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_astralinuxce_os_grains(os_release_dir):
+def test_astralinuxce_os_grains():
     """
     Test that OS grains are parsed correctly for Astra Linux Orel
     """
@@ -1163,11 +1232,11 @@ def test_astralinuxce_os_grains(os_release_dir):
         "osmajorrelease": 2,
         "osfinger": "AstraLinuxCE-2",
     }
-    _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
+    _run_os_grains_tests(None, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_astralinuxse_os_grains(os_release_dir):
+def test_astralinuxse_os_grains():
     """
     Test that OS grains are parsed correctly for Astra Linux Smolensk
     """
@@ -1184,7 +1253,7 @@ def test_astralinuxse_os_grains(os_release_dir):
         "osmajorrelease": 1,
         "osfinger": "AstraLinuxSE-1",
     }
-    _run_os_grains_tests(os_release_dir, None, _os_release_map, expectation)
+    _run_os_grains_tests(None, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_windows
@@ -3150,7 +3219,7 @@ def test_linux_proc_files_with_non_utf8_chars():
         ), patch.object(
             core, "_parse_lsb_release", return_value=empty_mock
         ), patch.object(
-            core, "_parse_os_release", return_value=empty_mock
+            core, "_freedesktop_os_release", return_value=empty_mock
         ), patch.object(
             core, "_hw_data", return_value=empty_mock
         ), patch.object(
