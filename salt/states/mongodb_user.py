@@ -21,10 +21,11 @@ def present(
     database="admin",
     user=None,
     password=None,
-    host="localhost",
-    port=27017,
+    host=None,
+    port=None,
     authdb=None,
     roles=None,
+    ssl=False,
 ):
     """
     Ensure that the user is present with the specified properties
@@ -59,6 +60,9 @@ def present(
     roles
         The roles assigned to user specified with the ``name`` parameter
 
+    ssl
+        Whether or not to use SSL to connect to mongodb. Default False.
+
     Example:
 
     .. code-block:: yaml
@@ -90,15 +94,22 @@ def present(
 
     # Check for valid port
     try:
-        port = int(port)
+        port = int(port or __salt__["config.option"]("mongodb.port"))
     except TypeError:
         ret["result"] = False
-        ret["comment"] = "Port ({}) is not an integer.".format(port)
+        ret["comment"] = "Port ({!r}) is not an integer.".format(port)
         return ret
 
     # check if user exists
     users = __salt__["mongodb.user_find"](
-        name, user, password, host, port, database, authdb
+        name,
+        user,
+        password,
+        host,
+        port,
+        database,
+        authdb,
+        ssl=ssl,
     )
     if len(users) > 0:
         # check for errors returned in users e.g.
@@ -140,6 +151,7 @@ def present(
                 database=database,
                 authdb=authdb,
                 roles=roles,
+                ssl=ssl,
             )
         return ret
 
@@ -165,6 +177,7 @@ def present(
         database=database,
         authdb=authdb,
         roles=roles,
+        ssl=ssl,
     ):
         ret["comment"] = "User {} has been created".format(name)
         ret["changes"][name] = "Present"
@@ -176,7 +189,14 @@ def present(
 
 
 def absent(
-    name, user=None, password=None, host=None, port=None, database="admin", authdb=None
+    name,
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    database="admin",
+    authdb=None,
+    ssl=False,
 ):
     """
     Ensure that the named user is absent
@@ -202,12 +222,15 @@ def absent(
 
     authdb
         The database in which to authenticate
+
+    ssl
+        Whether or not to use SSL to connect to mongodb. Default False.
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     # check if user exists and remove it
     user_exists = __salt__["mongodb.user_exists"](
-        name, user, password, host, port, database=database, authdb=authdb
+        name, user, password, host, port, database=database, authdb=authdb, ssl=ssl
     )
     if user_exists is True:
         if __opts__["test"]:
@@ -215,7 +238,14 @@ def absent(
             ret["comment"] = "User {} is present and needs to be removed".format(name)
             return ret
         if __salt__["mongodb.user_remove"](
-            name, user, password, host, port, database=database, authdb=authdb
+            name,
+            user,
+            password,
+            host,
+            port,
+            database=database,
+            authdb=authdb,
+            ssl=ssl,
         ):
             ret["comment"] = "User {} has been removed".format(name)
             ret["changes"][name] = "Absent"

@@ -4,13 +4,35 @@
 
 import pytest
 
+import salt.modules.mongodb
 import salt.states.mongodb_user as mongodb_user
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, call, patch
 
 
 @pytest.fixture
 def configure_loader_modules():
-    return {mongodb_user: {"__opts__": {"test": True}}}
+    salt.modules.mongodb.pymongo = MagicMock()
+    salt.modules.mongodb.pymongo.errors.PyMongoError = Exception
+    salt.modules.mongodb.HAS_MONGODB = True
+    fake_config = {
+        "mongodb.host": "example.com",
+        "mongodb.port": 42,
+    }
+    fake_salt = {
+        "mongodb.user_exists": salt.modules.mongodb.user_exists,
+        "mongodb.user_find": salt.modules.mongodb.user_find,
+        "mongodb.user_create": salt.modules.mongodb.user_create,
+        "mongodb.user_remove": salt.modules.mongodb.user_remove,
+        "config.option": fake_config.get,
+    }
+    with patch("salt.modules.mongodb._version", autospec=True, return_value=4):
+        yield {
+            mongodb_user: {
+                "__opts__": {"test": True},
+                "__salt__": fake_salt,
+            },
+            salt.modules.mongodb: {"__salt__": fake_salt},
+        }
 
 
 def test_present():
@@ -20,11 +42,10 @@ def test_present():
     name = "myapp"
     passwd = "password-of-myapp"
 
-    ret = {"name": name, "result": False, "comment": "", "changes": {}}
+    comt = "Port ({1, 2, 3}) is not an integer."
+    ret = {"name": name, "result": False, "comment": comt, "changes": {}}
 
-    comt = "Port ({}) is not an integer."
-    ret.update({"comment": comt})
-    assert mongodb_user.present(name, passwd, port={}) == ret
+    assert mongodb_user.present(name, passwd, port={1, 2, 3}) == ret
 
     mock_t = MagicMock(return_value=True)
     mock_f = MagicMock(return_value=[])
@@ -74,3 +95,68 @@ def test_absent():
         comt = "User {} is not present".format(name)
         ret.update({"comment": comt, "result": True, "changes": {}})
         assert mongodb_user.absent(name) == ret
+
+
+@pytest.mark.parametrize(
+    "expected_ssl, absent_kwargs",
+    [
+        (True, {"name": "mr_fnord", "ssl": True}),
+        (False, {"name": "mr_fnord", "ssl": False}),
+        (False, {"name": "mr_fnord", "ssl": None}),
+        (False, {"name": "mr_fnord"}),
+    ],
+)
+def test_when_absent_is_called_it_should_pass_the_correct_ssl_argument_to_MongoClient(
+    expected_ssl, absent_kwargs
+):
+    with patch.dict(mongodb_user.__opts__, {"test": False}), patch(
+        "salt.modules.mongodb._LooseVersion", autospec=True, return_value=4
+    ):
+        salt.modules.mongodb.pymongo.database.Database.return_value.command.return_value = {
+            "users": [
+                {
+                    "user": absent_kwargs["name"],
+                    "roles": [{"db": "kaiser"}, {"db": "dinner"}],
+                }
+            ]
+        }
+        mongodb_user.absent(**absent_kwargs)
+        salt.modules.mongodb.pymongo.MongoClient.assert_has_calls(
+            [
+                call(host="example.com", port=42, ssl=expected_ssl),
+                call().__bool__(),
+                call(host="example.com", port=42, ssl=expected_ssl),
+                call().__bool__(),
+            ]
+        )
+
+
+@pytest.mark.parametrize(
+    "expected_ssl, present_kwargs",
+    [
+        (True, {"name": "mr_fnord", "ssl": True}),
+        (False, {"name": "mr_fnord", "ssl": False}),
+        (False, {"name": "mr_fnord", "ssl": None}),
+        (False, {"name": "mr_fnord"}),
+    ],
+)
+@pytest.mark.parametrize(
+    "users",
+    [[], [{"roles": [{"db": "kaiser"}, {"db": "fnord"}]}]],
+)
+def test_when_present_is_called_it_should_pass_the_correct_ssl_argument_to_MongoClient(
+    expected_ssl, present_kwargs, users
+):
+    with patch.dict(mongodb_user.__opts__, {"test": False}):
+        salt.modules.mongodb.pymongo.database.Database.return_value.command.return_value = {
+            "users": users
+        }
+        mongodb_user.present(passwd="fnord", **present_kwargs)
+        salt.modules.mongodb.pymongo.MongoClient.assert_has_calls(
+            [
+                call(host="example.com", port=42, ssl=expected_ssl),
+                call().__bool__(),
+                call(host="example.com", port=42, ssl=expected_ssl),
+                call().__bool__(),
+            ]
+        )

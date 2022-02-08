@@ -18,6 +18,7 @@ def __virtual__():
     return (False, "mongodb module could not be loaded")
 
 
+# TODO: Add SSL arg + docs -W. Werner, 2022-02-08
 def absent(name, user=None, password=None, host=None, port=None, authdb=None):
     """
     Ensure that the named database is absent. Note that creation doesn't make
