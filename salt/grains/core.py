@@ -1828,10 +1828,18 @@ def _parse_os_release(*os_release_files):
     """
     Parse os-release and return a parameter dictionary
 
+    This function will behave identical to
+    platform.freedesktop_os_release() from Python >= 3.10, if
+    called with ("/etc/os-release", "/usr/lib/os-release").
+
     See http://www.freedesktop.org/software/systemd/man/os-release.html
     for specification of the file format.
     """
-    ret = {}
+    # These fields are mandatory fields with well-known defaults
+    # in practice all Linux distributions override NAME, ID, and PRETTY_NAME.
+    ret = {"NAME": "Linux", "ID": "linux", "PRETTY_NAME": "Linux"}
+
+    errno = None
     for filename in os_release_files:
         try:
             with salt.utils.files.fopen(filename) as ifile:
@@ -1845,8 +1853,12 @@ def _parse_os_release(*os_release_files):
                             r'\\([$"\'\\`])', r"\1", match.group(2)
                         )
             break
-        except OSError:
-            pass
+        except OSError as error:
+            errno = error.errno
+    else:
+        raise OSError(
+            errno, "Unable to read files {}".format(", ".join(os_release_files))
+        )
 
     return ret
 
@@ -2021,7 +2033,10 @@ def _linux_distribution_data():
             grains["osfullname"] = "Antergos Linux"
         elif "lsb_distrib_id" not in grains:
             log.trace("Failed to get lsb_distrib_id, trying to parse os-release")
-            os_release = _parse_os_release("/etc/os-release", "/usr/lib/os-release")
+            try:
+                os_release = _parse_os_release("/etc/os-release", "/usr/lib/os-release")
+            except OSError:
+                os_release = {}
             if os_release:
                 if "NAME" in os_release:
                     grains["lsb_distrib_id"] = os_release["NAME"].strip()
