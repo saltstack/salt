@@ -12,7 +12,19 @@ Statistics
 - Total Issue References: **138**
 - Total PR References: **351**
 
-- Contributors: **83** (`DmitryKuzmenko`_, `JaseFace`_, `LoveIsGrief`_, `MasterNayru`_, `Oro`_, `SmithSamuelM`_, `The-Loeki`_, `TheBigBear`_, `aboe76`_, `ajacoutot`_, `anlutro`_, `avinassh`_, `basepi`_, `bdrung`_, `bechtoldt`_, `bernieke`_, `blueyed`_, `cachedout`_, `cbuechler`_, `cedwards`_, `clarkperkins`_, `cro`_, `dkiser`_, `douglas-vaz`_, `dr4Ke`_, `eguven`_, `eliasp`_, `erchn`_, `eyj`_, `favadi`_, `flavio`_, `garethgreenaway`_, `gravyboat`_, `gtmanfred`_, `hedinfaok`_, `hexedpackets`_, `hyn-salt`_, `isbm`_, `itsamenathan`_, `jacksontj`_, `jacobhammons`_, `jeffreyctang`_, `jejenone`_, `jfindlay`_, `johnsocp`_, `justinta`_, `keesbos`_, `lathama`_, `ldobson`_, `lomeroe`_, `martinhoefling`_, `mbarrien`_, `mbologna`_, `merll`_, `mrosedale`_, `msteed`_, `multani`_, `nasenbaer13`_, `nmadhok`_, `notpeter`_, `opdude`_, `papertigers`_, `pass-by-value`_, `plastikos`_, `quantonganh`_, `rallytime`_, `redmcg`_, `rowillia`_, `ruzarowski`_, `ryan-lane`_, `s0undt3ch`_, `sdm24`_, `sjansen`_, `skizunov`_, `srkunze`_, `techhat`_, `terminalmage`_, `ticosax`_, `tkwilliams`_, `toddtomkinson`_, `twangboy`_, `twellspring`_, `whiteinge`_)
+- Contributors: **83** (`DmitryKuzmenko`_, `JaseFace`_, `LoveIsGrief`_, `MasterNayru`_, `Oro`_,
+  `SmithSamuelM`_, `The-Loeki`_, `TheBigBear`_, `aboe76`_, `ajacoutot`_, `anlutro`_, `avinassh`_,
+  `basepi`_, `bdrung`_, `bechtoldt`_, `bernieke`_, `blueyed`_, `cachedout`_, `cbuechler`_,
+  `cedwards`_, `clarkperkins`_, `cro`_, `dkiser`_, `douglas-vaz`_, `dr4Ke`_, `eguven`_, `eliasp`_,
+  `erchn`_, `eyj`_, `favadi`_, `flavio`_, `garethgreenaway`_, `gravyboat`_, `gtmanfred`_,
+  `hedinfaok`_, `hexedpackets`_, `hyn-salt`_, `isbm`_, `itsamenathan`_, `jacksontj`_,
+  `jacobhammons`_, `jeffreyctang`_, `jejenone`_, `jfindlay`_, `johnsocp`_, `justinta`_, `keesbos`_,
+  `lathama`_, `ldobson`_, `lomeroe`_, `martinhoefling`_, `mbarrien`_, `mbologna`_, `merll`_,
+  `mrosedale`_, `msteed`_, `multani`_, `nasenbaer13`_, `nmadhok`_, `notpeter`_, `opdude`_,
+  `papertigers`_, `pass-by-value`_, `plastikos`_, `quantonganh`_, `rallytime`_, `redmcg`_,
+  `rowillia`_, `ruzarowski`_, `ryan-lane`_, `s0undt3ch`_, `sdm24`_, `sjansen`_, `skizunov`_,
+  `srkunze`_, `techhat`_, `terminalmage`_, `ticosax`_, `tkwilliams`_, `toddtomkinson`_,
+  `twangboy`_, `twellspring`_, `whiteinge`_)
 
 
 .. important::

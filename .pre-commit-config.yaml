@@ -4,7 +4,7 @@ default_language_version:
 exclude: ^(doc/_static/.*|doc/_themes/.*)$
 repos:
   - repo: https://github.com/saltstack/pip-tools-compile-impersonate
-    rev: "4.3"
+    rev: "4.4"
     hooks:
 
   # ----- Packaging Requirements ------------------------------------------------------------------------------------>
@@ -1197,9 +1197,7 @@ repos:
 
   # ----- Code Formatting ------------------------------------------------------------------------------------------->
   - repo: https://github.com/asottile/pyupgrade
-    # This, for now, is meant to run when locally committing code and will be disabled(skipped) when we run pre-commit
-    # against all codebase to avoid MASSIVE code churn. This way, we do it in smaller chunks, a few at a time.
-    rev: v2.7.2
+    rev: v2.31.0
     hooks:
       - id: pyupgrade
         name: Drop six usage and Py2 support
@@ -1207,7 +1205,7 @@ repos:
         exclude: >
           (?x)^(
             salt/client/ssh/ssh_py_shim.py|
-            salt/ext/ipaddress.py
+            salt/ext/.*\.py
           )$
 
   - repo: https://github.com/saltstack/pre-commit-remove-import-headers

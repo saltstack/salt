@@ -14,7 +14,10 @@ Statistics
 - Total Issue References: **21**
 - Total PR References: **48**
 
-- Contributors: **21** (`abednarik`_, `aletourneau`_, `attiasr`_, `basepi`_, `cachedout`_, `clan`_, `clarkperkins`_, `cro`_, `dmyerscough`_, `jacobhammons`_, `jfindlay`_, `jsutton`_, `justinta`_, `lorengordon`_, `markckimball`_, `mpreziuso`_, `rallytime`_, `terminalmage`_, `titilambert`_, `twangboy`_, `zmalone`_)
+- Contributors: **21** (`abednarik`_, `aletourneau`_, `attiasr`_, `basepi`_, `cachedout`_, `clan`_,
+  `clarkperkins`_, `cro`_, `dmyerscough`_, `jacobhammons`_, `jfindlay`_, `jsutton`_, `justinta`_,
+  `lorengordon`_, `markckimball`_, `mpreziuso`_, `rallytime`_, `terminalmage`_, `titilambert`_,
+  `twangboy`_, `zmalone`_)
 
 
 Changelog for v2015.5.8..v2015.5.9

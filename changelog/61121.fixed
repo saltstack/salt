@@ -1,0 +1,1 @@
+fixed extend being too strict and wanting the system_type to exist when it is only needed for requisites.
