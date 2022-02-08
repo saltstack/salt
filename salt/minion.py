@@ -1613,6 +1613,7 @@ class Minion(MinionBase):
         with salt.utils.event.get_event(
             "minion", opts=self.opts, listen=False
         ) as event:
+            log.error("Send return over eventbus %r", load)
             return event.fire_event(
                 load, "__master_req_channel_payload", timeout=timeout
             )
@@ -2046,7 +2047,7 @@ class Minion(MinionBase):
                 log.warning("The metadata parameter must be a dictionary. Ignoring.")
         if minion_instance.connected:
             minion_instance._return_pub(
-                ret, timeout=minion_instance._return_retry_timer()
+                ret
             )
 
         # Add default returners from minion config
@@ -2162,7 +2163,7 @@ class Minion(MinionBase):
             ret["metadata"] = data["metadata"]
         if minion_instance.connected:
             minion_instance._return_pub(
-                ret, timeout=minion_instance._return_retry_timer()
+                ret
             )
         if data["ret"]:
             if "ret_config" in data:
@@ -2697,7 +2698,7 @@ class Minion(MinionBase):
         elif tag.startswith("__master_req_channel_payload"):
             yield self.req_channel.send(
                 data,
-                timeout=60,  # this is the hard-coded timeout used throughout this file
+                timeout=self._return_retry_timer(),
                 tries=self.opts["return_retry_tries"],
             )
         elif tag.startswith("pillar_refresh"):
