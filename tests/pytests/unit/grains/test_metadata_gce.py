@@ -18,35 +18,33 @@ from tests.support.mock import create_autospec, patch
 log = logging.getLogger(__name__)
 
 
-metadata_vals = {
-    "http://169.254.169.254/computeMetadata/v1/": {
-        "body": "instance/\nproject/",
-        "headers": {"Content-Type": "text/plain", "Metadata-Flavor": "Google"},
-    },
-    "http://169.254.169.254/computeMetadata/v1/instance/": {
-        "body": "test",
-        "headers": {"Content-Type": "text/plain", "Metadata-Flavor": "Google"},
-    },
-    "http://169.254.169.254/computeMetadata/v1/instance/test": {
-        "body": "fulltest",
-        "headers": {
-            "Content-Type": "application/octet-stream",
-            "Metadata-Flavor": "Google",
-        },
-    },
-}
-
-
 @pytest.fixture
 def configure_loader_modules():
     return {metadata: {"__opts__": {"metadata_server_grains": "True"}}}
 
 
-def mock_http(url="", headers=False, header_list=None):
-    return metadata_vals[url]
-
-
 def test_metadata_gce_search():
+    def mock_http(url="", headers=False, header_list=None):
+        metadata_vals = {
+            "http://169.254.169.254/computeMetadata/v1/": {
+                "body": "instance/\nproject/",
+                "headers": {"Content-Type": "text/plain", "Metadata-Flavor": "Google"},
+            },
+            "http://169.254.169.254/computeMetadata/v1/instance/": {
+                "body": "test",
+                "headers": {"Content-Type": "text/plain", "Metadata-Flavor": "Google"},
+            },
+            "http://169.254.169.254/computeMetadata/v1/instance/test": {
+                "body": "fulltest",
+                "headers": {
+                    "Content-Type": "application/octet-stream",
+                    "Metadata-Flavor": "Google",
+                },
+            },
+        }
+
+        return metadata_vals[url]
+
     with patch(
         "salt.utils.http.query",
         create_autospec(http.query, autospec=True, side_effect=mock_http),
