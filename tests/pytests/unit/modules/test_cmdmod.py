@@ -710,13 +710,11 @@ def test_log_cmd_non_str_tuple_list():
     assert cmdmod._log_cmd(cmd("foo bar")) == "foo"
 
 
+@pytest.mark.skip_on_windows
 def test_cmd_script_saltenv_from_config():
     mock_cp_get_template = MagicMock()
     mock_cp_cache_file = MagicMock()
     mock_run = MagicMock()
-    mock_shutil = MagicMock()
-    mock_os_chmod = MagicMock()
-    mock_os_chown = MagicMock()
     with patch.dict(cmdmod.__opts__, {"saltenv": "base"}):
         with patch.dict(
             cmdmod.__salt__,
@@ -744,3 +742,35 @@ def test_cmd_script_saltenv_from_config():
                                 assert mock_cp_get_template.call_args[0][3] == "base"
                                 assert mock_run.call_count == 2
                                 assert mock_run.call_args[1]["saltenv"] == "base"
+
+
+@pytest.mark.skip_unless_on_windows
+def test_cmd_script_saltenv_from_config_windows():
+    mock_cp_get_template = MagicMock()
+    mock_cp_cache_file = MagicMock()
+    mock_run = MagicMock()
+    with patch.dict(cmdmod.__opts__, {"saltenv": "base"}):
+        with patch.dict(
+            cmdmod.__salt__,
+            {
+                "cp.cache_file": mock_cp_cache_file,
+                "cp.get_template": mock_cp_get_template,
+                "file.user_to_uid": MagicMock(),
+                "file.remove": MagicMock(),
+            },
+        ):
+            with patch("salt.modules.cmdmod._run") as mock_run:
+                with patch(
+                    "salt.utils.platform.is_windows", MagicMock(return_value=False)
+                ):
+                    with patch("shutil.copyfile", MagicMock()):
+                        cmdmod.script("test")
+                        assert mock_cp_cache_file.call_count == 1
+                        mock_cp_cache_file.assert_called_with("test", "base")
+                        assert mock_run.call_count == 1
+                        assert mock_run.call_args[1]["saltenv"] == "base"
+                        cmdmod.script("test", template="jinja")
+                        assert mock_cp_get_template.call_count == 1
+                        assert mock_cp_get_template.call_args[0][3] == "base"
+                        assert mock_run.call_count == 2
+                        assert mock_run.call_args[1]["saltenv"] == "base"
