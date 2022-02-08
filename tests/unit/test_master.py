@@ -129,6 +129,7 @@ class TransportMethodsTest(TestCase):
             "_send_ssh_pub",
             "get_method",
             "destroy",
+            "connect",
         ]
         for name in dir(clear_funcs):
             if name in clear_funcs.expose_methods:

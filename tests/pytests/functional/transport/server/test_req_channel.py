@@ -2,12 +2,12 @@ import logging
 import multiprocessing
 
 import pytest
+import salt.channel.client
+import salt.channel.server
 import salt.config
 import salt.exceptions
 import salt.ext.tornado.gen
 import salt.log.setup
-import salt.transport.client
-import salt.transport.server
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
@@ -25,7 +25,7 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self.process_manager = salt.utils.process.ProcessManager(
             name="ReqServer-ProcessManager"
         )
-        self.req_server_channel = salt.transport.server.ReqServerChannel.factory(
+        self.req_server_channel = salt.channel.server.ReqServerChannel.factory(
             self.config
         )
         self.req_server_channel.pre_fork(self.process_manager)
@@ -101,7 +101,7 @@ def req_channel_crypt(request):
 
 @pytest.fixture
 def req_channel(req_server_channel, salt_minion, req_channel_crypt):
-    with salt.transport.client.ReqChannel.factory(
+    with salt.channel.client.ReqChannel.factory(
         salt_minion.config, crypt=req_channel_crypt
     ) as _req_channel:
         try:

@@ -47,7 +47,7 @@ jobs:
     - name: Check ALL Files On Branch
       if: github.event_name != 'pull_request'
       env:
-        SKIP: lint-salt,lint-tests,pyupgrade,remove-import-headers,rstcheck
+        SKIP: lint-salt,lint-tests,remove-import-headers,rstcheck
       run: |
         pre-commit run --show-diff-on-failure --color=always --all-files
 
