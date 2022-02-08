@@ -255,6 +255,8 @@ VALID_OPTS = immutabletypes.freeze(
         "decrypt_pillar_default": str,
         # List of renderers available for decrypt_pillar
         "decrypt_pillar_renderers": list,
+        # Treat GPG decryption errors as renderer errors
+        "gpg_decrypt_must_succeed": bool,
         # The type of hashing algorithm to use when doing file comparisons
         "hash_type": str,
         # Order of preference for optimized .pyc files (PY3 only)
@@ -374,6 +376,9 @@ VALID_OPTS = immutabletypes.freeze(
         "state_output_profile": bool,
         # Tells the highstate outputter whether success and failure percents will be shown for each state run
         "state_output_pct": bool,
+        # Tells the highstate outputter to aggregate information about states which
+        # have multiple "names" under the same state ID in the highstate output.
+        "state_compress_ids": bool,
         # When true, states run in the order defined in an SLS file, unless requisites re-order them
         "state_auto_order": bool,
         # Fire events as state chunks are processed by the state compiler
@@ -1057,6 +1062,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "decrypt_pillar_delimiter": ":",
         "decrypt_pillar_default": "gpg",
         "decrypt_pillar_renderers": ["gpg"],
+        "gpg_decrypt_must_succeed": False,
         # Update intervals
         "roots_update_interval": DEFAULT_INTERVAL,
         "azurefs_update_interval": DEFAULT_INTERVAL,
@@ -1294,6 +1300,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "decrypt_pillar_delimiter": ":",
         "decrypt_pillar_default": "gpg",
         "decrypt_pillar_renderers": ["gpg"],
+        "gpg_decrypt_must_succeed": False,
         "thoriumenv": None,
         "thorium_top": "top.sls",
         "thorium_interval": 0.5,

@@ -677,9 +677,14 @@ def _parse_interfaces(interface_files=None):
                         adapters["source"]["data"]["sources"] = []
                     adapters["source"]["data"]["sources"].append(line.split()[1])
 
+    adapters = _filter_malformed_interfaces(adapters=adapters)
+    return adapters
+
+
+def _filter_malformed_interfaces(*, adapters):
     # Return a sorted list of the keys for bond, bridge and ethtool options to
     # ensure a consistent order
-    for iface_name in adapters:
+    for iface_name in list(adapters):
         if iface_name == "source":
             continue
         if "data" not in adapters[iface_name]:
@@ -695,7 +700,6 @@ def _parse_interfaces(interface_files=None):
                             adapters[iface_name]["data"][inet][opt].keys()
                         )
                         adapters[iface_name]["data"][inet][opt + "_keys"] = opt_keys
-
     return adapters
 
 
