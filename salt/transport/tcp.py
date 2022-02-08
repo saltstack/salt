@@ -744,6 +744,10 @@ class TCPReqServerChannel(
                 )
                 raise salt.ext.tornado.gen.Return()
 
+            nonce = None
+            if version > 1:
+                nonce = payload["load"].pop("nonce", None)
+
             # TODO: test
             try:
                 ret, req_opts = yield self.payload_handler(payload)
@@ -760,20 +764,12 @@ class TCPReqServerChannel(
             if req_fun == "send_clear":
                 stream.write(salt.transport.frame.frame_msg(ret, header=header))
             elif req_fun == "send":
-                nonce = None
-                if version > 1:
-                    nonce = payload["load"].pop("nonce")
                 stream.write(
                     salt.transport.frame.frame_msg(
                         self.crypticle.dumps(ret, nonce), header=header
                     )
                 )
             elif req_fun == "send_private":
-                sign_messages = False
-                nonce = None
-                if version > 1:
-                    sign_messages = True
-                    nonce = payload["load"].get("nonce")
                 stream.write(
                     salt.transport.frame.frame_msg(
                         self._encrypt_private(

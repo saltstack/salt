@@ -801,11 +801,6 @@ class ZeroMQReqServerChannel(
         elif req_fun == "send":
             stream.send(salt.payload.dumps(self.crypticle.dumps(ret, nonce)))
         elif req_fun == "send_private":
-            sign_messages = False
-            nonce = None
-            if version > 1:
-                sign_messages = True
-                nonce = payload["load"]["nonce"]
             stream.send(
                 salt.payload.dumps(
                     self._encrypt_private(
