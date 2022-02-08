@@ -2426,11 +2426,8 @@ def os_data():
         grains["osrelease"] = osrelease
         grains["osrelease_techlevel"] = osrelease_techlevel
         grains.update(_aix_cpudata())
-    else:
-        grains["os"] = grains["kernel"]
-
-    if grains["kernel"] == "FreeBSD":
-        grains["osfullname"] = grains["os"]
+    elif grains["kernel"] == "FreeBSD":
+        grains["osfullname"] = grains["os"] = grains["kernel"]
         try:
             grains["osrelease"] = __salt__["cmd.run"]("freebsd-version -u").split("-")[
                 0
@@ -2440,11 +2437,14 @@ def os_data():
             # derive osrelease from kernelversion prior to that
             grains["osrelease"] = grains["kernelrelease"].split("-")[0]
         grains.update(_bsd_cpudata(grains))
-    if grains["kernel"] in ("OpenBSD", "NetBSD"):
+    elif grains["kernel"] in ("OpenBSD", "NetBSD"):
+        grains["os"] = grains["kernel"]
         grains.update(_bsd_cpudata(grains))
         grains["osrelease"] = grains["kernelrelease"].split("-")[0]
         if grains["kernel"] == "NetBSD":
             grains.update(_netbsd_gpu_data())
+    else:
+        grains["os"] = grains["kernel"]
 
     if not grains["os"]:
         grains["os"] = "Unknown {}".format(grains["kernel"])
