@@ -641,7 +641,6 @@ class MessageClient:
                     self.backoff,
                 )
                 yield salt.ext.tornado.gen.sleep(self.backoff)
-                # self._connecting_future.set_exception(exc)
         raise salt.ext.tornado.gen.Return(stream)
 
     @salt.ext.tornado.gen.coroutine
@@ -691,18 +690,15 @@ class MessageClient:
                 for future in self.send_future_map.values():
                     future.set_exception(e)
                 self.send_future_map = {}
-                if self._closing:
+                if self._closing or self._closed:
                     return
                 if self.disconnect_callback:
                     self.disconnect_callback()
-                # if the last connect finished, then we need to make a new one
-                # if self._connecting_future.done():
                 stream = self._stream
                 self._stream = None
-                stream.close()
+                if stream:
+                    stream.close()
                 yield self.connect()
-                # self._connecting_future = self.connect()
-                # yield self._connecting_future
             except TypeError:
                 # This is an invalid transport
                 if "detect_mode" in self.opts:
@@ -713,22 +709,19 @@ class MessageClient:
                 else:
                     raise SaltClientError
             except Exception as e:  # pylint: disable=broad-except
-                log.error("Exception parsing response", exc_info=True)
+                log.debug("Exception parsing response", exc_info=True)
                 for future in self.send_future_map.values():
                     future.set_exception(e)
                 self.send_future_map = {}
-                if self._closing:
+                if self._closing or self._closed:
                     return
                 if self.disconnect_callback:
                     self.disconnect_callback()
                 stream = self._stream
                 self._stream = None
-                stream.close()
+                if stream:
+                    stream.close()
                 yield self.connect()
-                # if the last connect finished, then we need to make a new one
-                # if self._connecting_future.done():
-                #    self._connecting_future = self.connect()
-                # yield self._connecting_future
         self._stream_return_running = False
 
     def _message_id(self):
@@ -769,20 +762,17 @@ class MessageClient:
         if message_id not in self.send_future_map:
             return
         future = self.send_future_map.pop(message_id)
-        future.set_exception(SaltReqTimeoutError("Message timed out"))
+        if future is not None:
+            future.set_exception(SaltReqTimeoutError("Message timed out"))
 
     @salt.ext.tornado.gen.coroutine
-    def send(self, msg, timeout=None, callback=None, raw=False, future=None, tries=3):
+    def send(self, msg, timeout=None, callback=None, raw=False):
         if self._closing:
             raise ClosingError()
         message_id = self._message_id()
         header = {"mid": message_id}
 
-        if future is None:
-            future = salt.ext.tornado.concurrent.Future()
-            future.tries = tries
-            future.attempts = 0
-            future.timeout = timeout
+        future = salt.ext.tornado.concurrent.Future()
 
         if callback is not None:
 
@@ -799,6 +789,7 @@ class MessageClient:
 
         if timeout is not None:
             self.io_loop.call_later(timeout, self.timeout_message, message_id, msg)
+
         item = salt.transport.frame.frame_msg(msg, header=header)
         yield self.connect()
         yield self._stream.write(item)
@@ -1095,8 +1086,8 @@ class TCPReqClient(salt.transport.base.RequestClient):
         yield self.message_client.connect()
 
     @salt.ext.tornado.gen.coroutine
-    def send(self, load, tries=3, timeout=60):
-        ret = yield self.message_client.send(load, tries=3, timeout=60)
+    def send(self, load, timeout=60):
+        ret = yield self.message_client.send(load, timeout=timeout)
         raise salt.ext.tornado.gen.Return(ret)
 
     def close(self):
