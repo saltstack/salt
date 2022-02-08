@@ -1,25 +1,20 @@
-import os
-
 import pytest
 import salt.config
 import salt.fileserver.roots as roots
 from salt.utils.odict import OrderedDict
 from tests.support.mock import patch
-from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
 ]
 
 
-@pytest.fixture(scope="module")
-def configure_loader_modules(base_env_state_tree_root_dir):
-    cachedir = os.path.join(RUNTIME_VARS.TMP, "__salt_test_fileserver_roots_cache_dir")
-    if not os.path.isdir(cachedir):
-        os.makedirs(cachedir)
+@pytest.fixture(scope="function")
+def configure_loader_modules(base_env_state_tree_root_dir, tmp_path):
+    cachedir = tmp_path / "__salt_test_fileserver_roots_cache_dir"
+    cachedir.mkdir(parents=True, exist_ok=True)
     opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    print(base_env_state_tree_root_dir, end=" ")
-    opts["cachedir"] = cachedir
+    opts["cachedir"] = str(cachedir)
     opts["file_roots"]["base"] = [str(base_env_state_tree_root_dir)]
     return {roots: {"__opts__": opts}}
 
