@@ -659,8 +659,6 @@ class MessageClient:
         unpacker = salt.utils.msgpack.Unpacker()
         while not self._closing:
             try:
-                # self._read_until_future = self._stream.read_bytes(4096, partial=True)
-                # wire_bytes = yield self._read_until_future
                 wire_bytes = yield self._stream.read_bytes(4096, partial=True)
                 unpacker.feed(wire_bytes)
                 for framed_msg in unpacker:
@@ -709,7 +707,7 @@ class MessageClient:
                 else:
                     raise SaltClientError
             except Exception as e:  # pylint: disable=broad-except
-                log.debug("Exception parsing response", exc_info=True)
+                log.error("Exception parsing response", exc_info=True)
                 for future in self.send_future_map.values():
                     future.set_exception(e)
                 self.send_future_map = {}
