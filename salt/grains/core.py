@@ -1943,24 +1943,19 @@ def _linux_init_system():
     return init_system
 
 
-def _linux_distribution_data():
+def _linux_lsb_distrib_data():
     """
-    Determine distribution information like OS name and version.
+    Determine lsb_distrib_* grains if LSB data is available.
 
-    Return a grain dictionary with following keys:
-     * os
-     * oscodename
-     * osfullname
-     * osrelease
-
-    This function might also return lsb_distrib_* grains,
-    most likely:
+    Returns a (lsb_grain, has_error) pair. The lsb_grain
+    dictionary is expected to have following keys on success:
      * lsb_distrib_codename
      * lsb_distrib_description
      * lsb_distrib_id
      * lsb_distrib_release
     """
     grains = {}
+    has_error = False
     # Add lsb grains on any distro with lsb-release. Note that this import
     # can fail on systems with lsb-release installed if the system package
     # does not install the python package for the python interpreter used by
@@ -1979,11 +1974,30 @@ def _linux_distribution_data():
     # Catch a NameError to workaround possible breakage in lsb_release
     # See https://github.com/saltstack/salt/issues/37867
     except (ImportError, NameError):
+        has_error = True
         # if the python library isn't available, try to parse
         # /etc/lsb-release using regex
         log.trace("lsb_release python bindings not available")
         grains.update(_parse_lsb_release())
+    return grains, has_error
 
+
+def _linux_distribution_data():
+    """
+    Determine distribution information like OS name and version.
+
+    Return a grain dictionary with following keys:
+     * os
+     * oscodename
+     * osfullname
+     * osrelease
+
+    This function might also return lsb_distrib_* grains
+    from _linux_lsb_distrib_data().
+    """
+    grains, lsb_has_error = _linux_lsb_distrib_data()
+
+    if lsb_has_error:
         if grains.get("lsb_distrib_description", "").lower().startswith("antergos"):
             # Antergos incorrectly configures their /etc/lsb-release,
             # setting the DISTRIB_ID to "Arch". This causes the "os" grain
