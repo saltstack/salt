@@ -72,7 +72,7 @@ pyiface==0.0.11
     # via -r requirements/static/ci/linux.in
 pyparsing==2.4.7
     # via packaging
-pytest-helpers-namespace==2019.1.8
+pytest-helpers-namespace==2021.12.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
