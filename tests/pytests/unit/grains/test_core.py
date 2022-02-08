@@ -992,27 +992,35 @@ def test_centos_stream_8_os_grains():
 @pytest.mark.skip_unless_on_linux
 def test_rocky_8_os_grains():
     """
-    Test if OS grains are parsed correctly in Rocky 8
+    Test if OS grains are parsed correctly in Rocky Linux 8
     """
+    # /etc/os-release data taken from Docker image rockylinux:8
     _os_release_data = {
         "NAME": "Rocky Linux",
-        "VERSION_ID": "8.4",
-        "PRETTY_NAME": "Rocky Linux 8.4 (Green Obsidian)",
+        "VERSION": "8.5 (Green Obsidian)",
         "ID": "rocky",
+        "ID_LIKE": "rhel centos fedora",
+        "VERSION_ID": "8.5",
+        "PLATFORM_ID": "platform:el8",
+        "PRETTY_NAME": "Rocky Linux 8.5 (Green Obsidian)",
         "ANSI_COLOR": "0;32",
-        "CPE_NAME": "cpe:/o:rocky:rocky:8.4:GA",
+        "CPE_NAME": "cpe:/o:rocky:rocky:8.5:GA",
+        "HOME_URL": "https://rockylinux.org/",
+        "BUG_REPORT_URL": "https://bugs.rockylinux.org/",
+        "ROCKY_SUPPORT_PRODUCT": "Rocky Linux",
+        "ROCKY_SUPPORT_PRODUCT_VERSION": "8",
     }
     _os_release_map = {
-        "_linux_distribution": ("rocky", "8.4", ""),
+        "_linux_distribution": ("rocky", "8.5", "Green Obsidian"),
     }
 
     expectation = {
         "os": "Rocky",
         "os_family": "RedHat",
-        "oscodename": "Rocky Linux 8.4 (Green Obsidian)",
+        "oscodename": "Rocky Linux 8.5 (Green Obsidian)",
         "osfullname": "Rocky Linux",
-        "osrelease": "8.4",
-        "osrelease_info": (8, 4),
+        "osrelease": "8.5",
+        "osrelease_info": (8, 5),
         "osmajorrelease": 8,
         "osfinger": "Rocky Linux-8",
     }
