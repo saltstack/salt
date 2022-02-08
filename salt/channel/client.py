@@ -265,8 +265,8 @@ class AsyncReqChannel:
                 break
             except Exception as exc:
                 log.error("Failed to send msg %r", dir(exc))
-                if _try == tries:
-                    raise #salt.exceptions.SaltClientError("Connection to master lost")
+                if _try >= tries:
+                    raise
                 else:
                     _try += 1
                     continue

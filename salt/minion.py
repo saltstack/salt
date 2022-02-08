@@ -1613,7 +1613,6 @@ class Minion(MinionBase):
         with salt.utils.event.get_event(
             "minion", opts=self.opts, listen=False
         ) as event:
-            log.error("Send return over eventbus %r", load)
             return event.fire_event(
                 load, "__master_req_channel_payload", timeout=timeout
             )
