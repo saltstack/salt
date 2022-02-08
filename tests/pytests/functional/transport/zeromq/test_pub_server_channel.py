@@ -107,10 +107,7 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self.pub_server_channel = salt.transport.zeromq.PublishServer(
             self.master_config
         )
-        self.pub_server_channel.pre_fork(
-            self.process_manager,
-            kwargs={"log_queue": salt.log.setup.get_multiprocessing_logging_queue()},
-        )
+        self.pub_server_channel.pre_fork(self.process_manager)
         self.pub_uri = "tcp://{interface}:{publish_port}".format(**self.master_config)
         self.queue = multiprocessing.Queue()
         self.stopped = multiprocessing.Event()
