@@ -36,6 +36,7 @@ except ImportError:
         except ImportError:
             pass
 
+
 log = logging.getLogger(__name__)
 
 
@@ -153,7 +154,10 @@ class AsyncReqChannel:
 
     @salt.ext.tornado.gen.coroutine
     def crypted_transfer_decode_dictentry(
-        self, load, dictkey=None, timeout=60,
+        self,
+        load,
+        dictkey=None,
+        timeout=60,
     ):
         if not self.auth.authenticated:
             yield self.auth.authenticate()
@@ -259,11 +263,9 @@ class AsyncReqChannel:
                     ret = yield self._uncrypted_transfer(load, timeout=timeout)
                 else:
                     log.trace("ReqChannel send crypt load=%r", load)
-                    ret = yield self._crypted_transfer(
-                        load, timeout=timeout, raw=raw
-                    )
+                    ret = yield self._crypted_transfer(load, timeout=timeout, raw=raw)
                 break
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error("Failed to send msg %r", dir(exc))
                 if _try >= tries:
                     raise

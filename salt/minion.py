@@ -102,6 +102,7 @@ try:
 except ImportError:
     HAS_WIN_FUNCTIONS = False
 
+
 log = logging.getLogger(__name__)
 
 # To set up a minion:
@@ -2045,9 +2046,7 @@ class Minion(MinionBase):
             else:
                 log.warning("The metadata parameter must be a dictionary. Ignoring.")
         if minion_instance.connected:
-            minion_instance._return_pub(
-                ret
-            )
+            minion_instance._return_pub(ret)
 
         # Add default returners from minion config
         # Should have been converted to comma-delimited string already
@@ -2161,9 +2160,7 @@ class Minion(MinionBase):
         if "metadata" in data:
             ret["metadata"] = data["metadata"]
         if minion_instance.connected:
-            minion_instance._return_pub(
-                ret
-            )
+            minion_instance._return_pub(ret)
         if data["ret"]:
             if "ret_config" in data:
                 ret["ret_config"] = data["ret_config"]
