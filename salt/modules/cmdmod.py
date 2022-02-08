@@ -133,7 +133,11 @@ def _render_cmd(cmd, cwd, template, saltenv=None, pillarenv=None, pillar_overrid
     that engine.
     """
     if saltenv is None:
-        saltenv = __opts__.get("saltenv", "base")
+        try:
+            saltenv = __opts__.get("saltenv", "base")
+        except NameError:
+            saltenv = "base"
+
     if not template:
         return (cmd, cwd)
 
@@ -2793,7 +2797,10 @@ def script(
         salt '*' cmd.script salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     """
     if saltenv is None:
-        saltenv = __opts__.get("saltenv", "base")
+        try:
+            saltenv = __opts__.get("saltenv", "base")
+        except NameError:
+            saltenv = "base"
     python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
 
     def _cleanup_tempfile(path):
