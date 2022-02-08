@@ -1175,6 +1175,42 @@ def test_ubuntu_impish_os_grains():
 
 
 @pytest.mark.skip_unless_on_linux
+def test_linux_mint_una_os_grains():
+    """
+    Test if OS grains are parsed correctly in Linux Mint 20.3 "Una"
+    """
+    # /etc/os-release data taken from base-files 20.3.0
+    _os_release_data = {
+        "NAME": "Linux Mint",
+        "VERSION": "20.3 (Una)",
+        "ID": "linuxmint",
+        "ID_LIKE": "ubuntu",
+        "PRETTY_NAME": "Linux Mint 20.3",
+        "VERSION_ID": "20.3",
+        "HOME_URL": "https://www.linuxmint.com/",
+        "SUPPORT_URL": "https://forums.linuxmint.com/",
+        "BUG_REPORT_URL": "http://linuxmint-troubleshooting-guide.readthedocs.io/en/latest/",
+        "PRIVACY_POLICY_URL": "https://www.linuxmint.com/",
+        "VERSION_CODENAME": "una",
+        "UBUNTU_CODENAME": "focal",
+    }
+    _os_release_map = {
+        "_linux_distribution": ("linuxmint", "20.03", "una"),
+    }
+    expectation = {
+        "os": "Mint",
+        "os_family": "Debian",
+        "oscodename": "una",
+        "osfullname": "Linux Mint",
+        "osrelease": "20.3",
+        "osrelease_info": (20, 3),
+        "osmajorrelease": 20,
+        "osfinger": "Linux Mint-20",
+    }
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
 def test_pop_focal_os_grains():
     """
     Test if OS grains are parsed correctly in Pop!_OS 20.04 "Focal Fossa"
