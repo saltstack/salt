@@ -383,7 +383,7 @@ smmap==4.0.0
     # via
     #   -r requirements/static/pkg/py3.10/windows.txt
     #   gitdb
-sqlparse==0.4.1
+sqlparse==0.4.2
     # via -r requirements/static/ci/common.in
 sshpubkeys==3.1.0
     # via moto
