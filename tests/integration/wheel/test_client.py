@@ -74,7 +74,7 @@ class WheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
     # Remove this skipIf when Issue #39616 is resolved
     # https://github.com/saltstack/salt/issues/39616
     @skipIf(
-        salt.utils.platform.is_windows(),
+        salt.utils.platform.spawning_platform(),
         "Causes pickling error on Windows: Issue #39616",
     )
     def test_cmd_async(self):
