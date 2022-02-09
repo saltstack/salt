@@ -2,8 +2,7 @@
 A collection of mixins useful for the various *Client interfaces
 """
 
-
-import copy as pycopy
+import copy
 import fnmatch
 import logging
 import signal
@@ -16,6 +15,7 @@ import salt.exceptions
 import salt.ext.tornado.stack_context
 import salt.log.setup
 import salt.minion
+import salt.output
 import salt.utils.args
 import salt.utils.doc
 import salt.utils.error
@@ -341,7 +341,7 @@ class SyncClientMixin:
             }
 
             try:
-                self_functions = pycopy.copy(self.functions)
+                self_functions = copy.copy(self.functions)
                 salt.utils.lazy.verify_fun(self_functions, fun)
 
                 # Inject some useful globals to *all* the function's global
