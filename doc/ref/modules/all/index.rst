@@ -19,9 +19,8 @@ execution modules
 .. currentmodule:: salt.modules
 
 .. autosummary::
-    :toctree:
+       :toctree:
     :template: autosummary.rst.tmpl
-
     acme
     aix_group
     aix_shadow
@@ -479,6 +478,7 @@ execution modules
     trafficserver
     transactional_update
     travisci
+    tsl
     tuned
     twilio_notify
     udev
