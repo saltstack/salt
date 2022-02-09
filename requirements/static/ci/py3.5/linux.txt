@@ -4,9 +4,6 @@
 #
 #    pip-compile -o requirements/static/ci/py3.5/linux.txt -v requirements/static/pkg/py3.5/linux.txt requirements/pytest.txt requirements/static/ci/git-sources.txt requirements/static/ci/linux.in
 #
---extra-index-url https://saltstack.gitlab.io/open/cicd/vsphere-automation-sdk-python/9f62581527f4960e35d4d52da7d013b1a0ebbf11/
-
--e git+https://github.com/vmware/vsphere-automation-sdk-python.git@9f62581527f4960e35d4d52da7d013b1a0ebbf11#egg=vSphere-Automation-SDK
 adal==1.2.3               # via azure-datalake-store, msrestazure
 apache-libcloud==2.0.0
 appdirs==1.4.4            # via virtualenv
