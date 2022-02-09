@@ -895,7 +895,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.6 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -912,7 +912,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.7 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -929,7 +929,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.8 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -946,7 +946,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.9 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -963,7 +963,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.10 Requirements
-        files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(linux\.in|common\.in|docs\.in|py3\.10/linux\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
