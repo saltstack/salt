@@ -157,7 +157,7 @@ jaraco.text==3.5.0
     # via
     #   -r requirements/static/pkg/py3.10/windows.txt
     #   jaraco.collections
-jinja2==2.10.1
+jinja2==3.0.3
     # via
     #   -r requirements/static/pkg/py3.10/windows.txt
     #   moto
@@ -187,13 +187,13 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.7.2
     # via -r requirements/static/pkg/py3.10/windows.txt
-lxml==4.6.2
+lxml==4.7.1
     # via -r requirements/static/pkg/py3.10/windows.txt
 mako==1.1.4
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.10/windows.txt
-markupsafe==1.1.1
+markupsafe==2.0.1
     # via
     #   -r requirements/static/pkg/py3.10/windows.txt
     #   jinja2
@@ -212,7 +212,7 @@ more-itertools==8.2.0
     #   jaraco.functools
     #   moto
     #   zipp
-moto==1.3.16
+moto==3.0.1
     # via -r requirements/static/ci/common.in
 msgpack==0.6.2
     # via
@@ -238,7 +238,7 @@ psutil==5.8.0
     # via
     #   -r requirements/static/pkg/py3.10/windows.txt
     #   pytest-salt-factories
-py==1.9.0
+py==1.10.0
     # via pytest
 pyasn1-modules==0.2.4
     # via google-auth
@@ -307,14 +307,14 @@ pytz==2021.1
     #   tempora
 pyvmomi==6.7.1.2018.12
     # via -r requirements/static/ci/common.in
-pywin32==300
+pywin32==303
     # via
     #   -r requirements/static/pkg/py3.10/windows.txt
     #   cherrypy
     #   wmi
 pywinrm==0.4.1
     # via -r requirements/static/ci/windows.in
-pyyaml==5.3.1
+pyyaml==5.4.1
     # via
     #   -r requirements/static/pkg/py3.10/windows.txt
     #   cfn-lint
@@ -343,7 +343,7 @@ responses==0.10.6
     # via moto
 rfc3987==1.3.8
     # via -r requirements/static/ci/common.in
-rsa==4.0
+rsa==4.7.2
     # via
     #   google-auth
     #   python-jose

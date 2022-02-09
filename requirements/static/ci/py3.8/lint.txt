@@ -423,14 +423,14 @@ gitpython==3.1.18
     # via -r requirements/static/ci/common.in
 google-auth==2.0.1
     # via kubernetes
+hglib==2.6.1
+    # via -r requirements/static/ci/linux.in
 idna==3.2
     # via requests
 immutables==0.16
     # via contextvars
 importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
-    # via
-    #   -r requirements/static/pkg/linux.in
-    #   moto
+    # via -r requirements/static/pkg/linux.in
 ipaddress==1.0.23
     # via kubernetes
 isodate==0.6.0
@@ -448,7 +448,7 @@ jaraco.functools==3.3.0
     #   tempora
 jaraco.text==3.5.1
     # via jaraco.collections
-jinja2==2.11.3
+jinja2==3.0.3
     # via
     #   -r requirements/base.txt
     #   ansible-core
@@ -478,7 +478,7 @@ lazy-object-proxy==1.4.3
     # via astroid
 libnacl==1.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
-loguru==0.5.3
+loguru==0.6.0
     # via ciscoconfparse
 lxml==4.7.1
     # via
@@ -487,7 +487,7 @@ lxml==4.7.1
     #   ncclient
 mako==1.1.5
     # via -r requirements/static/ci/common.in
-markupsafe==1.1.1
+markupsafe==2.0.1
     # via
     #   -r requirements/base.txt
     #   jinja2
@@ -495,6 +495,8 @@ markupsafe==1.1.1
     #   moto
 mccabe==0.6.1
     # via pylint
+mercurial==6.0.1
+    # via -r requirements/static/ci/linux.in
 modernize==0.5
     # via saltpylint
 more-itertools==8.8.0
@@ -503,8 +505,7 @@ more-itertools==8.8.0
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
-    #   moto
-moto==2.2.4 ; python_version <= "3.9"
+moto==3.0.1 ; python_version >= "3.6"
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
     # via -r requirements/base.txt
