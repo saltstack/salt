@@ -1699,7 +1699,6 @@ _OS_FAMILY_MAP = {
     "Sangoma": "RedHat",
     "VMware Photon OS": "RedHat",
     "Mandrake": "Mandriva",
-    "ESXi": "VMware",
     "Mint": "Debian",
     "VMwareESX": "VMware",
     "Bluewhite64": "Bluewhite",
@@ -1713,14 +1712,6 @@ _OS_FAMILY_MAP = {
     "openSUSE Leap": "Suse",
     "openSUSE Tumbleweed": "Suse",
     "SLES_SAP": "Suse",
-    "Solaris": "Solaris",
-    "SmartOS": "Solaris",
-    "OmniOS": "Solaris",
-    "OpenIndiana Development": "Solaris",
-    "OpenIndiana": "Solaris",
-    "OpenSolaris Development": "Solaris",
-    "OpenSolaris": "Solaris",
-    "Oracle Solaris": "Solaris",
     "Arch ARM": "Arch",
     "Manjaro": "Arch",
     "Antergos": "Arch",
@@ -1744,7 +1735,6 @@ _OS_FAMILY_MAP = {
     "Void": "Void",
     "IDMS": "Debian",
     "Funtoo": "Gentoo",
-    "AIX": "AIX",
     "TurnKey": "Debian",
     "Pop": "Debian",
     "Rocky": "RedHat",
@@ -1988,6 +1978,7 @@ def _linux_distribution_data():
 
     Return a grain dictionary with following keys:
      * os
+     * os_family
      * oscodename
      * osfullname
      * osrelease
@@ -2159,6 +2150,9 @@ def _linux_distribution_data():
         grains["oscodename"] = oscodename
     if "os" not in grains:
         grains["os"] = _derive_os_grain(grains["osfullname"])
+    # this assigns family names based on the os name
+    # family defaults to the os name if not found
+    grains["os_family"] = _OS_FAMILY_MAP.get(grains["os"], grains["os"])
     return grains
 
 
@@ -2411,6 +2405,7 @@ def os_data():
         if os.path.isdir("/proc/device-tree"):
             grains.update(_linux_devicetree_platform_data())
     elif grains["kernel"] == "SunOS":
+        grains["os_family"] = "Solaris"
         if salt.utils.platform.is_smartos():
             grains.update(_smartos_os_data())
         elif os.path.isfile("/etc/release"):
@@ -2418,6 +2413,7 @@ def os_data():
         grains.update(_sunos_cpudata())
     elif grains["kernel"] == "VMkernel":
         grains["os"] = "ESXi"
+        grains["os_family"] = "VMware"
     elif grains["kernel"] == "Darwin":
         osrelease = __salt__["cmd.run"]("sw_vers -productVersion")
         osname = __salt__["cmd.run"]("sw_vers -productName")
@@ -2436,12 +2432,13 @@ def os_data():
         osrelease_techlevel = __salt__["cmd.run"]("oslevel -r")
         osname = __salt__["cmd.run"]("uname")
         grains["os"] = "AIX"
+        grains["os_family"] = "AIX"
         grains["osfullname"] = osname
         grains["osrelease"] = osrelease
         grains["osrelease_techlevel"] = osrelease_techlevel
         grains.update(_aix_cpudata())
     elif grains["kernel"] == "FreeBSD":
-        grains["osfullname"] = grains["os"] = grains["kernel"]
+        grains["os_family"] = grains["osfullname"] = grains["os"] = grains["kernel"]
         try:
             grains["osrelease"] = __salt__["cmd.run"]("freebsd-version -u").split("-")[
                 0
@@ -2452,21 +2449,17 @@ def os_data():
             grains["osrelease"] = grains["kernelrelease"].split("-")[0]
         grains.update(_bsd_cpudata(grains))
     elif grains["kernel"] in ("OpenBSD", "NetBSD"):
-        grains["os"] = grains["kernel"]
+        grains["os_family"] = grains["os"] = grains["kernel"]
         grains.update(_bsd_cpudata(grains))
         grains["osrelease"] = grains["kernelrelease"].split("-")[0]
         if grains["kernel"] == "NetBSD":
             grains.update(_netbsd_gpu_data())
     else:
         grains["os"] = grains["kernel"]
+        grains["os_family"] = "Unknown"
 
     if not grains["os"]:
         grains["os"] = "Unknown {}".format(grains["kernel"])
-        grains["os_family"] = "Unknown"
-    else:
-        # this assigns family names based on the os name
-        # family defaults to the os name if not found
-        grains["os_family"] = _OS_FAMILY_MAP.get(grains["os"], grains["os"])
 
     grains["osarch"] = _osarch(grains.get("os_family"), grains.get("cpuarch"))
 
