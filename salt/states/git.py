@@ -613,7 +613,7 @@ def latest(
     # If we call from a runner, __env__ will not be populated, so we need to do so.
     if "saltenv" in kwargs:
         __env__ = kwargs.pop("saltenv")
-        
+
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
         return _fail(ret, salt.utils.args.invalid_kwargs(kwargs, raise_exc=False))
