@@ -38,12 +38,6 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
     client = "runner"
     tag_prefix = "run"
 
-    def __init__(self, opts, context=None):
-        self.opts = opts
-        if context is None:
-            context = {}
-        self.context = context
-
     @property
     def functions(self):
         if not hasattr(self, "_functions"):
@@ -304,8 +298,6 @@ class Runner(RunnerClient):
                     display_output(ret, outputter, self.opts)
                 else:
                     ret = self._proc_function(
-                        instance=self,
-                        opts=self.opts,
                         fun=self.opts["fun"],
                         low=low,
                         user=user,
