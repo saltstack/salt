@@ -115,7 +115,7 @@ def genrepo(opts=None, fire_event=True):
     return ret
 
 
-def update_git_repos(opts=None, clean=False, masterless=False):
+def update_git_repos(opts=None, clean=False, masterless=False, saltenv="base"):
     """
     Checkout git repos containing Windows Software Package Definitions
 
@@ -133,6 +133,12 @@ def update_git_repos(opts=None, clean=False, masterless=False):
             non-git repo definitions being removed.
 
         .. versionadded:: 2015.8.0
+
+    saltenv
+        Specify the saltenv to use for the underlying git.latest call if no
+        git dependencies are installed
+
+        ..versionadd:: 3005
 
     CLI Examples:
 
@@ -202,7 +208,7 @@ def update_git_repos(opts=None, clean=False, masterless=False):
                         target=gittarget,
                         force_checkout=True,
                         force_reset=True,
-                        saltenv="base",
+                        saltenv=saltenv,
                     )
                 winrepo_result[result["name"]] = result["result"]
             ret.update(winrepo_result)
