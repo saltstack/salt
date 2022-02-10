@@ -63,20 +63,6 @@ def test_latest_no_diff_for_bare_repo(tmp_path):
         git_diff.assert_not_called()
 
 
-def test_error_msg_without_git_dependencies(tmp_path):
-    name = "https://foo.com/bar/baz.git"
-
-    dunder_salt = {
-        "git.config_get_regexp": MagicMock(return_value={}),
-        "git.remote_refs": Mock(side_effect=NameError("name '__env__' is not defined")),
-    }
-
-    with patch.dict(git_state.__salt__, dunder_salt):
-        with pytest.raises(CommandExecutionError) as exc:
-            git_state.latest(name=name, target=tmp_path)
-            assert "You may need to install" in repr(exc)
-
-
 def test_latest_without_target():
     """
     Test latest when called without passing target
