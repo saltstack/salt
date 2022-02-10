@@ -1,2 +1,0 @@
---extra-index-url=https://saltstack.gitlab.io/open/cicd/vsphere-automation-sdk-python/9f62581527f4960e35d4d52da7d013b1a0ebbf11/
--e git+https://github.com/vmware/vsphere-automation-sdk-python.git@9f62581527f4960e35d4d52da7d013b1a0ebbf11#egg=vSphere-Automation-SDK
