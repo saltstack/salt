@@ -202,6 +202,7 @@ def update_git_repos(opts=None, clean=False, masterless=False):
                         target=gittarget,
                         force_checkout=True,
                         force_reset=True,
+                        saltenv="base",
                     )
                 winrepo_result[result["name"]] = result["result"]
             ret.update(winrepo_result)

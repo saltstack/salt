@@ -734,13 +734,6 @@ def latest(
         )
     except CommandExecutionError as exc:
         return _fail(ret, "Failed to check remote refs: {}".format(_strip_exc(exc)))
-    except NameError as exc:
-        if "'__env__' is not defined" in repr(exc):
-            raise CommandExecutionError(
-                "Failed to check remote refs: You may need to install "
-                "GitPython or PyGit2"
-            )
-        raise
 
     if "HEAD" in all_remote_refs:
         head_rev = all_remote_refs["HEAD"]
