@@ -138,7 +138,7 @@ def update_git_repos(opts=None, clean=False, masterless=False, saltenv="base"):
         Specify the saltenv to use for the underlying git.latest call if no
         git dependencies are installed
 
-        ..versionadd:: 3005
+        .. versionadded:: 3005
 
     CLI Examples:
 
