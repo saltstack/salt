@@ -21,6 +21,7 @@ def test_connected_ids():
         ret = ckminions.connected_ids()
         assert ret == {minion}
 
+
 # These validate_tgt tests make the assumption that CkMinions.check_minions is
 # correct. In other words, these tests are only worthwhile if check_minions is
 # also correct.
