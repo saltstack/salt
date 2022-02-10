@@ -20,7 +20,7 @@ def test_update_winrepo(salt_master, salt_run_cli):
     """
     winrepo_remotes = salt_master.config["winrepo_remotes"]
     winrepo_remotes_ng = salt_master.config["winrepo_remotes_ng"]
-    
+
     res = salt_run_cli.run("winrepo.update_git_repos").json
 
     assert res
