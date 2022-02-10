@@ -4,10 +4,7 @@ tests.pytests.unit.utils.win_dacl.test_get_sid_string
 
 Test the get_sid_string function in the win_dacl utility module
 """
-# Python libs
 import pytest
-
-# Salt libs
 import salt.utils.win_dacl
 
 # Third-party libs
@@ -21,10 +18,10 @@ except ImportError:
 pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_unless_on_windows,
+    pytest.mark.skipif(not HAS_WIN32, reason="Requires Win32 libraries"),
 ]
 
 
-@pytest.mark.skipif(not HAS_WIN32, reason="Requires Win32 libraries")
 @pytest.mark.parametrize(
     "principal,expected",
     [
