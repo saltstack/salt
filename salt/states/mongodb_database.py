@@ -18,11 +18,10 @@ def __virtual__():
     return (False, "mongodb module could not be loaded")
 
 
-# TODO: Add SSL arg + docs -W. Werner, 2022-02-08
-def absent(name, user=None, password=None, host=None, port=None, authdb=None):
+def absent(name, user=None, password=None, host=None, port=None, authdb=None, ssl=None):
     """
     Ensure that the named database is absent. Note that creation doesn't make
-    sense in MongoDB.
+    sense in MongoDB, since a database doesn't exist if it's empty.
 
     name
         The name of the database to remove
@@ -41,10 +40,17 @@ def absent(name, user=None, password=None, host=None, port=None, authdb=None):
 
     authdb
         The database in which to authenticate
+
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3005
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    if __salt__["mongodb.db_exists"](name, user, password, host, port, authdb=authdb):
+    if __salt__["mongodb.db_exists"](
+        name, user, password, host, port, authdb=authdb, ssl=ssl
+    ):
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"] = "Database {} is present and needs to be removed".format(
@@ -52,7 +58,7 @@ def absent(name, user=None, password=None, host=None, port=None, authdb=None):
             )
             return ret
         if __salt__["mongodb.db_remove"](
-            name, user, password, host, port, authdb=authdb
+            name, user, password, host, port, authdb=authdb, ssl=ssl
         ):
             ret["comment"] = "Database {} has been removed".format(name)
             ret["changes"][name] = "Absent"

@@ -4,13 +4,30 @@
 
 import pytest
 
+import salt.modules.mongodb
 import salt.states.mongodb_database as mongodb_database
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, call, patch
 
 
 @pytest.fixture
 def configure_loader_modules():
-    return {mongodb_database: {}}
+    salt.modules.mongodb.pymongo = MagicMock()
+    salt.modules.mongodb.pymongo.errors.PyMongoError = Exception
+    salt.modules.mongodb.HAS_MONGODB = True
+    fake_config = {
+        "mongodb.host": "mongodb.example.net",
+        "mongodb.port": 1982,
+    }
+    fake_salt = {
+        "mongodb.db_exists": salt.modules.mongodb.db_exists,
+        "mongodb.db_remove": salt.modules.mongodb.db_remove,
+        "config.option": fake_config.get,
+    }
+    with patch("salt.modules.mongodb._version", autospec=True, return_value=4):
+        yield {
+            mongodb_database: {"__salt__": fake_salt, "__opts__": {"test": False}},
+            salt.modules.mongodb: {"__salt__": fake_salt},
+        }
 
 
 def test_absent():
@@ -42,4 +59,37 @@ def test_absent():
             assert mongodb_database.absent(name) == ret
 
 
-# TODO: Add test to ensure that  when remove is called that it passes the SSL args on as expected -W. Werner, 2022-02-08
+@pytest.mark.parametrize(
+    "expected_ssl, absent_kwargs",
+    [
+        (True, {"name": "some_database", "ssl": True}),
+        (False, {"name": "some_database", "ssl": False}),
+        (False, {"name": "some_database", "ssl": None}),
+        (False, {"name": "some_database"}),
+    ],
+)
+def test_when_mongodb_database_remove_is_called_it_should_correctly_pass_ssl_argument(
+    expected_ssl, absent_kwargs
+):
+    # database from params needs to be in this return_value
+    salt.modules.mongodb.pymongo.MongoClient.return_value.database_names.return_value = [
+        "foo",
+        "bar",
+        "some_database",
+    ]
+    mongodb_database.absent(**absent_kwargs)
+    salt.modules.mongodb.pymongo.MongoClient.assert_has_calls(
+        [
+            call(host="mongodb.example.net", port=1982, ssl=expected_ssl),
+            call().__bool__(),
+            # Not sure why database_names is in the call list given our
+            # return_value modifications above - it *should* have removed that
+            # from the mock call list, but it didn't. There's probably some
+            # other way to ensure that database_names/drop_database is out of
+            # the MongoClient mock call list, but it was taking too long.
+            call().database_names(),
+            call(host="mongodb.example.net", port=1982, ssl=expected_ssl),
+            call().__bool__(),
+            call().drop_database("some_database"),
+        ]
+    )
