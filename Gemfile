@@ -8,7 +8,7 @@ gem 'kitchen-sync'
 gem 'git'
 
 group :docker do
-  gem 'kitchen-docker', :git => 'https://github.com/test-kitchen/kitchen-docker.git', :branch => 'v2.12.0'
+  gem 'kitchen-docker', :git => 'https://github.com/test-kitchen/kitchen-docker.git', :tag => 'v2.12.0'
 end
 
 group :windows do
