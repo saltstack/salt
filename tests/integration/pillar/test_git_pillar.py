@@ -65,6 +65,7 @@ https://github.com/unbit/uwsgi/commit/ac1e354
 
 import random
 import string
+import sys
 
 import pytest
 import salt.utils.path
@@ -740,6 +741,7 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
 @pytest.mark.usefixtures("ssh_pillar_tests_prep")
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skipif(sys.version_info >= (3.10), reason="Temporarily Skip under Py3.10")
 class TestPygit2SSH(GitPillarSSHTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication
