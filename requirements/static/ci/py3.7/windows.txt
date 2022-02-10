@@ -68,7 +68,7 @@ mako==1.1.4
 markupsafe==1.1.1
 mock==3.0.5
 more-itertools==8.2.0
-moto==1.3.16
+moto==1.3.16 ; python_version >= "3.6"
 msgpack==1.0.2
 networkx==2.5             # via cfn-lint
 ntlm-auth==1.5.0          # via requests-ntlm

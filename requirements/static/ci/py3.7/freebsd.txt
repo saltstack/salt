@@ -159,7 +159,7 @@ mako==1.1.0
 markupsafe==1.1.1
 mock==3.0.5
 more-itertools==5.0.0
-moto==1.3.16
+moto==1.3.16 ; python_version >= "3.6"
 msgpack==1.0.2
 msrest==0.6.19            # via azure-applicationinsights, azure-eventgrid, azure-keyvault, azure-loganalytics, azure-mgmt-cdn, azure-mgmt-compute, azure-mgmt-containerinstance, azure-mgmt-containerregistry, azure-mgmt-containerservice, azure-mgmt-dns, azure-mgmt-eventhub, azure-mgmt-keyvault, azure-mgmt-managementpartner, azure-mgmt-media, azure-mgmt-network, azure-mgmt-notificationhubs, azure-mgmt-rdbms, azure-mgmt-resource, azure-mgmt-search, azure-mgmt-servicebus, azure-mgmt-servicefabric, azure-mgmt-signalr, azure-servicefabric, msrestazure
 msrestazure==0.6.4        # via azure-batch, azure-eventgrid, azure-graphrbac, azure-keyvault, azure-mgmt-advisor, azure-mgmt-applicationinsights, azure-mgmt-authorization, azure-mgmt-batch, azure-mgmt-batchai, azure-mgmt-billing, azure-mgmt-cdn, azure-mgmt-cognitiveservices, azure-mgmt-commerce, azure-mgmt-compute, azure-mgmt-consumption, azure-mgmt-containerinstance, azure-mgmt-containerregistry, azure-mgmt-containerservice, azure-mgmt-cosmosdb, azure-mgmt-datafactory, azure-mgmt-datalake-analytics, azure-mgmt-datalake-store, azure-mgmt-datamigration, azure-mgmt-devspaces, azure-mgmt-devtestlabs, azure-mgmt-dns, azure-mgmt-eventgrid, azure-mgmt-eventhub, azure-mgmt-hanaonazure, azure-mgmt-iotcentral, azure-mgmt-iothub, azure-mgmt-iothubprovisioningservices, azure-mgmt-keyvault, azure-mgmt-loganalytics, azure-mgmt-logic, azure-mgmt-machinelearningcompute, azure-mgmt-managementgroups, azure-mgmt-managementpartner, azure-mgmt-maps, azure-mgmt-marketplaceordering, azure-mgmt-media, azure-mgmt-monitor, azure-mgmt-msi, azure-mgmt-network, azure-mgmt-notificationhubs, azure-mgmt-policyinsights, azure-mgmt-powerbiembedded, azure-mgmt-rdbms, azure-mgmt-recoveryservices, azure-mgmt-recoveryservicesbackup, azure-mgmt-redis, azure-mgmt-relay, azure-mgmt-reservations, azure-mgmt-resource, azure-mgmt-scheduler, azure-mgmt-search, azure-mgmt-servicebus, azure-mgmt-servicefabric, azure-mgmt-signalr, azure-mgmt-sql, azure-mgmt-storage, azure-mgmt-subscription, azure-mgmt-trafficmanager, azure-mgmt-web
@@ -172,7 +172,7 @@ ntc-templates==1.4.0      # via junos-eznc
 oauthlib==3.1.0           # via requests-oauthlib
 oscrypto==1.2.0           # via certvalidator
 packaging==19.2           # via pytest
-paramiko==2.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
+paramiko==2.7.1 ; python_version >= "3.6" and sys_platform != "win32" and sys_platform != "darwin"
 passlib==1.7.2 ; sys_platform != "win32"
 pathtools==0.1.2          # via watchdog
 pluggy==0.13.0            # via pytest
