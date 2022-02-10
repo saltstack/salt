@@ -681,9 +681,16 @@ def user_remove(
     return True
 
 
-# TODO: Add SSL arg + docs -W. Werner, 2022-02-08
 def user_roles_exists(
-    name, roles, database, user=None, password=None, host=None, port=None, authdb=None, ssl=False
+    name,
+    roles,
+    database,
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    authdb=None,
+    ssl=False,
 ):
     """
     Checks if a user of a MongoDB database has specified roles.
@@ -779,9 +786,16 @@ def user_roles_exists(
     return False
 
 
-# TODO: Add SSL arg + docs -W. Werner, 2022-02-08
 def user_grant_roles(
-    name, roles, database, user=None, password=None, host=None, port=None, authdb=None, ssl=False
+    name,
+    roles,
+    database,
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    authdb=None,
+    ssl=False,
 ):
     """
     Grant one or many roles to a MongoDB user.
@@ -878,9 +892,16 @@ def user_grant_roles(
     return True
 
 
-# TODO: Add SSL arg + docs -W. Werner, 2022-02-08
 def user_revoke_roles(
-    name, roles, database, user=None, password=None, host=None, port=None, authdb=None, ssl=False
+    name,
+    roles,
+    database,
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    authdb=None,
+    ssl=False,
 ):
     """
     Revoke one or many roles from a MongoDB user.
@@ -972,176 +993,6 @@ def user_revoke_roles(
         return str(err)
 
     return True
-
-
-def collection_create(
-    collection,
-    user=None,
-    password=None,
-    host=None,
-    port=None,
-    database="admin",
-    authdb=None,
-    ssl=False,
-):
-    """
-    .. versionadded:: 3006.0
-
-    Create a collection in the specified database.
-
-    collection
-        The name of the collection to create.
-
-    user
-        The user to connect to MongoDB as. Default is None.
-
-    password
-        The password to use to connect to MongoDB as.  Default is None.
-
-    host
-        The host where MongoDB is running. Default is None.
-
-    port
-        The host where MongoDB is running. Default is None.
-
-    authdb
-        The MongoDB database to use for authentication. Default is None.
-
-    ssl
-        Whether or not to connect to MongoDB over SSL. Default ``False``.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' mongodb.collection_create mycollection <user> <password> <host> <port> <database>
-
-    """
-    conn = _connect(user, password, host, port, database, authdb, ssl)
-    if not conn:
-        return "Failed to connect to mongo database"
-
-    try:
-        log.info("Creating %s.%s", database, collection)
-        mdb = pymongo.database.Database(conn, database)
-        mdb.create_collection(collection)
-    except pymongo.errors.PyMongoError as err:
-        log.error(
-            "Creating collection %r.%r failed with error %s", database, collection, err
-        )
-        return err
-    return True
-
-
-def collection_drop(
-    collection,
-    user=None,
-    password=None,
-    host=None,
-    port=None,
-    database="admin",
-    authdb=None,
-    ssl=False,
-):
-    """
-    .. versionadded:: 3006.0
-
-    Drop a collection in the specified database.
-
-    collection
-        The name of the collection to drop.
-
-    user
-        The user to connect to MongoDB as. Default is None.
-
-    password
-        The password to use to connect to MongoDB as.  Default is None.
-
-    host
-        The host where MongoDB is running. Default is None.
-
-    port
-        The host where MongoDB is running. Default is None.
-
-    authdb
-        The MongoDB database to use for authentication. Default is None.
-
-    ssl
-        Whether or not to connect to MongoDB over SSL. Default ``False``.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' mongodb.collection_drop mycollection <user> <password> <host> <port> <database>
-
-    """
-    conn = _connect(user, password, host, port, database, authdb, ssl)
-    if not conn:
-        return "Failed to connect to mongo database"
-
-    try:
-        log.info("Dropping %s.%s", database, collection)
-        mdb = pymongo.database.Database(conn, database)
-        mdb.drop_collection(collection)
-    except pymongo.errors.PyMongoError as err:
-        log.error(
-            "Creating collection %r.%r failed with error %s", database, collection, err
-        )
-        return err
-    return True
-
-
-def collections_list(
-    user=None,
-    password=None,
-    host=None,
-    port=None,
-    database="admin",
-    authdb=None,
-    ssl=False,
-):
-    """
-    .. versionadded:: 3006.0
-
-    List the collections available in the specified database.
-
-    user
-        The user to connect to MongoDB as. Default is None.
-
-    password
-        The password to use to connect to MongoDB as.  Default is None.
-
-    host
-        The host where MongoDB is running. Default is None.
-
-    port
-        The host where MongoDB is running. Default is None.
-
-    authdb
-        The MongoDB database to use for authentication. Default is None.
-
-    ssl
-        Whether or not to connect to MongoDB over SSL. Default ``False``.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' mongodb.collections_list mycollection <user> <password> <host> <port> <database>
-
-    """
-    conn = _connect(user, password, host, port, database, authdb, ssl)
-    if not conn:
-        return "Failed to connect to mongo database"
-
-    try:
-        mdb = pymongo.database.Database(conn, database)
-        ret = mdb.list_collection_names()
-    except pymongo.errors.PyMongoError as err:
-        log.error("Listing collections failed with error %s", err)
-        return err
-    return ret
 
 
 def collection_create(
@@ -1408,7 +1259,6 @@ def insert(
         return err
 
 
-# TODO: Add SSL arg + docs -W. Werner, 2022-02-08
 def update_one(
     objects,
     collection,
@@ -1418,7 +1268,7 @@ def update_one(
     port=None,
     database="admin",
     authdb=None,
-    ssl=False
+    ssl=False,
 ):
     """
     Update a MongoDB document that matches the provided filter.
@@ -1514,7 +1364,6 @@ def update_one(
             return err
 
 
-# TODO: Add SSL arg + docs -W. Werner, 2022-02-08
 def find(
     collection,
     query=None,
@@ -1593,7 +1442,6 @@ def find(
         return err
 
 
-# TODO: Add SSL arg + docs -W. Werner, 2022-02-08
 def remove(
     collection,
     query=None,
