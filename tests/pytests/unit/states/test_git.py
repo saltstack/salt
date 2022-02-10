@@ -9,7 +9,6 @@ import logging
 
 import pytest
 import salt.states.git as git_state  # Don't potentially shadow GitPython
-from salt.exceptions import CommandExecutionError
 from tests.support.mock import DEFAULT, MagicMock, Mock, patch
 
 log = logging.getLogger(__name__)
