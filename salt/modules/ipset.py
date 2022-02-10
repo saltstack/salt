@@ -329,7 +329,7 @@ def new_set(name=None, set_type=None, family="ipv4", comment=False, **kwargs):
 
     # Family only valid for certain set types
     if "family" in _CREATE_OPTIONS[set_type]:
-        cmd.extend(["family", cmd, ipset_family])
+        cmd.extend(["family", ipset_family])
 
     if comment:
         cmd.append("comment")
