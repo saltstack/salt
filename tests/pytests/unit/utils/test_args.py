@@ -1,7 +1,7 @@
 import logging
-import pytest
 from collections import namedtuple
 
+import pytest
 import salt.utils.args
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import DEFAULT, patch
@@ -13,9 +13,7 @@ def test_condition_input_string():
     """
     Test passing a jid on the command line
     """
-    cmd = salt.utils.args.condition_input(
-        ["*", "foo.bar", 20141020201325675584], None
-    )
+    cmd = salt.utils.args.condition_input(["*", "foo.bar", 20141020201325675584], None)
     assert isinstance(cmd[2], str)
 
 
@@ -162,12 +160,14 @@ def test_format_call():
 
         # Make sure we warn on invalid kwargs
         with pytest.raises(SaltInvocationError):
-            salt.utils.args.format_call(dummy_func, {"first": 2, "seconds": 2, "third": 3})
+            salt.utils.args.format_call(
+                dummy_func, {"first": 2, "seconds": 2, "third": 3}
+            )
 
         ret = salt.utils.args.format_call(
             dummy_func,
             {"first": 2, "second": 2, "third": 3},
-            expected_extra_kws=("first", "second", "third")
+            expected_extra_kws=("first", "second", "third"),
         )
         assert ret == {"args": [], "kwargs": {}}
 
@@ -176,12 +176,18 @@ def test_format_call_simple_args():
     def foo(one, two=2, three=3):
         pass
 
-    assert (salt.utils.args.format_call(foo, dict(one=10, two=20, three=30)) ==
-            {"args": [10], "kwargs": dict(two=20, three=30)})
-    assert (salt.utils.args.format_call(foo, dict(one=10, two=20)) ==
-            {"args": [10], "kwargs": dict(two=20, three=3)})
-    assert (salt.utils.args.format_call(foo, dict(one=2)) ==
-            {"args": [2], "kwargs": dict(two=2, three=3)})
+    assert salt.utils.args.format_call(foo, dict(one=10, two=20, three=30)) == {
+        "args": [10],
+        "kwargs": dict(two=20, three=30),
+    }
+    assert salt.utils.args.format_call(foo, dict(one=10, two=20)) == {
+        "args": [10],
+        "kwargs": dict(two=20, three=3),
+    }
+    assert salt.utils.args.format_call(foo, dict(one=2)) == {
+        "args": [2],
+        "kwargs": dict(two=2, three=3),
+    }
 
 
 def test_format_call_mimic_typeerror_exceptions():
@@ -237,9 +243,7 @@ def test_parse_function_args_only():
 
 
 def test_parse_function_kwargs_only():
-    fun, args, kwargs = salt.utils.args.parse_function(
-        "amod.afunc(kw1=val1, kw2=val2)"
-    )
+    fun, args, kwargs = salt.utils.args.parse_function("amod.afunc(kw1=val1, kw2=val2)")
     assert fun == "amod.afunc"
     assert args == []
     assert kwargs == {"kw1": "val1", "kw2": "val2"}
