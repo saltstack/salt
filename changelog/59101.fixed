@@ -1,1 +1,1 @@
-Show more informative error in winrepo runner in absence of git dependencies.
+Fixed error when running legacy code in winrepo.update_git_repos
