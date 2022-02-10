@@ -584,35 +584,17 @@ class AsyncReqMessageClient:
         # In a race condition the message might have been sent by the time
         # we're timing it out. Make sure the future is not None
         if future is not None:
-            if future.attempts < future.tries:
-                future.attempts += 1
-                log.debug(
-                    "SaltReqTimeoutError, retrying. (%s/%s)",
-                    future.attempts,
-                    future.tries,
-                )
-                self.send(
-                    message,
-                    timeout=future.timeout,
-                    tries=future.tries,
-                    future=future,
-                )
-
-            else:
-                future.set_exception(SaltReqTimeoutError("Message timed out"))
+            future.set_exception(SaltReqTimeoutError("Message timed out"))
 
     @salt.ext.tornado.gen.coroutine
-    def send(self, message, timeout=None, tries=3, future=None, callback=None):
+    def send(self, message, timeout=None, callback=None):
         """
         Return a future which will be completed when the message has a response
         """
-        if future is None:
-            future = salt.ext.tornado.concurrent.Future()
-            future.tries = tries
-            future.attempts = 0
-            future.timeout = timeout
-            # if a future wasn't passed in, we need to serialize the message
-            message = salt.payload.dumps(message)
+        future = salt.ext.tornado.concurrent.Future()
+
+        message = salt.payload.dumps(message)
+
         if callback is not None:
 
             def handle_future(future):
@@ -620,6 +602,7 @@ class AsyncReqMessageClient:
                 self.io_loop.add_callback(callback, response)
 
             future.add_done_callback(handle_future)
+
         # Add this future to the mapping
         self.send_future_map[message] = future
 
@@ -927,9 +910,9 @@ class RequestClient(salt.transport.base.RequestClient):
         self.message_client.connect()
 
     @salt.ext.tornado.gen.coroutine
-    def send(self, load, tries=3, timeout=60):
+    def send(self, load, timeout=60):
         self.connect()
-        ret = yield self.message_client.send(load, tries=tries, timeout=timeout)
+        ret = yield self.message_client.send(load, timeout=timeout)
         raise salt.ext.tornado.gen.Return(ret)
 
     def close(self):
