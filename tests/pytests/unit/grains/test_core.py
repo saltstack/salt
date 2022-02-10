@@ -1243,7 +1243,7 @@ def test_pop_focal_os_grains():
         "osrelease": "20.04",
         "osrelease_info": (20, 4),
         "osmajorrelease": 20,
-        "osfinger": "Pop-20",
+        "osfinger": "Pop-20.04",
     }
     _run_os_grains_tests(None, _os_release_map, expectation)
 
@@ -1264,7 +1264,7 @@ def test_pop_impish_os_grains():
         "osrelease": "21.10",
         "osrelease_info": (21, 10),
         "osmajorrelease": 21,
-        "osfinger": "Pop-21",
+        "osfinger": "Pop-21.10",
     }
     _run_os_grains_tests(None, _os_release_map, expectation)
 
