@@ -2258,7 +2258,7 @@ def _osrelease_data(os, osfullname, osrelease):
         os_name = osfullname
     grains["osfinger"] = "{}-{}".format(
         os_name,
-        osrelease if os_name in ("Ubuntu",) else grains["osrelease_info"][0],
+        osrelease if os in ("Ubuntu", "Pop") else grains["osrelease_info"][0],
     )
 
     return grains
