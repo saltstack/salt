@@ -1076,25 +1076,34 @@ def test_almalinux_8_os_grains():
     """
     Test if OS grains are parsed correctly in AlmaLinux 8
     """
+    # /etc/os-release data taken from Docker image almalinux:8
     _os_release_data = {
         "NAME": "AlmaLinux",
-        "VERSION_ID": "8.3",
-        "PRETTY_NAME": "AlmaLinux 8",
         "ID": "almalinux",
-        "ANSI_COLOR": "0;31",
-        "CPE_NAME": "cpe:/o:almalinux:almalinux:8.3",
+        "PRETTY_NAME": "AlmaLinux 8.5 (Arctic Sphynx)",
+        "VERSION": "8.5 (Arctic Sphynx)",
+        "ID_LIKE": "rhel centos fedora",
+        "VERSION_ID": "8.5",
+        "PLATFORM_ID": "platform:el8",
+        "ANSI_COLOR": "0;34",
+        "CPE_NAME": "cpe:/o:almalinux:almalinux:8::baseos",
+        "HOME_URL": "https://almalinux.org/",
+        "DOCUMENTATION_URL": "https://wiki.almalinux.org/",
+        "BUG_REPORT_URL": "https://bugs.almalinux.org/",
+        "ALMALINUX_MANTISBT_PROJECT": "AlmaLinux-8",
+        "ALMALINUX_MANTISBT_PROJECT_VERSION": "8.5",
     }
     _os_release_map = {
-        "_linux_distribution": ("almaLinux", "8.3", ""),
+        "_linux_distribution": ("almaLinux", "8.5", "Arctic Sphynx"),
     }
 
     expectation = {
         "os": "AlmaLinux",
         "os_family": "RedHat",
-        "oscodename": "AlmaLinux 8",
+        "oscodename": "AlmaLinux 8.5 (Arctic Sphynx)",
         "osfullname": "AlmaLinux",
-        "osrelease": "8.3",
-        "osrelease_info": (8, 3),
+        "osrelease": "8.5",
+        "osrelease_info": (8, 5),
         "osmajorrelease": 8,
         "osfinger": "AlmaLinux-8",
     }
