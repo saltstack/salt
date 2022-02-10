@@ -109,7 +109,22 @@ def _to_dict(objects):
 
 def db_list(user=None, password=None, host=None, port=None, authdb=None, ssl=False):
     """
-    List all MongoDB databases
+    List all MongoDB databases.
+
+    user
+        The user to authenticate with, if necessary.
+
+    password
+        The password to authenticate with, if necessary.
+
+    host
+        The host running MongoDB.
+
+    port
+        The port MongoDB is listening on.
+
+    authdb
+        The database to authenticate against, if not "admin".
 
     user
         The user to connect to MongoDB as. Default is None.
@@ -153,7 +168,25 @@ def db_exists(
     name, user=None, password=None, host=None, port=None, authdb=None, ssl=False
 ):
     """
-    Checks if a database exists in MongoDB
+    Checks if a database exists in MongoDB.
+
+    name
+        The name of the database to check.
+
+    user
+        The user to authenticate with, if necessary.
+
+    password
+        The password to authenticate with, if necessary.
+
+    host
+        The host running MongoDB.
+
+    port
+        The port MongoDB is listening on.
+
+    authdb
+        The database to authenticate against, if not "admin".
 
     name
         The name of the database to check for.
@@ -196,7 +229,25 @@ def db_remove(
     name, user=None, password=None, host=None, port=None, authdb=None, ssl=False
 ):
     """
-    Remove a MongoDB database
+    Remove a MongoDB database.
+
+    name
+        Name of the MongoDB database to remove.
+
+    user
+        The user to authenticate with, if necessary.
+
+    password
+        The password to authenticate with, if necessary.
+
+    host
+        The host running MongoDB.
+
+    port
+        The port MongoDB is listening on.
+
+    authdb
+        The database to authenticate against, if not "admin".
 
     name
         The name of the database to remove.
@@ -255,7 +306,30 @@ def version(
     ssl=False,
 ):
     """
-    Get MongoDB instance version
+    Get MongoDB instance version.
+
+    user
+        The user to authenticate with, if necessary.
+
+    password
+        The password to authenticate with, if necessary.
+
+    host
+        The host running MongoDB.
+
+    port
+        The port MongoDB is listening on.
+
+    database
+        The database to get the buildInfo version from, if not "admin".
+
+    authdb
+        The database to authenticate against, if not "admin".
+
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3005
 
     user
         The user to connect to MongoDB as. Default is None.
@@ -281,8 +355,10 @@ def version(
 
     .. code-block:: bash
 
-        salt '*' mongodb.version <user> <password> <host> <port> <database>
+        salt '*' mongodb.version <user> <password> <host> <port> <database> <ssl>
     """
+    # database is not passed into _connect here, which authdb typically falls
+    # back on. Probably not a bug but still confusing -W. Werner, 2022-02-10
     conn = _connect(user, password, host, port, authdb=authdb, ssl=ssl)
     if not conn:
         err_msg = "Failed to connect to MongoDB database {}:{}".format(host, port)
@@ -395,7 +471,7 @@ def user_list(
 
     .. code-block:: bash
 
-        salt '*' mongodb.user_list <user> <password> <host> <port> <database>
+        salt '*' mongodb.user_list <user> <password> <host> <port> <database> <authdb> <ssl>
     """
     conn = _connect(user, password, host, port, authdb=authdb, ssl=ssl)
     if not conn:
@@ -463,7 +539,7 @@ def user_exists(
 
     .. code-block:: bash
 
-        salt '*' mongodb.user_exists <name> <user> <password> <host> <port> <database> <ssl>
+        salt '*' mongodb.user_exists <name> <user> <password> <host> <port> <database> <authdb> <ssl>
     """
     users = user_list(user, password, host, port, database, authdb, ssl=ssl)
 
@@ -528,7 +604,7 @@ def user_create(
 
     .. code-block:: bash
 
-        salt '*' mongodb.user_create <user_name> <user_password> <roles> <user> <password> <host> <port> <database>
+        salt '*' mongodb.user_create <user_name> <user_password> <roles> <user> <password> <host> <port> <database> <authdb> <roles> <ssl>
     """
     conn = _connect(user, password, host, port, authdb=authdb, ssl=ssl)
     if not conn:
@@ -589,7 +665,7 @@ def user_remove(
 
     .. code-block:: bash
 
-        salt '*' mongodb.user_remove <name> <user> <password> <host> <port> <database>
+        salt '*' mongodb.user_remove <name> <user> <password> <host> <port> <database> <authdb> <ssl>
     """
     conn = _connect(user, password, host, port, ssl=ssl)
     if not conn:
@@ -610,7 +686,39 @@ def user_roles_exists(
     name, roles, database, user=None, password=None, host=None, port=None, authdb=None, ssl=False
 ):
     """
-    Checks if a user of a MongoDB database has specified roles
+    Checks if a user of a MongoDB database has specified roles.
+
+    name
+        The name of the user to check for roles.
+
+    roles
+        JSON list of roles to check either as strings, or JSON objects of
+        rolename and dbname to check. Example: ``'["salt", "readWrite",
+        "dinner"]'`` or ``[{"db": "some_database", "role": "dinner"}, {"db":
+        "another_db", "role": "kaiser"}]``
+
+    database
+        The name of the database to check the user and roles against.
+
+    user
+        The user to authenticate with, if necessary.
+
+    password
+        The password to authenticate with, if necessary.
+
+    host
+        The host running MongoDB.
+
+    port
+        The port MongoDB is listening on.
+
+    authdb
+        The database to authenticate against, if not "admin".
+
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3005
 
     name
         The name of the user to check for the specified roles.
@@ -651,6 +759,8 @@ def user_roles_exists(
     except Exception:  # pylint: disable=broad-except
         return "Roles provided in wrong format"
 
+    # Here we pass in the database - does MongoDB return *all* of the roles
+    # across databases for a particular user?
     users = user_list(user, password, host, port, database, authdb, ssl)
 
     if isinstance(users, str):
@@ -674,7 +784,38 @@ def user_grant_roles(
     name, roles, database, user=None, password=None, host=None, port=None, authdb=None, ssl=False
 ):
     """
-    Grant one or many roles to a MongoDB user
+    Grant one or many roles to a MongoDB user.
+
+    name
+        The name of the user to grant roles to.
+
+    roles
+        JSON list of roles to check either as strings, or JSON objects of
+        rolename and dbname to check. See ``user_roles_exists`` or examples
+        below.
+
+    database
+        The database to grant roles on.
+
+    user
+        The user to authenticate with, if necessary.
+
+    password
+        The password to authenticate with, if necessary.
+
+    host
+        The host running MongoDB.
+
+    port
+        The port MongoDB is listening on.
+
+    authdb
+        The database to authenticate against, if not "admin".
+
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3005
 
     name
         The user to grant the specified roles to.
@@ -742,7 +883,38 @@ def user_revoke_roles(
     name, roles, database, user=None, password=None, host=None, port=None, authdb=None, ssl=False
 ):
     """
-    Revoke one or many roles to a MongoDB user
+    Revoke one or many roles from a MongoDB user.
+
+    name
+        The name of the user to revoke roles from.
+
+    roles
+        JSON list of roles to revoke either as strings, or JSON objects of
+        rolename and dbname to check. See ``user_roles_exists`` or examples
+        below.
+
+    database
+        The database to revoke roles on.
+
+    user
+        The user to authenticate with, if necessary.
+
+    password
+        The password to authenticate with, if necessary.
+
+    host
+        The host running MongoDB.
+
+    port
+        The port MongoDB is listening on.
+
+    authdb
+        The database to authenticate against, if not "admin".
+
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3005
 
     user
         The user to connect to MongoDB as. Default is None.
@@ -1152,7 +1324,36 @@ def insert(
     ssl=False,
 ):
     """
-    Insert an object or list of objects into a collection
+    Insert an object or list of objects into a collection.
+
+    objects
+        The documents to store in the collection.
+
+    collection
+        The MongoDB collection to store the documents in.
+
+    user
+        The user to authenticate with, if necessary.
+
+    password
+        The password to authenticate with, if necessary.
+
+    host
+        The host running MongoDB.
+
+    port
+        The port MongoDB is listening on.
+
+    database
+        The database containing the collection, if not "admin".
+
+    authdb
+        The database to authenticate against, if not "admin".
+
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3005
 
     objects
         The objects to insert into the collection, should be provided as a list.
@@ -1220,8 +1421,11 @@ def update_one(
     ssl=False
 ):
     """
-    Update an object into a collection
+    Update a MongoDB document that matches the provided filter.
     http://api.mongodb.com/python/current/api/pymongo/collection.html#pymongo.collection.Collection.update_one
+
+    If the document is not found or too many documents match, then an error
+    will be returned.
 
     .. versionadded:: 2016.11.0
 
@@ -1243,6 +1447,9 @@ def update_one(
     port
         The host where MongoDB is running. Default is None.
 
+    database
+        The database containing the collection, if not "admin".
+
     authdb
         The MongoDB database to use for authentication. Default is None.
 
@@ -1255,7 +1462,7 @@ def update_one(
 
     .. code-block:: bash
 
-        salt '*' mongodb.update_one '{"_id": "my_minion"} {"bar": "BAR"}' mycollection <user> <password> <host> <port> <database>
+        salt '*' mongodb.update_one '{"_id": "my_minion"} {"bar": "BAR"}' mycollection <user> <password> <host> <port> <database> <ssl>
 
     """
     conn = _connect(user, password, host, port, database, authdb, ssl)
@@ -1340,6 +1547,9 @@ def find(
     port
         The host where MongoDB is running. Default is None.
 
+    database
+        The database containing the collection, if not "admin".
+
     authdb
         The MongoDB database to use for authentication. Default is None.
 
@@ -1352,7 +1562,7 @@ def find(
 
     .. code-block:: bash
 
-        salt '*' mongodb.find mycollection '[{"foo": "FOO", "bar": "BAR"}]' <user> <password> <host> <port> <database>
+        salt '*' mongodb.find mycollection '[{"foo": "FOO", "bar": "BAR"}]' <user> <password> <host> <port> <database> <authdb> <ssl>
 
     """
     conn = _connect(user, password, host, port, database, authdb, ssl)
@@ -1435,7 +1645,7 @@ def remove(
 
     .. code-block:: bash
 
-        salt '*' mongodb.remove mycollection '[{"foo": "FOO", "bar": "BAR"}, {"foo": "BAZ", "bar": "BAM"}]' <user> <password> <host> <port> <database>
+        salt '*' mongodb.remove mycollection '[{"foo": "FOO", "bar": "BAR"}, {"foo": "BAZ", "bar": "BAM"}]' <user> <password> <host> <port> <database> <w> <authdb> <ssl>
 
     """
     conn = _connect(user, password, host, port, database, authdb, ssl)
