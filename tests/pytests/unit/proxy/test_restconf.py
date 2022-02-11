@@ -1,7 +1,8 @@
+import sys
+
 import pytest
 import salt.proxy.restconf as restconf
 from tests.support.mock import patch
-import sys
 
 
 @pytest.fixture(autouse=True)
@@ -59,6 +60,7 @@ def test_if_text_is_provided_as_dict_payload_then_provided_string_should_be_used
     call = fake_query.mock_calls[0]
 
     assert call.kwargs["data"] == expected_data
+
 
 @pytest.mark.skipif(
     sys.version_info[0] == 3 and sys.version_info[1] <= 5,
