@@ -59,7 +59,10 @@ def test_if_text_is_provided_as_dict_payload_then_provided_string_should_be_used
 
     assert call.kwargs["data"] == expected_data
 
-
+@pytest.mark.skipif(
+    sys.version_info[0] == 3 and sys.version_info[1] <= 5,
+    reason="run on Python 3.6 or greater where OrderedDict is default",
+)
 def test_if_dict_is_provided_as_dict_payload_then_json_text_should_be_provided(
     patch_conn_args, fake_query
 ):
