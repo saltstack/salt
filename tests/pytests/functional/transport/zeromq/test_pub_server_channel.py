@@ -146,16 +146,15 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         )
 
     def run(self):
-        if "aes" not in salt.master.SMaster.secrets:
-            salt.master.SMaster.secrets["aes"] = {
-                "secret": multiprocessing.Array(
-                    ctypes.c_char,
-                    salt.utils.stringutils.to_bytes(self.aes_key),
-                ),
-                "serial": multiprocessing.Value(
-                    ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
-                ),
-            }
+        salt.master.SMaster.secrets["aes"] = {
+            "secret": multiprocessing.Array(
+                ctypes.c_char,
+                salt.utils.stringutils.to_bytes(self.aes_key),
+            ),
+            "serial": multiprocessing.Value(
+                ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
+            ),
+        }
         try:
             while True:
                 payload = self.queue.get()
