@@ -2016,10 +2016,73 @@ class State:
             }
 
         utc_finish_time = datetime.datetime.utcnow()
+        timezone_delta = datetime.datetime.utcnow() - datetime.datetime.now()
+        local_finish_time = utc_finish_time - timezone_delta
+        local_start_time = utc_start_time - timezone_delta
+        ret["start_time"] = local_start_time.time().isoformat()
         delta = utc_finish_time - utc_start_time
         # duration in milliseconds.microseconds
         duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
         ret["duration"] = duration
+
+        if "retry" in low:
+            retries = 1
+            low["retry"] = self.verify_retry_data(low["retry"])
+            if not sys.modules[self.states[cdata["full"]].__module__].__opts__["test"]:
+                while low["retry"]["attempts"] >= retries:
+
+                    if low["retry"]["until"] == ret["result"]:
+                        break
+
+                    interval = low["retry"]["interval"]
+                    if low["retry"]["splay"] != 0:
+                        interval = interval + random.randint(0, low["retry"]["splay"])
+                    log.info(
+                        "State result does not match retry until value, "
+                        "state will be re-run in %s seconds",
+                        interval,
+                    )
+                    self.functions["test.sleep"](interval)
+                    retry_ret = self.states[cdata["full"]](
+                        *cdata["args"], **cdata["kwargs"]
+                    )
+
+                    utc_start_time = datetime.datetime.utcnow()
+                    utc_finish_time = datetime.datetime.utcnow()
+                    delta = utc_finish_time - utc_start_time
+                    duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
+                    retry_ret["duration"] = duration
+
+                    orig_ret = ret
+                    ret = retry_ret
+                    if not ret["comment"]:
+                        _comment = ""
+                    else:
+                        _comment = (
+                            'Attempt {}: Returned a result of "{}", '
+                            'with the following comment: "{}"'.format(
+                                retries, ret["result"], ret["comment"]
+                            )
+                        )
+
+                    ret["comment"] = "\n".join([orig_ret["comment"], _comment])
+                    ret["duration"] = (
+                        ret["duration"] + orig_ret["duration"] + (interval * 1000)
+                    )
+                    if retries == 1:
+                        ret["start_time"] = orig_ret["start_time"]
+                    retries = retries + 1
+
+            else:
+                ret["comment"] = "  ".join(
+                    [
+                        "" if not ret["comment"] else str(ret["comment"]),
+                        "The state would be retried every {interval} seconds "
+                        "(with a splay of up to {splay} seconds) a maximum of "
+                        "{attempts} times or until a result of {until} "
+                        "is returned".format(**low["retry"]),
+                    ]
+                )
 
         troot = os.path.join(self.opts["cachedir"], self.jid)
         tfile = os.path.join(troot, salt.utils.hashutils.sha1_digest(tag))
@@ -2263,7 +2326,7 @@ class State:
             local_finish_time.time().isoformat(),
             duration,
         )
-        if "retry" in low:
+        if "retry" in low and "parallel" not in low:
             low["retry"] = self.verify_retry_data(low["retry"])
             if not sys.modules[self.states[cdata["full"]].__module__].__opts__["test"]:
                 if low["retry"]["until"] != ret["result"]:

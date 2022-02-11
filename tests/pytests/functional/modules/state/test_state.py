@@ -702,6 +702,41 @@ def test_retry_option_success(state, state_tree, tmp_path):
             assert "Attempt 2" not in state_return.comment
 
 
+def test_retry_option_success_parallel(state, state_tree, tmp_path):
+    """
+    test a state with the retry option that should return True immediately (i.e. no retries)
+    """
+    testfile = tmp_path / "testfile"
+    testfile.touch()
+    sls_contents = """
+    file_test:
+      file.exists:
+        - name: {}
+        - parallel: True
+        - retry:
+            until: True
+            attempts: 5
+            interval: 2
+            splay: 0
+    """.format(
+        testfile
+    )
+    duration = 4
+    if salt.utils.platform.is_windows():
+        duration = 16
+
+    with pytest.helpers.temp_file("retry.sls", sls_contents, state_tree):
+        ret = state.sls(
+            "retry", __pub_jid="1"
+        )  # Because these run in parallel we need a fake JID
+
+        for state_return in ret:
+            assert state_return.result is True
+            assert state_return.full_return["duration"] < duration
+            # It should not take 2 attempts
+            assert "Attempt 2" not in state_return.comment
+
+
 @pytest.mark.slow_test
 def test_retry_option_eventual_success(state, state_tree, tmp_path):
     """
@@ -741,6 +776,55 @@ def test_retry_option_eventual_success(state, state_tree, tmp_path):
         thread.start()
         ret = state.sls("retry")
         for state_return in ret:
+            assert state_return.result is True
+            assert state_return.full_return["duration"] > 4
+            # It should not take 5 attempts
+            assert "Attempt 5" not in state_return.comment
+
+
+@pytest.mark.slow_test
+def test_retry_option_eventual_success_parallel(state, state_tree, tmp_path):
+    """
+    test a state with the retry option that should return True, eventually
+    """
+    testfile1 = tmp_path / "testfile-1"
+    testfile2 = tmp_path / "testfile-2"
+
+    def create_testfile(testfile1, testfile2):
+        while True:
+            if testfile1.exists():
+                break
+        time.sleep(2)
+        testfile2.touch()
+
+    thread = threading.Thread(target=create_testfile, args=(testfile1, testfile2))
+    sls_contents = """
+    file_test_a:
+      file.managed:
+        - name: {}
+        - content: 'a'
+
+    file_test:
+      file.exists:
+        - name: {}
+        - retry:
+            until: True
+            attempts: 5
+            interval: 2
+            splay: 0
+        - parallel: True
+        - require:
+          - file_test_a
+    """.format(
+        testfile1, testfile2
+    )
+    with pytest.helpers.temp_file("retry.sls", sls_contents, state_tree):
+        thread.start()
+        ret = state.sls(
+            "retry", __pub_jid="1"
+        )  # Because these run in parallel we need a fake JID
+        for state_return in ret:
+            log.debug("=== state_return %s ===", state_return)
             assert state_return.result is True
             assert state_return.full_return["duration"] > 4
             # It should not take 5 attempts
