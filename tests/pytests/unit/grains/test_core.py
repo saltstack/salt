@@ -592,7 +592,10 @@ def _run_os_grains_tests(os_release_data, os_release_map, expectation):
     # - Skip all the /etc/*-release stuff (not pertinent)
     # - Mock _linux_distribution to give us the OS name that we want
     # - Mock the osarch
-    distro_mock = MagicMock(return_value=os_release_map["_linux_distribution"])
+    _linux_distribution = os_release_map.get(
+        "_linux_distribution", ("id", "version", "codename")
+    )
+    distro_mock = MagicMock(return_value=_linux_distribution)
     with patch.object(
         salt.utils.platform, "is_proxy", MagicMock(return_value=False)
     ), patch.object(
@@ -641,7 +644,6 @@ def _run_os_grains_tests(os_release_data, os_release_map, expectation):
 
 
 def _run_suse_os_grains_tests(os_release_data, os_release_map, expectation):
-    os_release_map["_linux_distribution"] = ("SUSE test", "version", "arch")
     expectation["os"] = "SUSE"
     expectation["os_family"] = "Suse"
     _run_os_grains_tests(os_release_data, os_release_map, expectation)
@@ -815,9 +817,6 @@ def test_debian_9_os_grains():
         "SUPPORT_URL": "https://www.debian.org/support",
         "BUG_REPORT_URL": "https://bugs.debian.org/",
     }
-    _os_release_map = {
-        "_linux_distribution": ("debian", "9.3", ""),
-    }
     expectation = {
         "os": "Debian",
         "os_family": "Debian",
@@ -828,7 +827,7 @@ def test_debian_9_os_grains():
         "osmajorrelease": 9,
         "osfinger": "Debian-9",
     }
-    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, {}, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
@@ -848,9 +847,6 @@ def test_debian_10_os_grains():
         "SUPPORT_URL": "https://www.debian.org/support",
         "BUG_REPORT_URL": "https://bugs.debian.org/",
     }
-    _os_release_map = {
-        "_linux_distribution": ("debian", "10", "buster"),
-    }
     expectation = {
         "os": "Debian",
         "os_family": "Debian",
@@ -861,7 +857,7 @@ def test_debian_10_os_grains():
         "osmajorrelease": 10,
         "osfinger": "Debian-10",
     }
-    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, {}, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
@@ -881,9 +877,6 @@ def test_debian_11_os_grains():
         "SUPPORT_URL": "https://www.debian.org/support",
         "BUG_REPORT_URL": "https://bugs.debian.org/",
     }
-    _os_release_map = {
-        "_linux_distribution": ("debian", "11", "bullseye"),
-    }
     expectation = {
         "os": "Debian",
         "os_family": "Debian",
@@ -894,7 +887,7 @@ def test_debian_11_os_grains():
         "osmajorrelease": 11,
         "osfinger": "Debian-11",
     }
-    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, {}, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
@@ -1010,10 +1003,6 @@ def test_rocky_8_os_grains():
         "ROCKY_SUPPORT_PRODUCT": "Rocky Linux",
         "ROCKY_SUPPORT_PRODUCT_VERSION": "8",
     }
-    _os_release_map = {
-        "_linux_distribution": ("rocky", "8.5", "Green Obsidian"),
-    }
-
     expectation = {
         "os": "Rocky",
         "os_family": "RedHat",
@@ -1024,7 +1013,7 @@ def test_rocky_8_os_grains():
         "osmajorrelease": 8,
         "osfinger": "Rocky Linux-8",
     }
-    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, {}, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
@@ -1067,11 +1056,6 @@ def test_mendel_os_grains():
         "BUG_REPORT_URL": "https://coral.ai/",
         "VERSION_CODENAME": "eagle",
     }
-    # Note: "lsb_release -a" falsely reports the version to be 10.0
-    _os_release_map = {
-        "_linux_distribution": ("Mendel", "10.0", "eagle"),
-    }
-
     expectation = {
         "os": "Mendel",
         "os_family": "Debian",
@@ -1082,7 +1066,7 @@ def test_mendel_os_grains():
         "osmajorrelease": 5,
         "osfinger": "Mendel GNU/Linux-5",
     }
-    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, {}, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
@@ -1107,10 +1091,6 @@ def test_almalinux_8_os_grains():
         "ALMALINUX_MANTISBT_PROJECT": "AlmaLinux-8",
         "ALMALINUX_MANTISBT_PROJECT_VERSION": "8.5",
     }
-    _os_release_map = {
-        "_linux_distribution": ("almaLinux", "8.5", "Arctic Sphynx"),
-    }
-
     expectation = {
         "os": "AlmaLinux",
         "os_family": "RedHat",
@@ -1121,7 +1101,7 @@ def test_almalinux_8_os_grains():
         "osmajorrelease": 8,
         "osfinger": "AlmaLinux-8",
     }
-    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, {}, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
@@ -1179,9 +1159,6 @@ def test_ubuntu_focal_os_grains():
         "VERSION_CODENAME": "focal",
         "UBUNTU_CODENAME": "focal",
     }
-    _os_release_map = {
-        "_linux_distribution": ("ubuntu", "20.04", "focal"),
-    }
     expectation = {
         "os": "Ubuntu",
         "os_family": "Debian",
@@ -1192,7 +1169,7 @@ def test_ubuntu_focal_os_grains():
         "osmajorrelease": 20,
         "osfinger": "Ubuntu-20.04",
     }
-    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, {}, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
@@ -1215,9 +1192,6 @@ def test_ubuntu_impish_os_grains():
         "PRIVACY_POLICY_URL": "https://www.ubuntu.com/legal/terms-and-policies/privacy-policy",
         "UBUNTU_CODENAME": "impish",
     }
-    _os_release_map = {
-        "_linux_distribution": ("ubuntu", "21.10", "impish"),
-    }
     expectation = {
         "os": "Ubuntu",
         "os_family": "Debian",
@@ -1228,7 +1202,7 @@ def test_ubuntu_impish_os_grains():
         "osmajorrelease": 21,
         "osfinger": "Ubuntu-21.10",
     }
-    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, {}, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
@@ -1251,9 +1225,6 @@ def test_linux_mint_una_os_grains():
         "VERSION_CODENAME": "una",
         "UBUNTU_CODENAME": "focal",
     }
-    _os_release_map = {
-        "_linux_distribution": ("linuxmint", "20.03", "una"),
-    }
     expectation = {
         "os": "Mint",
         "os_family": "Debian",
@@ -1264,7 +1235,7 @@ def test_linux_mint_una_os_grains():
         "osmajorrelease": 20,
         "osfinger": "Linux Mint-20",
     }
-    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, {}, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
@@ -1289,9 +1260,6 @@ def test_pop_focal_os_grains():
         "UBUNTU_CODENAME": "focal",
         "LOGO": "distributor-logo-pop-os",
     }
-    _os_release_map = {
-        "_linux_distribution": ("pop", "20.04", "focal"),
-    }
     expectation = {
         "os": "Pop",
         "os_family": "Debian",
@@ -1302,7 +1270,7 @@ def test_pop_focal_os_grains():
         "osmajorrelease": 20,
         "osfinger": "Pop!_OS-20.04",
     }
-    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, {}, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
@@ -1327,9 +1295,6 @@ def test_pop_impish_os_grains():
         "UBUNTU_CODENAME": "impish",
         "LOGO": "distributor-logo-pop-os",
     }
-    _os_release_map = {
-        "_linux_distribution": ("pop", "21.10", "impish"),
-    }
     expectation = {
         "os": "Pop",
         "os_family": "Debian",
@@ -1340,7 +1305,7 @@ def test_pop_impish_os_grains():
         "osmajorrelease": 21,
         "osfinger": "Pop!_OS-21.10",
     }
-    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, {}, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
@@ -1365,9 +1330,6 @@ def test_astralinuxce_os_grains():
         "VERSION_ID": "2.12.43",
         "VERSION_CODENAME": "orel",
     }
-    _os_release_map = {
-        "_linux_distribution": ("astra", "2.12.43", "orel"),
-    }
     expectation = {
         "os": "AstraLinuxCE",
         "os_family": "Debian",
@@ -1378,7 +1340,7 @@ def test_astralinuxce_os_grains():
         "osmajorrelease": 2,
         "osfinger": "Astra Linux (Orel)-2",
     }
-    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, {}, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
@@ -1400,9 +1362,6 @@ def test_astralinuxse_os_grains():
         "VARIANT": "Smolensk",
         "VERSION_ID": "1.6",
     }
-    _os_release_map = {
-        "_linux_distribution": ("astra", "1.6", "smolensk"),
-    }
     expectation = {
         "os": "AstraLinuxSE",
         "os_family": "Debian",
@@ -1413,7 +1372,7 @@ def test_astralinuxse_os_grains():
         "osmajorrelease": 1,
         "osfinger": "Astra Linux (Smolensk)-1",
     }
-    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, {}, expectation)
 
 
 @pytest.mark.skip_unless_on_windows
