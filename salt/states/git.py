@@ -609,7 +609,7 @@ def latest(
                   - ssh_known_hosts: gitlab.example.com
     """
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
-    
+
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
         return _fail(ret, salt.utils.args.invalid_kwargs(kwargs, raise_exc=False))
