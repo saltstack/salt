@@ -115,7 +115,7 @@ def genrepo(opts=None, fire_event=True):
     return ret
 
 
-def update_git_repos(opts=None, clean=False, masterless=False, saltenv="base"):
+def update_git_repos(opts=None, clean=False, masterless=False):
     """
     Checkout git repos containing Windows Software Package Definitions
 
@@ -133,12 +133,6 @@ def update_git_repos(opts=None, clean=False, masterless=False, saltenv="base"):
             non-git repo definitions being removed.
 
         .. versionadded:: 2015.8.0
-
-    saltenv
-        Specify the saltenv to use for the underlying git.latest call if no
-        git dependencies are installed
-
-        .. versionadded:: 3005
 
     CLI Examples:
 
@@ -201,15 +195,27 @@ def update_git_repos(opts=None, clean=False, masterless=False, saltenv="base"):
                         result = result[key]
                 else:
                     mminion = salt.minion.MasterMinion(opts)
-                    result = mminion.states["git.latest"](
-                        remote_url,
+                    result = mminion.functions["state.single"](
+                        "git.latest",
+                        name=remote_url,
                         rev=rev,
                         branch="winrepo",
                         target=gittarget,
                         force_checkout=True,
                         force_reset=True,
-                        saltenv=saltenv,
                     )
+                    if isinstance(result, list):
+                        # Errors were detected
+                        raise CommandExecutionError(
+                            "Failed up update winrepo remotes: {}".format(
+                                "\n".join(result)
+                            )
+                        )
+                    if "name" not in result:
+                        # Highstate output dict, the results are actually nested
+                        # one level down.
+                        key = next(iter(result))
+                        result = result[key]
                 winrepo_result[result["name"]] = result["result"]
             ret.update(winrepo_result)
         else:
