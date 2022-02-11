@@ -1017,7 +1017,7 @@ def test_rocky_8_os_grains():
     expectation = {
         "os": "Rocky",
         "os_family": "RedHat",
-        "oscodename": "Rocky Linux 8.5 (Green Obsidian)",
+        "oscodename": "Green Obsidian",
         "osfullname": "Rocky Linux",
         "osrelease": "8.5",
         "osrelease_info": (8, 5),
@@ -1052,8 +1052,22 @@ def test_osmc_os_grains():
 @pytest.mark.skip_unless_on_linux
 def test_mendel_os_grains():
     """
-    Test if OS grains are parsed correctly in Mendel Linux
+    Test if OS grains are parsed correctly in Mendel Linux 5.3 Eagle (Nov 2021)
     """
+    # From https://coral.ai/software/
+    # downloaded enterprise-eagle-flashcard-20211117215217.zip
+    # -> flashcard_arm64.img -> rootfs.img -> /etc/os-release
+    _os_release_data = {
+        "PRETTY_NAME": "Mendel GNU/Linux 5 (Eagle)",
+        "NAME": "Mendel GNU/Linux",
+        "ID": "mendel",
+        "ID_LIKE": "debian",
+        "HOME_URL": "https://coral.ai/",
+        "SUPPORT_URL": "https://coral.ai/",
+        "BUG_REPORT_URL": "https://coral.ai/",
+        "VERSION_CODENAME": "eagle",
+    }
+    # Note: "lsb_release -a" falsely reports the version to be 10.0
     _os_release_map = {
         "_linux_distribution": ("Mendel", "10.0", "eagle"),
     }
@@ -1062,13 +1076,13 @@ def test_mendel_os_grains():
         "os": "Mendel",
         "os_family": "Debian",
         "oscodename": "eagle",
-        "osfullname": "Mendel",
-        "osrelease": "10.0",
-        "osrelease_info": (10, 0),
-        "osmajorrelease": 10,
-        "osfinger": "Mendel-10",
+        "osfullname": "Mendel GNU/Linux",
+        "osrelease": "5",
+        "osrelease_info": (5,),
+        "osmajorrelease": 5,
+        "osfinger": "Mendel GNU/Linux-5",
     }
-    _run_os_grains_tests(None, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
@@ -1100,7 +1114,7 @@ def test_almalinux_8_os_grains():
     expectation = {
         "os": "AlmaLinux",
         "os_family": "RedHat",
-        "oscodename": "AlmaLinux 8.5 (Arctic Sphynx)",
+        "oscodename": "Arctic Sphynx",
         "osfullname": "AlmaLinux",
         "osrelease": "8.5",
         "osrelease_info": (8, 5),
@@ -1273,20 +1287,37 @@ def test_pop_focal_os_grains():
     """
     Test if OS grains are parsed correctly in Pop!_OS 20.04 "Focal Fossa"
     """
+    # /etc/pop-os/os-release data taken from
+    # pop-default-settings 4.0.6~1642047816~20.04~932caee
+    _os_release_data = {
+        "NAME": "Pop!_OS",
+        "VERSION": "20.04 LTS",
+        "ID": "pop",
+        "ID_LIKE": "ubuntu debian",
+        "PRETTY_NAME": "Pop!_OS 20.04 LTS",
+        "VERSION_ID": "20.04",
+        "HOME_URL": "https://pop.system76.com",
+        "SUPPORT_URL": "https://support.system76.com",
+        "BUG_REPORT_URL": "https://github.com/pop-os/pop/issues",
+        "PRIVACY_POLICY_URL": "https://system76.com/privacy",
+        "VERSION_CODENAME": "focal",
+        "UBUNTU_CODENAME": "focal",
+        "LOGO": "distributor-logo-pop-os",
+    }
     _os_release_map = {
-        "_linux_distribution": ("Pop", "20.04", "focal"),
+        "_linux_distribution": ("pop", "20.04", "focal"),
     }
     expectation = {
         "os": "Pop",
         "os_family": "Debian",
         "oscodename": "focal",
-        "osfullname": "Pop",
+        "osfullname": "Pop!_OS",
         "osrelease": "20.04",
         "osrelease_info": (20, 4),
         "osmajorrelease": 20,
-        "osfinger": "Pop-20.04",
+        "osfinger": "Pop!_OS-20.04",
     }
-    _run_os_grains_tests(None, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
@@ -1294,20 +1325,37 @@ def test_pop_impish_os_grains():
     """
     Test if OS grains are parsed correctly in Pop!_OS 21.10 "Impish Indri"
     """
+    # /etc/pop-os/os-release data taken from
+    # pop-default-settings 5.1.0~1640204937~21.10~3f0be51
+    _os_release_data = {
+        "NAME": "Pop!_OS",
+        "VERSION": "21.10",
+        "ID": "pop",
+        "ID_LIKE": "ubuntu debian",
+        "PRETTY_NAME": "Pop!_OS 21.10",
+        "VERSION_ID": "21.10",
+        "HOME_URL": "https://pop.system76.com",
+        "SUPPORT_URL": "https://support.system76.com",
+        "BUG_REPORT_URL": "https://github.com/pop-os/pop/issues",
+        "PRIVACY_POLICY_URL": "https://system76.com/privacy",
+        "VERSION_CODENAME": "impish",
+        "UBUNTU_CODENAME": "impish",
+        "LOGO": "distributor-logo-pop-os",
+    }
     _os_release_map = {
-        "_linux_distribution": ("Pop", "21.10", "impish"),
+        "_linux_distribution": ("pop", "21.10", "impish"),
     }
     expectation = {
         "os": "Pop",
         "os_family": "Debian",
         "oscodename": "impish",
-        "osfullname": "Pop",
+        "osfullname": "Pop!_OS",
         "osrelease": "21.10",
         "osrelease_info": (21, 10),
         "osmajorrelease": 21,
-        "osfinger": "Pop-21.10",
+        "osfinger": "Pop!_OS-21.10",
     }
-    _run_os_grains_tests(None, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
@@ -1315,20 +1363,37 @@ def test_astralinuxce_os_grains():
     """
     Test that OS grains are parsed correctly for Astra Linux Orel
     """
+    # os-release data taken from astra-version 8.1.24+v2.12.43.6
+    # found in pool on installer ISO downloaded from
+    # https://mirrors.edge.kernel.org/astra/stable/orel/iso/orel-current.iso
+    _os_release_data = {
+        "PRETTY_NAME": "Astra Linux (Orel 2.12.43)",
+        "NAME": "Astra Linux (Orel)",
+        "ID": "astra",
+        "ID_LIKE": "debian",
+        "ANSI_COLOR": "1;31",
+        "HOME_URL": "http://astralinux.ru",
+        "SUPPORT_URL": "http://astralinux.ru/support",
+        "VARIANT_ID": "orel",
+        "VARIANT": "Orel",
+        "LOGO": "astra",
+        "VERSION_ID": "2.12.43",
+        "VERSION_CODENAME": "orel",
+    }
     _os_release_map = {
-        "_linux_distribution": ("AstraLinuxCE", "2.12.40", "orel"),
+        "_linux_distribution": ("astra", "2.12.43", "orel"),
     }
     expectation = {
         "os": "AstraLinuxCE",
         "os_family": "Debian",
         "oscodename": "orel",
-        "osfullname": "AstraLinuxCE",
-        "osrelease": "2.12.40",
-        "osrelease_info": (2, 12, 40),
+        "osfullname": "Astra Linux (Orel)",
+        "osrelease": "2.12.43",
+        "osrelease_info": (2, 12, 43),
         "osmajorrelease": 2,
-        "osfinger": "AstraLinuxCE-2",
+        "osfinger": "Astra Linux (Orel)-2",
     }
-    _run_os_grains_tests(None, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_linux
@@ -1336,20 +1401,34 @@ def test_astralinuxse_os_grains():
     """
     Test that OS grains are parsed correctly for Astra Linux Smolensk
     """
+    # /etc/os-release data taken from base-files 7.2astra2
+    # from Docker image crbrka/astra16se:latest
+    _os_release_data = {
+        "PRETTY_NAME": "Astra Linux (Smolensk 1.6)",
+        "NAME": "Astra Linux (Smolensk)",
+        "ID": "astra",
+        "ID_LIKE": "debian",
+        "ANSI_COLOR": "1;31",
+        "HOME_URL": "http://astralinux.ru",
+        "SUPPORT_URL": "http://astralinux.ru/support",
+        "VARIANT_ID": "smolensk",
+        "VARIANT": "Smolensk",
+        "VERSION_ID": "1.6",
+    }
     _os_release_map = {
-        "_linux_distribution": ("AstraLinuxSE", "1.6", "smolensk"),
+        "_linux_distribution": ("astra", "1.6", "smolensk"),
     }
     expectation = {
         "os": "AstraLinuxSE",
         "os_family": "Debian",
         "oscodename": "smolensk",
-        "osfullname": "AstraLinuxSE",
+        "osfullname": "Astra Linux (Smolensk)",
         "osrelease": "1.6",
         "osrelease_info": (1, 6),
         "osmajorrelease": 1,
-        "osfinger": "AstraLinuxSE-1",
+        "osfinger": "Astra Linux (Smolensk)-1",
     }
-    _run_os_grains_tests(None, _os_release_map, expectation)
+    _run_os_grains_tests(_os_release_data, _os_release_map, expectation)
 
 
 @pytest.mark.skip_unless_on_windows
