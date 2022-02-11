@@ -1,6 +1,7 @@
 import pytest
 import salt.proxy.restconf as restconf
 from tests.support.mock import patch
+import sys
 
 
 @pytest.fixture(autouse=True)
