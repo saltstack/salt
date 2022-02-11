@@ -21,6 +21,107 @@ def __virtual__():
         return True
     return (False, "zabbix module could not be loaded")
 
+def _interface_format(interfaces_data):
+    """
+    Formats interfaces from SLS file into valid JSON usable for zabbix API.
+    Completes JSON with default values.
+
+    :param interfaces_data: list of interfaces data from SLS file
+
+    """
+
+    if not interfaces_data:
+        return list()
+
+    interface_attrs = ("ip", "dns", "main", "type", "useip", "port", "details")
+    interfaces_json = salt.utils.json.loads(salt.utils.json.dumps(interfaces_data))
+    interfaces_dict = dict()
+
+    for interface in interfaces_json:
+        for intf in interface:
+            intf_name = intf
+            interfaces_dict[intf_name] = dict()
+            for intf_val in interface[intf]:
+                for key, value in intf_val.items():
+                    if key in interface_attrs:
+                        interfaces_dict[intf_name][key] = value
+
+    interfaces_list = list()
+    interface_ports = {
+        "agent": ["1", "10050"],
+        "snmp": ["2", "161"],
+        "ipmi": ["3", "623"],
+        "jmx": ["4", "12345"],
+    }
+
+    for key, value in interfaces_dict.items():
+        # Load interface values or default values
+        interface_type = interface_ports[value["type"].lower()][0]
+        main = "1" if str(value.get("main", "true")).lower() == "true" else "0"
+        useip = "1" if str(value.get("useip", "true")).lower() == "true" else "0"
+        interface_ip = value.get("ip", "")
+        dns = value.get("dns", key)
+        port = str(value.get("port", interface_ports[value["type"].lower()][1]))
+        if interface_type == "2":
+            if not value.get("details", False):
+                details_version = "2"
+                details_bulk = "1"
+                details_community = "{$SNMP_COMMUNITY}"
+            else:
+                val_details = {}
+                for detail in value.get("details"):
+                    val_details.update(detail)
+                details_version = val_details.get("version", "2")
+                details_bulk = val_details.get("bulk", "1")
+                details_community = val_details.get(
+                    "community", "{$SNMP_COMMUNITY}"
+                )
+            details = {
+                "version": details_version,
+                "bulk": details_bulk,
+            }
+            if details_version == "3":
+                details_securitylevel = val_details.get("securitylevel", "0")
+                details_securityname = val_details.get("securityname", "")
+                details_contextname = val_details.get("contextname", "")
+                details["securitylevel"] = details_securitylevel
+                details["securityname"] = details_securityname
+                details["contextname"] = details_contextname
+                if int(details_securitylevel) > 0:
+                    details_authpassphrase = val_details.get("authpassphrase", "")
+                    details_authprotocol = val_details.get("authprotocol", "0")
+                    details["authpassphrase"] = details_authpassphrase
+                    details["authprotocol"] = details_authprotocol
+                    if int(details_securitylevel) > 1:
+                        details_privpassphrase = val_details.get(
+                            "privpassphrase", ""
+                        )
+                        details_privprotocol = val_details.get("privprotocol", "0")
+                        details["privpassphrase"] = details_privpassphrase
+                        details["privprotocol"] = details_privprotocol
+            else:
+                details["community"] = details_community
+        else:
+            details = []
+
+        interfaces_list.append(
+            {
+                "type": interface_type,
+                "main": main,
+                "useip": useip,
+                "ip": interface_ip,
+                "dns": dns,
+                "port": port,
+                "details": details,
+            }
+        )
+
+    interfaces_list_sorted = sorted(
+        interfaces_list, key=lambda k: k["main"], reverse=True
+    )
+
+    return interfaces_list_sorted
+
 
 def present(host, groups, interfaces, **kwargs):
     """
@@ -96,106 +197,6 @@ def present(host, groups, interfaces, **kwargs):
         }
     }
 
-    def _interface_format(interfaces_data):
-        """
-        Formats interfaces from SLS file into valid JSON usable for zabbix API.
-        Completes JSON with default values.
-
-        :param interfaces_data: list of interfaces data from SLS file
-
-        """
-
-        if not interfaces_data:
-            return list()
-
-        interface_attrs = ("ip", "dns", "main", "type", "useip", "port", "details")
-        interfaces_json = salt.utils.json.loads(salt.utils.json.dumps(interfaces_data))
-        interfaces_dict = dict()
-
-        for interface in interfaces_json:
-            for intf in interface:
-                intf_name = intf
-                interfaces_dict[intf_name] = dict()
-                for intf_val in interface[intf]:
-                    for key, value in intf_val.items():
-                        if key in interface_attrs:
-                            interfaces_dict[intf_name][key] = value
-
-        interfaces_list = list()
-        interface_ports = {
-            "agent": ["1", "10050"],
-            "snmp": ["2", "161"],
-            "ipmi": ["3", "623"],
-            "jmx": ["4", "12345"],
-        }
-
-        for key, value in interfaces_dict.items():
-            # Load interface values or default values
-            interface_type = interface_ports[value["type"].lower()][0]
-            main = "1" if str(value.get("main", "true")).lower() == "true" else "0"
-            useip = "1" if str(value.get("useip", "true")).lower() == "true" else "0"
-            interface_ip = value.get("ip", "")
-            dns = value.get("dns", key)
-            port = str(value.get("port", interface_ports[value["type"].lower()][1]))
-            if interface_type == "2":
-                if not value.get("details", False):
-                    details_version = "2"
-                    details_bulk = "1"
-                    details_community = "{$SNMP_COMMUNITY}"
-                else:
-                    val_details = {}
-                    for detail in value.get("details"):
-                        val_details.update(detail)
-                    details_version = val_details.get("version", "2")
-                    details_bulk = val_details.get("bulk", "1")
-                    details_community = val_details.get(
-                        "community", "{$SNMP_COMMUNITY}"
-                    )
-                details = {
-                    "version": details_version,
-                    "bulk": details_bulk,
-                }
-                if details_version == "3":
-                    details_securitylevel = val_details.get("securitylevel", "0")
-                    details_securityname = val_details.get("securityname", "")
-                    details_contextname = val_details.get("contextname", "")
-                    details["securitylevel"] = details_securitylevel
-                    details["securityname"] = details_securityname
-                    details["contextname"] = details_contextname
-                    if int(details_securitylevel) > 0:
-                        details_authpassphrase = val_details.get("authpassphrase", "")
-                        details_authprotocol = val_details.get("authprotocol", "0")
-                        details["authpassphrase"] = details_authpassphrase
-                        details["authprotocol"] = details_authprotocol
-                        if int(details_securitylevel) > 1:
-                            details_privpassphrase = val_details.get(
-                                "privpassphrase", ""
-                            )
-                            details_privprotocol = val_details.get("privprotocol", "0")
-                            details["privpassphrase"] = details_privpassphrase
-                            details["privprotocol"] = details_privprotocol
-                else:
-                    details["community"] = details_community
-            else:
-                details = []
-
-            interfaces_list.append(
-                {
-                    "type": interface_type,
-                    "main": main,
-                    "useip": useip,
-                    "ip": interface_ip,
-                    "dns": dns,
-                    "port": port,
-                    "details": details,
-                }
-            )
-
-        interfaces_list_sorted = sorted(
-            interfaces_list, key=lambda k: k["main"], reverse=True
-        )
-
-        return interfaces_list_sorted
 
     interfaces_formated = _interface_format(interfaces)
 
