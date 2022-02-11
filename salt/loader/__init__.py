@@ -129,7 +129,10 @@ def _module_dirs(
     if tag is None:
         tag = ext_type
     sys_types = os.path.join(base_path or str(SALT_BASE_PATH), int_type or ext_type)
-    ext_types = os.path.join(opts["extension_modules"], ext_type)
+    return_types = [sys_types]
+    if opts.get("extension_modules"):
+        ext_types = os.path.join(opts["extension_modules"], ext_type)
+        return_types.insert(0, ext_types)
 
     if not sys_types.startswith(SALT_INTERNAL_LOADERS_PATHS):
         raise RuntimeError(
@@ -245,7 +248,7 @@ def _module_dirs(
         if os.path.isdir(maybe_dir):
             cli_module_dirs.insert(0, maybe_dir)
 
-    return cli_module_dirs + ext_type_types + [ext_types, sys_types]
+    return cli_module_dirs + ext_type_types + return_types
 
 
 def minion_mods(
