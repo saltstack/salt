@@ -21,6 +21,7 @@ attrs==20.3.0
     #   jsonschema
     #   pytest
     #   pytest-salt-factories
+    #   pytest-skip-markers
 azure-applicationinsights==0.1.0
     # via azure
 azure-batch==4.1.3
@@ -423,6 +424,8 @@ gitpython==3.1.12
     #   -r requirements/static/ci/common.in
 google-auth==1.6.3
     # via kubernetes
+hglib==2.6.1
+    # via -r requirements/static/ci/darwin.in
 idna==2.8
     # via
     #   -r requirements/darwin.txt
@@ -471,7 +474,7 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 linode-python==1.1.1
     # via -r requirements/darwin.txt
-lxml==4.6.3
+lxml==4.7.1
     # via
     #   junos-eznc
     #   napalm
@@ -486,6 +489,8 @@ markupsafe==2.0.1
     #   jinja2
     #   mako
     #   moto
+mercurial==6.0.1
+    # via -r requirements/static/ci/darwin.in
 mock==3.0.5
     # via -r requirements/pytest.txt
 more-itertools==8.2.0
@@ -494,7 +499,7 @@ more-itertools==8.2.0
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
-moto==2.2.17 ; python_version >= "3.10"
+moto==3.0.1 ; python_version >= "3.6"
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
     # via
@@ -673,21 +678,27 @@ pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
-pytest-salt-factories==0.907.0
+pytest-salt-factories==0.912.1
     # via -r requirements/pytest.txt
+pytest-skip-markers==1.1.2
+    # via pytest-salt-factories
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
 pytest-tempdir==2019.10.12
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
+pytest-timeout==1.4.2
+    # via -r requirements/pytest.txt
 pytest==6.2.5 ; python_version >= "3.10"
     # via
     #   -r requirements/pytest.txt
     #   pytest-helpers-namespace
     #   pytest-salt-factories
+    #   pytest-skip-markers
     #   pytest-subtests
     #   pytest-tempdir
+    #   pytest-timeout
 python-dateutil==2.8.0
     # via
     #   -r requirements/darwin.txt
@@ -815,7 +826,7 @@ urllib3==1.26.6
     #   kubernetes
     #   python-etcd
     #   requests
-vcert==0.7.3 ; sys_platform != "win32"
+vcert==0.7.4 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 virtualenv==20.7.2
     # via
