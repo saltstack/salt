@@ -970,17 +970,10 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         publish_payload,
         presence_callback=None,
         remove_presence_callback=None,
-        **kwargs
     ):
         """
         Bind to the interface specified in the configuration file
         """
-        log_queue = kwargs.get("log_queue")
-        if log_queue is not None:
-            salt.log.setup.set_multiprocessing_logging_queue(log_queue)
-        log_queue_level = kwargs.get("log_queue_level")
-        if log_queue_level is not None:
-            salt.log.setup.set_multiprocessing_logging_level(log_queue_level)
         io_loop = salt.ext.tornado.ioloop.IOLoop()
         io_loop.make_current()
 
@@ -1025,15 +1018,13 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         finally:
             pull_sock.close()
 
-    def pre_fork(self, process_manager, kwargs=None):
+    def pre_fork(self, process_manager):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
         do the actual publishing
         """
-        process_manager.add_process(
-            self.publish_daemon, kwargs=kwargs, name=self.__class__.__name__
-        )
+        process_manager.add_process(self.publish_daemon, name=self.__class__.__name__)
 
     @salt.ext.tornado.gen.coroutine
     def publish_payload(self, payload, *args):
