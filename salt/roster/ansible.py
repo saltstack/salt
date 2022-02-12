@@ -125,10 +125,11 @@ def targets(tgt, tgt_type="glob", **kwargs):
     Default: /etc/salt/roster
     """
     inventory = __runner__["salt.cmd"](
-        "cmd.run", "ansible-inventory -i {} --list".format(get_roster_file(__opts__))
+        "cmd.run_all",
+        "ansible-inventory -i {} --list".format(get_roster_file(__opts__)),
     )
     __context__["inventory"] = __utils__["json.loads"](
-        __utils__["stringutils.to_str"](inventory)
+        __utils__["stringutils.to_str"](inventory["stdout"])
     )
 
     if tgt_type == "glob":
