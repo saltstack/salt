@@ -805,9 +805,9 @@ def test_parallel_state_with_long_tag(state, state_tree):
             __pub_jid="1",  # Because these run in parallel we need a fake JID
         )
 
-    comments = sorted([x.comment for x in ret])
+    comments = sorted(x.comment for x in ret)
     expected = sorted(
-        ['Command "{}" run'.format(x) for x in (short_command, long_command)]
+        'Command "{}" run'.format(x) for x in (short_command, long_command)
     )
     assert comments == expected, "{} != {}".format(comments, expected)
 

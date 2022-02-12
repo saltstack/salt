@@ -68,7 +68,14 @@ def test_send(event_listener, salt_master, salt_minion, salt_call_cli):
     event_tag = random_string("salt/test/event/")
     data = {"event.fire": "just test it!!!!"}
     start_time = time.time()
-    ret = salt_call_cli.run("event.send", event_tag, data=data)
+    ret = salt_call_cli.run(
+        "event.send",
+        event_tag,
+        data=data,
+        with_grains=True,
+        with_pillar=True,
+        preload={"foo": "bar"},
+    )
     assert ret.exitcode == 0
     assert ret.json
     assert ret.json is True
@@ -82,3 +89,6 @@ def test_send(event_listener, salt_master, salt_minion, salt_call_cli):
         assert event.data["id"] == salt_minion.id
         assert event.data["cmd"] == "_minion_event"
         assert "event.fire" in event.data["data"]
+        assert event.data["foo"] == "bar"
+        assert event.data["data"]["grains"]["test_grain"] == "cheese"
+        assert event.data["data"]["pillar"]["ext_spam"] == "eggs"

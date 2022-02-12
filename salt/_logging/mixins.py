@@ -7,6 +7,7 @@
 
 import logging
 import sys
+import weakref
 
 
 class LoggingProfileMixin:
@@ -131,3 +132,48 @@ class ExcInfoOnLogLevelFormatMixin:
         # data which is not pickle'able
         record.exc_info_on_loglevel_instance = None
         return formatted_record
+
+
+class MultiprocessingStateMixin:
+
+    # __setstate__ and __getstate__ are only used on spawning platforms.
+    def __setstate__(self, state):
+        # Deferred to avoid circular imports
+        import salt.log.setup
+
+        # If __setstate__ is getting called it means this is running on a
+        # new process. Setup logging.
+        try:
+            salt.log.setup.set_multiprocessing_logging_queue(state["log_queue"])
+        except Exception:  # pylint: disable=broad-except
+            logging.getLogger(__name__).exception(
+                "Failed to run salt.log.setup.set_multiprocessing_logging_queue() on %s",
+                self,
+            )
+        try:
+            salt.log.setup.set_multiprocessing_logging_level(state["log_queue_level"])
+        except Exception:  # pylint: disable=broad-except
+            logging.getLogger(__name__).exception(
+                "Failed to run salt.log.setup.set_multiprocessing_logging_level() on %s",
+                self,
+            )
+        try:
+            salt.log.setup.setup_multiprocessing_logging(state["log_queue"])
+        except Exception:  # pylint: disable=broad-except
+            logging.getLogger(__name__).exception(
+                "Failed to run salt.log.setup.setup_multiprocessing_logging() on %s",
+                self,
+            )
+        weakref.finalize(self, salt.log.setup.shutdown_multiprocessing_logging)
+
+    def __getstate__(self):
+        # Deferred to avoid circular imports
+        import salt.log.setup
+
+        # Grab the current multiprocessing logging settings
+        log_queue = salt.log.setup.get_multiprocessing_logging_queue()
+        log_queue_level = salt.log.setup.get_multiprocessing_logging_level()
+        return {
+            "log_queue": log_queue,
+            "log_queue_level": log_queue_level,
+        }

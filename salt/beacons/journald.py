@@ -22,7 +22,9 @@ __virtualname__ = "journald"
 def __virtual__():
     if HAS_SYSTEMD:
         return __virtualname__
-    return False
+    err_msg = "systemd library is missing."
+    log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+    return False, err_msg
 
 
 def _get_journal():

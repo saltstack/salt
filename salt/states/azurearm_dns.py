@@ -237,10 +237,10 @@ def zone_present(
                     return ret
                 reg_vnets = zone.get("registration_virtual_networks", [])
                 remote_reg_vnets = sorted(
-                    [vnet["id"].lower() for vnet in reg_vnets if "id" in vnet]
+                    vnet["id"].lower() for vnet in reg_vnets if "id" in vnet
                 )
                 local_reg_vnets = sorted(
-                    [vnet.lower() for vnet in registration_virtual_networks or []]
+                    vnet.lower() for vnet in registration_virtual_networks or []
                 )
                 if local_reg_vnets != remote_reg_vnets:
                     ret["changes"]["registration_virtual_networks"] = {
@@ -259,10 +259,10 @@ def zone_present(
                     return ret
                 res_vnets = zone.get("resolution_virtual_networks", [])
                 remote_res_vnets = sorted(
-                    [vnet["id"].lower() for vnet in res_vnets if "id" in vnet]
+                    vnet["id"].lower() for vnet in res_vnets if "id" in vnet
                 )
                 local_res_vnets = sorted(
-                    [vnet.lower() for vnet in resolution_virtual_networks or []]
+                    vnet.lower() for vnet in resolution_virtual_networks or []
                 )
                 if local_res_vnets != remote_res_vnets:
                     ret["changes"]["resolution_virtual_networks"] = {
@@ -582,9 +582,9 @@ def record_set_present(
                             " dictionaries!".format(record_str)
                         )
                         return ret
-                    local, remote = [
+                    local, remote = (
                         sorted(config) for config in (record, rec_set[record_str])
-                    ]
+                    )
                     for val in local:
                         for key in val:
                             local_val = val[key]
