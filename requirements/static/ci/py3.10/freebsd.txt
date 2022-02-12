@@ -421,6 +421,8 @@ gitpython==3.1.12
     # via -r requirements/static/ci/common.in
 google-auth==1.6.3
     # via kubernetes
+hglib==2.6.1
+    # via -r requirements/static/ci/freebsd.in
 idna==2.8
     # via requests
 immutables==0.15
@@ -482,6 +484,8 @@ markupsafe==2.0.1
     #   jinja2
     #   mako
     #   moto
+mercurial==6.0.1
+    # via -r requirements/static/ci/freebsd.in
 mock==3.0.5
     # via -r requirements/pytest.txt
 more-itertools==5.0.0
@@ -490,7 +494,7 @@ more-itertools==5.0.0
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
-moto==2.2.17 ; python_version >= "3.10"
+moto==3.0.1 ; python_version >= "3.6"
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
     # via
@@ -818,7 +822,7 @@ urllib3==1.26.6
     #   kubernetes
     #   python-etcd
     #   requests
-vcert==0.7.3 ; sys_platform != "win32"
+vcert==0.7.4 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 virtualenv==20.7.2
     # via
