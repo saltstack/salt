@@ -2,6 +2,7 @@
 ============
 Windows DACL
 ============
+
 This salt utility contains objects and functions for setting permissions to
 objects in Windows. You can use the built in functions or access the objects
 directly to create your own custom functionality. There are two objects, Flags
@@ -62,17 +63,22 @@ permissions you see when you look at the security for an object.
     =======================  ====  ========  =======  =======
     Permissions              File  Registry  Printer  Service
     =======================  ====  ========  =======  =======
+    *** folder permissions
     list_folder              X
-    read_data                X
     create_files             X
-    write_data               X
     create_folders           X
+    traverse_folder          X
+    delete_subfolders_files  X
+
+    *** file permissions
+    read_data                X
+    write_data               X
     append_data              X
+    execute_file             X
+
+    *** common permissions
     read_ea                  X
     write_ea                 X
-    traverse_folder          X
-    execute_file             X
-    delete_subfolders_files  X
     read_attributes          X
     write_attributes         X
     delete                   X     X
@@ -118,6 +124,11 @@ should match what you see when you look at the properties for an object.
           beneath this object
         - subfolders_only: Applies to all containers beneath this object
         - files_only: Applies to all file objects beneath this object
+
+    .. NOTE::
+
+        'applies to' properties can only be modified on directories. Files
+        will always be ``this_folder_only``.
 
     **Registry types:**
 
@@ -216,17 +227,20 @@ def flags(instantiated=True):
                     0x40000: "Change permissions",
                     0x80000: "Take ownership",
                     # 0x100000: 'SYNCHRONIZE',  # This is in all of them
+                    # Directory permissions
                     "list_folder": 0x0001,
-                    "read_data": 0x0001,
                     "create_files": 0x0002,
-                    "write_data": 0x0002,
                     "create_folders": 0x0004,
+                    "traverse_folder": 0x0020,
+                    "delete_subfolders_files": 0x0040,
+                    # File permissions
+                    "read_data": 0x0001,
+                    "write_data": 0x0002,
                     "append_data": 0x0004,
+                    "execute_file": 0x0020,
+                    # Common permissions
                     "read_ea": 0x0008,
                     "write_ea": 0x0010,
-                    "traverse_folder": 0x0020,
-                    "execute_file": 0x0020,
-                    "delete_subfolders_files": 0x0040,
                     "read_attributes": 0x0080,
                     "write_attributes": 0x0100,
                     "delete": 0x10000,
@@ -358,25 +372,27 @@ def flags(instantiated=True):
         # 0x0002 : win32security.CONTAINER_INHERIT_ACE
         # 0x0004 : win32security.NO_PROPAGATE_INHERIT_ACE
         # 0x0008 : win32security.INHERIT_ONLY_ACE
+
+        # These values only apply to directories. Files will always return
+        # "This folder only"
         ace_prop = {
             "file": {
                 # for report
-                0x0000: "Not Inherited (file)",
+                0x0000: "This folder only",
                 0x0001: "This folder and files",
                 0x0002: "This folder and subfolders",
                 0x0003: "This folder, subfolders and files",
-                0x0006: "This folder only",
                 0x0009: "Files only",
                 0x000A: "Subfolders only",
                 0x000B: "Subfolders and files only",
                 # for setting
-                "this_folder_only": 0x0006,
-                "this_folder_subfolders_files": 0x0003,
-                "this_folder_subfolders": 0x0002,
+                "this_folder_only": 0x0000,
                 "this_folder_files": 0x0001,
-                "subfolders_files": 0x000B,
-                "subfolders_only": 0x000A,
+                "this_folder_subfolders": 0x0002,
+                "this_folder_subfolders_files": 0x0003,
                 "files_only": 0x0009,
+                "subfolders_only": 0x000A,
+                "subfolders_files": 0x000B,
             },
             "registry": {
                 0x0000: "This key only",
@@ -632,13 +648,13 @@ def dacl(obj_name=None, obj_type="file"):
                     log.exception(msg)
                     raise CommandExecutionError(msg, exc)
             else:
-                try:
-                    for perm in permissions:
+                for perm in permissions:
+                    try:
                         perm_flag |= self.ace_perms[self.dacl_type]["advanced"][perm]
-                except KeyError as exc:
-                    msg = "Invalid permission specified: {}".format(perm)
-                    log.exception(msg)
-                    raise CommandExecutionError(msg, exc)
+                    except KeyError as exc:
+                        msg = "Invalid permission specified: {}".format(perm)
+                        log.exception(msg)
+                        raise CommandExecutionError(msg, exc)
 
             if access_mode.lower() not in ["grant", "deny"]:
                 raise SaltInvocationError("Invalid Access Mode: {}".format(access_mode))
@@ -1796,12 +1812,10 @@ def has_permission(
     .. code-block:: python
 
         # Does Joe have read permissions to C:\Temp
-        salt.utils.win_dacl.has_permission(
-            'C:\\Temp', 'joe', 'read', 'grant', False)
+        salt.utils.win_dacl.has_permission('C:\\Temp', 'joe', 'read', 'grant', exact=False)
 
         # Does Joe have Full Control of C:\Temp
-        salt.utils.win_dacl.has_permission(
-            'C:\\Temp', 'joe', 'full_control', 'grant')
+        salt.utils.win_dacl.has_permission('C:\\Temp', 'joe', 'full_control', 'grant')
     """
     # Validate access_mode
     if access_mode.lower() not in ["grant", "deny"]:
@@ -1886,13 +1900,11 @@ def has_permissions(
 
     .. code-block:: python
 
-        # Does Joe have read permissions to C:\Temp
-        salt.utils.win_dacl.has_permission(
-            'C:\\Temp', 'joe', 'read', 'grant', False)
+        # Does Joe have read and write permissions to C:\Temp
+        salt.utils.win_dacl.has_permission('C:\\Temp', 'joe', ['read', 'write'], 'grant', exact=False)
 
         # Does Joe have Full Control of C:\Temp
-        salt.utils.win_dacl.has_permission(
-            'C:\\Temp', 'joe', 'full_control', 'grant')
+        salt.utils.win_dacl.has_permissions('C:\\Temp', 'joe', 'full_control', 'grant')
     """
     # If this is a single permission, use has_permission function
     if isinstance(permissions, str):

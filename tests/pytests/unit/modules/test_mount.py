@@ -2,7 +2,10 @@
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
 
+import logging
 import os
+import shutil
+import sys
 import textwrap
 
 import pytest
@@ -12,6 +15,8 @@ import salt.utils.path
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, mock_open, patch
 
+log = logging.getLogger(__name__)
+
 
 @pytest.fixture
 def mock_shell_file():
@@ -19,8 +24,56 @@ def mock_shell_file():
 
 
 @pytest.fixture
+def config_initial_file():
+    inital_fsystem = [
+        "/:\n",
+        "\tdev\t\t= /dev/hd4\n",
+        "\tvfs\t\t= jfs2\n",
+        "\tlog\t\t= /dev/hd8\n",
+        "\tmount \t\t= automatic\n",
+        "\tcheck\t\t= false\n",
+        "\ttype\t\t= bootfs\n",
+        "\tvol\t\t= root\n",
+        "\tfree\t\t= true\n",
+        "\n",
+        "/home:\n",
+        "\tdev\t\t= /dev/hd1\n",
+        "\tvfs\t\t= jfs2\n",
+        "\tlog\t\t= /dev/hd8\n",
+        "\tmount\t\t= true\n",
+        "\tcheck\t\t= true\n",
+        "\tvol\t\t= /home\n",
+        "\tfree\t\t= false\n",
+        "\n",
+    ]
+    return inital_fsystem
+
+
+@pytest.fixture
 def configure_loader_modules():
     return {mount: {}}
+
+
+@pytest.fixture
+def tmp_sub_dir(tmp_path):
+    directory = tmp_path / "filesystems-dir"
+    directory.mkdir()
+
+    yield directory
+
+    shutil.rmtree(str(directory))
+
+
+@pytest.fixture
+def config_file(tmp_sub_dir, config_initial_file):
+    filename = str(tmp_sub_dir / "filesystems")
+
+    with salt.utils.files.fopen(filename, "wb") as fp:
+        fp.writelines(salt.utils.data.encode(config_initial_file))
+
+    yield filename
+
+    os.remove(filename)
 
 
 def test_active():
@@ -341,6 +394,57 @@ def test_set_filesystems():
                 pytest.raises(
                     CommandExecutionError, mount.set_filesystems, "A", "B", "C"
                 )
+
+
+@pytest.mark.skipif(
+    sys.version_info[0] == 3 and sys.version_info[1] <= 5,
+    reason="run on Python 3.6 or greater where OrderedDict is default",
+)
+@pytest.mark.skip_on_windows(
+    reason="Not supported on Windows, does not handle tabs well"
+)
+def test_set_filesystems_with_data(tmp_sub_dir, config_file):
+    """
+    Tests to verify set_filesystems reads and adjusts file /etc/filesystems correctly
+    """
+    # Note AIX uses tabs in filesystems files, hence disable warings and errors for tabs and spaces
+    # pylint: disable=W8191
+    # pylint: disable=E8101
+    config_filepath = str(tmp_sub_dir / "filesystems")
+    with patch.dict(mount.__grains__, {"os": "AIX", "kernel": "AIX"}):
+        mount.set_filesystems(
+            "/test_mount", "/dev/hd3", "jsf2", "-", "true", config_filepath
+        )
+        with salt.utils.files.fopen(config_filepath, "r") as fp:
+            fsys_content = fp.read()
+
+        test_fsyst = """/:
+	dev		= /dev/hd4
+	vfs		= jfs2
+	log		= /dev/hd8
+	mount		= automatic
+	check		= false
+	type		= bootfs
+	vol		= root
+	free		= true
+
+/home:
+	dev		= /dev/hd1
+	vfs		= jfs2
+	log		= /dev/hd8
+	mount		= true
+	check		= true
+	vol		= /home
+	free		= false
+
+/test_mount:
+	dev		= /dev/hd3
+	vfstype		= jsf2
+	opts		= -
+	mount		= true
+
+"""
+    assert test_fsyst == fsys_content
 
 
 def test_mount():
