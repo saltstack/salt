@@ -890,11 +890,19 @@ class ZeroMQReqServerChannel(
         if "version" in payload:
             version = payload["version"]
 
+        sign_messages = False
+        if version > 1:
+            sign_messages = True
+
         # intercept the "_auth" commands, since the main daemon shouldn't know
         # anything about our key auth
         if payload["enc"] == "clear" and payload.get("load", {}).get("cmd") == "_auth":
-            stream.send(self.serial.dumps(self._auth(payload["load"])))
+            stream.send(self.serial.dumps(self._auth(payload["load"], sign_messages)))
             raise salt.ext.tornado.gen.Return()
+
+        nonce = None
+        if version > 1:
+            nonce = payload["load"].pop("nonce", None)
 
         # TODO: test
         try:
@@ -913,11 +921,6 @@ class ZeroMQReqServerChannel(
         elif req_fun == "send":
             stream.send(self.serial.dumps(self.crypticle.dumps(ret)))
         elif req_fun == "send_private":
-            sign_messages = False
-            nonce = None
-            if version > 1:
-                sign_messages = True
-                nonce = payload["load"]["nonce"]
             stream.send(
                 self.serial.dumps(
                     self._encrypt_private(
