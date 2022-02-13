@@ -113,7 +113,7 @@ class AESReqServerMixin:
 
         self.master_key = salt.crypt.MasterKeys(self.opts)
 
-    def _encrypt_private(self, ret, dictkey, target):
+    def _encrypt_private(self, ret, dictkey, target, nonce=None, sign_messages=True):
         """
         The server equivalent of ReqChannel.crypted_transfer_decode_dictentry
         """
@@ -128,7 +128,6 @@ class AESReqServerMixin:
         except OSError:
             log.error("AES key not found")
             return {"error": "AES key not found"}
-
         pret = {}
         key = salt.utils.stringutils.to_bytes(key)
         if HAS_M2:
@@ -136,7 +135,22 @@ class AESReqServerMixin:
         else:
             cipher = PKCS1_OAEP.new(pub)
             pret["key"] = cipher.encrypt(key)
-        pret[dictkey] = pcrypt.dumps(ret if ret is not False else {})
+        if ret is False:
+            ret = {}
+        if sign_messages:
+            if nonce is None:
+                return {"error": "Nonce not included in request"}
+            tosign = salt.payload.Serial({}).dumps(
+                {"key": pret["key"], "pillar": ret, "nonce": nonce}
+            )
+            master_pem_path = os.path.join(self.opts["pki_dir"], "master.pem")
+            signed_msg = {
+                "data": tosign,
+                "sig": salt.crypt.sign_message(master_pem_path, tosign),
+            }
+            pret[dictkey] = pcrypt.dumps(signed_msg)
+        else:
+            pret[dictkey] = pcrypt.dumps(ret)
         return pret
 
     def _update_aes(self):
