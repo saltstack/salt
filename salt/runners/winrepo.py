@@ -207,7 +207,7 @@ def update_git_repos(opts=None, clean=False, masterless=False):
                     if isinstance(result, list):
                         # Errors were detected
                         raise CommandExecutionError(
-                            "Failed up update winrepo remotes: {}".format(
+                            "Failed to update winrepo remotes: {}".format(
                                 "\n".join(result)
                             )
                         )
