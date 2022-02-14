@@ -14,7 +14,6 @@ import salt.ext.tornado
 import salt.ext.tornado.concurrent
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
-import salt.log.setup
 import salt.payload
 import salt.transport.base
 import salt.utils.files
@@ -706,7 +705,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         publish_payload,
         presence_callback=None,
         remove_presence_callback=None,
-        **kwargs
     ):
         """
         This method represents the Publish Daemon process. It is intended to be
@@ -810,7 +808,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             yield self.dpub_sock.send(payload)
             log.trace("Unfiltered data has been sent")
 
-    def pre_fork(self, process_manager, kwargs=None):
+    def pre_fork(self, process_manager):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
@@ -819,7 +817,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         """
         process_manager.add_process(
-            self.publish_daemon, args=(self.publish_payload,), kwargs=kwargs
+            self.publish_daemon,
+            args=(self.publish_payload,),
         )
 
     @property

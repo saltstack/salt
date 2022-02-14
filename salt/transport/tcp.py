@@ -626,7 +626,7 @@ class MessageClient:
                 "source_port": self.source_port,
             }
         stream = None
-        while stream is None and not self._closed:
+        while stream is None and (not self._closed and not self._closing):
             try:
                 stream = yield self._tcp_client.connect(
                     self.host, self.port, ssl_options=self.opts.get("ssl"), **kwargs
@@ -646,12 +646,12 @@ class MessageClient:
     @salt.ext.tornado.gen.coroutine
     def connect(self):
         if self._stream is None:
-            self.stream = True
             self._stream = yield self.getstream()
-            if not self._stream_return_running:
-                self.io_loop.spawn_callback(self._stream_return)
-            if self.connect_callback:
-                self.connect_callback(True)
+            if self._stream:
+                if not self._stream_return_running:
+                    self.io_loop.spawn_callback(self._stream_return)
+                if self.connect_callback:
+                    self.connect_callback(True)
 
     @salt.ext.tornado.gen.coroutine
     def _stream_return(self):
@@ -789,8 +789,17 @@ class MessageClient:
             self.io_loop.call_later(timeout, self.timeout_message, message_id, msg)
 
         item = salt.transport.frame.frame_msg(msg, header=header)
-        yield self.connect()
-        yield self._stream.write(item)
+
+        @salt.ext.tornado.gen.coroutine
+        def _do_send():
+            yield self.connect()
+            # If the _stream is None, we failed to connect.
+            if self._stream:
+                yield self._stream.write(item)
+
+        # Run send in a callback so we can wait on the future, in case we time
+        # out before we are able to connect.
+        self.io_loop.add_callback(_do_send)
         recv = yield future
         raise salt.ext.tornado.gen.Return(recv)
 
@@ -961,17 +970,10 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         publish_payload,
         presence_callback=None,
         remove_presence_callback=None,
-        **kwargs
     ):
         """
         Bind to the interface specified in the configuration file
         """
-        log_queue = kwargs.get("log_queue")
-        if log_queue is not None:
-            salt.log.setup.set_multiprocessing_logging_queue(log_queue)
-        log_queue_level = kwargs.get("log_queue_level")
-        if log_queue_level is not None:
-            salt.log.setup.set_multiprocessing_logging_level(log_queue_level)
         io_loop = salt.ext.tornado.ioloop.IOLoop()
         io_loop.make_current()
 
@@ -1016,15 +1018,13 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
         finally:
             pull_sock.close()
 
-    def pre_fork(self, process_manager, kwargs=None):
+    def pre_fork(self, process_manager):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
         do the actual publishing
         """
-        process_manager.add_process(
-            self.publish_daemon, kwargs=kwargs, name=self.__class__.__name__
-        )
+        process_manager.add_process(self.publish_daemon, name=self.__class__.__name__)
 
     @salt.ext.tornado.gen.coroutine
     def publish_payload(self, payload, *args):
