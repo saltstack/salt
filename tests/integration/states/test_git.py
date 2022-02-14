@@ -2,6 +2,7 @@
 Tests for the Git state
 """
 
+import contextlib
 import functools
 import inspect
 import logging
@@ -22,6 +23,17 @@ from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
 TEST_REPO = "https://github.com/saltstack/salt-test-repo.git"
+
+
+@contextlib.contextmanager
+def patch_loglevel(module_name, level):
+    logger = logging.getLogger(module_name)
+    orig_level = logger.level
+    logger.level = level
+    try:
+        yield
+    finally:
+        logger.level = orig_level
 
 
 def __check_git_version(caller, min_version, skip_msg):
@@ -175,15 +187,19 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         """
         git.latest
         """
-
+        # This test fails if any modules outside of salt emit a log record
+        # because they won't have a jid in the logger's context.
         log_format = "[%(levelname)-8s] %(jid)s %(message)s"
         self.handler = TstSuiteLoggingHandler(format=log_format, level=logging.DEBUG)
         ret_code_err = "failed with return code: 1"
-        with self.handler:
-            ret = self.run_state("git.latest", name=TEST_REPO, target=target)
-            self.assertSaltTrueReturn(ret)
-            self.assertTrue(os.path.isdir(os.path.join(target, ".git")))
-            assert any(ret_code_err in s for s in self.handler.messages) is False, False
+        with patch_loglevel("asyncio", logging.CRITICAL):
+            with self.handler:
+                ret = self.run_state("git.latest", name=TEST_REPO, target=target)
+                self.assertSaltTrueReturn(ret)
+                self.assertTrue(os.path.isdir(os.path.join(target, ".git")))
+                assert (
+                    any(ret_code_err in s for s in self.handler.messages) is False
+                ), False
 
     @with_tempdir(create=False)
     @pytest.mark.slow_test

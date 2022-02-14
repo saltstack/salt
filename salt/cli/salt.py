@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 
@@ -19,6 +20,9 @@ from salt.utils.args import yamlify_arg
 from salt.utils.verify import verify_log
 
 sys.modules["pkg_resources"] = None
+
+
+log = logging.getLogger(__name__)
 
 
 class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):

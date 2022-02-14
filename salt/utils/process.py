@@ -1,6 +1,7 @@
 """
 Functions for daemonizing and otherwise modifying running processes
 """
+import asyncio
 import contextlib
 import copy
 import errno
@@ -26,11 +27,11 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.versions
-from salt.ext.tornado import gen
 
 log = logging.getLogger(__name__)
 
 HAS_PSUTIL = False
+
 try:
     import psutil
 
@@ -148,6 +149,9 @@ def daemonize_if(opts):
 
 
 def systemd_notify_call(action):
+    """
+    Call systemd-notify with the given action.
+    """
     process = subprocess.Popen(
         ["systemd-notify", action], stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
@@ -457,6 +461,8 @@ class ThreadPool:
             return False
 
     def _thread_target(self):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         while True:
             # 1s timeout so that if the parent dies this thread will die within 1s
             try:
@@ -597,11 +603,7 @@ class ProcessManager:
                 # Otherwise, it's a dead process, remove it from the process map
                 del self._process_map[pid]
 
-    @gen.coroutine
-    def run(self, asynchronous=False):
-        """
-        Load and start all available api modules
-        """
+    def sync_run(self):
         log.debug("Process Manager starting!")
         if multiprocessing.current_process().name != "MainProcess":
             appendproctitle(self.name)
@@ -622,10 +624,7 @@ class ProcessManager:
                 # The event-based subprocesses management code was removed from here
                 # because os.wait() conflicts with the subprocesses management logic
                 # implemented in `multiprocessing` package. See #35480 for details.
-                if asynchronous:
-                    yield gen.sleep(10)
-                else:
-                    time.sleep(10)
+                time.sleep(10)
                 if not self._process_map:
                     break
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait
@@ -637,6 +636,48 @@ class ProcessManager:
                 if exc.errno != errno.EINTR:
                     raise
                 break
+
+    async def async_run(self):
+        log.debug("Process Manager starting!")
+        if multiprocessing.current_process().name != "MainProcess":
+            appendproctitle(self.name)
+
+        # make sure to kill the subprocesses if the parent is killed
+        if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
+            # There are no SIGTERM handlers installed, install ours
+            signal.signal(signal.SIGTERM, self._handle_signals)
+        if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
+            # There are no SIGINT handlers installed, install ours
+            signal.signal(signal.SIGINT, self._handle_signals)
+
+        while True:
+            log.trace("Process manager iteration")
+            try:
+                # in case someone died while we were waiting...
+                self.check_children()
+                # The event-based subprocesses management code was removed from here
+                # because os.wait() conflicts with the subprocesses management logic
+                # implemented in `multiprocessing` package. See #35480 for details.
+                await asyncio.sleep(10)
+                if not self._process_map:
+                    break
+            # OSError is raised if a signal handler is called (SIGTERM) during os.wait
+            except OSError:
+                break
+            except OSError as exc:  # pylint: disable=duplicate-except
+                # IOError with errno of EINTR (4) may be raised
+                # when using time.sleep() on Windows.
+                if exc.errno != errno.EINTR:
+                    raise
+                break
+
+    def run(self, asynchronous=False):
+        """
+        Load and start all available api modules
+        """
+        if asynchronous:
+            return self.async_run()
+        return self.sync_run()
 
     def check_children(self):
         """
@@ -1139,6 +1180,9 @@ class SignalHandlingMultiprocessingProcess(SignalHandlingProcess):
 
 @contextlib.contextmanager
 def default_signals(*signals):
+    """
+    Setup Salt's default signal handlers
+    """
     old_signals = {}
     for signum in signals:
         try:

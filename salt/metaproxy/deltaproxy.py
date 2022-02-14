@@ -2,7 +2,9 @@
 #   Proxy minion metaproxy modules
 #
 
+import asyncio
 import copy
+import functools
 import logging
 import os
 import sys
@@ -58,7 +60,7 @@ from salt.utils.process import SignalHandlingProcess
 log = logging.getLogger(__name__)
 
 
-def post_master_init(self, master):
+async def post_master_init(self, master):
     """
     Function to finish init after a deltaproxy proxy
     minion has finished connecting to a master.
@@ -68,7 +70,7 @@ def post_master_init(self, master):
     """
 
     if self.connected:
-        self.opts["pillar"] = yield salt.pillar.get_async_pillar(
+        self.opts["pillar"] = await salt.pillar.get_async_pillar(
             self.opts,
             self.opts["grains"],
             self.opts["id"],
@@ -162,8 +164,13 @@ def post_master_init(self, master):
     # Start engines here instead of in the Minion superclass __init__
     # This is because we need to inject the __proxy__ variable but
     # it is not setup until now.
-    self.io_loop.spawn_callback(
-        salt.engines.start_engines, self.opts, self.process_manager, proxy=self.proxy
+    self.io_loop.call_soon(
+        functools.partial(
+            salt.engines.start_engines,
+            self.opts,
+            self.process_manager,
+            proxy=self.proxy,
+        )
     )
 
     proxy_init_func_name = "{}.init".format(fq_proxyname)
@@ -339,7 +346,7 @@ def post_master_init(self, master):
         self.proxy_grains[_id] = salt.loader.grains(
             proxyopts, proxy=self.proxy, context=self.proxy_context[_id]
         )
-        self.proxy_pillar[_id] = yield salt.pillar.get_async_pillar(
+        self.proxy_pillar[_id] = await salt.pillar.get_async_pillar(
             proxyopts,
             self.proxy_grains[_id],
             _id,
@@ -861,7 +868,7 @@ def thread_multi_return(cls, minion_instance, opts, data):
                 log.error("The return failed for job %s: %s", data["jid"], exc)
 
 
-def handle_payload(self, payload):
+async def handle_payload(self, payload):
     """
     Verify the publication and then pass
     the payload along to _handle_decoded_payload.
@@ -869,7 +876,8 @@ def handle_payload(self, payload):
     if payload is not None and payload["enc"] == "aes":
         # First handle payload for the "control" proxy
         if self._target_load(payload["load"]):
-            self._handle_decoded_payload(payload["load"])
+            # self.io_loop.create_task(self._handle_decoded_payload(payload["load"]))
+            await self._handle_decoded_payload(payload["load"])
 
         # The following handles the sub-proxies
         sub_ids = self.opts["proxy"].get("ids", [self.opts["id"]])
@@ -877,7 +885,9 @@ def handle_payload(self, payload):
             if _id in self.deltaproxy_objs:
                 instance = self.deltaproxy_objs[_id]
                 if instance._target_load(payload["load"]):
-                    instance._handle_decoded_payload(payload["load"])
+                    # instance._handle_decoded_payload(payload["load"])
+                    # instance.io_loop.create_task(instance._handle_decoded_payload(payload["load"]))
+                    await instance._handle_decoded_payload(payload["load"])
             else:
                 log.warn("Proxy minion %s is not loaded, skipping.", _id)
 
@@ -891,7 +901,7 @@ def handle_payload(self, payload):
     # the minion currently has no need.
 
 
-def handle_decoded_payload(self, data):
+async def handle_decoded_payload(self, data):
     """
     Override this method if you wish to handle the decoded data
     differently.
@@ -939,7 +949,7 @@ def handle_decoded_payload(self, data):
                     data["jid"],
                 )
                 once_logged = True
-            yield salt.ext.tornado.gen.sleep(0.5)
+            await asyncio.sleep(0.5)
             process_count = self.subprocess_list.count
 
     # We stash an instance references to allow for the socket

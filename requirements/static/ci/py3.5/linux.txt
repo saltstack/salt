@@ -780,7 +780,7 @@ pyyaml==5.3.1
     #   kubernetes
     #   moto
     #   yamlordereddictloader
-pyzmq==18.0.1 ; python_version < "3.9"
+pyzmq==18.0.1 ; python_version < "3.6"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
@@ -888,8 +888,10 @@ toml==0.10.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest
-tornado==6.1
-    # via python-telegram-bot
+tornado==5.1
+    # via
+    #   -r requirements/base.txt
+    #   python-telegram-bot
 transitions==0.8.1
     # via junos-eznc
 twilio==6.63.0

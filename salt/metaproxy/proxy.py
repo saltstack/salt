@@ -2,6 +2,8 @@
 # Proxy minion metaproxy modules
 #
 
+import asyncio
+import functools
 import logging
 import os
 import signal
@@ -58,7 +60,7 @@ from salt.utils.process import SignalHandlingProcess, default_signals
 log = logging.getLogger(__name__)
 
 
-def post_master_init(self, master):
+async def post_master_init(self, master):
     """
     Function to finish init after a proxy
     minion has finished connecting to a master.
@@ -71,7 +73,7 @@ def post_master_init(self, master):
     if self.connected:
         self.opts["master"] = master
 
-        self.opts["pillar"] = yield salt.pillar.get_async_pillar(
+        self.opts["pillar"] = await salt.pillar.get_async_pillar(
             self.opts,
             self.opts["grains"],
             self.opts["id"],
@@ -160,8 +162,13 @@ def post_master_init(self, master):
     # Start engines here instead of in the Minion superclass __init__
     # This is because we need to inject the __proxy__ variable but
     # it is not setup until now.
-    self.io_loop.spawn_callback(
-        salt.engines.start_engines, self.opts, self.process_manager, proxy=self.proxy
+    self.io_loop.call_soon(
+        functools.partial(
+            salt.engines.start_engines,
+            self.opts,
+            self.process_manager,
+            proxy=self.proxy,
+        )
     )
 
     if (
@@ -741,7 +748,7 @@ def thread_multi_return(cls, minion_instance, opts, data):
                 log.error("The return failed for job %s: %s", data["jid"], exc)
 
 
-def handle_payload(self, payload):
+async def handle_payload(self, payload):
     """
     Verify the publication and then pass
     the payload along to _handle_decoded_payload.
@@ -749,7 +756,7 @@ def handle_payload(self, payload):
     if payload is not None and payload["enc"] == "aes":
         if self._target_load(payload["load"]):
 
-            self._handle_decoded_payload(payload["load"])
+            await self._handle_decoded_payload(payload["load"])
         elif self.opts["zmq_filtering"]:
             # In the filtering enabled case, we'd like to know when minion sees something it shouldnt
             log.trace(
@@ -761,7 +768,7 @@ def handle_payload(self, payload):
     # the minion currently has no need.
 
 
-def handle_decoded_payload(self, data):
+async def handle_decoded_payload(self, data):
     """
     Override this method if you wish to handle the decoded data
     differently.
@@ -807,7 +814,8 @@ def handle_decoded_payload(self, data):
                 "Maximum number of processes reached while executing jid %s, waiting...",
                 data["jid"],
             )
-            yield salt.ext.tornado.gen.sleep(10)
+            await asyncio.sleep(10)
+            # time.sleep(.05)
             process_count = len(salt.utils.minion.running(self.opts))
 
     # We stash an instance references to allow for the socket

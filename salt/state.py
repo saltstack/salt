@@ -819,7 +819,11 @@ class State:
             pillar_override=self._pillar_override,
             pillarenv=self.opts.get("pillarenv"),
         )
-        return pillar.compile_pillar()
+        try:
+            data = pillar.compile_pillar()
+        finally:
+            pillar.destroy()
+        return data
 
     def _mod_init(self, low):
         """

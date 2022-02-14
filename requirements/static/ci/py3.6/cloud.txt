@@ -717,7 +717,7 @@ pyyaml==5.4.1
     #   junos-eznc
     #   kubernetes
     #   yamlordereddictloader
-pyzmq==21.0.2 ; python_version < "3.9"
+pyzmq==22.3.0 ; python_version >= "3.6"
     # via
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
@@ -809,6 +809,8 @@ toml==0.10.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest
+tornado==5.1
+    # via -r requirements/base.txt
 transitions==0.8.9
     # via junos-eznc
 typing-extensions==3.10.0.0

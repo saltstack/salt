@@ -1,5 +1,3 @@
-import salt.ext.tornado.gen
-
 TRANSPORTS = (
     "zeromq",
     "tcp",
@@ -23,7 +21,7 @@ def request_server(opts, **kwargs):
     elif ttype == "tcp":
         import salt.transport.tcp
 
-        return salt.transport.tcp.TCPReqServer(opts)
+        return salt.transport.tcp.RequestServer(opts)
     elif ttype == "local":
         import salt.transport.local
 
@@ -45,7 +43,7 @@ def request_client(opts, io_loop):
     elif ttype == "tcp":
         import salt.transport.tcp
 
-        return salt.transport.tcp.TCPReqClient(opts, io_loop=io_loop)
+        return salt.transport.tcp.RequestClient(opts, io_loop=io_loop)
     else:
         raise Exception("Channels are only defined for tcp, zeromq")
 
@@ -66,7 +64,7 @@ def publish_server(opts, **kwargs):
     elif ttype == "tcp":
         import salt.transport.tcp
 
-        return salt.transport.tcp.TCPPublishServer(opts)
+        return salt.transport.tcp.PublishServer(opts)
     elif ttype == "local":  # TODO:
         import salt.transport.local
 
@@ -90,7 +88,7 @@ def publish_client(opts, io_loop):
     elif ttype == "tcp":
         import salt.transport.tcp
 
-        return salt.transport.tcp.TCPPubClient(opts, io_loop)
+        return salt.transport.tcp.PublishClient(opts, io_loop)
     raise Exception("Transport type not found: {}".format(ttype))
 
 
@@ -103,8 +101,7 @@ class RequestClient:
     def __init__(self, opts, io_loop, **kwargs):
         pass
 
-    @salt.ext.tornado.gen.coroutine
-    def send(self, load, timeout=60):
+    async def send(self, load, timeout=60):
         """
         Send a request message and return the reply from the server.
         """
@@ -211,8 +208,9 @@ class PublishClient:
         """
         raise NotImplementedError
 
-    @salt.ext.tornado.gen.coroutine
-    def connect(self, publish_port, connect_callback=None, disconnect_callback=None):
+    async def connect(
+        self, publish_port, connect_callback=None, disconnect_callback=None
+    ):
         """
         Create a network connection to the the PublishServer or broker.
         """

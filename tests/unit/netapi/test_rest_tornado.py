@@ -1,5 +1,6 @@
 import copy
 import hashlib
+import logging
 import os
 import shutil
 import urllib.parse
@@ -22,6 +23,8 @@ from tests.support.helpers import patched_environ
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
+
+log = logging.getLogger(__name__)
 
 
 class SaltnadoTestsBase(AsyncHTTPTestCase, AdaptedConfigurationTestCaseMixin):
@@ -69,6 +72,10 @@ class SaltnadoTestsBase(AsyncHTTPTestCase, AdaptedConfigurationTestCaseMixin):
         return self.auth.mk_token(self.auth_creds_dict)
 
     def setUp(self):
+        try:
+            os.makedirs("/tmp/salt-tests-tmpdir")
+        except OSError:
+            pass
         super().setUp()
         self.patched_environ = patched_environ(ASYNC_TEST_TIMEOUT="30")
         self.patched_environ.__enter__()
@@ -930,6 +937,13 @@ class TestEventListener(AsyncTestCase):
                     {},  # we don't use mod_opts, don't save?
                     {"sock_dir": self.sock_dir, "transport": "zeromq"},
                 )
+
+                async def connect():
+                    await event_listener.event.subscriber.connect()
+                    self.stop()
+
+                self.io_loop.spawn_callback(connect)
+                self.wait()
                 self._finished = False  # fit to event_listener's behavior
                 event_future = event_listener.get_event(
                     self, "evt1", callback=self.stop
@@ -953,7 +967,15 @@ class TestEventListener(AsyncTestCase):
                 event_listener = saltnado.EventListener(
                     {},  # we don't use mod_opts, don't save?
                     {"sock_dir": self.sock_dir, "transport": "zeromq"},
+                    io_loop=self.io_loop,
                 )
+
+                async def connect():
+                    await event_listener.event.subscriber.connect()
+                    self.stop()
+
+                self.io_loop.spawn_callback(connect)
+                self.wait()
                 self._finished = False  # fit to event_listener's behavior
                 event_future = event_listener.get_event(
                     self,
@@ -1016,8 +1038,7 @@ class TestEventListener(AsyncTestCase):
 
         def stop():
             """
-            To realize the scenario of this test, define a custom stop method to call
-            self.stop after finished two events.
+            Keep track of stop count
             """
             cnt[0] += 1
             if cnt[0] == 2:
@@ -1028,7 +1049,15 @@ class TestEventListener(AsyncTestCase):
                 event_listener = saltnado.EventListener(
                     {},  # we don't use mod_opts, don't save?
                     {"sock_dir": self.sock_dir, "transport": "zeromq"},
+                    io_loop=self.io_loop,
                 )
+
+                async def connect():
+                    await event_listener.event.subscriber.connect()
+                    self.stop()
+
+                self.io_loop.spawn_callback(connect)
+                self.wait()
 
                 self.assertEqual(0, len(event_listener.tag_map))
                 self.assertEqual(0, len(event_listener.request_map))

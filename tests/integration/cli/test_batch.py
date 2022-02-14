@@ -74,7 +74,7 @@ class BatchTest(ShellCase):
         Test that a failed state returns a non-zero exit code in batch mode
         """
         cmd = self.run_salt(
-            ' "*" state.single test.fail_without_changes name=test_me -b 25%',
+            ' "*" state.single test.fail_without_changes name=test_me -b 25% -l debug',
             with_retcode=True,
             timeout=self.run_timeout,
         )

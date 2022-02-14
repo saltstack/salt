@@ -238,8 +238,7 @@ class AsyncRemotePillar(RemotePillarMixin):
         self._closing = False
         self.clean_cache = clean_cache
 
-    @salt.ext.tornado.gen.coroutine
-    def compile_pillar(self):
+    async def compile_pillar(self):
         """
         Return a future which will contain the pillar data from the master
         """
@@ -258,7 +257,7 @@ class AsyncRemotePillar(RemotePillarMixin):
         if self.ext:
             load["ext"] = self.ext
         try:
-            ret_pillar = yield self.channel.crypted_transfer_decode_dictentry(
+            ret_pillar = await self.channel.crypted_transfer_decode_dictentry(
                 load,
                 dictkey="pillar",
             )
@@ -273,7 +272,7 @@ class AsyncRemotePillar(RemotePillarMixin):
             log.error(msg)
             # raise an exception! Pillar isn't empty, we can't sync it!
             raise SaltClientError(msg)
-        raise salt.ext.tornado.gen.Return(ret_pillar)
+        return ret_pillar
 
     def destroy(self):
         if self._closing:
@@ -1341,7 +1340,6 @@ class Pillar:
 # TODO: actually migrate from Pillar to AsyncPillar to allow for futures in
 # ext_pillar etc.
 class AsyncPillar(Pillar):
-    @salt.ext.tornado.gen.coroutine
-    def compile_pillar(self, ext=True):
+    async def compile_pillar(self, ext=True):
         ret = super().compile_pillar(ext=ext)
-        raise salt.ext.tornado.gen.Return(ret)
+        return ret
