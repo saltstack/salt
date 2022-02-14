@@ -2042,7 +2042,7 @@ class State:
                         "state will be re-run in %s seconds",
                         interval,
                     )
-                    self.functions["test.sleep"](interval)
+                    time.sleep(interval)
                     retry_ret = self.states[cdata["full"]](
                         *cdata["args"], **cdata["kwargs"]
                     )
