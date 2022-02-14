@@ -11,6 +11,7 @@ pytestmark = [
 def configure_loader_modules(base_env_state_tree_root_dir):
     opts = salt.config.DEFAULT_MINION_OPTS.copy()
     print(base_env_state_tree_root_dir)
+    opts["cachedir"] = str(base_env_state_tree_root_dir / ".." / "..")
     opts["file_roots"]["base"] = [str(base_env_state_tree_root_dir)]
     return {roots: {"__opts__": opts}}
 
