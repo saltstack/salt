@@ -351,9 +351,7 @@ botocore==1.20.67
     #   moto
     #   s3transfer
 cachetools==4.2.2
-    # via
-    #   google-auth
-    #   python-telegram-bot
+    # via google-auth
 cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
 certifi==2021.5.30
@@ -722,7 +720,7 @@ python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
 python-gnupg==0.4.4
     # via -r requirements/static/pkg/linux.in
-python-telegram-bot==13.11 ; python_version > "3.5"
+python-telegram-bot==13.5 ; python_version > "3.5"
     # via -r requirements/static/ci/linux.in
 pytz-deprecation-shim==0.1.0.post0
     # via tzlocal
@@ -836,8 +834,10 @@ toml==0.10.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest
-tornado==6.1
-    # via python-telegram-bot
+tornado==5.1
+    # via
+    #   -r requirements/base.txt
+    #   python-telegram-bot
 transitions==0.8.1
     # via junos-eznc
 twilio==6.63.0

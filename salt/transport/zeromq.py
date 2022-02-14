@@ -697,14 +697,6 @@ class AsyncReqMessageClient:
 
         if callback is not None:
             log.warning("Callback ignored")
-        #    def handle_future(future):
-        #        response = future.result()
-        #        self.io_loop.add_callback(callback, response)
-
-        #    future.add_done_callback(handle_future)
-
-        # Add this future to the mapping
-        # self.send_future_map[message] = future
 
         if self.opts.get("detect_mode") is True:
             timeout = 1
@@ -717,10 +709,10 @@ class AsyncReqMessageClient:
                     await asyncio.sleep(0.3)
                 else:
                     return await self.socket.recv()
-
-        # self.stream.on_recv(mark_future)
-        await self.socket.send(message)
-        ret = await self.socket.recv()
+        try:
+            ret = await asyncio.wait_for(sendrecv(), timeout=timeout)
+        except asyncio.TimeoutError:
+            raise SaltReqTimeoutError("timeout")
         load = salt.payload.loads(ret)
         if callback is not None:
             callback(load)

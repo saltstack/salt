@@ -331,6 +331,10 @@ azure==4.0.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 backports.entry-points-selectable==1.1.0
     # via virtualenv
+backports.zoneinfo==0.2.1
+    # via
+    #   pytz-deprecation-shim
+    #   tzlocal
 bcrypt==3.1.6
     # via paramiko
 boto3==1.17.67 ; python_version >= "3.6"
@@ -345,9 +349,7 @@ botocore==1.20.67
     #   moto
     #   s3transfer
 cachetools==4.2.2
-    # via
-    #   google-auth
-    #   python-telegram-bot
+    # via google-auth
 cassandra-driver==3.23.0
     # via -r requirements/static/ci/common.in
 certifi==2021.5.30
@@ -730,8 +732,10 @@ python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
 python-gnupg==0.4.4
     # via -r requirements/static/pkg/linux.in
-python-telegram-bot==13.11 ; python_version > "3.5"
+python-telegram-bot==13.5 ; python_version > "3.5"
     # via -r requirements/static/ci/linux.in
+pytz-deprecation-shim==0.1.0.post0
+    # via tzlocal
 pytz==2021.1
     # via
     #   apscheduler
@@ -739,7 +743,6 @@ pytz==2021.1
     #   python-telegram-bot
     #   tempora
     #   twilio
-    #   tzlocal
 pyvmomi==6.7.1.2018.12
     # via -r requirements/static/ci/common.in
 pyyaml==5.4.1
@@ -851,13 +854,17 @@ toml==0.10.2
     # via
     #   -r requirements/static/ci/common.in
     #   pytest
-tornado==6.1
-    # via python-telegram-bot
+tornado==5.1
+    # via
+    #   -r requirements/base.txt
+    #   python-telegram-bot
 transitions==0.8.1
     # via junos-eznc
 twilio==6.63.0
     # via -r requirements/static/ci/linux.in
-tzlocal==2.1
+tzdata==2021.5
+    # via pytz-deprecation-shim
+tzlocal==4.1
     # via apscheduler
 urllib3==1.26.6
     # via
