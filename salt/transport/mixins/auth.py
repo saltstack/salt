@@ -603,8 +603,7 @@ class AESReqServerMixin:
                 ret["aes"] = pub.public_encrypt(aes, RSA.pkcs1_oaep_padding)
             else:
                 ret["aes"] = cipher.encrypt(aes)
-        # ret["serial"] = salt.master.SMaster.get_serial()
-        ret["serial"] = 0
+
         # Be aggressive about the signature
         digest = salt.utils.stringutils.to_bytes(hashlib.sha256(aes).hexdigest())
         ret["sig"] = salt.crypt.private_encrypt(self.master_key.key, digest)

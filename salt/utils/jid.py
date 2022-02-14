@@ -34,13 +34,6 @@ def gen_jid(opts):
     return "{:%Y%m%d%H%M%S%f}_{}".format(jid_dt, os.getpid())
 
 
-def jid_to_datetime(jid):
-    """
-    Return a datetime object from jid
-    """
-    return datetime.datetime.strptime(jid.split("_")[0], "%Y%m%d%H%M%S%f")
-
-
 def is_jid(jid):
     """
     Returns True if the passed in value is a job id

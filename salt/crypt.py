@@ -531,7 +531,7 @@ class AsyncAuth:
     def __init__(self, opts, io_loop=None):
         pass
 
-    ## an init for the singleton instance to call
+    # an init for the singleton instance to call
     def __singleton_init__(self, opts, io_loop=None):
         """
         Init an Auth instance
@@ -703,12 +703,12 @@ class AsyncAuth:
             else:
                 key = self.__key(self.opts)
                 if key not in AsyncAuth.creds_map:
-                    log.error("%s Got new master aes key.", self)
+                    log.debug("%s Got new master aes key.", self)
                     AsyncAuth.creds_map[key] = creds
                     self._creds = creds
                     self._crypticle = Crypticle(self.opts, creds["aes"])
                 elif self._creds["aes"] != creds["aes"]:
-                    log.error("%s The master's aes key has changed.", self)
+                    log.debug("%s The master's aes key has changed.", self)
                     AsyncAuth.creds_map[key] = creds
                     self._creds = creds
                     self._crypticle = Crypticle(self.opts, creds["aes"])

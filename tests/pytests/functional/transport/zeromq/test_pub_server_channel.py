@@ -91,7 +91,6 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                     if "stop" in payload:
                         break
                     last_msg = time.time()
-                    log.error("WTFSON %r", payload)
                     self.results.append(payload["jid"])
                 except salt.exceptions.SaltDeserializationError:
                     if not self.zmq_filtering:
