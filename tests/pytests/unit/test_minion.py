@@ -10,6 +10,7 @@ import salt.minion
 import salt.syspaths
 import salt.utils.crypt
 import salt.utils.event as event
+import salt.utils.jid
 import salt.utils.platform
 import salt.utils.process
 from salt._compat import ipaddress

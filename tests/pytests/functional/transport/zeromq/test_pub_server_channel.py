@@ -10,6 +10,7 @@ import salt.exceptions
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.log.setup
+import salt.master
 import salt.transport.client
 import salt.transport.server
 import salt.transport.zeromq
@@ -40,6 +41,21 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         self.started = multiprocessing.Event()
         self.running = multiprocessing.Event()
 
+    def _rotate_secrets(self, now=None):
+        salt.master.SMaster.secrets["aes"] = {
+            "secret": multiprocessing.Array(
+                ctypes.c_char,
+                salt.utils.stringutils.to_bytes(
+                    salt.crypt.Crypticle.generate_key_string()
+                ),
+            ),
+            "serial": multiprocessing.Value(
+                ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
+            ),
+            "reload": salt.crypt.Crypticle.generate_key_string,
+            "rotate_master_key": self._rotate_secrets,
+        }
+
     def run(self):
         """
         Gather results until then number of seconds specified by timeout passes
@@ -67,6 +83,8 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                 try:
                     serial_payload = salt.payload.loads(payload)
                     payload = crypticle.loads(serial_payload["load"])
+                    if not payload:
+                        continue
                     if "start" in payload:
                         self.running.set()
                         continue
@@ -108,10 +126,7 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self.master_config = master_config
         self.minion_config = minion_config
         self.collector_kwargs = collector_kwargs
-        self.aes_key = multiprocessing.Array(
-            ctypes.c_char,
-            salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
-        )
+        self.aes_key = salt.crypt.Crypticle.generate_key_string()
         self.process_manager = salt.utils.process.ProcessManager(
             name="ZMQ-PubServer-ProcessManager"
         )
@@ -126,14 +141,19 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self.queue = multiprocessing.Queue()
         self.stopped = multiprocessing.Event()
         self.collector = Collector(
-            self.minion_config,
-            self.pub_uri,
-            self.aes_key.value,
-            **self.collector_kwargs
+            self.minion_config, self.pub_uri, self.aes_key, **self.collector_kwargs
         )
 
     def run(self):
-        salt.master.SMaster.secrets["aes"] = {"secret": self.aes_key}
+        salt.master.SMaster.secrets["aes"] = {
+            "secret": multiprocessing.Array(
+                ctypes.c_char,
+                salt.utils.stringutils.to_bytes(self.aes_key),
+            ),
+            "serial": multiprocessing.Value(
+                ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
+            ),
+        }
         try:
             while True:
                 payload = self.queue.get()

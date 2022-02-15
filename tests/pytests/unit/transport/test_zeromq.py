@@ -910,11 +910,17 @@ async def test_req_serv_auth_v1(pki_dir):
     pub = salt.crypt.get_rsa_pub_key(str(pki_dir.join("minion", "minion.pub")))
     token = salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string())
     nonce = uuid.uuid4().hex
+
+    # We need to read the public key with fopen otherwise the newlines might
+    # not match on windows.
+    with salt.utils.files.fopen(str(pki_dir.join("minion", "minion.pub")), "r") as fp:
+        pub_key = fp.read()
+
     load = {
         "cmd": "_auth",
         "id": "minion",
         "token": token,
-        "pub": MINION_PUB_KEY.strip(),
+        "pub": pub_key,
     }
     ret = server._auth(load, sign_messages=False)
     assert "load" not in ret
@@ -956,12 +962,18 @@ async def test_req_serv_auth_v2(pki_dir):
     pub = salt.crypt.get_rsa_pub_key(str(pki_dir.join("minion", "minion.pub")))
     token = salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string())
     nonce = uuid.uuid4().hex
+
+    # We need to read the public key with fopen otherwise the newlines might
+    # not match on windows.
+    with salt.utils.files.fopen(str(pki_dir.join("minion", "minion.pub")), "r") as fp:
+        pub_key = fp.read()
+
     load = {
         "cmd": "_auth",
         "id": "minion",
         "nonce": nonce,
         "token": token,
-        "pub": MINION_PUB_KEY.strip(),
+        "pub": pub_key,
     }
     ret = server._auth(load, sign_messages=True)
     assert "sig" in ret
