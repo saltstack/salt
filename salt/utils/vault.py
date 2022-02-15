@@ -15,6 +15,7 @@ import time
 import requests
 import salt.crypt
 import salt.exceptions
+import salt.utils.json
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
