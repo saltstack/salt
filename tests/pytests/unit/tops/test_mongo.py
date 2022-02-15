@@ -6,9 +6,10 @@ from tests.support.mock import patch
 @pytest.mark.parametrize(
     "expected_ssl, use_ssl",
     [
-        (True, True),
-        (False, False),
-        (False, None),
+        (True, {"mongo.ssl": True}),
+        (False, {"mongo.ssl": False}),
+        (False, {"mongo.ssl": None}),
+        (False, {}),
     ],
 )
 def test_tops_should_correctly_pass_ssl_arg_to_MongoClient(expected_ssl, use_ssl):
@@ -16,10 +17,12 @@ def test_tops_should_correctly_pass_ssl_arg_to_MongoClient(expected_ssl, use_ssl
     with patch("salt.tops.mongo.pymongo", create=True) as fake_pymongo, patch.dict(
         "salt.tops.mongo.__opts__",
         {
-            "master_tops": {"mongo": {}},
-            "mongo.host": "fnord",
-            "mongo.port": "fnord",
-            "mongo.ssl": use_ssl,
+            **use_ssl,
+            **{
+                "master_tops": {"mongo": {}},
+                "mongo.host": "fnord",
+                "mongo.port": "fnord",
+            },
         },
     ):
         salt.tops.mongo.top(opts={"id": "fnord"})
