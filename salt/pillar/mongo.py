@@ -129,12 +129,25 @@ def ext_pillar(
           careful with other fields in the document as they must be string
           serializable. Defaults to ``None``.
     """
+    host = __opts__["mongo.host"]
+    port = __opts__["mongo.port"]
+    ssl = __opts__.get("mongo.ssl") or False
+    log.info("connecting to %s:%s for mongo ext_pillar", host, port)
+    conn = pymongo.MongoClient(host=host, port=port, ssl=ssl)
+
+    log.debug("using database '%s'", __opts__["mongo.db"])
+    mdb = conn[__opts__["mongo.db"]]
 
     uri = __opts__.get("mongo.uri")
     host = __opts__.get("mongo.host")
     port = __opts__.get("mongo.port")
     user = __opts__.get("mongo.user")
     password = __opts__.get("mongo.password")
+
+    if user and password:
+        log.debug("authenticating as '%s'", user)
+        mdb.authenticate(user, password)
+
     db = __opts__.get("mongo.db")
 
     if uri:
