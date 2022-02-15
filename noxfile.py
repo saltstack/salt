@@ -206,6 +206,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
+        session.error("Could not find a windows requirements file for {}".format(pydir))
     elif IS_DARWIN:
         if crypto is None:
             _requirements_file = os.path.join(
@@ -227,6 +228,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
+        session.error("Could not find a darwin requirements file for {}".format(pydir))
     elif IS_FREEBSD:
         if crypto is None:
             _requirements_file = os.path.join(
@@ -248,6 +250,7 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
+        session.error("Could not find a freebsd requirements file for {}".format(pydir))
     else:
         _install_system_packages(session)
         if crypto is None:
@@ -270,9 +273,10 @@ def _get_pip_requirements_file(session, transport, crypto=None, requirements_typ
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
+        session.error("Could not find a linux requirements file for {}".format(pydir))
 
 
-def _upgrade_pip_setuptools_and_wheel(session):
+def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
     if SKIP_REQUIREMENTS_INSTALL:
         session.log(
             "Skipping Python Requirements because SKIP_REQUIREMENTS_INSTALL was found in the environ"
@@ -285,13 +289,21 @@ def _upgrade_pip_setuptools_and_wheel(session):
         "pip",
         "install",
         "--progress-bar=off",
-        "-U",
-        "pip>=20.2.4,<21.2",
-        "setuptools!=50.*,!=51.*,!=52.*",
-        "wheel",
     ]
+    if upgrade:
+        install_command.append("-U")
+    install_command.extend(
+        ["pip>=20.2.4,<21.2", "setuptools!=50.*,!=51.*,!=52.*,<59", "wheel"]
+    )
     session.run(*install_command, silent=PIP_INSTALL_SILENT)
     return True
+
+
+def _install_requirements(
+    session, transport, *extra_requirements, requirements_type="ci"
+):
+    if not _upgrade_pip_setuptools_and_wheel(session):
+        return
 
 
 def _install_requirements(
@@ -314,8 +326,8 @@ def _install_requirements(
 
     if EXTRA_REQUIREMENTS_INSTALL:
         session.log(
-            "Installing the following extra requirements because the EXTRA_REQUIREMENTS_INSTALL environment variable "
-            "was set: %s",
+            "Installing the following extra requirements because the"
+            " EXTRA_REQUIREMENTS_INSTALL environment variable was set: %s",
             EXTRA_REQUIREMENTS_INSTALL,
         )
         # We pass --constraint in this step because in case any of these extra dependencies has a requirement
@@ -713,10 +725,15 @@ def pytest_cloud(session, coverage):
     """
     pytest cloud tests session
     """
+    pydir = _get_pydir(session)
+    if pydir == "py3.5":
+        session.error(
+            "Due to conflicting and unsupported requirements the cloud tests only run on Py3.6+"
+        )
     # Install requirements
-    if _install_requirements(session, "zeromq"):
+    if _upgrade_pip_setuptools_and_wheel(session):
         requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "cloud.txt"
+            "requirements", "static", "ci", pydir, "cloud.txt"
         )
 
         install_command = ["--progress-bar=off", "-r", requirements_file]
@@ -744,7 +761,8 @@ def pytest_tornado(session, coverage):
     pytest tornado tests session
     """
     # Install requirements
-    if _install_requirements(session, "zeromq"):
+    if _upgrade_pip_setuptools_and_wheel(session):
+        _install_requirements(session, "zeromq")
         session.install(
             "--progress-bar=off", "tornado==5.0.2", silent=PIP_INSTALL_SILENT
         )
@@ -846,8 +864,10 @@ class Tee:
         return self._first.fileno()
 
 
-def _lint(session, rcfile, flags, paths, tee_output=True):
-    if _install_requirements(session, "zeromq"):
+def _lint(
+    session, rcfile, flags, paths, tee_output=True, upgrade_setuptools_and_pip=True
+):
+    if _upgrade_pip_setuptools_and_wheel(session, upgrade=upgrade_setuptools_and_pip):
         requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "lint.txt"
         )
@@ -921,7 +941,14 @@ def _lint_pre_commit(session, rcfile, flags, paths):
             interpreter=session._runner.func.python,
             reuse_existing=True,
         )
-    _lint(session, rcfile, flags, paths, tee_output=False)
+    _lint(
+        session,
+        rcfile,
+        flags,
+        paths,
+        tee_output=False,
+        upgrade_setuptools_and_pip=False,
+    )
 
 
 @nox.session(python="3")
@@ -1018,7 +1045,6 @@ def docs_html(session, compress, clean):
         )
         install_command = ["--progress-bar=off", "-r", requirements_file]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
-
     os.chdir("doc/")
     if clean:
         session.run("make", "clean", external=True)
@@ -1042,7 +1068,6 @@ def docs_man(session, compress, update, clean):
         )
         install_command = ["--progress-bar=off", "-r", requirements_file]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
-
     os.chdir("doc/")
     if clean:
         session.run("make", "clean", external=True)
@@ -1055,11 +1080,13 @@ def docs_man(session, compress, update, clean):
     os.chdir("..")
 
 
-def _invoke(session):
+@nox.session(name="invoke", python="3")
+def invoke(session):
     """
     Run invoke tasks
     """
     if _upgrade_pip_setuptools_and_wheel(session):
+        _install_requirements(session, "zeromq")
         requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "invoke.txt"
         )
@@ -1082,53 +1109,6 @@ def _invoke(session):
     if files:
         cmd.append("--files={}".format(" ".join(files)))
     session.run(*cmd)
-
-
-@nox.session(name="invoke", python="3")
-def invoke(session):
-    """
-    Run an invoke target
-    """
-    _invoke(session)
-
-
-@nox.session(name="invoke-pre-commit", python=False)
-def invoke_pre_commit(session):
-    """
-    DO NOT CALL THIS NOX SESSION DIRECTLY
-
-    This session is called from a pre-commit hook
-    """
-    if "VIRTUAL_ENV" not in os.environ:
-        session.error(
-            "This should be running from within a virtualenv and "
-            "'VIRTUAL_ENV' was not found as an environment variable."
-        )
-    if "pre-commit" not in os.environ["VIRTUAL_ENV"]:
-        session.error(
-            "This should be running from within a pre-commit virtualenv and "
-            "'VIRTUAL_ENV'({}) does not appear to be a pre-commit virtualenv.".format(
-                os.environ["VIRTUAL_ENV"]
-            )
-        )
-    from nox.virtualenv import VirtualEnv
-
-    # Let's patch nox to make it run inside the pre-commit virtualenv
-    try:
-        session._runner.venv = VirtualEnv(  # pylint: disable=unexpected-keyword-arg
-            os.environ["VIRTUAL_ENV"],
-            interpreter=session._runner.func.python,
-            reuse_existing=True,
-            venv=True,
-        )
-    except TypeError:
-        # This is still nox-py2
-        session._runner.venv = VirtualEnv(
-            os.environ["VIRTUAL_ENV"],
-            interpreter=session._runner.func.python,
-            reuse_existing=True,
-        )
-    _invoke(session)
 
 
 @nox.session(name="changelog", python="3")
