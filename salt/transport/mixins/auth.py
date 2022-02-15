@@ -140,7 +140,7 @@ class AESReqServerMixin:
         if sign_messages:
             if nonce is None:
                 return {"error": "Nonce not included in request"}
-            tosign = self.serial.dumps(
+            tosign = salt.payload.Serial({}).dumps(
                 {"key": pret["key"], "pillar": ret, "nonce": nonce}
             )
             master_pem_path = os.path.join(self.opts["pki_dir"], "master.pem")

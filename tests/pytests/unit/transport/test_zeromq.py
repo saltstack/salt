@@ -416,7 +416,7 @@ def test_req_server_chan_encrypt_v2(pki_dir):
 
     assert "sig" in signed_msg
     assert "data" in signed_msg
-    data = salt.payload.loads(signed_msg["data"])
+    data = salt.payload.Serial({}).loads(signed_msg["data"])
     assert "key" in data
     assert data["key"] == ret["key"]
     assert "key" in data
@@ -662,9 +662,9 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(pki_dir):
         signed_msg = pcrypt.loads(ret[dictkey])
         # Changing the pillar data will cause the signature verification to
         # fail.
-        data = salt.payload.loads(signed_msg["data"])
+        data = salt.payload.Serial({}).loads(signed_msg["data"])
         data["pillar"] = {"pillar1": "bar"}
-        signed_msg["data"] = salt.payload.dumps(data)
+        signed_msg["data"] = salt.payload.Serial({}).dumps(data)
         ret[dictkey] = pcrypt.dumps(signed_msg)
         raise salt.ext.tornado.gen.Return(ret)
 
