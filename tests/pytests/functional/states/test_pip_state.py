@@ -135,7 +135,7 @@ pep8-pip:
         ):
             ret = modules.state.sls("pip-installed-errors")
             for state_return in ret:
-                assert not state_return.result
+                assert state_return.result is False
                 assert "Error installing 'pep8':" in state_return.comment
 
             # We now create the missing virtualenv
