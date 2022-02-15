@@ -195,7 +195,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(djangomod.__salt__, {"cmd.run": mock}):
             djangomod.createsuperuser("settings.py", "testuser", "user@example.com")
             self.assertEqual(mock.call_count, 1)
-            args, kwargs = mock.call_args
+            args, kwargs = mock.call_args  # pylint: disable=unpacking-non-sequence
             # cmdline arguments are extracted from a kwargs dict so order isn't guaranteed.
             self.assertEqual(len(args), 1)
             self.assertTrue(args[0].startswith("django-admin.py createsuperuser --"))

@@ -426,5 +426,7 @@ class RestartcheckTestCase(TestCase, LoaderModuleMockMixin):
         with patch_kernel, patch_salt, patch_deleted, patch_readlink, patch_grains, patch_popen:
             ret = restartcheck.restartcheck()
             self.assertIn("Found 1 processes using old versions of upgraded files", ret)
+            # pylint: disable=unpacking-non-sequence
             args, kwargs = popen_mock.call_args
+            # pylint: enable=unpacking-non-sequence
             assert args[0] == ["repoquery", "-l", "--admindir tmp dpkg"]

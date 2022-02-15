@@ -6,13 +6,9 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import Python libs
 import re
 
-# Import salt libs
 import salt.modules.mdadm_raid as mdadm
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -39,7 +35,7 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assert_called_once(mock)
 
-            args, kwargs = mock.call_args
+            args, kwargs = mock.call_args  # pylint: disable=unpacking-non-sequence
             # expected cmd is
             # mdadm -C /dev/md0 -R -v --chunk 256 --force -l 5 -e default -n 3 /dev/sdb1 /dev/sdc1 /dev/sdd1
             # where args between -v and -l could be in any order
@@ -75,7 +71,7 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assert_called_once(mock)
 
-            args, kwargs = mock.call_args
+            args, kwargs = mock.call_args  # pylint: disable=unpacking-non-sequence
             self.assertEqual(
                 args[0][:7], ["mdadm", "-C", "/dev/md0", "-R", "-v", "-l", "5"]
             )
