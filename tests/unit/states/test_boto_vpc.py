@@ -30,7 +30,7 @@ except ImportError:
     HAS_BOTO = False
 
 try:
-    from moto import mock_ec2_deprecated
+    from moto import mock_ec2_deprecated  # pylint: disable=no-name-in-module
 
     HAS_MOTO = True
 except ImportError:

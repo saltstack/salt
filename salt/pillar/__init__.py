@@ -651,6 +651,10 @@ class Pillar:
                     env,
                 )
                 opts["pillar_roots"][env] = opts["pillar_roots"].pop("__env__")
+                for idx, root in enumerate(opts["pillar_roots"][env]):
+                    opts["pillar_roots"][env][idx] = opts["pillar_roots"][env][
+                        idx
+                    ].replace("__env__", env)
             else:
                 log.debug(
                     "pillar_roots __env__ ignored (environment '%s' found in pillar_roots)",
