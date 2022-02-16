@@ -37,6 +37,15 @@ def pkgs():
     }
 
 
+@pytest.fixture(scope="module")
+def list_pkgs():
+    return {
+        "pkga": "1.0.1",
+        "pkgb": "1.0.2",
+        "pkgc": "1.0.3",
+    }
+
+
 def test_uptodate_with_changes(pkgs):
     """
     Test pkg.uptodate with simulated changes
@@ -518,3 +527,54 @@ def test_mod_aggregate():
     }
     res = pkg.mod_aggregate(low, chunks, running)
     assert res == expected
+
+
+def test_installed_with_changes_test_true(list_pkgs):
+    """
+    Test pkg.installed with simulated changes
+    """
+
+    list_pkgs = MagicMock(return_value=list_pkgs)
+
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.list_pkgs": list_pkgs,
+        },
+    ):
+
+        expected = {"installed": {"dummy": {"new": "installed", "old": ""}}}
+        # Run state with test=true
+        with patch.dict(pkg.__opts__, {"test": True}):
+            ret = pkg.installed("dummy", test=True)
+            assert ret["result"] is None
+            assert ret["changes"] == expected
+
+
+@pytest.mark.parametrize("action", ["removed", "purged"])
+def test_removed_purged_with_changes_test_true(list_pkgs, action):
+    """
+    Test pkg.removed with simulated changes
+    """
+
+    list_pkgs = MagicMock(return_value=list_pkgs)
+
+    mock_parse_targets = MagicMock(return_value=[{"pkga": None}, "repository"])
+
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.list_pkgs": list_pkgs,
+            "pkg_resource.parse_targets": mock_parse_targets,
+            "pkg_resource.version_clean": MagicMock(return_value=None),
+        },
+    ):
+
+        expected = {"pkga": {"new": "{}".format(action), "old": ""}}
+        pkg_actions = {"removed": pkg.removed, "purged": pkg.purged}
+
+        # Run state with test=true
+        with patch.dict(pkg.__opts__, {"test": True}):
+            ret = pkg_actions[action]("pkga", test=True)
+            assert ret["result"] is None
+            assert ret["changes"] == expected

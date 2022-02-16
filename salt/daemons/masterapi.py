@@ -405,7 +405,6 @@ class RemoteFuncs:
             opts=self.opts,
             listen=False,
         )
-        self.serial = salt.payload.Serial(opts)
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Create the tops dict for loading external top data
         self.tops = salt.loader.tops(self.opts)
@@ -1067,7 +1066,6 @@ class LocalFuncs:
     # _auth
     def __init__(self, opts, key):
         self.opts = opts
-        self.serial = salt.payload.Serial(opts)
         self.key = key
         # Create the event manager
         self.event = salt.utils.event.get_event(

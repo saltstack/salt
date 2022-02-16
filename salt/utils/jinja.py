@@ -4,6 +4,7 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 
 
 import atexit
+import itertools
 import logging
 import os.path
 import pipes
@@ -148,7 +149,7 @@ class SaltCacheLoader(BaseLoader):
                     'Relative path "%s" cannot be resolved without an environment',
                     template,
                 )
-                raise TemplateNotFound
+                raise TemplateNotFound(template)
             base_path = environment.globals["tpldir"]
             _template = os.path.normpath("/".join((base_path, _template)))
             if _template.split("/", 1)[0] == "..":
@@ -877,6 +878,39 @@ class SerializerExtension(Extension):
 
         unique = ['foo', 'bar']
 
+    ** Salt State Parameter Format Filters **
+
+    .. versionadded:: 3005
+
+    Renders a formatted multi-line YAML string from a Python dictionary. Each
+    key/value pair in the dictionary will be added as a single-key dictionary
+    to a list that will then be sent to the YAML formatter.
+
+    For example:
+
+    .. code-block:: jinja
+
+        {% set thing_params = {
+            "name": "thing",
+            "changes": True,
+            "warnings": "OMG! Stuff is happening!"
+           }
+        %}
+
+        thing:
+          test.configurable_test_state:
+            {{ thing_params | dict_to_sls_yaml_params | indent }}
+
+    will be rendered as::
+
+    .. code-block:: yaml
+
+        thing:
+          test.configurable_test_state:
+            - name: thing
+            - changes: true
+            - warnings: OMG! Stuff is happening!
+
     .. _`import tag`: https://jinja.palletsprojects.com/en/2.11.x/templates/#import
     '''
 
@@ -901,6 +935,14 @@ class SerializerExtension(Extension):
                 "load_yaml": self.load_yaml,
                 "load_json": self.load_json,
                 "load_text": self.load_text,
+                "dict_to_sls_yaml_params": self.dict_to_sls_yaml_params,
+                "combinations": itertools.combinations,
+                "combinations_with_replacement": itertools.combinations_with_replacement,
+                "compress": itertools.compress,
+                "permutations": itertools.permutations,
+                "product": itertools.product,
+                "zip": zip,
+                "zip_longest": itertools.zip_longest,
             }
         )
 
@@ -1169,4 +1211,22 @@ class SerializerExtension(Extension):
             parser, import_node.template, "import_{}".format(converter), body, lineno
         )
 
-    # pylint: enable=E1120,E1121
+    def dict_to_sls_yaml_params(self, value, flow_style=False):
+        """
+        .. versionadded:: 3005
+
+        Render a formatted multi-line YAML string from a Python dictionary. Each
+        key/value pair in the dictionary will be added as a single-key dictionary
+        to a list that will then be sent to the YAML formatter.
+
+        :param value: Python dictionary representing Salt state parameters
+
+        :param flow_style: Setting flow_style to False will enforce indentation
+                           mode
+
+        :returns: Formatted SLS YAML string rendered with newlines and
+                  indentation
+        """
+        return self.format_yaml(
+            [{key: val} for key, val in value.items()], flow_style=flow_style
+        )

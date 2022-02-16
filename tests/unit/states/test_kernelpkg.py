@@ -63,7 +63,7 @@ class KernelPkgTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertTrue(ret["result"])
                     self.assertIsInstance(ret["changes"], dict)
                     self.assertIsInstance(ret["comment"], str)
-                    self.assert_called_once(kernelpkg.__salt__["kernelpkg.upgrade"])
+                    kernelpkg.__salt__["kernelpkg.upgrade"].assert_called_once()
 
                 with patch.dict(kernelpkg.__opts__, {"test": True}):
                     kernelpkg.__salt__["kernelpkg.upgrade"].reset_mock()
@@ -116,7 +116,7 @@ class KernelPkgTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(ret["result"])
             self.assertIsInstance(ret["changes"], dict)
             self.assertIsInstance(ret["comment"], str)
-            self.assert_called_once(kernelpkg.__salt__["system.reboot"])
+            kernelpkg.__salt__["system.reboot"].assert_called_once()
 
             with patch.dict(kernelpkg.__opts__, {"test": True}):
                 kernelpkg.__salt__["system.reboot"].reset_mock()

@@ -11,11 +11,20 @@ Monitor temperature, humidity and pressure using the SenseHat of a Raspberry Pi
 import logging
 import re
 
+import salt.utils.beacons
+
 log = logging.getLogger(__name__)
+
+__virtualname__ = "sensehat"
 
 
 def __virtual__():
-    return "sensehat.get_pressure" in __salt__
+    if "sensehat.get_pressure" in __salt__:
+        return __virtualname__
+    else:
+        err_msg = "sensehat.get_pressure is missing."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
 
 
 def validate(config):
@@ -26,12 +35,10 @@ def validate(config):
     if not isinstance(config, list):
         return False, "Configuration for sensehat beacon must be a list."
     else:
-        _config = {}
-        list(map(_config.update, config))
+        config = salt.utils.beacons.list_to_dict(config)
 
-        if "sensors" not in _config:
+        if "sensors" not in config:
             return False, "Configuration for sensehat beacon requires sensors."
-
     return True, "Valid beacon configuration"
 
 
@@ -62,16 +69,15 @@ def beacon(config):
     ret = []
     min_default = {"humidity": "0", "pressure": "0", "temperature": "-273.15"}
 
-    _config = {}
-    list(map(_config.update, config))
+    config = salt.utils.beacons.list_to_dict(config)
 
-    for sensor in _config.get("sensors", {}):
+    for sensor in config.get("sensors", {}):
         sensor_function = "sensehat.get_{}".format(sensor)
         if sensor_function not in __salt__:
             log.error("No sensor for meassuring %s. Skipping.", sensor)
             continue
 
-        sensor_config = _config["sensors"][sensor]
+        sensor_config = config["sensors"][sensor]
         if isinstance(sensor_config, list):
             sensor_min = str(sensor_config[0])
             sensor_max = str(sensor_config[1])

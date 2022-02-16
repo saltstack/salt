@@ -11,6 +11,7 @@ import hashlib
 import logging
 import multiprocessing
 import os
+import queue
 import re
 import subprocess
 import sys
@@ -25,7 +26,7 @@ import salt.config
 import salt.defaults.exitcodes
 import salt.exceptions
 import salt.loader
-import salt.log
+import salt.log.setup
 import salt.minion
 import salt.output
 import salt.roster
@@ -43,6 +44,7 @@ import salt.utils.stringutils
 import salt.utils.thin
 import salt.utils.url
 import salt.utils.verify
+from salt._logging.mixins import MultiprocessingStateMixin
 from salt.template import compile_template
 from salt.utils.platform import is_junos, is_windows
 from salt.utils.process import Process
@@ -201,7 +203,7 @@ else:
 log = logging.getLogger(__name__)
 
 
-class SSH:
+class SSH(MultiprocessingStateMixin):
     """
     Create an SSH execution system
     """
@@ -306,18 +308,26 @@ class SSH:
                 "/var/tmp", ".{}".format(uuid.uuid4().hex[:6])
             )
             self.opts["ssh_wipe"] = "True"
-        self.serial = salt.payload.Serial(opts)
         self.returners = salt.loader.returners(self.opts, {})
         self.fsclient = salt.fileclient.FSClient(self.opts)
         self.thin = salt.utils.thin.gen_thin(
             self.opts["cachedir"],
             extra_mods=self.opts.get("thin_extra_mods"),
             overwrite=self.opts["regen_thin"],
-            python2_bin=self.opts["python2_bin"],
-            python3_bin=self.opts["python3_bin"],
             extended_cfg=self.opts.get("ssh_ext_alternatives"),
         )
         self.mods = mod_data(self.fsclient)
+
+    # __setstate__ and __getstate__ are only used on spawning platforms.
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        # This will invoke __init__ of the most derived class.
+        self.__init__(state["opts"])
+
+    def __getstate__(self):
+        state = super().__getstate__()
+        state["opts"] = self.opts
+        return state
 
     @property
     def parse_tgt(self):
@@ -374,7 +384,11 @@ class SSH:
                 roster_data = self.__parsed_rosters[roster_filename]
                 if not isinstance(roster_data, bool):
                     for host_id in roster_data:
-                        if hostname in [host_id, roster_data[host_id].get("host")]:
+                        try:
+                            roster_host = roster_data[host_id].get("host")
+                        except AttributeError:
+                            roster_host = roster_data[host_id]
+                        if hostname in [host_id, roster_host]:
                             if hostname != self.opts["tgt"]:
                                 self.opts["tgt"] = hostname
                             self.__parsed_rosters[self.ROSTER_UPDATE_FLAG] = False
@@ -614,11 +628,7 @@ class SSH:
                 if "id" in ret:
                     returned.add(ret["id"])
                     yield {ret["id"]: ret["ret"]}
-            except Exception:  # pylint: disable=broad-except
-                # This bare exception is here to catch spurious exceptions
-                # thrown by que.get during healthy operation. Please do not
-                # worry about this bare exception, it is entirely here to
-                # control program flow.
+            except queue.Empty:
                 pass
             for host in running:
                 if not running[host]["thread"].is_alive():
@@ -631,7 +641,7 @@ class SSH:
                                 if "id" in ret:
                                     returned.add(ret["id"])
                                     yield {ret["id"]: ret["ret"]}
-                        except Exception:  # pylint: disable=broad-except
+                        except queue.Empty:
                             pass
 
                         if host not in returned:
@@ -961,7 +971,6 @@ class Single:
         self.minion_config = salt.serializers.yaml.serialize(self.minion_opts)
         self.target = kwargs
         self.target.update(args)
-        self.serial = salt.payload.Serial(opts)
         self.wfuncs = salt.loader.ssh_wrapper(opts, None, self.context)
         self.shell = salt.client.ssh.shell.gen_shell(opts, **args)
         if self.winrm:
@@ -1140,6 +1149,7 @@ class Single:
             opts_pkg["_ssh_version"] = self.opts["_ssh_version"]
             opts_pkg["thin_dir"] = self.opts["thin_dir"]
             opts_pkg["master_tops"] = self.opts["master_tops"]
+            opts_pkg["extra_filerefs"] = self.opts.get("extra_filerefs", "")
             opts_pkg["__master_opts__"] = self.context["master_opts"]
             if "known_hosts_file" in self.opts:
                 opts_pkg["known_hosts_file"] = self.opts["known_hosts_file"]
@@ -1179,10 +1189,10 @@ class Single:
             }
             if data_cache:
                 with salt.utils.files.fopen(datap, "w+b") as fp_:
-                    fp_.write(self.serial.dumps(data))
+                    fp_.write(salt.payload.dumps(data))
         if not data and data_cache:
             with salt.utils.files.fopen(datap, "rb") as fp_:
-                data = self.serial.load(fp_)
+                data = salt.payload.load(fp_)
         opts = data.get("opts", {})
         opts["grains"] = data.get("grains")
 
@@ -1280,8 +1290,8 @@ class Single:
         if not self.opts.get("log_level"):
             self.opts["log_level"] = "info"
         if (
-            salt.log.LOG_LEVELS["debug"]
-            >= salt.log.LOG_LEVELS[self.opts.get("log_level", "info")]
+            salt.log.setup.LOG_LEVELS["debug"]
+            >= salt.log.setup.LOG_LEVELS[self.opts.get("log_level", "info")]
         ):
             debug = "1"
         arg_str = '''

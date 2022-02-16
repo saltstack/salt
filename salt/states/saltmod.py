@@ -113,6 +113,7 @@ def state(
     pillar=None,
     pillarenv=None,
     expect_minions=True,
+    exclude=None,
     fail_minions=None,
     allow_fail=0,
     concurrent=False,
@@ -196,6 +197,9 @@ def state(
         Pass in the number of minions to allow for failure before setting
         the result of the execution to False
 
+    exclude
+        Pass exclude kwarg to state
+
     concurrent
         Allow multiple state runs to occur at once.
 
@@ -235,6 +239,18 @@ def state(
               - apache
               - django
               - core
+            - saltenv: prod
+
+    Run sls file via :py:func:`state.sls <salt.state.sls>` on target
+    minions with exclude:
+
+    .. code-block:: yaml
+
+        docker:
+          salt.state:
+            - tgt: 'docker*'
+            - sls: docker
+            - exclude: docker.swarm
             - saltenv: prod
 
     Run a full :py:func:`state.highstate <salt.state.highstate>` on target
@@ -296,6 +312,9 @@ def state(
 
     if saltenv is not None:
         cmd_kw["kwarg"]["saltenv"] = saltenv
+
+    if exclude is not None:
+        cmd_kw["kwarg"]["exclude"] = exclude
 
     cmd_kw["kwarg"]["queue"] = queue
 
@@ -475,6 +494,11 @@ def function(
     ssh
         Set to `True` to use the ssh client instead of the standard salt client
 
+    roster
+        In the event of using salt-ssh, a roster system can be set
+
+        .. versionadded:: 3005
+
     batch
         Execute the command :ref:`in batches <targeting-batch>`. E.g.: ``10%``.
 
@@ -505,6 +529,8 @@ def function(
 
     cmd_kw["tgt_type"] = tgt_type
     cmd_kw["ssh"] = ssh
+    if "roster" in kwargs:
+        cmd_kw["roster"] = kwargs["roster"]
     cmd_kw["expect_minions"] = expect_minions
     cmd_kw["_cmd_meta"] = True
 
@@ -574,7 +600,7 @@ def function(
         func_ret["comment"] = "No minions responded"
     else:
         if changes:
-            func_ret["changes"] = {"out": "highstate", "ret": changes}
+            func_ret["changes"] = {"ret": changes}
         if fail:
             func_ret["result"] = False
             func_ret["comment"] = "Running function {} failed on minions: {}".format(

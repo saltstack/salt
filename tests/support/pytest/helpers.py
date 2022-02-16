@@ -570,6 +570,23 @@ class FakeSaltExtension:
                 )
             )
 
+            utils_dir = extension_package_dir / "utils"
+            utils_dir.mkdir()
+            utils_dir.joinpath("__init__.py").write_text("")
+            utils_dir.joinpath("foobar1.py").write_text(
+                textwrap.dedent(
+                    """\
+            __virtualname__ = "foobar"
+
+            def __virtual__():
+                return True
+
+            def echo(string):
+                return string
+            """
+                )
+            )
+
     def __enter__(self):
         self._laydown_files()
         return self

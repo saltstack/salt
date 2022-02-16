@@ -12,7 +12,11 @@ Statistics
 - Total Issue References: **43**
 - Total PR References: **117**
 
-- Contributors: **29** (`Azidburn`_, `Ch3LL`_, `UtahDave`_, `bobrik`_, `cachedout`_, `cedwards`_, `deepakhj`_, `dere`_, `gongled`_, `gtmanfred`_, `hrumph`_, `hu-dabao`_, `isbm`_, `jacobhammons`_, `jfindlay`_, `jmesquita`_, `junovitch`_, `justinta`_, `kev009`_, `martinhoefling`_, `multani`_, `rallytime`_, `randomed`_, `sjorge`_, `terminalmage`_, `thatch45`_, `theothergraham`_, `twangboy`_, `whiteinge`_)
+- Contributors: **29** (`Azidburn`_, `Ch3LL`_, `UtahDave`_, `bobrik`_, `cachedout`_, `cedwards`_,
+  `deepakhj`_, `dere`_, `gongled`_, `gtmanfred`_, `hrumph`_, `hu-dabao`_, `isbm`_, `jacobhammons`_,
+  `jfindlay`_, `jmesquita`_, `junovitch`_, `justinta`_, `kev009`_, `martinhoefling`_, `multani`_,
+  `rallytime`_, `randomed`_, `sjorge`_, `terminalmage`_, `thatch45`_, `theothergraham`_,
+  `twangboy`_, `whiteinge`_)
 
 
 Changelog for v2015.8.11..v2015.8.12

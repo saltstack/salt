@@ -243,21 +243,27 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
 
         # systemd < 231
         with patch.dict(systemd.__context__, {"salt.utils.systemd.version": 230}):
-            with patch.object(systemd, "_systemctl_status", mock):
+            with patch.object(systemd, "_systemctl_status", mock), patch.object(
+                systemd, "offline", MagicMock(return_value=False)
+            ):
                 self.assertTrue(systemd.available("sshd.service"))
                 self.assertFalse(systemd.available("foo.service"))
 
         # systemd >= 231
         with patch.dict(systemd.__context__, {"salt.utils.systemd.version": 231}):
             with patch.dict(_SYSTEMCTL_STATUS, _SYSTEMCTL_STATUS_GTE_231):
-                with patch.object(systemd, "_systemctl_status", mock):
+                with patch.object(systemd, "_systemctl_status", mock), patch.object(
+                    systemd, "offline", MagicMock(return_value=False)
+                ):
                     self.assertTrue(systemd.available("sshd.service"))
                     self.assertFalse(systemd.available("bar.service"))
 
         # systemd < 231 with retcode/output changes backported (e.g. RHEL 7.3)
         with patch.dict(systemd.__context__, {"salt.utils.systemd.version": 219}):
             with patch.dict(_SYSTEMCTL_STATUS, _SYSTEMCTL_STATUS_GTE_231):
-                with patch.object(systemd, "_systemctl_status", mock):
+                with patch.object(systemd, "_systemctl_status", mock), patch.object(
+                    systemd, "offline", MagicMock(return_value=False)
+                ):
                     self.assertTrue(systemd.available("sshd.service"))
                     self.assertFalse(systemd.available("bar.service"))
 
@@ -269,21 +275,27 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
 
         # systemd < 231
         with patch.dict(systemd.__context__, {"salt.utils.systemd.version": 230}):
-            with patch.object(systemd, "_systemctl_status", mock):
+            with patch.object(systemd, "_systemctl_status", mock), patch.object(
+                systemd, "offline", MagicMock(return_value=False)
+            ):
                 self.assertFalse(systemd.missing("sshd.service"))
                 self.assertTrue(systemd.missing("foo.service"))
 
         # systemd >= 231
         with patch.dict(systemd.__context__, {"salt.utils.systemd.version": 231}):
             with patch.dict(_SYSTEMCTL_STATUS, _SYSTEMCTL_STATUS_GTE_231):
-                with patch.object(systemd, "_systemctl_status", mock):
+                with patch.object(systemd, "_systemctl_status", mock), patch.object(
+                    systemd, "offline", MagicMock(return_value=False)
+                ):
                     self.assertFalse(systemd.missing("sshd.service"))
                     self.assertTrue(systemd.missing("bar.service"))
 
         # systemd < 231 with retcode/output changes backported (e.g. RHEL 7.3)
         with patch.dict(systemd.__context__, {"salt.utils.systemd.version": 219}):
             with patch.dict(_SYSTEMCTL_STATUS, _SYSTEMCTL_STATUS_GTE_231):
-                with patch.object(systemd, "_systemctl_status", mock):
+                with patch.object(systemd, "_systemctl_status", mock), patch.object(
+                    systemd, "offline", MagicMock(return_value=False)
+                ):
                     self.assertFalse(systemd.missing("sshd.service"))
                     self.assertTrue(systemd.missing("bar.service"))
 

@@ -4837,7 +4837,7 @@ class CreateVirtualMachineTestCase(TestCase):
             self.mock_folder_object,
             self.mock_resourcepool_object,
         )
-        self.assert_called_once(self.mock_vm_create_task)
+        self.mock_vm_create_task.assert_called_once()
 
     def test_create_vm_host_task_call(self):
         salt.utils.vmware.create_vm(
@@ -4847,7 +4847,7 @@ class CreateVirtualMachineTestCase(TestCase):
             self.mock_resourcepool_object,
             host_object=self.mock_host_object,
         )
-        self.assert_called_once(self.mock_vm_create_task)
+        self.mock_vm_create_task.assert_called_once()
 
     def test_create_vm_raise_no_permission(self):
         exception = vim.fault.NoPermission()
@@ -4929,7 +4929,7 @@ class RegisterVirtualMachineTestCase(TestCase):
             self.mock_vmx_path,
             self.mock_resourcepool_object,
         )
-        self.assert_called_once(self.mock_vm_register_task)
+        self.mock_vm_register_task.assert_called_once()
 
     def test_register_vm_host_task_call(self):
         salt.utils.vmware.register_vm(
@@ -4939,7 +4939,7 @@ class RegisterVirtualMachineTestCase(TestCase):
             self.mock_resourcepool_object,
             host_object=self.mock_host_object,
         )
-        self.assert_called_once(self.mock_vm_register_task)
+        self.mock_vm_register_task.assert_called_once()
 
     def test_register_vm_raise_no_permission(self):
         exception = vim.fault.NoPermission()
@@ -5011,7 +5011,7 @@ class UpdateVirtualMachineTestCase(TestCase):
 
     def test_update_vm_task_call(self):
         salt.utils.vmware.update_vm(self.mock_vm_ref, self.mock_config_spec)
-        self.assert_called_once(self.mock_vm_update_task)
+        self.mock_vm_update_task.assert_called_once()
 
     def test_update_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()
@@ -5056,7 +5056,7 @@ class DeleteVirtualMachineTestCase(TestCase):
 
     def test_destroy_vm_task_call(self):
         salt.utils.vmware.delete_vm(self.mock_vm_ref)
-        self.assert_called_once(self.mock_vm_destroy_task)
+        self.mock_vm_destroy_task.assert_called_once()
 
     def test_destroy_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()
@@ -5099,7 +5099,7 @@ class UnregisterVirtualMachineTestCase(TestCase):
 
     def test_unregister_vm_task_call(self):
         salt.utils.vmware.unregister_vm(self.mock_vm_ref)
-        self.assert_called_once(self.mock_vm_unregister)
+        self.mock_vm_unregister.assert_called_once()
 
     def test_unregister_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()

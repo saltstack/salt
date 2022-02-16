@@ -1,1 +1,0 @@
-Fixed mysql module to return `bytes` again.

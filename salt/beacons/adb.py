@@ -5,6 +5,7 @@ Beacon to emit adb device state changes for Android devices
 """
 import logging
 
+import salt.utils.beacons
 import salt.utils.path
 
 log = logging.getLogger(__name__)
@@ -18,7 +19,9 @@ last_state_extra = {"value": False, "no_devices": False}
 def __virtual__():
     which_result = salt.utils.path.which("adb")
     if which_result is None:
-        return False
+        err_msg = "adb is missing."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
     else:
         return __virtualname__
 
@@ -32,14 +35,13 @@ def validate(config):
         log.info("Configuration for adb beacon must be a list.")
         return False, "Configuration for adb beacon must be a list."
 
-    _config = {}
-    list(map(_config.update, config))
+    config = salt.utils.beacons.list_to_dict(config)
 
-    if "states" not in _config:
+    if "states" not in config:
         log.info("Configuration for adb beacon must include a states array.")
         return False, "Configuration for adb beacon must include a states array."
     else:
-        if not isinstance(_config["states"], list):
+        if not isinstance(config["states"], list):
             log.info("Configuration for adb beacon must include a states array.")
             return False, "Configuration for adb beacon must include a states array."
         else:
@@ -55,7 +57,7 @@ def validate(config):
                 "unknown",
                 "missing",
             ]
-            if any(s not in states for s in _config["states"]):
+            if any(s not in states for s in config["states"]):
                 log.info(
                     "Need a one of the following adb states: %s", ", ".join(states)
                 )
@@ -92,10 +94,9 @@ def beacon(config):
     log.trace("adb beacon starting")
     ret = []
 
-    _config = {}
-    list(map(_config.update, config))
+    config = salt.utils.beacons.list_to_dict(config)
 
-    out = __salt__["cmd.run"]("adb devices", runas=_config.get("user", None))
+    out = __salt__["cmd.run"]("adb devices", runas=config.get("user", None))
 
     lines = out.split("\n")[1:]
     last_state_devices = list(last_state.keys())
@@ -108,17 +109,17 @@ def beacon(config):
             if device not in last_state_devices or (
                 "state" in last_state[device] and last_state[device]["state"] != state
             ):
-                if state in _config["states"]:
+                if state in config["states"]:
                     ret.append({"device": device, "state": state, "tag": state})
                     last_state[device] = {"state": state}
 
-            if "battery_low" in _config:
+            if "battery_low" in config:
                 val = last_state.get(device, {})
                 cmd = "adb -s {} shell cat /sys/class/power_supply/*/capacity".format(
                     device
                 )
                 battery_levels = __salt__["cmd.run"](
-                    cmd, runas=_config.get("user", None)
+                    cmd, runas=config.get("user", None)
                 ).split("\n")
 
                 for l in battery_levels:
@@ -127,8 +128,8 @@ def beacon(config):
                         if "battery" not in val or battery_level != val["battery"]:
                             if (
                                 "battery" not in val
-                                or val["battery"] > _config["battery_low"]
-                            ) and battery_level <= _config["battery_low"]:
+                                or val["battery"] > config["battery_low"]
+                            ) and battery_level <= config["battery_low"]:
                                 ret.append(
                                     {
                                         "device": device,
@@ -148,13 +149,13 @@ def beacon(config):
     # Find missing devices and remove them / send an event
     for device in last_state_devices:
         if device not in found_devices:
-            if "missing" in _config["states"]:
+            if "missing" in config["states"]:
                 ret.append({"device": device, "state": "missing", "tag": "missing"})
 
             del last_state[device]
 
     # Maybe send an event if we don't have any devices
-    if "no_devices_event" in _config and _config["no_devices_event"] is True:
+    if "no_devices_event" in config and config["no_devices_event"] is True:
         if not found_devices and not last_state_extra["no_devices"]:
             ret.append({"tag": "no_devices"})
 

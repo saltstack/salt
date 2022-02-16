@@ -26,13 +26,13 @@ import time
 from datetime import datetime
 
 import salt.cache
+import salt.channel.client
 import salt.config
 import salt.defaults.exitcodes
 import salt.ext.tornado.gen
 import salt.loader
 import salt.payload
 import salt.syspaths as syspaths
-import salt.transport.client
 import salt.utils.args
 import salt.utils.event
 import salt.utils.files
@@ -215,7 +215,6 @@ class LocalClient:
                     c_path,
                 )
             self.opts = salt.config.client_config(c_path)
-        self.serial = salt.payload.Serial(self.opts)
         self.salt_user = salt.utils.user.get_specific_user()
         self.skip_perm_errors = skip_perm_errors
         self.key = self.__read_master_key()
@@ -1649,7 +1648,7 @@ class LocalClient:
             timeout=timeout,
             tgt=tgt,
             tgt_type=tgt_type,
-            # (gtmanfred) expect_minions is popped here incase it is passed from a client
+            # (gtmanfred) expect_minions is popped here in case it is passed from a client
             # call. If this is not popped, then it would be passed twice to
             # get_iter_returns.
             expect_minions=(
@@ -1892,7 +1891,7 @@ class LocalClient:
             str(self.opts["ret_port"]),
         )
 
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             self.opts, crypt="clear", master_uri=master_uri
         ) as channel:
             try:
@@ -1996,7 +1995,7 @@ class LocalClient:
             + str(self.opts["ret_port"])
         )
 
-        with salt.transport.client.AsyncReqChannel.factory(
+        with salt.channel.client.AsyncReqChannel.factory(
             self.opts, io_loop=io_loop, crypt="clear", master_uri=master_uri
         ) as channel:
             try:

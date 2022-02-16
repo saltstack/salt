@@ -97,6 +97,9 @@ def __virtual__():
             VALID_BRANCH_METHODS,
         )
         return False
+    if salt.utils.path.which("hg") is None:
+        log.error("hgfs requested but hg executable is not available.")
+        return False
     return __virtualname__
 
 
@@ -107,7 +110,11 @@ def _all_branches(repo):
     # repo.branches() returns a list of 3-tuples consisting of
     # (branch name, rev #, nodeid)
     # Example: [('default', 4, '7c96229269fa')]
-    return repo.branches()
+    branches = [
+        (salt.utils.stringutils.to_str(x[0]), x[1], salt.utils.stringutils.to_str(x[2]))
+        for x in repo.branches()
+    ]
+    return branches
 
 
 def _get_branch(repo, name):
@@ -128,7 +135,11 @@ def _all_bookmarks(repo):
     #   1. A list of 3-tuples consisting of (bookmark name, rev #, nodeid)
     #   2. The index of the current bookmark (-1 if no current one)
     # Example: ([('mymark', 4, '7c96229269fa')], -1)
-    return repo.bookmarks()[0]
+    bookmarks = [
+        (salt.utils.stringutils.to_str(x[0]), x[1], salt.utils.stringutils.to_str(x[2]))
+        for x in repo.bookmarks()[0]
+    ]
+    return bookmarks
 
 
 def _get_bookmark(repo, name):
@@ -150,7 +161,16 @@ def _all_tags(repo):
     # Example: [('1.0', 3, '3be15e71b31a', False),
     #           ('tip', 4, '7c96229269fa', False)]
     # Avoid returning the special 'tip' tag.
-    return [x for x in repo.tags() if x[0] != "tip"]
+    return [
+        (
+            salt.utils.stringutils.to_str(x[0]),
+            x[1],
+            salt.utils.stringutils.to_str(x[2]),
+            x[3],
+        )
+        for x in repo.tags()
+        if salt.utils.stringutils.to_str(x[0]) != "tip"
+    ]
 
 
 def _get_tag(repo, name):
@@ -181,6 +201,25 @@ def _get_ref(repo, name):
                 or _get_tag(repo["repo"], name)
             )
     return False
+
+
+def _get_manifest(repo, ref):
+    """
+    Get manifest for ref
+    """
+    # repo.manifest() returns a list of 5-tuples consisting of
+    # ('b80de5d138758541c5f05265ad144ab9fa86d1db', '644', False, False, 'thing.sls')
+    manifest = [
+        (
+            salt.utils.stringutils.to_str(x[0]),
+            salt.utils.stringutils.to_str(x[1]),
+            x[2],
+            x[3],
+            salt.utils.stringutils.to_str(x[4]),
+        )
+        for x in repo.manifest(rev=ref[1])
+    ]
+    return manifest
 
 
 def _failhard():
@@ -564,9 +603,8 @@ def update():
         if not os.path.exists(env_cachedir):
             os.makedirs(env_cachedir)
         new_envs = envs(ignore_cache=True)
-        serial = salt.payload.Serial(__opts__)
         with salt.utils.files.fopen(env_cache, "wb+") as fp_:
-            fp_.write(serial.dumps(new_envs))
+            fp_.write(salt.payload.dumps(new_envs))
             log.trace("Wrote env cache data to %s", env_cache)
 
     # if there is a change, fire an event
@@ -610,6 +648,7 @@ def envs(ignore_cache=False):
         if cache_match is not None:
             return cache_match
     ret = set()
+
     for repo in init():
         repo["repo"].open()
         if repo["branch_method"] in ("branches", "mixed"):
@@ -688,7 +727,11 @@ def find_file(path, tgt_env="base", **kwargs):  # pylint: disable=W0613
                     repo["repo"].close()
                     return fnd
         try:
-            repo["repo"].cat(["path:{}".format(repo_path)], rev=ref[2], output=dest)
+            repo["repo"].cat(
+                [salt.utils.stringutils.to_bytes("path:{}".format(repo_path))],
+                rev=ref[2],
+                output=dest,
+            )
         except hglib.error.CommandError:
             repo["repo"].close()
             continue
@@ -700,7 +743,7 @@ def find_file(path, tgt_env="base", **kwargs):  # pylint: disable=W0613
             except Exception:  # pylint: disable=broad-except
                 pass
         with salt.utils.files.fopen(blobshadest, "w+") as fp_:
-            fp_.write(ref[2])
+            fp_.write(salt.utils.stringutils.to_str(ref[2]))
         try:
             os.remove(lk_fn)
         except OSError:
@@ -841,7 +884,7 @@ def _get_file_list(load):
         repo["repo"].open()
         ref = _get_ref(repo, load["saltenv"])
         if ref:
-            manifest = repo["repo"].manifest(rev=ref[1])
+            manifest = _get_manifest(repo["repo"], ref=ref)
             for tup in manifest:
                 relpath = os.path.relpath(tup[4], repo["root"])
                 # Don't add files outside the hgfs_root
@@ -881,7 +924,7 @@ def _get_dir_list(load):
         repo["repo"].open()
         ref = _get_ref(repo, load["saltenv"])
         if ref:
-            manifest = repo["repo"].manifest(rev=ref[1])
+            manifest = _get_manifest(repo["repo"], ref=ref)
             for tup in manifest:
                 filepath = tup[4]
                 split = filepath.rsplit("/", 1)

@@ -9,6 +9,7 @@ import ast
 import pathlib
 
 from invoke import task  # pylint: disable=3rd-party-module-not-gated
+from salt.loader import SALT_INTERNAL_LOADERS_PATHS
 from tasks import utils
 
 CODE_DIR = pathlib.Path(__file__).resolve().parent.parent
@@ -16,7 +17,7 @@ SALT_CODE_DIR = CODE_DIR / "salt"
 
 
 @task(iterable=["files"], positional=["files"])
-def check_virtual(ctx, files):
+def check_virtual(ctx, files, enforce_virtualname=False):
     """
     Check Salt loader modules for a defined `__virtualname__` attribute and `__virtual__` function.
 
@@ -42,60 +43,20 @@ def check_virtual(ctx, files):
 
     _files = [path.resolve() for path in _files]
 
-    salt_loaders = (
-        CODE_DIR / "salt" / "modules",
-        CODE_DIR / "salt" / "metaproxy",
-        CODE_DIR / "salt" / "matchers",
-        CODE_DIR / "salt" / "engines",
-        CODE_DIR / "salt" / "proxy",
-        CODE_DIR / "salt" / "returners",
-        CODE_DIR / "salt" / "utils",
-        CODE_DIR / "salt" / "pillar",
-        CODE_DIR / "salt" / "tops",
-        CODE_DIR / "salt" / "wheel",
-        CODE_DIR / "salt" / "output",
-        CODE_DIR / "salt" / "serializers",
-        CODE_DIR / "salt" / "tokens",
-        CODE_DIR / "salt" / "auth",
-        CODE_DIR / "salt" / "fileserver",
-        CODE_DIR / "salt" / "roster",
-        CODE_DIR / "salt" / "thorium",
-        CODE_DIR / "salt" / "states",
-        CODE_DIR / "salt" / "beacons",
-        CODE_DIR / "salt" / "log" / "handlers",
-        CODE_DIR / "salt" / "client" / "ssh",
-        CODE_DIR / "salt" / "renderers",
-        CODE_DIR / "salt" / "grains",
-        CODE_DIR / "salt" / "runners",
-        CODE_DIR / "salt" / "queues",
-        CODE_DIR / "salt" / "sdb",
-        CODE_DIR / "salt" / "spm" / "pkgdb",
-        CODE_DIR / "salt" / "spm" / "pkgfiles",
-        CODE_DIR / "salt" / "cloud" / "clouds",
-        CODE_DIR / "salt" / "netapi",
-        CODE_DIR / "salt" / "executors",
-        CODE_DIR / "salt" / "cache",
-    )
-
-    # This is just internal task checking
-    for loader in salt_loaders:
-        if not pathlib.Path(loader).is_dir():
-            utils.error("The {} path is not a directory", loader)
-
     errors = 0
     exitcode = 0
     for path in _files:
         strpath = str(path)
-        if strpath.endswith("__init__.py"):
+        if path.name == "__init__.py":
             continue
-        for loader in salt_loaders:
+        for loader in SALT_INTERNAL_LOADERS_PATHS:
             try:
                 path.relative_to(loader)
                 break
             except ValueError:
                 # Path doesn't start with the loader path, carry on
                 continue
-        module = ast.parse(path.read_text(), filename=strpath)
+        module = ast.parse(path.read_text(), filename=str(path))
         found_virtual_func = False
         for funcdef in [
             node for node in module.body if isinstance(node, ast.FunctionDef)
@@ -128,7 +89,7 @@ def check_virtual(ctx, files):
             if found_virtualname_attr:
                 break
 
-        if not found_virtualname_attr:
+        if not found_virtualname_attr and enforce_virtualname:
             errors += 1
             exitcode = 1
             utils.error(

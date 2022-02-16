@@ -1118,6 +1118,83 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
                     zabbix.host_inventory_get("12345", **CONN_ARGS), module_return
                 )
 
+    def test_host_inventory_get_with_disabled_inventory(self):
+        """
+        test host_inventory_get with a host with inventory disabled
+        """
+        module_return = False
+        query_return = {
+            "jsonrpc": "2.0",
+            "result": [
+                {
+                    "hostid": "10258",
+                    "proxy_hostid": "0",
+                    "host": "master",
+                    "status": "0",
+                    "disable_until": "1517766661",
+                    "error": "Get value from agent failed: cannot connect to [[10.0.2.15]:10050]: [111] Connection refused",
+                    "available": "2",
+                    "errors_from": "1516087871",
+                    "lastaccess": "0",
+                    "ipmi_authtype": "-1",
+                    "ipmi_privilege": "2",
+                    "ipmi_username": "",
+                    "ipmi_password": "",
+                    "ipmi_disable_until": "0",
+                    "ipmi_available": "0",
+                    "snmp_disable_until": "0",
+                    "snmp_available": "0",
+                    "maintenanceid": "0",
+                    "maintenance_status": "0",
+                    "maintenance_type": "0",
+                    "maintenance_from": "0",
+                    "ipmi_errors_from": "0",
+                    "snmp_errors_from": "0",
+                    "ipmi_error": "",
+                    "snmp_error": "",
+                    "jmx_disable_until": "0",
+                    "jmx_available": "0",
+                    "jmx_errors_from": "0",
+                    "jmx_error": "",
+                    "name": "master",
+                    "flags": "0",
+                    "templateid": "0",
+                    "description": "",
+                    "tls_connect": "1",
+                    "tls_accept": "1",
+                    "tls_issuer": "",
+                    "tls_subject": "",
+                    "tls_psk_identity": "",
+                    "tls_psk": "",
+                    "inventory": [],
+                }
+            ],
+            "id": 1,
+        }
+
+        with patch.object(zabbix, "_query", return_value=query_return):
+            with patch.object(zabbix, "_login", return_value=CONN_ARGS):
+                self.assertEqual(
+                    zabbix.host_inventory_get("12345", **CONN_ARGS), module_return
+                )
+
+    def test_host_inventory_get_with_a_missing_host(self):
+        """
+        test host_inventory_get with a non-existent host
+        """
+        module_return = False
+        query_return = {
+            "jsonrpc": "2.0",
+            "result": [],
+            "id": 0,
+        }
+
+        with patch.object(zabbix, "_query", return_value=query_return):
+            with patch.object(zabbix, "_login", return_value=CONN_ARGS):
+                self.assertEqual(
+                    zabbix.host_inventory_get("12345", **CONN_ARGS), module_return
+                )
+
     def test_host_inventory_set(self):
         """
         query_submitted = {"params": {"hostid": 10258, "inventory_mode": "0", "inventory":
@@ -1127,12 +1204,67 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         module_return = {"hostids": [10258]}
         query_return = {"jsonrpc": "2.0", "result": {"hostids": [10258]}, "id": 0}
-
-        with patch.object(zabbix, "_query", return_value=query_return):
+        with patch.object(
+            zabbix, "_query", autospec=True, return_value=query_return
+        ) as mock__query:
             with patch.object(zabbix, "_login", return_value=CONN_ARGS):
                 self.assertEqual(
                     zabbix.host_inventory_set(
                         10258, asset_tag="jml3322", type="Xen", **CONN_ARGS
                     ),
                     module_return,
+                )
+                mock__query.assert_called_with(
+                    "host.update",
+                    {
+                        "hostid": 10258,
+                        "inventory_mode": "0",
+                        "inventory": {
+                            "asset_tag": "jml3322",
+                            "type": "Xen",
+                            "url": "http://test.url",
+                            "auth": "1234",
+                        },
+                    },
+                    "http://test.url",
+                    "1234",
+                )
+
+    def test_host_inventory_set_with_inventory_mode(self):
+        """
+        query_submitted = {"params": {"hostid": 10258, "inventory_mode": "1", "inventory":
+        {"asset_tag": "jml3322", "type": "Xen"}}, "jsonrpc": "2.0", "id": 0,
+        "auth": "a50d2c3030b9b73d7c28b5ebd89c044c", "method": "host.update"}
+        """
+
+        module_return = {"hostids": [10258]}
+        query_return = {"jsonrpc": "2.0", "result": {"hostids": [10258]}, "id": 0}
+        with patch.object(
+            zabbix, "_query", autospec=True, return_value=query_return
+        ) as mock__query:
+            with patch.object(zabbix, "_login", return_value=CONN_ARGS):
+                self.assertEqual(
+                    zabbix.host_inventory_set(
+                        10258,
+                        asset_tag="jml3322",
+                        type="Xen",
+                        inventory_mode="1",
+                        **CONN_ARGS
+                    ),
+                    module_return,
+                )
+                mock__query.assert_called_with(
+                    "host.update",
+                    {
+                        "hostid": 10258,
+                        "inventory_mode": "1",
+                        "inventory": {
+                            "asset_tag": "jml3322",
+                            "type": "Xen",
+                            "url": "http://test.url",
+                            "auth": "1234",
+                        },
+                    },
+                    "http://test.url",
+                    "1234",
                 )

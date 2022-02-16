@@ -28,14 +28,16 @@ def __virtual__():
 
 
 def _save_state(opts, details):
-    cachefile = os.path.join(opts["cachedir"], "dummy-proxy.cache")
+    _id = __context__["dummy_proxy"]["id"]
+    cachefile = os.path.join(opts["cachedir"], "dummy-proxy-{}.cache".format(_id))
     with salt.utils.files.fopen(cachefile, "wb") as pck:
         pck.write(salt.utils.msgpack.packb(details, use_bin_type=True))
     log.warning("Dummy Proxy Saved State(%s):\n%s", cachefile, pprint.pformat(details))
 
 
 def _load_state(opts):
-    cachefile = os.path.join(opts["cachedir"], "dummy-proxy.cache")
+    _id = __context__["dummy_proxy"]["id"]
+    cachefile = os.path.join(opts["cachedir"], "dummy-proxy-{}.cache".format(_id))
     try:
         with salt.utils.files.fopen(cachefile, "rb") as pck:
             state = salt.utils.msgpack.unpackb(pck.read(), raw=False)
@@ -83,6 +85,7 @@ def init(opts):
     Required.
     Can be used to initialize the server connection.
     """
+    __context__["dummy_proxy"] = {"id": opts["id"]}
     log.debug("dummy proxy init() called...")
     with _loaded_state(opts) as state:
         state["initialized"] = True
@@ -223,6 +226,7 @@ def package_remove(name):
     """
     Remove a "package" on the REST server
     """
+    __context__["dummy_proxy"]["foo"] = "bar"
     with _loaded_state(__opts__) as state:
         state["packages"].pop(name)
         return state["packages"]

@@ -120,6 +120,7 @@ __grants__ = [
     "SHOW DATABASES",
     "SHOW VIEW",
     "SHUTDOWN",
+    "SLAVE MONITOR",
     "SUPER",
     "SYSTEM_VARIABLES_ADMIN",
     "TRIGGER",
@@ -414,6 +415,13 @@ def _connect(**kwargs):
     _connarg("connection_unix_socket", "unix_socket", get_opts)
     _connarg("connection_default_file", "read_default_file", get_opts)
     _connarg("connection_default_group", "read_default_group", get_opts)
+    # MySQLdb states that this is required for charset usage
+    # but in fact it's more than it's internally activated
+    # when charset is used, activating use_unicode here would
+    # retrieve utf8 strings as unicode() objects in salt
+    # and we do not want that.
+    # _connarg('connection_use_unicode', 'use_unicode')
+    connargs["use_unicode"] = False
     _connarg("connection_charset", "charset")
     # Ensure MySQldb knows the format we use for queries with arguments
     MySQLdb.paramstyle = "pyformat"
@@ -421,13 +429,6 @@ def _connect(**kwargs):
     for key in copy.deepcopy(connargs):
         if not connargs[key]:
             del connargs[key]
-
-    # MySQLdb states that this is required for charset usage
-    # but in fact it's more than it's internally activated
-    # when charset is used, activating use_unicode here would
-    # retrieve utf8 strings as unicode() objects in salt
-    # and we do not want that. So we'll force it to False.
-    connargs["use_unicode"] = False
 
     if (
         connargs.get("passwd", True) is None
@@ -676,32 +677,13 @@ def _execute(cur, qry, args=None):
 def _sanitize_comments(content):
     # Remove comments which might affect line by line parsing
     # Regex should remove any text beginning with # (or --) not inside of ' or "
+    if not HAS_SQLPARSE:
+        log.error(
+            "_sanitize_comments unavailable, no python sqlparse library installed."
+        )
+        return content
+
     return sqlparse.format(content, strip_comments=True)
-
-
-def _disable_conversions():
-    # The following 3 lines stops MySQLdb from converting the MySQL results
-    # into Python objects. It leaves them as strings.
-    orig_conv = MySQLdb.converters.conversions
-    conv_iter = iter(orig_conv)
-    conv = dict(zip(conv_iter, [str] * len(orig_conv)))
-
-    # some converters are lists, do not break theses
-    conv_mysqldb = {"MYSQLDB": True}
-    if conv_mysqldb.get(MySQLdb.__package__.upper()):
-        conv[FIELD_TYPE.BLOB] = [
-            (FLAG.BINARY, str),
-        ]
-        conv[FIELD_TYPE.STRING] = [
-            (FLAG.BINARY, str),
-        ]
-        conv[FIELD_TYPE.VAR_STRING] = [
-            (FLAG.BINARY, str),
-        ]
-        conv[FIELD_TYPE.VARCHAR] = [
-            (FLAG.BINARY, str),
-        ]
-    return conv
 
 
 def query(database, query, **connection_args):
@@ -772,9 +754,29 @@ def query(database, query, **connection_args):
     # I don't think it handles multiple queries at once, so adding "commit"
     # might not work.
 
-    connection_args.update(
-        {"connection_db": database, "connection_conv": _disable_conversions()}
-    )
+    # The following 3 lines stops MySQLdb from converting the MySQL results
+    # into Python objects. It leaves them as strings.
+    orig_conv = MySQLdb.converters.conversions
+    conv_iter = iter(orig_conv)
+    conv = dict(zip(conv_iter, [str] * len(orig_conv)))
+
+    # some converters are lists, do not break theses
+    conv_mysqldb = {"MYSQLDB": True}
+    if conv_mysqldb.get(MySQLdb.__package__.upper()):
+        conv[FIELD_TYPE.BLOB] = [
+            (FLAG.BINARY, str),
+        ]
+        conv[FIELD_TYPE.STRING] = [
+            (FLAG.BINARY, str),
+        ]
+        conv[FIELD_TYPE.VAR_STRING] = [
+            (FLAG.BINARY, str),
+        ]
+        conv[FIELD_TYPE.VARCHAR] = [
+            (FLAG.BINARY, str),
+        ]
+
+    connection_args.update({"connection_db": database, "connection_conv": conv})
     dbc = _connect(**connection_args)
     if dbc is None:
         return {}
@@ -934,7 +936,7 @@ def status(**connection_args):
     ret = {}
     for _ in range(cur.rowcount):
         row = cur.fetchone()
-        ret[salt.utils.data.decode(row[0])] = row[1]
+        ret[row[0]] = row[1]
     return ret
 
 
@@ -1109,8 +1111,9 @@ def alter_db(name, character_set=None, collate=None, **connection_args):
         return []
     cur = dbc.cursor()
     existing = db_get(name, **connection_args)
+    # escaping database name is not required because of backticks in query expression
     qry = "ALTER DATABASE `{}` CHARACTER SET {} COLLATE {};".format(
-        name.replace("%", r"\%").replace("_", r"\_"),
+        name,
         character_set or existing.get("character_set"),
         collate or existing.get("collate"),
     )
@@ -1546,8 +1549,6 @@ def user_info(user, host="localhost", **connection_args):
 
         salt '*' mysql.user_info root localhost
     """
-    connection_args.update({"connection_conv": _disable_conversions()})
-
     dbc = _connect(**connection_args)
     if dbc is None:
         return False

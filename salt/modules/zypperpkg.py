@@ -435,10 +435,8 @@ class Wildcard:
             self.name = pkg_name
             self._set_version(pkg_version)  # Dissects possible operator
             versions = sorted(
-                [
-                    LooseVersion(vrs)
-                    for vrs in self._get_scope_versions(self._get_available_versions())
-                ]
+                LooseVersion(vrs)
+                for vrs in self._get_scope_versions(self._get_available_versions())
             )
             return versions and "{}{}".format(self._op or "", versions[-1]) or None
 
@@ -1080,7 +1078,7 @@ def list_repo_pkgs(*args, **kwargs):
             # Sort versions newest to oldest
             for pkgname in ret[reponame]:
                 sorted_versions = sorted(
-                    [LooseVersion(x) for x in ret[reponame][pkgname]], reverse=True
+                    (LooseVersion(x) for x in ret[reponame][pkgname]), reverse=True
                 )
                 ret[reponame][pkgname] = [x.vstring for x in sorted_versions]
         return ret
@@ -1091,7 +1089,7 @@ def list_repo_pkgs(*args, **kwargs):
                 byrepo_ret.setdefault(pkgname, []).extend(ret[reponame][pkgname])
         for pkgname in byrepo_ret:
             sorted_versions = sorted(
-                [LooseVersion(x) for x in byrepo_ret[pkgname]], reverse=True
+                (LooseVersion(x) for x in byrepo_ret[pkgname]), reverse=True
             )
             byrepo_ret[pkgname] = [x.vstring for x in sorted_versions]
         return byrepo_ret
@@ -2047,7 +2045,7 @@ def list_locks(root=None):
                 for element in [el for el in meta if el]:
                     if ":" in element:
                         lock.update(
-                            dict([tuple([i.strip() for i in element.split(":", 1)])])
+                            dict([tuple(i.strip() for i in element.split(":", 1))])
                         )
                 if lock.get("solvable_name"):
                     locks[lock.pop("solvable_name")] = lock
@@ -2101,7 +2099,6 @@ def unhold(name=None, pkgs=None, **kwargs):
     pkgs
         A list of packages to unhold.  The ``name`` parameter will be ignored if
         this option is passed.
-
 
     CLI Example:
 
@@ -2200,7 +2197,6 @@ def hold(name=None, pkgs=None, **kwargs):
     pkgs
         A list of packages to hold.  The ``name`` parameter will be ignored if
         this option is passed.
-
 
     CLI Example:
 

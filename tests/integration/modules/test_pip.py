@@ -542,7 +542,10 @@ class PipModuleTest(ModuleCase):
             if self._check_download_error(ret["stdout"]):
                 self.skipTest("Test skipped due to pip download error")
             self.assertEqual(ret["retcode"], 0)
-            self.assertIn("Successfully installed Blinker SaltTesting", ret["stdout"])
+            match = re.search(
+                "Successfully installed Blinker(.*) SaltTesting(.*)", ret["stdout"]
+            )
+            assert match is not None
         except KeyError as exc:
             self.fail(
                 "The returned dictionary is missing an expected key. Error: '{}'."

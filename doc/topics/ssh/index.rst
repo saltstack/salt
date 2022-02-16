@@ -292,7 +292,7 @@ This is especially important when using a custom `file_roots` that differ from
 
 .. note::
 
-    Please see https://docs.saltstack.com/en/latest/topics/grains/ for more
+    Please see https://docs.saltproject.io/en/latest/topics/grains/ for more
     information on grains and custom grains.
 
 

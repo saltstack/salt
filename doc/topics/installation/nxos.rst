@@ -360,7 +360,7 @@ The ``guestshell`` environment uses **systemd** for service management. The Salt
   [Unit]
   Description=The Salt Minion
   Documentation=man:salt-minion(1) file:///usr/share/doc/salt/html/contents.html
-  https://docs.saltstack.com/en/latest/contents.html
+  https://docs.saltproject.io/en/latest/contents.html
   After=network.target salt-master.service
 
   [Service]
