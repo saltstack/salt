@@ -1226,6 +1226,11 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
 
         .. versionadded:: 2015.8.0
 
+    allow_downgrades
+        Allow apt to downgrade packages without a prompt.
+
+        .. versionadded:: 3005
+
     CLI Example:
 
     .. code-block:: bash
@@ -1256,6 +1261,8 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         cmd.append("--allow-unauthenticated")
     if kwargs.get("download_only", False) or kwargs.get("downloadonly", False):
         cmd.append("--download-only")
+    if kwargs.get("allow_downgrades", False):
+        cmd.append("--allow-downgrades")
 
     cmd.append("dist-upgrade" if dist_upgrade else "upgrade")
     result = _call_apt(cmd, env=DPKG_ENV_VARS.copy())
