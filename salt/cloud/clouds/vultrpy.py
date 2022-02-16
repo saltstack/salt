@@ -632,6 +632,43 @@ def create(vm_):
         Wait for the server_state to switch to ok
         """
         data = show_instance(vm_["name"], call="action")
+        kwargs = {
+            "hostname": vm_["ssh_host"],
+            "port": 22,
+            "username": "root",
+            "password_retries": 1,
+            "timeout": 1,
+            "display_ssh_output": False,
+            "ssh_timeout": 1,
+            "password": vm_["password"],
+        }
+        # During my testing Vultr has shown to be stuck in installingbooting state for a very long
+        # time when deploying VM's.
+        # Vultr tech support suggested polling if /var/lib/cloud/instance/boot-finished exists as
+        # a workaround.
+        # Since I'm not sure that every image is using cloud-init we only try when server_status
+        # is installingbooting, and will eventually return True when state switches to ok.
+        if str(data.get("server_status", "")) == "installingbooting":
+            if salt.utils.cloud.wait_for_port(vm_["ssh_host"], port=22, timeout=1):
+                if salt.utils.cloud.wait_for_passwd(
+                    vm_["ssh_host"],
+                    port=22,
+                    username="root",
+                    ssh_timeout=1,
+                    display_ssh_output=False,
+                    maxtries=1,
+                ):
+                    try:
+                        return salt.utils.cloud.root_cmd(
+                            "test -f /var/lib/cloud/instance/boot-finished",
+                            tty=False,
+                            sudo=False,
+                            **kwargs
+                        )
+                    except SaltCloudSystemExit:
+                        return False
+            return False
+
         if str(data.get("server_status", "")) != "ok":
             time.sleep(1)
             return False
