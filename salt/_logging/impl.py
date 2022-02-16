@@ -551,8 +551,10 @@ def shutdown_console_handler():
     """
     console_handler = get_console_handler()
     if console_handler is not None:
+        logging.root.removeHandler(console_handler)
         console_handler.close()
         setup_console_handler.__handler__ = None
+        atexit.unregister(shutdown_console_handler)
 
 
 def setup_console_handler(log_level=None, log_format=None, date_format=None):
@@ -562,6 +564,8 @@ def setup_console_handler(log_level=None, log_format=None, date_format=None):
     if is_console_handler_configured():
         log.warning("Console logging already configured")
         return
+
+    atexit.register(shutdown_console_handler)
 
     log.trace(
         "Setting up console logging: %s",
@@ -628,8 +632,10 @@ def shutdown_logfile_handler():
     """
     logfile_handler = get_logfile_handler()
     if logfile_handler is not None:
+        logging.root.removeHandler(logfile_handler)
         logfile_handler.close()
         setup_logfile_handler.__handler__ = None
+        atexit.unregister(shutdown_logfile_handler)
 
 
 def setup_logfile_handler(
@@ -670,6 +676,7 @@ def setup_logfile_handler(
         log.warning("Logfile logging already configured")
         return
 
+    atexit.register(shutdown_logfile_handler)
     log.trace(
         "Setting up log file logging: %s",
         dict(
@@ -835,7 +842,9 @@ def shutdown_extended_logging():
     extended_logging_handlers = get_extended_logging_handlers()
     if extended_logging_handlers:
         for handler in extended_logging_handlers:
+            logging.root.removeHandler(handler)
             handler.close()
+        atexit.unregister(shutdown_extended_logging)
     setup_extended_logging.__handlers__ = None
 
 
