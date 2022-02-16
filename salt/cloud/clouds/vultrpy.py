@@ -79,9 +79,12 @@ You can list SSH keys available on your account using
 import logging
 import pprint
 import time
-import urllib.parse
 
 import salt.config as config
+import salt.utils.cloud
+import salt.utils.files
+import salt.utils.json
+import salt.utils.stringutils
 from salt.exceptions import SaltCloudConfigError, SaltCloudSystemExit
 
 # Get logging started
@@ -91,6 +94,13 @@ __virtualname__ = "vultr"
 
 DETAILS = {}
 
+try:
+    import requests
+
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+
 
 def __virtual__():
     """
@@ -99,7 +109,17 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
+    if get_dependencies() is False:
+        return False
+
     return __virtualname__
+
+
+def get_dependencies():
+    """
+    Warn if dependencies aren't met.
+    """
+    return config.check_driver_dependencies(__virtualname__, {"requests": HAS_REQUESTS})
 
 
 def _get_active_provider_name():
@@ -131,7 +151,7 @@ def _cache_provider_details(conn=None):
     sizes = avail_sizes(conn)
 
     for key, location in locations.items():
-        DETAILS["avail_locations"][location["name"]] = location
+        DETAILS["avail_locations"][location["id"]] = location
         DETAILS["avail_locations"][key] = location
 
     for key, image in images.items():
@@ -139,7 +159,7 @@ def _cache_provider_details(conn=None):
         DETAILS["avail_images"][key] = image
 
     for key, vm_size in sizes.items():
-        DETAILS["avail_sizes"][vm_size["name"]] = vm_size
+        DETAILS["avail_sizes"][vm_size["id"]] = vm_size
         DETAILS["avail_sizes"][key] = vm_size
 
 
@@ -147,28 +167,38 @@ def avail_locations(conn=None):
     """
     return available datacenter locations
     """
-    return _query("regions/list")
+    locations = _query("regions")["regions"]
+    ret = {}
+    for location in locations:
+        name = location["id"]
+        ret[name] = location.copy()
+    return ret
 
 
 def avail_scripts(conn=None):
     """
     return available startup scripts
     """
-    return _query("startupscript/list")
+    return _query("startup-scripts")["startup-scripts"]
 
 
 def avail_firewall_groups(conn=None):
     """
     return available firewall groups
     """
-    return _query("firewall/group_list")
+    return _query("firewalls")["firewall_groups"]
 
 
 def avail_keys(conn=None):
     """
     return available SSH keys
     """
-    return _query("sshkey/list")
+    ret = {}
+    keys = _query("ssh-keys")["ssh_keys"]
+    for key in keys:
+        name = key["name"]
+        ret[name] = key.copy()
+    return ret
 
 
 def list_scripts(conn=None, call=None):
@@ -204,7 +234,7 @@ def show_keypair(kwargs=None, call=None):
         return False
 
     keys = list_keypairs(call="function")
-    keyid = keys[kwargs["keyname"]]["SSHKEYID"]
+    keyid = keys[kwargs["keyname"]]["id"]
     log.debug("Key ID is %s", keyid)
 
     return keys[kwargs["keyname"]]
@@ -214,14 +244,24 @@ def avail_sizes(conn=None):
     """
     Return available sizes ("plans" in VultrSpeak)
     """
-    return _query("plans/list")
+    sizes = _query("plans")["plans"]
+    ret = {}
+    for size in sizes:
+        name = size["id"]
+        ret[name] = size.copy()
+    return ret
 
 
 def avail_images(conn=None):
     """
     Return available images
     """
-    return _query("os/list")
+    images = _query("os")["os"]
+    ret = {}
+    for image in images:
+        name = image["id"]
+        ret[name] = image.copy()
+    return ret
 
 
 def list_nodes(**kwargs):
@@ -243,19 +283,19 @@ def list_nodes_full(**kwargs):
     """
     Return all data on nodes
     """
-    nodes = _query("server/list")
+
+    nodes = _query("instances")
     ret = {}
 
-    for node in nodes:
-        name = nodes[node]["label"]
-        ret[name] = nodes[node].copy()
-        ret[name]["id"] = node
-        ret[name]["image"] = nodes[node]["os"]
-        ret[name]["size"] = nodes[node]["VPSPLANID"]
-        ret[name]["state"] = nodes[node]["status"]
-        ret[name]["private_ips"] = nodes[node]["internal_ip"]
-        ret[name]["public_ips"] = nodes[node]["main_ip"]
-
+    for node in nodes["instances"]:
+        name = node["label"]
+        ret[name] = node.copy()
+        ret[name]["id"] = node["id"]
+        ret[name]["image"] = node["os"]
+        ret[name]["size"] = node["plan"]
+        ret[name]["state"] = node["status"]
+        ret[name]["private_ips"] = node["internal_ip"]
+        ret[name]["public_ips"] = node["main_ip"]
     return ret
 
 
@@ -270,39 +310,94 @@ def list_nodes_select(conn=None, call=None):
     )
 
 
-def destroy(name):
+def destroy(name, call=None):
     """
-    Remove a node from Vultr
+    Destroy a VM. Will check termination protection and warn if enabled.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud --destroy mymachine
     """
-    node = show_instance(name, call="action")
-    params = {"SUBID": node["SUBID"]}
-    result = _query(
-        "server/destroy",
-        method="POST",
-        decode=False,
-        data=urllib.parse.urlencode(params),
+    if call == "function":
+        raise SaltCloudSystemExit(
+            "The destroy action must be called with -d, --destroy, -a or --action."
+        )
+
+    __utils__["cloud.fire_event"](
+        "event",
+        "destroying instance",
+        "salt/cloud/{}/destroying".format(name),
+        args={"name": name},
+        sock_dir=__opts__["sock_dir"],
+        transport=__opts__["transport"],
     )
 
-    # The return of a destroy call is empty in the case of a success.
-    # Errors are only indicated via HTTP status code. Status code 200
-    # effetively therefore means "success".
-    if result.get("body") == "" and result.get("text") == "":
-        return True
-    return result
+    node = show_instance(name, call="action")
+    result = _query(
+        "instances/{instance}".format(instance=node["id"]),
+        method="DELETE",
+    )
+
+    __utils__["cloud.fire_event"](
+        "event",
+        "destroyed instance",
+        "salt/cloud/{}/destroyed".format(name),
+        args={"name": name},
+        sock_dir=__opts__["sock_dir"],
+        transport=__opts__["transport"],
+    )
+
+    if __opts__.get("update_cachedir", False) is True:
+        __utils__["cloud.delete_minion_cachedir"](
+            name, _get_active_provider_name().split(":")[0], __opts__
+        )
+
+    return node
 
 
-def stop(*args, **kwargs):
+def stop(name, call=None):
     """
     Execute a "stop" action on a VM
+    name
+        The vm name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a stop mymachine
     """
-    return _query("server/halt")
+    if call != "action":
+        raise SaltCloudSystemExit("The stop action must be called with -a or --action.")
+
+    node = show_instance(name, call="action")
+
+    data = {"instance_ids": [node["id"]]}
+    return _query("instances/halt", method="POST", data=data)
 
 
-def start(*args, **kwargs):
+def start(name, call=None):
     """
-    Execute a "start" action on a VM
+    Execute a "stop" action on a VM
+    name
+        The name of the VM to start.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a start mymachine
     """
-    return _query("server/start")
+    if call != "action":
+        raise SaltCloudSystemExit(
+            "The start action must be called with -a or --action."
+        )
+
+    node = show_instance(name, call="action")
+
+    return _query("instances/{vmid}/start".format(vmid=node["id"]), method="POST")
 
 
 def show_instance(name, call=None):
@@ -329,10 +424,13 @@ def _lookup_vultrid(which_key, availkey, keyname):
     if DETAILS == {}:
         _cache_provider_details()
 
-    which_key = str(which_key)
     try:
         return DETAILS[availkey][which_key][keyname]
     except KeyError:
+        try:
+            return DETAILS[availkey][str(which_key)][keyname]
+        except KeyError:
+            return False
         return False
 
 
@@ -384,6 +482,7 @@ def create(vm_):
             str(firewall_group_id),
         )
         return False
+    ssh_key_list = []
     if ssh_key_ids is not None:
         key_list = ssh_key_ids.split(",")
         available_keys = avail_keys()
@@ -391,6 +490,7 @@ def create(vm_):
             if key and str(key) not in available_keys:
                 log.error("Your Vultr account does not have a key with ID %s", str(key))
                 return False
+            ssh_key_list.append(available_keys[key]["id"])
 
     if private_networking is not None:
         if not isinstance(private_networking, bool):
@@ -398,9 +498,9 @@ def create(vm_):
                 "'private_networking' should be a boolean value."
             )
     if private_networking is True:
-        enable_private_network = "yes"
+        enable_private_network = True
     else:
-        enable_private_network = "no"
+        enable_private_network = False
 
     __utils__["cloud.fire_event"](
         "event",
@@ -413,37 +513,37 @@ def create(vm_):
         transport=__opts__["transport"],
     )
 
-    osid = _lookup_vultrid(vm_["image"], "avail_images", "OSID")
+    osid = _lookup_vultrid(vm_["image"], "avail_images", "id")
     if not osid:
         log.error("Vultr does not have an image with id or name %s", vm_["image"])
         return False
 
-    vpsplanid = _lookup_vultrid(vm_["size"], "avail_sizes", "VPSPLANID")
+    vpsplanid = _lookup_vultrid(vm_["size"], "avail_sizes", "id")
     if not vpsplanid:
         log.error("Vultr does not have a size with id or name %s", vm_["size"])
         return False
 
-    dcid = _lookup_vultrid(vm_["location"], "avail_locations", "DCID")
+    dcid = _lookup_vultrid(vm_["location"], "avail_locations", "id")
     if not dcid:
         log.error("Vultr does not have a location with id or name %s", vm_["location"])
         return False
 
     kwargs = {
         "label": vm_["name"],
-        "OSID": osid,
-        "VPSPLANID": vpsplanid,
-        "DCID": dcid,
+        "os_id": osid,
+        "plan": vpsplanid,
+        "region": dcid,
         "hostname": vm_["name"],
         "enable_private_network": enable_private_network,
     }
     if startup_script:
-        kwargs["SCRIPTID"] = startup_script
+        kwargs["script_id"] = startup_script
 
     if firewall_group_id:
-        kwargs["FIREWALLGROUPID"] = firewall_group_id
+        kwargs["firewall_group_id"] = firewall_group_id
 
     if ssh_key_ids:
-        kwargs["SSHKEYID"] = ssh_key_ids
+        kwargs["sshkey_id"] = ssh_key_list
 
     log.info("Creating Cloud VM %s", vm_["name"])
 
@@ -461,9 +561,7 @@ def create(vm_):
     )
 
     try:
-        data = _query(
-            "server/create", method="POST", data=urllib.parse.urlencode(kwargs)
-        )
+        data = _query("instances", method="post", data=kwargs)
         if int(data.get("status", "200")) >= 300:
             log.error(
                 "Error creating %s on Vultr\n\nVultr API returned %s\n",
@@ -511,72 +609,54 @@ def create(vm_):
         data = show_instance(vm_["name"], call="action")
         main_ip = str(data.get("main_ip", "0"))
         if main_ip.startswith("0"):
-            time.sleep(3)
+            time.sleep(
+                config.get_cloud_config_value(
+                    "wait_for_ip_timout", vm_, __opts__, default=1
+                )
+            )
             return False
         return data["main_ip"]
 
-    def wait_for_default_password():
-        """
-        Wait for the IP address to become available
-        """
-        data = show_instance(vm_["name"], call="action")
-        # print("Waiting for default password")
-        # pprint.pprint(data)
-        default_password = str(data.get("default_password", ""))
-        if default_password == "" or default_password == "not supported":
-            time.sleep(1)
-            return False
-        return data["default_password"]
-
     def wait_for_status():
         """
-        Wait for the IP address to become available
+        Wait for the server to enter active state
         """
         data = show_instance(vm_["name"], call="action")
-        # print("Waiting for status normal")
-        # pprint.pprint(data)
         if str(data.get("status", "")) != "active":
             time.sleep(1)
             return False
-        return data["default_password"]
+        return data["id"]
 
     def wait_for_server_state():
         """
-        Wait for the IP address to become available
+        Wait for the server_state to switch to ok
         """
         data = show_instance(vm_["name"], call="action")
-        # print("Waiting for server state ok")
-        # pprint.pprint(data)
-        if str(data.get("server_state", "")) != "ok":
+        if str(data.get("server_status", "")) != "ok":
             time.sleep(1)
             return False
-        return data["default_password"]
+        return data["id"]
 
-    vm_["ssh_host"] = __utils__["cloud.wait_for_fun"](
+    vm_["ssh_host"] = salt.utils.cloud.wait_for_fun(
         wait_for_hostname,
         timeout=config.get_cloud_config_value(
-            "wait_for_fun_timeout", vm_, __opts__, default=15 * 60
+            "wait_for_ip_timout", vm_, __opts__, default=15 * 60
         ),
     )
-    vm_["password"] = __utils__["cloud.wait_for_fun"](
-        wait_for_default_password,
-        timeout=config.get_cloud_config_value(
-            "wait_for_fun_timeout", vm_, __opts__, default=15 * 60
-        ),
-    )
-    __utils__["cloud.wait_for_fun"](
+
+    vm_["password"] = data["instance"]["default_password"]
+    salt.utils.cloud.wait_for_fun(
         wait_for_status,
         timeout=config.get_cloud_config_value(
             "wait_for_fun_timeout", vm_, __opts__, default=15 * 60
         ),
     )
-    __utils__["cloud.wait_for_fun"](
+    salt.utils.cloud.wait_for_fun(
         wait_for_server_state,
         timeout=config.get_cloud_config_value(
             "wait_for_fun_timeout", vm_, __opts__, default=15 * 60
         ),
     )
-
     __opts__["hard_timeout"] = config.get_cloud_config_value(
         "hard_timeout",
         get_configured_provider(),
@@ -607,7 +687,7 @@ def create(vm_):
     return ret
 
 
-def _query(path, method="GET", data=None, params=None, header_dict=None, decode=True):
+def _query(path, method="GET", data=None):
     """
     Perform a query directly against the Vultr REST API
     """
@@ -624,28 +704,43 @@ def _query(path, method="GET", data=None, params=None, header_dict=None, decode=
         search_global=False,
         default="api.vultr.com",
     )
-    url = "https://{management_host}/v1/{path}?api_key={api_key}".format(
+    url = "https://{management_host}/v2/{path}".format(
         management_host=management_host,
         path=path,
-        api_key=api_key,
     )
 
-    if header_dict is None:
-        header_dict = {}
-
-    result = __utils__["http.query"](
+    data = salt.utils.json.dumps(data)
+    requester = getattr(requests, method.lower())
+    request = requester(
         url,
-        method=method,
-        params=params,
         data=data,
-        header_dict=header_dict,
-        port=443,
-        text=True,
-        decode=decode,
-        decode_type="json",
-        hide_fields=["api_key"],
-        opts=__opts__,
+        headers={
+            "Authorization": "Bearer " + api_key,
+            "Content-Type": "application/json",
+        },
     )
+    if request.status_code > 299:
+        raise SaltCloudSystemExit(
+            "An error occurred while querying Vultr. HTTP Code: {}  "
+            "Error: '{}'".format(
+                request.status_code,
+                # request.read()
+                request.text,
+            )
+        )
+
+    log.debug(request.url)
+
+    # success without data
+    if request.status_code == 204:
+        return True
+
+    content = request.text
+
+    result = salt.utils.json.loads(content)
+    if result.get("status", "").lower() == "error":
+        raise SaltCloudSystemExit(pprint.pformat(result.get("error_message", {})))
+
     if "dict" in result:
         return result["dict"]
 
