@@ -1,1 +1,0 @@
-Fixed targeting bug, especially visible when using syndic and user auth. (CVE-2022-22941)
