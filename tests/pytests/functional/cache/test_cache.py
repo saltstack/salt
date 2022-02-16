@@ -197,11 +197,7 @@ def localfs_cache(minion_opts):
     opts["cache"] = "localfs"
     cache = salt.cache.factory(opts)
     yield cache
-    try:
-        shutil.rmtree(opts["cachedir"])
-    except Exception:  # pylint: disable=broad-except
-        # Not my circus, not my monkey
-        pass
+    shutil.rmtree(opts["cachedir"], ignore_errors=True)
 
 
 @pytest.fixture
@@ -429,7 +425,7 @@ def test_caching(subtests, cache):
         "If the module raises SaltCacheError then it should make it out of updated"
     ):
         with patch.dict(
-            cache.modules,
+            cache.modules._dict,
             {"{}.updated".format(cache.driver): MagicMock(side_effect=SaltCacheError)},
         ), pytest.raises(SaltCacheError):
             cache.updated(bank="kaboom", key="oops")

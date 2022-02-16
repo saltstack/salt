@@ -194,9 +194,8 @@ def contains(bank, key):
     """
     Checks if the specified bank contains the specified key.
     """
-    key = key or ""
     try:
-        c_key = "{}/{}".format(bank, key)
+        c_key = "{}/{}".format(bank, key or "")
         _, value = api.kv.get(c_key, keys=True)
     except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(

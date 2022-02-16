@@ -101,10 +101,7 @@ def force_reconnect():
     Force a reconnection to the MySQL database, by removing the client from
     Salt's __context__.
     """
-    try:
-        __context__.pop("mysql_client")
-    except KeyError:
-        pass
+    __context__.pop("mysql_client", None)
 
 
 def run_query(conn, query, args=None, retries=3):

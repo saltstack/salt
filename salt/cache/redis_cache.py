@@ -293,7 +293,11 @@ def _get_bank_redis_key(bank):
 
 def _get_timestamp_key(bank, key):
     opts = _get_redis_keys_opts()
-    return f"{opts['timestamp_prefix']}{opts['separator']}{bank}/{key}"
+    return "{}{}{}/{}".format(
+        opts["timestamp_prefix"], opts["separator"], {bank}, {key}
+    )
+    # Use this line when we can use modern python
+    # return f"{opts['timestamp_prefix']}{opts['separator']}{bank}/{key}"
 
 
 def _get_key_redis_key(bank, key):

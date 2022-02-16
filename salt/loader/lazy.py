@@ -137,8 +137,7 @@ class LoadedFunc:
 
     @property
     def func(self):
-        loaded = self.loader._dict[self.name]
-        return getattr(loaded, "__wrapped__", loaded)
+        return self.loader._dict[self.name]
 
     def __getattr__(self, name):
         return getattr(self.func, name)

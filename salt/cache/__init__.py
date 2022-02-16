@@ -346,9 +346,9 @@ class MemCache(Cache):
 
     def flush(self, bank, key=None):
         if key is None:
-            for bank, key in tuple(self.storage):
-                if bank == bank:
-                    self.storage.pop((bank, key))
+            for bank_, key_ in tuple(self.storage):
+                if bank == bank_:
+                    self.storage.pop((bank_, key_))
         else:
             self.storage.pop((bank, key), None)
         super().flush(bank, key)
