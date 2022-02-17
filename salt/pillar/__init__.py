@@ -11,6 +11,7 @@ import logging
 import os
 import sys
 import traceback
+import uuid
 
 import salt.ext.tornado.gen
 import salt.fileclient
@@ -242,6 +243,9 @@ class AsyncRemotePillar(RemotePillarMixin):
             ret_pillar = yield self.channel.crypted_transfer_decode_dictentry(
                 load, dictkey="pillar",
             )
+        except salt.crypt.AuthenticationError as exc:
+            log.error(exc.message)
+            raise SaltClientError("Exception getting pillar.")
         except Exception:  # pylint: disable=broad-except
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
