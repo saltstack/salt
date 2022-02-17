@@ -10,7 +10,6 @@ import textwrap
 import pytest
 import salt.utils.files
 import salt.utils.path
-import salt.utils.platform
 from salt.utils.versions import LooseVersion as _LooseVersion
 from saltfactories.utils.ports import get_unused_localhost_port
 
@@ -209,10 +208,6 @@ def test_verify_ssl_skip_verify_false(
         )
 
     # test when verify_ssl is False
-    if salt.utils.platform.is_photonos():
-        check_mode = "0640"
-    else:
-        check_mode = "0644"
     with salt_master.state_tree.base.temp_file(
         "verify_ssl.sls", false_content
     ) as sfpath:
@@ -220,7 +215,7 @@ def test_verify_ssl_skip_verify_false(
         assert ret.exitcode == 0
         assert ret.json[next(iter(ret.json))]["changes"] == {
             "diff": "New file",
-            "mode": check_mode,
+            "mode": "0644",
         }
 
 
