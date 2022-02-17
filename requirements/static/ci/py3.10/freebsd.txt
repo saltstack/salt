@@ -333,8 +333,6 @@ botocore==1.20.67
     #   boto3
     #   moto
     #   s3transfer
-cached-property==1.5.1
-    # via pygit2
 cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.24.0
@@ -421,6 +419,8 @@ gitpython==3.1.12
     # via -r requirements/static/ci/common.in
 google-auth==1.6.3
     # via kubernetes
+hglib==2.6.1
+    # via -r requirements/static/ci/freebsd.in
 idna==2.8
     # via requests
 immutables==0.15
@@ -482,6 +482,8 @@ markupsafe==2.0.1
     #   jinja2
     #   mako
     #   moto
+mercurial==6.0.1
+    # via -r requirements/static/ci/freebsd.in
 mock==3.0.5
     # via -r requirements/pytest.txt
 more-itertools==5.0.0
@@ -490,7 +492,7 @@ more-itertools==5.0.0
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
-moto==2.2.17 ; python_version >= "3.10"
+moto==3.0.1 ; python_version >= "3.6"
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
     # via
@@ -645,7 +647,7 @@ pycurl==7.44.1 ; python_version >= "3.10"
     # via -r requirements/static/ci/common.in
 pyeapi==0.8.3
     # via napalm
-pygit2==1.5.0 ; python_version >= "3.7"
+pygit2==1.8.0 ; python_version >= "3.7"
     # via -r requirements/static/ci/freebsd.in
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via -r requirements/static/ci/common.in
@@ -818,7 +820,7 @@ urllib3==1.26.6
     #   kubernetes
     #   python-etcd
     #   requests
-vcert==0.7.3 ; sys_platform != "win32"
+vcert==0.7.4 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 virtualenv==20.7.2
     # via
