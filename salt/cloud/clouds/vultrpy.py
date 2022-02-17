@@ -74,6 +74,7 @@ You can list SSH keys available on your account using
 
     salt-cloud -f list_keypairs <name of vultr provider>
 
+:depends: requests
 """
 
 import logging
@@ -360,6 +361,7 @@ def destroy(name, call=None):
 def stop(name, call=None):
     """
     Execute a "stop" action on a VM
+
     name
         The vm name
 
@@ -381,6 +383,7 @@ def stop(name, call=None):
 def start(name, call=None):
     """
     Execute a "stop" action on a VM
+
     name
         The name of the VM to start.
 
@@ -688,6 +691,7 @@ def create(vm_):
             "wait_for_fun_timeout", vm_, __opts__, default=15 * 60
         ),
     )
+
     salt.utils.cloud.wait_for_fun(
         wait_for_server_state,
         timeout=config.get_cloud_config_value(

@@ -22,7 +22,6 @@ class VultrTestCase(TestCase, LoaderModuleMockMixin):
                 "__utils__": {
                     "cloud.fire_event": MagicMock(),
                     "cloud.filter_event": MagicMock(),
-                    "cloud.wait_for_fun": MagicMock(),
                     "cloud.bootstrap": MagicMock(),
                 },
                 "__opts__": {
@@ -50,9 +49,23 @@ class VultrTestCase(TestCase, LoaderModuleMockMixin):
         test salt.cloud.clouds.vultr.show_keypair
         when keyname provided
         """
-        _query.return_value = {"test": {"SSHKEYID": "keyID"}}
+        _query.return_value = {
+            "ssh_keys": [
+                {
+                    "id": "keyID",
+                    "name": "test",
+                    "ssh_key": "pubkey",
+                    "data_created": "2022-02-11T21:07:44+00:00",
+                }
+            ]
+        }
         kwargs = {"keyname": "test"}
-        assert vultr.show_keypair(kwargs) == {"SSHKEYID": "keyID"}
+        assert vultr.show_keypair(kwargs) == {
+            "id": "keyID",
+            "name": "test",
+            "ssh_key": "pubkey",
+            "data_created": "2022-02-11T21:07:44+00:00",
+        }
 
     def test_create_firewall_ssh(self):
         """
@@ -66,8 +79,8 @@ class VultrTestCase(TestCase, LoaderModuleMockMixin):
             "startup_script_id": "test_id",
             "firewall_group_id": "f_id",
             "image": 223,
-            "size": 13,
-            "location": 1,
+            "size": "vc2-1c-1gb",
+            "location": "ewr",
             "name": "test-vm",
         }
         patch_scripts = patch(
@@ -82,7 +95,28 @@ class VultrTestCase(TestCase, LoaderModuleMockMixin):
 
         patch_keys = patch(
             "salt.cloud.clouds.vultrpy.avail_keys",
-            MagicMock(return_value=["key3", "key2", "key1"]),
+            MagicMock(
+                return_value={
+                    "key1": {
+                        "id": "keyID1",
+                        "name": "key1",
+                        "ssh_key": "pubkey",
+                        "data_created": "2022-02-11T21:07:44+00:00",
+                    },
+                    "key2": {
+                        "id": "keyID2",
+                        "name": "key2",
+                        "ssh_key": "pubkey",
+                        "data_created": "2022-02-11T21:07:44+00:00",
+                    },
+                    "key3": {
+                        "id": "keyID3",
+                        "name": "key3",
+                        "ssh_key": "pubkey",
+                        "data_created": "2022-02-11T21:07:44+00:00",
+                    },
+                }
+            ),
         )
 
         patch_vultrid = patch(
@@ -90,16 +124,58 @@ class VultrTestCase(TestCase, LoaderModuleMockMixin):
             MagicMock(return_value="test_id"),
         )
 
-        mock_query = MagicMock(return_value={"status": 200})
+        patch_wait = patch(
+            "salt.utils.cloud.wait_for_fun", MagicMock(return_value="123")
+        )
+
+        # Data copied from example output on: https://www.vultr.com/api/#operation/create-instance
+        mock_query = MagicMock(
+            return_value={
+                "instance": {
+                    "id": "4f0f12e5-1f84-404f-aa84-85f431ea5ec2",
+                    "os": "CentOS 8 Stream",
+                    "ram": 1024,
+                    "disk": 0,
+                    "main_ip": "1.2.3.4",
+                    "vcpu_count": 1,
+                    "region": "ewr",
+                    "plan": "vc2-1c-1gb",
+                    "date_created": "2021-09-14T13:22:20+00:00",
+                    "status": "active",
+                    "allowed_bandwidth": 1000,
+                    "netmask_v4": "",
+                    "gateway_v4": "0.0.0.0",
+                    "power_status": "running",
+                    "server_status": "ok",
+                    "v6_network": "",
+                    "v6_main_ip": "",
+                    "v6_network_size": 0,
+                    "label": "",
+                    "internal_ip": "",
+                    "kvm": "",
+                    "hostname": "my_hostname",
+                    "tag": "",
+                    "os_id": 401,
+                    "app_id": 0,
+                    "image_id": "",
+                    "firewall_group_id": "",
+                    "features": [],
+                    "default_password": "v5{Fkvb#2ycPGwHs",
+                }
+            }
+        )
         patch_query = patch("salt.cloud.clouds.vultrpy._query", mock_query)
 
         patch_show = patch("salt.cloud.clouds.vultrpy.show_instance", MagicMock())
 
-        with patch_scripts, patch_firewall, patch_keys, patch_vultrid, patch_query, patch_show:
-            vultr.create(kwargs)
+        with patch_scripts, patch_firewall, patch_keys, patch_vultrid, patch_query, patch_show, patch_wait:
+            self.assertTrue(vultr.create(kwargs))
             query_ret = mock_query.call_args.kwargs["data"]
-            self.assertIn("SSHKEYID=key1%2Ckey2%2Ckey3", query_ret)
-            self.assertIn("FIREWALLGROUPID=f_id", query_ret)
+            self.assertIsInstance(query_ret["sshkey_id"], list)
+            self.assertIn("keyID1", query_ret["sshkey_id"])
+            self.assertIn("keyID2", query_ret["sshkey_id"])
+            self.assertIn("keyID3", query_ret["sshkey_id"])
+            self.assertEqual("f_id", query_ret["firewall_group_id"])
 
     def test_create_firewall_doesnotexist(self):
         """
@@ -128,7 +204,28 @@ class VultrTestCase(TestCase, LoaderModuleMockMixin):
 
         patch_keys = patch(
             "salt.cloud.clouds.vultrpy.avail_keys",
-            MagicMock(return_value=["key3", "key2", "key1"]),
+            MagicMock(
+                return_value={
+                    "key1": {
+                        "id": "keyID1",
+                        "name": "key1",
+                        "ssh_key": "pubkey",
+                        "data_created": "2022-02-11T21:07:44+00:00",
+                    },
+                    "key2": {
+                        "id": "keyID2",
+                        "name": "key2",
+                        "ssh_key": "pubkey",
+                        "data_created": "2022-02-11T21:07:44+00:00",
+                    },
+                    "key3": {
+                        "id": "keyID3",
+                        "name": "key3",
+                        "ssh_key": "pubkey",
+                        "data_created": "2022-02-11T21:07:44+00:00",
+                    },
+                }
+            ),
         )
 
         patch_vultrid = patch(
