@@ -500,7 +500,7 @@ class CMDModuleTest(ModuleCase):
         """
         with self._ensure_user_exists(self.runas_usr):
             out = self.run_function(
-                "cmd.run", ["env"], runas=self.runas_usr, cwd="/tmp"
+                "cmd.run", ["env"], runas=self.runas_usr
             ).splitlines()
         self.assertIn("USER={}".format(self.runas_usr), out)
 
