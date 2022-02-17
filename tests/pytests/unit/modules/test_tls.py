@@ -77,7 +77,7 @@ def test_create_csr_permissions_on_csr_and_key(tmpdir, tls_test_data):
         csrp_mode = os.stat(csrp).st_mode & 0o7777
         keyp_mode = os.stat(keyp).st_mode & 0o7777
 
-        assert 0o6444 == csrp_mode
+        assert 0o644 == csrp_mode
         assert 0o600 == keyp_mode
 
 
