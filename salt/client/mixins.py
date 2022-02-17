@@ -479,7 +479,7 @@ class AsyncClientMixin(ClientStateMixin):
         Run this method in a multiprocess target to execute the function on the
         master and fire the return data on the event bus
         """
-        if daemonize and not salt.utils.platform.is_windows():
+        if daemonize and not salt.utils.platform.spawning_platform():
             # Shutdown logging before daemonizing
             salt._logging.shutdown_logging()
             salt.utils.process.daemonize()

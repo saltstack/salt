@@ -689,7 +689,7 @@ class Schedule:
             or self.opts.get("transport") == "zeromq"
         ):
             # Since function references can't be pickled and pickling
-            # is required when spawning new processes on Windows, regenerate
+            # is required when spawning new processes on spawning platforms, regenerate
             # the functions and returners.
             # This also needed for ZeroMQ transport to reset all functions
             # context data that could keep paretns connections. ZeroMQ will
@@ -1795,7 +1795,7 @@ class Schedule:
         if multiprocessing_enabled and salt.utils.platform.spawning_platform():
             # Temporarily stash our function references.
             # You can't pickle function references, and pickling is
-            # required when spawning new processes on Windows.
+            # required when spawning new processes on spawning platforms.
             functions = self.functions
             self.functions = {}
             returners = self.returners
@@ -1830,7 +1830,7 @@ class Schedule:
                 proc.start()
                 self._subprocess_list.add(proc)
         finally:
-            if multiprocessing_enabled and salt.utils.platform.is_windows():
+            if multiprocessing_enabled and salt.utils.platform.spawning_platform():
                 # Restore our function references.
                 self.functions = functions
                 self.returners = returners
