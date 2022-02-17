@@ -468,7 +468,6 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
         ):
             shutil.copytree(self.bare_repo_backup, self.bare_repo)
             shutil.copytree(self.admin_repo_backup, self.admin_repo)
-
             return
 
         # Create bare repo
@@ -635,7 +634,6 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
         ):
             shutil.copytree(self.bare_extra_repo_backup, self.bare_extra_repo)
             shutil.copytree(self.admin_extra_repo_backup, self.admin_extra_repo)
-
             return
 
         # Create bare extra repo
@@ -688,7 +686,6 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
         _push("master", "initial commit")
         shutil.copytree(self.bare_extra_repo, self.bare_extra_repo_backup)
         shutil.copytree(self.admin_extra_repo, self.admin_extra_repo_backup)
-
         log.info("Extra test Git repo created.")
 
     @classmethod
