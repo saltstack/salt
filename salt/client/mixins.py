@@ -99,6 +99,8 @@ class ClientFuncsDict(MutableMapping):
 
             user = salt.utils.user.get_specific_user()
             return self.client._proc_function(
+                instance=self.client,
+                opts=self.client.opts,
                 fun=key,
                 low=low,
                 user=user,
@@ -474,7 +476,10 @@ class AsyncClientMixin(ClientStateMixin):
     client = None
     tag_prefix = None
 
-    def _proc_function_remote(self, *, fun, low, user, tag, jid, daemonize=True):
+    @classmethod
+    def _proc_function_remote(
+        cls, *, instance, opts, fun, low, user, tag, jid, daemonize=True
+    ):
         """
         Run this method in a multiprocess target to execute the function on the
         master and fire the return data on the event bus
@@ -495,12 +500,18 @@ class AsyncClientMixin(ClientStateMixin):
         low["__user__"] = user
         low["__tag__"] = tag
 
+        if instance is None:
+            instance = cls(opts)
+
         try:
-            return self.cmd_sync(low)
+            return instance.cmd_sync(low)
         except salt.exceptions.EauthAuthenticationError as exc:
             log.error(exc)
 
-    def _proc_function(self, *, fun, low, user, tag, jid, daemonize=True):
+    @classmethod
+    def _proc_function(
+        cls, *, instance, opts, fun, low, user, tag, jid, daemonize=True
+    ):
         """
         Run this method in a multiprocess target to execute the function
         locally and fire the return data on the event bus
@@ -516,12 +527,15 @@ class AsyncClientMixin(ClientStateMixin):
             # Configure logging once daemonized
             salt._logging.setup_logging()
 
+        if instance is None:
+            instance = cls(opts)
+
         # pack a few things into low
         low["__jid__"] = jid
         low["__user__"] = user
         low["__tag__"] = tag
 
-        return self.low(fun, low)
+        return instance.low(fun, low)
 
     def cmd_async(self, low):
         """
@@ -559,15 +573,19 @@ class AsyncClientMixin(ClientStateMixin):
         else:
             proc_func = self._proc_function_remote
         async_pub = pub if pub is not None else self._gen_async_pub()
+        if salt.utils.platform.spawning_platform():
+            instance = None
+        else:
+            instance = self
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-            # Reset current signals before starting the process in
-            # order not to inherit the current signal handlers
             proc = salt.utils.process.SignalHandlingProcess(
                 target=proc_func,
                 name="ProcessFunc({}, fun={} jid={})".format(
                     proc_func.__qualname__, fun, async_pub["jid"]
                 ),
                 kwargs=dict(
+                    instance=instance,
+                    opts=self.opts,
                     fun=fun,
                     low=low,
                     user=user,
