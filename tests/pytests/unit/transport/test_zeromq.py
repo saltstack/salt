@@ -1116,3 +1116,160 @@ async def test_req_chan_auth_v2_with_master_signing(pki_dir, io_loop):
         pki_dir.join("minion", "minion_master.pub").read()
         == pki_dir.join("master", "master.pub").read()
     )
+
+
+async def test_req_chan_auth_v2_new_minion_with_master_pub(pki_dir, io_loop):
+
+    pki_dir.join("master", "minions", "minion").remove()
+    mockloop = MagicMock()
+    opts = {
+        "master_uri": "tcp://127.0.0.1:4506",
+        "interface": "127.0.0.1",
+        "ret_port": 4506,
+        "ipv6": False,
+        "sock_dir": ".",
+        "pki_dir": str(pki_dir.join("minion")),
+        "id": "minion",
+        "__role": "minion",
+        "keysize": 4096,
+        "max_minions": 0,
+        "auto_accept": False,
+        "open_mode": False,
+        "key_pass": None,
+        "publish_port": 4505,
+        "auth_mode": 1,
+        "acceptance_wait_time": 3,
+    }
+    SMaster.secrets["aes"] = {
+        "secret": multiprocessing.Array(
+            ctypes.c_char,
+            salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
+        ),
+        "reload": salt.crypt.Crypticle.generate_key_string,
+    }
+    master_opts = dict(opts, pki_dir=str(pki_dir.join("master")))
+    master_opts["master_sign_pubkey"] = False
+    server = salt.transport.zeromq.ZeroMQReqServerChannel(master_opts)
+    server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
+    server.cache_cli = False
+    server.master_key = salt.crypt.MasterKeys(server.opts)
+    opts["verify_master_pubkey_sign"] = False
+    opts["always_verify_signature"] = False
+    client = salt.transport.zeromq.AsyncZeroMQReqChannel(opts, io_loop=io_loop)
+    signin_payload = client.auth.minion_sign_in_payload()
+    pload = client._package_load(signin_payload)
+    assert "version" in pload
+    assert pload["version"] == 2
+
+    ret = server._auth(pload["load"], sign_messages=True)
+    assert "sig" in ret
+    ret = client.auth.handle_signin_response(signin_payload, ret)
+    assert ret == "retry"
+
+
+async def test_req_chan_auth_v2_new_minion_with_master_pub_bad_sig(pki_dir, io_loop):
+
+    pki_dir.join("master", "minions", "minion").remove()
+
+    # Give the master a different key than the minion has.
+    mapriv = pki_dir.join("master", "master.pem")
+    mapriv.remove()
+    mapriv.write(MASTER2_PRIV_KEY.strip())
+    mapub = pki_dir.join("master", "master.pub")
+    mapub.remove()
+    mapub.write(MASTER2_PUB_KEY.strip())
+
+    mockloop = MagicMock()
+    opts = {
+        "master_uri": "tcp://127.0.0.1:4506",
+        "interface": "127.0.0.1",
+        "ret_port": 4506,
+        "ipv6": False,
+        "sock_dir": ".",
+        "pki_dir": str(pki_dir.join("minion")),
+        "id": "minion",
+        "__role": "minion",
+        "keysize": 4096,
+        "max_minions": 0,
+        "auto_accept": False,
+        "open_mode": False,
+        "key_pass": None,
+        "publish_port": 4505,
+        "auth_mode": 1,
+        "acceptance_wait_time": 3,
+    }
+    SMaster.secrets["aes"] = {
+        "secret": multiprocessing.Array(
+            ctypes.c_char,
+            salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
+        ),
+        "reload": salt.crypt.Crypticle.generate_key_string,
+    }
+    master_opts = dict(opts, pki_dir=str(pki_dir.join("master")))
+    master_opts["master_sign_pubkey"] = False
+    server = salt.transport.zeromq.ZeroMQReqServerChannel(master_opts)
+    server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
+    server.cache_cli = False
+    server.master_key = salt.crypt.MasterKeys(server.opts)
+    opts["verify_master_pubkey_sign"] = False
+    opts["always_verify_signature"] = False
+    client = salt.transport.zeromq.AsyncZeroMQReqChannel(opts, io_loop=io_loop)
+    signin_payload = client.auth.minion_sign_in_payload()
+    pload = client._package_load(signin_payload)
+    assert "version" in pload
+    assert pload["version"] == 2
+
+    ret = server._auth(pload["load"], sign_messages=True)
+    assert "sig" in ret
+    with pytest.raises(salt.crypt.SaltClientError, match="Invalid signature"):
+        ret = client.auth.handle_signin_response(signin_payload, ret)
+
+
+async def test_req_chan_auth_v2_new_minion_without_master_pub(pki_dir, io_loop):
+
+    pki_dir.join("master", "minions", "minion").remove()
+    pki_dir.join("minion", "minion_master.pub").remove()
+    mockloop = MagicMock()
+    opts = {
+        "master_uri": "tcp://127.0.0.1:4506",
+        "interface": "127.0.0.1",
+        "ret_port": 4506,
+        "ipv6": False,
+        "sock_dir": ".",
+        "pki_dir": str(pki_dir.join("minion")),
+        "id": "minion",
+        "__role": "minion",
+        "keysize": 4096,
+        "max_minions": 0,
+        "auto_accept": False,
+        "open_mode": False,
+        "key_pass": None,
+        "publish_port": 4505,
+        "auth_mode": 1,
+        "acceptance_wait_time": 3,
+    }
+    SMaster.secrets["aes"] = {
+        "secret": multiprocessing.Array(
+            ctypes.c_char,
+            salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
+        ),
+        "reload": salt.crypt.Crypticle.generate_key_string,
+    }
+    master_opts = dict(opts, pki_dir=str(pki_dir.join("master")))
+    master_opts["master_sign_pubkey"] = False
+    server = salt.transport.zeromq.ZeroMQReqServerChannel(master_opts)
+    server.auto_key = salt.daemons.masterapi.AutoKey(server.opts)
+    server.cache_cli = False
+    server.master_key = salt.crypt.MasterKeys(server.opts)
+    opts["verify_master_pubkey_sign"] = False
+    opts["always_verify_signature"] = False
+    client = salt.transport.zeromq.AsyncZeroMQReqChannel(opts, io_loop=io_loop)
+    signin_payload = client.auth.minion_sign_in_payload()
+    pload = client._package_load(signin_payload)
+    assert "version" in pload
+    assert pload["version"] == 2
+
+    ret = server._auth(pload["load"], sign_messages=True)
+    assert "sig" in ret
+    ret = client.auth.handle_signin_response(signin_payload, ret)
+    assert ret == "retry"
