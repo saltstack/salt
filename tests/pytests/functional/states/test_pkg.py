@@ -49,7 +49,10 @@ def PKG_TARGETS(grains):
     elif grains["os"] == "Amazon":
         _PKG_TARGETS = ["lynx", "gnuplot"]
     elif grains["os_family"] == "RedHat":
-        _PKG_TARGETS = ["units", "zsh-html"]
+        if grains["os"] == "VMware Photon OS":
+            _PKG_TARGETS = ["wget", "zsh-html"]
+        else:
+            _PKG_TARGETS = ["units", "zsh-html"]
     elif grains["os_family"] == "Suse":
         _PKG_TARGETS = ["lynx", "htop"]
 
