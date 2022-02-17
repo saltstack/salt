@@ -183,6 +183,14 @@ class RMQWrapperBase:
             else opts.get(publisher_exchange_declare_arguments_key, None)
         )
 
+        # rmq publisher exchange arguments when declaring exchanges
+        message_auto_ack_key = "transport_rabbitmq_message_auto_ack"
+        self._message_auto_ack = (
+            kwargs.get(message_auto_ack_key)
+            if message_auto_ack_key in kwargs
+            else opts.get(message_auto_ack_key, True)
+        )
+
     @property
     def queue_name(self):
         return self._consumer_queue_name
@@ -394,6 +402,8 @@ class RMQNonBlockingChannelWrapper(RMQWrapperBase):
         )
         self._channels = {}
 
+        self._last_processed_stream_offset = None  # PR - fixme -- this is one per channel. Cache for the duration of the process
+
     def _get_channel(self):
         chan = self._channels.get(threading.get_ident())
         return chan
@@ -526,6 +536,7 @@ class RMQNonBlockingChannelWrapper(RMQWrapperBase):
 
         # see https://www.rabbitmq.com/confirms.html
         channel.confirm_delivery(self._ack_nack_callback)
+        channel.basic_qos(prefetch_count=1000)  # PR - FIXME: need a callback here
         self._channels[threading.get_ident()] = channel
 
         if create_topology_ondemand:
@@ -669,18 +680,39 @@ class RMQNonBlockingChannelWrapper(RMQWrapperBase):
                 self.log.debug(
                     "Processed callback for message on queue [%s]", self.queue_name
                 )
+            if not self._message_auto_ack:
+                channel.basic_ack(delivery_tag=method.delivery_tag)
+                if properties.headers and "x-stream-offset" in properties.headers:
+                    self._last_processed_stream_offset = properties.headers[
+                        "x-stream-offset"
+                    ]
+                self.log.debug(
+                    "Acknowledged message on queue [%s] with delivery tag [%s]",
+                    self.queue_name,
+                    method.delivery_tag,
+                )
 
         if not self._get_channel():
             raise ValueError("_channel must be set")
 
+        arguments = {}
+        if self._last_processed_stream_offset:
+            arguments["x-stream-offset"] = (
+                self._last_processed_stream_offset + 1
+            )  # do not re-process the same message
         self._get_channel().basic_consume(
             self.queue_name,
+            arguments=arguments,
             callback=_callback_consumer_registered,
             on_message_callback=_on_message_callback_wrapper,
-            auto_ack=True,
+            auto_ack=self._message_auto_ack,  # stream queues do not support auto-ack=True
         )
 
-        self.log.debug("Starting basic_consume on queue [%s]", self.queue_name)
+        self.log.debug(
+            "Starting basic_consume on queue [%s] with arguments [%s]",
+            self.queue_name,
+            arguments,
+        )
 
         yield future
 
@@ -698,7 +730,7 @@ class RMQNonBlockingChannelWrapper(RMQWrapperBase):
         def _callback_consumer_registered(method):
             future.set_result(method.method.consumer_tag)
 
-        def _on_message_callback(ch, method, properties, body):
+        def _on_message_callback(channel, method, properties, body):
             self.log.debug(
                 "Received reply on queue [%s]: %s. Reply payload properties: %s",
                 reply_queue_name,
@@ -709,6 +741,14 @@ class RMQNonBlockingChannelWrapper(RMQWrapperBase):
             self.log.debug(
                 "Processed callback for reply on queue [%s]", reply_queue_name
             )
+
+            if not self._message_auto_ack:
+                # channel.basic_ack(delivery_tag=method.delivery_tag) # reply queues do not support acks
+                self.log.debug(
+                    "Acknowledged reply on queue [%s] with delivery tag [%s]",
+                    reply_queue_name,
+                    method.delivery_tag,
+                )
 
         self.log.debug("Starting basic_consume reply on queue [%s]", reply_queue_name)
 
@@ -721,7 +761,7 @@ class RMQNonBlockingChannelWrapper(RMQWrapperBase):
                 consumer_tag=consumer_tag,
                 queue=reply_queue_name,
                 on_message_callback=_on_message_callback,
-                auto_ack=True,
+                auto_ack=True,  # reply-to queues only support auto_ack=True
                 callback=_callback_consumer_registered,
             )
         except pika.exceptions.DuplicateConsumerTag:
