@@ -259,9 +259,6 @@ def pytest_configure(config):
     # "Flag" the slowTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
 
-    # Make sure config._tempdir.tempdir is world readable
-    os.chmod(str(config._tempdir.tempdir), 0o755)
-
 
 # <---- Register Markers ---------------------------------------------------------------------------------------------
 
