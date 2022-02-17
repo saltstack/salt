@@ -5,6 +5,7 @@
 import copy
 import logging
 import os
+import signal
 import threading
 import traceback
 import types
@@ -52,7 +53,7 @@ from salt.exceptions import (
 )
 from salt.minion import ProxyMinion
 from salt.utils.event import tagify
-from salt.utils.process import SignalHandlingProcess
+from salt.utils.process import SignalHandlingProcess, default_signals
 
 log = logging.getLogger(__name__)
 
@@ -964,20 +965,26 @@ def handle_decoded_payload(self, data):
             # let python reconstruct the minion on the other side if we"re
             # running on spawning platforms
             instance = None
-        process = SignalHandlingProcess(
-            target=target,
-            args=(self, instance, instance.opts, data, self.connected),
-            name=name,
-        )
+        with default_signals(signal.SIGINT, signal.SIGTERM):
+            process = SignalHandlingProcess(
+                target=target,
+                args=(self, instance, self.opts, data, self.connected),
+                name=name,
+            )
     else:
         process = threading.Thread(
             target=target,
-            args=(self, instance, instance.opts, data, self.connected),
+            args=(self, instance, self.opts, data, self.connected),
             name=name,
         )
 
-    process.start()
-    process.name = "{}-Job-{}".format(process.name, data["jid"])
+    if multiprocessing_enabled:
+        with default_signals(signal.SIGINT, signal.SIGTERM):
+            # Reset current signals before starting the process in
+            # order not to inherit the current signal handlers
+            process.start()
+    else:
+        process.start()
     self.subprocess_list.add(process)
 
 
