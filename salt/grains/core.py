@@ -2404,8 +2404,14 @@ def _osrelease_data(os, osfullname, osrelease):
             continue
         osrelease_info[idx] = int(value)
     grains["osrelease_info"] = tuple(osrelease_info)
+    os_major_release = None
     try:
-        grains["osmajorrelease"] = int(grains["osrelease_info"][0])
+        if os in ("Ubuntu", "Pop"):
+            os_major_release = osrelease
+            grains["osmajorrelease"] = float(os_major_release)
+        else:
+            os_major_release = grains["osrelease_info"][0]
+            grains["osmajorrelease"] = int(os_major_release)
     except (IndexError, TypeError, ValueError):
         log.debug(
             "Unable to derive osmajorrelease from osrelease_info '%s'. "
@@ -2417,10 +2423,8 @@ def _osrelease_data(os, osfullname, osrelease):
         os_name = os
     else:
         os_name = osfullname
-    grains["osfinger"] = "{}-{}".format(
-        os_name,
-        osrelease if os in ("Ubuntu", "Pop") else grains["osrelease_info"][0],
-    )
+    if os_major_release:
+        grains["osfinger"] = "{}-{}".format(os_name, os_major_release)
 
     return grains
 

@@ -1,0 +1,1 @@
+On Ubuntu and Pop!_OS the `osmajorrelease` returns a float in the form YY.MM (e.g. 20.04) instead of just an int of the year now.

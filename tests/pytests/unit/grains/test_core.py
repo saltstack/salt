@@ -1166,7 +1166,7 @@ def test_ubuntu_focal_os_grains():
         "osfullname": "Ubuntu",
         "osrelease": "20.04",
         "osrelease_info": (20, 4),
-        "osmajorrelease": 20,
+        "osmajorrelease": 20.04,
         "osfinger": "Ubuntu-20.04",
     }
     _run_os_grains_tests(_os_release_data, {}, expectation)
@@ -1199,7 +1199,7 @@ def test_ubuntu_impish_os_grains():
         "osfullname": "Ubuntu",
         "osrelease": "21.10",
         "osrelease_info": (21, 10),
-        "osmajorrelease": 21,
+        "osmajorrelease": 21.10,
         "osfinger": "Ubuntu-21.10",
     }
     _run_os_grains_tests(_os_release_data, {}, expectation)
@@ -1267,7 +1267,7 @@ def test_pop_focal_os_grains():
         "osfullname": "Pop!_OS",
         "osrelease": "20.04",
         "osrelease_info": (20, 4),
-        "osmajorrelease": 20,
+        "osmajorrelease": 20.04,
         "osfinger": "Pop!_OS-20.04",
     }
     _run_os_grains_tests(_os_release_data, {}, expectation)
@@ -1302,7 +1302,7 @@ def test_pop_impish_os_grains():
         "osfullname": "Pop!_OS",
         "osrelease": "21.10",
         "osrelease_info": (21, 10),
-        "osmajorrelease": 21,
+        "osmajorrelease": 21.10,
         "osfinger": "Pop!_OS-21.10",
     }
     _run_os_grains_tests(_os_release_data, {}, expectation)
