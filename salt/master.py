@@ -28,7 +28,6 @@ import salt.engines
 import salt.exceptions
 import salt.ext.tornado.gen
 import salt.key
-import salt.log.setup
 import salt.minion
 import salt.payload
 import salt.pillar
@@ -674,10 +673,9 @@ class Master(SMaster):
             self.process_manager = salt.utils.process.ProcessManager(wait_for_kill=5)
             pub_channels = []
             log.info("Creating master publisher process")
-            log_queue = salt.log.setup.get_multiprocessing_logging_queue()
             for _, opts in iter_transport_opts(self.opts):
                 chan = salt.channel.server.PubServerChannel.factory(opts)
-                chan.pre_fork(self.process_manager, kwargs={"log_queue": log_queue})
+                chan.pre_fork(self.process_manager)
                 pub_channels.append(chan)
 
             log.info("Creating master event publisher process")
@@ -742,11 +740,7 @@ class Master(SMaster):
 
             log.info("Creating master request server process")
             kwargs = {}
-            if salt.utils.platform.is_windows():
-                kwargs["log_queue"] = log_queue
-                kwargs[
-                    "log_queue_level"
-                ] = salt.log.setup.get_multiprocessing_logging_level()
+            if salt.utils.platform.spawning_platform():
                 kwargs["secrets"] = SMaster.secrets
 
             self.process_manager.add_process(
@@ -831,11 +825,6 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         """
         Binds the reply server
         """
-        if self.log_queue is not None:
-            salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
-        if self.log_queue_level is not None:
-            salt.log.setup.set_multiprocessing_logging_level(self.log_queue_level)
-        salt.log.setup.setup_multiprocessing_logging(self.log_queue)
         if self.secrets is not None:
             SMaster.secrets = self.secrets
 
@@ -863,11 +852,6 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
             if transport != "tcp":
                 tcp_only = False
 
-        kwargs = {}
-        if salt.utils.platform.is_windows():
-            kwargs["log_queue"] = self.log_queue
-            kwargs["log_queue_level"] = self.log_queue_level
-
         if self.opts["req_server_niceness"] and not salt.utils.platform.is_windows():
             log.info(
                 "setting ReqServer_ProcessManager niceness to %d",
@@ -884,7 +868,6 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
                 self.process_manager.add_process(
                     MWorker,
                     args=(self.opts, self.master_key, self.key, req_channels),
-                    kwargs=kwargs,
                     name=name,
                 )
         self.process_manager.run()

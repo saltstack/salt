@@ -212,9 +212,9 @@ def availability_set_present(
                 return ret
             aset_vms = aset.get("virtual_machines", [])
             remote_vms = sorted(
-                [vm["id"].split("/")[-1].lower() for vm in aset_vms if "id" in aset_vms]
+                vm["id"].split("/")[-1].lower() for vm in aset_vms if "id" in aset_vms
             )
-            local_vms = sorted([vm.lower() for vm in virtual_machines or []])
+            local_vms = sorted(vm.lower() for vm in virtual_machines or [])
             if local_vms != remote_vms:
                 ret["changes"]["virtual_machines"] = {
                     "old": aset_vms,

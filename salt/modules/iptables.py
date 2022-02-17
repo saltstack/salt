@@ -94,6 +94,7 @@ def _conf(family="ipv4"):
         else:
             return "/etc/iptables/iptables.rules"
     elif __grains__["os_family"] == "Debian":
+        # This assumes the iptables-persistent package is installed
         if family == "ipv6":
             return "/etc/iptables/rules.v6"
         else:

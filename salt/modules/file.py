@@ -874,9 +874,9 @@ def get_source_sum(
         # The source_hash is a hash expression
         ret = {}
         try:
-            ret["hash_type"], ret["hsum"] = [
+            ret["hash_type"], ret["hsum"] = (
                 x.strip() for x in source_hash.split("=", 1)
-            ]
+            )
         except AttributeError:
             _invalid_source_hash_format()
         except ValueError:
