@@ -317,6 +317,8 @@ def test_invalid_connection(
         - dummy_proxy_one
       broken_proxy_one:
         - broken_proxy_one
+      broken_proxy_two:
+        - broken_proxy_two
     """.format(
         proxy_minion_id
     )
@@ -324,8 +326,9 @@ def test_invalid_connection(
     proxy:
         proxytype: deltaproxy
         ids:
-          - dummy_proxy_one
           - broken_proxy_one
+          - broken_proxy_two
+          - dummy_proxy_one
     """
 
     dummy_proxy_one_pillar_file = """
@@ -335,12 +338,16 @@ def test_invalid_connection(
 
     broken_proxy_one_pillar_file = """
     proxy:
-      proxytype: napalm
-      driver: nxos_ssh
-      host: invalidhost
-      username: admin
-      passwd: admin
+      proxytype: dummy
+      raise_minion_error: True
     """
+
+    broken_proxy_two_pillar_file = """
+    proxy:
+      proxytype: dummy
+      raise_commandexec_error: True
+    """
+
     top_tempfile = pytest.helpers.temp_file(
         "top.sls", top_file, base_env_pillar_tree_root_dir
     )
@@ -357,7 +364,12 @@ def test_invalid_connection(
         broken_proxy_one_pillar_file,
         base_env_pillar_tree_root_dir,
     )
-    with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile, broken_proxy_one_tempfile:
+    broken_proxy_two_tempfile = pytest.helpers.temp_file(
+        "broken_proxy_two.sls",
+        broken_proxy_two_pillar_file,
+        base_env_pillar_tree_root_dir,
+    )
+    with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile, broken_proxy_one_tempfile, broken_proxy_two_tempfile:
         factory = salt_master.salt_proxy_minion_daemon(
             proxy_minion_id,
             defaults=config_defaults,
