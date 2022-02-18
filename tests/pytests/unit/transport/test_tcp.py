@@ -198,26 +198,26 @@ def test_tcp_pub_server_channel_publish_filtering(temp_salt_master):
     )
     with patch("salt.master.SMaster.secrets") as secrets, patch(
         "salt.crypt.Crypticle"
-    ) as crypticle, patch("salt.utils.asynchronous.SyncWrapper") as SyncWrapper:
+    ) as crypticle:
         channel = salt.transport.tcp.TCPPubServerChannel(opts)
-        wrap = MagicMock()
         crypt = MagicMock()
         crypt.dumps.return_value = {"test": "value"}
 
         secrets.return_value = {"aes": {"secret": None}}
         crypticle.return_value = crypt
-        SyncWrapper.return_value = wrap
 
         # try simple publish with glob tgt_type
-        channel.publish({"test": "value", "tgt_type": "glob", "tgt": "*"})
-        payload = wrap.send.call_args[0][0]
+        payload = channel.pack_publish(
+            {"test": "value", "tgt_type": "glob", "tgt": "*"}
+        )
 
         # verify we send it without any specific topic
         assert "topic_lst" not in payload
 
         # try simple publish with list tgt_type
-        channel.publish({"test": "value", "tgt_type": "list", "tgt": ["minion01"]})
-        payload = wrap.send.call_args[0][0]
+        payload = channel.pack_publish(
+            {"test": "value", "tgt_type": "list", "tgt": ["minion01"]}
+        )
 
         # verify we send it with correct topic
         assert "topic_lst" in payload
@@ -225,8 +225,9 @@ def test_tcp_pub_server_channel_publish_filtering(temp_salt_master):
 
         # try with syndic settings
         opts["order_masters"] = True
-        channel.publish({"test": "value", "tgt_type": "list", "tgt": ["minion01"]})
-        payload = wrap.send.call_args[0][0]
+        payload = channel.pack_publish(
+            {"test": "value", "tgt_type": "list", "tgt": ["minion01"]}
+        )
 
         # verify we send it without topic for syndics
         assert "topic_lst" not in payload
@@ -242,22 +243,21 @@ def test_tcp_pub_server_channel_publish_filtering_str_list(temp_salt_master):
     )
     with patch("salt.master.SMaster.secrets") as secrets, patch(
         "salt.crypt.Crypticle"
-    ) as crypticle, patch("salt.utils.asynchronous.SyncWrapper") as SyncWrapper, patch(
+    ) as crypticle, patch(
         "salt.utils.minions.CkMinions.check_minions"
     ) as check_minions:
         channel = salt.transport.tcp.TCPPubServerChannel(opts)
-        wrap = MagicMock()
         crypt = MagicMock()
         crypt.dumps.return_value = {"test": "value"}
 
         secrets.return_value = {"aes": {"secret": None}}
         crypticle.return_value = crypt
-        SyncWrapper.return_value = wrap
         check_minions.return_value = {"minions": ["minion02"]}
 
         # try simple publish with list tgt_type
-        channel.publish({"test": "value", "tgt_type": "list", "tgt": "minion02"})
-        payload = wrap.send.call_args[0][0]
+        payload = channel.pack_publish(
+            {"test": "value", "tgt_type": "list", "tgt": "minion02"}
+        )
 
         # verify we send it with correct topic
         assert "topic_lst" in payload

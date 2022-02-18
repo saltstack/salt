@@ -259,9 +259,8 @@ def verify_signature(pubkey_path, message, signature):
         try:
             return pubkey.verify(digest, signature)
         except RSA.RSAError as exc:
-            if exc.args[0] == "bad signature":
-                return False
-            raise
+            log.debug("Signature verification failed: %s", exc.args[0])
+            return False
     else:
         verifier = PKCS1_v1_5.new(pubkey)
         return verifier.verify(
