@@ -266,7 +266,7 @@ class AsyncReqChannel:
                     ret = yield self._crypted_transfer(load, timeout=timeout, raw=raw)
                 break
             except Exception as exc:  # pylint: disable=broad-except
-                log.error("Failed to send msg %r", dir(exc))
+                log.error("Failed to send msg %r", exc)
                 if _try >= tries:
                     raise
                 else:
