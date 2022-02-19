@@ -266,9 +266,8 @@ def verify_signature(pubkey_path, message, signature):
         try:
             return pubkey.verify(digest, signature)
         except RSA.RSAError as exc:
-            if exc.args[0] == "bad signature":
-                return False
-            raise
+            log.debug("Signature verification failed: %s", exc.args[0])
+            return False
     else:
         verifier = PKCS1_v1_5.new(pubkey)
         return verifier.verify(
@@ -793,20 +792,23 @@ class AsyncAuth:
         clear_signature = payload["sig"]
         payload = salt.payload.loads(clear_signed_data)
 
-        auth["aes"] = self.verify_master(payload, master_pub="token" in sign_in_payload)
-        if not auth["aes"]:
-            log.critical(
-                "The Salt Master server's public key did not authenticate!\n"
-                "The master may need to be updated if it is a version of Salt "
-                "lower than %s, or\n"
-                "If you are confident that you are connecting to a valid Salt "
-                "Master, then remove the master public key and restart the "
-                "Salt Minion.\nThe master public key can be found "
-                "at:\n%s",
-                salt.version.__version__,
-                m_pub_fn,
+        if "pub_key" in payload:
+            auth["aes"] = self.verify_master(
+                payload, master_pub="token" in sign_in_payload
             )
-            raise SaltClientError("Invalid master key")
+            if not auth["aes"]:
+                log.critical(
+                    "The Salt Master server's public key did not authenticate!\n"
+                    "The master may need to be updated if it is a version of Salt "
+                    "lower than %s, or\n"
+                    "If you are confident that you are connecting to a valid Salt "
+                    "Master, then remove the master public key and restart the "
+                    "Salt Minion.\nThe master public key can be found "
+                    "at:\n%s",
+                    salt.version.__version__,
+                    m_pub_fn,
+                )
+                raise SaltClientError("Invalid master key")
 
         master_pubkey_path = os.path.join(self.opts["pki_dir"], self.mpub)
         if os.path.exists(master_pubkey_path) and not verify_signature(
