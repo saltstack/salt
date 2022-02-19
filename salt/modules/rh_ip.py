@@ -468,7 +468,19 @@ def _parse_settings_bond_4(opts, iface):
             bond.update({binding: _BOND_DEFAULTS[binding]})
 
     if "hashing-algorithm" in opts:
-        valid = ("layer2", "layer2+3", "layer3+4")
+        if __grains__["os_family"] == "RedHat":
+            # allowing for Amazon 2 based of RHEL/Centos 7
+            if __grains__["osmajorrelease"] < 8:
+                valid = ("layer2", "layer2+3", "layer3+4", "encap2+3", "encap3+4")
+            else:
+                valid = (
+                    "layer2",
+                    "layer2+3",
+                    "layer3+4",
+                    "encap2+3",
+                    "encap3+4",
+                    "vlan+srcmac",
+                )
         if opts["hashing-algorithm"] in valid:
             bond.update({"xmit_hash_policy": opts["hashing-algorithm"]})
         else:
