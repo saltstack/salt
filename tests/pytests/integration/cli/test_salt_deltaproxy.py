@@ -348,23 +348,23 @@ def test_invalid_connection(
       raise_commandexec_error: True
     """
 
-    top_tempfile = pytest.helpers.temp_file(
+    top_tempfile = salt_master.pillar_tree.base.temp_file(
         "top.sls", top_file, base_env_pillar_tree_root_dir
     )
-    controlproxy_tempfile = pytest.helpers.temp_file(
+    controlproxy_tempfile = salt_master.pillar_tree.base.temp_file(
         "controlproxy.sls", controlproxy_pillar_file, base_env_pillar_tree_root_dir
     )
-    dummy_proxy_one_tempfile = pytest.helpers.temp_file(
+    dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
         "dummy_proxy_one.sls",
         dummy_proxy_one_pillar_file,
         base_env_pillar_tree_root_dir,
     )
-    broken_proxy_one_tempfile = pytest.helpers.temp_file(
+    broken_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
         "broken_proxy_one.sls",
         broken_proxy_one_pillar_file,
         base_env_pillar_tree_root_dir,
     )
-    broken_proxy_two_tempfile = pytest.helpers.temp_file(
+    broken_proxy_two_tempfile = salt_master.pillar_tree.base.temp_file(
         "broken_proxy_two.sls",
         broken_proxy_two_pillar_file,
         base_env_pillar_tree_root_dir,
@@ -379,19 +379,15 @@ def test_invalid_connection(
 
         factory.after_terminate(clear_proxy_minions, salt_master, factory.id)
 
-        factory.start()
-        assert factory.is_running()
+        with factory.started():
+            # Let's issue a ping the control proxy
+            ret = salt_cli.run("test.ping", minion_tgt=proxy_minion_id)
+            assert ret.exitcode == 0
+            assert ret.json is True
+            # Let's issue a ping to one of the controlled proxies
+            ret = salt_cli.run("test.ping", minion_tgt="dummy_proxy_one")
+            assert ret.exitcode == 0
+            assert ret.json is True
 
-        # Let's issue a ping the control proxy
-        ret = salt_cli.run("test.ping", minion_tgt=proxy_minion_id)
-        assert ret.exitcode == 0
-        assert ret.json is True
-
-        # Let's issue a ping to one of the controlled proxies
-        ret = salt_cli.run("test.ping", minion_tgt="dummy_proxy_one")
-        assert ret.exitcode == 0
-        assert ret.json is True
-
-        # Terminate the proxy minion
-        ret = factory.terminate()
-        assert ret.exitcode == salt.defaults.exitcodes.EX_OK, ret
+    assert not factory.is_running()
+    assert ret.exitcode == salt.defaults.exitcodes.EX_OK, ret

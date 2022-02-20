@@ -420,11 +420,13 @@ def post_master_init(self, master):
         proxy_init_fn = _proxy_minion.proxy[_fq_proxyname + ".init"]
         try:
             proxy_init_fn(proxyopts)
-        except Exception:  # pylint: disable=broad-except
-            msg = "An exception occured during the initialization of minion {}. Skipping.".format(
-                _id
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error(
+                "An exception occured during the initialization of minion %s: %s",
+                _id,
+                exc,
+                exc_info=True,
             )
-            log.error(msg, exc_info=True)
             continue
 
         # Reload the grains
