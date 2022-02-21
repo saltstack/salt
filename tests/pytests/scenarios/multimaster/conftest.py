@@ -143,6 +143,9 @@ def run_salt_cmds():
         clis_to_check = {minion.id: list(clis) for minion in minions}
 
         attempts = 6
+        timeout = 5
+        if salt.utils.platform.spawning_platform():
+            timeout *= 2
         while attempts:
             if not clis_to_check:
                 break
@@ -152,7 +155,11 @@ def run_salt_cmds():
                     continue
                 for cli in list(clis_to_check[minion]):
                     try:
-                        ret = cli.run("--timeout=5", "test.ping", minion_tgt=minion)
+                        ret = cli.run(
+                            "--timeout={}".format(timeout),
+                            "test.ping",
+                            minion_tgt=minion,
+                        )
                         if ret.exitcode == 0 and ret.json is True:
                             returned_minions.append((cli, minion_instances[minion]))
                             clis_to_check[minion].remove(cli)
