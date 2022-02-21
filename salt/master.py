@@ -845,13 +845,10 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         )
 
         req_channels = []
-        tcp_only = True
         for transport, opts in iter_transport_opts(self.opts):
             chan = salt.channel.server.ReqServerChannel.factory(opts)
             chan.pre_fork(self.process_manager)
             req_channels.append(chan)
-            if transport != "tcp":
-                tcp_only = False
 
         if self.opts["req_server_niceness"] and not salt.utils.platform.is_windows():
             log.info(
