@@ -108,6 +108,7 @@ _pytest.logging._LiveLoggingStreamHandler = LiveLoggingStreamHandler
 # Reset logging root handlers
 for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
+    handler.close()
 
 
 # Reset the root logger to its default level(because salt changed it)
