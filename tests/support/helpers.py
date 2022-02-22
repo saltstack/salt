@@ -57,10 +57,16 @@ PRE_PYTEST_SKIP_OR_NOT = "PRE_PYTEST_DONT_SKIP" not in os.environ
 PRE_PYTEST_SKIP_REASON = (
     "PRE PYTEST - This test was skipped before running under pytest"
 )
-PRE_PYTEST_SKIP = pytest.mark.skipif(
-    PRE_PYTEST_SKIP_OR_NOT, reason=PRE_PYTEST_SKIP_REASON
+PRE_PYTEST_SKIP = pytest.mark.skip_on_env(
+    "PRE_PYTEST_DONT_SKIP", present=False, reason=PRE_PYTEST_SKIP_REASON
 )
 ON_PY35 = sys.version_info < (3, 6)
+
+SKIP_INITIAL_PHOTONOS_FAILURES = pytest.mark.skip_on_env(
+    "SKIP_INITIAL_PHOTONOS_FAILURES",
+    eq="1",
+    reason="Failing test when PhotonOS was added to CI",
+)
 
 
 def no_symlinks():

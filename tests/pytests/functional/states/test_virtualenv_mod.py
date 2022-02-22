@@ -2,6 +2,7 @@ import logging
 
 import pytest
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
+from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES
 
 log = logging.getLogger(__name__)
 
@@ -11,6 +12,7 @@ pytestmark = [
 ]
 
 
+@SKIP_INITIAL_PHOTONOS_FAILURES
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 def test_issue_1959_virtualenv_runas(tmp_path, state_tree, states):
