@@ -492,6 +492,41 @@ def test_upgrade_downloadonly(uninstall_var, upgrade_var):
                 assert any(args_matching) is True
 
 
+def test_upgrade_allow_downgrades(uninstall_var, upgrade_var):
+    """
+    Tests the allow_downgrades option for upgrade.
+    """
+    with patch("salt.utils.pkg.clear_rtag", MagicMock()):
+        with patch(
+            "salt.modules.aptpkg.list_pkgs", MagicMock(return_value=uninstall_var)
+        ):
+            mock_cmd = MagicMock(return_value={"retcode": 0, "stdout": upgrade_var})
+            patch_kwargs = {
+                "__salt__": {
+                    "config.get": MagicMock(return_value=True),
+                    "cmd.run_all": mock_cmd,
+                },
+            }
+            with patch.multiple(aptpkg, **patch_kwargs):
+                aptpkg.upgrade()
+                args_matching = [
+                    True
+                    for args in patch_kwargs["__salt__"]["cmd.run_all"].call_args[0]
+                    if "--allow-downgrades" in args
+                ]
+                # Here we shouldn't see the parameter and args_matching should be empty.
+                assert any(args_matching) is False
+
+                aptpkg.upgrade(allow_downgrades=True)
+                args_matching = [
+                    True
+                    for args in patch_kwargs["__salt__"]["cmd.run_all"].call_args[0]
+                    if "--allow-downgrades" in args
+                ]
+                # --allow-downgrades should be in the args list and we should have at least on True in the list.
+                assert any(args_matching) is True
+
+
 def test_show():
     """
     Test that the pkg.show function properly parses apt-cache show output.
