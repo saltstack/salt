@@ -60,7 +60,7 @@ def test_rel_abs_path_ids(
     This tests for any regressions for this issue:
     https://github.com/saltstack/salt/issues/54179
     """
-    test_tempdir = salt_master.state_tree.base.paths[0] / "tmp_dir"
+    ## test_tempdir = salt_master.state_tree.base.paths[0] / "tmp_dir"
 
     init_sls_name = "tmp_dir/init"
     init_sls_contents = """
@@ -123,7 +123,7 @@ def test_rel_rel_path_ids(
     This tests for any regressions for this issue:
     https://github.com/saltstack/salt/issues/54179
     """
-    test_tempdir = salt_master.state_tree.base.paths[0] / "tmp_dir"
+    ## test_tempdir = salt_master.state_tree.base.paths[0] / "tmp_dir"
 
     init_sls_name = "tmp_dir/init"
     init_sls_contents = """
@@ -186,7 +186,7 @@ def test_abs_rel_path_ids(
     This tests for any regressions for this issue:
     https://github.com/saltstack/salt/issues/54179
     """
-    test_tempdir = salt_master.state_tree.base.paths[0] / "tmp_dir"
+    ## test_tempdir = salt_master.state_tree.base.paths[0] / "tmp_dir"
 
     init_sls_name = "tmp_dir/init"
     init_sls_contents = """
@@ -249,7 +249,7 @@ def test_abs_abs_path_ids(
     This tests for any regressions for this issue:
     https://github.com/saltstack/salt/issues/54179
     """
-    test_tempdir = salt_master.state_tree.base.paths[0] / "tmp_dir"
+    ## test_tempdir = salt_master.state_tree.base.paths[0] / "tmp_dir"
 
     init_sls_name = "tmp_dir/init"
     init_sls_contents = """
