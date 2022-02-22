@@ -413,7 +413,9 @@ decorator==4.4.2
 distlib==0.3.2
     # via virtualenv
 distro==1.5.0
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   pytest-skip-markers
 dnspython==1.16.0
     # via
     #   -r requirements/static/ci/common.in
@@ -725,7 +727,7 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-salt-factories
 pytest-salt-factories==0.912.1
     # via -r requirements/pytest.txt
-pytest-skip-markers==1.1.2
+pytest-skip-markers==1.2.0
     # via pytest-salt-factories
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt

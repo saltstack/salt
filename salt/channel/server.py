@@ -4,12 +4,9 @@ Encapsulate the different transports available to Salt.
 This includes server side transport, for the ReqServer and the Publisher
 """
 
-
 import binascii
-import ctypes
 import hashlib
 import logging
-import multiprocessing
 import os
 import shutil
 
@@ -64,19 +61,6 @@ class ReqServerChannel:
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be bind and listen (or the equivalent for your network library)
         """
-        if "aes" not in salt.master.SMaster.secrets:
-            # TODO: This is still needed only for the unit tests
-            # 'tcp_test.py' and 'zeromq_test.py'. Fix that. In normal
-            # cases, 'aes' is already set in the secrets.
-            salt.master.SMaster.secrets["aes"] = {
-                "secret": multiprocessing.Array(
-                    ctypes.c_char,
-                    salt.utils.stringutils.to_bytes(
-                        salt.crypt.Crypticle.generate_key_string()
-                    ),
-                ),
-                "reload": salt.crypt.Crypticle.generate_key_string,
-            }
         if hasattr(self.transport, "pre_fork"):
             self.transport.pre_fork(process_manager)
 
