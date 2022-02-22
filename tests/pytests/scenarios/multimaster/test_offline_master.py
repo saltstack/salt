@@ -2,8 +2,11 @@ import time
 
 import pytest
 
+pytestmark = [
+    pytest.mark.slow_test,
+]
 
-@pytest.mark.slow_test
+
 def test_minion_hangs_on_master_failure_50814(
     event_listener,
     salt_mm_master_1,
