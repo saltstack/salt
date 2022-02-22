@@ -39,9 +39,8 @@ class WheelClient(
     client = "wheel"
     tag_prefix = "wheel"
 
-    def __init__(self, opts=None):
-        self.opts = opts
-        self.context = {}
+    def __init__(self, opts, context=None):
+        super().__init__(opts, context=context)
         self.functions = salt.loader.wheels(opts, context=self.context)
 
     # TODO: remove/deprecate
