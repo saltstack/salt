@@ -1,11 +1,3 @@
-"""
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-
-    tests.unit.utils.event_test
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-"""
-
 import pytest
 import salt.config
 import salt.ext.tornado.ioloop

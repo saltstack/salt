@@ -1,20 +1,8 @@
-"""
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-
-    tests.unit.utils.event_test
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-"""
-
-import os
-import shutil
-
 import pytest
 import salt.config
 import salt.ext.tornado.ioloop
 import salt.utils.event
 import salt.utils.stringutils
-from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [pytest.mark.windows_whitelisted]
 
@@ -31,12 +19,12 @@ class IOLoopContainer:
 
 
 @pytest.fixture()
-def io_cont(io_loop):
+def io_cont(io_loop, tmp_path):
     io_cont = IOLoopContainer()
     io_cont.io_loop = io_loop
-    io_cont.sock_dir = os.path.join(RUNTIME_VARS.TMP, "test-socks")
-    if not os.path.exists(io_cont.sock_dir):
-        os.makedirs(io_cont.sock_dir)
+    socks_dir_path = tmp_path / "test-socks"
+    io_cont.sock_dir = str(socks_dir_path)
+    socks_dir_path.mkdir(exist_ok=True)
     io_cont.opts = {"sock_dir": io_cont.sock_dir}
     io_cont.publisher = salt.utils.event.AsyncEventPublisher(
         io_cont.opts,
@@ -48,7 +36,6 @@ def io_cont(io_loop):
     io_cont.event.subscribe("")
     io_cont.event.set_event_handler(io_cont._handle_publish)
     yield io_cont
-    shutil.rmtree(io_cont.sock_dir, ignore_errors=True)
 
 
 def test_event_subscription(io_cont):
