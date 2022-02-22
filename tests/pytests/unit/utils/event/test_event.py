@@ -25,7 +25,7 @@ pytestmark = [
 
 @pytest.fixture(autouse=True)
 def sock_dir(tmp_path):
-    sock_dir_path =  tmp_path / "test-socks"
+    sock_dir_path = tmp_path / "test-socks"
     sock_dir_path.mkdir(parents=True, exist_ok=True)
     yield sock_dir_path
 
@@ -55,7 +55,7 @@ def test_minion_event(sock_dir):
     ]
     with salt.utils.event.MinionEvent(opts, listen=False) as me:
         assert me.puburi == str(sock_dir / "minion_event_{}_pub.ipc".format(id_hash))
-        assert me.pulluri == str(sock_dir, "minion_event_{}_pull.ipc".format(id_hash))
+        assert me.pulluri == str(sock_dir / "minion_event_{}_pull.ipc".format(id_hash))
 
 
 def test_minion_event_tcp_ipc_mode():
