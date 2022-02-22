@@ -643,6 +643,10 @@
 # as a percent of total actions will be shown for each state run.
 #state_output_pct: False
 
+# The state_compress_ids setting aggregates information about states which have
+# multiple "names" under the same state ID in the highstate output.
+#state_compress_ids: False
+
 # Automatically aggregate all states that have support for mod_aggregate by
 # setting to 'True'. Or pass a list of state module names to automatically
 # aggregate just those types.
@@ -872,6 +876,10 @@
 # List of renderers which are permitted to be used for pillar decryption.
 #decrypt_pillar_renderers:
 #  - gpg
+
+# If this is `True` and the ciphertext could not be decrypted, then an error is
+# raised.
+#gpg_decrypt_must_succeed: False
 
 # The ext_pillar_first option allows for external pillar sources to populate
 # before file system pillar. This allows for targeting file system pillar from

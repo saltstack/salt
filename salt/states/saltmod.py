@@ -600,7 +600,7 @@ def function(
         func_ret["comment"] = "No minions responded"
     else:
         if changes:
-            func_ret["changes"] = {"out": "highstate", "ret": changes}
+            func_ret["changes"] = {"ret": changes}
         if fail:
             func_ret["result"] = False
             func_ret["comment"] = "Running function {} failed on minions: {}".format(

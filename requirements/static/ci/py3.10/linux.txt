@@ -8,9 +8,9 @@ adal==1.2.3
     # via
     #   azure-datalake-store
     #   msrestazure
-ansible-base==2.10.9
+ansible-core==2.11.7
     # via ansible
-ansible==3.4.0
+ansible==4.4.0
     # via -r requirements/static/ci/linux.in
 apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
@@ -393,7 +393,7 @@ croniter==0.3.29 ; sys_platform != "win32"
 cryptography==3.3.2
     # via
     #   adal
-    #   ansible-base
+    #   ansible-core
     #   azure-cosmosdb-table
     #   azure-keyvault
     #   azure-storage-common
@@ -404,7 +404,9 @@ cryptography==3.3.2
 distlib==0.3.2
     # via virtualenv
 distro==1.5.0
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   pytest-skip-markers
 dnspython==1.16.0
     # via
     #   -r requirements/static/ci/common.in
@@ -432,6 +434,8 @@ gitpython==3.1.12
     # via -r requirements/static/ci/common.in
 google-auth==1.6.3
     # via kubernetes
+hglib==2.6.1
+    # via -r requirements/static/ci/linux.in
 idna==2.8
     # via requests
 immutables==0.15
@@ -458,7 +462,7 @@ jaraco.text==3.5.1
 jinja2==3.0.3
     # via
     #   -r requirements/base.txt
-    #   ansible-base
+    #   ansible-core
     #   junos-eznc
     #   moto
     #   napalm
@@ -496,6 +500,8 @@ markupsafe==2.0.1
     #   jinja2
     #   mako
     #   moto
+mercurial==6.0.1
+    # via -r requirements/static/ci/linux.in
 mock==3.0.5
     # via -r requirements/pytest.txt
 more-itertools==5.0.0
@@ -504,7 +510,7 @@ more-itertools==5.0.0
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
-moto==2.2.17 ; python_version >= "3.10"
+moto==3.0.1 ; python_version >= "3.6"
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
     # via
@@ -616,7 +622,7 @@ oscrypto==1.2.0
     # via certvalidator
 packaging==19.2
     # via
-    #   ansible-base
+    #   ansible-core
     #   pytest
 paramiko==2.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
@@ -688,9 +694,9 @@ pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
-pytest-salt-factories==0.912.0
+pytest-salt-factories==0.912.1
     # via -r requirements/pytest.txt
-pytest-skip-markers==1.0.0
+pytest-skip-markers==1.2.0
     # via pytest-salt-factories
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
@@ -739,7 +745,7 @@ pyvmomi==6.7.1.2018.12
 pyyaml==5.4.1
     # via
     #   -r requirements/base.txt
-    #   ansible-base
+    #   ansible-core
     #   clustershell
     #   junos-eznc
     #   kubernetes
@@ -773,6 +779,8 @@ requests==2.25.1
     #   responses
     #   twilio
     #   vcert
+resolvelib==0.5.4
+    # via ansible-core
 responses==0.10.6
     # via moto
 rfc3987==1.3.8
@@ -854,7 +862,7 @@ urllib3==1.26.6
     #   kubernetes
     #   python-etcd
     #   requests
-vcert==0.7.3 ; sys_platform != "win32"
+vcert==0.7.4 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 virtualenv==20.7.2
     # via
