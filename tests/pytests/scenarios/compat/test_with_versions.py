@@ -97,7 +97,7 @@ def minion_image(
         extra=extra,
         virtualenv_path=container_virtualenv_path,
     )
-    log.warning("GENERATED Dockerfile:\n%s", dockerfile_contents)
+    log.debug("GENERATED Dockerfile:\n%s", dockerfile_contents)
     dockerfile_fh = io.BytesIO(dockerfile_contents.encode("utf-8"))
     _, logs = docker_client.images.build(
         fileobj=dockerfile_fh,
