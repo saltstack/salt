@@ -58,16 +58,25 @@ ${StrStrAdv}
 !macro Trim ResultVar String
     Push "${String}"
     Call Trim
-    Pop "${ResultVar}"
+    Pop  "${ResultVar}"
 !macroend
 
 # Part of the Explode function for Strings
 !define Explode "!insertmacro Explode"
 !macro Explode Length Separator String
-    Push    `${Separator}`
-    Push    `${String}`
-    Call    Explode
-    Pop     `${Length}`
+    Push "${Separator}"
+    Push "${String}"
+    Call Explode
+    Pop  "${Length}"
+!macroend
+
+# Part of the StrContains function for Strings
+!define StrContains "!insertmacro StrContains"
+!macro StrContains OUT NEEDLE HAYSTACK
+    Push "${HAYSTACK}"
+    Push "${NEEDLE}"
+    Call StrContains
+    Pop  "${OUT}"
 !macroend
 
 
@@ -140,6 +149,8 @@ Var DeleteRootDir
 Var ConfigWriteMinion
 Var ConfigWriteMaster
 # For new method installation
+Var RegInstDir
+Var RegRootDir
 Var RootDir
 Var SysDrive
 Var ExistingInstallation
@@ -665,7 +676,7 @@ Section "MainSection" SEC01
     CreateDirectory "$RootDir\conf\minion.d"
     CreateDirectory "$RootDir\var\cache\salt\minion\extmods\grains"
     CreateDirectory "$RootDir\var\cache\salt\minion\proc"
-    CreateDirectory "$RootDir\var\log\salt\minion"
+    CreateDirectory "$RootDir\var\log\salt"
     CreateDirectory "$RootDir\var\run"
     File /r "..\buildenv\"
     nsExec::Exec 'icacls $RootDir /inheritance:r /grant:r "*S-1-5-32-544":(OI)(CI)F /grant:r "*S-1-5-18":(OI)(CI)F'
@@ -950,32 +961,32 @@ Section -Post
     # variables. It's OK to use EXPAND_SZ even if you don't use an environment
     # variable so we'll just do that whether it's new location or old.
 
+    # Check for Program Files
     # Set the current setting for INSTDIR... we'll only change it if it contains
     # Program Files
     StrCpy $RegInstDir $INSTDIR
 
-    checkProgramFiles32:
+    # Check Program Files (x86) first
     ${StrContains} $0 "Program Files (x86)" $INSTDIR
-    StrCmp $0 "" checkProgramFiles
+    StrCmp $0 "" +2  # If it's empty, skip the next line
         StrCpy $RegInstDir "%ProgramFiles(x86)%\Salt Project\Salt"
 
-    checkProgramFiles:
+    # Check normal Program Files next
     ${StrContains} $0 "Program Files" $INSTDIR
-    StrCmp $0 "" checkProgramData
+    StrCmp $0 "" +2  # If it's empty, skip the next line
         StrCpy $RegInstDir "%ProgramFiles%\Salt Project\Salt"
 
-    checkProgramData:
+    # Check for ProgramData
     # Set the current setting for RootDir. we'll only change it if it contains
     # ProgramData
     StrCpy $RegRootDir $RootDir
 
     ${StrContains} $0 "ProgramData" $INSTDIR
-    StrCmp $0 "" writeRegExpand
+    StrCmp $0 "" +2  # If it's empty, skip the next line
         StrCpy $RegRootDir "%ProgramData%\Salt Project\Salt"
 
-    writeRegExpand:
-        WriteRegExpandStr HKLM "SOFTWARE\Salt Project\Salt" "install_dir" "$RegInstDir"
-        WriteRegExpandStr HKLM "SOFTWARE\Salt Project\Salt" "root_dir" "$RegRootDir"
+    WriteRegExpandStr HKLM "SOFTWARE\Salt Project\Salt" "install_dir" "$RegInstDir"
+    WriteRegExpandStr HKLM "SOFTWARE\Salt Project\Salt" "root_dir" "$RegRootDir"
 
     # Puts the nullsoft installer back to its default
     SetRegView 32  # Set it back to the 32 bit portion of the registry
@@ -1379,6 +1390,53 @@ FunctionEnd
 
 
 #------------------------------------------------------------------------------
+# StrContains
+#
+# This function does a case sensitive searches for an occurrence of a substring in a string.
+# It returns the substring if it is found.
+# Otherwise it returns null("").
+# Written by kenglish_hi
+# Adapted from StrReplace written by dandaman32
+#------------------------------------------------------------------------------
+Function StrContains
+
+    # Initialize variables
+    Var /GLOBAL STR_HAYSTACK
+    Var /GLOBAL STR_NEEDLE
+    Var /GLOBAL STR_CONTAINS_VAR_1
+    Var /GLOBAL STR_CONTAINS_VAR_2
+    Var /GLOBAL STR_CONTAINS_VAR_3
+    Var /GLOBAL STR_CONTAINS_VAR_4
+    Var /GLOBAL STR_RETURN_VAR
+
+    Exch $STR_NEEDLE
+    Exch 1
+    Exch $STR_HAYSTACK
+    # Uncomment to debug
+    #MessageBox MB_OK 'STR_NEEDLE = $STR_NEEDLE STR_HAYSTACK = $STR_HAYSTACK '
+    StrCpy $STR_RETURN_VAR ""
+    StrCpy $STR_CONTAINS_VAR_1 -1
+    StrLen $STR_CONTAINS_VAR_2 $STR_NEEDLE
+    StrLen $STR_CONTAINS_VAR_4 $STR_HAYSTACK
+
+    loop:
+        IntOp $STR_CONTAINS_VAR_1 $STR_CONTAINS_VAR_1 + 1
+        StrCpy $STR_CONTAINS_VAR_3 $STR_HAYSTACK $STR_CONTAINS_VAR_2 $STR_CONTAINS_VAR_1
+        StrCmp $STR_CONTAINS_VAR_3 $STR_NEEDLE found
+        StrCmp $STR_CONTAINS_VAR_1 $STR_CONTAINS_VAR_4 done
+        Goto loop
+
+    found:
+        StrCpy $STR_RETURN_VAR $STR_NEEDLE
+        Goto done
+
+    done:
+        Pop $STR_NEEDLE  # Prevent "invalid opcode" errors and keep the stack clean
+        Exch $STR_RETURN_VAR
+FunctionEnd
+
+
+#------------------------------------------------------------------------------
 # UninstallMSI Function
 # - Uninstalls MSI by product code
 #
@@ -1414,7 +1472,7 @@ Function getExistingMinionConfig
     # Find config, should be in $RootDir\conf\minion
     # Root dir is usually ProgramData\Salt Project\Salt\conf though it may be
     # C:\salt\conf if Salt was installed the old way
-    IfFileExists "$RootDir\conf\minion" confFound
+    IfFileExists "$RootDir\conf\minion" check_owner
     IfFileExists "C:\salt\conf\minion" old_location confNotFound
 
     old_location:
@@ -1562,7 +1620,7 @@ Function updateMinionConfig
             ${If} $3 == 0                               # is it in the first...
             ${OrIf} $3 == 1                             # or second position (account for comments)
 
-                ${Explode} $9 "," $MasterHost_state     # Split the hostname on commas, $9 is the number of items found
+                ${Explode} $9 "," $MasterHost           # Split the hostname on commas, $9 is the number of items found
                 ${If} $9 == 1                           # 1 means only a single master was passed
                     StrCpy $cfg_line "master: $MasterHost$\r$\n"  # write the master
                 ${Else}                                 # make a multi-master entry
@@ -1618,7 +1676,7 @@ Function updateMinionConfig
     # Does master config still need to be written
     ${If} $ConfigWriteMaster == 1                       # master not written to the config
 
-        ${Explode} $9 "," $MasterHost_state             # split the hostname on commas, $9 is the number of items found
+        ${Explode} $9 "," $MasterHost                   # split the hostname on commas, $9 is the number of items found
         ${If} $9 == 1                                   # 1 means only a single master was passed
             StrCpy $cfg_line "master: $MasterHost"      # write the master
         ${Else}                                         # make a multi-master entry
@@ -1779,7 +1837,7 @@ Function parseInstallerCommandLineSwitches
         FileWrite $0 "$\t$\t$\ta timestamp and a .bak extension. That includes$\n"
         FileWrite $0 "$\t$\t$\tthe minion file and the minion.d directory$\n"
         FileWrite $0 "$\n"
-        FileWrite $0 "/install-dir=$\tSpecify the installation location for the Salt binaries.$\n"
+        FileWrite $0 "/install-dir=$\t$\tSpecify the installation location for the Salt binaries.$\n"
         FileWrite $0 "$\t$\t$\tThis will be ignored for existing installations.$\n"
         FileWrite $0 "$\n"
         FileWrite $0 "/move-config$\t$\tIf config is found at C:\salt it will be moved to %ProgramData%$\n"

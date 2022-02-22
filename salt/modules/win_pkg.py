@@ -1159,10 +1159,9 @@ def genrepo(**kwargs):
                     ret,
                     successful_verbose,
                 )
-    serial = salt.payload.Serial(__opts__)
 
     with salt.utils.files.fopen(repo_details.winrepo_file, "wb") as repo_cache:
-        repo_cache.write(serial.dumps(ret))
+        repo_cache.write(salt.payload.dumps(ret))
     # For some reason we can not save ret into __context__['winrepo.data'] as this breaks due to utf8 issues
     successful_count = len(successful_verbose)
     error_count = len(ret["errors"])
@@ -1317,7 +1316,7 @@ def _get_source_sum(source_hash, file_path, saltenv):
             )
             raise SaltInvocationError(invalid_hash_msg)
 
-        ret["hash_type"], ret["hsum"] = [item.strip().lower() for item in items]
+        ret["hash_type"], ret["hsum"] = (item.strip().lower() for item in items)
 
     return ret
 
@@ -2290,10 +2289,11 @@ def get_repo_data(saltenv="base"):
         log.trace("get_repo_data called reading from disk")
 
     try:
-        serial = salt.payload.Serial(__opts__)
         with salt.utils.files.fopen(repo_details.winrepo_file, "rb") as repofile:
             try:
-                repodata = salt.utils.data.decode(serial.loads(repofile.read()) or {})
+                repodata = salt.utils.data.decode(
+                    salt.payload.loads(repofile.read()) or {}
+                )
                 __context__["winrepo.data"] = repodata
                 return repodata
             except Exception as exc:  # pylint: disable=broad-except

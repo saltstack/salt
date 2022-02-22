@@ -496,7 +496,7 @@ class ForceImportErrorOn:
     def patch_import_function(self):
         self.patcher.start()
 
-    def restore_import_funtion(self):
+    def restore_import_function(self):
         self.patcher.stop()
 
     def __fake_import__(
@@ -525,7 +525,7 @@ class ForceImportErrorOn:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.restore_import_funtion()
+        self.restore_import_function()
 
 
 class MockWraps:

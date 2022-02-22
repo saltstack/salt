@@ -51,6 +51,7 @@ value to ``etcd``:
 import base64
 import logging
 
+import salt.payload
 from salt.exceptions import SaltCacheError
 
 try:
@@ -129,7 +130,7 @@ def store(bank, key, data):
     _init_client()
     etcd_key = "{}/{}/{}".format(path_prefix, bank, key)
     try:
-        value = __context__["serial"].dumps(data)
+        value = salt.payload.dumps(data)
         client.write(etcd_key, base64.b64encode(value))
     except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
@@ -145,7 +146,7 @@ def fetch(bank, key):
     etcd_key = "{}/{}/{}".format(path_prefix, bank, key)
     try:
         value = client.read(etcd_key).value
-        return __context__["serial"].loads(base64.b64decode(value))
+        return salt.payload.loads(base64.b64decode(value))
     except etcd.EtcdKeyNotFound:
         return {}
     except Exception as exc:  # pylint: disable=broad-except

@@ -1780,11 +1780,7 @@ def _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps):
                         int(re.sub("[a-z]+", "", vol_name)) for vol_name in all_volumes
                     ] or [0]
                     index = min(
-                        [
-                            idx
-                            for idx in range(1, max(indexes) + 2)
-                            if idx not in indexes
-                        ]
+                        idx for idx in range(1, max(indexes) + 2) if idx not in indexes
                     )
                     disk["filename"] = "{}{}".format(os.path.basename(device), index)
 
@@ -2448,7 +2444,7 @@ def init(
         NUMA node, number of dies per socket, number of cores per die, and number of threads per core, respectively.
 
     features
-        A dictionary conains a set of cpu features to fine-tune features provided by the selected CPU model. Use cpu
+        A dictionary contains a set of cpu features to fine-tune features provided by the selected CPU model. Use cpu
         feature ``name`` as the key and the ``policy`` as the value. ``policy`` Attribute takes ``force``, ``require``,
         ``optional``, ``disable`` or ``forbid``.
 
@@ -3294,10 +3290,10 @@ def _serial_or_concole_equal(old, new):
         """
         return {
             "type": item.attrib["type"],
-            "port": item.find("source").attrib["service"]
+            "port": item.find("source").get("service")
             if item.find("source") is not None
             else None,
-            "protocol": item.find("protocol").attrib["type"]
+            "protocol": item.find("protocol").get("type")
             if item.find("protocol") is not None
             else None,
         }
@@ -7057,7 +7053,7 @@ def network_define(
 
         .. versionadded:: 3003
 
-    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+    :param addresses: whitespace separated list of addresses of PCI devices that can be used for this network in `hostdev` forward mode.
         (default ``None``)
 
         .. code-block:: yaml
@@ -7336,7 +7332,7 @@ def network_update(
           - forward: passthrough
           - interfaces: "eth10 eth11 eth12"
 
-    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+    :param addresses: whitespace separated list of addresses of PCI devices that can be used for this network in `hostdev` forward mode.
         (default ``None``)
 
         .. code-block:: yaml

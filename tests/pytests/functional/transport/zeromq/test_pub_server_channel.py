@@ -1,4 +1,3 @@
-import ctypes
 import logging
 import multiprocessing
 import time
@@ -10,13 +9,12 @@ import salt.exceptions
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.log.setup
-import salt.transport.client
-import salt.transport.server
+import salt.master
 import salt.transport.zeromq
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
-import zmq.eventloop.ioloop
+import zmq
 from saltfactories.utils.processes import terminate_process
 from tests.support.mock import MagicMock, patch
 
@@ -24,13 +22,10 @@ log = logging.getLogger(__name__)
 
 
 class Collector(salt.utils.process.SignalHandlingProcess):
-    def __init__(
-        self, minion_config, pub_uri, aes_key, timeout=30, zmq_filtering=False
-    ):
+    def __init__(self, minion_config, pub_uri, timeout=30, zmq_filtering=False):
         super().__init__()
         self.minion_config = minion_config
         self.pub_uri = pub_uri
-        self.aes_key = aes_key
         self.timeout = timeout
         self.hard_timeout = time.time() + timeout + 30
         self.manager = multiprocessing.Manager()
@@ -51,8 +46,6 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         sock.setsockopt(zmq.SUBSCRIBE, b"")
         sock.connect(self.pub_uri)
         last_msg = time.time()
-        serial = salt.payload.Serial(self.minion_config)
-        crypticle = salt.crypt.Crypticle(self.minion_config, self.aes_key)
         self.started.set()
         while True:
             curr_time = time.time()
@@ -63,11 +56,10 @@ class Collector(salt.utils.process.SignalHandlingProcess):
             try:
                 payload = sock.recv(zmq.NOBLOCK)
             except zmq.ZMQError:
-                time.sleep(0.01)
+                time.sleep(0.1)
             else:
                 try:
-                    serial_payload = serial.loads(payload)
-                    payload = crypticle.loads(serial_payload["load"])
+                    payload = salt.payload.loads(payload)
                     if "start" in payload:
                         self.running.set()
                         continue
@@ -109,37 +101,26 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self.master_config = master_config
         self.minion_config = minion_config
         self.collector_kwargs = collector_kwargs
-        self.aes_key = multiprocessing.Array(
-            ctypes.c_char,
-            salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
-        )
         self.process_manager = salt.utils.process.ProcessManager(
             name="ZMQ-PubServer-ProcessManager"
         )
-        self.pub_server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(
+        self.pub_server_channel = salt.transport.zeromq.PublishServer(
             self.master_config
         )
-        self.pub_server_channel.pre_fork(
-            self.process_manager,
-            kwargs={"log_queue": salt.log.setup.get_multiprocessing_logging_queue()},
-        )
+        self.pub_server_channel.pre_fork(self.process_manager)
         self.pub_uri = "tcp://{interface}:{publish_port}".format(**self.master_config)
         self.queue = multiprocessing.Queue()
         self.stopped = multiprocessing.Event()
         self.collector = Collector(
-            self.minion_config,
-            self.pub_uri,
-            self.aes_key.value,
-            **self.collector_kwargs
+            self.minion_config, self.pub_uri, **self.collector_kwargs
         )
 
     def run(self):
-        salt.master.SMaster.secrets["aes"] = {"secret": self.aes_key}
         try:
             while True:
                 payload = self.queue.get()
                 if payload is None:
-                    log.debug("We received the stop sentinal")
+                    log.debug("We received the stop sentinel")
                     break
                 self.pub_server_channel.publish(payload)
         except KeyboardInterrupt:

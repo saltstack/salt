@@ -1,1 +1,0 @@
-Changed the default character set used by `utils.pycrypto.secure_password()` to include symbols and implemented arguments to control the used character set.

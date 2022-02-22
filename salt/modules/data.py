@@ -41,12 +41,10 @@ def load():
 
         salt '*' data.load
     """
-    serial = salt.payload.Serial(__opts__)
-
     try:
         datastore_path = os.path.join(__opts__["cachedir"], "datastore")
         with salt.utils.files.fopen(datastore_path, "rb") as rfh:
-            return serial.loads(rfh.read())
+            return salt.payload.loads(rfh.read())
     except (OSError, NameError):
         return {}
 
@@ -70,8 +68,7 @@ def dump(new_data):
     try:
         datastore_path = os.path.join(__opts__["cachedir"], "datastore")
         with salt.utils.files.fopen(datastore_path, "w+b") as fn_:
-            serial = salt.payload.Serial(__opts__)
-            serial.dump(new_data, fn_)
+            salt.payload.dump(new_data, fn_)
 
         return True
 

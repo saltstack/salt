@@ -1118,7 +1118,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         initial_mode = "0111"
         changed_mode = "0555"
 
-        if grains["os_family"] in ("VMware Photon OS",):
+        if grains["os"] in ("VMware Photon OS",):
             initial_modes = {
                 0: {sub: "0750", subsub: "0110"},
                 1: {sub: "0110", subsub: "0110"},
@@ -4937,6 +4937,9 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
         self.assertIn("Patch would not apply cleanly", ret["comment"])
+        if IS_WINDOWS:
+            reject_file = reject_file.replace("\\", "\\\\")
+            reject_file = "'{}'".format(reject_file)
         self.assertRegex(
             ret["comment"], "saving rejects to (file )?{}".format(reject_file)
         )
@@ -4973,6 +4976,9 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
         self.assertIn("Patch would not apply cleanly", ret["comment"])
+        if IS_WINDOWS:
+            reject_file = reject_file.replace("\\", "\\\\")
+            reject_file = "'{}'".format(reject_file)
         self.assertRegex(
             ret["comment"], "saving rejects to (file )?{}".format(reject_file)
         )

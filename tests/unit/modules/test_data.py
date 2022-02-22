@@ -37,7 +37,7 @@ class DataTestCase(TestCase, LoaderModuleMockMixin):
             mocked_fopen.__enter__ = MagicMock(return_value=mocked_fopen)
             mocked_fopen.__exit__ = MagicMock()
             with patch("salt.utils.files.fopen", MagicMock(return_value=mocked_fopen)):
-                with patch("salt.payload.Serial.loads", MagicMock(return_value=True)):
+                with patch("salt.payload.loads", MagicMock(return_value=True)):
                     with patch.dict(data.__opts__, {"cachedir": "/"}):
                         self.assertTrue(data.load())
 

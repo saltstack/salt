@@ -1,0 +1,1 @@
+Allow cp functions to derive saltenv from config if not explicitly set

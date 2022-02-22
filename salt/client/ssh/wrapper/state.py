@@ -524,7 +524,6 @@ def request(mods=None, **kwargs):
     kwargs["test"] = True
     ret = apply_(mods, **kwargs)
     notify_path = os.path.join(__opts__["cachedir"], "req_state.p")
-    serial = salt.payload.Serial(__opts__)
     req = check_request()
     req.update(
         {
@@ -541,7 +540,7 @@ def request(mods=None, **kwargs):
                 # Make sure cache file isn't read-only
                 __salt__["cmd.run"]('attrib -R "{}"'.format(notify_path))
             with salt.utils.files.fopen(notify_path, "w+b") as fp_:
-                serial.dump(req, fp_)
+                salt.payload.dump(req, fp_)
         except OSError:
             log.error(
                 "Unable to write state request file %s. Check permission.", notify_path
@@ -562,12 +561,11 @@ def check_request(name=None):
         salt '*' state.check_request
     """
     notify_path = os.path.join(__opts__["cachedir"], "req_state.p")
-    serial = salt.payload.Serial(__opts__)
     if os.path.isfile(notify_path):
         with salt.utils.files.fopen(notify_path, "rb") as fp_:
             # Not sure if this needs to be decoded since it is being returned,
             # and msgpack serialization will encode it to bytes anyway.
-            req = serial.load(fp_)
+            req = salt.payload.load(fp_)
         if name:
             return req[name]
         return req
@@ -587,7 +585,6 @@ def clear_request(name=None):
         salt '*' state.clear_request
     """
     notify_path = os.path.join(__opts__["cachedir"], "req_state.p")
-    serial = salt.payload.Serial(__opts__)
     if not os.path.isfile(notify_path):
         return True
     if not name:
@@ -607,7 +604,7 @@ def clear_request(name=None):
                     # Make sure cache file isn't read-only
                     __salt__["cmd.run"]('attrib -R "{}"'.format(notify_path))
                 with salt.utils.files.fopen(notify_path, "w+b") as fp_:
-                    serial.dump(req, fp_)
+                    salt.payload.dump(req, fp_)
             except OSError:
                 log.error(
                     "Unable to write state request file %s. Check permission.",

@@ -1,1 +1,0 @@
-Make sure cmdmod._log_cmd handles tuples properly

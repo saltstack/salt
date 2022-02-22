@@ -271,7 +271,7 @@ def gpg_agent(request, gpghome):
         check=True,
         universal_newlines=True,
     )
-    if tuple([int(p) for p in gpg_version_proc.stdout.split(".")]) >= (2, 1):
+    if tuple(int(p) for p in gpg_version_proc.stdout.split(".")) >= (2, 1):
         kill_option_supported = True
     else:
         kill_option_supported = False

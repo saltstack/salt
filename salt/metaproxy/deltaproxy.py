@@ -18,6 +18,8 @@ import salt.config
 import salt.crypt
 import salt.defaults.exitcodes
 import salt.engines
+import salt.ext.tornado.gen  # pylint: disable=F0401
+import salt.ext.tornado.ioloop  # pylint: disable=F0401
 import salt.loader
 import salt.log.setup
 import salt.minion
@@ -42,8 +44,6 @@ import salt.utils.schedule
 import salt.utils.ssdp
 import salt.utils.user
 import salt.utils.zeromq
-import tornado.gen
-import tornado.ioloop
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import (
     CommandExecutionError,
@@ -188,7 +188,6 @@ def post_master_init(self, master):
 
     self.opts["grains"] = salt.loader.grains(self.opts, proxy=self.proxy)
 
-    self.serial = salt.payload.Serial(self.opts)
     self.mod_opts = self._prep_mod_opts()
     self.matchers = salt.loader.matchers(self.opts)
     self.beacons = salt.beacons.Beacon(self.opts, self.functions)
@@ -349,6 +348,11 @@ def post_master_init(self, master):
         ).compile_pillar()
 
         proxyopts["proxy"] = self.proxy_pillar[_id].get("proxy", {})
+        if not proxyopts["proxy"]:
+            log.warn(
+                "Pillar data for proxy minion %s could not be loaded, skipping.", _id
+            )
+            continue
 
         # Remove ids
         proxyopts["proxy"].pop("ids", None)
@@ -480,14 +484,11 @@ def target(cls, minion_instance, opts, data, connected):
         opts["id"],
     )
 
-    if not hasattr(minion_instance, "serial"):
-        minion_instance.serial = salt.payload.Serial(opts)
-
     if not hasattr(minion_instance, "proc_dir"):
         uid = salt.utils.user.get_uid(user=opts.get("user", None))
         minion_instance.proc_dir = salt.minion.get_proc_dir(opts["cachedir"], uid=uid)
 
-    with tornado.stack_context.StackContext(minion_instance.ctx):
+    with salt.ext.tornado.stack_context.StackContext(minion_instance.ctx):
         if isinstance(data["fun"], tuple) or isinstance(data["fun"], list):
             ProxyMinion._thread_multi_return(minion_instance, opts, data)
         else:
@@ -509,15 +510,13 @@ def thread_return(cls, minion_instance, opts, data):
         # Reconfigure multiprocessing logging after daemonizing
         salt.log.setup.setup_multiprocessing_logging()
 
-    salt.utils.process.appendproctitle(
-        "{}._thread_return {}".format(cls.__name__, data["jid"])
-    )
+    salt.utils.process.appendproctitle("{}._thread_return".format(cls.__name__))
 
     sdata = {"pid": os.getpid()}
     sdata.update(data)
     log.info("Starting a new job with PID %s", sdata["pid"])
     with salt.utils.files.fopen(fn_, "w+b") as fp_:
-        fp_.write(minion_instance.serial.dumps(sdata))
+        fp_.write(salt.payload.dumps(sdata))
     ret = {"success": False}
     function_name = data["fun"]
     executors = (
@@ -759,15 +758,13 @@ def thread_multi_return(cls, minion_instance, opts, data):
         # Reconfigure multiprocessing logging after daemonizing
         salt.log.setup.setup_multiprocessing_logging()
 
-    salt.utils.process.appendproctitle(
-        "{}._thread_multi_return {}".format(cls.__name__, data["jid"])
-    )
+    salt.utils.process.appendproctitle("{}._thread_multi_return".format(cls.__name__))
 
     sdata = {"pid": os.getpid()}
     sdata.update(data)
     log.info("Starting a new job with PID %s", sdata["pid"])
     with salt.utils.files.fopen(fn_, "w+b") as fp_:
-        fp_.write(minion_instance.serial.dumps(sdata))
+        fp_.write(salt.payload.dumps(sdata))
 
     multifunc_ordered = opts.get("multifunc_ordered", False)
     num_funcs = len(data["fun"])
@@ -877,9 +874,12 @@ def handle_payload(self, payload):
         # The following handles the sub-proxies
         sub_ids = self.opts["proxy"].get("ids", [self.opts["id"]])
         for _id in sub_ids:
-            instance = self.deltaproxy_objs[_id]
-            if instance._target_load(payload["load"]):
-                instance._handle_decoded_payload(payload["load"])
+            if _id in self.deltaproxy_objs:
+                instance = self.deltaproxy_objs[_id]
+                if instance._target_load(payload["load"]):
+                    instance._handle_decoded_payload(payload["load"])
+            else:
+                log.warn("Proxy minion %s is not loaded, skipping.", _id)
 
     elif self.opts["zmq_filtering"]:
         # In the filtering enabled case, we"d like to know when minion sees something it shouldnt
@@ -939,7 +939,7 @@ def handle_decoded_payload(self, data):
                     data["jid"],
                 )
                 once_logged = True
-            yield tornado.gen.sleep(0.5)
+            yield salt.ext.tornado.gen.sleep(0.5)
             process_count = self.subprocess_list.count
 
     # We stash an instance references to allow for the socket
@@ -948,19 +948,22 @@ def handle_decoded_payload(self, data):
     # side.
     instance = self
     multiprocessing_enabled = self.opts.get("multiprocessing", True)
+    name = "ProcessPayload(jid={})".format(data["jid"])
     if multiprocessing_enabled:
         if sys.platform.startswith("win"):
             # let python reconstruct the minion on the other side if we"re
             # running on windows
             instance = None
         process = SignalHandlingProcess(
-            target=target, args=(self, instance, instance.opts, data, self.connected)
+            target=target,
+            args=(self, instance, instance.opts, data, self.connected),
+            name=name,
         )
     else:
         process = threading.Thread(
             target=target,
             args=(self, instance, instance.opts, data, self.connected),
-            name=data["jid"],
+            name=name,
         )
 
     process.start()

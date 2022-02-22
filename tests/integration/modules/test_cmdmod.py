@@ -217,7 +217,7 @@ class CMDModuleTest(ModuleCase):
         """
         args = "saltines crackers biscuits=yes"
         script = "salt://script.py"
-        ret = self.run_function("cmd.script", [script, args])
+        ret = self.run_function("cmd.script", [script, args], saltenv="base")
         self.assertEqual(ret["stdout"], args)
 
     @pytest.mark.slow_test
@@ -227,7 +227,7 @@ class CMDModuleTest(ModuleCase):
         """
         args = "saltines crackers biscuits=yes"
         script = "salt://script.py?saltenv=base"
-        ret = self.run_function("cmd.script", [script, args])
+        ret = self.run_function("cmd.script", [script, args], saltenv="base")
         self.assertEqual(ret["stdout"], args)
 
     @pytest.mark.slow_test
@@ -236,7 +236,7 @@ class CMDModuleTest(ModuleCase):
         cmd.script_retcode
         """
         script = "salt://script.py"
-        ret = self.run_function("cmd.script_retcode", [script])
+        ret = self.run_function("cmd.script_retcode", [script], saltenv="base")
         self.assertEqual(ret, 0)
 
     @pytest.mark.slow_test
@@ -247,7 +247,9 @@ class CMDModuleTest(ModuleCase):
         tmp_cwd = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         args = "saltines crackers biscuits=yes"
         script = "salt://script.py"
-        ret = self.run_function("cmd.script", [script, args], cwd=tmp_cwd)
+        ret = self.run_function(
+            "cmd.script", [script, args], cwd=tmp_cwd, saltenv="base"
+        )
         self.assertEqual(ret["stdout"], args)
 
     @pytest.mark.slow_test
@@ -262,7 +264,9 @@ class CMDModuleTest(ModuleCase):
 
         args = "saltines crackers biscuits=yes"
         script = "salt://script.py"
-        ret = self.run_function("cmd.script", [script, args], cwd=tmp_cwd)
+        ret = self.run_function(
+            "cmd.script", [script, args], cwd=tmp_cwd, saltenv="base"
+        )
         self.assertEqual(ret["stdout"], args)
 
     @pytest.mark.destructive_test
@@ -275,6 +279,7 @@ class CMDModuleTest(ModuleCase):
                 ret = self.run_function("cmd.tty", [tty, "apply salt liberally"])
                 self.assertTrue("Success" in ret)
 
+    @pytest.mark.skip_on_windows
     @pytest.mark.skip_if_binaries_missing("which")
     def test_which(self):
         """
@@ -286,6 +291,7 @@ class CMDModuleTest(ModuleCase):
         self.assertIsInstance(cmd_run, str)
         self.assertEqual(cmd_which.rstrip(), cmd_run.rstrip())
 
+    @pytest.mark.skip_on_windows
     @pytest.mark.skip_if_binaries_missing("which")
     def test_which_bin(self):
         """
@@ -593,7 +599,9 @@ class CMDModuleTest(ModuleCase):
             " -ErrorAction Stop".format(val)
         )
         script = "salt://issue-56195/test.ps1"
-        ret = self.run_function("cmd.script", [script], args=args, shell="powershell")
+        ret = self.run_function(
+            "cmd.script", [script], args=args, shell="powershell", saltenv="base"
+        )
         self.assertEqual(ret["stdout"], val)
 
     @pytest.mark.slow_test
@@ -610,5 +618,7 @@ class CMDModuleTest(ModuleCase):
             " -ErrorAction Stop".format(val)
         )
         script = "salt://issue-56195/test.ps1"
-        ret = self.run_function("cmd.script", [script], args=args, shell="pwsh")
+        ret = self.run_function(
+            "cmd.script", [script], args=args, shell="pwsh", saltenv="base"
+        )
         self.assertEqual(ret["stdout"], val)

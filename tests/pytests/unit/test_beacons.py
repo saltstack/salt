@@ -45,6 +45,44 @@ def test_beacon_process():
     assert ret == _expected
 
 
+def test_beacon_process_invalid():
+    """
+    Test the process function in the beacon class
+    when the configuration is invalid.
+    """
+    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    mock_opts["id"] = "minion"
+    mock_opts["__role"] = "minion"
+
+    mock_opts["beacons"] = {"status": {}}
+
+    beacon = salt.beacons.Beacon(mock_opts, [])
+
+    with patch.object(salt.beacons, "log") as log_mock, patch.object(
+        salt.beacons.log, "error"
+    ) as log_error_mock:
+        ret = beacon.process(mock_opts["beacons"], mock_opts["grains"])
+        log_error_mock.assert_called_with(
+            "Beacon %s configuration invalid, not running.\n%s",
+            "status",
+            "Configuration for status beacon must be a list.",
+        )
+
+    mock_opts["beacons"] = {"mybeacon": {}}
+
+    beacon = salt.beacons.Beacon(mock_opts, [])
+
+    with patch.object(salt.beacons.log, "warn") as log_warn_mock, patch.object(
+        salt.beacons.log, "error"
+    ) as log_error_mock:
+        ret = beacon.process(mock_opts["beacons"], mock_opts["grains"])
+        log_warn_mock.assert_called_with(
+            "No validate function found for %s, running basic beacon validation.",
+            "mybeacon",
+        )
+        log_error_mock.assert_called_with("Configuration for beacon must be a list.")
+
+
 def test_beacon_module():
     """
     Test that beacon_module parameter for beacon configuration

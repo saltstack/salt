@@ -30,7 +30,7 @@ class Batch:
 
                            The default is an empty dict.
 
-        :param bool quiet: Supress printing to stdout
+        :param bool quiet: Suppress printing to stdout
 
                            The default is False.
         """

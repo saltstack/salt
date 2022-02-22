@@ -1,1 +1,0 @@
-Changed nginx.version to return version without `nginx/` prefix.

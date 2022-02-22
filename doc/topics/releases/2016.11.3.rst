@@ -12,7 +12,13 @@ Statistics
 - Total Issue References: **49**
 - Total PR References: **130**
 
-- Contributors: **47** (`Ch3LL`_, `DmitryKuzmenko`_, `MTecknology`_, `The-Loeki`_, `UtahDave`_, `anlutro`_, `arthru`_, `axmetishe`_, `bailsman`_, `bobrik`_, `cachedout`_, `clinta`_, `corywright`_, `cro`_, `dmaziuk`_, `dmitrievav`_, `dmurphy18`_, `eliasp`_, `eradman`_, `ezh`_, `gtmanfred`_, `hu-dabao`_, `hujunya`_, `isbm`_, `jak3kaj`_, `janhorstmann`_, `joe-niland`_, `kevinanderson1`_, `kstreee`_, `l2ol33rt`_, `lomeroe`_, `mcalmer`_, `meaksh`_, `mirceaulinic`_, `morganwillcock`_, `nasenbaer13`_, `nicholasmhughes`_, `rallytime`_, `sakateka`_, `sergeizv`_, `sjorge`_, `techhat`_, `terminalmage`_, `thatch45`_, `toanju`_, `twangboy`_, `vutny`_)
+- Contributors: **47** (`Ch3LL`_, `DmitryKuzmenko`_, `MTecknology`_, `The-Loeki`_, `UtahDave`_,
+  `anlutro`_, `arthru`_, `axmetishe`_, `bailsman`_, `bobrik`_, `cachedout`_, `clinta`_,
+  `corywright`_, `cro`_, `dmaziuk`_, `dmitrievav`_, `dmurphy18`_, `eliasp`_, `eradman`_, `ezh`_,
+  `gtmanfred`_, `hu-dabao`_, `hujunya`_, `isbm`_, `jak3kaj`_, `janhorstmann`_, `joe-niland`_,
+  `kevinanderson1`_, `kstreee`_, `l2ol33rt`_, `lomeroe`_, `mcalmer`_, `meaksh`_, `mirceaulinic`_,
+  `morganwillcock`_, `nasenbaer13`_, `nicholasmhughes`_, `rallytime`_, `sakateka`_, `sergeizv`_,
+  `sjorge`_, `techhat`_, `terminalmage`_, `thatch45`_, `toanju`_, `twangboy`_, `vutny`_)
 
 
 Changelog for v2016.11.2..v2016.11.3
