@@ -39,7 +39,7 @@ ENV VIRTUAL_ENV={virtualenv_path}
 
 RUN virtualenv --python=python{python_version} $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-RUN pip install salt=={salt_version}
+RUN pip install salt~={salt_version}
 {extra}
 
 CMD . $VIRTUAL_ENV/bin/activate
@@ -53,13 +53,13 @@ def _get_test_versions():
             test_versions.append(
                 PySaltCombo(python_version=python_version, salt_version=salt_version)
             )
-    for salt_version in ("3001.4", "3002.2"):
+    for salt_version in ("3001.0", "3002.0", "3003.0", "3004.0"):
         test_versions.append(PySaltCombo(python_version="3", salt_version=salt_version))
     return test_versions
 
 
 def _get_test_versions_ids(pysaltcombo):
-    return "Py{}-SaltMinion=={}".format(
+    return "Py{}-SaltMinion~={}".format(
         pysaltcombo.python_version, pysaltcombo.salt_version
     )
 
