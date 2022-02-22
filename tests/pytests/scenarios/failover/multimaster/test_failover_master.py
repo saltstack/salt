@@ -135,12 +135,12 @@ def test_minion_reconnection(
     run_salt_cmds,
 ):
     """
-    Test that mininons reconnect to a live master.
+    Test that minions reconnect to a live master.
 
     To work well with salt factories, the minions will reconnect to the master they were connected to in conftest.py.
     """
     with salt_mm_failover_minion_1.stopped(), salt_mm_failover_minion_2.stopped():
-        pass
+        log.debug("Minions have stopped. They will restart next.")
 
     returns = run_salt_cmds(
         [mm_failover_master_1_salt_cli, mm_failover_master_2_salt_cli],
