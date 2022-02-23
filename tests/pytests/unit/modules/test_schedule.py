@@ -827,7 +827,7 @@ def test_list(sock_dir, job1):
 """
 
             with patch.object(SaltEvent, "get_event", return_value=_ret_value):
-                with patch(
+                with patch("os.path.exists", MagicMock(return_value=True)), patch(
                     "salt.utils.files.fopen", mock_open(read_data=saved_schedule)
                 ) as fopen_mock:
                     ret = schedule.list_(offline=True)
@@ -857,7 +857,7 @@ def test_list(sock_dir, job1):
     seconds: 10
 """
             with patch.object(SaltEvent, "get_event", return_value=_ret_value):
-                with patch(
+                with patch("os.path.exists", MagicMock(return_value=True)), patch(
                     "salt.utils.files.fopen", mock_open(read_data="")
                 ) as fopen_mock:
                     ret = schedule.list_()
@@ -892,7 +892,7 @@ def test_list(sock_dir, job1):
     seconds: 10
 """
             with patch.object(SaltEvent, "get_event", return_value=_ret_value):
-                with patch(
+                with patch("os.path.exists", MagicMock(return_value=True)), patch(
                     "salt.utils.files.fopen", mock_open(read_data=saved_schedule)
                 ) as fopen_mock:
                     ret = schedule.list_()
