@@ -886,25 +886,20 @@ class Process(multiprocessing.Process):
         instance = super().__new__(cls)
         instance._after_fork_methods = []
         instance._finalize_methods = []
+        log_queue = kwargs.pop("log_queue", None)
+        log_queue_level = kwargs.pop("log_queue_level", None)
+        if log_queue is None:
+            log_queue = salt.log.setup.get_multiprocessing_logging_queue()
+        if log_queue_level is None:
+            log_queue_level = salt.log.setup.get_multiprocessing_logging_level()
+        instance.log_queue = log_queue
+        instance.log_queue_level = log_queue_level
 
         if salt.utils.platform.spawning_platform():
             # On spawning platforms, subclasses should call super if they define
             # __setstate__ and/or __getstate__
             instance._args_for_getstate = copy.copy(args)
             instance._kwargs_for_getstate = copy.copy(kwargs)
-        return instance
-
-    def __init__(self, *args, **kwargs):
-        log_queue = kwargs.pop("log_queue", None)
-        log_queue_level = kwargs.pop("log_queue_level", None)
-        super().__init__(*args, **kwargs)
-        self.log_queue = log_queue
-        if self.log_queue is None:
-            self.log_queue = salt.log.setup.get_multiprocessing_logging_queue()
-
-        self.log_queue_level = log_queue_level
-        if self.log_queue_level is None:
-            self.log_queue_level = salt.log.setup.get_multiprocessing_logging_level()
 
         # Because we need to enforce our after fork and finalize routines,
         # we must wrap this class run method to allow for these extra steps
@@ -913,7 +908,8 @@ class Process(multiprocessing.Process):
         #
         # We use setattr here to fool pylint not to complain that we're
         # overriding run from the subclass here
-        setattr(self, "run", self.__decorate_run(self.run))
+        setattr(instance, "run", instance.__decorate_run(instance.run))
+        return instance
 
     # __setstate__ and __getstate__ are only used on spawning platforms.
     def __setstate__(self, state):
@@ -1068,10 +1064,13 @@ class MultiprocessingProcess(Process):
 
 
 class SignalHandlingProcess(Process):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._signal_handled = multiprocessing.Event()
-        self.register_after_fork_method(SignalHandlingProcess._setup_signals, self)
+    def __new__(cls, *args, **kwargs):
+        instance = super().__new__(cls, *args, **kwargs)
+        instance._signal_handled = multiprocessing.Event()
+        instance.register_after_fork_method(
+            SignalHandlingProcess._setup_signals, instance
+        )
+        return instance
 
     def signal_handled(self):
         return self._signal_handled.is_set()
