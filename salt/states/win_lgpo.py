@@ -387,7 +387,7 @@ def set_(
     }
 
     current_policy = {}
-    deprecation_comments = []
+    comments = []
     for p_class, p_data in pol_data.items():
         if p_data["requested_policy"]:
             for p_name, _ in p_data["requested_policy"].items():
@@ -416,41 +416,19 @@ def set_(
                             valid_names.extend(element["element_aliases"])
                         for e_name in p_data["requested_policy"][p_name]:
                             if e_name not in valid_names:
-                                new_e_name = e_name.split(":")[-1].strip()
-                                # If we find an invalid name, test the new
-                                # format. If found, replace the old with the
-                                # new
-                                if new_e_name in valid_names:
-                                    msg = (
-                                        "The LGPO module changed the way "
-                                        "it gets policy element names.\n"
-                                        '"{}" is no longer valid.\n'
-                                        'Please use "{}" instead.'
-                                        "".format(e_name, new_e_name)
-                                    )
-                                    salt.utils.versions.warn_until("Phosphorus", msg)
-                                    pol_data[p_class]["requested_policy"][p_name][
-                                        new_e_name
-                                    ] = pol_data[p_class]["requested_policy"][
-                                        p_name
-                                    ].pop(
-                                        e_name
-                                    )
-                                    deprecation_comments.append(msg)
-                                else:
-                                    msg = "Invalid element name: {}".format(e_name)
-                                    ret["comment"] = "\n".join(
-                                        [ret["comment"], msg]
-                                    ).strip()
-                                    ret["result"] = False
+                                msg = "Invalid element name: {}".format(e_name)
+                                ret["comment"] = "\n".join(
+                                    [ret["comment"], msg]
+                                ).strip()
+                                ret["result"] = False
                 else:
                     ret["comment"] = "\n".join(
                         [ret["comment"], lookup["message"]]
                     ).strip()
                     ret["result"] = False
     if not ret["result"]:
-        deprecation_comments.append(ret["comment"])
-        ret["comment"] = "\n".join(deprecation_comments).strip()
+        comments.append(ret["comment"])
+        ret["comment"] = "\n".join(comments).strip()
         return ret
 
     log.debug("pol_data == %s", pol_data)
@@ -544,8 +522,8 @@ def set_(
             ret["result"] = None
         else:
             msg = "All specified policies are properly configured"
-        deprecation_comments.append(msg)
-        ret["comment"] = "\n".join(deprecation_comments).strip()
+        comments.append(msg)
+        ret["comment"] = "\n".join(comments).strip()
     else:
         if policy_changes:
             _ret = __salt__["lgpo.set"](
@@ -588,11 +566,11 @@ def set_(
                     )
                 )
                 ret["result"] = False
-            deprecation_comments.append(msg)
-            ret["comment"] = "\n".join(deprecation_comments).strip()
+            comments.append(msg)
+            ret["comment"] = "\n".join(comments).strip()
         else:
             msg = "All specified policies are properly configured"
-            deprecation_comments.append(msg)
-            ret["comment"] = "\n".join(deprecation_comments).strip()
+            comments.append(msg)
+            ret["comment"] = "\n".join(comments).strip()
 
     return ret
