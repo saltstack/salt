@@ -39,7 +39,7 @@ def updates_list():
             "Title": "Blank",
         },
         "d931e99c-4dda-4d39-9905-0f6a73f7195f": {
-            "KBs": ["KB3193497"],
+            "KBs": ["KB3193498"],
             "Installed": False,
             "Title": "Blank",
         },
@@ -171,14 +171,29 @@ def test_uptodate(updates_list):
         "name": "NA",
         "changes": {
             "failed": {
+                "a0f997b1-1abe-4a46-941f-b37f732f9fbd": {
+                    "KBs": ["KB3193497"],
+                    "Title": "Blank"
+                },
+                "afda9e11-44a0-4602-9e9b-423af11ecaed": {
+                    "KBs": ["KB4541329"],
+                    "Title": "Blank"
+                },
                 "eac02b09-d745-4891-b80f-400e0e5e4b6d": {
                     "KBs": ["KB4052623"],
                     "Title": "KB4052623: Really long title that exceeds 40 characters",
                 }
+            },
+            "superseded": {
+                "eac02c07-d744-4892-b80f-312d045e4ccc": {
+                    "KBs": ["KB4052444"],
+                    "Title": "Superseded Update"
+                }
             }
         },
         "result": False,
-        "comment": "Updates failed",
+        "comment": "Some updates failed to install\n"
+                   "Some updates were superseded"
     }
 
     updates_not_installed = {
@@ -200,27 +215,32 @@ def test_uptodate(updates_list):
         "eac02c07-d744-4892-b80f-312d045e4ccc": {
             "KBs": ["KB4052444"],
             "Installed": False,
-            "Title": "Blank",
+            "Title": "Superseded Update",
         },
     }
-    fake_wua = MagicMock()
+
     fake_updates = MagicMock()
     fake_updates.list.return_value = updates_not_installed
 
+    patch_win_wua_update = patch(
+        "salt.utils.win_update.Updates",
+        autospec=True,
+        return_value=fake_updates,
+    )
+
     fake_wua_updates = MagicMock()
     fake_wua_updates.list.return_value = updates_list
-    fake_wua.updates.return_value = fake_wua_updates
 
-    patch_winapi_com = patch("salt.utils.winapi.Com", autospec=True)
-    patch_win32 = patch("win32com.client.Dispatch", autospec=True)
+    fake_wua = MagicMock()
+    fake_wua.updates.return_value = fake_wua_updates
     patch_wua = patch(
         "salt.utils.win_update.WindowsUpdateAgent",
         autospec=True,
         return_value=fake_wua,
     )
-    patch_win_wua_update = patch(
-        "salt.utils.win_update.Updates", autospec=True, return_value=fake_updates
-    )
+
+    patch_winapi_com = patch("salt.utils.winapi.Com", autospec=True)
+    patch_win32 = patch("win32com.client.Dispatch", autospec=True)
     patch_opts = patch.dict(win_wua.__opts__, {"test": False})
 
     with patch_winapi_com, patch_win32, patch_wua, patch_win_wua_update, patch_opts:
