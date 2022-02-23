@@ -12,6 +12,7 @@ import salt.utils.files
 import salt.utils.path
 from salt.utils.versions import LooseVersion as _LooseVersion
 from saltfactories.utils.ports import get_unused_localhost_port
+from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES
 
 log = logging.getLogger(__name__)
 
@@ -175,6 +176,7 @@ def salt_cli_secondary_wrapper(salt_secondary_master, salt_secondary_minion):
     return run_command
 
 
+@SKIP_INITIAL_PHOTONOS_FAILURES
 @pytest.mark.skip_on_windows
 def test_verify_ssl_skip_verify_false(
     salt_master, salt_call_cli, tmpdir, ssl_webserver
