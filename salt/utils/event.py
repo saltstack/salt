@@ -123,10 +123,9 @@ def get_event(
     """
     if transport:
         salt.utils.versions.warn_until(
-            "3006",
-            "The 'transport' kwarg has been deprecated and its "
-            "functionality removed, as such, its usage is no longer "
-            "required.",
+            "Chlorine",
+            "The 'transport' kwarg has been deprecated and it will be removed "
+            "in the Chlorine release, as such, its usage is no longer required."
         )
 
     sock_dir = sock_dir or opts["sock_dir"]
