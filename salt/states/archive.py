@@ -1565,6 +1565,11 @@ def extracted(
         recurse_str = ", ".join(recurse)
 
         owner_changes = {x: y for x, y in (("user", user), ("group", group)) if y}
+
+        # If archive doesn't have a top level dir it will have a '/' as it.
+        # You would never want to do recursive stuff agains the /
+        if "/" in enforce_dirs:
+            enforce_dirs.remove("/")
         for dirname in enforce_dirs:
             full_path = os.path.join(name, dirname)
             if not os.path.isdir(full_path):
