@@ -95,7 +95,11 @@ def installed(name, updates=None):
        more than one update being installed.
 
     Returns:
-        dict: A dictionary containing the results of the update
+        dict: A dictionary containing the results of the update. There are three
+              keys under changes. `installed` is a list of updates that were
+              successfully installed. `failed` is a list of updates that failed
+              to install. `superseded` is a list of updates that were not
+              installed because they were superseded by another update.
 
     CLI Example:
 
@@ -250,7 +254,10 @@ def removed(name, updates=None):
        more than one update being removed.
 
     Returns:
-        dict: A dictionary containing the results of the removal
+        dict: A dictionary containing the results of the removal. There are
+              three keys under changes. `removed` is a list of updates that
+              were successfully removed. `failed` is a list of updates that
+              failed to be removed.
 
     CLI Example:
 
@@ -424,7 +431,11 @@ def uptodate(
 
 
     Returns:
-        dict: A dictionary containing the results of the update
+        dict: A dictionary containing the results of the update. There are three
+              keys under changes. `installed` is a list of updates that were
+              successfully installed. `failed` is a list of updates that failed
+              to install. `superseded` is a list of updates that were not
+              installed because they were superseded by another update.
 
     CLI Example:
 
