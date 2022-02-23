@@ -1,0 +1,3 @@
+Fixed cleanup logic with clean_parent param in archive.extrated
+Fixed top directory creation to take group into account in archive.extrated
+Fixed ownership enforcement to not be applied agains the root in archive.extrated
