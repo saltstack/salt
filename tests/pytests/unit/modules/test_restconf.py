@@ -4,11 +4,9 @@ from salt.utils.odict import OrderedDict
 from tests.support.mock import MagicMock, patch
 
 
-@pytest.fixture(autouse=True)
-def setup_loader():
-    setup_loader_modules = {restconf: {}}
-    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-        yield loader_mock
+@pytest.fixture
+def configure_loader_modules():
+    return {restconf: {}}
 
 
 @pytest.fixture
