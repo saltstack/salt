@@ -106,7 +106,6 @@ def __virtual__():
     """
     This Proxy Module is widely available as there are no external dependencies.
     """
-    log.debug("restconf proxy __virtual__() called...")
     return __virtualname__
 
 
