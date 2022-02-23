@@ -172,11 +172,11 @@ def _yum():
             if _check(os.path.join(dir, "dnf")):
                 context[contextkey] = "dnf"
                 break
-            elif _check(os.path.join(dir, "yum")):
-                context[contextkey] = "yum"
-                break
             elif _check(os.path.join(dir, "tdnf")):
                 context[contextkey] = "tdnf"
+                break
+            elif _check(os.path.join(dir, "yum")):
+                context[contextkey] = "yum"
                 break
     return context.get(contextkey)
 
@@ -995,7 +995,16 @@ def list_repo_pkgs(*args, **kwargs):
                 _parse_output(out["stdout"], strict=True)
     else:
         for repo in repos:
-            cmd = ["--quiet", "--showduplicates", "repository-packages", repo, "list"]
+            if _yum() == "tdnf":
+                cmd = ["--quiet", "--enablerepo={}".format(repo), "list"]
+            else:
+                cmd = [
+                    "--quiet",
+                    "--showduplicates",
+                    "repository-packages",
+                    repo,
+                    "list",
+                ]
             if cacheonly:
                 cmd.append("-C")
             # Can't concatenate because args is a tuple, using list.extend()
