@@ -1256,7 +1256,7 @@ def extracted(
                     return ret
 
                 # Skip notices of incorrect types if we're cleaning
-                if not (clean and contents is not None):
+                if not ((clean or clean_parent) and contents is not None):
                     if not force:
                         ret["comment"] += (
                             " To proceed with extraction, set 'force' to "
