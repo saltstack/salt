@@ -123,12 +123,8 @@ def config_manage(
         json.dumps(use_conf)
     )  # convert from orderedDict to Dict (which is now ordered by default in python3.8)
 
-    log.debug("existing path config:")
-    log.debug(type(path_check["request_restponse"]))
-    log.debug(path_check["request_restponse"])
-    log.debug("proposed_config:")
-    log.debug(type(proposed_config))
-    log.debug(proposed_config)
+    log.debug("existing path config(type: %s):\n%s", type(path_check["request_restponse"]), path_check["request_restponse"])
+    log.debug("proposed_config(type: %s):\n%s", type(proposed_config), proposed_config)
 
     # TODO: migrate the below == check to RecursiveDictDiffer when issue 59017 is fixed
     if path_check["request_restponse"] == proposed_config:
