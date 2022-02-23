@@ -173,27 +173,26 @@ def test_uptodate(updates_list):
             "failed": {
                 "a0f997b1-1abe-4a46-941f-b37f732f9fbd": {
                     "KBs": ["KB3193497"],
-                    "Title": "Blank"
+                    "Title": "Blank",
                 },
                 "afda9e11-44a0-4602-9e9b-423af11ecaed": {
                     "KBs": ["KB4541329"],
-                    "Title": "Blank"
+                    "Title": "Blank",
                 },
                 "eac02b09-d745-4891-b80f-400e0e5e4b6d": {
                     "KBs": ["KB4052623"],
                     "Title": "KB4052623: Really long title that exceeds 40 characters",
-                }
+                },
             },
             "superseded": {
                 "eac02c07-d744-4892-b80f-312d045e4ccc": {
                     "KBs": ["KB4052444"],
-                    "Title": "Superseded Update"
+                    "Title": "Superseded Update",
                 }
-            }
+            },
         },
         "result": False,
-        "comment": "Some updates failed to install\n"
-                   "Some updates were superseded"
+        "comment": "Some updates failed to install\nSome updates were superseded",
     }
 
     updates_not_installed = {
