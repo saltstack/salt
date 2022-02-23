@@ -76,7 +76,9 @@ def clean_adv_audit():
     win_dir = os.environ.get("WINDIR")
     audit_csv_files = [
         r"{}\security\audit\audit.csv".format(win_dir),
-        r"{}\System32\GroupPolicy\Machine\Microsoft\Windows NT\Audit\audit.csv".format(win_dir),
+        r"{}\System32\GroupPolicy\Machine\Microsoft\Windows NT\Audit\audit.csv".format(
+            win_dir
+        ),
     ]
     for audit_file in audit_csv_files:
         if os.path.exists(audit_file):
