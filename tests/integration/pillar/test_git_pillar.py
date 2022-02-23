@@ -88,7 +88,7 @@ from tests.support.gitfs import (  # pylint: disable=unused-import
     webserver_pillar_tests_prep,
     webserver_pillar_tests_prep_authenticated,
 )
-from tests.support.helpers import requires_system_grains
+from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES, requires_system_grains
 from tests.support.unit import skipIf
 
 # Check for requisite components
@@ -105,6 +105,10 @@ except Exception:  # pylint: disable=broad-except
 HAS_SSHD = bool(salt.utils.path.which("sshd"))
 HAS_NGINX = bool(salt.utils.path.which("nginx"))
 HAS_VIRTUALENV = bool(salt.utils.path.which_bin(VIRTUALENV_NAMES))
+
+pytestmark = [
+    SKIP_INITIAL_PHOTONOS_FAILURES,
+]
 
 
 def _rand_key_name(length):

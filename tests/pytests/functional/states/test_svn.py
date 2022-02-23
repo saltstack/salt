@@ -5,6 +5,7 @@ import logging
 
 import pytest
 import salt.utils.platform
+from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES
 
 log = logging.getLogger(__name__)
 
@@ -74,6 +75,7 @@ def test_latest_failure(svn, repo_revision, repo_target):
     assert not repo_target.joinpath(".svn").is_dir()
 
 
+@SKIP_INITIAL_PHOTONOS_FAILURES
 @pytest.mark.slow_test
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root

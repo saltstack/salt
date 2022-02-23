@@ -173,11 +173,11 @@ def _yum():
             if _check(os.path.join(dir, "dnf")):
                 context[contextkey] = "dnf"
                 break
-            elif _check(os.path.join(dir, "yum")):
-                context[contextkey] = "yum"
-                break
             elif _check(os.path.join(dir, "tdnf")):
                 context[contextkey] = "tdnf"
+                break
+            elif _check(os.path.join(dir, "yum")):
+                context[contextkey] = "yum"
                 break
     return context.get(contextkey)
 
@@ -996,7 +996,16 @@ def list_repo_pkgs(*args, **kwargs):
                 _parse_output(out["stdout"], strict=True)
     else:
         for repo in repos:
-            cmd = ["--quiet", "--showduplicates", "repository-packages", repo, "list"]
+            if _yum() == "tdnf":
+                cmd = ["--quiet", "--enablerepo={}".format(repo), "list"]
+            else:
+                cmd = [
+                    "--quiet",
+                    "--showduplicates",
+                    "repository-packages",
+                    repo,
+                    "list",
+                ]
             if cacheonly:
                 cmd.append("-C")
             # Can't concatenate because args is a tuple, using list.extend()
@@ -1011,7 +1020,7 @@ def list_repo_pkgs(*args, **kwargs):
             # Sort versions newest to oldest
             for pkgname in ret[reponame]:
                 sorted_versions = sorted(
-                    [_LooseVersion(x) for x in ret[reponame][pkgname]], reverse=True
+                    (_LooseVersion(x) for x in ret[reponame][pkgname]), reverse=True
                 )
                 ret[reponame][pkgname] = [x.vstring for x in sorted_versions]
         return ret
@@ -1022,7 +1031,7 @@ def list_repo_pkgs(*args, **kwargs):
                 byrepo_ret.setdefault(pkgname, []).extend(ret[reponame][pkgname])
         for pkgname in byrepo_ret:
             sorted_versions = sorted(
-                [_LooseVersion(x) for x in byrepo_ret[pkgname]], reverse=True
+                (_LooseVersion(x) for x in byrepo_ret[pkgname]), reverse=True
             )
             byrepo_ret[pkgname] = [x.vstring for x in sorted_versions]
         return byrepo_ret
@@ -2122,6 +2131,8 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     pkg_params.update(pkg_matches)
 
     for target in pkg_params:
+        if target not in old:
+            continue
         version_to_remove = pkg_params[target]
 
         # Check if package version set to be removed is actually installed:
@@ -2567,7 +2578,7 @@ def group_info(name, expand=False, ignore_groups=None):
     g_info = {}
     for line in salt.utils.itertools.split(out, "\n"):
         try:
-            key, value = [x.strip() for x in line.split(":")]
+            key, value = (x.strip() for x in line.split(":"))
             g_info[key.lower()] = value
         except ValueError:
             continue

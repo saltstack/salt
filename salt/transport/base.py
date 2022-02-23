@@ -104,7 +104,7 @@ class RequestClient:
         pass
 
     @salt.ext.tornado.gen.coroutine
-    def send(self, load, tries=3, timeout=60):
+    def send(self, load, timeout=60):
         """
         Send a request message and return the reply from the server.
         """
@@ -173,7 +173,7 @@ class DaemonizedPublishServer(PublishServer):
     PublishServer that has a daemon associated with it.
     """
 
-    def pre_fork(self, process_manager, kwargs=None):
+    def pre_fork(self, process_manager):
         raise NotImplementedError
 
     def publish_daemon(
@@ -181,7 +181,6 @@ class DaemonizedPublishServer(PublishServer):
         publish_payload,
         presence_callback=None,
         remove_presence_callback=None,
-        **kwargs
     ):
         """
         If a daemon is needed to act as a broker implement it here.
