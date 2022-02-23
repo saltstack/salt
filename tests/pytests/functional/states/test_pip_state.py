@@ -1,11 +1,3 @@
-"""
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-
-    tests.integration.states.pip_state
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-"""
-
 import glob
 import logging
 import os
@@ -21,7 +13,7 @@ import salt.utils.versions
 import salt.utils.win_dacl
 import salt.utils.win_functions
 import salt.utils.win_runas
-from tests.support.helpers import patched_environ
+from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES, patched_environ
 
 try:
     import pwd
@@ -135,7 +127,7 @@ pep8-pip:
         ):
             ret = modules.state.sls("pip-installed-errors")
             for state_return in ret:
-                assert not state_return.result
+                assert state_return.result is False
                 assert "Error installing 'pep8':" in state_return.comment
 
             # We now create the missing virtualenv
@@ -274,6 +266,7 @@ pip.installed:
         )
 
 
+@SKIP_INITIAL_PHOTONOS_FAILURES
 @pytest.mark.destructive_test
 @pytest.mark.slow_test
 @pytest.mark.skip_if_not_root
@@ -339,10 +332,9 @@ def test_issue_6912_wrong_owner(tmp_path, create_virtualenv, modules, states):
                     assert salt.utils.win_dacl.get_owner(path) == account.username
 
 
+@SKIP_INITIAL_PHOTONOS_FAILURES
 @pytest.mark.destructive_test
-@pytest.mark.skipif(
-    salt.utils.platform.is_darwin() is True, reason="Test is flaky on macosx"
-)
+@pytest.mark.skip_on_darwin(reason="Test is flaky on macosx")
 @pytest.mark.slow_test
 @pytest.mark.skip_if_not_root
 def test_issue_6912_wrong_owner_requirements_file(

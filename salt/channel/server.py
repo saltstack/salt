@@ -4,12 +4,9 @@ Encapsulate the different transports available to Salt.
 This includes server side transport, for the ReqServer and the Publisher
 """
 
-
 import binascii
-import ctypes
 import hashlib
 import logging
-import multiprocessing
 import os
 import shutil
 
@@ -22,6 +19,7 @@ import salt.utils.channel
 import salt.utils.event
 import salt.utils.files
 import salt.utils.minions
+import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.verify
 from salt.utils.cache import CacheCli
@@ -63,19 +61,6 @@ class ReqServerChannel:
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be bind and listen (or the equivalent for your network library)
         """
-        if "aes" not in salt.master.SMaster.secrets:
-            # TODO: This is still needed only for the unit tests
-            # 'tcp_test.py' and 'zeromq_test.py'. Fix that. In normal
-            # cases, 'aes' is already set in the secrets.
-            salt.master.SMaster.secrets["aes"] = {
-                "secret": multiprocessing.Array(
-                    ctypes.c_char,
-                    salt.utils.stringutils.to_bytes(
-                        salt.crypt.Crypticle.generate_key_string()
-                    ),
-                ),
-                "reload": salt.crypt.Crypticle.generate_key_string,
-            }
         if hasattr(self.transport, "pre_fork"):
             self.transport.pre_fork(process_manager)
 
@@ -677,7 +662,7 @@ class PubServerChannel:
             self.aes_funcs.destroy()
             self.aes_funcs = None
 
-    def pre_fork(self, process_manager, kwargs=None):
+    def pre_fork(self, process_manager):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
@@ -686,26 +671,16 @@ class PubServerChannel:
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         """
         if hasattr(self.transport, "publish_daemon"):
-            process_manager.add_process(self._publish_daemon, kwargs=kwargs)
+            process_manager.add_process(self._publish_daemon)
 
-    def _publish_daemon(self, log_queue=None, log_queue_level=None):
-        salt.utils.process.appendproctitle(self.__class__.__name__)
+    def _publish_daemon(self):
         if self.opts["pub_server_niceness"] and not salt.utils.platform.is_windows():
             log.info(
                 "setting Publish daemon niceness to %i",
                 self.opts["pub_server_niceness"],
             )
             os.nice(self.opts["pub_server_niceness"])
-
-        if log_queue:
-            salt.log.setup.set_multiprocessing_logging_queue(log_queue)
-        if log_queue_level is not None:
-            salt.log.setup.set_multiprocessing_logging_level(log_queue_level)
-        salt.log.setup.setup_multiprocessing_logging(log_queue)
-        try:
-            self.transport.publish_daemon(self.publish_payload, self.presence_callback)
-        finally:
-            salt.log.setup.shutdown_multiprocessing_logging()
+        self.transport.publish_daemon(self.publish_payload, self.presence_callback)
 
     def presence_callback(self, subscriber, msg):
         if msg["enc"] != "aes":

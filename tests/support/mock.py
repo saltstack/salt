@@ -44,7 +44,7 @@ from mock import (
 
 
 __mock_version = tuple(
-    [int(part) for part in mock.__version__.split(".") if part.isdigit()]
+    int(part) for part in mock.__version__.split(".") if part.isdigit()
 )  # pylint: disable=no-member
 if sys.version_info < (3, 6) and __mock_version < (2,):
     # We need mock >= 2.0.0 before Py3.6

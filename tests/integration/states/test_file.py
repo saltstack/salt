@@ -1118,7 +1118,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         initial_mode = "0111"
         changed_mode = "0555"
 
-        if grains["os_family"] in ("VMware Photon OS",):
+        if grains["os"] in ("VMware Photon OS",):
             initial_modes = {
                 0: {sub: "0750", subsub: "0110"},
                 1: {sub: "0110", subsub: "0110"},

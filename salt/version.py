@@ -190,7 +190,7 @@ class SaltVersionsInfo(type):
     def versions(cls):
         if not cls._sorted_versions:
             cls._sorted_versions = sorted(
-                [getattr(cls, name) for name in dir(cls) if name.isupper()],
+                (getattr(cls, name) for name in dir(cls) if name.isupper()),
                 key=operator.attrgetter("info"),
             )
         return cls._sorted_versions
