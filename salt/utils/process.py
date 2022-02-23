@@ -148,6 +148,9 @@ def daemonize_if(opts):
 
 
 def systemd_notify_call(action):
+    """
+    Call ``systemd-notify`` with the passed action.
+    """
     process = subprocess.Popen(
         ["systemd-notify", action], stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
@@ -1138,6 +1141,9 @@ class SignalHandlingMultiprocessingProcess(SignalHandlingProcess):
 
 @contextlib.contextmanager
 def default_signals(*signals):
+    """
+    Temporarily reset the currently set signals to their defaults.
+    """
     old_signals = {}
     for signum in signals:
         try:
