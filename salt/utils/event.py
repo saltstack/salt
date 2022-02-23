@@ -125,7 +125,7 @@ def get_event(
         salt.utils.versions.warn_until(
             "Chlorine",
             "The 'transport' kwarg has been deprecated and it will be removed "
-            "in the Chlorine release, as such, its usage is no longer required."
+            "in the Chlorine release, as such, its usage is no longer required.",
         )
 
     sock_dir = sock_dir or opts["sock_dir"]
