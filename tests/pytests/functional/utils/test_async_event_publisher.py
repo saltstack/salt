@@ -3,8 +3,20 @@ import salt.config
 import salt.ext.tornado.ioloop
 import salt.utils.event
 import salt.utils.stringutils
+import zmq
 
-pytestmark = [pytest.mark.windows_whitelisted]
+NO_LONG_IPC = False
+if getattr(zmq, "IPC_PATH_MAX_LEN", 103) <= 103:
+    NO_LONG_IPC = True
+
+
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+    pytest.mark.skipif(
+        NO_LONG_IPC,
+        reason="This system does not support long IPC paths. Skipping event tests!",
+    ),
+]
 
 
 class IOLoopContainer:
