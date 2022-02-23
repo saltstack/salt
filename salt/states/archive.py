@@ -1370,7 +1370,7 @@ def extracted(
                 return ret
 
         if not os.path.isdir(name):
-            __states__["file.directory"](name, user=user, makedirs=True)
+            __states__["file.directory"](name, user=user, group=group, makedirs=True)
             created_destdir = True
 
         log.debug("Extracting %s to %s", cached, name)
