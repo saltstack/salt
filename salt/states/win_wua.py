@@ -180,29 +180,51 @@ def installed(name, updates=None):
     wua.refresh()
     post_info = wua.updates().list()
 
+    # superseded_updates is a list of updates that the WUA first requested to be
+    # installed but became ineligible for installation because they were
+    # superseded
+    superseded_updates = {}
+    failed_updates = {}
+    installed_updates = {}
+
     # Verify the installation
-    for item in install.list():
-        if not salt.utils.data.is_true(post_info[item]["Installed"]):
-            ret["changes"]["failed"] = {
-                item: {
+    installed_items = install.list()
+    for item in installed_items:
+        if item not in post_info:
+            # Update (item) was not installed for valid reason
+            superseded_updates[item] = {
+                "Title": installed_items[item]["Title"],
+                "KBs": installed_items[item]["KBs"],
+            }
+        else:
+            if not salt.utils.data.is_true(post_info[item]["Installed"]):
+                failed_updates[item] = {
                     "Title": post_info[item]["Title"],
                     "KBs": post_info[item]["KBs"],
                 }
-            }
-            ret["result"] = False
-        else:
-            ret["changes"]["installed"] = {
-                item: {
+            else:
+                installed_updates[item] = {
                     "Title": post_info[item]["Title"],
                     "NeedsReboot": post_info[item]["NeedsReboot"],
                     "KBs": post_info[item]["KBs"],
                 }
-            }
 
-    if ret["changes"].get("failed", False):
-        ret["comment"] = "Updates failed"
-    else:
-        ret["comment"] = "Updates installed successfully"
+    comments = []
+    if installed_updates:
+        comments.append("Updates installed successfully")
+        ret["changes"]["installed"] = installed_updates
+
+    if failed_updates:
+        comments.append("Some updates failed to install")
+        ret["changes"]["failed"] = failed_updates
+        ret["result"] = False
+
+    # Add the list of updates not installed to the return
+    if superseded_updates:
+        comments.append("Some updates were superseded")
+        ret["changes"]["superseded"] = superseded_updates
+
+    ret["comment"] = "\n".join(comments)
 
     return ret
 
@@ -304,29 +326,31 @@ def removed(name, updates=None):
     wua.refresh()
     post_info = wua.updates().list()
 
+    failed_updates = {}
+    removed_updates = {}
+
     # Verify the installation
     for item in uninstall.list():
         if salt.utils.data.is_true(post_info[item]["Installed"]):
-            ret["changes"]["failed"] = {
-                item: {
-                    "Title": post_info[item]["Title"],
-                    "KBs": post_info[item]["KBs"],
-                }
+            failed_updates[item] = {
+                "Title": post_info[item]["Title"],
+                "KBs": post_info[item]["KBs"],
             }
-            ret["result"] = False
         else:
-            ret["changes"]["removed"] = {
-                item: {
-                    "Title": post_info[item]["Title"],
-                    "NeedsReboot": post_info[item]["NeedsReboot"],
-                    "KBs": post_info[item]["KBs"],
-                }
+            removed_updates[item] = {
+                "Title": post_info[item]["Title"],
+                "NeedsReboot": post_info[item]["NeedsReboot"],
+                "KBs": post_info[item]["KBs"],
             }
 
-    if ret["changes"].get("failed", False):
-        ret["comment"] = "Updates failed"
-    else:
+    if removed_updates:
         ret["comment"] = "Updates removed successfully"
+        ret["changes"]["removed"] = removed_updates
+
+    if failed_updates:
+        ret["comment"] = "Some updates failed to uninstall"
+        ret["changes"]["failed"] = failed_updates
+        ret["result"] = False
 
     return ret
 
@@ -480,43 +504,50 @@ def uptodate(
 
     post_info = wua.updates().list()
 
-    # Updates not installed is a list of updates that the WUA first requested
-    # to be installed but became ineligible for installation because they were
+    # superseded_updates is a list of updates that the WUA first requested to be
+    # installed but became ineligible for installation because they were
     # superseded by other updates
-    updates_not_installed = []
+    superseded_updates = {}
+    failed_updates = {}
+    installed_updates = {}
 
     # Verify the installation
-    for item in install.list():
+    installed_items = install.list()
+    for item in installed_items:
         if item not in post_info:
             # Update (item) was not installed for valid reason
-            updates_not_installed.append(item)
+            superseded_updates[item] = {
+                "Title": installed_items[item]["Title"],
+                "KBs": installed_items[item]["KBs"],
+            }
         else:
             if not salt.utils.data.is_true(post_info[item]["Installed"]):
-                ret["changes"]["failed"] = {
-                    item: {
-                        "Title": post_info[item]["Title"],
-                        "KBs": post_info[item]["KBs"],
-                    }
+                failed_updates[item] = {
+                    "Title": post_info[item]["Title"],
+                    "KBs": post_info[item]["KBs"],
                 }
-                ret["result"] = False
             else:
-                ret["changes"]["installed"] = {
-                    item: {
-                        "Title": post_info[item]["Title"],
-                        "NeedsReboot": post_info[item]["NeedsReboot"],
-                        "KBs": post_info[item]["KBs"],
-                    }
+                installed_updates[item] = {
+                    "Title": post_info[item]["Title"],
+                    "NeedsReboot": post_info[item]["NeedsReboot"],
+                    "KBs": post_info[item]["KBs"],
                 }
 
+    comments = []
+    if installed_updates:
+        comments.append("Updates installed successfully")
+        ret["changes"]["installed"] = installed_updates
+
+    if failed_updates:
+        comments.append("Some updates failed to install")
+        ret["changes"]["failed"] = failed_updates
+        ret["result"] = False
+
     # Add the list of updates not installed to the return
-    if updates_not_installed:
-        ret["comment"] = "Updates that were not installed:"
-        for update in updates_not_installed:
-            ret["comment"] += "\n"
-            ret["comment"] += ": ".join([update])
-    if ret["changes"].get("failed", False):
-        ret["comment"] = "Updates failed"
-    else:
-        ret["comment"] = "Updates installed successfully"
+    if superseded_updates:
+        comments.append("Some updates were superseded")
+        ret["changes"]["superseded"] = superseded_updates
+
+    ret["comment"] = "\n".join(comments)
 
     return ret
