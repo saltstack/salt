@@ -12,7 +12,10 @@ Statistics
 - Total Issue References: **23**
 - Total PR References: **58**
 
-- Contributors: **25** (`abednarik`_, `amontalban`_, `anlutro`_, `babilen`_, `cachedout`_, `clburlison`_, `danslimmon`_, `eliasp`_, `glomium`_, `jacobhammons`_, `jfindlay`_, `kev009`_, `lomeroe`_, `michalsuba`_, `neil-williamson`_, `onorua`_, `opdude`_, `rallytime`_, `sjorge`_, `terminalmage`_, `thatch45`_, `ticosax`_, `tomlaredo`_, `twangboy`_, `zigarn`_)
+- Contributors: **25** (`abednarik`_, `amontalban`_, `anlutro`_, `babilen`_, `cachedout`_,
+  `clburlison`_, `danslimmon`_, `eliasp`_, `glomium`_, `jacobhammons`_, `jfindlay`_, `kev009`_,
+  `lomeroe`_, `michalsuba`_, `neil-williamson`_, `onorua`_, `opdude`_, `rallytime`_, `sjorge`_,
+  `terminalmage`_, `thatch45`_, `ticosax`_, `tomlaredo`_, `twangboy`_, `zigarn`_)
 
 
 Final Release of Debian 7 Packages
@@ -632,7 +635,7 @@ Changelog for v2016.3.0..v2016.3.1
 
   * c738a0de76 fix a KeyError if group is provided but not user
 
-* **ISSUE** `#33543`_: (`arthurlogilab`_) Thorium documentation is incorrectly formated and appears partially on docs.saltstack.com (refs: `#33550`_)
+* **ISSUE** `#33543`_: (`arthurlogilab`_) Thorium documentation is incorrectly formated and appears partially on docs.saltproject.io (refs: `#33550`_)
 
 * **PR** `#33550`_: (`jacobhammons`_) Fixes display of thorium docs
   @ *2016-05-26 17:57:05 UTC*

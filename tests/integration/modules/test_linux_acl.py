@@ -16,7 +16,6 @@ from tests.support.unit import skipIf
 
 
 @pytest.mark.skip_if_binaries_missing("getfacl")
-@pytest.mark.windows_whitelisted
 class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
     """
     Validate the linux_acl module

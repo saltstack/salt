@@ -412,3 +412,34 @@ def test_salt_call_error(salt_call_cli):
 
     ret = salt_call_cli.run("test.echo", "{foo: bar, result: False}")
     assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
+
+
+def test_local_salt_call_no_function_no_retcode(salt_call_cli):
+    """
+    This tests ensures that when salt-call --local is called
+    with a module but without a function the return code is 1
+    and we receive the docs for all module functions.
+
+    Also ensure we don't get an exception.
+    """
+    with pytest.helpers.temp_file() as filename:
+
+        ret = salt_call_cli.run("--local", "test")
+        assert ret.exitcode == 1
+
+        state_run_dict = ret.json
+        assert "test" in state_run_dict
+        assert state_run_dict["test"] == "'test' is not available."
+
+        assert "test.recho" in state_run_dict
+
+        expected = """
+    Return a reversed string
+
+    CLI Example:
+
+        salt '*' test.recho 'foo bar baz quo qux'
+    """
+        a = state_run_dict["test.recho"]
+        b = expected
+        assert state_run_dict["test.recho"] == expected

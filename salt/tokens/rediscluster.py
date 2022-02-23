@@ -85,9 +85,8 @@ def mk_token(opts, tdata):
         )
         return {}
     tdata["token"] = tok
-    serial = salt.payload.Serial(opts)
     try:
-        redis_client.set(tok, serial.dumps(tdata))
+        redis_client.set(tok, salt.payload.dumps(tdata))
     except Exception as err:  # pylint: disable=broad-except
         log.warning(
             "Authentication failure: cannot save token %s to redis: %s", tok, err
@@ -107,9 +106,8 @@ def get_token(opts, tok):
     redis_client = _redis_client(opts)
     if not redis_client:
         return {}
-    serial = salt.payload.Serial(opts)
     try:
-        tdata = serial.loads(redis_client.get(tok))
+        tdata = salt.payload.loads(redis_client.get(tok))
         return tdata
     except Exception as err:  # pylint: disable=broad-except
         log.warning(
@@ -147,7 +145,6 @@ def list_tokens(opts):
     redis_client = _redis_client(opts)
     if not redis_client:
         return []
-    serial = salt.payload.Serial(opts)
     try:
         return [k.decode("utf8") for k in redis_client.keys()]
     except Exception as err:  # pylint: disable=broad-except

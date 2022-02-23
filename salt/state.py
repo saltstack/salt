@@ -25,12 +25,12 @@ import sys
 import time
 import traceback
 
+import salt.channel.client
 import salt.fileclient
 import salt.loader
 import salt.minion
 import salt.pillar
 import salt.syspaths as syspaths
-import salt.transport.client
 import salt.utils.args
 import salt.utils.crypt
 import salt.utils.data
@@ -222,14 +222,18 @@ def state_args(id_, state, high):
     return args
 
 
-def find_name(name, state, high):
+def find_name(name, state, high, strict=False):
     """
     Scan high data for the id referencing the given name and return a list of (IDs, state) tuples that match
 
     Note: if `state` is sls, then we are looking for all IDs that match the given SLS
     """
     ext_id = []
-    if name in high and state in high[name]:
+    if strict is False:
+        check2 = True
+    else:
+        check2 = state in high.get(name, {})
+    if name in high and check2:
         ext_id.append((name, state))
     # if we are requiring an entire SLS, then we need to add ourselves to everything in that SLS
     elif state == "sls":
@@ -1626,7 +1630,7 @@ class State:
         chunks = self.order_chunks(chunks)
         return chunks
 
-    def reconcile_extend(self, high):
+    def reconcile_extend(self, high, strict=False):
         """
         Pull the extend data and add it to the respective high data
         """
@@ -1639,7 +1643,7 @@ class State:
                 state_type = next(x for x in body if not x.startswith("__"))
                 if name not in high or state_type not in high[name]:
                     # Check for a matching 'name' override in high data
-                    ids = find_name(name, state_type, high)
+                    ids = find_name(name, state_type, high, strict=strict)
                     if len(ids) != 1:
                         errors.append(
                             "Cannot extend ID '{0}' in '{1}:{2}'. It is not "
@@ -1887,7 +1891,9 @@ class State:
                                         )
                                     if key == "prereq":
                                         # Add prerequired to prereqs
-                                        ext_ids = find_name(name, _state, high)
+                                        ext_ids = find_name(
+                                            name, _state, high, strict=True
+                                        )
                                         for ext_id, _req_state in ext_ids:
                                             if ext_id not in extend:
                                                 extend[ext_id] = OrderedDict()
@@ -1900,7 +1906,9 @@ class State:
                                     if key == "use_in":
                                         # Add the running states args to the
                                         # use_in states
-                                        ext_ids = find_name(name, _state, high)
+                                        ext_ids = find_name(
+                                            name, _state, high, strict=True
+                                        )
                                         for ext_id, _req_state in ext_ids:
                                             if not ext_id:
                                                 continue
@@ -1927,7 +1935,9 @@ class State:
                                     if key == "use":
                                         # Add the use state's args to the
                                         # running state
-                                        ext_ids = find_name(name, _state, high)
+                                        ext_ids = find_name(
+                                            name, _state, high, strict=True
+                                        )
                                         for ext_id, _req_state in ext_ids:
                                             if not ext_id:
                                                 continue
@@ -1975,7 +1985,7 @@ class State:
         high["__extend__"] = []
         for key, val in extend.items():
             high["__extend__"].append({key: val})
-        req_in_high, req_in_errors = self.reconcile_extend(high)
+        req_in_high, req_in_errors = self.reconcile_extend(high, strict=True)
         errors.extend(req_in_errors)
         return req_in_high, errors
 
@@ -2037,7 +2047,9 @@ class State:
             name = low.get("name", low.get("__id__"))
 
         proc = salt.utils.process.Process(
-            target=self._call_parallel_target, args=(name, cdata, low)
+            target=self._call_parallel_target,
+            args=(name, cdata, low),
+            name="ParallelState({})".format(name),
         )
         proc.start()
         ret = {
@@ -3448,7 +3460,7 @@ class LazyAvailStates:
     def __getitem__(self, saltenv):
         if saltenv != "base":
             self._fill()
-        if self._avail[saltenv] is None:
+        if saltenv not in self._avail or self._avail[saltenv] is None:
             self._avail[saltenv] = self._hs.client.list_states(saltenv)
         return self._avail[saltenv]
 
@@ -3473,7 +3485,6 @@ class BaseHighState:
         self.opts = self.__gen_opts(opts)
         self.iorder = 10000
         self.avail = self.__gather_avail()
-        self.serial = salt.payload.Serial(self.opts)
         self.building_highstate = OrderedDict()
 
     def __gather_avail(self):
@@ -3523,8 +3534,8 @@ class BaseHighState:
             opts["env_order"] = mopts.get("env_order", opts.get("env_order", []))
             opts["default_top"] = mopts.get("default_top", opts.get("default_top"))
             opts["state_events"] = mopts.get("state_events")
-            opts["state_aggregate"] = mopts.get(
-                "state_aggregate", opts.get("state_aggregate", False)
+            opts["state_aggregate"] = (
+                opts.get("state_aggregate") or mopts.get("state_aggregate") or False
             )
             opts["jinja_env"] = mopts.get("jinja_env", {})
             opts["jinja_sls_env"] = mopts.get("jinja_sls_env", {})
@@ -4082,7 +4093,7 @@ class BaseHighState:
                     else:
                         env_key = saltenv
 
-                    if env_key not in self.avail:
+                    if env_key not in self.avail and "__env__" not in self.avail:
                         msg = (
                             "Nonexistent saltenv '{}' found in include "
                             "of '{}' within SLS '{}:{}'".format(
@@ -4479,7 +4490,7 @@ class BaseHighState:
         if cache:
             if os.path.isfile(cfn):
                 with salt.utils.files.fopen(cfn, "rb") as fp_:
-                    high = self.serial.load(fp_)
+                    high = salt.payload.load(fp_)
                     return self.state.call_high(high, orchestration_jid)
         # File exists so continue
         err = []
@@ -4532,7 +4543,7 @@ class BaseHighState:
                     )
                 with salt.utils.files.fopen(cfn, "w+b") as fp_:
                     try:
-                        self.serial.dump(high, fp_)
+                        salt.payload.dump(high, fp_)
                     except TypeError:
                         # Can't serialize pydsl
                         pass
@@ -4765,9 +4776,8 @@ class RemoteHighState:
     def __init__(self, opts, grains):
         self.opts = opts
         self.grains = grains
-        self.serial = salt.payload.Serial(self.opts)
         # self.auth = salt.crypt.SAuth(opts)
-        self.channel = salt.transport.client.ReqChannel.factory(self.opts["master_uri"])
+        self.channel = salt.channel.client.ReqChannel.factory(self.opts["master_uri"])
         self._closing = False
 
     def compile_master(self):

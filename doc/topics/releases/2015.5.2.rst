@@ -14,7 +14,13 @@ Statistics
 - Total Issue References: **36**
 - Total PR References: **145**
 
-- Contributors: **49** (`Sacro`_, `The-Loeki`_, `YanChii`_, `aboe76`_, `anlutro`_, `awdrius`_, `basepi`_, `cdarwin`_, `cedwards`_, `clan`_, `corywright`_, `cro`_, `djcrabhat`_, `dmyerscough`_, `dr4Ke`_, `fayetted`_, `galet`_, `garethgreenaway`_, `ghost`_, `hazelesque`_, `hvnsweeting`_, `jacksontj`_, `jacobhammons`_, `jayeshka`_, `jbq`_, `jfindlay`_, `joejulian`_, `justinta`_, `kartiksubbarao`_, `kiorky`_, `merll`_, `msteed`_, `neogenix`_, `nicholascapo`_, `nleib`_, `pengyao`_, `pruiz`_, `rallytime`_, `randybias`_, `ryan-lane`_, `steverweber`_, `swdream`_, `techhat`_, `terminalmage`_, `thcipriani`_, `thusoy`_, `trevor-h`_, `twangboy`_, `whiteinge`_)
+- Contributors: **49** (`Sacro`_, `The-Loeki`_, `YanChii`_, `aboe76`_, `anlutro`_, `awdrius`_,
+  `basepi`_, `cdarwin`_, `cedwards`_, `clan`_, `corywright`_, `cro`_, `djcrabhat`_, `dmyerscough`_,
+  `dr4Ke`_, `fayetted`_, `galet`_, `garethgreenaway`_, `ghost`_, `hazelesque`_, `hvnsweeting`_,
+  `jacksontj`_, `jacobhammons`_, `jayeshka`_, `jbq`_, `jfindlay`_, `joejulian`_, `justinta`_,
+  `kartiksubbarao`_, `kiorky`_, `merll`_, `msteed`_, `neogenix`_, `nicholascapo`_, `nleib`_,
+  `pengyao`_, `pruiz`_, `rallytime`_, `randybias`_, `ryan-lane`_, `steverweber`_, `swdream`_,
+  `techhat`_, `terminalmage`_, `thcipriani`_, `thusoy`_, `trevor-h`_, `twangboy`_, `whiteinge`_)
 
 
 Changelog for v2015.5.1..v2015.5.2

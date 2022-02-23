@@ -1,2 +1,0 @@
-{% from 'macroerror' import mymacro -%}
-{{ mymacro('Hey') ~ mymacro(a|default('a'), b|default('b')) }}

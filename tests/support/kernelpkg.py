@@ -165,7 +165,7 @@ class KernelPkgTestCase:
                 self.assertEqual(result["latest_installed"], self.KERNEL_LIST[-1])
                 self.assertEqual(result["reboot_requested"], True)
                 self.assertEqual(result["reboot_required"], True)
-                self.assert_called_once(self._kernelpkg.__salt__["system.reboot"])
+                self._kernelpkg.__salt__["system.reboot"].assert_called_once()
 
     def test_upgrade_needed_without_reboot(self):
         """

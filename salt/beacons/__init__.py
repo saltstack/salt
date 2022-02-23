@@ -71,9 +71,31 @@ class Beacon:
                 beacon_name = current_beacon_config["beacon_module"]
             else:
                 beacon_name = mod
+
+            # Run the validate function if it's available,
+            # otherwise there is a warning about it being missing
+            validate_str = "{}.validate".format(beacon_name)
+            if validate_str in self.beacons:
+                valid, vcomment = self.beacons[validate_str](b_config[mod])
+
+                if not valid:
+                    log.error(
+                        "Beacon %s configuration invalid, not running.\n%s",
+                        mod,
+                        vcomment,
+                    )
+                    continue
+            else:
+                log.warn(
+                    "No validate function found for %s, running basic beacon validation.",
+                    mod,
+                )
+                if not isinstance(b_config[mod], list):
+                    log.error("Configuration for beacon must be a list.")
+                    continue
+
             b_config[mod].append({"_beacon_name": mod})
             fun_str = "{}.beacon".format(beacon_name)
-            validate_str = "{}.validate".format(beacon_name)
             if fun_str in self.beacons:
                 runonce = self._determine_beacon_config(
                     current_beacon_config, "run_once"
@@ -111,19 +133,6 @@ class Beacon:
                         continue
                 # Update __grains__ on the beacon
                 self.beacons[fun_str].__globals__["__grains__"] = grains
-
-                # Run the validate function if it's available,
-                # otherwise there is a warning about it being missing
-                if validate_str in self.beacons:
-                    valid, vcomment = self.beacons[validate_str](b_config[mod])
-
-                    if not valid:
-                        log.info(
-                            "Beacon %s configuration invalid, not running.\n%s",
-                            mod,
-                            vcomment,
-                        )
-                        continue
 
                 # Fire the beacon!
                 error = None

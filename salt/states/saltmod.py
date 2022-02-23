@@ -494,6 +494,11 @@ def function(
     ssh
         Set to `True` to use the ssh client instead of the standard salt client
 
+    roster
+        In the event of using salt-ssh, a roster system can be set
+
+        .. versionadded:: 3005
+
     batch
         Execute the command :ref:`in batches <targeting-batch>`. E.g.: ``10%``.
 
@@ -524,6 +529,8 @@ def function(
 
     cmd_kw["tgt_type"] = tgt_type
     cmd_kw["ssh"] = ssh
+    if "roster" in kwargs:
+        cmd_kw["roster"] = kwargs["roster"]
     cmd_kw["expect_minions"] = expect_minions
     cmd_kw["_cmd_meta"] = True
 
@@ -593,7 +600,7 @@ def function(
         func_ret["comment"] = "No minions responded"
     else:
         if changes:
-            func_ret["changes"] = {"out": "highstate", "ret": changes}
+            func_ret["changes"] = {"ret": changes}
         if fail:
             func_ret["result"] = False
             func_ret["comment"] = "Running function {} failed on minions: {}".format(

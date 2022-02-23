@@ -583,8 +583,6 @@ def gen_thin(
     extra_mods="",
     overwrite=False,
     so_mods="",
-    python2_bin="python2",
-    python3_bin="python3",
     absonly=True,
     compress="gzip",
     extended_cfg=None,
@@ -603,12 +601,6 @@ def gen_thin(
         salt-run thin.generate mako,wempy 1
         salt-run thin.generate overwrite=1
     """
-    if python2_bin != "python2" or python3_bin != "python3":
-        salt.utils.versions.warn_until(
-            "Silicon",
-            "python2_bin and python3_bin are no longer used, please update your call to"
-            " gen_thin",
-        )
     if sys.version_info < (3,):
         raise salt.exceptions.SaltSystemExit(
             'The minimum required python version to run salt-ssh is "3".'
@@ -786,8 +778,6 @@ def gen_min(
     extra_mods="",
     overwrite=False,
     so_mods="",
-    python2_bin="python2",
-    python3_bin="python3",
 ):
     """
     Generate the salt-min tarball and print the location of the tarball
@@ -803,12 +793,6 @@ def gen_min(
         salt-run min.generate mako,wempy 1
         salt-run min.generate overwrite=1
     """
-    if python2_bin != "python2" or python3_bin != "python3":
-        salt.utils.versions.warn_until(
-            "Silicon",
-            "python2_bin and python3_bin are no longer used, please update your call to"
-            " gen_min",
-        )
     mindir = os.path.join(cachedir, "min")
     if not os.path.isdir(mindir):
         os.makedirs(mindir)
@@ -950,7 +934,10 @@ def gen_min(
         "salt/cli/call.py",
         "salt/fileserver",
         "salt/fileserver/__init__.py",
-        "salt/transport",
+        "salt/channel",
+        "salt/channel/__init__.py",
+        "salt/channel/client.py",
+        "salt/transport",  # XXX Are the transport imports still needed?
         "salt/transport/__init__.py",
         "salt/transport/client.py",
         "salt/exceptions.py",

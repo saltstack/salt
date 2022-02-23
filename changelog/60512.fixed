@@ -1,1 +1,0 @@
-virt.get_disks: properly report qemu-img errors

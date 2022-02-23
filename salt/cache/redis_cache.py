@@ -138,6 +138,7 @@ Cluster Configuration Example:
 
 import logging
 
+import salt.payload
 from salt.exceptions import SaltCacheError
 
 # Import salt
@@ -350,7 +351,7 @@ def store(bank, key, data):
     redis_bank_keys = _get_bank_keys_redis_key(bank)
     try:
         _build_bank_hier(bank, redis_pipe)
-        value = __context__["serial"].dumps(data)
+        value = salt.payload.dumps(data)
         redis_pipe.set(redis_key, value)
         log.debug("Setting the value for %s under %s (%s)", key, bank, redis_key)
         redis_pipe.sadd(redis_bank_keys, key)
@@ -381,7 +382,7 @@ def fetch(bank, key):
         raise SaltCacheError(mesg)
     if redis_value is None:
         return {}
-    return __context__["serial"].loads(redis_value)
+    return salt.payload.loads(redis_value)
 
 
 def flush(bank, key=None):

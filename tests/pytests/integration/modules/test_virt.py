@@ -481,8 +481,7 @@ class TestVirtMigrateTest:
         ret = salt_cli.run(
             "virt.migrate",
             virt_domain,
-            virt_minion_1.uri,
-            ssh=True,
+            "qemu+ssh://{}/system".format(virt_minion_1.uri),
             minion_tgt=virt_minion_0.id,
         )
         assert ret.exitcode == 0, ret

@@ -40,7 +40,7 @@ import salt.utils.path
 import salt.utils.pkg.rpm
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.utils.network import _get_interfaces
+from salt.utils.network import _clear_interfaces, _get_interfaces
 
 
 # rewrite distro.linux_distribution to allow best=True kwarg in version(), needed to get the minor version numbers in CentOS
@@ -50,6 +50,10 @@ def _linux_distribution():
         distro.version(best=True),
         distro.codename(),
     )
+
+
+def __init__(opts):
+    _clear_interfaces()
 
 
 try:
@@ -1771,15 +1775,15 @@ def _parse_cpe_name(cpe):
             ret["phase"] = cpe[5] if len(cpe) > 5 else None
             ret["part"] = part.get(cpe[1][1:])
         elif len(cpe) == 6 and cpe[1] == "2.3":  # WFN to a string
-            ret["vendor"], ret["product"], ret["version"] = [
+            ret["vendor"], ret["product"], ret["version"] = (
                 x if x != "*" else None for x in cpe[3:6]
-            ]
+            )
             ret["phase"] = None
             ret["part"] = part.get(cpe[2])
         elif len(cpe) > 7 and len(cpe) <= 13 and cpe[1] == "2.3":  # WFN to a string
-            ret["vendor"], ret["product"], ret["version"], ret["phase"] = [
+            ret["vendor"], ret["product"], ret["version"], ret["phase"] = (
                 x if x != "*" else None for x in cpe[3:7]
-            ]
+            )
             ret["part"] = part.get(cpe[2])
 
     return ret
@@ -2099,9 +2103,9 @@ def os_data():
         log.trace(
             "Getting OS name, release, and codename from distro id, version, codename"
         )
-        (osname, osrelease, oscodename) = [
+        (osname, osrelease, oscodename) = (
             x.strip('"').strip("'") for x in _linux_distribution()
-        ]
+        )
         # Try to assign these three names based on the lsb info, they tend to
         # be more accurate than what python gets from /etc/DISTRO-release.
         # It's worth noting that Ubuntu has patched their Python distribution
@@ -2524,7 +2528,7 @@ def ip4_interfaces():
             if "address" in inet:
                 iface_ips.append(inet["address"])
         for secondary in ifaces[face].get("secondary", []):
-            if "address" in secondary:
+            if "address" in secondary and secondary.get("type") == "inet":
                 iface_ips.append(secondary["address"])
         ret[face] = iface_ips
     return {"ip4_interfaces": ret}
@@ -2549,7 +2553,7 @@ def ip6_interfaces():
             if "address" in inet:
                 iface_ips.append(inet["address"])
         for secondary in ifaces[face].get("secondary", []):
-            if "address" in secondary:
+            if "address" in secondary and secondary.get("type") == "inet6":
                 iface_ips.append(secondary["address"])
         ret[face] = iface_ips
     return {"ip6_interfaces": ret}
@@ -3096,6 +3100,8 @@ def kernelparams():
                         value = data[1].strip('"')
 
                     grains["kernelparams"] += [(data[0], value)]
+        except FileNotFoundError:
+            grains = {}
         except OSError as exc:
             grains = {}
             log.debug("Failed to read /proc/cmdline: %s", exc)

@@ -20,10 +20,12 @@
 """
 
 import errno
+import functools
 import logging
 import os
 import select
 import signal
+import subprocess
 import sys
 import time
 
@@ -49,7 +51,6 @@ except ImportError:
     import fcntl
     import struct
     import termios
-    import resource
 
 
 log = logging.getLogger(__name__)
@@ -61,31 +62,36 @@ class TerminalException(Exception):
     """
 
 
-# ----- Cleanup Running Instances ------------------------------------------->
-# This lists holds Terminal instances for which the underlying process had
-# not exited at the time its __del__ method got called: those processes are
-# wait()ed for synchronously from _cleanup() when a new Terminal object is
-# created, to avoid zombie processes.
-_ACTIVE = []
-
-
-def _cleanup():
+def setwinsize(child, rows=80, cols=80):
     """
-    Make sure that any terminal processes still running when __del__ was called
-    to the waited and cleaned up.
+    This sets the terminal window size of the child tty. This will
+    cause a SIGWINCH signal to be sent to the child. This does not
+    change the physical window size. It changes the size reported to
+    TTY-aware applications like vi or curses -- applications that
+    respond to the SIGWINCH signal.
+
+    Thank you for the shortcut PEXPECT
     """
-    for inst in _ACTIVE[:]:
-        res = inst.isalive()
-        if res is not True:
-            try:
-                _ACTIVE.remove(inst)
-            except ValueError:
-                # This can happen if two threads create a new Terminal instance
-                # It's harmless that it was already removed, so ignore.
-                pass
+    TIOCSWINSZ = getattr(termios, "TIOCSWINSZ", -2146929561)
+    if TIOCSWINSZ == 2148037735:
+        # Same bits, but with sign.
+        TIOCSWINSZ = -2146929561
+    # Note, assume ws_xpixel and ws_ypixel are zero.
+    packed = struct.pack(b"HHHH", rows, cols, 0, 0)
+    fcntl.ioctl(child, TIOCSWINSZ, packed)
 
 
-# <---- Cleanup Running Instances --------------------------------------------
+def getwinsize(child):
+    """
+    This returns the terminal window size of the child tty. The return
+    value is a tuple of (rows, cols).
+
+    Thank you for the shortcut PEXPECT
+    """
+    TIOCGWINSZ = getattr(termios, "TIOCGWINSZ", 1074295912)
+    packed = struct.pack(b"HHHH", 0, 0, 0, 0)
+    ioctl = fcntl.ioctl(child, TIOCGWINSZ, packed)
+    return struct.unpack(b"HHHH", ioctl)[0:2]
 
 
 class Terminal:
@@ -117,15 +123,10 @@ class Terminal:
         # Used for tests
         force_receive_encoding=__salt_system_encoding__,
     ):
-
-        # Let's avoid Zombies!!!
-        _cleanup()
-
         if not args and not executable:
             raise TerminalException(
                 'You need to pass at least one of "args", "executable" '
             )
-
         self.args = args
         self.executable = executable
         self.shell = shell
@@ -134,7 +135,6 @@ class Terminal:
         self.preexec_fn = preexec_fn
         self.receive_encoding = force_receive_encoding
 
-        # ----- Set the desired terminal size ------------------------------->
         if rows is None and cols is None:
             rows, cols = self.__detect_parent_terminal_size()
         elif rows is not None and cols is None:
@@ -143,9 +143,6 @@ class Terminal:
             rows, _ = self.__detect_parent_terminal_size()
         self.rows = rows
         self.cols = cols
-        # <---- Set the desired terminal size --------------------------------
-
-        # ----- Internally Set Attributes ----------------------------------->
         self.pid = None
         self.stdin = None
         self.stdout = None
@@ -165,10 +162,7 @@ class Terminal:
         self.signalstatus = None
         # status returned by os.waitpid
         self.status = None
-        self.__irix_hack = "irix" in sys.platform.lower()
-        # <---- Internally Set Attributes ------------------------------------
 
-        # ----- Direct Streaming Setup -------------------------------------->
         if stream_stdout is True:
             self.stream_stdout = sys.stdout
         elif stream_stdout is False:
@@ -210,9 +204,7 @@ class Terminal:
                 "Don't know how to handle '{}' as the VT's "
                 "'stream_stderr' parameter.".format(stream_stderr)
             )
-        # <---- Direct Streaming Setup ---------------------------------------
 
-        # ----- Spawn our terminal ------------------------------------------>
         try:
             self._spawn()
         except Exception as err:  # pylint: disable=W0703
@@ -238,9 +230,7 @@ class Terminal:
             log.trace("Terminal Command: %s", terminal_command)
         else:
             log.debug("Terminal Command: %s", terminal_command)
-        # <---- Spawn our terminal -------------------------------------------
 
-        # ----- Setup Logging ----------------------------------------------->
         # Setup logging after spawned in order to have a pid value
         self.stdin_logger_level = LOG_LEVELS.get(log_stdin_level, log_stdin_level)
         if log_stdin is True:
@@ -281,9 +271,7 @@ class Terminal:
             self.stderr_logger = log_stderr
         else:
             self.stderr_logger = None
-        # <---- Setup Logging ------------------------------------------------
 
-    # ----- Common Public API ----------------------------------------------->
     def send(self, data):
         """
         Send data to the terminal. You are responsible to send any required
@@ -333,18 +321,12 @@ class Terminal:
     def has_unread_data(self):
         return self.flag_eof_stderr is False or self.flag_eof_stdout is False
 
-    # <---- Common Public API ------------------------------------------------
-
-    # ----- Common Internal API --------------------------------------------->
     def _translate_newlines(self, data):
         if data is None or not data:
             return
         # PTY's always return \r\n as the line feeds
         return data.replace("\r\n", os.linesep)
 
-    # <---- Common Internal API ----------------------------------------------
-
-    # ----- Context Manager Methods ----------------------------------------->
     def __enter__(self):
         return self
 
@@ -354,11 +336,8 @@ class Terminal:
         if self.isalive():
             self.wait()
 
-    # <---- Context Manager Methods ------------------------------------------
-
-    # ----- Platform Specific Methods ------------------------------------------->
     if mswindows:
-        # ----- Windows Methods --------------------------------------------->
+
         def _execute(self):
             raise NotImplementedError
 
@@ -401,165 +380,83 @@ class Terminal:
                 self.exitstatus = ecode
 
         kill = terminate
-    # <---- Windows Methods --------------------------------------------------
     else:
-        # ----- Linux Methods ----------------------------------------------->
-        # ----- Internal API ------------------------------------------------>
+
         def _spawn(self):
-            self.pid, self.child_fd, self.child_fde = self.__fork_ptys()
-
-            if isinstance(self.args, str):
-                args = [self.args]
-            elif self.args:
-                args = list(self.args)
-            else:
-                args = []
-
-            if self.shell and self.args:
-                self.args = ["/bin/sh", "-c", " ".join(args)]
-            elif self.shell:
-                self.args = ["/bin/sh"]
-            else:
-                self.args = args
-
-            if self.executable:
-                self.args[0] = self.executable
-
-            if self.executable is None:
-                self.executable = self.args[0]
-
-            if self.pid == 0:
-                # Child
-                self.stdin = sys.stdin.fileno()
-                self.stdout = sys.stdout.fileno()
-                self.stderr = sys.stderr.fileno()
-
-                # Set the terminal size
-                self.child_fd = self.stdin
-
-                if os.isatty(self.child_fd):
-                    # Only try to set the window size if the parent IS a tty
-                    try:
-                        self.setwinsize(self.rows, self.cols)
-                    except OSError as err:
-                        log.warning(
-                            "Failed to set the VT terminal size: %s",
-                            err,
-                            exc_info_on_loglevel=logging.DEBUG,
-                        )
-
-                # Do not allow child to inherit open file descriptors from
-                # parent
-                max_fd = resource.getrlimit(resource.RLIMIT_NOFILE)
-                try:
-                    os.closerange(pty.STDERR_FILENO + 1, max_fd[0])
-                except OSError:
-                    pass
-
-                if self.cwd is not None:
-                    os.chdir(self.cwd)
-
-                if self.preexec_fn:
-                    self.preexec_fn()
-
-                if self.env is None:
-                    os.execvp(self.executable, self.args)
-                else:
-                    os.execvpe(self.executable, self.args, self.env)
-
-            # Parent
+            if not isinstance(self.args, str) and self.shell is True:
+                self.args = " ".join(self.args)
+            parent, child = pty.openpty()
+            err_parent, err_child = os.pipe()
+            child_name = os.ttyname(child)
+            proc = subprocess.Popen(  # pylint: disable=subprocess-popen-preexec-fn
+                self.args,
+                preexec_fn=functools.partial(
+                    self._preexec, child_name, self.rows, self.cols, self.preexec_fn
+                ),
+                shell=self.shell,  # nosec
+                executable=self.executable,
+                cwd=self.cwd,
+                stdin=child,
+                stdout=child,
+                stderr=err_child,
+                env=self.env,
+                close_fds=True,
+            )
+            os.close(child)
+            os.close(err_child)
+            self.child_fd = parent
+            self.child_fde = err_parent
+            self.pid = proc.pid
+            self.proc = proc
             self.closed = False
             self.terminated = False
 
-        def __fork_ptys(self):
-            """
-            Fork the PTY
-
-            The major difference from the python source is that we separate the
-            stdout from stderr output.
-            """
-            stdout_parent_fd, stdout_child_fd = pty.openpty()
-            if stdout_parent_fd < 0 or stdout_child_fd < 0:
-                raise TerminalException("Failed to open a TTY for stdout")
-
-            stderr_parent_fd, stderr_child_fd = pty.openpty()
-            if stderr_parent_fd < 0 or stderr_child_fd < 0:
-                raise TerminalException("Failed to open a TTY for stderr")
-
-            pid = os.fork()
-            if pid < pty.CHILD:
-                raise TerminalException("Failed to fork")
-            elif pid == pty.CHILD:
-                # Child.
-                # Close parent FDs
-                os.close(stdout_parent_fd)
-                os.close(stderr_parent_fd)
-                salt.utils.crypt.reinit_crypto()
-
-                # ----- Make STDOUT the controlling PTY --------------------->
-                child_name = os.ttyname(stdout_child_fd)
-                # Disconnect from controlling tty. Harmless if not already
-                # connected
-                try:
-                    tty_fd = os.open("/dev/tty", os.O_RDWR | os.O_NOCTTY)
-                    if tty_fd >= 0:
-                        os.close(tty_fd)
-                # which exception, shouldn't we catch explicitly .. ?
-                except Exception:  # pylint: disable=broad-except
-                    # Already disconnected. This happens if running inside cron
-                    pass
-
-                # New session!
+        @staticmethod
+        def _preexec(child_name, rows=80, cols=80, preexec_fn=None):
+            # Disconnect from controlling tty. Harmless if not already
+            # connected
+            try:
+                tty_fd = os.open("/dev/tty", os.O_RDWR | os.O_NOCTTY)
+                if tty_fd >= 0:
+                    os.close(tty_fd)
+            # which exception, shouldn't we catch explicitly .. ?
+            except Exception:  # pylint: disable=broad-except
+                # Already disconnected. This happens if running inside cron
+                pass
+            try:
                 os.setsid()
-
-                # Verify we are disconnected from controlling tty
-                # by attempting to open it again.
-                try:
-                    tty_fd = os.open("/dev/tty", os.O_RDWR | os.O_NOCTTY)
-                    if tty_fd >= 0:
-                        os.close(tty_fd)
-                        raise TerminalException(
-                            "Failed to disconnect from controlling tty. It is "
-                            "still possible to open /dev/tty."
-                        )
-                # which exception, shouldn't we catch explicitly .. ?
-                except Exception:  # pylint: disable=broad-except
-                    # Good! We are disconnected from a controlling tty.
-                    pass
-
-                # Verify we can open child pty.
-                tty_fd = os.open(child_name, os.O_RDWR)
-                if tty_fd < 0:
+            except OSError:
+                pass
+            try:
+                tty_fd = os.open("/dev/tty", os.O_RDWR | os.O_NOCTTY)
+                if tty_fd >= 0:
+                    os.close(tty_fd)
                     raise TerminalException(
                         "Could not open child pty, {}".format(child_name)
                     )
+            # which exception, shouldn't we catch explicitly .. ?
+            except Exception:  # pylint: disable=broad-except
+                # Good! We are disconnected from a controlling tty.
+                pass
+            tty_fd = os.open(child_name, os.O_RDWR)
+            setwinsize(tty_fd, rows, cols)
+            if tty_fd < 0:
+                raise TerminalException(
+                    "Could not open child pty, {}".format(child_name)
+                )
+            else:
+                os.close(tty_fd)
+            if os.name != "posix":
+                tty_fd = os.open("/dev/tty", os.O_WRONLY)
+                if tty_fd < 0:
+                    raise TerminalException("Could not open controlling tty, /dev/tty")
                 else:
                     os.close(tty_fd)
 
-                # Verify we now have a controlling tty.
-                if os.name != "posix":
-                    # Only do this check in not BSD-like operating systems. BSD-like operating systems breaks at this point
-                    tty_fd = os.open("/dev/tty", os.O_WRONLY)
-                    if tty_fd < 0:
-                        raise TerminalException(
-                            "Could not open controlling tty, /dev/tty"
-                        )
-                    else:
-                        os.close(tty_fd)
-                # <---- Make STDOUT the controlling PTY ----------------------
+            salt.utils.crypt.reinit_crypto()
 
-                # ----- Duplicate Descriptors ------------------------------->
-                os.dup2(stdout_child_fd, pty.STDIN_FILENO)
-                os.dup2(stdout_child_fd, pty.STDOUT_FILENO)
-                os.dup2(stderr_child_fd, pty.STDERR_FILENO)
-                # <---- Duplicate Descriptors --------------------------------
-            else:
-                # Parent. Close Child PTY's
-                salt.utils.crypt.reinit_crypto()
-                os.close(stdout_child_fd)
-                os.close(stderr_child_fd)
-
-            return pid, stdout_parent_fd, stderr_parent_fd
+            if preexec_fn is not None:
+                preexec_fn()
 
         def _send(self, data):
             if self.child_fd is None:
@@ -589,6 +486,7 @@ class Terminal:
 
             if not self.isalive():
                 if not rfds:
+                    self.close()
                     return None, None
                 rlist, _, _ = select.select(rfds, [], [], 0)
                 if not rlist:
@@ -598,61 +496,34 @@ class Terminal:
                         # There is data that was received but for which
                         # decoding failed, attempt decoding again to generate
                         # relevant exception
+                        self.close()
                         return (
                             salt.utils.stringutils.to_unicode(self.partial_data_stdout),
                             salt.utils.stringutils.to_unicode(self.partial_data_stderr),
                         )
-                    return None, None
-            elif self.__irix_hack:
-                # Irix takes a long time before it realizes a child was
-                # terminated.
-                # FIXME So does this mean Irix systems are forced to always
-                # have a 2 second delay when calling read_nonblocking?
-                # That sucks.
-                rlist, _, _ = select.select(rfds, [], [], 2)
-                if not rlist:
-                    self.flag_eof_stdout = self.flag_eof_stderr = True
-                    log.debug("End of file(EOL). Slow platform.")
-                    if self.partial_data_stdout or self.partial_data_stderr:
-                        # There is data that was received but for which
-                        # decoding failed, attempt decoding again to generate
-                        # relevant exception
-                        return (
-                            salt.utils.stringutils.to_unicode(self.partial_data_stdout),
-                            salt.utils.stringutils.to_unicode(self.partial_data_stderr),
-                        )
+                    self.close()
                     return None, None
 
             stderr = ""
             stdout = ""
 
-            # ----- Store FD Flags ------------------------------------------>
             if self.child_fd:
                 fd_flags = fcntl.fcntl(self.child_fd, fcntl.F_GETFL)
             if self.child_fde:
                 fde_flags = fcntl.fcntl(self.child_fde, fcntl.F_GETFL)
-            # <---- Store FD Flags -------------------------------------------
-
-            # ----- Non blocking Reads -------------------------------------->
             if self.child_fd:
                 fcntl.fcntl(self.child_fd, fcntl.F_SETFL, fd_flags | os.O_NONBLOCK)
             if self.child_fde:
                 fcntl.fcntl(self.child_fde, fcntl.F_SETFL, fde_flags | os.O_NONBLOCK)
-            # <---- Non blocking Reads ---------------------------------------
 
-            # ----- Check for any incoming data ----------------------------->
             rlist, _, _ = select.select(rfds, [], [], 0)
-            # <---- Check for any incoming data ------------------------------
 
-            # ----- Nothing to Process!? ------------------------------------>
             if not rlist:
                 if not self.isalive():
                     self.flag_eof_stdout = self.flag_eof_stderr = True
                     log.debug("End of file(EOL). Very slow platform.")
                     return None, None
-            # <---- Nothing to Process!? -------------------------------------
 
-            # ----- Helper function for processing STDERR and STDOUT -------->
             def read_and_decode_fd(fd, maxsize, partial_data_attr=None):
                 bytes_read = getattr(self, partial_data_attr, b"")
                 # Only read one byte if we already have some existing data
@@ -692,9 +563,6 @@ class Terminal:
                     else:
                         raise
 
-            # <---- Helper function for processing STDERR and STDOUT ---------
-
-            # ----- Process STDERR ------------------------------------------>
             if self.child_fde in rlist and not self.flag_eof_stderr:
                 try:
                     stderr, partial_data = read_and_decode_fd(
@@ -725,9 +593,7 @@ class Terminal:
                 finally:
                     if self.child_fde is not None:
                         fcntl.fcntl(self.child_fde, fcntl.F_SETFL, fde_flags)
-            # <---- Process STDERR -------------------------------------------
 
-            # ----- Process STDOUT ------------------------------------------>
             if self.child_fd in rlist and not self.flag_eof_stdout:
                 try:
                     stdout, partial_data = read_and_decode_fd(
@@ -788,38 +654,10 @@ class Terminal:
                     "Can't check the size of the terminal since we're not "
                     "connected to the child process."
                 )
+            return getwinsize(self.child_fd)
 
-            TIOCGWINSZ = getattr(termios, "TIOCGWINSZ", 1074295912)
-            packed = struct.pack(b"HHHH", 0, 0, 0, 0)
-            ioctl = fcntl.ioctl(self.child_fd, TIOCGWINSZ, packed)
-            return struct.unpack(b"HHHH", ioctl)[0:2]
-
-        def setwinsize(self, rows, cols):
-            """
-            This sets the terminal window size of the child tty. This will
-            cause a SIGWINCH signal to be sent to the child. This does not
-            change the physical window size. It changes the size reported to
-            TTY-aware applications like vi or curses -- applications that
-            respond to the SIGWINCH signal.
-
-            Thank you for the shortcut PEXPECT
-            """
-            # Check for buggy platforms. Some Python versions on some platforms
-            # (notably OSF1 Alpha and RedHat 7.1) truncate the value for
-            # termios.TIOCSWINSZ. It is not clear why this happens.
-            # These platforms don't seem to handle the signed int very well;
-            # yet other platforms like OpenBSD have a large negative value for
-            # TIOCSWINSZ and they don't have a truncate problem.
-            # Newer versions of Linux have totally different values for
-            # TIOCSWINSZ.
-            # Note that this fix is a hack.
-            TIOCSWINSZ = getattr(termios, "TIOCSWINSZ", -2146929561)
-            if TIOCSWINSZ == 2148037735:
-                # Same bits, but with sign.
-                TIOCSWINSZ = -2146929561
-            # Note, assume ws_xpixel and ws_ypixel are zero.
-            packed = struct.pack(b"HHHH", rows, cols, 0, 0)
-            fcntl.ioctl(self.child_fd, TIOCSWINSZ, packed)
+        def setwinsize(self, child, rows=80, cols=80):
+            setwinsize(self.child_fd, rows, cols)
 
         def isalive(
             self,
@@ -855,6 +693,14 @@ class Terminal:
 
             try:
                 pid, status = _waitpid(self.pid, waitpid_options)
+            except ChildProcessError:
+                # check if process is really dead or if it is just pretending and we should exit normally through the gift center
+                polled = self.proc.poll()
+                if polled is None:
+                    return True
+                # process must have returned on it's own process the return code
+                pid = self.pid
+                status = polled
             except _os_error:
                 err = sys.exc_info()[1]
                 # No child processes
@@ -987,29 +833,3 @@ class Terminal:
             Kill the process with SIGKILL
             """
             self.send_signal(signal.SIGKILL)
-
-        # <---- Public API ---------------------------------------------------
-    # <---- Linux Methods ----------------------------------------------------
-
-    # ----- Cleanup!!! ------------------------------------------------------>
-    # pylint: disable=W1701
-    def __del__(self, _maxsize=sys.maxsize, _active=_ACTIVE):  # pylint: disable=W0102
-        # I've disabled W0102 above which is regarding a dangerous default
-        # value of [] for _ACTIVE, though, this is how Python itself handles
-        # their subprocess clean up code.
-        # XXX: Revisit this cleanup code to make it less dangerous.
-
-        if self.pid is None:
-            # We didn't get to successfully create a child process.
-            return
-
-        # In case the child hasn't been waited on, check if it's done.
-        if self.isalive() and _ACTIVE is not None:
-            # Child is still running, keep us alive until we can wait on it.
-            _ACTIVE.append(self)
-
-    # pylint: enable=W1701
-    # <---- Cleanup!!! -------------------------------------------------------
-
-
-# <---- Platform Specific Methods --------------------------------------------

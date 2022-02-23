@@ -79,8 +79,8 @@ def present(
         public key from the remote host, defaults to port 22.
 
     enc
-        Defines what type of key is being used, can be ed25519, ecdsa ssh-rsa
-        or ssh-dss
+        Defines what type of key is being used, can be ed25519, ecdsa,
+        ssh-rsa, ssh-dss or any other type as of openssh server version 8.7.
 
     config
         The location of the authorized keys file relative to the user's home

@@ -126,8 +126,7 @@ class MockSubscriber:
         """
         Create a mock return from a jid, minion, and fun
         """
-        serial = salt.payload.Serial({"serial": "msgpack"})
-        dumped = serial.dumps(
+        dumped = salt.payload.dumps(
             {
                 "fun_args": [],
                 "jid": jid,

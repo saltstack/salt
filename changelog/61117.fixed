@@ -1,0 +1,1 @@
+Correct returned result to False when an error exception occurs for pip.installed

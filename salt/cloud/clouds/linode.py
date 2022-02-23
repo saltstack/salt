@@ -21,7 +21,7 @@ The following provider parameters are supported:
 
     APIv3 usage is deprecated and will be removed in a future release in favor of APIv4. To move to APIv4 now,
     set the ``api_version`` parameter in your provider configuration to ``v4``. See the full migration guide
-    here https://docs.saltstack.com/en/latest/topics/cloud/linode.html#migrating-to-apiv4.
+    here https://docs.saltproject.io/en/latest/topics/cloud/linode.html#migrating-to-apiv4.
 
 Set up the provider configuration at ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/linode.conf``:
 
@@ -393,7 +393,7 @@ def _warn_for_api_v3():
             "Linode APIv3 has been deprecated and support will be removed "
             "in future releases. Please plan to upgrade to APIv4. For more "
             "information, see"
-            " https://docs.saltstack.com/en/latest/topics/cloud/linode.html#migrating-to-apiv4."
+            " https://docs.saltproject.io/en/latest/topics/cloud/linode.html#migrating-to-apiv4."
         )
         HAS_WARNED_FOR_API_V3 = True
 
@@ -1813,10 +1813,8 @@ class LinodeAPIv3(LinodeAPI):
                     vm_["name"],
                     pprint.pprint(
                         sorted(
-                            [
-                                distro["LABEL"].encode(__salt_system_encoding__)
-                                for distro in distributions
-                            ]
+                            distro["LABEL"].encode(__salt_system_encoding__)
+                            for distro in distributions
                         )
                     ),
                 )

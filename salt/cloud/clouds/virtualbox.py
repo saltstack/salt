@@ -8,7 +8,7 @@ For now this will only clone existing VMs. It's best to create a template
 from which we will clone.
 
 Followed
-https://docs.saltstack.com/en/latest/topics/cloud/cloud.html#non-libcloud-based-modules
+https://docs.saltproject.io/en/latest/topics/cloud/cloud.html#non-libcloud-based-modules
 to create this.
 
 Dicts provided by salt:

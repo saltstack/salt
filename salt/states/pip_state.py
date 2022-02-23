@@ -317,12 +317,12 @@ def _check_if_installed(
                 extra_index_url=extra_index_url,
             )
             desired_version = ""
-            if any(version_spec):
+            if any(version_spec) and available_versions:
                 for version in reversed(available_versions):
                     if _fulfills_version_spec(version, version_spec):
                         desired_version = version
                         break
-            else:
+            elif available_versions:
                 desired_version = available_versions[-1]
             if not desired_version:
                 ret["result"] = True
@@ -731,7 +731,7 @@ def installed(
     try:
         cur_version = __salt__["pip.version"](bin_env)
     except (CommandNotFoundError, CommandExecutionError) as err:
-        ret["result"] = None
+        ret["result"] = False
         ret["comment"] = "Error installing '{}': {}".format(name, err)
         return ret
     # Check that the pip binary supports the 'use_wheel' option

@@ -2092,9 +2092,9 @@ def fqdns():
                 # No FQDN for this IP address, so we don't need to know this all the time.
                 log.debug("Unable to resolve address %s: %s", ip, err)
             else:
-                log.error(err_message, err)
+                log.error("Failed to resolve address %s: %s", ip, err)
         except (OSError, socket.gaierror, socket.timeout) as err:
-            log.error(err_message, err)
+            log.error("Failed to resolve address %s: %s", ip, err)
 
     start = time.time()
 
@@ -2106,7 +2106,6 @@ def fqdns():
             include_loopback=False, interface_data=salt.utils.network._get_interfaces()
         )
     )
-    err_message = "Exception during resolving address: %s"
 
     # Create a ThreadPool to process the underlying calls to 'socket.gethostbyaddr' in parallel.
     # This avoid blocking the execution when the "fqdn" is not defined for certains IP addresses, which was causing

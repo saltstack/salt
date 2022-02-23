@@ -152,7 +152,7 @@ def test_set_cache(minion_config, cache_mods_path, cache_mod_name, cache_dir):
 
     # Test manual de-serialize
     target_cache_data = salt.utils.data.decode(
-        salt.payload.Serial(minion_config).loads(cached_file.read_bytes())
+        salt.payload.loads(cached_file.read_bytes())
     )
     assert target_cache_data == dict(context, called=1)
 
