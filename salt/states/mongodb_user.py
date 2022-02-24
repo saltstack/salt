@@ -26,6 +26,7 @@ def present(
     authdb=None,
     roles=None,
     ssl=False,
+    verify_ssl=None,
 ):
     """
     Ensure that the user is present with the specified properties
@@ -110,6 +111,7 @@ def present(
         database,
         authdb,
         ssl=ssl,
+        verify_ssl=verify_ssl,
     )
     if len(users) > 0:
         # check for errors returned in users e.g.
@@ -152,6 +154,7 @@ def present(
                 authdb=authdb,
                 roles=roles,
                 ssl=ssl,
+                verify_ssl=verify_ssl,
             )
         return ret
 
@@ -178,6 +181,7 @@ def present(
         authdb=authdb,
         roles=roles,
         ssl=ssl,
+        verify_ssl=verify_ssl,
     ):
         ret["comment"] = "User {} has been created".format(name)
         ret["changes"][name] = "Present"
@@ -197,6 +201,7 @@ def absent(
     database="admin",
     authdb=None,
     ssl=False,
+    verify_ssl=None,
 ):
     """
     Ensure that the named user is absent
@@ -230,7 +235,15 @@ def absent(
 
     # check if user exists and remove it
     user_exists = __salt__["mongodb.user_exists"](
-        name, user, password, host, port, database=database, authdb=authdb, ssl=ssl
+        name,
+        user,
+        password,
+        host,
+        port,
+        database=database,
+        authdb=authdb,
+        ssl=ssl,
+        verify_ssl=verify_ssl,
     )
     if user_exists is True:
         if __opts__["test"]:
@@ -246,6 +259,7 @@ def absent(
             database=database,
             authdb=authdb,
             ssl=ssl,
+            verify_ssl=verify_ssl,
         ):
             ret["comment"] = "User {} has been removed".format(name)
             ret["changes"][name] = "Absent"
