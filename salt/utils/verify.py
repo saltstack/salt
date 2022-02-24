@@ -16,9 +16,8 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
+from salt._logging import LOG_LEVELS
 from salt.exceptions import CommandExecutionError, SaltClientError, SaltSystemExit
-from salt.log import is_console_configured
-from salt.log.setup import LOG_LEVELS
 
 # Original Author: Jeff Schroeder <jeffschroeder@computer.org>
 
@@ -51,11 +50,7 @@ def zmq_version():
 
     # Fallthrough and hope for the best
     if not match:
-        msg = "Using untested zmq python bindings version: '{}'".format(ver)
-        if is_console_configured():
-            log.warning(msg)
-        else:
-            sys.stderr.write("WARNING {}\n".format(msg))
+        log.warning("Using untested zmq python bindings version: '%s'", ver)
         return True
 
     major, minor, point = match.groups()
@@ -72,11 +67,7 @@ def zmq_version():
     if major == 2 and minor == 1:
         # zmq 2.1dev could be built against a newer libzmq
         if "dev" in ver and not point:
-            msg = "Using dev zmq module, please report unexpected results"
-            if is_console_configured():
-                log.warning(msg)
-            else:
-                sys.stderr.write("WARNING: {}\n".format(msg))
+            log.warning("Using dev zmq module, please report unexpected results")
             return True
         elif point and point >= 9:
             return True
@@ -86,15 +77,11 @@ def zmq_version():
     # If all else fails, gracefully croak and warn the user
     log.critical("ZeroMQ python bindings >= 2.1.9 are required")
     if "salt-master" in sys.argv[0]:
-        msg = (
+        log.critical(
             "The Salt Master is unstable using a ZeroMQ version "
             "lower than 2.1.11 and requires this fix: http://lists.zeromq."
             "org/pipermail/zeromq-dev/2011-June/012094.html"
         )
-        if is_console_configured():
-            log.critical(msg)
-        else:
-            sys.stderr.write("CRITICAL {}\n".format(msg))
     return False
 
 
@@ -135,10 +122,7 @@ def verify_socket(interface, pub_port, ret_port):
             else:
                 msg = "{}, this might not be a problem.".format(msg)
             msg += "; Is there another salt-master running?"
-            if is_console_configured():
-                log.warning(msg)
-            else:
-                sys.stderr.write("WARNING: {}\n".format(msg))
+            log.warning(msg)
             return False
         finally:
             sock.close()
@@ -182,14 +166,12 @@ def _get_pwnam(user):
     try:
         return pwd.getpwnam(user)
     except KeyError:
-        msg = (
-            "Failed to prepare the Salt environment for user {}. The user is not"
-            " available.".format(user)
+        print(
+            "Failed to prepare the Salt environment for user {}. "
+            "The user is not available.".format(user),
+            file=sys.stderr,
+            flush=True,
         )
-        if is_console_configured():
-            log.critical(msg)
-        else:
-            print(msg, file=sys.stderr, flush=True)
         sys.exit(salt.defaults.exitcodes.EX_NOUSER)
 
 
@@ -321,12 +303,9 @@ def verify_env(
                 if os.access(dir_, os.W_OK):
                     os.chmod(dir_, 448)
                 else:
-                    msg = 'Unable to securely set the permissions of "{0}".'
-                    msg = msg.format(dir_)
-                    if is_console_configured():
-                        log.critical(msg)
-                    else:
-                        sys.stderr.write("CRITICAL: {}\n".format(msg))
+                    log.critical(
+                        'Unable to securely set the permissions of "%s".', dir_
+                    )
 
     if skip_extra is False:
         # Run the extra verification checks
@@ -366,11 +345,7 @@ def check_user(user):
                 os.environ[envvar] = pwuser.pw_name
 
     except OSError:
-        msg = 'Salt configured to run as user "{}" but unable to switch.'.format(user)
-        if is_console_configured():
-            log.critical(msg)
-        else:
-            sys.stderr.write("CRITICAL: {}\n".format(msg))
+        log.critical('Salt configured to run as user "%s" but unable to switch.', user)
         return False
     return True
 
@@ -632,11 +607,7 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
                 obj_name=reg_path, principal="S-1-5-32-544", obj_type="registry"
             )
         except CommandExecutionError:
-            msg = 'Unable to securely set the owner of "{}".'.format(reg_path)
-            if is_console_configured():
-                log.critical(msg)
-            else:
-                sys.stderr.write("CRITICAL: {}\n".format(msg))
+            log.critical("Unable to securely set the owner of '%s'.", reg_path)
 
         try:
             # Get a clean dacl by not passing an obj_name
@@ -669,11 +640,7 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
             dacl.save(obj_name=reg_path, protected=True)
 
         except CommandExecutionError:
-            msg = 'Unable to securely set the permissions of "{}"'.format(reg_path)
-            if is_console_configured():
-                log.critical(msg)
-            else:
-                sys.stderr.write("CRITICAL: {}\n".format(msg))
+            log.critical("Unable to securely set the permissions of '%s'.", reg_path)
 
     # Set permissions to the root path directory
     if salt.utils.win_functions.is_admin(current_user):
@@ -683,11 +650,7 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
             salt.utils.win_dacl.set_owner(obj_name=path, principal="S-1-5-32-544")
 
         except CommandExecutionError:
-            msg = "Unable to securely set the owner of {}".format(path)
-            if is_console_configured():
-                log.critical(msg)
-            else:
-                sys.stderr.write("CRITICAL: {}\n".format(msg))
+            log.critical('Unable to securely set the owner of "%s".', path)
 
         if not permissive:
             try:
@@ -721,11 +684,7 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
                 dacl.save(obj_name=path, protected=True)
 
             except CommandExecutionError:
-                msg = 'Unable to securely set the permissions of "{}".'.format(path)
-                if is_console_configured():
-                    log.critical(msg)
-                else:
-                    sys.stderr.write("CRITICAL: {}\n".format(msg))
+                log.critical("Unable to securely set the permissions of '%s'", path)
 
     # Create the directories
     for dir_ in dirs:
@@ -776,12 +735,7 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
                 dacl.save(obj_name=dir_, protected=True)
 
             except CommandExecutionError:
-                msg = 'Unable to securely set the permissions of "{0}".'
-                msg = msg.format(dir_)
-                if is_console_configured():
-                    log.critical(msg)
-                else:
-                    sys.stderr.write("CRITICAL: {}\n".format(msg))
+                log.critical("Unable to securely set the permissions of '%s'.", dir_)
 
     if skip_extra is False:
         # Run the extra verification checks

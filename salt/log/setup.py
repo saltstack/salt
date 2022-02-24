@@ -48,6 +48,7 @@ warn_until_date(
     "'{name}' will go away after {{date}}. Do note however that "
     "'salt._logging' is now considered a non public implementation "
     "and is subject to change without deprecations.".format(name=__name__),
+    stacklevel=4,
 )
 
 __CONSOLE_CONFIGURED = False
@@ -540,36 +541,6 @@ def set_multiprocessing_logging_level_by_opts(opts):
         log_levels.append(LOG_LEVELS.get(level.lower(), logging.ERROR))
 
     __MP_LOGGING_LEVEL = min(log_levels)
-
-
-def setup_multiprocessing_logging_listener(opts, queue=None):
-    global __MP_LOGGING_QUEUE_PROCESS
-    global __MP_LOGGING_LISTENER_CONFIGURED
-    global __MP_MAINPROCESS_ID
-
-    if __MP_IN_MAINPROCESS is False:
-        # We're not in the MainProcess, return! No logging listener setup shall happen
-        return
-
-    if __MP_LOGGING_LISTENER_CONFIGURED is True:
-        return
-
-    if __MP_MAINPROCESS_ID is not None and __MP_MAINPROCESS_ID != os.getpid():
-        # We're not in the MainProcess, return! No logging listener setup shall happen
-        return
-
-    __MP_MAINPROCESS_ID = os.getpid()
-    __MP_LOGGING_QUEUE_PROCESS = multiprocessing.Process(
-        name="MultiprocessingLoggingQueue",
-        target=__process_multiprocessing_logging_queue,
-        args=(
-            opts,
-            queue or get_multiprocessing_logging_queue(),
-        ),
-    )
-    __MP_LOGGING_QUEUE_PROCESS.daemon = True
-    __MP_LOGGING_QUEUE_PROCESS.start()
-    __MP_LOGGING_LISTENER_CONFIGURED = True
 
 
 def setup_multiprocessing_logging(queue=None):

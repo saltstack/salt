@@ -13,7 +13,6 @@ from threading import Event, Thread
 import salt.cache
 import salt.client
 import salt.config
-import salt.log
 import salt.payload
 import salt.pillar
 import salt.utils.atomicfile
