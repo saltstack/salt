@@ -26,7 +26,7 @@ def absent(
     port=None,
     authdb=None,
     ssl=None,
-    verify_ssl=None,
+    verify_ssl=True,
 ):
     """
     Ensure that the named database is absent. Note that creation doesn't make
@@ -51,9 +51,14 @@ def absent(
         The database in which to authenticate
 
     ssl
-        Whether or not to connect to MongoDB over SSL. Default ``False``.
+        Whether or not to use SSL to connect to mongodb. Default False.
 
-        .. versionadded:: 3005
+        .. versionadded:: 3005.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3005.0
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 

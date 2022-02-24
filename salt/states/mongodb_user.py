@@ -26,7 +26,7 @@ def present(
     authdb=None,
     roles=None,
     ssl=False,
-    verify_ssl=None,
+    verify_ssl=True,
 ):
     """
     Ensure that the user is present with the specified properties
@@ -63,6 +63,13 @@ def present(
 
     ssl
         Whether or not to use SSL to connect to mongodb. Default False.
+
+        .. versionadded:: 3005.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3005.0
 
     Example:
 
@@ -230,6 +237,13 @@ def absent(
 
     ssl
         Whether or not to use SSL to connect to mongodb. Default False.
+
+        .. versionadded:: 3005.0
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3005.0
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
