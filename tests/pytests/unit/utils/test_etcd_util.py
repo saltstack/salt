@@ -90,9 +90,6 @@ def test_get():
             assert client.get("salt") == "stack"
             mock.assert_called_with("salt", recursive=False)
 
-            assert client.get("salt", recurse=True) == "stack"
-            mock.assert_called_with("salt", recursive=True)
-
             # iter(list(Exception)) works correctly with both mock<1.1 and mock>=1.1
             mock.side_effect = iter([etcd.EtcdKeyNotFound()])
             assert client.get("not-found") is None
@@ -107,6 +104,12 @@ def test_get():
             mock.side_effect = Exception
             with pytest.raises(Exception):
                 client.get("some-error")
+
+        # Get with recurse now delegates to client.tree
+        with patch.object(client, "tree", autospec=True) as tree_mock:
+            tree_mock.return_value = {"salt": "stack"}
+            assert client.get("salt", recurse=True) == {"salt": "stack"}
+            tree_mock.assert_called_with("salt")
 
 
 def test_tree():

@@ -15,6 +15,7 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skipif(not HAS_LIBS, reason="Need etcd libs to test etcd_util!"),
+    pytest.mark.skip_if_binaries_missing("docker", "dockerd", check_all=False),
 ]
 
 
