@@ -1,16 +1,3 @@
-"""
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-
-    salt.log.mixins
-    ~~~~~~~~~~~~~~~
-
-    .. versionadded:: 0.17.0
-
-    Some mix-in classes to be used in salt's logging
-"""
-
-
 # pylint: disable=unused-import
 from salt._logging.mixins import (
     ExcInfoOnLogLevelFormatMixin as ExcInfoOnLogLevelFormatMixIn,

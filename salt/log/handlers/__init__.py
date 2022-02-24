@@ -1,12 +1,3 @@
-"""
-    salt.log.handlers
-    ~~~~~~~~~~~~~~~~~
-
-    .. versionadded:: 0.17.0
-
-    Custom logging handlers to be used in salt.
-"""
-
 import logging
 
 from salt._logging.handlers import (
