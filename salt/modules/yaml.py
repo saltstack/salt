@@ -1,6 +1,12 @@
 """
 Yaml helper module for troubleshooting yaml
 
+
+.. versionadded:: 3005
+
+:depends:   yamllint
+
+
 """
 
 import logging
