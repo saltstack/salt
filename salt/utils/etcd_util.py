@@ -50,6 +50,7 @@ rather than top-level configurations. This being the case, it is better to
 always use a named configuration profile, as shown above.
 """
 
+from ast import Delete
 import logging
 
 from salt.exceptions import CommandExecutionError
@@ -178,25 +179,37 @@ class EtcdClient:
         return ret
 
     def get(self, key, recurse=False):
-        try:
-            result = self.read(key, recursive=recurse)
-        except etcd.EtcdKeyNotFound:
-            # etcd already logged that the key wasn't found, no need to do
-            # anything here but return
-            return None
-        except etcd.EtcdConnectionFailed:
-            log.error(
-                "etcd: failed to perform 'get' operation on key %s due to connection"
-                " error",
-                key,
-            )
-            return None
-        except ValueError:
-            return None
+        """
+        Get the value of a specific key.  If recurse is true, defer to EtcdClient.read() instead.
+        """
+        if not recurse:
+            try:
+                result = self.read(key, recursive=recurse)
+            except etcd.EtcdKeyNotFound:
+                # etcd already logged that the key wasn't found, no need to do
+                # anything here but return
+                return None
+            except etcd.EtcdConnectionFailed:
+                log.error(
+                    "etcd: failed to perform 'get' operation on key %s due to connection"
+                    " error",
+                    key,
+                )
+                return None
+            except ValueError:
+                return None
 
-        return getattr(result, "value", None)
+            return getattr(result, "value", None)
+
+        return self.tree(key)
 
     def read(self, key, recursive=False, wait=False, timeout=None, waitIndex=None):
+        """
+        Read a value of a key.
+
+        This method also provides the ability to wait for changes after a given index and/or
+        within a certain timeout.
+        """
         try:
             if waitIndex:
                 result = self.client.read(
@@ -249,6 +262,29 @@ class EtcdClient:
         return result
 
     def _flatten(self, data, path=""):
+        """
+        Take a data dictionary and flatten it to a dictionary with values that are all strings.
+
+        If path is given, prepend it to all keys.
+
+        For example, given path="/salt" it will convert...
+
+        {
+            "key1": "value1",
+            "key2": {
+                "subkey1": "subvalue1",
+                "subkey2": "subvalue2",
+            }
+        }
+
+        to...
+
+        {
+            "/salt/key1": "value1",
+            "/salt/key2/subkey1": "subvalue1",
+            "/salt/key2/subkey2": "subvalue2",
+        }
+        """
         if not data:
             return {path: {}}
         path = path.strip("/")
@@ -267,6 +303,36 @@ class EtcdClient:
         return flat
 
     def update(self, fields, path=""):
+        """
+        Update etcd according to the layout of fields.
+
+        Given etcd with this layout...
+        {
+            ...
+            "/salt/key1": "OLDvalue1",
+            "/salt/key2/subkey1": "OLDsubvalue1",
+            "/salt/key2/subkey2": "OLDsubvalue2",
+            ...
+        }
+
+        fields = {
+            "key1": "value1",
+            "key2": {
+                "subkey1": "subvalue1",
+                "subkey2": "subvalue2",
+            }
+        }
+
+        will update etcd to look like the following...
+        {
+            ...
+            "/salt/key1": "value1",
+            "/salt/key2/subkey1": "subvalue1",
+            "/salt/key2/subkey2": "subvalue2",
+            ...
+        }
+
+        """
         if not isinstance(fields, dict):
             log.error("etcd.update: fields is not type dict")
             return None
@@ -280,14 +346,23 @@ class EtcdClient:
         return keys
 
     def set(self, key, value, ttl=None, directory=False):
+        """
+        Write a file or directory, a higher interface to write
+        """
         return self.write(key, value, ttl=ttl, directory=directory)
 
     def write(self, key, value, ttl=None, directory=False):
+        """
+        Write a file or directory depending on directory flag
+        """
         if directory:
             return self.write_directory(key, value, ttl)
         return self.write_file(key, value, ttl)
 
     def write_file(self, key, value, ttl=None):
+        """
+        Write a file (key: value pair) to etcd
+        """
         try:
             result = self.client.write(key, value, ttl=ttl, dir=False)
         except (etcd.EtcdNotFile, etcd.EtcdRootReadOnly, ValueError) as err:
@@ -305,6 +380,9 @@ class EtcdClient:
         return getattr(result, "value")
 
     def write_directory(self, key, value, ttl=None):
+        """
+        Write a directory (key: {}) to etcd
+        """
         if value is not None:
             log.info("etcd: non-empty value passed for directory: %s", value)
         try:
@@ -330,6 +408,11 @@ class EtcdClient:
         return getattr(result, "dir")
 
     def ls(self, path):
+        """
+        Get all the top level keys and their values at the given path.
+
+        If the key is a directory, its value is an empty dictionary.
+        """
         ret = {}
         try:
             items = self.read(path)
@@ -343,6 +426,7 @@ class EtcdClient:
             )
             return None
 
+        # This will find the top level keys only since it's not recursive
         for item in items.children:
             if item.dir is True:
                 if item.key == path:
@@ -354,9 +438,15 @@ class EtcdClient:
         return {path: ret}
 
     def rm(self, key, recurse=False):
+        """
+        An alias for delete
+        """
         return self.delete(key, recurse)
 
     def delete(self, key, recursive=False):
+        """
+        Delete keys or (recursively) whole directories
+        """
         try:
             if self.client.delete(key, recursive=recursive):
                 return True
@@ -409,9 +499,15 @@ class EtcdClient:
 
 
 def get_conn(opts, profile=None, **kwargs):
+    """
+    Client creation at the module level.
+    """
     client = EtcdClient(opts, profile, **kwargs)
     return client
 
 
 def tree(client, path):
+    """
+    Module level find tree at the given path.
+    """
     return client.tree(path)
