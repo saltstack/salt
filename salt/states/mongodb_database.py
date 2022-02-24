@@ -18,7 +18,16 @@ def __virtual__():
     return (False, "mongodb module could not be loaded")
 
 
-def absent(name, user=None, password=None, host=None, port=None, authdb=None, ssl=None):
+def absent(
+    name,
+    user=None,
+    password=None,
+    host=None,
+    port=None,
+    authdb=None,
+    ssl=None,
+    verify_ssl=None,
+):
     """
     Ensure that the named database is absent. Note that creation doesn't make
     sense in MongoDB, since a database doesn't exist if it's empty.
@@ -49,7 +58,14 @@ def absent(name, user=None, password=None, host=None, port=None, authdb=None, ss
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     if __salt__["mongodb.db_exists"](
-        name, user, password, host, port, authdb=authdb, ssl=ssl
+        name,
+        user,
+        password,
+        host,
+        port,
+        authdb=authdb,
+        ssl=ssl,
+        verify_ssl=verify_ssl,
     ):
         if __opts__["test"]:
             ret["result"] = None
@@ -58,7 +74,14 @@ def absent(name, user=None, password=None, host=None, port=None, authdb=None, ss
             )
             return ret
         if __salt__["mongodb.db_remove"](
-            name, user, password, host, port, authdb=authdb, ssl=ssl
+            name,
+            user,
+            password,
+            host,
+            port,
+            authdb=authdb,
+            ssl=ssl,
+            verify_ssl=verify_ssl,
         ):
             ret["comment"] = "Database {} has been removed".format(name)
             ret["changes"][name] = "Absent"

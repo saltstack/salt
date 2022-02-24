@@ -60,16 +60,22 @@ def test_absent():
 
 
 @pytest.mark.parametrize(
-    "expected_ssl, absent_kwargs",
+    "expected_ssl, expected_allow_invalid, absent_kwargs",
     [
-        (True, {"name": "some_database", "ssl": True}),
-        (False, {"name": "some_database", "ssl": False}),
-        (False, {"name": "some_database", "ssl": None}),
-        (False, {"name": "some_database"}),
+        (True, False, {"name": "some_database", "ssl": True}),
+        (True, False, {"name": "some_database", "ssl": True, "verify_ssl": None}),
+        (True, False, {"name": "some_database", "ssl": True, "verify_ssl": True}),
+        (True, True, {"name": "some_database", "ssl": True, "verify_ssl": False}),
+        (False, False, {"name": "some_database", "ssl": False}),
+        (False, False, {"name": "some_database", "ssl": None}),
+        (False, False, {"name": "some_database"}),
+        (False, False, {"name": "some_database", "verify_ssl": None}),
+        (False, False, {"name": "some_database", "verify_ssl": True}),
+        (False, True, {"name": "some_database", "verify_ssl": False}),
     ],
 )
 def test_when_mongodb_database_remove_is_called_it_should_correctly_pass_ssl_argument(
-    expected_ssl, absent_kwargs
+    expected_ssl, expected_allow_invalid, absent_kwargs
 ):
     # database from params needs to be in this return_value
     salt.modules.mongodb.pymongo.MongoClient.return_value.database_names.return_value = [
@@ -80,7 +86,12 @@ def test_when_mongodb_database_remove_is_called_it_should_correctly_pass_ssl_arg
     mongodb_database.absent(**absent_kwargs)
     salt.modules.mongodb.pymongo.MongoClient.assert_has_calls(
         [
-            call(host="mongodb.example.net", port=1982, ssl=expected_ssl),
+            call(
+                host="mongodb.example.net",
+                port=1982,
+                ssl=expected_ssl,
+                tlsAllowInvalidCertificates=expected_allow_invalid,
+            ),
             call().__bool__(),
             # Not sure why database_names is in the call list given our
             # return_value modifications above - it *should* have removed that
@@ -88,7 +99,12 @@ def test_when_mongodb_database_remove_is_called_it_should_correctly_pass_ssl_arg
             # other way to ensure that database_names/drop_database is out of
             # the MongoClient mock call list, but it was taking too long.
             call().database_names(),
-            call(host="mongodb.example.net", port=1982, ssl=expected_ssl),
+            call(
+                host="mongodb.example.net",
+                port=1982,
+                ssl=expected_ssl,
+                tlsAllowInvalidCertificates=expected_allow_invalid,
+            ),
             call().__bool__(),
             call().drop_database("some_database"),
         ]
