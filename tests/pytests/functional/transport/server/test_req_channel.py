@@ -7,7 +7,6 @@ import salt.channel.server
 import salt.config
 import salt.exceptions
 import salt.ext.tornado.gen
-import salt.log.setup
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils

@@ -26,7 +26,6 @@ import salt.config
 import salt.defaults.exitcodes
 import salt.exceptions
 import salt.loader
-import salt.log.setup
 import salt.minion
 import salt.output
 import salt.roster
@@ -40,13 +39,14 @@ import salt.utils.hashutils
 import salt.utils.json
 import salt.utils.network
 import salt.utils.path
+import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.thin
 import salt.utils.url
 import salt.utils.verify
+from salt._logging import LOG_LEVELS
 from salt._logging.mixins import MultiprocessingStateMixin
 from salt.template import compile_template
-from salt.utils.platform import is_junos, is_windows
 from salt.utils.process import Process
 from salt.utils.zeromq import zmq
 
@@ -190,7 +190,7 @@ EOF'''.format(
     ]
 )
 
-if not is_windows() and not is_junos():
+if not salt.utils.platform.is_windows() and not salt.utils.platform.is_junos():
     shim_file = os.path.join(os.path.dirname(__file__), "ssh_py_shim.py")
     if not os.path.exists(shim_file):
         # On esky builds we only have the .pyc file
@@ -1289,10 +1289,7 @@ class Single:
         debug = ""
         if not self.opts.get("log_level"):
             self.opts["log_level"] = "info"
-        if (
-            salt.log.setup.LOG_LEVELS["debug"]
-            >= salt.log.setup.LOG_LEVELS[self.opts.get("log_level", "info")]
-        ):
+        if LOG_LEVELS["debug"] >= LOG_LEVELS[self.opts.get("log_level", "info")]:
             debug = "1"
         arg_str = '''
 OPTIONS.config = \

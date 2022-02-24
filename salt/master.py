@@ -211,6 +211,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         old_present = set()
         while True:
             now = int(time.time())
+            log.trace("Running maintenance routines")
             if (now - last) >= self.loop_interval:
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)

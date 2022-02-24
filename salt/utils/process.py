@@ -745,10 +745,7 @@ class ProcessManager:
                     "Some processes failed to respect the KILL signal: %s",
                     "; ".join(
                         "Process: {} (Pid: {})".format(v["Process"], k)
-                        for (  # pylint: disable=str-format-in-logging
-                            k,
-                            v,
-                        ) in self._process_map.items()
+                        for (k, v) in self._process_map.items()
                     ),
                 )
                 log.info("kill_children retries left: %s", available_retries)
@@ -759,7 +756,7 @@ class ProcessManager:
                     "Failed to kill the following processes: %s",
                     "; ".join(
                         "Process: {} (Pid: {})".format(v["Process"], k)
-                        for (  # pylint: disable=str-format-in-logging
+                        for (
                             k,
                             v,
                         ) in self._process_map.items()
@@ -954,8 +951,25 @@ class Process(multiprocessing.Process):
         def wrapped_run_func():
             # Static after fork method, always needs to happen first
             appendproctitle(self.name)
+
+            # Set the logging options dictionary if not already set
             if not salt._logging.get_logging_options_dict():
                 salt._logging.set_logging_options_dict(self.__logging_config__)
+
+            if not salt.utils.platform.spawning_platform():
+                # On non-spawning platforms, the new process inherits the parent
+                # process logging setup.
+                # To be on the safe side and avoid duplicate handlers or handlers which connect
+                # to services which would have to reconnect, we just shutdown logging before
+                # setting it up again.
+                try:
+                    salt._logging.shutdown_logging()
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.exception(
+                        "Failed to shutdown logging when starting on %s: %s", self, exc
+                    )
+
+            # Setup logging on the new process
             try:
                 salt._logging.setup_logging()
             except Exception as exc:  # pylint: disable=broad-except
@@ -965,6 +979,7 @@ class Process(multiprocessing.Process):
                     exc,
                 )
 
+            # Run any after fork methods registered
             for method, args, kwargs in self._after_fork_methods:
                 try:
                     method(*args, **kwargs)
@@ -978,6 +993,7 @@ class Process(multiprocessing.Process):
                     )
                     continue
             try:
+                # Run the process target function
                 return run_func()
             except SystemExit:  # pylint: disable=try-except-raise
                 # These are handled by multiprocessing.Process._bootstrap()
@@ -994,6 +1010,7 @@ class Process(multiprocessing.Process):
                 # it above.
                 raise
             finally:
+                # Run any registered process finalization routines
                 try:
                     for method, args, kwargs in self._finalize_methods:
                         try:
@@ -1008,7 +1025,7 @@ class Process(multiprocessing.Process):
                             )
                             continue
                 finally:
-                    # Static finalize method, should always run last
+                    # Static finalize method, should always run last, shutdown logging.
                     try:
                         salt._logging.shutdown_logging()
                     except Exception as exc:  # pylint: disable=broad-except
