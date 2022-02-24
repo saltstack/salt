@@ -56,7 +56,7 @@ SALT_INTERNAL_LOADERS_PATHS = (
     str(SALT_BASE_PATH / "executors"),
     str(SALT_BASE_PATH / "fileserver"),
     str(SALT_BASE_PATH / "grains"),
-    str(SALT_BASE_PATH / "log" / "handlers"),
+    str(SALT_BASE_PATH / "log_handlers"),
     str(SALT_BASE_PATH / "matchers"),
     str(SALT_BASE_PATH / "metaproxy"),
     str(SALT_BASE_PATH / "modules"),
@@ -691,8 +691,6 @@ def log_handlers(opts):
         _module_dirs(
             opts,
             "log_handlers",
-            int_type="handlers",
-            base_path=str(SALT_BASE_PATH / "log"),
         ),
         opts,
         tag="log_handlers",

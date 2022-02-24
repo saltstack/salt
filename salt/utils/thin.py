@@ -920,6 +920,8 @@ def gen_min(
         "salt/pillar",
         "salt/pillar/__init__.py",
         "salt/utils/textformat.py",
+        "salt/log_handlers",
+        "salt/log_handlers/__init__.py",
         "salt/_logging/__init__.py",
         "salt/_logging/handlers.py",
         "salt/_logging/impl.py",
