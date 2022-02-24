@@ -1,5 +1,6 @@
 import functools
 import io
+import logging
 import multiprocessing
 import os
 import signal
@@ -9,6 +10,7 @@ import threading
 import time
 
 import pytest
+import salt._logging
 import salt.utils.platform
 import salt.utils.process
 from tests.support.mock import patch
@@ -21,6 +23,8 @@ try:
     HAS_PSUTIL = True
 except ImportError:
     pass
+
+log = logging.getLogger(__name__)
 
 
 def die(func):
@@ -216,15 +220,18 @@ class TestProcessCallbacks(TestCase):
 
     def test_callbacks(self):
         "Validate Process call after fork and finalize methods"
-        teardown_to_mock = "salt.log.setup.shutdown_multiprocessing_logging"
-        log_to_mock = "salt.log.setup.setup_multiprocessing_logging"
-        with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
+        with patch(
+            "salt._logging.get_logging_options_dict", return_value={"1": 1}
+        ) as ls1, patch("salt._logging.setup_logging") as ls2, patch(
+            "salt._logging.shutdown_logging"
+        ) as ls3:
             evt = multiprocessing.Event()
             proc = salt.utils.process.Process(target=self.process_target, args=(evt,))
             proc.run()
             assert evt.is_set()
-        mb.assert_called()
-        ma.assert_called()
+        ls1.assert_called()
+        ls2.assert_called()
+        ls3.assert_called()
 
     def test_callbacks_called_when_run_overridden(self):
         "Validate Process sub classes call after fork and finalize methods when run is overridden"
@@ -237,14 +244,17 @@ class TestProcessCallbacks(TestCase):
             def run(self):
                 self.evt.set()
 
-        teardown_to_mock = "salt.log.setup.shutdown_multiprocessing_logging"
-        log_to_mock = "salt.log.setup.setup_multiprocessing_logging"
-        with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
+        with patch(
+            "salt._logging.get_logging_options_dict", return_value={"1": 1}
+        ) as ls1, patch("salt._logging.setup_logging") as ls2, patch(
+            "salt._logging.shutdown_logging"
+        ) as ls3:
             proc = MyProcess()
             proc.run()
             assert proc.evt.is_set()
-        ma.assert_called()
-        mb.assert_called()
+        ls1.assert_called()
+        ls2.assert_called()
+        ls3.assert_called()
 
 
 @skipIf(not HAS_PSUTIL, "Missing psutil")
@@ -392,20 +402,23 @@ class TestSignalHandlingProcessCallbacks(TestCase):
     def test_callbacks(self):
         "Validate SignalHandlingProcess call after fork and finalize methods"
 
-        teardown_to_mock = "salt.log.setup.shutdown_multiprocessing_logging"
-        log_to_mock = "salt.log.setup.setup_multiprocessing_logging"
         sig_to_mock = "salt.utils.process.SignalHandlingProcess._setup_signals"
         # Mock _setup_signals so we do not register one for this process.
         evt = multiprocessing.Event()
         with patch(sig_to_mock):
-            with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
+            with patch(
+                "salt._logging.get_logging_options_dict", return_value={"1": 1}
+            ) as ls1, patch("salt._logging.setup_logging") as ls2, patch(
+                "salt._logging.shutdown_logging"
+            ) as ls3:
                 sh_proc = salt.utils.process.SignalHandlingProcess(
                     target=self.process_target, args=(evt,)
                 )
                 sh_proc.run()
                 assert evt.is_set()
-        ma.assert_called()
-        mb.assert_called()
+        ls1.assert_called()
+        ls2.assert_called()
+        ls3.assert_called()
 
     def test_callbacks_called_when_run_overridden(self):
         "Validate SignalHandlingProcess sub classes call after fork and finalize methods when run is overridden"
@@ -418,17 +431,20 @@ class TestSignalHandlingProcessCallbacks(TestCase):
             def run(self):
                 self.evt.set()
 
-        teardown_to_mock = "salt.log.setup.shutdown_multiprocessing_logging"
-        log_to_mock = "salt.log.setup.setup_multiprocessing_logging"
         sig_to_mock = "salt.utils.process.SignalHandlingProcess._setup_signals"
         # Mock _setup_signals so we do not register one for this process.
         with patch(sig_to_mock):
-            with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
+            with patch(
+                "salt._logging.get_logging_options_dict", return_value={"1": 1}
+            ) as ls1, patch("salt._logging.setup_logging") as ls2, patch(
+                "salt._logging.shutdown_logging"
+            ) as ls3:
                 sh_proc = MyProcess()
                 sh_proc.run()
                 assert sh_proc.evt.is_set()
-        ma.assert_called()
-        mb.assert_called()
+        ls1.assert_called()
+        ls2.assert_called()
+        ls3.assert_called()
 
 
 class TestDup2(TestCase):
