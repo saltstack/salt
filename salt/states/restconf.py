@@ -191,12 +191,8 @@ def _compare_changes(old, new, output_style="yaml"):
     if output_style == "json":
         old = json.dumps(old, sort_keys=False, indent=2).splitlines()
         new = json.dumps(new, sort_keys=False, indent=2).splitlines()
-    log.debug("_compare_changes:")
-    log.debug("old:")
-    log.debug(old)
-    log.debug("new:")
-    log.debug(new)
+
     diffout = difflib.unified_diff(old, new, fromfile="before", tofile="after")
     diffclean = "\n".join([x.replace("\n", "") for x in diffout])
-    log.debug(diffclean)
+    log.debug(f"resconf_diff: {diffclean}")
     return diffclean
