@@ -50,7 +50,6 @@ rather than top-level configurations. This being the case, it is better to
 always use a named configuration profile, as shown above.
 """
 
-from ast import Delete
 import logging
 
 from salt.exceptions import CommandExecutionError
