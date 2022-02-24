@@ -1744,7 +1744,7 @@ class Minion(MinionBase):
                 self.schedule.functions = self.functions
                 self.schedule.returners = self.returners
 
-        if self.opts["grains_refresh_pre_exec"]:
+        if self.opts.get("grains_refresh_pre_exec"):
             self.opts["grains"] = salt.loader.grains(self.opts, force_refresh=True)
 
         process_count_max = self.opts.get("process_count_max")
