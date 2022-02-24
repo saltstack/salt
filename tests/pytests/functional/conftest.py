@@ -1,4 +1,5 @@
 import logging
+import pathlib
 import shutil
 
 import pytest
@@ -79,6 +80,11 @@ def loaders(minion_opts):
 
 @pytest.fixture(autouse=True)
 def reset_loaders_state(loaders):
+    # Delete the files cache after each test
+    cachedir = pathlib.Path(loaders.opts["cachedir"])
+    shutil.rmtree(str(cachedir), ignore_errors=True)
+    cachedir.mkdir(parents=True, exist_ok=True)
+    # The above can be deleted after pytest-salt-factories>=1.0.0rc7 has been merged
     try:
         # Run the tests
         yield

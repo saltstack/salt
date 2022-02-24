@@ -1,0 +1,1 @@
+Prevent get_tops from performing a Set operation on a List

@@ -17,7 +17,17 @@ Statistics
 - Total Issue References: **146**
 - Total PR References: **312**
 
-- Contributors: **74** (`Ch3LL`_, `DmitryKuzmenko`_, `JohannesEbke`_, `RabidCicada`_, `Talkless`_, `The-Loeki`_, `abednarik`_, `anlutro`_, `basepi`_, `bdrung`_, `cachedout`_, `captaininspiration`_, `clarkperkins`_, `clinta`_, `cro`_, `darix`_, `dmacvicar`_, `dr4Ke`_, `dschaller`_, `edencrane`_, `garethgreenaway`_, `gladiatr72`_, `gtmanfred`_, `iacopo-papalini`_, `isbm`_, `jacksontj`_, `jacobhammons`_, `jakehilton`_, `jespada`_, `jfindlay`_, `joejulian`_, `justinta`_, `kiorky`_, `kraney`_, `llua`_, `mcalmer`_, `mchugh19`_, `mew1033`_, `mlalpho`_, `moltob`_, `multani`_, `myii`_, `opdude`_, `paiou`_, `pass-by-value`_, `peripatetic-sojourner`_, `pprince`_, `rallytime`_, `redmcg`_, `replicant0wnz`_, `rhansen`_, `rmtmckenzie`_, `s0undt3ch`_, `sakateka`_, `sbreidba`_, `seanjnkns`_, `sjmh`_, `sjorge`_, `skizunov`_, `szeestraten`_, `tbaker57`_, `techhat`_, `terminalmage`_, `thusoy`_, `ticosax`_, `twangboy`_, `virtualguy`_, `vutny`_, `whiteinge`_, `xmj`_, `xopher-mc`_, `yannis666`_, `youngnick`_, `zygiss`_)
+- Contributors: **74** (`Ch3LL`_, `DmitryKuzmenko`_, `JohannesEbke`_, `RabidCicada`_, `Talkless`_,
+  `The-Loeki`_, `abednarik`_, `anlutro`_, `basepi`_, `bdrung`_, `cachedout`_,
+  `captaininspiration`_, `clarkperkins`_, `clinta`_, `cro`_, `darix`_, `dmacvicar`_, `dr4Ke`_,
+  `dschaller`_, `edencrane`_, `garethgreenaway`_, `gladiatr72`_, `gtmanfred`_, `iacopo-papalini`_,
+  `isbm`_, `jacksontj`_, `jacobhammons`_, `jakehilton`_, `jespada`_, `jfindlay`_, `joejulian`_,
+  `justinta`_, `kiorky`_, `kraney`_, `llua`_, `mcalmer`_, `mchugh19`_, `mew1033`_, `mlalpho`_,
+  `moltob`_, `multani`_, `myii`_, `opdude`_, `paiou`_, `pass-by-value`_, `peripatetic-sojourner`_,
+  `pprince`_, `rallytime`_, `redmcg`_, `replicant0wnz`_, `rhansen`_, `rmtmckenzie`_, `s0undt3ch`_,
+  `sakateka`_, `sbreidba`_, `seanjnkns`_, `sjmh`_, `sjorge`_, `skizunov`_, `szeestraten`_,
+  `tbaker57`_, `techhat`_, `terminalmage`_, `thusoy`_, `ticosax`_, `twangboy`_, `virtualguy`_,
+  `vutny`_, `whiteinge`_, `xmj`_, `xopher-mc`_, `yannis666`_, `youngnick`_, `zygiss`_)
 
 
 Security Fix

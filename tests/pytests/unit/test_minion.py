@@ -53,46 +53,68 @@ def test_minion_load_grains_default():
 
 
 @pytest.mark.parametrize(
-    "req_channel",
+    "event",
     [
         (
-            "salt.transport.client.AsyncReqChannel.factory",
-            lambda load, timeout, tries: salt.ext.tornado.gen.maybe_future(tries),
+            "fire_event",
+            lambda data, tag, cb=None, timeout=60: True,
         ),
         (
-            "salt.transport.client.ReqChannel.factory",
-            lambda load, timeout, tries: tries,
+            "fire_event_async",
+            lambda data, tag, cb=None, timeout=60: salt.ext.tornado.gen.maybe_future(
+                True
+            ),
         ),
     ],
 )
-def test_send_req_tries(req_channel):
-    channel_enter = MagicMock()
-    channel_enter.send.side_effect = req_channel[1]
-    channel = MagicMock()
-    channel.__enter__.return_value = channel_enter
+def test_send_req_fires_completion_event(event):
+    event_enter = MagicMock()
+    event_enter.send.side_effect = event[1]
+    event = MagicMock()
+    event.__enter__.return_value = event_enter
 
-    with patch(req_channel[0], return_value=channel):
-        opts = {
-            "random_startup_delay": 0,
-            "grains": {},
-            "return_retry_tries": 30,
-            "minion_sign_messages": False,
-        }
+    with patch("salt.utils.event.get_event", return_value=event):
+        opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        opts["random_startup_delay"] = 0
+        opts["return_retry_tries"] = 30
+        opts["grains"] = {}
         with patch("salt.loader.grains"):
             minion = salt.minion.Minion(opts)
 
             load = {"load": "value"}
             timeout = 60
 
-            if "Async" in req_channel[0]:
+            if "async" in event[0]:
                 rtn = minion._send_req_async(load, timeout).result()
             else:
                 rtn = minion._send_req_sync(load, timeout)
 
-            assert rtn == 30
+            # get the
+            for idx, call in enumerate(event.mock_calls, 1):
+                if "fire_event" in call[0]:
+                    condition_event_tag = (
+                        len(call.args) > 1
+                        and call.args[1] == "__master_req_channel_payload"
+                    )
+                    condition_event_tag_error = "{} != {}; Call(number={}): {}".format(
+                        idx, call, call.args[1], "__master_req_channel_payload"
+                    )
+                    condition_timeout = (
+                        len(call.kwargs) == 1 and call.kwargs["timeout"] == timeout
+                    )
+                    condition_timeout_error = "{} != {}; Call(number={}): {}".format(
+                        idx, call, call.kwargs["timeout"], timeout
+                    )
+
+                    fire_event_called = True
+                    assert condition_event_tag, condition_event_tag_error
+                    assert condition_timeout, condition_timeout_error
+
+            assert fire_event_called
+            assert rtn
 
 
-@patch("salt.transport.client.ReqChannel.factory")
+@patch("salt.channel.client.ReqChannel.factory")
 def test_mine_send_tries(req_channel_factory):
     channel_enter = MagicMock()
     channel_enter.send.side_effect = lambda load, timeout, tries: tries
@@ -492,7 +514,7 @@ def test_scheduler_before_connect():
             minion.destroy()
 
 
-def test_minion_module_refresh():
+def test_minion_module_refresh(tmp_path):
     """
     Tests that the 'module_refresh' just return in case there is no 'schedule'
     because destroy method was already called.
@@ -506,6 +528,7 @@ def test_minion_module_refresh():
     ):
         try:
             mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+            mock_opts["cachedir"] = str(tmp_path)
             minion = salt.minion.Minion(
                 mock_opts,
                 io_loop=salt.ext.tornado.ioloop.IOLoop(),
@@ -519,7 +542,7 @@ def test_minion_module_refresh():
             minion.destroy()
 
 
-def test_minion_module_refresh_beacons_refresh():
+def test_minion_module_refresh_beacons_refresh(tmp_path):
     """
     Tests that 'module_refresh' calls beacons_refresh and that the
     minion object has a beacons attribute with beacons.
@@ -533,6 +556,7 @@ def test_minion_module_refresh_beacons_refresh():
     ):
         try:
             mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+            mock_opts["cachedir"] = str(tmp_path)
             minion = salt.minion.Minion(
                 mock_opts,
                 io_loop=salt.ext.tornado.ioloop.IOLoop(),
@@ -901,12 +925,12 @@ def test_master_type_failover():
             "master_uri": "tcp://192.168.2.1:4505",
         }
 
-    def mock_transport_factory(opts, **kwargs):
+    def mock_channel_factory(opts, **kwargs):
         assert opts["master"] == "master2"
         return MockPubChannel()
 
     with patch("salt.minion.resolve_dns", mock_resolve_dns), patch(
-        "salt.transport.client.AsyncPubChannel.factory", mock_transport_factory
+        "salt.channel.client.AsyncPubChannel.factory", mock_channel_factory
     ), patch("salt.loader.grains", MagicMock(return_value=[])):
         with pytest.raises(SaltClientError):
             minion = salt.minion.Minion(mock_opts)

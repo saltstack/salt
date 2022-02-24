@@ -36,6 +36,7 @@ def find_file(path, saltenv="base", **kwargs):
     """
     Search the environment for the relative path.
     """
+    actual_saltenv = saltenv
     if "env" in kwargs:
         # "env" is not supported; Use "saltenv".
         kwargs.pop("env")
@@ -94,6 +95,8 @@ def find_file(path, saltenv="base", **kwargs):
             return _add_file_stat(fnd)
         return fnd
     for root in __opts__["file_roots"][saltenv]:
+        if saltenv == "__env__":
+            root = root.replace("__env__", actual_saltenv)
         full = os.path.join(root, path)
         if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
             fnd["path"] = full
@@ -305,6 +308,7 @@ def _file_lists(load, form):
         load.pop("env")
 
     saltenv = load["saltenv"]
+    actual_saltenv = saltenv
     if saltenv not in __opts__["file_roots"]:
         if "__env__" in __opts__["file_roots"]:
             log.debug(
@@ -399,8 +403,13 @@ def _file_lists(load, form):
                         # outside of the root dir of the fileserver
                         # (i.e. the "path" variable)
                         ret["links"][rel_path] = link_dest
+                    else:
+                        if not __opts__["fileserver_followsymlinks"]:
+                            ret["links"][rel_path] = link_dest
 
         for path in __opts__["file_roots"][saltenv]:
+            if saltenv == "__env__":
+                path = path.replace("__env__", actual_saltenv)
             for root, dirs, files in salt.utils.path.os_walk(
                 path, followlinks=__opts__["fileserver_followsymlinks"]
             ):

@@ -64,10 +64,8 @@ state module
 
 .. warning::
 
-    Package names are currently case-sensitive. If the minion is using a
-    package manager which is not case-sensitive (such as :mod:`pkgng
-    <salt.modules.pkgng>`), then this state will fail if the proper case is not
-    used. This will be addressed in a future release of Salt.
+    Make sure the package name has the correct case for package managers which are
+    case-sensitive (such as :mod:`pkgng <salt.modules.pkgng>`).
 """
 
 
@@ -1393,7 +1391,7 @@ def installed(
 
     |
 
-    **MULTIPLE PACKAGE INSTALLATION OPTIONS: (not supported in pkgng)**
+    **MULTIPLE PACKAGE INSTALLATION OPTIONS:**
 
     :param list pkgs:
         A list of packages to install from a software repository. All packages
@@ -3005,7 +3003,7 @@ def _uninstall(
         }
 
     comments = []
-    not_installed = sorted([x for x in pkg_params if x not in targets])
+    not_installed = sorted(x for x in pkg_params if x not in targets)
     if not_installed:
         comments.append(
             "The following packages were not installed: {}".format(
