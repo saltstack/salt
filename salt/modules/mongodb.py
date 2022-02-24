@@ -161,6 +161,11 @@ def db_list(
 
         .. versionadded:: 3006
 
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3006
+
     CLI Example:
 
     .. code-block:: bash
@@ -236,6 +241,11 @@ def db_exists(
 
         .. versionadded:: 3006
 
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3006
+
     CLI Example:
 
     .. code-block:: bash
@@ -306,6 +316,11 @@ def db_remove(
 
         .. versionadded:: 3006
 
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3006
+
     CLI Example:
 
     .. code-block:: bash
@@ -346,29 +361,6 @@ def version(
     Get MongoDB instance version.
 
     user
-        The user to authenticate with, if necessary.
-
-    password
-        The password to authenticate with, if necessary.
-
-    host
-        The host running MongoDB.
-
-    port
-        The port MongoDB is listening on.
-
-    database
-        The database to get the buildInfo version from, if not "admin".
-
-    authdb
-        The database to authenticate against, if not "admin".
-
-    ssl
-        Whether or not to connect to MongoDB over SSL. Default ``False``.
-
-        .. versionadded:: 3005
-
-    user
         The user to connect to MongoDB as. Default is None.
 
     password
@@ -385,6 +377,11 @@ def version(
 
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3006
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
 
         .. versionadded:: 3006
 
@@ -452,6 +449,11 @@ def user_find(
 
         .. versionadded:: 3006
 
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3006
+
     CLI Example:
 
     .. code-block:: bash
@@ -507,6 +509,11 @@ def user_list(
 
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3006
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
 
         .. versionadded:: 3006
 
@@ -581,6 +588,11 @@ def user_exists(
 
         .. versionadded:: 3006
 
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3006
+
     CLI Example:
 
     .. code-block:: bash
@@ -649,6 +661,11 @@ def user_create(
 
         .. versionadded:: 3006
 
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3006
+
     CLI Example:
 
     .. code-block:: bash
@@ -710,6 +727,11 @@ def user_remove(
 
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3006
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
 
         .. versionadded:: 3006
 
@@ -778,31 +800,12 @@ def user_roles_exists(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
-        .. versionadded:: 3005
+        .. versionadded:: 3006
 
-    name
-        The name of the user to check for the specified roles.
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
 
-    roles
-        The roles to check are associated with the specified user.
-
-    database
-        The database to check has the specified roles for the specified user.
-
-    user
-        The user to connect to MongoDB as. Default is None.
-
-    password
-        The password to use to connect to MongoDB as.  Default is None.
-
-    host
-        The host where MongoDB is running. Default is None.
-
-    port
-        The host where MongoDB is running. Default is None.
-
-    authdb
-        The MongoDB database to use for authentication. Default is None.
+        .. versionadded:: 3006
 
     CLI Examples:
 
@@ -885,34 +888,10 @@ def user_grant_roles(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
-        .. versionadded:: 3005
+        .. versionadded:: 3006
 
-    name
-        The user to grant the specified roles to.
-
-    roles
-        The roles to grant to the specified user.
-
-    database
-        The database to great the roles against for the specified user.
-
-    user
-        The user to connect to MongoDB as. Default is None.
-
-    password
-        The password to use to connect to MongoDB as.  Default is None.
-
-    host
-        The host where MongoDB is running. Default is None.
-
-    port
-        The host where MongoDB is running. Default is None.
-
-    authdb
-        The MongoDB database to use for authentication. Default is None.
-
-    ssl
-        Whether or not to connect to MongoDB over SSL. Default ``False``.
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
 
         .. versionadded:: 3006
 
@@ -994,31 +973,10 @@ def user_revoke_roles(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
-        .. versionadded:: 3005
+        .. versionadded:: 3006
 
-    user
-        The user to connect to MongoDB as. Default is None.
-
-    roles
-        The roles to revoke from the specified user.
-
-    database
-        The database to revoke the roles from for the specified user.
-
-    password
-        The password to use to connect to MongoDB as.  Default is None.
-
-    host
-        The host where MongoDB is running. Default is None.
-
-    port
-        The host where MongoDB is running. Default is None.
-
-    authdb
-        The MongoDB database to use for authentication. Default is None.
-
-    ssl
-        Whether or not to connect to MongoDB over SSL. Default ``False``.
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
 
         .. versionadded:: 3006
 
@@ -1093,6 +1051,9 @@ def collection_create(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
     CLI Example:
 
     .. code-block:: bash
@@ -1150,6 +1111,12 @@ def collection_drop(
     authdb
         The MongoDB database to use for authentication. Default is None.
 
+    ssl
+        Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
     CLI Example:
 
     .. code-block:: bash
@@ -1205,6 +1172,9 @@ def collections_list(
 
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
 
     CLI Example:
 
@@ -1269,31 +1239,10 @@ def insert(
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
 
-        .. versionadded:: 3005
+        .. versionadded:: 3006
 
-    objects
-        The objects to insert into the collection, should be provided as a list.
-
-    collection
-        The collection to insert the objects into.
-
-    user
-        The user to connect to MongoDB as. Default is None.
-
-    password
-        The password to use to connect to MongoDB as.  Default is None.
-
-    host
-        The host where MongoDB is running. Default is None.
-
-    port
-        The host where MongoDB is running. Default is None.
-
-    authdb
-        The MongoDB database to use for authentication. Default is None.
-
-    ssl
-        Whether or not to connect to MongoDB over SSL. Default ``False``.
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
 
         .. versionadded:: 3006
 
@@ -1373,6 +1322,11 @@ def update_one(
 
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3006
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
 
         .. versionadded:: 3006
 
@@ -1478,6 +1432,11 @@ def find(
 
         .. versionadded:: 3006
 
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
+
+        .. versionadded:: 3006
+
     CLI Example:
 
     .. code-block:: bash
@@ -1560,6 +1519,11 @@ def remove(
 
     ssl
         Whether or not to connect to MongoDB over SSL. Default ``False``.
+
+        .. versionadded:: 3006
+
+    verify_ssl
+        Whether or not to verify the server cert when connecting. Default True.
 
         .. versionadded:: 3006
 
