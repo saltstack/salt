@@ -628,7 +628,7 @@ class LocalClient:
             if key not in opts:
                 opts[key] = val
         batch = salt.cli.batch.Batch(opts, eauth=eauth, quiet=True)
-        for ret in batch.run():
+        for ret, _ in batch.run():
             yield ret
 
     def cmd(

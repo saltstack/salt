@@ -1060,45 +1060,6 @@ def _gen_xml(
                     chardev_context["protocol"] = chardev.get("protocol", "telnet")
                 context[chardev_type + "s"].append(chardev_context)
 
-    # processing of deprecated parameters
-    old_port = kwargs.get("telnet_port")
-    if old_port:
-        salt.utils.versions.warn_until(
-            "Phosphorus",
-            "'telnet_port' parameter has been deprecated, use the 'serials' and"
-            " 'consoles' parameters instead. 'telnet_port' parameter has been"
-            " deprecated, use the 'serials' parameter with a value like ``{{{{'type':"
-            " 'tcp', 'protocol': 'telnet', 'port': {}}}}}`` instead and a similar"
-            " `consoles` parameter. It will be removed in {{version}}.".format(
-                old_port
-            ),
-        )
-
-    old_serial_type = kwargs.get("serial_type")
-    if old_serial_type:
-        salt.utils.versions.warn_until(
-            "Phosphorus",
-            "'serial_type' parameter has been deprecated, use the 'serials' parameter"
-            " with a value like ``{{{{'type': '{}', 'protocol':  'telnet' }}}}``"
-            " instead and a similar `consoles` parameter. It will be removed in"
-            " {{version}}.".format(old_serial_type),
-        )
-        serial_context = {"type": old_serial_type}
-        if serial_context["type"] == "tcp":
-            serial_context["port"] = old_port or default_port
-            serial_context["protocol"] = "telnet"
-        context["serials"].append(serial_context)
-
-        old_console = kwargs.get("console")
-        if old_console:
-            salt.utils.versions.warn_until(
-                "Phosphorus",
-                "'console' parameter has been deprecated, use the 'serials' and"
-                " 'consoles' parameters instead. It will be removed in {version}.",
-            )
-            if old_console is True:
-                context["consoles"].append(serial_context)
-
     context["disks"] = []
     disk_bus_map = {"virtio": "vd", "xen": "xvd", "fdc": "fd", "ide": "hd"}
     targets = []
@@ -2251,9 +2212,6 @@ def init(
     :param config: minion configuration to use when seeding.
                    See :mod:`seed module for more details <salt.modules.seed>`
     :param boot_dev: String of space-separated devices to boot from (Default: ``'hd'``)
-    :param serial_type: Serial device type. One of ``'pty'``, ``'tcp'`` (Default: ``None``)
-    :param telnet_port: Telnet port to use for serial device of type ``tcp``.
-    :param console: ``True`` to add a console device along with serial one (Default: ``True``)
     :param connection: libvirt connection URI, overriding defaults
 
                        .. versionadded:: 2019.2.0
