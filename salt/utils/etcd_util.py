@@ -179,7 +179,7 @@ class EtcdClient:
 
     def get(self, key, recurse=False):
         """
-        Get the value of a specific key.  If recurse is true, defer to EtcdClient.read() instead.
+        Get the value of a specific key.  If recurse is true, defer to EtcdClient.tree() instead.
         """
         if not recurse:
             try:
