@@ -5,7 +5,6 @@
 """
 
 import pytest
-
 import salt.utils.etcd_util as etcd_util
 from tests.support.mock import MagicMock, patch
 
@@ -25,8 +24,12 @@ except ImportError:
 
 
 pytestmark = [
-    pytest.mark.skipif(HAS_URLLIB3 is False, reason="urllib3 module must be installed."),
-    pytest.mark.skipif(HAS_ETCD is False, reason="python-etcd module must be installed."),
+    pytest.mark.skipif(
+        HAS_URLLIB3 is False, reason="urllib3 module must be installed."
+    ),
+    pytest.mark.skipif(
+        HAS_ETCD is False, reason="python-etcd module must be installed."
+    ),
 ]
 
 
@@ -92,14 +95,14 @@ def test_get():
 
             # iter(list(Exception)) works correctly with both mock<1.1 and mock>=1.1
             mock.side_effect = iter([etcd.EtcdKeyNotFound()])
-            assert client.get("not-found") == None
+            assert client.get("not-found") is None
 
             mock.side_effect = iter([etcd.EtcdConnectionFailed()])
-            assert client.get("watching") == None
+            assert client.get("watching") is None
 
             # python 2.6 test
             mock.side_effect = ValueError
-            assert client.get("not-found") == None
+            assert client.get("not-found") is None
 
             mock.side_effect = Exception
             with pytest.raises(Exception):
@@ -122,19 +125,17 @@ def test_tree():
                 MagicMock(key="/x/c", dir=True),
             ]
             c2.__iter__.return_value = [MagicMock(key="/x/c/d", value="3")]
-            mock.side_effect = iter(
-                [MagicMock(children=c1), MagicMock(children=c2)]
-            )
+            mock.side_effect = iter([MagicMock(children=c1), MagicMock(children=c2)])
             assert client.tree("/x") == {"a": "1", "b": "2", "c": {"d": "3"}}
             mock.assert_any_call("/x")
             mock.assert_any_call("/x/c")
 
             # iter(list(Exception)) works correctly with both mock<1.1 and mock>=1.1
             mock.side_effect = iter([etcd.EtcdKeyNotFound()])
-            assert client.tree("not-found") == None
+            assert client.tree("not-found") is None
 
             mock.side_effect = ValueError
-            assert client.tree("/x") == None
+            assert client.tree("/x") is None
 
             mock.side_effect = Exception
             with pytest.raises(Exception):
@@ -172,47 +173,45 @@ def test_write():
 
         etcd_client.write.return_value = MagicMock(value="salt")
         assert client.write("/some-key", "salt") == "salt"
-        etcd_client.write.assert_called_with(
-            "/some-key", "salt", ttl=None, dir=False
-        )
+        etcd_client.write.assert_called_with("/some-key", "salt", ttl=None, dir=False)
 
         assert client.write("/some-key", "salt", ttl=5) == "salt"
         etcd_client.write.assert_called_with("/some-key", "salt", ttl=5, dir=False)
 
         etcd_client.write.return_value = MagicMock(dir=True)
-        assert client.write("/some-dir", "salt", ttl=0, directory=True) == True
+        assert client.write("/some-dir", "salt", ttl=0, directory=True)
         etcd_client.write.assert_called_with("/some-dir", None, ttl=0, dir=True)
 
         # Check when a file is attempted to be written to a read-only root
         etcd_client.write.side_effect = etcd.EtcdRootReadOnly()
-        assert client.write("/", "some-val", directory=False) == None
+        assert client.write("/", "some-val", directory=False) is None
 
         # Check when a directory is attempted to be written to a read-only root
         etcd_client.write.side_effect = etcd.EtcdRootReadOnly()
-        assert client.write("/", None, directory=True) == None
+        assert client.write("/", None, directory=True) is None
 
         # Check when a file is attempted to be written when unable to connect to the service
         etcd_client.write.side_effect = MaxRetryError(None, None)
-        assert client.write("/some-key", "some-val", directory=False) == None
+        assert client.write("/some-key", "some-val", directory=False) is None
 
         # Check when a directory is attempted to be written when unable to connect to the service
         etcd_client.write.side_effect = MaxRetryError(None, None)
-        assert client.write("/some-dir", None, directory=True) == None
+        assert client.write("/some-dir", None, directory=True) is None
 
         # Check when a file is attempted to be written to a directory that already exists (name-collision)
         etcd_client.write.side_effect = etcd.EtcdNotFile()
-        assert client.write("/some-dir", "some-val", directory=False) == None
+        assert client.write("/some-dir", "some-val", directory=False) is None
 
         # Check when a directory is attempted to be written to a file that already exists (name-collision)
         etcd_client.write.side_effect = etcd.EtcdNotDir()
-        assert client.write("/some-key", None, directory=True) == None
+        assert client.write("/some-key", None, directory=True) is None
 
         # Check when a directory is attempted to be written to a directory that already exists (update-ttl)
         etcd_client.write.side_effect = etcd.EtcdNotFile()
-        assert client.write("/some-dir", None, directory=True) == True
+        assert client.write("/some-dir", None, directory=True)
 
         etcd_client.write.side_effect = ValueError
-        assert client.write("/some-key", "some-val") == None
+        assert client.write("/some-key", "some-val") is None
 
         etcd_client.write.side_effect = Exception
         with pytest.raises(Exception):
@@ -287,7 +286,7 @@ def test_update():
         }
         client._flatten = MagicMock(return_value=flatten_result)
 
-        assert client.update("/some/key", path="/blah") == None
+        assert client.update("/some/key", path="/blah") is None
 
         with patch.object(client, "write", autospec=True) as write_mock:
 
@@ -306,22 +305,22 @@ def test_rm():
         client = etcd_util.EtcdClient({})
 
         etcd_client.delete.return_value = True
-        assert client.rm("/some-key") == True
+        assert client.rm("/some-key")
         etcd_client.delete.assert_called_with("/some-key", recursive=False)
-        assert client.rm("/some-dir", recurse=True) == True
+        assert client.rm("/some-dir", recurse=True)
         etcd_client.delete.assert_called_with("/some-dir", recursive=True)
 
         etcd_client.delete.side_effect = etcd.EtcdNotFile()
-        assert client.rm("/some-dir") == None
+        assert client.rm("/some-dir") is None
 
         etcd_client.delete.side_effect = etcd.EtcdDirNotEmpty()
-        assert client.rm("/some-key") == None
+        assert client.rm("/some-key") is None
 
         etcd_client.delete.side_effect = etcd.EtcdRootReadOnly()
-        assert client.rm("/") == None
+        assert client.rm("/") is None
 
         etcd_client.delete.side_effect = ValueError
-        assert client.rm("/some-dir") == None
+        assert client.rm("/some-dir") is None
 
         etcd_client.delete.side_effect = Exception
         with pytest.raises(Exception):
@@ -337,37 +336,35 @@ def test_watch():
                 value="stack", key="/some-key", modifiedIndex=1, dir=False
             )
             assert client.watch("/some-key") == {
-                    "value": "stack",
-                    "key": "/some-key",
-                    "mIndex": 1,
-                    "changed": True,
-                    "dir": False,
-                }
+                "value": "stack",
+                "key": "/some-key",
+                "mIndex": 1,
+                "changed": True,
+                "dir": False,
+            }
             mock.assert_called_with(
                 "/some-key", wait=True, recursive=False, timeout=0, waitIndex=None
             )
 
-            mock.side_effect = iter(
-                [etcd_util.EtcdUtilWatchTimeout, mock.return_value]
-            )
+            mock.side_effect = iter([etcd_util.EtcdUtilWatchTimeout, mock.return_value])
             assert client.watch("/some-key") == {
-                    "value": "stack",
-                    "changed": False,
-                    "mIndex": 1,
-                    "key": "/some-key",
-                    "dir": False,
-                }
+                "value": "stack",
+                "changed": False,
+                "mIndex": 1,
+                "key": "/some-key",
+                "dir": False,
+            }
 
             mock.side_effect = iter(
                 [etcd_util.EtcdUtilWatchTimeout, etcd.EtcdKeyNotFound]
             )
             assert client.watch("/some-key") == {
-                    "value": None,
-                    "changed": False,
-                    "mIndex": 0,
-                    "key": "/some-key",
-                    "dir": False,
-                }
+                "value": None,
+                "changed": False,
+                "mIndex": 0,
+                "key": "/some-key",
+                "dir": False,
+            }
 
             mock.side_effect = iter([etcd_util.EtcdUtilWatchTimeout, ValueError])
             assert client.watch("/some-key") == {}
@@ -377,12 +374,12 @@ def test_watch():
                 value="stack", key="/some-key", modifiedIndex=1, dir=True
             )
             assert client.watch("/some-dir", recurse=True, timeout=5, index=10) == {
-                    "value": "stack",
-                    "key": "/some-key",
-                    "mIndex": 1,
-                    "changed": True,
-                    "dir": True,
-                }
+                "value": "stack",
+                "key": "/some-key",
+                "mIndex": 1,
+                "changed": True,
+                "dir": True,
+            }
             mock.assert_called_with(
                 "/some-dir", wait=True, recursive=True, timeout=5, waitIndex=10
             )
