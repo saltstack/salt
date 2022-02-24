@@ -1061,6 +1061,8 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                     log.debug("Publish daemon getting data from puller %s", pull_uri)
                     package = pull_sock.recv()
                     log.debug("Publish daemon received payload. size=%d", len(package))
+                    load = salt.payload.Serial({}).loads(package)
+                    package = self.pack_publish(load)
 
                     unpacked_package = salt.payload.unpackage(package)
                     unpacked_package = salt.transport.frame.decode_embedded_strs(
@@ -1154,7 +1156,10 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             self.pub_close()
         ctx = zmq.Context.instance()
         self._sock_data.sock = ctx.socket(zmq.PUSH)
-        self.pub_sock.setsockopt(zmq.LINGER, -1)
+        self._sock_data.sock.setsockopt(zmq.LINGER, -1)
+        self._sock_data.sock.setsockopt(zmq.SNDHWM, self.opts.get("pub_hwm", 1000))
+        self._sock_data.sock.setsockopt(zmq.RCVHWM, self.opts.get("pub_hwm", 1000))
+        self._sock_data.sock.setsockopt(zmq.BACKLOG, self.opts.get("zmq_backlog", 1000))
         if self.opts.get("ipc_mode", "") == "tcp":
             pull_uri = "tcp://127.0.0.1:{}".format(
                 self.opts.get("tcp_master_publish_pull", 4514)
@@ -1164,7 +1169,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                 os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
             )
         log.debug("Connecting to pub server: %s", pull_uri)
-        self.pub_sock.connect(pull_uri)
+        self._sock_data.sock.connect(pull_uri)
         return self._sock_data.sock
 
     def pub_close(self):
@@ -1174,12 +1179,12 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         """
         if hasattr(self._sock_data, "sock"):
             self._sock_data.sock.close()
-            delattr(self._sock_data, "sock")
+            self._sock_data.sock = None
 
-    def publish(self, load):
+    def pack_publish(self, load):
         """
-        Publish "load" to minions. This send the load to the publisher daemon
-        process with does the actual sending to minions.
+        Package the "load" for a publish to minions. This send the load to the
+        publisher daemon process with does the actual sending to minions.
 
         :param dict load: A load to be sent across the wire to minions
         """
@@ -1215,9 +1220,18 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             load.get("jid", None),
             len(payload),
         )
+        return payload
+
+    def publish(self, load):
+        """
+        Publish "load" to minions. This send the load to the publisher daemon
+        process with does the actual sending to minions.
+
+        :param dict load: A load to be sent across the wire to minions
+        """
         if not self.pub_sock:
             self.pub_connect()
-        self.pub_sock.send(payload)
+        self.pub_sock.send(self.serial.dumps(load))
         log.debug("Sent payload to publish daemon.")
 
 

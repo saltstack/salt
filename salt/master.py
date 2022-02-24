@@ -143,8 +143,15 @@ class SMaster:
         return salt.daemons.masterapi.access_keys(self.opts)
 
     @classmethod
-    def get_serial(cls, opts=None, event=None):
-        with cls.secrets["aes"]["secret"].get_lock():
+    def get_serial(cls, opts=None, event=None, lock=True):
+        if lock:
+            with cls.secrets["aes"]["secret"].get_lock():
+                if cls.secrets["aes"]["serial"].value == sys.maxsize:
+                    cls.rotate_secrets(opts, event, use_lock=False)
+                else:
+                    cls.secrets["aes"]["serial"].value += 1
+                return cls.secrets["aes"]["serial"].value
+        else:
             if cls.secrets["aes"]["serial"].value == sys.maxsize:
                 cls.rotate_secrets(opts, event, use_lock=False)
             else:

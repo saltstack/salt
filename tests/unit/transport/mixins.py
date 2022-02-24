@@ -1,15 +1,5 @@
-# -*- coding: utf-8 -*-
-
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
 import salt.ext.tornado.gen
-
-# Import Salt Libs
 import salt.transport.client
-
-# Import 3rd-party libs
-from salt.ext import six
 
 
 def run_loop_in_thread(loop, evt):
@@ -33,7 +23,7 @@ def run_loop_in_thread(loop, evt):
         loop.close()
 
 
-class ReqChannelMixin(object):
+class ReqChannelMixin:
     def test_basic(self):
         """
         Test a variety of messages, make sure we get the expected responses
@@ -44,7 +34,7 @@ class ReqChannelMixin(object):
             {"baz": "qux", "list": [1, 2, 3]},
         ]
         for msg in msgs:
-            ret = self.channel.send(msg, timeout=2, tries=1)
+            ret = self.channel.send(dict(msg), timeout=2, tries=1)
             self.assertEqual(ret["load"], msg)
 
     def test_normalization(self):
@@ -59,7 +49,7 @@ class ReqChannelMixin(object):
         ]
         for msg in msgs:
             ret = self.channel.send(msg, timeout=2, tries=1)
-            for k, v in six.iteritems(ret["load"]):
+            for k, v in ret["load"].items():
                 self.assertEqual(types[k], type(v))
 
     def test_badload(self):
@@ -72,7 +62,7 @@ class ReqChannelMixin(object):
             self.assertEqual(ret, "payload and load must be a dict")
 
 
-class PubChannelMixin(object):
+class PubChannelMixin:
     def test_basic(self):
         self.pub = None
 
