@@ -259,9 +259,8 @@ def verify_signature(pubkey_path, message, signature):
         try:
             return pubkey.verify(digest, signature)
         except RSA.RSAError as exc:
-            if exc.args[0] == "bad signature":
-                return False
-            raise
+            log.debug("Signature verification failed: %s", exc.args[0])
+            return False
     else:
         verifier = PKCS1_v1_5.new(pubkey)
         return verifier.verify(
@@ -696,9 +695,17 @@ class AsyncAuth:
                 self._authenticate_future.set_exception(error)
             else:
                 key = self.__key(self.opts)
-                AsyncAuth.creds_map[key] = creds
-                self._creds = creds
-                self._crypticle = Crypticle(self.opts, creds["aes"])
+                if key not in AsyncAuth.creds_map:
+                    log.debug("%s Got new master aes key.", self)
+                    AsyncAuth.creds_map[key] = creds
+                    self._creds = creds
+                    self._crypticle = Crypticle(self.opts, creds["aes"])
+                elif self._creds["aes"] != creds["aes"]:
+                    log.debug("%s The master's aes key has changed.", self)
+                    AsyncAuth.creds_map[key] = creds
+                    self._creds = creds
+                    self._crypticle = Crypticle(self.opts, creds["aes"])
+
                 self._authenticate_future.set_result(
                     True
                 )  # mark the sign-in as complete
@@ -1277,6 +1284,7 @@ class SAuth(AsyncAuth):
         self.serial = salt.payload.Serial(self.opts)
         self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
+        self._creds = None
         if "syndic_master" in self.opts:
             self.mpub = "syndic_master.pub"
         elif "alert_master" in self.opts:
@@ -1346,8 +1354,14 @@ class SAuth(AsyncAuth):
                         )
                     continue
                 break
-            self._creds = creds
-            self._crypticle = Crypticle(self.opts, creds["aes"])
+            if self._creds is None:
+                log.error("%s Got new master aes key.", self)
+                self._creds = creds
+                self._crypticle = Crypticle(self.opts, creds["aes"])
+            elif self._creds["aes"] != creds["aes"]:
+                log.error("%s The master's aes key has changed.", self)
+                self._creds = creds
+                self._crypticle = Crypticle(self.opts, creds["aes"])
 
     def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
         """
@@ -1415,11 +1429,11 @@ class Crypticle:
     AES_BLOCK_SIZE = 16
     SIG_SIZE = hashlib.sha256().digest_size
 
-    def __init__(self, opts, key_string, key_size=192):
+    def __init__(self, opts, key_string, key_size=192, serial=0):
         self.key_string = key_string
         self.keys = self.extract_keys(self.key_string, key_size)
         self.key_size = key_size
-        self.serial = salt.payload.Serial(opts)
+        self.serial = serial
 
     @classmethod
     def generate_key_string(cls, key_size=192):
@@ -1489,13 +1503,19 @@ class Crypticle:
             data = cypher.decrypt(data)
         return data[: -data[-1]]
 
-    def dumps(self, obj):
+    def dumps(self, obj, nonce=None):
         """
         Serialize and encrypt a python object
         """
-        return self.encrypt(self.PICKLE_PAD + self.serial.dumps(obj))
+        if nonce:
+            toencrypt = (
+                self.PICKLE_PAD + nonce.encode() + salt.payload.Serial({}).dumps(obj)
+            )
+        else:
+            toencrypt = self.PICKLE_PAD + salt.payload.Serial({}).dumps(obj)
+        return self.encrypt(toencrypt)
 
-    def loads(self, data, raw=False):
+    def loads(self, data, raw=False, nonce=None):
         """
         Decrypt and un-serialize a python object
         """
@@ -1503,5 +1523,25 @@ class Crypticle:
         # simple integrity check to verify that we got meaningful data
         if not data.startswith(self.PICKLE_PAD):
             return {}
-        load = self.serial.loads(data[len(self.PICKLE_PAD) :], raw=raw)
-        return load
+        data = data[len(self.PICKLE_PAD) :]
+        if nonce:
+            ret_nonce = data[:32].decode()
+            data = data[32:]
+            if ret_nonce != nonce:
+                raise SaltClientError("Nonce verification error")
+        payload = salt.payload.Serial({}).loads(data, raw=raw)
+        if isinstance(payload, dict):
+            if "serial" in payload:
+                serial = payload.pop("serial")
+                if serial <= self.serial:
+                    log.critical(
+                        "A message with an invalid serial was received.\n"
+                        "this serial: %d\n"
+                        "last serial: %d\n"
+                        "The minion will not honor this request.",
+                        serial,
+                        self.serial,
+                    )
+                    return {}
+                self.serial = serial
+        return payload

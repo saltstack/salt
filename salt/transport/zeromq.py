@@ -64,6 +64,7 @@ except ImportError:
     except ImportError:
         from Crypto.Cipher import PKCS1_OAEP  # nosec
 
+
 log = logging.getLogger(__name__)
 
 
@@ -75,12 +76,12 @@ def _get_master_uri(master_ip, master_port, source_ip=None, source_port=None):
     rc = zmq_connect(socket, "tcp://192.168.1.17:5555;192.168.1.1:5555"); assert (rc == 0);
     Source: http://api.zeromq.org/4-1:zmq-tcp
     """
+
     from salt.utils.zeromq import ip_bracket
 
     master_uri = "tcp://{master_ip}:{master_port}".format(
         master_ip=ip_bracket(master_ip), master_port=master_port
     )
-
     if source_ip or source_port:
         if LIBZMQ_VERSION_INFO >= (4, 1, 6) and ZMQ_VERSION_INFO >= (16, 0, 1):
             # The source:port syntax for ZeroMQ has been added in libzmq 4.1.6
@@ -413,6 +414,9 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         :param int tries: The number of times to make before failure
         :param int timeout: The number of seconds on a response before failing
         """
+        nonce = uuid.uuid4().hex
+        if load and isinstance(load, dict):
+            load["nonce"] = nonce
 
         @salt.ext.tornado.gen.coroutine
         def _do_transfer():
@@ -427,7 +431,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             # communication, we do not subscribe to return events, we just
             # upload the results to the master
             if data:
-                data = self.auth.crypticle.loads(data, raw)
+                data = self.auth.crypticle.loads(data, raw, nonce)
             if not raw:
                 data = salt.transport.frame.decode_embedded_strs(data)
             raise salt.ext.tornado.gen.Return(data)
@@ -922,7 +926,7 @@ class ZeroMQReqServerChannel(
         if req_fun == "send_clear":
             stream.send(self.serial.dumps(ret))
         elif req_fun == "send":
-            stream.send(self.serial.dumps(self.crypticle.dumps(ret)))
+            stream.send(self.serial.dumps(self.crypticle.dumps(ret, nonce)))
         elif req_fun == "send_private":
             stream.send(
                 self.serial.dumps(
@@ -1059,6 +1063,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                 try:
                     log.debug("Publish daemon getting data from puller %s", pull_uri)
                     package = pull_sock.recv()
+                    package = self.pack_publish(self.serial.loads(package))
                     log.debug("Publish daemon received payload. size=%d", len(package))
 
                     unpacked_package = salt.payload.unpackage(package)
@@ -1151,8 +1156,8 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         """
         if self.pub_sock:
             self.pub_close()
-        ctx = zmq.Context.instance()
-        self._sock_data.sock = ctx.socket(zmq.PUSH)
+        self._sock_data._ctx = zmq.Context.instance()
+        self._sock_data.sock = self._sock_data._ctx.socket(zmq.PUSH)
         self.pub_sock.setsockopt(zmq.LINGER, -1)
         if self.opts.get("ipc_mode", "") == "tcp":
             pull_uri = "tcp://127.0.0.1:{}".format(
@@ -1174,8 +1179,10 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         if hasattr(self._sock_data, "sock"):
             self._sock_data.sock.close()
             delattr(self._sock_data, "sock")
+            if hasattr(self._sock_data, "_ctx"):
+                self._sock_data._ctx.destroy()
 
-    def publish(self, load):
+    def pack_publish(self, load):
         """
         Publish "load" to minions. This send the load to the publisher daemon
         process with does the actual sending to minions.
@@ -1183,6 +1190,8 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         :param dict load: A load to be sent across the wire to minions
         """
         payload = {"enc": "aes"}
+        load["serial"] = salt.master.SMaster.get_serial()
+
         crypticle = salt.crypt.Crypticle(
             self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
         )
@@ -1213,8 +1222,18 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             load.get("jid", None),
             len(payload),
         )
+        return payload
+
+    def publish(self, load):
+        """
+        Publish "load" to minions. This send the load to the publisher daemon
+        process with does the actual sending to minions.
+
+        :param dict load: A load to be sent across the wire to minions
+        """
         if not self.pub_sock:
             self.pub_connect()
+        payload = self.serial.dumps(load)
         self.pub_sock.send(payload)
         log.debug("Sent payload to publish daemon.")
 

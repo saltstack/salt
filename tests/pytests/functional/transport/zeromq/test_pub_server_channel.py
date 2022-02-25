@@ -11,6 +11,7 @@ import salt.exceptions
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.log.setup
+import salt.master
 import salt.transport.client
 import salt.transport.server
 import salt.transport.zeromq
@@ -41,6 +42,21 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         self.started = multiprocessing.Event()
         self.running = multiprocessing.Event()
 
+    def _rotate_secrets(self, now=None):
+        salt.master.SMaster.secrets["aes"] = {
+            "secret": multiprocessing.Array(
+                ctypes.c_char,
+                salt.utils.stringutils.to_bytes(
+                    salt.crypt.Crypticle.generate_key_string()
+                ),
+            ),
+            "serial": multiprocessing.Value(
+                ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
+            ),
+            "reload": salt.crypt.Crypticle.generate_key_string,
+            "rotate_master_key": self._rotate_secrets,
+        }
+
     def run(self):
         """
         Gather results until then number of seconds specified by timeout passes
@@ -69,6 +85,8 @@ class Collector(salt.utils.process.SignalHandlingProcess):
                 try:
                     serial_payload = serial.loads(payload)
                     payload = crypticle.loads(serial_payload["load"])
+                    if not payload:
+                        continue
                     if "start" in payload:
                         self.running.set()
                         continue
@@ -110,10 +128,15 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self.master_config = master_config
         self.minion_config = minion_config
         self.collector_kwargs = collector_kwargs
-        self.aes_key = multiprocessing.Array(
-            ctypes.c_char,
-            salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
-        )
+        self.aes_key = salt.crypt.Crypticle.generate_key_string()
+        salt.master.SMaster.secrets["aes"] = {
+            "secret": multiprocessing.Array(
+                ctypes.c_char, salt.utils.stringutils.to_bytes(self.aes_key),
+            ),
+            "serial": multiprocessing.Value(
+                ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
+            ),
+        }
         self.process_manager = salt.utils.process.ProcessManager(
             name="ZMQ-PubServer-ProcessManager"
         )
@@ -128,14 +151,10 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self.queue = multiprocessing.Queue()
         self.stopped = multiprocessing.Event()
         self.collector = Collector(
-            self.minion_config,
-            self.pub_uri,
-            self.aes_key.value,
-            **self.collector_kwargs
+            self.minion_config, self.pub_uri, self.aes_key, **self.collector_kwargs
         )
 
     def run(self):
-        salt.master.SMaster.secrets["aes"] = {"secret": self.aes_key}
         try:
             while True:
                 payload = self.queue.get()
@@ -231,12 +250,16 @@ def test_issue_36469_tcp(salt_master, salt_minion):
     https://github.com/saltstack/salt/issues/36469
     """
 
-    def _send_small(server_channel, sid, num=10):
+    def _send_small(opts, sid, num=10):
+        server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(opts)
         for idx in range(num):
             load = {"tgt_type": "glob", "tgt": "*", "jid": "{}-s{}".format(sid, idx)}
             server_channel.publish(load)
+        time.sleep(0.3)
+        server_channel.pub_close()
 
-    def _send_large(server_channel, sid, num=10, size=250000 * 3):
+    def _send_large(opts, sid, num=10, size=250000 * 3):
+        server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(opts)
         for idx in range(num):
             load = {
                 "tgt_type": "glob",
@@ -245,18 +268,23 @@ def test_issue_36469_tcp(salt_master, salt_minion):
                 "xdata": "0" * size,
             }
             server_channel.publish(load)
+        time.sleep(0.3)
+        server_channel.pub_close()
 
     opts = dict(salt_master.config.copy(), ipc_mode="tcp", pub_hwm=0)
     send_num = 10 * 4
     expect = []
     with PubServerChannelProcess(opts, salt_minion.config.copy()) as server_channel:
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            executor.submit(_send_small, server_channel, 1)
-            executor.submit(_send_large, server_channel, 2)
-            executor.submit(_send_small, server_channel, 3)
-            executor.submit(_send_large, server_channel, 4)
-        expect.extend(["{}-s{}".format(a, b) for a in range(10) for b in (1, 3)])
-        expect.extend(["{}-l{}".format(a, b) for a in range(10) for b in (2, 4)])
+        assert "aes" in salt.master.SMaster.secrets
+        with ThreadPoolExecutor(max_workers=6) as executor:
+            executor.submit(_send_small, opts, 1)
+            executor.submit(_send_small, opts, 2)
+            # executor.submit(_send_small, opts, 3)
+            executor.submit(_send_large, opts, 4)
+            executor.submit(_send_large, opts, 5)
+            # executor.submit(_send_large, opts, 6)
+        expect.extend(["{}-s{}".format(a, b) for a in range(10) for b in (1, 2)])
+        expect.extend(["{}-l{}".format(a, b) for a in range(10) for b in (4, 5)])
     results = server_channel.collector.results
     assert len(results) == send_num, "{} != {}, difference: {}".format(
         len(results), send_num, set(expect).difference(results)
