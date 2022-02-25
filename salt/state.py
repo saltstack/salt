@@ -4681,7 +4681,7 @@ class BaseHighState:
                 "count_unused": 0,
             }
 
-            env_matches = matches.get(saltenv)
+            env_matches = matches.get(saltenv, [])
 
             for state in states:
                 env_usage["count_all"] += 1
