@@ -127,6 +127,15 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         self.minion_config = minion_config
         self.collector_kwargs = collector_kwargs
         self.aes_key = salt.crypt.Crypticle.generate_key_string()
+        salt.master.SMaster.secrets["aes"] = {
+            "secret": multiprocessing.Array(
+                ctypes.c_char,
+                salt.utils.stringutils.to_bytes(self.aes_key),
+            ),
+            "serial": multiprocessing.Value(
+                ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
+            ),
+        }
         self.process_manager = salt.utils.process.ProcessManager(
             name="ZMQ-PubServer-ProcessManager"
         )
@@ -145,15 +154,6 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
         )
 
     def run(self):
-        salt.master.SMaster.secrets["aes"] = {
-            "secret": multiprocessing.Array(
-                ctypes.c_char,
-                salt.utils.stringutils.to_bytes(self.aes_key),
-            ),
-            "serial": multiprocessing.Value(
-                ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
-            ),
-        }
         try:
             while True:
                 payload = self.queue.get()
@@ -247,12 +247,16 @@ def test_issue_36469_tcp(salt_master, salt_minion):
     https://github.com/saltstack/salt/issues/36469
     """
 
-    def _send_small(server_channel, sid, num=10):
+    def _send_small(opts, sid, num=10):
+        server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(opts)
         for idx in range(num):
             load = {"tgt_type": "glob", "tgt": "*", "jid": "{}-s{}".format(sid, idx)}
             server_channel.publish(load)
+        time.sleep(0.3)
+        server_channel.close_pub()
 
-    def _send_large(server_channel, sid, num=10, size=250000 * 3):
+    def _send_large(opts, sid, num=10, size=250000 * 3):
+        server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(opts)
         for idx in range(num):
             load = {
                 "tgt_type": "glob",
@@ -261,16 +265,19 @@ def test_issue_36469_tcp(salt_master, salt_minion):
                 "xdata": "0" * size,
             }
             server_channel.publish(load)
+        time.sleep(0.3)
+        server_channel.close_pub()
 
     opts = dict(salt_master.config.copy(), ipc_mode="tcp", pub_hwm=0)
     send_num = 10 * 4
     expect = []
     with PubServerChannelProcess(opts, salt_minion.config.copy()) as server_channel:
+        assert "aes" in salt.master.SMaster.secrets
         with ThreadPoolExecutor(max_workers=4) as executor:
-            executor.submit(_send_small, server_channel, 1)
-            executor.submit(_send_large, server_channel, 2)
-            executor.submit(_send_small, server_channel, 3)
-            executor.submit(_send_large, server_channel, 4)
+            executor.submit(_send_small, opts, 1)
+            executor.submit(_send_large, opts, 2)
+            executor.submit(_send_small, opts, 3)
+            executor.submit(_send_large, opts, 4)
         expect.extend(["{}-s{}".format(a, b) for a in range(10) for b in (1, 3)])
         expect.extend(["{}-l{}".format(a, b) for a in range(10) for b in (2, 4)])
     results = server_channel.collector.results

@@ -210,15 +210,17 @@ def test_tcp_pub_server_channel_publish_filtering(temp_salt_master):
         SyncWrapper.return_value = wrap
 
         # try simple publish with glob tgt_type
-        channel.publish({"test": "value", "tgt_type": "glob", "tgt": "*"})
-        payload = wrap.send.call_args[0][0]
+        payload = channel.pack_publish(
+            {"test": "value", "tgt_type": "glob", "tgt": "*"}
+        )
 
         # verify we send it without any specific topic
         assert "topic_lst" not in payload
 
         # try simple publish with list tgt_type
-        channel.publish({"test": "value", "tgt_type": "list", "tgt": ["minion01"]})
-        payload = wrap.send.call_args[0][0]
+        payload = channel.pack_publish(
+            {"test": "value", "tgt_type": "list", "tgt": ["minion01"]}
+        )
 
         # verify we send it with correct topic
         assert "topic_lst" in payload
@@ -226,8 +228,9 @@ def test_tcp_pub_server_channel_publish_filtering(temp_salt_master):
 
         # try with syndic settings
         opts["order_masters"] = True
-        channel.publish({"test": "value", "tgt_type": "list", "tgt": ["minion01"]})
-        payload = wrap.send.call_args[0][0]
+        payload = channel.pack_publish(
+            {"test": "value", "tgt_type": "list", "tgt": ["minion01"]}
+        )
 
         # verify we send it without topic for syndics
         assert "topic_lst" not in payload
@@ -257,8 +260,9 @@ def test_tcp_pub_server_channel_publish_filtering_str_list(temp_salt_master):
         check_minions.return_value = {"minions": ["minion02"]}
 
         # try simple publish with list tgt_type
-        channel.publish({"test": "value", "tgt_type": "list", "tgt": "minion02"})
-        payload = wrap.send.call_args[0][0]
+        payload = channel.pack_publish(
+            {"test": "value", "tgt_type": "list", "tgt": "minion02"}
+        )
 
         # verify we send it with correct topic
         assert "topic_lst" in payload
