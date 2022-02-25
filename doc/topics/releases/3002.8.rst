@@ -6,16 +6,17 @@ Salt 3002.8 (2022-02-25)
 
 Version 3002.8 is a CVE security fix release for :ref:`3002 <release-3002>`.
 
+
 Important notice about upgrading
 --------------------------------
 
-Version 3004.1 is a security release. 3004.1 minions are not able to
-communicate with masters older than 3004.1. You must upgrade your masters
+Version 3002.8 is a security release. 3002.8 minions are not able to
+communicate with masters older than 3002.8. You must upgrade your masters
 before upgrading minions.
 
 
 Minion authentication security
------------------------------
+------------------------------
 
 Authentication between masters and minions rely on public/private key
 encryption and message signing. To secure minion authentication before you must
