@@ -7,11 +7,20 @@ import os
 
 import pytest
 import salt.defaults.exitcodes
+import salt.utils.platform
 from saltfactories.exceptions import FactoryNotStarted
 from saltfactories.utils import random_string
 from tests.support.helpers import PRE_PYTEST_SKIP_REASON
 
 log = logging.getLogger(__name__)
+
+
+pytestmark = [
+    pytest.mark.skipif(
+        salt.utils.platform.spawning_platform(),
+        reason="Deltaproxy minions do not currently work on spawning platforms.",
+    )
+]
 
 
 @pytest.fixture(scope="package", autouse=True)
