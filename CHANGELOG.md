@@ -7,6 +7,18 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+Salt 3002.8 (2022-02-25)
+========================
+
+Security
+--------
+
+- Sign authentication replies to prevent MiTM (cve-2020-22935)
+- Sign pillar data to prevent MiTM attacks. (cve-2022-22934)
+- Prevent job and fileserver replays (cve-2022-22936)
+- Fixed targeting bug, especially visible when using syndic and user auth. (CVE-2022-22941) (#60413)
+
+
 Salt 3002.7 (2021-08-20)
 ========================
 
