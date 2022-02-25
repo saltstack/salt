@@ -273,7 +273,6 @@ pyyaml==5.4.1
     #   -r requirements/base.txt
     #   clustershell
     #   kubernetes
-    #   moto
     #   yamllint
 pyzmq==20.0.0 ; python_version >= "3.9"
     # via

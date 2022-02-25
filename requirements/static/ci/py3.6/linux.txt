@@ -740,7 +740,6 @@ pyyaml==5.4.1
     #   clustershell
     #   junos-eznc
     #   kubernetes
-    #   moto
     #   yamllint
     #   yamlordereddictloader
 pyzmq==18.0.1 ; python_version < "3.9"
