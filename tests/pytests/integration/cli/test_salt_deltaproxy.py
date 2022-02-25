@@ -32,7 +32,13 @@ def proxy_minion_id(salt_master):
 
 
 def clear_proxy_minions(salt_master, proxy_minion_id):
-    for proxy in [proxy_minion_id, "dummy_proxy_one", "dummy_proxy_two"]:
+    for proxy in [
+        proxy_minion_id,
+        "dummy_proxy_one",
+        "dummy_proxy_two",
+        "broken_proxy_one",
+        "broken_proxy_two",
+    ]:
         pytest.helpers.remove_stale_minion_key(salt_master, proxy)
 
         cachefile = os.path.join(
