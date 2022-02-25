@@ -1,0 +1,16 @@
+.. _release-3002-8:
+
+========================
+Salt 3002.8 (2022-02-25)
+========================
+
+Version 3002.8 is a CVE security fix release for :ref:`3002 <release-3002>`.
+
+
+Security
+--------
+
+- Sign authentication replies to prevent MiTM (cve-2020-22935)
+- Sign pillar data to prevent MiTM attacks. (cve-2022-22934)
+- Prevent job and fileserver replays (cve-2022-22936)
+- Fixed targeting bug, especially visible when using syndic and user auth. (CVE-2022-22941) (#60413)
