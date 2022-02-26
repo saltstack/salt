@@ -296,6 +296,7 @@ def defined(
     stop_on_reboot=False,
     live=True,
     host_devices=None,
+    autostart=False,
 ):
     """
     Starts an existing guest, or defines and starts a new VM with specified arguments.
@@ -667,6 +668,7 @@ def defined(
                 clock=clock,
                 stop_on_reboot=stop_on_reboot,
                 host_devices=host_devices,
+                autostart=autostart,
             )
             ret["changes"][name] = status
             if not status.get("definition"):
@@ -749,6 +751,7 @@ def running(
     consoles=None,
     stop_on_reboot=False,
     host_devices=None,
+    autostart=False,
 ):
     """
     Starts an existing guest, or defines and starts a new VM with specified arguments.
@@ -1023,6 +1026,7 @@ def running(
         serials=serials,
         consoles=consoles,
         host_devices=host_devices,
+        autostart=autostart,
     )
 
     result = True if not __opts__["test"] else None
