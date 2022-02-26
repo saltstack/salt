@@ -3498,6 +3498,7 @@ def update(
     consoles=None,
     stop_on_reboot=False,
     host_devices=None,
+    autostart=False,
     **kwargs
 ):
     """
@@ -3759,7 +3760,9 @@ def update(
             **kwargs
         )
     )
-
+    
+    set_autostart(name, "on" if autostart else "off")
+    
     if clock:
         offset = "utc" if clock.get("utc", True) else "localtime"
         if "timezone" in clock:
