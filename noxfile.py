@@ -306,13 +306,10 @@ def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
 def _install_requirements(
     session, transport, *extra_requirements, requirements_type="ci"
 ):
-    if not _upgrade_pip_setuptools_and_wheel(session):
-        return
 
+    if not IS_WINDOWS:
+        session.run("df", "-h", external=True)
 
-def _install_requirements(
-    session, transport, *extra_requirements, requirements_type="ci"
-):
     if not _upgrade_pip_setuptools_and_wheel(session):
         return False
 
