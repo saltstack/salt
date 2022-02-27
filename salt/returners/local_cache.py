@@ -394,14 +394,13 @@ def get_jids_filter(count, filter_find_job=True):
 
 def _remove_job_dir(job_path):
     """
-    Try to remove job dir. If job dir cant be removed then error will be logged.
-
-    :param job_path:      Path to job
+    Try to remove job dir. In rare cases NotADirectoryError can raise because node corruption.
+    :param job_path: Path to job
     """
-    # Remove remove job dir
+    # Remove job dir
     try:
         shutil.rmtree(job_path)
-    except OSError as err:
+    except NotADirectoryError as err:
         log.error("Unable to remove %s: %s", job_path, err)
 
 
