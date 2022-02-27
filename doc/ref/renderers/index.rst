@@ -19,8 +19,8 @@ Two Kinds of Renderers
 ----------------------
 
 Renderers fall into one of two categories, based on what they output: text or
-data. The one exception to this would be the :mod:`pure python
-<salt.renderers.py>` renderer, which can be used in either capacity.
+data. Some exceptions to this would be the :mod:`pure python
+<salt.renderers.py>` and :mod:`gpg <salt.renderers.gpg>` renderers which could be used in either capacity.
 
 Text Renderers
 **************
@@ -59,7 +59,7 @@ following are all data renderers:
 - :mod:`stateconf <salt.renderers.stateconf>`
 - :mod:`yamlex <salt.renderers.yamlex>`
 - :mod:`yaml <salt.renderers.yaml>`
-
+- :mod:`gpg <salt.renderers.gpg>`
 
 Overriding the Default Renderer
 -------------------------------

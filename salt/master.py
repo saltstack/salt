@@ -18,6 +18,7 @@ import time
 
 import salt.acl
 import salt.auth
+import salt.channel.server
 import salt.client
 import salt.client.ssh.client
 import salt.crypt
@@ -27,14 +28,12 @@ import salt.engines
 import salt.exceptions
 import salt.ext.tornado.gen
 import salt.key
-import salt.log.setup
 import salt.minion
 import salt.payload
 import salt.pillar
 import salt.runner
 import salt.serializers.msgpack
 import salt.state
-import salt.transport.server
 import salt.utils.args
 import salt.utils.atomicfile
 import salt.utils.crypt
@@ -58,7 +57,8 @@ import salt.wheel
 from salt.config import DEFAULT_INTERVAL
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.ext.tornado.stack_context import StackContext
-from salt.transport import iter_transport_opts
+from salt.transport import TRANSPORTS
+from salt.utils.channel import iter_transport_opts
 from salt.utils.ctx import RequestContext
 from salt.utils.debug import (
     enable_sigusr1_handler,
@@ -234,7 +234,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         if self.opts["key_cache"] == "sched":
             keys = []
             # TODO DRY from CKMinions
-            if self.opts["transport"] in ("zeromq", "tcp"):
+            if self.opts["transport"] in TRANSPORTS:
                 acc = "minions"
             else:
                 acc = "accepted"
@@ -673,10 +673,9 @@ class Master(SMaster):
             self.process_manager = salt.utils.process.ProcessManager(wait_for_kill=5)
             pub_channels = []
             log.info("Creating master publisher process")
-            log_queue = salt.log.setup.get_multiprocessing_logging_queue()
             for _, opts in iter_transport_opts(self.opts):
-                chan = salt.transport.server.PubServerChannel.factory(opts)
-                chan.pre_fork(self.process_manager, kwargs={"log_queue": log_queue})
+                chan = salt.channel.server.PubServerChannel.factory(opts)
+                chan.pre_fork(self.process_manager)
                 pub_channels.append(chan)
 
             log.info("Creating master event publisher process")
@@ -741,11 +740,7 @@ class Master(SMaster):
 
             log.info("Creating master request server process")
             kwargs = {}
-            if salt.utils.platform.is_windows():
-                kwargs["log_queue"] = log_queue
-                kwargs[
-                    "log_queue_level"
-                ] = salt.log.setup.get_multiprocessing_logging_level()
+            if salt.utils.platform.spawning_platform():
                 kwargs["secrets"] = SMaster.secrets
 
             self.process_manager.add_process(
@@ -830,11 +825,6 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         """
         Binds the reply server
         """
-        if self.log_queue is not None:
-            salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
-        if self.log_queue_level is not None:
-            salt.log.setup.set_multiprocessing_logging_level(self.log_queue_level)
-        salt.log.setup.setup_multiprocessing_logging(self.log_queue)
         if self.secrets is not None:
             SMaster.secrets = self.secrets
 
@@ -856,16 +846,11 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         req_channels = []
         tcp_only = True
         for transport, opts in iter_transport_opts(self.opts):
-            chan = salt.transport.server.ReqServerChannel.factory(opts)
+            chan = salt.channel.server.ReqServerChannel.factory(opts)
             chan.pre_fork(self.process_manager)
             req_channels.append(chan)
             if transport != "tcp":
                 tcp_only = False
-
-        kwargs = {}
-        if salt.utils.platform.is_windows():
-            kwargs["log_queue"] = self.log_queue
-            kwargs["log_queue_level"] = self.log_queue_level
 
         if self.opts["req_server_niceness"] and not salt.utils.platform.is_windows():
             log.info(
@@ -883,7 +868,6 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
                 self.process_manager.add_process(
                     MWorker,
                     args=(self.opts, self.master_key, self.key, req_channels),
-                    kwargs=kwargs,
                     name=name,
                 )
         self.process_manager.run()
@@ -1108,6 +1092,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             self.opts,
             self.key,
         )
+        self.clear_funcs.connect()
         self.aes_funcs = AESFuncs(self.opts)
         salt.utils.crypt.reinit_crypto()
         self.__bind()
@@ -1953,6 +1938,7 @@ class ClearFuncs(TransportMethods):
         self.wheel_ = salt.wheel.Wheel(opts)
         # Make a masterapi object
         self.masterapi = salt.daemons.masterapi.LocalFuncs(opts, key)
+        self.channels = []
 
     def runner(self, clear_load):
         """
@@ -2294,8 +2280,11 @@ class ClearFuncs(TransportMethods):
         """
         Take a load and send it across the network to connected minions
         """
-        for transport, opts in iter_transport_opts(self.opts):
-            chan = salt.transport.server.PubServerChannel.factory(opts)
+        if not self.channels:
+            for transport, opts in iter_transport_opts(self.opts):
+                chan = salt.channel.server.PubServerChannel.factory(opts)
+                self.channels.append(chan)
+        for chan in self.channels:
             chan.publish(load)
 
     @property
@@ -2466,3 +2455,13 @@ class ClearFuncs(TransportMethods):
         if self.local is not None:
             self.local.destroy()
             self.local = None
+        while self.channels:
+            chan = self.channels.pop()
+            chan.close()
+
+    def connect(self):
+        if self.channels:
+            return
+        for transport, opts in iter_transport_opts(self.opts):
+            chan = salt.channel.server.PubServerChannel.factory(opts)
+            self.channels.append(chan)

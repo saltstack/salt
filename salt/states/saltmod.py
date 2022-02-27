@@ -600,7 +600,7 @@ def function(
         func_ret["comment"] = "No minions responded"
     else:
         if changes:
-            func_ret["changes"] = {"out": "highstate", "ret": changes}
+            func_ret["changes"] = {"ret": changes}
         if fail:
             func_ret["result"] = False
             func_ret["comment"] = "Running function {} failed on minions: {}".format(
@@ -666,7 +666,7 @@ def wait_for_event(name, id_list, event_id="id", timeout=300, node="master"):
         return ret
 
     with salt.utils.event.get_event(
-        node, __opts__["sock_dir"], __opts__["transport"], opts=__opts__, listen=True
+        node, __opts__["sock_dir"], opts=__opts__, listen=True
     ) as sevent:
 
         del_counter = 0
