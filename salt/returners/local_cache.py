@@ -400,7 +400,7 @@ def _remove_job_dir(job_path):
     # Remove job dir
     try:
         shutil.rmtree(job_path)
-    except NotADirectoryError as err:
+    except (NotADirectoryError, OSError) as err:
         log.error("Unable to remove %s: %s", job_path, err)
 
 
