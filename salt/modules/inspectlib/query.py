@@ -53,9 +53,9 @@ class SysInfo:
             log.error(msg)
             raise SIException(msg)
 
-        devpath, blocks, used, available, used_p, mountpoint = [
+        devpath, blocks, used, available, used_p, mountpoint = (
             elm for elm in out["stdout"].split(os.linesep)[-1].split(" ") if elm
-        ]
+        )
         return {
             "device": devpath,
             "blocks": blocks,

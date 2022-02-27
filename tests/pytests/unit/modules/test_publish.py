@@ -81,7 +81,7 @@ def test_full_data():
     assert publish.publish("*", "publish.salt") == {}
 
 
-def test_runner():
+def test_runner(tmpdir):
     """
     Test if it execute a runner on the master and return the data
     from the runner function
@@ -91,7 +91,7 @@ def test_runner():
     mock = MagicMock(return_value=True)
     mock_id = MagicMock(return_value="salt_id")
     with patch("salt.crypt.SAuth", return_value=SAuth(publish.__opts__)):
-        with patch("salt.transport.client.ReqChannel", Channel()):
+        with patch("salt.channel.client.ReqChannel", Channel()):
             with patch.dict(publish.__opts__, {"master_uri": mock, "id": mock_id}):
                 Channel.flag = 0
                 assert publish.runner("manage.down")

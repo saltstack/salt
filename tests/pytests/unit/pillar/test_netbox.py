@@ -2003,3 +2003,49 @@ def test_when_we_retrieve_everything_successfully_then_return_dict(
         actual_result = netbox.ext_pillar(**default_kwargs)
 
         assert actual_result == expected_result
+
+
+def test_when_we_set_proxy_return_but_get_no_value_for_platform_then_error_message_should_be_logged(
+    default_kwargs, headers, device_results
+):
+
+    default_kwargs["site_details"] = False
+    default_kwargs["site_prefixes"] = False
+    default_kwargs["proxy_return"] = True
+    device_results["dict"]["results"][0]["platform"] = None
+
+    with patch("salt.pillar.netbox._get_devices", autospec=True) as devices, patch(
+        "salt.pillar.netbox.log.error", autospec=True
+    ) as fake_error:
+
+        devices.return_value = device_results["dict"]["results"]
+
+        netbox.ext_pillar(**default_kwargs)
+
+        fake_error.assert_called_with(
+            'You have set "proxy_return" to "True" but you have not set the platform in NetBox for "%s"',
+            "minion1",
+        )
+
+
+def test_when_we_set_proxy_return_but_get_no_value_for_primary_ip_then_error_message_should_be_logged(
+    default_kwargs, headers, device_results
+):
+
+    default_kwargs["site_details"] = False
+    default_kwargs["site_prefixes"] = False
+    default_kwargs["proxy_return"] = True
+    device_results["dict"]["results"][0]["primary_ip"] = None
+
+    with patch("salt.pillar.netbox._get_devices", autospec=True) as devices, patch(
+        "salt.pillar.netbox.log.error", autospec=True
+    ) as fake_error:
+
+        devices.return_value = device_results["dict"]["results"]
+
+        netbox.ext_pillar(**default_kwargs)
+
+        fake_error.assert_called_with(
+            'You have set "proxy_return" to "True" but you have not set the primary IPv4 or IPv6 address in NetBox for "%s"',
+            "minion1",
+        )
