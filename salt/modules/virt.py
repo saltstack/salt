@@ -3706,6 +3706,10 @@ def update(
 
         .. versionadded:: 3003
 
+    :param autostart:
+        If set to ``True`` the host will start the guest after boot.
+        (Default: ``False``)
+
     :return:
 
         Returns a dictionary indicating the status of what has been done. It is structured in

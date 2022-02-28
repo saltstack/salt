@@ -599,6 +599,10 @@ def defined(
 
         .. versionadded:: 3003
 
+    :param autostart:
+        If set to ``True`` the host will start the guest after boot.
+        (Default: ``False``)
+
     .. rubric:: Example States
 
     Make sure a virtual machine called ``domain_name`` is defined:
@@ -954,6 +958,10 @@ def running(
         (Default: ``None``)
 
         .. versionadded:: 3003
+
+    :param autostart:
+        If set to ``True`` the host will start the guest after boot.
+        (Default: ``False``)
 
     .. rubric:: Example States
 
