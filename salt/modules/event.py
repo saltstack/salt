@@ -10,9 +10,9 @@ import sys
 import traceback
 from collections.abc import Mapping
 
+import salt.channel.client
 import salt.crypt
 import salt.payload
-import salt.transport.client
 import salt.utils.event
 import salt.utils.zeromq
 
@@ -72,7 +72,7 @@ def fire_master(data, tag, preload=None):
             load.update(preload)
 
         for master in masters:
-            with salt.transport.client.ReqChannel.factory(
+            with salt.channel.client.ReqChannel.factory(
                 __opts__, master_uri=master
             ) as channel:
                 try:
@@ -112,7 +112,6 @@ def fire(data, tag):
         with salt.utils.event.get_event(
             "minion",  # was __opts__['id']
             sock_dir=__opts__["sock_dir"],
-            transport=__opts__["transport"],
             opts=__opts__,
             listen=False,
         ) as event:
@@ -216,13 +215,13 @@ def send(
         if isinstance(with_grains, list):
             data_dict["grains"] = _dict_subset(with_grains, __grains__)
         else:
-            data_dict["grains"] = __grains__
+            data_dict["grains"] = __grains__.value()
 
     if with_pillar:
         if isinstance(with_pillar, list):
             data_dict["pillar"] = _dict_subset(with_pillar, __pillar__)
         else:
-            data_dict["pillar"] = __pillar__
+            data_dict["pillar"] = __pillar__.value()
 
     if with_env_opts:
         data_dict["saltenv"] = __opts__.get("saltenv", "base")

@@ -271,7 +271,7 @@
 
 # To auto recover minions if master changes IP address (DDNS)
 #    auth_tries: 10
-#    auth_safemode: False
+#    auth_safemode: True
 #    ping_interval: 2
 #
 # Minions won't know master is missing until a ping fails. After the ping fail,
@@ -638,14 +638,6 @@
 # files on the Master will not be returned to the Minion.
 #fileserver_ignoresymlinks: True
 #
-# By default, the Salt fileserver recurses fully into all defined environments
-# to attempt to find files. To limit this behavior so that the fileserver only
-# traverses directories with SLS files and special Salt directories like _modules,
-# enable the option below. This might be useful for installations where a file root
-# has a very large number of files and performance is negatively impacted. Default
-# is False.
-#fileserver_limit_traversal: False
-
 # The hash_type is the hash to use when discovering the hash of a file on
 # the local fileserver. The default is sha256, but md5, sha1, sha224, sha384
 # and sha512 are also supported.
@@ -663,6 +655,10 @@
 #pillar_roots:
 #  base:
 #    - /srv/pillar
+
+# If this is `True` and the ciphertext could not be decrypted, then an error is
+# raised.
+#gpg_decrypt_must_succeed: False
 
 # Set a hard-limit on the size of the files that can be pushed to the master.
 # It will be interpreted as megabytes. Default: 100
@@ -712,6 +708,10 @@
 # The state_output_pct setting changes whether success and failure information
 # as a percent of total actions will be shown for each state run.
 #state_output_pct: False
+
+# The state_compress_ids setting aggregates information about states which have
+# multiple "names" under the same state ID in the highstate output.
+#state_compress_ids: False
 
 # Fingerprint of the master public key to validate the identity of your Salt master
 # before the initial key exchange. The master fingerprint can be found by running

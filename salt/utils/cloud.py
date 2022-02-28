@@ -1388,21 +1388,18 @@ def deploy_windows(
                 salt.utils.smb.delete_directory("salttemp", "C$", conn=smb_conn)
         # Shell out to psexec to ensure salt-minion service started
         if use_winrm:
-            winrm_cmd(winrm_session, "sc", ["stop", "salt-minion"])
-            time.sleep(5)
-            winrm_cmd(winrm_session, "sc", ["start", "salt-minion"])
+            winrm_cmd(winrm_session, "net", ["stop", "salt-minion"])
+            winrm_cmd(winrm_session, "net", ["start", "salt-minion"])
         else:
             stdout, stderr, ret_code = run_psexec_command(
-                "cmd.exe", "/c sc stop salt-minion", host, username, password
+                "cmd.exe", "/c net stop salt-minion", host, username, password
             )
             if ret_code != 0:
                 return False
 
-            time.sleep(5)
-
             log.debug("Run psexec: sc start salt-minion")
             stdout, stderr, ret_code = run_psexec_command(
-                "cmd.exe", "/c sc start salt-minion", host, username, password
+                "cmd.exe", "/c net start salt-minion", host, username, password
             )
             if ret_code != 0:
                 return False
@@ -2072,9 +2069,7 @@ def fire_event(key, msg, tag, sock_dir, args=None, transport="zeromq"):
     """
     Fire deploy action
     """
-    with salt.utils.event.get_event(
-        "master", sock_dir, transport, listen=False
-    ) as event:
+    with salt.utils.event.get_event("master", sock_dir, listen=False) as event:
         try:
             event.fire_event(msg, tag)
         except ValueError:

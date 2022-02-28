@@ -1226,6 +1226,11 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
 
         .. versionadded:: 2015.8.0
 
+    allow_downgrades
+        Allow apt to downgrade packages without a prompt.
+
+        .. versionadded:: 3005
+
     CLI Example:
 
     .. code-block:: bash
@@ -1256,6 +1261,8 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         cmd.append("--allow-unauthenticated")
     if kwargs.get("download_only", False) or kwargs.get("downloadonly", False):
         cmd.append("--download-only")
+    if kwargs.get("allow_downgrades", False):
+        cmd.append("--allow-downgrades")
 
     cmd.append("dist-upgrade" if dist_upgrade else "upgrade")
     result = _call_apt(cmd, env=DPKG_ENV_VARS.copy())
@@ -1472,9 +1479,9 @@ def list_pkgs(
     for line in out.splitlines():
         cols = line.split()
         try:
-            linetype, status, name, version_num, arch = [
+            linetype, status, name, version_num, arch = (
                 cols[x] for x in (0, 2, 3, 4, 5)
-            ]
+            )
         except (ValueError, IndexError):
             continue
         if __grains__.get("cpuarch", "") == "x86_64":
@@ -2997,7 +3004,7 @@ def show(*names, **kwargs):
         line = line.strip()
         if line:
             try:
-                key, val = [x.strip() for x in line.split(":", 1)]
+                key, val = (x.strip() for x in line.split(":", 1))
             except ValueError:
                 pass
             else:

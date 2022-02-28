@@ -9,7 +9,7 @@ try:
     import twilio
 
     # Grab version, ensure elements are ints
-    twilio_version = tuple([int(x) for x in twilio.__version_info__])
+    twilio_version = tuple(int(x) for x in twilio.__version_info__)
     if twilio_version > (5,):
         from twilio.rest import Client as TwilioRestClient
     else:
@@ -27,7 +27,9 @@ def __virtual__():
     if HAS_TWILIO:
         return __virtualname__
     else:
-        return False
+        err_msg = "twilio library is missing."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
 
 
 def validate(config):

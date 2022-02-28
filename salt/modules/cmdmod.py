@@ -127,13 +127,17 @@ def _chroot_pids(chroot):
     return pids
 
 
-def _render_cmd(
-    cmd, cwd, template, saltenv="base", pillarenv=None, pillar_override=None
-):
+def _render_cmd(cmd, cwd, template, saltenv=None, pillarenv=None, pillar_override=None):
     """
     If template is a valid template engine, process the cmd and cwd through
     that engine.
     """
+    if saltenv is None:
+        try:
+            saltenv = __opts__.get("saltenv", "base")
+        except NameError:
+            saltenv = "base"
+
     if not template:
         return (cmd, cwd)
 
@@ -274,7 +278,7 @@ def _run(
     with_communicate=True,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     pillarenv=None,
     pillar_override=None,
     use_vt=False,
@@ -901,7 +905,7 @@ def _run_quiet(
     umask=None,
     timeout=None,
     reset_system_locale=True,
-    saltenv="base",
+    saltenv=None,
     pillarenv=None,
     pillar_override=None,
     success_retcodes=None,
@@ -948,7 +952,7 @@ def _run_all_quiet(
     umask=None,
     timeout=None,
     reset_system_locale=True,
-    saltenv="base",
+    saltenv=None,
     pillarenv=None,
     pillar_override=None,
     output_encoding=None,
@@ -1010,7 +1014,7 @@ def run(
     timeout=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     bg=False,
     password=None,
@@ -1328,7 +1332,7 @@ def shell(
     timeout=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     bg=False,
     password=None,
@@ -1588,7 +1592,7 @@ def run_stdout(
     timeout=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     password=None,
     prepend_path=None,
@@ -1822,7 +1826,7 @@ def run_stderr(
     timeout=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     password=None,
     prepend_path=None,
@@ -2056,7 +2060,7 @@ def run_all(
     timeout=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     redirect_stderr=False,
     password=None,
@@ -2336,7 +2340,7 @@ def retcode(
     timeout=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     password=None,
     success_retcodes=None,
@@ -2554,7 +2558,7 @@ def _retcode_quiet(
     timeout=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     password=None,
     success_retcodes=None,
@@ -2612,7 +2616,7 @@ def script(
     hide_output=False,
     timeout=None,
     reset_system_locale=True,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     bg=False,
     password=None,
@@ -2795,6 +2799,11 @@ def script(
 
         salt '*' cmd.script salt://scripts/runme.sh stdin='one\\ntwo\\nthree\\nfour\\nfive\\n'
     """
+    if saltenv is None:
+        try:
+            saltenv = __opts__.get("saltenv", "base")
+        except NameError:
+            saltenv = "base"
     python_shell = _python_shell_default(python_shell, kwargs.get("__pub_jid", ""))
 
     def _cleanup_tempfile(path):
@@ -2914,7 +2923,7 @@ def script_retcode(
     umask=None,
     timeout=None,
     reset_system_locale=True,
-    saltenv="base",
+    saltenv=None,
     output_encoding=None,
     output_loglevel="debug",
     log_callback=None,
@@ -3267,7 +3276,7 @@ def run_chroot(
     timeout=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     bg=False,
     success_retcodes=None,
@@ -3805,7 +3814,7 @@ def powershell(
     timeout=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     password=None,
     depth=None,
@@ -4093,7 +4102,7 @@ def powershell_all(
     timeout=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     use_vt=False,
     password=None,
     depth=None,
@@ -4465,7 +4474,7 @@ def run_bg(
     log_callback=None,
     reset_system_locale=True,
     ignore_retcode=False,
-    saltenv="base",
+    saltenv=None,
     password=None,
     prepend_path=None,
     success_retcodes=None,

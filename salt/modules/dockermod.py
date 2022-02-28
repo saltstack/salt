@@ -2505,11 +2505,11 @@ def version():
     if "Version" in ret:
         match = version_re.match(str(ret["Version"]))
         if match:
-            ret["VersionInfo"] = tuple([int(x) for x in match.group(1).split(".")])
+            ret["VersionInfo"] = tuple(int(x) for x in match.group(1).split("."))
     if "ApiVersion" in ret:
         match = version_re.match(str(ret["ApiVersion"]))
         if match:
-            ret["ApiVersionInfo"] = tuple([int(x) for x in match.group(1).split(".")])
+            ret["ApiVersionInfo"] = tuple(int(x) for x in match.group(1).split("."))
     return ret
 
 

@@ -43,6 +43,7 @@ salt/modules/augeas_cfg.py:
   - pytests.unit.states.test_augeas
 
 salt/modules/cp.py:
+  - pytests.functional.modules.file.test_replace
   - pytests.unit.modules.file.test_file_basics
   - pytests.unit.modules.file.test_file_block_replace
   - pytests.unit.modules.file.test_file_chattr
@@ -51,7 +52,6 @@ salt/modules/cp.py:
   - pytests.unit.modules.file.test_file_line
   - pytests.unit.modules.file.test_file_lsattr
   - pytests.unit.modules.file.test_file_module
-  - pytests.unit.modules.file.test_file_replace
   - pytests.unit.modules.file.test_file_selinux
   - pytests.unit.states.file.test_copy
   - integration.modules.test_file
@@ -251,9 +251,6 @@ salt/(cli/spm\.py|spm/.+):
   - integration.spm.test_remove
   - integration.spm.test_repo
 
-salt/transport/*:
-  - unit.test_transport
-
 salt/utils/docker/*:
   - unit.utils.test_dockermod
 
@@ -278,5 +275,19 @@ salt/utils/vt.py:
 salt/wheel/*:
   - integration.wheel.test_client
 
+salt/(minion\.py|channel/.+|transport/.+):
+  - pytests.scenarios.multimaster.test_multimaster
+  - pytests.scenarios.multimaster.test_offline_master
+  - pytests.scenarios.multimaster.beacons.test_inotify
+  - pytests.scenarios.multimaster.modules.test_test
+  - pytests.scenarios.failover.multimaster.test_failover_master
+
 tests/support/mock.py:
   - unit.test_mock
+
+tests/pytests/scenarios/multimaster:
+  - pytests.scenarios.multimaster.test_multimaster
+  - pytests.scenarios.multimaster.test_offline_master
+  - pytests.scenarios.multimaster.beacons.test_inotify
+  - pytests.scenarios.multimaster.modules.test_test
+  - pytests.scenarios.failover.multimaster.test_failover_master
