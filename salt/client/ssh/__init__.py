@@ -13,6 +13,7 @@ import multiprocessing
 import os
 import queue
 import re
+import shlex
 import subprocess
 import sys
 import tarfile
@@ -1346,11 +1347,9 @@ ARGS = {arguments}\n'''.format(
         """
         args = ""
         if script_args:
-            args = " {}".format(
-                " ".join([str(el) for el in script_args])
-                if isinstance(script_args, (list, tuple))
-                else script_args
-            )
+            if not isinstance(script_args, (list, tuple)):
+                script_args = shlex.split(str(script_args))
+            args = " {}".format(" ".join([shlex.quote(str(el)) for el in script_args]))
         if extension == "ps1":
             ret = self.shell.exec_cmd('"powershell {}"'.format(script))
         else:
