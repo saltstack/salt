@@ -1,4 +1,5 @@
 import os
+
 import pytest
 import salt.client.ssh.client
 import salt.utils.msgpack
