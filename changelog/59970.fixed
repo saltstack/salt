@@ -1,0 +1,3 @@
+Improved performance of zfs.filesystem_present and zfs.volume_present.  When
+applying these states, only query specified ZFS properties rather than all
+properties.

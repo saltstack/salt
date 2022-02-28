@@ -1,0 +1,1 @@
+virt: don't crash if console doesn't have service or type attribute

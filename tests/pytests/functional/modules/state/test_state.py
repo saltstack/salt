@@ -689,11 +689,15 @@ def test_retry_option_success(state, state_tree, tmp_path):
     """.format(
         testfile
     )
+    duration = 4
+    if salt.utils.platform.is_windows():
+        duration = 16
+
     with pytest.helpers.temp_file("retry.sls", sls_contents, state_tree):
         ret = state.sls("retry")
         for state_return in ret:
             assert state_return.result is True
-            assert state_return.full_return["duration"] < 4
+            assert state_return.full_return["duration"] < duration
             # It should not take 2 attempts
             assert "Attempt 2" not in state_return.comment
 
@@ -801,9 +805,9 @@ def test_parallel_state_with_long_tag(state, state_tree):
             __pub_jid="1",  # Because these run in parallel we need a fake JID
         )
 
-    comments = sorted([x.comment for x in ret])
+    comments = sorted(x.comment for x in ret)
     expected = sorted(
-        ['Command "{}" run'.format(x) for x in (short_command, long_command)]
+        'Command "{}" run'.format(x) for x in (short_command, long_command)
     )
     assert comments == expected, "{} != {}".format(comments, expected)
 
