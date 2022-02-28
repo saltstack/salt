@@ -1347,17 +1347,15 @@ ARGS = {arguments}\n'''.format(
         """
         args = ""
         if script_args:
-            args = "{}".format(
-                " ".join([shlex.quote(str(el)) for el in script_args])
-                if isinstance(script_args, (list, tuple))
-                else shlex.quote(script_args)
-            )
+            if not isinstance(script_args, (list, tuple)):
+                script_args = shlex.split(str(script_args))
+            args = " {}".format(" ".join([shlex.quote(str(el)) for el in script_args]))
         if extension == "ps1":
             ret = self.shell.exec_cmd('"powershell {}"'.format(script))
         else:
             if not self.winrm:
                 ret = self.shell.exec_cmd(
-                    "/bin/sh '{}{}' {}".format(pre_dir, script, args)
+                    "/bin/sh '{}{}'{}".format(pre_dir, script, args)
                 )
             else:
                 ret = saltwinshell.call_python(self, script)
