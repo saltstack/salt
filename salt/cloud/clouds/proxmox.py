@@ -755,7 +755,7 @@ def _import_api():
     # Results for both possible matches are returned as a tuple instead of a single string
     filter_results = re_filter.findall(returned_data.text)[0]
     # We need to capture the single tuple item expected to have valid json
-    api_json = ''
+    api_json = ""
     for result in filter_results:
         if result != "":
             api_json = result
