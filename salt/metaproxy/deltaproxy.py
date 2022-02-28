@@ -418,7 +418,16 @@ def post_master_init(self, master):
         _fq_proxyname = proxyopts["proxy"]["proxytype"]
 
         proxy_init_fn = _proxy_minion.proxy[_fq_proxyname + ".init"]
-        proxy_init_fn(proxyopts)
+        try:
+            proxy_init_fn(proxyopts)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error(
+                "An exception occured during the initialization of minion %s: %s",
+                _id,
+                exc,
+                exc_info=True,
+            )
+            continue
 
         # Reload the grains
         self.proxy_grains[_id] = salt.loader.grains(

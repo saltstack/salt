@@ -286,3 +286,100 @@ def test_missing_pillar_file(
         # Terminate the proxy minion
         ret = factory.terminate()
         assert ret.exitcode == salt.defaults.exitcodes.EX_OK, ret
+
+
+# Hangs on Windows. You can add a timeout to the proxy.run command, but then
+# it just times out.
+@pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
+def test_invalid_connection(
+    salt_factories,
+    base_env_pillar_tree_root_dir,
+    salt_master,
+    salt_cli,
+    proxy_minion_id,
+):
+    """
+    Ensure that the control proxy minion starts up when
+    pillar files for sub proxies are missing.
+
+    Skip on Windows because daemonization not supported
+    """
+
+    config_defaults = {
+        "metaproxy": "deltaproxy",
+    }
+
+    top_file = """
+    base:
+      '{}':
+        - controlproxy
+      dummy_proxy_one:
+        - dummy_proxy_one
+      broken_proxy_one:
+        - broken_proxy_one
+      broken_proxy_two:
+        - broken_proxy_two
+    """.format(
+        proxy_minion_id
+    )
+    controlproxy_pillar_file = """
+    proxy:
+        proxytype: deltaproxy
+        ids:
+          - broken_proxy_one
+          - broken_proxy_two
+          - dummy_proxy_one
+    """
+
+    dummy_proxy_one_pillar_file = """
+    proxy:
+      proxytype: dummy
+    """
+
+    broken_proxy_one_pillar_file = """
+    proxy:
+      proxytype: dummy
+      raise_minion_error: True
+    """
+
+    broken_proxy_two_pillar_file = """
+    proxy:
+      proxytype: dummy
+      raise_commandexec_error: True
+    """
+
+    top_tempfile = salt_master.pillar_tree.base.temp_file("top.sls", top_file)
+    controlproxy_tempfile = salt_master.pillar_tree.base.temp_file(
+        "controlproxy.sls", controlproxy_pillar_file
+    )
+    dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
+        "dummy_proxy_one.sls", dummy_proxy_one_pillar_file
+    )
+    broken_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
+        "broken_proxy_one.sls", broken_proxy_one_pillar_file
+    )
+    broken_proxy_two_tempfile = salt_master.pillar_tree.base.temp_file(
+        "broken_proxy_two.sls", broken_proxy_two_pillar_file
+    )
+    with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile, broken_proxy_one_tempfile, broken_proxy_two_tempfile:
+        factory = salt_master.salt_proxy_minion_daemon(
+            proxy_minion_id,
+            defaults=config_defaults,
+            extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+            start_timeout=240,
+        )
+
+        factory.after_terminate(clear_proxy_minions, salt_master, factory.id)
+
+        with factory.started():
+            # Let's issue a ping the control proxy
+            ret = salt_cli.run("test.ping", minion_tgt=proxy_minion_id)
+            assert ret.exitcode == 0
+            assert ret.json is True
+            # Let's issue a ping to one of the controlled proxies
+            ret = salt_cli.run("test.ping", minion_tgt="dummy_proxy_one")
+            assert ret.exitcode == 0
+            assert ret.json is True
+
+    assert not factory.is_running()
+    assert ret.exitcode == salt.defaults.exitcodes.EX_OK, ret
