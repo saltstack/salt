@@ -939,6 +939,8 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                 try:
                     log.debug("Publish daemon getting data from puller %s", pull_uri)
                     package = pull_sock.recv()
+                    package = salt.payload.loads(package)
+                    package = self.pack_publish(package)
                     log.debug("Publish daemon received payload. size=%d", len(package))
 
                     unpacked_package = salt.payload.unpackage(package)
@@ -1031,8 +1033,8 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         """
         if self.pub_sock:
             self.pub_close()
-        ctx = zmq.Context.instance()
-        self._sock_data.sock = ctx.socket(zmq.PUSH)
+        self._sock_data._ctx = zmq.Context()
+        self._sock_data.sock = self._sock_data._ctx.socket(zmq.PUSH)
         self.pub_sock.setsockopt(zmq.LINGER, -1)
         if self.opts.get("ipc_mode", "") == "tcp":
             pull_uri = "tcp://127.0.0.1:{}".format(
@@ -1054,14 +1056,10 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
         if hasattr(self._sock_data, "sock"):
             self._sock_data.sock.close()
             delattr(self._sock_data, "sock")
+            if hasattr(self._sock_data, "_ctx"):
+                self._sock_data._ctx.destroy()
 
-    def publish(self, load):
-        """
-        Publish "load" to minions. This send the load to the publisher daemon
-        process with does the actual sending to minions.
-
-        :param dict load: A load to be sent across the wire to minions
-        """
+    def pack_publish(self, load):
         payload = {"enc": "aes"}
         load["serial"] = salt.master.SMaster.get_serial()
         crypticle = salt.crypt.Crypticle(
@@ -1094,9 +1092,18 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             load.get("jid", None),
             len(payload),
         )
+        return payload
+
+    def publish(self, load):
+        """
+        Publish "load" to minions. This send the load to the publisher daemon
+        process with does the actual sending to minions.
+
+        :param dict load: A load to be sent across the wire to minions
+        """
         if not self.pub_sock:
             self.pub_connect()
-        self.pub_sock.send(payload)
+        self.pub_sock.send(salt.payload.dumps(load))
         log.debug("Sent payload to publish daemon.")
 
 
