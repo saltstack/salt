@@ -216,7 +216,7 @@ class SSH(MultiprocessingStateMixin):
         pull_sock = os.path.join(opts["sock_dir"], "master_event_pull.ipc")
         if os.path.exists(pull_sock) and zmq:
             self.event = salt.utils.event.get_event(
-                "master", opts["sock_dir"], opts["transport"], opts=opts, listen=False
+                "master", opts["sock_dir"], opts=opts, listen=False
             )
         else:
             self.event = None
