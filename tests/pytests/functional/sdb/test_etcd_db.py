@@ -1,9 +1,4 @@
 import logging
-import threading
-import time
-
-from more_itertools import side_effect
-from tests.support.mock import patch
 
 import pytest
 import salt.sdb.etcd_db as etcd_db
@@ -11,6 +6,7 @@ from salt.utils.etcd_util import HAS_LIBS, EtcdClient
 from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
+from tests.support.mock import patch
 
 docker = pytest.importorskip("docker")
 
@@ -113,13 +109,25 @@ def test_set(subtests, etcd_profile, prefix):
         assert etcd_db.set_("{}/1".format(prefix), "one", profile=etcd_profile) == "one"
 
     with subtests.test("we should be able to alter a key/value pair"):
-        assert etcd_db.set_("{}/1".format(prefix), "not one", profile=etcd_profile) == "not one"
+        assert (
+            etcd_db.set_("{}/1".format(prefix), "not one", profile=etcd_profile)
+            == "not one"
+        )
 
-    with subtests.test("assigning a value to be None should assign it to an empty value"):
+    with subtests.test(
+        "assigning a value to be None should assign it to an empty value"
+    ):
         assert etcd_db.set_("{}/1".format(prefix), None, profile=etcd_profile) == ""
 
-    with subtests.test("providing a service to set should do nothing extra at the moment"):
-        assert etcd_db.set_("{}/1".format(prefix), "one", service="Pablo", profile=etcd_profile) == "one"
+    with subtests.test(
+        "providing a service to set should do nothing extra at the moment"
+    ):
+        assert (
+            etcd_db.set_(
+                "{}/1".format(prefix), "one", service="Pablo", profile=etcd_profile
+            )
+            == "one"
+        )
 
 
 def test_get(subtests, etcd_profile, prefix):
@@ -133,8 +141,13 @@ def test_get(subtests, etcd_profile, prefix):
         etcd_db.set_("{}/1".format(prefix), "one", profile=etcd_profile)
         assert etcd_db.get("{}/1".format(prefix), profile=etcd_profile) == "one"
 
-    with subtests.test("providing a service to get should do nothing extra at the moment"):
-        assert etcd_db.get("{}/1".format(prefix), service="Picasso", profile=etcd_profile) == "one"
+    with subtests.test(
+        "providing a service to get should do nothing extra at the moment"
+    ):
+        assert (
+            etcd_db.get("{}/1".format(prefix), service="Picasso", profile=etcd_profile)
+            == "one"
+        )
 
 
 def test_delete(subtests, etcd_profile, prefix):
@@ -152,5 +165,9 @@ def test_delete(subtests, etcd_profile, prefix):
         etcd_db.set_("{}/1".format(prefix), "one", profile=etcd_profile)
         assert etcd_db.delete("{}/1".format(prefix), profile=etcd_profile)
 
-    with subtests.test("providing a service to delete should do nothing extra at the moment"):
-        assert etcd_db.delete("{}/1".format(prefix), service="Picasso", profile=etcd_profile)
+    with subtests.test(
+        "providing a service to delete should do nothing extra at the moment"
+    ):
+        assert etcd_db.delete(
+            "{}/1".format(prefix), service="Picasso", profile=etcd_profile
+        )
