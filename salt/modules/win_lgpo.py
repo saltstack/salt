@@ -6916,7 +6916,7 @@ def _checkAllAdmxPolicies(
 
                             if etree.QName(child_item).localname == "boolean":
                                 # https://msdn.microsoft.com/en-us/library/dn605978(v=vs.85).aspx
-                                if child_item:
+                                if child_item is not None:
                                     if (
                                         TRUE_VALUE_XPATH(child_item)
                                         and this_element_name not in configured_elements
@@ -9313,7 +9313,7 @@ def _get_policy_adm_setting(
                     )
                     if etree.QName(child_item).localname == "boolean":
                         # https://msdn.microsoft.com/en-us/library/dn605978(v=vs.85).aspx
-                        if child_item:
+                        if child_item is not None:
                             if (
                                 TRUE_VALUE_XPATH(child_item)
                                 and this_element_name not in configured_elements

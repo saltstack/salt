@@ -110,7 +110,6 @@ def listen(opts):
     event = salt.utils.event.get_event(
         opts["node"],
         sock_dir=opts["sock_dir"],
-        transport=opts["transport"],
         opts=opts,
         listen=True,
     )
