@@ -593,7 +593,7 @@ msrestazure==0.6.4
     #   azure-mgmt-subscription
     #   azure-mgmt-trafficmanager
     #   azure-mgmt-web
-napalm==3.1.0 ; sys_platform != "win32" and python_version > "3.6"
+napalm==3.1.0 ; sys_platform != "win32" and python_version > "3.6" and python_version < "3.10"
     # via -r requirements/static/ci/common.in
 ncclient==0.6.4
     # via junos-eznc
