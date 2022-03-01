@@ -94,7 +94,11 @@ class Beacon:
                     log.error("Configuration for beacon must be a list.")
                     continue
 
-            b_config[mod].append({"_beacon_name": mod})
+            try:
+                b_config[mod].append({"_beacon_name": mod})
+            except AttributeError:
+                continue
+                
             fun_str = "{}.beacon".format(beacon_name)
             if fun_str in self.beacons:
                 runonce = self._determine_beacon_config(
