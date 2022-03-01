@@ -6,7 +6,7 @@ def blackout_minion(salt_minion, salt_master, salt_run_cli):
     with pytest.helpers.temp_file(
         "top.sls",
         """base:\n  '*':\n    - fnord""",
-        salt_master.pillar_tree.base.paths[0],
+        salt_master.pillar_tree.base.temp_file,
     ), pytest.helpers.temp_file(
         "fnord.sls", """minion_blackout: True""", salt_master.pillar_tree.base.paths[0]
     ):
