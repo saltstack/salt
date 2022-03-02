@@ -199,9 +199,9 @@ def test_symlink(file, multiline_file):
 
 
 def test_replace_no_modify_time_update_on_no_change(file, multiline_file):
-    os.utime(multiline_file, (1552661253, 1552661253))
-    mtime = os.stat(multiline_file).st_mtime
+    os.utime(str(multiline_file), (1552661253, 1552661253))
+    mtime = os.stat(str(multiline_file)).st_mtime
     file.replace(str(multiline_file), r"Etia.", "Etiam", backup=False)
-    nmtime = os.stat(multiline_file).st_mtime
+    nmtime = os.stat(str(multiline_file)).st_mtime
 
     assert mtime == nmtime
