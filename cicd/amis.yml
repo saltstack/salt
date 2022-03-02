@@ -1,6 +1,6 @@
 alma-8-x86_64: ami-0594d7cf435c3d2f7
-amazon-2-x86_64: ami-017678da32a33019e
-arch-lts-x86_64: ami-0d6d180c7b3cbde31
+amazon-2-x86_64: ami-01226819a514516fe
+arch-lts-x86_64: ami-018a6b479dcb87969
 centos-7-x86_64: ami-05764f27cdf8f99e0
 centosstream-8-x86_64: ami-02fc0a57f9b1fa4ed
 debian-10-amd64: ami-0eb32b3297dc438d0
