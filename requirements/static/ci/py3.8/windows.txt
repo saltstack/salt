@@ -213,6 +213,8 @@ pyparsing==2.4.5
     # via packaging
 pyrsistent==0.17.3
     # via jsonschema
+pytest-asyncio==0.18.1
+    # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
@@ -232,6 +234,7 @@ pytest-timeout==1.4.2
 pytest==6.1.2 ; python_version <= "3.9"
     # via
     #   -r requirements/pytest.txt
+    #   pytest-asyncio
     #   pytest-helpers-namespace
     #   pytest-salt-factories
     #   pytest-skip-markers

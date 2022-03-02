@@ -662,6 +662,8 @@ pyrsistent==0.18.0
     # via jsonschema
 pyserial==3.5
     # via junos-eznc
+pytest-asyncio==0.16.0
+    # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
@@ -681,6 +683,7 @@ pytest-timeout==2.0.2
 pytest==6.2.5 ; python_version <= "3.9"
     # via
     #   -r requirements/pytest.txt
+    #   pytest-asyncio
     #   pytest-helpers-namespace
     #   pytest-salt-factories
     #   pytest-skip-markers

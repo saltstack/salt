@@ -185,6 +185,7 @@ a return like::
 .. |500| replace:: internal server error
 """
 
+import asyncio
 import cgi
 import fnmatch
 import logging
@@ -215,6 +216,7 @@ from salt.ext.tornado.concurrent import Future
 from salt.utils.event import tagify
 
 _json = salt.utils.json.import_json()
+
 log = logging.getLogger(__name__)
 
 
@@ -269,16 +271,21 @@ class EventListener:
     non-blocking work in the main processes and "wait" for an event to happen
     """
 
-    def __init__(self, mod_opts, opts):
+    def __init__(self, mod_opts, opts, io_loop=None):
         self.mod_opts = mod_opts
         self.opts = opts
+        if io_loop is None:
+            io_loop = asyncio.get_event_loop()
+        if hasattr(io_loop, "asyncio_loop"):
+            io_loop = io_loop.asyncio_loop
         self.event = salt.utils.event.get_event(
             "master",
             opts["sock_dir"],
             opts["transport"],
             opts=opts,
             listen=True,
-            io_loop=salt.ext.tornado.ioloop.IOLoop.current(),
+            # io_loop=salt.ext.tornado.ioloop.IOLoop.current(),
+            io_loop=io_loop,
         )
 
         # tag -> list of futures
@@ -340,7 +347,8 @@ class EventListener:
             future.set_exception(TimeoutException())
             return future
 
-        future = Future()
+        future = asyncio.Future()
+        asyncio.ensure_future(future)
         if callback is not None:
 
             def handle_future(future):
@@ -428,6 +436,7 @@ class BaseSaltAPIHandler(salt.ext.tornado.web.RequestHandler):  # pylint: disabl
             self.application.event_listener = EventListener(
                 self.application.mod_opts,
                 self.application.opts,
+                io_loop=salt.ext.tornado.ioloop.IOLoop.current(),
             )
 
         if not hasattr(self, "saltclients"):
@@ -436,9 +445,7 @@ class BaseSaltAPIHandler(salt.ext.tornado.web.RequestHandler):  # pylint: disabl
                 "local": local_client.run_job_async,
                 # not the actual client we'll use.. but its what we'll use to get args
                 "local_async": local_client.run_job_async,
-                "runner": salt.runner.RunnerClient(
-                    opts=self.application.opts
-                ).cmd_async,
+                "runner": salt.runner.RunnerClient(self.application.opts).cmd_async,
                 "runner_async": None,  # empty, since we use the same client as `runner`
             }
 
@@ -1158,6 +1165,9 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                     minion_running = False
                     continue
 
+            if event is None:
+                break
+
             # Minions can return, we want to see if the job is running...
             if event["data"].get("return", {}) == {}:
                 continue
@@ -1209,7 +1219,8 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         f_call = salt.utils.args.format_call(
             salt.client.LocalClient.run_job, chunk, is_class_method=True
         )
-        f_call.get("kwargs", {})["io_loop"] = salt.ext.tornado.ioloop.IOLoop.current()
+        # f_call.get("kwargs", {})["io_loop"] = salt.ext.tornado.ioloop.IOLoop.current()
+        f_call.get("kwargs", {})["io_loop"] = asyncio.get_event_loop()
         return f_call
 
 

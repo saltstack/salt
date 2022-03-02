@@ -60,6 +60,7 @@ class MockSubscriber:
 
     calls = 0
     pubret = None
+    close_methods = []
 
     def __init__(self, *args, **kwargs):
         return

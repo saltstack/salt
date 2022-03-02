@@ -2,8 +2,11 @@
     :codeauthor: Thomas Jackson <jacksontj.89@gmail.com>
 """
 
+import asyncio
 import hashlib
+import logging
 
+import pytest
 import salt.channel.client
 import salt.config
 import salt.exceptions
@@ -15,6 +18,8 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 from tests.support.mock import MagicMock, patch
+
+log = logging.getLogger(__name__)
 
 
 def test_master_uri():
@@ -92,7 +97,7 @@ def test_clear_req_channel_master_uri_override(temp_salt_minion, temp_salt_maste
         assert "127.0.0.1" in channel.transport.message_client.addr
 
 
-def test_zeromq_async_pub_channel_publish_port(temp_salt_master):
+async def test_zeromq_async_pub_channel_publish_port(temp_salt_master):
     """
     test when connecting that we use the publish_port set in opts when its not 4506
     """
@@ -110,17 +115,17 @@ def test_zeromq_async_pub_channel_publish_port(temp_salt_master):
         sign_pub_messages=False,
     )
     opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
-    ioloop = salt.ext.tornado.ioloop.IOLoop()
+    ioloop = asyncio.get_event_loop()
     transport = salt.transport.zeromq.PublishClient(opts, ioloop)
     with transport:
         patch_socket = MagicMock(return_value=True)
         patch_auth = MagicMock(return_value=True)
         with patch.object(transport, "_socket", patch_socket):
-            transport.connect(455505)
+            await transport.connect(455505)
     assert str(opts["publish_port"]) in patch_socket.mock_calls[0][1][0]
 
 
-def test_zeromq_async_pub_channel_filtering_decode_message_no_match(
+async def test_zeromq_async_pub_channel_filtering_decode_message_no_match(
     temp_salt_master,
 ):
     """
@@ -152,18 +157,18 @@ def test_zeromq_async_pub_channel_filtering_decode_message_no_match(
     )
     opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
 
-    ioloop = salt.ext.tornado.ioloop.IOLoop()
+    ioloop = asyncio.get_event_loop()
     channel = salt.transport.zeromq.PublishClient(opts, ioloop)
     with channel:
         with patch(
             "salt.crypt.AsyncAuth.crypticle",
             MagicMock(return_value={"tgt_type": "glob", "tgt": "*", "jid": 1}),
         ):
-            res = channel._decode_messages(message)
-    assert res.result() is None
+            res = await channel._decode_messages(message)
+    assert res is None
 
 
-def test_zeromq_async_pub_channel_filtering_decode_message(
+async def test_zeromq_async_pub_channel_filtering_decode_message(
     temp_salt_master, temp_salt_minion
 ):
     """
@@ -199,13 +204,74 @@ def test_zeromq_async_pub_channel_filtering_decode_message(
     )
     opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
 
-    ioloop = salt.ext.tornado.ioloop.IOLoop()
+    ioloop = asyncio.get_event_loop()
     channel = salt.transport.zeromq.PublishClient(opts, ioloop)
     with channel:
         with patch(
             "salt.crypt.AsyncAuth.crypticle",
             MagicMock(return_value={"tgt_type": "glob", "tgt": "*", "jid": 1}),
         ) as mock_test:
-            res = channel._decode_messages(message)
+            res = await channel._decode_messages(message)
 
-    assert res.result()["enc"] == "aes"
+    assert res["enc"] == "aes"
+
+
+async def test_zeromq_req_channel(temp_salt_master, temp_salt_minion, event_loop):
+    io_loop = event_loop
+    opts = dict(
+        temp_salt_master.config.copy(),
+        id=temp_salt_minion.id,
+        ipc_mode="ipc",
+        pub_hwm=0,
+        zmq_filtering=True,
+        recon_randomize=False,
+        recon_default=1,
+        recon_max=2,
+        master_ip="127.0.0.1",
+        acceptance_wait_time=5,
+        acceptance_wait_time_max=5,
+        sign_pub_messages=False,
+    )
+    opts["master_uri"] = "tcp://{interface}:{ret_port}".format(**opts)
+    # for k in opts:
+    #    log.error("%s=%r", k, opts[k])
+    req_server = salt.transport.zeromq.RequestServer(opts)
+    process_manager = salt.utils.process.ProcessManager(name="ReqServer-ProcessManager")
+    req_server.pre_fork(process_manager)
+    await asyncio.sleep(2)
+
+    async def handle_payload(payload):
+        return payload
+
+    req_server.post_fork(handle_payload, io_loop)
+
+    req_client = salt.transport.zeromq.RequestClient(opts, io_loop)
+    log.error("SEND 1")
+    resp = await req_client.send({"wtf": "meh"}, timeout=3)
+    assert resp == {"wtf": "meh"}
+    process_manager.terminate()
+    req_server.close()
+
+    assert req_client.message_client.socket
+    with pytest.raises(salt.transport.zeromq.SaltReqTimeoutError):
+        log.error("SEND 2")
+        resp = await req_client.send({"wtf": "meh"}, timeout=3)
+
+    # assert req_client.message_client.socket.closed
+    # req_client.message_client.context.destroy()
+
+    req_server = salt.transport.zeromq.RequestServer(opts)
+    process_manager = salt.utils.process.ProcessManager(name="ReqServer-ProcessManager")
+    req_server.pre_fork(process_manager)
+    await asyncio.sleep(2)
+
+    req_server.post_fork(handle_payload, io_loop)
+
+    log.error("SLEEP 5")
+    await asyncio.sleep(5)
+    log.error("SEND 3")
+    # req_client = salt.transport.zeromq.RequestClient(opts, io_loop)
+    resp = await req_client.send({"wtf": "meh"}, timeout=10)
+    assert resp == {"wtf": "meh"}
+    process_manager.terminate()
+    req_server.close()

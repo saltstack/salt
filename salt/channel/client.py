@@ -102,6 +102,7 @@ class AsyncReqChannel:
     ]
     close_methods = [
         "close",
+        "wait_closed",
     ]
 
     @classmethod
@@ -151,9 +152,7 @@ class AsyncReqChannel:
             "load": load,
         }
 
-    async def crypted_transfer_decode_dictentry(
-        self, load, dictkey=None, timeout=60
-    ):
+    async def crypted_transfer_decode_dictentry(self, load, dictkey=None, timeout=60):
         if not self.auth.authenticated:
             await self.auth.authenticate()
         ret = await self.transport.send(
@@ -276,6 +275,13 @@ class AsyncReqChannel:
         self._closing = True
         self.transport.close()
 
+    async def wait_closed(self):
+        try:
+            if self.transport.message_client.stream_return_running:
+                await self.transport.message_client.stream_return_running
+        except AttributeError:
+            pass
+
     def __enter__(self):
         return self
 
@@ -385,7 +391,10 @@ class AsyncPubChannel:
             decoded = await self._decode_payload(payload)
             log.trace("PubChannel received: %r", decoded)
             if decoded is not None:
-                callback(decoded)
+                if asyncio.iscoroutinefunction(callback):
+                    await callback(decoded)
+                else:
+                    callback(decoded)
 
         return self.transport.on_recv(wrap_callback)
 

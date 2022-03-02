@@ -1,3 +1,4 @@
+import asyncio
 import pathlib
 import sys
 
@@ -39,6 +40,7 @@ class IPCTester:
     client = attr.ib()
     payloads = attr.ib(default=attr.Factory(list))
     payload_ack = attr.ib(default=attr.Factory(locks.Condition))
+    start_tasks = attr.ib(default=attr.Factory(list))
 
     @server.default
     def _server_default(self):
@@ -75,8 +77,8 @@ class IPCTester:
         return ret
 
     def __enter__(self):
-        self.io_loop.add_callback(self.server.start)
-        self.io_loop.add_callback(self.client.connect)
+        self.start_tasks.append(self.io_loop.create_task(self.server.start()))
+        self.start_tasks.append(self.io_loop.create_task(self.client.connect()))
         return self
 
     def __exit__(self, *args):
@@ -98,13 +100,14 @@ def ipc_socket_path(tmp_path):
 
 
 @pytest.fixture
-def channel(io_loop, ipc_socket_path):
-    _ipc_tester = IPCTester(io_loop=io_loop, socket_path=str(ipc_socket_path))
+def channel(event_loop, ipc_socket_path):
+    _ipc_tester = IPCTester(io_loop=event_loop, socket_path=str(ipc_socket_path))
     with _ipc_tester:
         yield _ipc_tester
 
 
 async def test_basic_send(channel):
+    await asyncio.gather(*channel.start_tasks)
     msg = {"foo": "bar", "stop": True}
     await channel.send(msg)
     assert channel.payloads[0] == msg
@@ -130,6 +133,7 @@ async def test_very_big_message(channel):
 async def test_multistream_sends(channel):
     new_channel = channel.new_client()
     with new_channel:
+        await asyncio.gather(*new_channel.start_tasks)
         assert channel.client is not new_channel.client
         await new_channel.send("foo")
         await channel.send("foo")
@@ -139,6 +143,7 @@ async def test_multistream_sends(channel):
 async def test_multistream_error_sends(channel):
     new_channel = channel.new_client()
     with new_channel:
+        await asyncio.gather(*new_channel.start_tasks)
         assert channel.client is not new_channel.client
         await new_channel.send(None)
         await channel.send(None)

@@ -215,9 +215,8 @@ def test_pub(salt_master_factory):
             )
 
 
-@pytest.mark.skip_unless_on_windows(reason="Windows only test")
 @pytest.mark.slow_test
-def test_pub_win32(salt_master_factory):
+def test_pub_tcp_ipc(salt_master_factory):
     """
     Tests that the client raises a timeout error when using ZeroMQ's TCP
     transport and publisher is not running.
@@ -226,6 +225,7 @@ def test_pub_win32(salt_master_factory):
     """
     config = copy.deepcopy(salt_master_factory.config)
     salt_local_client = salt.client.get_local_client(mopts=config)
+    config["ipc_mode"] = "tcp"
 
     if salt_local_client.opts.get("transport") != "zeromq":
         pytest.skip("This test only works with ZeroMQ")

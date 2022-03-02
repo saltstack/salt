@@ -719,6 +719,7 @@ class TestDisbatchLocal(salt.ext.tornado.testing.AsyncTestCase):
 
     @salt.ext.tornado.testing.gen_test
     def test_when_is_finished_then_all_collected_data_should_be_returned(self):
+        # yield self.handler.application.event_listener.connect()
         completed_event = salt.ext.tornado.gen.Future()
         never_completed = salt.ext.tornado.gen.Future()
         # This timeout should never be reached

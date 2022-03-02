@@ -28,10 +28,10 @@ import salt.utils.path
 import salt.utils.platform
 import salt.utils.versions
 
-
 log = logging.getLogger(__name__)
 
 HAS_PSUTIL = False
+
 try:
     import psutil
 
@@ -149,6 +149,9 @@ def daemonize_if(opts):
 
 
 def systemd_notify_call(action):
+    """
+    Call systemd-notify with the given action.
+    """
     process = subprocess.Popen(
         ["systemd-notify", action], stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
@@ -458,6 +461,8 @@ class ThreadPool:
             return False
 
     def _thread_target(self):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         while True:
             # 1s timeout so that if the parent dies this thread will die within 1s
             try:
@@ -1175,6 +1180,9 @@ class SignalHandlingMultiprocessingProcess(SignalHandlingProcess):
 
 @contextlib.contextmanager
 def default_signals(*signals):
+    """
+    Setup Salt's default signal handlers
+    """
     old_signals = {}
     for signum in signals:
         try:

@@ -42,7 +42,7 @@ class Collector(salt.utils.process.SignalHandlingProcess):
         """
         ctx = zmq.Context()
         sock = ctx.socket(zmq.SUB)
-        sock.setsockopt(zmq.LINGER, -1)
+        sock.setsockopt(zmq.LINGER, 500)
         sock.setsockopt(zmq.SUBSCRIBE, b"")
         sock.connect(self.pub_uri)
         last_msg = time.time()
@@ -247,6 +247,7 @@ def test_zeromq_filtering(salt_master, salt_minion):
     """
     Test sending messages to publisher using UDP with zeromq_filtering enabled
     """
+    log.error("MEH 0")
     opts = dict(
         salt_master.config.copy(),
         ipc_mode="ipc",
@@ -266,9 +267,11 @@ def test_zeromq_filtering(salt_master, salt_minion):
             }
         ),
     ):
+        log.error("MEH 1")
         with PubServerChannelProcess(
             opts, salt_minion.config.copy(), zmq_filtering=True
         ) as server_channel:
+            log.error("MEH 2")
             expect.append(send_num)
             load = {"tgt_type": "glob", "tgt": "*", "jid": send_num}
             server_channel.publish(load)

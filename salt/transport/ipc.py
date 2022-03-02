@@ -91,25 +91,32 @@ class IPCServer:
                         log.debug(
                             "%s process message %r", self.__class__.__name__, wire_bytes
                         )
-                        self.process_message(unpacker, wire_bytes, write_callback)
+                        await self.process_message(unpacker, wire_bytes, write_callback)
                         break
                     else:
                         log.debug("%s reader reached EOF", self)
                         break
-                self.process_message(unpacker, wire_bytes, write_callback)
+                await self.process_message(unpacker, wire_bytes, write_callback)
             except Exception as exc:  # pylint: disable=broad-except
                 log.error("Unhandled exception %s", exc, exc_info=True)
                 break
 
-    def process_message(self, unpacker, wire_bytes, write_callback):
+    async def process_message(self, unpacker, wire_bytes, write_callback):
         unpacker.feed(wire_bytes)
         for framed_msg in unpacker:
             head = framed_msg.get("head", None)
             body = framed_msg["body"]
-            self.payload_handler(
-                body,
-                write_callback(head),
-            )
+            if asyncio.iscoroutinefunction(self.payload_handler):
+                await self.payload_handler(
+                    body,
+                    write_callback(head),
+                )
+            else:
+                # XXX Spawn callback or enforce coroutine here?
+                self.payload_handler(
+                    body,
+                    write_callback(head),
+                )
 
 
 class IPCClient:
@@ -150,13 +157,12 @@ class IPCClient:
                 FileNotFoundError,
             ):
                 if timeout is None or time.time() - start > timeout:
-                        raise
+                    raise
                 await asyncio.sleep(1)
         if callback:
             callback(self)
 
     def close(self):
-        log.error("CLOSE CALLED")
         # Only the writer has a close method
         if self.writer:
             self.writer.close()
@@ -216,7 +222,7 @@ class IPCMessagePublisher:
         if isinstance(self.socket_path, int):
             host = "127.0.0.1"
             log.info(
-                "%s listen on %s:%s", self.__class__.__name__, host, self.stocket_path
+                "%s listen on %s:%s", self.__class__.__name__, host, self.socket_path
             )
             self.server = await asyncio.start_server(
                 self.handle_connection,
@@ -282,8 +288,8 @@ class IPCMessageSubscriber(IPCClient):
     async def _read(self, timeout, callback=None):
         try:
             await asyncio.wait_for(self._read_lock.acquire(), timeout=0.0000001)
-        except Exception as exc:
-            log.error("Neet to exc %r", exc)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Unhandled exception %r", exc)
 
         exc_to_raise = None
         ret = None
@@ -295,14 +301,20 @@ class IPCMessageSubscriber(IPCClient):
                 try:
                     # Backwards compat
                     if timeout == 0:
-                        timeout = .3
+                        timeout = 0.3
                     if timeout is None:
                         wire_bytes = await self.reader.read(1024)
                     else:
-                        wire_bytes = await asyncio.wait_for(self.reader.read(1024), timeout=timeout)
+                        wire_bytes = await asyncio.wait_for(
+                            self.reader.read(1024), timeout=timeout
+                        )
                     if not wire_bytes:
-                        log.debug("%s Noting more to read", self.__class__.__name__)
+                        log.debug("%s Nothing more to read", self.__class__.__name__)
                         break
+                except ConnectionResetError as e:
+                    # XXX This only happens on windows?
+                    log.error("Connection reset by peer")
+                    break
                 except asyncio.IncompleteReadError as e:
                     log.error("Incomplete read")
                     stop = True
@@ -319,6 +331,7 @@ class IPCMessageSubscriber(IPCClient):
                                 self.io_loop.call_soon(callback, framed_msg["body"])
                             except TypeError:
                                 self.io_loop.create_task(callback(framed_msg["body"]))
+                            stop = True
                         elif first_sync_msg:
                             ret = framed_msg["body"]
                             first_sync_msg = False
@@ -354,6 +367,11 @@ class IPCMessageSubscriber(IPCClient):
         return res
 
     async def read_async(self, callback):
+        if self._saved_data:
+            res = self._saved_data.pop(0)
+            callback(res)
         if not self.connected():
+            log.error("NOT YET CONNECTED")
             await self.connect()
+        log.error("NOW %r", self.connected())
         await self._read(None, callback)

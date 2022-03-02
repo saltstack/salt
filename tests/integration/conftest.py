@@ -7,6 +7,7 @@
 import logging
 
 import pytest
+import saltfactories.exceptions
 
 log = logging.getLogger(__name__)
 
@@ -28,10 +29,18 @@ def salt_minion(salt_minion_factory):
     with salt_minion_factory.started():
         # Sync All
         salt_call_cli = salt_minion_factory.salt_call_cli()
-        ret = salt_call_cli.run("saltutil.sync_all",
-            '-l', 'debug',
-            _timeout=120)
-        assert ret.exitcode == 0, ret
+        tries = 0
+        while True:
+            try:
+                ret = salt_call_cli.run("saltutil.sync_all", _timeout=60)
+            except saltfactories.exceptions.FactoryTimeout:
+                if tries == 2:
+                    raise
+                else:
+                    tries += 1
+            else:
+                assert ret.exitcode == 0, ret
+                break
         yield salt_minion_factory
 
 

@@ -14,6 +14,8 @@ ansible==4.4.0
     # via -r requirements/static/ci/linux.in
 apache-libcloud==2.5.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
+apscheduler==3.6.3
+    # via python-telegram-bot
 asn1crypto==1.3.0
     # via
     #   certvalidator
@@ -331,6 +333,10 @@ backports.entry-points-selectable==1.1.0
     # via virtualenv
 backports.ssl-match-hostname==3.7.0.1 ; python_version < "3.7"
     # via -r requirements/static/pkg/linux.in
+backports.zoneinfo==0.2.1
+    # via
+    #   pytz-deprecation-shim
+    #   tzlocal
 bcrypt==3.1.6
     # via paramiko
 boto3==1.17.67 ; python_version >= "3.6"
@@ -353,6 +359,7 @@ certifi==2021.5.30
     #   -r requirements/static/ci/common.in
     #   kubernetes
     #   msrest
+    #   python-telegram-bot
     #   requests
 certvalidator==0.11.1
     # via vcert
@@ -439,6 +446,7 @@ importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
     #   virtualenv
 importlib-resources==1.5.0
     # via
+    #   backports.zoneinfo
     #   jaraco.text
     #   virtualenv
 iniconfig==1.0.1
@@ -672,6 +680,8 @@ pyrsistent==0.17.3
     # via jsonschema
 pyserial==3.4
     # via junos-eznc
+pytest-asyncio==0.16.0
+    # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
@@ -691,6 +701,7 @@ pytest-timeout==1.4.2
 pytest==6.1.2 ; python_version <= "3.9"
     # via
     #   -r requirements/pytest.txt
+    #   pytest-asyncio
     #   pytest-helpers-namespace
     #   pytest-salt-factories
     #   pytest-skip-markers
@@ -712,13 +723,15 @@ python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
 python-gnupg==0.4.4
     # via -r requirements/static/pkg/linux.in
-python-telegram-bot==13.7 ; python_version > "3.5"
+python-telegram-bot==13.5 ; python_version > "3.5"
     # via -r requirements/static/ci/linux.in
-python-jose[cryptography]==3.2.0
-    # via moto
+pytz-deprecation-shim==0.1.0.post0
+    # via tzlocal
 pytz==2021.1
     # via
+    #   apscheduler
     #   moto
+    #   python-telegram-bot
     #   tempora
     #   twilio
 pyvmomi==6.7.1.2018.12
@@ -777,7 +790,6 @@ setproctitle==1.1.10 ; python_version < "3.10"
 six==1.16.0
     # via
     #   apscheduler
-    #   aws-sam-translator
     #   bcrypt
     #   cassandra-driver
     #   cheroot
@@ -826,13 +838,19 @@ toml==0.10.2
     #   -r requirements/static/ci/common.in
     #   pytest
 tornado==5.1
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   python-telegram-bot
 transitions==0.8.1
     # via junos-eznc
 twilio==6.63.0
     # via -r requirements/static/ci/linux.in
 typing-extensions==3.10.0.0
     # via importlib-metadata
+tzdata==2021.5
+    # via pytz-deprecation-shim
+tzlocal==4.1
+    # via apscheduler
 urllib3==1.26.6
     # via
     #   botocore

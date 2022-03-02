@@ -78,6 +78,7 @@ except ImportError:
     # resource is not available on windows
     HAS_RESOURCE = False
 
+
 log = logging.getLogger(__name__)
 
 
@@ -683,7 +684,6 @@ class Master(SMaster):
             self.process_manager.add_process(
                 salt.utils.event.EventPublisher,
                 args=(self.opts,),
-                kwargs={"log_queue": log_queue},
                 name="EventPublisher",
             )
             log.info("publisher started")
@@ -920,6 +920,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         self.k_mtime = 0
         self.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
         self.stat_clock = time.time()
+        self.name = kwargs.get("name", self.__class__.__name__)
+        self.clear_funcs = None
 
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
     # Otherwise, 'SMaster.secrets' won't be copied over to the spawned process
@@ -939,7 +941,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
     def _handle_signals(self, signum, sigframe):
         for channel in getattr(self, "req_channels", ()):
             channel.close()
-        self.clear_funcs.destroy()
+        if self.clear_funcs:
+            self.clear_funcs.destroy()
         super()._handle_signals(signum, sigframe)
 
     def __bind(self):

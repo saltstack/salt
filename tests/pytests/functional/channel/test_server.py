@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import time
@@ -63,7 +64,7 @@ def process_manager():
         process_manager.terminate()
 
 
-async def test_pub_server_channel_with_zmq_transport(configs, process_manager):
+async def test_pub_server_channel_with_zmq_transport(configs, process_manager, io_loop):
     minion_conf, master_conf = configs
 
     server_channel = salt.channel.server.PubServerChannel.factory(
@@ -76,32 +77,32 @@ async def test_pub_server_channel_with_zmq_transport(configs, process_manager):
     def handle_payload(payload):
         log.info("TEST - Req Server handle payload %r", payload)
 
-    req_server_channel.post_fork(handle_payload, io_loop=io_loop)
+    req_server_channel.post_fork(handle_payload, io_loop)
 
     pub_channel = salt.channel.client.AsyncPubChannel.factory(minion_conf)
     received = []
     await asyncio.sleep(2)
 
     log.info("TEST - BEFORE CHANNEL CONNECT")
-    await channel.connect()
+    await pub_channel.connect()
     log.info("TEST - AFTER CHANNEL CONNECT")
 
     def cb(payload):
         log.info("TEST - PUB SERVER MSG %r", payload)
         received.append(payload)
 
-    channel.on_recv(cb)
-    server.publish({"tgt_type": "glob", "tgt": ["carbon"], "WTF": "SON"})
+    pub_channel.on_recv(cb)
+    server_channel.publish({"tgt_type": "glob", "tgt": ["carbon"], "WTF": "SON"})
+    timeout = 60
     start = time.time()
     while time.time() - start < timeout and not received:
         await asyncio.sleep(1)
     assert len(received) == 1
-    server_channel.close()
     req_server_channel.close()
     pub_channel.close()
 
 
-def test_pub_server_channel_with_tcp_transport(io_loop, configs, process_manager):
+async def test_pub_server_channel_with_tcp_transport(io_loop, configs, process_manager):
     minion_conf, master_conf = configs
     minion_conf["transport"] = "tcp"
     master_conf["transport"] = "tcp"
@@ -121,10 +122,9 @@ def test_pub_server_channel_with_tcp_transport(io_loop, configs, process_manager
     pub_channel = salt.channel.client.AsyncPubChannel.factory(minion_conf)
     received = []
 
-    @salt.ext.tornado.gen.coroutine
-    def doit(channel, server, received, timeout=60):
+    async def doit(channel, server, received, timeout=60):
         log.info("TEST - BEFORE CHANNEL CONNECT")
-        yield channel.connect()
+        await channel.connect()
         log.info("TEST - AFTER CHANNEL CONNECT")
 
         def cb(payload):
@@ -136,7 +136,7 @@ def test_pub_server_channel_with_tcp_transport(io_loop, configs, process_manager
         server.publish({"tgt_type": "glob", "tgt": ["minion"], "WTF": "SON"})
         start = time.time()
         while time.time() - start < timeout:
-            yield salt.ext.tornado.gen.sleep(1)
+            await asyncio.sleep(1)
         io_loop.stop()
 
     try:

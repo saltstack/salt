@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import pathlib
 import sys
 
@@ -7,6 +8,8 @@ import pytest
 import salt.channel.server
 import salt.transport.ipc
 import salt.utils.platform
+
+log = logging.getLogger(__name__)
 
 pytestmark = [
     # Windows does not support POSIX IPC
@@ -40,6 +43,7 @@ class IPCTester:
     subscriber = attr.ib()
     payloads = attr.ib(default=attr.Factory(list))
     payload_ack = attr.ib(default=attr.Factory(asyncio.Condition))
+    start_tasks = attr.ib(default=attr.Factory(list))
 
     @subscriber.default
     def _subscriber_default(self):
@@ -77,20 +81,21 @@ class IPCTester:
         ret = await self.subscriber.read(timeout)
         return ret
 
-#    def __enter__(self):
-#        self.publisher.start()
-#        self.io_loop.create_task(self.subscriber.connect())
-#        return self
-#
-#    def __exit__(self, *args):
-#        self.subscriber.close()
-#        self.publisher.close()
+    #    def __enter__(self):
+    #        self.publisher.start()
+    #        self.io_loop.create_task(self.subscriber.connect())
+    #        return self
+    #
+    #    def __exit__(self, *args):
+    #        self.subscriber.close()
+    #        self.publisher.close()
 
     async def __aenter__(self):
         await self.publisher.start()
+        await asyncio.sleep(0.01)
         await self.subscriber.connect()
         while not self.publisher.streams:
-            await asyncio.sleep(.01)
+            await asyncio.sleep(0.01)
         return self
 
     async def __aexit__(self, *args):
@@ -99,6 +104,16 @@ class IPCTester:
 
     def __await__(self):
         return self.__aenter__().__await__()
+
+    # def __enter__(self):
+    #    self.start_tasks.append(self.io_loop.create_task(self.publisher.start()))
+    #    self.start_tasks.append(self.io_loop.create_task(self.subscriber.connect()))
+    #    return self
+
+    # def __exit__(self, *args):
+    #    self.publisher.close()
+    #    self.subscriber.close()
+
 
 @pytest.fixture
 def ipc_socket_path(tmp_path):
@@ -114,15 +129,17 @@ def ipc_socket_path(tmp_path):
 
 
 @pytest.fixture
-def channel(io_loop, ipc_socket_path):
-    _ipc_tester = IPCTester(io_loop=io_loop, socket_path=str(ipc_socket_path))
+def channel(event_loop, ipc_socket_path):
+    _ipc_tester = IPCTester(io_loop=event_loop, socket_path=str(ipc_socket_path))
     yield _ipc_tester
 
-import logging
-log = logging.getLogger(__name__)
+
 async def test_basic_send(channel):
     msg = {"foo": "bar", "stop": True}
+    log.error("MEH1")
     async with channel as ch:
+        # await asyncio.gather(ch.start_tasks)
+        log.error("MEH2")
         assert ch.subscriber.connected()
         await ch.publish(msg)
         ret = await ch.read()

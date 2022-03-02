@@ -1,5 +1,3 @@
-import salt.ext.tornado.gen
-
 TRANSPORTS = (
     "zeromq",
     "tcp",
@@ -23,7 +21,7 @@ def request_server(opts, **kwargs):
     elif ttype == "tcp":
         import salt.transport.tcp
 
-        return salt.transport.tcp.TCPReqServer(opts)
+        return salt.transport.tcp.RequestServer(opts)
     elif ttype == "local":
         import salt.transport.local
 
@@ -45,7 +43,7 @@ def request_client(opts, io_loop):
     elif ttype == "tcp":
         import salt.transport.tcp
 
-        return salt.transport.tcp.TCPReqClient(opts, io_loop=io_loop)
+        return salt.transport.tcp.RequestClient(opts, io_loop=io_loop)
     else:
         raise Exception("Channels are only defined for tcp, zeromq")
 
@@ -66,7 +64,7 @@ def publish_server(opts, **kwargs):
     elif ttype == "tcp":
         import salt.transport.tcp
 
-        return salt.transport.tcp.TCPPublishServer(opts)
+        return salt.transport.tcp.PublishServer(opts)
     elif ttype == "local":  # TODO:
         import salt.transport.local
 
@@ -90,7 +88,7 @@ def publish_client(opts, io_loop):
     elif ttype == "tcp":
         import salt.transport.tcp
 
-        return salt.transport.tcp.TCPPubClient(opts, io_loop)
+        return salt.transport.tcp.PublishClient(opts, io_loop)
     raise Exception("Transport type not found: {}".format(ttype))
 
 

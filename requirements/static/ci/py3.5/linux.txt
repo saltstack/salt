@@ -18,6 +18,8 @@ asn1crypto==1.3.0
     # via
     #   certvalidator
     #   oscrypto
+async-generator==1.10
+    # via pytest-asyncio
 attrs==20.3.0
     # via
     #   jsonschema
@@ -719,6 +721,8 @@ pyrsistent==0.17.3
     # via jsonschema
 pyserial==3.4
     # via junos-eznc
+pytest-asyncio==0.14.0
+    # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
@@ -738,6 +742,7 @@ pytest-timeout==1.4.2
 pytest==6.1.2 ; python_version <= "3.9"
     # via
     #   -r requirements/pytest.txt
+    #   pytest-asyncio
     #   pytest-helpers-namespace
     #   pytest-salt-factories
     #   pytest-skip-markers

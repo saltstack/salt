@@ -2,6 +2,7 @@
 Salt package
 """
 
+import asyncio
 import importlib
 import sys
 import warnings
@@ -14,6 +15,10 @@ if sys.version_info < (3,):
 
 
 USE_VENDORED_TORNADO = False
+
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 class TornadoImporter:

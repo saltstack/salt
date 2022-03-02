@@ -125,7 +125,7 @@ def test_minion_reconnection_attempts(
 
     start_events = event_listener.wait_for_events(
         [(salt_mm_master_2.id, "salt/minion/{}/start".format(salt_mm_minion_1.id))],
-        timeout=60,
+        timeout=160,
         after_time=start_time,
     )
     assert not start_events.missed

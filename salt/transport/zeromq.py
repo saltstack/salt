@@ -180,9 +180,10 @@ class PublishClient(salt.transport.base.PublishClient):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self._socket.setsockopt(zmq.IPV4ONLY, 0)
 
-        if HAS_ZMQ_MONITOR and self.opts["zmq_monitor"]:
-            self._monitor = ZeroMQSocketMonitor(self._socket)
-            self._monitor.start_io_loop(self.io_loop)
+        # if HAS_ZMQ_MONITOR and self.opts["zmq_monitor"]:
+        #    self._monitor = ZeroMQSocketMonitor(self._socket)
+        #    self._monitor.start_io_loop(self.io_loop)
+        self._monitor = None
         self.task = None
 
     def close(self):
@@ -280,12 +281,12 @@ class PublishClient(salt.transport.base.PublishClient):
                 except zmq.error.ZMQError:
                     # We've disconnected just die
                     break
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     log.error("READ GOT EXCEPTION", exc_info=True)
                     break
                 try:
                     await callback(msg)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     log.error("GOT EXCEPTION", exc_info=True)
                 log.error("Callback done %r", callback)
 
@@ -367,9 +368,10 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         self.__setup_signals()
-        from zmq.devices.monitoredqueuedevice import MonitoredQueue
+        # from zmq.devices.monitoredqueuedevice import MonitoredQueue
         from zmq.devices import Device
-        from zmq.utils.strtypes import asbytes
+
+        # from zmq.utils.strtypes import asbytes
 
         if self.opts["mworker_queue_niceness"] and not salt.utils.platform.is_windows():
             log.info(
@@ -390,31 +392,30 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         context = zmq.Context(self.opts["worker_threads"])
         # Prepare the zeromq sockets
         self.uri = "tcp://{interface}:{ret_port}".format(**self.opts)
-        #self.clients = context.socket(zmq.ROUTER)
-        #self.clients.setsockopt(zmq.LINGER, -1)
-        #if self.opts["ipv6"] is True and hasattr(zmq, "IPV4ONLY"):
+        # self.clients = context.socket(zmq.ROUTER)
+        # self.clients.setsockopt(zmq.LINGER, -1)
+        # if self.opts["ipv6"] is True and hasattr(zmq, "IPV4ONLY"):
         #    # IPv6 sockets work for both IPv6 and IPv4 addresses
         #    self.clients.setsockopt(zmq.IPV4ONLY, 0)
-        #self.clients.setsockopt(zmq.BACKLOG, self.opts.get("zmq_backlog", 1000))
-        #self._start_zmq_monitor(self.clients)
-        #self.workers = context.socket(zmq.DEALER)
-        #self.workers.setsockopt(zmq.LINGER, -1)
-
+        # self.clients.setsockopt(zmq.BACKLOG, self.opts.get("zmq_backlog", 1000))
+        # self._start_zmq_monitor(self.clients)
+        # self.workers = context.socket(zmq.DEALER)
+        # self.workers.setsockopt(zmq.LINGER, -1)
 
         log.info("Setting up the master communication server")
-        #log.debug("ReqServer clients %s", self.uri)
-        #self.clients.bind(self.uri)
-        #log.debug("ReqServer workers %s", self.w_uri)
-        #self.workers.bind(self.w_uri)
+        # log.debug("ReqServer clients %s", self.uri)
+        # self.clients.bind(self.uri)
+        # log.debug("ReqServer workers %s", self.w_uri)
+        # self.workers.bind(self.w_uri)
 
-        #mon = MonitoredQueue(zmq.ROUTER, zmq.DEALER, zmq.PUB, asbytes("in"), asbytes("out"))
+        # mon = MonitoredQueue(zmq.ROUTER, zmq.DEALER, zmq.PUB, asbytes("in"), asbytes("out"))
         mon = Device(in_type=zmq.ROUTER, out_type=zmq.DEALER)
         mon.bind_in(self.uri)
         mon.bind_out(self.w_uri)
-        #mon.bind_mon('tcp://127.0.0.1:9999')
+        # mon.bind_mon('tcp://127.0.0.1:9999')
         mon.start()
 
-        #while True:
+        # while True:
         #    if self.clients.closed or self.workers.closed:
         #        break
         #    try:
@@ -426,9 +427,8 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         #        raise
         #    except (KeyboardInterrupt, SystemExit):
         #        break
-        #log.error("ZMQ DEVICE TERM")
+        # log.error("ZMQ DEVICE TERM")
         context.term()
-
 
     def close(self):
         """
@@ -515,8 +515,8 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 await self.socket.send(reply)
             except asyncio.exceptions.CancelledError:
                 return
-            except:
-                log.error("Unhandled %r", exc_info=True)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Unhandled %r", exc, exc_info=True)
             self.task = asyncio.ensure_future(reciever())
 
         self.task = asyncio.ensure_future(reciever())
@@ -601,7 +601,7 @@ class AsyncReqMessageClient:
         self.linger = linger
         if io_loop is None:
             raise Exception("WTF")
-            self.io_loop = asyncio.get_event_loop()
+            # self.io_loop = asyncio.get_event_loop()
         else:
             self.io_loop = io_loop
 
@@ -656,7 +656,8 @@ class AsyncReqMessageClient:
                 #    self.socket = None
                 # self.stream = None
                 self.socket.close(0)
-                self.context.destroy()
+            if hasattr(self, "context"):
+                self.context.term()
                 self.context = None
             # if self.context.closed is False:
             #    self.context.term()
@@ -696,52 +697,22 @@ class AsyncReqMessageClient:
 
         if callback is not None:
             log.warning("Callback ignored")
-        #    def handle_future(future):
-        #        response = future.result()
-        #        self.io_loop.add_callback(callback, response)
-
-        #    future.add_done_callback(handle_future)
-
-        # Add this future to the mapping
-        # self.send_future_map[message] = future
 
         if self.opts.get("detect_mode") is True:
             timeout = 1
 
-        # if timeout is not None:
-        #    log.warning("Timeout ignored")
-        #    send_timeout = self.io_loop.call_later(
-        #        timeout, self.timeout_message, message
-        #    )
-
-        def mark_future(msg):
-            if not future.done():
-                data = salt.payload.loads(msg[0])
-                future.set_result(data)
-                self.send_future_map.pop(message)
-
         async def sendrecv():
-            await self.socket.send(message)
-            return await self.socket.recv()
-
-        # self.stream.on_recv(mark_future)
-        # if timeout and tries and False:
-        #    try_ = 1
-        #    while True:
-        #        try:
-        #            ret = await asyncio.wait_for(sendrecv(), timeout=timeout)
-        #        except asyncio.TimeoutError:
-        #            if try_ > tries:
-        #                raise
-        #            try_ += 1
-        #        else:
-        #            break
-        # elif timeout and False:
-        #     ret = await asyncio.wait_for(sendrecv(), timeout=timeout)
-        # else:
-        #     ret = await sendrecv()
-        await self.socket.send(message)
-        ret = await self.socket.recv()
+            while True:
+                try:
+                    await self.socket.send(message)
+                except zmq.error.ZMQError:
+                    await asyncio.sleep(0.3)
+                else:
+                    return await self.socket.recv()
+        try:
+            ret = await asyncio.wait_for(sendrecv(), timeout=timeout)
+        except asyncio.TimeoutError:
+            raise SaltReqTimeoutError("timeout")
         load = salt.payload.loads(ret)
         if callback is not None:
             callback(load)
@@ -827,7 +798,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
     _sock_data = threading.local()
 
-    def __init__(self, opts):
+    def __init__(self, opts, **kwargs):
         self.opts = opts
 
     def connect(self):
@@ -1076,7 +1047,7 @@ class RequestClient(salt.transport.base.RequestClient):
     async def send(self, load, timeout=60):
         # XXX Is this blocking?
         self.connect()
-        ret = await self.message_client.send(load, tries=tries, timeout=timeout)
+        ret = await self.message_client.send(load, timeout=timeout)
         log.debug("Client got ret %d", len(ret))
         return ret
 

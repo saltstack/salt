@@ -678,6 +678,8 @@ pyserial==3.4
     # via
     #   junos-eznc
     #   netmiko
+pytest-asyncio==0.18.1
+    # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
@@ -697,6 +699,7 @@ pytest-timeout==1.4.2
 pytest==6.1.2 ; python_version <= "3.9"
     # via
     #   -r requirements/pytest.txt
+    #   pytest-asyncio
     #   pytest-helpers-namespace
     #   pytest-salt-factories
     #   pytest-skip-markers
@@ -831,7 +834,9 @@ tornado==5.1
 transitions==0.8.1
     # via junos-eznc
 typing-extensions==3.10.0.0
-    # via importlib-metadata
+    # via
+    #   importlib-metadata
+    #   pytest-asyncio
 urllib3==1.26.6
     # via
     #   botocore

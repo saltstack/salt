@@ -7,7 +7,6 @@ authenticating peers
 import asyncio
 import base64
 import binascii
-import copy
 import getpass
 import hashlib
 import hmac
@@ -18,7 +17,6 @@ import stat
 import sys
 import time
 import traceback
-import weakref
 
 import salt.channel.client
 import salt.defaults.exitcodes
@@ -734,7 +732,7 @@ class AsyncAuth:
                             "The Salt Master has rejected this minion's public "
                             "key.\nTo repair this issue, delete the public key "
                             "for this minion on the Salt Master.\nThe Salt "
-                            "Minion will attempt to to re-authenicate."
+                            "Minion will attempt to re-authenicate."
                         )
                         return "retry"
                     else:
@@ -1164,7 +1162,7 @@ class SAuth(AsyncAuth):
     Set up an object to maintain authentication with the salt master
     """
 
-    def __init__(self, opts, io_loop=None):
+    def __init__(self, opts, io_loop=None):  # pylint: disable=super-init-not-called
         """
         Init an Auth instance
 

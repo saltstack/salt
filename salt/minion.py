@@ -20,6 +20,7 @@ import types
 
 import salt
 import salt.beacons
+import salt.channel
 import salt.channel.client
 import salt.cli.daemons
 import salt.client
@@ -836,6 +837,8 @@ class MinionBase:
                         if pub_channel:
                             pub_channel.close()
                         raise
+            if pub_channel:
+                pub_channel.close()
 
     def _discover_masters(self):
         """
@@ -934,7 +937,9 @@ class SMinion(MinionBase):
         if self.opts.get("file_client", "remote") == "remote" or self.opts.get(
             "use_master_when_local", False
         ):
-            salt.utils.asynchronous.run_sync(self.eval_master, args=(self.opts,), kwargs=dict(failed=True))
+            salt.utils.asynchronous.run_sync(
+                self.eval_master, args=(self.opts,), kwargs=dict(failed=True)
+            )
         self.gen_modules(initial_load=True, context=context)
 
         # If configured, cache pillar data on the minion
@@ -1064,8 +1069,13 @@ class MinionManager(MinionBase):
         self.event.set_event_handler(self.handle_event)
 
     async def handle_event(self, package):
+        tasks = []
         for minion in self.minions:
-            await minion.handle_event(package)
+            tasks.append(self.io_loop.create_task(minion.handle_event(package)))
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for result in results:
+            if isinstance(result, Exception):
+                log.error("Event handler got exception %r", result)
 
     def _create_minion_object(
         self,
@@ -1096,6 +1106,7 @@ class MinionManager(MinionBase):
         """
         if not self.minions:
             log.error("Minion unable to successfully connect to a Salt Master.")
+            # log.error("\n".join(traceback.format_stack()))
 
     def _spawn_minions(self, timeout=60):
         """
@@ -1130,7 +1141,6 @@ class MinionManager(MinionBase):
         """
         Create a minion, and asynchronously connect it to a master
         """
-        log.error("CONNECT_MINION")
         last = 0  # never have we signed in
         auth_wait = minion.opts["acceptance_wait_time"]
         failed = False
@@ -1184,11 +1194,9 @@ class MinionManager(MinionBase):
         self._bind()
 
         # Fire off all the minion coroutines
-        log.error("Spawn minion coroutines")
         self._spawn_minions()
 
         # serve forever!
-        log.error("Start IO loop")
         self.io_loop.run_forever()
 
     @property
@@ -1374,7 +1382,7 @@ class Minion(MinionBase):
         )
 
         # a long-running req channel
-        self.req_channel = salt.transport.client.AsyncReqChannel.factory(
+        self.req_channel = salt.channel.client.AsyncReqChannel.factory(
             self.opts, io_loop=self.io_loop
         )
 
@@ -1612,6 +1620,7 @@ class Minion(MinionBase):
                 minion_privkey_path, salt.serializers.msgpack.serialize(load)
             )
             load["sig"] = sig
+        load["_master"] = self.opts["master"]
 
         with salt.utils.event.get_event(
             "minion", opts=self.opts, listen=False
@@ -1629,6 +1638,7 @@ class Minion(MinionBase):
             )
             load["sig"] = sig
 
+        load["_master"] = self.opts["master"]
         with salt.utils.event.get_event(
             "minion", opts=self.opts, listen=False
         ) as event:
@@ -1701,10 +1711,12 @@ class Minion(MinionBase):
                 timeout_handler = handle_timeout
 
             # XXX: Asyncio version
-            with salt.ext.tornado.stack_context.ExceptionStackContext(timeout_handler):
-                # pylint: disable=unexpected-keyword-arg
-                self._send_req_async(load, timeout, callback=lambda f: None)
-                # pylint: enable=unexpected-keyword-arg
+            # with salt.ext.tornado.stack_context.ExceptionStackContext(timeout_handler):
+            # pylint: disable=unexpected-keyword-arg
+            self.io_loop.create_task(
+                self._send_req_async(load, timeout)
+            )  # , callback=lambda f: None)
+            # pylint: enable=unexpected-keyword-arg
         return True
 
     async def _handle_decoded_payload(self, data):
@@ -1748,6 +1760,7 @@ class Minion(MinionBase):
         process_count_max = self.opts.get("process_count_max")
         if process_count_max > 0:
             process_count = len(salt.utils.minion.running(self.opts))
+            log.trace("Process count %r %r", process_count_max, process_count)
             while process_count >= process_count_max:
                 log.warning(
                     "Maximum number of processes reached while executing jid %s,"
@@ -2424,6 +2437,7 @@ class Minion(MinionBase):
         """
         if not hasattr(self, "schedule"):
             return
+
         log.debug("Refreshing modules. Notify=%s", notify)
         self.functions, self.returners, _, self.executors = self._load_modules(
             force_refresh, notify=notify
@@ -2691,11 +2705,19 @@ class Minion(MinionBase):
                 notify=data.get("notify", False),
             )
         elif tag.startswith("__master_req_channel_payload"):
-            yield self.req_channel.send(
-                data,
-                timeout=self._return_retry_timer(),
-                tries=self.opts["return_retry_tries"],
-            )
+            tgt_master = data.pop("_master")
+            if tgt_master == self.opts["master"]:
+                await self.req_channel.send(
+                    data,
+                    timeout=self._return_retry_timer(),
+                    tries=self.opts["return_retry_tries"],
+                )
+            else:
+                log.debug(
+                    "Master req not for this master %r!=%r",
+                    tgt_master,
+                    self.opts["master"],
+                )
         elif tag.startswith("pillar_refresh"):
             await _minion.pillar_refresh(
                 force_refresh=data.get("force_refresh", False),
@@ -2812,10 +2834,8 @@ class Minion(MinionBase):
                             self.opts["master"],
                         )
 
-                        self.req_channel = (
-                            salt.transport.client.AsyncReqChannel.factory(
-                                self.opts, io_loop=self.io_loop
-                            )
+                        self.req_channel = salt.channel.client.AsyncReqChannel.factory(
+                            self.opts, io_loop=self.io_loop
                         )
 
                         # put the current schedule into the new loaders
@@ -3161,10 +3181,11 @@ class Minion(MinionBase):
             ):  # A RuntimeError can be re-raised by Tornado on shutdown
                 self.destroy()
 
-    def _handle_payload(self, payload):
+    async def _handle_payload(self, payload):
         if payload is not None and payload["enc"] == "aes":
             if self._target_load(payload["load"]):
-                self.io_loop.create_task(self._handle_decoded_payload(payload["load"]))
+                # self.io_loop.create_task(self._handle_decoded_payload(payload["load"]))
+                await self._handle_decoded_payload(payload["load"])
             elif self.opts["zmq_filtering"]:
                 # In the filtering enabled case, we'd like to know when minion sees something it shouldn't
                 log.trace(
@@ -3792,7 +3813,7 @@ class ProxyMinion(Minion):
         functions.
         """
         mp_call = _metaproxy_call(self.opts, "post_master_init")
-        return mp_call(self, master)
+        return await mp_call(self, master)
 
     def tune_in(self, start=True):
         """
@@ -3809,13 +3830,13 @@ class ProxyMinion(Minion):
         mp_call = _metaproxy_call(self.opts, "target_load")
         return mp_call(self, load)
 
-    def _handle_payload(self, payload):
+    async def _handle_payload(self, payload):
         mp_call = _metaproxy_call(self.opts, "handle_payload")
-        return mp_call(self, payload)
+        return await mp_call(self, payload)
 
     async def _handle_decoded_payload(self, data):
         mp_call = _metaproxy_call(self.opts, "handle_decoded_payload")
-        return mp_call(self, data)
+        return await mp_call(self, data)
 
     @classmethod
     def _target(cls, minion_instance, opts, data, connected):

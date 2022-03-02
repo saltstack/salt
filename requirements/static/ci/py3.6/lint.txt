@@ -14,6 +14,8 @@ ansible==4.4.0
     # via -r requirements/static/ci/linux.in
 apache-libcloud==3.3.1 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
+apscheduler==3.6.3
+    # via python-telegram-bot
 asn1crypto==1.4.0
     # via
     #   certvalidator
@@ -324,6 +326,10 @@ backports.entry-points-selectable==1.1.0
     # via virtualenv
 backports.ssl-match-hostname==3.7.0.1 ; python_version < "3.7"
     # via -r requirements/static/pkg/linux.in
+backports.zoneinfo==0.2.1
+    # via
+    #   pytz-deprecation-shim
+    #   tzlocal
 bcrypt==3.2.0
     # via paramiko
 boto3==1.18.27 ; python_version >= "3.6"
@@ -346,6 +352,7 @@ certifi==2021.5.30
     #   -r requirements/static/ci/common.in
     #   kubernetes
     #   msrest
+    #   python-telegram-bot
     #   requests
 certvalidator==0.11.1
     # via vcert
@@ -428,6 +435,7 @@ importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
     #   virtualenv
 importlib-resources==5.2.2
     # via
+    #   backports.zoneinfo
     #   jaraco.text
     #   netaddr
     #   virtualenv
@@ -678,9 +686,15 @@ python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
 python-gnupg==0.4.7
     # via -r requirements/static/pkg/linux.in
+python-telegram-bot==13.5 ; python_version > "3.5"
+    # via -r requirements/static/ci/linux.in
+pytz-deprecation-shim==0.1.0.post0
+    # via tzlocal
 pytz==2021.1
     # via
+    #   apscheduler
     #   moto
+    #   python-telegram-bot
     #   tempora
     #   twilio
 pyvmomi==7.0.2
@@ -738,6 +752,7 @@ setproctitle==1.2.2 ; python_version < "3.10"
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
     # via
+    #   apscheduler
     #   astroid
     #   bcrypt
     #   cassandra-driver
@@ -779,7 +794,9 @@ toml==0.10.2
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/ci/lint.in
 tornado==5.1
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   python-telegram-bot
 transitions==0.8.8
     # via junos-eznc
 twilio==6.63.0
@@ -791,6 +808,10 @@ typing-extensions==3.10.0.0
     #   gitpython
     #   immutables
     #   importlib-metadata
+tzdata==2021.5
+    # via pytz-deprecation-shim
+tzlocal==4.1
+    # via apscheduler
 urllib3==1.26.6
     # via
     #   botocore

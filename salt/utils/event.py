@@ -80,6 +80,7 @@ import salt.utils.zeromq
 
 log = logging.getLogger(__name__)
 
+
 # The SUB_EVENT set is for functions that require events fired based on
 # component executions, like the state system
 SUB_EVENT = ("state.highstate", "state.sls")
@@ -360,7 +361,7 @@ class SaltEvent:
                     self.subscriber = salt.utils.asynchronous.AIOSyncWrapper(
                         salt.transport.ipc.IPCMessageSubscriber,
                         args=(self.puburi,),
-                        #kwargs={"io_loop": self.io_loop},
+                        # kwargs={"io_loop": self.io_loop},
                         loop_kwarg="io_loop",
                     )
                 try:
@@ -383,7 +384,6 @@ class SaltEvent:
                 self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
                     self.puburi, io_loop=self.io_loop
                 )
-
             # For the asynchronous case, the connect will be defered to when
             # set_event_handler() is invoked.
             self.cpub = True
@@ -423,7 +423,8 @@ class SaltEvent:
                     self.cpush = True
                 except Exception as exc:  # pylint: disable=broad-except
                     log.error(
-                        "Unable to connect pusher: %s",
+                        "Unable to connect pusher to %s: %s",
+                        self.pulluri,
                         exc,
                         exc_info_on_loglevel=logging.DEBUG,
                     )
@@ -952,12 +953,12 @@ class SaltEvent:
         """
         Invoke the event_handler callback each time an event arrives.
         """
-        assert not self._run_io_loop_sync
+        # assert not self._run_io_loop_sync
 
         if not self.cpub:
             self.connect_pub()
         # This will handle reconnects
-        self.io_loop.create_task(self.subscriber.read_async(event_handler))
+        return self.io_loop.create_task(self.subscriber.read_async(event_handler))
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1130,9 +1131,22 @@ class AsyncEventPublisher:
         )
 
         log.info("Starting pull socket on %s", epull_uri)
+        self._start_tasks = []
         with salt.utils.files.set_umask(0o177):
-            self.io_loop.create_task(self.publisher.start())
-            self.io_loop.create_task(self.puller.start())
+            self._start_tasks.extend(
+                [
+                    self.io_loop.create_task(self.publisher.start()),
+                    self.io_loop.create_task(self.puller.start()),
+                ]
+            )
+
+    async def start(self):
+        await asyncio.gather(*self._start_tasks)
+        self._start_tasks = []
+
+    def stop(self):
+        self.publisher.close()
+        self.puller.close()
 
     def handle_publish(self, package, _):
         """
@@ -1257,7 +1271,8 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
             self.puller.close()
             self.puller = None
         if self.io_loop is not None:
-            self.io_loop.close()
+            self.io_loop.stop()
+            # self.io_loop.close()
             self.io_loop = None
 
     def _handle_signals(self, signum, sigframe):

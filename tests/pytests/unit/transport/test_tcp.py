@@ -1,3 +1,5 @@
+import asyncio
+import logging
 import socket
 
 import attr
@@ -7,6 +9,8 @@ import salt.ext.tornado
 import salt.transport.tcp
 from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.mock import MagicMock, patch
+
+log = logging.getLogger(__name__)
 
 
 @attr.s(frozen=True, slots=True)
@@ -35,48 +39,27 @@ def client_socket():
         yield _client_socket
 
 
-def test_message_client_cleanup_on_close(client_socket, temp_salt_master):
+async def test_message_client_cleanup_on_close(client_socket, temp_salt_master):
     """
     test message client cleanup on close
     """
-    orig_loop = salt.ext.tornado.ioloop.IOLoop()
-    orig_loop.make_current()
+    # orig_loop = salt.ext.tornado.ioloop.IOLoop()
+    # orig_loop.make_current()
+    orig_loop = asyncio.get_event_loop()
 
     opts = dict(temp_salt_master.config.copy(), transport="tcp")
     client = salt.transport.tcp.MessageClient(
         opts, client_socket.listen_on, client_socket.port
     )
-
-    # Mock the io_loop's stop method so we know when it has been called.
-    orig_loop.real_stop = orig_loop.stop
-    orig_loop.stop_called = False
-
-    def stop(*args, **kwargs):
-        orig_loop.stop_called = True
-        orig_loop.real_stop()
-
-    orig_loop.stop = stop
+    assert client.io_loop == orig_loop
     try:
-        assert client.io_loop == orig_loop
-        client.io_loop.run_sync(client.connect)
-
-        # Ensure we are testing the _read_until_future and io_loop teardown
-        assert client._stream is not None
-        assert orig_loop.stop_called is True
-
-        # The run_sync call will set stop_called, reset it
-        # orig_loop.stop_called = False
-        client.close()
-
-        # Stop should be called again, client's io_loop should be None
+        await client.connect()
+        assert client._reader is not None
+        assert client._writer is not None
+        # This is no longer a thing
         # assert orig_loop.stop_called is True
-        # assert client.io_loop is None
     finally:
-        orig_loop.stop = orig_loop.real_stop
-        del orig_loop.real_stop
-        del orig_loop.stop_called
-        orig_loop.clear_current()
-        orig_loop.close(all_fds=True)
+        client.close()
 
 
 # XXX: Test channel for this
@@ -161,7 +144,7 @@ def test_message_client_cleanup_on_close(client_socket, temp_salt_master):
 
 @pytest.fixture(scope="function")
 def salt_message_client():
-    io_loop_mock = MagicMock(spec=salt.ext.tornado.ioloop.IOLoop)
+    io_loop_mock = MagicMock(spec=asyncio.get_event_loop())
     io_loop_mock.call_later.side_effect = lambda *args, **kwargs: (args, kwargs)
 
     client = salt.transport.tcp.MessageClient(

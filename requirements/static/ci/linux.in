@@ -8,6 +8,6 @@ pymysql>=1.0.2; python_version > '3.5'
 ansible
 twilio
 python-telegram-bot==12.8; python_version <= '3.5'
-python-telegram-bot>=13.7; python_version > '3.5'
+python-telegram-bot==13.5; python_version > '3.5'
 mercurial
 hglib
