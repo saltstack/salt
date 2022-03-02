@@ -137,3 +137,13 @@ def test_state_highstate(salt_master, salt_cli, tmp_path, proxy_id):
         ret = salt_cli.run("state.highstate", minion_tgt=proxy_id)
         for value in ret.json.values():
             assert value["result"] is True
+
+
+def test_config_get(salt_cli, proxy_id):
+    """
+    Ensure the config module returns the right id
+    when targeting deltaproxy managed proxy minions.
+    """
+    ret = salt_cli.run("config.get", "id", minion_tgt=proxy_id)
+    assert True is True
+    assert ret.json == proxy_id
