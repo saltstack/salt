@@ -1,3 +1,5 @@
+import configparser
+import logging
 import os
 import time
 
@@ -6,6 +8,8 @@ import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
 from tests.support.helpers import requires_system_grains
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture
@@ -477,3 +481,40 @@ def test_pkg_latest_version(grains, modules, states, test_pkg):
         pytest.skip("TODO: test not configured for {}".format(grains["os_family"]))
     pkg_latest = modules.pkg.latest_version(test_pkg)
     assert pkg_latest in cmd_pkg
+
+
+@pytest.mark.destructive_test
+@pytest.mark.requires_salt_modules("pkg.list_repos")
+@pytest.mark.slow_test
+def test_list_repos_duplicate_entries(grains, modules):
+    """
+    test duplicate entries in /etc/yum.conf
+
+    This is a destructive test as it installs and then removes a package
+    """
+    if grains["os_family"] != "RedHat":
+        pytest.skip("Only runs on RedHat.")
+
+    ret = modules.pkg.list_repos()
+    log.debug(f"DGM first try ret '{ret}'")
+    assert ret != []
+    assert isinstance(ret, dict) is True
+
+    try:
+        # write config with duplicates entries
+        cfg_file = "/etc/yum.conf"
+        with salt.utils.files.fpopen(cfg_file, "w+", mode=0o644) as fp_:
+            fp_.write("http_caching=True\n")
+            fp_.write("http_caching=True\n")
+
+        ret = modules.pkg.list_repos(strict_config=False)
+        log.debug(f"DGM second try ret '{ret}'")
+        assert ret != []
+        assert isinstance(ret, dict) is True
+
+    except configparser.DuplicateOptionError as exc_info:
+        log.debug(f"DGM second try exception '{exc_info}'")
+        # test failed, should not have had an exception
+        result = False
+        failure = True
+        assert result == failure
