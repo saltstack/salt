@@ -601,12 +601,9 @@ paramiko==2.7.1
     #   ncclient
     #   scp
 passlib==1.7.2 ; sys_platform != "win32"
-    # via
-    #   -r requirements/static/ci/common.in
-    #   ciscoconfparse
+    # via -r requirements/static/ci/common.in
 pathspec==0.9.0
     # via yamllint
-    # via -r requirements/static/ci/common.in
 pathtools==0.1.2
     # via watchdog
 platformdirs==2.2.0
@@ -704,7 +701,6 @@ pyyaml==5.4.1
     #   clustershell
     #   junos-eznc
     #   kubernetes
-    #   napalm
     #   yamllint
     #   yamlordereddictloader
 pyzmq==21.0.2 ; python_version >= "3.9"
