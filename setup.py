@@ -1041,6 +1041,10 @@ class SaltDistribution(distutils.dist.Distribution):
         self.author = "Thomas S Hatch"
         self.author_email = "thatch45@gmail.com"
         self.url = "https://saltproject.io"
+        self.project_urls = {
+            "Documentation": "https://docs.saltproject.io/en/latest/contents.html",
+            "Source": "https://github.com/saltstack/salt",
+        },
         self.cmdclass.update(
             {
                 "test": TestCommand,
