@@ -1,0 +1,1 @@
+Do not block the deltaproxy startup.  Wrap the call to the individual proxy initialization functions in a try...except, catching the exception, logging an error and moving onto the next proxy minion.

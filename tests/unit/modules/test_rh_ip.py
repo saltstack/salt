@@ -656,7 +656,93 @@ class RhipTestCase(TestCase, LoaderModuleMockMixin):
                     ]
                     assert bonding_opts == expected, bonding_opts
 
-    def test_build_interface_bond_mode_4(self):
+    def test_build_interface_bond_mode_4_xmit(self):
+        """
+        Test that mode 4 bond interfaces are properly built
+        """
+        kwargs = {
+            "test": True,
+            "duplex": "full",
+            "slaves": "eth1 eth2",
+            "miimon": 100,
+            "downdelay": 200,
+        }
+        valid_lacp_rate = ("fast", "slow", "1", "0")
+        valid_ad_select = ("0",)
+
+        for version in range(7, 8):
+            with patch.dict(
+                rh_ip.__grains__,
+                {
+                    "osmajorrelease": version,
+                    "osrelease": str(version),
+                    "os_family": "RedHat",
+                },
+            ):
+                for mode in ("802.3ad", 4, "4"):
+                    kwargs["mode"] = mode
+                    self._validate_miimon_conf(kwargs)
+
+                    for version in range(7, 8):
+                        with patch.dict(rh_ip.__grains__, {"osmajorrelease": version}):
+                            # Using an invalid hashing algorithm should cause an error
+                            # to be raised.
+                            kwargs["hashing-algorithm"] = "layer42"
+                            try:
+                                bonding_opts = self._get_bonding_opts(kwargs)
+                            except AttributeError as exc:
+                                assert "hashing-algorithm" in str(exc)
+                            else:
+                                raise Exception("AttributeError was not raised")
+
+                        hash_alg = "vlan+srcmac"
+                        if version == 7:
+                            # Using an invalid hashing algorithm should cause an error
+                            # to be raised.
+                            kwargs["hashing-algorithm"] = hash_alg
+                            try:
+                                bonding_opts = self._get_bonding_opts(kwargs)
+                            except AttributeError as exc:
+                                assert "hashing-algorithm" in str(exc)
+                            else:
+                                raise Exception("AttributeError was not raised")
+                        else:
+                            # Correct the hashing algorithm and re-run
+                            kwargs["hashing-algorithm"] = hash_alg
+                            bonding_opts = self._get_bonding_opts(kwargs)
+                            expected = [
+                                "ad_select=0",
+                                "downdelay=200",
+                                "lacp_rate=0",
+                                "miimon=100",
+                                "mode=4",
+                                "use_carrier=0",
+                                "xmit_hash_policy={}".format(hash_alg),
+                            ]
+                            assert bonding_opts == expected, bonding_opts
+
+                        for hash_alg in [
+                            "layer2",
+                            "layer2+3",
+                            "layer3+4",
+                            "encap2+3",
+                            "encap3+4",
+                        ]:
+                            # Correct the hashing algorithm and re-run
+                            kwargs["hashing-algorithm"] = hash_alg
+                            bonding_opts = self._get_bonding_opts(kwargs)
+                            expected = [
+                                "ad_select=0",
+                                "downdelay=200",
+                                "lacp_rate=0",
+                                "miimon=100",
+                                "mode=4",
+                                "use_carrier=0",
+                                "xmit_hash_policy={}".format(hash_alg),
+                            ]
+                            assert bonding_opts == expected, bonding_opts
+
+    def test_build_interface_bond_mode_4_lacp(self):
         """
         Test that mode 4 bond interfaces are properly built
         """
