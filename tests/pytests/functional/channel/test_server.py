@@ -2,6 +2,10 @@ import asyncio
 import logging
 import os
 import time
+import ctypes
+import multiprocessing
+import salt.crypt
+import salt.master
 
 import pytest
 import salt.channel.client
@@ -76,6 +80,7 @@ async def test_pub_server_channel_with_zmq_transport(configs, process_manager, i
 
     def handle_payload(payload):
         log.info("TEST - Req Server handle payload %r", payload)
+        return payload
 
     req_server_channel.post_fork(handle_payload, io_loop)
 
@@ -98,50 +103,63 @@ async def test_pub_server_channel_with_zmq_transport(configs, process_manager, i
     while time.time() - start < timeout and not received:
         await asyncio.sleep(1)
     assert len(received) == 1
+    process_manager.terminate()
+    log.error("REQ SERV CLOSE")
     req_server_channel.close()
+    log.error("PUB CHAN CLOSE")
     pub_channel.close()
 
-
-async def test_pub_server_channel_with_tcp_transport(io_loop, configs, process_manager):
+async def test_pub_server_channel_with_tcp_transport(event_loop, configs, process_manager):
     minion_conf, master_conf = configs
     minion_conf["transport"] = "tcp"
     master_conf["transport"] = "tcp"
+    salt.master.SMaster.secrets["aes"] = {
+                "secret": multiprocessing.Array(
+                    ctypes.c_char,
+                    salt.utils.stringutils.to_bytes(
+                        salt.crypt.Crypticle.generate_key_string()
+                    ),
+                ),
+                "reload": salt.crypt.Crypticle.generate_key_string,
+            }
 
     server_channel = salt.channel.server.PubServerChannel.factory(
         master_conf,
     )
     server_channel.pre_fork(process_manager)
+    await asyncio.sleep(2)
+
     req_server_channel = salt.channel.server.ReqServerChannel.factory(master_conf)
     req_server_channel.pre_fork(process_manager)
 
+    await asyncio.sleep(2)
+
     def handle_payload(payload):
         log.info("TEST - Req Server handle payload %r", payload)
+        return {}
 
-    req_server_channel.post_fork(handle_payload, io_loop=io_loop)
+    await asyncio.sleep(2)
+    req_server_channel.post_fork(handle_payload, io_loop=event_loop)
 
     pub_channel = salt.channel.client.AsyncPubChannel.factory(minion_conf)
     received = []
+    await asyncio.sleep(2)
+    log.info("TEST - BEFORE CHANNEL CONNECT")
+    await pub_channel.connect()
+    log.info("TEST - AFTER CHANNEL CONNECT")
 
-    async def doit(channel, server, received, timeout=60):
-        log.info("TEST - BEFORE CHANNEL CONNECT")
-        await channel.connect()
-        log.info("TEST - AFTER CHANNEL CONNECT")
+    def cb(payload):
+        log.info("TEST - PUB SERVER MSG %r", payload)
+        received.append(payload)
 
-        def cb(payload):
-            log.info("TEST - PUB SERVER MSG %r", payload)
-            received.append(payload)
-            io_loop.stop()
+    pub_channel.on_recv(cb)
 
-        channel.on_recv(cb)
-        server.publish({"tgt_type": "glob", "tgt": ["minion"], "WTF": "SON"})
-        start = time.time()
-        while time.time() - start < timeout:
-            await asyncio.sleep(1)
-        io_loop.stop()
-
+    server_channel.publish({"tgt_type": "glob", "tgt": ["minion"], "ASDF": "SDFA"})
+    timeout = 60
+    start = time.time()
+    while time.time() - start < timeout and not received:
+        await asyncio.sleep(1)
     try:
-        io_loop.add_callback(doit, pub_channel, server_channel, received)
-        io_loop.run_forever()
         assert len(received) == 1
     finally:
         server_channel.close()

@@ -370,7 +370,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         asyncio.set_event_loop(loop)
         self.__setup_signals()
         from zmq.devices.monitoredqueuedevice import MonitoredQueue
-        # from zmq.devices import Device
+        from zmq.devices import Device
 
         # from zmq.utils.strtypes import asbytes
 
@@ -409,17 +409,16 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         log.error("ReqServer workers %s", self.w_uri)
         # self.workers.bind(self.w_uri)
 
-        mon = MonitoredQueue(zmq.ROUTER, zmq.DEALER, zmq.PUB, b"in", b"out")
+        #mon = MonitoredQueue(zmq.ROUTER, zmq.DEALER, zmq.PUB, b"in", b"out")
+        mon = Device(in_type=zmq.ROUTER, out_type=zmq.DEALER)
         mon._context = context
-        #mon = Device(in_type=zmq.ROUTER, out_type=zmq.DEALER)
         mon.bind_in(self.uri)
-        log.error("WTF %r", dir(mon))
         mon.setsockopt_in(zmq.LINGER, -1)
         mon.setsockopt_in(zmq.BACKLOG, self.opts.get("zmq_backlog", 1000))
         mon.bind_out(self.w_uri)
         mon.setsockopt_out(zmq.LINGER, -1)
         mon.setsockopt_out(zmq.BACKLOG, self.opts.get("zmq_backlog", 1000))
-        mon.bind_mon('tcp://127.0.0.1:9999')
+        #mon.bind_mon('tcp://127.0.0.1:9999')
         try:
             mon.start()
         except Exception as exc:
@@ -464,7 +463,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             self.workers.close()
         if hasattr(self, "stream"):
             self.stream.close()
-        if hasattr(self, "_socket") and self.socket.closed is False:
+        if hasattr(self, "socket") and self.socket.closed is False:
             self.socket.close()
         if hasattr(self, "context") and self.context.closed is False:
             self.context.term()
