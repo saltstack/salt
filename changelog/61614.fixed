@@ -1,0 +1,1 @@
+Fix issue with state.show_state_usage when a saltenv is not referenced in any topfile

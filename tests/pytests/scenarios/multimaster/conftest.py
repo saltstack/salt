@@ -139,21 +139,38 @@ def run_salt_cmds():
         Run test.ping from all clis to all minions
         """
         returned_minions = []
+        minion_instances = {minion.id: minion for minion in minions}
+        clis_to_check = {minion.id: list(clis) for minion in minions}
 
-        for cli in clis:
-            for minion in minions:
-                try:
-                    ret = cli.run("test.ping", minion_tgt=minion.id, _timeout=20)
-                    if ret and ret.json:
-                        assert ret.json
-                        assert ret.exitcode == 0
-                        returned_minions.append((cli, minion))
-                except FactoryTimeout:
-                    log.debug(
-                        "Failed to execute test.ping from %s to %s.",
-                        cli.get_display_name(),
-                        minion.id,
-                    )
+        attempts = 6
+        timeout = 5
+        if salt.utils.platform.spawning_platform():
+            timeout *= 2
+        while attempts:
+            if not clis_to_check:
+                break
+            for minion in list(clis_to_check):
+                if not clis_to_check[minion]:
+                    clis_to_check.pop(minion)
+                    continue
+                for cli in list(clis_to_check[minion]):
+                    try:
+                        ret = cli.run(
+                            "--timeout={}".format(timeout),
+                            "test.ping",
+                            minion_tgt=minion,
+                        )
+                        if ret.exitcode == 0 and ret.json is True:
+                            returned_minions.append((cli, minion_instances[minion]))
+                            clis_to_check[minion].remove(cli)
+                    except FactoryTimeout:
+                        log.debug(
+                            "Failed to execute test.ping from %s to %s.",
+                            cli.get_display_name(),
+                            minion,
+                        )
+            time.sleep(1)
+            attempts -= 1
 
         return returned_minions
 

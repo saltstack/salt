@@ -1649,8 +1649,8 @@ def build_bond(iface, **settings):
     # Load kernel module
     __salt__["kmod.load"]("bonding")
 
-    # install ifenslave-2.6
-    __salt__["pkg.install"]("ifenslave-2.6")
+    # install ifenslave
+    __salt__["pkg.install"]("ifenslave")
 
     return _read_file(path)
 
