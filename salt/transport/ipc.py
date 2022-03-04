@@ -258,6 +258,7 @@ class IPCMessagePublisher:
         log.debug("%s publish %r", self.__class__.__name__, msg)
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
         for reader, writer in list(self.streams):
+            log.trace("%s publish to %r", self.__class__.__name__, writer)
             self.io_loop.create_task(self._write(writer, reader, pack))
 
     def close(self):
@@ -331,7 +332,7 @@ class IPCMessageSubscriber(IPCClient):
                                 self.io_loop.call_soon(callback, framed_msg["body"])
                             except TypeError:
                                 self.io_loop.create_task(callback(framed_msg["body"]))
-                            stop = True
+                            #stop = True
                         elif first_sync_msg:
                             ret = framed_msg["body"]
                             first_sync_msg = False
@@ -367,9 +368,6 @@ class IPCMessageSubscriber(IPCClient):
         return res
 
     async def read_async(self, callback):
-        if self._saved_data:
-            res = self._saved_data.pop(0)
-            callback(res)
         if not self.connected():
             log.error("NOT YET CONNECTED")
             await self.connect()

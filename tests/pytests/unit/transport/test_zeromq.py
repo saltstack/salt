@@ -214,15 +214,32 @@ async def test_zeromq_async_pub_channel_filtering_decode_message(
             res = await channel._decode_messages(message)
 
     assert res["enc"] == "aes"
-
+import zmq
 
 async def test_zeromq_req_channel(temp_salt_master, temp_salt_minion, event_loop):
-    io_loop = event_loop
+    event_loop.set_debug(True)
+
+    async def monitorclient(server_url="tcp://127.0.0.1:9999"):
+        try:
+            context = zmq.asyncio.Context()
+            socket = context.socket(zmq.SUB)
+            socket.connect(server_url)
+            socket.setsockopt(zmq.SUBSCRIBE, b"")
+            log.error( "started monitoring client")
+
+            while True:
+                res = await socket.recv_multipart()
+                log.error("MON GOT %r", res)
+        except Exception as exc:
+            log.exception("mon")
+
+    #task = event_loop.create_task(monitorclient())
+    log.error("WTF %r", event_loop)
     opts = dict(
         temp_salt_master.config.copy(),
         id=temp_salt_minion.id,
         ipc_mode="ipc",
-        pub_hwm=0,
+        pub_hwm=10,
         zmq_filtering=True,
         recon_randomize=False,
         recon_default=1,
@@ -239,36 +256,43 @@ async def test_zeromq_req_channel(temp_salt_master, temp_salt_minion, event_loop
     process_manager = salt.utils.process.ProcessManager(name="ReqServer-ProcessManager")
     req_server.pre_fork(process_manager)
     await asyncio.sleep(2)
+    event = asyncio.Event()
 
     async def handle_payload(payload):
         return payload
+    req_server.post_fork(handle_payload, event_loop)
 
-    req_server.post_fork(handle_payload, io_loop)
 
-    req_client = salt.transport.zeromq.RequestClient(opts, io_loop)
+    req_client = salt.transport.zeromq.RequestClient(opts, event_loop)
     log.error("SEND 1")
     resp = await req_client.send({"wtf": "meh"}, timeout=3)
     assert resp == {"wtf": "meh"}
+
+    event.set()
+
     process_manager.terminate()
     req_server.close()
+    await req_server.task
+    req_server.a_context.destroy()
 
     assert req_client.message_client.socket
     with pytest.raises(salt.transport.zeromq.SaltReqTimeoutError):
         log.error("SEND 2")
         resp = await req_client.send({"wtf": "meh"}, timeout=3)
 
-    # assert req_client.message_client.socket.closed
-    # req_client.message_client.context.destroy()
+
+    #assert req_client.message_client.socket.closed
+    #req_client.message_client.context.destroy()
 
     req_server = salt.transport.zeromq.RequestServer(opts)
     process_manager = salt.utils.process.ProcessManager(name="ReqServer-ProcessManager")
     req_server.pre_fork(process_manager)
     await asyncio.sleep(2)
 
-    req_server.post_fork(handle_payload, io_loop)
+    req_server.post_fork(handle_payload, event_loop)
 
-    log.error("SLEEP 5")
-    await asyncio.sleep(5)
+    await asyncio.sleep(2)
+
     log.error("SEND 3")
     # req_client = salt.transport.zeromq.RequestClient(opts, io_loop)
     resp = await req_client.send({"wtf": "meh"}, timeout=10)
