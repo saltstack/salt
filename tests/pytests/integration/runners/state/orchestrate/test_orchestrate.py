@@ -59,6 +59,49 @@ def test_orchestrate_output(salt_run_cli, salt_minion, base_env_state_tree_root_
             assert item in ret_output
 
 
+def test_orchestrate_state_output_with_salt_function(
+    salt_run_cli, salt_minion, base_env_state_tree_root_dir
+):
+    """
+    Ensure that orchestration produces the correct output with salt.function.
+
+    A salt execution module function does not return highstate data, so we
+    should not try to recursively output it as such.
+    The outlier to this rule is state.apply, but that is handled by the salt.state.
+
+    See https://github.com/saltstack/salt/issues/60029 for more detail.
+    """
+    sls_contents = """
+    arg_clean_test:
+      salt.function:
+        - name: test.arg_clean
+        - arg:
+          - B flat major
+          - has 2 flats
+        - tgt: {minion_id}
+
+    ping_test:
+      salt.function:
+        - name: test.ping
+        - tgt: {minion_id}
+    """.format(
+        minion_id=salt_minion.id
+    )
+    with pytest.helpers.temp_file(
+        "orch-function-test.sls", sls_contents, base_env_state_tree_root_dir
+    ):
+        ret = salt_run_cli.run(
+            "--out=highstate", "state.orchestrate", "orch-function-test"
+        )
+        assert ret.exitcode == 0
+        ret_output = [line.strip() for line in ret.stdout.splitlines()]
+
+        assert "args:" in ret_output
+        assert "- B flat major" in ret_output
+        assert "- has 2 flats" in ret_output
+        assert "True" in ret_output
+
+
 def test_orchestrate_nested(
     salt_run_cli, salt_minion, base_env_state_tree_root_dir, tmp_path
 ):
@@ -211,7 +254,7 @@ def test_orchestrate_state_and_function_failure(
         },
     }
     assert state_ret == expected
-    assert func_ret == {"out": "highstate", "ret": {salt_minion.id: False}}
+    assert func_ret == {"ret": {salt_minion.id: False}}
 
 
 def test_orchestrate_salt_function_return_false_failure(
@@ -246,7 +289,7 @@ def test_orchestrate_salt_function_return_false_failure(
     func_ret = data["salt_|-deploy_check_|-test.false_|-function"]["changes"]
 
     assert state_result is False
-    assert func_ret == {"out": "highstate", "ret": {salt_minion.id: False}}
+    assert func_ret == {"ret": {salt_minion.id: False}}
 
 
 def test_orchestrate_target_exists(
@@ -302,7 +345,6 @@ def test_orchestrate_target_exists(
             to_check.remove("test-state")
         if state_data["name"] == "cmd.run":
             assert state_data["changes"] == {
-                "out": "highstate",
                 "ret": {salt_minion.id: "test"},
             }
             to_check.remove("cmd.run")
@@ -364,7 +406,6 @@ def test_orchestrate_target_does_not_exist(
             to_check.remove("test-state")
         if state_data["name"] == "cmd.run":
             assert state_data["changes"] == {
-                "out": "highstate",
                 "ret": {salt_minion.id: "test"},
             }
             to_check.remove("cmd.run")

@@ -236,5 +236,8 @@ def test_interrupt_on_long_running_job(salt_cli, salt_master, salt_minion):
     ), "The command wasn't actually terminated. Took {} seconds.".format(
         round(stop - start, 2)
     )
+
+    # Make sure the ctrl+c exited gracefully
     assert "Exiting gracefully on Ctrl-c" in ret.stderr
+    assert "Exception ignored in" not in ret.stderr
     assert "This job's jid is" in ret.stderr

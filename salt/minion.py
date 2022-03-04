@@ -2812,6 +2812,13 @@ class Minion(MinionBase):
                             "Re-initialising subsystems for new master %s",
                             self.opts["master"],
                         )
+
+                        self.req_channel = (
+                            salt.transport.client.AsyncReqChannel.factory(
+                                self.opts, io_loop=self.io_loop
+                            )
+                        )
+
                         # put the current schedule into the new loaders
                         self.opts["schedule"] = self.schedule.option("schedule")
                         (
