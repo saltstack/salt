@@ -6,14 +6,12 @@
 
 import copy
 
-from more_itertools import side_effect
-
 import pytest
 import salt.returners.etcd_return as etcd_return
 import salt.utils.etcd_util as etcd_util
 import salt.utils.jid
 import salt.utils.json
-from tests.support.mock import MagicMock, create_autospec, patch, call
+from tests.support.mock import MagicMock, call, create_autospec, patch
 
 
 @pytest.fixture
@@ -61,34 +59,34 @@ def configure_loader_modules():
 
 def test__get_conn(etcd_client_mock, profile_name, returner_root, instance):
     """
-    Test the _get_conn utility function in etcd_return 
+    Test the _get_conn utility function in etcd_return
     """
     with patch("salt.utils.etcd_util.get_conn", etcd_client_mock):
         # Test to make sure we get the right path back
         config = {
-            profile_name: {
-                "etcd.host": "127.0.0.1",
-                "etcd.port": 2379
-            },
+            profile_name: {"etcd.host": "127.0.0.1", "etcd.port": 2379},
             "etcd.returner": profile_name,
             "etcd.returner_root": returner_root,
         }
-        assert etcd_return._get_conn(config, profile=profile_name) == (instance, returner_root)
+        assert etcd_return._get_conn(config, profile=profile_name) == (
+            instance,
+            returner_root,
+        )
 
         # Test to make sure we get the default path back if none in opts
         config = {
-            profile_name: {
-                "etcd.host": "127.0.0.1",
-                "etcd.port": 2379
-            },
+            profile_name: {"etcd.host": "127.0.0.1", "etcd.port": 2379},
             "etcd.returner": profile_name,
         }
-        assert etcd_return._get_conn(config, profile=profile_name) == (instance, "/salt/return")
+        assert etcd_return._get_conn(config, profile=profile_name) == (
+            instance,
+            "/salt/return",
+        )
 
 
 def test_returner(etcd_client_mock, instance, returner_root, profile_name, etcd_config):
     """
-    Test the returner function in etcd_return 
+    Test the returner function in etcd_return
     """
     with patch("salt.utils.etcd_util.get_conn", etcd_client_mock):
         ret = {
@@ -109,7 +107,12 @@ def test_returner(etcd_client_mock, instance, returner_root, profile_name, etcd_
         with patch.dict(etcd_return.__opts__, config):
             assert etcd_return.returner(ret) is None
             dest = "/".join((returner_root, "jobs", ret["jid"], ret["id"], "{}"))
-            calls = [call("/".join((returner_root, "minions", ret["id"])), ret["jid"], ttl=5)] + [call(dest.format(key), salt.utils.json.dumps(ret[key]), ttl=5) for key in ret]
+            calls = [
+                call("/".join((returner_root, "minions", ret["id"])), ret["jid"], ttl=5)
+            ] + [
+                call(dest.format(key), salt.utils.json.dumps(ret[key]), ttl=5)
+                for key in ret
+            ]
             instance.set.assert_has_calls(calls)
 
         # Test returner with ttl in top level config
@@ -119,13 +122,20 @@ def test_returner(etcd_client_mock, instance, returner_root, profile_name, etcd_
         with patch.dict(etcd_return.__opts__, config):
             assert etcd_return.returner(ret) is None
             dest = "/".join((returner_root, "jobs", ret["jid"], ret["id"], "{}"))
-            calls = [call("/".join((returner_root, "minions", ret["id"])), ret["jid"], ttl=6)] + [call(dest.format(key), salt.utils.json.dumps(ret[key]), ttl=6) for key in ret]
+            calls = [
+                call("/".join((returner_root, "minions", ret["id"])), ret["jid"], ttl=6)
+            ] + [
+                call(dest.format(key), salt.utils.json.dumps(ret[key]), ttl=6)
+                for key in ret
+            ]
             instance.set.assert_has_calls(calls)
 
 
-def test_save_load(etcd_client_mock, instance, returner_root, profile_name, etcd_config):
+def test_save_load(
+    etcd_client_mock, instance, returner_root, profile_name, etcd_config
+):
     """
-    Test the save_load function in etcd_return 
+    Test the save_load function in etcd_return
     """
     load = {
         "single-key": "single-value",
@@ -162,7 +172,10 @@ def test_save_load(etcd_client_mock, instance, returner_root, profile_name, etcd
             )
 
             # Test save_load with minion kwarg, unused at the moment
-            assert etcd_return.save_load(jid, load, minions=("minion-1", "minion-2")) is None
+            assert (
+                etcd_return.save_load(jid, load, minions=("minion-1", "minion-2"))
+                is None
+            )
             instance.set.assert_called_with(
                 "/".join((returner_root, "jobs", jid, ".load.p")),
                 salt.utils.json.dumps(load),
@@ -172,7 +185,7 @@ def test_save_load(etcd_client_mock, instance, returner_root, profile_name, etcd
 
 def test_get_load(etcd_client_mock, instance, returner_root, profile_name, etcd_config):
     """
-    Test the get_load function in etcd_return 
+    Test the get_load function in etcd_return
     """
     load = {
         "single-key": "single-value",
@@ -206,11 +219,13 @@ def test_get_load(etcd_client_mock, instance, returner_root, profile_name, etcd_
 
 def test_get_jid(etcd_client_mock, instance, returner_root, etcd_config):
     """
-    Test the get_load function in etcd_return 
+    Test the get_load function in etcd_return
     """
     jid = "10"
 
-    with patch("salt.utils.etcd_util.get_conn", etcd_client_mock), patch.dict(etcd_return.__opts__, etcd_config):
+    with patch("salt.utils.etcd_util.get_conn", etcd_client_mock), patch.dict(
+        etcd_return.__opts__, etcd_config
+    ):
         # Test that no value for jid returns an empty dict
         with patch.object(instance, "get", return_value=MagicMock(children=[])):
             assert etcd_return.get_jid(jid) == {}
@@ -218,11 +233,13 @@ def test_get_jid(etcd_client_mock, instance, returner_root, etcd_config):
 
         # Test that a jid with child values returns them
         side_effect = (
-            MagicMock(children=(
-                MagicMock(key="/top-level/key-1"),
-                MagicMock(key="/top-level/.load.p"),
-                MagicMock(key="/top-level/key-2"),
-            )),
+            MagicMock(
+                children=(
+                    MagicMock(key="/top-level/key-1"),
+                    MagicMock(key="/top-level/.load.p"),
+                    MagicMock(key="/top-level/key-2"),
+                )
+            ),
             MagicMock(value='{"key-1": "value-1"}'),
             MagicMock(value='{"key-2": "value-2"}'),
         )
@@ -231,12 +248,8 @@ def test_get_jid(etcd_client_mock, instance, returner_root, etcd_config):
         with patch.object(instance, "get", side_effect=side_effect):
             # assert etcd_return.get_jid(jid) == {}
             assert etcd_return.get_jid(jid) == {
-                "key-1": {
-                    "return": {"key-1": "value-1"}
-                },
-                "key-2": {
-                    "return": {"key-2": "value-2"}
-                },
+                "key-1": {"return": {"key-1": "value-1"}},
+                "key-2": {"return": {"key-2": "value-2"}},
             }
             calls = [
                 call("/".join((returner_root, "jobs", jid))),
@@ -248,11 +261,13 @@ def test_get_jid(etcd_client_mock, instance, returner_root, etcd_config):
 
 def test_get_fun(etcd_client_mock, instance, returner_root, etcd_config):
     """
-    Test the get_fun function in etcd_return 
+    Test the get_fun function in etcd_return
     """
     fun = "test.ping"
 
-    with patch("salt.utils.etcd_util.get_conn", etcd_client_mock), patch.dict(etcd_return.__opts__, etcd_config):
+    with patch("salt.utils.etcd_util.get_conn", etcd_client_mock), patch.dict(
+        etcd_return.__opts__, etcd_config
+    ):
         # Test that no value for jid returns an empty dict
         with patch.object(instance, "get", return_value=MagicMock(children=[])):
             assert etcd_return.get_fun(fun) == {}
@@ -260,10 +275,12 @@ def test_get_fun(etcd_client_mock, instance, returner_root, etcd_config):
 
         # Test that a jid with child values returns them
         side_effect = (
-            MagicMock(children=(
-                MagicMock(key="/top-level/key-1", value="value-1"),
-                MagicMock(key="/top-level/key-2", value="value-2"),
-            )),
+            MagicMock(
+                children=(
+                    MagicMock(key="/top-level/key-1", value="value-1"),
+                    MagicMock(key="/top-level/key-2", value="value-2"),
+                )
+            ),
             MagicMock(value='"test.ping"'),
             MagicMock(value='"test.collatz"'),
         )
@@ -281,9 +298,11 @@ def test_get_fun(etcd_client_mock, instance, returner_root, etcd_config):
 
 def test_get_jids(etcd_client_mock, instance, returner_root, etcd_config):
     """
-    Test the get_jids function in etcd_return 
+    Test the get_jids function in etcd_return
     """
-    with patch("salt.utils.etcd_util.get_conn", etcd_client_mock), patch.dict(etcd_return.__opts__, etcd_config):
+    with patch("salt.utils.etcd_util.get_conn", etcd_client_mock), patch.dict(
+        etcd_return.__opts__, etcd_config
+    ):
         # Test that no value for jids returns an empty dict
         with patch.object(instance, "get", return_value=MagicMock(children=[])):
             assert etcd_return.get_jids() == []
@@ -302,9 +321,11 @@ def test_get_jids(etcd_client_mock, instance, returner_root, etcd_config):
 
 def test_get_minions(etcd_client_mock, instance, returner_root, etcd_config):
     """
-    Test the get_minions function in etcd_return 
+    Test the get_minions function in etcd_return
     """
-    with patch("salt.utils.etcd_util.get_conn", etcd_client_mock), patch.dict(etcd_return.__opts__, etcd_config):
+    with patch("salt.utils.etcd_util.get_conn", etcd_client_mock), patch.dict(
+        etcd_return.__opts__, etcd_config
+    ):
         # Test that no minions returns an empty dict
         with patch.object(instance, "get", return_value=MagicMock(children=[])):
             assert etcd_return.get_minions() == []

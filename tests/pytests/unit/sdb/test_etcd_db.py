@@ -7,7 +7,7 @@ import logging
 import pytest
 import salt.sdb.etcd_db as etcd_db
 import salt.utils.etcd_util as etcd_util
-from tests.support.mock import MagicMock, call, create_autospec, patch
+from tests.support.mock import MagicMock, create_autospec, patch
 
 log = logging.getLogger(__name__)
 
@@ -45,17 +45,30 @@ def test_set(etcd_client_mock, instance):
     with patch("salt.sdb.etcd_db._get_conn", etcd_client_mock):
         instance.get.return_value = "super awesome"
 
-        assert etcd_db.set_("sdb://myetcd/path/to/foo/bar", "super awesome") == "super awesome"
+        assert (
+            etcd_db.set_("sdb://myetcd/path/to/foo/bar", "super awesome")
+            == "super awesome"
+        )
         instance.set.assert_called_with("sdb://myetcd/path/to/foo/bar", "super awesome")
         instance.get.assert_called_with("sdb://myetcd/path/to/foo/bar")
-        
-        assert etcd_db.set_("sdb://myetcd/path/to/foo/bar", "super awesome", service="Pablo") == "super awesome"
+
+        assert (
+            etcd_db.set_(
+                "sdb://myetcd/path/to/foo/bar", "super awesome", service="Pablo"
+            )
+            == "super awesome"
+        )
         instance.set.assert_called_with("sdb://myetcd/path/to/foo/bar", "super awesome")
         instance.get.assert_called_with("sdb://myetcd/path/to/foo/bar")
-        
-        assert etcd_db.set_("sdb://myetcd/path/to/foo/bar", "super awesome", profile="Picasso") == "super awesome"
+
+        assert (
+            etcd_db.set_(
+                "sdb://myetcd/path/to/foo/bar", "super awesome", profile="Picasso"
+            )
+            == "super awesome"
+        )
         instance.set.assert_called_with("sdb://myetcd/path/to/foo/bar", "super awesome")
-        instance.get.assert_called_with("sdb://myetcd/path/to/foo/bar")        
+        instance.get.assert_called_with("sdb://myetcd/path/to/foo/bar")
 
         instance.get.side_effect = Exception
         pytest.raises(Exception, etcd_db.set_, "bad key", "bad value")
@@ -70,10 +83,16 @@ def test_get(etcd_client_mock, instance):
         assert etcd_db.get("sdb://myetcd/path/to/foo/bar") == "super awesome"
         instance.get.assert_called_with("sdb://myetcd/path/to/foo/bar")
 
-        assert etcd_db.get("sdb://myetcd/path/to/foo/bar", service="salt") == "super awesome"
+        assert (
+            etcd_db.get("sdb://myetcd/path/to/foo/bar", service="salt")
+            == "super awesome"
+        )
         instance.get.assert_called_with("sdb://myetcd/path/to/foo/bar")
 
-        assert etcd_db.get("sdb://myetcd/path/to/foo/bar", profile="stack") == "super awesome"
+        assert (
+            etcd_db.get("sdb://myetcd/path/to/foo/bar", profile="stack")
+            == "super awesome"
+        )
         instance.get.assert_called_with("sdb://myetcd/path/to/foo/bar")
 
         instance.get.side_effect = Exception
@@ -97,7 +116,7 @@ def test_delete(etcd_client_mock, instance):
 
         instance.delete.side_effect = Exception
         assert not etcd_db.delete("sdb://myetcd/path/to/foo/bar")
-        
+
 
 def test__get_conn(etcd_client_mock):
     """

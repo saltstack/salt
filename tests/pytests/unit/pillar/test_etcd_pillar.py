@@ -9,6 +9,7 @@ import salt.pillar.etcd_pillar as etcd_pillar
 import salt.utils.etcd_util as etcd_util
 from tests.support.mock import MagicMock, create_autospec, patch
 
+
 @pytest.fixture
 def configure_loader_modules():
     return {etcd_pillar: {}}
@@ -38,12 +39,16 @@ def test_ext_pillar(etcd_client_mock, instance):
 
         # Test pillar with a root given
         instance.tree.return_value = {"key": "value"}
-        assert etcd_pillar.ext_pillar("test-id", {}, "etcd_profile root=/salt") == {"key": "value"}
+        assert etcd_pillar.ext_pillar("test-id", {}, "etcd_profile root=/salt") == {
+            "key": "value"
+        }
         instance.tree.assert_called_with("/salt")
 
         # Test pillar with a root given that uses the minion id
         instance.tree.return_value = {"key": "value"}
-        assert etcd_pillar.ext_pillar("test-id", {}, "etcd_profile root=/salt/%(minion_id)s") == {"key": "value"}
+        assert etcd_pillar.ext_pillar(
+            "test-id", {}, "etcd_profile root=/salt/%(minion_id)s"
+        ) == {"key": "value"}
         instance.tree.assert_called_with("/salt/test-id")
 
         # Test pillar with a root given that uses the minion id

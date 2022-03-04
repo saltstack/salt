@@ -14,6 +14,7 @@ import pytest
 import salt.states.etcd_mod as etcd_state
 from tests.support.mock import MagicMock, patch
 
+
 @pytest.fixture
 def configure_loader_modules():
     return {etcd_state: {}}
@@ -76,7 +77,7 @@ def test_wait_set():
         "comment": "",
     }
     assert etcd_state.wait_set("key", "any value") == expected
-    
+
 
 def test_directory():
     """
@@ -111,7 +112,7 @@ def test_directory():
             "changes": {},
         }
         assert etcd_state.directory("new_dir") == expected
-    
+
 
 def test_rm():
     """
@@ -194,8 +195,14 @@ def test_mod_watch():
             "result": True,
             "changes": {"key": "value"},
         }
-        assert etcd_state.mod_watch("key", value="value", sfun="wait_set", profile={}) == expected
-        assert etcd_state.mod_watch("key", value="value", sfun="wait_set_key", profile={}) == expected
+        assert (
+            etcd_state.mod_watch("key", value="value", sfun="wait_set", profile={})
+            == expected
+        )
+        assert (
+            etcd_state.mod_watch("key", value="value", sfun="wait_set_key", profile={})
+            == expected
+        )
 
         # Test watch with wait_rm
         get_mock.return_value = "value"

@@ -15,6 +15,7 @@ import salt.modules.etcd_mod as etcd_mod
 import salt.utils.etcd_util as etcd_util
 from tests.support.mock import MagicMock, create_autospec, patch
 
+
 @pytest.fixture
 def configure_loader_modules():
     return {etcd_mod: {}}
@@ -34,13 +35,12 @@ def etcd_client_mock(instance):
 
 # 'get_' function tests: 1
 
+
 def test_get(etcd_client_mock, instance):
     """
     Test if it get a value from etcd, by direct path
     """
-    with patch.dict(
-        etcd_mod.__utils__, {"etcd_util.get_conn": etcd_client_mock}
-    ):
+    with patch.dict(etcd_mod.__utils__, {"etcd_util.get_conn": etcd_client_mock}):
         instance.get.return_value = "stack"
         assert etcd_mod.get_("salt") == "stack"
         instance.get.assert_called_with("salt", recurse=False)
@@ -52,43 +52,41 @@ def test_get(etcd_client_mock, instance):
         instance.get.side_effect = Exception
         pytest.raises(Exception, etcd_mod.get_, "err")
 
+
 # 'set_' function tests: 1
+
 
 def test_set(etcd_client_mock, instance):
     """
     Test if it set a key in etcd, by direct path
     """
-    with patch.dict(
-        etcd_mod.__utils__, {"etcd_util.get_conn": etcd_client_mock}
-    ):
+    with patch.dict(etcd_mod.__utils__, {"etcd_util.get_conn": etcd_client_mock}):
         instance.set.return_value = "stack"
         assert etcd_mod.set_("salt", "stack") == "stack"
-        instance.set.assert_called_with(
-            "salt", "stack", directory=False, ttl=None
-        )
+        instance.set.assert_called_with("salt", "stack", directory=False, ttl=None)
 
         instance.set.return_value = True
-        assert etcd_mod.set_("salt", "", directory=True) == True
+        assert etcd_mod.set_("salt", "", directory=True) is True
         instance.set.assert_called_with("salt", "", directory=True, ttl=None)
 
-        assert etcd_mod.set_("salt", "", directory=True, ttl=5) == True
+        assert etcd_mod.set_("salt", "", directory=True, ttl=5) is True
         instance.set.assert_called_with("salt", "", directory=True, ttl=5)
 
-        assert etcd_mod.set_("salt", "", None, 10, True) == True
+        assert etcd_mod.set_("salt", "", None, 10, True) is True
         instance.set.assert_called_with("salt", "", directory=True, ttl=10)
 
         instance.set.side_effect = Exception
         pytest.raises(Exception, etcd_mod.set_, "err", "stack")
 
+
 # 'update' function tests: 1
+
 
 def test_update(etcd_client_mock, instance):
     """
     Test if can set multiple keys in etcd
     """
-    with patch.dict(
-        etcd_mod.__utils__, {"etcd_util.get_conn": etcd_client_mock}
-    ):
+    with patch.dict(etcd_mod.__utils__, {"etcd_util.get_conn": etcd_client_mock}):
         args = {
             "x": {"y": {"a": "1", "b": "2"}},
             "z": "4",
@@ -107,15 +105,15 @@ def test_update(etcd_client_mock, instance):
         assert etcd_mod.update(args) == result
         instance.update.assert_called_with(args, "")
 
+
 # 'ls_' function tests: 1
+
 
 def test_ls(etcd_client_mock, instance):
     """
     Test if it return all keys and dirs inside a specific path
     """
-    with patch.dict(
-        etcd_mod.__utils__, {"etcd_util.get_conn": etcd_client_mock}
-    ):
+    with patch.dict(etcd_mod.__utils__, {"etcd_util.get_conn": etcd_client_mock}):
         instance.ls.return_value = {"/some-dir": {}}
         assert etcd_mod.ls_("/some-dir") == {"/some-dir": {}}
         instance.ls.assert_called_with("/some-dir")
@@ -127,15 +125,15 @@ def test_ls(etcd_client_mock, instance):
         instance.ls.side_effect = Exception
         pytest.raises(Exception, etcd_mod.ls_, "err")
 
+
 # 'rm_' function tests: 1
+
 
 def test_rm(etcd_client_mock, instance):
     """
     Test if it delete a key from etcd
     """
-    with patch.dict(
-        etcd_mod.__utils__, {"etcd_util.get_conn": etcd_client_mock}
-    ):
+    with patch.dict(etcd_mod.__utils__, {"etcd_util.get_conn": etcd_client_mock}):
         instance.rm.return_value = False
         assert not etcd_mod.rm_("dir")
         instance.rm.assert_called_with("dir", recurse=False)
@@ -147,15 +145,15 @@ def test_rm(etcd_client_mock, instance):
         instance.rm.side_effect = Exception
         pytest.raises(Exception, etcd_mod.rm_, "err")
 
+
 # 'tree' function tests: 1
+
 
 def test_tree(etcd_client_mock, instance):
     """
     Test if it recurses through etcd and return all values
     """
-    with patch.dict(
-        etcd_mod.__utils__, {"etcd_util.get_conn": etcd_client_mock}
-    ):
+    with patch.dict(etcd_mod.__utils__, {"etcd_util.get_conn": etcd_client_mock}):
         instance.tree.return_value = {}
         assert etcd_mod.tree("/some-dir") == {}
         instance.tree.assert_called_with("/some-dir")
@@ -166,15 +164,15 @@ def test_tree(etcd_client_mock, instance):
         instance.tree.side_effect = Exception
         pytest.raises(Exception, etcd_mod.tree, "err")
 
+
 # 'watch' function tests: 1
+
 
 def test_watch(etcd_client_mock, instance):
     """
     Test if watch returns the right tuples
     """
-    with patch.dict(
-        etcd_mod.__utils__, {"etcd_util.get_conn": etcd_client_mock}
-    ):
+    with patch.dict(etcd_mod.__utils__, {"etcd_util.get_conn": etcd_client_mock}):
         instance.watch.return_value = {
             "value": "stack",
             "changed": True,
@@ -183,17 +181,21 @@ def test_watch(etcd_client_mock, instance):
             "key": "/salt",
         }
         assert etcd_mod.watch("/salt") == instance.watch.return_value
-        instance.watch.assert_called_with(
-            "/salt", recurse=False, timeout=0, index=None
-        )
+        instance.watch.assert_called_with("/salt", recurse=False, timeout=0, index=None)
 
         instance.watch.return_value["dir"] = True
-        assert etcd_mod.watch("/some-dir", recurse=True, timeout=5, index=10) == instance.watch.return_value
+        assert (
+            etcd_mod.watch("/some-dir", recurse=True, timeout=5, index=10)
+            == instance.watch.return_value
+        )
         instance.watch.assert_called_with(
             "/some-dir", recurse=True, timeout=5, index=10
         )
 
-        assert etcd_mod.watch("/some-dir", True, None, 5, 10) == instance.watch.return_value
+        assert (
+            etcd_mod.watch("/some-dir", True, None, 5, 10)
+            == instance.watch.return_value
+        )
         instance.watch.assert_called_with(
             "/some-dir", recurse=True, timeout=5, index=10
         )
