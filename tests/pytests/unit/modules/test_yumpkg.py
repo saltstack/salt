@@ -1231,6 +1231,43 @@ def test_install_error_reporting():
         assert exc_info.value.info == expected, exc_info.value.info
 
 
+def test_remove_not_installed():
+    """
+    Tests that no exception raised on removing not installed package
+    """
+    name = "foo"
+    list_pkgs_mock = MagicMock(return_value={})
+    cmd_mock = MagicMock(
+        return_value={"pid": 12345, "retcode": 0, "stdout": "", "stderr": ""}
+    )
+    salt_mock = {
+        "cmd.run_all": cmd_mock,
+        "lowpkg.version_cmp": rpm.version_cmp,
+        "pkg_resource.parse_targets": MagicMock(
+            return_value=({name: None}, "repository")
+        ),
+    }
+    with patch.object(yumpkg, "list_pkgs", list_pkgs_mock), patch(
+        "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+    ), patch.dict(yumpkg.__salt__, salt_mock):
+
+        # Test yum
+        with patch.dict(yumpkg.__context__, {"yum_bin": "yum"}), patch.dict(
+            yumpkg.__grains__, {"os": "CentOS", "osrelease": 7}
+        ):
+            yumpkg.remove(name)
+            cmd_mock.assert_not_called()
+
+        # Test dnf
+        yumpkg.__context__.pop("yum_bin")
+        cmd_mock.reset_mock()
+        with patch.dict(yumpkg.__context__, {"yum_bin": "dnf"}), patch.dict(
+            yumpkg.__grains__, {"os": "Fedora", "osrelease": 27}
+        ):
+            yumpkg.remove(name)
+            cmd_mock.assert_not_called()
+
+
 def test_upgrade_with_options():
     with patch.object(yumpkg, "list_pkgs", MagicMock(return_value={})), patch(
         "salt.utils.systemd.has_scope", MagicMock(return_value=False)

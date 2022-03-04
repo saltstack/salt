@@ -1,5 +1,6 @@
 """
-Module for running arbitrary tests with a __virtual__ function
+Module for testing that a __virtual__ function returning False will not be
+available via the Salt Loader.
 """
 
 

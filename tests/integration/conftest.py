@@ -5,10 +5,17 @@
     Integration tests PyTest configuration/fixtures
 """
 import logging
+import pathlib
 
 import pytest
+from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _create_old_tempdir():
+    pathlib.Path(RUNTIME_VARS.TMP).mkdir(exist_ok=True, parents=True)
 
 
 @pytest.fixture(scope="package", autouse=True)

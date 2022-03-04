@@ -127,6 +127,10 @@ class SSHModuleTest(ModuleCase):
                 "AssertionError: {}. Function returned: {}".format(exc, ret)
             )
 
+    @pytest.mark.skipif(
+        salt.utils.platform.is_photonos() is True,
+        reason="Skip on PhotonOS.  Attempting to receive the SSH key from Github, using RSA keys which are disabled.",
+    )
     @pytest.mark.slow_test
     def test_recv_known_host_entries(self):
         """
@@ -214,6 +218,10 @@ class SSHModuleTest(ModuleCase):
         ret = self.run_function("ssh.check_known_host", arg, **kwargs)
         self.assertEqual(ret, "add")
 
+    @pytest.mark.skipif(
+        salt.utils.platform.is_photonos() is True,
+        reason="Skip on PhotonOS.  Attempting to receive the SSH key from Github, using RSA keys which are disabled.",
+    )
     @pytest.mark.slow_test
     def test_set_known_host(self):
         """
