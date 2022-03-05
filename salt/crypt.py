@@ -19,11 +19,10 @@ import time
 import traceback
 import weakref
 
+import salt.channel.client
 import salt.defaults.exitcodes
 import salt.ext.tornado.gen
 import salt.payload
-import salt.transport.client
-import salt.transport.frame
 import salt.utils.crypt
 import salt.utils.decorators
 import salt.utils.event
@@ -640,7 +639,7 @@ class AsyncAuth:
             acceptance_wait_time_max = acceptance_wait_time
         creds = None
 
-        with salt.transport.client.AsyncReqChannel.factory(
+        with salt.channel.client.AsyncReqChannel.factory(
             self.opts, crypt="clear", io_loop=self.io_loop
         ) as channel:
             error = None
@@ -748,7 +747,7 @@ class AsyncAuth:
         close_channel = False
         if not channel:
             close_channel = True
-            channel = salt.transport.client.AsyncReqChannel.factory(
+            channel = salt.channel.client.AsyncReqChannel.factory(
                 self.opts, crypt="clear", io_loop=self.io_loop
             )
 
@@ -1289,7 +1288,7 @@ class SAuth(AsyncAuth):
         acceptance_wait_time_max = self.opts["acceptance_wait_time_max"]
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             self.opts, crypt="clear"
         ) as channel:
             while True:
@@ -1361,7 +1360,7 @@ class SAuth(AsyncAuth):
         close_channel = False
         if not channel:
             close_channel = True
-            channel = salt.transport.client.ReqChannel.factory(self.opts, crypt="clear")
+            channel = salt.channel.client.ReqChannel.factory(self.opts, crypt="clear")
 
         sign_in_payload = self.minion_sign_in_payload()
         try:

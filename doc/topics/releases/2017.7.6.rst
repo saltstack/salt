@@ -11,7 +11,13 @@ Statistics
 - Total Issue References: **60**
 - Total PR References: **217**
 
-- Contributors: **47** (`Ch3LL`_, `DmitryKuzmenko`_, `GwiYeong`_, `Quarky9`_, `RichardW42`_, `UtahDave`_, `amaclean199`_, `arif-ali`_, `baniobloom`_, `bdrung`_, `benediktwerner`_, `bmiguel-teixeira`_, `cachedout`_, `dafenko`_, `damon-atkins`_, `dwoz`_, `ezh`_, `folti`_, `fpicot`_, `frogunder`_, `garethgreenaway`_, `gtmanfred`_, `isbm`_, `jeroennijhof`_, `jfindlay`_, `jfoboss`_, `kstreee`_, `lomeroe`_, `mattp-`_, `meaksh`_, `mirceaulinic`_, `myinitialsarepm`_, `mzbroch`_, `nages13`_, `paclat`_, `pcjeff`_, `pruiz`_, `psyer`_, `rallytime`_, `s0undt3ch`_, `skizunov`_, `smitty42`_, `terminalmage`_, `twangboy`_, `vutny`_, `yagnik`_, `yannj-fr`_)
+- Contributors: **47** (`Ch3LL`_, `DmitryKuzmenko`_, `GwiYeong`_, `Quarky9`_, `RichardW42`_,
+  `UtahDave`_, `amaclean199`_, `arif-ali`_, `baniobloom`_, `bdrung`_, `benediktwerner`_,
+  `bmiguel-teixeira`_, `cachedout`_, `dafenko`_, `damon-atkins`_, `dwoz`_, `ezh`_, `folti`_,
+  `fpicot`_, `frogunder`_, `garethgreenaway`_, `gtmanfred`_, `isbm`_, `jeroennijhof`_, `jfindlay`_,
+  `jfoboss`_, `kstreee`_, `lomeroe`_, `mattp-`_, `meaksh`_, `mirceaulinic`_, `myinitialsarepm`_,
+  `mzbroch`_, `nages13`_, `paclat`_, `pcjeff`_, `pruiz`_, `psyer`_, `rallytime`_, `s0undt3ch`_,
+  `skizunov`_, `smitty42`_, `terminalmage`_, `twangboy`_, `vutny`_, `yagnik`_, `yannj-fr`_)
 
 Tornado 5.0 Support for Python 2 Only
 -------------------------------------

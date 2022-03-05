@@ -361,10 +361,10 @@ def hold_present(name, snapshot, recursive=False):
 def _dataset_present(
     dataset_type,
     name,
+    properties,
     volume_size=None,
     sparse=False,
     create_parent=False,
-    properties=None,
     cloned_from=None,
 ):
     """
@@ -408,12 +408,16 @@ def _dataset_present(
         dataset_type = "filesystem"
 
     ## ensure properties are zfs values
-    if volume_size:
-        volume_size = __utils__["zfs.from_size"](volume_size)
-    if properties:
-        properties = __utils__["zfs.from_auto_dict"](properties)
-    elif properties is None:
+    if properties is None:
         properties = {}
+    properties = __utils__["zfs.from_auto_dict"](properties)
+    if volume_size:
+        ## NOTE: add volsize to properties
+        volume_size = __utils__["zfs.from_size"](volume_size)
+        properties.update({"volsize": volume_size})
+    # The sorted isn't necessary for proper behavior, but it helps for the unit
+    # tests.
+    propnames = ",".join(sorted(properties.keys()))
 
     ## log configuration
     log.debug(
@@ -446,19 +450,19 @@ def _dataset_present(
 
     ## ensure dataset is in correct state
     ## NOTE: update the dataset
-    if __salt__["zfs.exists"](name, **{"type": dataset_type}):
+    exists = __salt__["zfs.exists"](name, **{"type": dataset_type})
+    if exists and len(properties) == 0:
+        ret["comment"] = "{} {} is uptodate".format(dataset_type, name)
+    elif exists and len(properties) > 0:
         ## NOTE: fetch current volume properties
         properties_current = __salt__["zfs.get"](
             name,
+            properties=propnames,
             type=dataset_type,
             fields="value",
             depth=0,
             parsable=True,
         ).get(name, OrderedDict())
-
-        ## NOTE: add volsize to properties
-        if volume_size:
-            properties["volsize"] = volume_size
 
         ## NOTE: build list of properties to update
         properties_update = []
@@ -503,7 +507,7 @@ def _dataset_present(
             ret["comment"] = "{} {} failed to be updated".format(dataset_type, name)
 
     ## NOTE: create or clone the dataset
-    else:
+    elif not exists:
         mod_res_action = "cloned" if cloned_from else "created"
         if __opts__["test"]:
             ## NOTE: pretend to create/clone
@@ -579,8 +583,8 @@ def filesystem_present(name, create_parent=False, properties=None, cloned_from=N
     return _dataset_present(
         "filesystem",
         name,
+        properties,
         create_parent=create_parent,
-        properties=properties,
         cloned_from=cloned_from,
     )
 
@@ -628,10 +632,10 @@ def volume_present(
     return _dataset_present(
         "volume",
         name,
+        properties,
         volume_size,
         sparse=sparse,
         create_parent=create_parent,
-        properties=properties,
         cloned_from=cloned_from,
     )
 

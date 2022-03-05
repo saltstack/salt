@@ -157,7 +157,7 @@ class GitModuleTest(ModuleCase):
                     )
                 )
         ret = self.run_function("git.add", [self.repo, newdir])
-        res = "\n".join(sorted(["add '{}'".format(x) for x in files_relpath]))
+        res = "\n".join(sorted("add '{}'".format(x) for x in files_relpath))
         if salt.utils.platform.is_windows():
             res = res.replace("\\", "/")
         self.assertEqual(ret, res)
@@ -783,7 +783,7 @@ class GitModuleTest(ModuleCase):
         )
         # Remove an entire dir
         expected = "\n".join(
-            sorted(["rm '" + os.path.join(entire_dir, x) + "'" for x in self.files])
+            sorted("rm '" + os.path.join(entire_dir, x) + "'" for x in self.files)
         )
         if salt.utils.platform.is_windows():
             expected = expected.replace("\\", "/")

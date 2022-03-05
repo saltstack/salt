@@ -120,6 +120,7 @@ __grants__ = [
     "SHOW DATABASES",
     "SHOW VIEW",
     "SHUTDOWN",
+    "SLAVE MONITOR",
     "SUPER",
     "SYSTEM_VARIABLES_ADMIN",
     "TRIGGER",
@@ -676,6 +677,12 @@ def _execute(cur, qry, args=None):
 def _sanitize_comments(content):
     # Remove comments which might affect line by line parsing
     # Regex should remove any text beginning with # (or --) not inside of ' or "
+    if not HAS_SQLPARSE:
+        log.error(
+            "_sanitize_comments unavailable, no python sqlparse library installed."
+        )
+        return content
+
     return sqlparse.format(content, strip_comments=True)
 
 
@@ -1104,8 +1111,9 @@ def alter_db(name, character_set=None, collate=None, **connection_args):
         return []
     cur = dbc.cursor()
     existing = db_get(name, **connection_args)
+    # escaping database name is not required because of backticks in query expression
     qry = "ALTER DATABASE `{}` CHARACTER SET {} COLLATE {};".format(
-        name.replace("%", r"\%").replace("_", r"\_"),
+        name,
         character_set or existing.get("character_set"),
         collate or existing.get("collate"),
     )

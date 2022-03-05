@@ -245,6 +245,9 @@ QEMU profile file (for a clone):
     # Workaround https://github.com/saltstack/salt/issues/27821
     size: ''
 
+    # Enable the use of a Qemu agent on VM to retrieve the IP-address from.
+    agent_get_ip: True
+
 More information can be found on Proxmox API under the 'POST' method of /nodes/{node}/qemu/{vmid}/clone
 
 .. note::
