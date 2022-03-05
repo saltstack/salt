@@ -273,7 +273,6 @@ async def test_zeromq_req_channel(temp_salt_master, temp_salt_minion, event_loop
     process_manager.terminate()
     req_server.close()
     await req_server.task
-    req_server.a_context.destroy()
 
     assert req_client.message_client.socket
     with pytest.raises(salt.transport.zeromq.SaltReqTimeoutError):

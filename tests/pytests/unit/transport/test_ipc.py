@@ -1,4 +1,5 @@
 import asyncio
+import time
 import logging
 import os
 import sys
@@ -81,11 +82,9 @@ async def pub_channel(opts, socket_path):
 async def test_sync_reading(pub_channel, opts, socket_path):
     # To be completely fair let's create 2 clients.
     client1 = salt.transport.ipc.IPCMessageSubscriber(
-        #    opts,
         socket_path,
     )
     client2 = salt.transport.ipc.IPCMessageSubscriber(
-        #    opts,
         socket_path,
     )
     await client1.connect()
@@ -103,20 +102,17 @@ async def test_sync_reading(pub_channel, opts, socket_path):
 async def test_multi_client_reading(pub_channel, opts, socket_path, event_loop):
     # To be completely fair let's create 2 clients.
     client1 = salt.transport.ipc.IPCMessageSubscriber(
-        #    opts,
         socket_path,
     )
     client2 = salt.transport.ipc.IPCMessageSubscriber(
-        #    opts,
         socket_path,
     )
+
     await client1.connect()
+    log.error("WTF 3")
     await client2.connect()
     call_cnt = []
     await asyncio.sleep(0.1)
-
-    # Create a watchdog to be safe from hanging in sync loops (what old code did)
-    # evt = threading.Event()
 
     # Runs in ioloop thread so we're safe from race conditions here
     def handler(raw):
@@ -128,7 +124,17 @@ async def test_multi_client_reading(pub_channel, opts, socket_path, event_loop):
     task2 = event_loop.create_task(client2.read_async(handler))
 
     pub_channel.publish("TEST")
-    await asyncio.gather(task1, task2)
+    start = time.time()
+    timeout = 60
+
+    while True:
+        if len(call_cnt) == 2 or time.time() - start >= timeout:
+            task1.cancel()
+            task2.cancel()
+            break
+        await asyncio.sleep(.3)
+
+    await asyncio.gather(task1, task2, return_exceptions=True)
 
     assert len(call_cnt) == 2
     assert call_cnt[0] == "TEST"
@@ -140,7 +146,6 @@ if sys.version_info > (3, 6):
     @pytest.fixture
     async def sub_channel(opts, socket_path):
         channel = salt.transport.ipc.IPCMessageSubscriber(
-            #        opts,
             socket_path,
         )
         await channel.connect()
