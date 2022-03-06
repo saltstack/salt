@@ -285,6 +285,7 @@ class IPCMessageSubscriber(IPCClient):
         else:
             msgpack_kwargs = {"encoding": "utf-8"}
         self.unpacker = salt.utils.msgpack.Unpacker(**msgpack_kwargs)
+        self._callback_tasks = {}
 
     async def _read(self, timeout, callback=None):
         try:
@@ -372,4 +373,18 @@ class IPCMessageSubscriber(IPCClient):
             log.error("NOT YET CONNECTED")
             await self.connect()
         log.error("NOW %r", self.connected())
-        await self._read(None, callback)
+        if callback in self._callback_tasks:
+            task = self._callback_tasks.pop(callback)
+            task.cancel()
+            try:
+                await task
+            except Exception as exc:
+                log.error("Exception while running task")
+        task = self.io_loop.create_task(self._read(None, callback))
+        self._callback_tasks[callback] = task
+
+    def close(self):
+        super().close()
+        for callback in list(self._callback_tasks):
+            task = self._callback_tasks.pop(callback)
+            task.cancel()
