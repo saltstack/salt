@@ -712,7 +712,6 @@ class AsyncReqMessageClient:
             timeout = 1
 
         async def sendrecv():
-            await asyncio.sleep(0.3)
             while True:
                 try:
                     await self.socket.send(message)
