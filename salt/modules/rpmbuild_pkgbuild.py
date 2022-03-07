@@ -153,7 +153,7 @@ def _get_deps(deps, tree_base, saltenv="base"):
             "'deps' must be a Python list or comma-separated string"
         )
     for deprpm in deps:
-        parsed = urllib.parse._urlparse(deprpm)
+        parsed = urllib.parse.urlparse(deprpm)
         depbase = os.path.basename(deprpm)
         dest = os.path.join(tree_base, depbase)
         if parsed.scheme:
