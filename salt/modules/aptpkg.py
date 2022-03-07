@@ -2136,6 +2136,9 @@ def get_repo_keys(aptkey=True, keydir=None):
 
         salt '*' pkg.get_repo_keys
     """
+    if not salt.utils.path.which("apt-key"):
+        aptkey = False
+
     if not aptkey:
         if not keydir:
             keydir = pathlib.Path("/usr", "share", "keyrings")
@@ -2505,6 +2508,9 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         refresh = kwargs["refresh_db"]
     else:
         refresh = kwargs.get("refresh", True)
+
+    if not salt.utils.path.which("apt-key"):
+        aptkey = False
 
     # to ensure no one sets some key values that _shouldn't_ be changed on the
     # object itself, this is just a white-list of "ok" to set properties
