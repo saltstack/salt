@@ -330,7 +330,7 @@ def create(vm_):
 
     # Get the ssh_keys
     ssh_keys = config.get_cloud_config_value(
-        "ssh_keys", vm_, __opts__, search_global=False, default=False
+        "ssh_keys", vm_, __opts__, search_global=False
     )
 
     if ssh_keys:
