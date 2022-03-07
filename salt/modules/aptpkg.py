@@ -85,7 +85,9 @@ PKG_ARCH_SEPARATOR = ":"
 LP_SRC_FORMAT = "deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main"
 LP_PVT_SRC_FORMAT = "deb https://{0}private-ppa.launchpad.net/{1}/{2}/ubuntu {3} main"
 
-_MODIFY_OK = frozenset(["uri", "comps", "architectures", "disabled", "file", "dist"])
+_MODIFY_OK = frozenset(
+    ["uri", "comps", "architectures", "disabled", "file", "dist", "signedby"]
+)
 DPKG_ENV_VARS = {
     "APT_LISTBUGS_FRONTEND": "none",
     "APT_LISTCHANGES_FRONTEND": "none",
@@ -136,7 +138,7 @@ if not HAS_APT:
             self.uri = ""
             self.line = line
             self.architectures = []
-            self.signed_by = ""
+            self.signedby = ""
             self.file = file
             if not self.file:
                 self.file = str(pathlib.Path(os.sep, "etc", "apt", "sources.list"))
@@ -153,13 +155,14 @@ if not HAS_APT:
                 repo_line.append("#")
 
             repo_line.append(self.type)
-            inside_brackets = []
+            opts = []
             if self.architectures:
-                inside_brackets.append("arch={}".format(" ".join(self.architectures)))
-            if self.signed_by:
-                inside_brackets.append("signed-by={}".format(self.signed_by))
-            if inside_brackets:
-                repo_line.append("[{}]".format(" ".join(inside_brackets)))
+                opts.append("arch={}".format(" ".join(self.architectures)))
+            if self.signedby:
+                opts.append("signed-by={}".format(self.signedby))
+
+            if opts:
+                repo_line.append("[{}]".format(" ".join(opts)))
 
             repo_line = repo_line + [self.uri, self.dist, " ".join(self.comps)]
             if self.comment:
@@ -188,7 +191,7 @@ if not HAS_APT:
                     if opt.startswith("arch"):
                         self.architectures.extend(opt.split("=", 1)[1].split(","))
                     if opt.startswith("signed-by"):
-                        self.signed_by = opt.split("=")[1]
+                        self.signedby = opt.split("=", 1)[1]
                     try:
                         repo_line.pop(repo_line.index(opt))
                     except ValueError:
@@ -226,10 +229,16 @@ if not HAS_APT:
             else:
                 log.debug("The apt sources file %s does not exist", file)
 
-        def add(self, type, uri, dist, orig_comps, architectures):
+        def add(self, type, uri, dist, orig_comps, architectures, signedby):
+            if architectures:
+                architectures = "arch={}".format(" ".join(architectures))
+            if signedby:
+                signedby = "signed-by={}".format(signedby)
             repo_line = [
                 type,
-                "[arch={}]".format(" ".join(architectures)) if architectures else "",
+                " [{} {}] ".format(architectures, signedby)
+                if architectures or signedby
+                else "",
                 uri,
                 dist,
                 " ".join(orig_comps),
@@ -1671,7 +1680,14 @@ def _split_repo_str(repo):
     Return APT source entry as a tuple.
     """
     split = SourceEntry(repo)
-    return split.type, split.architectures, split.uri, split.dist, split.comps
+    return (
+        split.type,
+        split.architectures,
+        split.uri,
+        split.dist,
+        split.comps,
+        split.signedby,
+    )
 
 
 def _consolidate_repo_sources(sources):
@@ -1884,6 +1900,7 @@ def get_repo(repo, **kwargs):
                 repo_uri,
                 repo_dist,
                 repo_comps,
+                repo_signedby,
             ) = _split_repo_str(repo)
             if ppa_auth:
                 uri_match = re.search("(http[s]?://)(.+)", repo_uri)
@@ -1960,6 +1977,7 @@ def del_repo(repo, **kwargs):
                 repo_uri,
                 repo_dist,
                 repo_comps,
+                repo_signedby,
             ) = _split_repo_str(repo)
         except SyntaxError:
             raise SaltInvocationError(
@@ -2048,44 +2066,12 @@ def _convert_if_int(value):
     return value
 
 
-def get_repo_keys():
-    """
-    .. versionadded:: 2017.7.0
-
-    List known repo key details.
-
-    :return: A dictionary containing the repo keys.
-    :rtype: dict
-
-    CLI Examples:
-
-    .. code-block:: bash
-
-        salt '*' pkg.get_repo_keys
-    """
+def _parse_repo_keys_output(cmd_ret):
+    """ """
     ret = dict()
     repo_keys = list()
 
-    # The double usage of '--with-fingerprint' is necessary in order to
-    # retrieve the fingerprint of the subkey.
-    cmd = [
-        "apt-key",
-        "adv",
-        "--batch",
-        "--list-public-keys",
-        "--with-fingerprint",
-        "--with-fingerprint",
-        "--with-colons",
-        "--fixed-list-mode",
-    ]
-
-    cmd_ret = _call_apt(cmd, scope=False)
-
-    if cmd_ret["retcode"] != 0:
-        log.error(cmd_ret["stderr"])
-        return ret
-
-    lines = [line for line in cmd_ret["stdout"].splitlines() if line.strip()]
+    lines = [line for line in cmd_ret.splitlines() if line.strip()]
 
     # Reference for the meaning of each item in the colon-separated
     # record can be found here: https://goo.gl/KIZbvp
@@ -2130,7 +2116,105 @@ def get_repo_keys():
     return ret
 
 
-def add_repo_key(path=None, text=None, keyserver=None, keyid=None, saltenv="base"):
+def get_repo_keys(aptkey=True, keydir=None):
+    """
+    .. versionadded:: 2017.7.0
+
+    List known repo key details.
+    :param bool aptkey: Use the binary apt-key.
+    :param str keydir: The directory path to save keys. The default directory
+                       is /usr/share/keyrings/ which is the recommended path
+                       for adding third party keys. This argument is only used
+                       when aptkey is False.
+
+    :return: A dictionary containing the repo keys.
+    :rtype: dict
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.get_repo_keys
+    """
+    if not aptkey:
+        if not keydir:
+            keydir = pathlib.Path("/usr", "share", "keyrings")
+        if not isinstance(keydir, pathlib.Path):
+            keydir = pathlib.Path(keydir)
+
+        ret_output = []
+        for file in os.listdir(keydir):
+            key_file = keydir / file
+            cmd_ret = __salt__["cmd.run_all"](
+                [
+                    "gpg",
+                    "--no-default-keyring",
+                    "--keyring",
+                    key_file,
+                    "--list-keys",
+                    "--with-colons",
+                ]
+            )
+            ret_output.append(cmd_ret["stdout"])
+
+        ret = _parse_repo_keys_output(" ".join(ret_output))
+    # The double usage of '--with-fingerprint' is necessary in order to
+    # retrieve the fingerprint of the subkey.
+    else:
+        cmd = [
+            "apt-key",
+            "adv",
+            "--batch",
+            "--list-public-keys",
+            "--with-fingerprint",
+            "--with-fingerprint",
+            "--with-colons",
+            "--fixed-list-mode",
+        ]
+
+        cmd_ret = _call_apt(cmd, scope=False)
+        if cmd_ret["retcode"] != 0:
+            log.error(cmd_ret["stderr"])
+            return ret
+
+        ret = _parse_repo_keys_output(cmd_ret["stdout"])
+    return ret
+
+
+def _decrypt_key(key):
+    """
+    Check if the key needs to be decrypted. If it needs
+    to be decrypt it, do so with the gpg binary.
+    """
+    try:
+        with salt.utils.files.fopen(key, "r") as fp:
+            if fp.read().strip("-").startswith("BEGIN PGP"):
+                if not salt.utils.path.which("gpg"):
+                    log.error(
+                        "Detected an ASCII armored key %s and the gpg binary is not available. Not decrypting the key.",
+                        key,
+                    )
+                    return False
+                encrypted_key = key + ".gpg"
+                cmd = ["gpg", "--output", encrypted_key, "--dearmor", key]
+                if not __salt__["cmd.run_all"](cmd)["retcode"] == 0:
+                    log.error("Failed to decrypt the key %s", key)
+                return encrypted_key
+    except UnicodeDecodeError:
+        log.debug("Key is not ASCII Armored. Do not need to decrypt")
+    return key
+
+
+def add_repo_key(
+    path=None,
+    text=None,
+    keyserver=None,
+    keyid=None,
+    saltenv="base",
+    aptkey=True,
+    keydir=None,
+    keyfile=None,
+):
     """
     .. versionadded:: 2017.7.0
 
@@ -2141,9 +2225,23 @@ def add_repo_key(path=None, text=None, keyserver=None, keyid=None, saltenv="base
     :param str keyserver: The server to download the repo key specified by the keyid.
     :param str keyid: The key id of the repo key to add.
     :param str saltenv: The environment the key file resides in.
+    :param bool aptkey: Use the binary apt-key.
+    :param str keydir: The directory path to save keys. The default directory
+                       is /usr/share/keyrings/ which is the recommended path
+                       for adding third party keys. This argument is only used
+                       when aptkey is False.
+
+    :param str keyfile: The name of the key to add. This is only required when
+                        aptkey is False and you are using a keyserver. This
+                        argument is only used when aptkey is False.
 
     :return: A boolean representing whether the repo key was added.
     :rtype: bool
+
+    .. warning::
+       The apt-key binary is deprecated and will last be available
+       in Debian 11 and Ubuntu 22.04. It is recommended to use aptkey=False
+       when using this module.
 
     CLI Examples:
 
@@ -2155,10 +2253,17 @@ def add_repo_key(path=None, text=None, keyserver=None, keyid=None, saltenv="base
 
         salt '*' pkg.add_repo_key keyserver='keyserver.example' keyid='0000AAAA'
     """
+    if not keydir:
+        keydir = pathlib.Path("/usr", "share", "keyrings")
+    if not isinstance(keydir, pathlib.Path):
+        keydir = pathlib.Path(keydir)
+
+    if not salt.utils.path.which("apt-key"):
+        aptkey = False
     cmd = ["apt-key"]
     kwargs = {}
 
-    current_repo_keys = get_repo_keys()
+    current_repo_keys = get_repo_keys(aptkey=aptkey, keydir=keydir)
 
     if path:
         cached_source_path = __salt__["cp.cache_file"](path, saltenv)
@@ -2167,7 +2272,13 @@ def add_repo_key(path=None, text=None, keyserver=None, keyid=None, saltenv="base
             log.error("Unable to get cached copy of file: %s", path)
             return False
 
-        cmd.extend(["add", cached_source_path])
+        if not aptkey:
+            key = _decrypt_key(cached_source_path)
+            if not key:
+                return False
+            cmd = ["cp", key, str(keydir)]
+        else:
+            cmd.extend(["add", cached_source_path])
     elif text:
         log.debug("Received value: %s", text)
 
@@ -2180,7 +2291,24 @@ def add_repo_key(path=None, text=None, keyserver=None, keyid=None, saltenv="base
             )
             raise SaltInvocationError(error_msg)
 
-        cmd.extend(["adv", "--batch", "--keyserver", keyserver, "--recv", keyid])
+        if not aptkey:
+            if not keyfile:
+                log.error(
+                    "You must define the name of the key file to save the key. See keyfile argument"
+                )
+                return False
+            cmd = [
+                "gpg",
+                "--no-default-keyring",
+                "--keyring",
+                keydir / keyfile,
+                "--keyserver",
+                keyserver,
+                "--recv-keys",
+                keyid,
+            ]
+        else:
+            cmd.extend(["adv", "--batch", "--keyserver", keyserver, "--recv", keyid])
     elif keyid:
         error_msg = "No keyserver specified for keyid: {}".format(keyid)
         raise SaltInvocationError(error_msg)
@@ -2205,7 +2333,34 @@ def add_repo_key(path=None, text=None, keyserver=None, keyid=None, saltenv="base
     return False
 
 
-def del_repo_key(name=None, **kwargs):
+def _get_key_from_id(keydir, keyid):
+    """
+    Find and return the key file from the keyid.
+    """
+    if not len(keyid) in (8, 16):
+        log.error("The keyid needs to be either 8 or 16 characters")
+        return False
+    for file in os.listdir(keydir):
+        key_file = keydir / file
+        key_output = __salt__["cmd.run_all"](
+            [
+                "gpg",
+                "--no-default-keyring",
+                "--keyring",
+                key_file,
+                "--list-keys",
+                "--with-colons",
+            ]
+        )
+        ret = _parse_repo_keys_output(key_output["stdout"])
+        for key in ret:
+            if ret[key]["keyid"].endswith(keyid):
+                return key_file
+    log.error("Could not find the key file for keyid: %s", keyid)
+    return False
+
+
+def del_repo_key(name=None, aptkey=True, keydir=None, **kwargs):
     """
     .. versionadded:: 2015.8.0
 
@@ -2226,6 +2381,19 @@ def del_repo_key(name=None, **kwargs):
             Setting this option to ``True`` requires that the ``name`` param
             also be passed.
 
+    aptkey
+        Use the binary apt-key.
+
+    keydir
+        The directory path to save keys. The default directory
+        is /usr/share/keyrings/ which is the recommended path
+        for adding third party keys.
+
+    .. warning::
+       The apt-key binary is deprecated and will last be available
+       in Debian 11 and Ubuntu 22.04. It is recommended to use aptkey=False
+       when using this module.
+
     CLI Examples:
 
     .. code-block:: bash
@@ -2233,6 +2401,14 @@ def del_repo_key(name=None, **kwargs):
         salt '*' pkg.del_repo_key keyid=0123ABCD
         salt '*' pkg.del_repo_key name='ppa:foo/bar' keyid_ppa=True
     """
+    if not keydir:
+        keydir = pathlib.Path("/usr", "share", "keyrings")
+    if not isinstance(keydir, pathlib.Path):
+        keydir = pathlib.Path(keydir)
+
+    if not salt.utils.path.which("apt-key"):
+        aptkey = False
+
     if kwargs.get("keyid_ppa", False):
         if isinstance(name, str) and name.startswith("ppa:"):
             owner_name, ppa_name = name[4:].split("/")
@@ -2246,16 +2422,22 @@ def del_repo_key(name=None, **kwargs):
         else:
             raise SaltInvocationError("keyid or keyid_ppa and PPA name must be passed")
 
-    result = _call_apt(["apt-key", "del", keyid], scope=False)
-    if result["retcode"] != 0:
-        msg = "Failed to remove keyid {0}"
-        if result["stderr"]:
-            msg += ": {}".format(result["stderr"])
-        raise CommandExecutionError(msg)
+    if not aptkey:
+        key_file = _get_key_from_id(keydir=keydir, keyid=keyid)
+        if not key_file:
+            return False
+        pathlib.Path(key_file).unlink()
+    else:
+        result = _call_apt(["apt-key", "del", keyid], scope=False)
+        if result["retcode"] != 0:
+            msg = "Failed to remove keyid {0}"
+            if result["stderr"]:
+                msg += ": {}".format(result["stderr"])
+            raise CommandExecutionError(msg)
     return keyid
 
 
-def mod_repo(repo, saltenv="base", **kwargs):
+def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     """
     Modify one or more values for a repo.  If the repo does not exist, it will
     be created, so long as the definition is well formed.  For Ubuntu the
@@ -2458,6 +2640,7 @@ def mod_repo(repo, saltenv="base", **kwargs):
             repo_uri,
             repo_dist,
             repo_comps,
+            repo_signedby,
         ) = _split_repo_str(repo)
     except SyntaxError:
         raise SyntaxError(
@@ -2466,6 +2649,11 @@ def mod_repo(repo, saltenv="base", **kwargs):
 
     full_comp_list = {comp.strip() for comp in repo_comps}
     no_proxy = __salt__["config.option"]("no_proxy")
+
+    if "signedby" in kwargs:
+        kwargs["signedby"] = kwargs["signedby"]
+    else:
+        kwargs["signedby"] = repo_signedby
 
     if "keyid" in kwargs:
         keyid = kwargs.pop("keyid", None)
@@ -2502,34 +2690,51 @@ def mod_repo(repo, saltenv="base", **kwargs):
                             key,
                         ]
                     else:
-                        cmd = [
-                            "apt-key",
-                            "adv",
-                            "--batch",
-                            "--keyserver",
-                            keyserver,
-                            "--logger-fd",
-                            "1",
-                            "--recv-keys",
-                            key,
-                        ]
-                    ret = _call_apt(cmd, scope=False, **kwargs)
-                    if ret["retcode"] != 0:
-                        raise CommandExecutionError(
-                            "Error: key retrieval failed: {}".format(ret["stdout"])
-                        )
+                        if not aptkey:
+
+                            key_file = pathlib.Path(kwargs["signedby"])
+                            add_repo_key(
+                                keyid=key,
+                                keyserver=keyserver,
+                                aptkey=False,
+                                keydir=key_file.parent,
+                                keyfile=key_file,
+                            )
+                        else:
+                            cmd = [
+                                "apt-key",
+                                "adv",
+                                "--batch",
+                                "--keyserver",
+                                keyserver,
+                                "--logger-fd",
+                                "1",
+                                "--recv-keys",
+                                key,
+                            ]
+                            ret = _call_apt(cmd, scope=False, **kwargs)
+                            if ret["retcode"] != 0:
+                                raise CommandExecutionError(
+                                    "Error: key retrieval failed: {}".format(
+                                        ret["stdout"]
+                                    )
+                                )
 
     elif "key_url" in kwargs:
         key_url = kwargs["key_url"]
         fn_ = __salt__["cp.cache_file"](key_url, saltenv)
         if not fn_:
             raise CommandExecutionError("Error: file not found: {}".format(key_url))
-        cmd = ["apt-key", "add", fn_]
-        out = __salt__["cmd.run_stdout"](cmd, python_shell=False, **kwargs)
-        if not out.upper().startswith("OK"):
-            raise CommandExecutionError(
-                "Error: failed to add key from {}".format(key_url)
-            )
+        if not aptkey:
+            if not add_repo_key(path=fn_, aptkey=False):
+                return False
+        else:
+            cmd = ["apt-key", "add", fn_]
+            out = __salt__["cmd.run_stdout"](cmd, python_shell=False, **kwargs)
+            if not out.upper().startswith("OK"):
+                raise CommandExecutionError(
+                    "Error: failed to add key from {}".format(key_url)
+                )
 
     elif "key_text" in kwargs:
         key_text = kwargs["key_text"]
@@ -2611,6 +2816,7 @@ def mod_repo(repo, saltenv="base", **kwargs):
             "type": mod_source.type,
             "uri": mod_source.uri,
             "line": mod_source.line,
+            "signedby": mod_source.signedby,
         }
     }
 
@@ -2701,6 +2907,7 @@ def expand_repo_def(**kwargs):
         dist=source_entry.dist,
         orig_comps=getattr(source_entry, "comps", []),
         architectures=getattr(source_entry, "architectures", []),
+        signedby=source_entry.signedby,
     )
 
     sanitized["file"] = source_entry.file
@@ -2711,6 +2918,7 @@ def expand_repo_def(**kwargs):
     sanitized["uri"] = source_entry.uri
     sanitized["line"] = source_entry.line.strip()
     sanitized["architectures"] = getattr(source_entry, "architectures", [])
+    sanitized["signedby"] = source_entry.signedby
 
     return sanitized
 
