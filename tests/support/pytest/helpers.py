@@ -169,6 +169,16 @@ def remove_stale_minion_key(master, minion_id):
         log.debug("The minion(id=%r) key was not found at %s", minion_id, key_path)
 
 
+@pytest.helpers.register
+def remove_stale_proxy_minion_cache_file(proxy_minion, minion_id=None):
+    cachefile = os.path.join(
+        proxy_minion.config["cachedir"],
+        "dummy-proxy-{}.cache".format(minion_id or proxy_minion.id),
+    )
+    if os.path.exists(cachefile):
+        os.unlink(cachefile)
+
+
 @attr.s(kw_only=True, slots=True)
 class TestGroup:
     sminion = attr.ib(default=None, repr=False)
