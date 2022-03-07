@@ -54,6 +54,27 @@ class TestLogin(cptc.BaseRestCherryPyTest):
         self.assertEqual(response.status, "200 OK")
         return response
 
+    def test_leak(self):
+        """
+        Test perms leak array is becoming bigger and bigger after each call
+        """
+        lengthOfPerms = []
+        run_tests = 2
+
+        for x in range(0, run_tests):
+            body = urllib.parse.urlencode(self.auth_creds)
+            request, response = self.request(
+                "/login",
+                method="POST",
+                body=body,
+                headers={"content-type": "application/x-www-form-urlencoded"},
+            )
+
+            response = salt.utils.json.loads(response.body[0])
+            lengthOfPerms.append(len(response["return"][0]["perms"]))
+        self.assertEqual(lengthOfPerms[0], lengthOfPerms[run_tests - 1])
+        return response
+
     def test_bad_login(self):
         """
         Test logging in

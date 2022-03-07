@@ -188,7 +188,7 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
                 # convert SuspendedProcess objects to names
                 elif attr == "suspended_processes":
                     suspended_processes = getattr(asg, attr)
-                    ret[attr] = sorted([x.process_name for x in suspended_processes])
+                    ret[attr] = sorted(x.process_name for x in suspended_processes)
                 else:
                     ret[attr] = getattr(asg, attr)
             # scaling policies

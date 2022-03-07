@@ -26,7 +26,7 @@ import salt.config
 import salt.defaults.exitcodes
 import salt.exceptions
 import salt.loader
-import salt.log
+import salt.log.setup
 import salt.minion
 import salt.output
 import salt.roster
@@ -44,6 +44,7 @@ import salt.utils.stringutils
 import salt.utils.thin
 import salt.utils.url
 import salt.utils.verify
+from salt._logging.mixins import MultiprocessingStateMixin
 from salt.template import compile_template
 from salt.utils.platform import is_junos, is_windows
 from salt.utils.process import Process
@@ -202,7 +203,7 @@ else:
 log = logging.getLogger(__name__)
 
 
-class SSH:
+class SSH(MultiprocessingStateMixin):
     """
     Create an SSH execution system
     """
@@ -214,7 +215,7 @@ class SSH:
         pull_sock = os.path.join(opts["sock_dir"], "master_event_pull.ipc")
         if os.path.exists(pull_sock) and zmq:
             self.event = salt.utils.event.get_event(
-                "master", opts["sock_dir"], opts["transport"], opts=opts, listen=False
+                "master", opts["sock_dir"], opts=opts, listen=False
             )
         else:
             self.event = None
@@ -316,6 +317,17 @@ class SSH:
             extended_cfg=self.opts.get("ssh_ext_alternatives"),
         )
         self.mods = mod_data(self.fsclient)
+
+    # __setstate__ and __getstate__ are only used on spawning platforms.
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        # This will invoke __init__ of the most derived class.
+        self.__init__(state["opts"])
+
+    def __getstate__(self):
+        state = super().__getstate__()
+        state["opts"] = self.opts
+        return state
 
     @property
     def parse_tgt(self):
@@ -1278,8 +1290,8 @@ class Single:
         if not self.opts.get("log_level"):
             self.opts["log_level"] = "info"
         if (
-            salt.log.LOG_LEVELS["debug"]
-            >= salt.log.LOG_LEVELS[self.opts.get("log_level", "info")]
+            salt.log.setup.LOG_LEVELS["debug"]
+            >= salt.log.setup.LOG_LEVELS[self.opts.get("log_level", "info")]
         ):
             debug = "1"
         arg_str = '''
