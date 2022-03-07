@@ -194,7 +194,7 @@ def test_get_load(etcd_client_mock, instance, returner_root, profile_name, etcd_
             "dict-subkey-2": "subvalue-2",
         },
     }
-    instance.get.return_value = MagicMock(value=salt.utils.json.dumps(load))
+    instance.get.return_value = salt.utils.json.dumps(load)
     jid = "23"
 
     with patch("salt.utils.etcd_util.get_conn", etcd_client_mock):
@@ -227,36 +227,27 @@ def test_get_jid(etcd_client_mock, instance, returner_root, etcd_config):
         etcd_return.__opts__, etcd_config
     ):
         # Test that no value for jid returns an empty dict
-        with patch.object(instance, "get", return_value=MagicMock(children=[])):
+        with patch.object(instance, "get", return_value={}):
             assert etcd_return.get_jid(jid) == {}
-            instance.get.assert_called_with("/".join((returner_root, "jobs", jid)))
+            instance.get.assert_called_with("/".join((returner_root, "jobs", jid)), recurse=True)
 
         # Test that a jid with child values returns them
-        side_effect = (
-            MagicMock(
-                children=(
-                    MagicMock(key="/top-level/key-1"),
-                    MagicMock(key="/top-level/.load.p"),
-                    MagicMock(key="/top-level/key-2"),
-                )
-            ),
-            MagicMock(value='{"key-1": "value-1"}'),
-            MagicMock(value='{"key-2": "value-2"}'),
-        )
-        instance.get.reset_mock()
+        retval = {
+            "test-id-1": {
+                "return": salt.utils.json.dumps("test-return-1"),
+            },
+            "test-id-2": {
+                "return": salt.utils.json.dumps("test-return-2"),
+            },
+        }
 
-        with patch.object(instance, "get", side_effect=side_effect):
+        with patch.object(instance, "get", return_value=retval):
             # assert etcd_return.get_jid(jid) == {}
             assert etcd_return.get_jid(jid) == {
-                "key-1": {"return": {"key-1": "value-1"}},
-                "key-2": {"return": {"key-2": "value-2"}},
+                "test-id-1": {"return": "test-return-1"},
+                "test-id-2": {"return": "test-return-2"},
             }
-            calls = [
-                call("/".join((returner_root, "jobs", jid))),
-                call("/".join((returner_root, "jobs", jid, "key-1", "return"))),
-                call("/".join((returner_root, "jobs", jid, "key-2", "return"))),
-            ]
-            instance.get.assert_has_calls(calls)
+            instance.get.assert_called_with("/".join((returner_root, "jobs", jid)), recurse=True)
 
 
 def test_get_fun(etcd_client_mock, instance, returner_root, etcd_config):
@@ -269,29 +260,27 @@ def test_get_fun(etcd_client_mock, instance, returner_root, etcd_config):
         etcd_return.__opts__, etcd_config
     ):
         # Test that no value for jid returns an empty dict
-        with patch.object(instance, "get", return_value=MagicMock(children=[])):
+        with patch.object(instance, "get", return_value={}):
             assert etcd_return.get_fun(fun) == {}
-            instance.get.assert_called_with("/".join((returner_root, "minions")))
+            instance.get.assert_called_with("/".join((returner_root, "minions")), recurse=True)
 
         # Test that a jid with child values returns them
         side_effect = (
-            MagicMock(
-                children=(
-                    MagicMock(key="/top-level/key-1", value="value-1"),
-                    MagicMock(key="/top-level/key-2", value="value-2"),
-                )
-            ),
-            MagicMock(value='"test.ping"'),
-            MagicMock(value='"test.collatz"'),
+            {
+                "id-1": "1",
+                "id-2": "2",
+            },
+            '"test.ping"',
+            '"test.collatz"',
         )
         instance.get.reset_mock()
 
         with patch.object(instance, "get", side_effect=side_effect):
-            assert etcd_return.get_fun(fun) == {"key-1": "test.ping"}
+            assert etcd_return.get_fun(fun) == {"id-1": "test.ping"}
             calls = [
-                call("/".join((returner_root, "minions"))),
-                call("/".join((returner_root, "jobs", "value-1", "key-1", "fun"))),
-                call("/".join((returner_root, "jobs", "value-2", "key-2", "fun"))),
+                call("/".join((returner_root, "minions")), recurse=True),
+                call("/".join((returner_root, "jobs", "1", "id-1", "fun"))),
+                call("/".join((returner_root, "jobs", "2", "id-2", "fun"))),
             ]
             instance.get.assert_has_calls(calls)
 
@@ -304,19 +293,20 @@ def test_get_jids(etcd_client_mock, instance, returner_root, etcd_config):
         etcd_return.__opts__, etcd_config
     ):
         # Test that no value for jids returns an empty dict
-        with patch.object(instance, "get", return_value=MagicMock(children=[])):
+        with patch.object(instance, "get", return_value={}):
             assert etcd_return.get_jids() == []
-            instance.get.assert_called_with("/".join((returner_root, "jobs")))
+            instance.get.assert_called_with("/".join((returner_root, "jobs")), recurse=True)
 
         # Test that having child job values returns them
-        children = [
-            MagicMock(dir=True, key="/key/jid/123"),
-            MagicMock(dir=False, key="/key/jid/456"),
-            MagicMock(dir=True, key="/key/jid/789"),
-        ]
-        with patch.object(instance, "get", return_value=MagicMock(children=children)):
+        children = {
+            "123": {},
+            "456": "not a dictionary",
+            "789": {},
+        }
+        
+        with patch.object(instance, "get", return_value=children):
             assert etcd_return.get_jids() == ["123", "789"]
-            instance.get.assert_called_with("/".join((returner_root, "jobs")))
+            instance.get.assert_called_with("/".join((returner_root, "jobs")), recurse=True)
 
 
 def test_get_minions(etcd_client_mock, instance, returner_root, etcd_config):
@@ -327,18 +317,18 @@ def test_get_minions(etcd_client_mock, instance, returner_root, etcd_config):
         etcd_return.__opts__, etcd_config
     ):
         # Test that no minions returns an empty dict
-        with patch.object(instance, "get", return_value=MagicMock(children=[])):
+        with patch.object(instance, "get", return_value={}):
             assert etcd_return.get_minions() == []
-            instance.get.assert_called_with("/".join((returner_root, "minions")))
+            instance.get.assert_called_with("/".join((returner_root, "minions")), recurse=True)
 
         # Test that having child minion values returns them
-        children = [
-            MagicMock(key="/key/minion/id-1"),
-            MagicMock(key="/key/minion/id-2"),
-        ]
-        with patch.object(instance, "get", return_value=MagicMock(children=children)):
+        children = {
+            "id-1": "ignored-jid-1",
+            "id-2": "ignored-jid-2",
+        }
+        with patch.object(instance, "get", return_value=children):
             assert etcd_return.get_minions() == ["id-1", "id-2"]
-            instance.get.assert_called_with("/".join((returner_root, "minions")))
+            instance.get.assert_called_with("/".join((returner_root, "minions")), recurse=True)
 
 
 def test_prep_jid():
