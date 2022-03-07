@@ -163,9 +163,7 @@ def get_load(jid):
     log.debug("sdstack_etcd returner <get_load> called jid: %s", jid)
     read_profile = __opts__.get("etcd.returner_read_profile")
     client, path = _get_conn(__opts__, read_profile)
-    return salt.utils.json.loads(
-        client.get("/".join((path, "jobs", jid, ".load.p")))
-    )
+    return salt.utils.json.loads(client.get("/".join((path, "jobs", jid, ".load.p"))))
 
 
 def get_jid(jid):
@@ -195,9 +193,7 @@ def get_fun(fun):
     for id, jid in items.items():
         id = str(id).split("/")[-1]
         efun = salt.utils.json.loads(
-            client.get(
-                "/".join((path, "jobs", str(jid), id, "fun"))
-            )
+            client.get("/".join((path, "jobs", str(jid), id, "fun")))
         )
         if efun == fun:
             ret[id] = str(efun)
@@ -213,7 +209,7 @@ def get_jids():
     client, path = _get_conn(__opts__)
     items = client.get("/".join((path, "jobs")), recurse=True)
     for key, value in items.items():
-        if isinstance(value, dict): # dict means directory
+        if isinstance(value, dict):  # dict means directory
             jid = str(key).split("/")[-1]
             ret.append(jid)
     return ret

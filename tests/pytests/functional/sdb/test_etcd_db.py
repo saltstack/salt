@@ -1,10 +1,8 @@
 import logging
-import threading
-import time
 
 import pytest
 import salt.sdb.etcd_db as etcd_db
-from salt.utils.etcd_util import HAS_LIBS, EtcdClient, get_conn
+from salt.utils.etcd_util import HAS_LIBS, EtcdClient
 from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
@@ -97,6 +95,11 @@ def test_basic_operations(etcd_profile, prefix, profile_name):
     """
     Ensure we can do the basic CRUD operations available in sdb.etcd_db
     """
-    assert etcd_db.set_("{}/1".format(prefix), "one", profile=etcd_profile[profile_name]) == "one"
+    assert (
+        etcd_db.set_("{}/1".format(prefix), "one", profile=etcd_profile[profile_name])
+        == "one"
+    )
     etcd_db.delete("{}/1".format(prefix), profile=etcd_profile[profile_name])
-    assert etcd_db.get("{}/1".format(prefix), profile=etcd_profile[profile_name]) is None
+    assert (
+        etcd_db.get("{}/1".format(prefix), profile=etcd_profile[profile_name]) is None
+    )

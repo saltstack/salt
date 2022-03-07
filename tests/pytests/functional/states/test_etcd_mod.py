@@ -1,6 +1,4 @@
 import logging
-import threading
-import time
 
 import pytest
 import salt.modules.etcd_mod as etcd_mod
@@ -133,16 +131,24 @@ def test_basic_operations(subtests, profile_name, prefix):
             "result": True,
             "changes": {"{}/1".format(prefix): "one"},
         }
-        assert etcd_state.set_("{}/1".format(prefix), "one", profile=profile_name) == expected
+        assert (
+            etcd_state.set_("{}/1".format(prefix), "one", profile=profile_name)
+            == expected
+        )
 
-    with subtests.test("We should be able to create an empty directory and set values in it"):
+    with subtests.test(
+        "We should be able to create an empty directory and set values in it"
+    ):
         expected = {
             "name": "{}/2".format(prefix),
             "comment": "New directory created",
             "result": True,
             "changes": {"{}/2".format(prefix): "Created"},
         }
-        assert etcd_state.directory("{}/2".format(prefix), profile=profile_name) == expected
+        assert (
+            etcd_state.directory("{}/2".format(prefix), profile=profile_name)
+            == expected
+        )
 
         expected = {
             "name": "{}/2/3".format(prefix),
@@ -150,7 +156,10 @@ def test_basic_operations(subtests, profile_name, prefix):
             "result": True,
             "changes": {"{}/2/3".format(prefix): "two-three"},
         }
-        assert etcd_state.set_("{}/2/3".format(prefix), "two-three", profile=profile_name) == expected
+        assert (
+            etcd_state.set_("{}/2/3".format(prefix), "two-three", profile=profile_name)
+            == expected
+        )
 
     with subtests.test("We should be able to remove an existing key"):
         expected = {

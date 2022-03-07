@@ -229,7 +229,9 @@ def test_get_jid(etcd_client_mock, instance, returner_root, etcd_config):
         # Test that no value for jid returns an empty dict
         with patch.object(instance, "get", return_value={}):
             assert etcd_return.get_jid(jid) == {}
-            instance.get.assert_called_with("/".join((returner_root, "jobs", jid)), recurse=True)
+            instance.get.assert_called_with(
+                "/".join((returner_root, "jobs", jid)), recurse=True
+            )
 
         # Test that a jid with child values returns them
         retval = {
@@ -247,7 +249,9 @@ def test_get_jid(etcd_client_mock, instance, returner_root, etcd_config):
                 "test-id-1": {"return": "test-return-1"},
                 "test-id-2": {"return": "test-return-2"},
             }
-            instance.get.assert_called_with("/".join((returner_root, "jobs", jid)), recurse=True)
+            instance.get.assert_called_with(
+                "/".join((returner_root, "jobs", jid)), recurse=True
+            )
 
 
 def test_get_fun(etcd_client_mock, instance, returner_root, etcd_config):
@@ -262,7 +266,9 @@ def test_get_fun(etcd_client_mock, instance, returner_root, etcd_config):
         # Test that no value for jid returns an empty dict
         with patch.object(instance, "get", return_value={}):
             assert etcd_return.get_fun(fun) == {}
-            instance.get.assert_called_with("/".join((returner_root, "minions")), recurse=True)
+            instance.get.assert_called_with(
+                "/".join((returner_root, "minions")), recurse=True
+            )
 
         # Test that a jid with child values returns them
         side_effect = (
@@ -295,7 +301,9 @@ def test_get_jids(etcd_client_mock, instance, returner_root, etcd_config):
         # Test that no value for jids returns an empty dict
         with patch.object(instance, "get", return_value={}):
             assert etcd_return.get_jids() == []
-            instance.get.assert_called_with("/".join((returner_root, "jobs")), recurse=True)
+            instance.get.assert_called_with(
+                "/".join((returner_root, "jobs")), recurse=True
+            )
 
         # Test that having child job values returns them
         children = {
@@ -303,10 +311,12 @@ def test_get_jids(etcd_client_mock, instance, returner_root, etcd_config):
             "456": "not a dictionary",
             "789": {},
         }
-        
+
         with patch.object(instance, "get", return_value=children):
             assert etcd_return.get_jids() == ["123", "789"]
-            instance.get.assert_called_with("/".join((returner_root, "jobs")), recurse=True)
+            instance.get.assert_called_with(
+                "/".join((returner_root, "jobs")), recurse=True
+            )
 
 
 def test_get_minions(etcd_client_mock, instance, returner_root, etcd_config):
@@ -319,7 +329,9 @@ def test_get_minions(etcd_client_mock, instance, returner_root, etcd_config):
         # Test that no minions returns an empty dict
         with patch.object(instance, "get", return_value={}):
             assert etcd_return.get_minions() == []
-            instance.get.assert_called_with("/".join((returner_root, "minions")), recurse=True)
+            instance.get.assert_called_with(
+                "/".join((returner_root, "minions")), recurse=True
+            )
 
         # Test that having child minion values returns them
         children = {
@@ -328,7 +340,9 @@ def test_get_minions(etcd_client_mock, instance, returner_root, etcd_config):
         }
         with patch.object(instance, "get", return_value=children):
             assert etcd_return.get_minions() == ["id-1", "id-2"]
-            instance.get.assert_called_with("/".join((returner_root, "minions")), recurse=True)
+            instance.get.assert_called_with(
+                "/".join((returner_root, "minions")), recurse=True
+            )
 
 
 def test_prep_jid():

@@ -1,10 +1,8 @@
 import logging
-import threading
-import time
 
 import pytest
 import salt.pillar.etcd_pillar as etcd_pillar
-from salt.utils.etcd_util import HAS_LIBS, EtcdClient, get_conn
+from salt.utils.etcd_util import HAS_LIBS, EtcdClient
 from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port

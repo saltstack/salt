@@ -114,7 +114,10 @@ def test_basic_operations(subtests, profile_name, prefix):
 
     with subtests.test("We should be able to set and retrieve simple values"):
         etcd_mod.set_("{}/1".format(prefix), "one", profile=profile_name)
-        assert etcd_mod.get_("{}/1".format(prefix), recurse=False, profile=profile_name) == "one"
+        assert (
+            etcd_mod.get_("{}/1".format(prefix), recurse=False, profile=profile_name)
+            == "one"
+        )
 
     with subtests.test("We should be able to update and retrieve those values"):
         updated = {
@@ -145,7 +148,7 @@ def test_basic_operations(subtests, profile_name, prefix):
         }
         etcd_mod.rm_("{}/1".format(prefix), profile=profile_name)
         assert etcd_mod.tree(path=prefix, profile=profile_name) == updated
-    
+
     with subtests.test("updates should be able to be caught by waiting in read"):
         return_list = []
 

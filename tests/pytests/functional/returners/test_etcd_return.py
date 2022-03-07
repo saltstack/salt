@@ -1,11 +1,9 @@
 import logging
-import threading
-import time
 
 import pytest
-import salt.utils.json
 import salt.returners.etcd_return as etcd_return
-from salt.utils.etcd_util import HAS_LIBS, EtcdClient, get_conn
+import salt.utils.json
+from salt.utils.etcd_util import HAS_LIBS, EtcdClient
 from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
@@ -126,7 +124,10 @@ def test_returner(prefix, etcd_client):
     etcd_return.returner(ret)
     assert etcd_client.get("/".join((prefix, "minions", ret["id"]))) == ret["jid"]
     expected = {key: salt.utils.json.dumps(ret[key]) for key in ret}
-    assert etcd_client.get("/".join((prefix, "jobs", ret["jid"], ret["id"])), recurse=True) == expected
+    assert (
+        etcd_client.get("/".join((prefix, "jobs", ret["jid"], ret["id"])), recurse=True)
+        == expected
+    )
 
 
 def test_save_and_get_load():
@@ -158,17 +159,13 @@ def test_get_jid():
             "dict-subkey-1": "subvalue-1",
             "dict-subkey-2": "subvalue-2",
         },
-        "return": "test-return-1"
+        "return": "test-return-1",
     }
     etcd_return.returner(ret)
-    
-    ret = {
-        "id": "test-id-2",
-        "jid": jid,
-        "return": "test-return-2"
-    }
+
+    ret = {"id": "test-id-2", "jid": jid, "return": "test-return-2"}
     etcd_return.returner(ret)
-    
+
     expected = {
         "test-id-1": {"return": "test-return-1"},
         "test-id-2": {"return": "test-return-2"},
@@ -192,7 +189,7 @@ def test_get_fun():
         "fun": "test.ping",
     }
     etcd_return.returner(ret)
-    
+
     ret = {
         "id": "test-id-2",
         "jid": "2",
@@ -200,7 +197,7 @@ def test_get_fun():
         "fun": "test.collatz",
     }
     etcd_return.returner(ret)
-    
+
     expected = {
         "test-id-2": "test.collatz",
     }
@@ -216,13 +213,13 @@ def test_get_jids():
         "jid": "1",
     }
     etcd_return.returner(ret)
-    
+
     ret = {
         "id": "test-id-2",
         "jid": "2",
     }
     etcd_return.returner(ret)
-    
+
     retval = etcd_return.get_jids()
     assert len(retval) == 2
     assert "1" in retval
@@ -238,7 +235,7 @@ def test_get_minions():
         "jid": "1",
     }
     etcd_return.returner(ret)
-    
+
     ret = {
         "id": "test-id-2",
         "jid": "2",
