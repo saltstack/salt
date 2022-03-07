@@ -103,7 +103,7 @@ def __virtual__():
     return "pkg.mod_repo" in __salt__
 
 
-def managed(name, ppa=None, copr=None, **kwargs):
+def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     """
     This state manages software package repositories. Currently, :mod:`yum
     <salt.modules.yumpkg>`, :mod:`apt <salt.modules.aptpkg>`, and :mod:`zypper
@@ -307,8 +307,13 @@ def managed(name, ppa=None, copr=None, **kwargs):
        :mod:`pkg.latest <salt.states.pkg.latest>` to trigger the
        running of ``apt-get update`` prior to attempting to install these
        packages. Setting a require in the pkg state will not work for this.
-    """
 
+    aptkey: Use the binary apt-key
+
+    signedby:
+        On apt-based systems, ``signedby`` is the the path to the key file
+        the repository will use. This is required in apt-key is False.
+    """
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
 
     if "pkg.get_repo" not in __salt__:
@@ -505,7 +510,7 @@ def managed(name, ppa=None, copr=None, **kwargs):
 
     try:
         if __grains__["os_family"] == "Debian":
-            __salt__["pkg.mod_repo"](repo, saltenv=__env__, **kwargs)
+            __salt__["pkg.mod_repo"](repo, saltenv=__env__, aptkey=aptkey, **kwargs)
         else:
             __salt__["pkg.mod_repo"](repo, **kwargs)
     except Exception as exc:  # pylint: disable=broad-except
