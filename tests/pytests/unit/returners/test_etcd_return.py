@@ -113,7 +113,7 @@ def test_returner(etcd_client_mock, instance, returner_root, profile_name, etcd_
                 call(dest.format(key), salt.utils.json.dumps(ret[key]), ttl=5)
                 for key in ret
             ]
-            instance.set.assert_has_calls(calls)
+            instance.set.assert_has_calls(calls, any_order=True)
 
         # Test returner with ttl in top level config
         config = copy.deepcopy(etcd_config)
@@ -128,7 +128,7 @@ def test_returner(etcd_client_mock, instance, returner_root, profile_name, etcd_
                 call(dest.format(key), salt.utils.json.dumps(ret[key]), ttl=6)
                 for key in ret
             ]
-            instance.set.assert_has_calls(calls)
+            instance.set.assert_has_calls(calls, any_order=True)
 
 
 def test_save_load(
@@ -282,13 +282,17 @@ def test_get_fun(etcd_client_mock, instance, returner_root, etcd_config):
         instance.get.reset_mock()
 
         with patch.object(instance, "get", side_effect=side_effect):
-            assert etcd_return.get_fun(fun) == {"id-1": "test.ping"}
+            # Could be either one depending on if Python<3.6
+            assert (
+                etcd_return.get_fun(fun) == {"id-1": "test.ping"}
+                or etcd_return.get_fun(fun) == {"id-2": "test.ping"}
+            )
             calls = [
                 call("/".join((returner_root, "minions")), recurse=True),
                 call("/".join((returner_root, "jobs", "1", "id-1", "fun"))),
                 call("/".join((returner_root, "jobs", "2", "id-2", "fun"))),
             ]
-            instance.get.assert_has_calls(calls)
+            instance.get.assert_has_calls(calls, any_order=True)
 
 
 def test_get_jids(etcd_client_mock, instance, returner_root, etcd_config):
@@ -313,7 +317,10 @@ def test_get_jids(etcd_client_mock, instance, returner_root, etcd_config):
         }
 
         with patch.object(instance, "get", return_value=children):
-            assert etcd_return.get_jids() == ["123", "789"]
+            retval = etcd_return.get_jids()
+            assert len(retval) == 2
+            assert "123" in retval
+            assert "789" in retval
             instance.get.assert_called_with(
                 "/".join((returner_root, "jobs")), recurse=True
             )
@@ -339,7 +346,10 @@ def test_get_minions(etcd_client_mock, instance, returner_root, etcd_config):
             "id-2": "ignored-jid-2",
         }
         with patch.object(instance, "get", return_value=children):
-            assert etcd_return.get_minions() == ["id-1", "id-2"]
+            retval = etcd_return.get_minions()
+            assert len(retval) == 2
+            assert "id-1" in retval
+            assert "id-2" in retval
             instance.get.assert_called_with(
                 "/".join((returner_root, "minions")), recurse=True
             )
