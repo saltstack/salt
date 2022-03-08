@@ -2048,3 +2048,59 @@ def test_61003_pkg_should_not_fail_when_target_not_in_old_pkgs():
         # packages that were returned by parse_targets that yumpkg.remove would
         # catch on fire.  This ensures that won't go undetected again.
         yumpkg.remove()
+
+
+@pytest.fixture(
+    ids=["yum", "dnf"],
+    params=[
+        {
+            "context": {"yum_bin": "yum"},
+            "grains": {"os": "CentOS", "osrelease": 7},
+            "cmd": ["yum", "-y"],
+        },
+        {
+            "context": {"yum_bin": "dnf"},
+            "grains": {"os": "Fedora", "osrelease": 27},
+            "cmd": ["dnf", "-y", "--best", "--allowerasing"],
+        },
+    ],
+)
+def yum_and_dnf(request):
+    with patch.dict(yumpkg.__context__, request.param["context"]), patch.dict(
+        yumpkg.__grains__, request.param["grains"]
+    ), patch.dict(pkg_resource.__grains__, request.param["grains"]):
+        yield request.param["cmd"]
+
+
+@pytest.mark.xfail
+@pytest.mark.parametrize(
+    "new,full_pkg_string",
+    (
+        (42, "foo-42"),
+        # ("99:1.2.3", "foo-1.2.3"),
+    ),
+)
+def test_59705_version_as_accidental_float_should_become_text(
+    new, full_pkg_string, yum_and_dnf
+):
+    name = "foo"
+    expected_cmd = yum_and_dnf + ["install", full_pkg_string]
+    cmd_mock = MagicMock(
+        return_value={"pid": 12345, "retcode": 0, "stdout": "", "stderr": ""}
+    )
+    patch_yum_salt = patch.dict(
+        yumpkg.__salt__,
+        {
+            "cmd.run_all": cmd_mock,
+            "lowpkg.version_cmp": rpm.version_cmp,
+            "pkg_resource.parse_targets": pkg_resource.parse_targets,
+        },
+    )
+    patch_list_pkgs = patch.object(
+        yumpkg, "list_pkgs", return_value={"foo": ["foo-42"]}
+    )
+    patch_systemd = patch("salt.utils.systemd.has_scope", MagicMock(return_value=False))
+    with patch_list_pkgs, patch_systemd, patch_yum_salt:
+        yumpkg.install("foo", version=new)
+        call = cmd_mock.mock_calls[0][1][0]
+        assert call == expected_cmd
