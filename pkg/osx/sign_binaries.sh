@@ -28,7 +28,7 @@
 #         security import "developerID_application.p12" -k ~/Library/Keychains/login.keychain
 #
 #         NOTE: The .p12 certificate is required as the .cer certificate is
-#               is missing the private key. This can be created by exporting the
+#               missing the private key. This can be created by exporting the
 #               certificate from the machine it was created on
 #
 #     Define Environment Variables:
@@ -73,6 +73,17 @@ echo "**** Signing binaries that have entitlements (/opt/salt/bin)"
 find ${INSTALL_DIR}/bin \
     -type f \
     -perm -u=x \
+    -follow \
+    -exec codesign --timestamp \
+                   --options=runtime \
+                   --verbose \
+                   --entitlements ./entitlements.plist \
+                   --sign "$DEV_APP_CERT" "{}" \;
+
+find ${INSTALL_DIR}/openssl/bin \
+    -type f \
+    -perm -u=x \
+    -follow \
     -exec codesign --timestamp \
                    --options=runtime \
                    --verbose \
@@ -83,6 +94,7 @@ echo "**** Signing binaries (/opt/salt/lib)"
 find ${INSTALL_DIR}/lib \
     -type f \
     -perm -u=x \
+    -follow \
     -exec codesign --timestamp \
                    --options=runtime \
                    --verbose \
@@ -92,6 +104,34 @@ echo "**** Signing dynamic libraries (*dylib) (/opt/salt/lib)"
 find ${INSTALL_DIR}/lib \
     -type f \
     -name "*dylib" \
+    -follow \
+    -exec codesign --timestamp \
+                   --options=runtime \
+                   --verbose \
+                   --sign "$DEV_APP_CERT" "{}" \;
+
+find ${INSTALL_DIR}/readline/lib \
+    -type f \
+    -name "*dylib" \
+    -follow \
+    -exec codesign --timestamp \
+                   --options=runtime \
+                   --verbose \
+                   --sign "$DEV_APP_CERT" "{}" \;
+
+find ${INSTALL_DIR}/openssl/lib \
+    -type f \
+    -name "*dylib" \
+    -follow \
+    -exec codesign --timestamp \
+                   --options=runtime \
+                   --verbose \
+                   --sign "$DEV_APP_CERT" "{}" \;
+
+find ${INSTALL_DIR}/.pyenv/lib \
+    -type f \
+    -name "*dylib" \
+    -follow \
     -exec codesign --timestamp \
                    --options=runtime \
                    --verbose \
@@ -101,6 +141,7 @@ echo "**** Signing shared libraries (*.so) (/opt/salt/lib)"
 find ${INSTALL_DIR}/lib \
     -type f \
     -name "*.so" \
+    -follow \
     -exec codesign --timestamp \
                    --options=runtime \
                    --verbose \

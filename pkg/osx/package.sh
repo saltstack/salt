@@ -122,10 +122,12 @@ cp $PKGRESOURCES/scripts/salt-config.sh /opt/salt/bin
 ################################################################################
 # Copy Service Definitions from Salt Repo to the Package Directory
 ################################################################################
-echo "**** Copying Service Definitions"
 
-mkdir -p $PKGDIR/opt
-cp -r /opt/salt $PKGDIR/opt
+echo "**** Copying Build Files"
+mkdir -p $PKGDIR/opt/salt
+cp -r /opt/salt/.pyenv $PKGDIR/opt/salt/.pyenv
+
+echo "**** Copying Service Definitions"
 mkdir -p $PKGDIR/Library/LaunchDaemons $PKGDIR/etc
 
 cp $PKGRESOURCES/scripts/com.saltstack.salt.minion.plist $PKGDIR/Library/LaunchDaemons
@@ -138,17 +140,19 @@ cp $PKGRESOURCES/scripts/com.saltstack.salt.api.plist $PKGDIR/Library/LaunchDaem
 ################################################################################
 echo "**** Trimming Unneeded Files"
 
-rm -rdf $PKGDIR/opt/salt/bin/pkg-config
-rm -rdf $PKGDIR/opt/salt/lib/pkgconfig
-rm -rdf $PKGDIR/opt/salt/lib/engines
-rm -rdf $PKGDIR/opt/salt/share/aclocal
-rm -rdf $PKGDIR/opt/salt/share/doc
-rm -rdf $PKGDIR/opt/salt/share/man/man1/pkg-config.1
-rm -rdf $PKGDIR/opt/salt/lib/python3.7/test
+rm -rdf $PKGDIR/opt/salt/.pyenv/lib/pkgconfig
+rm -rdf $PKGDIR/opt/salt/.pyenv/versions/3.7.12/lib/pkgconfig
+rm -rdf $PKGDIR/opt/salt/.pyenv/versions/3.7.12/lib/engines*
+rm -rdf $PKGDIR/opt/salt/.pyenv/versions/3.7.12/lib/python3.7/test
+rm -rdf $PKGDIR/opt/salt/.pyenv/versions/3.7.12/lib/python3.7/site-packages/Cryptodome/SelfTest
+rm -rdf $PKGDIR/opt/salt/.pyenv/versions/3.7.12/lib/python3.7/site-packages/libcloud/test
 
+echo "**** Removing Unneded documentation"
+find $PKGDIR/opt/salt -name 'share' -type d -prune -exec rm -rf {} \;
 
-echo "**** Removing Compiled Python Files (.pyc)"
+echo "**** Removing Compiled Python Files (.pyc/__pycache__)"
 find $PKGDIR/opt/salt -name '*.pyc' -type f -delete
+find $PKGDIR/opt/salt -name '__pycache__' -type d -prune -exec rm -rf {} \;
 
 ################################################################################
 # Copy Config Files from Salt Repo to the Package Directory

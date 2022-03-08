@@ -154,7 +154,7 @@ fi
 echo -n -e "\033]0;Build: Install Salt\007"
 rm -rf $SRCDIR/build
 rm -rf $SRCDIR/dist
-$PYTHON $SRCDIR/setup.py build -e "$PYTHON -E -s"
+$PYTHON $SRCDIR/setup.py build -e "$PYTHON -E -s --upgrade"
 $PYTHON $SRCDIR/setup.py install
 
 ################################################################################

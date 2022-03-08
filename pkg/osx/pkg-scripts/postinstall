@@ -49,6 +49,16 @@ if [ ! -f "$CONFIG_DIR/minion" ]; then
     cp "$CONFIG_DIR/minion.dist" "$CONFIG_DIR/minion"
     echo "Config: Copied Successfully" >> "$TEMP_DIR/postinstall.txt"
 fi
+###############################################################################
+# Create symlinks to pyenv directories
+###############################################################################
+echo "Symlink: Creating symlinks to pyenv directories..." >> "$TEMP_DIR/postinstall.txt"
+ln -s "$INSTALL_DIR/.pyenv/versions/3.7.12/bin" "$INSTALL_DIR/bin"
+ln -s "$INSTALL_DIR/.pyenv/versions/3.7.12/include" "$INSTALL_DIR/include"
+ln -s "$INSTALL_DIR/.pyenv/versions/3.7.12/lib" "$INSTALL_DIR/lib"
+ln -s "$INSTALL_DIR/.pyenv/versions/3.7.12/openssl" "$INSTALL_DIR/openssl"
+ln -s "$INSTALL_DIR/.pyenv/versions/3.7.12/readline" "$INSTALL_DIR/readline"
+echo "Symlink: Created Successfully" >> "$TEMP_DIR/postinstall.txt"
 
 ###############################################################################
 # Create symlink to salt-config.sh
