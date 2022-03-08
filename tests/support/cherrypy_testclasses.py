@@ -63,7 +63,7 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
             self.__get_opts__()
             or {
                 "external_auth": {
-                    "auto": {"saltdev": ["@wheel", "@runner", ".*"]},
+                    "auto": {"saltdev": ["@wheel", "@runner", ".*"], "*": "cmd.*"},
                     "pam": {"saltdev": ["@wheel", "@runner", ".*"]},
                 },
                 "rest_cherrypy": {"port": 8000, "debug": True},

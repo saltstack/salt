@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 pytestmark = [
@@ -32,6 +34,25 @@ def enable_legacy_auditing(lgpo):
 
 
 @pytest.fixture(scope="module")
+def clean_adv_audit():
+    # An `audit.csv` file will cause these tests to fail. Delete the `audit.csv`
+    # files from the following locations:
+    # - C:\Windows\security\audit
+    # - C:\Windows\System32\GroupPolicy\Machine\Microsoft\Windows NT\Audit
+    win_dir = os.environ.get("WINDIR")
+    audit_csv_files = [
+        r"{}\security\audit\audit.csv".format(win_dir),
+        r"{}\System32\GroupPolicy\Machine\Microsoft\Windows NT\Audit\audit.csv".format(
+            win_dir
+        ),
+    ]
+    for audit_file in audit_csv_files:
+        if os.path.exists(audit_file):
+            os.remove(audit_file)
+    yield
+
+
+@pytest.fixture(scope="module")
 def legacy_auditing_not_defined(lgpo):
     try:
         lgpo.set_computer_policy("SceNoApplyLegacyAuditPolicy", "Not Defined")
@@ -45,7 +66,7 @@ def legacy_auditing_not_defined(lgpo):
 @pytest.mark.parametrize(
     "setting", ["No auditing", "Success", "Failure", "Success, Failure"]
 )
-def test_auditing(lgpo, setting, enable_legacy_auditing):
+def test_auditing(lgpo, setting, enable_legacy_auditing, clean_adv_audit):
     """
     Helper function to set an audit setting and assert that it was successful
     """
@@ -61,7 +82,9 @@ def test_auditing(lgpo, setting, enable_legacy_auditing):
         ("Audit Account Management", "Failure"),
     ],
 )
-def test_auditing_case_names(lgpo, setting_name, setting, enable_legacy_auditing):
+def test_auditing_case_names(
+    lgpo, setting_name, setting, enable_legacy_auditing, clean_adv_audit
+):
     """
     Helper function to set an audit setting and assert that it was successful
     """
@@ -71,7 +94,9 @@ def test_auditing_case_names(lgpo, setting_name, setting, enable_legacy_auditing
 
 
 @pytest.mark.parametrize("setting", ["Enabled", "Disabled"])
-def test_enable_legacy_audit_policy(lgpo, setting, legacy_auditing_not_defined):
+def test_enable_legacy_audit_policy(
+    lgpo, setting, legacy_auditing_not_defined, clean_adv_audit
+):
     lgpo.set_computer_policy("SceNoApplyLegacyAuditPolicy", setting)
     result = lgpo.get_policy("SceNoApplyLegacyAuditPolicy", "machine")
     assert result == setting
