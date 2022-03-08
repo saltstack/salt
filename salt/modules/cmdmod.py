@@ -2646,8 +2646,7 @@ def script(
             salt myminion cmd.script salt://foo.sh "arg1 'arg two' arg3"
 
     :param str cwd: The directory from which to execute the command. Defaults
-        to the home directory of the user specified by ``runas`` (or the user
-        under which Salt is running if ``runas`` is not specified).
+        to the directory returned from Python's tempfile.mkstemp.
 
     :param str stdin: A string of standard input can be specified for the
         command to be run using the ``stdin`` parameter. This can be useful in

@@ -75,41 +75,54 @@ def test_fileserver_roots_find_file_envs_path_substitution(
 
 
 @pytest.mark.parametrize(
-    "env",
-    ("base", "something-else", "cool_path_123", "__env__"),
+    "saltenv", ("base", "something-else", "cool_path_123", "__env__")
 )
 def test_fileserver_roots__file_lists_envs_path_substitution(
-    env, temp_salt_minion, tmp_path
+    saltenv, temp_salt_minion, tmp_path
 ):
     """
     Test fileserver access to a dynamic path using __env__
     """
-    fn = "test.txt"
+
+    # We need our saltenv directory as well as some other env directory.
+    # It doesn't really matter what it is - expected saltenv and not expected
+    # saltenv
+    # The filenames should be different, because cache lists the filenames.
     opts = temp_salt_minion.config.copy()
+    other_env = "something_completely_different"
+    other_filename = "different.txt"
+    expected_filename = "test.txt"
+    expected = [expected_filename]
+    expected_different_ret = [other_filename]
 
-    if env == "__env__":
-        # __env__ saltenv will pass "dynamic" as saltenv and
-        # expect to be routed to the "dynamic" directory
-        actual_env = "dynamic"
-        leaf_dir = actual_env
-    else:
-        # any other saltenv will pass saltenv normally and
-        # expect to be routed to a static "__env__" directory
-        actual_env = env
-        leaf_dir = "__env__"
+    # __env__ saltenv will pass "dynamic" as saltenv and
+    # expect to be routed to the "dynamic" directory
+    actual_env = "dynamic" if saltenv == "__env__" else saltenv
 
-    envpath = tmp_path / leaf_dir
+    # If `__env__` is in the path and is the file roots (see
+    # doc/ref/configuration/master.rst) then `__env__` will be replaced in the
+    # file path with the actual saltenv. So we need the file_roots path, as
+    # well as both our expected saltenv and our not expected saltenv. We also
+    # need some files in the directories.
+    file_roots = tmp_path / "__env__" / "cool"
+    envpath = tmp_path / actual_env / "cool"
+    otherpath = tmp_path / other_env / "cool"
     envpath.mkdir(parents=True, exist_ok=True)
-    filepath = envpath / fn
-    filepath.touch()
-
-    expected = [fn]
+    otherpath.mkdir(parents=True, exist_ok=True)
+    (envpath / expected_filename).touch()
+    (otherpath / other_filename).touch()
 
     # Stop using OrderedDict once we drop Py3.5 support
     opts["file_roots"] = OrderedDict()
-    opts["file_roots"][env] = [str(tmp_path / leaf_dir)]
+    opts["file_roots"]["__env__"] = [str(file_roots)]
 
     with patch("salt.fileserver.roots.__opts__", opts, create=True):
+        # actual_env is our target. The other env doesn't really matter, but
+        # it should be different than our expected one and also contain its
+        # own file(s)
         ret = roots._file_lists({"saltenv": actual_env}, "files")
+        different_ret = roots._file_lists({"saltenv": other_env}, "files")
 
     assert ret == expected
+    assert different_ret != ret
+    assert different_ret == expected_different_ret
