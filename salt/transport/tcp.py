@@ -439,18 +439,6 @@ class SaltMessageServer(salt.ext.tornado.tcpserver.TCPServer):
         except ValueError:
             log.trace("Message server client was not in list to remove")
 
-    def shutdown(self):
-        """
-        Shutdown the whole server
-        """
-        salt.utils.versions.warn_until(
-            "Phosphorus",
-            "Please stop calling {0}.{1}.shutdown() and instead call {0}.{1}.close()".format(
-                __name__, self.__class__.__name__
-            ),
-        )
-        self.close()
-
     def close(self):
         """
         Close the server
@@ -485,15 +473,6 @@ if USE_LOAD_BALANCER:
             self._stop = threading.Event()
             self.thread = threading.Thread(target=self.socket_queue_thread)
             self.thread.start()
-
-        def stop(self):
-            salt.utils.versions.warn_until(
-                "Phosphorus",
-                "Please stop calling {0}.{1}.stop() and instead call {0}.{1}.close()".format(
-                    __name__, self.__class__.__name__
-                ),
-            )
-            self.close()
 
         def close(self):
             self._stop.set()

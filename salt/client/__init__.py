@@ -223,7 +223,6 @@ class LocalClient:
         self.event = salt.utils.event.get_event(
             "master",
             self.opts["sock_dir"],
-            self.opts["transport"],
             opts=self.opts,
             listen=self.listen,
             io_loop=io_loop,
@@ -629,7 +628,7 @@ class LocalClient:
             if key not in opts:
                 opts[key] = val
         batch = salt.cli.batch.Batch(opts, eauth=eauth, quiet=True)
-        for ret in batch.run():
+        for ret, _ in batch.run():
             yield ret
 
     def cmd(

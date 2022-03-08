@@ -77,7 +77,7 @@ def serve(port=8000, directory=None):
     s.serve_forever()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def free_port():
     """
     Utility fixture to grab a free port for the web server
@@ -88,7 +88,7 @@ def free_port():
         return s.getsockname()[1]
 
 
-@pytest.fixture(autouse=True, scope="session")
+@pytest.fixture(autouse=True, scope="module")
 def server(free_port, web_root):
     """
     Web server fixture
@@ -97,9 +97,10 @@ def server(free_port, web_root):
     p.start()
     yield
     p.terminate()
+    p.join()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def web_root(tmp_path_factory):
     """
     Temporary directory fixture for the web server root
