@@ -283,10 +283,9 @@ def test_get_fun(etcd_client_mock, instance, returner_root, etcd_config):
 
         with patch.object(instance, "get", side_effect=side_effect):
             # Could be either one depending on if Python<3.6
-            assert (
-                etcd_return.get_fun(fun) == {"id-1": "test.ping"}
-                or etcd_return.get_fun(fun) == {"id-2": "test.ping"}
-            )
+            assert etcd_return.get_fun(fun) == {
+                "id-1": "test.ping"
+            } or etcd_return.get_fun(fun) == {"id-2": "test.ping"}
             calls = [
                 call("/".join((returner_root, "minions")), recurse=True),
                 call("/".join((returner_root, "jobs", "1", "id-1", "fun"))),
