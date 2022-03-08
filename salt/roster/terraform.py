@@ -80,7 +80,7 @@ TF_ROSTER_ATTRS = {
 MINION_ID = "salt_id"
 
 
-def _handle_salt_host_resource(resource):
+def _handle_old_salt_host_resource(resource):
     """
     Handles salt_host resources.
     See https://github.com/dmacvicar/terraform-provider-salt
@@ -94,6 +94,27 @@ def _handle_salt_host_resource(resource):
     for attr in valid_attrs:
         ret[attr] = _cast_output_to_type(attrs.get(attr), TF_ROSTER_ATTRS.get(attr))
     return ret
+
+
+def _handle_new_salt_host_resource(resource):
+    """
+    Handles salt_host resources.
+    See https://github.com/dmacvicar/terraform-provider-salt
+    Returns roster attributes for the resource or None
+    """
+    rets = []
+    instances = resource.get("instances", [])
+    for instance in instances:
+        ret = {}
+        attrs = instance.get("attributes", {})
+        ret[MINION_ID] = attrs.get(MINION_ID)
+        valid_attrs = set(attrs.keys()).intersection(TF_ROSTER_ATTRS.keys())
+        for attr in valid_attrs:
+            print(attr)
+            ret[attr] = _cast_output_to_type(attrs.get(attr), TF_ROSTER_ATTRS.get(attr))
+        log.info(ret)
+        rets.append(ret)
+    return rets
 
 
 def _add_ssh_key(ret):
@@ -116,6 +137,9 @@ def _add_ssh_key(ret):
 
 def _cast_output_to_type(value, typ):
     """cast the value depending on the terraform type"""
+    if not value:
+        # handle None
+        return value
     if typ == "b":
         return bool(value)
     if typ == "i":
@@ -127,10 +151,52 @@ def _parse_state_file(state_file_path="terraform.tfstate"):
     """
     Parses the terraform state file passing different resource types to the right handler
     """
-    ret = {}
     with salt.utils.files.fopen(state_file_path, "r") as fh_:
         tfstate = salt.utils.json.load(fh_)
+    if "resources" in tfstate:
+        return _do_parse_new_state_file(tfstate)
+    elif "modules" in tfstate:
+        return _do__parse_old_state_file(tfstate)
+    else:
+        log.error("Malformed tfstate file.")
+        return {}
 
+
+def _do_parse_new_state_file(tfstate):
+    """
+    Parses the terraform state file passing different resource types to the right handler  terraform version >= v0.13.0
+    """
+    ret = {}
+    resources = tfstate.get("resources")
+    if not resources:
+        log.error("Malformed tfstate file. No resources found")
+        return ret
+    for resource in resources:
+        if resource["type"] == "salt_host":
+            roster_entrys = _handle_new_salt_host_resource(resource)
+
+            if not roster_entrys or len(roster_entrys) < 1:
+                continue
+            for roster_entry in roster_entrys:
+                if not roster_entry:
+                    continue
+
+                minion_id = roster_entry.get(MINION_ID, resource.get("id"))
+                if not minion_id:
+                    continue
+
+                if MINION_ID in roster_entry:
+                    del roster_entry[MINION_ID]
+                _add_ssh_key(roster_entry)
+                ret[minion_id] = roster_entry
+    return ret
+
+
+def _do__parse_old_state_file(tfstate):
+    """
+    Parses the terraform state file passing different resource types to the right handler  terraform version < v0.13.0
+    """
+    ret = {}
     modules = tfstate.get("modules")
     if not modules:
         log.error("Malformed tfstate file. No modules found")
@@ -141,7 +207,7 @@ def _parse_state_file(state_file_path="terraform.tfstate"):
         for resource_name, resource in resources.items():
             roster_entry = None
             if resource["type"] == "salt_host":
-                roster_entry = _handle_salt_host_resource(resource)
+                roster_entry = _handle_old_salt_host_resource(resource)
 
             if not roster_entry:
                 continue
@@ -155,7 +221,7 @@ def _parse_state_file(state_file_path="terraform.tfstate"):
             _add_ssh_key(roster_entry)
             ret[minion_id] = roster_entry
     return ret
-
+    
 
 def targets(tgt, tgt_type="glob", **kwargs):  # pylint: disable=W0613
     """
