@@ -1,10 +1,6 @@
 import salt.ext.tornado.gen
 
-TRANSPORTS = (
-    "zeromq",
-    "tcp",
-    "rabbitmq",
-)
+TRANSPORTS = ("zeromq", "tcp", "rabbitmq", "sqs")
 
 
 def request_server(opts, **kwargs):
@@ -30,6 +26,10 @@ def request_server(opts, **kwargs):
         import salt.transport.rabbitmq
 
         return salt.transport.rabbitmq.RabbitMQReqServer(opts)
+    elif ttype == "sqs":
+        import salt.transport.sqs
+
+        return salt.transport.sqs.SQSReqServer(opts)
     elif ttype == "local":
         import salt.transport.local
 
@@ -61,6 +61,10 @@ def request_client(opts, io_loop):
         import salt.transport.rabbitmq
 
         return salt.transport.rabbitmq.RabbitMQRequestClient(opts, io_loop=io_loop)
+    elif ttype == "sqs":
+        import salt.transport.sqs
+
+        return salt.transport.sqs.SQSRequestClient(opts, io_loop=io_loop)
     else:
         raise Exception(
             "Unsupported transport {!r}. Channels are only defined for TCP, ZeroMQ or RabbitMQ".format(
@@ -90,6 +94,10 @@ def publish_server(opts, **kwargs):
         import salt.transport.rabbitmq
 
         return salt.transport.rabbitmq.RabbitMQPublishServer(opts, **kwargs)
+    elif ttype == "sqs":
+        import salt.transport.sqs
+
+        return salt.transport.sqs.SQSPublishServer(opts, **kwargs)
     elif ttype == "local":  # TODO:
         import salt.transport.local
 
@@ -118,6 +126,10 @@ def publish_client(opts, io_loop):
         import salt.transport.rabbitmq
 
         return salt.transport.rabbitmq.RabbitMQPubClient(opts, io_loop)
+    elif ttype == "sqs":
+        import salt.transport.sqs
+
+        return salt.transport.sqs.SQSPubClient(opts, io_loop)
     raise Exception("Transport type not found: {}".format(ttype))
 
 
@@ -131,7 +143,7 @@ class RequestClient:
         pass
 
     @salt.ext.tornado.gen.coroutine
-    def send(self, load, timeout=60):
+    def send(self, load, tries=3, timeout=60):
         """
         Send a request message and return the reply from the server.
         """
@@ -200,7 +212,7 @@ class DaemonizedPublishServer(PublishServer):
     PublishServer that has a daemon associated with it.
     """
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, kwargs=None):
         raise NotImplementedError
 
     def publish_daemon(
@@ -208,6 +220,7 @@ class DaemonizedPublishServer(PublishServer):
         publish_payload,
         presence_callback=None,
         remove_presence_callback=None,
+        **kwargs
     ):
         """
         If a daemon is needed to act as a broker implement it here.

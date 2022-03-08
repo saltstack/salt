@@ -184,7 +184,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         if self.opts.get("presence_events", False):
             tcp_only = True
             for transport, _ in iter_transport_opts(self.opts):
-                if transport not in ("tcp", "rabbitmq"):
+                if transport not in ("tcp", "rabbitmq", "sqs"):
                     tcp_only = False
             if not tcp_only:
                 # For a TCP and RabbitMQ transport, the presence events will be

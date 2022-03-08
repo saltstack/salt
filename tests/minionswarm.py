@@ -192,7 +192,7 @@ class Swarm:
                 prefix="mswarm-root", suffix=".d", dir=tmpdir
             )
 
-        if self.opts["transport"] == "zeromq" or "rabbitmq":
+        if self.opts["transport"] in ["zeromq" , "rabbitmq", "sqs"]:
             self.pki = self._pki_dir()
         self.zfill = len(str(self.opts["minions"]))
 
@@ -324,7 +324,7 @@ class MinionSwarm(Swarm):
             }
         )
 
-        if self.opts["transport"] == "zeromq" or "rabbitmq":
+        if self.opts["transport"] in ["zeromq" , "rabbitmq", "sqs"]:
             minion_pkidir = os.path.join(dpath, "pki")
             if not os.path.exists(minion_pkidir):
                 os.makedirs(minion_pkidir)
@@ -336,23 +336,23 @@ class MinionSwarm(Swarm):
         elif self.opts["transport"] == "tcp":
             data["transport"] = "tcp"
 
-        if self.opts["transport"] == "rabbitmq":
+        if self.opts["transport"] in ["rabbitmq", "sqs"]:
             # only update the keys that need to be unique per minion
             queue_declare_args = data.get(
-                "transport_rabbitmq_consumer_queue_declare_arguments"
+                f"transport_{self.opts['transport']}_consumer_queue_declare_arguments"
             )
             if (
                 queue_declare_args
                 and queue_declare_args.get("x-queue-type") != "stream"
             ):
-                # stream queues are shared among multiple consumers (minions) and hence do not need a unique
-                # queue name per consumer/minion
-                data["transport_rabbitmq_consumer_queue_name"] = "{}_{}_{}".format(
+                data[f"transport_{self.opts['transport']}_consumer_queue_name"] = "{}_{}_{}".format(
                     "salt_minion_command_queue", socket.gethostname(), minion_id
                 )
             else:
+                # stream queues are shared among multiple consumers (minions) and hence do not need a unique
+                # queue name per consumer/minion
                 data[
-                    "transport_rabbitmq_consumer_queue_name"
+                    f"transport_{self.opts['transport']}_consumer_queue_name"
                 ] = "salt_minion_command_queue"
 
         if self.opts["root_dir"]:
