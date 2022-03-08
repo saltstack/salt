@@ -221,7 +221,7 @@ def _do__parse_old_state_file(tfstate):
             _add_ssh_key(roster_entry)
             ret[minion_id] = roster_entry
     return ret
-    
+
 
 def targets(tgt, tgt_type="glob", **kwargs):  # pylint: disable=W0613
     """
