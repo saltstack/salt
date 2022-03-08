@@ -1464,8 +1464,6 @@ def install(
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    version_num = kwargs.get("version")
-
     diff_attr = kwargs.get("diff_attr")
     old = (
         list_pkgs(versions_as_list=False, attr=diff_attr)
