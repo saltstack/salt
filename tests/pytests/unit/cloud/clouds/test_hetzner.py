@@ -556,3 +556,31 @@ def test_resize():
                 wait.reset_mock()
                 hetzner.resize("myvm", kwargs, "action")
                 wait.assert_not_called()
+
+
+def test_config_loading(vm):
+    """Test if usual config parameters are loaded via get_cloud_config_value()"""
+    with patch(
+        "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
+    ) as client:
+        with patch(
+            "salt.config.get_cloud_config_value", return_value=MagicMock()
+        ) as cloud_config:
+            hetzner.create(vm)
+
+            config_values = {
+                "automount",
+                "datacenter",
+                "image",
+                "labels",
+                "location",
+                "name",
+                "networks",
+                "private_key",
+                "size",
+                "ssh_keys",
+                "user_data",
+                "volumes",
+            }
+            calls = set(map(lambda call: call[0][0], cloud_config.call_args_list))
+            assert config_values.issubset(calls)
