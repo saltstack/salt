@@ -2072,12 +2072,11 @@ def yum_and_dnf(request):
         yield request.param["cmd"]
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize(
     "new,full_pkg_string",
     (
         (42, "foo-42"),
-        # ("99:1.2.3", "foo-1.2.3"),
+        ("99:1.2.3", "foo-1.2.3"),
     ),
 )
 def test_59705_version_as_accidental_float_should_become_text(
