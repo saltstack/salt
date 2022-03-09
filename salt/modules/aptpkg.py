@@ -2156,9 +2156,9 @@ def get_repo_keys(aptkey=True, keydir=None):
     List known repo key details.
     :param bool aptkey: Use the binary apt-key.
     :param str keydir: The directory path to save keys. The default directory
-                       is /usr/share/keyrings/ which is the recommended path
-                       for adding third party keys. This argument is only used
-                       when aptkey is False.
+    is /usr/share/keyrings/ which is the recommended path
+    for adding third party keys. This argument is only used
+    when aptkey is False.
 
     :return: A dictionary containing the repo keys.
     :rtype: dict
