@@ -299,13 +299,15 @@ Windows system:
 
 .. _file_roots: https://docs.saltproject.io/en/latest/ref/configuration/master.html#file-roots
 """
+import logging
 
 import salt.loader
 import salt.utils.args
 import salt.utils.functools
 import salt.utils.jid
 from salt.exceptions import SaltInvocationError
-from salt.utils.decorators import with_deprecated
+
+log = logging.getLogger(__name__)
 
 
 def wait(name, **kwargs):
@@ -337,7 +339,6 @@ def wait(name, **kwargs):
 watch = salt.utils.functools.alias_function(wait, "watch")
 
 
-@with_deprecated(globals(), "Phosphorus", policy=with_deprecated.OPT_IN)
 def run(**kwargs):
     """
     Run a single module function or a range of module functions in a batch.
@@ -370,6 +371,27 @@ def run(**kwargs):
 
     :return:
     """
+    # Detect if this call is using legacy or new style syntax.
+    legacy_run = False
+
+    keys = list(kwargs.keys())
+    if "name" in keys:
+        keys.remove("name")
+
+    # The rest of the keys should be function names for new-style syntax
+    for name in keys:
+        if name.find(".") == -1:
+            legacy_run = True
+
+    if legacy_run:
+        log.debug("Detected legacy module.run syntax: %s", __low__["__id__"])
+        return _legacy_run(**kwargs)
+    else:
+        log.debug("Using new style module.run syntax: %s", __low__["__id__"])
+        return _run(**kwargs)
+
+
+def _run(**kwargs):
 
     if "name" in kwargs:
         kwargs.pop("name")
@@ -482,7 +504,7 @@ def _call_function(name, returner=None, func_args=None, func_kwargs=None):
     return mret
 
 
-def _run(name, **kwargs):
+def _legacy_run(name, **kwargs):
     """
     .. deprecated:: 2017.7.0
        Function name stays the same, behaviour will change.
