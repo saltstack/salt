@@ -312,7 +312,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
 
     signedby:
         On apt-based systems, ``signedby`` is the the path to the key file
-        the repository will use. This is required in apt-key is False.
+        the repository will use. This is required if apt-key is False.
     """
     if not salt.utils.path.which("apt-key"):
         aptkey = False
