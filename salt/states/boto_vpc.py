@@ -1890,6 +1890,8 @@ def request_vpc_peering_connection(
     peer_region
         Region of peer VPC. For inter-region vpc peering connections. Not required for intra-region peering connections.
 
+        .. versionadded:: 3005
+
     region
         Region to connect to.
 
@@ -2007,6 +2009,8 @@ def vpc_peering_connection_present(
     peer_region
         Region of peer VPC. For inter-region vpc peering connections. Not required
         for intra-region peering connections.
+
+        .. versionadded:: 3005
 
     region
         Region to connect to.
