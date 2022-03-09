@@ -54,18 +54,24 @@ class MapBuilder:
         )
 
         map_data = {
-            "debian": "    class Debian:\n"
-            "        server = 'samba'\n"
-            "        client = 'samba-client'\n"
-            "        service = 'samba'\n",
-            "centos": "    class RougeChapeau:\n"
-            "        __match__ = 'RedHat'\n"
-            "        server = 'samba'\n"
-            "        client = 'samba'\n"
-            "        service = 'smb'\n",
-            "ubuntu": "    class Ubuntu:\n"
-            "        __grain__ = 'os'\n"
-            "        service = 'smbd'\n",
+            "debian": (
+                "    class Debian:\n"
+                "        server = 'samba'\n"
+                "        client = 'samba-client'\n"
+                "        service = 'samba'\n"
+            ),
+            "centos": (
+                "    class RougeChapeau:\n"
+                "        __match__ = 'RedHat'\n"
+                "        server = 'samba'\n"
+                "        client = 'samba'\n"
+                "        service = 'smb'\n"
+            ),
+            "ubuntu": (
+                "    class Ubuntu:\n"
+                "        __grain__ = 'os'\n"
+                "        service = 'smbd'\n"
+            ),
         }
 
         if template is None:

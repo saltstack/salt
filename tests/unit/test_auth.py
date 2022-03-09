@@ -52,7 +52,8 @@ class LoadAuthTestCase(TestCase):
         fake_get_token = MagicMock(side_effect=SaltDeserializationError("hi"))
         patch_opts = patch.dict(self.lauth.opts, {"eauth_tokens": "testfs"})
         patch_get_token = patch.dict(
-            self.lauth.tokens, {"testfs.get_token": fake_get_token},
+            self.lauth.tokens,
+            {"testfs.get_token": fake_get_token},
         )
         mock_rm_token = MagicMock()
         patch_rm_token = patch.object(self.lauth, "rm_token", mock_rm_token)
@@ -65,7 +66,8 @@ class LoadAuthTestCase(TestCase):
         fake_get_token = MagicMock(return_value={"no_expire_here": "Nope"})
         patch_opts = patch.dict(self.lauth.opts, {"eauth_tokens": "testfs"})
         patch_get_token = patch.dict(
-            self.lauth.tokens, {"testfs.get_token": fake_get_token},
+            self.lauth.tokens,
+            {"testfs.get_token": fake_get_token},
         )
         mock_rm_token = MagicMock()
         patch_rm_token = patch.object(self.lauth, "rm_token", mock_rm_token)
@@ -78,7 +80,8 @@ class LoadAuthTestCase(TestCase):
         fake_get_token = MagicMock(return_value={"expire": time.time() - 1})
         patch_opts = patch.dict(self.lauth.opts, {"eauth_tokens": "testfs"})
         patch_get_token = patch.dict(
-            self.lauth.tokens, {"testfs.get_token": fake_get_token},
+            self.lauth.tokens,
+            {"testfs.get_token": fake_get_token},
         )
         mock_rm_token = MagicMock()
         patch_rm_token = patch.object(self.lauth, "rm_token", mock_rm_token)
@@ -92,7 +95,8 @@ class LoadAuthTestCase(TestCase):
         fake_get_token = MagicMock(return_value=expected_token)
         patch_opts = patch.dict(self.lauth.opts, {"eauth_tokens": "testfs"})
         patch_get_token = patch.dict(
-            self.lauth.tokens, {"testfs.get_token": fake_get_token},
+            self.lauth.tokens,
+            {"testfs.get_token": fake_get_token},
         )
         mock_rm_token = MagicMock()
         patch_rm_token = patch.object(self.lauth, "rm_token", mock_rm_token)

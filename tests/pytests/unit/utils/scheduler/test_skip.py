@@ -140,7 +140,7 @@ def test_skip_during_range_invalid_datestring(schedule):
     # Check the first job
     ret = schedule.job_status(job_name1)
     _expected = (
-        "Invalid date string for start in " "skip_during_range. Ignoring " "job {}."
+        "Invalid date string for start in skip_during_range. Ignoring job {}."
     ).format(job_name1)
     assert ret["_error"] == _expected
 
@@ -156,7 +156,7 @@ def test_skip_during_range_invalid_datestring(schedule):
     # Check the second job
     ret = schedule.job_status(job_name2)
     _expected = (
-        "Invalid date string for end in " "skip_during_range. Ignoring " "job {}."
+        "Invalid date string for end in skip_during_range. Ignoring job {}."
     ).format(job_name2)
     assert ret["_error"] == _expected
 

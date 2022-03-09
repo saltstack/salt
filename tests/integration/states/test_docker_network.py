@@ -151,6 +151,10 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
     @container_name
     @with_network(create=False)
     @pytest.mark.slow_test
+    @pytest.mark.skipif(
+        salt.utils.platform.is_photonos() is True,
+        reason="Skip on PhotonOS.  No busybox available.",
+    )
     def test_absent_with_disconnected_container(self, net, container_name):
         self.assertSaltTrueReturn(
             self.run_state(
@@ -193,6 +197,10 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
     @container_name
     @with_network(create=False)
     @pytest.mark.slow_test
+    @pytest.mark.skipif(
+        salt.utils.platform.is_photonos() is True,
+        reason="Skip on PhotonOS.  No busybox available.",
+    )
     def test_present_with_containers(self, net, container_name):
         ret = self.run_state(
             "docker_network.present", name=net.name, containers=[container_name]
@@ -248,6 +256,10 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
     @container_name
     @with_network(create=False)
     @pytest.mark.slow_test
+    @pytest.mark.skipif(
+        salt.utils.platform.is_photonos() is True,
+        reason="Skip on PhotonOS.  No busybox available.",
+    )
     def test_present_with_reconnect(self, net, container_name):
         """
         Test reconnecting with containers not passed to state
@@ -257,6 +269,10 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
     @container_name
     @with_network(create=False)
     @pytest.mark.slow_test
+    @pytest.mark.skipif(
+        salt.utils.platform.is_photonos() is True,
+        reason="Skip on PhotonOS.  No busybox available.",
+    )
     def test_present_with_no_reconnect(self, net, container_name):
         """
         Test reconnecting with containers not passed to state
@@ -267,7 +283,11 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
     @pytest.mark.slow_test
     def test_present_internal(self, net):
         self.assertSaltTrueReturn(
-            self.run_state("docker_network.present", name=net.name, internal=True,)
+            self.run_state(
+                "docker_network.present",
+                name=net.name,
+                internal=True,
+            )
         )
         net_info = self.run_function("docker.inspect_network", [net.name])
         self.assertIs(net_info["Internal"], True)
@@ -285,7 +305,8 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
         )
         net_info = self.run_function("docker.inspect_network", [net.name])
         self.assertEqual(
-            net_info["Labels"], {"foo": "", "bar": "baz", "hello": "world"},
+            net_info["Labels"],
+            {"foo": "", "bar": "baz", "hello": "world"},
         )
 
     @with_network(subnet="fe3f:2180:26:1::/123")
@@ -312,7 +333,11 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
             self.skipTest("Cannot reliably manage attachable on RHEL <= 7")
 
         self.assertSaltTrueReturn(
-            self.run_state("docker_network.present", name=net.name, attachable=True,)
+            self.run_state(
+                "docker_network.present",
+                name=net.name,
+                attachable=True,
+            )
         )
         net_info = self.run_function("docker.inspect_network", [net.name])
         self.assertIs(net_info["Attachable"], True)
@@ -321,7 +346,11 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
     @with_network()
     def test_present_scope(self, net):
         self.assertSaltTrueReturn(
-            self.run_state("docker_network.present", name=net.name, scope="global",)
+            self.run_state(
+                "docker_network.present",
+                name=net.name,
+                scope="global",
+            )
         )
         net_info = self.run_function("docker.inspect_network", [net.name])
         self.assertIs(net_info["Scope"], "global")
@@ -330,7 +359,11 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
     @with_network()
     def test_present_ingress(self, net):
         self.assertSaltTrueReturn(
-            self.run_state("docker_network.present", name=net.name, ingress=True,)
+            self.run_state(
+                "docker_network.present",
+                name=net.name,
+                ingress=True,
+            )
         )
         net_info = self.run_function("docker.inspect_network", [net.name])
         self.assertIs(net_info["Ingress"], True)

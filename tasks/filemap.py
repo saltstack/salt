@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     tasks.filemap
     ~~~~~~~~~~~~~
@@ -29,7 +28,8 @@ def _check_matches(rule, matches):
         filematch = _match_to_test_file(match)
         if not filematch.exists():
             utils.error(
-                "The match '{}' for rule '{}' points to a non existing test module path: {}",
+                "The match '{}' for rule '{}' points to a non existing test module"
+                " path: {}",
                 match,
                 rule,
                 filematch,

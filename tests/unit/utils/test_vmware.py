@@ -168,7 +168,7 @@ class GetClusterTestCase(TestCase):
                     salt.utils.vmware.get_cluster(self.mock_dc, "fake_cluster")
         self.assertEqual(
             excinfo.exception.strerror,
-            "Cluster 'fake_cluster' was not found in " "datacenter 'fake_dc'",
+            "Cluster 'fake_cluster' was not found in datacenter 'fake_dc'",
         )
 
     def test_cluster_not_found(self):
@@ -184,7 +184,7 @@ class GetClusterTestCase(TestCase):
                     salt.utils.vmware.get_cluster(self.mock_dc, "fake_cluster")
         self.assertEqual(
             excinfo.exception.strerror,
-            "Cluster 'fake_cluster' was not found in " "datacenter 'fake_dc'",
+            "Cluster 'fake_cluster' was not found in datacenter 'fake_dc'",
         )
 
     def test_cluster_found(self):
@@ -248,7 +248,7 @@ class CreateClusterTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_create_cluster_raise_vim_fault(self):
@@ -325,7 +325,7 @@ class UpdateClusterTestCase(TestCase):
             salt.utils.vmware.update_cluster(self.mock_cluster, self.mock_cluster_spec)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_reconfigure_compute_resource_raise_vim_fault(self):
@@ -386,7 +386,7 @@ class WaitForTaskTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_first_task_info_raise_vim_fault(self):
@@ -424,7 +424,7 @@ class WaitForTaskTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_inner_loop_task_info_raise_vim_fault(self):
@@ -528,7 +528,7 @@ class WaitForTaskTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_info_error_vim_fault(self):
@@ -925,7 +925,7 @@ class GetPropertiesOfManagedObjectTestCase(TestCase):
                     self.fake_mo_ref, self.mock_props
                 )
         self.assertEqual(
-            "Properties of managed object '<unnamed>' weren't " "retrieved",
+            "Properties of managed object '<unnamed>' weren't retrieved",
             excinfo.exception.strerror,
         )
 
@@ -939,7 +939,7 @@ class GetPropertiesOfManagedObjectTestCase(TestCase):
                     self.fake_mo_ref, self.mock_props
                 )
         self.assertEqual(
-            "Properties of managed object 'fake_name' weren't " "retrieved",
+            "Properties of managed object 'fake_name' weren't retrieved",
             excinfo.exception.strerror,
         )
 
@@ -1139,7 +1139,7 @@ class GetContentTestCase(TestCase):
                 salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_create_container_view_raise_vim_fault(self):
@@ -1175,7 +1175,7 @@ class GetContentTestCase(TestCase):
                 salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_destroy_raise_vim_fault(self):
@@ -1255,7 +1255,7 @@ class GetContentTestCase(TestCase):
             salt.utils.vmware.get_content(self.si_mock, self.obj_type_mock)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_retrieve_contents_raise_vim_fault(self):
@@ -1316,7 +1316,7 @@ class GetRootFolderTestCase(TestCase):
             salt.utils.vmware.get_root_folder(self.mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_raise_vim_fault(self):
@@ -1367,7 +1367,7 @@ class GetServiceInfoTestCase(TestCase):
             salt.utils.vmware.get_service_info(self.mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_about_raises_vim_fault(self):
@@ -1797,7 +1797,8 @@ class PrivateGetServiceInstanceTestCase(TestCase):
 
         self.assertEqual(mock_sc.call_count, 1)
         self.assertIn(
-            "Could not connect to host 'fake_host.fqdn'", excinfo.exception.message,
+            "Could not connect to host 'fake_host.fqdn'",
+            excinfo.exception.message,
         )
 
     def test_attempt_unsuccessful_connection_vim_fault(self):
@@ -2106,7 +2107,7 @@ class GetServiceInstanceTestCase(TestCase):
                 )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_current_time_raise_vim_fault(self):
@@ -2174,7 +2175,7 @@ class DisconnectTestCase(TestCase):
                 salt.utils.vmware.disconnect(service_instance=self.mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_disconnect_raise_vim_fault(self):
@@ -2209,7 +2210,7 @@ class IsConnectionToAVCenterTestCase(TestCase):
             salt.utils.vmware.is_connection_to_a_vcenter(mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_api_type_raise_vim_fault(self):
@@ -2560,7 +2561,7 @@ class CreateDatacenterTestCase(TestCase):
                 salt.utils.vmware.create_datacenter(self.mock_si, "fake_dc")
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_create_datacenter_raise_vim_fault(self):
@@ -2772,7 +2773,7 @@ class GetNetworkFolderTestCase(TestCase):
                 salt.utils.vmware.get_network_folder(self.mock_dc_ref)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Network folder in datacenter 'fake_dc' wasn't " "retrieved",
+            "Network folder in datacenter 'fake_dc' wasn't retrieved",
         )
 
     def test_get_network_folder(self):
@@ -2865,7 +2866,7 @@ class CreateDvsTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_create_dvs_task_raises_vim_fault(self):
@@ -2952,7 +2953,7 @@ class UpdateDvsTestCase(TestCase):
             salt.utils.vmware.update_dvs(self.mock_dvs_ref, self.mock_dvs_spec)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_reconfigure_dvs_task_raises_vim_fault(self):
@@ -3029,7 +3030,7 @@ class SetDvsNetworkResourceManagementEnabledTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_enable_network_resource_management_raises_vim_fault(self):
@@ -3099,7 +3100,7 @@ class GetDvportgroupsTestCase(TestCase):
             salt.utils.vmware.get_dvportgroups(MagicMock())
         self.assertEqual(
             excinfo.exception.strerror,
-            "Parent has to be either a datacenter, or a " "distributed virtual switch",
+            "Parent has to be either a datacenter, or a distributed virtual switch",
         )
 
     def test_get_managed_object_name_call(self):
@@ -3307,7 +3308,7 @@ class CreateDvportgroupTestCase(TestCase):
             salt.utils.vmware.create_dvportgroup(self.mock_dvs_ref, self.mock_pg_spec)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_create_dvporgroup_task_raises_vim_fault(self):
@@ -3383,7 +3384,7 @@ class UpdateDvportgroupTestCase(TestCase):
             salt.utils.vmware.update_dvportgroup(self.mock_pg_ref, self.mock_pg_spec)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_reconfigure_dvporgroup_task_raises_vim_fault(self):
@@ -3456,7 +3457,7 @@ class RemoveDvportgroupTestCase(TestCase):
             salt.utils.vmware.remove_dvportgroup(self.mock_pg_ref)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_destroy_treconfigure_dvporgroup_task_raises_vim_fault(self):
@@ -3521,7 +3522,7 @@ class GetHostsTestCase(TestCase):
             salt.utils.vmware.get_hosts(self.mock_si, cluster_name="fake_cluster")
         self.assertEqual(
             excinfo.exception.strerror,
-            "Must specify the datacenter when specifying the " "cluster",
+            "Must specify the datacenter when specifying the cluster",
         )
 
     def test_get_si_no_datacenter_no_cluster(self):
@@ -3665,7 +3666,7 @@ class GetLicenseManagerTestCase(TestCase):
             salt.utils.vmware.get_license_manager(self.mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_raise_vim_fault(self):
@@ -3716,7 +3717,7 @@ class GetLicenseAssignmentManagerTestCase(TestCase):
             salt.utils.vmware.get_license_assignment_manager(self.mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_raise_vim_fault(self):
@@ -3804,7 +3805,7 @@ class GetLicensesTestCase(TestCase):
             salt.utils.vmware.get_licenses(self.mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_raise_vim_fault(self):
@@ -3907,7 +3908,7 @@ class AddLicenseTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_add_license_raises_vim_fault(self):
@@ -4046,7 +4047,7 @@ class GetAssignedLicensesTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_instance_uuid_raises_vim_fault(self):
@@ -4118,7 +4119,7 @@ class GetAssignedLicensesTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_query_assigned_licenses_raises_vim_fault(self):
@@ -4254,7 +4255,7 @@ class AssignLicenseTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_instance_uuid_raises_vim_fault(self):
@@ -4320,7 +4321,7 @@ class AssignLicenseTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_update_assigned_licenses_raises_vim_fault(self):
@@ -4442,7 +4443,7 @@ class GetStorageSystemTestCase(TestCase):
                 salt.utils.vmware.get_storage_system(self.mock_si, self.mock_host_ref)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Host's 'fake_host' storage system was " "not retrieved",
+            "Host's 'fake_host' storage system was not retrieved",
         )
 
     def test_valid_mors_result(self):
@@ -4757,7 +4758,7 @@ class RenameDatastoreTestCase(TestCase):
             salt.utils.vmware.rename_datastore(self.mock_ds_ref, "fake_new_name")
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_rename_datastore_raise_vim_fault(self):
@@ -4836,7 +4837,7 @@ class CreateVirtualMachineTestCase(TestCase):
             self.mock_folder_object,
             self.mock_resourcepool_object,
         )
-        self.assert_called_once(self.mock_vm_create_task)
+        self.mock_vm_create_task.assert_called_once()
 
     def test_create_vm_host_task_call(self):
         salt.utils.vmware.create_vm(
@@ -4846,7 +4847,7 @@ class CreateVirtualMachineTestCase(TestCase):
             self.mock_resourcepool_object,
             host_object=self.mock_host_object,
         )
-        self.assert_called_once(self.mock_vm_create_task)
+        self.mock_vm_create_task.assert_called_once()
 
     def test_create_vm_raise_no_permission(self):
         exception = vim.fault.NoPermission()
@@ -4928,7 +4929,7 @@ class RegisterVirtualMachineTestCase(TestCase):
             self.mock_vmx_path,
             self.mock_resourcepool_object,
         )
-        self.assert_called_once(self.mock_vm_register_task)
+        self.mock_vm_register_task.assert_called_once()
 
     def test_register_vm_host_task_call(self):
         salt.utils.vmware.register_vm(
@@ -4938,7 +4939,7 @@ class RegisterVirtualMachineTestCase(TestCase):
             self.mock_resourcepool_object,
             host_object=self.mock_host_object,
         )
-        self.assert_called_once(self.mock_vm_register_task)
+        self.mock_vm_register_task.assert_called_once()
 
     def test_register_vm_raise_no_permission(self):
         exception = vim.fault.NoPermission()
@@ -5010,7 +5011,7 @@ class UpdateVirtualMachineTestCase(TestCase):
 
     def test_update_vm_task_call(self):
         salt.utils.vmware.update_vm(self.mock_vm_ref, self.mock_config_spec)
-        self.assert_called_once(self.mock_vm_update_task)
+        self.mock_vm_update_task.assert_called_once()
 
     def test_update_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()
@@ -5055,7 +5056,7 @@ class DeleteVirtualMachineTestCase(TestCase):
 
     def test_destroy_vm_task_call(self):
         salt.utils.vmware.delete_vm(self.mock_vm_ref)
-        self.assert_called_once(self.mock_vm_destroy_task)
+        self.mock_vm_destroy_task.assert_called_once()
 
     def test_destroy_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()
@@ -5098,7 +5099,7 @@ class UnregisterVirtualMachineTestCase(TestCase):
 
     def test_unregister_vm_task_call(self):
         salt.utils.vmware.unregister_vm(self.mock_vm_ref)
-        self.assert_called_once(self.mock_vm_unregister)
+        self.mock_vm_unregister.assert_called_once()
 
     def test_unregister_vm_raise_vim_fault(self):
         exception = vim.fault.VimFault()

@@ -31,8 +31,6 @@ import salt.utils.dateutils
 import salt.utils.platform
 import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
-from salt.ext.six import string_types
 
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
@@ -72,27 +70,6 @@ def __virtual__():
         return False, "Module win_useradd: Missing Win32 Modules"
 
     return __virtualname__
-
-
-def _to_unicode(instr):
-    """
-    Internal function for converting to Unicode Strings
-
-    The NetUser* series of API calls in this module requires input parameters to
-    be Unicode Strings. This function ensures the parameter is a Unicode String.
-    This only seems to be an issue in Python 2. All calls to this function
-    should be gated behind a ``if six.PY2`` check.
-
-    Args:
-        instr (str): String to convert
-
-    Returns:
-        str: Unicode type string
-    """
-    if instr is None or isinstance(instr, str):
-        return instr
-    else:
-        return str(instr, "utf-8")
 
 
 def add(
@@ -142,16 +119,6 @@ def add(
 
         salt '*' user.add name password
     """
-    if six.PY2:
-        name = _to_unicode(name)
-        password = _to_unicode(password)
-        fullname = _to_unicode(fullname)
-        description = _to_unicode(description)
-        home = _to_unicode(home)
-        homedrive = _to_unicode(homedrive)
-        profile = _to_unicode(profile)
-        logonscript = _to_unicode(logonscript)
-
     user_info = {}
     if name:
         user_info["name"] = name
@@ -254,16 +221,6 @@ def update(
                  home=\\server\\homeshare\\bob homedrive=U:
     """
     # pylint: enable=anomalous-backslash-in-string
-    if six.PY2:
-        name = _to_unicode(name)
-        password = _to_unicode(password)
-        fullname = _to_unicode(fullname)
-        description = _to_unicode(description)
-        home = _to_unicode(home)
-        homedrive = _to_unicode(homedrive)
-        logonscript = _to_unicode(logonscript)
-        profile = _to_unicode(profile)
-
     # Make sure the user exists
     # Return an object containing current settings for the user
     try:
@@ -361,9 +318,6 @@ def delete(name, purge=False, force=False):
 
         salt '*' user.delete name
     """
-    if six.PY2:
-        name = _to_unicode(name)
-
     # Check if the user exists
     try:
         user_info = win32net.NetUserGetInfo(None, name, 4)
@@ -460,9 +414,6 @@ def getUserSid(username):
 
         salt '*' user.getUserSid jsnuffy
     """
-    if six.PY2:
-        username = _to_unicode(username)
-
     domain = win32api.GetComputerName()
     if username.find("\\") != -1:
         domain = username.split("\\")[0]
@@ -512,10 +463,6 @@ def addgroup(name, group):
 
         salt '*' user.addgroup jsnuffy 'Power Users'
     """
-    if six.PY2:
-        name = _to_unicode(name)
-        group = _to_unicode(group)
-
     name = _cmd_quote(name)
     group = _cmd_quote(group).lstrip("'").rstrip("'")
 
@@ -549,10 +496,6 @@ def removegroup(name, group):
 
         salt '*' user.removegroup jsnuffy 'Power Users'
     """
-    if six.PY2:
-        name = _to_unicode(name)
-        group = _to_unicode(group)
-
     name = _cmd_quote(name)
     group = _cmd_quote(group).lstrip("'").rstrip("'")
 
@@ -589,10 +532,6 @@ def chhome(name, home, **kwargs):
 
         salt '*' user.chhome foo \\\\fileserver\\home\\foo True
     """
-    if six.PY2:
-        name = _to_unicode(name)
-        home = _to_unicode(home)
-
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     persist = kwargs.pop("persist", False)
     if kwargs:
@@ -685,16 +624,10 @@ def chgroups(name, groups, append=True):
 
         salt '*' user.chgroups jsnuffy Administrators,Users True
     """
-    if six.PY2:
-        name = _to_unicode(name)
-
-    if isinstance(groups, string_types):
+    if isinstance(groups, str):
         groups = groups.split(",")
 
     groups = [x.strip(" *") for x in groups]
-    if six.PY2:
-        groups = [_to_unicode(x) for x in groups]
-
     ugrps = set(list_groups(name))
     if ugrps == set(groups):
         return True
@@ -759,9 +692,6 @@ def info(name):
 
         salt '*' user.info jsnuffy
     """
-    if six.PY2:
-        name = _to_unicode(name)
-
     ret = {}
     items = {}
     try:
@@ -872,9 +802,6 @@ def list_groups(name):
 
         salt '*' user.list_groups foo
     """
-    if six.PY2:
-        name = _to_unicode(name)
-
     ugrp = set()
     try:
         user = info(name)["groups"]
@@ -976,10 +903,6 @@ def rename(name, new_name):
 
         salt '*' user.rename jsnuffy jshmoe
     """
-    if six.PY2:
-        name = _to_unicode(name)
-        new_name = _to_unicode(new_name)
-
     # Load information for the current name
     current_info = info(name)
     if not current_info:
@@ -1014,9 +937,15 @@ def rename(name, new_name):
                 3: "Invalid parameter",
                 4: "User not found",
                 5: "Domain not found",
-                6: "Operation is allowed only on the primary domain controller of the domain",
+                6: (
+                    "Operation is allowed only on the primary domain controller of the"
+                    " domain"
+                ),
                 7: "Operation is not allowed on the last administrative account",
-                8: "Operation is not allowed on specified special groups: user, admin, local, or guest",
+                8: (
+                    "Operation is not allowed on specified special groups: user, admin,"
+                    " local, or guest"
+                ),
                 9: "Other API error",
                 10: "Internal error",
             }

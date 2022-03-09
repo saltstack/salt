@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     Sentry Logging Handler
     ======================
@@ -85,17 +84,13 @@
     .. _`Raven`: https://raven.readthedocs.io
     .. _`Raven client documentation`: https://raven.readthedocs.io/en/latest/config/index.html#client-arguments
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 import re
 
-# Import salt libs
 import salt.loader
 from salt.log import LOG_LEVELS
 
-# Import 3rd party libs
 try:
     import raven
     from raven.handlers.logging import SentryHandler
@@ -113,20 +108,29 @@ __virtualname__ = "sentry"
 
 
 def __virtual__():
-    if HAS_RAVEN is True:
-        return __virtualname__
-    return False
+    load_err_msg = []
+    if not HAS_RAVEN:
+        load_err_msg.append("Cannot find 'raven' python library")
+    if not __opts__.get("sentry_handler"):
+        load_err_msg.append("'sentry_handler' config is empty or not defined")
+    if load_err_msg:
+        return False, ", ".join(load_err_msg)
+    return __virtualname__
 
 
 def setup_handlers():
     """
     sets up the sentry handler
     """
+    if not __opts__.get("sentry_handler"):
+        log.debug("'sentry_handler' config is empty or not defined")
+        return False
+
+    # Regenerating dunders can be expensive, so only do it if the user enables
+    # `sentry_handler` as checked above
     __grains__ = salt.loader.grains(__opts__)
     __salt__ = salt.loader.minion_mods(__opts__)
-    if "sentry_handler" not in __opts__:
-        log.debug("No 'sentry_handler' key was found in the configuration")
-        return False
+
     options = {}
     dsn = get_config_value("dsn")
     if dsn is not None:
@@ -138,9 +142,7 @@ def setup_handlers():
             transport_registry = TransportRegistry(default_transports)
             url = urlparse(dsn)
             if not transport_registry.supported_scheme(url.scheme):
-                raise ValueError(
-                    "Unsupported Sentry DSN scheme: {0}".format(url.scheme)
-                )
+                raise ValueError("Unsupported Sentry DSN scheme: {}".format(url.scheme))
         except ValueError as exc:
             log.info("Raven failed to parse the configuration provided DSN: %s", exc)
 
@@ -217,7 +219,7 @@ def setup_handlers():
         if exclude_patterns:
             filter_regexes = [re.compile(pattern) for pattern in exclude_patterns]
 
-            class FilterExcludedMessages(object):
+            class FilterExcludedMessages:
                 @staticmethod
                 def filter(record):
                     m = record.getMessage()

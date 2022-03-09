@@ -44,7 +44,10 @@ class GlobalConfig:
     error_content = {"Error": {"Code": 101, "Message": "Test-defined error"}}
     policy_ret = dict(
         policyName="testpolicy",
-        policyDocument='{"Version": "2012-10-17", "Statement": [{"Action": ["iot:Publish"], "Resource": ["*"], "Effect": "Allow"}]}',
+        policyDocument=(
+            '{"Version": "2012-10-17", "Statement": [{"Action": ["iot:Publish"],'
+            ' "Resource": ["*"], "Effect": "Allow"}]}'
+        ),
         policyArn="arn:aws:iot:us-east-1:123456:policy/my_policy",
         policyVersionId=1,
         defaultVersionId=1,
@@ -96,7 +99,9 @@ def configure_loader_modules():
     opts["grains"] = salt.loader.grains(opts)
     ctx = {}
     utils = salt.loader.utils(
-        opts, whitelist=["boto3", "args", "systemd", "path", "platform"], context=ctx,
+        opts,
+        whitelist=["boto3", "args", "systemd", "path", "platform"],
+        context=ctx,
     )
     serializers = salt.loader.serializers(opts)
     funcs = funcs = salt.loader.minion_mods(

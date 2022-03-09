@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Display return data in JSON format
 ==================================
@@ -36,16 +35,10 @@ CLI Example:
 
     salt '*' foo.bar --out=json
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
-# Import Salt libs
 import salt.utils.json
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -89,10 +82,7 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
     except UnicodeDecodeError as exc:
         log.error("Unable to serialize output to json")
         return salt.utils.json.dumps(
-            {
-                "error": "Unable to serialize output to json",
-                "message": six.text_type(exc),
-            }
+            {"error": "Unable to serialize output to json", "message": str(exc)}
         )
 
     except TypeError:

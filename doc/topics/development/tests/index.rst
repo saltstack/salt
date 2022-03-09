@@ -366,7 +366,7 @@ As soon as the pull request is merged, the changes will be added to the
 next branch test run on Jenkins.
 
 For a full list of currently running test environments, go to
-https://jenkinsci.saltstack.com.
+https://jenkins.saltproject.io.
 
 
 Using Salt-Cloud on Jenkins

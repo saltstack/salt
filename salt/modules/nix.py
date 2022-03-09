@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Work with Nix packages
 ======================
@@ -19,7 +18,6 @@ For more information on nix, see the `nix documentation`_.
 .. _`nix-daemon`: https://nixos.org/nix/manual/#ssec-multi-user
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import itertools
 import logging
@@ -27,7 +25,6 @@ import os
 
 import salt.utils.itertools
 import salt.utils.path
-from salt.ext.six.moves import zip
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +34,7 @@ def __virtual__():
     This only works if we have access to nix-env
     """
     nixhome = os.path.join(
-        os.path.expanduser("~{0}".format(__opts__["user"])), ".nix-profile/bin/"
+        os.path.expanduser("~{}".format(__opts__["user"])), ".nix-profile/bin/"
     )
     if salt.utils.path.which(
         os.path.join(nixhome, "nix-env")
@@ -46,7 +43,8 @@ def __virtual__():
     else:
         return (
             False,
-            "The `nix` binaries required cannot be found or are not installed. (`nix-store` and `nix-env`)",
+            "The `nix` binaries required cannot be found or are not installed."
+            " (`nix-store` and `nix-env`)",
         )
 
 
@@ -55,7 +53,7 @@ def _run(cmd):
     Just a convenience function for ``__salt__['cmd.run_all'](cmd)``
     """
     return __salt__["cmd.run_all"](
-        cmd, env={"HOME": os.path.expanduser("~{0}".format(__opts__["user"]))}
+        cmd, env={"HOME": os.path.expanduser("~{}".format(__opts__["user"]))}
     )
 
 
@@ -65,7 +63,7 @@ def _nix_env():
     only show changes.
     """
     nixhome = os.path.join(
-        os.path.expanduser("~{0}".format(__opts__["user"])), ".nix-profile/bin/"
+        os.path.expanduser("~{}".format(__opts__["user"])), ".nix-profile/bin/"
     )
     return [os.path.join(nixhome, "nix-env")]
 
@@ -75,7 +73,7 @@ def _nix_collect_garbage():
     Make sure we get the right nix-store, too.
     """
     nixhome = os.path.join(
-        os.path.expanduser("~{0}".format(__opts__["user"])), ".nix-profile/bin/"
+        os.path.expanduser("~{}".format(__opts__["user"])), ".nix-profile/bin/"
     )
     return [os.path.join(nixhome, "nix-collect-garbage")]
 

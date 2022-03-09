@@ -114,7 +114,11 @@ def test_present_with_another_driver():
         ),
     }
     with patch.dict(docker_state.__dict__, {"__salt__": __salt__}):
-        ret = docker_state.present("volume_foo", driver="bar", force=True,)
+        ret = docker_state.present(
+            "volume_foo",
+            driver="bar",
+            force=True,
+        )
     docker_remove_volume.assert_called_with("volume_foo")
     docker_create_volume.assert_called_with(
         "volume_foo", driver="bar", driver_opts=None
@@ -139,7 +143,11 @@ def test_present_wo_existing_volumes():
         "docker.volumes": Mock(return_value={"Volumes": None}),
     }
     with patch.dict(docker_state.__dict__, {"__salt__": __salt__}):
-        ret = docker_state.present("volume_foo", driver="bar", force=True,)
+        ret = docker_state.present(
+            "volume_foo",
+            driver="bar",
+            force=True,
+        )
     docker_create_volume.assert_called_with(
         "volume_foo", driver="bar", driver_opts=None
     )
@@ -161,7 +169,9 @@ def test_absent():
         "docker.volumes": Mock(return_value={"Volumes": [{"Name": "volume_foo"}]}),
     }
     with patch.dict(docker_state.__dict__, {"__salt__": __salt__}):
-        ret = docker_state.absent("volume_foo",)
+        ret = docker_state.absent(
+            "volume_foo",
+        )
     docker_remove_volume.assert_called_with("volume_foo")
     assert ret == {
         "name": "volume_foo",

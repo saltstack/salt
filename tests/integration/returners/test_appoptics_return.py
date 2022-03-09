@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 Tests for the appoptics returner
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import salt libs
 from salt.returners import appoptics_return
-
-# Import Salt Testing libs
 from tests.support.case import ShellCase
 
 log = logging.getLogger(__name__)

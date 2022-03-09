@@ -1,16 +1,10 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Shane Lee <slee@saltstack.com>`
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import textwrap
 
-# Import Salt Libs
 import salt.grains.disks as disks
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, mock_open, patch
 from tests.support.unit import TestCase

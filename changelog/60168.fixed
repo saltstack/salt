@@ -1,1 +1,0 @@
-Update the external ipaddress to the latest 3.9.5 version which has some security fixes. Updating the compat.p to use the vendored version if the python version is below 3.9.5 and only run the test_ipaddress.py tests if below 3.9.5.

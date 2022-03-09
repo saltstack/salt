@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Cassandra NoSQL Database Module
 
@@ -11,14 +10,10 @@ Cassandra NoSQL Database Module
         cassandra.host: localhost
         cassandra.thrift_port: 9160
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
-# Import salt libs
 import salt.utils.path
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -57,16 +52,16 @@ def _nodetool(cmd):
     """
     nodetool = __salt__["config.option"]("cassandra.nodetool")
     host = __salt__["config.option"]("cassandra.host")
-    return __salt__["cmd.run_stdout"]("{0} -h {1} {2}".format(nodetool, host, cmd))
+    return __salt__["cmd.run_stdout"]("{} -h {} {}".format(nodetool, host, cmd))
 
 
 def _sys_mgr():
     """
     Return a pycassa system manager connection object
     """
-    thrift_port = six.text_type(__salt__["config.option"]("cassandra.THRIFT_PORT"))
+    thrift_port = str(__salt__["config.option"]("cassandra.THRIFT_PORT"))
     host = __salt__["config.option"]("cassandra.host")
-    return SystemManager("{0}:{1}".format(host, thrift_port))
+    return SystemManager("{}:{}".format(host, thrift_port))
 
 
 def compactionstats():

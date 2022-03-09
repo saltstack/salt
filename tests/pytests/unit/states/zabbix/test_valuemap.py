@@ -168,8 +168,10 @@ def test_present_update(input_params, existing_obj_diff, diff_params):
             ret["comment"] = 'Zabbix Value map "{}" updated.'.format(name)
             ret["changes"] = {
                 name: {
-                    "old": 'Zabbix Value map "{}" differed '
-                    "in following parameters: {}".format(name, diff_params),
+                    "old": (
+                        'Zabbix Value map "{}" differed '
+                        "in following parameters: {}".format(name, diff_params)
+                    ),
                     "new": 'Zabbix Value map "{}" fixed.'.format(name),
                 }
             }

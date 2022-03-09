@@ -83,14 +83,12 @@ salt-call from the GuestShell environment as follows.
     salt '*' nxos.cmd get_user username=admin
 """
 
-# Import python stdlib
 import ast
 import difflib
 import logging
 import re
 from socket import error as socket_error
 
-# Import Salt libs
 import salt.utils.nxos
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError, NxosError, SaltInvocationError
@@ -221,13 +219,13 @@ def cmd(command, *args, **kwargs):
         salt '*' nxos.cmd show_run
         salt '*' nxos.cmd check_password username=admin password='$5$lkjsdfoi$blahblahblah' encrypted=True
     """
-    warn_until("Silicon", "'nxos.cmd COMMAND' is deprecated in favor of 'nxos.COMMAND'")
+    warn_until("Argon", "'nxos.cmd COMMAND' is deprecated in favor of 'nxos.COMMAND'")
 
     for k in list(kwargs):
         if k.startswith("__pub_"):
             kwargs.pop(k)
     local_command = ".".join(["nxos", command])
-    log.info("local command: {}".format(local_command))
+    log.info("local command: %s", local_command)
     if local_command not in __salt__:
         return False
     return __salt__[local_command](*args, **kwargs)
@@ -385,7 +383,7 @@ def show(commands, raw_text=True, **kwargs):
         salt 'regular-minion' nxos.show 'show interfaces' host=sw01.example.com username=test password=test
     """
     warn_until(
-        "Silicon",
+        "Argon",
         "'nxos.show commands' is deprecated in favor of 'nxos.sendline commands'",
     )
 
@@ -452,7 +450,7 @@ def system_info(**kwargs):
 
         salt '*' nxos.system_info
     """
-    warn_until("Silicon", "'nxos.system_info' is deprecated in favor of 'nxos.grains'")
+    warn_until("Argon", "'nxos.system_info' is deprecated in favor of 'nxos.grains'")
     return salt.utils.nxos.system_info(show_ver(**kwargs))["nxos"]
 
 
@@ -479,7 +477,7 @@ def add_config(lines, **kwargs):
         For more than one config added per command, lines should be a list.
     """
     warn_until(
-        "Silicon",
+        "Argon",
         "'nxos.add_config lines' is deprecated in favor of 'nxos.config commands'",
     )
 

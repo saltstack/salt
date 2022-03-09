@@ -5,7 +5,6 @@ import string
 
 import salt.loader
 import salt.modules.boto_elasticsearch_domain as boto_elasticsearch_domain
-from salt.ext.six.moves import range
 from salt.utils.versions import LooseVersion
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
@@ -121,8 +120,9 @@ class BotoElasticsearchDomainTestCaseMixin:
 @skipIf(HAS_BOTO is False, "The boto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto3 module must be greater than"
-    " or equal to version {}".format(required_boto3_version),
+    "The boto3 module must be greater than or equal to version {}".format(
+        required_boto3_version
+    ),
 )
 class BotoElasticsearchDomainTestCase(
     BotoElasticsearchDomainTestCaseBase, BotoElasticsearchDomainTestCaseMixin

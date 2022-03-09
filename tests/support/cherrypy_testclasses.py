@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-
 import os
 
 import salt.config
@@ -66,7 +63,7 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
             self.__get_opts__()
             or {
                 "external_auth": {
-                    "auto": {"saltdev": ["@wheel", "@runner", ".*"]},
+                    "auto": {"saltdev": ["@wheel", "@runner", ".*"], "*": "cmd.*"},
                     "pam": {"saltdev": ["@wheel", "@runner", ".*"]},
                 },
                 "rest_cherrypy": {"port": 8000, "debug": True},
@@ -88,7 +85,7 @@ class BaseRestCherryPyTest(BaseCherryPyTestCase):
         self.addCleanup(cherrypy.engine.exit)
 
 
-class Root(object):
+class Root:
     """
     The simplest CherryPy app needed to test individual tools
     """

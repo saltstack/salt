@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.states.keyboard as keyboard
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -37,17 +31,17 @@ class KeyboardTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(
             keyboard.__salt__, {"keyboard.get_sys": mock, "keyboard.set_sys": mock_t}
         ):
-            comt = "System layout {0} already set".format(name)
+            comt = "System layout {} already set".format(name)
             ret.update({"comment": comt})
             self.assertDictEqual(keyboard.system(name), ret)
 
             with patch.dict(keyboard.__opts__, {"test": True}):
-                comt = "System layout {0} needs to be set".format(name)
+                comt = "System layout {} needs to be set".format(name)
                 ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(keyboard.system(name), ret)
 
             with patch.dict(keyboard.__opts__, {"test": False}):
-                comt = "Set system keyboard layout {0}".format(name)
+                comt = "Set system keyboard layout {}".format(name)
                 ret.update(
                     {"comment": comt, "result": True, "changes": {"layout": name}}
                 )
@@ -72,17 +66,17 @@ class KeyboardTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(
             keyboard.__salt__, {"keyboard.get_x": mock, "keyboard.set_x": mock_t}
         ):
-            comt = "XOrg layout {0} already set".format(name)
+            comt = "XOrg layout {} already set".format(name)
             ret.update({"comment": comt})
             self.assertDictEqual(keyboard.xorg(name), ret)
 
             with patch.dict(keyboard.__opts__, {"test": True}):
-                comt = "XOrg layout {0} needs to be set".format(name)
+                comt = "XOrg layout {} needs to be set".format(name)
                 ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(keyboard.xorg(name), ret)
 
             with patch.dict(keyboard.__opts__, {"test": False}):
-                comt = "Set XOrg keyboard layout {0}".format(name)
+                comt = "Set XOrg keyboard layout {}".format(name)
                 ret.update(
                     {"comment": comt, "result": True, "changes": {"layout": name}}
                 )

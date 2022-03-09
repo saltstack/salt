@@ -286,10 +286,8 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         self.assertEqual(
             ret[next(iter(ret))]["comment"],
-            (
-                "Repository {} is up-to-date, but with uncommitted changes. "
-                "Set 'force_reset' to True to purge uncommitted changes.".format(target)
-            ),
+            "Repository {} is up-to-date, but with uncommitted changes. "
+            "Set 'force_reset' to True to purge uncommitted changes.".format(target),
         )
 
         # Now run the state with force_reset=True
@@ -424,7 +422,11 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
         # Run the state to clone the repo we just created
-        ret = self.run_state("git.latest", name=name, target=target,)
+        ret = self.run_state(
+            "git.latest",
+            name=name,
+            target=target,
+        )
         self.assertSaltTrueReturn(ret)
 
         # Add another commit
@@ -439,7 +441,11 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
 
         # Run the state again. It should pass, if it doesn't then there was
         # a problem checking whether or not the change is a fast-forward.
-        ret = self.run_state("git.latest", name=name, target=target,)
+        ret = self.run_state(
+            "git.latest",
+            name=name,
+            target=target,
+        )
         self.assertSaltTrueReturn(ret)
 
     @with_tempdir(create=False)
@@ -576,10 +582,8 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         assert ret["result"] is None
         assert ret["changes"] == {"new": "{} => {}".format(TEST_REPO, target)}
-        assert ret["comment"] == (
-            "{} would be cloned to {} with branch '{}'".format(
-                TEST_REPO, target, old_branch
-            )
+        assert ret["comment"] == "{} would be cloned to {} with branch '{}'".format(
+            TEST_REPO, target, old_branch
         )
 
         # Now actually run the state
@@ -589,8 +593,8 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         assert ret["result"] is True
         assert ret["changes"] == {"new": "{} => {}".format(TEST_REPO, target)}
-        assert ret["comment"] == (
-            "{} cloned to {} with branch '{}'".format(TEST_REPO, target, old_branch)
+        assert ret["comment"] == "{} cloned to {} with branch '{}'".format(
+            TEST_REPO, target, old_branch
         )
 
         # Run the state again to test idempotence
@@ -600,9 +604,10 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         assert ret["result"] is True
         assert not ret["changes"]
-        assert ret["comment"] == (
-            "Repository already exists at {} "
-            "and is checked out to branch '{}'".format(target, old_branch)
+        assert ret[
+            "comment"
+        ] == "Repository already exists at {} and is checked out to branch '{}'".format(
+            target, old_branch
         )
 
         # Run the state again to test idempotence (test mode)
@@ -612,9 +617,10 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         assert ret["result"] is True
         assert not ret["changes"]
-        assert ret["comment"] == (
-            "Repository already exists at {} "
-            "and is checked out to branch '{}'".format(target, old_branch)
+        assert ret[
+            "comment"
+        ] == "Repository already exists at {} and is checked out to branch '{}'".format(
+            target, old_branch
         )
 
         # Change branch (test mode)
@@ -673,10 +679,8 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
         assert ret["result"] is None
         assert ret["changes"]
-        assert ret["comment"] == (
-            "{} would be cloned to {} with branch '{}'".format(
-                TEST_REPO, target, branch
-            )
+        assert ret["comment"] == "{} would be cloned to {} with branch '{}'".format(
+            TEST_REPO, target, branch
         )
 
         # Now actually run the state
@@ -943,7 +947,10 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
         # Run git.latest state. This should successfully clone and fail with a
         # specific error in the comment field.
         ret = self.run_state(
-            "git.latest", name=self.repo, target=self.target, rev="develop",
+            "git.latest",
+            name=self.repo,
+            target=self.target,
+            rev="develop",
         )
         self.assertSaltFalseReturn(ret)
         self.assertEqual(
@@ -965,7 +972,10 @@ class LocalRepoGitTest(ModuleCase, SaltReturnAssertsMixin):
         # Run git.latest state again. This should fail again, with a different
         # error in the comment field, and should not change anything.
         ret = self.run_state(
-            "git.latest", name=self.repo, target=self.target, rev="develop",
+            "git.latest",
+            name=self.repo,
+            target=self.target,
+            rev="develop",
         )
         self.assertSaltFalseReturn(ret)
         self.assertEqual(

@@ -86,9 +86,7 @@ The following code will check for a single event:
 
     opts = salt.config.client_config("/etc/salt/master")
 
-    event = salt.utils.event.get_event(
-        "master", sock_dir=opts["sock_dir"], transport=opts["transport"], opts=opts
-    )
+    event = salt.utils.event.get_event("master", sock_dir=opts["sock_dir"], opts=opts)
 
     data = event.get_event()
 
@@ -137,9 +135,7 @@ using the fnmatch library.
 
     opts = salt.config.client_config("/etc/salt/master")
 
-    sevent = salt.utils.event.get_event(
-        "master", sock_dir=opts["sock_dir"], transport=opts["transport"], opts=opts
-    )
+    sevent = salt.utils.event.get_event("master", sock_dir=opts["sock_dir"], opts=opts)
 
     while True:
         ret = sevent.get_event(full=True)
@@ -232,7 +228,7 @@ easily done using the normal cross-calling syntax:
         # do something!
         __salt__["event.send"](
             "myco/my_custom_module/finished",
-            {"finished": True, "message": "The something is finished!",},
+            {"finished": True, "message": "The something is finished!"},
         )
 
 From Custom Python Scripts

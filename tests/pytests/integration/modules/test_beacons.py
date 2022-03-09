@@ -250,7 +250,10 @@ def test_enable(salt_call_cli, disabled_beacon):
 
 @pytest.mark.skipif(
     PRE_PYTEST_SKIP_OR_NOT,
-    reason="Skip until https://github.com/saltstack/salt/issues/31516 problems are resolved.",
+    reason=(
+        "Skip until https://github.com/saltstack/salt/issues/31516 problems are"
+        " resolved."
+    ),
 )
 def test_enabled_beacons(salt_call_cli, beacon):
     """

@@ -85,21 +85,18 @@ def __virtual__():
         if LooseVersion(pylxd_version()) < LooseVersion(_pylxd_minimal_version):
             return (
                 False,
-                (
-                    "The lxd execution module cannot be loaded:"
-                    ' pylxd "{}" is not supported,'
-                    ' you need at least pylxd "{}"'
-                ).format(pylxd_version(), _pylxd_minimal_version),
+                'The lxd execution module cannot be loaded: pylxd "{}" is '
+                'not supported, you need at least pylxd "{}"'.format(
+                    pylxd_version(), _pylxd_minimal_version
+                ),
             )
 
         return __virtualname__
 
     return (
         False,
-        (
-            "The lxd execution module cannot be loaded: "
-            "the pylxd python module is not available."
-        ),
+        "The lxd execution module cannot be loaded: "
+        "the pylxd python module is not available.",
     )
 
 
@@ -184,7 +181,7 @@ def init(
         salt '*' lxd.init
     """
 
-    cmd = ("lxd init --auto" ' --storage-backend="{}"').format(storage_backend)
+    cmd = 'lxd init --auto --storage-backend="{}"'.format(storage_backend)
 
     if trust_password is not None:
         cmd = cmd + ' --trust-password="{}"'.format(trust_password)
@@ -212,7 +209,9 @@ def init(
         )
 
     if "error:" in output:
-        raise CommandExecutionError(output[output.index("error:") + 7 :],)
+        raise CommandExecutionError(
+            output[output.index("error:") + 7 :],
+        )
 
     return output
 
@@ -239,11 +238,16 @@ def config_set(key, value):
         salt '*' lxd.config_set core.trust_password blah
 
     """
-    cmd = 'lxc config set "{}" "{}"'.format(key, value,)
+    cmd = 'lxc config set "{}" "{}"'.format(
+        key,
+        value,
+    )
 
     output = __salt__["cmd.run"](cmd)
     if "error:" in output:
-        raise CommandExecutionError(output[output.index("error:") + 7 :],)
+        raise CommandExecutionError(
+            output[output.index("error:") + 7 :],
+        )
 
     return ('Config value "{}" successfully set.'.format(key),)
 
@@ -268,7 +272,9 @@ def config_get(key):
 
     output = __salt__["cmd.run"](cmd)
     if "error:" in output:
-        raise CommandExecutionError(output[output.index("error:") + 7 :],)
+        raise CommandExecutionError(
+            output[output.index("error:") + 7 :],
+        )
 
     return output
 
@@ -311,7 +317,14 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
 
     """
 
-    pool_key = "|".join((str(remote_addr), str(cert), str(key), str(verify_cert),))
+    pool_key = "|".join(
+        (
+            str(remote_addr),
+            str(cert),
+            str(key),
+            str(verify_cert),
+        )
+    )
 
     if pool_key in _connection_pool:
         log.debug('Returning the client "%s" from our connection pool', remote_addr)
@@ -335,18 +348,14 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
 
                 if not os.path.isfile(cert):
                     raise SaltInvocationError(
-                        (
-                            'You have given an invalid cert path: "{}", '
-                            "the file does not exists or is not a file."
-                        ).format(cert)
+                        'You have given an invalid cert path: "{}", the '
+                        "file does not exist or is not a file.".format(cert)
                     )
 
                 if not os.path.isfile(key):
                     raise SaltInvocationError(
-                        (
-                            'You have given an invalid key path: "{}", '
-                            "the file does not exists or is not a file."
-                        ).format(key)
+                        'You have given an invalid key path: "{}", the '
+                        "file does not exists or is not a file.".format(key)
                     )
 
                 log.debug(
@@ -358,7 +367,12 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
                     verify_cert,
                 )
                 client = pylxd.Client(
-                    endpoint=remote_addr, cert=(cert, key,), verify=verify_cert
+                    endpoint=remote_addr,
+                    cert=(
+                        cert,
+                        key,
+                    ),
+                    verify=verify_cert,
                 )
     except pylxd.exceptions.ClientConnectionFailed:
         raise CommandExecutionError("Failed to connect to '{}'".format(remote_addr))
@@ -366,10 +380,8 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
     except TypeError as e:
         # Happens when the verification failed.
         raise CommandExecutionError(
-            (
-                'Failed to connect to "{}",'
-                " looks like the SSL verification failed, error was: {}"
-            ).format(remote_addr, str(e))
+            'Failed to connect to "{}", looks like the SSL verification '
+            "failed, error was: {}".format(remote_addr, str(e))
         )
 
     _connection_pool[pool_key] = client
@@ -378,7 +390,7 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
 
 
 def pylxd_save_object(obj):
-    """ Saves an object (profile/image/container) and
+    """Saves an object (profile/image/container) and
         translate its execpetion on failure
 
     obj :
@@ -687,38 +699,38 @@ def container_create(
 def container_get(
     name=None, remote_addr=None, cert=None, key=None, verify_cert=True, _raw=False
 ):
-    """ Gets a container from the LXD
+    """Gets a container from the LXD
 
-        name :
-            The name of the container to get.
+    name :
+        The name of the container to get.
 
-        remote_addr :
-            An URL to a remote Server, you also have to give cert and key if
-            you provide remote_addr and its a TCP Address!
+    remote_addr :
+        An URL to a remote Server, you also have to give cert and key if
+        you provide remote_addr and its a TCP Address!
 
-            Examples:
-                https://myserver.lan:8443
-                /var/lib/mysocket.sock
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
 
-        cert :
-            PEM Formatted SSL Certificate.
+    cert :
+        PEM Formatted SSL Certificate.
 
-            Examples:
-                ~/.config/lxc/client.crt
+        Examples:
+            ~/.config/lxc/client.crt
 
-        key :
-            PEM Formatted SSL Key.
+    key :
+        PEM Formatted SSL Key.
 
-            Examples:
-                ~/.config/lxc/client.key
+        Examples:
+            ~/.config/lxc/client.key
 
-        verify_cert : True
-            Wherever to verify the cert, this is by default True
-            but in the most cases you want to set it off as LXD
-            normally uses self-signed certificates.
+    verify_cert : True
+        Wherever to verify the cert, this is by default True
+        but in the most cases you want to set it off as LXD
+        normally uses self-signed certificates.
 
-        _raw :
-            Return the pylxd object, this is internal and by states in use.
+    _raw :
+        Return the pylxd object, this is internal and by states in use.
     """
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
 
@@ -1092,57 +1104,57 @@ def container_migrate(
     src_key=None,
     src_verify_cert=None,
 ):
-    """ Migrate a container.
+    """Migrate a container.
 
-        If the container is running, it either must be shut down
-        first (use stop_and_start=True) or criu must be installed
-        on the source and destination machines.
+    If the container is running, it either must be shut down
+    first (use stop_and_start=True) or criu must be installed
+    on the source and destination machines.
 
-        For this operation both certs need to be authenticated,
-        use :mod:`lxd.authenticate <salt.modules.lxd.authenticate`
-        to authenticate your cert(s).
+    For this operation both certs need to be authenticated,
+    use :mod:`lxd.authenticate <salt.modules.lxd.authenticate`
+    to authenticate your cert(s).
 
-        name :
-            Name of the container to migrate
+    name :
+        Name of the container to migrate
 
-        stop_and_start :
-            Stop the container on the source and start it on dest
+    stop_and_start :
+        Stop the container on the source and start it on dest
 
-        remote_addr :
-            An URL to a remote Server, you also have to give cert and key if
-            you provide remote_addr and its a TCP Address!
+    remote_addr :
+        An URL to a remote Server, you also have to give cert and key if
+        you provide remote_addr and its a TCP Address!
 
-            Examples:
-                https://myserver.lan:8443
-                /var/lib/mysocket.sock
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
 
-        cert :
-            PEM Formatted SSL Certificate.
+    cert :
+        PEM Formatted SSL Certificate.
 
-            Examples:
-                ~/.config/lxc/client.crt
+        Examples:
+            ~/.config/lxc/client.crt
 
-        key :
-            PEM Formatted SSL Key.
+    key :
+        PEM Formatted SSL Key.
 
-            Examples:
-                ~/.config/lxc/client.key
+        Examples:
+            ~/.config/lxc/client.key
 
-        verify_cert : True
-            Wherever to verify the cert, this is by default True
-            but in the most cases you want to set it off as LXD
-            normally uses self-signed certificates.
+    verify_cert : True
+        Wherever to verify the cert, this is by default True
+        but in the most cases you want to set it off as LXD
+        normally uses self-signed certificates.
 
-        CLI Example:
+    CLI Example:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            # Authorize
-            salt '*' lxd.authenticate https://srv01:8443 <yourpass> ~/.config/lxc/client.crt ~/.config/lxc/client.key false
-            salt '*' lxd.authenticate https://srv02:8443 <yourpass> ~/.config/lxc/client.crt ~/.config/lxc/client.key false
+        # Authorize
+        salt '*' lxd.authenticate https://srv01:8443 <yourpass> ~/.config/lxc/client.crt ~/.config/lxc/client.key false
+        salt '*' lxd.authenticate https://srv02:8443 <yourpass> ~/.config/lxc/client.crt ~/.config/lxc/client.key false
 
-            # Migrate phpmyadmin from srv01 to srv02
-            salt '*' lxd.container_migrate phpmyadmin stop_and_start=true remote_addr=https://srv02:8443 cert=~/.config/lxc/client.crt key=~/.config/lxc/client.key verify_cert=False src_remote_addr=https://srv01:8443
+        # Migrate phpmyadmin from srv01 to srv02
+        salt '*' lxd.container_migrate phpmyadmin stop_and_start=true remote_addr=https://srv02:8443 cert=~/.config/lxc/client.crt key=~/.config/lxc/client.key verify_cert=False src_remote_addr=https://srv01:8443
     """
     if src_cert is None:
         src_cert = cert
@@ -1852,10 +1864,16 @@ def container_execute(
         result = container.execute(cmd)
         saltresult = {}
         if not hasattr(result, "exit_code"):
-            saltresult = dict(exit_code=0, stdout=result[0], stderr=result[1],)
+            saltresult = dict(
+                exit_code=0,
+                stdout=result[0],
+                stderr=result[1],
+            )
         else:
             saltresult = dict(
-                exit_code=result.exit_code, stdout=result.stdout, stderr=result.stderr,
+                exit_code=result.exit_code,
+                stdout=result.stdout,
+                stderr=result.stderr,
             )
     except pylxd.exceptions.NotFound as e:
         # TODO: Using exit_code 0 here is not always right,
@@ -1877,43 +1895,43 @@ def container_execute(
 def profile_list(
     list_names=False, remote_addr=None, cert=None, key=None, verify_cert=True
 ):
-    """ Lists all profiles from the LXD.
+    """Lists all profiles from the LXD.
 
-        list_names :
+    list_names :
 
-            Return a list of names instead of full blown dicts.
+        Return a list of names instead of full blown dicts.
 
-        remote_addr :
-            An URL to a remote Server, you also have to give cert and key if
-            you provide remote_addr and its a TCP Address!
+    remote_addr :
+        An URL to a remote Server, you also have to give cert and key if
+        you provide remote_addr and its a TCP Address!
 
-            Examples:
-                https://myserver.lan:8443
-                /var/lib/mysocket.sock
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
 
-        cert :
-            PEM Formatted SSL Certificate.
+    cert :
+        PEM Formatted SSL Certificate.
 
-            Examples:
-                ~/.config/lxc/client.crt
+        Examples:
+            ~/.config/lxc/client.crt
 
-        key :
-            PEM Formatted SSL Key.
+    key :
+        PEM Formatted SSL Key.
 
-            Examples:
-                ~/.config/lxc/client.key
+        Examples:
+            ~/.config/lxc/client.key
 
-        verify_cert : True
-            Wherever to verify the cert, this is by default True
-            but in the most cases you want to set it off as LXD
-            normally uses self-signed certificates.
+    verify_cert : True
+        Wherever to verify the cert, this is by default True
+        but in the most cases you want to set it off as LXD
+        normally uses self-signed certificates.
 
-        CLI Examples:
+    CLI Examples:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' lxd.profile_list true --out=json
-            salt '*' lxd.profile_list --out=json
+        salt '*' lxd.profile_list true --out=json
+        salt '*' lxd.profile_list --out=json
     """
 
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
@@ -1935,59 +1953,59 @@ def profile_create(
     key=None,
     verify_cert=True,
 ):
-    """ Creates a profile.
+    """Creates a profile.
 
-        name :
-            The name of the profile to get.
+    name :
+        The name of the profile to get.
 
-        config :
-            A config dict or None (None = unset).
+    config :
+        A config dict or None (None = unset).
 
-            Can also be a list:
-                [{'key': 'boot.autostart', 'value': 1},
-                 {'key': 'security.privileged', 'value': '1'}]
+        Can also be a list:
+            [{'key': 'boot.autostart', 'value': 1},
+             {'key': 'security.privileged', 'value': '1'}]
 
-        devices :
-            A device dict or None (None = unset).
+    devices :
+        A device dict or None (None = unset).
 
-        description :
-            A description string or None (None = unset).
+    description :
+        A description string or None (None = unset).
 
-        remote_addr :
-            An URL to a remote Server, you also have to give cert and key if
-            you provide remote_addr and its a TCP Address!
+    remote_addr :
+        An URL to a remote Server, you also have to give cert and key if
+        you provide remote_addr and its a TCP Address!
 
-            Examples:
-                https://myserver.lan:8443
-                /var/lib/mysocket.sock
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
 
-        cert :
-            PEM Formatted SSL Certificate.
+    cert :
+        PEM Formatted SSL Certificate.
 
-            Examples:
-                ~/.config/lxc/client.crt
+        Examples:
+            ~/.config/lxc/client.crt
 
-        key :
-            PEM Formatted SSL Key.
+    key :
+        PEM Formatted SSL Key.
 
-            Examples:
-                ~/.config/lxc/client.key
+        Examples:
+            ~/.config/lxc/client.key
 
-        verify_cert : True
-            Wherever to verify the cert, this is by default True
-            but in the most cases you want to set it off as LXD
-            normally uses self-signed certificates.
+    verify_cert : True
+        Wherever to verify the cert, this is by default True
+        but in the most cases you want to set it off as LXD
+        normally uses self-signed certificates.
 
-        CLI Examples:
+    CLI Examples:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' lxd.profile_create autostart config="{boot.autostart: 1, boot.autostart.delay: 2, boot.autostart.priority: 1}"
-            salt '*' lxd.profile_create shared_mounts devices="{shared_mount: {type: 'disk', source: '/home/shared', path: '/home/shared'}}"
+        salt '*' lxd.profile_create autostart config="{boot.autostart: 1, boot.autostart.delay: 2, boot.autostart.priority: 1}"
+        salt '*' lxd.profile_create shared_mounts devices="{shared_mount: {type: 'disk', source: '/home/shared', path: '/home/shared'}}"
 
-        See the `lxd-docs`_ for the details about the config and devices dicts.
+    See the `lxd-docs`_ for the details about the config and devices dicts.
 
-        .. _lxd-docs: https://github.com/lxc/lxd/blob/master/doc/rest-api.md#post-10
+    .. _lxd-docs: https://github.com/lxc/lxd/blob/master/doc/rest-api.md#post-10
     """
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
 
@@ -2008,44 +2026,44 @@ def profile_create(
 def profile_get(
     name, remote_addr=None, cert=None, key=None, verify_cert=True, _raw=False
 ):
-    """ Gets a profile from the LXD
+    """Gets a profile from the LXD
 
-        name :
-            The name of the profile to get.
+    name :
+        The name of the profile to get.
 
-        remote_addr :
-            An URL to a remote Server, you also have to give cert and key if
-            you provide remote_addr and its a TCP Address!
+    remote_addr :
+        An URL to a remote Server, you also have to give cert and key if
+        you provide remote_addr and its a TCP Address!
 
-            Examples:
-                https://myserver.lan:8443
-                /var/lib/mysocket.sock
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
 
-        cert :
-            PEM Formatted SSL Certificate.
+    cert :
+        PEM Formatted SSL Certificate.
 
-            Examples:
-                ~/.config/lxc/client.crt
+        Examples:
+            ~/.config/lxc/client.crt
 
-        key :
-            PEM Formatted SSL Key.
+    key :
+        PEM Formatted SSL Key.
 
-            Examples:
-                ~/.config/lxc/client.key
+        Examples:
+            ~/.config/lxc/client.key
 
-        verify_cert : True
-            Wherever to verify the cert, this is by default True
-            but in the most cases you want to set it off as LXD
-            normally uses self-signed certificates.
+    verify_cert : True
+        Wherever to verify the cert, this is by default True
+        but in the most cases you want to set it off as LXD
+        normally uses self-signed certificates.
 
-        _raw :
-            Return the pylxd object, this is internal and by states in use.
+    _raw :
+        Return the pylxd object, this is internal and by states in use.
 
-        CLI Examples:
+    CLI Examples:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' lxd.profile_get autostart
+        salt '*' lxd.profile_get autostart
     """
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
 
@@ -2062,41 +2080,41 @@ def profile_get(
 
 
 def profile_delete(name, remote_addr=None, cert=None, key=None, verify_cert=True):
-    """ Deletes a profile.
+    """Deletes a profile.
 
-        name :
-            The name of the profile to delete.
+    name :
+        The name of the profile to delete.
 
-        remote_addr :
-            An URL to a remote Server, you also have to give cert and key if
-            you provide remote_addr and its a TCP Address!
+    remote_addr :
+        An URL to a remote Server, you also have to give cert and key if
+        you provide remote_addr and its a TCP Address!
 
-            Examples:
-                https://myserver.lan:8443
-                /var/lib/mysocket.sock
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
 
-        cert :
-            PEM Formatted SSL Certificate.
+    cert :
+        PEM Formatted SSL Certificate.
 
-            Examples:
-                ~/.config/lxc/client.crt
+        Examples:
+            ~/.config/lxc/client.crt
 
-        key :
-            PEM Formatted SSL Key.
+    key :
+        PEM Formatted SSL Key.
 
-            Examples:
-                ~/.config/lxc/client.key
+        Examples:
+            ~/.config/lxc/client.key
 
-        verify_cert : True
-            Wherever to verify the cert, this is by default True
-            but in the most cases you want to set it off as LXD
-            normally uses self-signed certificates.
+    verify_cert : True
+        Wherever to verify the cert, this is by default True
+        but in the most cases you want to set it off as LXD
+        normally uses self-signed certificates.
 
-        CLI Example:
+    CLI Example:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' lxd.profile_delete shared_mounts
+        salt '*' lxd.profile_delete shared_mounts
     """
     profile = profile_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -2107,44 +2125,44 @@ def profile_delete(name, remote_addr=None, cert=None, key=None, verify_cert=True
 def profile_config_get(
     name, config_key, remote_addr=None, cert=None, key=None, verify_cert=True
 ):
-    """ Get a profile config item.
+    """Get a profile config item.
 
-        name :
-            The name of the profile to get the config item from.
+    name :
+        The name of the profile to get the config item from.
 
-        config_key :
-            The key for the item to retrieve.
+    config_key :
+        The key for the item to retrieve.
 
-        remote_addr :
-            An URL to a remote Server, you also have to give cert and key if
-            you provide remote_addr and its a TCP Address!
+    remote_addr :
+        An URL to a remote Server, you also have to give cert and key if
+        you provide remote_addr and its a TCP Address!
 
-            Examples:
-                https://myserver.lan:8443
-                /var/lib/mysocket.sock
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
 
-        cert :
-            PEM Formatted SSL Certificate.
+    cert :
+        PEM Formatted SSL Certificate.
 
-            Examples:
-                ~/.config/lxc/client.crt
+        Examples:
+            ~/.config/lxc/client.crt
 
-        key :
-            PEM Formatted SSL Key.
+    key :
+        PEM Formatted SSL Key.
 
-            Examples:
-                ~/.config/lxc/client.key
+        Examples:
+            ~/.config/lxc/client.key
 
-        verify_cert : True
-            Wherever to verify the cert, this is by default True
-            but in the most cases you want to set it off as LXD
-            normally uses self-signed certificates.
+    verify_cert : True
+        Wherever to verify the cert, this is by default True
+        but in the most cases you want to set it off as LXD
+        normally uses self-signed certificates.
 
-        CLI Example:
+    CLI Example:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' lxd.profile_config_get autostart boot.autostart
+        salt '*' lxd.profile_config_get autostart boot.autostart
     """
     profile = profile_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -2160,47 +2178,47 @@ def profile_config_set(
     key=None,
     verify_cert=True,
 ):
-    """ Set a profile config item.
+    """Set a profile config item.
 
-        name :
-            The name of the profile to set the config item to.
+    name :
+        The name of the profile to set the config item to.
 
-        config_key :
-            The items key.
+    config_key :
+        The items key.
 
-        config_value :
-            Its items value.
+    config_value :
+        Its items value.
 
-        remote_addr :
-            An URL to a remote Server, you also have to give cert and key if
-            you provide remote_addr and its a TCP Address!
+    remote_addr :
+        An URL to a remote Server, you also have to give cert and key if
+        you provide remote_addr and its a TCP Address!
 
-            Examples:
-                https://myserver.lan:8443
-                /var/lib/mysocket.sock
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
 
-        cert :
-            PEM Formatted SSL Certificate.
+    cert :
+        PEM Formatted SSL Certificate.
 
-            Examples:
-                ~/.config/lxc/client.crt
+        Examples:
+            ~/.config/lxc/client.crt
 
-        key :
-            PEM Formatted SSL Key.
+    key :
+        PEM Formatted SSL Key.
 
-            Examples:
-                ~/.config/lxc/client.key
+        Examples:
+            ~/.config/lxc/client.key
 
-        verify_cert : True
-            Wherever to verify the cert, this is by default True
-            but in the most cases you want to set it off as LXD
-            normally uses self-signed certificates.
+    verify_cert : True
+        Wherever to verify the cert, this is by default True
+        but in the most cases you want to set it off as LXD
+        normally uses self-signed certificates.
 
-        CLI Example:
+    CLI Example:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' lxd.profile_config_set autostart boot.autostart 0
+        salt '*' lxd.profile_config_set autostart boot.autostart 0
     """
     profile = profile_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -2210,44 +2228,44 @@ def profile_config_set(
 def profile_config_delete(
     name, config_key, remote_addr=None, cert=None, key=None, verify_cert=True
 ):
-    """ Delete a profile config item.
+    """Delete a profile config item.
 
-        name :
-            The name of the profile to delete the config item.
+    name :
+        The name of the profile to delete the config item.
 
-        config_key :
-            The config key for the value to retrieve.
+    config_key :
+        The config key for the value to retrieve.
 
-        remote_addr :
-            An URL to a remote Server, you also have to give cert and key if
-            you provide remote_addr and its a TCP Address!
+    remote_addr :
+        An URL to a remote Server, you also have to give cert and key if
+        you provide remote_addr and its a TCP Address!
 
-            Examples:
-                https://myserver.lan:8443
-                /var/lib/mysocket.sock
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
 
-        cert :
-            PEM Formatted SSL Certificate.
+    cert :
+        PEM Formatted SSL Certificate.
 
-            Examples:
-                ~/.config/lxc/client.crt
+        Examples:
+            ~/.config/lxc/client.crt
 
-        key :
-            PEM Formatted SSL Key.
+    key :
+        PEM Formatted SSL Key.
 
-            Examples:
-                ~/.config/lxc/client.key
+        Examples:
+            ~/.config/lxc/client.key
 
-        verify_cert : True
-            Wherever to verify the cert, this is by default True
-            but in the most cases you want to set it off as LXD
-            normally uses self-signed certificates.
+    verify_cert : True
+        Wherever to verify the cert, this is by default True
+        but in the most cases you want to set it off as LXD
+        normally uses self-signed certificates.
 
-        CLI Example:
+    CLI Example:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' lxd.profile_config_delete autostart boot.autostart.delay
+        salt '*' lxd.profile_config_delete autostart boot.autostart.delay
     """
     profile = profile_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -2257,44 +2275,44 @@ def profile_config_delete(
 def profile_device_get(
     name, device_name, remote_addr=None, cert=None, key=None, verify_cert=True
 ):
-    """ Get a profile device.
+    """Get a profile device.
 
-        name :
-            The name of the profile to get the device from.
+    name :
+        The name of the profile to get the device from.
 
-        device_name :
-            The name of the device to retrieve.
+    device_name :
+        The name of the device to retrieve.
 
-        remote_addr :
-            An URL to a remote Server, you also have to give cert and key if
-            you provide remote_addr and its a TCP Address!
+    remote_addr :
+        An URL to a remote Server, you also have to give cert and key if
+        you provide remote_addr and its a TCP Address!
 
-            Examples:
-                https://myserver.lan:8443
-                /var/lib/mysocket.sock
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
 
-        cert :
-            PEM Formatted SSL Certificate.
+    cert :
+        PEM Formatted SSL Certificate.
 
-            Examples:
-                ~/.config/lxc/client.crt
+        Examples:
+            ~/.config/lxc/client.crt
 
-        key :
-            PEM Formatted SSL Key.
+    key :
+        PEM Formatted SSL Key.
 
-            Examples:
-                ~/.config/lxc/client.key
+        Examples:
+            ~/.config/lxc/client.key
 
-        verify_cert : True
-            Wherever to verify the cert, this is by default True
-            but in the most cases you want to set it off as LXD
-            normally uses self-signed certificates.
+    verify_cert : True
+        Wherever to verify the cert, this is by default True
+        but in the most cases you want to set it off as LXD
+        normally uses self-signed certificates.
 
-        CLI Example:
+    CLI Example:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' lxd.profile_device_get default eth0
+        salt '*' lxd.profile_device_get default eth0
     """
     profile = profile_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -2311,44 +2329,44 @@ def profile_device_set(
     verify_cert=True,
     **kwargs
 ):
-    """ Set a profile device.
+    """Set a profile device.
 
-        name :
-            The name of the profile to set the device to.
+    name :
+        The name of the profile to set the device to.
 
-        device_name :
-            The name of the device to set.
+    device_name :
+        The name of the device to set.
 
-        remote_addr :
-            An URL to a remote Server, you also have to give cert and key if
-            you provide remote_addr and its a TCP Address!
+    remote_addr :
+        An URL to a remote Server, you also have to give cert and key if
+        you provide remote_addr and its a TCP Address!
 
-            Examples:
-                https://myserver.lan:8443
-                /var/lib/mysocket.sock
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
 
-        cert :
-            PEM Formatted SSL Certificate.
+    cert :
+        PEM Formatted SSL Certificate.
 
-            Examples:
-                ~/.config/lxc/client.crt
+        Examples:
+            ~/.config/lxc/client.crt
 
-        key :
-            PEM Formatted SSL Key.
+    key :
+        PEM Formatted SSL Key.
 
-            Examples:
-                ~/.config/lxc/client.key
+        Examples:
+            ~/.config/lxc/client.key
 
-        verify_cert : True
-            Wherever to verify the cert, this is by default True
-            but in the most cases you want to set it off as LXD
-            normally uses self-signed certificates.
+    verify_cert : True
+        Wherever to verify the cert, this is by default True
+        but in the most cases you want to set it off as LXD
+        normally uses self-signed certificates.
 
-        CLI Example:
+    CLI Example:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' lxd.profile_device_set autostart eth1 nic nictype=bridged parent=lxdbr0
+        salt '*' lxd.profile_device_set autostart eth1 nic nictype=bridged parent=lxdbr0
     """
     profile = profile_get(name, remote_addr, cert, key, verify_cert, _raw=True)
 
@@ -2363,44 +2381,44 @@ def profile_device_set(
 def profile_device_delete(
     name, device_name, remote_addr=None, cert=None, key=None, verify_cert=True
 ):
-    """ Delete a profile device.
+    """Delete a profile device.
 
-        name :
-            The name of the profile to delete the device.
+    name :
+        The name of the profile to delete the device.
 
-        device_name :
-            The name of the device to delete.
+    device_name :
+        The name of the device to delete.
 
-        remote_addr :
-            An URL to a remote Server, you also have to give cert and key if
-            you provide remote_addr and its a TCP Address!
+    remote_addr :
+        An URL to a remote Server, you also have to give cert and key if
+        you provide remote_addr and its a TCP Address!
 
-            Examples:
-                https://myserver.lan:8443
-                /var/lib/mysocket.sock
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
 
-        cert :
-            PEM Formatted SSL Certificate.
+    cert :
+        PEM Formatted SSL Certificate.
 
-            Examples:
-                ~/.config/lxc/client.crt
+        Examples:
+            ~/.config/lxc/client.crt
 
-        key :
-            PEM Formatted SSL Key.
+    key :
+        PEM Formatted SSL Key.
 
-            Examples:
-                ~/.config/lxc/client.key
+        Examples:
+            ~/.config/lxc/client.key
 
-        verify_cert : True
-            Wherever to verify the cert, this is by default True
-            but in the most cases you want to set it off as LXD
-            normally uses self-signed certificates.
+    verify_cert : True
+        Wherever to verify the cert, this is by default True
+        but in the most cases you want to set it off as LXD
+        normally uses self-signed certificates.
 
-        CLI Example:
+    CLI Example:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' lxd.profile_device_delete autostart eth1
+        salt '*' lxd.profile_device_delete autostart eth1
 
     """
     profile = profile_get(name, remote_addr, cert, key, verify_cert, _raw=True)
@@ -2414,44 +2432,44 @@ def profile_device_delete(
 def image_list(
     list_aliases=False, remote_addr=None, cert=None, key=None, verify_cert=True
 ):
-    """ Lists all images from the LXD.
+    """Lists all images from the LXD.
 
-        list_aliases :
+    list_aliases :
 
-            Return a dict with the fingerprint as key and
-            a list of aliases as value instead.
+        Return a dict with the fingerprint as key and
+        a list of aliases as value instead.
 
-        remote_addr :
-            An URL to a remote Server, you also have to give cert and key if
-            you provide remote_addr and its a TCP Address!
+    remote_addr :
+        An URL to a remote Server, you also have to give cert and key if
+        you provide remote_addr and its a TCP Address!
 
-            Examples:
-                https://myserver.lan:8443
-                /var/lib/mysocket.sock
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
 
-        cert :
-            PEM Formatted SSL Certificate.
+    cert :
+        PEM Formatted SSL Certificate.
 
-            Examples:
-                ~/.config/lxc/client.crt
+        Examples:
+            ~/.config/lxc/client.crt
 
-        key :
-            PEM Formatted SSL Key.
+    key :
+        PEM Formatted SSL Key.
 
-            Examples:
-                ~/.config/lxc/client.key
+        Examples:
+            ~/.config/lxc/client.key
 
-        verify_cert : True
-            Wherever to verify the cert, this is by default True
-            but in the most cases you want to set it off as LXD
-            normally uses self-signed certificates.
+    verify_cert : True
+        Wherever to verify the cert, this is by default True
+        but in the most cases you want to set it off as LXD
+        normally uses self-signed certificates.
 
-        CLI Examples:
+    CLI Examples:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' lxd.image_list true --out=json
-            salt '*' lxd.image_list --out=json
+        salt '*' lxd.image_list true --out=json
+        salt '*' lxd.image_list --out=json
     """
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
 
@@ -2465,44 +2483,44 @@ def image_list(
 def image_get(
     fingerprint, remote_addr=None, cert=None, key=None, verify_cert=True, _raw=False
 ):
-    """ Get an image by its fingerprint
+    """Get an image by its fingerprint
 
-        fingerprint :
-            The fingerprint of the image to retrieve
+    fingerprint :
+        The fingerprint of the image to retrieve
 
-        remote_addr :
-            An URL to a remote Server, you also have to give cert and key if
-            you provide remote_addr and its a TCP Address!
+    remote_addr :
+        An URL to a remote Server, you also have to give cert and key if
+        you provide remote_addr and its a TCP Address!
 
-            Examples:
-                https://myserver.lan:8443
-                /var/lib/mysocket.sock
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
 
-        cert :
-            PEM Formatted SSL Certificate.
+    cert :
+        PEM Formatted SSL Certificate.
 
-            Examples:
-                ~/.config/lxc/client.crt
+        Examples:
+            ~/.config/lxc/client.crt
 
-        key :
-            PEM Formatted SSL Key.
+    key :
+        PEM Formatted SSL Key.
 
-            Examples:
-                ~/.config/lxc/client.key
+        Examples:
+            ~/.config/lxc/client.key
 
-        verify_cert : True
-            Wherever to verify the cert, this is by default True
-            but in the most cases you want to set it off as LXD
-            normally uses self-signed certificates.
+    verify_cert : True
+        Wherever to verify the cert, this is by default True
+        but in the most cases you want to set it off as LXD
+        normally uses self-signed certificates.
 
-        _raw : False
-            Return the raw pylxd object or a dict of it?
+    _raw : False
+        Return the raw pylxd object or a dict of it?
 
-        CLI Examples:
+    CLI Examples:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' lxd.image_get <fingerprint>
+        salt '*' lxd.image_get <fingerprint>
     """
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
 
@@ -2523,44 +2541,44 @@ def image_get(
 def image_get_by_alias(
     alias, remote_addr=None, cert=None, key=None, verify_cert=True, _raw=False
 ):
-    """ Get an image by an alias
+    """Get an image by an alias
 
-        alias :
-            The alias of the image to retrieve
+    alias :
+        The alias of the image to retrieve
 
-        remote_addr :
-            An URL to a remote Server, you also have to give cert and key if
-            you provide remote_addr and its a TCP Address!
+    remote_addr :
+        An URL to a remote Server, you also have to give cert and key if
+        you provide remote_addr and its a TCP Address!
 
-            Examples:
-                https://myserver.lan:8443
-                /var/lib/mysocket.sock
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
 
-        cert :
-            PEM Formatted SSL Certificate.
+    cert :
+        PEM Formatted SSL Certificate.
 
-            Examples:
-                ~/.config/lxc/client.crt
+        Examples:
+            ~/.config/lxc/client.crt
 
-        key :
-            PEM Formatted SSL Key.
+    key :
+        PEM Formatted SSL Key.
 
-            Examples:
-                ~/.config/lxc/client.key
+        Examples:
+            ~/.config/lxc/client.key
 
-        verify_cert : True
-            Wherever to verify the cert, this is by default True
-            but in the most cases you want to set it off as LXD
-            normally uses self-signed certificates.
+    verify_cert : True
+        Wherever to verify the cert, this is by default True
+        but in the most cases you want to set it off as LXD
+        normally uses self-signed certificates.
 
-        _raw : False
-            Return the raw pylxd object or a dict of it?
+    _raw : False
+        Return the raw pylxd object or a dict of it?
 
-        CLI Examples:
+    CLI Examples:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' lxd.image_get_by_alias xenial/amd64
+        salt '*' lxd.image_get_by_alias xenial/amd64
     """
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
 
@@ -2577,42 +2595,42 @@ def image_get_by_alias(
 
 
 def image_delete(image, remote_addr=None, cert=None, key=None, verify_cert=True):
-    """ Delete an image by an alias or fingerprint
+    """Delete an image by an alias or fingerprint
 
-        name :
-            The alias or fingerprint of the image to delete,
-            can be a obj for the states.
+    name :
+        The alias or fingerprint of the image to delete,
+        can be a obj for the states.
 
-        remote_addr :
-            An URL to a remote Server, you also have to give cert and key if
-            you provide remote_addr and its a TCP Address!
+    remote_addr :
+        An URL to a remote Server, you also have to give cert and key if
+        you provide remote_addr and its a TCP Address!
 
-            Examples:
-                https://myserver.lan:8443
-                /var/lib/mysocket.sock
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
 
-        cert :
-            PEM Formatted SSL Certificate.
+    cert :
+        PEM Formatted SSL Certificate.
 
-            Examples:
-                ~/.config/lxc/client.crt
+        Examples:
+            ~/.config/lxc/client.crt
 
-        key :
-            PEM Formatted SSL Key.
+    key :
+        PEM Formatted SSL Key.
 
-            Examples:
-                ~/.config/lxc/client.key
+        Examples:
+            ~/.config/lxc/client.key
 
-        verify_cert : True
-            Wherever to verify the cert, this is by default True
-            but in the most cases you want to set it off as LXD
-            normally uses self-signed certificates.
+    verify_cert : True
+        Wherever to verify the cert, this is by default True
+        but in the most cases you want to set it off as LXD
+        normally uses self-signed certificates.
 
-        CLI Examples:
+    CLI Examples:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' lxd.image_delete xenial/amd64
+        salt '*' lxd.image_delete xenial/amd64
     """
 
     image = _verify_image(image, remote_addr, cert, key, verify_cert)
@@ -2633,56 +2651,56 @@ def image_from_simplestreams(
     auto_update=False,
     _raw=False,
 ):
-    """ Create an image from simplestreams
+    """Create an image from simplestreams
 
-        server :
-            Simplestreams server URI
+    server :
+        Simplestreams server URI
 
-        alias :
-            The alias of the image to retrieve
+    alias :
+        The alias of the image to retrieve
 
-        remote_addr :
-            An URL to a remote Server, you also have to give cert and key if
-            you provide remote_addr and its a TCP Address!
+    remote_addr :
+        An URL to a remote Server, you also have to give cert and key if
+        you provide remote_addr and its a TCP Address!
 
-            Examples:
-                https://myserver.lan:8443
-                /var/lib/mysocket.sock
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
 
-        cert :
-            PEM Formatted SSL Certificate.
+    cert :
+        PEM Formatted SSL Certificate.
 
-            Examples:
-                ~/.config/lxc/client.crt
+        Examples:
+            ~/.config/lxc/client.crt
 
-        key :
-            PEM Formatted SSL Key.
+    key :
+        PEM Formatted SSL Key.
 
-            Examples:
-                ~/.config/lxc/client.key
+        Examples:
+            ~/.config/lxc/client.key
 
-        verify_cert : True
-            Wherever to verify the cert, this is by default True
-            but in the most cases you want to set it off as LXD
-            normally uses self-signed certificates.
+    verify_cert : True
+        Wherever to verify the cert, this is by default True
+        but in the most cases you want to set it off as LXD
+        normally uses self-signed certificates.
 
-        aliases : []
-            List of aliases to append to the copied image
+    aliases : []
+        List of aliases to append to the copied image
 
-        public : False
-            Make this image public available
+    public : False
+        Make this image public available
 
-        auto_update : False
-            Should LXD auto update that image?
+    auto_update : False
+        Should LXD auto update that image?
 
-        _raw : False
-            Return the raw pylxd object or a dict of the image?
+    _raw : False
+        Return the raw pylxd object or a dict of the image?
 
-        CLI Examples:
+    CLI Examples:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' lxd.image_from_simplestreams "https://cloud-images.ubuntu.com/releases" "trusty/amd64" aliases='["t", "trusty/amd64"]' auto_update=True
+        salt '*' lxd.image_from_simplestreams "https://cloud-images.ubuntu.com/releases" "trusty/amd64" aliases='["t", "trusty/amd64"]' auto_update=True
     """
     if aliases is None:
         aliases = []
@@ -2717,53 +2735,53 @@ def image_from_url(
     auto_update=False,
     _raw=False,
 ):
-    """ Create an image from an url
+    """Create an image from an url
 
-        url :
-            The URL from where to download the image
+    url :
+        The URL from where to download the image
 
-        remote_addr :
-            An URL to a remote Server, you also have to give cert and key if
-            you provide remote_addr and its a TCP Address!
+    remote_addr :
+        An URL to a remote Server, you also have to give cert and key if
+        you provide remote_addr and its a TCP Address!
 
-            Examples:
-                https://myserver.lan:8443
-                /var/lib/mysocket.sock
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
 
-        cert :
-            PEM Formatted SSL Certificate.
+    cert :
+        PEM Formatted SSL Certificate.
 
-            Examples:
-                ~/.config/lxc/client.crt
+        Examples:
+            ~/.config/lxc/client.crt
 
-        key :
-            PEM Formatted SSL Key.
+    key :
+        PEM Formatted SSL Key.
 
-            Examples:
-                ~/.config/lxc/client.key
+        Examples:
+            ~/.config/lxc/client.key
 
-        verify_cert : True
-            Wherever to verify the cert, this is by default True
-            but in the most cases you want to set it off as LXD
-            normally uses self-signed certificates.
+    verify_cert : True
+        Wherever to verify the cert, this is by default True
+        but in the most cases you want to set it off as LXD
+        normally uses self-signed certificates.
 
-        aliases : []
-            List of aliases to append to the copied image
+    aliases : []
+        List of aliases to append to the copied image
 
-        public : False
-            Make this image public available
+    public : False
+        Make this image public available
 
-        auto_update : False
-            Should LXD auto update that image?
+    auto_update : False
+        Should LXD auto update that image?
 
-        _raw : False
-            Return the raw pylxd object or a dict of the image?
+    _raw : False
+        Return the raw pylxd object or a dict of the image?
 
-        CLI Examples:
+    CLI Examples:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' lxd.image_from_url https://dl.stgraber.org/lxd aliases='["busybox-amd64"]'
+        salt '*' lxd.image_from_url https://dl.stgraber.org/lxd aliases='["busybox-amd64"]'
     """
     if aliases is None:
         aliases = []
@@ -2798,53 +2816,53 @@ def image_from_file(
     saltenv="base",
     _raw=False,
 ):
-    """ Create an image from a file
+    """Create an image from a file
 
-        filename :
-            The filename of the rootfs
+    filename :
+        The filename of the rootfs
 
-        remote_addr :
-            An URL to a remote Server, you also have to give cert and key if
-            you provide remote_addr and its a TCP Address!
+    remote_addr :
+        An URL to a remote Server, you also have to give cert and key if
+        you provide remote_addr and its a TCP Address!
 
-            Examples:
-                https://myserver.lan:8443
-                /var/lib/mysocket.sock
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
 
-        cert :
-            PEM Formatted SSL Certificate.
+    cert :
+        PEM Formatted SSL Certificate.
 
-            Examples:
-                ~/.config/lxc/client.crt
+        Examples:
+            ~/.config/lxc/client.crt
 
-        key :
-            PEM Formatted SSL Key.
+    key :
+        PEM Formatted SSL Key.
 
-            Examples:
-                ~/.config/lxc/client.key
+        Examples:
+            ~/.config/lxc/client.key
 
-        verify_cert : True
-            Wherever to verify the cert, this is by default True
-            but in the most cases you want to set it off as LXD
-            normally uses self-signed certificates.
+    verify_cert : True
+        Wherever to verify the cert, this is by default True
+        but in the most cases you want to set it off as LXD
+        normally uses self-signed certificates.
 
-        aliases : []
-            List of aliases to append to the copied image
+    aliases : []
+        List of aliases to append to the copied image
 
-        public : False
-            Make this image public available
+    public : False
+        Make this image public available
 
-        saltenv : base
-            The saltenv to use for salt:// copies
+    saltenv : base
+        The saltenv to use for salt:// copies
 
-        _raw : False
-            Return the raw pylxd object or a dict of the image?
+    _raw : False
+        Return the raw pylxd object or a dict of the image?
 
-        CLI Examples:
+    CLI Examples:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' lxd.image_from_file salt://lxd/files/busybox.tar.xz aliases=["busybox-amd64"]
+        salt '*' lxd.image_from_file salt://lxd/files/busybox.tar.xz aliases=["busybox-amd64"]
     """
     if aliases is None:
         aliases = []
@@ -2886,7 +2904,7 @@ def image_copy_lxd(
     auto_update=None,
     _raw=False,
 ):
-    """ Copy an image from another LXD instance
+    """Copy an image from another LXD instance
 
     source :
         An alias or a fingerprint of the source.
@@ -3004,47 +3022,47 @@ def image_alias_add(
     key=None,
     verify_cert=True,
 ):
-    """ Create an alias on the given image
+    """Create an alias on the given image
 
-        image :
-            An image alias, a fingerprint or a image object
+    image :
+        An image alias, a fingerprint or a image object
 
-        alias :
-            The alias to add
+    alias :
+        The alias to add
 
-        description :
-            Description of the alias
+    description :
+        Description of the alias
 
-        remote_addr :
-            An URL to a remote Server, you also have to give cert and key if
-            you provide remote_addr and its a TCP Address!
+    remote_addr :
+        An URL to a remote Server, you also have to give cert and key if
+        you provide remote_addr and its a TCP Address!
 
-            Examples:
-                https://myserver.lan:8443
-                /var/lib/mysocket.sock
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
 
-        cert :
-            PEM Formatted SSL Certificate.
+    cert :
+        PEM Formatted SSL Certificate.
 
-            Examples:
-                ~/.config/lxc/client.crt
+        Examples:
+            ~/.config/lxc/client.crt
 
-        key :
-            PEM Formatted SSL Key.
+    key :
+        PEM Formatted SSL Key.
 
-            Examples:
-                ~/.config/lxc/client.key
+        Examples:
+            ~/.config/lxc/client.key
 
-        verify_cert : True
-            Wherever to verify the cert, this is by default True
-            but in the most cases you want to set it off as LXD
-            normally uses self-signed certificates.
+    verify_cert : True
+        Wherever to verify the cert, this is by default True
+        but in the most cases you want to set it off as LXD
+        normally uses self-signed certificates.
 
-        CLI Examples:
+    CLI Examples:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' lxd.image_alias_add xenial/amd64 x "Short version of xenial/amd64"
+        salt '*' lxd.image_alias_add xenial/amd64 x "Short version of xenial/amd64"
     """
     image = _verify_image(image, remote_addr, cert, key, verify_cert)
 
@@ -3059,44 +3077,44 @@ def image_alias_add(
 def image_alias_delete(
     image, alias, remote_addr=None, cert=None, key=None, verify_cert=True
 ):
-    """ Delete an alias (this is currently not restricted to the image)
+    """Delete an alias (this is currently not restricted to the image)
 
-        image :
-            An image alias, a fingerprint or a image object
+    image :
+        An image alias, a fingerprint or a image object
 
-        alias :
-            The alias to delete
+    alias :
+        The alias to delete
 
-        remote_addr :
-            An URL to a remote Server, you also have to give cert and key if
-            you provide remote_addr and its a TCP Address!
+    remote_addr :
+        An URL to a remote Server, you also have to give cert and key if
+        you provide remote_addr and its a TCP Address!
 
-            Examples:
-                https://myserver.lan:8443
-                /var/lib/mysocket.sock
+        Examples:
+            https://myserver.lan:8443
+            /var/lib/mysocket.sock
 
-        cert :
-            PEM Formatted SSL Certificate.
+    cert :
+        PEM Formatted SSL Certificate.
 
-            Examples:
-                ~/.config/lxc/client.crt
+        Examples:
+            ~/.config/lxc/client.crt
 
-        key :
-            PEM Formatted SSL Key.
+    key :
+        PEM Formatted SSL Key.
 
-            Examples:
-                ~/.config/lxc/client.key
+        Examples:
+            ~/.config/lxc/client.key
 
-        verify_cert : True
-            Wherever to verify the cert, this is by default True
-            but in the most cases you want to set it off as LXD
-            normally uses self-signed certificates.
+    verify_cert : True
+        Wherever to verify the cert, this is by default True
+        but in the most cases you want to set it off as LXD
+        normally uses self-signed certificates.
 
-        CLI Examples:
+    CLI Examples:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' lxd.image_alias_add xenial/amd64 x "Short version of xenial/amd64"
+        salt '*' lxd.image_alias_add xenial/amd64 x "Short version of xenial/amd64"
     """
     image = _verify_image(image, remote_addr, cert, key, verify_cert)
 
@@ -3361,21 +3379,21 @@ def normalize_input_values(config, devices):
 
 
 def sync_config_devices(obj, newconfig, newdevices, test=False):
-    """ Syncs the given config and devices with the object
-        (a profile or a container)
-        returns a changes dict with all changes made.
+    """Syncs the given config and devices with the object
+    (a profile or a container)
+    returns a changes dict with all changes made.
 
-        obj :
-            The object to sync with / or just test with.
+    obj :
+        The object to sync with / or just test with.
 
-        newconfig:
-            The new config to check with the obj.
+    newconfig:
+        The new config to check with the obj.
 
-        newdevices:
-            The new devices to check with the obj.
+    newdevices:
+        The new devices to check with the obj.
 
-        test:
-            Wherever to not change anything and give "Would change" message.
+    test:
+        Wherever to not change anything and give "Would change" message.
     """
     changes = {}
 
@@ -3420,9 +3438,10 @@ def sync_config_devices(obj, newconfig, newdevices, test=False):
 
         if newconfig[k] != obj.config[k]:
             if not test:
-                config_changes[k] = (
-                    'Changed config key "{}" to "{}", '
-                    'its value was "{}"'.format(k, newconfig[k], obj.config[k])
+                config_changes[
+                    k
+                ] = 'Changed config key "{}" to "{}", its value was "{}"'.format(
+                    k, newconfig[k], obj.config[k]
                 )
                 obj.config[k] = newconfig[k]
             else:
@@ -3507,13 +3526,13 @@ def sync_config_devices(obj, newconfig, newdevices, test=False):
 
 
 def _set_property_dict_item(obj, prop, key, value):
-    """ Sets the dict item key of the attr from obj.
+    """Sets the dict item key of the attr from obj.
 
-        Basicaly it does getattr(obj, prop)[key] = value.
+    Basicaly it does getattr(obj, prop)[key] = value.
 
 
-        For the disk device we added some checks to make
-        device changes on the CLI saver.
+    For the disk device we added some checks to make
+    device changes on the CLI saver.
     """
     attr = getattr(obj, prop)
     if prop == "devices":

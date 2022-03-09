@@ -5,7 +5,11 @@
     PyTest fixtures
 """
 
+import logging
+
 import pytest
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="package")
@@ -46,22 +50,12 @@ def salt_sub_minion(salt_master, salt_sub_minion_factory):
 
 
 @pytest.fixture(scope="package")
-def salt_proxy(salt_master, salt_proxy_factory):
-    """
-    A running salt-proxy fixture
-    """
-    assert salt_master.is_running()
-    with salt_proxy_factory.started():
-        yield salt_proxy_factory
-
-
-@pytest.fixture(scope="package")
 def salt_cli(salt_master):
     """
     The ``salt`` CLI as a fixture against the running master
     """
     assert salt_master.is_running()
-    return salt_master.get_salt_cli()
+    return salt_master.salt_cli()
 
 
 @pytest.fixture(scope="package")

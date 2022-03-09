@@ -134,7 +134,7 @@ def ext_pillar(
         and re.search(r"^i-([0-9a-z]{17}|[0-9a-z]{8})$", grain_instance_id) is None
     ):
         log.error(
-            "External pillar %s, instance-id '%s' is not valid for " "'%s'",
+            "External pillar %s, instance-id '%s' is not valid for '%s'",
             __name__,
             grain_instance_id,
             minion_id,
@@ -152,7 +152,7 @@ def ext_pillar(
 
     if tag_match_key and tag_match_value not in valid_tag_match_value:
         log.error(
-            "External pillar %s, tag_value '%s' is not valid must be one " "of %s",
+            "External pillar %s, tag_value '%s' is not valid must be one of %s",
             __name__,
             tag_match_value,
             " ".join(valid_tag_match_value),

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 r"""
 Manage Vagrant VMs
 ==================
@@ -49,14 +48,9 @@ value will select the ``primary`` (or only) machine in the Vagrantfile.
       create_table: True  # if not present
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Python libs
 import fnmatch
 
-import salt.ext.six as six
-
-# Import Salt libs
 import salt.utils.args
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -88,7 +82,7 @@ def _vagrant_call(node, function, section, comment, status_when_done=None, **kwa
     ret = {"name": node, "changes": {}, "result": True, "comment": ""}
 
     targeted_nodes = []
-    if isinstance(node, six.string_types):
+    if isinstance(node, str):
         try:  # use shortcut if a single node name
             if __salt__["vagrant.get_vm_info"](node):
                 targeted_nodes = [node]
@@ -109,12 +103,12 @@ def _vagrant_call(node, function, section, comment, status_when_done=None, **kwa
             except (IndexError, SaltInvocationError, CommandExecutionError):
                 pass
         try:
-            response = __salt__["vagrant.{0}".format(function)](node, **kwargs)
+            response = __salt__["vagrant.{}".format(function)](node, **kwargs)
             if isinstance(response, dict):
                 response = response["name"]
             changed_nodes.append({"node": node, function: response})
         except (SaltInvocationError, CommandExecutionError) as err:
-            ignored_nodes.append({"node": node, "issue": six.text_type(err)})
+            ignored_nodes.append({"node": node, "issue": str(err)})
     if not changed_nodes:
         ret["result"] = True
         ret["comment"] = "No changes seen"
@@ -176,7 +170,7 @@ def running(name, **kwargs):
             "name": name,
             "changes": {},
             "result": True,
-            "comment": "{0} is already running".format(name),
+            "comment": "{} is already running".format(name),
         }
 
         try:
@@ -184,14 +178,14 @@ def running(name, **kwargs):
             if info[0]["state"] != "running":
                 __salt__["vagrant.start"](name)
                 ret["changes"][name] = "Machine started"
-                ret["comment"] = "Node {0} started".format(name)
+                ret["comment"] = "Node {} started".format(name)
         except (SaltInvocationError, CommandExecutionError):
             #  there was no viable existing machine to start
             ret, kwargs = _find_init_change(name, ret, **kwargs)
             kwargs["start"] = True
             __salt__["vagrant.init"](name, **kwargs)
             ret["changes"][name] = "Node defined and started"
-            ret["comment"] = "Node {0} defined and started".format(name)
+            ret["comment"] = "Node {} defined and started".format(name)
 
         return ret
 
@@ -278,7 +272,7 @@ def initialized(name, **kwargs):
     kwargs["start"] = False
     __salt__["vagrant.init"](name, **kwargs)
     ret["changes"][name] = "Node initialized"
-    ret["comment"] = "Node {0} defined but not started.".format(name)
+    ret["comment"] = "Node {} defined but not started.".format(name)
 
     return ret
 

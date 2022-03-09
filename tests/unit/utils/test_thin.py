@@ -194,7 +194,7 @@ class SSHThinTestCase(TestCase):
         with pytest.raises(salt.exceptions.SaltSystemExit) as err:
             thin.get_ext_tops(cfg)
         self.assertIn(
-            "specific locked Python version should be a list of " "major/minor version",
+            "specific locked Python version should be a list of major/minor version",
             str(err.value),
         )
 
@@ -223,7 +223,7 @@ class SSHThinTestCase(TestCase):
         with pytest.raises(salt.exceptions.SaltSystemExit):
             thin.get_ext_tops(cfg)
         assert len(thin.log.warning.mock_calls) == 4
-        assert sorted([x[1][1] for x in thin.log.warning.mock_calls]) == [
+        assert sorted(x[1][1] for x in thin.log.warning.mock_calls) == [
             "jinja2",
             "msgpack",
             "tornado",
@@ -370,7 +370,10 @@ class SSHThinTestCase(TestCase):
         :return:
         """
         cfg = {"ns": {"py-version": [2, 7]}}
-        assert thin._get_ext_namespaces(cfg).get("ns") == (2, 7,)
+        assert thin._get_ext_namespaces(cfg).get("ns") == (
+            2,
+            7,
+        )
         assert isinstance(thin._get_ext_namespaces(cfg).get("ns"), tuple)
 
     def test_get_ext_namespaces_failure(self):
@@ -387,14 +390,16 @@ class SSHThinTestCase(TestCase):
         type("distro", (), {"__file__": "/site-packages/distro"}),
     )
     @patch(
-        "salt.utils.thin.salt", type("salt", (), {"__file__": "/site-packages/salt"}),
+        "salt.utils.thin.salt",
+        type("salt", (), {"__file__": "/site-packages/salt"}),
     )
     @patch(
         "salt.utils.thin.jinja2",
         type("jinja2", (), {"__file__": "/site-packages/jinja2"}),
     )
     @patch(
-        "salt.utils.thin.yaml", type("yaml", (), {"__file__": "/site-packages/yaml"}),
+        "salt.utils.thin.yaml",
+        type("yaml", (), {"__file__": "/site-packages/yaml"}),
     )
     @patch(
         "salt.utils.thin.tornado",
@@ -480,14 +485,16 @@ class SSHThinTestCase(TestCase):
         type("distro", (), {"__file__": "/site-packages/distro"}),
     )
     @patch(
-        "salt.utils.thin.salt", type("salt", (), {"__file__": "/site-packages/salt"}),
+        "salt.utils.thin.salt",
+        type("salt", (), {"__file__": "/site-packages/salt"}),
     )
     @patch(
         "salt.utils.thin.jinja2",
         type("jinja2", (), {"__file__": "/site-packages/jinja2"}),
     )
     @patch(
-        "salt.utils.thin.yaml", type("yaml", (), {"__file__": "/site-packages/yaml"}),
+        "salt.utils.thin.yaml",
+        type("yaml", (), {"__file__": "/site-packages/yaml"}),
     )
     @patch(
         "salt.utils.thin.tornado",
@@ -583,14 +590,16 @@ class SSHThinTestCase(TestCase):
         type("distro", (), {"__file__": "/site-packages/distro"}),
     )
     @patch(
-        "salt.utils.thin.salt", type("salt", (), {"__file__": "/site-packages/salt"}),
+        "salt.utils.thin.salt",
+        type("salt", (), {"__file__": "/site-packages/salt"}),
     )
     @patch(
         "salt.utils.thin.jinja2",
         type("jinja2", (), {"__file__": "/site-packages/jinja2"}),
     )
     @patch(
-        "salt.utils.thin.yaml", type("yaml", (), {"__file__": "/site-packages/yaml"}),
+        "salt.utils.thin.yaml",
+        type("yaml", (), {"__file__": "/site-packages/yaml"}),
     )
     @patch(
         "salt.utils.thin.tornado",
@@ -729,7 +738,7 @@ class SSHThinTestCase(TestCase):
             thin.sys.exc_clear = lambda: None
             thin.gen_thin("")
         self.assertIn(
-            "The minimum required python version to run salt-ssh is " '"3"',
+            'The minimum required python version to run salt-ssh is "3"',
             str(err.value),
         )
 
@@ -1112,8 +1121,8 @@ class SSHThinTestCase(TestCase):
                         exp_ret[key] = str(pathlib.Path(value).resolve(strict=False))
                 assert ret == exp_ret
                 assert (
-                    "ERROR:Could not auto detect file location for module concurrent for python version python3.7"
-                    in log_handler.messages
+                    "ERROR:Could not auto detect file location for module concurrent"
+                    " for python version python3.7" in log_handler.messages
                 )
 
     def test_get_tops_python_exclude(self):
@@ -1357,6 +1366,9 @@ class SSHThinTestCase(TestCase):
             tar.extractall(str(thin_dir))
             tar.close()
             ret = venv.run(
-                venv.venv_python, str(thin_dir / "salt-call"), "--version", check=False,
+                venv.venv_python,
+                str(thin_dir / "salt-call"),
+                "--version",
+                check=False,
             )
             assert ret.exitcode == 0, ret

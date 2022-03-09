@@ -12,7 +12,16 @@ Statistics
 - Total Issue References: **68**
 - Total PR References: **202**
 
-- Contributors: **61** (`AFriemann`_, `Ch3LL`_, `CorvinM`_, `Da-Juan`_, `DmitryKuzmenko`_, `UtahDave`_, `abulford`_, `amalleo25`_, `amendlik`_, `aneeshusa`_, `aogier`_, `arount`_, `arthurlogilab`_, `astronouth7303`_, `binocvlar`_, `blarghmatey`_, `cachedout`_, `clem-compilatio`_, `corywright`_, `cri-epita`_, `damon-atkins`_, `davidjb`_, `dglloyd`_, `dmurphy18`_, `ferringb`_, `garethgreenaway`_, `gdubroeucq`_, `gilbsgilbs`_, `goten4`_, `gtmanfred`_, `isbm`_, `jagguli`_, `kevinanderson1`_, `kojiromike`_, `kstreee`_, `leeclemens`_, `lomeroe`_, `lorengordon`_, `lubyou`_, `mcarlton00`_, `meaksh`_, `morganwillcock`_, `nhavens`_, `pabloh007`_, `rallytime`_, `remijouannet`_, `renner`_, `root360-AndreasUlm`_, `s-sebastian`_, `sarcasticadmin`_, `sbojarski`_, `shengis`_, `tdutrion`_, `terminalmage`_, `toanju`_, `twangboy`_, `ushmodin`_, `viktorkrivak`_, `vutny`_, `whiteinge`_, `xiaoanyunfei`_)
+- Contributors: **61** (`AFriemann`_, `Ch3LL`_, `CorvinM`_, `Da-Juan`_, `DmitryKuzmenko`_,
+  `UtahDave`_, `abulford`_, `amalleo25`_, `amendlik`_, `aneeshusa`_, `aogier`_, `arount`_,
+  `arthurlogilab`_, `astronouth7303`_, `binocvlar`_, `blarghmatey`_, `cachedout`_,
+  `clem-compilatio`_, `corywright`_, `cri-epita`_, `damon-atkins`_, `davidjb`_, `dglloyd`_,
+  `dmurphy18`_, `ferringb`_, `garethgreenaway`_, `gdubroeucq`_, `gilbsgilbs`_, `goten4`_,
+  `gtmanfred`_, `isbm`_, `jagguli`_, `kevinanderson1`_, `kojiromike`_, `kstreee`_, `leeclemens`_,
+  `lomeroe`_, `lorengordon`_, `lubyou`_, `mcarlton00`_, `meaksh`_, `morganwillcock`_, `nhavens`_,
+  `pabloh007`_, `rallytime`_, `remijouannet`_, `renner`_, `root360-AndreasUlm`_, `s-sebastian`_,
+  `sarcasticadmin`_, `sbojarski`_, `shengis`_, `tdutrion`_, `terminalmage`_, `toanju`_,
+  `twangboy`_, `ushmodin`_, `viktorkrivak`_, `vutny`_, `whiteinge`_, `xiaoanyunfei`_)
 
 
 Security Fix

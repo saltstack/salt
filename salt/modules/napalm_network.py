@@ -18,7 +18,6 @@ Dependencies
 .. versionchanged:: 2017.7.0
 """
 
-# Import Python libs
 import datetime
 import logging
 import time
@@ -31,7 +30,6 @@ import salt.utils.versions
 log = logging.getLogger(__name__)
 
 
-# Import 3rd-party libs
 try:
     import jxmlease  # pylint: disable=unused-import
 
@@ -124,8 +122,6 @@ def _safe_commit_config(loaded_result, napalm_device):
 
 
 def _safe_dicard_config(loaded_result, napalm_device):
-    """
-    """
     log.debug("Discarding the config")
     log.debug(loaded_result)
     _discarded = discard_config(inherit_napalm_device=napalm_device)
@@ -275,18 +271,20 @@ def _config_logic(
                 if not discarded["result"]:
                     discarded["comment"] += (
                         "Scheduled the job to be executed at {schedule_ts}, "
-                        "but was unable to discard the config: \n"
-                    ).format(schedule_ts=commit_time)
+                        "but was unable to discard the config: \n".format(
+                            schedule_ts=commit_time
+                        )
+                    )
                     return discarded
                 loaded_result["comment"] = (
-                    "Changes discarded for now, and scheduled commit at: {schedule_ts}.\n"
-                    "The commit ID is: {current_jid}.\n"
-                    "To discard this commit, you can execute: \n\n"
-                    "salt {min_id} net.cancel_commit {current_jid}"
-                ).format(
-                    schedule_ts=commit_time,
-                    min_id=__opts__["id"],
-                    current_jid=current_jid,
+                    "Changes discarded for now, and scheduled commit at:"
+                    " {schedule_ts}.\nThe commit ID is: {current_jid}.\nTo discard this"
+                    " commit, you can execute: \n\nsalt {min_id} net.cancel_commit"
+                    " {current_jid}".format(
+                        schedule_ts=commit_time,
+                        min_id=__opts__["id"],
+                        current_jid=current_jid,
+                    )
                 )
                 loaded_result["commit_id"] = current_jid
                 return loaded_result
@@ -299,8 +297,9 @@ def _config_logic(
                 if __grains__["os"] == "junos":
                     if not HAS_JXMLEASE:
                         loaded_result["comment"] = (
-                            "This feature requires the library jxmlease to be installed.\n"
-                            "To install, please execute: ``pip install jxmlease``."
+                            "This feature requires the library jxmlease to be"
+                            " installed.\nTo install, please execute: ``pip install"
+                            " jxmlease``."
                         )
                         loaded_result["result"] = False
                         return loaded_result
@@ -347,14 +346,14 @@ def _config_logic(
                     log.debug(scheduled)
                     saved = __salt__["schedule.save"]()
                 loaded_result["comment"] = (
-                    "The commit ID is: {current_jid}.\n"
-                    "This commit will be reverted at: {schedule_ts}, unless confirmed.\n"
-                    "To confirm the commit and avoid reverting, you can execute:\n\n"
-                    "salt {min_id} net.confirm_commit {current_jid}"
-                ).format(
-                    schedule_ts=revert_time,
-                    min_id=__opts__["id"],
-                    current_jid=current_jid,
+                    "The commit ID is: {current_jid}.\nThis commit will be reverted at:"
+                    " {schedule_ts}, unless confirmed.\nTo confirm the commit and avoid"
+                    " reverting, you can execute:\n\nsalt {min_id} net.confirm_commit"
+                    " {current_jid}".format(
+                        schedule_ts=revert_time,
+                        min_id=__opts__["id"],
+                        current_jid=current_jid,
+                    )
                 )
                 loaded_result["commit_id"] = current_jid
                 return loaded_result
@@ -1939,9 +1938,11 @@ def load_template(
         _loaded.update(
             {
                 "result": False,
-                "comment": "Invalid templating engine! Choose between: {tpl_eng_opts}".format(
-                    tpl_eng_opts=", ".join(
-                        list(salt.utils.templates.TEMPLATE_REGISTRY.keys())
+                "comment": (
+                    "Invalid templating engine! Choose between: {tpl_eng_opts}".format(
+                        tpl_eng_opts=", ".join(
+                            list(salt.utils.templates.TEMPLATE_REGISTRY.keys())
+                        )
                     )
                 ),
             }
@@ -2238,9 +2239,10 @@ def config_control(
     try_commit = commit()
     if not try_commit.get("result"):
         result = False
-        comment = "Unable to commit the changes: {reason}.\n\
-        Will try to rollback now!".format(
-            reason=try_commit.get("comment")
+        comment = (
+            "Unable to commit the changes: {reason}.\nWill try to rollback now!".format(
+                reason=try_commit.get("comment")
+            )
         )
         try_rollback = rollback()
         if not try_rollback.get("result"):

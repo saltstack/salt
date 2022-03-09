@@ -1,11 +1,3 @@
-"""
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-
-    tests.integration.shell.call
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-"""
-
 import copy
 import logging
 import os
@@ -14,6 +6,7 @@ import re
 import sys
 
 import pytest
+import salt.defaults.exitcodes
 import salt.utils.files
 import salt.utils.json
 import salt.utils.platform
@@ -304,8 +297,8 @@ def test_syslog_file_not_found(salt_minion, salt_call_cli, tmp_path):
         if sys.version_info >= (3, 5, 4):
             assert ret.exitcode == 0
             assert (
-                "[WARNING ] The log_file does not exist. Logging not setup correctly or syslog service not started."
-                in ret.stderr
+                "[WARNING ] The log_file does not exist. Logging not setup correctly or"
+                " syslog service not started." in ret.stderr
             )
             assert ret.json == "foo", ret
         else:
@@ -419,3 +412,34 @@ def test_salt_call_error(salt_call_cli):
 
     ret = salt_call_cli.run("test.echo", "{foo: bar, result: False}")
     assert ret.exitcode == salt.defaults.exitcodes.EX_GENERIC, ret
+
+
+def test_local_salt_call_no_function_no_retcode(salt_call_cli):
+    """
+    This tests ensures that when salt-call --local is called
+    with a module but without a function the return code is 1
+    and we receive the docs for all module functions.
+
+    Also ensure we don't get an exception.
+    """
+    with pytest.helpers.temp_file() as filename:
+
+        ret = salt_call_cli.run("--local", "test")
+        assert ret.exitcode == 1
+
+        state_run_dict = ret.json
+        assert "test" in state_run_dict
+        assert state_run_dict["test"] == "'test' is not available."
+
+        assert "test.recho" in state_run_dict
+
+        expected = """
+    Return a reversed string
+
+    CLI Example:
+
+        salt '*' test.recho 'foo bar baz quo qux'
+    """
+        a = state_run_dict["test.recho"]
+        b = expected
+        assert state_run_dict["test.recho"] == expected

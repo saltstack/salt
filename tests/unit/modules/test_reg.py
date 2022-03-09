@@ -17,7 +17,7 @@ except ImportError:
 
 UNICODE_KEY = "Unicode Key \N{TRADE MARK SIGN}"
 UNICODE_VALUE = (
-    "Unicode Value " "\N{COPYRIGHT SIGN},\N{TRADE MARK SIGN},\N{REGISTERED SIGN}"
+    "Unicode Value \N{COPYRIGHT SIGN},\N{TRADE MARK SIGN},\N{REGISTERED SIGN}"
 )
 FAKE_KEY = "SOFTWARE\\{}".format(random_string("SaltTesting-", lowercase=False))
 
@@ -284,8 +284,10 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
         Test the read_value function using a non existing value pair
         """
         expected = {
-            "comment": "Cannot find fake_name in HKLM\\SOFTWARE\\Microsoft\\"
-            "Windows\\CurrentVersion",
+            "comment": (
+                "Cannot find fake_name in HKLM\\SOFTWARE\\Microsoft\\"
+                "Windows\\CurrentVersion"
+            ),
             "vdata": None,
             "vname": "fake_name",
             "success": False,
@@ -385,7 +387,12 @@ class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
                 "vtype": "REG_MULTI_SZ",
             }
             self.assertEqual(
-                reg.read_value(hive="HKLM", key=FAKE_KEY, vname="empty_list",), expected
+                reg.read_value(
+                    hive="HKLM",
+                    key=FAKE_KEY,
+                    vname="empty_list",
+                ),
+                expected,
             )
         finally:
             reg.delete_key_recursive(hive="HKLM", key=FAKE_KEY)

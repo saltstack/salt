@@ -1,17 +1,11 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Jorge Schrauwen <sjorge@blackdot.be>`
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import textwrap
 
-# Import Salt Libs
 import salt.grains.smartos as smartos
 from tests.support.mock import MagicMock, Mock, mock_open, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase
 
 
@@ -146,7 +140,9 @@ class SmartOSGrainsTestCase(TestCase):
         Get pkgsrc information from a zone
         """
         grains_exp_res = {
-            "pkgsrcpath": "https://pkgsrc.joyent.com/packages/SmartOS/2018Q1/x86_64/All",
+            "pkgsrcpath": (
+                "https://pkgsrc.joyent.com/packages/SmartOS/2018Q1/x86_64/All"
+            ),
             "pkgsrcversion": "2018Q1",
         }
 

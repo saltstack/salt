@@ -53,7 +53,7 @@ class VsanSupportedTestCase(TestCase):
             vsan.vsan_supported(mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_api_version_raises_vim_fault(self):
@@ -279,7 +279,7 @@ class GetHostVsanSystemTestCase(TestCase):
                 vsan.get_host_vsan_system(self.mock_si, self.mock_host_ref)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Host's 'fake_hostname' VSAN system was " "not retrieved",
+            "Host's 'fake_hostname' VSAN system was not retrieved",
         )
 
     def test_valid_mors_result(self):
@@ -388,7 +388,7 @@ class CreateDiskgroupTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_initialize_disk_mapping_raise_vim_fault(self):
@@ -564,7 +564,7 @@ class AddCapacityToDiskGroupTestCase(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_initialize_disk_mapping_raise_vim_fault(self):
@@ -738,7 +738,7 @@ class RemoveCapacityFromDiskGroup(TestCase):
             )
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_remove_disk_raise_vim_fault(self):
@@ -885,7 +885,7 @@ class RemoveDiskgroup(TestCase):
             vsan.remove_diskgroup(self.mock_si, self.mock_host_ref, self.mock_diskgroup)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_remove_disk_mapping_raise_vim_fault(self):
@@ -985,7 +985,7 @@ class GetClusterVsanInfoTestCase(TestCase, LoaderModuleMockMixin):
                 vsan.get_cluster_vsan_info(self.mock_cl_ref)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_VsanClusterGetConfig_raises_vim_fault(self):
@@ -1101,7 +1101,7 @@ class ReconfigureClusterVsanTestCase(TestCase):
                 vsan.reconfigure_cluster_vsan(self.mock_cl_ref, self.mock_cl_vsan_spec)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_cluster_reconfig_raises_vim_fault(self):
@@ -1174,7 +1174,7 @@ class _WaitForTasks(TestCase, LoaderModuleMockMixin):
                 vsan._wait_for_tasks(self.mock_tasks, self.mock_si)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Not enough permissions. Required privilege: " "Fake privilege",
+            "Not enough permissions. Required privilege: Fake privilege",
         )
 
     def test_wait_for_tasks_raises_vim_fault(self):

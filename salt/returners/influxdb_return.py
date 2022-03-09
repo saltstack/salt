@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Return data to an influxdb server.
 
@@ -50,19 +49,14 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
     salt '*' test.ping --return influxdb --return_kwargs '{"db": "another-salt"}'
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import python libs
 import logging
 
 import requests
 import salt.returners
-
-# Import Salt libs
 import salt.utils.jid
 from salt.utils.decorators import memoize
 
-# Import third party libs
 try:
     import influxdb
     import influxdb.influxdb08
@@ -114,7 +108,7 @@ def _get_version(host, port, user, password):
     # check the InfluxDB version via the HTTP API
     try:
         result = requests.get(
-            "http://{0}:{1}/ping".format(host, port), auth=(user, password)
+            "http://{}:{}/ping".format(host, port), auth=(user, password)
         )
         if influxDBVersionHeader in result.headers:
             version = result.headers[influxDBVersionHeader]
@@ -229,7 +223,7 @@ def get_load(jid):
     Return the load data that marks a specified jid
     """
     serv = _get_serv(ret=None)
-    sql = "select load from jids where jid = '{0}'".format(jid)
+    sql = "select load from jids where jid = '{}'".format(jid)
 
     log.debug(">> Now in get_load %s", jid)
     data = serv.query(sql)
@@ -245,7 +239,7 @@ def get_jid(jid):
     """
     serv = _get_serv(ret=None)
 
-    sql = "select id, full_ret from returns where jid = '{0}'".format(jid)
+    sql = "select id, full_ret from returns where jid = '{}'".format(jid)
 
     data = serv.query(sql)
     ret = {}
@@ -265,7 +259,7 @@ def get_fun(fun):
 
     sql = """select first(id) as fid, first(full_ret) as fret
             from returns
-            where fun = '{0}'
+            where fun = '{}'
             group by fun, id
           """.format(
         fun

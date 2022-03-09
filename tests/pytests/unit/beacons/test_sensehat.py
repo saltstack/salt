@@ -42,6 +42,15 @@ def test_sensehat_humidity_match():
     ret = sensehat.beacon(config)
     assert ret == [{"tag": "sensehat/humidity", "humidity": 80}]
 
+    # Test without the percent
+    config = [{"sensors": {"humidity": "70%"}}]
+
+    ret = sensehat.validate(config)
+    assert ret == (True, "Valid beacon configuration")
+
+    ret = sensehat.beacon(config)
+    assert ret == [{"tag": "sensehat/humidity", "humidity": 80}]
+
 
 def test_sensehat_temperature_match():
 

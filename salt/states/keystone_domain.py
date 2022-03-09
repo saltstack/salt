@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of OpenStack Keystone Domains
 ========================================
@@ -27,7 +26,6 @@ Example States
         - name: domain1
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 __virtualname__ = "keystone_domain"
 
@@ -37,7 +35,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The keystoneng execution module failed to load: shade python module is not available",
+        "The keystoneng execution module failed to load: shade python module is not"
+        " available",
     )
 
 

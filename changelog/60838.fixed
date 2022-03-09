@@ -1,0 +1,1 @@
+Moving the call to the validate function earlier to ensure that beacons are in the right format before we attempt to do anything to the configuration.  Adding a generic validation to ensure the beacon configuration is in the wrong format when a validation function does not exist.

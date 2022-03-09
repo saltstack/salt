@@ -1,12 +1,7 @@
 """
-    tests.integration.proxy.test_shell
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    Test salt-call --proxyid <proxyid> commands
+Simple Smoke Tests for Connected Proxy Minion
 """
-
 import logging
-import os
 import random
 
 import pytest
@@ -15,14 +10,6 @@ import salt.utils.path
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
-
-
-@pytest.fixture(scope="module")
-def salt_proxy(salt_proxy):
-    cachefile = os.path.join(salt_proxy.config["cachedir"], "dummy-proxy.cache")
-    if os.path.exists(cachefile):
-        os.unlink(cachefile)
-    return salt_proxy
 
 
 @pytest.fixture

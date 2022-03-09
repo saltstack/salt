@@ -50,7 +50,7 @@ class DriftDetector(Plugin):
 
     def PLUGINEND(self, headers, body):
         """
-        Hook when plugin closes Zypper's transaction.        
+        Hook when plugin closes Zypper's transaction.
         """
         if "SALT_RUNNING" not in os.environ:
             with open(self.ck_path, "w") as ck_fh:

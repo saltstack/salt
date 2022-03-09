@@ -51,7 +51,6 @@ import salt.utils.data
 import salt.utils.json
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import map
 
 try:
     # pylint: disable=unused-import
@@ -233,9 +232,9 @@ def get_eip_address_info(
 
     .. versionadded:: 2016.3.0
     """
-    if type(addresses) == (type("string")):
+    if isinstance(addresses, str):
         addresses = [addresses]
-    if type(allocation_ids) == (type("string")):
+    if isinstance(allocation_ids, str):
         allocation_ids = [allocation_ids]
 
     ret = _get_all_eip_addresses(
@@ -335,7 +334,7 @@ def release_eip_address(
     """
     if not salt.utils.data.exactly_one((public_ip, allocation_id)):
         raise SaltInvocationError(
-            "Exactly one of 'public_ip' OR " "'allocation_id' must be provided"
+            "Exactly one of 'public_ip' OR 'allocation_id' must be provided"
         )
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -694,7 +693,7 @@ def find_instances(
         reservations = conn.get_all_reservations(**filter_parameters)
         instances = [i for r in reservations for i in r.instances]
         log.debug(
-            "The filters criteria %s matched the following " "instances:%s",
+            "The filters criteria %s matched the following instances:%s",
             filter_parameters,
             instances,
         )
@@ -759,7 +758,8 @@ def create_image(
         return False
     if len(instances) > 1:
         log.error(
-            "Multiple instances found, must match exactly only one instance to create an image from"
+            "Multiple instances found, must match exactly only one instance to create"
+            " an image from"
         )
         return False
 
@@ -814,7 +814,7 @@ def find_images(
                     filter_parameters["filters"]["tag:{}".format(tag_name)] = tag_value
             images = conn.get_all_images(**filter_parameters)
             log.debug(
-                "The filters criteria %s matched the following " "images:%s",
+                "The filters criteria %s matched the following images:%s",
                 filter_parameters,
                 images,
             )
@@ -912,7 +912,7 @@ def get_id(
             return instance_ids[0]
         else:
             raise CommandExecutionError(
-                "Found more than one instance " "matching the criteria."
+                "Found more than one instance matching the criteria."
             )
     else:
         log.warning("Could not find instance.")
@@ -1203,7 +1203,7 @@ def run(
     """
     if all((subnet_id, subnet_name)):
         raise SaltInvocationError(
-            "Only one of subnet_name or subnet_id may be " "provided."
+            "Only one of subnet_name or subnet_id may be provided."
         )
     if subnet_name:
         r = __salt__["boto_vpc.get_resource_id"](
@@ -1216,7 +1216,7 @@ def run(
 
     if all((security_group_ids, security_group_names)):
         raise SaltInvocationError(
-            "Only one of security_group_ids or " "security_group_names may be provided."
+            "Only one of security_group_ids or security_group_names may be provided."
         )
     if security_group_names:
         security_group_ids = []
@@ -1514,7 +1514,8 @@ def get_attribute(
         )
     if instance_name and instance_id:
         raise SaltInvocationError(
-            "Both instance_name and instance_id can not be specified in the same command."
+            "Both instance_name and instance_id can not be specified in the same"
+            " command."
         )
     if attribute not in attribute_list:
         raise SaltInvocationError(
@@ -1601,11 +1602,13 @@ def set_attribute(
     ]
     if not any((instance_name, instance_id)):
         raise SaltInvocationError(
-            "At least one of the following must be specified: instance_name or instance_id."
+            "At least one of the following must be specified: instance_name or"
+            " instance_id."
         )
     if instance_name and instance_id:
         raise SaltInvocationError(
-            "Both instance_name and instance_id can not be specified in the same command."
+            "Both instance_name and instance_id can not be specified in the same"
+            " command."
         )
     if attribute not in attribute_list:
         raise SaltInvocationError(
@@ -1798,7 +1801,7 @@ def create_network_interface(
     """
     if not salt.utils.data.exactly_one((subnet_id, subnet_name)):
         raise SaltInvocationError(
-            "One (but not both) of subnet_id or " "subnet_name must be provided."
+            "One (but not both) of subnet_id or subnet_name must be provided."
         )
 
     if subnet_name:
@@ -1972,7 +1975,7 @@ def detach_network_interface(
     """
     if not (name or network_interface_id or attachment_id):
         raise SaltInvocationError(
-            "Either name or network_interface_id or attachment_id must be" " provided."
+            "Either name or network_interface_id or attachment_id must be provided."
         )
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     r = {}
@@ -2050,7 +2053,7 @@ def modify_network_interface_attribute(
         )
         if not _value:
             r["error"] = {
-                "message": ("Security groups do not map to valid security" " group ids")
+                "message": "Security groups do not map to valid security group ids"
             }
             return r
     _attachment_id = None

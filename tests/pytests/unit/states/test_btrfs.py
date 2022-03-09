@@ -348,7 +348,10 @@ def test_subvolume_created_exists_set_default_no_force(
     }
     with patch.dict(btrfs.__salt__, salt_mock), patch.dict(btrfs.__opts__, opts_mock):
         assert btrfs.subvolume_created(
-            name="@/var", device="/dev/sda1", set_default=True, force_set_default=False,
+            name="@/var",
+            device="/dev/sda1",
+            set_default=True,
+            force_set_default=False,
         ) == {
             "name": "@/var",
             "result": True,

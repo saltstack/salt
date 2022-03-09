@@ -11,7 +11,14 @@ Statistics
 - Total Issue References: **48**
 - Total PR References: **279**
 
-- Contributors: **52** (`AVeenstra`_, `Ch3LL`_, `Circuitsoft`_, `DmitryKuzmenko`_, `KaiSforza`_, `Martin819`_, `OrlandoArcapix`_, `UtahDave`_, `Vaelatern`_, `abednarik`_, `asnell`_, `b1naryth1ef`_, `baniobloom`_, `basepi`_, `bdrung`_, `beornf`_, `bmcorser`_, `bowmanjd-lms`_, `damon-atkins`_, `darkpixel`_, `discogestalt`_, `doesitblend`_, `dqminh`_, `dubb-b`_, `dwoz`_, `frankiexyz`_, `frogunder`_, `fzipi`_, `garethgreenaway`_, `grokrecursion`_, `gtmanfred`_, `jacksontj`_, `jagguli`_, `lejambon`_, `lomeroe`_, `lordcirth`_, `lusche`_, `mbunkus`_, `meaksh`_, `mirceaulinic`_, `nbraud`_, `pritambaral`_, `ralex`_, `rallytime`_, `rmcintosh`_, `slaws`_, `terminalmage`_, `twangboy`_, `twellspring`_, `wyardley`_, `xetix`_, `zer0def`_)
+- Contributors: **52** (`AVeenstra`_, `Ch3LL`_, `Circuitsoft`_, `DmitryKuzmenko`_, `KaiSforza`_,
+  `Martin819`_, `OrlandoArcapix`_, `UtahDave`_, `Vaelatern`_, `abednarik`_, `asnell`_,
+  `b1naryth1ef`_, `baniobloom`_, `basepi`_, `bdrung`_, `beornf`_, `bmcorser`_, `bowmanjd-lms`_,
+  `damon-atkins`_, `darkpixel`_, `discogestalt`_, `doesitblend`_, `dqminh`_, `dubb-b`_, `dwoz`_,
+  `frankiexyz`_, `frogunder`_, `fzipi`_, `garethgreenaway`_, `grokrecursion`_, `gtmanfred`_,
+  `jacksontj`_, `jagguli`_, `lejambon`_, `lomeroe`_, `lordcirth`_, `lusche`_, `mbunkus`_,
+  `meaksh`_, `mirceaulinic`_, `nbraud`_, `pritambaral`_, `ralex`_, `rallytime`_, `rmcintosh`_,
+  `slaws`_, `terminalmage`_, `twangboy`_, `twellspring`_, `wyardley`_, `xetix`_, `zer0def`_)
 
 Security Fix
 ============
@@ -534,12 +541,12 @@ Changelog for v2017.7.7..v2017.7.8
 
   * 365ebdf539 Fixed `enable_vnc` runner arg being passed into `seed_cmd` module arg in `virt.init`.
 
-* **PR** `#48749`_: (`Ch3LL`_) Update Saltstack Logo banner on docs.saltstack.com
+* **PR** `#48749`_: (`Ch3LL`_) Update Saltstack Logo banner on docs.saltproject.io
   @ *2018-07-25 13:05:04 UTC*
 
   * 169afea16a Merge pull request `#48749`_ from Ch3LL/logo_docs
 
-  * 73b1fc29f0 Update Saltstack Logo banner on docs.saltstack.com
+  * 73b1fc29f0 Update Saltstack Logo banner on docs.saltproject.io
 
 * **PR** `#48743`_: (`rallytime`_) Update DOCBANNER with new SaltConf18 image
   @ *2018-07-24 16:46:19 UTC*

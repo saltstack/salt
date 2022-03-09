@@ -1,200 +1,135 @@
 # Author: Bo Maryniuk <bo@suse.de>
 
-import os
-import sys
-
 import pytest
-import salt.modules.ansiblegate as ansible
-from salt.exceptions import LoaderError
-from tests.support.mock import MagicMock, MockTimedProc, patch
+import salt.modules.ansiblegate as ansiblegate
+import salt.utils.json
+from tests.support.mock import ANY, MagicMock, patch
 
 pytestmark = [
-    pytest.mark.skip_on_windows,
+    pytest.mark.skip_on_windows(reason="Not supported on Windows"),
 ]
 
 
 @pytest.fixture
 def configure_loader_modules():
-    return {ansible: {}}
+    return {ansiblegate: {}}
 
 
-@pytest.fixture
-def resolver():
-    _resolver = ansible.AnsibleModuleResolver({})
-    _resolver._modules_map = {
-        "one.two.three": os.sep + os.path.join("one", "two", "three.py"),
-        "four.five.six": os.sep + os.path.join("four", "five", "six.py"),
-        "three.six.one": os.sep + os.path.join("three", "six", "one.py"),
-    }
-    return _resolver
-
-
-def test_ansible_module_help(resolver):
+def test_ansible_module_help():
     """
     Test help extraction from the module
     :return:
     """
+    extension = {
+        "foo": {
+            "doc": {"description": "The description of foo"},
+            "examples": "These are the examples",
+            "return": {"a": "A return"},
+        }
+    }
 
-    class Module:
-        """
-        An ansible module mock.
-        """
-
-        __name__ = "foo"
-        DOCUMENTATION = """
----
-one:
-    text here
----
-two:
-    text here
-description:
-    describe the second part
-    """
-
-    with patch.object(ansible, "_resolver", resolver), patch.object(
-        ansible._resolver, "load_module", MagicMock(return_value=Module())
-    ):
-        ret = ansible.help("dummy")
-        assert sorted(
-            ret.get('Available sections on module "{}"'.format(Module().__name__))
-        ) == ["one", "two"]
-        assert ret.get("Description") == "describe the second part"
+    with patch("subprocess.run") as proc_run_mock:
+        proc_run_mock.return_value.stdout = salt.utils.json.dumps(extension)
+        ret = ansiblegate.help("foo")
+        assert ret["description"] == extension["foo"]["doc"]["description"]
 
 
-def test_module_resolver_modlist(resolver):
-    """
-    Test Ansible resolver modules list.
-    :return:
-    """
-    assert resolver.get_modules_list() == [
-        "four.five.six",
-        "one.two.three",
-        "three.six.one",
-    ]
-    for ptr in ["five", "fi", "ve"]:
-        assert resolver.get_modules_list(ptr) == ["four.five.six"]
-    for ptr in ["si", "ix", "six"]:
-        assert resolver.get_modules_list(ptr) == ["four.five.six", "three.six.one"]
-    assert resolver.get_modules_list("one") == ["one.two.three", "three.six.one"]
-    assert resolver.get_modules_list("one.two") == ["one.two.three"]
-    assert resolver.get_modules_list("four") == ["four.five.six"]
-
-
-def test_resolver_module_loader_failure(resolver):
-    """
-    Test Ansible module loader.
-    :return:
-    """
-    mod = "four.five.six"
-    with pytest.raises(ImportError) as import_error:
-        resolver.load_module(mod)
-
-    mod = "i.even.do.not.exist.at.all"
-    with pytest.raises(LoaderError) as loader_error:
-        resolver.load_module(mod)
-
-
-def test_resolver_module_loader(resolver):
-    """
-    Test Ansible module loader.
-    :return:
-    """
-    with patch("salt.modules.ansiblegate.importlib", MagicMock()), patch(
-        "salt.modules.ansiblegate.importlib.import_module", lambda x: x
-    ):
-        assert resolver.load_module("four.five.six") == "ansible.modules.four.five.six"
-
-
-def test_resolver_module_loader_import_failure(resolver):
-    """
-    Test Ansible module loader failure.
-    :return:
-    """
-    with patch("salt.modules.ansiblegate.importlib", MagicMock()), patch(
-        "salt.modules.ansiblegate.importlib.import_module", lambda x: x
-    ):
-        with pytest.raises(LoaderError) as loader_error:
-            resolver.load_module("something.strange")
-
-
-def test_virtual_function(resolver):
+def test_virtual_function(subtests):
     """
     Test Ansible module __virtual__ when ansible is not installed on the minion.
     :return:
     """
-    with patch("salt.modules.ansiblegate.ansible", None):
-        assert ansible.__virtual__() == "ansible"
+
+    with subtests.test("missing ansible binary"):
+        with patch("salt.utils.path.which", side_effect=[None]):
+            assert ansiblegate.__virtual__() == (
+                False,
+                "The 'ansible' binary was not found.",
+            )
+
+    with subtests.test("missing ansible-doc binary"):
+        with patch(
+            "salt.utils.path.which",
+            side_effect=["/path/to/ansible", None],
+        ):
+            assert ansiblegate.__virtual__() == (
+                False,
+                "The 'ansible-doc' binary was not found.",
+            )
+
+    with subtests.test("missing ansible-playbook binary"):
+        with patch(
+            "salt.utils.path.which",
+            side_effect=["/path/to/ansible", "/path/to/ansible-doc", None],
+        ):
+            assert ansiblegate.__virtual__() == (
+                False,
+                "The 'ansible-playbook' binary was not found.",
+            )
+
+    with subtests.test("Failing to load the ansible modules listing"):
+        with patch(
+            "salt.utils.path.which",
+            side_effect=[
+                "/path/to/ansible",
+                "/path/to/ansible-doc",
+                "/path/to/ansible-playbook",
+            ],
+        ):
+            with patch("subprocess.run") as proc_run_mock:
+                proc_run_mock.return_value.retcode = 1
+                proc_run_mock.return_value.stderr = "bar"
+                proc_run_mock.return_value.stdout = "{}"
+                assert ansiblegate.__virtual__() == (
+                    False,
+                    "Failed to get the listing of ansible modules:\nbar",
+                )
 
 
-def test_ansible_module_call(resolver):
+def test_ansible_module_call():
     """
     Test Ansible module call from ansible gate module
     :return:
     """
 
-    class Module:
-        """
-        An ansible module mock.
-        """
+    with patch("subprocess.run") as proc_run_mock:
+        proc_run_mock.return_value.stdout = (
+            'localhost | SUCCESS => {\n    "completed": true    \n}'
+        )
 
-        __name__ = "one.two.three"
-        __file__ = "foofile"
-
-        def main():  # pylint: disable=no-method-argument
-            pass
-
-    ANSIBLE_MODULE_ARGS = '{"ANSIBLE_MODULE_ARGS": ["arg_1", {"kwarg1": "foobar"}]}'
-
-    proc = MagicMock(
-        side_effect=[
-            MockTimedProc(stdout=ANSIBLE_MODULE_ARGS.encode(), stderr=None),
-            MockTimedProc(stdout=b'{"completed": true}', stderr=None),
-        ]
-    )
-
-    with patch.object(ansible, "_resolver", resolver), patch.object(
-        ansible._resolver, "load_module", MagicMock(return_value=Module())
-    ):
-        _ansible_module_caller = ansible.AnsibleModuleCaller(ansible._resolver)
-        with patch("salt.utils.timed_subprocess.TimedProc", proc):
-            ret = _ansible_module_caller.call("one.two.three", "arg_1", kwarg1="foobar")
-            proc.assert_any_call(
-                [sys.executable, "foofile"],
-                stdin=ANSIBLE_MODULE_ARGS,
-                stdout=-1,
-                timeout=1200,
-            )
-            try:
-                proc.assert_any_call(
-                    [
-                        "echo",
-                        '{"ANSIBLE_MODULE_ARGS": {"kwarg1": "foobar", "_raw_params": "arg_1"}}',
-                    ],
-                    stdout=-1,
-                    timeout=1200,
-                )
-            except AssertionError:
-                proc.assert_any_call(
-                    [
-                        "echo",
-                        '{"ANSIBLE_MODULE_ARGS": {"_raw_params": "arg_1", "kwarg1": "foobar"}}',
-                    ],
-                    stdout=-1,
-                    timeout=1200,
-                )
-            assert ret == {"completed": True, "timeout": 1200}
+        ret = ansiblegate.call("one.two.three", "arg_1", kwarg1="foobar")
+        proc_run_mock.assert_any_call(
+            [
+                ANY,
+                "localhost",
+                "--limit",
+                "127.0.0.1",
+                "-m",
+                "one.two.three",
+                "-a",
+                '"arg_1" kwarg1="foobar"',
+                "-i",
+                ANY,
+            ],
+            check=True,
+            shell=False,
+            stderr=-1,
+            stdout=-1,
+            timeout=1200,
+            universal_newlines=True,
+        )
+        assert ret == {"completed": True}
 
 
-def test_ansible_playbooks_return_retcode(resolver):
+def test_ansible_playbooks_return_retcode():
     """
     Test ansible.playbooks execution module function include retcode in the return.
     :return:
     """
     ref_out = {"retcode": 0, "stdout": '{"foo": "bar"}'}
     cmd_run_all = MagicMock(return_value=ref_out)
-    with patch.dict(ansible.__salt__, {"cmd.run_all": cmd_run_all}), patch(
+    with patch.dict(ansiblegate.__salt__, {"cmd.run_all": cmd_run_all}), patch(
         "salt.utils.path.which", MagicMock(return_value=True)
     ):
-        ret = ansible.playbooks("fake-playbook.yml")
+        ret = ansiblegate.playbooks("fake-playbook.yml")
         assert "retcode" in ret

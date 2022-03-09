@@ -619,10 +619,9 @@ def present(
 
         # Set the comment now to say that it already exists, if we need to
         # recreate the network with new config we'll update the comment later.
-        ret["comment"] = (
-            "Network '{}' already exists, and is configured "
-            "as specified".format(name)
-        )
+        ret[
+            "comment"
+        ] = "Network '{}' already exists, and is configured as specified".format(name)
         log.trace("Details of docker network '%s': %s", name, network)
 
         temp_net_name = "".join(

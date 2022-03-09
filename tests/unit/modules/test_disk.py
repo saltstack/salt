@@ -1,17 +1,12 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
+import sys
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
-
-# Import Salt libs
+import pytest
 import salt.modules.disk as disk
 import salt.utils.path
 import salt.utils.platform
-
-# Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
@@ -216,9 +211,14 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             disk.wipe("/dev/sda")
             mock.assert_called_once_with("wipefs -a /dev/sda", python_shell=False)
 
+    @pytest.mark.skipif(
+        sys.version_info < (3, 6), reason="Py3.5 dictionaries are not ordered"
+    )
     def test_tune(self):
         mock = MagicMock(
-            return_value="712971264\n512\n512\n512\n0\n0\n88\n712971264\n365041287168\n512\n512"
+            return_value=(
+                "712971264\n512\n512\n512\n0\n0\n88\n712971264\n365041287168\n512\n512"
+            )
         )
         with patch.dict(disk.__salt__, {"cmd.run": mock}):
             mock_dump = MagicMock(return_value={"retcode": 0, "stdout": ""})
@@ -226,19 +226,9 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                 kwargs = {"read-ahead": 512, "filesystem-read-ahead": 1024}
                 disk.tune("/dev/sda", **kwargs)
 
-                self.assert_called_once(mock)
-
-                args, kwargs = mock.call_args
-
-                # Assert called once with either 'blockdev --setra 512 --setfra 512 /dev/sda' or
-                # 'blockdev --setfra 512 --setra 512 /dev/sda' and python_shell=False kwarg.
-                self.assertEqual(len(args), 1)
-                self.assertTrue(args[0].startswith("blockdev "))
-                self.assertTrue(args[0].endswith(" /dev/sda"))
-                self.assertIn(" --setra 512 ", args[0])
-                self.assertIn(" --setfra 1024 ", args[0])
-                self.assertEqual(len(args[0].split()), 6)
-                self.assertEqual(kwargs, {"python_shell": False})
+                mock.assert_called_with(
+                    "blockdev --setra 512 --setfra 1024 /dev/sda", python_shell=False
+                )
 
     def test_format(self):
         """
@@ -275,7 +265,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         """
         device = "/dev/sdX1"
         fs_type = "ext4"
-        mock = MagicMock(return_value="FSTYPE\n{0}".format(fs_type))
+        mock = MagicMock(return_value="FSTYPE\n{}".format(fs_type))
         with patch.dict(disk.__grains__, {"kernel": "Linux"}), patch.dict(
             disk.__salt__, {"cmd.run": mock}
         ), patch("salt.utils.path.which", MagicMock(return_value=True)):
@@ -292,7 +282,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         ):
             disk.resize2fs(device)
             mock.assert_called_once_with(
-                "resize2fs {0}".format(device), python_shell=False
+                "resize2fs {}".format(device), python_shell=False
             )
 
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")

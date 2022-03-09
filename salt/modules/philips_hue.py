@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright 2015 SUSE LLC
 #
@@ -20,7 +19,6 @@ Philips HUE lamps module for proxy.
 .. versionadded:: 2015.8.3
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import sys
 

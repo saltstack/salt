@@ -135,8 +135,7 @@ Commands with ``salt-ssh`` follow the same syntax as the ``salt`` command.
 
 The standard salt functions are available! The output is the same as ``salt``
 and many of the same flags are available. Please see
-http://docs.saltstack.com/ref/cli/salt-ssh.html for all of the available
-options.
+:ref:`Salt SSH reference <cli-salt-ssh>` for all of the available options.
 
 Raw Shell Calls
 ---------------
@@ -293,7 +292,7 @@ This is especially important when using a custom `file_roots` that differ from
 
 .. note::
 
-    Please see https://docs.saltstack.com/en/latest/topics/grains/ for more
+    Please see https://docs.saltproject.io/en/latest/topics/grains/ for more
     information on grains and custom grains.
 
 

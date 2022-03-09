@@ -112,9 +112,8 @@ def _sdc_mdata(mdata_list=None, mdata_get=None):
         )
         if mdata_value.startswith("ERROR:"):
             log.warning(
-                "unable to read sdc:{} via mdata-get, mdata grain may be incomplete.".format(
-                    mdata_grain,
-                )
+                "unable to read sdc:%s via mdata-get, mdata grain may be incomplete.",
+                mdata_grain,
             )
             continue
 

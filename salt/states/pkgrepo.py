@@ -318,18 +318,18 @@ def managed(name, ppa=None, copr=None, **kwargs):
 
     if "key_url" in kwargs and ("keyid" in kwargs or "keyserver" in kwargs):
         ret["result"] = False
-        ret["comment"] = (
-            'You may not use both "keyid"/"keyserver" and ' '"key_url" argument.'
-        )
+        ret[
+            "comment"
+        ] = 'You may not use both "keyid"/"keyserver" and "key_url" argument.'
 
     if "key_text" in kwargs and ("keyid" in kwargs or "keyserver" in kwargs):
         ret["result"] = False
-        ret["comment"] = (
-            'You may not use both "keyid"/"keyserver" and ' '"key_text" argument.'
-        )
+        ret[
+            "comment"
+        ] = 'You may not use both "keyid"/"keyserver" and "key_text" argument.'
     if "key_text" in kwargs and ("key_url" in kwargs):
         ret["result"] = False
-        ret["comment"] = 'You may not use both "key_url" and ' '"key_text" argument.'
+        ret["comment"] = 'You may not use both "key_url" and "key_text" argument.'
 
     if "repo" in kwargs:
         ret["result"] = False
@@ -440,9 +440,9 @@ def managed(name, ppa=None, copr=None, **kwargs):
                 # split the line and sort everything after the URL
                 sanitizedsplit = sanitizedkwargs[kwarg].split()
                 sanitizedsplit[3:] = sorted(sanitizedsplit[3:])
-                reposplit, _, pre_comments = [
+                reposplit, _, pre_comments = (
                     x.strip() for x in pre[kwarg].partition("#")
-                ]
+                )
                 reposplit = reposplit.split()
                 reposplit[3:] = sorted(reposplit[3:])
                 if sanitizedsplit != reposplit:

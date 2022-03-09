@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 UNICODE_VALUE_NAME = "Unicode Key \N{TRADE MARK SIGN}"
 UNICODE_VALUE = (
-    "Unicode Value " "\N{COPYRIGHT SIGN},\N{TRADE MARK SIGN},\N{REGISTERED SIGN}"
+    "Unicode Value \N{COPYRIGHT SIGN},\N{TRADE MARK SIGN},\N{REGISTERED SIGN}"
 )
 FAKE_KEY = "SOFTWARE\\{}".format(random_string("SaltTesting-", lowercase=False))
 

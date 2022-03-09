@@ -272,7 +272,8 @@ def test_list_acc_wrong_eauth(salt_key_cli):
     )
     assert ret.exitcode == 0, ret
     assert re.search(
-        r"^The specified external authentication system \"wrongeauth\" is not available\nAvailable eauth types: auto, .*",
+        r"^The specified external authentication system \"wrongeauth\" is not"
+        r" available\nAvailable eauth types: auto, .*",
         ret.stdout.replace("\r\n", "\n"),
     )
 
@@ -314,3 +315,24 @@ def test_keys_generation_keysize_max(salt_key_cli, tmp_path):
     )
     assert ret.exitcode != 0
     assert "error: The maximum value for keysize is 32768" in ret.stderr
+
+
+def test_accept_bad_key(salt_master, salt_key_cli):
+    """
+    test salt-key -d usage
+    """
+    min_name = random_string("minibar-")
+    pki_dir = salt_master.config["pki_dir"]
+    key = os.path.join(pki_dir, "minions_pre", min_name)
+
+    with salt.utils.files.fopen(key, "w") as fp:
+        fp.write("")
+
+    try:
+        # Check Key
+        ret = salt_key_cli.run("-y", "-a", min_name)
+        assert ret.exitcode == 0
+        assert "invalid key for {}".format(min_name) in ret.stderr
+    finally:
+        if os.path.exists(key):
+            os.remove(key)

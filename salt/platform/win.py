@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Windows specific utility functions, this module should be imported in a try,
 except block because it is only applicable on Windows platforms.
@@ -9,7 +8,6 @@ Much of what is here was adapted from the following:
     https://stackoverflow.com/a/43233332
     http://stackoverflow.com/questions/29566330
 """
-from __future__ import absolute_import, unicode_literals
 
 import collections
 import ctypes
@@ -24,7 +22,6 @@ import win32con
 import win32process
 import win32security
 import win32service
-from salt.ext.six.moves import range, zip
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -295,7 +292,7 @@ class TOKEN_SOURCE(ctypes.Structure):
     )
 
     def __init__(self, SourceName=None, SourceIdentifier=None):
-        super(TOKEN_SOURCE, self).__init__()
+        super().__init__()
         if SourceName is not None:
             if not isinstance(SourceName, bytes):
                 SourceName = SourceName.encode("mbcs")
@@ -339,7 +336,7 @@ LPDWORD = ctypes.POINTER(wintypes.DWORD)
 class ContiguousUnicode(ctypes.Structure):
     # _string_names_: sequence matched to underscore-prefixed fields
     def __init__(self, *args, **kwargs):  # pylint: disable=useless-super-delegation
-        super(ContiguousUnicode, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def _get_unicode_string(self, name):
         wchar_size = ctypes.sizeof(WCHAR)
@@ -397,7 +394,7 @@ class ContiguousUnicode(ctypes.Structure):
         if name in self._string_names_:
             self._set_unicode_string(name, value)
         else:
-            super(ContiguousUnicode, self).__setattr__(name, value)
+            super().__setattr__(name, value)
 
     @classmethod
     def from_address_copy(cls, address, size=None):
@@ -417,7 +414,7 @@ class ContiguousUnicode(ctypes.Structure):
 class AuthInfo(ContiguousUnicode):
     # _message_type_: from a logon-submit-type enumeration
     def __init__(self):
-        super(AuthInfo, self).__init__()
+        super().__init__()
         self.MessageType = self._message_type_
 
 
@@ -433,7 +430,7 @@ class MSV1_0_INTERACTIVE_LOGON(AuthInfo):
     )
 
     def __init__(self, UserName=None, Password=None, LogonDomainName=None):
-        super(MSV1_0_INTERACTIVE_LOGON, self).__init__()
+        super().__init__()
         if LogonDomainName is not None:
             self.LogonDomainName = LogonDomainName
         if UserName is not None:
@@ -453,7 +450,7 @@ class S4ULogon(AuthInfo):
     )
 
     def __init__(self, UserPrincipalName=None, DomainName=None, Flags=0):
-        super(S4ULogon, self).__init__()
+        super().__init__()
         self.Flags = Flags
         if UserPrincipalName is not None:
             self.UserPrincipalName = UserPrincipalName
@@ -476,7 +473,7 @@ PKERB_S4U_LOGON = ctypes.POINTER(KERB_S4U_LOGON)
 class ProfileBuffer(ContiguousUnicode):
     # _message_type_
     def __init__(self):
-        super(ProfileBuffer, self).__init__()
+        super().__init__()
         self.MessageType = self._message_type_
 
 
@@ -539,7 +536,7 @@ class SECURITY_ATTRIBUTES(ctypes.Structure):
 
     def __init__(self, **kwds):
         self.nLength = ctypes.sizeof(self)
-        super(SECURITY_ATTRIBUTES, self).__init__(**kwds)
+        super().__init__(**kwds)
 
 
 LPSECURITY_ATTRIBUTES = ctypes.POINTER(SECURITY_ATTRIBUTES)
@@ -574,7 +571,7 @@ class STARTUPINFO(ctypes.Structure):
 
     def __init__(self, **kwds):
         self.cb = ctypes.sizeof(self)
-        super(STARTUPINFO, self).__init__(**kwds)
+        super().__init__(**kwds)
 
 
 LPSTARTUPINFO = ctypes.POINTER(STARTUPINFO)
@@ -789,13 +786,17 @@ _win(ntdll.NtAllocateLocallyUniqueId, NTSTATUS, LPLUID)  # _Out_ LUID
 
 # https://msdn.microsoft.com/en-us/library/aa378279
 _win(
-    secur32.LsaFreeReturnBuffer, NTSTATUS, wintypes.LPVOID,
+    secur32.LsaFreeReturnBuffer,
+    NTSTATUS,
+    wintypes.LPVOID,
 )  # _In_ Buffer
 
 
 # https://msdn.microsoft.com/en-us/library/aa378265
 _win(
-    secur32.LsaConnectUntrusted, NTSTATUS, LPHANDLE,
+    secur32.LsaConnectUntrusted,
+    NTSTATUS,
+    LPHANDLE,
 )  # _Out_ LsaHandle
 
 
@@ -974,7 +975,7 @@ def lsa_logon_user(
                 ctypes.byref(quotas),
                 ctypes.byref(substatus),
             )
-        except WindowsError:  # pylint: disable=undefined-variable
+        except OSError:
             if substatus.value:
                 raise ctypes.WinError(substatus.to_error())
             raise
@@ -1154,9 +1155,7 @@ def CreateProcessWithTokenW(
     )
     if ret == 0:
         winerr = win32api.GetLastError()
-        # pylint: disable=undefined-variable
-        exc = WindowsError(win32api.FormatMessage(winerr))
-        # pylint: enable=undefined-variable
+        exc = OSError(win32api.FormatMessage(winerr))
         exc.winerror = winerr
         raise exc
     return process_info
@@ -1245,11 +1244,9 @@ def impersonate_sid(sid, session_id=None, privs=None):
         tok = dup_token(tok)
         elevate_token(tok)
         if win32security.ImpersonateLoggedOnUser(tok) == 0:
-            # pylint: disable=undefined-variable
-            raise WindowsError("Impersonation failure")
-            # pylint: enable=undefined-variable
+            raise OSError("Impersonation failure")
         return tok
-    raise WindowsError("Impersonation failure")  # pylint: disable=undefined-variable
+    raise OSError("Impersonation failure")
 
 
 def dup_token(th):
@@ -1282,9 +1279,7 @@ def elevate_token(th):
 
     # Enable the privileges
     if win32security.AdjustTokenPrivileges(th, 0, enable_privs) == 0:
-        # pylint: disable=undefined-variable
-        raise WindowsError(win32api.FormatMessage(win32api.GetLastError()))
-        # pylint: enable=undefined-variable
+        raise OSError(win32api.FormatMessage(win32api.GetLastError()))
 
 
 def make_inheritable(token):

@@ -196,7 +196,12 @@ def __init__(opts):
 
 
 def check_vpc(
-    vpc_id=None, vpc_name=None, region=None, key=None, keyid=None, profile=None,
+    vpc_id=None,
+    vpc_name=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
 ):
     """
     Check whether a VPC with the given name or id exists.
@@ -215,7 +220,7 @@ def check_vpc(
 
     if not _exactly_one((vpc_name, vpc_id)):
         raise SaltInvocationError(
-            "One (but not both) of vpc_id or vpc_name " "must be provided."
+            "One (but not both) of vpc_id or vpc_name must be provided."
         )
     if vpc_name:
         vpc_id = _get_id(
@@ -250,8 +255,9 @@ def _create_resource(
             create_resource = getattr(conn, "create_" + resource)
         except AttributeError:
             raise AttributeError(
-                "{} function does not exist for boto VPC "
-                "connection.".format("create_" + resource)
+                "{} function does not exist for boto VPC connection.".format(
+                    "create_" + resource
+                )
             )
 
         if name and _get_resource_id(
@@ -311,9 +317,7 @@ def _delete_resource(
     """
 
     if not _exactly_one((name, resource_id)):
-        raise SaltInvocationError(
-            "One (but not both) of name or id must be " "provided."
-        )
+        raise SaltInvocationError("One (but not both) of name or id must be provided.")
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -322,8 +326,9 @@ def _delete_resource(
             delete_resource = getattr(conn, "delete_" + resource)
         except AttributeError:
             raise AttributeError(
-                "{} function does not exist for boto VPC "
-                "connection.".format("delete_" + resource)
+                "{} function does not exist for boto VPC connection.".format(
+                    "delete_" + resource
+                )
             )
         if name:
             resource_id = _get_resource_id(
@@ -374,9 +379,7 @@ def _get_resource(
     """
 
     if not _exactly_one((name, resource_id)):
-        raise SaltInvocationError(
-            "One (but not both) of name or id must be " "provided."
-        )
+        raise SaltInvocationError("One (but not both) of name or id must be provided.")
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -413,7 +416,7 @@ def _get_resource(
             return r[0]
         else:
             raise CommandExecutionError(
-                "Found more than one " '{} named "{}"'.format(resource, name)
+                'Found more than one {} named "{}"'.format(resource, name)
             )
     else:
         return None
@@ -434,11 +437,11 @@ def _find_resources(
     """
 
     if all((resource_id, name)):
-        raise SaltInvocationError("Only one of name or id may be " "provided.")
+        raise SaltInvocationError("Only one of name or id may be provided.")
 
     if not any((resource_id, name, tags)):
         raise SaltInvocationError(
-            "At least one of the following must be " "provided: id, name, or tags."
+            "At least one of the following must be provided: id, name, or tags."
         )
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -582,7 +585,7 @@ def _find_vpcs(
     """
 
     if all((vpc_id, vpc_name)):
-        raise SaltInvocationError("Only one of vpc_name or vpc_id may be " "provided.")
+        raise SaltInvocationError("Only one of vpc_name or vpc_id may be provided.")
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     filter_parameters = {"filters": {}}
@@ -672,7 +675,13 @@ def _get_id(
 
 
 def get_id(
-    name=None, cidr=None, tags=None, region=None, key=None, keyid=None, profile=None,
+    name=None,
+    cidr=None,
+    tags=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
 ):
     """
     Given VPC properties, return the VPC id if a match is found.
@@ -837,13 +846,13 @@ def delete(
 
     if name:
         log.warning(
-            "boto_vpc.delete: name parameter is deprecated " "use vpc_name instead."
+            "boto_vpc.delete: name parameter is deprecated use vpc_name instead."
         )
         vpc_name = name
 
     if not _exactly_one((vpc_name, vpc_id)):
         raise SaltInvocationError(
-            "One (but not both) of vpc_name or vpc_id must be " "provided."
+            "One (but not both) of vpc_name or vpc_id must be provided."
         )
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -883,7 +892,12 @@ def delete(
 
 
 def describe(
-    vpc_id=None, vpc_name=None, region=None, key=None, keyid=None, profile=None,
+    vpc_id=None,
+    vpc_name=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
 ):
     """
     Describe a VPC's properties. If no VPC ID/Name is spcified then describe the default VPC.
@@ -1741,7 +1755,7 @@ def create_nat_gateway(
     try:
         if all((subnet_id, subnet_name)):
             raise SaltInvocationError(
-                "Only one of subnet_name or subnet_id may be " "provided."
+                "Only one of subnet_name or subnet_id may be provided."
             )
         if subnet_name:
             subnet_id = _get_resource_id(
@@ -2275,7 +2289,7 @@ def create_network_acl(
 
     if all((subnet_id, subnet_name)):
         raise SaltInvocationError(
-            "Only one of subnet_name or subnet_id may be " "provided."
+            "Only one of subnet_name or subnet_id may be provided."
         )
     if subnet_name:
         subnet_id = _get_resource_id(
@@ -2515,11 +2529,11 @@ def disassociate_network_acl(
 
     if not _exactly_one((subnet_name, subnet_id)):
         raise SaltInvocationError(
-            "One (but not both) of subnet_id or subnet_name " "must be provided."
+            "One (but not both) of subnet_id or subnet_name must be provided."
         )
 
     if all((vpc_name, vpc_id)):
-        raise SaltInvocationError("Only one of vpc_id or vpc_name " "may be provided.")
+        raise SaltInvocationError("Only one of vpc_id or vpc_name may be provided.")
     try:
         if subnet_name:
             subnet_id = _get_resource_id(
@@ -2573,8 +2587,7 @@ def _create_network_acl_entry(
 
     if not _exactly_one((network_acl_name, network_acl_id)):
         raise SaltInvocationError(
-            "One (but not both) of network_acl_id or "
-            "network_acl_name must be provided."
+            "One (but not both) of network_acl_id or network_acl_name must be provided."
         )
 
     for v in ("rule_number", "protocol", "rule_action", "cidr_block"):
@@ -2724,8 +2737,7 @@ def delete_network_acl_entry(
     """
     if not _exactly_one((network_acl_name, network_acl_id)):
         raise SaltInvocationError(
-            "One (but not both) of network_acl_id or "
-            "network_acl_name must be provided."
+            "One (but not both) of network_acl_id or network_acl_name must be provided."
         )
 
     for v in ("rule_number", "egress"):
@@ -2907,7 +2919,8 @@ def route_exists(
 
     if not any((route_table_name, route_table_id)):
         raise SaltInvocationError(
-            "At least one of the following must be specified: route table name or route table id."
+            "At least one of the following must be specified: route table name or route"
+            " table id."
         )
 
     if not any((gateway_id, instance_id, interface_id, vpc_peering_connection_id)):
@@ -2991,7 +3004,7 @@ def associate_route_table(
 
     if all((subnet_id, subnet_name)):
         raise SaltInvocationError(
-            "Only one of subnet_name or subnet_id may be " "provided."
+            "Only one of subnet_name or subnet_id may be provided."
         )
     if subnet_name:
         subnet_id = _get_resource_id(
@@ -3005,7 +3018,7 @@ def associate_route_table(
 
     if all((route_table_id, route_table_name)):
         raise SaltInvocationError(
-            "Only one of route_table_name or route_table_id may be " "provided."
+            "Only one of route_table_name or route_table_id may be provided."
         )
     if route_table_name:
         route_table_id = _get_resource_id(
@@ -3132,8 +3145,7 @@ def create_route(
 
     if not _exactly_one((route_table_name, route_table_id)):
         raise SaltInvocationError(
-            "One (but not both) of route_table_id or route_table_name "
-            "must be provided."
+            "One (but not both) of route_table_id or route_table_name must be provided."
         )
 
     if not _exactly_one(
@@ -3150,9 +3162,9 @@ def create_route(
         )
     ):
         raise SaltInvocationError(
-            "Only one of gateway_id, internet_gateway_name, instance_id, "
-            "interface_id, vpc_peering_connection_id, nat_gateway_id, "
-            "nat_gateway_subnet_id, nat_gateway_subnet_name or vpc_peering_connection_name may be provided."
+            "Only one of gateway_id, internet_gateway_name, instance_id, interface_id,"
+            " vpc_peering_connection_id, nat_gateway_id, nat_gateway_subnet_id,"
+            " nat_gateway_subnet_name or vpc_peering_connection_name may be provided."
         )
 
     if destination_cidr_block is None:
@@ -3306,8 +3318,7 @@ def delete_route(
 
     if not _exactly_one((route_table_name, route_table_id)):
         raise SaltInvocationError(
-            "One (but not both) of route_table_id or route_table_name "
-            "must be provided."
+            "One (but not both) of route_table_id or route_table_name must be provided."
         )
 
     if destination_cidr_block is None:
@@ -3372,8 +3383,7 @@ def replace_route(
 
     if not _exactly_one((route_table_name, route_table_id)):
         raise SaltInvocationError(
-            "One (but not both) of route_table_id or route_table_name "
-            "must be provided."
+            "One (but not both) of route_table_id or route_table_name must be provided."
         )
 
     if destination_cidr_block is None:
@@ -3717,11 +3727,11 @@ def request_vpc_peering_connection(
 
     if not _exactly_one((requester_vpc_id, requester_vpc_name)):
         raise SaltInvocationError(
-            "Exactly one of requester_vpc_id or " "requester_vpc_name is required"
+            "Exactly one of requester_vpc_id or requester_vpc_name is required"
         )
     if not _exactly_one((peer_vpc_id, peer_vpc_name)):
         raise SaltInvocationError(
-            "Exactly one of peer_vpc_id or " "peer_vpc_name is required."
+            "Exactly one of peer_vpc_id or peer_vpc_name is required."
         )
 
     if requester_vpc_name:
@@ -3870,9 +3880,7 @@ def accept_vpc_peering_connection(  # pylint: disable=too-many-arguments
     """
     if not _exactly_one((conn_id, name)):
         raise SaltInvocationError(
-            "One (but not both) of "
-            "vpc_peering_connection_id or name "
-            "must be provided."
+            "One (but not both) of vpc_peering_connection_id or name must be provided."
         )
 
     conn = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
@@ -3971,7 +3979,7 @@ def delete_vpc_peering_connection(
     """
     if not _exactly_one((conn_id, conn_name)):
         raise SaltInvocationError(
-            "Exactly one of conn_id or " "conn_name must be provided."
+            "Exactly one of conn_id or conn_name must be provided."
         )
 
     conn = _get_conn3(region=region, key=key, keyid=keyid, profile=profile)
@@ -3979,8 +3987,7 @@ def delete_vpc_peering_connection(
         conn_id = _vpc_peering_conn_id_for_name(conn_name, conn)
         if not conn_id:
             raise SaltInvocationError(
-                "Couldn't resolve VPC peering connection "
-                "{} to an ID".format(conn_name)
+                "Couldn't resolve VPC peering connection {} to an ID".format(conn_name)
             )
     try:
         log.debug("Trying to delete vpc peering connection")

@@ -14,7 +14,17 @@ Statistics
 - Total Issue References: **110**
 - Total PR References: **264**
 
-- Contributors: **71** (`Ch3LL`_, `DmitryKuzmenko`_, `DylanFrese`_, `Ferbla`_, `Kurocon`_, `Lothiraldan`_, `RuriRyan`_, `Talkless`_, `The-Loeki`_, `UtahDave`_, `Xiami2012`_, `abednarik`_, `afletch`_, `ahammond`_, `ahus1`_, `aletourneau`_, `alxf`_, `amontalban`_, `anlutro`_, `arthurlogilab`_, `atengler`_, `basepi`_, `bdrung`_, `bradthurber`_, `cachedout`_, `captaininspiration`_, `cedwards`_, `clarkperkins`_, `clinta`_, `cro`_, `dmurphy18`_, `exowaucka`_, `garethgreenaway`_, `guettli`_, `idonin`_, `isbm`_, `jacobhammons`_, `jbonachera`_, `jfindlay`_, `jfray`_, `junster1`_, `justinta`_, `krak3n`_, `lalmeras`_, `lloydoliver`_, `lomeroe`_, `mcalmer`_, `mitar`_, `mrproper`_, `multani`_, `nmadhok`_, `notpeter`_, `onorua`_, `paclat`_, `papertigers`_, `rallytime`_, `rkgrunt`_, `sakateka`_, `sbreidba`_, `schancel`_, `sjorge`_, `stk0vrfl0w`_, `techhat`_, `terminalmage`_, `thatch45`_, `ticosax`_, `tomlaredo`_, `twangboy`_, `twellspring`_, `vutny`_, `whiteinge`_)
+- Contributors: **71** (`Ch3LL`_, `DmitryKuzmenko`_, `DylanFrese`_, `Ferbla`_, `Kurocon`_,
+  `Lothiraldan`_, `RuriRyan`_, `Talkless`_, `The-Loeki`_, `UtahDave`_, `Xiami2012`_, `abednarik`_,
+  `afletch`_, `ahammond`_, `ahus1`_, `aletourneau`_, `alxf`_, `amontalban`_, `anlutro`_,
+  `arthurlogilab`_, `atengler`_, `basepi`_, `bdrung`_, `bradthurber`_, `cachedout`_,
+  `captaininspiration`_, `cedwards`_, `clarkperkins`_, `clinta`_, `cro`_, `dmurphy18`_,
+  `exowaucka`_, `garethgreenaway`_, `guettli`_, `idonin`_, `isbm`_, `jacobhammons`_, `jbonachera`_,
+  `jfindlay`_, `jfray`_, `junster1`_, `justinta`_, `krak3n`_, `lalmeras`_, `lloydoliver`_,
+  `lomeroe`_, `mcalmer`_, `mitar`_, `mrproper`_, `multani`_, `nmadhok`_, `notpeter`_, `onorua`_,
+  `paclat`_, `papertigers`_, `rallytime`_, `rkgrunt`_, `sakateka`_, `sbreidba`_, `schancel`_,
+  `sjorge`_, `stk0vrfl0w`_, `techhat`_, `terminalmage`_, `thatch45`_, `ticosax`_, `tomlaredo`_,
+  `twangboy`_, `twellspring`_, `vutny`_, `whiteinge`_)
 
 
 Important Post-Upgrade Instructions for Linux Mint

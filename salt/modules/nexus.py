@@ -55,31 +55,33 @@ def get_latest_snapshot(
     password=None,
 ):
     """
-       Gets latest snapshot of the given artifact
+    Gets latest snapshot of the given artifact
 
-       nexus_url
-           URL of nexus instance
-       repository
-           Snapshot repository in nexus to retrieve artifact from, for example: libs-snapshots
-       group_id
-           Group Id of the artifact
-       artifact_id
-           Artifact Id of the artifact
-       packaging
-           Packaging type (jar,war,ear,etc)
-       target_dir
-           Target directory to download artifact to (default: /tmp)
-       target_file
-           Target file to download artifact to (by default it is target_dir/artifact_id-snapshot_version.packaging)
-       classifier
-           Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
-       username
-           nexus username. Optional parameter.
-       password
-           nexus password. Optional parameter.
-       """
+    nexus_url
+        URL of nexus instance
+    repository
+        Snapshot repository in nexus to retrieve artifact from, for example: libs-snapshots
+    group_id
+        Group Id of the artifact
+    artifact_id
+        Artifact Id of the artifact
+    packaging
+        Packaging type (jar,war,ear,etc)
+    target_dir
+        Target directory to download artifact to (default: /tmp)
+    target_file
+        Target file to download artifact to (by default it is target_dir/artifact_id-snapshot_version.packaging)
+    classifier
+        Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
+    username
+        nexus username. Optional parameter.
+    password
+        nexus password. Optional parameter.
+    """
     log.debug(
-        "======================== MODULE FUNCTION: nexus.get_latest_snapshot, nexus_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, target_dir=%s, classifier=%s)",
+        "======================== MODULE FUNCTION: nexus.get_latest_snapshot,"
+        " nexus_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s,"
+        " target_dir=%s, classifier=%s)",
         nexus_url,
         repository,
         group_id,
@@ -132,33 +134,35 @@ def get_snapshot(
     password=None,
 ):
     """
-       Gets snapshot of the desired version of the artifact
+    Gets snapshot of the desired version of the artifact
 
-       nexus_url
-           URL of nexus instance
-       repository
-           Snapshot repository in nexus to retrieve artifact from, for example: libs-snapshots
-       group_id
-           Group Id of the artifact
-       artifact_id
-           Artifact Id of the artifact
-       packaging
-           Packaging type (jar,war,ear,etc)
-       version
-           Version of the artifact
-       target_dir
-           Target directory to download artifact to (default: /tmp)
-       target_file
-           Target file to download artifact to (by default it is target_dir/artifact_id-snapshot_version.packaging)
-       classifier
-           Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
-       username
-           nexus username. Optional parameter.
-       password
-           nexus password. Optional parameter.
-       """
+    nexus_url
+        URL of nexus instance
+    repository
+        Snapshot repository in nexus to retrieve artifact from, for example: libs-snapshots
+    group_id
+        Group Id of the artifact
+    artifact_id
+        Artifact Id of the artifact
+    packaging
+        Packaging type (jar,war,ear,etc)
+    version
+        Version of the artifact
+    target_dir
+        Target directory to download artifact to (default: /tmp)
+    target_file
+        Target file to download artifact to (by default it is target_dir/artifact_id-snapshot_version.packaging)
+    classifier
+        Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
+    username
+        nexus username. Optional parameter.
+    password
+        nexus password. Optional parameter.
+    """
     log.debug(
-        "======================== MODULE FUNCTION: nexus.get_snapshot(nexus_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, target_dir=%s, classifier=%s)",
+        "======================== MODULE FUNCTION: nexus.get_snapshot(nexus_url=%s,"
+        " repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s,"
+        " target_dir=%s, classifier=%s)",
         nexus_url,
         repository,
         group_id,
@@ -201,29 +205,31 @@ def get_snapshot_version_string(
     password=None,
 ):
     """
-       Gets the specific version string of a snapshot of the desired version of the artifact
+    Gets the specific version string of a snapshot of the desired version of the artifact
 
-       nexus_url
-           URL of nexus instance
-       repository
-           Snapshot repository in nexus to retrieve artifact from, for example: libs-snapshots
-       group_id
-           Group Id of the artifact
-       artifact_id
-           Artifact Id of the artifact
-       packaging
-           Packaging type (jar,war,ear,etc)
-       version
-           Version of the artifact
-       classifier
-           Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
-       username
-           nexus username. Optional parameter.
-       password
-           nexus password. Optional parameter.
-       """
+    nexus_url
+        URL of nexus instance
+    repository
+        Snapshot repository in nexus to retrieve artifact from, for example: libs-snapshots
+    group_id
+        Group Id of the artifact
+    artifact_id
+        Artifact Id of the artifact
+    packaging
+        Packaging type (jar,war,ear,etc)
+    version
+        Version of the artifact
+    classifier
+        Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
+    username
+        nexus username. Optional parameter.
+    password
+        nexus password. Optional parameter.
+    """
     log.debug(
-        "======================== MODULE FUNCTION: nexus.get_snapshot_version_string(nexus_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, classifier=%s)",
+        "======================== MODULE FUNCTION:"
+        " nexus.get_snapshot_version_string(nexus_url=%s, repository=%s, group_id=%s,"
+        " artifact_id=%s, packaging=%s, version=%s, classifier=%s)",
         nexus_url,
         repository,
         group_id,
@@ -262,31 +268,33 @@ def get_latest_release(
     password=None,
 ):
     """
-       Gets the latest release of the artifact
+    Gets the latest release of the artifact
 
-       nexus_url
-           URL of nexus instance
-       repository
-           Release repository in nexus to retrieve artifact from, for example: libs-releases
-       group_id
-           Group Id of the artifact
-       artifact_id
-           Artifact Id of the artifact
-       packaging
-           Packaging type (jar,war,ear,etc)
-       target_dir
-           Target directory to download artifact to (default: /tmp)
-       target_file
-           Target file to download artifact to (by default it is target_dir/artifact_id-version.packaging)
-       classifier
-           Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
-       username
-           nexus username. Optional parameter.
-       password
-           nexus password. Optional parameter.
-       """
+    nexus_url
+        URL of nexus instance
+    repository
+        Release repository in nexus to retrieve artifact from, for example: libs-releases
+    group_id
+        Group Id of the artifact
+    artifact_id
+        Artifact Id of the artifact
+    packaging
+        Packaging type (jar,war,ear,etc)
+    target_dir
+        Target directory to download artifact to (default: /tmp)
+    target_file
+        Target file to download artifact to (by default it is target_dir/artifact_id-version.packaging)
+    classifier
+        Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
+    username
+        nexus username. Optional parameter.
+    password
+        nexus password. Optional parameter.
+    """
     log.debug(
-        "======================== MODULE FUNCTION: nexus.get_latest_release(nexus_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, target_dir=%s, classifier=%s)",
+        "======================== MODULE FUNCTION:"
+        " nexus.get_latest_release(nexus_url=%s, repository=%s, group_id=%s,"
+        " artifact_id=%s, packaging=%s, target_dir=%s, classifier=%s)",
         nexus_url,
         repository,
         group_id,
@@ -330,33 +338,35 @@ def get_release(
     password=None,
 ):
     """
-       Gets the specified release of the artifact
+    Gets the specified release of the artifact
 
-       nexus_url
-           URL of nexus instance
-       repository
-           Release repository in nexus to retrieve artifact from, for example: libs-releases
-       group_id
-           Group Id of the artifact
-       artifact_id
-           Artifact Id of the artifact
-       packaging
-           Packaging type (jar,war,ear,etc)
-       version
-           Version of the artifact
-       target_dir
-           Target directory to download artifact to (default: /tmp)
-       target_file
-           Target file to download artifact to (by default it is target_dir/artifact_id-version.packaging)
-       classifier
-           Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
-       username
-           nexus username. Optional parameter.
-       password
-           nexus password. Optional parameter.
-       """
+    nexus_url
+        URL of nexus instance
+    repository
+        Release repository in nexus to retrieve artifact from, for example: libs-releases
+    group_id
+        Group Id of the artifact
+    artifact_id
+        Artifact Id of the artifact
+    packaging
+        Packaging type (jar,war,ear,etc)
+    version
+        Version of the artifact
+    target_dir
+        Target directory to download artifact to (default: /tmp)
+    target_file
+        Target file to download artifact to (by default it is target_dir/artifact_id-version.packaging)
+    classifier
+        Artifact classifier name (ex: sources,javadoc,etc). Optional parameter.
+    username
+        nexus username. Optional parameter.
+    password
+        nexus password. Optional parameter.
+    """
     log.debug(
-        "======================== MODULE FUNCTION: nexus.get_release(nexus_url=%s, repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s, target_dir=%s, classifier=%s)",
+        "======================== MODULE FUNCTION: nexus.get_release(nexus_url=%s,"
+        " repository=%s, group_id=%s, artifact_id=%s, packaging=%s, version=%s,"
+        " target_dir=%s, classifier=%s)",
         nexus_url,
         repository,
         group_id,
@@ -507,11 +517,13 @@ def _get_release_url(
 def _get_artifact_metadata_url(nexus_url, repository, group_id, artifact_id):
     group_url = __get_group_id_subpath(group_id)
     # for released versions the suffix for the file is same as version
-    artifact_metadata_url = "{nexus_url}/{repository}/{group_url}/{artifact_id}/maven-metadata.xml".format(
-        nexus_url=nexus_url,
-        repository=repository,
-        group_url=group_url,
-        artifact_id=artifact_id,
+    artifact_metadata_url = (
+        "{nexus_url}/{repository}/{group_url}/{artifact_id}/maven-metadata.xml".format(
+            nexus_url=nexus_url,
+            repository=repository,
+            group_url=group_url,
+            artifact_id=artifact_id,
+        )
     )
     log.debug("artifact_metadata_url=%s", artifact_metadata_url)
     return artifact_metadata_url
@@ -676,7 +688,7 @@ def __save_artifact(artifact_url, target_file, headers):
             local_file.write(salt.utils.stringutils.to_bytes(f.read()))
         result["status"] = True
         result["comment"] = __append_comment(
-            ("Artifact downloaded from URL: {}".format(artifact_url)),
+            "Artifact downloaded from URL: {}".format(artifact_url),
             result["comment"],
         )
         result["changes"]["downloaded_file"] = target_file
@@ -720,8 +732,8 @@ def __get_error_comment(http_error, request_url):
         comment = "HTTP Error 404. Request URL: " + request_url
     elif http_error.code == http.client.CONFLICT:
         comment = (
-            "HTTP Error 409: Conflict. Requested URL: {}. \n"
-            "This error may be caused by reading snapshot artifact from non-snapshot repository.".format(
+            "HTTP Error 409: Conflict. Requested URL: {}. \nThis error may be caused by"
+            " reading snapshot artifact from non-snapshot repository.".format(
                 request_url
             )
         )

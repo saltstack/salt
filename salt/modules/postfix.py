@@ -137,7 +137,14 @@ def set_master(
     new_conf = []
     dict_key = "{} {}".format(service, conn_type)
     new_line = _format_master(
-        service, conn_type, private, unpriv, chroot, wakeup, maxproc, command,
+        service,
+        conn_type,
+        private,
+        unpriv,
+        chroot,
+        wakeup,
+        maxproc,
+        command,
     )
     for line in conf_list:
         if isinstance(line, dict):
@@ -190,7 +197,14 @@ def _format_master(
         maxproc = "-"
 
     conf_line = "{:9s} {:5s} {:7s} {:7s} {:7s} {:7s} {:7s} {}".format(
-        service, conn_type, private, unpriv, chroot, wakeup, maxproc, command,
+        service,
+        conn_type,
+        private,
+        unpriv,
+        chroot,
+        wakeup,
+        maxproc,
+        command,
     )
     # print(conf_line)
     return conf_line

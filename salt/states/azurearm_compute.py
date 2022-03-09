@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Azure (ARM) Compute State Module
 
@@ -86,7 +85,6 @@ Azure (ARM) Compute State Module
 """
 
 # Python libs
-from __future__ import absolute_import
 
 import logging
 
@@ -214,9 +212,9 @@ def availability_set_present(
                 return ret
             aset_vms = aset.get("virtual_machines", [])
             remote_vms = sorted(
-                [vm["id"].split("/")[-1].lower() for vm in aset_vms if "id" in aset_vms]
+                vm["id"].split("/")[-1].lower() for vm in aset_vms if "id" in aset_vms
             )
-            local_vms = sorted([vm.lower() for vm in virtual_machines or []])
+            local_vms = sorted(vm.lower() for vm in virtual_machines or [])
             if local_vms != remote_vms:
                 ret["changes"]["virtual_machines"] = {
                     "old": aset_vms,
@@ -225,12 +223,12 @@ def availability_set_present(
 
         if not ret["changes"]:
             ret["result"] = True
-            ret["comment"] = "Availability set {0} is already present.".format(name)
+            ret["comment"] = "Availability set {} is already present.".format(name)
             return ret
 
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Availability set {0} would be updated.".format(name)
+            ret["comment"] = "Availability set {} would be updated.".format(name)
             return ret
 
     else:
@@ -247,7 +245,7 @@ def availability_set_present(
         }
 
     if __opts__["test"]:
-        ret["comment"] = "Availability set {0} would be created.".format(name)
+        ret["comment"] = "Availability set {} would be created.".format(name)
         ret["result"] = None
         return ret
 
@@ -267,10 +265,10 @@ def availability_set_present(
 
     if "error" not in aset:
         ret["result"] = True
-        ret["comment"] = "Availability set {0} has been created.".format(name)
+        ret["comment"] = "Availability set {} has been created.".format(name)
         return ret
 
-    ret["comment"] = "Failed to create availability set {0}! ({1})".format(
+    ret["comment"] = "Failed to create availability set {}! ({})".format(
         name, aset.get("error")
     )
     return ret
@@ -306,11 +304,11 @@ def availability_set_absent(name, resource_group, connection_auth=None):
 
     if "error" in aset:
         ret["result"] = True
-        ret["comment"] = "Availability set {0} was not found.".format(name)
+        ret["comment"] = "Availability set {} was not found.".format(name)
         return ret
 
     elif __opts__["test"]:
-        ret["comment"] = "Availability set {0} would be deleted.".format(name)
+        ret["comment"] = "Availability set {} would be deleted.".format(name)
         ret["result"] = None
         ret["changes"] = {
             "old": aset,
@@ -324,9 +322,9 @@ def availability_set_absent(name, resource_group, connection_auth=None):
 
     if deleted:
         ret["result"] = True
-        ret["comment"] = "Availability set {0} has been deleted.".format(name)
+        ret["comment"] = "Availability set {} has been deleted.".format(name)
         ret["changes"] = {"old": aset, "new": {}}
         return ret
 
-    ret["comment"] = "Failed to delete availability set {0}!".format(name)
+    ret["comment"] = "Failed to delete availability set {}!".format(name)
     return ret

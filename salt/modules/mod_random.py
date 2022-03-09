@@ -96,22 +96,108 @@ def str_encode(value, encoder="base64"):
     return out
 
 
-def get_str(length=20):
+def get_str(
+    length=20,
+    chars=None,
+    lowercase=True,
+    uppercase=True,
+    digits=True,
+    punctuation=True,
+    whitespace=False,
+    printable=False,
+):
     """
     .. versionadded:: 2014.7.0
+    .. versionchanged:: 3004.0
+
+         Changed the default character set used to include symbols and implemented arguments to control the used character set.
 
     Returns a random string of the specified length.
 
     length : 20
         Any valid number of bytes.
 
+    chars : None
+        .. versionadded:: 3004.0
+
+        String with any character that should be used to generate random string.
+
+        This argument supersedes all other character controlling arguments.
+
+    lowercase : True
+        .. versionadded:: 3004.0
+
+        Use lowercase letters in generated random string.
+        (see :py:data:`string.ascii_lowercase`)
+
+        This argument is superseded by chars.
+
+    uppercase : True
+        .. versionadded:: 3004.0
+
+        Use uppercase letters in generated random string.
+        (see :py:data:`string.ascii_uppercase`)
+
+        This argument is superseded by chars.
+
+    digits : True
+        .. versionadded:: 3004.0
+
+        Use digits in generated random string.
+        (see :py:data:`string.digits`)
+
+        This argument is superseded by chars.
+
+    printable : False
+        .. versionadded:: 3004.0
+
+        Use printable characters in generated random string and includes lowercase, uppercase,
+        digits, punctuation and whitespace.
+        (see :py:data:`string.printable`)
+
+        It is disabled by default as includes whitespace characters which some systems do not
+        handle well in passwords.
+        This argument also supersedes all other classes because it includes them.
+
+        This argument is superseded by chars.
+
+    punctuation : True
+        .. versionadded:: 3004.0
+
+        Use punctuation characters in generated random string.
+        (see :py:data:`string.punctuation`)
+
+        This argument is superseded by chars.
+
+    whitespace : False
+        .. versionadded:: 3004.0
+
+        Use whitespace characters in generated random string.
+        (see :py:data:`string.whitespace`)
+
+        It is disabled by default as some systems do not handle whitespace characters in passwords
+        well.
+
+        This argument is superseded by chars.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' random.get_str 128
+        salt '*' random.get_str 128 chars='abc123.!()'
+        salt '*' random.get_str 128 lowercase=False whitespace=True
     """
-    return salt.utils.pycrypto.secure_password(length)
+    return salt.utils.pycrypto.secure_password(
+        length=length,
+        chars=chars,
+        lowercase=lowercase,
+        uppercase=uppercase,
+        digits=digits,
+        punctuation=punctuation,
+        whitespace=whitespace,
+        printable=printable,
+    )
 
 
 def shadow_hash(crypt_salt=None, password=None, algorithm="sha512"):

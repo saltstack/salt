@@ -41,9 +41,7 @@ def test_monitored():
         ret.update({"comment": comt})
         assert serverdensity_device.monitored(name) == ret
 
-        comt = (
-            "Successfully installed agent and created" " device in Server Density db."
-        )
+        comt = "Successfully installed agent and created device in Server Density db."
         ret.update(
             {
                 "comment": comt,

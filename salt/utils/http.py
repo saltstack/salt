@@ -346,8 +346,7 @@ def query(
                     req_kwargs["cert"] = cert
             else:
                 log.error(
-                    "The client-side certificate path that"
-                    " was passed is not valid: %s",
+                    "The client-side certificate path that was passed is not valid: %s",
                     cert,
                 )
 
@@ -511,8 +510,7 @@ def query(
                     req_kwargs["client_key"] = cert[1]
             else:
                 log.error(
-                    "The client-side certificate path that "
-                    "was passed is not valid: %s",
+                    "The client-side certificate path that was passed is not valid: %s",
                     cert,
                 )
 
@@ -563,8 +561,8 @@ def query(
         if proxy_host and proxy_port:
             if HAS_CURL_HTTPCLIENT is False:
                 ret["error"] = (
-                    "proxy_host and proxy_port has been set. This requires pycurl and tornado, "
-                    "but the libraries does not seem to be installed"
+                    "proxy_host and proxy_port has been set. This requires pycurl and"
+                    " tornado, but the libraries does not seem to be installed"
                 )
                 log.error(ret["error"])
                 return ret
@@ -806,7 +804,10 @@ def get_ca_bundle(opts=None):
 
 
 def update_ca_bundle(
-    target=None, source=None, opts=None, merge_files=None,
+    target=None,
+    source=None,
+    opts=None,
+    merge_files=None,
 ):
     """
     Attempt to update the CA bundle file from a URL
