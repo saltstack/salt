@@ -732,6 +732,7 @@ def test_mod_repo_match():
                                     "http://cdn-aws.deb.debian.org/debian/",
                                     "stretch",
                                     ["main"],
+                                    "",
                                 )
                             ),
                         ):

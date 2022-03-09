@@ -157,7 +157,7 @@ if not HAS_APT:
             repo_line.append(self.type)
             opts = []
             if self.architectures:
-                opts.append("arch={}".format(" ".join(self.architectures)))
+                opts.append("arch={}".format(",".join(self.architectures)))
             if self.signedby:
                 opts.append("signed-by={}".format(self.signedby))
 
@@ -185,17 +185,17 @@ if not HAS_APT:
                 self.invalid = True
                 return False
             if repo_line[1].startswith("["):
-                opts = re.search(r"\[.*\]", self.line).group(0).strip("[]")
                 repo_line = [x for x in (line.strip("[]") for line in repo_line) if x]
-                for opt in opts.split():
-                    if opt.startswith("arch"):
-                        self.architectures.extend(opt.split("=", 1)[1].split(","))
-                    if opt.startswith("signed-by"):
-                        self.signedby = opt.split("=", 1)[1]
-                    try:
-                        repo_line.pop(repo_line.index(opt))
-                    except ValueError:
-                        repo_line.pop(repo_line.index("[" + opt + "]"))
+                opts = _get_opts(self.line)
+                self.architectures.extend(opts["arch"]["value"])
+                self.signedby = opts["signedby"]["value"]
+                for opt in opts.keys():
+                    opt = opts[opt]["full"]
+                    if opt:
+                        try:
+                            repo_line.pop(repo_line.index(opt))
+                        except ValueError:
+                            repo_line.pop(repo_line.index("[" + opt + "]"))
             self.type = repo_line[0]
             self.uri = repo_line[1]
             self.dist = repo_line[2]
@@ -1675,18 +1675,46 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):
     return None
 
 
+def _get_opts(line):
+    """
+    Return all opts in [] for a repo line
+    """
+    get_opts = re.search(r"\[.*\]", line)
+    ret = {"arch": {"full": "", "value": ""}, "signedby": {"full": "", "value": ""}}
+
+    if not get_opts:
+        return ret
+    opts = get_opts.group(0).strip("[]")
+    architectures = []
+    for idx, opt in enumerate(opts.split()):
+        if opt.startswith("arch"):
+            architectures.extend(opt.split("=", 1)[1].split(","))
+            ret["arch"]["full"] = opt
+            ret["arch"]["value"] = architectures
+            ret["arch"]["index"] = idx
+        if opt.startswith("signed-by"):
+            ret["signedby"]["full"] = opt
+            ret["signedby"]["value"] = opt.split("=", 1)[1]
+            ret["signedby"]["index"] = idx
+    return ret
+
+
 def _split_repo_str(repo):
     """
     Return APT source entry as a tuple.
     """
     split = SourceEntry(repo)
+    if not HAS_APT:
+        signedby = split.signedby
+    else:
+        signedby = _get_opts(line=repo)["signedby"].get("value", "")
     return (
         split.type,
         split.architectures,
         split.uri,
         split.dist,
         split.comps,
-        split.signedby,
+        signedby,
     )
 
 
@@ -1838,6 +1866,10 @@ def list_repos(**kwargs):
     for source in sources.list:
         if _skip_source(source):
             continue
+        if not HAS_APT:
+            signedby = source.signedby
+        else:
+            signedby = _get_opts(line=source.line)["signedby"].get("value", "")
         repo = {}
         repo["file"] = source.file
         repo["comps"] = getattr(source, "comps", [])
@@ -1847,6 +1879,7 @@ def list_repos(**kwargs):
         repo["uri"] = source.uri
         repo["line"] = source.line.strip()
         repo["architectures"] = getattr(source, "architectures", [])
+        repo["signedby"] = signedby
         repos.setdefault(source.uri, []).append(repo)
     return repos
 
@@ -2657,9 +2690,9 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     no_proxy = __salt__["config.option"]("no_proxy")
 
     if "signedby" in kwargs:
-        kwargs["signedby"] = kwargs["signedby"]
+        kwargs["signedby"] = pathlib.Path(kwargs["signedby"])
     else:
-        kwargs["signedby"] = repo_signedby
+        kwargs["signedby"] = pathlib.Path(repo_signedby)
 
     if "keyid" in kwargs:
         keyid = kwargs.pop("keyid", None)
@@ -2698,7 +2731,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
                     else:
                         if not aptkey:
 
-                            key_file = pathlib.Path(kwargs["signedby"])
+                            key_file = kwargs["signedby"]
                             add_repo_key(
                                 keyid=key,
                                 keyserver=keyserver,
@@ -2728,14 +2761,22 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     elif "key_url" in kwargs:
         key_url = kwargs["key_url"]
-        fn_ = __salt__["cp.cache_file"](key_url, saltenv)
+        fn_ = pathlib.Path(__salt__["cp.cache_file"](key_url, saltenv))
         if not fn_:
             raise CommandExecutionError("Error: file not found: {}".format(key_url))
+
+        if fn_.name != kwargs["signedby"].name:
+            # override the signedby defined in the name with the
+            # one defined in kwargs.
+            new_path = fn_.parent / kwargs["signedby"].name
+            fn_.rename(new_path)
+            fn_ = new_path
+
         if not aptkey:
-            if not add_repo_key(path=fn_, aptkey=False):
+            if not add_repo_key(path=str(fn_), aptkey=False):
                 return False
         else:
-            cmd = ["apt-key", "add", fn_]
+            cmd = ["apt-key", "add", str(fn_)]
             out = __salt__["cmd.run_stdout"](cmd, python_shell=False, **kwargs)
             if not out.upper().startswith("OK"):
                 raise CommandExecutionError(
@@ -2813,6 +2854,12 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     # on changes, explicitly refresh
     if refresh:
         refresh_db()
+
+    if not HAS_APT:
+        signedby = mod_source.signedby
+    else:
+        signedby = _get_opts(repo)["signedby"].get("value", "")
+
     return {
         repo: {
             "architectures": getattr(mod_source, "architectures", []),
@@ -2822,7 +2869,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
             "type": mod_source.type,
             "uri": mod_source.uri,
             "line": mod_source.line,
-            "signedby": mod_source.signedby,
+            "signedby": signedby,
         }
     }
 
@@ -2907,13 +2954,20 @@ def expand_repo_def(**kwargs):
             setattr(source_entry, kwarg, kwargs[kwarg])
 
     source_list = SourcesList()
+    kwargs = {}
+    if not HAS_APT:
+        signedby = source_entry.signedby
+        kwargs["signedby"] = signedby
+    else:
+        signedby = _get_opts(repo)["signedby"].get("value", "")
+
     source_entry = source_list.add(
         type=source_entry.type,
         uri=source_entry.uri,
         dist=source_entry.dist,
         orig_comps=getattr(source_entry, "comps", []),
         architectures=getattr(source_entry, "architectures", []),
-        signedby=source_entry.signedby,
+        **kwargs,
     )
 
     sanitized["file"] = source_entry.file
@@ -2924,7 +2978,21 @@ def expand_repo_def(**kwargs):
     sanitized["uri"] = source_entry.uri
     sanitized["line"] = source_entry.line.strip()
     sanitized["architectures"] = getattr(source_entry, "architectures", [])
-    sanitized["signedby"] = source_entry.signedby
+    sanitized["signedby"] = signedby
+    if HAS_APT and signedby:
+        # python3-apt does not supported the signed-by opt currently.
+        # creating the line with all opts including signed-by
+        if signedby not in sanitized["line"]:
+            line = sanitized["line"].split()
+            repo_opts = _get_opts(repo)
+            opts_order = [x for x in repo_opts.keys()]
+            for opt in repo_opts:
+                idx = repo_opts[opt]["index"]
+                opts_order[idx] = repo_opts[opt]["full"]
+
+            opts = "[" + " ".join(opts_order) + "]"
+            line[1] = opts
+            sanitized["line"] = " ".join(line)
 
     return sanitized
 
