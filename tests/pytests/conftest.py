@@ -319,15 +319,19 @@ def salt_proxy_factory(salt_master_factory):
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
         start_timeout=240,
     )
+    factory.before_start(pytest.helpers.remove_stale_proxy_minion_cache_file, factory)
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
+    )
+    factory.after_terminate(
+        pytest.helpers.remove_stale_proxy_minion_cache_file, factory
     )
     return factory
 
 
 @pytest.fixture(scope="session")
 def salt_delta_proxy_factory(salt_factories, salt_master_factory):
-    proxy_minion_id = random_string("proxytest-")
+    proxy_minion_id = random_string("delta-proxy-test-")
     root_dir = salt_factories.get_root_dir_for_daemon(proxy_minion_id)
     conf_dir = root_dir / "conf"
     conf_dir.mkdir(parents=True, exist_ok=True)
@@ -351,9 +355,17 @@ def salt_delta_proxy_factory(salt_factories, salt_master_factory):
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
         start_timeout=240,
     )
-    factory.after_terminate(
-        pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
-    )
+
+    for minion_id in [factory.id] + pytest.helpers.proxy.delta_proxy_minion_ids():
+        factory.before_start(
+            pytest.helpers.remove_stale_proxy_minion_cache_file, factory, minion_id
+        )
+        factory.after_terminate(
+            pytest.helpers.remove_stale_minion_key, salt_master_factory, minion_id
+        )
+        factory.after_terminate(
+            pytest.helpers.remove_stale_proxy_minion_cache_file, factory, minion_id
+        )
     return factory
 
 
@@ -509,3 +521,14 @@ def io_loop():
 
 
 # <---- Async Test Fixtures ------------------------------------------------------------------------------------------
+
+# ----- Helpers ----------------------------------------------------------------------------------------------------->
+@pytest.helpers.proxy.register
+def delta_proxy_minion_ids():
+    return [
+        "dummy_proxy_one",
+        "dummy_proxy_two",
+    ]
+
+
+# <---- Helpers ------------------------------------------------------------------------------------------------------
