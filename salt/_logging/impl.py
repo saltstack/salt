@@ -4,6 +4,7 @@
 
     Salt's logging implementation classes/functionality
 """
+
 import logging
 import re
 import sys
@@ -23,7 +24,6 @@ from salt._logging.handlers import StreamHandler  # isort:skip
 # from salt._logging.handlers import WatchedFileHandler  # isort:skip
 from salt._logging.handlers import TemporaryLoggingHandler  # isort:skip
 from salt._logging.mixins import LoggingMixinMeta  # isort:skip
-from salt._logging.mixins import NewStyleClassMixin  # isort:skip
 from salt.exceptions import LoggingRuntimeError  # isort:skip
 from salt.utils.ctx import RequestContext  # isort:skip
 from salt.utils.textformat import TextFormat  # isort:skip
@@ -167,9 +167,7 @@ set_log_record_factory(SaltLogRecord)
 LOGGING_LOGGER_CLASS = logging.getLoggerClass()
 
 
-class SaltLoggingClass(
-    LOGGING_LOGGER_CLASS, NewStyleClassMixin, metaclass=LoggingMixinMeta
-):
+class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
     def __new__(cls, *args):
         """
         We override `__new__` in our logging logger class in order to provide

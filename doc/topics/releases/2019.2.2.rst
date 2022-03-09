@@ -13,7 +13,8 @@ Statistics
 - Total Issue References: **12**
 - Total PR References: **26**
 
-- Contributors: **13** (`Akm0d`_, `Ch3LL`_, `Oloremo`_, `OrlandoArcapix`_, `bryceml`_, `dhiltonp`_, `dwoz`_, `frogunder`_, `garethgreenaway`_, `javierbertoli`_, `pizzapanther`_, `s0undt3ch`_, `twangboy`_)
+- Contributors: **13** (`Akm0d`_, `Ch3LL`_, `Oloremo`_, `OrlandoArcapix`_, `bryceml`_, `dhiltonp`_, `dwoz`_,
+  `frogunder`_, `garethgreenaway`_, `javierbertoli`_, `pizzapanther`_, `s0undt3ch`_, `twangboy`_)
 
 Changelog for v2019.2.1..v2019.2.2
 ==================================

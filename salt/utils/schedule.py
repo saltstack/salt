@@ -723,11 +723,6 @@ class Schedule:
                     "specified as a dictionary.  Ignoring."
                 )
 
-        if multiprocessing_enabled:
-            # We just want to modify the process name if we're on a different process
-            salt.utils.process.appendproctitle(
-                "{} {}".format(self.__class__.__name__, ret["jid"])
-            )
         data_returner = data.get("returner", None)
 
         if not self.standalone:
@@ -806,7 +801,6 @@ class Schedule:
                     salt.utils.event.get_event(
                         self.opts["__role"],
                         self.opts["sock_dir"],
-                        self.opts["transport"],
                         opts=self.opts,
                         listen=False,
                     ),
@@ -1810,24 +1804,25 @@ class Schedule:
             else:
                 thread_cls = threading.Thread
 
+            name = "Schedule(name={}, jid={})".format(data["name"], jid)
             if multiprocessing_enabled:
                 with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
+                    # Reset current signals before starting the process in
+                    # order not to inherit the current signal handlers
                     proc = thread_cls(
                         target=self.handle_func,
                         args=(multiprocessing_enabled, func, data, jid),
+                        name=name,
                     )
-                    # Reset current signals before starting the process in
-                    # order not to inherit the current signal handlers
                     proc.start()
-                    proc.name = "{}-Schedule-{}".format(proc.name, data["name"])
                     self._subprocess_list.add(proc)
             else:
                 proc = thread_cls(
                     target=self.handle_func,
                     args=(multiprocessing_enabled, func, data, jid),
+                    name=name,
                 )
                 proc.start()
-                proc.name = "{}-Schedule-{}".format(proc.name, data["name"])
                 self._subprocess_list.add(proc)
         finally:
             if multiprocessing_enabled and salt.utils.platform.is_windows():

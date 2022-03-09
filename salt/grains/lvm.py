@@ -33,15 +33,15 @@ def _linux_lvm():
     ret = {}
     cmd = salt.utils.path.which("lvm")
     if cmd:
-        vgs = __salt__["cmd.run"]("{} vgs -o vg_name --noheadings".format(cmd))
+        vgs = __salt__["cmd.run_all"]("{} vgs -o vg_name --noheadings".format(cmd))
 
-        for vg in vgs.splitlines():
+        for vg in vgs["stdout"].splitlines():
             vg = vg.strip()
             ret[vg] = []
-            lvs = __salt__["cmd.run"](
+            lvs = __salt__["cmd.run_all"](
                 "{} lvs -o lv_name --noheadings {}".format(cmd, vg)
             )
-            for lv in lvs.splitlines():
+            for lv in lvs["stdout"].splitlines():
                 ret[vg].append(lv.strip())
 
         return {"lvm": ret}

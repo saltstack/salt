@@ -19,10 +19,7 @@ attrs==20.3.0
     #   jsonschema
     #   pytest
     #   pytest-salt-factories
-aws-sam-translator==1.33.0
-    # via cfn-lint
-aws-xray-sdk==0.95
-    # via moto
+    #   pytest-skip-markers
 azure-applicationinsights==0.1.0
     # via azure
 azure-batch==4.1.3
@@ -328,19 +325,14 @@ bcrypt==3.1.6
 boto3==1.17.67 ; python_version >= "3.6"
     # via
     #   -r requirements/static/ci/common.in
-    #   aws-sam-translator
     #   moto
 boto==2.49.0
-    # via
-    #   -r requirements/static/ci/common.in
-    #   moto
+    # via -r requirements/static/ci/common.in
 botocore==1.20.67
     # via
     #   boto3
     #   moto
     #   s3transfer
-cached-property==1.5.1
-    # via pygit2
 cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.24.0
@@ -359,11 +351,8 @@ cffi==1.14.6
     #   azure-datalake-store
     #   bcrypt
     #   cryptography
-    #   napalm
     #   pygit2
     #   pynacl
-cfn-lint==0.44.3
-    # via moto
 chardet==3.0.4
     # via requests
 cheetah3==3.2.6.post2
@@ -374,14 +363,10 @@ cherrypy==18.6.1
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/freebsd.in
-ciscoconfparse==1.5.19
-    # via napalm
 click==7.1.2
     # via geomet
 clustershell==1.8.3
     # via -r requirements/static/ci/common.in
-colorama==0.4.3
-    # via ciscoconfparse
 contextvars==2.4
     # via -r requirements/base.txt
 croniter==0.3.29 ; sys_platform != "win32"
@@ -395,41 +380,26 @@ cryptography==3.3.2
     #   moto
     #   paramiko
     #   pyopenssl
-    #   python-jose
-    #   sshpubkeys
     #   vcert
-decorator==4.4.2
-    # via networkx
 distlib==0.3.2
     # via virtualenv
 distro==1.5.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
+    #   pytest-skip-markers
 dnspython==1.16.0
     # via
     #   -r requirements/static/ci/common.in
-    #   ciscoconfparse
     #   python-etcd
 docker-pycreds==0.4.0
     # via docker
 docker==3.7.2
-    # via
-    #   -r requirements/static/ci/common.in
-    #   moto
-ecdsa==0.14.1
-    # via
-    #   moto
-    #   python-jose
-    #   sshpubkeys
+    # via -r requirements/static/ci/common.in
 filelock==3.0.12
     # via virtualenv
 flaky==3.7.0
     # via -r requirements/pytest.txt
-future==0.17.1
-    # via
-    #   napalm
-    #   textfsm
 genshi==0.7.5
     # via -r requirements/static/ci/common.in
 geomet==0.2.1.post1
@@ -440,10 +410,10 @@ gitpython==3.1.12
     # via -r requirements/static/ci/common.in
 google-auth==1.6.3
     # via kubernetes
+hglib==2.6.1
+    # via -r requirements/static/ci/freebsd.in
 idna==2.8
-    # via
-    #   moto
-    #   requests
+    # via requests
 immutables==0.15
     # via contextvars
 iniconfig==1.0.1
@@ -463,36 +433,20 @@ jaraco.functools==2.0
     #   tempora
 jaraco.text==3.5.1
     # via jaraco.collections
-jinja2==2.11.3
+jinja2==3.0.3
     # via
     #   -r requirements/base.txt
     #   junos-eznc
     #   moto
-    #   napalm
 jmespath==0.9.4
     # via
     #   -r requirements/static/ci/common.in
     #   boto3
     #   botocore
-jsondiff==1.2.0
-    # via moto
-jsonpatch==1.28
-    # via cfn-lint
-jsonpickle==2.0.0
-    # via aws-xray-sdk
-jsonpointer==2.0
-    # via jsonpatch
 jsonschema==3.2.0
-    # via
-    #   -r requirements/static/ci/common.in
-    #   aws-sam-translator
-    #   cfn-lint
-junit-xml==1.9
-    # via cfn-lint
-junos-eznc==2.4.0 ; sys_platform != "win32"
-    # via
-    #   -r requirements/static/ci/common.in
-    #   napalm
+    # via -r requirements/static/ci/common.in
+junos-eznc==2.6.0 ; sys_platform != "win32" and python_version >= "3.10"
+    # via -r requirements/static/ci/common.in
 jxmlease==1.0.1 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 kazoo==2.6.1 ; sys_platform != "win32" and sys_platform != "darwin"
@@ -503,31 +457,29 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
-lxml==4.6.3
+lxml==4.7.1
     # via
     #   junos-eznc
-    #   napalm
     #   ncclient
 mako==1.1.4
     # via -r requirements/static/ci/common.in
-markupsafe==1.1.1
+markupsafe==2.0.1
     # via
     #   -r requirements/base.txt
     #   jinja2
     #   mako
     #   moto
+mercurial==6.0.1
+    # via -r requirements/static/ci/freebsd.in
 mock==3.0.5
-    # via
-    #   -r requirements/pytest.txt
-    #   moto
+    # via -r requirements/pytest.txt
 more-itertools==5.0.0
     # via
     #   cheroot
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
-    #   moto
-moto==1.3.16
+moto==3.0.1 ; python_version >= "3.6"
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
     # via
@@ -625,20 +577,9 @@ msrestazure==0.6.4
     #   azure-mgmt-subscription
     #   azure-mgmt-trafficmanager
     #   azure-mgmt-web
-napalm==3.1.0 ; sys_platform != "win32" and python_version > "3.6"
-    # via -r requirements/static/ci/common.in
-ncclient==0.6.4
+ncclient==0.6.9
     # via junos-eznc
 netaddr==0.7.19
-    # via
-    #   junos-eznc
-    #   napalm
-    #   pyeapi
-netmiko==3.2.0
-    # via napalm
-networkx==2.5
-    # via cfn-lint
-ntc-templates==1.4.1
     # via junos-eznc
 oauthlib==3.1.0
     # via requests-oauthlib
@@ -650,14 +591,10 @@ paramiko==2.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -r requirements/static/ci/common.in
     #   junos-eznc
-    #   napalm
     #   ncclient
-    #   netmiko
     #   scp
 passlib==1.7.2 ; sys_platform != "win32"
-    # via
-    #   -r requirements/static/ci/common.in
-    #   ciscoconfparse
+    # via -r requirements/static/ci/common.in
 pathtools==0.1.2
     # via watchdog
 platformdirs==2.2.0
@@ -677,17 +614,14 @@ pyasn1-modules==0.2.4
 pyasn1==0.4.8
     # via
     #   pyasn1-modules
-    #   python-jose
     #   rsa
 pycparser==2.17
     # via cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
-pycurl==7.43.0.6
+pycurl==7.44.1 ; python_version >= "3.10"
     # via -r requirements/static/ci/common.in
-pyeapi==0.8.3
-    # via napalm
-pygit2==1.5.0 ; python_version >= "3.7"
+pygit2==1.8.0 ; python_version >= "3.7"
     # via -r requirements/static/ci/freebsd.in
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via -r requirements/static/ci/common.in
@@ -704,28 +638,32 @@ pyparsing==2.4.5
 pyrsistent==0.17.3
     # via jsonschema
 pyserial==3.4
-    # via
-    #   junos-eznc
-    #   netmiko
+    # via junos-eznc
 pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
-pytest-salt-factories==0.907.0
+pytest-salt-factories==0.912.1
     # via -r requirements/pytest.txt
+pytest-skip-markers==1.2.0
+    # via pytest-salt-factories
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
 pytest-tempdir==2019.10.12
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
-pytest==6.1.2
+pytest-timeout==1.4.2
+    # via -r requirements/pytest.txt
+pytest==6.2.5 ; python_version >= "3.10"
     # via
     #   -r requirements/pytest.txt
     #   pytest-helpers-namespace
     #   pytest-salt-factories
+    #   pytest-skip-markers
     #   pytest-subtests
     #   pytest-tempdir
+    #   pytest-timeout
 python-dateutil==2.8.1
     # via
     #   -r requirements/static/pkg/freebsd.in
@@ -741,8 +679,6 @@ python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
 python-gnupg==0.4.4
     # via -r requirements/static/pkg/freebsd.in
-python-jose[cryptography]==3.2.0
-    # via moto
 pytz==2021.1
     # via
     #   moto
@@ -752,12 +688,9 @@ pyvmomi==6.7.1.2018.12
 pyyaml==5.4.1
     # via
     #   -r requirements/base.txt
-    #   cfn-lint
     #   clustershell
     #   junos-eznc
     #   kubernetes
-    #   moto
-    #   napalm
     #   yamlordereddictloader
 pyzmq==21.0.2 ; python_version >= "3.9"
     # via
@@ -771,7 +704,6 @@ requests==2.25.1
     #   -r requirements/static/ci/common.in
     #   adal
     #   apache-libcloud
-    #   aws-xray-sdk
     #   azure-cosmosdb-table
     #   azure-datalake-store
     #   azure-keyvault
@@ -782,7 +714,6 @@ requests==2.25.1
     #   kubernetes
     #   moto
     #   msrest
-    #   napalm
     #   pyvmomi
     #   requests-oauthlib
     #   responses
@@ -792,51 +723,39 @@ responses==0.10.6
 rfc3987==1.3.8
     # via -r requirements/static/ci/common.in
 rsa==4.7.2
-    # via
-    #   google-auth
-    #   python-jose
+    # via google-auth
 s3transfer==0.4.2
     # via boto3
 scp==0.13.2
-    # via
-    #   junos-eznc
-    #   napalm
-    #   netmiko
+    # via junos-eznc
 setproctitle==1.1.10
     # via -r requirements/static/pkg/freebsd.in
 six==1.16.0
     # via
-    #   aws-sam-translator
     #   bcrypt
     #   cassandra-driver
-    #   cfn-lint
     #   cheroot
     #   cryptography
     #   docker
     #   docker-pycreds
-    #   ecdsa
     #   genshi
     #   geomet
     #   google-auth
     #   isodate
     #   jsonschema
-    #   junit-xml
     #   junos-eznc
     #   kazoo
     #   kubernetes
     #   mock
     #   more-itertools
-    #   moto
     #   msrestazure
     #   ncclient
     #   packaging
     #   pynacl
     #   pyopenssl
     #   python-dateutil
-    #   python-jose
     #   pyvmomi
     #   responses
-    #   textfsm
     #   transitions
     #   vcert
     #   virtualenv
@@ -845,19 +764,10 @@ smmap==3.0.4
     # via gitdb
 sqlparse==0.4.2
     # via -r requirements/static/ci/common.in
-sshpubkeys==3.1.0
-    # via moto
 strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in
 tempora==4.1.1
     # via portend
-terminal==0.4.0
-    # via ntc-templates
-textfsm==1.1.0
-    # via
-    #   napalm
-    #   netmiko
-    #   ntc-templates
 timelib==0.2.5
     # via -r requirements/static/pkg/freebsd.in
 toml==0.10.2
@@ -872,7 +782,7 @@ urllib3==1.26.6
     #   kubernetes
     #   python-etcd
     #   requests
-vcert==0.7.3 ; sys_platform != "win32"
+vcert==0.7.4 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 virtualenv==20.7.2
     # via
@@ -886,16 +796,12 @@ websocket-client==0.40.0
     #   kubernetes
 werkzeug==0.15.6
     # via moto
-wrapt==1.11.1
-    # via aws-xray-sdk
 xmltodict==0.12.0
     # via moto
 yamlordereddictloader==0.4.0
     # via junos-eznc
 zc.lockfile==1.4
     # via cherrypy
-zipp==3.4.0
-    # via moto
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

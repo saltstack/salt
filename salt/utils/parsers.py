@@ -221,6 +221,8 @@ class OptionParser(optparse.OptionParser):
                 "Configuration file path: %s",
                 self.config["conf_file"],  # pylint: disable=no-member
             )
+
+        salt.utils.process.appendproctitle("MainProcess")
         # Retain the standard behavior of optparse to return options and args
         return options, args
 
@@ -1044,8 +1046,8 @@ class DaemonMixIn(metaclass=MixInMeta):
                 # We'll restart it once forked
                 log.shutdown_multiprocessing_logging_listener(daemonizing=True)
 
-            # Late import so logging works correctly
             salt.utils.process.daemonize()
+            salt.utils.process.appendproctitle("MainProcess")
 
         # Setup the multiprocessing log queue listener if enabled
         self._setup_mp_logging_listener()

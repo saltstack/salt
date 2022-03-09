@@ -967,7 +967,15 @@ def urlencoded_processor(entity):
     except (UnicodeDecodeError, AttributeError):
         pass
     cherrypy.serving.request.raw_body = urlencoded
-    cherrypy.serving.request.unserialized_data = dict(parse_qsl(urlencoded))
+    unserialized_data = {}
+    for key, val in parse_qsl(urlencoded):
+        unserialized_data.setdefault(key, []).append(val)
+    for key, val in unserialized_data.items():
+        if len(val) == 1:
+            unserialized_data[key] = val[0]
+        if len(val) == 0:
+            unserialized_data[key] = ""
+    cherrypy.serving.request.unserialized_data = unserialized_data
 
 
 @process_request_body
@@ -1881,7 +1889,7 @@ class Login(LowDataAdapter):
                 perms = token["auth_list"]
             else:
                 # Get sum of '*' perms, user-specific perms, and group-specific perms
-                perms = eauth.get(token["name"], [])
+                perms = eauth.get(token["name"], []).copy()
                 perms.extend(eauth.get("*", []))
 
                 if "groups" in token and token["groups"]:
@@ -2355,7 +2363,6 @@ class Events:
             with salt.utils.event.get_event(
                 "master",
                 sock_dir=self.opts["sock_dir"],
-                transport=self.opts["transport"],
                 opts=self.opts,
                 listen=True,
             ) as event:
@@ -2531,7 +2538,6 @@ class WebsocketEndpoint:
             with salt.utils.event.get_event(
                 "master",
                 sock_dir=self.opts["sock_dir"],
-                transport=self.opts["transport"],
                 opts=self.opts,
                 listen=True,
             ) as event:
@@ -2631,7 +2637,6 @@ class Webhook:
         self.event = salt.utils.event.get_event(
             "master",
             sock_dir=self.opts["sock_dir"],
-            transport=self.opts["transport"],
             opts=self.opts,
             listen=False,
         )

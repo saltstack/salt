@@ -10,10 +10,11 @@ Two configurations can be set to modify the highstate outputter. These values
 can be set in the master config to change the output of the ``salt`` command or
 set in the minion config to change the output of the ``salt-call`` command.
 
-state_verbose
+state_verbose:
     By default `state_verbose` is set to `True`, setting this to `False` will
     instruct the highstate outputter to omit displaying anything in green, this
     means that nothing with a result of True and no changes will not be printed
+
 state_output:
     The highstate outputter has six output modes,
     ``full``, ``terse``, ``mixed``, ``changes`` and ``filter``
@@ -54,6 +55,16 @@ state_tabular:
     If `state_output` uses the terse output, set this to `True` for an aligned
     output format.  If you wish to use a custom format, this can be set to a
     string.
+
+state_output_pct:
+    Set `state_output_pct` to `True` in order to add "Success %" and "Failure %"
+    to the "Summary" section at the end of the highstate output.
+
+state_compress_ids:
+    Set `state_compress_ids` to `True` to aggregate information about states
+    which have multiple "names" under the same state ID in the highstate output.
+    This is useful in combination with the `terse_id` value set in the
+    `state_output` option when states are using the `names` state parameter.
 
 Example usage:
 
@@ -113,6 +124,7 @@ Example output with no special settings in configuration files:
 """
 
 
+import collections
 import logging
 import pprint
 import re
@@ -124,6 +136,145 @@ import salt.utils.data
 import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
+
+
+def _compress_ids(data):
+    """
+    Function to take incoming raw state data and roll IDs with multiple names
+    into a single state block for reporting purposes. This functionality is most
+    useful for any "_id" state_output options, such as ``terse_id``.
+
+    The following example state has one ID and four names.
+
+    .. code-block:: yaml
+
+    mix-matched results:
+      cmd.run:
+        - names:
+          - "true"
+          - "false"
+          - "/bin/true"
+          - "/bin/false"
+
+    With ``state_output: terse_id`` set, this can create many lines of output
+    which are not unique enough to be worth the screen real estate they occupy.
+
+    .. code-block:: text
+
+        19:10:10.969049 [  8.546 ms]        cmd.run        Changed   Name: mix-matched results
+        19:10:10.977998 [  8.606 ms]        cmd.run        Failed    Name: mix-matched results
+        19:10:10.987116 [  7.618 ms]        cmd.run        Changed   Name: mix-matched results
+        19:10:10.995172 [  9.344 ms]        cmd.run        Failed    Name: mix-matched results
+
+    Enabling ``state_compress_ids: True`` consolidates the state data by ID and
+    result (e.g. success or failure). The earliest start time is chosen for
+    display, duration is aggregated, and the total number of names if shown in
+    parentheses to the right of the ID.
+
+    .. code-block:: text
+
+        19:10:46.283323 [ 16.236 ms]        cmd.run        Changed   Name: mix-matched results (2)
+        19:10:46.292181 [ 16.255 ms]        cmd.run        Failed    Name: mix-matched results (2)
+
+    A better real world use case would be passing dozens of files and
+    directories to the ``names`` parameter of the ``file.absent`` state. The
+    amount of lines consolidated in that case would be substantial.
+    """
+    if not isinstance(data, dict):
+        return data
+
+    compressed = {}
+
+    # any failures to compress result in passing the original data
+    # to the highstate outputter without modification
+    try:
+        for host, hostdata in data.items():
+            compressed[host] = {}
+            # count the number of unique IDs. use sls name and result in the key
+            # so differences can be shown separately in the output
+            id_count = collections.Counter(
+                [
+                    "_".join(
+                        map(
+                            str,
+                            [
+                                tname.split("_|-")[0],
+                                info["__id__"],
+                                info["__sls__"],
+                                info["result"],
+                            ],
+                        )
+                    )
+                    for tname, info in hostdata.items()
+                ]
+            )
+            for tname, info in hostdata.items():
+                comps = tname.split("_|-")
+                _id = "_".join(
+                    map(
+                        str, [comps[0], info["__id__"], info["__sls__"], info["result"]]
+                    )
+                )
+                # state does not need to be compressed
+                if id_count[_id] == 1:
+                    compressed[host][tname] = info
+                    continue
+
+                # replace name to create a single key by sls and result
+                comps[2] = "_".join(
+                    map(
+                        str,
+                        [
+                            "state_compressed",
+                            info["__sls__"],
+                            info["__id__"],
+                            info["result"],
+                        ],
+                    )
+                )
+                comps[1] = "{} ({})".format(info["__id__"], id_count[_id])
+                tname = "_|-".join(comps)
+
+                # store the first entry as-is
+                if tname not in compressed[host]:
+                    compressed[host][tname] = info
+                    continue
+
+                # subsequent entries for compression will use the lowest
+                # __run_num__ value, the sum of the duration, and the earliest
+                # start time found
+                compressed[host][tname]["__run_num__"] = min(
+                    info["__run_num__"], compressed[host][tname]["__run_num__"]
+                )
+                compressed[host][tname]["duration"] = round(
+                    sum([info["duration"], compressed[host][tname]["duration"]]), 3
+                )
+                compressed[host][tname]["start_time"] = sorted(
+                    [info["start_time"], compressed[host][tname]["start_time"]]
+                )[0]
+
+                # changes are turned into a dict of changes keyed by name
+                if compressed[host][tname].get("changes") and info.get("changes"):
+                    if not compressed[host][tname]["changes"].get("compressed changes"):
+                        compressed[host][tname]["changes"] = {
+                            "compressed changes": {
+                                compressed[host][tname]["name"]: compressed[host][
+                                    tname
+                                ]["changes"]
+                            }
+                        }
+                    compressed[host][tname]["changes"]["compressed changes"].update(
+                        {info["name"]: info["changes"]}
+                    )
+                elif info.get("changes"):
+                    compressed[host][tname]["changes"] = {
+                        "compressed changes": {info["name"]: info["changes"]}
+                    }
+    except Exception:  # pylint: disable=broad-except
+        log.warning("Unable to compress state output by ID! Returning output normally.")
+        return data
+
+    return compressed
 
 
 def output(data, **kwargs):  # pylint: disable=unused-argument
@@ -164,6 +315,10 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
 
     if orchestrator_output:
         del data["retcode"]
+
+    # pre-process data if state_compress_ids is set
+    if __opts__.get("state_compress_ids", False):
+        data = _compress_ids(data)
 
     indent_level = kwargs.get("indent_level", 1)
     ret = [
@@ -241,7 +396,19 @@ def _format_host(host, data, indent_level=1):
             ret = data[tname]
             # Increment result counts
             rcounts.setdefault(ret["result"], 0)
-            rcounts[ret["result"]] += 1
+
+            # unpack state compression counts
+            compressed_count = 1
+            if (
+                __opts__.get("state_compress_ids", False)
+                and "_|-state_compressed_" in tname
+            ):
+                _, _id, _, _ = tname.split("_|-")
+                count_match = re.search(r"\((\d+)\)$", _id)
+                if count_match:
+                    compressed_count = int(count_match.group(1))
+
+            rcounts[ret["result"]] += compressed_count
             rduration = ret.get("duration", 0)
             try:
                 rdurations.append(float(rduration))
@@ -264,7 +431,11 @@ def _format_host(host, data, indent_level=1):
                 nchanges += 1
             else:
                 schanged, ctext = _format_changes(ret["changes"])
-                nchanges += 1 if schanged else 0
+                # if compressed, the changes are keyed by name
+                if schanged and compressed_count > 1:
+                    nchanges += len(ret["changes"].get("compressed changes", {})) or 1
+                else:
+                    nchanges += 1 if schanged else 0
 
             # Skip this state if it was successful & diff output was requested
             if (
@@ -478,6 +649,46 @@ def _format_host(host, data, indent_level=1):
                 colors,
             )
         )
+
+        if __opts__.get("state_output_pct", False):
+            # Add success percentages to the summary output
+            try:
+                success_pct = round(
+                    (
+                        (rcounts.get(True, 0) + rcounts.get(None, 0))
+                        / (sum(rcounts.values()) - rcounts.get("warnings", 0))
+                    )
+                    * 100,
+                    2,
+                )
+
+                hstrs.append(
+                    colorfmt.format(
+                        colors["GREEN"],
+                        _counts("Success %", success_pct),
+                        colors,
+                    )
+                )
+            except ZeroDivisionError:
+                pass
+
+            # Add failure percentages to the summary output
+            try:
+                failed_pct = round(
+                    (num_failed / (sum(rcounts.values()) - rcounts.get("warnings", 0)))
+                    * 100,
+                    2,
+                )
+
+                hstrs.append(
+                    colorfmt.format(
+                        colors["RED"] if num_failed else colors["CYAN"],
+                        _counts("Failure %", failed_pct),
+                        colors,
+                    )
+                )
+            except ZeroDivisionError:
+                pass
 
         num_warnings = rcounts.get("warnings", 0)
         if num_warnings:
