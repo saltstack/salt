@@ -398,6 +398,8 @@ cryptography==3.3.2
     #   paramiko
     #   pyopenssl
     #   vcert
+dataclasses==0.8
+    # via werkzeug
 distlib==0.3.2
     # via virtualenv
 distro==1.5.0
@@ -681,6 +683,8 @@ pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
+pytest-httpserver==1.0.4
+    # via -r requirements/pytest.txt
 pytest-salt-factories==0.912.1
     # via -r requirements/pytest.txt
 pytest-skip-markers==1.1.2
@@ -858,8 +862,10 @@ websocket-client==0.40.0
     # via
     #   docker
     #   kubernetes
-werkzeug==0.15.6
-    # via moto
+werkzeug==2.0.3
+    # via
+    #   moto
+    #   pytest-httpserver
 xmltodict==0.12.0
     # via moto
 yamlordereddictloader==0.4.0
