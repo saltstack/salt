@@ -1019,6 +1019,9 @@ def test_minion_grains_refresh_pre_exec_true():
             minion.destroy()
 
 
+@pytest.mark.skip_on_darwin(
+    reason="Skip on MacOS, where this does not raise an exception."
+)
 def test_valid_ipv4_master_address_ipv6_enabled():
     """
     Tests that the lookups fail back to ipv4 when ipv6 fails.
