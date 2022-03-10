@@ -49,7 +49,6 @@ def fake_ips():
         yield
 
 
-@pytest.mark.xfail
 def test_when_errors_happen_looking_up_fqdns_threads_should_not_leak(socket_errors):
     before_threads = threading.active_count()
     networkmod.fqdns()
