@@ -45,9 +45,9 @@ echo "Signing Binaries"
 ################################################################################
 # Make sure the script is launched with sudo
 ################################################################################
-if [[ $(id -u) -ne 0 ]]
-    then
-        exec sudo /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
+if [[ $(id -u) -ne 0 ]]; then
+    echo ">>>>>> Re-launching as sudo <<<<<<"
+    exec sudo /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
 fi
 
 ################################################################################
@@ -69,6 +69,7 @@ INSTALL_DIR=/opt/salt
 ################################################################################
 # Add rpath to the Python binaries before signing
 ################################################################################
+echo "**** Setting rpath in binaries"
 install_name_tool $INSTALL_DIR/bin/python3.7m \
     -add_rpath $INSTALL_DIR/.pyenv/versions/3.7.12/lib \
     -add_rpath $INSTALL_DIR/.pyenv/versions/3.7.12/openssl/lib || echo "already present"
@@ -76,8 +77,8 @@ install_name_tool $INSTALL_DIR/bin/python3.7m \
 ################################################################################
 # Sign python binaries in `bin` and `lib`
 ################################################################################
-echo "**** Signing binaries that have entitlements (/opt/salt/bin)"
-find ${INSTALL_DIR}/bin \
+echo "**** Signing binaries that have entitlements (/opt/salt/.pyenv)"
+find ${INSTALL_DIR}/.pyenv \
     -type f \
     -perm -u=x \
     -follow \
@@ -87,28 +88,8 @@ find ${INSTALL_DIR}/bin \
                    --entitlements ./entitlements.plist \
                    --sign "$DEV_APP_CERT" "{}" \;
 
-find ${INSTALL_DIR}/openssl/bin \
-    -type f \
-    -perm -u=x \
-    -follow \
-    -exec codesign --timestamp \
-                   --options=runtime \
-                   --verbose \
-                   --entitlements ./entitlements.plist \
-                   --sign "$DEV_APP_CERT" "{}" \;
-
-echo "**** Signing binaries (/opt/salt/lib)"
-find ${INSTALL_DIR}/lib \
-    -type f \
-    -perm -u=x \
-    -follow \
-    -exec codesign --timestamp \
-                   --options=runtime \
-                   --verbose \
-                   --sign "$DEV_APP_CERT" "{}" \;
-
-echo "**** Signing dynamic libraries (*dylib) (/opt/salt/lib)"
-find ${INSTALL_DIR}/lib \
+echo "**** Signing dynamic libraries (*dylib) (/opt/salt/.pyenv)"
+find ${INSTALL_DIR}/.pyenv \
     -type f \
     -name "*dylib" \
     -follow \
@@ -117,35 +98,8 @@ find ${INSTALL_DIR}/lib \
                    --verbose \
                    --sign "$DEV_APP_CERT" "{}" \;
 
-find ${INSTALL_DIR}/readline/lib \
-    -type f \
-    -name "*dylib" \
-    -follow \
-    -exec codesign --timestamp \
-                   --options=runtime \
-                   --verbose \
-                   --sign "$DEV_APP_CERT" "{}" \;
-
-find ${INSTALL_DIR}/openssl/lib \
-    -type f \
-    -name "*dylib" \
-    -follow \
-    -exec codesign --timestamp \
-                   --options=runtime \
-                   --verbose \
-                   --sign "$DEV_APP_CERT" "{}" \;
-
-find ${INSTALL_DIR}/.pyenv/lib \
-    -type f \
-    -name "*dylib" \
-    -follow \
-    -exec codesign --timestamp \
-                   --options=runtime \
-                   --verbose \
-                   --sign "$DEV_APP_CERT" "{}" \;
-
-echo "**** Signing shared libraries (*.so) (/opt/salt/lib)"
-find ${INSTALL_DIR}/lib \
+echo "**** Signing shared libraries (*.so) (/opt/salt/.pyenv)"
+find ${INSTALL_DIR}/.pyenv \
     -type f \
     -name "*.so" \
     -follow \

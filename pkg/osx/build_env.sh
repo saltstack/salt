@@ -5,7 +5,8 @@
 # Authors: CR Oldham, Shane Lee
 # Date: December 2015
 #
-# Description: This script sets up a build environment for Salt on macOS.
+# Description: This script sets up a build environment for Salt on macOS using
+#              pyenv.
 #
 # Requirements:
 #     - Xcode Command Line Tools (xcode-select --install)
@@ -26,12 +27,16 @@
 #
 ################################################################################
 
+echo "#########################################################################"
+echo "Build Environment Script"
+echo "#########################################################################"
+
 ################################################################################
 # Make sure the script is launched with sudo
 ################################################################################
-if [[ $(id -u) -ne 0 ]]
-    then
-        exec sudo /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
+if [[ $(id -u) -ne 0 ]]; then
+    echo ">>>>>> Re-launching as sudo <<<<<<"
+    exec sudo /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
 fi
 
 ################################################################################
@@ -41,24 +46,25 @@ trap 'quit_on_error $LINENO $BASH_COMMAND' ERR
 
 quit_on_error() {
     echo "$(basename $0) caught error on line : $1 command was: $2"
+    echo -en "\033]0;\a"
     exit -1
 }
 
 ################################################################################
 # Parameters Required for the script to function properly
 ################################################################################
-echo -n -e "\033]0;Build_Env: Variables\007"
+echo "**** Setting Variables"
 
 MACOSX_DEPLOYMENT_TARGET=10.15
 export MACOSX_DEPLOYMENT_TARGET
 
 # This is needed to allow the some test suites (zmq) to pass
 # taken from https://github.com/zeromq/libzmq/issues/1878
-SET_ULIMIT=250000
+SET_ULIMIT=300000
 sysctl -w kern.maxfiles=$SET_ULIMIT
 sysctl -w kern.maxfilesperproc=$SET_ULIMIT
 launchctl limit maxfiles $SET_ULIMIT $SET_ULIMIT
-ulimit -n $SET_ULIMIT
+ulimit -n 64000 $SET_ULIMIT
 
 PY_VERSION=3.7
 PY_DOT_VERSION=3.7.12
@@ -87,6 +93,7 @@ else
     echo "Try running: xcode-select --install"
     exit -1
 fi
+echo "**** Using make from: $MAKE"
 
 ################################################################################
 # Download Function
@@ -102,14 +109,10 @@ download(){
 
     cd $BUILDDIR
 
-    echo "################################################################################"
-    echo "Retrieving $PKGNAME"
-    echo "################################################################################"
+    echo "**** Retrieving $PKGNAME"
     curl -LO# $URL
 
-    echo "################################################################################"
-    echo "Comparing Sha512 Hash"
-    echo "################################################################################"
+    echo "**** Comparing Sha512 Hash"
     FILESHA=($(shasum -a 512 $PKGNAME))
     EXPECTEDSHA=($(cat $SHADIR/$PKGNAME.sha512))
     if [ "$FILESHA" != "$EXPECTEDSHA" ]; then
@@ -117,9 +120,7 @@ download(){
         return 1
     fi
 
-    echo "################################################################################"
-    echo "Unpacking $PKGNAME"
-    echo "################################################################################"
+    echo "**** Unpacking $PKGNAME"
     tar -zxvf $PKGNAME
 
     return $?
@@ -128,10 +129,7 @@ download(){
 ################################################################################
 # Ensure Paths are present and clean
 ################################################################################
-echo "################################################################################"
-echo "Ensure Paths are present and clean"
-echo "################################################################################"
-echo -n -e "\033]0;Build_Env: Clean\007"
+echo "**** Ensure Paths are present and clean"
 
 # Make sure $INSTALL_DIR is clean
 rm -rf $INSTALL_DIR
@@ -145,8 +143,9 @@ BUILDDIR=$SCRIPTDIR/build
 
 
 ################################################################################
-# Download and install pyenv
+# Clone pyenv from github
 ################################################################################
+echo "**** Clone pyenv repo"
 echo -n -e "\033]0;Build_Env: pyenv\007"
 cd ~
 mkdir -p /opt/salt
@@ -155,14 +154,19 @@ export PYENV_ROOT=/opt/salt/.pyenv
 export PATH=/opt/salt/.pyenv/bin:$PATH
 
 ################################################################################
-# Download and Install Python
+# Use pyenv to install Python
 ################################################################################
+echo "**** Use pyenv to install Python $PY_DOT_VERSION"
 echo -n -e "\033]0;Build_Env: Use pyenv to install Python $PY_DOT_VERSION\007"
+if [ "$1" != "true" ]; then
+    CONFIGURE_OPTS="--enable-optimizations"
+fi
 pyenv install $PY_DOT_VERSION
 
 ################################################################################
 # Softlink the pyenv versions/$PY_DOT_VERSION directories
 ################################################################################
+echo "**** Create softlinks to pyenv versions $PY_DOT_VERSION directories"
 ln -s /opt/salt/.pyenv/versions/$PY_DOT_VERSION/lib /opt/salt
 ln -s /opt/salt/.pyenv/versions/$PY_DOT_VERSION/bin /opt/salt
 ln -s /opt/salt/.pyenv/versions/$PY_DOT_VERSION/share /opt/salt
@@ -173,6 +177,7 @@ ln -s /opt/salt/.pyenv/versions/$PY_DOT_VERSION/readline /opt/salt
 ################################################################################
 # Download and install libsodium
 ################################################################################
+echo "**** Download and install libsodium: $LIBSODIUM_VERSION"
 echo -n -e "\033]0;Build_Env: libsodium $LIBSODIUM_VERSION: download\007"
 
 PKGURL="https://download.libsodium.org/libsodium/releases/libsodium-$LIBSODIUM_VERSION.tar.gz"
@@ -180,9 +185,6 @@ PKGDIR="libsodium-$LIBSODIUM_VERSION"
 
 download $PKGURL
 
-echo "################################################################################"
-echo "Building libsodium"
-echo "################################################################################"
 cd $PKGDIR
 echo -n -e "\033]0;Build_Env: libsodium $LIBSODIUM_VERSION: configure\007"
 ./configure --prefix=$PYENV_ROOT
@@ -196,6 +198,7 @@ $MAKE install
 ################################################################################
 # Download and install zeromq
 ################################################################################
+echo "**** Downloading and installing zeromq: $ZMQ_VERSION"
 echo -n -e "\033]0;Build_Env: zeromq $ZMQ_VERSION: download\007"
 
 PKGURL="https://github.com/zeromq/libzmq/releases/download/v$ZMQ_VERSION/zeromq-$ZMQ_VERSION.tar.gz"
@@ -203,9 +206,6 @@ PKGDIR="zeromq-$ZMQ_VERSION"
 
 download $PKGURL
 
-echo "################################################################################"
-echo "Building zeromq"
-echo "################################################################################"
 cd $PKGDIR
 echo -n -e "\033]0;Build_Env: zeromq $ZMQ_VERSION: configure\007"
 ./configure --prefix=$INSTALL_DIR
@@ -220,28 +220,25 @@ $MAKE install
 ################################################################################
 # upgrade pip
 ################################################################################
+echo "**** Upgrading pip and wheel"
 $PIP install --upgrade pip wheel
 
 ################################################################################
 # Download and install salt python dependencies
 ################################################################################
+echo "**** Installing Salt Dependencies with pip (normal)"
 echo -n -e "\033]0;Build_Env: PIP Dependencies\007"
 
 cd $BUILDDIR
 
-echo "################################################################################"
-echo "Installing Salt Dependencies with pip (normal)"
-echo "################################################################################"
 $PIP install -r $SRCDIR/requirements/static/pkg/py$PY_VERSION/darwin.txt \
              --target=$PYDIR/site-packages \
              --ignore-installed \
              --upgrade \
              --no-cache-dir
 
-echo -n -e "\033]0;Build_Env: Finished\007"
-
 cd $BUILDDIR
-
-echo "################################################################################"
+echo -en "\033]0;\a"
+echo "#########################################################################"
 echo "Build Environment Script Completed"
-echo "################################################################################"
+echo "#########################################################################"

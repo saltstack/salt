@@ -44,15 +44,15 @@
 #         export DEV_INSTALL_CERT="Developer ID Installer: Salt Stack, Inc. (AB123ABCD1)"
 #
 ################################################################################
-echo "#########################################################################"
+echo "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
 echo "Building Salt Package"
 
 ################################################################################
 # Make sure the script is launched with sudo
 ################################################################################
-if [[ $(id -u) -ne 0 ]]
-    then
-        exec sudo /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
+if [[ $(id -u) -ne 0 ]]; then
+    echo ">>>>>> Re-launching as sudo <<<<<<"
+    exec sudo /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
 fi
 
 ################################################################################
@@ -197,7 +197,7 @@ pkgbuild --root=$PKGDIR \
          --identifier=com.saltstack.salt \
          --version=$VERSION \
          --ownership=recommended \
-         salt-src-$VERSION-py3-$CPUARCH.pkg
+         salt-src-$VERSION-py3-$CPUARCH.pkg > /dev/null
 
 echo "**** Building and Signing the Product Package with Timestamp"
 productbuild --resources=pkg-resources \
@@ -206,7 +206,7 @@ productbuild --resources=pkg-resources \
              --version=$VERSION \
              --sign "$DEV_INSTALL_CERT" \
              --timestamp \
-             salt-$VERSION-py3-$CPUARCH-signed.pkg
+             salt-$VERSION-py3-$CPUARCH-signed.pkg > /dev/null
 
 echo "Building Salt Package Completed Successfully"
-echo "#########################################################################"
+echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"

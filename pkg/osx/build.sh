@@ -89,19 +89,22 @@
 #         `sign_binaries.sh` scripts under the sudo environment.
 #
 ################################################################################
+echo "#########################################################################"
+echo "Salt Package Build Script"
+echo "#########################################################################"
 
 ################################################################################
 # Make sure the script is launched with sudo
 ################################################################################
-if [[ $(id -u) -ne 0 ]]
-    then
-        exec sudo /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
+if [[ $(id -u) -ne 0 ]]; then
+    echo ">>>>>> Re-launching as sudo <<<<<<"
+    exec sudo /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
 fi
 
 ################################################################################
 # Check passed parameters, set defaults
 ################################################################################
-echo -n -e "\033]0;Build: Variables\007"
+echo "**** Setting Variables"
 
 if [ "$1" == "" ]; then
     VERSION=`git describe`
@@ -136,21 +139,24 @@ if [[ ! -e "$SRCDIR/.git" ]] && [[ ! -e "$SRCDIR/scripts/salt" ]]; then
     echo "This directory doesn't appear to be a git repository."
     echo "The macOS build process needs some files from a Git checkout of Salt."
     echo "Run this script from the root of the Git checkout."
+    echo -en "\033]0;\a"
     exit -1
 fi
 
 ################################################################################
 # Create the Build Environment
 ################################################################################
-echo -n -e "\033]0;Build: Build Environment\007"
+echo "**** Building the environment"
 $PKGRESOURCES/build_env.sh $TEST_MODE
 if [[ "$?" != "0" ]]; then
     echo "Failed to build the environment."
+    echo -en "\033]0;\a"
     exit -1
 fi
 ################################################################################
 # Install Salt
 ################################################################################
+echo "**** Installing Salt into the environment"
 echo -n -e "\033]0;Build: Install Salt\007"
 rm -rf $SRCDIR/build
 rm -rf $SRCDIR/dist
@@ -160,17 +166,24 @@ $PYTHON $SRCDIR/setup.py install
 ################################################################################
 # Sign Binaries built by Salt
 ################################################################################
+echo "**** Signing binaries"
 echo -n -e "\033]0;Build: Sign Binaries\007"
 $PKGRESOURCES/sign_binaries.sh
 
 ################################################################################
 # Build and Sign Package
 ################################################################################
+echo "**** Building the package"
 echo -n -e "\033]0;Build: Package Salt\007"
 $PKGRESOURCES/package.sh $VERSION $PKGDIR
 
 ################################################################################
 # Notarize Package
 ################################################################################
+echo "**** Notarizing the package"
 echo -n -e "\033]0;Build: Notarize Salt\007"
 $PKGRESOURCES/notarize.sh salt-$VERSION-py3-$CPUARCH-signed.pkg
+echo -en "\033]0;\a"
+echo "#########################################################################"
+echo "Salt Package Build Script Complete"
+echo "#########################################################################"
