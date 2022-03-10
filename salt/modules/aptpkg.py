@@ -1692,10 +1692,16 @@ def _get_opts(line):
             ret["arch"]["full"] = opt
             ret["arch"]["value"] = architectures
             ret["arch"]["index"] = idx
-        if opt.startswith("signed-by"):
+        elif opt.startswith("signed-by"):
             ret["signedby"]["full"] = opt
             ret["signedby"]["value"] = opt.split("=", 1)[1]
             ret["signedby"]["index"] = idx
+        else:
+            other_opt = opt.split("=", 1)[0]
+            ret[other_opt] = {}
+            ret[other_opt]["full"] = opt
+            ret[other_opt]["value"] = opt.split("=", 1)[1]
+            ret[other_opt]["index"] = idx
     return ret
 
 
