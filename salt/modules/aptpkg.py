@@ -2698,7 +2698,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     if "signedby" in kwargs:
         kwargs["signedby"] = pathlib.Path(kwargs["signedby"])
     else:
-        kwargs["signedby"] = pathlib.Path(repo_signedby)
+        kwargs["signedby"] = pathlib.Path(repo_signedby) if repo_signedby else ""
 
     if "keyid" in kwargs:
         keyid = kwargs.pop("keyid", None)
