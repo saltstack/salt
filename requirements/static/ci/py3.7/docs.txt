@@ -480,6 +480,7 @@ jaraco.text==3.5.1
 jinja2==2.11.3
     # via
     #   -r requirements/base.txt
+    #   -r requirements/static/ci/docs.in
     #   ansible-core
     #   junos-eznc
     #   moto
