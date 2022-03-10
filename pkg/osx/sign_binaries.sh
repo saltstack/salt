@@ -67,6 +67,13 @@ echo "**** Setting Variables"
 INSTALL_DIR=/opt/salt
 
 ################################################################################
+# Add rpath to the Python binaries before signing
+################################################################################
+install_name_tool $INSTALL_DIR/bin/python3.7m \
+    -add_rpath $INSTALL_DIR/.pyenv/versions/3.7.12/lib \
+    -add_rpath $INSTALL_DIR/.pyenv/versions/3.7.12/openssl/lib || echo "already present"
+
+################################################################################
 # Sign python binaries in `bin` and `lib`
 ################################################################################
 echo "**** Signing binaries that have entitlements (/opt/salt/bin)"

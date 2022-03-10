@@ -58,6 +58,12 @@ ln -s "$INSTALL_DIR/.pyenv/versions/3.7.12/include" "$INSTALL_DIR/include"
 ln -s "$INSTALL_DIR/.pyenv/versions/3.7.12/lib" "$INSTALL_DIR/lib"
 ln -s "$INSTALL_DIR/.pyenv/versions/3.7.12/openssl" "$INSTALL_DIR/openssl"
 ln -s "$INSTALL_DIR/.pyenv/versions/3.7.12/readline" "$INSTALL_DIR/readline"
+
+ln -s "$INSTALL_DIR/.pyenv/versions/3.7.12/openssl/lib/libcrypto.1.1.dylib" "$INSTALL_DIR/lib/"
+ln -s "$INSTALL_DIR/.pyenv/versions/3.7.12/openssl/lib/libcrypto.dylib" "$INSTALL_DIR/lib/"
+ln -s "$INSTALL_DIR/.pyenv/versions/3.7.12/openssl/lib/libssl.1.1.dylib" "$INSTALL_DIR/lib/"
+ln -s "$INSTALL_DIR/.pyenv/versions/3.7.12/openssl/lib/libssl.dylib" "$INSTALL_DIR/lib/"
+
 echo "Symlink: Created Successfully" >> "$TEMP_DIR/postinstall.txt"
 
 ###############################################################################
