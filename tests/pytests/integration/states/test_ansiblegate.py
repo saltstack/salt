@@ -23,6 +23,8 @@ pytestmark = [
     ),
 ]
 
+log = logging.getLogger(__name__)
+
 
 @pytest.fixture(scope="module")
 def ansible_inventory_directory(tmp_path_factory, grains):
