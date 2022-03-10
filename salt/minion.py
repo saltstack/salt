@@ -1744,6 +1744,15 @@ class Minion(MinionBase):
                 self.schedule.functions = self.functions
                 self.schedule.returners = self.returners
 
+        if self.opts.get("grains_refresh_pre_exec"):
+            if hasattr(self, "proxy"):
+                proxy = self.proxy
+            else:
+                proxy = None
+            self.opts["grains"] = salt.loader.grains(
+                self.opts, force_refresh=True, proxy=proxy
+            )
+
         process_count_max = self.opts.get("process_count_max")
         if process_count_max > 0:
             process_count = len(salt.utils.minion.running(self.opts))
