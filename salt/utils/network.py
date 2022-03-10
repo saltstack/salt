@@ -2177,8 +2177,6 @@ def dns_check(addr, port, safe=False, ipv6=None):
             ),
         )
     except OSError:
-        pass
-    except socket.Error:
         socket_error = True
 
     # If ipv6 is set to True, attempt another lookup using the IPv4 family,
