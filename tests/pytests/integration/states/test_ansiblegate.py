@@ -3,11 +3,13 @@ Test AnsibleGate State Module
 """
 
 import shutil
+import textwrap
 
 import pytest
 import salt.utils.files
 import salt.utils.path
 import yaml
+from saltfactories.exceptions import FactoryTimeout 
 from saltfactories.utils.functional import StateResult
 from tests.support.runtests import RUNTIME_VARS
 
@@ -59,23 +61,56 @@ def ansible_inventory(ansible_inventory_directory, sshd_server):
 
 
 @pytest.mark.requires_sshd_server
-def test_ansible_playbook(salt_call_cli, ansible_inventory):
-    ret = salt_call_cli.run(
-        "state.single",
-        "ansible.playbooks",
-        name="remove.yml",
-        git_repo="https://github.com/saltstack/salt-test-suite-ansible-playbooks.git",
-        ansible_kwargs={"inventory": ansible_inventory},
-    )
-    assert ret.exitcode == 0
-    assert StateResult(ret.json).result is True
+def test_ansible_playbook(salt_call_cli, ansible_inventory, tmp_path):
+    rundir = tmp_path / "rundir"
+    rundir.mkdir(exist_ok=True, parents=True)
+    remove_contents = textwrap.dedent("""
+    ---
+    - hosts: all
+      tasks:
+      - name: remove postfix
+        yum:
+          name: postfix
+          state: absent
+        become: true
+        become_user: root
+    """)
+    remove_playbook = rundir / "remove.yml"
+    remove_playbook.write_text(remove_contents)
+    install_contents = textwrap.dedent("""
+    ---
+    - hosts: all
+      tasks:
+      - name: install postfix
+        yum:
+          name: postfix
+          state: present
+        become: true
+        become_user: root
+    """)
+    install_playbook = rundir / "install.yml"
+    install_playbook.write_text(install_contents)
 
-    ret = salt_call_cli.run(
-        "state.single",
-        "ansible.playbooks",
-        name="install.yml",
-        git_repo="https://github.com/saltstack/salt-test-suite-ansible-playbooks.git",
-        ansible_kwargs={"inventory": ansible_inventory},
-    )
-    assert ret.exitcode == 0
-    assert StateResult(ret.json).result is True
+    # These tests have been known to timeout, so allow them longer if needed.
+    timeouts = [60, 120, 180]
+    names = ["remove.yml", "install.yml"]
+
+    for name in names:
+        for timeout in timeouts:
+            try:
+                ret = salt_call_cli.run(
+                    "state.single",
+                    "ansible.playbooks",
+                    name=name,
+                    rundir=str(rundir),
+                    ansible_kwargs={"inventory": ansible_inventory},
+                    _timeout=timeout, # The removal can take over 60 seconds
+                )
+            except FactoryTimeout:
+                log.debug("remove.yml took longer than the timeout of {}".format(timeout))
+                if timeout == timeouts[-1]:
+                    pytest.fail("Failed to run {}".format(name))
+            else:
+                assert ret.exitcode == 0
+                assert StateResult(ret.json).result is True
+                break
