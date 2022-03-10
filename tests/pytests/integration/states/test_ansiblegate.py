@@ -2,6 +2,7 @@
 Test AnsibleGate State Module
 """
 
+import logging
 import shutil
 import textwrap
 
