@@ -115,7 +115,7 @@ def test_ansible_playbook(salt_call_cli, ansible_inventory, tmp_path):
                 )
             except FactoryTimeout:
                 log.debug(
-                    "remove.yml took longer than the timeout of {}".format(timeout)
+                    "%s took longer than %s seconds", name, timeout
                 )
                 if timeout == timeouts[-1]:
                     pytest.fail("Failed to run {}".format(name))
