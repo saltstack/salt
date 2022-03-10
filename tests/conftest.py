@@ -652,6 +652,22 @@ def integration_files_dir(salt_factories):
     return dirname
 
 
+@pytest.fixture(scope="module")
+def functional_files_dir(salt_factories):
+    """
+    Fixture which returns the salt functional files directory path.
+    Creates the directory if it does not yet exist.
+    """
+    dirname = salt_factories.root_dir / "functional-files"
+    dirname.mkdir(exist_ok=True)
+    for child in (PYTESTS_DIR / "functional" / "files").iterdir():
+        if child.is_dir():
+            shutil.copytree(str(child), str(dirname / child.name))
+        else:
+            shutil.copyfile(str(child), str(dirname / child.name))
+    return dirname
+
+
 @pytest.fixture(scope="session")
 def state_tree_root_dir(integration_files_dir):
     """
