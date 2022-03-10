@@ -1,0 +1,1 @@
+Ensure opts is included in pack for minion_mods and config loads opts from the named_context.

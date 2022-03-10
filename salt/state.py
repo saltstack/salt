@@ -4194,7 +4194,8 @@ class BaseHighState:
                             log.error(msg)
                             errors.append(msg)
                             continue
-                        inc_sls = ".".join(p_comps[:-level_count] + [include])
+                        # relative paths become abolute paths, otherwise issue allowing for both
+                        inc_sls = os.sep.join(p_comps[:-level_count] + [include])
 
                     if env_key != xenv_key:
                         if matches is None:
