@@ -13,23 +13,21 @@
 #
 # Usage:
 #     This script can be passed 1 parameter
-#       $1 : <test mode> :   if this script should be run in test mode, this
-#                            disables the longer optimized compile time of python.
-#                            Please DO NOT set to "true" when building a
-#                            release version.
-#                            (defaults to false)
+#       $1 : <test mode> :   If this script is run in test mode, python is not
+#                            optimized when it is built. Please DO NOT set to
+#                            "true" when building a release version.
+#                            (default is false)
 #
 #     Example:
-#         The following will set up an optimized Python build environment for Salt
-#         on macOS
+#         The following will set up an optimized Python build environment for
+#         Salt on macOS
 #
 #         ./dev_env.sh
 #
 ################################################################################
 
-echo "#########################################################################"
+echo "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
 echo "Build Environment Script"
-echo "#########################################################################"
 
 ################################################################################
 # Make sure the script is launched with sudo
@@ -47,7 +45,7 @@ trap 'quit_on_error $LINENO $BASH_COMMAND' ERR
 quit_on_error() {
     echo "$(basename $0) caught error on line : $1 command was: $2"
     echo -en "\033]0;\a"
-    exit -1
+    exit 1
 }
 
 ################################################################################
@@ -61,8 +59,8 @@ export MACOSX_DEPLOYMENT_TARGET
 # This is needed to allow the some test suites (zmq) to pass
 # taken from https://github.com/zeromq/libzmq/issues/1878
 SET_ULIMIT=300000
-sysctl -w kern.maxfiles=$SET_ULIMIT
-sysctl -w kern.maxfilesperproc=$SET_ULIMIT
+sysctl -w kern.maxfiles=$SET_ULIMIT > /dev/null
+sysctl -w kern.maxfilesperproc=$SET_ULIMIT > /dev/null
 launchctl limit maxfiles $SET_ULIMIT $SET_ULIMIT
 ulimit -n 64000 $SET_ULIMIT
 
@@ -91,7 +89,7 @@ elif [ -d '/Applications/Xcode.app/Contents/Developer/usr/bin' ]; then
 else
     echo "No installation of XCode found. This script requires XCode."
     echo "Try running: xcode-select --install"
-    exit -1
+    exit 1
 fi
 echo "**** Using make from: $MAKE"
 
@@ -141,7 +139,6 @@ rm -rf build
 mkdir -p build
 BUILDDIR=$SCRIPTDIR/build
 
-
 ################################################################################
 # Clone pyenv from github
 ################################################################################
@@ -159,7 +156,9 @@ export PATH=/opt/salt/.pyenv/bin:$PATH
 echo "**** Use pyenv to install Python $PY_DOT_VERSION"
 echo -n -e "\033]0;Build_Env: Use pyenv to install Python $PY_DOT_VERSION\007"
 if [ "$1" != "true" ]; then
-    CONFIGURE_OPTS="--enable-optimizations"
+    export PYTHON_CONFIGURE_OPTS="--enable-optimizations"
+else
+    unset PYTHON_CONFIGURE_OPTS
 fi
 pyenv install $PY_DOT_VERSION
 
@@ -239,6 +238,5 @@ $PIP install -r $SRCDIR/requirements/static/pkg/py$PY_VERSION/darwin.txt \
 
 cd $BUILDDIR
 echo -en "\033]0;\a"
-echo "#########################################################################"
 echo "Build Environment Script Completed"
-echo "#########################################################################"
+echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"

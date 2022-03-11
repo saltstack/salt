@@ -1,15 +1,16 @@
 #!/bin/bash
 ################################################################################
 #
-# Title: Build Salt Script for macOS
+# Title: Build Salt Package Script for macOS
 # Authors: CR Oldham, Shane Lee
 # Date: December 2015
 #
 # Description: This script downloads and installs all dependencies and build
 #              tools required to create a .pkg file for installation on macOS.
-#              Salt and all dependencies will be installed to /opt/salt. A
-#              .pkg file will then be created based on the contents of
-#              /opt/salt. The pkg will be signed and notarized
+#              Salt and all dependencies will be installed to a pyenv
+#              environment in /opt/salt. A .pkg file will then be created based
+#              on the contents of /opt/salt. The pkg will be signed and
+#              notarized
 #
 #              This script must be run with sudo. In order for the environment
 #              variables to be available in sudo you need to pass the `-E`
@@ -18,10 +19,10 @@
 #              sudo -E ./build.sh 3003
 #
 # Requirements:
-#     - Xcode Command Line Tools (xcode-select --install)
+#     - Xcode
 #
 # Usage:
-#     This script can be passed 3 parameters
+#     This script can be passed 3 positional arguments:
 #         $1 : <version> : the version of salt to build
 #                          (a git tag, not a branch)
 #                          (defaults to git-repo state)
@@ -39,17 +40,17 @@
 #
 #         sudo -E ./build.sh 3001 false /tmp/custom_pkg
 #
-# This script uses the following scripts:
+# This script calls out to the following scripts:
 #
 #     build_env.sh
-#         Builds python and other salt dependencies such as pkg-config,
-#         libsodium, zeromq, and openssl.
+#         Builds python using pyenv, libsodium, and zeromq. OpenSSL and Readline
+#         are compiled by pyenv.
 #
 #     sign_binaries.sh
 #         Signs all the binaries with the Developer App certificate specified in
 #         the DEV_APP_CERT environment variable. It signs all binaries in the
-#         /opt/salt/bin and /opt/salt/lib directories. It also signs .dylib
-#         files in the /opt/salt/lib directory.
+#         /opt/salt/.pyenv directory. It also signs all .dylib and .so files in
+#         the /opt/salt/.pyenv directory.
 #
 #     package.sh
 #         Builds a package file from the contents of /opt/salt and signs it with
@@ -140,7 +141,7 @@ if [[ ! -e "$SRCDIR/.git" ]] && [[ ! -e "$SRCDIR/scripts/salt" ]]; then
     echo "The macOS build process needs some files from a Git checkout of Salt."
     echo "Run this script from the root of the Git checkout."
     echo -en "\033]0;\a"
-    exit -1
+    exit 1
 fi
 
 ################################################################################
@@ -151,7 +152,7 @@ $PKGRESOURCES/build_env.sh $TEST_MODE
 if [[ "$?" != "0" ]]; then
     echo "Failed to build the environment."
     echo -en "\033]0;\a"
-    exit -1
+    exit 1
 fi
 ################################################################################
 # Install Salt

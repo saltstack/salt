@@ -1,19 +1,21 @@
 #!/bin/bash
 ################################################################################
 #
-# Title: Binary Signing Script for the macOS installer
+# Title: Binary Signing Script for macOS
 # Author: Shane Lee
 # Date: December 2020
 #
 # Description: This signs all binaries built by the `build_env.sh` script as
-#              well as those created by installing salt. It assumes a python
-#              environment in /opt/salt with salt installed
+#              well as those created by installing salt. It assumes a pyenv
+#              environment in /opt/salt/.pyenv with salt installed
 #
 # Requirements:
 #     - Xcode Command Line Tools (xcode-select --install)
+#       or
+#     - Xcode
 #
 # Usage:
-#     This script ignores any parameters passed to it
+#     This script does not require any parameters.
 #
 #     Example:
 #
@@ -39,7 +41,7 @@
 #         export DEV_APP_CERT="Developer ID Application: Salt Stack, Inc. (AB123ABCD1)"
 #
 ################################################################################
-echo "#########################################################################"
+echo "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
 echo "Signing Binaries"
 
 ################################################################################
@@ -57,7 +59,7 @@ trap 'quit_on_error $LINENO $BASH_COMMAND' ERR
 
 quit_on_error() {
     echo "$(basename $0) caught error on line : $1 command was: $2"
-    exit -1
+    exit 1
 }
 
 ################################################################################
@@ -109,4 +111,4 @@ find ${INSTALL_DIR}/.pyenv \
                    --sign "$DEV_APP_CERT" "{}" \;
 
 echo "**** Signing Binaries Completed Successfully"
-echo "#########################################################################"
+echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"

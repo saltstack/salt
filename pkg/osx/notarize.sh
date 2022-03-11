@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 #
-# Title: Notarize Package Script for the macOS installer
+# Title: Notarize Package Script for macOS
 # Author: Shane Lee
 # Date: December 2020
 #
@@ -10,7 +10,7 @@
 #              Xcode package. It is not available in Command Line Tools.
 #
 #              This script will upload a copy of the package to apple and wait
-#.             for the notarization to return. This can take several minutes.
+#              for the notarization to return. This can take several minutes.
 #
 # Requirements:
 #     - Full Xcode Installation
@@ -19,7 +19,7 @@
 #       The Xcode installation includes the Command Line Tools.
 #
 # Usage:
-#     This script must be passed 2 parameters
+#     This script must be passed 1 parameter
 #
 #         $1 : <package>
 #             The package that will be notarized (must be signed)
@@ -48,7 +48,7 @@ echo "Notarize Salt Package"
 ################################################################################
 if [ "$1" == "" ]; then
     echo "Must supply a package to notarize"
-    exit -1
+    exit 1
 else
     PACKAGE=$1
 fi

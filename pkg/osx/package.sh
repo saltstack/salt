@@ -1,15 +1,17 @@
 #!/bin/bash
 ################################################################################
 #
-# Title: Build Package Script for the macOS installer
+# Title: Build Package Script for macOS
 # Authors: CR Oldham, Shane Lee
 # Date: December 2015
 #
-# Description: This creates a signed macOS package for Salt from the contents of
+# Description: This creates a macOS package for Salt from the contents of
 #              /opt/salt
 #
 # Requirements:
 #     - Xcode Command Line Tools (xcode-select --install)
+#       or
+#     - Xcode
 #
 # Usage:
 #     This script can be passed 2 parameters
@@ -19,8 +21,8 @@
 #              /tmp/salt_pkg
 #
 #     Example:
-#         The following will build Salt version 2017.7.0 with Python 3 and
-#         stage all files in /tmp/salt_pkg:
+#         The following will build Salt version 2017.7.0 and stage all files in
+#         /tmp/salt_pkg:
 #
 #         ./package.sh 2017.7.0 /tmp/salt_pkg
 #
@@ -62,7 +64,7 @@ trap 'quit_on_error $LINENO $BASH_COMMAND' ERR
 
 quit_on_error() {
     echo "$(basename $0) caught error on line : $1 command was: $2"
-    exit -1
+    exit 1
 }
 
 ################################################################################
@@ -99,7 +101,7 @@ if [[ ! -e "$SRCDIR/.git" ]] && [[ ! -e "$SRCDIR/scripts/salt" ]]; then
     echo "This directory doesn't appear to be a git repository."
     echo "The macOS build process needs some files from a Git checkout of Salt."
     echo "Run this script from the 'pkg/osx' directory of the Git checkout."
-    exit -1
+    exit 1
 fi
 
 ################################################################################
