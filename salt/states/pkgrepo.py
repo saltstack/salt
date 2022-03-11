@@ -82,6 +82,69 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
         pkg.installed:
             - name: hello
 
+
+apt-key deprecated
+------------------
+``apt-key`` is deprecated and will be last available in Debian 11 and
+Ubuntu 22.04. The recommended way to manage repo keys going forward
+is to download the keys into /usr/share/keyrings and use ``signed-by``
+in your repo file pointing to the key. This module was updated
+in version 3005 to implement the recommended approach. You need to add
+``- aptkey: False`` to your state and set ``signed-by`` in your repo
+name, to use this recommended approach.  If the cli command ``apt-key``
+is not available it will automatically set ``aptkey`` to False.
+
+
+Using ``aptkey: False`` with ``key_url`` example:
+
+.. code-block:: yaml
+
+    deb [signed-by=/usr/share/keyrings/salt-archive-keyring.gpg arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
+      pkgrepo.managed:
+        - file: /etc/apt/sources.list.d/salt.list
+        - key_url: https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest/salt-archive-keyring.gpg
+        - aptkey: False
+
+Using ``aptkey: False`` with ``keyserver`` and ``keyid``:
+
+.. code-block:: yaml
+
+    deb [signed-by=/usr/share/keyrings/salt-archive-keyring.gpg arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
+      pkgrepo.managed:
+        - file: /etc/apt/sources.list.d/salt.list
+        - keyserver: keyserver.ubuntu.com
+        - keyid: 0E08A149DE57BFBE
+        - aptkey: False
+
+You can also use the ``signedby`` option as an argument to the state.
+This option is only supported if you do NOT have python3-apt installed.
+Python3-apt does not currently support the ``signed-by`` option in repo
+definitions. You can set ``signed-by`` in the name of the repo, but
+NOT in the ``signedby`` argument of the state if python3-apt is installed.
+
+.. code-block:: yaml
+
+    deb [arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
+      pkgrepo.managed:
+        - file: /etc/apt/sources.list.d/salt.list
+        - signedby: /usr/share/keyrings/salt-archive-keyring.gpg
+        - keyserver: keyserver.ubuntu.com
+        - keyid: 0E08A149DE57BFBE
+        - aptkey: False
+
+If you have the ``signed-by`` option set in your pkgrepo.managed name
+and the ``signedby`` arg set in the state, the ``signedby`` arg
+will override what is set in the name.
+
+.. code-block:: yaml
+
+    deb [arch=amd64 signed-by=/usr/share/keyrings/salt-archive-keyring.gpg] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
+      pkgrepo.managed:
+        - file: /etc/apt/sources.list.d/salt.list
+        - signedby: /usr/share/keyrings/salt-archive-keyring-override.gpg
+        - keyserver: keyserver.ubuntu.com
+        - keyid: 0E08A149DE57BFBE
+        - aptkey: False
 """
 
 
