@@ -5,33 +5,36 @@
 # Authors: CR Oldham, Shane Lee
 # Date: December 2015
 #
-# Description: This script sets up a build environment for Salt on macOS.
+# Description: This script sets up a build environment for Salt on macOS using
+#              pyenv.
 #
 # Requirements:
 #     - Xcode Command Line Tools (xcode-select --install)
 #
 # Usage:
 #     This script can be passed 1 parameter
-#       $1 : <test mode> :   if this script should be run in test mode, this
-#                            disables the longer optimized compile time of python.
-#                            Please DO NOT set to "true" when building a
-#                            release version.
-#                            (defaults to false)
+#       $1 : <test mode> :   If this script is run in test mode, python is not
+#                            optimized when it is built. Please DO NOT set to
+#                            "true" when building a release version.
+#                            (default is false)
 #
 #     Example:
-#         The following will set up an optimized Python build environment for Salt
-#         on macOS
+#         The following will set up an optimized Python build environment for
+#         Salt on macOS
 #
 #         ./dev_env.sh
 #
 ################################################################################
 
+echo "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
+echo "Build Environment Script"
+
 ################################################################################
 # Make sure the script is launched with sudo
 ################################################################################
-if [[ $(id -u) -ne 0 ]]
-    then
-        exec sudo /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
+if [[ $(id -u) -ne 0 ]]; then
+    echo ">>>>>> Re-launching as sudo <<<<<<"
+    exec sudo /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
 fi
 
 ################################################################################
@@ -41,40 +44,37 @@ trap 'quit_on_error $LINENO $BASH_COMMAND' ERR
 
 quit_on_error() {
     echo "$(basename $0) caught error on line : $1 command was: $2"
-    exit -1
+    echo -en "\033]0;\a"
+    exit 1
 }
 
 ################################################################################
 # Parameters Required for the script to function properly
 ################################################################################
-echo -n -e "\033]0;Build_Env: Variables\007"
+echo "**** Setting Variables"
 
-MACOSX_DEPLOYMENT_TARGET=10.13
+MACOSX_DEPLOYMENT_TARGET=10.15
 export MACOSX_DEPLOYMENT_TARGET
 
 # This is needed to allow the some test suites (zmq) to pass
 # taken from https://github.com/zeromq/libzmq/issues/1878
-SET_ULIMIT=200000
-sysctl -w kern.maxfiles=$SET_ULIMIT
-sysctl -w kern.maxfilesperproc=$SET_ULIMIT
+SET_ULIMIT=300000
+sysctl -w kern.maxfiles=$SET_ULIMIT > /dev/null
+sysctl -w kern.maxfilesperproc=$SET_ULIMIT > /dev/null
 launchctl limit maxfiles $SET_ULIMIT $SET_ULIMIT
-ulimit -n $SET_ULIMIT
+ulimit -n 64000 $SET_ULIMIT
 
 PY_VERSION=3.7
+PY_DOT_VERSION=3.7.12
+ZMQ_VERSION=4.3.4
+LIBSODIUM_VERSION=1.0.18
 SRCDIR=`git rev-parse --show-toplevel`
 SCRIPTDIR=`pwd`
 SHADIR=$SCRIPTDIR/shasums
 INSTALL_DIR=/opt/salt
-PKG_CONFIG=$INSTALL_DIR/bin/pkg-config
-PKG_CONFIG_PATH=$INSTALL_DIR/lib/pkgconfig
 PYDIR=$INSTALL_DIR/lib/python$PY_VERSION
 PYTHON=$INSTALL_DIR/bin/python3
 PIP=$INSTALL_DIR/bin/pip3
-
-# needed for python to find pkg-config and have pkg-config properly link
-# the python install to the compiled openssl below.
-export PKG_CONFIG
-export PKG_CONFIG_PATH
 
 ################################################################################
 # Determine Which XCode is being used (XCode or XCode Command Line Tools)
@@ -89,8 +89,9 @@ elif [ -d '/Applications/Xcode.app/Contents/Developer/usr/bin' ]; then
 else
     echo "No installation of XCode found. This script requires XCode."
     echo "Try running: xcode-select --install"
-    exit -1
+    exit 1
 fi
+echo "**** Using make from: $MAKE"
 
 ################################################################################
 # Download Function
@@ -106,14 +107,10 @@ download(){
 
     cd $BUILDDIR
 
-    echo "################################################################################"
-    echo "Retrieving $PKGNAME"
-    echo "################################################################################"
+    echo "**** Retrieving $PKGNAME"
     curl -LO# $URL
 
-    echo "################################################################################"
-    echo "Comparing Sha512 Hash"
-    echo "################################################################################"
+    echo "**** Comparing Sha512 Hash"
     FILESHA=($(shasum -a 512 $PKGNAME))
     EXPECTEDSHA=($(cat $SHADIR/$PKGNAME.sha512))
     if [ "$FILESHA" != "$EXPECTEDSHA" ]; then
@@ -121,9 +118,7 @@ download(){
         return 1
     fi
 
-    echo "################################################################################"
-    echo "Unpacking $PKGNAME"
-    echo "################################################################################"
+    echo "**** Unpacking $PKGNAME"
     tar -zxvf $PKGNAME
 
     return $?
@@ -132,10 +127,7 @@ download(){
 ################################################################################
 # Ensure Paths are present and clean
 ################################################################################
-echo "################################################################################"
-echo "Ensure Paths are present and clean"
-echo "################################################################################"
-echo -n -e "\033]0;Build_Env: Clean\007"
+echo "**** Ensure Paths are present and clean"
 
 # Make sure $INSTALL_DIR is clean
 rm -rf $INSTALL_DIR
@@ -148,46 +140,55 @@ mkdir -p build
 BUILDDIR=$SCRIPTDIR/build
 
 ################################################################################
-# Download and install pkg-config
+# Clone pyenv from github
 ################################################################################
-echo -n -e "\033]0;Build_Env: pkg-config: download\007"
+echo "**** Clone pyenv repo"
+echo -n -e "\033]0;Build_Env: pyenv\007"
+cd ~
+mkdir -p /opt/salt
+git clone https://github.com/pyenv/pyenv /opt/salt/.pyenv
+export PYENV_ROOT=/opt/salt/.pyenv
+export PATH=/opt/salt/.pyenv/bin:$PATH
 
-PKGURL="http://pkgconfig.freedesktop.org/releases/pkg-config-0.29.2.tar.gz"
-PKGDIR="pkg-config-0.29.2"
+################################################################################
+# Use pyenv to install Python
+################################################################################
+echo "**** Use pyenv to install Python $PY_DOT_VERSION"
+echo -n -e "\033]0;Build_Env: Use pyenv to install Python $PY_DOT_VERSION\007"
+if [ "$1" != "true" ]; then
+    export PYTHON_CONFIGURE_OPTS="--enable-optimizations"
+else
+    unset PYTHON_CONFIGURE_OPTS
+fi
+pyenv install $PY_DOT_VERSION
 
-download $PKGURL
-
-echo "################################################################################"
-echo "Building pkg-config"
-echo "################################################################################"
-cd $PKGDIR
-echo -n -e "\033]0;Build_Env: pkg-config: configure\007"
-env LDFLAGS="-framework CoreFoundation -framework Carbon" ./configure --prefix=$INSTALL_DIR --with-internal-glib
-echo -n -e "\033]0;Build_Env: pkg-config: make\007"
-$MAKE
-echo -n -e "\033]0;Build_Env: pkg-config: make check\007"
-$MAKE check
-echo -n -e "\033]0;Build_Env: pkg-config: make install\007"
-$MAKE install
+################################################################################
+# Softlink the pyenv versions/$PY_DOT_VERSION directories
+################################################################################
+echo "**** Create softlinks to pyenv versions $PY_DOT_VERSION directories"
+ln -s /opt/salt/.pyenv/versions/$PY_DOT_VERSION/lib /opt/salt
+ln -s /opt/salt/.pyenv/versions/$PY_DOT_VERSION/bin /opt/salt
+ln -s /opt/salt/.pyenv/versions/$PY_DOT_VERSION/share /opt/salt
+ln -s /opt/salt/.pyenv/versions/$PY_DOT_VERSION/include /opt/salt
+ln -s /opt/salt/.pyenv/versions/$PY_DOT_VERSION/openssl /opt/salt
+ln -s /opt/salt/.pyenv/versions/$PY_DOT_VERSION/readline /opt/salt
 
 ################################################################################
 # Download and install libsodium
 ################################################################################
-echo -n -e "\033]0;Build_Env: libsodium: download\007"
+echo "**** Download and install libsodium: $LIBSODIUM_VERSION"
+echo -n -e "\033]0;Build_Env: libsodium $LIBSODIUM_VERSION: download\007"
 
-PKGURL="https://download.libsodium.org/libsodium/releases/libsodium-1.0.18.tar.gz"
-PKGDIR="libsodium-1.0.18"
+PKGURL="https://download.libsodium.org/libsodium/releases/libsodium-$LIBSODIUM_VERSION.tar.gz"
+PKGDIR="libsodium-$LIBSODIUM_VERSION"
 
 download $PKGURL
 
-echo "################################################################################"
-echo "Building libsodium"
-echo "################################################################################"
 cd $PKGDIR
-echo -n -e "\033]0;Build_Env: libsodium: configure\007"
-./configure --prefix=$INSTALL_DIR
+echo -n -e "\033]0;Build_Env: libsodium $LIBSODIUM_VERSION: configure\007"
+./configure --prefix=$PYENV_ROOT
 echo -n -e "\033]0;Build_Env: libsodium: make\007"
-$MAKE
+$MAKE -j4
 echo -n -e "\033]0;Build_Env: libsodium: make check\007"
 $MAKE check
 echo -n -e "\033]0;Build_Env: libsodium: make install\007"
@@ -196,21 +197,19 @@ $MAKE install
 ################################################################################
 # Download and install zeromq
 ################################################################################
-echo -n -e "\033]0;Build_Env: zeromq: download\007"
+echo "**** Downloading and installing zeromq: $ZMQ_VERSION"
+echo -n -e "\033]0;Build_Env: zeromq $ZMQ_VERSION: download\007"
 
-PKGURL="https://github.com/zeromq/zeromq4-1/releases/download/v4.1.7/zeromq-4.1.7.tar.gz"
-PKGDIR="zeromq-4.1.7"
+PKGURL="https://github.com/zeromq/libzmq/releases/download/v$ZMQ_VERSION/zeromq-$ZMQ_VERSION.tar.gz"
+PKGDIR="zeromq-$ZMQ_VERSION"
 
 download $PKGURL
 
-echo "################################################################################"
-echo "Building zeromq"
-echo "################################################################################"
 cd $PKGDIR
-echo -n -e "\033]0;Build_Env: zeromq: configure\007"
+echo -n -e "\033]0;Build_Env: zeromq $ZMQ_VERSION: configure\007"
 ./configure --prefix=$INSTALL_DIR
 echo -n -e "\033]0;Build_Env: zeromq: make\007"
-$MAKE
+$MAKE -j4
 echo -n -e "\033]0;Build_Env: zeromq: make check\007"
 # some tests fail occasionally.
 $MAKE check
@@ -218,86 +217,26 @@ echo -n -e "\033]0;Build_Env: zeromq: make install\007"
 $MAKE install
 
 ################################################################################
-# Download and install OpenSSL
-################################################################################
-echo -n -e "\033]0;Build_Env: OpenSSL: download\007"
-
-PKGURL="http://openssl.org/source/openssl-1.0.2u.tar.gz"
-PKGDIR="openssl-1.0.2u"
-
-download $PKGURL
-
-echo "################################################################################"
-echo "Building OpenSSL"
-echo "################################################################################"
-cd $PKGDIR
-echo -n -e "\033]0;Build_Env: OpenSSL: configure\007"
-./Configure darwin64-x86_64-cc shared --prefix=$INSTALL_DIR --openssldir=$INSTALL_DIR/openssl
-echo -n -e "\033]0;Build_Env: OpenSSL: make\007"
-$MAKE
-echo -n -e "\033]0;Build_Env: OpenSSL: make test\007"
-$MAKE test
-echo -n -e "\033]0;Build_Env: OpenSSL: make install\007"
-$MAKE install
-
-################################################################################
-# Download and install Python
-################################################################################
-echo -n -e "\033]0;Build_Env: Python: download\007"
-# if $1 is true the we should remove the --enable-optimizations flag to get a quicker
-# build if testing other functions of this script
-if [ "$1" == "true" ]; then
-    PY_CONF="--prefix=$INSTALL_DIR --enable-shared --with-ensurepip=install"
-else
-    PY_CONF="--prefix=$INSTALL_DIR --enable-shared --with-ensurepip=install --enable-optimizations"
-fi
-PKGURL="https://www.python.org/ftp/python/3.7.4/Python-3.7.4.tar.xz"
-PKGDIR="Python-3.7.4"
-
-download $PKGURL
-
-echo "################################################################################"
-echo "Building Python"
-echo "################################################################################"
-echo "Note there are some test failures"
-cd $PKGDIR
-echo -n -e "\033]0;Build_Env: Python: configure\007"
-# removed --enable-toolbox-glue as no longer a config option
-./configure $PY_CONF
-echo -n -e "\033]0;Build_Env: Python: make\007"
-$MAKE
-echo -n -e "\033]0;Build_Env: Python: make install\007"
-$MAKE install
-
-################################################################################
 # upgrade pip
 ################################################################################
+echo "**** Upgrading pip and wheel"
 $PIP install --upgrade pip wheel
 
 ################################################################################
 # Download and install salt python dependencies
 ################################################################################
+echo "**** Installing Salt Dependencies with pip (normal)"
 echo -n -e "\033]0;Build_Env: PIP Dependencies\007"
 
 cd $BUILDDIR
 
-echo "################################################################################"
-echo "Installing Salt Dependencies with pip (normal)"
-echo "################################################################################"
 $PIP install -r $SRCDIR/requirements/static/pkg/py$PY_VERSION/darwin.txt \
              --target=$PYDIR/site-packages \
              --ignore-installed \
+             --upgrade \
              --no-cache-dir
 
-echo "--------------------------------------------------------------------------------"
-echo "Create Symlink to certifi for openssl"
-echo "--------------------------------------------------------------------------------"
-ln -s $PYDIR/site-packages/certifi/cacert.pem $INSTALL_DIR/openssl/cert.pem
-
-echo -n -e "\033]0;Build_Env: Finished\007"
-
 cd $BUILDDIR
-
-echo "################################################################################"
+echo -en "\033]0;\a"
 echo "Build Environment Script Completed"
-echo "################################################################################"
+echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
