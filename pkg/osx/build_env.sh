@@ -22,7 +22,7 @@
 #         The following will set up an optimized Python build environment for
 #         Salt on macOS
 #
-#         ./dev_env.sh
+#         ./build_env.sh
 #
 ################################################################################
 
@@ -53,28 +53,42 @@ quit_on_error() {
 ################################################################################
 echo "**** Setting Variables"
 
+# Minimum Mac Version Supported
 MACOSX_DEPLOYMENT_TARGET=10.15
 export MACOSX_DEPLOYMENT_TARGET
 
-# This is needed to allow the some test suites (zmq) to pass
+# Versions we're going to install
+PY_VERSION=3.7
+PY_DOT_VERSION=3.7.12
+ZMQ_VERSION=4.3.4
+LIBSODIUM_VERSION=1.0.18
+
+# Directories
+SRC_DIR=`git rev-parse --show-toplevel`
+SCRIPT_DIR=`pwd`
+SHA_DIR=$SCRIPT_DIR/shasums
+BUILD_DIR=$SCRIPT_DIR/build
+INSTALL_DIR=/opt/salt
+PYTHON_DIR=$INSTALL_DIR/lib/python$PY_VERSION
+PIP=$INSTALL_DIR/bin/pip3
+PYENV_INSTALL_DIR=~/pyenv
+
+# Add pyenv to the path
+export PATH=$PYENV_INSTALL_DIR/bin:$PATH
+
+# Set PYENV_ROOT for the pyenv binary
+export PYENV_ROOT=$INSTALL_DIR/.pyenv
+
+################################################################################
+# This is needed to allow some test suites (zmq) to pass
 # taken from https://github.com/zeromq/libzmq/issues/1878
+################################################################################
+echo "**** Set ulimit settings"
 SET_ULIMIT=300000
 sysctl -w kern.maxfiles=$SET_ULIMIT > /dev/null
 sysctl -w kern.maxfilesperproc=$SET_ULIMIT > /dev/null
 launchctl limit maxfiles $SET_ULIMIT $SET_ULIMIT
 ulimit -n 64000 $SET_ULIMIT
-
-PY_VERSION=3.7
-PY_DOT_VERSION=3.7.12
-ZMQ_VERSION=4.3.4
-LIBSODIUM_VERSION=1.0.18
-SRCDIR=`git rev-parse --show-toplevel`
-SCRIPTDIR=`pwd`
-SHADIR=$SCRIPTDIR/shasums
-INSTALL_DIR=/opt/salt
-PYDIR=$INSTALL_DIR/lib/python$PY_VERSION
-PYTHON=$INSTALL_DIR/bin/python3
-PIP=$INSTALL_DIR/bin/pip3
 
 ################################################################################
 # Determine Which XCode is being used (XCode or XCode Command Line Tools)
@@ -103,23 +117,23 @@ download(){
     fi
 
     URL=$1
-    PKGNAME=${URL##*/}
+    PKG_NAME=${URL##*/}
 
-    cd $BUILDDIR
+    cd $BUILD_DIR
 
-    echo "**** Retrieving $PKGNAME"
+    echo "**** Downloading $PKG_NAME"
     curl -LO# $URL
 
     echo "**** Comparing Sha512 Hash"
-    FILESHA=($(shasum -a 512 $PKGNAME))
-    EXPECTEDSHA=($(cat $SHADIR/$PKGNAME.sha512))
-    if [ "$FILESHA" != "$EXPECTEDSHA" ]; then
-        echo "ERROR: Sha Check Failed for $PKGNAME"
+    FILE_SHA=($(shasum -a 512 $PKG_NAME))
+    EXPECTED_SHA=($(cat $SHA_DIR/$PKG_NAME.sha512))
+    if [ "$FILE_SHA" != "$EXPECTED_SHA" ]; then
+        echo "ERROR: Sha Check Failed for $PKG_NAME"
         return 1
     fi
 
-    echo "**** Unpacking $PKGNAME"
-    tar -zxvf $PKGNAME
+    echo "**** Unpacking $PKG_NAME"
+    tar -zxvf $PKG_NAME
 
     return $?
 }
@@ -130,14 +144,63 @@ download(){
 echo "**** Ensure Paths are present and clean"
 
 # Make sure $INSTALL_DIR is clean
+echo "     - Install Dir"
 rm -rf $INSTALL_DIR
 mkdir -p $INSTALL_DIR
 chown $USER:staff $INSTALL_DIR
+mkdir -p $PYENV_ROOT
 
 # Make sure build staging is clean
-rm -rf build
-mkdir -p build
-BUILDDIR=$SCRIPTDIR/build
+echo "     - Build Dir"
+rm -rf $BUILD_DIR
+mkdir -p $BUILD_DIR
+
+# Remove pyenv
+echo "     - Pyenv Install Dir"
+rm -rf $PYENV_INSTALL_DIR
+
+################################################################################
+# Download and install libsodium
+################################################################################
+echo "**** Download and install libsodium: $LIBSODIUM_VERSION"
+echo -n -e "\033]0;Build_Env: libsodium $LIBSODIUM_VERSION: download\007"
+
+PKG_URL="https://download.libsodium.org/libsodium/releases/libsodium-$LIBSODIUM_VERSION.tar.gz"
+PKG_DIR="libsodium-$LIBSODIUM_VERSION"
+
+download $PKG_URL
+
+cd $PKG_DIR
+echo -n -e "\033]0;Build_Env: libsodium $LIBSODIUM_VERSION: configure\007"
+./configure --prefix=$PYENV_ROOT
+echo -n -e "\033]0;Build_Env: libsodium: make\007"
+$MAKE -j4
+echo -n -e "\033]0;Build_Env: libsodium: make check\007"
+$MAKE check
+echo -n -e "\033]0;Build_Env: libsodium: make install\007"
+$MAKE install
+
+################################################################################
+# Download and install zeromq
+################################################################################
+echo "**** Downloading and installing zeromq: $ZMQ_VERSION"
+echo -n -e "\033]0;Build_Env: zeromq $ZMQ_VERSION: download\007"
+
+PKG_URL="https://github.com/zeromq/libzmq/releases/download/v$ZMQ_VERSION/zeromq-$ZMQ_VERSION.tar.gz"
+PKG_DIR="zeromq-$ZMQ_VERSION"
+
+download $PKG_URL
+
+cd $PKG_DIR
+echo -n -e "\033]0;Build_Env: zeromq $ZMQ_VERSION: configure\007"
+./configure --prefix=$PYENV_ROOT
+echo -n -e "\033]0;Build_Env: zeromq: make\007"
+$MAKE -j4
+echo -n -e "\033]0;Build_Env: zeromq: make check\007"
+# some tests fail occasionally.
+$MAKE check
+echo -n -e "\033]0;Build_Env: zeromq: make install\007"
+$MAKE install
 
 ################################################################################
 # Clone pyenv from github
@@ -145,10 +208,7 @@ BUILDDIR=$SCRIPTDIR/build
 echo "**** Clone pyenv repo"
 echo -n -e "\033]0;Build_Env: pyenv\007"
 cd ~
-mkdir -p /opt/salt
-git clone https://github.com/pyenv/pyenv /opt/salt/.pyenv
-export PYENV_ROOT=/opt/salt/.pyenv
-export PATH=/opt/salt/.pyenv/bin:$PATH
+git clone https://github.com/pyenv/pyenv $PYENV_INSTALL_DIR
 
 ################################################################################
 # Use pyenv to install Python
@@ -166,55 +226,12 @@ pyenv install $PY_DOT_VERSION
 # Softlink the pyenv versions/$PY_DOT_VERSION directories
 ################################################################################
 echo "**** Create softlinks to pyenv versions $PY_DOT_VERSION directories"
-ln -s /opt/salt/.pyenv/versions/$PY_DOT_VERSION/lib /opt/salt
-ln -s /opt/salt/.pyenv/versions/$PY_DOT_VERSION/bin /opt/salt
-ln -s /opt/salt/.pyenv/versions/$PY_DOT_VERSION/share /opt/salt
-ln -s /opt/salt/.pyenv/versions/$PY_DOT_VERSION/include /opt/salt
-ln -s /opt/salt/.pyenv/versions/$PY_DOT_VERSION/openssl /opt/salt
-ln -s /opt/salt/.pyenv/versions/$PY_DOT_VERSION/readline /opt/salt
-
-################################################################################
-# Download and install libsodium
-################################################################################
-echo "**** Download and install libsodium: $LIBSODIUM_VERSION"
-echo -n -e "\033]0;Build_Env: libsodium $LIBSODIUM_VERSION: download\007"
-
-PKGURL="https://download.libsodium.org/libsodium/releases/libsodium-$LIBSODIUM_VERSION.tar.gz"
-PKGDIR="libsodium-$LIBSODIUM_VERSION"
-
-download $PKGURL
-
-cd $PKGDIR
-echo -n -e "\033]0;Build_Env: libsodium $LIBSODIUM_VERSION: configure\007"
-./configure --prefix=$PYENV_ROOT
-echo -n -e "\033]0;Build_Env: libsodium: make\007"
-$MAKE -j4
-echo -n -e "\033]0;Build_Env: libsodium: make check\007"
-$MAKE check
-echo -n -e "\033]0;Build_Env: libsodium: make install\007"
-$MAKE install
-
-################################################################################
-# Download and install zeromq
-################################################################################
-echo "**** Downloading and installing zeromq: $ZMQ_VERSION"
-echo -n -e "\033]0;Build_Env: zeromq $ZMQ_VERSION: download\007"
-
-PKGURL="https://github.com/zeromq/libzmq/releases/download/v$ZMQ_VERSION/zeromq-$ZMQ_VERSION.tar.gz"
-PKGDIR="zeromq-$ZMQ_VERSION"
-
-download $PKGURL
-
-cd $PKGDIR
-echo -n -e "\033]0;Build_Env: zeromq $ZMQ_VERSION: configure\007"
-./configure --prefix=$INSTALL_DIR
-echo -n -e "\033]0;Build_Env: zeromq: make\007"
-$MAKE -j4
-echo -n -e "\033]0;Build_Env: zeromq: make check\007"
-# some tests fail occasionally.
-$MAKE check
-echo -n -e "\033]0;Build_Env: zeromq: make install\007"
-$MAKE install
+ln -s $PYENV_ROOT/versions/$PY_DOT_VERSION/lib $INSTALL_DIR
+ln -s $PYENV_ROOT/versions/$PY_DOT_VERSION/bin $INSTALL_DIR
+ln -s $PYENV_ROOT/versions/$PY_DOT_VERSION/share $INSTALL_DIR
+ln -s $PYENV_ROOT/versions/$PY_DOT_VERSION/include $INSTALL_DIR
+ln -s $PYENV_ROOT/versions/$PY_DOT_VERSION/openssl $INSTALL_DIR
+ln -s $PYENV_ROOT/versions/$PY_DOT_VERSION/readline $INSTALL_DIR
 
 ################################################################################
 # upgrade pip
@@ -228,15 +245,15 @@ $PIP install --upgrade pip wheel
 echo "**** Installing Salt Dependencies with pip (normal)"
 echo -n -e "\033]0;Build_Env: PIP Dependencies\007"
 
-cd $BUILDDIR
+cd $BUILD_DIR
 
-$PIP install -r $SRCDIR/requirements/static/pkg/py$PY_VERSION/darwin.txt \
-             --target=$PYDIR/site-packages \
+$PIP install -r $SRC_DIR/requirements/static/pkg/py$PY_VERSION/darwin.txt \
+             --target=$PYTHON_DIR/site-packages \
              --ignore-installed \
              --upgrade \
              --no-cache-dir
 
-cd $BUILDDIR
+cd $BUILD_DIR
 echo -en "\033]0;\a"
 echo "Build Environment Script Completed"
 echo "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"

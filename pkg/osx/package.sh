@@ -6,7 +6,7 @@
 # Date: December 2015
 #
 # Description: This creates a macOS package for Salt from the contents of
-#              /opt/salt
+#              /opt/salt and signs it
 #
 # Requirements:
 #     - Xcode Command Line Tools (xcode-select --install)
@@ -24,7 +24,7 @@
 #         The following will build Salt version 2017.7.0 and stage all files in
 #         /tmp/salt_pkg:
 #
-#         ./package.sh 2017.7.0 /tmp/salt_pkg
+#         ./build_pkg.sh 2017.7.0 /tmp/salt_pkg
 #
 # Environment Setup:
 #
@@ -127,7 +127,8 @@ cp $PKGRESOURCES/scripts/salt-config.sh /opt/salt/bin
 
 echo "**** Copying Build Files"
 mkdir -p $PKGDIR/opt/salt
-cp -r /opt/salt/.pyenv $PKGDIR/opt/salt/.pyenv
+# -r: Recursive, Symbolic Links are preserved
+cp -R /opt/salt/.pyenv $PKGDIR/opt/salt/.pyenv
 
 echo "**** Copying Service Definitions"
 mkdir -p $PKGDIR/Library/LaunchDaemons $PKGDIR/etc
@@ -143,14 +144,19 @@ cp $PKGRESOURCES/scripts/com.saltstack.salt.api.plist $PKGDIR/Library/LaunchDaem
 echo "**** Trimming Unneeded Files"
 
 rm -rdf $PKGDIR/opt/salt/.pyenv/lib/pkgconfig
-rm -rdf $PKGDIR/opt/salt/.pyenv/versions/3.7.12/lib/pkgconfig
 rm -rdf $PKGDIR/opt/salt/.pyenv/versions/3.7.12/lib/engines*
 rm -rdf $PKGDIR/opt/salt/.pyenv/versions/3.7.12/lib/python3.7/test
 rm -rdf $PKGDIR/opt/salt/.pyenv/versions/3.7.12/lib/python3.7/site-packages/Cryptodome/SelfTest
 rm -rdf $PKGDIR/opt/salt/.pyenv/versions/3.7.12/lib/python3.7/site-packages/libcloud/test
 
-echo "**** Removing Unneded documentation"
+echo "**** Removing pkgconfig directories"
+find $PKGDIR/opt/salt -name 'pkgconfig' -type d -prune -exec rm -rf {} \;
+
+echo "**** Removing Unneeded documentation"
 find $PKGDIR/opt/salt -name 'share' -type d -prune -exec rm -rf {} \;
+
+echo "**** Removing pyenv shims"
+find $PKGDIR/opt/salt -name 'shims' -type d -prune -exec rm -rf {} \;
 
 echo "**** Removing Compiled Python Files (.pyc/__pycache__)"
 find $PKGDIR/opt/salt -name '*.pyc' -type f -delete
@@ -189,7 +195,7 @@ SEDSTR="s/@CPUARCH@/$CPUARCH/g"
 sed -i '' "$SEDSTR" distribution.xml
 
 ################################################################################
-# Build the Package
+# Build and Sign the Package
 ################################################################################
 echo "**** Building the Source Package"
 
