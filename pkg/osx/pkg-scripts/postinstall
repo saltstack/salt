@@ -22,6 +22,7 @@
 # Get Minor Version
 OSX_VERSION=$(sw_vers | grep ProductVersion | cut -f 2 -d: | tr -d '[:space:]')
 MINOR=$(echo ${OSX_VERSION} | cut -f 2 -d.)
+PY_DOT_VERSION="3.7.12"
 # Path Variables
 INSTALL_DIR="/opt/salt"
 BIN_DIR="$INSTALL_DIR/bin"
@@ -53,23 +54,27 @@ fi
 # Create symlinks to pyenv directories
 ###############################################################################
 echo "Symlink: Creating symlinks to pyenv directories..." >> "$TEMP_DIR/postinstall.txt"
-ln -s "$INSTALL_DIR/.pyenv/versions/3.7.12/bin" "$INSTALL_DIR/bin"
-ln -s "$INSTALL_DIR/.pyenv/versions/3.7.12/include" "$INSTALL_DIR/include"
-ln -s "$INSTALL_DIR/.pyenv/versions/3.7.12/lib" "$INSTALL_DIR/lib"
-ln -s "$INSTALL_DIR/.pyenv/versions/3.7.12/openssl" "$INSTALL_DIR/openssl"
-ln -s "$INSTALL_DIR/.pyenv/versions/3.7.12/readline" "$INSTALL_DIR/readline"
+ln -s "$INSTALL_DIR/.pyenv/versions/$PY_DOT_VERSION/bin" "$INSTALL_DIR/bin"
+ln -s "$INSTALL_DIR/.pyenv/versions/$PY_DOT_VERSION/include" "$INSTALL_DIR/include"
+ln -s "$INSTALL_DIR/.pyenv/versions/$PY_DOT_VERSION/lib" "$INSTALL_DIR/lib"
 
-echo "Symlink: Creating symlinks to OpenSSL libraries..." >> "$TEMP_DIR/postinstall.txt"
-find "$INSTALL_DIR/.pyenv/versions/3.7.12/openssl" \
+echo "Symlink: Creating symlinks to library files..." >> "$TEMP_DIR/postinstall.txt"
+find "$INSTALL_DIR/.pyenv/versions/$PY_DOT_VERSION" \
     -name '*.dylib' \
     -type f \
     -exec ln -s {} $INSTALL_DIR/lib/ \;
 
-echo "Symlink: Creating symlinks to Readline libraries..." >> "$TEMP_DIR/postinstall.txt"
-find "$INSTALL_DIR/.pyenv/versions/3.7.12/readline" \
+echo "Symlink: Copying symlinks for openssl..." >> "$TEMP_DIR/postinstall.txt"
+find "$INSTALL_DIR/.pyenv/versions/$PY_DOT_VERSION/openssl" \
     -name '*.dylib' \
-    -type f \
-    -exec ln -s {} $INSTALL_DIR/lib/ \;
+    -type l \
+    -exec cp -R {} $INSTALL_DIR/lib/ \;
+
+echo "Symlink: Copying symlinks for readline..." >> "$TEMP_DIR/postinstall.txt"
+find "$INSTALL_DIR/.pyenv/versions/$PY_DOT_VERSION/readline" \
+    -name '*.dylib' \
+    -type l \
+    -exec cp -R {} $INSTALL_DIR/lib/ \;
 
 echo "Symlink: Created Successfully" >> "$TEMP_DIR/postinstall.txt"
 
