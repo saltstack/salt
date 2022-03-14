@@ -45,7 +45,10 @@ def _search(prefix="latest/"):
     Recursively look up all grains in the metadata server
     """
     ret = {}
-    linedata = http.query(os.path.join(HOST, prefix), headers=True)
+    try:
+        linedata = http.query(os.path.join(HOST, prefix), headers=True)
+    except UnicodeDecodeError:
+        linedata = ""
     if "body" not in linedata:
         return ret
     body = salt.utils.stringutils.to_unicode(linedata["body"])
@@ -61,10 +64,7 @@ def _search(prefix="latest/"):
             # (gtmanfred) The first level should have a forward slash since
             # they have stuff underneath. This will not be doubled up though,
             # because lines ending with a slash are checked first.
-            try:
-                ret[line] = _search(prefix=os.path.join(prefix, line + "/"))
-            except UnicodeDecodeError:
-                continue
+            ret[line] = _search(prefix=os.path.join(prefix, line + "/"))
         elif line.endswith(("dynamic", "meta-data")):
             ret[line] = _search(prefix=os.path.join(prefix, line))
         elif "=" in line:
