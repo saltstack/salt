@@ -271,7 +271,7 @@
 
 # To auto recover minions if master changes IP address (DDNS)
 #    auth_tries: 10
-#    auth_safemode: False
+#    auth_safemode: True
 #    ping_interval: 2
 #
 # Minions won't know master is missing until a ping fails. After the ping fail,
@@ -369,6 +369,12 @@
 #
 # If the value is set to zero, this check is disabled.
 #grains_refresh_every: 1
+
+# The grains_refresh_pre_exec setting allows for a minion to check its grains
+# prior to the execution of any operation to see if they have changed and, if
+# so, to inform the master of the new grains. This operation is moderately
+# expensive, therefore care should be taken before enabling this behavior.
+#grains_refresh_pre_exec: False
 
 # Cache grains on the minion. Default is False.
 #grains_cache: False
@@ -708,6 +714,10 @@
 # The state_output_pct setting changes whether success and failure information
 # as a percent of total actions will be shown for each state run.
 #state_output_pct: False
+
+# The state_compress_ids setting aggregates information about states which have
+# multiple "names" under the same state ID in the highstate output.
+#state_compress_ids: False
 
 # Fingerprint of the master public key to validate the identity of your Salt master
 # before the initial key exchange. The master fingerprint can be found by running

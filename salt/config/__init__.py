@@ -376,6 +376,9 @@ VALID_OPTS = immutabletypes.freeze(
         "state_output_profile": bool,
         # Tells the highstate outputter whether success and failure percents will be shown for each state run
         "state_output_pct": bool,
+        # Tells the highstate outputter to aggregate information about states which
+        # have multiple "names" under the same state ID in the highstate output.
+        "state_compress_ids": bool,
         # When true, states run in the order defined in an SLS file, unless requisites re-order them
         "state_auto_order": bool,
         # Fire events as state chunks are processed by the state compiler
@@ -746,6 +749,8 @@ VALID_OPTS = immutabletypes.freeze(
         "grains_blacklist": list,
         # The number of minutes between the minion refreshing its cache of grains
         "grains_refresh_every": int,
+        # Enable grains refresh prior to any operation
+        "grains_refresh_pre_exec": bool,
         # Use lspci to gather system data for grains on a minion
         "enable_lspci": bool,
         # The number of seconds for the salt client to wait for additional syndics to

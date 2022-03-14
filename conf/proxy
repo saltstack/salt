@@ -510,6 +510,10 @@
 # as a percent of total actions will be shown for each state run.
 #state_output_pct: False
 
+# The state_compress_ids setting aggregates information about states which have
+# multiple "names" under the same state ID in the highstate output.
+#state_compress_ids: False
+
 # Fingerprint of the master public key to validate the identity of your Salt master
 # before the initial key exchange. The master fingerprint can be found by running
 # "salt-key -F master" on the Salt master.
