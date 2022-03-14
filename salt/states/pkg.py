@@ -3205,7 +3205,7 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
 
     :param kwargs
         Any keyword arguments to pass through to the ``pkg`` module.
-        
+
         For example, for apt systems: `dist_upgrade`, `cache_valid_time`, `force_conf_new`
 
         .. versionadded:: 2015.5.0
