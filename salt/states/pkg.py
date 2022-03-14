@@ -3217,36 +3217,25 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
 
     Verify that the system is completely up to date.
 
-    name
+    :param str name
         The name has no functional value and is only used as a tracking
         reference
 
-    refresh
+    :param bool refresh
         refresh the package database before checking for new upgrades
 
-    pkgs
+    :param list pkgs
         list of packages to upgrade
-
-    :param str cache_valid_time:
-        This parameter sets the value in seconds after which cache marked as invalid,
-        and cache update is necessary. This overwrite ``refresh`` parameter
-        default behavior.
-
-        In this case cache_valid_time is set, refresh will not take place for
-        amount in seconds since last ``apt-get update`` executed on the system.
-
-        .. note::
-
-            This parameter available only on Debian based distributions, and
-            have no effect on the rest.
 
     :param bool resolve_capabilities:
         Turn on resolving capabilities. This allow one to name "provides" or alias names for packages.
 
         .. versionadded:: 2018.3.0
 
-    kwargs
-        Any keyword arguments to pass through to ``pkg.upgrade``.
+    :param kwargs
+        Any keyword arguments to pass through to the ``pkg`` module.
+        
+        For example, for apt systems: `dist_upgrade`, `cache_valid_time`, `force_conf_new`
 
         .. versionadded:: 2015.5.0
     """
