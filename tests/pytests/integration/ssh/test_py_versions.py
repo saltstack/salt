@@ -11,9 +11,6 @@ from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
 
 docker = pytest.importorskip("docker")
-from docker.errors import (  # isort:skip pylint: disable=3rd-party-module-not-gated
-    DockerException,
-)
 
 
 log = logging.getLogger(__name__)
@@ -61,7 +58,7 @@ class Keys:
 def docker_client():
     try:
         client = docker.from_env()
-    except DockerException:
+    except docker.errors.DockerException:
         pytest.skip("Failed to get a connection to docker running on the system")
     connectable = Container.client_connectable(client)
     if connectable is not True:  # pragma: nocover
@@ -110,13 +107,28 @@ def salt_ssh_roster_file(ssh_port, ssh_keys, salt_master):
 
 
 @pytest.fixture(scope="module")
-def ssh_docker_container(salt_factories, docker_client, ssh_port, ssh_keys):
+def docker_image_name(docker_client):
+    image_name = "dwoz1/cicd"
+    image_tag = "ssh"
+    try:
+        docker_client.images.pull(image_name, tag=image_tag)
+    except docker.errors.APIError as exc:
+        pytest.skip(
+            "Failed to pull docker image '{}:{}': {}".format(image_name, image_tag, exc)
+        )
+    return "{}:{}".format(image_name, image_tag)
+
+
+@pytest.fixture(scope="module")
+def ssh_docker_container(
+    salt_factories, docker_client, ssh_port, ssh_keys, docker_image_name
+):
     """
     Temporary docker container with python 3.6 and ssh enabled
     """
     container = salt_factories.get_container(
         random_string("ssh-py_versions-"),
-        "dwoz1/cicd:ssh",
+        docker_image_name,
         docker_client=docker_client,
         check_ports=[ssh_port],
         container_run_kwargs={
