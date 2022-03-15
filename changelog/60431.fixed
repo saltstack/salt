@@ -1,0 +1,1 @@
+Fixed error being thrown when None was passed as src/defaults or dest to defaults.update and defaults.merge
