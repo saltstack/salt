@@ -2914,10 +2914,12 @@ def mod_repo(repo, basedir=None, **kwargs):
         the URL for yum to reference
     mirrorlist
         the URL for yum to reference
+    metalink
+        the URL for yum to reference
 
     Key/Value pairs may also be removed from a repo's configuration by setting
-    a key to a blank value. Bear in mind that a name cannot be deleted, and a
-    baseurl can only be deleted if a mirrorlist is specified (or vice versa).
+    a key to a blank value. Bear in mind that a name cannot be deleted, and one
+    of baseurl, mirrorlist or metalink is required.
 
     CLI Examples:
 
@@ -2925,16 +2927,20 @@ def mod_repo(repo, basedir=None, **kwargs):
 
         salt '*' pkg.mod_repo reponame enabled=1 gpgcheck=1
         salt '*' pkg.mod_repo reponame basedir=/path/to/dir enabled=1
-        salt '*' pkg.mod_repo reponame baseurl= mirrorlist=http://host.com/
+        salt '*' pkg.mod_repo reponame baseurl= metalink= mirrorlist=http://host.com/
+        salt '*' pkg.mod_repo reponame baseurl= mirrorlist= metalink=http://host.com/
+
     """
     # Filter out '__pub' arguments, as well as saltenv
     repo_opts = {
         x: kwargs[x] for x in kwargs if not x.startswith("__") and x not in ("saltenv",)
     }
 
-    if all(x in repo_opts for x in ("mirrorlist", "baseurl")):
+    if (all(x in repo_opts for x in ("mirrorlist", "baseurl")) or
+      all(x in repo_opts for x in ("metalink", "baseurl")) or
+      all(x in repo_opts for x in ("metalink", "mirrorlist"))):
         raise SaltInvocationError(
-            "Only one of 'mirrorlist' and 'baseurl' can be specified"
+            "Only one of 'mirrorlist', 'baseurl' or 'metalink' can be specified"
         )
 
     use_copr = False
@@ -2951,12 +2957,18 @@ def mod_repo(repo, basedir=None, **kwargs):
             del repo_opts[key]
             todelete.append(key)
 
-    # Add baseurl or mirrorlist to the 'todelete' list if the other was
+    # Add baseurl, mirrorlist or metalink to the 'todelete' list if the other was
     # specified in the repo_opts
     if "mirrorlist" in repo_opts:
         todelete.append("baseurl")
+        todelete.append("metalink")
     elif "baseurl" in repo_opts:
         todelete.append("mirrorlist")
+        todelete.append("metalink")
+    elif "metalink" in repo_opts:
+        todelete.append("mirrorlist")
+        todelete.append("baseurl")
+
 
     # Fail if the user tried to delete the name
     if "name" in todelete:
@@ -3019,10 +3031,10 @@ def mod_repo(repo, basedir=None, **kwargs):
                     "was not given"
                 )
 
-            if "baseurl" not in repo_opts and "mirrorlist" not in repo_opts:
+            if "baseurl" not in repo_opts and "mirrorlist" not in repo_opts and 'metalink' not in repo_opts:
                 raise SaltInvocationError(
                     "The repo does not exist and needs to be created, but either "
-                    "a baseurl or a mirrorlist needs to be given"
+                    "a baseurl, mirrorlist or metalink needs to be given"
                 )
             filerepos[repo] = {}
     else:
@@ -3032,14 +3044,19 @@ def mod_repo(repo, basedir=None, **kwargs):
 
     # Error out if they tried to delete baseurl or mirrorlist improperly
     if "baseurl" in todelete:
-        if "mirrorlist" not in repo_opts and "mirrorlist" not in filerepos[repo]:
+        if "mirrorlist" not in repo_opts and "mirrorlist" not in filerepos[repo] and "metalink" not in repo_opts and "metalink" not in filerepos[repo]:
             raise SaltInvocationError(
-                "Cannot delete baseurl without specifying mirrorlist"
+                "Cannot delete baseurl without specifying mirrorlist or metalink"
             )
     if "mirrorlist" in todelete:
-        if "baseurl" not in repo_opts and "baseurl" not in filerepos[repo]:
+        if "baseurl" not in repo_opts and "baseurl" not in filerepos[repo] and "metalink" not in repo_opts and "metalink" not in filerepos[repo]:
             raise SaltInvocationError(
-                "Cannot delete mirrorlist without specifying baseurl"
+                "Cannot delete mirrorlist without specifying baseurl or metalink"
+            )
+    if "metalink" in todelete:
+        if "baseurl" not in repo_opts and "baseurl" not in filerepos[repo] and "mirrorlist" not in repo_opts and "mirrorlist" not in filerepos[repo]:
+            raise SaltInvocationError(
+                "Cannot delete metalink without specifying baseurl or mirrorlist"
             )
 
     # Delete anything in the todelete list
