@@ -155,7 +155,7 @@ def test_deepcopy():
 
     result = {"A": "A", "B": "B", "C": "C"}
 
-    assert not src == dist
+    assert src != dist
     assert dist == result
 
 
@@ -195,7 +195,6 @@ def test_update_with_defaults_none():
     assert group01["nodes"]["host01"] == host01
 
 
-
 def test_update_with_dest_none():
     group01 = {
         "defaults": {"enabled": True, "extra": ["test", "stage"]},
@@ -213,5 +212,3 @@ def test_update_in_place_with_dest_none():
     }
 
     pytest.raises(TypeError, defaults.update, None, group01["defaults"])
-    
-

@@ -234,7 +234,9 @@ def update(dest, defaults, merge_lists=True, in_place=True, convert_none=True):
 
     for node_name, node_vars in nodes.items():
         defaults_vars = deepcopy(defaults)
-        node_vars = merge(defaults_vars, node_vars, merge_lists=merge_lists, convert_none=convert_none)
+        node_vars = merge(
+            defaults_vars, node_vars, merge_lists=merge_lists, convert_none=convert_none
+        )
         nodes[node_name] = node_vars
 
     return nodes
