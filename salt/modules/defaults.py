@@ -104,7 +104,7 @@ def get(key, default=""):
         return defaults
 
 
-def merge(dest, src, merge_lists=False, in_place=True):
+def merge(dest, src, merge_lists=False, in_place=True, convert_none=True):
     """
     defaults.merge
         Allows deep merging of dicts in formulas.
@@ -116,6 +116,13 @@ def merge(dest, src, merge_lists=False, in_place=True):
         If True, it will merge into dest dict,
         if not it will make a new copy from that dict and return it.
 
+    convert_none : True
+        If True, it will convert src and dest to empty dicts if they are None.
+        If True and dest is None but in_place is True, raises TypeError.
+        If False it will make a new copy from that dict and return it.
+
+        .. versionadded:: 3005
+
     CLI Example:
 
     .. code-block:: bash
@@ -125,6 +132,14 @@ def merge(dest, src, merge_lists=False, in_place=True):
     It is more typical to use this in a templating language in formulas,
     instead of directly on the command-line.
     """
+    # Force empty dicts if applicable (useful for cleaner templating)
+    src = {} if (src is None and convert_none) else src
+    if dest is None and convert_none:
+        if in_place:
+            raise TypeError("Can't perform in-place merge into NoneType")
+        else:
+            dest = {}
+
     if in_place:
         merged = dest
     else:
@@ -146,7 +161,7 @@ def deepcopy(source):
     return copy.deepcopy(source)
 
 
-def update(dest, defaults, merge_lists=True, in_place=True):
+def update(dest, defaults, merge_lists=True, in_place=True, convert_none=True):
     """
     defaults.update
         Allows setting defaults for group of data set e.g. group for nodes.
@@ -195,18 +210,31 @@ def update(dest, defaults, merge_lists=True, in_place=True):
         If True, it will merge into dest dict.
         if not it will make a new copy from that dict and return it.
 
+    convert_none : True
+        If True, it will convert src and dest to empty dicts if they are None.
+        If True and dest is None but in_place is True, raises TypeError.
+        If False it will make a new copy from that dict and return it.
+
+        .. versionadded:: 3005
+
     It is more typical to use this in a templating language in formulas,
     instead of directly on the command-line.
     """
-
+    #  Force empty dicts if applicable here
     if in_place:
-        nodes = dest
+        if dest is None:
+            raise TypeError("Can't perform in-place update into NoneType")
+        else:
+            nodes = dest
     else:
+        dest = {} if (dest is None and convert_none) else dest
         nodes = deepcopy(dest)
+
+    defaults = {} if (defaults is None and convert_none) else defaults
 
     for node_name, node_vars in nodes.items():
         defaults_vars = deepcopy(defaults)
-        node_vars = merge(defaults_vars, node_vars, merge_lists=merge_lists)
+        node_vars = merge(defaults_vars, node_vars, merge_lists=merge_lists, convert_none=convert_none)
         nodes[node_name] = node_vars
 
     return nodes
