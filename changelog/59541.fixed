@@ -1,0 +1,1 @@
+Fix crash when meta-data grains contains gzipped content
