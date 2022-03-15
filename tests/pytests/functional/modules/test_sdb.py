@@ -16,7 +16,6 @@ def minion_config_overrides():
         }
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize(
     "expected_value",
     (
