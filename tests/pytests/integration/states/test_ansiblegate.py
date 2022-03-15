@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 
 @pytest.fixture(scope="module")
 def ansible_inventory_directory(tmp_path_factory, grains):
-    if grains["os_family"] != "RedHat":
+    if grains["os_family"] != "RedHat" or grains["os"] == "VMware Photon OS":
         pytest.skip("Currently, the test targets the RedHat OS familly only.")
     tmp_dir = tmp_path_factory.mktemp("ansible")
     try:

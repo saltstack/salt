@@ -384,6 +384,47 @@ def test_os_environment_remains_intact():
                     getpwnam_mock.assert_called_with("foobar")
 
 
+@pytest.mark.skip_on_windows
+def test_os_environment_do_not_pass_notify_socket():
+    """
+    Make sure NOTIFY_SOCKET environment variable is not passed
+    to the command if not explicitly set with env parameter.
+    """
+    with patch("pwd.getpwnam") as getpwnam_mock:
+        new_env = os.environ.copy()
+        new_env.update({"NOTIFY_SOCKET": "/run/systemd/notify"})
+        with patch("subprocess.Popen") as popen_mock, patch(
+            "os.environ.copy", return_value=new_env
+        ):
+            popen_mock.return_value = Mock(
+                communicate=lambda *args, **kwags: [b"", None],
+                pid=lambda: 1,
+                retcode=0,
+            )
+
+            with patch.dict(cmdmod.__grains__, {"os": "SUSE", "os_family": "Suse"}):
+                if sys.platform.startswith(("freebsd", "openbsd")):
+                    shell = "/bin/sh"
+                else:
+                    shell = "/bin/bash"
+
+                cmdmod._run("ls", cwd=tempfile.gettempdir(), shell=shell)
+
+                assert "NOTIFY_SOCKET" not in popen_mock.call_args_list[0][1]["env"]
+
+                cmdmod._run(
+                    "ls",
+                    cwd=tempfile.gettempdir(),
+                    shell=shell,
+                    env={"NOTIFY_SOCKET": "/run/systemd/notify.new"},
+                )
+
+                assert (
+                    popen_mock.call_args_list[1][1]["env"]["NOTIFY_SOCKET"]
+                    == "/run/systemd/notify.new"
+                )
+
+
 @pytest.mark.skip_unless_on_darwin
 def test_shell_properly_handled_on_macOS():
     """

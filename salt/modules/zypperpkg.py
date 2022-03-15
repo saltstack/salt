@@ -2140,50 +2140,6 @@ def unhold(name=None, pkgs=None, **kwargs):
     return ret
 
 
-def remove_lock(name, root=None, **kwargs):
-    """
-    .. deprecated:: 3003
-        This function is deprecated. Please use ``unhold()`` instead.
-
-    Remove specified package lock.
-
-    name
-        A package name, or a comma-separated list of package names.
-
-    root
-        operate on a different root directory.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' pkg.remove_lock <package name>
-        salt '*' pkg.remove_lock <package1>,<package2>,<package3>
-    """
-
-    salt.utils.versions.warn_until(
-        "Phosphorus", "This function is deprecated. Please use unhold() instead."
-    )
-    locks = list_locks(root)
-    try:
-        packages = list(__salt__["pkg_resource.parse_targets"](name)[0].keys())
-    except MinionError as exc:
-        raise CommandExecutionError(exc)
-
-    removed = []
-    missing = []
-    for pkg in packages:
-        if locks.get(pkg):
-            removed.append(pkg)
-        else:
-            missing.append(pkg)
-
-    if removed:
-        __zypper__(root=root).call("rl", *removed)
-
-    return {"removed": len(removed), "not_found": missing}
-
-
 def hold(name=None, pkgs=None, **kwargs):
     """
     .. versionadded:: 3003
@@ -2236,43 +2192,6 @@ def hold(name=None, pkgs=None, **kwargs):
         __zypper__.call("al", *added)
 
     return ret
-
-
-def add_lock(name, root=None, **kwargs):
-    """
-    .. deprecated:: 3003
-        This function is deprecated. Please use ``hold()`` instead.
-
-    Add a package lock. Specify packages to lock by exact name.
-
-    root
-        operate on a different root directory.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' pkg.add_lock <package name>
-        salt '*' pkg.add_lock <package1>,<package2>,<package3>
-    """
-    salt.utils.versions.warn_until(
-        "Phosphorus", "This function is deprecated. Please use hold() instead."
-    )
-    locks = list_locks(root)
-    added = []
-    try:
-        packages = list(__salt__["pkg_resource.parse_targets"](name)[0].keys())
-    except MinionError as exc:
-        raise CommandExecutionError(exc)
-
-    for pkg in packages:
-        if not locks.get(pkg):
-            added.append(pkg)
-
-    if added:
-        __zypper__(root=root).call("al", *added)
-
-    return {"added": len(added), "packages": added}
 
 
 def verify(*names, **kwargs):
