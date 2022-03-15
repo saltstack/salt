@@ -987,6 +987,8 @@ def agent_service_register(consul_url=None, token=None, **kwargs):
     :param id: Unique ID to identify the service, if not
                provided the value of the name parameter is used.
     :param tags: Identifying tags for service, string or list.
+    :param metadata: Arbitrary KV metadata linked to service
+                     instance.
     :param script: If script is provided, the check type is
                    a script, and Consul will evaluate that script
                    based on the interval parameter.
@@ -1042,6 +1044,11 @@ def agent_service_register(consul_url=None, token=None, **kwargs):
 
     if "enabletagoverride" in lc_kwargs:
         data["EnableTagOverride"] = lc_kwargs["enabletagoverride"]
+
+    if "metadata" in lc_kwargs:
+        _metadata = lc_kwargs["metadata"]
+        if isinstance(_metadata, dict):
+            data["Meta"] = _metadata
 
     if "check" in lc_kwargs:
         dd = dict()
