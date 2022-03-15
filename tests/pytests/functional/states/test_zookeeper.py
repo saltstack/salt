@@ -11,9 +11,6 @@ from saltfactories.utils.ports import get_unused_localhost_port
 
 pytest.importorskip("kazoo")
 docker = pytest.importorskip("docker")
-from docker.errors import (  # isort:skip pylint: disable=3rd-party-module-not-gated
-    DockerException,
-)
 
 log = logging.getLogger(__name__)
 
@@ -21,6 +18,18 @@ pytestmark = [
     # pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("dockerd"),
 ]
+
+
+@pytest.fixture(scope="module")
+def docker_client():
+    try:
+        client = docker.from_env()
+    except docker.errors.DockerException:
+        pytest.skip("Failed to get a connection to docker running on the system")
+    connectable = Container.client_connectable(client)
+    if connectable is not True:  # pragma: nocover
+        pytest.skip(connectable)
+    return client
 
 
 @pytest.fixture(scope="module")
@@ -66,22 +75,20 @@ def minion_config_overrides(zookeeper_port):
 
 
 @pytest.fixture(scope="module")
-def docker_client():
+def zookeeper_image(docker_client):
+    image_name = "zookeeper"
     try:
-        client = docker.from_env()
-    except DockerException:
-        pytest.skip("Failed to get a connection to docker running on the system")
-    connectable = Container.client_connectable(client)
-    if connectable is not True:  # pragma: nocover
-        pytest.skip(connectable)
-    return client
+        docker_client.images.pull(image_name)
+    except docker.errors.APIError as exc:
+        pytest.skip("Failed to pull docker image '{}': {}".format(image_name, exc))
+    return image_name
 
 
 @pytest.fixture(scope="module")
-def zookeeper_container(salt_factories, docker_client, zookeeper_port):
+def zookeeper_container(salt_factories, docker_client, zookeeper_port, zookeeper_image):
     container = salt_factories.get_container(
         random_string("zookeeper-"),
-        "zookeeper",
+        zookeeper_image,
         docker_client=docker_client,
         check_ports=[zookeeper_port],
         container_run_kwargs={"ports": {"2181/tcp": zookeeper_port}},
