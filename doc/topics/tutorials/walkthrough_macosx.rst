@@ -163,7 +163,7 @@ Create The Master Configuration
 
 If the default /etc/salt/master configuration file was not created,
 copy-paste it from here:
-https://docs.saltproject.io/ref/configuration/examples.html#configuration-examples-master
+https://docs.saltproject.io/en/latest/ref/configuration/examples.html#configuration-examples-master
 
 .. note::
 
