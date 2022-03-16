@@ -35,15 +35,6 @@ MISSING_DOCSTRINGS = {
         "get_queue_data",
     ],
     "salt/cloud/clouds/ec2.py": ["query", "sign"],
-    "salt/cloud/clouds/hetzner.py": [
-        "show_instance",
-        "avail_sizes",
-        "avail_images",
-        "avail_locations",
-        "list_ssh_keys",
-        "list_nodes",
-        "list_nodes_full",
-    ],
     "salt/cloud/clouds/libvirt.py": [
         "get_domain_ips",
         "destroy_domain",
