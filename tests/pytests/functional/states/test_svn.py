@@ -16,8 +16,8 @@ pytestmark = [
 
 
 @pytest.fixture
-def repo_target(tmp_path):
-    return tmp_path / "svn-repo-checkout"
+def repo_target(tmp_path_world_rw):
+    return tmp_path_world_rw / "svn-repo-checkout"
 
 
 @pytest.fixture
@@ -83,8 +83,6 @@ def test_latest_user(svn, repo_url, repo_revision, repo_target, account):
     """
     svn.latest
     """
-    # Make sure the repo_target parent directory is writable by anyone
-    repo_target.parent.chmod(0o777)
     ret = svn.latest(
         name=repo_url, rev=repo_revision, target=str(repo_target), user=account.username
     )
