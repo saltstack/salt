@@ -1,3 +1,4 @@
+import logging
 import time
 
 import pytest
@@ -5,24 +6,40 @@ import salt.netapi.rest_tornado.saltnado as saltnado_app
 from tests.support.mock import MagicMock, patch
 
 
+log = logging.getLogger(__name__)
+
+
 @pytest.fixture
-def configure_loader_modules():
-    return {saltnado_app: {}}
+def arg_mock():
+    mock = MagicMock()
+    mock.opts = {
+        "syndic_wait": 0.1,
+        "cachedir": "/tmp/testing/cachedir",
+        "sock_dir": "/tmp/testing/sock_drawer",
+        "transport": "zeromq",
+        "extension_modules": "/tmp/testing/moduuuuules",
+        "order_masters": False,
+        "gather_job_timeout": 10.001,
+    }
+    return mock
 
 
-def test__verify_auth():
-    base_handler = saltnado_app.BaseSaltAPIHandler(MagicMock(), MagicMock())
+def test__verify_auth(arg_mock):
+    base_handler = saltnado_app.BaseSaltAPIHandler(arg_mock, arg_mock)
+    log.debug("successfully created handler")
     with patch.object(base_handler, "get_cookie", return_value="ABCDEF"):
+        log.debug("successfully patched get_cookie")
         with patch.object(
             base_handler.application.auth,
             "get_tok",
             return_value={"expire": time.time() + 60},
         ):
+            log.debug("successfully patched get_tok")
             assert base_handler._verify_auth()
 
 
-def test__verify_auth_expired():
-    base_handler = saltnado_app.BaseSaltAPIHandler(MagicMock(), MagicMock())
+def test__verify_auth_expired(arg_mock):
+    base_handler = saltnado_app.BaseSaltAPIHandler(arg_mock, arg_mock)
     with patch.object(base_handler, "get_cookie", return_value="ABCDEF"):
         with patch.object(
             base_handler.application.auth,
