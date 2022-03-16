@@ -375,7 +375,7 @@ def run(**kwargs):
     # Detect if this call is using legacy or new style syntax.
     legacy_run = False
 
-    keys = list(kwargs.keys())
+    keys = list(kwargs)
     if "name" in keys:
         keys.remove("name")
 
@@ -383,6 +383,8 @@ def run(**kwargs):
     for name in keys:
         if name.find(".") == -1:
             legacy_run = True
+    if not keys and kwargs:
+        legacy_run = True
 
     if legacy_run:
         log.debug("Detected legacy module.run syntax: %s", __low__["__id__"])
