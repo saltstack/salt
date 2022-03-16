@@ -10,6 +10,7 @@ from contextlib import contextmanager
 
 import salt.utils.files
 import salt.utils.msgpack
+from salt.exceptions import CommandExecutionError, MinionError
 
 # This must be present or the Salt loader won't load this module
 __proxyenabled__ = ["dummy"]
@@ -85,6 +86,12 @@ def init(opts):
     Required.
     Can be used to initialize the server connection.
     """
+    # Added to test situation when a proxy minion throws
+    # an exception during init.
+    if opts["proxy"].get("raise_minion_error"):
+        raise MinionError(message="Raising A MinionError.")
+    if opts["proxy"].get("raise_commandexec_error"):
+        raise CommandExecutionError(message="Raising A CommandExecutionError.")
     __context__["dummy_proxy"] = {"id": opts["id"]}
     log.debug("dummy proxy init() called...")
     with _loaded_state(opts) as state:

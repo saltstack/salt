@@ -731,7 +731,7 @@ def installed(
     try:
         cur_version = __salt__["pip.version"](bin_env)
     except (CommandNotFoundError, CommandExecutionError) as err:
-        ret["result"] = None
+        ret["result"] = False
         ret["comment"] = "Error installing '{}': {}".format(name, err)
         return ret
     # Check that the pip binary supports the 'use_wheel' option

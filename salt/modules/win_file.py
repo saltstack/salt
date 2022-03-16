@@ -1244,9 +1244,6 @@ def symlink(src, link, force=False):
         msg = "Existing path is not a symlink: {}".format(link)
         raise CommandExecutionError(msg)
 
-    if not os.path.exists(src):
-        raise CommandExecutionError("Source path does not exist: {}".format(src))
-
     if not os.path.isabs(link):
         raise SaltInvocationError("Link path must be absolute: {}".format(link))
 
@@ -1735,9 +1732,9 @@ def set_perms(path, grant_perms=None, deny_perms=None, inheritance=True, reset=F
         grant_perms (dict):
             A dictionary containing the user/group and the basic permissions to
             grant, ie: ``{'user': {'perms': 'basic_permission'}}``. You can also
-            set the ``applies_to`` setting here. The default for ``applise_to``
-            is ``this_folder_subfolders_files``. Specify another ``applies_to``
-            setting like this:
+            set the ``applies_to`` setting here for directories. The default for
+            ``applies_to`` is ``this_folder_subfolders_files``. Specify another
+            ``applies_to`` setting like this:
 
             .. code-block:: yaml
 
