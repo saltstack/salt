@@ -154,7 +154,7 @@ class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
         """
             )
         )
-        self.assertTrue(len(result), 6)
+        self.assertEqual(len(result), 6)
         self.assertTrue(set("X A B G H".split()).issubset(set(result.keys())))
         b = result["B"]["cmd"]
         self.assertEqual(b[0], "run")

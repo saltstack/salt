@@ -1,11 +1,3 @@
-"""
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-
-    tests.integration.states.pip_state
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-"""
-
 import glob
 import logging
 import os
@@ -21,7 +13,7 @@ import salt.utils.versions
 import salt.utils.win_dacl
 import salt.utils.win_functions
 import salt.utils.win_runas
-from tests.support.helpers import patched_environ
+from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES, patched_environ
 
 try:
     import pwd
@@ -274,6 +266,7 @@ pip.installed:
         )
 
 
+@SKIP_INITIAL_PHOTONOS_FAILURES
 @pytest.mark.destructive_test
 @pytest.mark.slow_test
 @pytest.mark.skip_if_not_root
@@ -339,10 +332,9 @@ def test_issue_6912_wrong_owner(tmp_path, create_virtualenv, modules, states):
                     assert salt.utils.win_dacl.get_owner(path) == account.username
 
 
+@SKIP_INITIAL_PHOTONOS_FAILURES
 @pytest.mark.destructive_test
-@pytest.mark.skipif(
-    salt.utils.platform.is_darwin() is True, reason="Test is flaky on macosx"
-)
+@pytest.mark.skip_on_darwin(reason="Test is flaky on macosx")
 @pytest.mark.slow_test
 @pytest.mark.skip_if_not_root
 def test_issue_6912_wrong_owner_requirements_file(
@@ -444,7 +436,7 @@ def test_issue_6833_pip_upgrade_pip(tmp_path, create_virtualenv, modules, states
 
     # Let's install a fixed version pip over whatever pip was
     # previously installed
-    ret = modules.pip.install("pip==9.0.1", upgrade=True, bin_env=venv_dir)
+    ret = modules.pip.install("pip==19.3.1", upgrade=True, bin_env=venv_dir)
 
     if not isinstance(ret, dict):
         pytest.fail(
@@ -456,7 +448,7 @@ def test_issue_6833_pip_upgrade_pip(tmp_path, create_virtualenv, modules, states
     assert "Successfully installed pip" in ret["stdout"]
 
     # Let's make sure we have pip 9.0.1 installed
-    assert modules.pip.list("pip", bin_env=venv_dir) == {"pip": "9.0.1"}
+    assert modules.pip.list("pip", bin_env=venv_dir) == {"pip": "19.3.1"}
 
     # Now the actual pip upgrade pip test
     ret = states.pip.installed(name="pip==20.0.1", upgrade=True, bin_env=venv_dir)

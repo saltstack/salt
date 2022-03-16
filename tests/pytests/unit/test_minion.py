@@ -969,3 +969,51 @@ def test_config_cache_path_overrides():
 
     mminion = salt.minion.MasterMinion(opts)
     assert mminion.opts["cachedir"] == cachedir
+
+
+def test_minion_grains_refresh_pre_exec_false():
+    """
+    Minion does not refresh grains when grains_refresh_pre_exec is False
+    """
+    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    mock_opts["multiprocessing"] = False
+    mock_opts["grains_refresh_pre_exec"] = False
+    mock_data = {"fun": "foo.bar", "jid": 123}
+    with patch("salt.loader.grains") as grainsfunc, patch(
+        "salt.minion.Minion._target", MagicMock(return_value=True)
+    ):
+        minion = salt.minion.Minion(
+            mock_opts,
+            jid_queue=None,
+            io_loop=salt.ext.tornado.ioloop.IOLoop(),
+            load_grains=False,
+        )
+        try:
+            ret = minion._handle_decoded_payload(mock_data).result()
+            grainsfunc.assert_not_called()
+        finally:
+            minion.destroy()
+
+
+def test_minion_grains_refresh_pre_exec_true():
+    """
+    Minion refreshes grains when grains_refresh_pre_exec is True
+    """
+    mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    mock_opts["multiprocessing"] = False
+    mock_opts["grains_refresh_pre_exec"] = True
+    mock_data = {"fun": "foo.bar", "jid": 123}
+    with patch("salt.loader.grains") as grainsfunc, patch(
+        "salt.minion.Minion._target", MagicMock(return_value=True)
+    ):
+        minion = salt.minion.Minion(
+            mock_opts,
+            jid_queue=None,
+            io_loop=salt.ext.tornado.ioloop.IOLoop(),
+            load_grains=False,
+        )
+        try:
+            ret = minion._handle_decoded_payload(mock_data).result()
+            grainsfunc.assert_called()
+        finally:
+            minion.destroy()
