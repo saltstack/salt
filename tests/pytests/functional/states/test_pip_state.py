@@ -436,7 +436,7 @@ def test_issue_6833_pip_upgrade_pip(tmp_path, create_virtualenv, modules, states
 
     # Let's install a fixed version pip over whatever pip was
     # previously installed
-    ret = modules.pip.install("pip==9.0.1", upgrade=True, bin_env=venv_dir)
+    ret = modules.pip.install("pip==19.3.1", upgrade=True, bin_env=venv_dir)
 
     if not isinstance(ret, dict):
         pytest.fail(
@@ -448,7 +448,7 @@ def test_issue_6833_pip_upgrade_pip(tmp_path, create_virtualenv, modules, states
     assert "Successfully installed pip" in ret["stdout"]
 
     # Let's make sure we have pip 9.0.1 installed
-    assert modules.pip.list("pip", bin_env=venv_dir) == {"pip": "9.0.1"}
+    assert modules.pip.list("pip", bin_env=venv_dir) == {"pip": "19.3.1"}
 
     # Now the actual pip upgrade pip test
     ret = states.pip.installed(name="pip==20.0.1", upgrade=True, bin_env=venv_dir)
