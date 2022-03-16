@@ -12,6 +12,7 @@ docker = pytest.importorskip("docker")
 log = logging.getLogger(__name__)
 
 pytestmark = [
+    pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
     pytest.mark.skipif(not HAS_LIBS, reason="Need etcd libs to test etcd_util!"),
     pytest.mark.skip_if_binaries_missing("docker", "dockerd", check_all=False),
@@ -31,16 +32,26 @@ def docker_client():
 
 
 @pytest.fixture(scope="module")
+def docker_image_name(docker_client):
+    image_name = "elcolio/etcd"
+    try:
+        docker_client.images.pull(image_name)
+    except docker.errors.APIError as exc:
+        pytest.skip("Failed to pull docker image '{}': {}".format(image_name, exc))
+    return image_name
+
+
+@pytest.fixture(scope="module")
 def etcd_port():
     return get_unused_localhost_port()
 
 
 # TODO: Use our own etcd image to avoid reliance on a third party
 @pytest.fixture(scope="module", autouse=True)
-def etcd_apiv2_container(salt_factories, docker_client, etcd_port):
+def etcd_apiv2_container(salt_factories, docker_client, etcd_port, docker_image_name):
     container = salt_factories.get_container(
         random_string("etcd-server-"),
-        image_name="elcolio/etcd",
+        image_name=docker_image_name,
         docker_client=docker_client,
         check_ports=[etcd_port],
         container_run_kwargs={

@@ -36,18 +36,18 @@ class TestRequestHandler(http.server.SimpleHTTPRequestHandler):
         try:
             # Retrieve the local file from the web root to serve to clients
             with salt.utils.files.fopen(
-                os.path.join(self.directory, self.path[1:])
+                os.path.join(self.directory, self.path[1:]), "rb"
             ) as reqfp:
-                return_text = reqfp.read().encode("utf-8")
+                return_data = reqfp.read()
                 # We're using this checksum as the etag to show file changes
-                checksum = hashlib.md5(return_text).hexdigest()
+                checksum = hashlib.md5(return_data).hexdigest()
                 if none_match == checksum:
                     # Status code 304 Not Modified is returned if the file is unchanged
                     status_code = 304
         except:  # pylint: disable=bare-except
             # Something went wrong. We didn't find the requested file
             status_code = 404
-            return_text = None
+            return_data = None
             checksum = None
 
         self.send_response(status_code)
@@ -59,13 +59,13 @@ class TestRequestHandler(http.server.SimpleHTTPRequestHandler):
             # it'll rear it's head here as random failures that are hard to reproduce.
             # Any alternatives seem overly complex. So... don't break the case insensitivity
             # in the code.
-            possible_etags = ["Etag", "ETag"]
+            possible_etags = ["Etag", "ETag", "etag", "ETAG"]
             self.send_header(random.choice(possible_etags), checksum)
             self.end_headers()
 
         # Return file content
-        if return_text:
-            self.wfile.write(return_text)
+        if return_data:
+            self.wfile.write(return_data)
 
 
 def serve(port=8000, directory=None):
@@ -112,24 +112,32 @@ def web_root(tmp_path_factory):
         shutil.rmtree(str(_web_root), ignore_errors=True)
 
 
-def test_file_managed_web_source_etag_operation(
-    states, free_port, web_root, minion_opts
+def test_archive_extracted_web_source_etag_operation(
+    modules, states, free_port, web_root, minion_opts
 ):
     """
     This functional test checks the operation of the use_etag parameter to the
-    file.managed state. There are four (4) invocations of file.managed with a
-    web source, but only three (3) will trigger a call to the web server as
-    shown below and in comments within.
+    archive.extracted state. There are four (4) invocations of archive.extracted
+    with a web source, but only three (3) will trigger a call to the web server
+    as shown below and in comments within.
 
-        127.0.0.1 - - [08/Jan/2022 00:53:11] "GET /foo.txt HTTP/1.1" 200 -
-        127.0.0.1 - - [08/Jan/2022 00:53:11] "GET /foo.txt HTTP/1.1" 304 -
-        127.0.0.1 - - [08/Jan/2022 00:53:12] "GET /foo.txt HTTP/1.1" 200 -
+        127.0.0.1 - - [08/Mar/2022 13:07:10] "GET /foo.tar.gz HTTP/1.1" 200 -
+        127.0.0.1 - - [08/Mar/2022 13:07:10] "GET /foo.tar.gz HTTP/1.1" 304 -
+        127.0.0.1 - - [08/Mar/2022 13:07:10] "GET /foo.tar.gz HTTP/1.1" 200 -
 
     Checks are documented in the comments.
     """
     # Create file in the web root directory to serve
     states.file.managed(
-        name=os.path.join(web_root, "foo.txt"), contents="this is my file"
+        name=os.path.join(web_root, "foo", "bar.txt"),
+        contents="this is my file",
+        makedirs=True,
+    )
+    modules.archive.tar(
+        options="czf",
+        tarfile=os.path.join(web_root, "foo.tar.gz"),
+        sources=[os.path.join(web_root, "foo")],
+        cwd=web_root,
     )
 
     # File should not be cached yet
@@ -138,7 +146,7 @@ def test_file_managed_web_source_etag_operation(
         "extrn_files",
         "base",
         "localhost:{free_port}".format(free_port=free_port),
-        "foo.txt",
+        "foo.tar.gz",
     )
     cached_etag = cached_file + ".etag"
     assert not os.path.exists(cached_file)
@@ -146,10 +154,12 @@ def test_file_managed_web_source_etag_operation(
 
     # Pull the file from the web server
     #     Web server returns 200 status code with content:
-    #     127.0.0.1 - - [08/Jan/2022 00:53:11] "GET /foo.txt HTTP/1.1" 200 -
-    states.file.managed(
-        name=os.path.join(web_root, "bar.txt"),
-        source="http://localhost:{free_port}/foo.txt".format(free_port=free_port),
+    #     127.0.0.1 - - [08/Mar/2022 13:07:10] "GET /foo.tar.gz HTTP/1.1" 200 -
+    states.archive.extracted(
+        name=web_root,
+        source="http://localhost:{free_port}/foo.tar.gz".format(free_port=free_port),
+        archive_format="tar",
+        options="z",
         use_etag=True,
     )
 
@@ -162,10 +172,12 @@ def test_file_managed_web_source_etag_operation(
 
     # Pull the file again. Etag hasn't changed. No download occurs.
     #     Web server returns 304 status code and no content:
-    #     127.0.0.1 - - [08/Jan/2022 00:53:11] "GET /foo.txt HTTP/1.1" 304 -
-    states.file.managed(
-        name=os.path.join(web_root, "bar.txt"),
-        source="http://localhost:{free_port}/foo.txt".format(free_port=free_port),
+    #     127.0.0.1 - - [08/Mar/2022 13:07:10] "GET /foo.tar.gz HTTP/1.1" 304 -
+    states.archive.extracted(
+        name=web_root,
+        source="http://localhost:{free_port}/foo.tar.gz".format(free_port=free_port),
+        archive_format="tar",
+        options="z",
         use_etag=True,
     )
 
@@ -174,14 +186,23 @@ def test_file_managed_web_source_etag_operation(
 
     # Change file in the web root directory
     states.file.managed(
-        name=os.path.join(web_root, "foo.txt"), contents="this is my changed file"
+        name=os.path.join(web_root, "foo", "bar.txt"),
+        contents="this is my changed file",
+    )
+    modules.archive.tar(
+        options="czf",
+        tarfile=os.path.join(web_root, "foo.tar.gz"),
+        sources=[os.path.join(web_root, "foo")],
+        cwd=web_root,
     )
 
     # Don't use Etag. Cached file is there, Salt won't try to download.
     #     No call to the web server will be made.
-    states.file.managed(
-        name=os.path.join(web_root, "bar.txt"),
-        source="http://localhost:{free_port}/foo.txt".format(free_port=free_port),
+    states.archive.extracted(
+        name=web_root,
+        source="http://localhost:{free_port}/foo.tar.gz".format(free_port=free_port),
+        archive_format="tar",
+        options="z",
         use_etag=False,
     )
 
@@ -190,10 +211,12 @@ def test_file_managed_web_source_etag_operation(
 
     # Now use Etag again. Cached file changes
     #     Web server returns 200 status code with content
-    #     127.0.0.1 - - [08/Jan/2022 00:53:12] "GET /foo.txt HTTP/1.1" 200 -
-    states.file.managed(
-        name=os.path.join(web_root, "bar.txt"),
-        source="http://localhost:{free_port}/foo.txt".format(free_port=free_port),
+    #     127.0.0.1 - - [08/Mar/2022 13:07:10] "GET /foo.tar.gz HTTP/1.1" 200 -
+    states.archive.extracted(
+        name=web_root,
+        source="http://localhost:{free_port}/foo.tar.gz".format(free_port=free_port),
+        archive_format="tar",
+        options="z",
         use_etag=True,
     )
 
