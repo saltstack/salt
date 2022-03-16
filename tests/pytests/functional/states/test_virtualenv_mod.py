@@ -15,10 +15,7 @@ pytestmark = [
 @SKIP_INITIAL_PHOTONOS_FAILURES
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
-def test_issue_1959_virtualenv_runas(tmp_path, state_tree, states):
-    # Since we'll be creating the virtualenv under a different account, the `tmp_path` path
-    # needs to be world writable
-    tmp_path.chmod(0o0777)
+def test_issue_1959_virtualenv_runas(tmp_path_world_rw, state_tree, states):
     with pytest.helpers.create_account(create_group=True) as account:
 
         state_tree_dirname = account.username
@@ -26,7 +23,7 @@ def test_issue_1959_virtualenv_runas(tmp_path, state_tree, states):
         with pytest.helpers.temp_file(
             "requirements.txt", contents="pep8==1.3.3\n", directory=state_tree_path
         ):
-            venv_dir = tmp_path / "venv"
+            venv_dir = tmp_path_world_rw / "venv"
             ret = states.virtualenv.managed(
                 name=str(venv_dir),
                 user=account.username,

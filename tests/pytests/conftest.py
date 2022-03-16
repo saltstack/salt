@@ -6,9 +6,11 @@ import functools
 import inspect
 import logging
 import os
+import pathlib
 import shutil
 import stat
 import sys
+import tempfile
 
 import attr
 import pytest
@@ -439,6 +441,21 @@ def get_python_executable():
         # We're not running inside a virtualenv
         python_binary = sys.executable
     return python_binary
+
+
+@pytest.fixture
+def tmp_path_world_rw(request):
+    """
+    Temporary path which is world read/write for tests that run under a different account
+    """
+    tempdir_path = pathlib.Path(basetemp=tempfile.gettempdir()).resolve()
+    path = tempdir_path / "world-rw-{}".format(id(request.node))
+    path.mkdir(exist_ok=True)
+    path.chmod(0o777)
+    try:
+        yield path
+    finally:
+        shutil.rmtree(str(path), ignore_errors=True)
 
 
 @pytest.fixture(scope="session")
