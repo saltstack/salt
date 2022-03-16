@@ -62,3 +62,26 @@ def test_issue_58763_a(tmp_path, modules, state_tree, caplog):
             assert (
                 "Detected legacy module.run syntax: test.random_hash" in caplog.messages
             )
+
+
+@pytest.mark.slow_test
+def test_issue_58763_b(tmp_path, modules, state_tree, caplog):
+
+    venv_dir = tmp_path / "issue-2028-pip-installed"
+
+    sls_contents = dedent(
+        """
+    test.ping:
+      module.run
+    """
+    )
+    with pytest.helpers.temp_file("issue-58763.sls", sls_contents, state_tree):
+        with caplog.at_level(logging.DEBUG):
+            ret = modules.state.sls(
+                mods="issue-58763",
+            )
+            assert len(ret.raw) == 1
+            print(ret)
+            for k in ret.raw:
+                assert ret.raw[k]["result"] is True
+            assert "Detected legacy module.run syntax: test.ping" in caplog.messages
