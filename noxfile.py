@@ -10,6 +10,7 @@ Nox configuration script
 import datetime
 import glob
 import os
+import pathlib
 import shutil
 import sys
 import tempfile
@@ -39,8 +40,10 @@ SKIP_REQUIREMENTS_INSTALL = "SKIP_REQUIREMENTS_INSTALL" in os.environ
 EXTRA_REQUIREMENTS_INSTALL = os.environ.get("EXTRA_REQUIREMENTS_INSTALL")
 
 # Global Path Definitions
-REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
-SITECUSTOMIZE_DIR = os.path.join(REPO_ROOT, "tests", "support", "coverage")
+REPO_ROOT = pathlib.Path(os.path.dirname(__file__)).resolve()
+SITECUSTOMIZE_DIR = str(REPO_ROOT / "tests" / "support" / "coverage")
+ARTIFACTS_DIR = REPO_ROOT / "artifacts"
+COVERAGE_OUTPUT_DIR = ARTIFACTS_DIR / "coverage"
 IS_DARWIN = sys.platform.lower().startswith("darwin")
 IS_WINDOWS = sys.platform.lower().startswith("win")
 IS_FREEBSD = sys.platform.lower().startswith("freebsd")
@@ -54,10 +57,9 @@ nox.options.reuse_existing_virtualenvs = True
 nox.options.error_on_missing_interpreters = False
 
 # Change current directory to REPO_ROOT
-os.chdir(REPO_ROOT)
+os.chdir(str(REPO_ROOT))
 
-RUNTESTS_LOGFILE = os.path.join(
-    "artifacts",
+RUNTESTS_LOGFILE = ARTIFACTS_DIR.joinpath(
     "logs",
     "runtests-{}.log".format(datetime.datetime.now().strftime("%Y%m%d%H%M%S.%f")),
 )
@@ -89,10 +91,14 @@ def find_session_runner(session, name, **kwargs):
 
 
 def _create_ci_directories():
-    for dirname in ("logs", "coverage", "xml-unittests-output"):
-        path = os.path.join("artifacts", dirname)
-        if not os.path.exists(path):
-            os.makedirs(path)
+    ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+    # Allow other users to write to this directory.
+    # This helps when some tests run under a different name and yet
+    # they need access to this path, for example, code coverage.
+    ARTIFACTS_DIR.chmod(0o777)
+    COVERAGE_OUTPUT_DIR.mkdir(exist_ok=True)
+    COVERAGE_OUTPUT_DIR.chmod(0o777)
+    ARTIFACTS_DIR.joinpath("xml-unittests-output").mkdir(exist_ok=True)
 
 
 def _get_session_python_version_info(session):
@@ -163,7 +169,9 @@ def _install_system_packages(session):
     version_info = _get_session_python_version_info(session)
     py_version_keys = ["{}".format(*version_info), "{}.{}".format(*version_info)]
     session_site_packages_dir = _get_session_python_site_packages_dir(session)
-    session_site_packages_dir = os.path.relpath(session_site_packages_dir, REPO_ROOT)
+    session_site_packages_dir = os.path.relpath(
+        session_site_packages_dir, str(REPO_ROOT)
+    )
     for py_version in py_version_keys:
         dist_packages_path = "/usr/lib/python{}/dist-packages".format(py_version)
         if not os.path.isdir(dist_packages_path):
@@ -359,6 +367,11 @@ def _run_with_coverage(session, *test_cmd, env=None):
         python_path_entries.insert(0, SITECUSTOMIZE_DIR)
         python_path_env_var = os.pathsep.join(python_path_entries)
 
+    coverage_base_env = {
+        # The full path to the .coverage data file. Makes sure we always write
+        # them to the same directory
+        "COVERAGE_FILE": str(COVERAGE_OUTPUT_DIR / ".coverage")
+    }
     if env is None:
         env = {}
 
@@ -366,12 +379,10 @@ def _run_with_coverage(session, *test_cmd, env=None):
         {
             # The updated python path so that sitecustomize is importable
             "PYTHONPATH": python_path_env_var,
-            # The full path to the .coverage data file. Makes sure we always write
-            # them to the same directory
-            "COVERAGE_FILE": os.path.abspath(os.path.join(REPO_ROOT, ".coverage")),
             # Instruct sub processes to also run under coverage
-            "COVERAGE_PROCESS_START": os.path.join(REPO_ROOT, ".coveragerc"),
-        }
+            "COVERAGE_PROCESS_START": str(REPO_ROOT / ".coveragerc"),
+        },
+        **coverage_base_env
     )
 
     try:
@@ -379,7 +390,7 @@ def _run_with_coverage(session, *test_cmd, env=None):
     finally:
         # Always combine and generate the XML coverage report
         try:
-            session.run("coverage", "combine")
+            session.run("coverage", "combine", env=coverage_base_env)
         except CommandFailed:
             # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
             # exception
@@ -389,21 +400,21 @@ def _run_with_coverage(session, *test_cmd, env=None):
             "coverage",
             "xml",
             "-o",
-            os.path.join("artifacts", "coverage", "salt.xml"),
+            str(COVERAGE_OUTPUT_DIR.joinpath("salt.xml").relative_to(REPO_ROOT)),
             "--omit=tests/*",
             "--include=salt/*",
+            env=coverage_base_env,
         )
         # Generate report for tests code coverage
         session.run(
             "coverage",
             "xml",
             "-o",
-            os.path.join("artifacts", "coverage", "tests.xml"),
+            str(COVERAGE_OUTPUT_DIR.joinpath("tests.xml").relative_to(REPO_ROOT)),
             "--omit=salt/*",
             "--include=tests/*",
+            env=coverage_base_env,
         )
-        # Move the coverage DB to artifacts/coverage in order for it to be archived by CI
-        shutil.move(".coverage", os.path.join("artifacts", "coverage", ".coverage"))
 
 
 def _runtests(session):
@@ -559,7 +570,7 @@ def pytest_parametrized(session, coverage, transport, crypto):
 
     cmd_args = [
         "--rootdir",
-        REPO_ROOT,
+        str(REPO_ROOT),
         "--log-file={}".format(RUNTESTS_LOGFILE),
         "--log-file-level=debug",
         "--show-capture=no",
@@ -745,7 +756,7 @@ def pytest_cloud(session, coverage):
 
     cmd_args = [
         "--rootdir",
-        REPO_ROOT,
+        str(REPO_ROOT),
         "--log-file={}".format(RUNTESTS_LOGFILE),
         "--log-file-level=debug",
         "--show-capture=no",
@@ -776,7 +787,7 @@ def pytest_tornado(session, coverage):
 
     cmd_args = [
         "--rootdir",
-        REPO_ROOT,
+        str(REPO_ROOT),
         "--log-file={}".format(RUNTESTS_LOGFILE),
         "--log-file-level=debug",
         "--show-capture=no",
