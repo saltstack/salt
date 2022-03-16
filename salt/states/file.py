@@ -8577,10 +8577,16 @@ def shortcut(
 
 
 def cached(
-    name, source_hash="", source_hash_name=None, skip_verify=False, saltenv="base"
+    name,
+    source_hash="",
+    source_hash_name=None,
+    skip_verify=False,
+    saltenv="base",
+    use_etag=False,
 ):
     """
     .. versionadded:: 2017.7.3
+    .. versionchanged:: 3005
 
     Ensures that a file is saved to the minion's cache. This state is primarily
     invoked by other states to ensure that we do not re-download a source file
@@ -8624,6 +8630,15 @@ def cached(
     saltenv
         Used to specify the environment from which to download a file from the
         Salt fileserver (i.e. those with ``salt://`` URL).
+
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
 
 
     This state will in most cases not be useful in SLS files, but it is useful
@@ -8670,11 +8685,12 @@ def cached(
     if (
         not skip_verify
         and not source_hash
+        and not use_etag
         and parsed.scheme in salt.utils.files.REMOTE_PROTOS
     ):
         ret["comment"] = (
             "Unable to verify upstream hash of source file {}, please set "
-            "source_hash or set skip_verify to True".format(
+            "source_hash or set skip_verify or use_etag to True".format(
                 salt.utils.url.redact_http_basic_auth(name)
             )
         )
@@ -8763,47 +8779,23 @@ def cached(
     else:
         pre_hash = None
 
-    def _try_cache(path, checksum):
-        """
-        This helper is not needed anymore in develop as the fileclient in the
-        develop branch now has means of skipping a download if the existing
-        hash matches one passed to cp.cache_file. Remove this helper and the
-        code that invokes it, once we have merged forward into develop.
-        """
-        if not path or not checksum:
-            return True
-        form = salt.utils.files.HASHES_REVMAP.get(len(checksum))
-        if form is None:
-            # Shouldn't happen, an invalid checksum length should be caught
-            # before we get here. But in the event this gets through, don't let
-            # it cause any trouble, and just return True.
-            return True
-        try:
-            return salt.utils.hashutils.get_hash(path, form=form) != checksum
-        except (OSError, ValueError):
-            # Again, shouldn't happen, but don't let invalid input/permissions
-            # in the call to get_hash blow this up.
-            return True
-
     # Cache the file. Note that this will not actually download the file if
-    # either of the following is true:
+    # any of the following are true:
     #   1. source is a salt:// URL and the fileserver determines that the hash
     #      of the minion's copy matches that of the fileserver.
     #   2. File is remote (http(s), ftp, etc.) and the specified source_hash
     #      matches the cached copy.
+    #   3. File is a remote web source (http[s]), use_etag is enabled, and the
+    #      remote file hasn't changed since the last cache.
     # Remote, non salt:// sources _will_ download if a copy of the file was
     # not already present in the minion cache.
-    if _try_cache(local_copy, source_sum.get("hsum")):
-        # The _try_cache helper is obsolete in the develop branch. Once merged
-        # forward, remove the helper as well as this if statement, and dedent
-        # the below block.
-        try:
-            local_copy = __salt__["cp.cache_file"](
-                name, saltenv=saltenv, source_hash=source_sum.get("hsum")
-            )
-        except Exception as exc:  # pylint: disable=broad-except
-            ret["comment"] = salt.utils.url.redact_http_basic_auth(exc.__str__())
-            return ret
+    try:
+        local_copy = __salt__["cp.cache_file"](
+            name, saltenv=saltenv, source_hash=source_sum.get("hsum"), use_etag=use_etag
+        )
+    except Exception as exc:  # pylint: disable=broad-except
+        ret["comment"] = salt.utils.url.redact_http_basic_auth(exc.__str__())
+        return ret
 
     if not local_copy:
         ret[

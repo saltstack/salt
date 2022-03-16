@@ -416,10 +416,6 @@ class PipStateInstallationErrorTest(TestCase):
                 extra_requirements.append("{}=={}".format(name, version))
         failures = {}
         pip_version_requirements = [
-            # Latest pip 8
-            "<9.0",
-            # Latest pip 9
-            "<10.0",
             # Latest pip 18
             "<19.0",
             # Latest pip 19
