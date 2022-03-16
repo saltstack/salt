@@ -5247,7 +5247,11 @@ def version(versioninfo=False):
             log.error("Failed to obtain the git version (error follows):\n%s", exc)
             version_ = "unknown"
         try:
-            __context__[contextkey] = version_.split()[-1]
+            # On macOS, the git version is displayed in a different format
+            #  git version 2.21.1 (Apple Git-122.3)
+            # As opposed to:
+            #  git version 2.21.1
+            __context__[contextkey] = version_.split("(")[0].strip().split()[-1]
         except IndexError:
             # Somehow git --version returned no stdout while not raising an
             # error. Should never happen but we should still account for this
@@ -5527,14 +5531,18 @@ def worktree_prune(
     if expire:
         command.extend(["--expire", expire])
     command.extend(_format_opts(opts))
-    return _git_run(
+    result = _git_run(
         command,
         cwd=cwd,
         user=user,
         password=password,
         ignore_retcode=ignore_retcode,
         output_encoding=output_encoding,
-    )["stdout"]
+    )
+    git_version = version(versioninfo=False)
+    if _LooseVersion(git_version) > _LooseVersion("2.35.0"):
+        return result["stderr"]
+    return result["stdout"]
 
 
 def worktree_rm(cwd, user=None, output_encoding=None):
