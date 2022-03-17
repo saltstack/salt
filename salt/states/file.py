@@ -450,7 +450,7 @@ def _gen_recurse_managed_files(
             # the same list.
             _filenames = list(filenames)
             for filename in _filenames:
-                if filename.startswith(lname):
+                if filename.startswith(lname + os.sep):
                     log.debug(
                         "** skipping file ** %s, it intersects a symlink", filename
                     )
@@ -530,9 +530,9 @@ def _gen_recurse_managed_files(
             if keep_symlinks:
                 islink = False
                 for link in symlinks:
-                    if mdir.startswith(link, 0):
+                    if mdir.startswith(link + os.sep, 0):
                         log.debug(
-                            "** skipping empty dir ** %s, it intersectsa symlink", mdir
+                            "** skipping empty dir ** %s, it intersects a symlink", mdir
                         )
                         islink = True
                         break
@@ -1882,6 +1882,9 @@ def absent(name, **kwargs):
     be deleted. This will work to reverse any of the functions in the file
     state module. If a directory is supplied, it will be recursively deleted.
 
+    If only the contents of the directory need to be deleted but not the directory
+    itself, use :mod:`file.directory <salt.states.file.directory>` with ``clean=True``
+
     name
         The path which should be deleted
     """
@@ -2136,6 +2139,7 @@ def managed(
     win_inheritance=True,
     win_perms_reset=False,
     verify_ssl=True,
+    use_etag=False,
     **kwargs
 ):
     r"""
@@ -2716,6 +2720,15 @@ def managed(
         will not attempt to validate the servers certificate. Default is True.
 
         .. versionadded:: 3002
+
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
     """
     if "env" in kwargs:
         # "env" is not supported; Use "saltenv".
@@ -3082,6 +3095,7 @@ def managed(
             defaults,
             skip_verify,
             verify_ssl=verify_ssl,
+            use_etag=use_etag,
             **kwargs
         )
     except Exception as exc:  # pylint: disable=broad-except
@@ -3136,6 +3150,7 @@ def managed(
                 serole=serole,
                 setype=setype,
                 serange=serange,
+                use_etag=use_etag,
                 **kwargs
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -3214,6 +3229,7 @@ def managed(
                 serole=serole,
                 setype=setype,
                 serange=serange,
+                use_etag=use_etag,
                 **kwargs
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -3387,13 +3403,13 @@ def directory(
         file.
 
     clean
-        Make sure that only files that are set up by salt and required by this
-        function are kept. If this option is set then everything in this
-        directory will be deleted unless it is required.
-        'clean' and 'max_depth' are mutually exclusive.
+        Remove any files that are not referenced by a required ``file`` state.
+        See examples below for more info. If this option is set then everything
+        in this directory will be deleted unless it is required. 'clean' and
+        'max_depth' are mutually exclusive.
 
     require
-        Require other resources such as packages or files
+        Require other resources such as packages or files.
 
     exclude_pat
         When 'clean' is set to True, exclude this pattern from removal list
@@ -3506,6 +3522,135 @@ def directory(
                 fred_snuffy:
                   perms: full_control
             - win_inheritance: False
+
+
+    For ``clean: True`` there is no mechanism that allows all states and
+    modules to enumerate the files that they manage, so for file.directory to
+    know what files are managed by Salt, a ``file`` state targeting managed
+    files is required. To use a contrived example, the following states will
+    always have changes, despite the file named ``okay`` being created by a
+    Salt state:
+
+    .. code-block:: yaml
+
+        silly_way_of_creating_a_file:
+          cmd.run:
+             - name: mkdir -p /tmp/dont/do/this && echo "seriously" > /tmp/dont/do/this/okay
+             - unless: grep seriously /tmp/dont/do/this/okay
+
+        will_always_clean:
+          file.directory:
+            - name: /tmp/dont/do/this
+            - clean: True
+
+    Because ``cmd.run`` has no way of communicating that it's creating a file,
+    ``will_always_clean`` will remove the newly created file. Of course, every
+    time the states run the same thing will happen - the
+    ``silly_way_of_creating_a_file`` will crete the file and
+    ``will_always_clean`` will always remove it. Over and over again, no matter
+    how many times you run it.
+
+    To make this example work correctly, we need to add a ``file`` state that
+    targets the file, and a ``require`` between the file states.
+
+    .. code-block:: yaml
+
+        silly_way_of_creating_a_file:
+          cmd.run:
+             - name: mkdir -p /tmp/dont/do/this && echo "seriously" > /tmp/dont/do/this/okay
+             - unless: grep seriously /tmp/dont/do/this/okay
+          file.managed:
+             - name: /tmp/dont/do/this/okay
+             - create: False
+             - replace: False
+             - require_in:
+               - file: will_always_clean
+
+    Now there is a ``file`` state that ``clean`` can check, so running those
+    states will work as expected. The file will be created with the specific
+    contents, and ``clean`` will ignore the file because it is being managed by
+    a salt ``file`` state. Note that if ``require_in`` was placed under
+    ``cmd.run``, it would **not** work, because the requisite is for the cmd,
+    not the file.
+
+    .. code-block:: yaml
+
+        silly_way_of_creating_a_file:
+          cmd.run:
+             - name: mkdir -p /tmp/dont/do/this && echo "seriously" > /tmp/dont/do/this/okay
+             - unless: grep seriously /tmp/dont/do/this/okay
+             # This part should be under file.managed
+             - require_in:
+               - file: will_always_clean
+          file.managed:
+             - name: /tmp/dont/do/this/okay
+             - create: False
+             - replace: False
+
+
+    Any other state that creates a file as a result, for example ``pkgrepo``,
+    must have the resulting files referenced in a file state in order for
+    ``clean: True`` to ignore them.  Also note that the requisite
+    (``require_in`` vs ``require``) works in both directions:
+
+    .. code-block:: yaml
+
+        clean_dir:
+          file.directory:
+            - name: /tmp/a/better/way
+            - require:
+              - file: a_better_way
+
+        a_better_way:
+          file.managed:
+            - name: /tmp/a/better/way/truely
+            - makedirs: True
+            - contents: a much better way
+
+    Works the same as this:
+
+    .. code-block:: yaml
+
+        clean_dir:
+          file.directory:
+            - name: /tmp/a/better/way
+            - clean: True
+
+        a_better_way:
+          file.managed:
+            - name: /tmp/a/better/way/truely
+            - makedirs: True
+            - contents: a much better way
+            - require_in:
+              - file: clean_dir
+
+    A common mistake here is to forget the state name and id are both required for requisites:
+
+    .. code-block:: yaml
+
+        # Correct:
+        /path/to/some/file:
+          file.managed:
+            - contents: Cool
+            - require_in:
+              - file: clean_dir
+
+        # Incorrect
+        /path/to/some/file:
+          file.managed:
+            - contents: Cool
+            - require_in:
+              # should be `- file: clean_dir`
+              - clean_dir
+
+        # Also incorrect
+        /path/to/some/file:
+          file.managed:
+            - contents: Cool
+            - require_in:
+              # should be `- file: clean_dir`
+              - file
+
     """
     name = os.path.expanduser(name)
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
@@ -7292,7 +7437,9 @@ def rename(name, source, force=False, makedirs=False, **kwargs):
 
     """
     name = os.path.expanduser(name)
+    name = os.path.expandvars(name)
     source = os.path.expanduser(source)
+    source = os.path.expandvars(source)
 
     ret = {"name": name, "changes": {}, "comment": "", "result": True}
     if not name:
@@ -7341,7 +7488,7 @@ def rename(name, source, force=False, makedirs=False, **kwargs):
     # All tests pass, move the file into place
     try:
         if os.path.islink(source):
-            linkto = os.readlink(source)
+            linkto = salt.utils.path.readlink(source)
             os.symlink(linkto, name)
             os.unlink(source)
         else:
@@ -8430,10 +8577,16 @@ def shortcut(
 
 
 def cached(
-    name, source_hash="", source_hash_name=None, skip_verify=False, saltenv="base"
+    name,
+    source_hash="",
+    source_hash_name=None,
+    skip_verify=False,
+    saltenv="base",
+    use_etag=False,
 ):
     """
     .. versionadded:: 2017.7.3
+    .. versionchanged:: 3005
 
     Ensures that a file is saved to the minion's cache. This state is primarily
     invoked by other states to ensure that we do not re-download a source file
@@ -8477,6 +8630,15 @@ def cached(
     saltenv
         Used to specify the environment from which to download a file from the
         Salt fileserver (i.e. those with ``salt://`` URL).
+
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
 
 
     This state will in most cases not be useful in SLS files, but it is useful
@@ -8523,11 +8685,12 @@ def cached(
     if (
         not skip_verify
         and not source_hash
+        and not use_etag
         and parsed.scheme in salt.utils.files.REMOTE_PROTOS
     ):
         ret["comment"] = (
             "Unable to verify upstream hash of source file {}, please set "
-            "source_hash or set skip_verify to True".format(
+            "source_hash or set skip_verify or use_etag to True".format(
                 salt.utils.url.redact_http_basic_auth(name)
             )
         )
@@ -8616,47 +8779,23 @@ def cached(
     else:
         pre_hash = None
 
-    def _try_cache(path, checksum):
-        """
-        This helper is not needed anymore in develop as the fileclient in the
-        develop branch now has means of skipping a download if the existing
-        hash matches one passed to cp.cache_file. Remove this helper and the
-        code that invokes it, once we have merged forward into develop.
-        """
-        if not path or not checksum:
-            return True
-        form = salt.utils.files.HASHES_REVMAP.get(len(checksum))
-        if form is None:
-            # Shouldn't happen, an invalid checksum length should be caught
-            # before we get here. But in the event this gets through, don't let
-            # it cause any trouble, and just return True.
-            return True
-        try:
-            return salt.utils.hashutils.get_hash(path, form=form) != checksum
-        except (OSError, ValueError):
-            # Again, shouldn't happen, but don't let invalid input/permissions
-            # in the call to get_hash blow this up.
-            return True
-
     # Cache the file. Note that this will not actually download the file if
-    # either of the following is true:
+    # any of the following are true:
     #   1. source is a salt:// URL and the fileserver determines that the hash
     #      of the minion's copy matches that of the fileserver.
     #   2. File is remote (http(s), ftp, etc.) and the specified source_hash
     #      matches the cached copy.
+    #   3. File is a remote web source (http[s]), use_etag is enabled, and the
+    #      remote file hasn't changed since the last cache.
     # Remote, non salt:// sources _will_ download if a copy of the file was
     # not already present in the minion cache.
-    if _try_cache(local_copy, source_sum.get("hsum")):
-        # The _try_cache helper is obsolete in the develop branch. Once merged
-        # forward, remove the helper as well as this if statement, and dedent
-        # the below block.
-        try:
-            local_copy = __salt__["cp.cache_file"](
-                name, saltenv=saltenv, source_hash=source_sum.get("hsum")
-            )
-        except Exception as exc:  # pylint: disable=broad-except
-            ret["comment"] = salt.utils.url.redact_http_basic_auth(exc.__str__())
-            return ret
+    try:
+        local_copy = __salt__["cp.cache_file"](
+            name, saltenv=saltenv, source_hash=source_sum.get("hsum"), use_etag=use_etag
+        )
+    except Exception as exc:  # pylint: disable=broad-except
+        ret["comment"] = salt.utils.url.redact_http_basic_auth(exc.__str__())
+        return ret
 
     if not local_copy:
         ret[

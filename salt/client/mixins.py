@@ -2,8 +2,7 @@
 A collection of mixins useful for the various *Client interfaces
 """
 
-
-import copy as pycopy
+import copy
 import fnmatch
 import logging
 import signal
@@ -11,11 +10,12 @@ import traceback
 import weakref
 from collections.abc import Mapping, MutableMapping
 
+import salt.channel.client
 import salt.exceptions
 import salt.ext.tornado.stack_context
 import salt.log.setup
 import salt.minion
-import salt.transport.client
+import salt.output
 import salt.utils.args
 import salt.utils.doc
 import salt.utils.error
@@ -98,12 +98,12 @@ class ClientFuncsDict(MutableMapping):
 
             user = salt.utils.user.get_specific_user()
             return self.client._proc_function(
-                key,
-                low,
-                user,
-                async_pub["tag"],  # TODO: fix
-                async_pub["jid"],  # TODO: fix
-                False,  # Don't daemonize
+                fun=key,
+                low=low,
+                user=user,
+                tag=async_pub["tag"],
+                jid=async_pub["jid"],
+                daemonize=False,
             )
 
         return wrapper
@@ -115,7 +115,26 @@ class ClientFuncsDict(MutableMapping):
         return iter(self.client.functions)
 
 
-class SyncClientMixin:
+class ClientStateMixin:
+    def __init__(self, opts, context=None):
+        self.opts = opts
+        if context is None:
+            context = {}
+        self.context = context
+
+    # __setstate__ and __getstate__ are only used on spawning platforms.
+    def __getstate__(self):
+        return {
+            "opts": self.opts,
+            "context": self.context or None,
+        }
+
+    def __setstate__(self, state):
+        # If __setstate__ is getting called it means this is running on a new process.
+        self.__init__(state["opts"], context=state["context"])
+
+
+class SyncClientMixin(ClientStateMixin):
     """
     A mixin for *Client interfaces to abstract common function execution
     """
@@ -137,7 +156,7 @@ class SyncClientMixin:
         load = kwargs
         load["cmd"] = self.client
 
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             self.opts, crypt="clear", usage="master_call"
         ) as channel:
             ret = channel.send(load)
@@ -192,31 +211,6 @@ class SyncClientMixin:
     ):
         """
         Execute a function
-
-        .. code-block:: python
-
-            >>> opts = salt.config.master_config('/etc/salt/master')
-            >>> runner = salt.runner.RunnerClient(opts)
-            >>> runner.cmd('jobs.list_jobs', [])
-            {
-                '20131219215650131543': {
-                    'Arguments': [300],
-                    'Function': 'test.sleep',
-                    'StartTime': '2013, Dec 19 21:56:50.131543',
-                    'Target': '*',
-                    'Target-type': 'glob',
-                    'User': 'saltdev'
-                },
-                '20131219215921857715': {
-                    'Arguments': [300],
-                    'Function': 'test.sleep',
-                    'StartTime': '2013, Dec 19 21:59:21.857715',
-                    'Target': '*',
-                    'Target-type': 'glob',
-                    'User': 'saltdev'
-                },
-            }
-
         """
         if arg is None:
             arg = tuple()
@@ -319,7 +313,6 @@ class SyncClientMixin:
             salt.utils.event.get_event(
                 "master",
                 self.opts["sock_dir"],
-                self.opts["transport"],
                 opts=self.opts,
                 listen=False,
             ),
@@ -339,7 +332,7 @@ class SyncClientMixin:
             }
 
             try:
-                self_functions = pycopy.copy(self.functions)
+                self_functions = copy.copy(self.functions)
                 salt.utils.lazy.verify_fun(self_functions, fun)
 
                 # Inject some useful globals to *all* the function's global
@@ -472,7 +465,7 @@ class SyncClientMixin:
         return salt.utils.doc.strip_rst(docs)
 
 
-class AsyncClientMixin:
+class AsyncClientMixin(ClientStateMixin):
     """
     A mixin for *Client interfaces to enable easy asynchronous function execution
     """
@@ -480,7 +473,7 @@ class AsyncClientMixin:
     client = None
     tag_prefix = None
 
-    def _proc_function_remote(self, fun, low, user, tag, jid, daemonize=True):
+    def _proc_function_remote(self, *, fun, low, user, tag, jid, daemonize=True):
         """
         Run this method in a multiprocess target to execute the function on the
         master and fire the return data on the event bus
@@ -504,7 +497,7 @@ class AsyncClientMixin:
         except salt.exceptions.EauthAuthenticationError as exc:
             log.error(exc)
 
-    def _proc_function(self, fun, low, user, tag, jid, daemonize=True):
+    def _proc_function(self, *, fun, low, user, tag, jid, daemonize=True):
         """
         Run this method in a multiprocess target to execute the function
         locally and fire the return data on the event bus
@@ -561,16 +554,22 @@ class AsyncClientMixin:
         else:
             proc_func = self._proc_function_remote
         async_pub = pub if pub is not None else self._gen_async_pub()
-        proc = salt.utils.process.SignalHandlingProcess(
-            target=proc_func,
-            name="ProcessFunc(func={}, jid={})".format(
-                proc_func.__qualname__, async_pub["jid"]
-            ),
-            args=(fun, low, user, async_pub["tag"], async_pub["jid"]),
-        )
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
             # Reset current signals before starting the process in
             # order not to inherit the current signal handlers
+            proc = salt.utils.process.SignalHandlingProcess(
+                target=proc_func,
+                name="ProcessFunc({}, fun={} jid={})".format(
+                    proc_func.__qualname__, fun, async_pub["jid"]
+                ),
+                kwargs=dict(
+                    fun=fun,
+                    low=low,
+                    user=user,
+                    tag=async_pub["tag"],
+                    jid=async_pub["jid"],
+                ),
+            )
             proc.start()
         proc.join()  # MUST join, otherwise we leave zombies all over
         return async_pub

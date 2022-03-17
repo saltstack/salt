@@ -16,8 +16,8 @@ class RunNetapi(salt.utils.process.SignalHandlingProcess):
     Runner class that's pickable for netapi modules
     """
 
-    def __init__(self, opts, fname, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, opts, fname):
+        super().__init__()
         self.opts = opts
         self.fname = fname
 
@@ -48,7 +48,7 @@ class NetapiClient:
 
         for fun in self.netapi:
             if fun.endswith(".start"):
-                name = "RunNetapi({})".format(fun.__module__)
+                name = "RunNetapi({})".format(self.netapi[fun].__module__)
                 log.info("Starting %s", name)
                 self.process_manager.add_process(
                     RunNetapi, args=(self.opts, fun), name=name

@@ -19,6 +19,7 @@ import types
 
 import salt
 import salt.beacons
+import salt.channel.client
 import salt.cli.daemons
 import salt.client
 import salt.crypt
@@ -35,7 +36,7 @@ import salt.payload
 import salt.pillar
 import salt.serializers.msgpack
 import salt.syspaths
-import salt.transport.client
+import salt.transport
 import salt.utils.args
 import salt.utils.context
 import salt.utils.crypt
@@ -100,6 +101,7 @@ try:
     HAS_WIN_FUNCTIONS = True
 except ImportError:
     HAS_WIN_FUNCTIONS = False
+
 
 log = logging.getLogger(__name__)
 
@@ -735,7 +737,7 @@ class MinionBase:
 
                     self.opts = opts
 
-                    pub_channel = salt.transport.client.AsyncPubChannel.factory(
+                    pub_channel = salt.channel.client.AsyncPubChannel.factory(
                         opts, **factory_kwargs
                     )
                     try:
@@ -805,11 +807,11 @@ class MinionBase:
                 try:
                     if self.opts["transport"] == "detect":
                         self.opts["detect_mode"] = True
-                        for trans in ("zeromq", "tcp"):
+                        for trans in salt.transport.TRANSPORTS:
                             if trans == "zeromq" and not zmq:
                                 continue
                             self.opts["transport"] = trans
-                            pub_channel = salt.transport.client.AsyncPubChannel.factory(
+                            pub_channel = salt.channel.client.AsyncPubChannel.factory(
                                 self.opts, **factory_kwargs
                             )
                             yield pub_channel.connect()
@@ -818,7 +820,7 @@ class MinionBase:
                             del self.opts["detect_mode"]
                             break
                     else:
-                        pub_channel = salt.transport.client.AsyncPubChannel.factory(
+                        pub_channel = salt.channel.client.AsyncPubChannel.factory(
                             self.opts, **factory_kwargs
                         )
                         yield pub_channel.connect()
@@ -1363,10 +1365,29 @@ class Minion(MinionBase):
         """
         Return a future which will complete when you are connected to a master
         """
+        # Consider refactoring so that eval_master does not have a subtle side-effect on the contents of the opts array
         master, self.pub_channel = yield self.eval_master(
             self.opts, self.timeout, self.safe, failed
         )
+
+        # a long-running req channel
+        self.req_channel = salt.transport.client.AsyncReqChannel.factory(
+            self.opts, io_loop=self.io_loop
+        )
+
+        if hasattr(
+            self.req_channel, "connect"
+        ):  # TODO: consider generalizing this for all channels
+            log.debug("Connecting minion's long-running req channel")
+            yield self.req_channel.connect()
+
         yield self._post_master_init(master)
+
+    @salt.ext.tornado.gen.coroutine
+    def handle_payload(self, payload, reply_func):
+        self.payloads.append(payload)
+        yield reply_func(payload)
+        self.payload_ack.notify()
 
     # TODO: better name...
     @salt.ext.tornado.gen.coroutine
@@ -1582,7 +1603,6 @@ class Minion(MinionBase):
         return functions, returners, errors, executors
 
     def _send_req_sync(self, load, timeout):
-
         if self.opts["minion_sign_messages"]:
             log.trace("Signing event to be published onto the bus.")
             minion_privkey_path = os.path.join(self.opts["pki_dir"], "minion.pem")
@@ -1591,9 +1611,11 @@ class Minion(MinionBase):
             )
             load["sig"] = sig
 
-        with salt.transport.client.ReqChannel.factory(self.opts) as channel:
-            return channel.send(
-                load, timeout=timeout, tries=self.opts["return_retry_tries"]
+        with salt.utils.event.get_event(
+            "minion", opts=self.opts, listen=False
+        ) as event:
+            return event.fire_event(
+                load, "__master_req_channel_payload", timeout=timeout
             )
 
     @salt.ext.tornado.gen.coroutine
@@ -1606,9 +1628,11 @@ class Minion(MinionBase):
             )
             load["sig"] = sig
 
-        with salt.transport.client.AsyncReqChannel.factory(self.opts) as channel:
-            ret = yield channel.send(
-                load, timeout=timeout, tries=self.opts["return_retry_tries"]
+        with salt.utils.event.get_event(
+            "minion", opts=self.opts, listen=False
+        ) as event:
+            ret = yield event.fire_event(
+                load, "__master_req_channel_payload", timeout=timeout
             )
             raise salt.ext.tornado.gen.Return(ret)
 
@@ -1719,6 +1743,15 @@ class Minion(MinionBase):
                 ) = self._load_modules()
                 self.schedule.functions = self.functions
                 self.schedule.returners = self.returners
+
+        if self.opts.get("grains_refresh_pre_exec"):
+            if hasattr(self, "proxy"):
+                proxy = self.proxy
+            else:
+                proxy = None
+            self.opts["grains"] = salt.loader.grains(
+                self.opts, force_refresh=True, proxy=proxy
+            )
 
         process_count_max = self.opts.get("process_count_max")
         if process_count_max > 0:
@@ -2022,12 +2055,10 @@ class Minion(MinionBase):
             else:
                 log.warning("The metadata parameter must be a dictionary. Ignoring.")
         if minion_instance.connected:
-            minion_instance._return_pub(
-                ret, timeout=minion_instance._return_retry_timer()
-            )
+            minion_instance._return_pub(ret)
 
         # Add default returners from minion config
-        # Should have been coverted to comma-delimited string already
+        # Should have been converted to comma-delimited string already
         if isinstance(opts.get("return"), str):
             if data["ret"]:
                 data["ret"] = ",".join((data["ret"], opts["return"]))
@@ -2138,9 +2169,7 @@ class Minion(MinionBase):
         if "metadata" in data:
             ret["metadata"] = data["metadata"]
         if minion_instance.connected:
-            minion_instance._return_pub(
-                ret, timeout=minion_instance._return_retry_timer()
-            )
+            minion_instance._return_pub(ret)
         if data["ret"]:
             if "ret_config" in data:
                 ret["ret_config"] = data["ret_config"]
@@ -2636,7 +2665,8 @@ class Minion(MinionBase):
         """
         Send mine data to the master
         """
-        with salt.transport.client.ReqChannel.factory(self.opts) as channel:
+        # Consider using a long-running req channel to send mine data
+        with salt.channel.client.ReqChannel.factory(self.opts) as channel:
             data["tok"] = self.tok
             try:
                 ret = channel.send(
@@ -2669,6 +2699,12 @@ class Minion(MinionBase):
             _minion.module_refresh(
                 force_refresh=data.get("force_refresh", False),
                 notify=data.get("notify", False),
+            )
+        elif tag.startswith("__master_req_channel_payload"):
+            yield self.req_channel.send(
+                data,
+                timeout=self._return_retry_timer(),
+                tries=self.opts["return_retry_tries"],
             )
         elif tag.startswith("pillar_refresh"):
             yield _minion.pillar_refresh(
@@ -2785,6 +2821,13 @@ class Minion(MinionBase):
                             "Re-initialising subsystems for new master %s",
                             self.opts["master"],
                         )
+
+                        self.req_channel = (
+                            salt.transport.client.AsyncReqChannel.factory(
+                                self.opts, io_loop=self.io_loop
+                            )
+                        )
+
                         # put the current schedule into the new loaders
                         self.opts["schedule"] = self.schedule.option("schedule")
                         (
@@ -3133,7 +3176,7 @@ class Minion(MinionBase):
             if self._target_load(payload["load"]):
                 self._handle_decoded_payload(payload["load"])
             elif self.opts["zmq_filtering"]:
-                # In the filtering enabled case, we'd like to know when minion sees something it shouldnt
+                # In the filtering enabled case, we'd like to know when minion sees something it shouldn't
                 log.trace(
                     "Broadcast message received not for this minion, Load: %s",
                     payload["load"],
