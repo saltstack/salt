@@ -746,10 +746,10 @@ def test_minion_manage_schedule():
         "salt.minion.Minion.sync_connect_master",
         MagicMock(side_effect=RuntimeError("stop execution")),
     ), patch(
-        "salt.utils.process.SignalHandlingMultiprocessingProcess.start",
+        "salt.utils.process.SignalHandlingProcess.start",
         MagicMock(return_value=True),
     ), patch(
-        "salt.utils.process.SignalHandlingMultiprocessingProcess.join",
+        "salt.utils.process.SignalHandlingProcess.join",
         MagicMock(return_value=True),
     ):
         mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
@@ -804,10 +804,10 @@ def test_minion_manage_beacons():
         "salt.minion.Minion.sync_connect_master",
         MagicMock(side_effect=RuntimeError("stop execution")),
     ), patch(
-        "salt.utils.process.SignalHandlingMultiprocessingProcess.start",
+        "salt.utils.process.SignalHandlingProcess.start",
         MagicMock(return_value=True),
     ), patch(
-        "salt.utils.process.SignalHandlingMultiprocessingProcess.join",
+        "salt.utils.process.SignalHandlingProcess.join",
         MagicMock(return_value=True),
     ):
         try:
