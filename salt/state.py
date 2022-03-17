@@ -3534,8 +3534,8 @@ class BaseHighState:
             opts["env_order"] = mopts.get("env_order", opts.get("env_order", []))
             opts["default_top"] = mopts.get("default_top", opts.get("default_top"))
             opts["state_events"] = mopts.get("state_events")
-            opts["state_aggregate"] = mopts.get(
-                "state_aggregate", opts.get("state_aggregate", False)
+            opts["state_aggregate"] = (
+                opts.get("state_aggregate") or mopts.get("state_aggregate") or False
             )
             opts["jinja_env"] = mopts.get("jinja_env", {})
             opts["jinja_sls_env"] = mopts.get("jinja_sls_env", {})
@@ -4131,7 +4131,8 @@ class BaseHighState:
                             log.error(msg)
                             errors.append(msg)
                             continue
-                        inc_sls = ".".join(p_comps[:-level_count] + [include])
+                        # relative paths become abolute paths, otherwise issue allowing for both
+                        inc_sls = os.sep.join(p_comps[:-level_count] + [include])
 
                     if env_key != xenv_key:
                         if matches is None:
@@ -4618,7 +4619,7 @@ class BaseHighState:
                 "count_unused": 0,
             }
 
-            env_matches = matches.get(saltenv)
+            env_matches = matches.get(saltenv, [])
 
             for state in states:
                 env_usage["count_all"] += 1

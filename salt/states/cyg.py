@@ -222,9 +222,9 @@ class DictDiffer:
         Iitialize the differ.
         """
         self.current_dict, self.past_dict = current_dict, past_dict
-        self.current_keys, self.past_keys = [
+        self.current_keys, self.past_keys = (
             set(d.keys()) for d in (current_dict, past_dict)
-        ]
+        )
         self.intersect = self.current_keys.intersection(self.past_keys)
 
     def same(self):
