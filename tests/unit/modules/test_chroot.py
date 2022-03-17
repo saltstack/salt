@@ -62,13 +62,11 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
             "salt.client.ssh.wrapper.state._cleanup_slsmod_low_data", MagicMock()
         ):
             with patch(
-                "salt.utils.hashutils.get_hash", MagicMock(
-                    return_value="deadbeaf")
+                "salt.utils.hashutils.get_hash", MagicMock(return_value="deadbeaf")
             ):
                 with patch("salt.fileclient.get_file_client", MagicMock()):
                     with patch("salt.modules.chroot.call", MagicMock()):
-                        chroot._create_and_execute_salt_state(
-                            "", {}, {}, False, "md5")
+                        chroot._create_and_execute_salt_state("", {}, {}, False, "md5")
 
     @patch("os.path.isdir")
     def test_exist(self, isdir):
@@ -103,8 +101,7 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
         matrix = (("a", "b", True), ("a", "a", False))
         for root_mountinfo, self_mountinfo, result in matrix:
             fopen.return_value.__enter__.return_value = fopen
-            fopen.read = MagicMock(side_effect=(
-                root_mountinfo, self_mountinfo))
+            fopen.read = MagicMock(side_effect=(root_mountinfo, self_mountinfo))
             self.assertEqual(chroot.in_chroot(), result)
 
     @patch("salt.modules.chroot.exist")
@@ -115,8 +112,7 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
         # Basic input validation
         exist.return_value = False
         self.assertRaises(CommandExecutionError, chroot.call, "/chroot", "")
-        self.assertRaises(CommandExecutionError, chroot.call,
-                          "/chroot", "test.ping")
+        self.assertRaises(CommandExecutionError, chroot.call, "/chroot", "test.ping")
 
     @patch("salt.modules.chroot.exist")
     @patch("tempfile.mkdtemp")
@@ -273,8 +269,7 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
             chroot.__salt__, salt_mock
         ):
             self.assertEqual(
-                chroot.call("/chroot", "module.function",
-                            key="value"), "result"
+                chroot.call("/chroot", "module.function", key="value"), "result"
             )
             utils_mock["thin.gen_thin"].assert_called_once()
             salt_mock["config.option"].assert_called()
@@ -412,8 +407,7 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
             "cmd.run": MagicMock(return_value=""),
             "config.option": MagicMock(),
             "cmd.run_chroot": MagicMock(
-                return_value={"retcode": 1,
-                              "stderr": "[ERROR] This went wrong"}
+                return_value={"retcode": 1, "stderr": "[ERROR] This went wrong"}
             ),
         }
         with patch.dict(chroot.__utils__, utils_mock), patch.dict(
@@ -428,6 +422,5 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
                     },
                 )
             self.assertEqual(
-                cm.output, [
-                    "ERROR:salt.modules.chroot:(chroot) This went wrong"]
+                cm.output, ["ERROR:salt.modules.chroot:(chroot) This went wrong"]
             )

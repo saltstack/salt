@@ -87,7 +87,7 @@ def create(root):
     return True
 
 
-def relog(message):
+def _relog(message):
     """
     Takes a multiline string containing log lines as usually returned as
     stderr from `cmd.run_chroot` and logs it.
@@ -164,12 +164,10 @@ def call(root, function, *args, **kwargs):
     """
 
     if not function:
-        raise salt.exceptions.CommandExecutionError(
-            "Missing function parameter")
+        raise salt.exceptions.CommandExecutionError("Missing function parameter")
 
     if not exist(root):
-        raise salt.exceptions.CommandExecutionError(
-            "Chroot environment not found")
+        raise salt.exceptions.CommandExecutionError("Chroot environment not found")
 
     # Create a temporary directory inside the chroot where we can
     # untar salt-thin
@@ -185,14 +183,12 @@ def call(root, function, *args, **kwargs):
     #
     # stdout = __salt__['archive.tar']('xzf', thin_path, dest=thin_dest_path)
     #
-    stdout = __salt__["cmd.run"](
-        ["tar", "xzf", thin_path, "-C", thin_dest_path])
+    stdout = __salt__["cmd.run"](["tar", "xzf", thin_path, "-C", thin_dest_path])
     if stdout:
         __utils__["files.rm_rf"](thin_dest_path)
         return {"result": False, "comment": stdout}
 
-    chroot_path = os.path.join(
-        os.path.sep, os.path.relpath(thin_dest_path, root))
+    chroot_path = os.path.join(os.path.sep, os.path.relpath(thin_dest_path, root))
     try:
         safe_kwargs = salt.utils.args.clean_kwargs(**kwargs)
         log_level = __opts__.get("log_level", "info")
@@ -220,7 +216,7 @@ def call(root, function, *args, **kwargs):
 
         # Log anything from stderr
         if "stderr" in ret:
-            relog(ret["stderr"])
+            _relog(ret["stderr"])
 
         # Process "real" result in stdout
         try:
@@ -423,8 +419,7 @@ def highstate(root, **kwargs):
         file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
             salt.client.ssh.wrapper.state._merge_extra_filerefs(
-                kwargs.get("extra_filerefs", ""), opts.get(
-                    "extra_filerefs", "")
+                kwargs.get("extra_filerefs", ""), opts.get("extra_filerefs", "")
             ),
         )
         # Check for errors
