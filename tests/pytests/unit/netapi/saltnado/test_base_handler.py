@@ -6,9 +6,6 @@ import salt.netapi.rest_tornado.saltnado as saltnado_app
 from tests.support.mock import MagicMock, patch
 
 
-log = logging.getLogger(__name__)
-
-
 @pytest.fixture
 def arg_mock():
     mock = MagicMock()
@@ -26,15 +23,12 @@ def arg_mock():
 
 def test__verify_auth(arg_mock):
     base_handler = saltnado_app.BaseSaltAPIHandler(arg_mock, arg_mock)
-    log.debug("successfully created handler")
     with patch.object(base_handler, "get_cookie", return_value="ABCDEF"):
-        log.debug("successfully patched get_cookie")
         with patch.object(
             base_handler.application.auth,
             "get_tok",
             return_value={"expire": time.time() + 60},
         ):
-            log.debug("successfully patched get_tok")
             assert base_handler._verify_auth()
 
 
