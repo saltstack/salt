@@ -6,7 +6,6 @@ import time
 import pytest
 import salt.cache
 from salt.exceptions import SaltCacheError
-from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.mock import MagicMock, patch
@@ -16,6 +15,7 @@ docker = pytest.importorskip("docker")
 log = logging.getLogger(__name__)
 
 pytestmark = [
+    pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("dockerd"),
 ]
 
@@ -39,18 +39,6 @@ class Timer:
 
 
 @pytest.fixture(scope="module")
-def docker_client():
-    try:
-        client = docker.from_env()
-    except docker.errors.DockerException:
-        pytest.skip("Failed to get a connection to docker running on the system")
-    connectable = Container.client_connectable(client)
-    if connectable is not True:  # pragma: nocover
-        pytest.skip(connectable)
-    return client
-
-
-@pytest.fixture(scope="module")
 def etcd_port():
     return get_unused_localhost_port()
 
@@ -65,8 +53,66 @@ def consul_port():
     return get_unused_localhost_port()
 
 
+# GIVE ME FIXTURES ON FIXTURES NOW
+
+
 @pytest.fixture(scope="module")
-def mysql_port():
+def mysql_5_6_port():
+    return get_unused_localhost_port()
+
+
+@pytest.fixture(scope="module")
+def mysql_5_7_port():
+    return get_unused_localhost_port()
+
+
+@pytest.fixture(scope="module")
+def mysql_8_0_port():
+    return get_unused_localhost_port()
+
+
+@pytest.fixture(scope="module")
+def mariadb_10_1_port():
+    return get_unused_localhost_port()
+
+
+@pytest.fixture(scope="module")
+def mariadb_10_2_port():
+    return get_unused_localhost_port()
+
+
+@pytest.fixture(scope="module")
+def mariadb_10_3_port():
+    return get_unused_localhost_port()
+
+
+@pytest.fixture(scope="module")
+def mariadb_10_4_port():
+    return get_unused_localhost_port()
+
+
+@pytest.fixture(scope="module")
+def mariadb_10_5_port():
+    return get_unused_localhost_port()
+
+
+@pytest.fixture(scope="module")
+def percona_5_5_port():
+    return get_unused_localhost_port()
+
+
+@pytest.fixture(scope="module")
+def percona_5_6_port():
+    return get_unused_localhost_port()
+
+
+@pytest.fixture(scope="module")
+def percona_5_7_port():
+    return get_unused_localhost_port()
+
+
+@pytest.fixture(scope="module")
+def percona_8_0_port():
     return get_unused_localhost_port()
 
 
@@ -88,10 +134,10 @@ def etcd_apiv2_container(salt_factories, docker_client, etcd_port):
 
 
 @pytest.fixture(scope="module")
-def redis_container(salt_factories, docker_client, redis_port):
+def redis_container(salt_factories, docker_client, redis_port, docker_redis_image):
     container = salt_factories.get_container(
         random_string("redis-server-"),
-        image_name="redis:alpine",
+        image_name=docker_redis_image,
         docker_client=docker_client,
         check_ports=[redis_port],
         container_run_kwargs={"ports": {"6379/tcp": redis_port}},
@@ -100,28 +146,159 @@ def redis_container(salt_factories, docker_client, redis_port):
         yield factory
 
 
-@pytest.fixture(scope="module")
-def mysql_container(salt_factories, docker_client, mysql_port):
-    # TODO: Gareth has some container stuff already for lots of mysql versions - see pytests/integration/modules/test_mysql.py -W. Werner, 2021-08-05
+# Pytest does not have the ability to parametrize fixtures with parametriezed
+# fixtures, which is super annoying. In other words, in order to have a `cache`
+# test fixture that takes different versions of the cache that depend on
+# different docker images, I've gotta make up fixtures for each
+# image+container. When https://github.com/pytest-dev/pytest/issues/349 is
+# actually fixed then we can go ahead and refactor all of these mysql
+# containers, caches, and their images into a single parametrized fixture.
+
+
+def start_mysql_container(
+    salt_factories, docker_client, mysql_port, docker_mysql_image
+):
     container = salt_factories.get_container(
         random_string("mysql-server-"),
-        image_name="mysql",
+        image_name=docker_mysql_image,
         docker_client=docker_client,
         check_ports=[mysql_port],
         container_run_kwargs={
-            "environment": {"MYSQL_ALLOW_EMPTY_PASSWORD": "yes"},
+            "environment": {
+                "MYSQL_ROOT_PASSWORD": "fnord",
+                "MYSQL_ROOT_HOST": "%",
+            },
             "ports": {"3306/tcp": mysql_port},
         },
     )
-    with container.started() as factory:
+    return container.started()
+
+
+@pytest.fixture(scope="module")
+def mysql_5_6_container(
+    salt_factories, docker_client, mysql_5_6_port, docker_mysql_5_6_image
+):
+    with start_mysql_container(
+        salt_factories, docker_client, mysql_5_6_port, docker_mysql_5_6_image
+    ) as factory:
         yield factory
 
 
 @pytest.fixture(scope="module")
-def consul_container(salt_factories, docker_client, consul_port):
+def mysql_5_7_container(
+    salt_factories, docker_client, mysql_5_7_port, docker_mysql_5_7_image
+):
+    with start_mysql_container(
+        salt_factories, docker_client, mysql_5_7_port, docker_mysql_5_7_image
+    ) as factory:
+        yield factory
+
+
+@pytest.fixture(scope="module")
+def mysql_8_0_container(
+    salt_factories, docker_client, mysql_8_0_port, docker_mysql_8_0_image
+):
+    with start_mysql_container(
+        salt_factories, docker_client, mysql_8_0_port, docker_mysql_8_0_image
+    ) as factory:
+        yield factory
+
+
+@pytest.fixture(scope="module")
+def mariadb_10_1_container(
+    salt_factories, docker_client, mariadb_10_1_port, docker_mariadb_10_1_image
+):
+    with start_mysql_container(
+        salt_factories, docker_client, mariadb_10_1_port, docker_mariadb_10_1_image
+    ) as factory:
+        yield factory
+
+
+@pytest.fixture(scope="module")
+def mariadb_10_2_container(
+    salt_factories, docker_client, mariadb_10_2_port, docker_mariadb_10_2_image
+):
+    with start_mysql_container(
+        salt_factories, docker_client, mariadb_10_2_port, docker_mariadb_10_2_image
+    ) as factory:
+        yield factory
+
+
+@pytest.fixture(scope="module")
+def mariadb_10_3_container(
+    salt_factories, docker_client, mariadb_10_3_port, docker_mariadb_10_3_image
+):
+    with start_mysql_container(
+        salt_factories, docker_client, mariadb_10_3_port, docker_mariadb_10_3_image
+    ) as factory:
+        yield factory
+
+
+@pytest.fixture(scope="module")
+def mariadb_10_4_container(
+    salt_factories, docker_client, mariadb_10_4_port, docker_mariadb_10_4_image
+):
+    with start_mysql_container(
+        salt_factories, docker_client, mariadb_10_4_port, docker_mariadb_10_4_image
+    ) as factory:
+        yield factory
+
+
+@pytest.fixture(scope="module")
+def mariadb_10_5_container(
+    salt_factories, docker_client, mariadb_10_5_port, docker_mariadb_10_5_image
+):
+    with start_mysql_container(
+        salt_factories, docker_client, mariadb_10_5_port, docker_mariadb_10_5_image
+    ) as factory:
+        yield factory
+
+
+@pytest.fixture(scope="module")
+def percona_5_5_container(
+    salt_factories, docker_client, percona_5_5_port, docker_percona_5_5_image
+):
+    with start_mysql_container(
+        salt_factories, docker_client, percona_5_5_port, docker_percona_5_5_image
+    ) as factory:
+        yield factory
+
+
+@pytest.fixture(scope="module")
+def percona_5_6_container(
+    salt_factories, docker_client, percona_5_6_port, docker_percona_5_6_image
+):
+    with start_mysql_container(
+        salt_factories, docker_client, percona_5_6_port, docker_percona_5_6_image
+    ) as factory:
+        yield factory
+
+
+@pytest.fixture(scope="module")
+def percona_5_7_container(
+    salt_factories, docker_client, percona_5_7_port, docker_percona_5_7_image
+):
+    with start_mysql_container(
+        salt_factories, docker_client, percona_5_7_port, docker_percona_5_7_image
+    ) as factory:
+        yield factory
+
+
+@pytest.fixture(scope="module")
+def percona_8_0_container(
+    salt_factories, docker_client, percona_8_0_port, docker_percona_8_0_image
+):
+    with start_mysql_container(
+        salt_factories, docker_client, percona_8_0_port, docker_percona_8_0_image
+    ) as factory:
+        yield factory
+
+
+@pytest.fixture(scope="module")
+def consul_container(salt_factories, docker_client, consul_port, docker_consul_image):
     container = salt_factories.get_container(
         random_string("consul-server-"),
-        image_name="consul",
+        image_name=docker_consul_image,
         docker_client=docker_client,
         check_ports=[consul_port],
         container_run_kwargs={"ports": {"8500/tcp": consul_port}},
@@ -213,8 +390,7 @@ def consul_cache(minion_opts, consul_port, consul_container):
     yield cache
 
 
-@pytest.fixture
-def mysql_cache(minion_opts, mysql_port, mysql_container):
+def fixy(minion_opts, mysql_port, mysql_container):
     # We're doing a late import because we need access to the exception
     import salt.cache.mysql_cache
 
@@ -233,6 +409,7 @@ def mysql_cache(minion_opts, mysql_port, mysql_container):
     opts["mysql.host"] = "127.0.0.1"
     opts["mysql.port"] = mysql_port
     opts["mysql.user"] = "root"
+    opts["mysql.password"] = "fnord"
     opts["mysql.database"] = "salt_cache"
     opts["mysql.table_name"] = "cache"
     cache = salt.cache.factory(opts)
@@ -266,7 +443,70 @@ def mysql_cache(minion_opts, mysql_port, mysql_container):
     )[0].fetchone()
 
     cache.modules["mysql.force_reconnect"]()
-    yield cache
+    return cache
+
+
+# See container comment above >:(
+
+
+@pytest.fixture(scope="module")
+def mysql_5_6_cache(minion_opts, mysql_5_6_port, mysql_5_6_container):
+    yield fixy(minion_opts, mysql_5_6_port, mysql_5_6_container)
+
+
+@pytest.fixture(scope="module")
+def mysql_5_7_cache(minion_opts, mysql_5_7_port, mysql_5_7_container):
+    yield fixy(minion_opts, mysql_5_7_port, mysql_5_7_container)
+
+
+@pytest.fixture(scope="module")
+def mysql_8_0_cache(minion_opts, mysql_8_0_port, mysql_8_0_container):
+    yield fixy(minion_opts, mysql_8_0_port, mysql_8_0_container)
+
+
+@pytest.fixture(scope="module")
+def mariadb_10_1_cache(minion_opts, mariadb_10_1_port, mariadb_10_1_container):
+    yield fixy(minion_opts, mariadb_10_1_port, mariadb_10_1_container)
+
+
+@pytest.fixture(scope="module")
+def mariadb_10_2_cache(minion_opts, mariadb_10_2_port, mariadb_10_2_container):
+    yield fixy(minion_opts, mariadb_10_2_port, mariadb_10_2_container)
+
+
+@pytest.fixture(scope="module")
+def mariadb_10_3_cache(minion_opts, mariadb_10_3_port, mariadb_10_3_container):
+    yield fixy(minion_opts, mariadb_10_3_port, mariadb_10_3_container)
+
+
+@pytest.fixture(scope="module")
+def mariadb_10_4_cache(minion_opts, mariadb_10_4_port, mariadb_10_4_container):
+    yield fixy(minion_opts, mariadb_10_4_port, mariadb_10_4_container)
+
+
+@pytest.fixture(scope="module")
+def mariadb_10_5_cache(minion_opts, mariadb_10_5_port, mariadb_10_5_container):
+    yield fixy(minion_opts, mariadb_10_5_port, mariadb_10_5_container)
+
+
+@pytest.fixture(scope="module")
+def percona_5_5_cache(minion_opts, percona_5_5_port, percona_5_5_container):
+    yield fixy(minion_opts, percona_5_5_port, percona_5_5_container)
+
+
+@pytest.fixture(scope="module")
+def percona_5_6_cache(minion_opts, percona_5_6_port, percona_5_6_container):
+    yield fixy(minion_opts, percona_5_6_port, percona_5_6_container)
+
+
+@pytest.fixture(scope="module")
+def percona_5_7_cache(minion_opts, percona_5_7_port, percona_5_7_container):
+    yield fixy(minion_opts, percona_5_7_port, percona_5_7_container)
+
+
+@pytest.fixture(scope="module")
+def percona_8_0_cache(minion_opts, percona_8_0_port, percona_8_0_container):
+    yield fixy(minion_opts, percona_8_0_port, percona_8_0_container)
 
 
 # TODO: Figure out how to parametrize this in combo with the getfixturevalue process -W. Werner, 2021-10-28
@@ -284,7 +524,18 @@ def memcache_cache(minion_opts):
         "redis_cache",
         "etcd_cache",
         "consul_cache",
-        "mysql_cache",
+        "mysql_5_6_cache",
+        "mysql_5_7_cache",
+        "mysql_8_0_cache",
+        "mariadb_10_1_cache",
+        "mariadb_10_2_cache",
+        "mariadb_10_3_cache",
+        "mariadb_10_4_cache",
+        "mariadb_10_5_cache",
+        "percona_5_5_cache",
+        "percona_5_6_cache",
+        "percona_5_7_cache",
+        "percona_8_0_cache",
         "memcache_cache",  # Memcache actually delegates some behavior to the backing cache which alters the API somewhat.
     ]
 )
