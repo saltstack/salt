@@ -179,9 +179,9 @@ Changelog for v2016.3.4..v2016.3.5
 
   * fd2ee7db30 Add some simple unit tests for salt.config.api_config function
 
-  * 3d2fefc83b Make sure the pidfile and log_file values are overriden by api opts
+  * 3d2fefc83b Make sure the pidfile and log_file values are overridden by api opts
 
-  * 1f6b540e46 Make sure the pidfile and log_file values are overriden by api opts
+  * 1f6b540e46 Make sure the pidfile and log_file values are overridden by api opts
 
   * 04d307f917 salt-api no longer forces the default timeout
 
@@ -294,7 +294,7 @@ Changelog for v2016.3.4..v2016.3.5
 
   * 7b657ca4ae add the ability to use keystone v2 and v3
 
-  * 5646ae1b34 add ability to use keystoneauth to authenitcate in nova driver
+  * 5646ae1b34 add ability to use keystoneauth to authenticate in nova driver
 
 * **ISSUE** `#38648`_: (`ericuldall`_) No release file error from PPA on Ubuntu (refs: `#38650`_)
 
@@ -1110,7 +1110,7 @@ Changelog for v2016.3.4..v2016.3.5
 
   * **PR** `#37826`_: (`rallytime`_) Update branch refs to more relevant branch
 
-  * **PR** `#37822`_: (`laleocen`_) add documenation for multiline encryption using nacl (refs: `#37826`_)
+  * **PR** `#37822`_: (`laleocen`_) add documentation for multiline encryption using nacl (refs: `#37826`_)
 
 * **ISSUE** `#19269`_: (`markuskramerIgitt`_) Undocumented  feature `names:` of `file.directory` (refs: `#37823`_)
 
