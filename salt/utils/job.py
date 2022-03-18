@@ -124,7 +124,10 @@ def store_job(opts, load, event=None, mminion=None):
         log.error(emsg)
         raise KeyError(emsg)
 
-    if job_cache != "local_cache":
+    # don't call save_load if the load doesn't have a tgt
+    # as this is this is most likely data destined only for
+    # the returner
+    if "tgt" in load:
         try:
             mminion.returners[savefstr](load["jid"], load)
         except KeyError as e:
