@@ -33,7 +33,7 @@ def docker_client():
 
 @pytest.fixture(scope="module")
 def docker_image_name(docker_client):
-    image_name = "elcolio/etcd"
+    image_name = "bitnami/etcd:3"
     try:
         docker_client.images.pull(image_name)
     except docker.errors.APIError as exc:
@@ -55,7 +55,10 @@ def etcd_apiv2_container(salt_factories, docker_client, etcd_port, docker_image_
         docker_client=docker_client,
         check_ports=[etcd_port],
         container_run_kwargs={
-            "environment": {"ALLOW_NONE_AUTHENTICATION": "yes"},
+            "environment": {
+                "ALLOW_NONE_AUTHENTICATION": "yes",
+                "ETCD_ENABLE_V2": "true",
+            },
             "ports": {"2379/tcp": etcd_port},
         },
     )
