@@ -333,7 +333,7 @@ def zone_compare(timezone):
 
     .. note::
 
-        On Solaris-link operating systems only a string comparison is done.
+        On Solaris-like operating systems only a string comparison is done.
 
     .. versionchanged:: 2016.11.4
 
