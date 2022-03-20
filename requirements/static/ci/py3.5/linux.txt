@@ -413,7 +413,9 @@ decorator==4.4.2
 distlib==0.3.2
     # via virtualenv
 distro==1.5.0
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   pytest-skip-markers
 dnspython==1.16.0
     # via
     #   -r requirements/static/ci/common.in
@@ -723,9 +725,11 @@ pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
+pytest-httpserver==1.0.1
+    # via -r requirements/pytest.txt
 pytest-salt-factories==0.912.1
     # via -r requirements/pytest.txt
-pytest-skip-markers==1.1.2
+pytest-skip-markers==1.2.0
     # via pytest-salt-factories
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
@@ -913,7 +917,9 @@ websocket-client==0.40.0
     #   docker
     #   kubernetes
 werkzeug==0.15.6
-    # via moto
+    # via
+    #   moto
+    #   pytest-httpserver
 wrapt==1.11.1
     # via aws-xray-sdk
 xmltodict==0.12.0

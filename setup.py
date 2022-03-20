@@ -269,7 +269,7 @@ def _parse_requirements_file(requirements_file):
                     platform.python_version(), _parse_op(op), _parse_ver(ver)
                 ):
                     continue
-            parsed_requirements.append(pkg)
+            parsed_requirements.append(line)
     return parsed_requirements
 
 

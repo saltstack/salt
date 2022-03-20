@@ -106,7 +106,7 @@ TAGS = {
 def get_event(
     node,
     sock_dir=None,
-    transport="zeromq",
+    transport=None,
     opts=None,
     listen=True,
     io_loop=None,
@@ -121,6 +121,13 @@ def get_event(
                            set_event_handler() API. Otherwise, operation
                            will be synchronous.
     """
+    if transport:
+        salt.utils.versions.warn_until(
+            "Chlorine",
+            "The 'transport' kwarg has been deprecated and it will be removed "
+            "in the Chlorine release, as such, its usage is no longer required.",
+        )
+
     sock_dir = sock_dir or opts["sock_dir"]
     # TODO: AIO core is separate from transport
     if node == "master":

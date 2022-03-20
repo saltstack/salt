@@ -316,58 +316,63 @@ def init():
 
         if not os.listdir(rp_):
             # Only init if the directory is empty.
-            hglib.init(rp_)
+            client = hglib.init(rp_)
+            client.close()
             new_remote = True
+        repo = None
         try:
-            repo = hglib.open(rp_)
-        except hglib.error.ServerError:
-            log.error(
-                "Cache path %s (corresponding remote: %s) exists but is not "
-                "a valid mercurial repository. You will need to manually "
-                "delete this directory on the master to continue to use this "
-                "hgfs remote.",
-                rp_,
-                repo_url,
-            )
-            _failhard()
-        except Exception as exc:  # pylint: disable=broad-except
-            log.error(
-                "Exception '%s' encountered while initializing hgfs remote %s",
-                exc,
-                repo_url,
-            )
-            _failhard()
-
-        try:
-            refs = repo.config(names=b"paths")
-        except hglib.error.CommandError:
-            refs = None
-
-        # Do NOT put this if statement inside the except block above. Earlier
-        # versions of hglib did not raise an exception, so we need to do it
-        # this way to support both older and newer hglib.
-        if not refs:
-            # Write an hgrc defining the remote URL
-            hgconfpath = os.path.join(rp_, ".hg", "hgrc")
-            with salt.utils.files.fopen(hgconfpath, "w+") as hgconfig:
-                hgconfig.write("[paths]\n")
-                hgconfig.write(
-                    salt.utils.stringutils.to_str("default = {}\n".format(repo_url))
+            try:
+                repo = hglib.open(rp_)
+            except hglib.error.ServerError:
+                log.error(
+                    "Cache path %s (corresponding remote: %s) exists but is not "
+                    "a valid mercurial repository. You will need to manually "
+                    "delete this directory on the master to continue to use this "
+                    "hgfs remote.",
+                    rp_,
+                    repo_url,
                 )
+                _failhard()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error(
+                    "Exception '%s' encountered while initializing hgfs remote %s",
+                    exc,
+                    repo_url,
+                )
+                _failhard()
 
-        repo_conf.update(
-            {
-                "repo": repo,
-                "url": repo_url,
-                "hash": repo_hash,
-                "cachedir": rp_,
-                "lockfile": os.path.join(
-                    __opts__["cachedir"], "hgfs", "{}.update.lk".format(repo_hash)
-                ),
-            }
-        )
-        repos.append(repo_conf)
-        repo.close()
+            try:
+                refs = repo.config(names=b"paths")
+            except hglib.error.CommandError:
+                refs = None
+
+            # Do NOT put this if statement inside the except block above. Earlier
+            # versions of hglib did not raise an exception, so we need to do it
+            # this way to support both older and newer hglib.
+            if not refs:
+                # Write an hgrc defining the remote URL
+                hgconfpath = os.path.join(rp_, ".hg", "hgrc")
+                with salt.utils.files.fopen(hgconfpath, "w+") as hgconfig:
+                    hgconfig.write("[paths]\n")
+                    hgconfig.write(
+                        salt.utils.stringutils.to_str("default = {}\n".format(repo_url))
+                    )
+
+            repo_conf.update(
+                {
+                    "repo": repo,
+                    "url": repo_url,
+                    "hash": repo_hash,
+                    "cachedir": rp_,
+                    "lockfile": os.path.join(
+                        __opts__["cachedir"], "hgfs", "{}.update.lk".format(repo_hash)
+                    ),
+                }
+            )
+            repos.append(repo_conf)
+        finally:
+            if repo:
+                repo.close()
 
     if new_remote:
         remote_map = os.path.join(__opts__["cachedir"], "hgfs/remote_map.txt")
@@ -488,17 +493,20 @@ def clear_lock(remote=None):
     cleared = []
     errors = []
     for repo in init():
-        if remote:
-            try:
-                if not fnmatch.fnmatch(repo["url"], remote):
-                    continue
-            except TypeError:
-                # remote was non-string, try again
-                if not fnmatch.fnmatch(repo["url"], str(remote)):
-                    continue
-        success, failed = _do_clear_lock(repo)
-        cleared.extend(success)
-        errors.extend(failed)
+        try:
+            if remote:
+                try:
+                    if not fnmatch.fnmatch(repo["url"], remote):
+                        continue
+                except TypeError:
+                    # remote was non-string, try again
+                    if not fnmatch.fnmatch(repo["url"], str(remote)):
+                        continue
+            success, failed = _do_clear_lock(repo)
+            cleared.extend(success)
+            errors.extend(failed)
+        finally:
+            repo["repo"].close()
     return cleared, errors
 
 
@@ -536,17 +544,20 @@ def lock(remote=None):
     locked = []
     errors = []
     for repo in init():
-        if remote:
-            try:
-                if not fnmatch.fnmatch(repo["url"], remote):
-                    continue
-            except TypeError:
-                # remote was non-string, try again
-                if not fnmatch.fnmatch(repo["url"], str(remote)):
-                    continue
-        success, failed = _do_lock(repo)
-        locked.extend(success)
-        errors.extend(failed)
+        try:
+            if remote:
+                try:
+                    if not fnmatch.fnmatch(repo["url"], remote):
+                        continue
+                except TypeError:
+                    # remote was non-string, try again
+                    if not fnmatch.fnmatch(repo["url"], str(remote)):
+                        continue
+            success, failed = _do_lock(repo)
+            locked.extend(success)
+            errors.extend(failed)
+        finally:
+            repo["repo"].close()
 
     return locked, errors
 
@@ -561,40 +572,43 @@ def update():
     # second init()
     data["changed"], repos = _clear_old_remotes()
     for repo in repos:
-        if os.path.exists(repo["lockfile"]):
-            log.warning(
-                "Update lockfile is present for hgfs remote %s, skipping. "
-                "If this warning persists, it is possible that the update "
-                "process was interrupted. Removing %s or running "
-                "'salt-run fileserver.clear_lock hgfs' will allow updates "
-                "to continue for this remote.",
-                repo["url"],
-                repo["lockfile"],
-            )
-            continue
-        _, errors = lock(repo)
-        if errors:
-            log.error(
-                "Unable to set update lock for hgfs remote %s, skipping.", repo["url"]
-            )
-            continue
-        log.debug("hgfs is fetching from %s", repo["url"])
-        repo["repo"].open()
-        curtip = repo["repo"].tip()
         try:
-            repo["repo"].pull()
-        except Exception as exc:  # pylint: disable=broad-except
-            log.error(
-                "Exception %s caught while updating hgfs remote %s",
-                exc,
-                repo["url"],
-                exc_info_on_loglevel=logging.DEBUG,
-            )
-        else:
-            newtip = repo["repo"].tip()
-            if curtip[1] != newtip[1]:
-                data["changed"] = True
-        repo["repo"].close()
+            if os.path.exists(repo["lockfile"]):
+                log.warning(
+                    "Update lockfile is present for hgfs remote %s, skipping. "
+                    "If this warning persists, it is possible that the update "
+                    "process was interrupted. Removing %s or running "
+                    "'salt-run fileserver.clear_lock hgfs' will allow updates "
+                    "to continue for this remote.",
+                    repo["url"],
+                    repo["lockfile"],
+                )
+                continue
+            _, errors = lock(repo)
+            if errors:
+                log.error(
+                    "Unable to set update lock for hgfs remote %s, skipping.",
+                    repo["url"],
+                )
+                continue
+            log.debug("hgfs is fetching from %s", repo["url"])
+            repo["repo"].open()
+            curtip = repo["repo"].tip()
+            try:
+                repo["repo"].pull()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error(
+                    "Exception %s caught while updating hgfs remote %s",
+                    exc,
+                    repo["url"],
+                    exc_info_on_loglevel=logging.DEBUG,
+                )
+            else:
+                newtip = repo["repo"].tip()
+                if curtip[1] != newtip[1]:
+                    data["changed"] = True
+        finally:
+            repo["repo"].close()
         clear_lock(repo)
 
     env_cache = os.path.join(__opts__["cachedir"], "hgfs/envs.p")
@@ -612,7 +626,6 @@ def update():
         with salt.utils.event.get_event(
             "master",
             __opts__["sock_dir"],
-            __opts__["transport"],
             opts=__opts__,
             listen=False,
         ) as event:
@@ -650,21 +663,23 @@ def envs(ignore_cache=False):
     ret = set()
 
     for repo in init():
-        repo["repo"].open()
-        if repo["branch_method"] in ("branches", "mixed"):
-            for branch in _all_branches(repo["repo"]):
-                branch_name = branch[0]
-                if branch_name == repo["base"]:
-                    branch_name = "base"
-                ret.add(branch_name)
-        if repo["branch_method"] in ("bookmarks", "mixed"):
-            for bookmark in _all_bookmarks(repo["repo"]):
-                bookmark_name = bookmark[0]
-                if bookmark_name == repo["base"]:
-                    bookmark_name = "base"
-                ret.add(bookmark_name)
-        ret.update([x[0] for x in _all_tags(repo["repo"])])
-        repo["repo"].close()
+        try:
+            repo["repo"].open()
+            if repo["branch_method"] in ("branches", "mixed"):
+                for branch in _all_branches(repo["repo"]):
+                    branch_name = branch[0]
+                    if branch_name == repo["base"]:
+                        branch_name = "base"
+                    ret.add(branch_name)
+            if repo["branch_method"] in ("bookmarks", "mixed"):
+                for bookmark in _all_bookmarks(repo["repo"]):
+                    bookmark_name = bookmark[0]
+                    if bookmark_name == repo["base"]:
+                        bookmark_name = "base"
+                    ret.add(bookmark_name)
+            ret.update([x[0] for x in _all_tags(repo["repo"])])
+        finally:
+            repo["repo"].close()
     return [x for x in sorted(ret) if _env_is_exposed(x)]
 
 
@@ -705,68 +720,72 @@ def find_file(path, tgt_env="base", **kwargs):  # pylint: disable=W0613
             os.makedirs(hashdir)
 
     for repo in init():
-        if repo["mountpoint"] and not path.startswith(repo["mountpoint"] + os.path.sep):
-            continue
-        repo_path = path[len(repo["mountpoint"]) :].lstrip(os.path.sep)
-        if repo["root"]:
-            repo_path = os.path.join(repo["root"], repo_path)
-
-        repo["repo"].open()
-        ref = _get_ref(repo, tgt_env)
-        if not ref:
-            # Branch or tag not found in repo, try the next
-            repo["repo"].close()
-            continue
-        salt.fileserver.wait_lock(lk_fn, dest)
-        if os.path.isfile(blobshadest) and os.path.isfile(dest):
-            with salt.utils.files.fopen(blobshadest, "r") as fp_:
-                sha = fp_.read()
-                if sha == ref[2]:
-                    fnd["rel"] = path
-                    fnd["path"] = dest
-                    repo["repo"].close()
-                    return fnd
         try:
-            repo["repo"].cat(
-                [salt.utils.stringutils.to_bytes("path:{}".format(repo_path))],
-                rev=ref[2],
-                output=dest,
-            )
-        except hglib.error.CommandError:
-            repo["repo"].close()
-            continue
-        with salt.utils.files.fopen(lk_fn, "w"):
-            pass
-        for filename in glob.glob(hashes_glob):
+            if repo["mountpoint"] and not path.startswith(
+                repo["mountpoint"] + os.path.sep
+            ):
+                continue
+            repo_path = path[len(repo["mountpoint"]) :].lstrip(os.path.sep)
+            if repo["root"]:
+                repo_path = os.path.join(repo["root"], repo_path)
+
+            repo["repo"].open()
+            ref = _get_ref(repo, tgt_env)
+            if not ref:
+                # Branch or tag not found in repo, try the next
+                repo["repo"].close()
+                continue
+            salt.fileserver.wait_lock(lk_fn, dest)
+            if os.path.isfile(blobshadest) and os.path.isfile(dest):
+                with salt.utils.files.fopen(blobshadest, "r") as fp_:
+                    sha = fp_.read()
+                    if sha == ref[2]:
+                        fnd["rel"] = path
+                        fnd["path"] = dest
+                        repo["repo"].close()
+                        return fnd
             try:
-                os.remove(filename)
+                repo["repo"].cat(
+                    [salt.utils.stringutils.to_bytes("path:{}".format(repo_path))],
+                    rev=ref[2],
+                    output=dest,
+                )
+            except hglib.error.CommandError:
+                repo["repo"].close()
+                continue
+            with salt.utils.files.fopen(lk_fn, "w"):
+                pass
+            for filename in glob.glob(hashes_glob):
+                try:
+                    os.remove(filename)
+                except Exception:  # pylint: disable=broad-except
+                    pass
+            with salt.utils.files.fopen(blobshadest, "w+") as fp_:
+                fp_.write(salt.utils.stringutils.to_str(ref[2]))
+            try:
+                os.remove(lk_fn)
+            except OSError:
+                pass
+            fnd["rel"] = path
+            fnd["path"] = dest
+            try:
+                # Converting the stat result to a list, the elements of the
+                # list correspond to the following stat_result params:
+                # 0 => st_mode=33188
+                # 1 => st_ino=10227377
+                # 2 => st_dev=65026
+                # 3 => st_nlink=1
+                # 4 => st_uid=1000
+                # 5 => st_gid=1000
+                # 6 => st_size=1056233
+                # 7 => st_atime=1468284229
+                # 8 => st_mtime=1456338235
+                # 9 => st_ctime=1456338235
+                fnd["stat"] = list(os.stat(dest))
             except Exception:  # pylint: disable=broad-except
                 pass
-        with salt.utils.files.fopen(blobshadest, "w+") as fp_:
-            fp_.write(salt.utils.stringutils.to_str(ref[2]))
-        try:
-            os.remove(lk_fn)
-        except OSError:
-            pass
-        fnd["rel"] = path
-        fnd["path"] = dest
-        try:
-            # Converting the stat result to a list, the elements of the
-            # list correspond to the following stat_result params:
-            # 0 => st_mode=33188
-            # 1 => st_ino=10227377
-            # 2 => st_dev=65026
-            # 3 => st_nlink=1
-            # 4 => st_uid=1000
-            # 5 => st_gid=1000
-            # 6 => st_size=1056233
-            # 7 => st_atime=1468284229
-            # 8 => st_mtime=1456338235
-            # 9 => st_ctime=1456338235
-            fnd["stat"] = list(os.stat(dest))
-        except Exception:  # pylint: disable=broad-except
-            pass
-        repo["repo"].close()
+        finally:
+            repo["repo"].close()
         return fnd
     return fnd
 
@@ -881,16 +900,18 @@ def _get_file_list(load):
         return []
     ret = set()
     for repo in init():
-        repo["repo"].open()
-        ref = _get_ref(repo, load["saltenv"])
-        if ref:
-            manifest = _get_manifest(repo["repo"], ref=ref)
-            for tup in manifest:
-                relpath = os.path.relpath(tup[4], repo["root"])
-                # Don't add files outside the hgfs_root
-                if not relpath.startswith("../"):
-                    ret.add(os.path.join(repo["mountpoint"], relpath))
-        repo["repo"].close()
+        try:
+            repo["repo"].open()
+            ref = _get_ref(repo, load["saltenv"])
+            if ref:
+                manifest = _get_manifest(repo["repo"], ref=ref)
+                for tup in manifest:
+                    relpath = os.path.relpath(tup[4], repo["root"])
+                    # Don't add files outside the hgfs_root
+                    if not relpath.startswith("../"):
+                        ret.add(os.path.join(repo["mountpoint"], relpath))
+        finally:
+            repo["repo"].close()
     return sorted(ret)
 
 
@@ -921,22 +942,24 @@ def _get_dir_list(load):
         return []
     ret = set()
     for repo in init():
-        repo["repo"].open()
-        ref = _get_ref(repo, load["saltenv"])
-        if ref:
-            manifest = _get_manifest(repo["repo"], ref=ref)
-            for tup in manifest:
-                filepath = tup[4]
-                split = filepath.rsplit("/", 1)
-                while len(split) > 1:
-                    relpath = os.path.relpath(split[0], repo["root"])
-                    # Don't add '.'
-                    if relpath != ".":
-                        # Don't add files outside the hgfs_root
-                        if not relpath.startswith("../"):
-                            ret.add(os.path.join(repo["mountpoint"], relpath))
-                    split = split[0].rsplit("/", 1)
-        repo["repo"].close()
+        try:
+            repo["repo"].open()
+            ref = _get_ref(repo, load["saltenv"])
+            if ref:
+                manifest = _get_manifest(repo["repo"], ref=ref)
+                for tup in manifest:
+                    filepath = tup[4]
+                    split = filepath.rsplit("/", 1)
+                    while len(split) > 1:
+                        relpath = os.path.relpath(split[0], repo["root"])
+                        # Don't add '.'
+                        if relpath != ".":
+                            # Don't add files outside the hgfs_root
+                            if not relpath.startswith("../"):
+                                ret.add(os.path.join(repo["mountpoint"], relpath))
+                        split = split[0].rsplit("/", 1)
+        finally:
+            repo["repo"].close()
     if repo["mountpoint"]:
         ret.add(repo["mountpoint"])
     return sorted(ret)

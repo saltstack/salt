@@ -70,7 +70,9 @@ cryptography==3.4.7
 distlib==0.3.2
     # via virtualenv
 distro==1.5.0
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   pytest-skip-markers
 dmidecode==0.9.0
     # via -r requirements/static/ci/windows.in
 dnspython==1.16.0
@@ -217,9 +219,11 @@ pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
+pytest-httpserver==1.0.4
+    # via -r requirements/pytest.txt
 pytest-salt-factories==0.912.1
     # via -r requirements/pytest.txt
-pytest-skip-markers==1.1.2
+pytest-skip-markers==1.2.0
     # via pytest-salt-factories
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
@@ -349,8 +353,10 @@ websocket-client==0.40.0
     # via
     #   docker
     #   kubernetes
-werkzeug==0.15.6
-    # via moto
+werkzeug==2.0.3
+    # via
+    #   moto
+    #   pytest-httpserver
 wheel==0.36.2
     # via -r requirements/windows.txt
 wmi==1.5.1

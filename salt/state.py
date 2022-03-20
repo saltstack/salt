@@ -4131,7 +4131,8 @@ class BaseHighState:
                             log.error(msg)
                             errors.append(msg)
                             continue
-                        inc_sls = ".".join(p_comps[:-level_count] + [include])
+                        # relative paths become abolute paths, otherwise issue allowing for both
+                        inc_sls = os.sep.join(p_comps[:-level_count] + [include])
 
                     if env_key != xenv_key:
                         if matches is None:
@@ -4618,7 +4619,7 @@ class BaseHighState:
                 "count_unused": 0,
             }
 
-            env_matches = matches.get(saltenv)
+            env_matches = matches.get(saltenv, [])
 
             for state in states:
                 env_usage["count_all"] += 1

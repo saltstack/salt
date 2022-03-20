@@ -391,7 +391,9 @@ dataclasses==0.8
 distlib==0.3.3
     # via virtualenv
 distro==1.6.0
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   pytest-skip-markers
 dnspython==2.1.0
     # via
     #   -r requirements/static/ci/common.in
@@ -666,9 +668,11 @@ pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
+pytest-httpserver==1.0.4
+    # via -r requirements/pytest.txt
 pytest-salt-factories==0.912.1
     # via -r requirements/pytest.txt
-pytest-skip-markers==1.1.2
+pytest-skip-markers==1.2.0
     # via pytest-salt-factories
 pytest-subtests==0.5.0
     # via -r requirements/pytest.txt
@@ -836,7 +840,9 @@ websocket-client==0.40.0
     #   docker
     #   kubernetes
 werkzeug==2.0.1
-    # via moto
+    # via
+    #   moto
+    #   pytest-httpserver
 xmltodict==0.12.0
     # via
     #   moto
