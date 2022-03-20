@@ -684,7 +684,10 @@ class Schedule:
         """
         Execute this method in a multiprocess or thread
         """
-        if salt.utils.platform.is_windows() or self.opts.get("transport") == "zeromq":
+        if (
+            salt.utils.platform.spawning_platform()
+            or self.opts.get("transport") == "zeromq"
+        ):
             # Since function references can't be pickled and pickling
             # is required when spawning new processes on Windows, regenerate
             # the functions and returners.
@@ -1789,7 +1792,7 @@ class Schedule:
             self.handle_func(False, func, data, jid)
             return
 
-        if multiprocessing_enabled and salt.utils.platform.is_windows():
+        if multiprocessing_enabled and salt.utils.platform.spawning_platform():
             # Temporarily stash our function references.
             # You can't pickle function references, and pickling is
             # required when spawning new processes on Windows.
