@@ -181,11 +181,11 @@ def list_pkgs(versions_as_list=False, **kwargs):
 
     for package in package_info["casks"]:
         version = package["installed"]
-        names = [package["full_token"], package["token"]]
+        names = {package["full_token"], package["token"]}
         # The following name is appended to maintain backward compatibility
         # with old salt formulas. Since full_token and token are the same
         # for official taps (homebrew/*).
-        names.append("/".join([package["tap"], package["token"]]))
+        names.add("/".join([package["tap"], package["token"]]))
         for name in names:
             __salt__["pkg_resource.add_pkg"](ret, name, version)
 
