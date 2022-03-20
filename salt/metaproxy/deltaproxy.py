@@ -5,7 +5,6 @@
 import copy
 import logging
 import os
-import sys
 import threading
 import traceback
 import types
@@ -511,7 +510,7 @@ def thread_return(cls, minion_instance, opts, data):
     """
     fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
-    if opts["multiprocessing"] and not salt.utils.platform.is_windows():
+    if opts["multiprocessing"] and not salt.utils.platform.spawning_platform():
 
         # Shutdown the multiprocessing before daemonizing
         salt._logging.shutdown_logging()
@@ -760,8 +759,7 @@ def thread_multi_return(cls, minion_instance, opts, data):
     """
     fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
-    if opts["multiprocessing"] and not salt.utils.platform.is_windows():
-
+    if opts["multiprocessing"] and not salt.utils.platform.spawning_platform():
         # Shutdown the multiprocessing before daemonizing
         salt._logging.shutdown_logging()
 
@@ -962,9 +960,9 @@ def handle_decoded_payload(self, data):
     multiprocessing_enabled = self.opts.get("multiprocessing", True)
     name = "ProcessPayload(jid={})".format(data["jid"])
     if multiprocessing_enabled:
-        if sys.platform.startswith("win"):
+        if salt.utils.platform.spawning_platform():
             # let python reconstruct the minion on the other side if we"re
-            # running on windows
+            # running on spawning platforms
             instance = None
         process = SignalHandlingProcess(
             target=target,
