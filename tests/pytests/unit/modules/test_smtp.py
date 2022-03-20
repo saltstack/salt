@@ -23,7 +23,7 @@ def test_send_msg_html():
         "sendmail": MagicMock(return_value=True)
     })
 
-    with patch.dict(smtp.smtplib.SMTP_SSL, mock):
+    with patch.dict(smtp.smtplib, {"SMTP_SSL":mock}):
         assert ret == smtp.send_msg(
             recipient="recipient@gmail.com",
             sender="admin@example.com",
