@@ -3139,6 +3139,7 @@ def managed(
 
             if isinstance(ret["changes"], tuple):
                 ret["result"], ret["comment"] = ret["changes"]
+                ret["changes"] = {}
             elif ret["changes"]:
                 ret["result"] = None
                 ret["comment"] = "The file {} is set to be changed".format(name)
@@ -8004,7 +8005,7 @@ def serialize(
                     ret["comment"] = "Failed to deserialize existing data: {}".format(
                         exc
                     )
-                    return False
+                    return ret
 
             if existing_data is not None:
                 merged_data = salt.utils.dictupdate.merge_recurse(
