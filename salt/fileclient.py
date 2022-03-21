@@ -1169,15 +1169,7 @@ class RemoteClient(Client):
         if senv:
             saltenv = senv
 
-        if not salt.utils.platform.is_windows():
-            hash_server, stat_server = self.hash_and_stat_file(path, saltenv)
-            try:
-                mode_server = stat_server[0]
-            except (IndexError, TypeError):
-                mode_server = None
-        else:
-            hash_server = self.hash_file(path, saltenv)
-            mode_server = None
+        hash_server = self.hash_file(path, saltenv)
 
         # Check if file exists on server, before creating files and
         # directories
@@ -1218,16 +1210,7 @@ class RemoteClient(Client):
         )
 
         if dest2check and os.path.isfile(dest2check):
-            if not salt.utils.platform.is_windows():
-                hash_local, stat_local = self.hash_and_stat_file(dest2check, saltenv)
-                try:
-                    mode_local = stat_local[0]
-                except (IndexError, TypeError):
-                    mode_local = None
-            else:
-                hash_local = self.hash_file(dest2check, saltenv)
-                mode_local = None
-
+            hash_local = self.hash_file(dest2check, saltenv)
             if hash_local == hash_server:
                 return dest2check
 
