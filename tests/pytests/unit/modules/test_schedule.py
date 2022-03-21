@@ -167,11 +167,21 @@ def test_build_schedule_item_invalid_when(sock_dir):
     """
     Test if it build a schedule job.
     """
-    comment = 'Schedule item garbage for "when" in invalid.'
+    comment1 = 'Schedule item garbage for "when" in invalid.'
+    comment2 = "job_kwargs is not a dict. please correct and try again."
+    comment3 = "job_args is not a list. please correct and try again."
     with patch.dict(schedule.__opts__, {"job1": {}}):
         assert schedule.build_schedule_item(
             "job1", function="test.ping", when="garbage"
-        ) == {"comment": comment, "result": False}
+        ) == {"comment": comment1, "result": False}
+    with patch.dict(schedule.__opts__, {"job1": {}}):
+        assert schedule.build_schedule_item(
+            "job1", function="test.args", job_kwargs=[{"key1": "value1"}]
+        ) == {"comment": comment2, "result": False}
+    with patch.dict(schedule.__opts__, {"job1": {}}):
+        assert schedule.build_schedule_item(
+            "job1", function="test.args", job_args={"positional"}
+        ) == {"comment": comment3, "result": False}
 
 
 # 'add' function tests: 1
