@@ -110,9 +110,10 @@ def test_save(tmpdir):
     """
     Test saving beacons.
     """
-    _beacon_conf_file = "{}/{}/beacons.conf".format(
+    _beacon_conf_file = os.path.join(
         os.path.dirname(beacons.__opts__["conf_file"]),
         os.path.dirname(beacons.__opts__["default_include"]),
+        "beacons.conf",
     )
     _beacons_data = {
         "ps": [{"processes": {"salt-master": "stopped", "apache2": "stopped"}}]
