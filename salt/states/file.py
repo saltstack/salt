@@ -2051,11 +2051,10 @@ def tidied(
     def _matches(name):
         for prog in progs:
             if prog.match(name):
-                if not exes:
-                    return True
                 for _ex in exes:
-                    if not _ex.match(name):
-                        return True
+                    if _ex.match(name):
+                        return False
+                return True
         return False
 
     # Iterate over given directory tree, depth-first
