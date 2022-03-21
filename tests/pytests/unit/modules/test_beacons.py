@@ -3,6 +3,7 @@
 """
 
 import logging
+import os
 
 import pytest
 import salt.config
@@ -109,14 +110,17 @@ def test_save(tmpdir):
     """
     Test saving beacons.
     """
-    _beacon_conf_file = "/etc/salt/minion.d/beacons.conf"
+    _beacon_conf_file = "{}/{}/beacons.conf".format(
+        os.path.dirname(beacons.__opts__["conf_file"]),
+        os.path.dirname(beacons.__opts__["default_include"]),
+    )
     _beacons_data = {
         "ps": [{"processes": {"salt-master": "stopped", "apache2": "stopped"}}]
     }
 
     # Test that beacons contents are written to config file.
     _expected = {
-        "comment": "Beacons saved to /etc/salt/minion.d/beacons.conf.",
+        "comment": "Beacons saved to {}.".format(_beacon_conf_file),
         "result": True,
     }
     with patch("salt.utils.files.fopen", mock_open(read_data="")) as fopen_mock:
