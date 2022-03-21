@@ -471,10 +471,20 @@ def build_schedule_item(name, **kwargs):
         schedule[name]["metadata"] = kwargs["metadata"]
 
     if "job_args" in kwargs:
-        schedule[name]["args"] = kwargs["job_args"]
+        if isinstance(kwargs["job_args"], list):
+            schedule[name]["args"] = kwargs["job_args"]
+        else:
+            ret["result"] = False
+            ret["comment"] = "job_args is not a list. please correct and try again."
+            return ret
 
     if "job_kwargs" in kwargs:
-        schedule[name]["kwargs"] = kwargs["job_kwargs"]
+        if isinstance(kwargs["job_kwargs"], dict):
+            schedule[name]["kwargs"] = kwargs["job_kwargs"]
+        else:
+            ret["result"] = False
+            ret["comment"] = "job_kwargs is not a dict. please correct and try again."
+            return ret
 
     if "maxrunning" in kwargs:
         schedule[name]["maxrunning"] = kwargs["maxrunning"]
