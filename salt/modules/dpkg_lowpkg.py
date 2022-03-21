@@ -316,7 +316,7 @@ def _get_pkg_license(pkg):
     licenses = set()
     cpr = "/usr/share/doc/{}/copyright".format(pkg)
     if os.path.exists(cpr):
-        with salt.utils.files.fopen(cpr) as fp_:
+        with salt.utils.files.fopen(cpr, errors="ignore") as fp_:
             for line in salt.utils.stringutils.to_unicode(fp_.read()).split(os.linesep):
                 if line.startswith("License:"):
                     licenses.add(line.split(":", 1)[1].strip())
