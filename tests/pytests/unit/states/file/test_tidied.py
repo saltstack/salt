@@ -130,7 +130,7 @@ def test_tidied_with_exclude():
     ), patch(
         "os.path.isdir", return_value=True
     ):
-        ret = filestate.tidied(name=name, exclude=["file2"])
+        ret = filestate.tidied(name=name, exclude=["notfound", "file2"])
     exp = {
         "name": name,
         "changes": {
@@ -157,7 +157,7 @@ def test_tidied_with_exclude():
     ), patch(
         "os.path.isdir", return_value=True
     ):
-        ret = filestate.tidied(name=name, rmdirs=True, exclude=["file2"])
+        ret = filestate.tidied(name=name, rmdirs=True, exclude=["notfound", "file2"])
     exp = {
         "name": name,
         "changes": {
@@ -188,7 +188,9 @@ def test_tidied_with_exclude():
         "os.path.isdir", return_value=True
     ):
         ret = filestate.tidied(
-            name=name, rmdirs=True, exclude=[os.path.join("test", "test2", "file2")]
+            name=name,
+            rmdirs=True,
+            exclude=["notfound", os.path.join("test", "test2", "file2")],
         )
     exp = {
         "name": name,
