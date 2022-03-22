@@ -863,7 +863,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltFalseReturn(ret)
             ret = ret[next(iter(ret))]
             self.assertFalse(ret["changes"])
-            self.assertIn("does not exist".format(), ret["comment"])
+            self.assertIn("does not exist", ret["comment"])
 
     def test_managed_unicode_jinja_with_tojson_filter(self):
         """

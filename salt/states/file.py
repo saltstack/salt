@@ -3134,7 +3134,9 @@ def managed(
                             reset=win_perms_reset,
                         )
                     except CommandExecutionError as exc:
-                        if exc.strerror.startswith("Path not found"):
+                        if not isinstance(
+                            ret["changes"], tuple
+                        ) and exc.strerror.startswith("Path not found"):
                             ret["changes"]["newfile"] = name
 
             if isinstance(ret["changes"], tuple):
