@@ -903,7 +903,10 @@ class LogLevelMixIn(metaclass=MixInMeta):
         salt._logging.freeze_logging_options_dict()
 
     def __setup_logging(self):
-        salt._logging.setup_logging()
+        try:
+            salt._logging.setup_logging()
+        except salt.exceptions.LoggingRuntimeError as exc:
+            self.exit(salt.defaults.exitcodes.EX_UNAVAILABLE, str(exc))
 
     def __verify_logging(self):
         verify_log(self.config)
