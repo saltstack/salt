@@ -1676,6 +1676,33 @@ Returns:
   Example 1: snakeCaseForTheWin
   Example 2: SnakeCaseForTheWin
 
+
+.. jinja_ref:: human_to_bytes
+
+``human_to_bytes``
+----------------
+
+.. versionadded:: 3005
+
+Given a human-readable byte string (e.g. 2G, 30MB, 64KiB), return the number of bytes.
+Will return 0 if the argument has unexpected form.
+
+.. code-block:: jinja
+
+  Example 1: {{ "32GB" | human_to_bytes }}
+
+  Example 2: {{ "32GB" | human_to_bytes(handle_metric=True) }}
+
+  Example 3: {{ "32" | human_to_bytes(default_unit="GiB") }}
+
+Returns:
+
+.. code-block:: text
+
+  Example 1: 34359738368
+  Example 2: 32000000000
+  Example 3: 34359738368
+
 Networking Filters
 ------------------
 
