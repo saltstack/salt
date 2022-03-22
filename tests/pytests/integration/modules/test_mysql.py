@@ -5,7 +5,7 @@ import logging
 
 import pytest
 import salt.modules.mysql as mysql
-from tests.support.pytest.mysql import mysql_container  # pylint: disable=unused-import
+from tests.support.pytest.mysql import *  # pylint: disable=wildcard-import,unused-wildcard-import
 
 log = logging.getLogger(__name__)
 

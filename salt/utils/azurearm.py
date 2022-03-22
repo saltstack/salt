@@ -306,9 +306,9 @@ def compare_list_of_dicts(old, new, convert_id_to_name=None):
         return ret
 
     try:
-        local_configs, remote_configs = [
+        local_configs, remote_configs = (
             sorted(config, key=itemgetter("name")) for config in (new, old)
-        ]
+        )
     except TypeError:
         ret["comment"] = "configurations must be provided as a list of dictionaries!"
         return ret

@@ -10,5 +10,4 @@
     the python's logging system.
 """
 
-
 from salt._logging.impl import *  # pylint: disable=wildcard-import

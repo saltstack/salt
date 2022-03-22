@@ -20,7 +20,7 @@ from salt.exceptions import (
     CommandNotFoundError,
     SaltInvocationError,
 )
-from tests.support.mock import MagicMock, Mock, call, patch
+from tests.support.mock import MagicMock, Mock, call, mock_open, patch
 
 try:
     from aptsources import sourceslist  # pylint: disable=unused-import
@@ -489,6 +489,41 @@ def test_upgrade_downloadonly(uninstall_var, upgrade_var):
                     if "--download-only" in args
                 ]
                 # --download-only should be in the args list and we should have at least on True in the list.
+                assert any(args_matching) is True
+
+
+def test_upgrade_allow_downgrades(uninstall_var, upgrade_var):
+    """
+    Tests the allow_downgrades option for upgrade.
+    """
+    with patch("salt.utils.pkg.clear_rtag", MagicMock()):
+        with patch(
+            "salt.modules.aptpkg.list_pkgs", MagicMock(return_value=uninstall_var)
+        ):
+            mock_cmd = MagicMock(return_value={"retcode": 0, "stdout": upgrade_var})
+            patch_kwargs = {
+                "__salt__": {
+                    "config.get": MagicMock(return_value=True),
+                    "cmd.run_all": mock_cmd,
+                },
+            }
+            with patch.multiple(aptpkg, **patch_kwargs):
+                aptpkg.upgrade()
+                args_matching = [
+                    True
+                    for args in patch_kwargs["__salt__"]["cmd.run_all"].call_args[0]
+                    if "--allow-downgrades" in args
+                ]
+                # Here we shouldn't see the parameter and args_matching should be empty.
+                assert any(args_matching) is False
+
+                aptpkg.upgrade(allow_downgrades=True)
+                args_matching = [
+                    True
+                    for args in patch_kwargs["__salt__"]["cmd.run_all"].call_args[0]
+                    if "--allow-downgrades" in args
+                ]
+                # --allow-downgrades should be in the args list and we should have at least on True in the list.
                 assert any(args_matching) is True
 
 
@@ -1108,3 +1143,55 @@ SERVICE:cups-daemon,390,/usr/sbin/cupsd
             "cups-daemon",
             "rsyslog",
         ]
+
+
+@pytest.mark.skipif(
+    HAS_APTSOURCES is True, reason="Only run test with python3-apt library is missing."
+)
+def test_sourceslist_multiple_comps():
+    """
+    Test SourcesList when repo has multiple comps
+    """
+    repo_line = "deb http://archive.ubuntu.com/ubuntu/ focal-updates main restricted"
+    with patch.object(aptpkg, "HAS_APT", return_value=True):
+        with patch("salt.utils.files.fopen", mock_open(read_data=repo_line)):
+            with patch("pathlib.Path.is_file", side_effect=[True, False]):
+                sources = aptpkg.SourcesList()
+                for source in sources:
+                    assert source.type == "deb"
+                    assert source.uri == "http://archive.ubuntu.com/ubuntu/"
+                    assert source.comps == ["main", "restricted"]
+                    assert source.dist == "focal-updates"
+
+
+@pytest.mark.skipif(
+    HAS_APTSOURCES is True, reason="Only run test with python3-apt library is missing."
+)
+@pytest.mark.parametrize(
+    "repo_line",
+    [
+        "deb [ arch=amd64 ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+        "deb [arch=amd64 ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+        "deb [arch=amd64 test=one ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+        "deb [arch=amd64,armel test=one ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+        "deb [ arch=amd64,armel test=one ] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+        "deb [ arch=amd64,armel test=one] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+        "deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted",
+    ],
+)
+def test_sourceslist_architectures(repo_line):
+    """
+    Test SourcesList when architectures is in repo
+    """
+    with patch("salt.utils.files.fopen", mock_open(read_data=repo_line)):
+        with patch("pathlib.Path.is_file", side_effect=[True, False]):
+            sources = aptpkg.SourcesList()
+            for source in sources:
+                assert source.type == "deb"
+                assert source.uri == "http://archive.ubuntu.com/ubuntu/"
+                assert source.comps == ["main", "restricted"]
+                assert source.dist == "focal-updates"
+                if "," in repo_line:
+                    assert source.architectures == ["amd64", "armel"]
+                else:
+                    assert source.architectures == ["amd64"]

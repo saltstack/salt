@@ -51,15 +51,13 @@ def start_engines(opts, proc_mgr, proxy=None):
         if fun in engines:
             start_func = engines[fun]
             if engine_name:
-                name = "{}.Engine({}-{})".format(
-                    __name__, start_func.__module__, engine_name
-                )
+                name = "Engine({}, name={})".format(start_func.__module__, engine_name)
             else:
-                name = "{}.Engine({})".format(__name__, start_func.__module__)
-            log.info("Starting Engine %s", name)
+                name = "Engine({})".format(start_func.__module__)
+            log.info("Starting %s", name)
             proc_mgr.add_process(
                 Engine,
-                args=(name, opts, fun, engine_opts, funcs, runners, proxy),
+                args=(opts, fun, engine_opts, funcs, runners, proxy),
                 name=name,
             )
 
@@ -69,12 +67,11 @@ class Engine(salt.utils.process.SignalHandlingProcess):
     Execute the given engine in a new process
     """
 
-    def __init__(self, name, opts, fun, config, funcs, runners, proxy, **kwargs):
+    def __init__(self, opts, fun, config, funcs, runners, proxy, **kwargs):
         """
         Set up the process executor
         """
         super().__init__(**kwargs)
-        self.name = name
         self.opts = opts
         self.config = config
         self.fun = fun
@@ -86,7 +83,6 @@ class Engine(salt.utils.process.SignalHandlingProcess):
         """
         Run the master service!
         """
-        salt.utils.process.appendproctitle(self.name)
         self.utils = salt.loader.utils(self.opts, proxy=self.proxy)
         if salt.utils.platform.is_windows():
             # Calculate function references since they can't be pickled.
@@ -102,11 +98,12 @@ class Engine(salt.utils.process.SignalHandlingProcess):
             self.opts, self.funcs, self.runners, self.utils, proxy=self.proxy
         )
         kwargs = self.config or {}
+
         try:
             self.engine[self.fun](**kwargs)
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             log.critical(
-                "Engine '%s' could not be started!",
-                self.fun.split(".")[0],
+                "%s could not be started!",
+                self.name,
                 exc_info=True,
             )

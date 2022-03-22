@@ -72,7 +72,6 @@
 
 """
 
-
 import datetime
 import logging
 import logging.handlers
@@ -83,7 +82,6 @@ import types
 
 import salt.utils.msgpack
 import salt.utils.network
-from salt.log.mixins import NewStyleClassMixIn
 from salt.log.setup import LOG_LEVELS
 
 log = logging.getLogger(__name__)
@@ -176,7 +174,7 @@ def setup_handlers():
         yield False
 
 
-class MessageFormatter(logging.Formatter, NewStyleClassMixIn):
+class MessageFormatter(logging.Formatter):
     def __init__(self, payload_type, version, tags, msg_type=None, msg_path=None):
         self.payload_type = payload_type
         self.version = version
@@ -235,10 +233,8 @@ class MessageFormatter(logging.Formatter, NewStyleClassMixIn):
                 # These are already handled above or explicitly pruned.
                 continue
 
-            # pylint: disable=incompatible-py3-code
             if isinstance(value, (str, bool, dict, float, int, list, types.NoneType)):
                 val = value
-            # pylint: enable=incompatible-py3-code
             else:
                 val = repr(value)
             message_dict.update({"{}".format(key): val})
@@ -286,10 +282,8 @@ class MessageFormatter(logging.Formatter, NewStyleClassMixIn):
                 # These are already handled above or explicitly avoided.
                 continue
 
-            # pylint: disable=incompatible-py3-code
             if isinstance(value, (str, bool, dict, float, int, list, types.NoneType)):
                 val = value
-            # pylint: enable=incompatible-py3-code
             else:
                 val = repr(value)
             # GELF spec require "non-standard" fields to be prefixed with '_' (underscore).

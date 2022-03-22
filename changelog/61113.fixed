@@ -1,0 +1,1 @@
+Fixed v3004 windows minion failing to open log file at C:\ProgramData\Salt Project\Salt\var\log\salt\minion

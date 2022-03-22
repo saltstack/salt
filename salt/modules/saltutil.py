@@ -17,6 +17,7 @@ import time
 import urllib.error
 
 import salt
+import salt.channel.client
 import salt.client
 import salt.client.ssh.client
 import salt.config
@@ -24,7 +25,6 @@ import salt.defaults.events
 import salt.payload
 import salt.runner
 import salt.state
-import salt.transport.client
 import salt.utils.args
 import salt.utils.event
 import salt.utils.extmods
@@ -1513,7 +1513,7 @@ def regen_keys():
             pass
     # TODO: move this into a channel function? Or auth?
     # create a channel again, this will force the key regen
-    with salt.transport.client.ReqChannel.factory(__opts__) as channel:
+    with salt.channel.client.ReqChannel.factory(__opts__) as channel:
         log.debug("Recreating channel to force key regen")
 
 
@@ -1541,7 +1541,7 @@ def revoke_auth(preserve_minion_cache=False):
         masters.append(__opts__["master_uri"])
 
     for master in masters:
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             __opts__, master_uri=master
         ) as channel:
             tok = channel.auth.gen_token(b"salt")

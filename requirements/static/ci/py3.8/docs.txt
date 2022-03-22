@@ -322,7 +322,7 @@ azure-storage-queue==1.4.0
     # via azure
 azure==4.0.0 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
-babel==2.9.0
+babel==2.9.1
     # via sphinx
 backports.entry-points-selectable==1.1.0
     # via virtualenv
@@ -427,6 +427,8 @@ gitpython==3.1.18
     # via -r requirements/static/ci/common.in
 google-auth==2.0.1
     # via kubernetes
+hglib==2.6.1
+    # via -r requirements/static/ci/linux.in
 idna==2.8
     # via requests
 imagesize==1.2.0
@@ -434,9 +436,7 @@ imagesize==1.2.0
 immutables==0.15
     # via contextvars
 importlib-metadata==4.6.4 ; python_version >= "3.6" and python_version < "3.10"
-    # via
-    #   -r requirements/static/pkg/linux.in
-    #   moto
+    # via -r requirements/static/pkg/linux.in
 ipaddress==1.0.23
     # via kubernetes
 isodate==0.6.0
@@ -452,7 +452,7 @@ jaraco.functools==2.0
     #   tempora
 jaraco.text==3.5.1
     # via jaraco.collections
-jinja2==2.11.3
+jinja2==3.0.3
     # via
     #   -r requirements/base.txt
     #   ansible-core
@@ -467,7 +467,7 @@ jmespath==0.10.0
     #   botocore
 jsonschema==3.2.0
     # via -r requirements/static/ci/common.in
-junos-eznc==2.4.0 ; sys_platform != "win32"
+junos-eznc==2.4.0 ; sys_platform != "win32" and python_version <= "3.9"
     # via
     #   -r requirements/static/ci/common.in
     #   napalm
@@ -481,29 +481,30 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/common.in
 libnacl==1.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
-loguru==0.5.3
+loguru==0.6.0
     # via ciscoconfparse
-lxml==4.6.3
+lxml==4.7.1
     # via
     #   junos-eznc
     #   napalm
     #   ncclient
 mako==1.1.5
     # via -r requirements/static/ci/common.in
-markupsafe==1.1.1
+markupsafe==2.0.1
     # via
     #   -r requirements/base.txt
     #   jinja2
     #   mako
     #   moto
+mercurial==6.0.2
+    # via -r requirements/static/ci/linux.in
 more-itertools==5.0.0
     # via
     #   cheroot
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
-    #   moto
-moto==2.2.4
+moto==3.0.1 ; python_version >= "3.6"
     # via -r requirements/static/ci/common.in
 msgpack==1.0.2
     # via -r requirements/base.txt
@@ -599,7 +600,7 @@ msrestazure==0.6.4
     #   azure-mgmt-subscription
     #   azure-mgmt-trafficmanager
     #   azure-mgmt-web
-napalm==3.3.1 ; sys_platform != "win32" and python_version > "3.6"
+napalm==3.3.1 ; sys_platform != "win32" and python_version > "3.6" and python_version < "3.10"
     # via -r requirements/static/ci/common.in
 ncclient==0.6.12
     # via
@@ -652,7 +653,7 @@ pycparser==2.17
     # via cffi
 pycryptodomex==3.9.8
     # via -r requirements/crypto.txt
-pycurl==7.44.1
+pycurl==7.44.1 ; python_version <= "3.9"
     # via -r requirements/static/ci/common.in
 pyeapi==0.8.4
     # via napalm
@@ -764,7 +765,7 @@ scp==0.13.6
     #   junos-eznc
     #   napalm
     #   netmiko
-setproctitle==1.1.10
+setproctitle==1.1.10 ; python_version < "3.10"
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
     # via

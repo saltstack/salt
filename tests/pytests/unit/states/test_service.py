@@ -244,7 +244,7 @@ def test_running():
 
         with patch.dict(service.__opts__, {"test": True}):
             with patch.dict(service.__salt__, {"service.status": tmock}):
-                assert service.running("salt") == ret[10]
+                assert service.running("salt") == ret[5]
 
             with patch.dict(service.__salt__, {"service.status": fmock}):
                 assert service.running("salt") == ret[3]

@@ -93,7 +93,14 @@ def get(key, profile=None):
         url = "v1/{}".format(path)
         response = __utils__["vault.make_request"]("GET", url)
         if response.status_code == 404:
-            return None
+            if version2["v2"]:
+                path = version2["data"] + "/" + key
+                url = "v1/{}".format(path)
+                response = __utils__["vault.make_request"]("GET", url)
+                if response.status_code == 404:
+                    return None
+            else:
+                return None
         if response.status_code != 200:
             response.raise_for_status()
         data = response.json()["data"]
@@ -101,6 +108,8 @@ def get(key, profile=None):
         if version2["v2"]:
             if key in data["data"]:
                 return data["data"][key]
+            else:
+                return data["data"]
         else:
             if key in data:
                 return data[key]
