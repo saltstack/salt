@@ -1680,7 +1680,7 @@ Returns:
 .. jinja_ref:: human_to_bytes
 
 ``human_to_bytes``
-----------------
+------------------
 
 .. versionadded:: 3005
 
