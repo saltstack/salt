@@ -496,19 +496,20 @@ def test_run_all_quiet_does_not_depend_on_salt_dunder():
     """
 
     proc = MagicMock(return_value=MockTimedProc(stdout=b"success", stderr=None))
-    with patch("salt.utils.timed_subprocess.TimedProc", proc):
-        salt_dunder_mock = MagicMock(spec_set=dict)
-        salt_dunder_mock.__getitem__.side_effect = NameError(
-            "__salt__ might not be defined"
-        )
+    with patch("pwd.getpwnam") as getpwnam_mock:
+        with patch("salt.utils.timed_subprocess.TimedProc", proc):
+            salt_dunder_mock = MagicMock(spec_set=dict)
+            salt_dunder_mock.__getitem__.side_effect = NameError(
+                "__salt__ might not be defined"
+            )
 
-        with patch.object(cmdmod, "__salt__", salt_dunder_mock):
-            ret = cmdmod._run_all_quiet("foo")
-            assert ret["stdout"] == "success"
-            assert salt_dunder_mock.__getitem__.call_count == 0
-            ret = cmdmod._run_all_quiet("foo", runas="bar")
-            assert ret["stdout"] == "success"
-            assert salt_dunder_mock.__getitem__.call_count == 0
+            with patch.object(cmdmod, "__salt__", salt_dunder_mock):
+                ret = cmdmod._run_all_quiet("foo")
+                assert ret["stdout"] == "success"
+                assert salt_dunder_mock.__getitem__.call_count == 0
+                ret = cmdmod._run_all_quiet("foo", runas="bar")
+                assert ret["stdout"] == "success"
+                assert salt_dunder_mock.__getitem__.call_count == 0
 
 
 def test_run_cwd_doesnt_exist_issue_7154():
