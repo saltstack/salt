@@ -489,14 +489,22 @@ def test_shell_properly_handled_on_macOS():
                 ), "cmd does not invoke user shell on macOS"
 
 
+@pytest.mark.skip_on_windows
 def test_run_all_quiet_does_not_depend_on_salt_dunder():
     """
-    cmdmod._run_all_quiet should not depend on availability
-    of __salt__ dictionary (issue #61816)
+    `cmdmod._run_all_quiet` should not depend on availability
+    of __salt__ dictionary (issue #61816).
+
+    This test checks for __salt__ specifically and will still
+    pass if other dunders, especially __grains__, are referenced.
+    This is the case on UNIX systems other than MacOS when
+    `sudo` could not be found.
     """
 
     proc = MagicMock(return_value=MockTimedProc(stdout=b"success", stderr=None))
-    with patch("pwd.getpwnam") as getpwnam_mock:
+    runas = getpass.getuser()
+
+    with patch.dict(cmdmod.__grains__, {"os": "Darwin", "os_family": "Solaris"}):
         with patch("salt.utils.timed_subprocess.TimedProc", proc):
             salt_dunder_mock = MagicMock(spec_set=dict)
             salt_dunder_mock.__getitem__.side_effect = NameError(
@@ -507,7 +515,7 @@ def test_run_all_quiet_does_not_depend_on_salt_dunder():
                 ret = cmdmod._run_all_quiet("foo")
                 assert ret["stdout"] == "success"
                 assert salt_dunder_mock.__getitem__.call_count == 0
-                ret = cmdmod._run_all_quiet("foo", runas="bar")
+                ret = cmdmod._run_all_quiet("foo", runas=runas)
                 assert ret["stdout"] == "success"
                 assert salt_dunder_mock.__getitem__.call_count == 0
 
