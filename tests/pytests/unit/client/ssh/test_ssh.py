@@ -140,6 +140,7 @@ def test_ssh_kwargs(test_opts):
         assert ssh_obj.opts.get(opt_key, None) == opt_value
 
 
+@pytest.mark.skip_on_windows(reason="pre_flight_args is not implemented for Windows")
 @pytest.mark.parametrize(
     "test_opts",
     [
