@@ -190,7 +190,10 @@ def test_tidied_with_exclude():
         ret = filestate.tidied(
             name=name,
             rmdirs=True,
-            exclude=["notfound", os.path.join("test", "test2", "file2")],
+            exclude=[
+                "notfound",
+                os.path.join("test", "test2", "file2").replace("\\", "\\\\"),
+            ],
         )
     exp = {
         "name": name,
@@ -236,7 +239,7 @@ def test_tidied_with_full_path_exclude():
     ):
         ret = filestate.tidied(
             name=name,
-            exclude=[os.path.join("test", "test2", "file2")],
+            exclude=[os.path.join("test", "test2", "file2").replace("\\", "\\\\")],
             full_path_match=True,
         )
     exp = {
@@ -268,7 +271,7 @@ def test_tidied_with_full_path_exclude():
         ret = filestate.tidied(
             name=name,
             rmdirs=True,
-            exclude=[os.path.join("test", "test2", "file2")],
+            exclude=[os.path.join("test", "test2", "file2").replace("\\", "\\\\")],
             full_path_match=True,
         )
     exp = {
@@ -303,7 +306,7 @@ def test_tidied_with_full_path_exclude():
         ret = filestate.tidied(
             name=name,
             rmdirs=True,
-            exclude=[os.path.join("test", "test2", "file2")],
+            exclude=[os.path.join("test", "test2", "file2").replace("\\", "\\\\")],
             full_path_match=False,
         )
     exp = {
