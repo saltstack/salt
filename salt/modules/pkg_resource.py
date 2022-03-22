@@ -101,7 +101,7 @@ def parse_targets(
     if __grains__["os"] == "MacOS" and sources:
         log.warning('Parameter "sources" ignored on MacOS hosts.')
 
-    version = str(kwargs["version"]) if "version" in kwargs else None
+    version = kwargs.get("version")
 
     if pkgs and sources:
         log.error('Only one of "pkgs" and "sources" can be used.')
