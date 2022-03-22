@@ -2072,7 +2072,6 @@ def yum_and_dnf(request):
         yield request.param["cmd"]
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize(
     "new,full_pkg_string",
     (
