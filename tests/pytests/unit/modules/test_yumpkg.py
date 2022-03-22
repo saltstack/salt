@@ -2072,10 +2072,12 @@ def yum_and_dnf(request):
         yield request.param["cmd"]
 
 
+@pytest.mark.xfail
 @pytest.mark.parametrize(
     "new,full_pkg_string",
     (
         (42, "foo-42"),
+        (12, "foo-12"),
         ("99:1.2.3", "foo-1.2.3"),
     ),
 )
@@ -2087,12 +2089,16 @@ def test_59705_version_as_accidental_float_should_become_text(
     cmd_mock = MagicMock(
         return_value={"pid": 12345, "retcode": 0, "stdout": "", "stderr": ""}
     )
+
+    def fake_parse(*args, **kwargs):
+        return {name: kwargs["version"]}, "repository"
+
     patch_yum_salt = patch.dict(
         yumpkg.__salt__,
         {
             "cmd.run_all": cmd_mock,
             "lowpkg.version_cmp": rpm.version_cmp,
-            "pkg_resource.parse_targets": pkg_resource.parse_targets,
+            "pkg_resource.parse_targets": fake_parse,
         },
     )
     patch_list_pkgs = patch.object(
