@@ -2032,6 +2032,11 @@ def tidied(
         time_comparison = "atime"
     time_comparison = time_comparison.lower()
 
+    # Convert size with human units to bytes
+    if isinstance(size, str):
+        # add handle_metric=True when #61833 is merged
+        size = salt.utils.stringutils.human_to_bytes(size)
+
     # Define some variables
     todelete = []
     today = date.today()
