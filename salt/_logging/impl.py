@@ -9,6 +9,7 @@ import atexit
 import logging
 import multiprocessing
 import os
+import pathlib
 import re
 import socket
 import sys
@@ -23,6 +24,7 @@ TRACE = logging.TRACE = 5
 GARBAGE = logging.GARBAGE = 1
 QUIET = logging.QUIET = 1000
 
+import salt.defaults.exitcodes  # isort:skip  pylint: disable=unused-import
 from salt._logging.handlers import DeferredStreamHandler  # isort:skip
 from salt._logging.handlers import RotatingFileHandler  # isort:skip
 from salt._logging.handlers import StreamHandler  # isort:skip
@@ -174,11 +176,11 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
                 max(list(logging.Logger.manager.loggerDict), key=len)
             )
             if max_logger_length > 80:
-                # Make sure the logger name on the formatted log record is not longer than 100 chars
-                # Messages which need more that 100 chars will use them, but not ALL log messages
+                # Make sure the logger name on the formatted log record is not longer than 80 chars
+                # Messages which need more that 80 chars will use them, but not ALL log messages
                 max_logger_length = 80
             for handler in logging.root.handlers:
-                if handler == get_temp_handler():
+                if handler is get_temp_handler():
                     continue
 
                 formatter = handler.formatter
@@ -443,8 +445,8 @@ def setup_temp_handler(log_level=None):
     """
     Setup the temporary deferred stream handler
     """
-    if is_temp_handler_configured():
-        handler = get_temp_handler()
+    handler = get_temp_handler()
+    if handler is not None:
         log_level = get_logging_level_from_string(log_level)
         if handler.level != log_level:
             handler.setLevel(log_level)
@@ -581,7 +583,7 @@ def setup_console_handler(log_level=None, log_format=None, date_format=None):
 
     handler = None
     for handler in logging.root.handlers:
-        if handler == get_temp_handler():
+        if handler is get_temp_handler():
             continue
 
         if not hasattr(handler, "stream"):
@@ -708,20 +710,25 @@ def setup_logfile_handler(
         }
 
         if parsed_log_path.scheme == "file" and parsed_log_path.path:
-            facility_name = parsed_log_path.path.split(os.sep)[-1].upper()
-            if not facility_name.startswith("LOG_"):
-                # The user is not specifying a syslog facility
-                facility_name = "LOG_USER"  # Syslog default
-                syslog_opts["address"] = parsed_log_path.path
-            else:
-                # The user has set a syslog facility, let's update the path to
-                # the logging socket
-                syslog_opts["address"] = os.sep.join(
-                    parsed_log_path.path.split(os.sep)[:-1]
-                )
+            path = pathlib.Path(parsed_log_path.path)
+            facility_name = path.stem.upper()
+            try:
+                if not facility_name.startswith("LOG_"):
+                    # The user is not specifying a syslog facility
+                    facility_name = "LOG_USER"  # Syslog default
+                    syslog_opts["address"] = str(path.resolve())
+                else:
+                    # The user has set a syslog facility, let's update the path to
+                    # the logging socket
+                    syslog_opts["address"] = str(path.resolve().parent)
+            except OSError as exc:
+                raise LoggingRuntimeError(
+                    "Failed to setup the Syslog logging handler: {}".format(exc)
+                ) from exc
         elif parsed_log_path.path:
             # In case of udp or tcp with a facility specified
-            facility_name = parsed_log_path.path.lstrip(os.sep).upper()
+            path = pathlib.Path(parsed_log_path.path)
+            facility_name = path.stem.upper()
             if not facility_name.startswith("LOG_"):
                 # Logging facilities start with LOG_ if this is not the case
                 # fail right now!
@@ -741,24 +748,24 @@ def setup_logfile_handler(
             )
         syslog_opts["facility"] = facility
 
-        if parsed_log_path.scheme == "tcp":
-            syslog_opts["socktype"] = socket.SOCK_STREAM
-
         if parsed_log_path.scheme in ("tcp", "udp"):
             syslog_opts["address"] = (
                 parsed_log_path.hostname,
                 parsed_log_path.port or logging.handlers.SYSLOG_UDP_PORT,
             )
+            if parsed_log_path.scheme == "tcp":
+                syslog_opts["socktype"] = socket.SOCK_STREAM
 
-        if parsed_log_path.scheme == "file":
+        elif parsed_log_path.scheme == "file":
             syslog_opts.pop("socktype", None)
 
         try:
             # Et voilá! Finally our syslog handler instance
             handler = SysLogHandler(**syslog_opts)
-        except OSError as err:
-            log.error("Failed to setup the Syslog logging handler: %s", err)
-            sys.exit(2)
+        except OSError as exc:
+            raise LoggingRuntimeError(
+                "Failed to setup the Syslog logging handler: {}".format(exc)
+            ) from exc
     else:
         # make sure, the logging directory exists and attempt to create it if necessary
         if user is None:
