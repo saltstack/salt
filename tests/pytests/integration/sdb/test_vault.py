@@ -51,7 +51,7 @@ def vault_container_version_id(value):
 @pytest.fixture(
     scope="module",
     autouse=True,
-    params=["0.9.6", "1.3.1"],
+    params=["0.9.6", "1.3.1", "latest"],
     ids=vault_container_version_id,
 )
 def vault_container_version(request, salt_call_cli, vault_port):
@@ -140,7 +140,7 @@ def vault_container_version(request, salt_call_cli, vault_port):
             )
             log.debug("Failed to assign policy to vault:\n%s", ret)
             pytest.fail("unable to assign policy to vault")
-        if vault_version == "1.3.1":
+        if vault_version in ["1.3.1", "latest"]:
             proc = subprocess.run(
                 [vault_binary, "secrets", "enable", "kv-v2"],
                 env=env,
@@ -163,6 +163,101 @@ def vault_container_version(request, salt_call_cli, vault_port):
                 pass
             elif "Success" in proc.stdout:
                 pass
+            else:
+                log.debug("Failed to enable kv-v2:\n%s", ret)
+                pytest.fail("Could not enable kv-v2 {}".format(proc.stdout))
+        if vault_version == "latest":
+            proc = subprocess.run(
+                [vault_binary, "secrets", "enable", "-version=2", "-path=salt/", "kv"],
+                env=env,
+                check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+            )
+            ret = ProcessResult(
+                exitcode=proc.returncode,
+                stdout=proc.stdout,
+                stderr=proc.stderr,
+                cmdline=proc.args,
+            )
+            if proc.returncode != 0:
+                log.debug("Failed to enable kv-v2:\n%s", ret)
+                pytest.fail("Could not enable kv-v2")
+
+            if "path is already in use at kv-v2/" in proc.stdout:
+                pass
+            elif "Success" in proc.stdout:
+                proc = subprocess.run(
+                    [
+                        vault_binary,
+                        "kv",
+                        "put",
+                        "salt/user1",
+                        "password=p4ssw0rd",
+                        "desc=test user",
+                    ],
+                    env=env,
+                    check=False,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    universal_newlines=True,
+                )
+                ret = ProcessResult(
+                    exitcode=proc.returncode,
+                    stdout=proc.stdout,
+                    stderr=proc.stderr,
+                    cmdline=proc.args,
+                )
+                if proc.returncode != 0:
+                    log.debug("Failed to enable kv-v2:\n%s", ret)
+                    pytest.fail("Could not enable kv-v2")
+                if "path is already in use at kv-v2/" in proc.stdout:
+                    pass
+                elif "created_time" in proc.stdout:
+                    proc = subprocess.run(
+                        [
+                            vault_binary,
+                            "kv",
+                            "put",
+                            "salt/user/user1",
+                            "password=p4ssw0rd",
+                            "desc=test user",
+                        ],
+                        env=env,
+                        check=False,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        universal_newlines=True,
+                    )
+                    ret = ProcessResult(
+                        exitcode=proc.returncode,
+                        stdout=proc.stdout,
+                        stderr=proc.stderr,
+                        cmdline=proc.args,
+                    )
+                    if proc.returncode != 0:
+                        log.debug("Failed to enable kv-v2:\n%s", ret)
+                        pytest.fail("Could not enable kv-v2")
+
+                    if "path is already in use at kv-v2/" in proc.stdout:
+                        pass
+                    elif "created_time" in proc.stdout:
+                        proc = subprocess.run(
+                            [vault_binary, "kv", "get", "salt/user1"],
+                            env=env,
+                            check=False,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            universal_newlines=True,
+                        )
+                        ret = ProcessResult(
+                            exitcode=proc.returncode,
+                            stdout=proc.stdout,
+                            stderr=proc.stderr,
+                            cmdline=proc.args,
+                        )
+
             else:
                 log.debug("Failed to enable kv-v2:\n%s", ret)
                 pytest.fail("Could not enable kv-v2 {}".format(proc.stdout))
@@ -228,7 +323,7 @@ def test_config(salt_call_cli, pillar_tree):
 
 @pytest.mark.slow_test
 def test_sdb_kv2_kvv2_path_local(salt_call_cli, vault_container_version):
-    if vault_container_version != "1.3.1":
+    if vault_container_version not in ["1.3.1", "latest"]:
         pytest.skip("Test not applicable to vault {}".format(vault_container_version))
     ret = salt_call_cli.run(
         "sdb.set", uri="sdb://sdbvault/kv-v2/test/test_sdb/foo", value="bar"
@@ -240,3 +335,12 @@ def test_sdb_kv2_kvv2_path_local(salt_call_cli, vault_container_version):
     )
     assert ret.json
     assert ret.json == "bar"
+
+
+@pytest.mark.slow_test
+def test_sdb_kv_dual_item(salt_call_cli, vault_container_version):
+    if vault_container_version not in ["latest"]:
+        pytest.skip("Test not applicable to vault {}".format(vault_container_version))
+    ret = salt_call_cli.run("--local", "sdb.get", "sdb://sdbvault/salt/data/user1")
+    # assert ret.json
+    assert ret.json == {"desc": "test user", "password": "p4ssw0rd"}

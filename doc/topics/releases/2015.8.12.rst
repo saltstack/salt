@@ -292,7 +292,7 @@ Changelog for v2015.8.11..v2015.8.12
 
   * 8a5b47b5d7 Collect all error data from the wfuncs call
 
-  * 11864c31b7 supress a stack trace to show clean ssh error
+  * 11864c31b7 suppress a stack trace to show clean ssh error
 
   * 9fbfa282fa wow this solves an issue!
 
@@ -465,7 +465,7 @@ Changelog for v2015.8.11..v2015.8.12
 
   * e1fcb8311d Put pkg.latest_version in try/except structure Move refreshed or refresh to different spot (just for code tidyness)
 
-  * e0b6261659 changed name of varibale 'refreshed' to 'was_refreshed'
+  * e0b6261659 changed name of variable 'refreshed' to 'was_refreshed'
 
   * 340110b4b4 Move check for rtag to outermost-nesting in function
 
@@ -748,7 +748,7 @@ Changelog for v2015.8.11..v2015.8.12
 
   * 9c803d05a5 Add output_file option to master config docs
 
-* **ISSUE** `saltstack/salt#32276`_: (`javicacheiro`_) pkg.installed using sources from master fails with file not found after first succesful run (refs: `#34689`_)
+* **ISSUE** `saltstack/salt#32276`_: (`javicacheiro`_) pkg.installed using sources from master fails with file not found after first successful run (refs: `#34689`_)
 
 * **PR** `#34689`_: (`Azidburn`_) fix second run problems with pkg.installed using sources
   @ *2016-07-15 21:19:39 UTC*
