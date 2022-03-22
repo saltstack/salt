@@ -455,11 +455,12 @@ def test_shell_properly_handled_on_macOS():
 
             # User default shell is '/usr/local/bin/bash'
             user_default_shell = "/usr/local/bin/bash"
-            with patch.dict(
-                cmdmod.__salt__,
-                {"user.info": MagicMock(return_value={"shell": user_default_shell})},
+            with patch(
+                "pwd.getpwall",
+                Mock(
+                    return_value=[Mock(pw_shell=user_default_shell, pw_name="foobar")]
+                ),
             ):
-
                 cmd_handler.clear()
                 cmdmod._run(
                     "ls", cwd=tempfile.gettempdir(), runas="foobar", use_vt=False
@@ -471,9 +472,11 @@ def test_shell_properly_handled_on_macOS():
 
             # User default shell is '/bin/zsh'
             user_default_shell = "/bin/zsh"
-            with patch.dict(
-                cmdmod.__salt__,
-                {"user.info": MagicMock(return_value={"shell": user_default_shell})},
+            with patch(
+                "pwd.getpwall",
+                Mock(
+                    return_value=[Mock(pw_shell=user_default_shell, pw_name="foobar")]
+                ),
             ):
 
                 cmd_handler.clear()
@@ -484,6 +487,28 @@ def test_shell_properly_handled_on_macOS():
                 assert not re.search(
                     "bash -l -c", cmd_handler.cmd
                 ), "cmd does not invoke user shell on macOS"
+
+
+def test_run_all_quiet_does_not_depend_on_salt_dunder():
+    """
+    cmdmod._run_all_quiet should not depend on availability
+    of __salt__ dictionary (issue #61816)
+    """
+
+    proc = MagicMock(return_value=MockTimedProc(stdout=b"success", stderr=None))
+    with patch("salt.utils.timed_subprocess.TimedProc", proc):
+        salt_dunder_mock = MagicMock(spec_set=dict)
+        salt_dunder_mock.__getitem__.side_effect = NameError(
+            "__salt__ might not be defined"
+        )
+
+        with patch.object(cmdmod, "__salt__", salt_dunder_mock):
+            ret = cmdmod._run_all_quiet("foo")
+            assert ret["stdout"] == "success"
+            assert salt_dunder_mock.__getitem__.call_count == 0
+            ret = cmdmod._run_all_quiet("foo", runas="bar")
+            assert ret["stdout"] == "success"
+            assert salt_dunder_mock.__getitem__.call_count == 0
 
 
 def test_run_cwd_doesnt_exist_issue_7154():
