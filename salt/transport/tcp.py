@@ -424,7 +424,7 @@ class SaltMessageServer:
             while True:
                 wire_bytes = await reader.read(4096)
                 if not wire_bytes:
-                    log.error("%s empty read", self.__class__.__name__)
+                    log.trace("%s empty read", self.__class__.__name__)
                     break
                 unpacker.feed(wire_bytes)
                 for framed_msg in unpacker:
@@ -694,7 +694,7 @@ class MessageClient:
             try:
                 wire_bytes = await self._reader.read(4096)
                 if not wire_bytes:
-                    log.error("%s empty read", self.__class__.__name__)
+                    log.trace("%s empty read", self.__class__.__name__)
                     break
                 unpacker.feed(wire_bytes)
                 for framed_msg in unpacker:
@@ -935,9 +935,9 @@ class PubServer:
         while not self._closing:
             try:
                 wire_bytes = await client.reader.read(4096)
-                log.error("PubServer Read from client %r", wire_bytes)
+                log.trace("PubServer Read from client %r", wire_bytes)
                 if not wire_bytes:
-                    log.error("%s empty read", self.__class__.__name__)
+                    log.trace("%s empty read", self.__class__.__name__)
                     break
                 unpacker.feed(wire_bytes)
                 for framed_msg in unpacker:
@@ -960,7 +960,7 @@ class PubServer:
     async def handle_stream(self, reader, writer):
         socket = writer.get_extra_info("socket")
         address = socket.getpeername()
-        log.error("Subscriber at %s connected", address)
+        log.trace("Subscriber at %s connected", address)
         client = Subscriber(reader, writer, address)
         self.clients.add(client)
         await self._stream_read(client)
@@ -1083,7 +1083,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         )
 
         # Securely create socket
-        log.warn("Starting the Salt Puller on %s", pull_uri)
+        log.debug("Starting the Salt Puller on %s", pull_uri)
         # with salt.utils.files.set_umask(0o177):
         io_loop.create_task(pull_sock.start())
         io_loop.create_task(self.pub_server.connect())

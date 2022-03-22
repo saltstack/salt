@@ -2713,7 +2713,7 @@ class Minion(MinionBase):
                     tries=self.opts["return_retry_tries"],
                 )
             else:
-                log.debug(
+                log.trace(
                     "Master req not for this master %r!=%r",
                     tgt_master,
                     self.opts["master"],

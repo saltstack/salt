@@ -568,7 +568,6 @@ class SaltEvent:
                 try:
                     raw = self.subscriber.read(timeout=wait)
                 except TypeError:
-                    log.error("WTF %r", self.subscriber.read)
                     raise
                 if raw is None:
                     break

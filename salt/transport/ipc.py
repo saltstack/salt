@@ -48,13 +48,13 @@ class IPCServer:
     async def handle_stream(self, reader, writer):
         socket = writer.get_extra_info("socket")
         if socket is not None:
-            log.debug("%r handle connection from %r", self, socket)
+            log.trace("%r handle connection from %r", self, socket)
         else:
-            log.debug("%r Socket is %r", self, socket)
+            log.trace("%r Socket is %r", self, socket)
 
         def write_callback(header):
             async def callback(msg, header=None):
-                log.debug("IPC server write to stream: %r", msg)
+                log.trace("IPC server write to stream: %r", msg)
                 if header and header.get("mid"):
                     pack = salt.transport.frame.frame_msg_ipc(
                         msg,
@@ -83,18 +83,18 @@ class IPCServer:
                 try:
                     wire_bytes = await reader.read(1024)
                     if not wire_bytes:
-                        log.debug("%s nothing more to read", self.__class__.__name__)
+                        log.trace("%s nothing more to read", self.__class__.__name__)
                         break
                 except asyncio.IncompleteReadError as e:
                     if len(e.partial) > 0:
                         wire_bytes = e.partial
-                        log.debug(
+                        log.trace(
                             "%s process message %r", self.__class__.__name__, wire_bytes
                         )
                         await self.process_message(unpacker, wire_bytes, write_callback)
                         break
                     else:
-                        log.debug("%s reader reached EOF", self)
+                        log.trace("%s reader reached EOF", self)
                         break
                 await self.process_message(unpacker, wire_bytes, write_callback)
             except Exception as exc:  # pylint: disable=broad-except
@@ -192,7 +192,7 @@ class IPCMessageClient(IPCClient):
         """
         if not self.connected():
             await self.connect()
-        log.debug(
+        log.trace(
             "%s to %s send %r", self.__class__.__name__, self.connection_info, msg
         )
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
@@ -221,7 +221,7 @@ class IPCMessagePublisher:
     async def start(self):
         if isinstance(self.socket_path, int):
             host = "127.0.0.1"
-            log.info(
+            log.debug(
                 "%s listen on %s:%s", self.__class__.__name__, host, self.socket_path
             )
             self.server = await asyncio.start_server(
@@ -231,7 +231,7 @@ class IPCMessagePublisher:
                 reuse_address=True,
             )
         else:
-            log.info("%s listen on %s", self.__class__.__name__, self.socket_path)
+            log.debug("%s listen on %s", self.__class__.__name__, self.socket_path)
             self.server = await asyncio.start_unix_server(
                 self.handle_connection,
                 path=self.socket_path,
@@ -240,14 +240,14 @@ class IPCMessagePublisher:
     async def handle_connection(self, reader, writer):
         socket = writer.get_extra_info("socket")
         if socket is not None:
-            log.debug("%s handle connection from %r", self.__class__.__name__, socket)
+            log.trace("%s handle connection from %r", self.__class__.__name__, socket)
         else:
-            log.debug("%s Socket is %r", self.__class__.__name__, socket)
+            log.trace("%s Socket is %r", self.__class__.__name__, socket)
         self.streams.add((reader, writer))
 
     async def _write(self, writer, reader, pack):
         try:
-            log.debug("%s write %r", self.__class__.__name__, pack)
+            log.trace("%s write %r", self.__class__.__name__, pack)
             writer.write(pack)
             await writer.drain()
         except Exception as exc:  # pylint: disable=broad-except
@@ -255,7 +255,7 @@ class IPCMessagePublisher:
             self.streams.remove((reader, writer))
 
     def publish(self, msg):
-        log.debug("%s publish %r", self.__class__.__name__, msg)
+        log.trace("%s publish %r", self.__class__.__name__, msg)
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
         for reader, writer in list(self.streams):
             log.trace("%s publish to %r", self.__class__.__name__, writer)
@@ -311,7 +311,7 @@ class IPCMessageSubscriber(IPCClient):
                             self.reader.read(1024), timeout=timeout
                         )
                     if not wire_bytes:
-                        log.debug("%s Nothing more to read", self.__class__.__name__)
+                        log.trace("%s Nothing more to read", self.__class__.__name__)
                         break
                 except ConnectionResetError as e:
                     # XXX This only happens on windows?
@@ -333,7 +333,7 @@ class IPCMessageSubscriber(IPCClient):
                                 self.io_loop.call_soon(callback, framed_msg["body"])
                             except TypeError:
                                 self.io_loop.create_task(callback(framed_msg["body"]))
-                            #stop = True
+                            # stop = True
                         elif first_sync_msg:
                             ret = framed_msg["body"]
                             first_sync_msg = False
@@ -370,9 +370,8 @@ class IPCMessageSubscriber(IPCClient):
 
     async def read_async(self, callback):
         if not self.connected():
-            log.error("NOT YET CONNECTED")
+            log.trace("%r not yet connected", self)
             await self.connect()
-        log.error("NOW %r", self.connected())
         if callback in self._callback_tasks:
             task = self._callback_tasks.pop(callback)
             task.cancel()

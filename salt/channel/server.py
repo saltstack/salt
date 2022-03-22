@@ -125,7 +125,7 @@ class ReqServerChannel:
     async def handle_message(self, payload):
         try:
             payload = self._decode_payload(payload)
-            log.debug("Request server handle message %.50r", payload)
+            log.trace("Request server handle message %.50r", payload)
         except Exception as exc:  # pylint: disable=broad-except
             exc_type = type(exc).__name__
             if exc_type == "AuthenticationError":

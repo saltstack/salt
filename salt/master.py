@@ -686,7 +686,7 @@ class Master(SMaster):
                 args=(self.opts,),
                 name="EventPublisher",
             )
-            log.info("publisher started")
+            log.debug("Publisher started")
 
             if self.opts.get("reactor"):
                 if isinstance(self.opts["engines"], list):
@@ -954,7 +954,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         asyncio.set_event_loop(self.io_loop)
         self.io_loop.set_debug(True)
         for req_channel in self.req_channels:
-            log.error("Register payload handler")
+            log.trace("Register payload handler: %r", self._handle_payload)
             req_channel.post_fork(
                 self._handle_payload, io_loop=self.io_loop
             )  # TODO: cleaner? Maybe lazily?
