@@ -1448,6 +1448,8 @@ def install(
                 'version': '<new-version>',
                 'arch': '<new-arch>'}}}
     """
+    if "version" in kwargs:
+        kwargs["version"] = str(kwargs["version"])
     options = _get_options(**kwargs)
 
     if salt.utils.data.is_true(refresh):
