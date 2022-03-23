@@ -2163,6 +2163,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
         if ipv6 is False
         else socket.AF_UNSPEC
     )
+    socket_error = False
     try:
         refresh_dns()
         addrinfo = socket.getaddrinfo(addr, port, family, socket.SOCK_STREAM)
@@ -2176,7 +2177,28 @@ def dns_check(addr, port, safe=False, ipv6=None):
             ),
         )
     except OSError:
-        pass
+        socket_error = True
+
+    # If ipv6 is set to True, attempt another lookup using the IPv4 family,
+    # just in case we're attempting to lookup an IPv4 IP
+    # as an IPv6 hostname.
+    if socket_error and ipv6:
+        try:
+            refresh_dns()
+            addrinfo = socket.getaddrinfo(
+                addr, port, socket.AF_INET, socket.SOCK_STREAM
+            )
+            ip_addrs = _test_addrs(addrinfo, port)
+        except TypeError:
+            raise SaltSystemExit(
+                code=42,
+                msg=(
+                    "Attempt to resolve address '{}' failed. Invalid or unresolveable"
+                    " address".format(addr)
+                ),
+            )
+        except OSError:
+            error = True
 
     if not ip_addrs:
         err = "DNS lookup or connection check of '{}' failed.".format(addr)
