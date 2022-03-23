@@ -174,6 +174,22 @@ def test_build_schedule_item_invalid_when(sock_dir):
         ) == {"comment": comment, "result": False}
 
 
+def test_build_schedule_item_invalid_jobs_args(sock_dir):
+    """
+    Test failure if job_arg and job_kwargs are passed correctly
+    """
+    comment1 = "job_kwargs is not a dict. please correct and try again."
+    comment2 = "job_args is not a list. please correct and try again."
+    with patch.dict(schedule.__opts__, {"job1": {}}):
+        assert schedule.build_schedule_item(
+            "job1", function="test.args", job_kwargs=[{"key1": "value1"}]
+        ) == {"comment": comment1, "result": False}
+    with patch.dict(schedule.__opts__, {"job1": {}}):
+        assert schedule.build_schedule_item(
+            "job1", function="test.args", job_args={"positional"}
+        ) == {"comment": comment2, "result": False}
+
+
 # 'add' function tests: 1
 
 
