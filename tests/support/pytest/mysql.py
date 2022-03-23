@@ -93,7 +93,7 @@ def mysql_image(request, docker_client):
 
 
 @pytest.fixture(scope="module")
-def mysql_container(salt_factories, salt_call_cli, mysql_image):
+def mysql_container(salt_factories, docker_client, salt_call_cli, mysql_image):
 
     mysql_user = "root"
     mysql_passwd = "password"
