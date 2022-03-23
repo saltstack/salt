@@ -805,3 +805,111 @@ def test_job_status(sock_dir):
                     "function": "salt",
                     "seconds": 3600,
                 }
+
+
+# 'purge' function tests: 1
+@pytest.mark.slow_test
+def test_list(sock_dir, job1):
+    """
+    Test schedule.list
+    """
+    _schedule_data = {"job1": job1}
+    with patch.dict(schedule.__opts__, {"schedule": {}, "sock_dir": sock_dir}):
+        mock = MagicMock(return_value=True)
+        with patch.dict(schedule.__salt__, {"event.fire": mock}):
+            _ret_schedule_data = {
+                "function": "test.ping",
+                "seconds": 10,
+                "maxrunning": 1,
+                "name": "job1",
+                "enabled": True,
+                "jid_include": True,
+            }
+            _ret_value = {"complete": True, "schedule": {"job1": _ret_schedule_data}}
+            saved_schedule = """schedule:
+  job1: {enabled: true, function: test.ping, jid_include: true, maxrunning: 1, name: job1,
+    seconds: 10}
+"""
+
+            expected = """schedule:
+  job1:
+    enabled: true
+    function: test.ping
+    jid_include: true
+    maxrunning: 1
+    name: job1
+    saved: true
+    seconds: 10
+"""
+
+            with patch.object(SaltEvent, "get_event", return_value=_ret_value):
+                with patch("os.path.exists", MagicMock(return_value=True)), patch(
+                    "salt.utils.files.fopen", mock_open(read_data=saved_schedule)
+                ) as fopen_mock:
+                    ret = schedule.list_(offline=True)
+                    assert ret == expected
+
+    _schedule_data = {"job1": job1}
+    with patch.dict(schedule.__opts__, {"schedule": {}, "sock_dir": sock_dir}):
+        mock = MagicMock(return_value=True)
+        with patch.dict(schedule.__salt__, {"event.fire": mock}):
+            _ret_schedule_data = {
+                "function": "test.ping",
+                "seconds": 10,
+                "maxrunning": 1,
+                "name": "job1",
+                "enabled": True,
+                "jid_include": True,
+            }
+            _ret_value = {"complete": True, "schedule": {"job1": _ret_schedule_data}}
+            expected = """schedule:
+  job1:
+    enabled: true
+    function: test.ping
+    jid_include: true
+    maxrunning: 1
+    name: job1
+    saved: false
+    seconds: 10
+"""
+            with patch.object(SaltEvent, "get_event", return_value=_ret_value):
+                with patch("os.path.exists", MagicMock(return_value=True)), patch(
+                    "salt.utils.files.fopen", mock_open(read_data="")
+                ) as fopen_mock:
+                    ret = schedule.list_()
+                    assert ret == expected
+
+    _schedule_data = {"job1": job1}
+    with patch.dict(schedule.__opts__, {"schedule": {}, "sock_dir": sock_dir}):
+        mock = MagicMock(return_value=True)
+        with patch.dict(schedule.__salt__, {"event.fire": mock}):
+            _ret_schedule_data = {
+                "function": "test.ping",
+                "seconds": 10,
+                "maxrunning": 1,
+                "name": "job1",
+                "enabled": True,
+                "jid_include": True,
+            }
+            _ret_value = {"complete": True, "schedule": {"job1": _ret_schedule_data}}
+            saved_schedule = """schedule:
+  job1: {enabled: true, function: test.ping, jid_include: true, maxrunning: 1, name: job1,
+    seconds: 10}
+"""
+
+            expected = """schedule:
+  job1:
+    enabled: true
+    function: test.ping
+    jid_include: true
+    maxrunning: 1
+    name: job1
+    saved: true
+    seconds: 10
+"""
+            with patch.object(SaltEvent, "get_event", return_value=_ret_value):
+                with patch("os.path.exists", MagicMock(return_value=True)), patch(
+                    "salt.utils.files.fopen", mock_open(read_data=saved_schedule)
+                ) as fopen_mock:
+                    ret = schedule.list_()
+                    assert ret == expected
