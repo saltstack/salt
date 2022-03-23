@@ -500,7 +500,7 @@ def enable(**kwargs):
                         if "enabled" in beacons and beacons["enabled"]:
                             ret["result"] = True
                             ret["comment"] = "Enabled beacons on minion."
-                        elif event_ret:
+                        elif "enabled" in beacons and not beacons["enabled"]:
                             ret["result"] = False
                             ret["comment"] = "Failed to enable beacons on minion."
                         else:
@@ -553,7 +553,7 @@ def disable(**kwargs):
                         if "enabled" in beacons and not beacons["enabled"]:
                             ret["result"] = True
                             ret["comment"] = "Disabled beacons on minion."
-                        elif event_ret:
+                        elif "enabled" in beacons and beacons["enabled"]:
                             ret["result"] = False
                             ret["comment"] = "Failed to disable beacons on minion."
                         else:
