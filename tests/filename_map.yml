@@ -193,6 +193,7 @@ salt/(client/ssh/.+|cli/ssh\.py):
 
 salt/config/*:
   - unit.test_config
+  - pytests.unit.config.test__validate_opts
 
 salt/loader/*:
   - integration.loader.test_ext_grains

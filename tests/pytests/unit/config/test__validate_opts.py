@@ -20,8 +20,8 @@ import salt.config
 )
 def test_list_types(option_value, expected):
     """
-    List type config options return True when the value is a list. All other
-    types return False
+    List and tuple type config options return True when the value is a list. All
+    other types return False
     modules_dirs is a list type config option
     """
     result = salt.config._validate_opts({"module_dirs": option_value})
@@ -43,8 +43,8 @@ def test_list_types(option_value, expected):
 )
 def test_str_types(option_value, expected):
     """
-    Str type config options return True when the value is a str. All other types
-    return False
+    Str, bool, int, float, and none type config options return True when the
+    value is a str. All other types return False
     user is a str type config option
     """
     result = salt.config._validate_opts({"user": option_value})
@@ -135,8 +135,8 @@ def test_int_types(option_value, expected):
 )
 def test_float_types(option_value, expected):
     """
-    Float type config options return True when the value is a float. All other
-    types return False
+    Float and int type config options return True when the value is a float. All
+    other types return False
     ssh_timeout is a float type config option
     """
     result = salt.config._validate_opts({"ssh_timeout": option_value})
@@ -158,8 +158,9 @@ def test_float_types(option_value, expected):
 )
 def test_none_str_types(option_value, expected):
     """
-    Some config settings have two types, None and str which should evaluate as
-    True. All others should return False.
+    Some config settings have two types, None and str. In that case str, bool,
+    int, float, and None type options should evaluate as True. All others should
+    return False.
     saltenv is a None, str type config option
     """
     result = salt.config._validate_opts({"saltenv": option_value})
@@ -181,7 +182,7 @@ def test_none_str_types(option_value, expected):
 )
 def test_none_int_types(option_value, expected):
     """
-    Some config settings have two types, None and int which should evaluate as
+    Some config settings have two types, None and int, which should evaluate as
     True. All others should return False.
     retry_dns_count is a None, int type config option
     """
@@ -227,8 +228,9 @@ def test_none_bool_types(option_value, expected):
 )
 def test_str_list_types(option_value, expected):
     """
-    Some config settings have two types, str and list which should evaluate as
-    True. All others should return False.
+    Some config settings have two types, str and list. In that case, list,
+    tuple, str, bool, int, float, and None should evaluate as True. All others
+    should return False.
     master is a str, list type config option
     """
     result = salt.config._validate_opts({"master": option_value})
@@ -250,8 +252,9 @@ def test_str_list_types(option_value, expected):
 )
 def test_str_int_types(option_value, expected):
     """
-    Some config settings have two types, str and int which should evaluate as
-    True. All others should return False.
+    Some config settings have two types, str and int. In that case, str, bool,
+    int, float, and None should evaluate as True. All others should return
+    False.
     master_port is a str, int type config option
     """
     result = salt.config._validate_opts({"master_port": option_value})
@@ -273,8 +276,9 @@ def test_str_int_types(option_value, expected):
 )
 def test_str_dict_types(option_value, expected):
     """
-    Some config settings have two types, str and dict which should evaluate as
-    True. All others should return False.
+    Some config settings have two types, str and dict. In that case, dict, str,
+    bool, int, float, and None should evaluate as True. All others should return
+    False.
     id_function is a str, dict type config option
     """
     result = salt.config._validate_opts({"id_function": option_value})
@@ -296,8 +300,9 @@ def test_str_dict_types(option_value, expected):
 )
 def test_str_tuple_types(option_value, expected):
     """
-    Some config settings have two types, str and tuple which should evaluate as
-    True. All others should return False.
+    Some config settings have two types, str and tuple. In that case, list,
+    tuple, str, bool, int, float, and None should evaluate as True. All others
+    should return False.
     log_fmt_logfile is a str, tuple type config option
     """
     result = salt.config._validate_opts({"log_fmt_logfile": option_value})
@@ -319,8 +324,9 @@ def test_str_tuple_types(option_value, expected):
 )
 def test_str_bool_types(option_value, expected):
     """
-    Some config settings have two types, str and bool which should evaluate as
-    True. All others should return False.
+    Some config settings have two types, str and bool. In that case, str, bool,
+    int, float, and None should evaluate as True. All others should return
+    False.
     update_url is a str, bool type config option
     """
     result = salt.config._validate_opts({"update_url": option_value})
@@ -365,8 +371,8 @@ def test_dict_bool_types(option_value, expected):
 )
 def test_dict_list_types(option_value, expected):
     """
-    Some config settings have two types, dict and list which should evaluate as
-    True. All others should return False.
+    Some config settings have two types, dict and list. In that case, list,
+    tuple, and dict should evaluate as True. All others should return False.
     nodegroups is a dict, list type config option
     """
     result = salt.config._validate_opts({"nodegroups": option_value})
