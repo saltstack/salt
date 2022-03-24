@@ -1875,7 +1875,10 @@ def _validate_opts(opts):
                             if isinstance(val, tuple(nf_types[nf_type])):
                                 errors.append(
                                     err.format(
-                                        key, val, type(val).__name__, VALID_OPTS[key].__name__
+                                        key,
+                                        val,
+                                        type(val).__name__,
+                                        VALID_OPTS[key].__name__
                                     )
                                 )
                 except (TypeError, ValueError):
@@ -1911,7 +1914,10 @@ def _validate_opts(opts):
                 if True not in valid:
                     errors.append(
                         err.format(
-                            key, val, type(val).__name__, format_multi_opt(VALID_OPTS[key])
+                            key,
+                            val,
+                            type(val).__name__,
+                            format_multi_opt(VALID_OPTS[key])
                         )
                     )
 
