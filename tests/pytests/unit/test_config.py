@@ -20,3 +20,10 @@ def test_call_id_function(tmp_path):
     }
     ret = salt.config.call_id_function(opts)
     assert ret == "meh"
+
+
+def test__validate_opts_list():
+    opts = {
+        "module_dirs": ["valid type list"]
+    }
+    assert salt.config._validate_opts(opts)
