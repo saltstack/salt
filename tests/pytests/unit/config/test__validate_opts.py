@@ -16,7 +16,7 @@ import salt.config
         (1, False),  # int
         (0.123, False),  # float
         (None, False),  # None
-    ]
+    ],
 )
 def test_list_types(option_value, expected):
     """
@@ -39,7 +39,7 @@ def test_list_types(option_value, expected):
         (1, True),  # int
         (0.123, True),  # float
         (None, True),  # None
-    ]
+    ],
 )
 def test_str_types(option_value, expected):
     """
@@ -62,7 +62,7 @@ def test_str_types(option_value, expected):
         (1, False),  # int
         (0.123, False),  # float
         (None, False),  # None
-    ]
+    ],
 )
 def test_dict_types(option_value, expected):
     """
@@ -85,7 +85,7 @@ def test_dict_types(option_value, expected):
         (1, False),  # int
         (0.123, False),  # float
         (None, False),  # None
-    ]
+    ],
 )
 def test_bool_types(option_value, expected):
     """
@@ -108,7 +108,7 @@ def test_bool_types(option_value, expected):
         (1, True),  # int
         (0.123, False),  # float
         (None, False),  # None
-    ]
+    ],
 )
 def test_int_types(option_value, expected):
     """
@@ -131,7 +131,7 @@ def test_int_types(option_value, expected):
         (1, True),  # int
         (0.123, True),  # float
         (None, False),  # None
-    ]
+    ],
 )
 def test_float_types(option_value, expected):
     """
@@ -154,7 +154,7 @@ def test_float_types(option_value, expected):
         (1, True),  # int
         (0.123, True),  # float
         (None, True),  # None
-    ]
+    ],
 )
 def test_none_str_types(option_value, expected):
     """
@@ -177,7 +177,7 @@ def test_none_str_types(option_value, expected):
         (1, True),  # int
         (0.123, False),  # float
         (None, True),  # None
-    ]
+    ],
 )
 def test_none_int_types(option_value, expected):
     """
@@ -200,7 +200,7 @@ def test_none_int_types(option_value, expected):
         (1, False),  # int
         (0.123, False),  # float
         (None, True),  # None
-    ]
+    ],
 )
 def test_none_bool_types(option_value, expected):
     """
@@ -223,7 +223,7 @@ def test_none_bool_types(option_value, expected):
         (1, True),  # int
         (0.123, True),  # float
         (None, True),  # None
-    ]
+    ],
 )
 def test_str_list_types(option_value, expected):
     """
@@ -246,7 +246,7 @@ def test_str_list_types(option_value, expected):
         (1, True),  # int
         (0.123, True),  # float
         (None, True),  # None
-    ]
+    ],
 )
 def test_str_int_types(option_value, expected):
     """
@@ -269,7 +269,7 @@ def test_str_int_types(option_value, expected):
         (1, True),  # int
         (0.123, True),  # float
         (None, True),  # None
-    ]
+    ],
 )
 def test_str_dict_types(option_value, expected):
     """
@@ -292,7 +292,7 @@ def test_str_dict_types(option_value, expected):
         (1, True),  # int
         (0.123, True),  # float
         (None, True),  # None
-    ]
+    ],
 )
 def test_str_tuple_types(option_value, expected):
     """
@@ -315,7 +315,7 @@ def test_str_tuple_types(option_value, expected):
         (1, True),  # int
         (0.123, True),  # float
         (None, True),  # None
-    ]
+    ],
 )
 def test_str_bool_types(option_value, expected):
     """
@@ -338,7 +338,7 @@ def test_str_bool_types(option_value, expected):
         (1, False),  # int
         (0.123, False),  # float
         (None, False),  # None
-    ]
+    ],
 )
 def test_dict_bool_types(option_value, expected):
     """
@@ -361,7 +361,7 @@ def test_dict_bool_types(option_value, expected):
         (1, False),  # int
         (0.123, False),  # float
         (None, False),  # None
-    ]
+    ],
 )
 def test_dict_list_types(option_value, expected):
     """
@@ -384,7 +384,7 @@ def test_dict_list_types(option_value, expected):
         (1, False),  # int
         (0.123, False),  # float
         (None, True),  # None
-    ]
+    ],
 )
 def test_dict_bool_none_types(option_value, expected):
     """
