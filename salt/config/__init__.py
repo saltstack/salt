@@ -1878,7 +1878,7 @@ def _validate_opts(opts):
                                         key,
                                         val,
                                         type(val).__name__,
-                                        VALID_OPTS[key].__name__
+                                        VALID_OPTS[key].__name__,
                                     )
                                 )
                 except (TypeError, ValueError):
@@ -1917,7 +1917,7 @@ def _validate_opts(opts):
                             key,
                             val,
                             type(val).__name__,
-                            format_multi_opt(VALID_OPTS[key])
+                            format_multi_opt(VALID_OPTS[key]),
                         )
                     )
 
