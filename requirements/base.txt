@@ -1,4 +1,4 @@
-Jinja2
+Jinja2<3.1
 msgpack-python > 0.3
 PyYAML
 MarkupSafe
