@@ -763,7 +763,7 @@ python-dateutil==2.8.1
     #   vcert
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
-python-gnupg==0.4.4
+python-gnupg==0.4.8
     # via -r requirements/static/pkg/linux.in
 python-jose[cryptography]==3.2.0
     # via moto
