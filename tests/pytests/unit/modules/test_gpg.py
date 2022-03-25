@@ -4,8 +4,10 @@
 """
 
 import datetime
+import multiprocessing
 import shutil
 import subprocess
+import tempfile
 import time
 import types
 
@@ -20,6 +22,29 @@ pytest.importorskip("gnupg")
 pytestmark = [
     pytest.mark.skip_unless_on_linux,
 ]
+
+
+def generate_entropy(running_event):
+    sha256sum = shutil.which("sha256sum")
+    while running_event.is_set():
+        subprocess.run(
+            [shutil.which("ls"), "-R", tempfile.gettempdir()],
+            check=False,
+            shell=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        if sha256sum:
+            if not running_event.is_set():
+                break
+            subprocess.run(
+                [sha256sum, __file__],
+                check=False,
+                shell=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
 
 GPG_TEST_KEY_PASSPHRASE = "testkeypassphrase"
 GPG_TEST_KEY_ID = "7416F045"
@@ -150,6 +175,19 @@ OZV2Hg+93dg3Wi6g/JW4OuTKWKuHRqpRB1J4i4lO
 =WRTN
 -----END PGP PRIVATE KEY BLOCK-----
 """
+
+
+@pytest.fixture(scope="module", autouse=True)
+def entropy_generation():
+    running_event = multiprocessing.Event()
+    proc = multiprocessing.Process(target=generate_entropy, args=(running_event,))
+    running_event.set()
+    proc.start()
+    try:
+        yield
+    finally:
+        running_event.clear()
+        proc.join()
 
 
 @pytest.fixture
