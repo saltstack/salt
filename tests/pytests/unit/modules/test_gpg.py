@@ -4,9 +4,12 @@
 """
 
 import datetime
+import shutil
+import subprocess
 import time
 import types
 
+import psutil
 import pytest
 import salt.modules.gpg as gpg
 from salt.exceptions import SaltInvocationError
@@ -157,7 +160,38 @@ def gpghome(tmp_path):
     pub.write_text(GPG_TEST_PUB_KEY)
     priv = root / "gpgfile.priv"
     priv.write_text(GPG_TEST_PRIV_KEY)
-    return types.SimpleNamespace(path=root, pub=pub, priv=priv)
+    try:
+        yield types.SimpleNamespace(path=root, pub=pub, priv=priv)
+    finally:
+        # Make sure we don't leave any gpg-agent's running behind
+        gpg_connect_agent = shutil.which("gpg-connect-agent")
+        if gpg_connect_agent:
+            gnupghome = root / ".gnupg"
+            if not gnupghome.is_dir():
+                gnupghome = root
+            try:
+                subprocess.run(
+                    [gpg_connect_agent, "killagent", "/bye"],
+                    env={"GNUPGHOME": str(gnupghome)},
+                    shell=False,
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            except subprocess.CalledProcessError:
+                # This is likely CentOS 7 or Amazon Linux 2
+                pass
+
+        # If the above errored or was not enough, as a last resort, let's check
+        # the running processes.
+        for proc in psutil.process_iter():
+            try:
+                if "gpg-agent" in proc.name():
+                    for arg in proc.cmdline():
+                        if str(root) in arg:
+                            proc.terminate()
+            except Exception:  # pylint: disable=broad-except
+                pass
 
 
 @pytest.fixture
