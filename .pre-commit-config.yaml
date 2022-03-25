@@ -1310,11 +1310,11 @@ repos:
         args:
           - docs.check
         additional_dependencies:
-          - blessings
-          - pyyaml
-          - distro
-          - jinja2
-          - msgpack
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1327,11 +1327,11 @@ repos:
         args:
           - filemap.check
         additional_dependencies:
-          - blessings
-          - pyyaml
-          - distro
-          - jinja2
-          - msgpack
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1348,11 +1348,11 @@ repos:
         args:
           - loader.check-virtual
         additional_dependencies:
-          - blessings
-          - pyyaml
-          - distro
-          - jinja2
-          - msgpack
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1369,11 +1369,11 @@ repos:
         args:
           - docstrings.check
         additional_dependencies:
-          - blessings
-          - pyyaml
-          - distro
-          - jinja2
-          - msgpack
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1392,11 +1392,11 @@ repos:
           - docstrings.check
           - --error-on-known-failures
         additional_dependencies:
-          - blessings
-          - pyyaml
-          - distro
-          - jinja2
-          - msgpack
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
 
   - repo: https://github.com/saltstack/mirrors-nox
     rev: v2020.8.22
