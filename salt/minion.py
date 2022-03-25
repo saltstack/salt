@@ -1042,7 +1042,6 @@ class MinionManager(MinionBase):
         self.jid_queue = []
 
         self.io_loop = asyncio.get_event_loop()
-        self.io_loop.set_debug(False)
         self.process_manager = ProcessManager(name="MultiMinionProcessManager")
         self.io_loop.create_task(
             self.process_manager.async_run()
@@ -1269,7 +1268,6 @@ class Minion(MinionBase):
 
         if io_loop is None:
             self.io_loop = asyncio.get_event_loop()
-            self.io_loop.set_debug(False)
         else:
             self.io_loop = io_loop
 
@@ -3438,7 +3436,6 @@ class SyndicManager(MinionBase):
 
         if io_loop is None:
             self.io_loop = asyncio.get_event_loop()
-            self.io_loop.set_debug(False)
         else:
             self.io_loop = io_loop
 

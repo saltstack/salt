@@ -1428,3 +1428,14 @@ def ssl_webserver(integration_files_dir, scope="module"):
 
 
 # <---- Custom Fixtures ----------------------------------------------------------------------------------------------
+import tracemalloc
+
+def pytest_sessionstart():
+    tracemalloc.start()
+
+def pytest_sessionfinish():
+    snapshot = tracemalloc.take_snapshot()
+    top_stats = snapshot.statistics('lineno')
+    for stat in top_stats[:50]:
+        print(stat)
+

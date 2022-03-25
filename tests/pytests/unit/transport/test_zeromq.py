@@ -217,7 +217,6 @@ async def test_zeromq_async_pub_channel_filtering_decode_message(
 import zmq
 
 async def test_zeromq_req_channel(temp_salt_master, temp_salt_minion, event_loop):
-    event_loop.set_debug(False)
 
     async def monitorclient(server_url="tcp://127.0.0.1:9999"):
         try:

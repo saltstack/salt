@@ -189,7 +189,7 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
         """
         # This test fails if any modules outside of salt emit a log record
         # because they won't have a jid in the logger's context.
-        log_format = "[%(levelname)-8s] %(jid)s %(message)s"
+        log_format = "[%(levelname)-8s] %(message)s"
         self.handler = TstSuiteLoggingHandler(format=log_format, level=logging.DEBUG)
         ret_code_err = "failed with return code: 1"
         with patch_loglevel("asyncio", logging.CRITICAL):

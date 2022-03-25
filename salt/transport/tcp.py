@@ -1049,7 +1049,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         """
         io_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(io_loop)
-        io_loop.set_debug(False)
 
         # Spin up the publisher
         self.pub_server = pub_server = PubServer(

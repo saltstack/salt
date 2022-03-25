@@ -952,7 +952,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         # New event loop because we should be in a new process.
         self.io_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.io_loop)
-        self.io_loop.set_debug(False)
         for req_channel in self.req_channels:
             log.trace("Register payload handler: %r", self._handle_payload)
             req_channel.post_fork(
