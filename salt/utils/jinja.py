@@ -36,10 +36,10 @@ from salt.utils.odict import OrderedDict
 from salt.utils.versions import LooseVersion
 
 try:
-    from jinja2 import Markup
-except ImportError:
-    # Markup moved to markupsafe in jinja>= 3.1
     from markupsafe import Markup
+except ImportError:
+    # jinja < 3.1
+    from jinja2 import Markup
 
 log = logging.getLogger(__name__)
 
@@ -713,9 +713,9 @@ def method_call(obj, f_name, *f_args, **f_kwargs):
     return getattr(obj, f_name, lambda *args, **kwargs: None)(*f_args, **f_kwargs)
 
 
-if jinja2.__version__ < "3.0.0":
+try:
     contextfunction = jinja2.contextfunction
-else:
+except AttributeError:
     contextfunction = jinja2.pass_context
 
 
