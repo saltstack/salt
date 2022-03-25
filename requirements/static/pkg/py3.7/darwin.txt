@@ -82,7 +82,7 @@ pyopenssl==19.0.0
     # via -r requirements/darwin.txt
 python-dateutil==2.8.0
     # via -r requirements/darwin.txt
-python-gnupg==0.4.4
+python-gnupg==0.4.8
     # via -r requirements/darwin.txt
 pytz==2021.1
     # via tempora
