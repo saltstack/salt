@@ -3005,6 +3005,8 @@ class State:
                     self.pre[tag]["result"] = None
             else:
                 depth += 1
+                # even this depth is being generous. This shouldn't exceed 1 no
+                # matter how the loops are happening
                 if depth >= 20:
                     log.error("Recursive requisite found")
                     running[tag] = {
@@ -3014,8 +3016,6 @@ class State:
                         "__run_num__": self.__run_num,
                         "__sls__": low["__sls__"],
                     }
-                    self.__run_num += 1
-                    return running
                 else:
                     running = self.call_chunk(low, running, chunks, depth)
             if self.check_failhard(chunk, running):
