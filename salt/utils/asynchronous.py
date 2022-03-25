@@ -163,7 +163,7 @@ class AIOSyncWrapper:
         debug=True,
     ):
         self.io_loop = asyncio.new_event_loop()
-        self.io_loop.set_debug(debug)
+        self.io_loop.set_debug(False)
         if args is None:
             args = []
         if kwargs is None:
