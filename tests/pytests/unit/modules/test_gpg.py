@@ -4,10 +4,10 @@
 """
 
 import datetime
-import multiprocessing
+import logging
+import pathlib
 import shutil
 import subprocess
-import tempfile
 import time
 import types
 
@@ -23,27 +23,7 @@ pytestmark = [
     pytest.mark.skip_unless_on_linux,
 ]
 
-
-def generate_entropy(running_event):
-    sha256sum = shutil.which("sha256sum")
-    while running_event.is_set():
-        subprocess.run(
-            [shutil.which("ls"), "-R", tempfile.gettempdir()],
-            check=False,
-            shell=False,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        if sha256sum:
-            if not running_event.is_set():
-                break
-            subprocess.run(
-                [sha256sum, __file__],
-                check=False,
-                shell=False,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
+log = logging.getLogger(__name__)
 
 
 GPG_TEST_KEY_PASSPHRASE = "testkeypassphrase"
@@ -177,17 +157,62 @@ OZV2Hg+93dg3Wi6g/JW4OuTKWKuHRqpRB1J4i4lO
 """
 
 
-@pytest.fixture(scope="module", autouse=True)
-def entropy_generation():
-    running_event = multiprocessing.Event()
-    proc = multiprocessing.Process(target=generate_entropy, args=(running_event,))
-    running_event.set()
-    proc.start()
-    try:
-        yield
-    finally:
-        running_event.clear()
-        proc.join()
+@pytest.fixture(autouse=True)
+def entropy_generation(tmp_path):
+    max_time = 5 * 60  # Take at most 5 minutes to generate enough entropy
+    minimum_entropy = 1500
+    kernel_entropy_file = pathlib.Path("/proc/sys/kernel/random/entropy_avail")
+    if kernel_entropy_file.exists():
+        available_entropy = int(kernel_entropy_file.read_text().strip())
+        log.critical("Available Entropy: %s", available_entropy)
+        if available_entropy >= minimum_entropy:
+            return
+        rngd = shutil.which("rngd")
+        openssl = shutil.which("openssl")
+        timeout = time.time() + max_time
+        if rngd:
+            log.info("Using rngd to generate entropy")
+            while available_entropy < minimum_entropy:
+                if time.time() >= timeout:
+                    pytest.skip(
+                        "Skipping test as generating entropy took more than 5 minutes. "
+                        "Current entropy value {}".format(available_entropy)
+                    )
+                subprocess.run([rngd, "-r", "/dev/urandom"], shell=False, check=True)
+                available_entropy = int(kernel_entropy_file.read_text().strip())
+                log.critical("Available Entropy: %s", available_entropy)
+        elif openssl:
+            log.info("Using openssl to generate entropy")
+            target_file = tmp_path / "sample.txt"
+            while available_entropy < minimum_entropy:
+                if time.time() >= timeout:
+                    pytest.skip(
+                        "Skipping test as generating entropy took more than 5 minutes. "
+                        "Current entropy value {}".format(available_entropy)
+                    )
+                subprocess.run(
+                    [
+                        "openssl",
+                        "rand",
+                        "-out",
+                        str(tmp_path / "sample.txt"),
+                        "-base64",
+                        str(int(2 ** 30 * 3 / 4)),  # 1GB
+                    ],
+                    shell=False,
+                    check=True,
+                )
+                target_file.unlink()
+                available_entropy = int(kernel_entropy_file.read_text().strip())
+                log.critical("Available Entropy: %s", available_entropy)
+        else:
+            pytest.skip(
+                "Skipping test as there's not enough entropy({}) to continue".format(
+                    available_entropy
+                )
+            )
+    else:
+        log.info("The '%s' file is not avilable", kernel_entropy_file)
 
 
 @pytest.fixture
