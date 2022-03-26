@@ -194,5 +194,6 @@ def _compare_changes(old, new, output_style="yaml"):
 
     diffout = difflib.unified_diff(old, new, fromfile="before", tofile="after")
     diffclean = "\n".join([x.replace("\n", "") for x in diffout])
-    log.debug(f"resconf_diff: {diffclean}")
+    log.debug("resconf_diff:")
+    log.debug(diffclean)
     return diffclean
