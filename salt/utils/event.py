@@ -1152,7 +1152,6 @@ class AsyncEventPublisher:
         Get something from epull, publish it out epub, and return the package (or None)
         """
         try:
-            log.error("Publisher got package %r", package)
             self.publisher.publish(package)
             return package
         # Add an extra fallback in case a forked process leeks through

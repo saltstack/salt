@@ -327,13 +327,7 @@ class IPCMessageSubscriber(IPCClient):
                     first_sync_msg = True
                     for framed_msg in self.unpacker:
                         if callback:
-                            # Try to run the callback as a normal function
-                            # first, if it fails, run it as a coroutine.
-                            try:
-                                self.io_loop.call_soon(callback, framed_msg["body"])
-                            except TypeError:
-                                self.io_loop.create_task(callback(framed_msg["body"]))
-                            # stop = True
+                            await callback(framed_msg["body"])
                         elif first_sync_msg:
                             ret = framed_msg["body"]
                             first_sync_msg = False
