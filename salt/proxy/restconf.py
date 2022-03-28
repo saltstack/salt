@@ -170,7 +170,7 @@ def connection_test():
     log.debug("RESTCONF proxy connection_test() called...")
     response = request("restconf/yang-library-version", method="GET", dict_payload=None)
 
-    if "ietf-restconf:yang-library-version" in str(response):
+    if "yang-library-version" in str(response):
         return True, response
     else:
         return False, response
@@ -228,7 +228,7 @@ def request(path, method="GET", dict_payload=None):
         username=restconf_device["conn_args"]["username"],
         password=restconf_device["conn_args"]["password"],
         header_list=[
-            "Accept: application/yang-data+json",
+            "Accept: application/yang-data+json,application/yang.data+json",
             "Content-Type: application/yang-data+json",
         ],
     )
