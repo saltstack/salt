@@ -83,11 +83,11 @@ def test_if_proxy_def_connectiontest_passes_correctly(patch_conn_args, fake_quer
     fake_query.return_value = """{'body': '{\n    "ietf-restconf:yang-library-version": "2016-06-21"\n}', 'status': 200, 'dict': {'ietf-restconf:yang-library-version': '2016-06-21'}}"""
     result = restconf.connection_test()
     assert result[0] is True
-    assert "ietf-restconf:yang-library-version" in result[1]
+    assert "yang-library-version" in result[1]
 
 
 def test_if_proxy_def_connectiontest_fails_correctly(patch_conn_args, fake_query):
     fake_query.return_value = """{'body': 'fnord', 'status': 200 }"""
     result = restconf.connection_test()
     assert result[0] is False
-    assert "ietf-restconf:yang-library-version" not in result[1]
+    assert "yang-library-version" not in result[1]
