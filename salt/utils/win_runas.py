@@ -49,16 +49,6 @@ def __virtual__():
     return "win_runas"
 
 
-def split_username(username):
-    # TODO: Is there a windows api for this?
-    domain = "."
-    if "@" in username:
-        username, domain = username.split("@")
-    if "\\" in username:
-        domain, username = username.split("\\")
-    return username, domain
-
-
 def create_env(user_token, inherit, timeout=1):
     """
     CreateEnvironmentBlock might fail when we close a login session and then
@@ -91,9 +81,8 @@ def runas(cmdLine, username, password=None, cwd=None):
     account provided.
     """
     # Validate the domain and sid exist for the username
-    username, domain = split_username(username)
     try:
-        _, domain, _ = win32security.LookupAccountName(domain, username)
+        _, domain, _ = win32security.LookupAccountName(None, username)
     except pywintypes.error as exc:
         message = win32api.FormatMessage(exc.winerror).rstrip("\n")
         raise CommandExecutionError(message)
@@ -255,9 +244,8 @@ def runas_unpriv(cmd, username, password, cwd=None):
     Runas that works for non-privileged users
     """
     # Validate the domain and sid exist for the username
-    username, domain = split_username(username)
     try:
-        _, domain, _ = win32security.LookupAccountName(domain, username)
+        _, domain, _ = win32security.LookupAccountName(None, username)
     except pywintypes.error as exc:
         message = win32api.FormatMessage(exc.winerror).rstrip("\n")
         raise CommandExecutionError(message)
