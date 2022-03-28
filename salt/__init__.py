@@ -134,3 +134,7 @@ del __define_global_system_encoding_variable__
 
 # Import Salt's logging machinery
 import salt._logging.impl  # isort:skip  pylint: disable=unused-import
+
+# Do any nessessary patching when salt is running from a tiamat package
+# This code is temporary and will exist until we can handle this on salt-pkg
+import salt.utils.tiamatpkg  # isort:skip  pylint: disable=unused-import
