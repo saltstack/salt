@@ -285,6 +285,10 @@ salt/(minion\.py|channel/.+|transport/.+):
 tests/support/mock.py:
   - unit.test_mock
 
+tests/support/pytest/mysql.py:
+  - pytests.integration.states.test_mysql
+  - pytests.integration.modules.test_mysql
+
 tests/pytests/scenarios/multimaster:
   - pytests.scenarios.multimaster.test_multimaster
   - pytests.scenarios.multimaster.test_offline_master
