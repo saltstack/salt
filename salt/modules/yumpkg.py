@@ -366,7 +366,7 @@ def _get_yum_config(**kwargs):
         "reposdir": ["/etc/yum/repos.d", "/etc/yum.repos.d"],
     }
 
-    strict_parser = kwargs.get("strict_config", False)
+    strict_parser = kwargs.get("strict_config", True)
     if HAS_YUM:
         try:
             yb = yum.YumBase()
@@ -2771,7 +2771,7 @@ def list_repos(basedir=None, **kwargs):
     Lists all repos in <basedir> (default: all dirs in `reposdir` yum option).
 
     Strict parsing of configuration files is the default, this can be disabled
-    using the  ``strict_config`` keyword argument
+    using the  ``strict_config`` keyword argument set to False
 
     CLI Example:
 
@@ -2840,7 +2840,7 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
     configuration, the file itself will be deleted.
 
     Strict parsing of configuration files is the default, this can be disabled
-    using the  ``strict_config`` keyword argument
+    using the  ``strict_config`` keyword argument set to False
 
     CLI Examples:
 
@@ -2927,7 +2927,7 @@ def mod_repo(repo, basedir=None, **kwargs):
     baseurl can only be deleted if a mirrorlist is specified (or vice versa).
 
     Strict parsing of configuration files is the default, this can be disabled
-    using the  ``strict_config`` keyword argument
+    using the  ``strict_config`` keyword argument set to False
 
     CLI Examples:
 
@@ -3087,7 +3087,7 @@ def _parse_repo_file(filename, **kwargs):
     """
     Turn a single repo file into a dict
     """
-    strict_parser = kwargs.get("strict_config", False)
+    strict_parser = kwargs.get("strict_config", True)
     parsed = configparser.ConfigParser(strict=strict_parser)
     config = {}
 
