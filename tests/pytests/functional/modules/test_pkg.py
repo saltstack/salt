@@ -525,3 +525,13 @@ def test_list_repos_duplicate_entries(grains, modules):
     with pytest.raises(configparser.DuplicateOptionError) as exc_info:
         result = modules.pkg.list_repos()
     assert "{}".format(exc_info.value) == expected
+
+    # leave yum.com in reasonable state
+    with salt.utils.files.fpopen(cfg_file, "w", mode=0o644) as fp_:
+        fp_.write("[main]\n")
+        fp_.write("gpgcheck=1\n")
+        fp_.write("installonly_limit=3\n")
+        fp_.write("clean_requirements_on_remove=True\n")
+        fp_.write("best=True\n")
+        fp_.write("skip_if_unavailable=False\n")
+        fp_.write("http_caching=True\n")
