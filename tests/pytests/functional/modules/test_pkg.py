@@ -198,6 +198,10 @@ def test_owner(modules):
 
 
 # Similar to pkg.owner, but for FreeBSD's pkgng
+@pytest.mark.skipif(
+    not salt.utils.platform.is_freebsd(),
+    reason="test for new package manager for FreeBSD",
+)
 @pytest.mark.requires_salt_modules("pkg.which")
 def test_which(modules):
     """
@@ -495,26 +499,29 @@ def test_list_repos_duplicate_entries(grains, modules):
     if grains["os_family"] != "RedHat":
         pytest.skip("Only runs on RedHat.")
 
-    ret = modules.pkg.list_repos()
-    log.debug(f"DGM first try ret '{ret}'")
+    # write valid config with duplicates entries
+    cfg_file = "/etc/yum.conf"
+    with salt.utils.files.fpopen(cfg_file, "w", mode=0o644) as fp_:
+        fp_.write("[main]\n")
+        fp_.write("gpgcheck=1\n")
+        fp_.write("installonly_limit=3\n")
+        fp_.write("clean_requirements_on_remove=True\n")
+        fp_.write("best=True\n")
+        fp_.write("skip_if_unavailable=False\n")
+        fp_.write("http_caching=True\n")
+        fp_.write("http_caching=True\n")
+
+    ret = modules.pkg.list_repos(strict_config=False)
     assert ret != []
     assert isinstance(ret, dict) is True
 
-    try:
-        # write config with duplicates entries
-        cfg_file = "/etc/yum.conf"
-        with salt.utils.files.fpopen(cfg_file, "w+", mode=0o644) as fp_:
-            fp_.write("http_caching=True\n")
-            fp_.write("http_caching=True\n")
+    # test explicitly strict_config
+    expected = "While reading from '/etc/yum.conf' [line  8]: option 'http_caching' in section 'main' already exists"
+    with pytest.raises(configparser.DuplicateOptionError) as exc_info:
+        result = modules.pkg.list_repos(strict_config=True)
+    assert "{}".format(exc_info.value) == expected
 
-        ret = modules.pkg.list_repos(strict_config=False)
-        log.debug(f"DGM second try ret '{ret}'")
-        assert ret != []
-        assert isinstance(ret, dict) is True
-
-    except configparser.DuplicateOptionError as exc_info:
-        log.debug(f"DGM second try exception '{exc_info}'")
-        # test failed, should not have had an exception
-        result = False
-        failure = True
-        assert result == failure
+    # test implicitly strict_config
+    with pytest.raises(configparser.DuplicateOptionError) as exc_info:
+        result = modules.pkg.list_repos()
+    assert "{}".format(exc_info.value) == expected
