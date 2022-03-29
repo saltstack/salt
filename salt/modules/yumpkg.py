@@ -346,7 +346,7 @@ def _get_options(**kwargs):
     return ret
 
 
-def _get_yum_config(**kwargs):
+def _get_yum_config(strict_parser=True):
     """
     Returns a dict representing the yum config options and values.
 
@@ -366,7 +366,6 @@ def _get_yum_config(**kwargs):
         "reposdir": ["/etc/yum/repos.d", "/etc/yum.repos.d"],
     }
 
-    strict_parser = kwargs.get("strict_config", True)
     if HAS_YUM:
         try:
             yb = yum.YumBase()
@@ -420,11 +419,11 @@ def _get_yum_config(**kwargs):
     return conf
 
 
-def _get_yum_config_value(name, **kwargs):
+def _get_yum_config_value(name, strict_config=True):
     """
     Look for a specific config variable and return its value
     """
-    conf = _get_yum_config(**kwargs)
+    conf = _get_yum_config(strict_config)
     if name in conf.keys():
         return conf.get(name)
     return None
@@ -447,7 +446,8 @@ def _normalize_basedir(basedir=None, **kwargs):
 
     # nothing specified, so use the reposdir option as the default
     if not basedir:
-        basedir = _get_yum_config_value("reposdir", **kwargs)
+        strict_config = kwargs.get("strict_config", True)
+        basedir = _get_yum_config_value("reposdir", strict_config)
 
     if not isinstance(basedir, list) or not basedir:
         raise SaltInvocationError("Could not determine any repo directories")
@@ -2976,7 +2976,6 @@ def mod_repo(repo, basedir=None, **kwargs):
     repos = {}
     basedirs = _normalize_basedir(basedir, **kwargs)
     repos = list_repos(basedirs, **kwargs)
-
     repofile = ""
     header = ""
     filerepos = {}
