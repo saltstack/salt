@@ -534,4 +534,3 @@ def test_list_repos_duplicate_entries(grains, modules):
         fp_.write("clean_requirements_on_remove=True\n")
         fp_.write("best=True\n")
         fp_.write("skip_if_unavailable=False\n")
-        fp_.write("http_caching=True\n")
