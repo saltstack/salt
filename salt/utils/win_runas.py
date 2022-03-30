@@ -49,12 +49,14 @@ def __virtual__():
     return "win_runas"
 
 
-def get_username(username):
+def split_username(username):
+    domain = "."
+    user_name = username
     if "@" in username:
-        username, _ = username.split("@")
+        user_name, domain = username.split("@")
     if "\\" in username:
-        _, username = username.split("\\")
-    return username
+        domain, user_name = username.split("\\")
+    return user_name, domain
 
 
 def create_env(user_token, inherit, timeout=1):
@@ -91,7 +93,7 @@ def runas(cmdLine, username, password=None, cwd=None):
     # Validate the domain and sid exist for the username
     try:
         _, domain, _ = win32security.LookupAccountName(None, username)
-        username = get_username(username)
+        username, _ = split_username(username)
     except pywintypes.error as exc:
         message = win32api.FormatMessage(exc.winerror).rstrip("\n")
         raise CommandExecutionError(message)
@@ -255,7 +257,7 @@ def runas_unpriv(cmd, username, password, cwd=None):
     # Validate the domain and sid exist for the username
     try:
         _, domain, _ = win32security.LookupAccountName(None, username)
-        username = get_username(username)
+        username, _ = split_username(username)
     except pywintypes.error as exc:
         message = win32api.FormatMessage(exc.winerror).rstrip("\n")
         raise CommandExecutionError(message)
