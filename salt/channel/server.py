@@ -836,7 +836,8 @@ class PubServerChannel:
                 )
 
     @salt.ext.tornado.gen.coroutine
-    def publish_payload(self, unpacked_package, *args):
+    def publish_payload(self, load, *args):
+        unpacked_package = self.wrap_payload(load)
         try:
             payload = salt.payload.loads(unpacked_package["payload"])
         except KeyError:
@@ -886,10 +887,9 @@ class PubServerChannel:
         """
         Publish "load" to minions
         """
-        payload = self.wrap_payload(load)
         log.debug(
             "Sending payload to publish daemon. jid=%s load=%s",
             load.get("jid", None),
             repr(load)[:40],
         )
-        self.transport.publish(payload)
+        self.transport.publish(load)
