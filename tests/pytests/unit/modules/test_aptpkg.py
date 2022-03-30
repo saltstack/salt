@@ -837,6 +837,50 @@ def test__skip_source():
     assert ret is False
 
 
+def test__parse_source():
+    cases = (
+        {"ok": False, "line": "", "invalid": True, "disabled": False},
+        {"ok": False, "line": "#", "invalid": True, "disabled": True},
+        {"ok": False, "line": "##", "invalid": True, "disabled": True},
+        {"ok": False, "line": "# comment", "invalid": True, "disabled": True},
+        {"ok": False, "line": "## comment", "invalid": True, "disabled": True},
+        {"ok": False, "line": "deb #", "invalid": True, "disabled": False},
+        {"ok": False, "line": "# deb #", "invalid": True, "disabled": True},
+        {"ok": False, "line": "deb [ invalid line", "invalid": True, "disabled": False},
+        {
+            "ok": True,
+            "line": "# deb http://debian.org/debian/ stretch main\n",
+            "invalid": False,
+            "disabled": True,
+        },
+        {
+            "ok": True,
+            "line": "deb http://debian.org/debian/ stretch main # comment\n",
+            "invalid": False,
+            "disabled": False,
+        },
+        {
+            "ok": True,
+            "line": "deb [trusted=yes] http://debian.org/debian/ stretch main\n",
+            "invalid": False,
+            "disabled": False,
+        },
+    )
+    with patch.dict("sys.modules", {"aptsources.sourceslist": None}):
+        import importlib
+        import salt.modules.aptpkg as _aptpkg
+
+        importlib.reload(_aptpkg)
+
+        for case in cases:
+            source = _aptpkg.SourceEntry(case["line"])
+            ok = source._parse_sources(case["line"])
+
+            assert ok is case["ok"]
+            assert source.invalid is case["invalid"]
+            assert source.disabled is case["disabled"]
+
+
 def test_normalize_name():
     """
     Test that package is normalized only when it should be
