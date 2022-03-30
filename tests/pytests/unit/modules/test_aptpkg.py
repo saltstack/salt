@@ -7,6 +7,7 @@
 
 
 import copy
+import importlib
 import logging
 import os
 import pathlib
@@ -867,18 +868,17 @@ def test__parse_source():
         },
     )
     with patch.dict("sys.modules", {"aptsources.sourceslist": None}):
-        import importlib
-        import salt.modules.aptpkg as _aptpkg
+        importlib.reload(aptpkg)
+        NoAptSourceEntry = aptpkg.SourceEntry
+    importlib.reload(aptpkg)
 
-        importlib.reload(_aptpkg)
+    for case in cases:
+        source = NoAptSourceEntry(case["line"])
+        ok = source._parse_sources(case["line"])
 
-        for case in cases:
-            source = _aptpkg.SourceEntry(case["line"])
-            ok = source._parse_sources(case["line"])
-
-            assert ok is case["ok"]
-            assert source.invalid is case["invalid"]
-            assert source.disabled is case["disabled"]
+        assert ok is case["ok"]
+        assert source.invalid is case["invalid"]
+        assert source.disabled is case["disabled"]
 
 
 def test_normalize_name():
