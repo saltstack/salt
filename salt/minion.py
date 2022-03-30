@@ -1711,6 +1711,7 @@ class Minion(MinionBase):
         Override this method if you wish to handle the decoded data
         differently.
         """
+
         # Ensure payload is unicode. Disregard failure to decode binary blobs.
         if "user" in data:
             log.info(
