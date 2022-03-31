@@ -587,7 +587,7 @@ oscrypto==1.2.0
     # via certvalidator
 packaging==19.2
     # via pytest
-paramiko==2.7.1 ; sys_platform != "win32" and sys_platform != "darwin"
+paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -r requirements/static/ci/common.in
     #   junos-eznc
@@ -756,6 +756,7 @@ six==1.16.0
     #   msrestazure
     #   ncclient
     #   packaging
+    #   paramiko
     #   pynacl
     #   pyopenssl
     #   python-dateutil

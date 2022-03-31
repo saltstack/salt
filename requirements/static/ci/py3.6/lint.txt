@@ -615,7 +615,7 @@ oscrypto==1.2.1
     # via certvalidator
 packaging==21.0
     # via ansible-core
-paramiko==2.7.2 ; sys_platform != "win32" and sys_platform != "darwin"
+paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -r requirements/static/ci/common.in
     #   junos-eznc
@@ -767,6 +767,7 @@ six==1.16.0
     #   kubernetes
     #   msrestazure
     #   ncclient
+    #   paramiko
     #   pynacl
     #   pyopenssl
     #   python-dateutil
