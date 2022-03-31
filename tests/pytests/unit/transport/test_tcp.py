@@ -4,11 +4,49 @@ import socket
 import attr
 import pytest
 import salt.exceptions
+import salt.transport.mixins.auth
 import salt.transport.tcp
 from salt.ext.tornado import concurrent, gen, ioloop
 from saltfactories.utils.ports import get_unused_localhost_port
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, PropertyMock, create_autospec, patch
 
+
+@pytest.fixture
+def fake_keys():
+    with patch("salt.crypt.AsyncAuth.get_keys", autospec=True):
+        yield
+
+
+@pytest.fixture
+def fake_crypto():
+    with patch("salt.transport.tcp.PKCS1_OAEP", autospec=True) as fake_crypto:
+        yield fake_crypto
+
+
+@pytest.fixture
+def fake_authd():
+    @salt.ext.tornado.gen.coroutine
+    def return_nothing():
+        raise salt.ext.tornado.gen.Return()
+
+    with patch(
+        "salt.crypt.AsyncAuth.authenticated", new_callable=PropertyMock
+    ) as mock_authed, patch(
+        "salt.crypt.AsyncAuth.authenticate",
+        autospec=True,
+        return_value=return_nothing(),
+    ), patch(
+        "salt.crypt.AsyncAuth.gen_token", autospec=True, return_value=42
+    ):
+        mock_authed.return_value = False
+        yield
+
+
+@pytest.fixture
+def fake_crypticle():
+    with patch("salt.crypt.Crypticle") as fake_crypticle:
+        fake_crypticle.generate_key_string.return_value = "fakey fake"
+        yield fake_crypticle
 
 @pytest.fixture
 def message_client_pool():
@@ -405,3 +443,110 @@ def test_client_reconnect_backoff(client_socket):
             client.io_loop.run_sync(client._connect)
     finally:
         client.close()
+
+
+async def test_when_async_req_channel_with_syndic_role_should_use_syndic_master_pub_file_to_verify_master_sig(
+    fake_keys, fake_crypto, fake_crypticle
+):
+    # Syndics use the minion pki dir, but they also create a syndic_master.pub
+    # file for comms with the Salt master
+    expected_pubkey_path = "/etc/salt/pki/minion/syndic_master.pub"
+    fake_crypto.new.return_value.decrypt.return_value = "decrypted_return_value"
+    mockloop = MagicMock()
+    opts = {
+        "master_uri": "tcp://127.0.0.1:4506",
+        "interface": "127.0.0.1",
+        "ret_port": 4506,
+        "ipv6": False,
+        "sock_dir": ".",
+        "pki_dir": "/etc/salt/pki/minion",
+        "id": "syndic",
+        "__role": "syndic",
+        "keysize": 4096,
+    }
+    client = salt.transport.tcp.AsyncTCPReqChannel(opts, io_loop=mockloop)
+
+    dictkey = "pillar"
+    target = "minion"
+
+    # Mock auth and message client.
+    client.auth._authenticate_future = MagicMock()
+    client.auth._authenticate_future.done.return_value = True
+    client.auth._authenticate_future.exception.return_value = None
+    client.auth._crypticle = MagicMock()
+    client.message_client = create_autospec(client.message_client)
+
+    @salt.ext.tornado.gen.coroutine
+    def mocksend(msg, timeout=60, tries=3):
+        raise salt.ext.tornado.gen.Return({"pillar": "data", "key": "value"})
+
+    client.message_client.send = mocksend
+
+    # Note the 'ver' value in 'load' does not represent the the 'version' sent
+    # in the top level of the transport's message.
+    load = {
+        "id": target,
+        "grains": {},
+        "saltenv": "base",
+        "pillarenv": "base",
+        "pillar_override": True,
+        "extra_minion_data": {},
+        "ver": "2",
+        "cmd": "_pillar",
+    }
+    fake_nonce = 42
+    with patch(
+        "salt.crypt.verify_signature", autospec=True, return_value=True
+    ) as fake_verify, patch(
+        "salt.payload.loads",
+        autospec=True,
+        return_value={"key": "value", "nonce": fake_nonce, "pillar": "data"},
+    ), patch(
+        "uuid.uuid4", autospec=True
+    ) as fake_uuid:
+        fake_uuid.return_value.hex = fake_nonce
+        ret = await client.crypted_transfer_decode_dictentry(
+            load,
+            dictkey="pillar",
+        )
+
+        assert fake_verify.mock_calls[0].args[0] == expected_pubkey_path
+
+
+async def test_mixin_should_use_correct_path_when_syndic(
+    fake_keys, fake_authd, fake_crypticle
+):
+    mockloop = MagicMock()
+    expected_pubkey_path = "/etc/salt/pki/minion/syndic_master.pub"
+    opts = {
+        "master_uri": "tcp://127.0.0.1:4506",
+        "interface": "127.0.0.1",
+        "ret_port": 4506,
+        "ipv6": False,
+        "sock_dir": ".",
+        "pki_dir": "/etc/salt/pki/minion",
+        "id": "syndic",
+        "__role": "syndic",
+        "keysize": 4096,
+        "sign_pub_messages": True,
+    }
+
+    with patch(
+        "salt.crypt.verify_signature", autospec=True, return_value=True
+    ) as fake_verify, patch(
+        "salt.utils.msgpack.loads",
+        autospec=True,
+        return_value={"enc": "aes", "load": "", "sig": "fake_signature"},
+    ):
+        client = salt.transport.tcp.AsyncTCPPubChannel(opts, io_loop=mockloop)
+        client.message_client = MagicMock()
+        client.message_client.on_recv.side_effect = lambda x: x(b"some_data")
+        await client.connect()
+        client.auth._crypticle = fake_crypticle
+
+        @client.on_recv
+        def test_recv_function(*args, **kwargs):
+            ...
+
+        await test_recv_function
+        assert fake_verify.mock_calls[0].args[0] == expected_pubkey_path
