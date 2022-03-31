@@ -2103,6 +2103,9 @@ def test_59705_version_as_accidental_float_should_become_text(
     patch_list_pkgs = patch.object(
         yumpkg, "list_pkgs", return_value={"foo": ["foo-42"]}
     )
+    patch_list_downloaded = patch(
+        "salt.module.yumpkg.list_downloaded", autospec=True, return_value={}
+    )
     patch_systemd = patch("salt.utils.systemd.has_scope", MagicMock(return_value=False))
     with patch_list_pkgs, patch_systemd, patch_yum_salt:
         yumpkg.install("foo", version=new)
