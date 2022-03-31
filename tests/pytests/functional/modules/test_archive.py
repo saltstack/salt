@@ -307,9 +307,9 @@ def test_unrar(archive, unicode_filename):
 
 @pytest.mark.skip_on_windows
 @pytest.mark.skip_if_binaries_missing("tar")
-def test_tar_unpack_no_explicit_top_level_directory_member(archive, tmp_path):
+def test_tar_list_no_explicit_top_level_directory_member(archive, tmp_path):
     rel_path = pathlib.Path("archive_top/second_level/file.txt")
-    srcfile = tmp_path / rel_path
+    srcfile = tmp_path / str(rel_path)
     srcfile.parent.mkdir(parents=True, exist_ok=True)
     srcfile.write_text("hey there")
     archive.tar(
