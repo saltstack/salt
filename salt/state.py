@@ -4022,6 +4022,10 @@ class BaseHighState:
             )
         else:
             try:
+                # Make sure SaltCacheLoader use correct fileclient
+                # Required to fix bug #60003
+                if context is None:
+                    context = {'fileclient': self.client}
                 state = compile_template(
                     fn_,
                     self.state.rend,
