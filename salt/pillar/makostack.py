@@ -44,7 +44,7 @@ MakoStack config file as shown below:
 .. code:: yaml
 
     ext_pillar:
-    - makostack: /path/to/stack.cfg
+      - makostack: /path/to/stack.cfg
 
 List of config files
 ~~~~~~~~~~~~~~~~~~~~
@@ -54,9 +54,9 @@ You can also provide a list of config files:
 .. code:: yaml
 
     ext_pillar:
-    - makostack:
-      - /path/to/infrastructure.cfg
-      - /path/to/production.cfg
+      - makostack:
+        - /path/to/infrastructure.cfg
+        - /path/to/production.cfg
 
 Select config files through grains|pillar|opts matching
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -71,16 +71,16 @@ itself:
 .. code:: yaml
 
     ext_pillar:
-    - makostack:
-        pillar:environment:
-          dev: /path/to/dev/stack.cfg
-          prod: /path/to/prod/stack.cfg
-        grains:custom:grain:
-          value:
-          - /path/to/stack1.cfg
-          - /path/to/stack2.cfg
-        opts:custom:opt:
-          value: /path/to/stack0.cfg
+      - makostack:
+          pillar:environment:
+            dev: /path/to/dev/stack.cfg
+            prod: /path/to/prod/stack.cfg
+          grains:custom:grain:
+            value:
+            - /path/to/stack1.cfg
+            - /path/to/stack2.cfg
+          opts:custom:opt:
+            value: /path/to/stack0.cfg
 
 Grafting data from files to arbitrary namespaces
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -92,8 +92,8 @@ following:
 .. code:: yaml
 
     foo:
-    - bar
-    - baz
+      - bar
+      - baz
 
 and you specified the cfg file as ``/path/to/foo.cfg:yummy:fur``, the following
 would actually end up in pillar after all merging was complete:
@@ -403,10 +403,10 @@ missing), but it MIGHT be useful to someone, somewhere so I added it...
 .. code:: yaml
 
     ext_pillar:
-    - config:
-        fail_on_parse_error: True
-        fail_on_missing_file: False
-    - makostack: /path/to/stack.cfg
+      - config:
+          fail_on_parse_error: True
+          fail_on_missing_file: False
+      - makostack: /path/to/stack.cfg
 
 This will cause MakoStack to still ignore non-existant files, but fail on
 actual parse errors inside files that do exist.  Note that False is the default
