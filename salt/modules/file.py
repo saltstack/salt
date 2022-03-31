@@ -2593,6 +2593,8 @@ def replace(
                     else r_data.splitlines(True)
                 )
                 new_file = result.splitlines(True)
+                if orig_file == new_file:
+                    has_changes = False
 
     except OSError as exc:
         raise CommandExecutionError(
