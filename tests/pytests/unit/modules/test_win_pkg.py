@@ -1,6 +1,7 @@
 """
 Tests for the win_pkg module
 """
+import time
 
 import pytest
 import salt.modules.config as config
@@ -72,6 +73,44 @@ def test_pkg__get_reg_software():
         if search in key:
             found_python = True
     assert found_python
+
+
+def test_pkg__get_reg_software_noremove():
+    search = "test_pkg_noremove"
+    key = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{}".format(search)
+    win_reg.set_value(hive="HKLM", key=key, vname="DisplayName", vdata=search)
+    win_reg.set_value(hive="HKLM", key=key, vname="DisplayVersion", vdata="1.0.0")
+    win_reg.set_value(hive="HKLM", key=key, vname="NoRemove", vtype="REG_DWORD", vdata="1")
+    try:
+        result = win_pkg._get_reg_software()
+        assert isinstance(result, dict)
+        found = False
+        search = "test_pkg"
+        for item in result:
+            if search in item:
+                found = True
+        assert found is True
+    finally:
+        win_reg.delete_key_recursive(hive="HKLM", key=key)
+        assert not win_reg.key_exists(hive="HKLM", key=key)
+
+
+def test_pkg__get_reg_software_noremove_not_present():
+    search = "test_pkg_noremove_not_present"
+    key = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{}".format(search)
+    win_reg.set_value(hive="HKLM", key=key, vname="DisplayName", vdata=search)
+    win_reg.set_value(hive="HKLM", key=key, vname="DisplayVersion", vdata="1.0.0")
+    try:
+        result = win_pkg._get_reg_software()
+        assert isinstance(result, dict)
+        found = False
+        for item in result:
+            if search in item:
+                found = True
+        assert found is False
+    finally:
+        win_reg.delete_key_recursive(hive="HKLM", key=key)
+        assert not win_reg.key_exists(hive="HKLM", key=key)
 
 
 def test_pkg_install_not_found():
