@@ -561,12 +561,15 @@ def _get_reg_software(include_components=True, include_updates=True):
             vname="NoRemove",
             use_32bit_registry=use_32bit_registry,
         ):
-            if __utils__["reg.read_value"](
-                hive=hive,
-                key="{}\\{}".format(key, sub_key),
-                vname="NoRemove",
-                use_32bit_registry=use_32bit_registry,
-            )["vdata"] > 0:
+            if (
+                __utils__["reg.read_value"](
+                    hive=hive,
+                    key="{}\\{}".format(key, sub_key),
+                    vname="NoRemove",
+                    use_32bit_registry=use_32bit_registry,
+                )["vdata"]
+                > 0
+            ):
                 return False
         if not __utils__["reg.value_exists"](
             hive=hive,
