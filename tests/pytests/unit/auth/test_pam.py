@@ -23,7 +23,6 @@ def mock_pam():
         yield
 
 
-@pytest.mark.xfail
 def test_cve_if_pam_acct_mgmt_returns_nonzero_authenticate_should_be_false(mock_pam):
     with patch("salt.auth.pam.PAM_ACCT_MGMT", autospec=True, return_value=42):
         assert salt.auth.pam.authenticate(username="fnord", password="fnord") is False
