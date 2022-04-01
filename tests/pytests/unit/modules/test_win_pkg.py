@@ -1,8 +1,6 @@
 """
 Tests for the win_pkg module
 """
-import time
-
 import pytest
 import salt.modules.config as config
 import salt.modules.pkg_resource as pkg_resource
@@ -80,7 +78,9 @@ def test_pkg__get_reg_software_noremove():
     key = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{}".format(search)
     win_reg.set_value(hive="HKLM", key=key, vname="DisplayName", vdata=search)
     win_reg.set_value(hive="HKLM", key=key, vname="DisplayVersion", vdata="1.0.0")
-    win_reg.set_value(hive="HKLM", key=key, vname="NoRemove", vtype="REG_DWORD", vdata="1")
+    win_reg.set_value(
+        hive="HKLM", key=key, vname="NoRemove", vtype="REG_DWORD", vdata="1"
+    )
     try:
         result = win_pkg._get_reg_software()
         assert isinstance(result, dict)
