@@ -57,6 +57,7 @@ try:
     import MySQLdb.cursors
     import MySQLdb.converters
     from MySQLdb.connections import OperationalError
+    from MySQLdb.connections import OperationalError as OperationalError_alt
 except ImportError:
     try:
         # MySQLdb import failed, try to import PyMySQL
@@ -67,6 +68,7 @@ except ImportError:
         import MySQLdb.cursors
         import MySQLdb.converters
         from MySQLdb.err import OperationalError
+        from pymysql.err import OperationalError as OperationalError_alt
     except ImportError:
         MySQLdb = None
 
@@ -108,7 +110,7 @@ def run_query(conn, query, args=None, retries=3):
             out = cur.execute(query, args)
 
         return cur, out
-    except (AttributeError, OperationalError) as e:
+    except (AttributeError, OperationalError, OperationalError_alt) as e:
         if retries == 0:
             raise
         # reconnect creating new client
