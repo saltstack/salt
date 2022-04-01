@@ -22,7 +22,7 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 from salt.master import SMaster
-from tests.support.mock import MagicMock
+from tests.support.mock import MagicMock, create_autospec, patch
 
 try:
     from M2Crypto import RSA
@@ -387,6 +387,7 @@ async def test_req_chan_decode_data_dict_entry_v2(pki_dir):
     auth = client.auth
     auth._crypticle = salt.crypt.Crypticle(opts, AES_KEY)
     client.auth = MagicMock()
+    client.auth.mpub = auth.mpub
     client.auth.authenticated = True
     client.auth.get_keys = auth.get_keys
     client.auth.crypticle.dumps = auth.crypticle.dumps
@@ -448,6 +449,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_nonce(pki_dir):
     auth = client.auth
     auth._crypticle = salt.crypt.Crypticle(opts, AES_KEY)
     client.auth = MagicMock()
+    client.auth.mpub = auth.mpub
     client.auth.authenticated = True
     client.auth.get_keys = auth.get_keys
     client.auth.crypticle.dumps = auth.crypticle.dumps
@@ -508,6 +510,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(pki_dir):
     auth = client.auth
     auth._crypticle = salt.crypt.Crypticle(opts, AES_KEY)
     client.auth = MagicMock()
+    client.auth.mpub = auth.mpub
     client.auth.authenticated = True
     client.auth.get_keys = auth.get_keys
     client.auth.crypticle.dumps = auth.crypticle.dumps
@@ -584,6 +587,7 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_key(pki_dir):
     auth = client.auth
     auth._crypticle = salt.crypt.Crypticle(opts, AES_KEY)
     client.auth = MagicMock()
+    client.auth.mpub = auth.mpub
     client.auth.authenticated = True
     client.auth.get_keys = auth.get_keys
     client.auth.crypticle.dumps = auth.crypticle.dumps
@@ -1040,3 +1044,70 @@ async def test_req_chan_auth_v2_new_minion_without_master_pub(pki_dir, io_loop):
     assert "sig" in ret
     ret = client.auth.handle_signin_response(signin_payload, ret)
     assert ret == "retry"
+
+
+async def test_when_async_req_channel_with_syndic_role_should_use_syndic_master_pub_file_to_verify_master_sig(
+    pki_dir,
+):
+    # Syndics use the minion pki dir, but they also create a syndic_master.pub
+    # file for comms with the Salt master
+    expected_pubkey_path = os.path.join(pki_dir, "minion", "syndic_master.pub")
+    mockloop = MagicMock()
+    opts = {
+        "master_uri": "tcp://127.0.0.1:4506",
+        "interface": "127.0.0.1",
+        "ret_port": 4506,
+        "ipv6": False,
+        "sock_dir": ".",
+        "pki_dir": str(pki_dir.join("minion")),
+        "id": "syndic",
+        "__role": "syndic",
+        "keysize": 4096,
+    }
+    master_opts = dict(opts, pki_dir=str(pki_dir.join("master")))
+    server = salt.transport.zeromq.ZeroMQReqServerChannel(master_opts)
+    client = salt.transport.zeromq.AsyncZeroMQReqChannel(opts, io_loop=mockloop)
+
+    dictkey = "pillar"
+    target = "minion"
+    pillar_data = {"pillar1": "data1"}
+
+    # Mock auth and message client.
+    client.auth._authenticate_future = MagicMock()
+    client.auth._authenticate_future.done.return_value = True
+    client.auth._authenticate_future.exception.return_value = None
+    client.auth._crypticle = salt.crypt.Crypticle(opts, AES_KEY)
+    client.message_client = create_autospec(client.message_client)
+
+    @salt.ext.tornado.gen.coroutine
+    def mocksend(msg, timeout=60, tries=3):
+        client.message_client.msg = msg
+        load = client.auth.crypticle.loads(msg["load"])
+        ret = server._encrypt_private(
+            pillar_data, dictkey, target, nonce=load["nonce"], sign_messages=True
+        )
+        raise salt.ext.tornado.gen.Return(ret)
+
+    client.message_client.send = mocksend
+
+    # Note the 'ver' value in 'load' does not represent the the 'version' sent
+    # in the top level of the transport's message.
+    load = {
+        "id": target,
+        "grains": {},
+        "saltenv": "base",
+        "pillarenv": "base",
+        "pillar_override": True,
+        "extra_minion_data": {},
+        "ver": "2",
+        "cmd": "_pillar",
+    }
+    with patch(
+        "salt.crypt.verify_signature", autospec=True, return_value=True
+    ) as fake_verify:
+        ret = await client.crypted_transfer_decode_dictentry(
+            load,
+            dictkey="pillar",
+        )
+
+        assert fake_verify.mock_calls[0].args[0] == expected_pubkey_path
