@@ -1,0 +1,1 @@
+Fixed PAM auth to reject auth attempt if user account is locked.
