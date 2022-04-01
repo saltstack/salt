@@ -217,7 +217,7 @@ def authenticate(username, password):
 
     retval = PAM_AUTHENTICATE(handle, 0)
     if retval == 0:
-        PAM_ACCT_MGMT(handle, 0)
+        retval = PAM_ACCT_MGMT(handle, 0)
     PAM_END(handle, 0)
     return retval == 0
 
