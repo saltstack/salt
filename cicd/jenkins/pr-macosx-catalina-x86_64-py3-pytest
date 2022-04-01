@@ -14,6 +14,7 @@ runTestSuite(
     python_version: 'py3',
     testrun_timeout: 6,
     use_spot_instances: false,
+    macos_python_version: '3.9',
 )
 
 // vim: ft=groovy
