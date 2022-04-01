@@ -543,13 +543,31 @@ def _get_reg_software(include_components=True, include_updates=True):
 
     def skip_uninstall_string(hive, key, sub_key, use_32bit_registry):
         """
-        'UninstallString' must be present, because it stores the command line
+        `UninstallString` must be present, because it stores the command line
         that gets executed by Add/Remove programs, when the user tries to
-        uninstall a program.
+        uninstall a program. Skip those, unless `NoRemove` contains a non-zero
+        value in which case there is no `UninstallString` value.
+
+        We want to display these in case we're trying to install software that
+        will set the `NoRemove` option.
 
         Returns:
             bool: True if the package needs to be skipped, otherwise False
         """
+        # https://docs.microsoft.com/en-us/windows/win32/msi/arpnoremove
+        if __utils__["reg.value_exists"](
+            hive=hive,
+            key="{}\\{}".format(key, sub_key),
+            vname="NoRemove",
+            use_32bit_registry=use_32bit_registry,
+        ):
+            if __utils__["reg.read_value"](
+                hive=hive,
+                key="{}\\{}".format(key, sub_key),
+                vname="NoRemove",
+                use_32bit_registry=use_32bit_registry,
+            )["vdata"] > 0:
+                return False
         if not __utils__["reg.value_exists"](
             hive=hive,
             key="{}\\{}".format(key, sub_key),
