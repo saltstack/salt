@@ -138,13 +138,11 @@ if [ -n "$SET_PATH" ]
 fi
 SUDO=""
 if [ -n "{{SUDO}}" ]
-    then SUDO="sudo "
+    then SUDO="{{SUDO}} "
 fi
 SUDO_USER="{{SUDO_USER}}"
 if [ "$SUDO" ] && [ "$SUDO_USER" ]
-then SUDO="sudo -u {{SUDO_USER}}"
-elif [ "$SUDO" ] && [ -n "$SUDO_USER" ]
-then SUDO="sudo "
+then SUDO="$SUDO -u $SUDO_USER"
 fi
 EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
 PYTHON_CMDS="python3 python27 python2.7 python26 python2.6 python2 python"
@@ -1279,7 +1277,14 @@ class Single:
         """
         Prepare the command string
         """
-        sudo = "sudo" if self.target["sudo"] else ""
+        if self.target.get("sudo"):
+            sudo = (
+                "sudo -p '{}'".format(salt.client.ssh.shell.SUDO_PROMPT)
+                if self.target.get("passwd")
+                else "sudo"
+            )
+        else:
+            sudo = ""
         sudo_user = self.target["sudo_user"]
         if "_caller_cachedir" in self.opts:
             cachedir = self.opts["_caller_cachedir"]
@@ -1329,7 +1334,7 @@ ARGS = {arguments}\n'''.format(
             cmd = SSH_SH_SHIM.format(
                 DEBUG=debug,
                 SUDO=sudo,
-                SUDO_USER=sudo_user,
+                SUDO_USER=sudo_user or "",
                 SSH_PY_CODE=py_code_enc,
                 HOST_PY_MAJOR=sys.version_info[0],
                 SET_PATH=self.set_path,
