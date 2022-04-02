@@ -8,6 +8,10 @@ adal==1.2.7
     # via
     #   azure-datalake-store
     #   msrestazure
+aiohttp==3.8.1
+    # via etcd3-py
+aiosignal==1.2.0
+    # via aiohttp
 alabaster==0.7.12
     # via sphinx
 ansible-core==2.11.4
@@ -22,8 +26,14 @@ asn1crypto==1.4.0
     # via
     #   certvalidator
     #   oscrypto
+async-timeout==4.0.2
+    # via aiohttp
+asynctest==0.13.0
+    # via aiohttp
 attrs==21.2.0
-    # via jsonschema
+    # via
+    #   aiohttp
+    #   jsonschema
 azure-applicationinsights==0.1.0
     # via azure
 azure-batch==4.1.3
@@ -368,6 +378,8 @@ cffi==1.14.6
     #   pynacl
 chardet==3.0.4
     # via requests
+charset-normalizer==2.0.12
+    # via aiohttp
 cheetah3==3.2.6.post1
     # via -r requirements/static/ci/common.in
 cheroot==8.5.2
@@ -391,6 +403,7 @@ cryptography==3.4.7
     #   azure-cosmosdb-table
     #   azure-keyvault
     #   azure-storage-common
+    #   etcd3-py
     #   moto
     #   paramiko
     #   pyopenssl
@@ -409,8 +422,14 @@ docker==5.0.0
     # via -r requirements/static/ci/common.in
 docutils==0.16
     # via sphinx
+etcd3-py==0.1.6 ; python_version >= "3.6"
+    # via -r requirements/static/ci/common.in
 filelock==3.0.12
     # via virtualenv
+frozenlist==1.2.0
+    # via
+    #   aiohttp
+    #   aiosignal
 future==0.18.2
     # via textfsm
 genshi==0.7.5
@@ -425,8 +444,14 @@ google-auth==2.0.1
     # via kubernetes
 hglib==2.6.1
     # via -r requirements/static/ci/linux.in
+idna-ssl==1.1.0
+    # via aiohttp
 idna==2.8
-    # via requests
+    # via
+    #   etcd3-py
+    #   idna-ssl
+    #   requests
+    #   yarl
 imagesize==1.2.0
     # via sphinx
 immutables==0.14
@@ -602,6 +627,10 @@ msrestazure==0.6.4
     #   azure-mgmt-subscription
     #   azure-mgmt-trafficmanager
     #   azure-mgmt-web
+multidict==5.2.0
+    # via
+    #   aiohttp
+    #   yarl
 ncclient==0.6.12
     # via junos-eznc
 netaddr==0.8.0
@@ -659,7 +688,9 @@ pymysql==1.0.2 ; python_version > "3.5"
 pynacl==1.4.0
     # via paramiko
 pyopenssl==19.1.0
-    # via -r requirements/static/pkg/linux.in
+    # via
+    #   -r requirements/static/pkg/linux.in
+    #   etcd3-py
 pyparsing==2.4.7
     # via
     #   junos-eznc
@@ -720,6 +751,7 @@ requests==2.25.1
     #   azure-servicemanagement-legacy
     #   azure-storage-common
     #   docker
+    #   etcd3-py
     #   kubernetes
     #   moto
     #   msrest
@@ -743,6 +775,8 @@ s3transfer==0.5.0
     # via boto3
 scp==0.13.6
     # via junos-eznc
+semantic-version==2.9.0
+    # via etcd3-py
 setproctitle==1.1.10 ; python_version < "3.10"
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
@@ -751,6 +785,7 @@ six==1.16.0
     #   bcrypt
     #   cassandra-driver
     #   cheroot
+    #   etcd3-py
     #   genshi
     #   geomet
     #   isodate
@@ -810,8 +845,11 @@ twilio==6.63.0
     # via -r requirements/static/ci/linux.in
 typing-extensions==3.10.0.0
     # via
+    #   aiohttp
+    #   async-timeout
     #   gitpython
     #   importlib-metadata
+    #   yarl
 tzlocal==3.0
     # via apscheduler
 urllib3==1.26.6
@@ -837,6 +875,8 @@ xmltodict==0.12.0
     # via moto
 yamlordereddictloader==0.4.0
     # via junos-eznc
+yarl==1.7.2
+    # via aiohttp
 zc.lockfile==1.4
     # via cherrypy
 zipp==3.5.0
