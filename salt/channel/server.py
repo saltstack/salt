@@ -753,7 +753,7 @@ class PubServerChannel:
             self.aes_funcs.destroy()
             self.aes_funcs = None
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, kwargs=None):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
@@ -762,15 +762,18 @@ class PubServerChannel:
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         """
         if hasattr(self.transport, "publish_daemon"):
-            process_manager.add_process(self._publish_daemon)
+            process_manager.add_process(self._publish_daemon, kwargs=kwargs)
 
-    def _publish_daemon(self):
+    def _publish_daemon(self, **kwargs):
         if self.opts["pub_server_niceness"] and not salt.utils.platform.is_windows():
             log.info(
                 "setting Publish daemon niceness to %i",
                 self.opts["pub_server_niceness"],
             )
             os.nice(self.opts["pub_server_niceness"])
+        secrets = kwargs.get("master_secrets", None)
+        if secrets is not None:
+            salt.master.SMaster.secrets = secrets
         self.transport.publish_daemon(self.publish_payload, self.presence_callback)
 
     def presence_callback(self, subscriber, msg):
