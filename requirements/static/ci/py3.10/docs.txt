@@ -445,6 +445,7 @@ jaraco.text==3.7.0
 jinja2==3.0.3
     # via
     #   -r requirements/base.txt
+    #   -r requirements/static/ci/docs.in
     #   ansible-core
     #   junos-eznc
     #   moto
