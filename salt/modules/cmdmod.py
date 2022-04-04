@@ -2869,8 +2869,8 @@ def script(
         os.chmod(path, 320)
         os.chown(path, __salt__["file.user_to_uid"](runas), -1)
 
-    if salt.utils.platform.is_windows() and shell.lower() != "powershell":
-        cmd_path = _cmd_quote(path, escape=False)
+    if salt.utils.platform.is_windows():
+        cmd_path = _cmd_quote(path, (shell.lower() != "powershell"))
     else:
         cmd_path = _cmd_quote(path)
 
