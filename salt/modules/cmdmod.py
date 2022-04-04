@@ -2870,7 +2870,11 @@ def script(
         os.chown(path, __salt__["file.user_to_uid"](runas), -1)
 
     if salt.utils.platform.is_windows():
-        cmd_path = _cmd_quote(path, (shell.lower() != "powershell"))
+        if shell.lower() != "powershell":
+            cmd_path = _cmd_quote(path, escape=False)
+        else:    
+            # not great but better than not working at all.
+            cmd_path = "&\"" + path.replace('"', '`"') + "\""
     else:
         cmd_path = _cmd_quote(path)
 
