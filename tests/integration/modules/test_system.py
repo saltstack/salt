@@ -185,6 +185,7 @@ class SystemModuleTest(ModuleCase):
         msg = "Difference in times is too large. Now: {} Fake: {}".format(t1, t2)
         self.assertTrue(self._same_times(t1, t2, seconds_diff=2), msg=msg)
 
+    @pytest.mark.skip_on_env("ON_DOCKER", eq="1")
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
     @pytest.mark.slow_test
@@ -204,6 +205,7 @@ class SystemModuleTest(ModuleCase):
         self.assertTrue(result and self._same_times(time_now, cmp_time), msg=msg)
         self._test_hwclock_sync()
 
+    @pytest.mark.skip_on_env("ON_DOCKER", eq="1")
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
     @pytest.mark.slow_test
@@ -224,6 +226,7 @@ class SystemModuleTest(ModuleCase):
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
         self._test_hwclock_sync()
 
+    @pytest.mark.skip_on_env("ON_DOCKER", eq="1")
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
     @pytest.mark.slow_test
@@ -246,6 +249,7 @@ class SystemModuleTest(ModuleCase):
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
         self._test_hwclock_sync()
 
+    @pytest.mark.skip_on_env("ON_DOCKER", eq="1")
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
     @pytest.mark.slow_test
@@ -268,6 +272,7 @@ class SystemModuleTest(ModuleCase):
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
         self._test_hwclock_sync()
 
+    @pytest.mark.skip_on_env("ON_DOCKER", eq="1")
     @pytest.mark.flaky(max_runs=4)
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
@@ -290,6 +295,7 @@ class SystemModuleTest(ModuleCase):
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
         self._test_hwclock_sync()
 
+    @pytest.mark.skip_on_env("ON_DOCKER", eq="1")
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
     @pytest.mark.slow_test

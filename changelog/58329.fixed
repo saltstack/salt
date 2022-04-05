@@ -1,0 +1,1 @@
+update salt.module.schedule to check the job_args and job_kwargs for valid formatting.

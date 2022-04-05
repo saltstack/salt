@@ -49,7 +49,10 @@ def PKG_TARGETS(grains):
     elif grains["os"] == "Amazon":
         _PKG_TARGETS = ["lynx", "gnuplot"]
     elif grains["os_family"] == "RedHat":
-        _PKG_TARGETS = ["units", "zsh-html"]
+        if grains["os"] == "VMware Photon OS":
+            _PKG_TARGETS = ["wget", "zsh-html"]
+        else:
+            _PKG_TARGETS = ["units", "zsh-html"]
     elif grains["os_family"] == "Suse":
         _PKG_TARGETS = ["lynx", "htop"]
 
@@ -699,6 +702,10 @@ def test_pkg_016_conditionally_ignore_epoch(PKG_EPOCH_TARGETS, latest_version, s
     assert ret.result is True
 
 
+@pytest.mark.skipif(
+    salt.utils.platform.is_photonos(),
+    reason="package hold/unhold unsupported on Photon OS",
+)
 @pytest.mark.requires_salt_modules(
     "pkg.hold", "pkg.unhold", "pkg.version", "pkg.list_pkgs"
 )

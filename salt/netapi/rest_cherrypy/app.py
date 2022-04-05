@@ -591,6 +591,7 @@ import logging
 import os
 import signal
 import tarfile
+import time
 from collections.abc import Iterator, Mapping
 from multiprocessing import Pipe, Process
 from urllib.parse import parse_qsl
@@ -1889,7 +1890,7 @@ class Login(LowDataAdapter):
                 perms = token["auth_list"]
             else:
                 # Get sum of '*' perms, user-specific perms, and group-specific perms
-                perms = eauth.get(token["name"], [])
+                perms = eauth.get(token["name"], []).copy()
                 perms.extend(eauth.get("*", []))
 
                 if "groups" in token and token["groups"]:
@@ -2208,8 +2209,11 @@ class Events:
         # The eauth system does not currently support perms for the event
         # stream, so we're just checking if the token exists not if the token
         # allows access.
-        if salt_token and self.resolver.get_token(salt_token):
-            return True
+        if salt_token:
+            # We want to at least make sure that the token isn't expired yet.
+            resolved_tkn = self.resolver.get_token(salt_token)
+            if resolved_tkn and resolved_tkn.get("expire", 0) > time.time():
+                return True
 
         return False
 
@@ -2363,7 +2367,6 @@ class Events:
             with salt.utils.event.get_event(
                 "master",
                 sock_dir=self.opts["sock_dir"],
-                transport=self.opts["transport"],
                 opts=self.opts,
                 listen=True,
             ) as event:
@@ -2372,6 +2375,11 @@ class Events:
                 yield "retry: 400\n"
 
                 while True:
+                    # make sure the token is still valid
+                    if not self._is_valid_token(auth_token):
+                        logger.debug("Token is no longer valid")
+                        break
+
                     data = next(stream)
                     yield "tag: {}\n".format(data.get("tag", ""))
                     yield "data: {}\n\n".format(salt.utils.json.dumps(data))
@@ -2539,7 +2547,6 @@ class WebsocketEndpoint:
             with salt.utils.event.get_event(
                 "master",
                 sock_dir=self.opts["sock_dir"],
-                transport=self.opts["transport"],
                 opts=self.opts,
                 listen=True,
             ) as event:
@@ -2639,7 +2646,6 @@ class Webhook:
         self.event = salt.utils.event.get_event(
             "master",
             sock_dir=self.opts["sock_dir"],
-            transport=self.opts["transport"],
             opts=self.opts,
             listen=False,
         )

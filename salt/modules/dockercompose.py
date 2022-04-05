@@ -145,7 +145,7 @@ def __virtual__():
     if HAS_DOCKERCOMPOSE:
         match = re.match(VERSION_RE, str(compose.__version__))
         if match:
-            version = tuple([int(x) for x in match.group(1).split(".")])
+            version = tuple(int(x) for x in match.group(1).split("."))
             if version >= MIN_DOCKERCOMPOSE:
                 return __virtualname__
     return (

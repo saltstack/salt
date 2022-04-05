@@ -12,7 +12,18 @@ Statistics
 - Total Issue References: **119**
 - Total PR References: **374**
 
-- Contributors: **80** (`BenoitKnecht`_, `Ch3LL`_, `DavidWittman`_, `DmitryKuzmenko`_, `Jlin317`_, `Kimamisa`_, `UtahDave`_, `aaronm-cloudtek`_, `abednarik`_, `ahammond`_, `alertedsnake`_, `alexander-bauer`_, `amontalban`_, `basepi`_, `bl4ckcontact`_, `bx2`_, `cachedout`_, `clarkperkins`_, `clinta`_, `cro`_, `damon-atkins`_, `danlsgiga`_, `darkalia`_, `dmurphy18`_, `do3meli`_, `edhgoose`_, `efficks`_, `eliasp`_, `eradman`_, `fix7`_, `galet`_, `goestin`_, `gtmanfred`_, `hrumph`_, `hu-dabao`_, `isbm`_, `jackywu`_, `jacobhammons`_, `jbonachera`_, `jf`_, `jfindlay`_, `jizhilong`_, `justinta`_, `kstreee`_, `l2ol33rt`_, `lomeroe`_, `lorengordon`_, `maximeguillet`_, `meaksh`_, `mikeadamz`_, `mirceaulinic`_, `morganwillcock`_, `mrproper`_, `multani`_, `nvtkaszpir`_, `oba11`_, `onorua`_, `opdude`_, `orymate`_, `oz123`_, `pass-by-value`_, `pbdeuchler`_, `rallytime`_, `roosri`_, `silenius`_, `skizunov`_, `slinn0`_, `stanislavb`_, `swiftgist`_, `techhat`_, `terminalmage`_, `thatch45`_, `theredcat`_, `ticosax`_, `twangboy`_, `vutny`_, `whiteinge`_, `xbglowx`_, `xiaoanyunfei`_, `yhekma`_)
+- Contributors: **80** (`BenoitKnecht`_, `Ch3LL`_, `DavidWittman`_, `DmitryKuzmenko`_, `Jlin317`_,
+  `Kimamisa`_, `UtahDave`_, `aaronm-cloudtek`_, `abednarik`_, `ahammond`_, `alertedsnake`_,
+  `alexander-bauer`_, `amontalban`_, `basepi`_, `bl4ckcontact`_, `bx2`_, `cachedout`_,
+  `clarkperkins`_, `clinta`_, `cro`_, `damon-atkins`_, `danlsgiga`_, `darkalia`_, `dmurphy18`_,
+  `do3meli`_, `edhgoose`_, `efficks`_, `eliasp`_, `eradman`_, `fix7`_, `galet`_, `goestin`_,
+  `gtmanfred`_, `hrumph`_, `hu-dabao`_, `isbm`_, `jackywu`_, `jacobhammons`_, `jbonachera`_, `jf`_,
+  `jfindlay`_, `jizhilong`_, `justinta`_, `kstreee`_, `l2ol33rt`_, `lomeroe`_, `lorengordon`_,
+  `maximeguillet`_, `meaksh`_, `mikeadamz`_, `mirceaulinic`_, `morganwillcock`_, `mrproper`_,
+  `multani`_, `nvtkaszpir`_, `oba11`_, `onorua`_, `opdude`_, `orymate`_, `oz123`_,
+  `pass-by-value`_, `pbdeuchler`_, `rallytime`_, `roosri`_, `silenius`_, `skizunov`_, `slinn0`_,
+  `stanislavb`_, `swiftgist`_, `techhat`_, `terminalmage`_, `thatch45`_, `theredcat`_, `ticosax`_,
+  `twangboy`_, `vutny`_, `whiteinge`_, `xbglowx`_, `xiaoanyunfei`_, `yhekma`_)
 
 
 Known Issues
@@ -946,7 +957,7 @@ Changelog for v2016.3.3..v2016.3.4
 
   * 6ce4653fa3 Error on reaction with missing SLS file
 
-* **ISSUE** `saltstack/salt#36788`_: (`damon-atkins`_) pillar/libvirt.py assume certtool is available and works everytime (refs: `#36803`_)
+* **ISSUE** `saltstack/salt#36788`_: (`damon-atkins`_) pillar/libvirt.py assume certtool is available and works every time (refs: `#36803`_)
 
 * **PR** `#36803`_: (`gtmanfred`_) do not load libvirt pillar if certtool is unavailable
   @ *2016-10-06 11:15:14 UTC*
@@ -2519,7 +2530,7 @@ Changelog for v2016.3.3..v2016.3.4
 
   * eda2ae0add Merge pull request `#35781`_ from thatch45/ssh_deploy_more
 
-    * 2558dcc100 follow up on the re-deploy if there is a checksum missmatch
+    * 2558dcc100 follow up on the re-deploy if there is a checksum mismatch
 
   * 165237412c Merge pull request `#35815`_ from gtmanfred/2015.8
 
