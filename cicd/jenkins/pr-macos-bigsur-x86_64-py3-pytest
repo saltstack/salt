@@ -2,8 +2,8 @@
 
 runTestSuite(
     concurrent_builds: 1,
-    distro_name: 'macosx',
-    distro_version: 'catalina',
+    distro_name: 'macos',
+    distro_version: 'bigsur',
     distro_arch: 'x86-64',
     env: env,
     jenkins_slave_label: 'kitchen-slave-mac',
