@@ -1049,21 +1049,16 @@ class Process(multiprocessing.Process):
 class SignalHandlingProcess(Process):
     def __new__(cls, *args, **kwargs):
         instance = super().__new__(cls, *args, **kwargs)
-        instance._signal_handled = multiprocessing.Event()
         instance.register_after_fork_method(
             SignalHandlingProcess._setup_signals, instance
         )
         return instance
-
-    def signal_handled(self):
-        return self._signal_handled.is_set()
 
     def _setup_signals(self):
         signal.signal(signal.SIGINT, self._handle_signals)
         signal.signal(signal.SIGTERM, self._handle_signals)
 
     def _handle_signals(self, signum, sigframe):
-        self._signal_handled.set()
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         msg = "{} received a ".format(self.__class__.__name__)
