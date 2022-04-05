@@ -5,6 +5,7 @@ import time
 
 import pytest
 import salt.cache
+import salt.loader
 from salt.exceptions import SaltCacheError
 from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
@@ -396,12 +397,12 @@ def fixy(minion_opts, mysql_port, mysql_container):
 
     # The container can be available before mysql actually is
     mysql_container.container.exec_run(
-        ["/bin/sh", "-c", 'while ! mysql -e "SELECT 1;" >/dev/null; do sleep 1; done'],
+        ["/bin/sh", "-c", 'while ! mysql -u root -pfnord -e "SELECT 1;" >/dev/null; do sleep 1; done'],
     )
 
     # Gotta make the db we're going to use
     res = mysql_container.container.exec_run(
-        ["/bin/sh", "-c", 'echo "create database salt_cache;" | mysql'],
+        ["/bin/sh", "-c", 'echo "create database salt_cache;" | mysql -u root -pfnord '],
     )
 
     opts = minion_opts.copy()
@@ -415,13 +416,14 @@ def fixy(minion_opts, mysql_port, mysql_container):
     cache = salt.cache.factory(opts)
 
     # For some reason even though mysql is available in the container, we
-    # can't reliably connect outside the container. Wait for access
-    timer = Timer(timeout=10)
+    # can't reliably connect outside the container. Wait for access - but we
+    # may need a new cache...
+    timer = Timer(timeout=15)
     while not timer.expired:
         try:
             # Doesn't matter what. We just have to execute so that we spin
             # here until we can actually connect to the db instance.
-            cache.modules["mysql.list"]("fnord")
+            cache.modules["mysql.list"]("salt_cache")
         except salt.cache.mysql_cache.MySQLdb.DatabaseError:
             # We don't really care what MySQL error is happening -
             pass
