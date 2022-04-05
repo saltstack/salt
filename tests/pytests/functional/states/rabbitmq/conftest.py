@@ -34,6 +34,18 @@ class RabbitMQCombo:
         return get_unused_localhost_port()
 
 
+@pytest.fixture(scope="module")
+def docker_client():
+    try:
+        client = docker.from_env()
+    except docker.errors.DockerException:
+        pytest.skip("Failed to get a connection to docker running on the system")
+    connectable = Container.client_connectable(client)
+    if connectable is not True:  # pragma: nocover
+        pytest.skip(connectable)
+    return client
+
+
 def get_test_versions():
     test_versions = []
     name = "rabbitmq"
@@ -56,17 +68,19 @@ def get_test_version_id(value):
 
 
 @pytest.fixture(scope="module", params=get_test_versions(), ids=get_test_version_id)
-def rabbitmq_container(request, salt_factories, modules):
-
+def rabbitmq_image(request, docker_client):
+    image = request.param
     try:
-        docker_client = docker.from_env()
-    except docker_errors.DockerException:
-        pytest.skip("Failed to get a connection to docker running on the system")
-    connectable = Container.client_connectable(docker_client)
-    if connectable is not True:  # pragma: no cover
-        pytest.skip(connectable)
+        docker_client.images.pull(image.name, tag=image.tag)
+    except docker.errors.APIError as exc:
+        pytest.skip(
+            "Failed to pull docker image '{}:{}': {}".format(image.name, image.tag, exc)
+        )
+    return image
 
-    rabbitmq_image = request.param
+
+@pytest.fixture(scope="module")
+def rabbitmq_container(salt_factories, docker_client, rabbitmq_image):
 
     combo = RabbitMQCombo(
         rabbitmq_name=rabbitmq_image.name,
