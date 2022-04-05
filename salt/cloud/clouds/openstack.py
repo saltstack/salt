@@ -444,11 +444,9 @@ def _get_ips(node, addr_type="public"):
                 "OS-EXT-IPS:type"
             ):
                 ret.append(addr["addr"])
-            elif addr_type == "public" and __utils__["cloud.is_public_ip"](
-                addr["addr"]
-            ):
+            elif addr_type == "public" and salt.utils.cloud.is_public_ip(addr["addr"]):
                 ret.append(addr["addr"])
-            elif addr_type == "private" and not __utils__["cloud.is_public_ip"](
+            elif addr_type == "private" and not salt.utils.cloud.is_public_ip(
                 addr["addr"]
             ):
                 ret.append(addr["addr"])
