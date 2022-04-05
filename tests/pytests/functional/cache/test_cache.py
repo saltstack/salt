@@ -397,12 +397,20 @@ def fixy(minion_opts, mysql_port, mysql_container):
 
     # The container can be available before mysql actually is
     mysql_container.container.exec_run(
-        ["/bin/sh", "-c", 'while ! mysql -u root -pfnord -e "SELECT 1;" >/dev/null; do sleep 1; done'],
+        [
+            "/bin/sh",
+            "-c",
+            'while ! mysql -u root -pfnord -e "SELECT 1;" >/dev/null; do sleep 1; done',
+        ],
     )
 
     # Gotta make the db we're going to use
     res = mysql_container.container.exec_run(
-        ["/bin/sh", "-c", 'echo "create database salt_cache;" | mysql -u root -pfnord '],
+        [
+            "/bin/sh",
+            "-c",
+            'echo "create database salt_cache;" | mysql -u root -pfnord ',
+        ],
     )
 
     opts = minion_opts.copy()
