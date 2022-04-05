@@ -72,7 +72,7 @@ pyyaml==5.3.1
     # via -r requirements/base.txt
 pyzmq==18.0.1 ; python_version < "3.9"
     # via -r requirements/zeromq.txt
-requests==2.25.1
+requests==2.24.0
     # via -r requirements/base.txt
 rpm-vercmp==0.1.2
     # via -r requirements/static/pkg/linux.in
@@ -93,7 +93,7 @@ tempora==1.14.1
     # via portend
 timelib==0.2.5
     # via -r requirements/static/pkg/linux.in
-urllib3==1.26.6
+urllib3==1.25.11
     # via requests
 zc.lockfile==1.4
     # via cherrypy

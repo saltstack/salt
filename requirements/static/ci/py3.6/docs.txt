@@ -708,7 +708,7 @@ pyzmq==18.0.1 ; python_version < "3.9"
     # via -r requirements/zeromq.txt
 requests-oauthlib==1.3.0
     # via msrest
-requests==2.25.1
+requests==2.24.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
@@ -815,7 +815,7 @@ typing-extensions==3.10.0.0
     #   importlib-metadata
 tzlocal==3.0
     # via apscheduler
-urllib3==1.26.6
+urllib3==1.25.11
     # via
     #   botocore
     #   kubernetes

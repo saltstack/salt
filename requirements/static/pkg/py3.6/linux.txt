@@ -10,7 +10,7 @@ certifi==2021.5.30
     # via requests
 cffi==1.14.6
     # via cryptography
-chardet==3.0.4
+charset-normalizer==2.0.12
     # via requests
 cheroot==8.5.2
     # via cherrypy
@@ -75,7 +75,7 @@ pyyaml==5.4.1
     # via -r requirements/base.txt
 pyzmq==18.0.1 ; python_version < "3.9"
     # via -r requirements/zeromq.txt
-requests==2.25.1
+requests==2.27.1
     # via -r requirements/base.txt
 rpm-vercmp==0.1.2
     # via -r requirements/static/pkg/linux.in
@@ -94,7 +94,7 @@ timelib==0.2.5
     # via -r requirements/static/pkg/linux.in
 typing-extensions==3.10.0.0
     # via importlib-metadata
-urllib3==1.26.6
+urllib3==1.25.11
     # via requests
 zc.lockfile==1.4
     # via cherrypy

@@ -10,7 +10,7 @@ certifi==2021.5.30
     # via requests
 cffi==1.14.6
     # via cryptography
-chardet==3.0.4
+charset-normalizer==2.0.12
     # via requests
 cheroot==8.5.2
     # via cherrypy
@@ -90,7 +90,7 @@ pyyaml==5.4.1
     # via -r requirements/base.txt
 pyzmq==19.0.0 ; python_version < "3.9"
     # via -r requirements/zeromq.txt
-requests==2.25.1
+requests==2.27.1
     # via
     #   -r requirements/base.txt
     #   apache-libcloud
@@ -109,7 +109,7 @@ tempora==4.1.1
     # via portend
 timelib==0.2.5
     # via -r requirements/darwin.txt
-urllib3==1.26.6
+urllib3==1.25.11
     # via requests
 vultr==1.0.1
     # via -r requirements/darwin.txt

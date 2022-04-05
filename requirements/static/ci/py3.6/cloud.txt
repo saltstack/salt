@@ -729,7 +729,7 @@ requests-ntlm==1.1.0
     # via pywinrm
 requests-oauthlib==1.3.0
     # via msrest
-requests==2.25.1
+requests==2.24.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
@@ -820,7 +820,7 @@ typing-extensions==3.10.0.0
     #   gitpython
     #   immutables
     #   importlib-metadata
-urllib3==1.26.6
+urllib3==1.25.11
     # via
     #   botocore
     #   kubernetes

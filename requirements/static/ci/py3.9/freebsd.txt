@@ -734,7 +734,7 @@ pyzmq==21.0.2 ; python_version >= "3.9"
     #   pytest-salt-factories
 requests-oauthlib==1.3.0
     # via msrest
-requests==2.25.1
+requests==2.24.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
@@ -824,7 +824,7 @@ toml==0.10.2
     #   pytest
 transitions==0.8.1
     # via junos-eznc
-urllib3==1.26.6
+urllib3==1.25.11
     # via
     #   botocore
     #   kubernetes
