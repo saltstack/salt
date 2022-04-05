@@ -5764,10 +5764,6 @@ def blockreplace(
         The file extension to use for a backup of the file if any edit is made.
         Set this to ``False`` to skip making a backup.
 
-    dry_run
-        If ``True``, do not make any edits to the file and simply return the
-        changes that *would* be made.
-
     show_changes
         Controls how changes are presented. If ``True``, the ``Changes``
         section of the state return will contain a unified diff of the changes
