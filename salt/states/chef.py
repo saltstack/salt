@@ -161,6 +161,8 @@ def _summary(stdout):
 
 def _has_changes(stdout):
     regex = re.search(
-        r"Infra \w+ (complete|finished), (\d+)", _summary(stdout), re.IGNORECASE
+        r"(Chef Client finished|Chef Infra Client finished|Infra Phase complete), (\d+)",
+        _summary(stdout),
+        re.IGNORECASE,
     )
     return int(regex.group(2)) > 0
