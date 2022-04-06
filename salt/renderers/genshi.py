@@ -4,9 +4,9 @@ Genshi Renderer for Salt
 
 # pylint: disable=import-error,no-name-in-module
 try:
-    from genshi.template import MarkupTemplate
-    from genshi.template import NewTextTemplate
-    from genshi.template import OldTextTemplate
+    from genshi.template import MarkupTemplate  # pylint: disable=no-name-in-module
+    from genshi.template import NewTextTemplate  # pylint: disable=no-name-in-module
+    from genshi.template import OldTextTemplate  # pylint: disable=no-name-in-module
 
     HAS_LIBS = True
 except ImportError:
