@@ -165,7 +165,7 @@ except ImportError:
     HAS_REDIS = False
 
 try:
-    from rediscluster import RedisCluster
+    from rediscluster import RedisCluster  # pylint: disable=no-name-in-module
 
     HAS_REDIS_CLUSTER = True
 except ImportError:
