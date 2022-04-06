@@ -2,7 +2,6 @@
 Genshi Renderer for Salt
 """
 
-# pylint: disable=import-error,no-name-in-module
 try:
     from genshi.template import MarkupTemplate  # pylint: disable=no-name-in-module
     from genshi.template import NewTextTemplate  # pylint: disable=no-name-in-module
@@ -11,7 +10,6 @@ try:
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
-# pylint: enable=import-error,no-name-in-module
 
 
 def render(genshi_data, saltenv="base", sls="", method="xml", **kws):

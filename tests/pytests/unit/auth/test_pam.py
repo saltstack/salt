@@ -10,14 +10,14 @@ def configure_loader_modules():
 
 @pytest.fixture
 def mock_pam():
-    with patch("salt.auth.pam.CALLOC", autospec=True), patch(
-        "salt.auth.pam.pointer", autospec=True
-    ), patch("salt.auth.pam.PamHandle", autospec=True), patch(
-        "salt.auth.pam.PAM_START", autospec=True, return_value=0
+    with patch("salt.auth.pam.CALLOC", autospec=True, create=True), patch(
+        "salt.auth.pam.pointer", autospec=True, create=True
+    ), patch("salt.auth.pam.PamHandle", autospec=True, create=True), patch(
+        "salt.auth.pam.PAM_START", autospec=True, return_value=0, create=True
     ), patch(
-        "salt.auth.pam.PAM_AUTHENTICATE", autospec=True, return_value=0
+        "salt.auth.pam.PAM_AUTHENTICATE", autospec=True, return_value=0, create=True
     ), patch(
-        "salt.auth.pam.PAM_END", autospec=True
+        "salt.auth.pam.PAM_END", autospec=True, create=True
     ):
         yield
 
