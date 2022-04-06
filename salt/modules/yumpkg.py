@@ -429,7 +429,7 @@ def _get_yum_config_value(name, strict_config=True):
     return None
 
 
-def _normalize_basedir(basedir=None, **kwargs):
+def _normalize_basedir(basedir=None, strict_config=True):
     """
     Takes a basedir argument as a string or a list. If the string or list is
     empty, then look up the default from the 'reposdir' option in the yum
@@ -446,7 +446,6 @@ def _normalize_basedir(basedir=None, **kwargs):
 
     # nothing specified, so use the reposdir option as the default
     if not basedir:
-        strict_config = kwargs.get("strict_config", True)
         basedir = _get_yum_config_value("reposdir", strict_config)
 
     if not isinstance(basedir, list) or not basedir:
@@ -2782,7 +2781,8 @@ def list_repos(basedir=None, **kwargs):
         salt '*' pkg.list_repos basedir=/path/to/dir,/path/to/another/dir strict_config=False
     """
 
-    basedirs = _normalize_basedir(basedir, **kwargs)
+    strict_parser = kwargs.get("strict_config", True)
+    basedirs = _normalize_basedir(basedir, strict_parser)
     repos = {}
     log.debug("Searching for repos in %s", basedirs)
     for bdir in basedirs:
@@ -2792,7 +2792,7 @@ def list_repos(basedir=None, **kwargs):
             repopath = "{}/{}".format(bdir, repofile)
             if not repofile.endswith(".repo"):
                 continue
-            filerepos = _parse_repo_file(repopath, **kwargs)[1]
+            filerepos = _parse_repo_file(repopath, strict_parser)[1]
             for reponame in filerepos:
                 repo = filerepos[reponame]
                 repo["file"] = repopath
@@ -2826,7 +2826,8 @@ def get_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
 
     if repofile:
         # Return just one repo
-        filerepos = _parse_repo_file(repofile, **kwargs)[1]
+        strict_parser = kwargs.get("strict_config", True)
+        filerepos = _parse_repo_file(repofile, strict_parser)[1]
         return filerepos[repo]
     return {}
 
@@ -2855,7 +2856,8 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
         repo = _get_copr_repo(repo)
 
     # this is so we know which dirs are searched for our error messages below
-    basedirs = _normalize_basedir(basedir, **kwargs)
+    strict_parser = kwargs.get("strict_config", True)
+    basedirs = _normalize_basedir(basedir, strict_parser)
     repos = list_repos(basedirs, **kwargs)
 
     if repo not in repos:
@@ -2881,7 +2883,7 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
         return "File {} containing repo {} has been removed".format(repofile, repo)
 
     # There must be other repos in this file, write the file with them
-    header, filerepos = _parse_repo_file(repofile, **kwargs)
+    header, filerepos = _parse_repo_file(repofile, strict_parser)
     content = header
     for stanza in filerepos.keys():
         if stanza == repo:
@@ -2974,7 +2976,8 @@ def mod_repo(repo, basedir=None, **kwargs):
 
     # Give the user the ability to change the basedir
     repos = {}
-    basedirs = _normalize_basedir(basedir, **kwargs)
+    strict_parser = kwargs.get("strict_config", True)
+    basedirs = _normalize_basedir(basedir, strict_parser)
     repos = list_repos(basedirs, **kwargs)
     repofile = ""
     header = ""
@@ -3018,7 +3021,7 @@ def mod_repo(repo, basedir=None, **kwargs):
             # Repo has been added, update repos list
             repos = list_repos(basedirs, **kwargs)
             repofile = repos[repo]["file"]
-            header, filerepos = _parse_repo_file(repofile, **kwargs)
+            header, filerepos = _parse_repo_file(repofile, strict_parser)
         else:
             repofile = "{}/{}.repo".format(newdir, repo)
 
@@ -3037,7 +3040,7 @@ def mod_repo(repo, basedir=None, **kwargs):
     else:
         # The repo does exist, open its file
         repofile = repos[repo]["file"]
-        header, filerepos = _parse_repo_file(repofile, **kwargs)
+        header, filerepos = _parse_repo_file(repofile, strict_parser)
 
     # Error out if they tried to delete baseurl or mirrorlist improperly
     if "baseurl" in todelete:
@@ -3082,12 +3085,11 @@ def mod_repo(repo, basedir=None, **kwargs):
     return {repofile: filerepos}
 
 
-def _parse_repo_file(filename, **kwargs):
+def _parse_repo_file(filename, strict_config=True):
     """
     Turn a single repo file into a dict
     """
-    strict_parser = kwargs.get("strict_config", True)
-    parsed = configparser.ConfigParser(strict=strict_parser)
+    parsed = configparser.ConfigParser(strict=strict_config)
     config = {}
 
     try:
