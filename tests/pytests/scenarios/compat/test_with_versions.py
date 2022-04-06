@@ -32,7 +32,7 @@ ENV VIRTUAL_ENV={virtualenv_path}
 
 RUN virtualenv --python=python3 $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-RUN pip install salt~={salt_version}
+RUN pip install salt=={salt_version}
 
 CMD . $VIRTUAL_ENV/bin/activate
 """
@@ -43,7 +43,7 @@ def _get_test_versions_ids(value):
 
 
 @pytest.fixture(
-    params=("3002.0", "3003.0", "3004.0"), ids=_get_test_versions_ids, scope="module"
+    params=("3002.7", "3003.3", "3004"), ids=_get_test_versions_ids, scope="module"
 )
 def compat_salt_version(request):
     return request.param
