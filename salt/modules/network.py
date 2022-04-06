@@ -9,7 +9,7 @@ import os
 import re
 import socket
 import time
-from multiprocessing.pool import ThreadPool
+from concurrent.futures import ThreadPoolExecutor
 
 import salt.utils.decorators.path
 import salt.utils.functools
@@ -2096,7 +2096,7 @@ def fqdns():
                 log.debug("Unable to resolve address %s: %s", ip, err)
             else:
                 log.error("Failed to resolve address %s: %s", ip, err)
-        except (OSError, socket.gaierror, socket.timeout) as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error("Failed to resolve address %s: %s", ip, err)
 
     start = time.time()
@@ -2110,24 +2110,21 @@ def fqdns():
         )
     )
 
-    # Create a ThreadPool to process the underlying calls to 'socket.gethostbyaddr' in parallel.
-    # This avoid blocking the execution when the "fqdn" is not defined for certains IP addresses, which was causing
-    # that "socket.timeout" was reached multiple times secuencially, blocking execution for several seconds.
+    # Create a ThreadPool to process the underlying calls to
+    # 'socket.gethostbyaddr' in parallel.  This avoid blocking the execution
+    # when the "fqdn" is not defined for certains IP addresses, which was
+    # causing that "socket.timeout" was reached multiple times sequentially,
+    # blocking execution for several seconds.
 
-    results = []
     try:
-        pool = ThreadPool(8)
-        results = pool.map(_lookup_fqdn, addresses)
-        pool.close()
-        pool.join()
+        with ThreadPoolExecutor(8) as pool:
+            for item in pool.map(_lookup_fqdn, addresses):
+                if item:
+                    fqdns.update(item)
     except Exception as exc:  # pylint: disable=broad-except
         log.error("Exception while creating a ThreadPool for resolving FQDNs: %s", exc)
-
-    for item in results:
-        if item:
-            fqdns.update(item)
 
     elapsed = time.time() - start
     log.debug("Elapsed time getting FQDNs: %s seconds", elapsed)
 
-    return {"fqdns": sorted(list(fqdns))}
+    return {"fqdns": sorted(fqdns)}
