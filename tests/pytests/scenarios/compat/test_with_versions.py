@@ -43,7 +43,7 @@ def _get_test_versions_ids(value):
 
 
 @pytest.fixture(
-    params=("3002.8", "3003.3", "3004"), ids=_get_test_versions_ids, scope="module"
+    params=("3002.7", "3003.3", "3004"), ids=_get_test_versions_ids, scope="module"
 )
 def compat_salt_version(request):
     return request.param
