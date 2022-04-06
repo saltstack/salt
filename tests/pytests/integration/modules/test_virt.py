@@ -545,6 +545,7 @@ class TestVirtMigrateTest:
         assert isinstance(domains, list)
         assert domains == [virt_domain], "Failed to migrate VM"
 
+    @pytest.mark.flaky(max_runs=4)
     def test_tls_migration(
         self, salt_cli, virt_minion_0, virt_minion_1, prep_virt, virt_domain
     ):
