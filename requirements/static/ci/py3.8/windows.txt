@@ -122,7 +122,7 @@ jaraco.functools==2.0
     #   tempora
 jaraco.text==3.5.0
     # via jaraco.collections
-jinja2==3.0.3
+jinja2==3.1.0
     # via
     #   -r requirements/base.txt
     #   moto
@@ -171,6 +171,8 @@ packaging==19.2
     # via pytest
 patch==1.16
     # via -r requirements/static/ci/windows.in
+pathspec==0.9.0
+    # via yamllint
 pathtools==0.1.2
     # via watchdog
 platformdirs==2.2.0
@@ -273,6 +275,7 @@ pyyaml==5.4.1
     #   -r requirements/base.txt
     #   clustershell
     #   kubernetes
+    #   yamllint
 pyzmq==19.0.0 ; python_version < "3.9"
     # via
     #   -r requirements/zeromq.txt
@@ -365,6 +368,8 @@ xmltodict==0.12.0
     # via
     #   moto
     #   pywinrm
+yamllint==1.26.3
+    # via -r requirements/static/ci/windows.in
 zc.lockfile==2.0
     # via cherrypy
 zipp==3.5.0
