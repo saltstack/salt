@@ -17,7 +17,7 @@
 ::         COPYRIGHT: (c) 2012-2018 by the SaltStack Team
 ::
 ::           LICENSE: Apache 2.0
-::      ORGANIZATION: SaltStack, Inc (saltstack.com)
+::      ORGANIZATION: VMware, Inc (saltstack.com)
 ::           CREATED: 2017
 ::
 :: ############################################################################
