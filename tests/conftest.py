@@ -256,6 +256,10 @@ def pytest_configure(config):
         "slow_test: Mark test as being slow. These tests are skipped by default unless"
         " `--run-slow` is passed",
     )
+    config.addinivalue_line(
+        "markers",
+        "async_timeout: Timeout, in seconds, for asynchronous test functions(`async def`)",
+    )
     # "Flag" the slowTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
 
