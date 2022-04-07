@@ -142,10 +142,12 @@ class CacheDisk(CacheDict):
         """
         if not salt.utils.msgpack.HAS_MSGPACK or not os.path.exists(self._path):
             return
-        with salt.utils.files.fopen(self._path, "rb") as fp_:
-            cache = salt.utils.data.decode(
-                salt.utils.msgpack.load(fp_, encoding=__salt_system_encoding__)
-            )
+        try:
+            with salt.utils.files.fopen(self._path, "rb") as fp_:
+                cache = salt.utils.msgpack.load(fp_, encoding=__salt_system_encoding__)
+                cache = salt.utils.data.decode(cache)
+        except UnicodeDecodeError:
+            pass
         if "CacheDisk_cachetime" in cache:  # new format
             self._dict = cache["CacheDisk_data"]
             self._key_cache_time = cache["CacheDisk_cachetime"]
