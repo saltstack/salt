@@ -1,4 +1,4 @@
-## import configparser
+import configparser
 import logging
 import os
 import time
@@ -487,50 +487,53 @@ def test_pkg_latest_version(grains, modules, states, test_pkg):
     assert pkg_latest in cmd_pkg
 
 
-## @pytest.mark.destructive_test
-## @pytest.mark.requires_salt_modules("pkg.list_repos")
-## @pytest.mark.slow_test
-## def test_list_repos_duplicate_entries(grains, modules):
-##     """
-##     test duplicate entries in /etc/yum.conf
-##
-##     This is a destructive test as it installs and then removes a package
-##     """
-##     if grains["os_family"] != "RedHat":
-##         pytest.skip("Only runs on RedHat.")
-##
-##     # write valid config with duplicates entries
-##     cfg_file = "/etc/yum.conf"
-##     with salt.utils.files.fpopen(cfg_file, "w", mode=0o644) as fp_:
-##         fp_.write("[main]\n")
-##         fp_.write("gpgcheck=1\n")
-##         fp_.write("installonly_limit=3\n")
-##         fp_.write("clean_requirements_on_remove=True\n")
-##         fp_.write("best=True\n")
-##         fp_.write("skip_if_unavailable=False\n")
-##         fp_.write("http_caching=True\n")
-##         fp_.write("http_caching=True\n")
-##
-##     ret = modules.pkg.list_repos(strict_config=False)
-##     assert ret != []
-##     assert isinstance(ret, dict) is True
-##
-##     # test explicitly strict_config
-##     expected = "While reading from '/etc/yum.conf' [line  8]: option 'http_caching' in section 'main' already exists"
-##     with pytest.raises(configparser.DuplicateOptionError) as exc_info:
-##         result = modules.pkg.list_repos(strict_config=True)
-##     assert "{}".format(exc_info.value) == expected
-##
-##     # test implicitly strict_config
-##     with pytest.raises(configparser.DuplicateOptionError) as exc_info:
-##         result = modules.pkg.list_repos()
-##     assert "{}".format(exc_info.value) == expected
-##
-##     # leave yum.com in reasonable state
-##     with salt.utils.files.fpopen(cfg_file, "w", mode=0o644) as fp_:
-##         fp_.write("[main]\n")
-##         fp_.write("gpgcheck=1\n")
-##         fp_.write("installonly_limit=3\n")
-##         fp_.write("clean_requirements_on_remove=True\n")
-##         fp_.write("best=True\n")
-##         fp_.write("skip_if_unavailable=False\n")
+@pytest.mark.destructive_test
+@pytest.mark.requires_salt_modules("pkg.list_repos")
+@pytest.mark.slow_test
+def test_list_repos_duplicate_entries(grains, modules):
+    """
+    test duplicate entries in /etc/yum.conf
+
+    This is a destructive test as it installs and then removes a package
+    """
+    if grains["os_family"] != "RedHat":
+        pytest.skip("Only runs on RedHat.")
+
+    if grains["os"] == "Amazon":
+        pytest.skip("Only runs on RedHat, Amazon /etc/yum.conf differs.")
+
+    # write valid config with duplicates entries
+    cfg_file = "/etc/yum.conf"
+    with salt.utils.files.fpopen(cfg_file, "w", mode=0o644) as fp_:
+        fp_.write("[main]\n")
+        fp_.write("gpgcheck=1\n")
+        fp_.write("installonly_limit=3\n")
+        fp_.write("clean_requirements_on_remove=True\n")
+        fp_.write("best=True\n")
+        fp_.write("skip_if_unavailable=False\n")
+        fp_.write("http_caching=True\n")
+        fp_.write("http_caching=True\n")
+
+    ret = modules.pkg.list_repos(strict_config=False)
+    assert ret != []
+    assert isinstance(ret, dict) is True
+
+    # test explicitly strict_config
+    expected = "While reading from '/etc/yum.conf' [line  8]: option 'http_caching' in section 'main' already exists"
+    with pytest.raises(configparser.DuplicateOptionError) as exc_info:
+        result = modules.pkg.list_repos(strict_config=True)
+    assert "{}".format(exc_info.value) == expected
+
+    # test implicitly strict_config
+    with pytest.raises(configparser.DuplicateOptionError) as exc_info:
+        result = modules.pkg.list_repos()
+    assert "{}".format(exc_info.value) == expected
+
+    # leave yum.com in reasonable state
+    with salt.utils.files.fpopen(cfg_file, "w", mode=0o644) as fp_:
+        fp_.write("[main]\n")
+        fp_.write("gpgcheck=1\n")
+        fp_.write("installonly_limit=3\n")
+        fp_.write("clean_requirements_on_remove=True\n")
+        fp_.write("best=True\n")
+        fp_.write("skip_if_unavailable=False\n")
