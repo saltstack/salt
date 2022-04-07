@@ -24,7 +24,6 @@ import salt.utils.stringutils
 import salt.utils.yamlencoding
 from salt import __path__ as saltpath
 from salt.exceptions import CommandExecutionError, SaltInvocationError, SaltRenderError
-from salt.features import features
 from salt.loader.context import NamedLoaderContext
 from salt.utils.decorators.jinja import JinjaFilter, JinjaGlobal, JinjaTest
 from salt.utils.odict import OrderedDict
@@ -93,43 +92,7 @@ class AliasedModule:
         return getattr(self.wrapped, name)
 
 
-def _generate_sls_context_legacy(tmplpath, sls):
-    """
-    Legacy version of generate_sls_context, this method should be remove in the
-    Phosphorus release.
-    """
-    salt.utils.versions.warn_until(
-        "Phosphorus",
-        "There have been significant improvement to template variables. "
-        "To enable these improvements set features.enable_slsvars_fixes "
-        "to True in your config file. This feature will become the default "
-        "in the Phoshorus release.",
-    )
-    context = {}
-    slspath = sls.replace(".", "/")
-    if tmplpath is not None:
-        context["tplpath"] = tmplpath
-        if not tmplpath.lower().replace("\\", "/").endswith("/init.sls"):
-            slspath = os.path.dirname(slspath)
-        template = tmplpath.replace("\\", "/")
-        i = template.rfind(slspath.replace(".", "/"))
-        if i != -1:
-            template = template[i:]
-        tpldir = os.path.dirname(template).replace("\\", "/")
-        tpldata = {
-            "tplfile": template,
-            "tpldir": "." if tpldir == "" else tpldir,
-            "tpldot": tpldir.replace("/", "."),
-        }
-        context.update(tpldata)
-    context["slsdotpath"] = slspath.replace("/", ".")
-    context["slscolonpath"] = slspath.replace("/", ":")
-    context["sls_path"] = slspath.replace("/", "_")
-    context["slspath"] = slspath
-    return context
-
-
-def _generate_sls_context(tmplpath, sls):
+def generate_sls_context(tmplpath, sls):
     """
     Generate SLS/Template Context Items
 
@@ -188,27 +151,6 @@ def _generate_sls_context(tmplpath, sls):
     )
 
     return sls_context
-
-
-def generate_sls_context(tmplpath, sls):
-    """
-    Generate SLS/Template Context Items
-
-    Return values:
-
-    tplpath - full path to template on filesystem including filename
-    tplfile - relative path to template -- relative to file roots
-    tpldir - directory of the template relative to file roots. If none, "."
-    tpldot - tpldir using dots instead of slashes, if none, ""
-    slspath - directory containing current sls - (same as tpldir), if none, ""
-    sls_path - slspath with underscores separating parts, if none, ""
-    slsdotpath - slspath with dots separating parts, if none, ""
-    slscolonpath- slspath with colons separating parts, if none, ""
-
-    """
-    if not features.get("enable_slsvars_fixes", False):
-        return _generate_sls_context_legacy(tmplpath, sls)
-    return _generate_sls_context(tmplpath, sls)
 
 
 def wrap_tmpl_func(render_str):

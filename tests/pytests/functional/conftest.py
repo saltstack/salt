@@ -62,7 +62,6 @@ def minion_opts(
         {
             "file_client": "local",
             "file_roots": {"base": [str(state_tree)], "prod": [str(state_tree_prod)]},
-            "features": {"enable_slsvars_fixes": True},
         }
     )
     factory = salt_factories.salt_minion_daemon(
