@@ -1,7 +1,7 @@
 import logging
 
 import pytest
-import salt.sdb.etcd_db as etcd_db
+import salt.pillar.etcd_pillar as etcd_pillar
 from salt.utils.etcd_util import HAS_LIBS, EtcdClient
 from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
@@ -12,11 +12,19 @@ docker = pytest.importorskip("docker")
 log = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
     pytest.mark.skipif(not HAS_LIBS, reason="Need etcd libs to test etcd_util!"),
     pytest.mark.skip_if_binaries_missing("docker", "dockerd", check_all=False),
 ]
+
+
+@pytest.fixture
+def configure_loader_modules(minion_opts):
+    return {
+        etcd_pillar: {
+            "__opts__": minion_opts,
+        },
+    }
 
 
 @pytest.fixture(scope="module")
@@ -105,15 +113,25 @@ def cleanup_prefixed_entries(etcd_client, prefix):
         etcd_client.delete(prefix, recursive=True)
 
 
-def test_basic_operations(etcd_profile, prefix, profile_name):
+def test_ext_pillar(subtests, profile_name, prefix, etcd_client):
     """
-    Ensure we can do the basic CRUD operations available in sdb.etcd_db
+    Test ext_pillar functionality
     """
-    assert (
-        etcd_db.set_("{}/1".format(prefix), "one", profile=etcd_profile[profile_name])
-        == "one"
-    )
-    etcd_db.delete("{}/1".format(prefix), profile=etcd_profile[profile_name])
-    assert (
-        etcd_db.get("{}/1".format(prefix), profile=etcd_profile[profile_name]) is None
-    )
+    updated = {
+        "1": "not one",
+        "2": {
+            "3": "two-three",
+            "4": "two-four",
+        },
+    }
+    etcd_client.update(updated, path=prefix)
+
+    with subtests.test("We should be able to use etcd as an external pillar"):
+        expected = {
+            "salt": {
+                "pillar": {
+                    "test": updated,
+                },
+            },
+        }
+        assert etcd_pillar.ext_pillar("minion_id", {}, profile_name) == expected
