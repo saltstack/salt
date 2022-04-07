@@ -752,6 +752,7 @@ def _query(path, method="GET", data=None):
 
     data = salt.utils.json.dumps(data)
     requester = getattr(requests, method.lower())
+    # pylint: disable=not-callable
     request = requester(
         url,
         data=data,
@@ -760,6 +761,7 @@ def _query(path, method="GET", data=None):
             "Content-Type": "application/json",
         },
     )
+    # pylint: enable=not-callable
     if request.status_code > 299:
         raise SaltCloudSystemExit(
             "An error occurred while querying Vultr. HTTP Code: {}  "
