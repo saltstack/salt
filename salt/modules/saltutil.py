@@ -128,7 +128,7 @@ def _sync(form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
 def update(version=None):
     """
     Update the salt minion from the URL defined in opts['update_url']
-    SaltStack, Inc provides the latest builds here:
+    VMware, Inc provides the latest builds here:
     update_url: https://repo.saltproject.io/windows/
 
     Be aware that as of 2014-8-11 there's a bug in esky such that only the
