@@ -623,7 +623,6 @@ def test_pkg_015_installed_held(grains, modules, states, PKG_TARGETS):
         refresh=False,
     )
     assert ret.result is True
-    print("DGM ensure pkg is installed target '{}', result '{}'".format(target, ret))
 
     # Then we check that the package is now held
     ret = states.pkg.installed(
@@ -631,15 +630,6 @@ def test_pkg_015_installed_held(grains, modules, states, PKG_TARGETS):
         hold=True,
         refresh=False,
     )
-    print(
-        "DGM ensure pkg is installed and hold target '{}', result '{}'".format(
-            target, ret
-        )
-    )
-    ## DGM
-    assert versionlock_pkg is True
-    assert str(ret) == "-versionlock is not installed"
-    assert ret.result is True
 
     if versionlock_pkg and "-versionlock is not installed" in str(ret):
         pytest.skip("{}  `{}` is installed".format(ret, versionlock_pkg))
