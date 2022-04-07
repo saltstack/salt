@@ -543,6 +543,7 @@ execution modules
     xfs
     xml
     xmpp
+    yaml
     yumpkg
     zabbix
     zcbuildout
