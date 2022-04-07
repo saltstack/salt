@@ -1265,6 +1265,8 @@ repos:
                 salt/ext/.*|
                 tests/kitchen/.*
             )$
+        additional_dependencies:
+          - click<8.1.0
 
   - repo: https://github.com/asottile/blacken-docs
     rev: v1.10.0
@@ -1272,7 +1274,9 @@ repos:
       - id: blacken-docs
         args: [--skip-errors]
         files: ^doc/.*\.rst
-        additional_dependencies: [black==21.7b0]
+        additional_dependencies:
+          - click<8.1.0
+          - black==21.7b0
 
   # <---- Code Formatting --------------------------------------------------------------------------------------------
 
@@ -1312,11 +1316,11 @@ repos:
         args:
           - docs.check
         additional_dependencies:
-          - blessings
-          - pyyaml
-          - distro
-          - jinja2
-          - msgpack
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1329,11 +1333,11 @@ repos:
         args:
           - filemap.check
         additional_dependencies:
-          - blessings
-          - pyyaml
-          - distro
-          - jinja2
-          - msgpack
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1350,11 +1354,11 @@ repos:
         args:
           - loader.check-virtual
         additional_dependencies:
-          - blessings
-          - pyyaml
-          - distro
-          - jinja2
-          - msgpack
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1371,11 +1375,11 @@ repos:
         args:
           - docstrings.check
         additional_dependencies:
-          - blessings
-          - pyyaml
-          - distro
-          - jinja2
-          - msgpack
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1394,11 +1398,11 @@ repos:
           - docstrings.check
           - --error-on-known-failures
         additional_dependencies:
-          - blessings
-          - pyyaml
-          - distro
-          - jinja2
-          - msgpack
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
 
   - repo: https://github.com/saltstack/mirrors-nox
     rev: v2020.8.22
