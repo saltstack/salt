@@ -34,10 +34,11 @@ class MacPkgutilModuleTest(ModuleCase):
         """
         Get current settings
         """
-        os_release = grains["osrelease"]
-        self.pkg_name = "com.apple.pkg.BaseSystemResources"
-        if int(os_release.split(".")[1]) >= 13:
-            self.pkg_name = "com.apple.pkg.iTunesX"
+        os_release_info = grains["osrelease_info"]
+        if os_release_info[0] >= 11:
+            self.pkg_name = "com.apple.pkg.InstallAssistant.macOSBigSur"
+        else:
+            self.pkg_name = "com.apple.pkg.BaseSystemResources"
 
     def tearDown(self):
         """
