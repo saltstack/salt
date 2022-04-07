@@ -109,6 +109,9 @@ def test_jid_in_ret_event(
                 assert "__jid__" in job_data
 
 
+@pytest.mark.skip_on_spawning_platform(
+    reason="The '__low__' global is not populated on spawning platforms"
+)
 def test_parallel_orchestrations(
     salt_run_cli, salt_master, salt_minion, event_listener, base_env_state_tree_root_dir
 ):
