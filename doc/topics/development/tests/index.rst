@@ -568,8 +568,8 @@ See implementation details in `tests.support.helpers` for details.
 within a test case.  See implementation details in `tests.support.helpers` for details.
 
 
-.. _kitchen-salt jenkins setup: https://kitchen.saltstack.com/docs/file/docs/jenkins.md
-.. _getting started: https://kitchen.saltstack.com/docs/file/docs/gettingstarted.md
+.. _kitchen-salt jenkins setup: https://kitchen.saltproject.io/docs/file/docs/jenkins.md
+.. _getting started: https://kitchen.saltproject.io/docs/file/docs/gettingstarted.md
 .. _salt-jenkins: https://github.com/saltstack/salt-jenkins
-.. _Kitchen Salt: https://kitchen.saltstack.com/
+.. _Kitchen Salt: https://kitchen.saltproject.io/
 .. _pytest: https://docs.pytest.org/en/latest/usage.html#specifying-tests-selecting-tests
