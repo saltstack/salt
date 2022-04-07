@@ -1,8 +1,9 @@
 import logging
 
 import pytest
-import salt.sdb.etcd_db as etcd_db
-from salt.utils.etcd_util import HAS_LIBS, EtcdClient
+import salt.modules.etcd_mod as etcd_mod
+import salt.states.etcd_mod as etcd_state
+from salt.utils.etcd_util import HAS_LIBS, EtcdClient, get_conn
 from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
@@ -12,11 +13,29 @@ docker = pytest.importorskip("docker")
 log = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
     pytest.mark.skipif(not HAS_LIBS, reason="Need etcd libs to test etcd_util!"),
     pytest.mark.skip_if_binaries_missing("docker", "dockerd", check_all=False),
 ]
+
+
+@pytest.fixture
+def configure_loader_modules(minion_opts):
+    return {
+        etcd_state: {
+            "__salt__": {
+                "etcd.get": etcd_mod.get_,
+                "etcd.set": etcd_mod.set_,
+                "etcd.rm": etcd_mod.rm_,
+            },
+        },
+        etcd_mod: {
+            "__opts__": minion_opts,
+            "__utils__": {
+                "etcd_util.get_conn": get_conn,
+            },
+        },
+    }
 
 
 @pytest.fixture(scope="module")
@@ -105,15 +124,61 @@ def cleanup_prefixed_entries(etcd_client, prefix):
         etcd_client.delete(prefix, recursive=True)
 
 
-def test_basic_operations(etcd_profile, prefix, profile_name):
+def test_basic_operations(subtests, profile_name, prefix):
     """
-    Ensure we can do the basic CRUD operations available in sdb.etcd_db
+    Test basic CRUD operations
     """
-    assert (
-        etcd_db.set_("{}/1".format(prefix), "one", profile=etcd_profile[profile_name])
-        == "one"
-    )
-    etcd_db.delete("{}/1".format(prefix), profile=etcd_profile[profile_name])
-    assert (
-        etcd_db.get("{}/1".format(prefix), profile=etcd_profile[profile_name]) is None
-    )
+    with subtests.test("Removing a non-existent key should not explode"):
+        expected = {
+            "name": "{}/2/3".format(prefix),
+            "comment": "Key does not exist",
+            "result": True,
+            "changes": {},
+        }
+        assert etcd_state.rm("{}/2/3".format(prefix), profile=profile_name) == expected
+
+    with subtests.test("We should be able to set a value"):
+        expected = {
+            "name": "{}/1".format(prefix),
+            "comment": "New key created",
+            "result": True,
+            "changes": {"{}/1".format(prefix): "one"},
+        }
+        assert (
+            etcd_state.set_("{}/1".format(prefix), "one", profile=profile_name)
+            == expected
+        )
+
+    with subtests.test(
+        "We should be able to create an empty directory and set values in it"
+    ):
+        expected = {
+            "name": "{}/2".format(prefix),
+            "comment": "New directory created",
+            "result": True,
+            "changes": {"{}/2".format(prefix): "Created"},
+        }
+        assert (
+            etcd_state.directory("{}/2".format(prefix), profile=profile_name)
+            == expected
+        )
+
+        expected = {
+            "name": "{}/2/3".format(prefix),
+            "comment": "New key created",
+            "result": True,
+            "changes": {"{}/2/3".format(prefix): "two-three"},
+        }
+        assert (
+            etcd_state.set_("{}/2/3".format(prefix), "two-three", profile=profile_name)
+            == expected
+        )
+
+    with subtests.test("We should be able to remove an existing key"):
+        expected = {
+            "name": "{}/2/3".format(prefix),
+            "comment": "Key removed",
+            "result": True,
+            "changes": {"{}/2/3".format(prefix): "Deleted"},
+        }
+        assert etcd_state.rm("{}/2/3".format(prefix), profile=profile_name) == expected
