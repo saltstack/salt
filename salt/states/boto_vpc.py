@@ -1859,6 +1859,7 @@ def request_vpc_peering_connection(
     peer_vpc_name=None,
     conn_name=None,
     peer_owner_id=None,
+    peer_region=None,
     region=None,
     key=None,
     keyid=None,
@@ -1878,13 +1879,18 @@ def request_vpc_peering_connection(
         ID of the VPC tp crete VPC peering connection with.  This can be a VPC in another account. Exclusive with peer_vpc_name. String type.
 
     peer_vpc_name
-        Name tag of the VPC tp crete VPC peering connection with.  This can only be a VPC the same account. Exclusive with peer_vpc_id.  String type.
+        Name tag of the VPC tp crete VPC peering connection with.  This can only be a VPC the same account and region. Exclusive with peer_vpc_id.  String type.
 
     conn_name
         The (optional) name to use for this VPC peering connection. String type.
 
     peer_owner_id
         ID of the owner of the peer VPC. String type. If this isn't supplied AWS uses your account ID.  Required if peering to a different account.
+
+    peer_region
+        Region of peer VPC. For inter-region vpc peering connections. Not required for intra-region peering connections.
+
+        .. versionadded:: 3005
 
     region
         Region to connect to.
@@ -1944,6 +1950,7 @@ def request_vpc_peering_connection(
         peer_vpc_name,
         name=conn_name,
         peer_owner_id=peer_owner_id,
+        peer_region=peer_region,
         region=region,
         key=key,
         keyid=keyid,
@@ -1967,6 +1974,7 @@ def vpc_peering_connection_present(
     peer_vpc_name=None,
     conn_name=None,
     peer_owner_id=None,
+    peer_region=None,
     region=None,
     key=None,
     keyid=None,
@@ -1997,6 +2005,12 @@ def vpc_peering_connection_present(
     peer_owner_id
         ID of the owner of the peer VPC. Defaults to your account ID, so a value
         is required if peering with a VPC in a different account.
+
+    peer_region
+        Region of peer VPC. For inter-region vpc peering connections. Not required
+        for intra-region peering connections.
+
+        .. versionadded:: 3005
 
     region
         Region to connect to.
@@ -2062,6 +2076,7 @@ def vpc_peering_connection_present(
         peer_vpc_name=peer_vpc_name,
         conn_name=conn_name,
         peer_owner_id=peer_owner_id,
+        peer_region=peer_region,
         region=region,
         key=key,
         keyid=keyid,

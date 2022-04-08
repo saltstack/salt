@@ -67,7 +67,7 @@ salt-call from the GuestShell environment as follows.
 
 .. code-block:: bash
 
-    salt-call --local nxos.show 'show lldp neighbors' raw_text
+    salt-call --local nxos.sendline 'show lldp neighbors' raw_text
 
 .. note::
 
@@ -259,7 +259,7 @@ def get_roles(username, **kwargs):
     if not user:
         return []
     command = "show user-account {}".format(username)
-    info = show(command, **kwargs)
+    info = sendline(command, **kwargs)
     if isinstance(info, list):
         info = info[0]
     roles = re.search(r"^\s*roles:(.*)$", info, re.MULTILINE)
@@ -279,7 +279,7 @@ def get_user(username, **kwargs):
         salt '*' nxos.get_user username=admin
     """
     command = 'show run | include "^username {} password 5 "'.format(username)
-    info = show(command, **kwargs)
+    info = sendline(command, **kwargs)
     if isinstance(info, list):
         info = info[0]
     return info
@@ -421,7 +421,7 @@ def show_ver(**kwargs):
         salt '*' nxos.show_ver
     """
     command = "show version"
-    info = show(command, **kwargs)
+    info = sendline(command, **kwargs)
     if isinstance(info, list):
         info = info[0]
     return info
@@ -436,7 +436,7 @@ def show_run(**kwargs):
         salt '*' nxos.show_run
     """
     command = "show running-config"
-    info = show(command, **kwargs)
+    info = sendline(command, **kwargs)
     if isinstance(info, list):
         info = info[0]
     return info
@@ -556,7 +556,7 @@ def config(
         salt '*' nxos.config config_file=https://bit.ly/2LGLcDy context="{'servers': ['1.2.3.4']}"
     """
     kwargs = clean_kwargs(**kwargs)
-    initial_config = show("show running-config", **kwargs)
+    initial_config = sendline("show running-config", **kwargs)
     if isinstance(initial_config, list):
         initial_config = initial_config[0]
     if config_file:
@@ -586,7 +586,7 @@ def config(
         return e.strerror + "\n" + CONNECTION_ERROR_MSG
 
     config_result = _parse_config_result(config_result)
-    current_config = show("show running-config", **kwargs)
+    current_config = sendline("show running-config", **kwargs)
     if isinstance(current_config, list):
         current_config = current_config[0]
     diff = difflib.unified_diff(
@@ -696,7 +696,7 @@ def replace(old_value, new_value, full_match=False, **kwargs):
     if lines["old"]:
         delete_config(lines["old"], **kwargs)
     if lines["new"]:
-        add_config(lines["new"], **kwargs)
+        config(lines["new"], **kwargs)
 
     return lines
 

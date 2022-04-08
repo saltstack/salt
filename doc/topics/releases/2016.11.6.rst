@@ -466,7 +466,7 @@ Changelog for v2016.11.5..v2016.11.6
 
   * 1592687294 Document aptpkg architectures parameter
 
-* **ISSUE** `#41478`_: (`jf`_) security / information leak with consul pillar when subsitution values are not present (refs: `#41530`_)
+* **ISSUE** `#41478`_: (`jf`_) security / information leak with consul pillar when substitution values are not present (refs: `#41530`_)
 
 * **PR** `#41530`_: (`gtmanfred`_) Set default for consul_pillar to None
   @ *2017-06-08 18:13:15 UTC*
@@ -533,14 +533,14 @@ Changelog for v2016.11.5..v2016.11.6
 
   * 53bca96328 Update __init__.py
 
-* **PR** `#41552`_: (`Enquier`_) Adding logic so that update_floatingip can dissassociate floatingip's
+* **PR** `#41552`_: (`Enquier`_) Adding logic so that update_floatingip can disassociate floatingip's
   @ *2017-06-06 18:25:56 UTC*
 
   * 846ca54688 Merge pull request `#41552`_ from Enquier/neutron-floatingip-remove
 
   * aeed51c1e3 Adding port=None default and documentation
 
-  * fcce05e1e4 Adding logic so that update_floatingip can dissassociate floatingip's Previously update_floatingip would cause an error if port is set to None.
+  * fcce05e1e4 Adding logic so that update_floatingip can disassociate floatingip's Previously update_floatingip would cause an error if port is set to None.
 
 * **PR** `#41569`_: (`gtmanfred`_) Check all entries in result
   @ *2017-06-06 18:18:17 UTC*
@@ -581,7 +581,7 @@ Changelog for v2016.11.5..v2016.11.6
 
   * ef8e3ef569 Update win_pki.py
 
-* **PR** `#41557`_: (`dmurphy18`_) Add symbolic link for salt-proxy service similar to other serivce files
+* **PR** `#41557`_: (`dmurphy18`_) Add symbolic link for salt-proxy service similar to other service files
   @ *2017-06-06 17:13:52 UTC*
 
   * 3335fcbc7d Merge pull request `#41557`_ from dmurphy18/fix-proxy-service
@@ -826,7 +826,7 @@ Changelog for v2016.11.5..v2016.11.6
 
   * 66ab1e5184 Re-adding neutron dependency check
 
-  * cce07eefc2 Updating Neutron module to suport KeystoneAuth
+  * cce07eefc2 Updating Neutron module to support KeystoneAuth
 
 * **ISSUE** `#34460`_: (`Ch3LL`_) Receive an error when using salt-api to call a runner (refs: `#41409`_)
 
@@ -1022,7 +1022,7 @@ Changelog for v2016.11.5..v2016.11.6
 * **PR** `#41319`_: (`lomeroe`_) backport `#41307`_ to 2016.11, properly pack version numbers into single
   @ *2017-05-19 18:25:00 UTC*
 
-  * **PR** `#41307`_: (`lomeroe`_) properly pack/unpack the verison numbers into a number (refs: `#41319`_)
+  * **PR** `#41307`_: (`lomeroe`_) properly pack/unpack the version numbers into a number (refs: `#41319`_)
 
   * 140b0427e1 Merge pull request `#41319`_ from lomeroe/bp_41307
 

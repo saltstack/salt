@@ -591,6 +591,7 @@ import logging
 import os
 import signal
 import tarfile
+import time
 from collections.abc import Iterator, Mapping
 from multiprocessing import Pipe, Process
 from urllib.parse import parse_qsl
@@ -615,13 +616,13 @@ try:
     )
 except AttributeError:
     cpstats = None
-    logger.warn(
+    logger.warning(
         "Import of cherrypy.cpstats failed. Possible upstream bug: "
         "https://github.com/cherrypy/cherrypy/issues/1444"
     )
 except ImportError:
     cpstats = None
-    logger.warn("Import of cherrypy.cpstats failed.")
+    logger.warning("Import of cherrypy.cpstats failed.")
 
 try:
     # Imports related to websocket
@@ -2208,8 +2209,11 @@ class Events:
         # The eauth system does not currently support perms for the event
         # stream, so we're just checking if the token exists not if the token
         # allows access.
-        if salt_token and self.resolver.get_token(salt_token):
-            return True
+        if salt_token:
+            # We want to at least make sure that the token isn't expired yet.
+            resolved_tkn = self.resolver.get_token(salt_token)
+            if resolved_tkn and resolved_tkn.get("expire", 0) > time.time():
+                return True
 
         return False
 
@@ -2371,6 +2375,11 @@ class Events:
                 yield "retry: 400\n"
 
                 while True:
+                    # make sure the token is still valid
+                    if not self._is_valid_token(auth_token):
+                        logger.debug("Token is no longer valid")
+                        break
+
                     data = next(stream)
                     yield "tag: {}\n".format(data.get("tag", ""))
                     yield "data: {}\n\n".format(salt.utils.json.dumps(data))
