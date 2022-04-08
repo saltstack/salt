@@ -42,6 +42,8 @@ def test_pkg(grains):
             _pkg = "snoopy"
         else:
             _pkg = "units"
+    elif grains["os_family"] == "Debian":
+        _pkg = "ifenslave"
     return _pkg
 
 

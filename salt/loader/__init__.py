@@ -300,7 +300,12 @@ def minion_mods(
         _module_dirs(opts, "modules", "module"),
         opts,
         tag="module",
-        pack={"__context__": context, "__utils__": utils, "__proxy__": proxy},
+        pack={
+            "__context__": context,
+            "__utils__": utils,
+            "__proxy__": proxy,
+            "__opts__": opts,
+        },
         whitelist=whitelist,
         loaded_base_name=loaded_base_name,
         static_modules=static_modules,

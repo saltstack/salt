@@ -178,7 +178,6 @@ def event_bus_context(opts):
     else:
         event_bus = salt.utils.event.get_event(
             "minion",
-            transport=opts["transport"],
             opts=opts,
             sock_dir=opts["sock_dir"],
             listen=True,

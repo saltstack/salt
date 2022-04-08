@@ -33,7 +33,18 @@ import salt.version  # isort:skip
 formulas_dir = os.path.join(os.pardir, docs_basepath, "formulas")
 
 # ----- Intersphinx Settings ------------------------------------------------>
-intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
+intersphinx_mapping = {
+    "python": (
+        "https://docs.python.org/3",
+        (
+            "/usr/share/doc/python{}.{}/html/objects.inv".format(
+                sys.version_info[0], sys.version_info[1]
+            ),
+            "/usr/share/doc/python/html/objects.inv",
+            None,
+        ),
+    )
+}
 # <---- Intersphinx Settings -------------------------------------------------
 
 # -- General Configuration -----------------------------------------------------
@@ -274,7 +285,7 @@ html_show_copyright = True
 ### Latex options
 
 latex_documents = [
-    ("contents", "Salt.tex", "Salt Documentation", "SaltStack, Inc.", "manual"),
+    ("contents", "Salt.tex", "Salt Documentation", "VMware, Inc.", "manual"),
 ]
 
 latex_logo = "_static/salt-logo.png"
@@ -317,7 +328,7 @@ linkcheck_ignore = [
     r"dash-feed://",
     r"https://github.com/saltstack/salt/",
     r"http://bootstrap.saltstack.org",
-    r"https://bootstrap.saltstack.com",
+    r"https://bootstrap.saltproject.io",
     r"https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh",
     r"media.readthedocs.org/dash/salt/latest/salt.xml",
     r"https://portal.aws.amazon.com/gp/aws/securityCredentials",
@@ -348,19 +359,18 @@ man_pages = [
     ("ref/cli/salt-ssh", "salt-ssh", "salt-ssh Documentation", authors, 1),
     ("ref/cli/salt-cloud", "salt-cloud", "Salt Cloud Command", authors, 1),
     ("ref/cli/salt-api", "salt-api", "salt-api Command", authors, 1),
-    ("ref/cli/salt-unity", "salt-unity", "salt-unity Command", authors, 1),
     ("ref/cli/spm", "spm", "Salt Package Manager Command", authors, 1),
 ]
 
 
 ### epub options
 epub_title = "Salt Documentation"
-epub_author = "SaltStack, Inc."
+epub_author = "VMware, Inc."
 epub_publisher = epub_author
 epub_copyright = copyright
 
 epub_scheme = "URL"
-epub_identifier = "http://saltstack.com/"
+epub_identifier = "http://saltproject.io/"
 
 epub_tocdup = False
 # epub_tocdepth = 3

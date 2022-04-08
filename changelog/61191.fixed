@@ -1,0 +1,1 @@
+Fix a failure with salt.utils.vault.make_request when namespace is not defined in the connection.
