@@ -1343,9 +1343,6 @@ async def test_when_async_req_channel_with_syndic_role_should_use_syndic_master_
     with patch(
         "salt.crypt.verify_signature", autospec=True, return_value=True
     ) as fake_verify:
-        ret = await client.crypted_transfer_decode_dictentry(
-            load,
-            dictkey="pillar",
-        )
+        ret = await client.crypted_transfer_decode_dictentry(load, dictkey="pillar",)
 
         assert fake_verify.mock_calls[0].args[0] == expected_pubkey_path

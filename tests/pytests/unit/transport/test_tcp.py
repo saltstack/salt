@@ -48,6 +48,7 @@ def fake_crypticle():
         fake_crypticle.generate_key_string.return_value = "fakey fake"
         yield fake_crypticle
 
+
 @pytest.fixture
 def message_client_pool():
     sock_pool_size = 5
@@ -500,10 +501,7 @@ async def test_when_async_req_channel_with_syndic_role_should_use_syndic_master_
         "uuid.uuid4", autospec=True
     ) as fake_uuid:
         fake_uuid.return_value.hex = fake_nonce
-        ret = await client.crypted_transfer_decode_dictentry(
-            load,
-            dictkey="pillar",
-        )
+        ret = await client.crypted_transfer_decode_dictentry(load, dictkey="pillar",)
 
         assert fake_verify.mock_calls[0].args[0] == expected_pubkey_path
 
