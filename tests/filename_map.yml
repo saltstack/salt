@@ -275,5 +275,23 @@ salt/utils/vt.py:
 salt/wheel/*:
   - integration.wheel.test_client
 
+salt/(minion\.py|channel/.+|transport/.+):
+  - pytests.scenarios.multimaster.test_multimaster
+  - pytests.scenarios.multimaster.test_offline_master
+  - pytests.scenarios.multimaster.beacons.test_inotify
+  - pytests.scenarios.multimaster.modules.test_test
+  - pytests.scenarios.failover.multimaster.test_failover_master
+
 tests/support/mock.py:
   - unit.test_mock
+
+tests/support/pytest/mysql.py:
+  - pytests.integration.states.test_mysql
+  - pytests.integration.modules.test_mysql
+
+tests/pytests/scenarios/multimaster:
+  - pytests.scenarios.multimaster.test_multimaster
+  - pytests.scenarios.multimaster.test_offline_master
+  - pytests.scenarios.multimaster.beacons.test_inotify
+  - pytests.scenarios.multimaster.modules.test_test
+  - pytests.scenarios.failover.multimaster.test_failover_master

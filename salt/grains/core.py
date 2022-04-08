@@ -1117,6 +1117,8 @@ def _virtual(osdata):
                 grains["virtual"] = "OpenStack"
             if maker.startswith("Bochs"):
                 grains["virtual"] = "kvm"
+            if maker.startswith("Amazon EC2"):
+                grains["virtual"] = "Nitro"
         if sysctl:
             hv_vendor = __salt__["cmd.run"]("{} -n hw.hv_vendor".format(sysctl))
             model = __salt__["cmd.run"]("{} -n hw.model".format(sysctl))
@@ -2528,7 +2530,7 @@ def ip4_interfaces():
             if "address" in inet:
                 iface_ips.append(inet["address"])
         for secondary in ifaces[face].get("secondary", []):
-            if "address" in secondary:
+            if "address" in secondary and secondary.get("type") == "inet":
                 iface_ips.append(secondary["address"])
         ret[face] = iface_ips
     return {"ip4_interfaces": ret}
@@ -2553,7 +2555,7 @@ def ip6_interfaces():
             if "address" in inet:
                 iface_ips.append(inet["address"])
         for secondary in ifaces[face].get("secondary", []):
-            if "address" in secondary:
+            if "address" in secondary and secondary.get("type") == "inet6":
                 iface_ips.append(secondary["address"])
         ret[face] = iface_ips
     return {"ip6_interfaces": ret}

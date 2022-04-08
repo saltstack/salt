@@ -578,6 +578,10 @@ syndic_user: salt
 # as a percent of total actions will be shown for each state run.
 #state_output_pct: False
 
+# The state_compress_ids setting aggregates information about states which have
+# multiple "names" under the same state ID in the highstate output.
+#state_compress_ids: False
+
 # Automatically aggregate all states that have support for mod_aggregate by
 # setting to 'True'. Or pass a list of state module names to automatically
 # aggregate just those types.
