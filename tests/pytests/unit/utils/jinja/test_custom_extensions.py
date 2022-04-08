@@ -721,6 +721,48 @@ def test_ipv6(minion_opts, local_salt):
     assert rendered == "fe80::, ::"
 
 
+def test_ipwrap(minion_opts, local_salt):
+    """
+    Test the `ipwrap` Jinja filter.
+    """
+    rendered = render_jinja_tmpl(
+        "{{ '192.168.0.1' | ipwrap }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "192.168.0.1"
+
+    rendered = render_jinja_tmpl(
+        "{{ 'random' | ipwrap }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "random"
+
+    # returns the standard format value
+    rendered = render_jinja_tmpl(
+        "{{ 'FE80:0:0::0' | ipwrap }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "[fe80::]"
+
+    rendered = render_jinja_tmpl(
+        "{{ ['fe80::', '::'] | ipwrap | join(', ') }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "[fe80::], [::]"
+
+    rendered = render_jinja_tmpl(
+        "{{ ['fe80::', 'ham', 'spam', '2001:db8::1', 'eggs', '::'] | ipwrap | join(', ') }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "[fe80::], ham, spam, [2001:db8::1], eggs, [::]"
+
+    rendered = render_jinja_tmpl(
+        "{{ ('fe80::', 'ham', 'spam', '2001:db8::1', 'eggs', '::') | ipwrap | join(', ') }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "[fe80::], ham, spam, [2001:db8::1], eggs, [::]"
+
+
 def test_network_hosts(minion_opts, local_salt):
     """
     Test the `network_hosts` Jinja filter.
