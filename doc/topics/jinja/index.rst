@@ -1814,7 +1814,7 @@ Returns:
   ["fe80::"]
 
 
-.. jinja_ref:: network_hosts
+.. jinja_ref:: ipwrap
 
 ``ipwrap``
 --------
