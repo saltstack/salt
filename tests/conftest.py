@@ -27,9 +27,9 @@ import _pytest.skipping
 import psutil
 import pytest
 import salt._logging.impl
+import salt._logging.mixins
 import salt.config
 import salt.loader
-import salt.log.mixins
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -80,7 +80,7 @@ collect_ignore = ["setup.py"]
 
 # Patch PyTest logging handlers
 class LogCaptureHandler(
-    salt.log.mixins.ExcInfoOnLogLevelFormatMixIn, _pytest.logging.LogCaptureHandler
+    salt._logging.mixins.ExcInfoOnLogLevelFormatMixin, _pytest.logging.LogCaptureHandler
 ):
     """
     Subclassing PyTest's LogCaptureHandler in order to add the
@@ -94,7 +94,7 @@ _pytest.logging.LogCaptureHandler = LogCaptureHandler
 
 
 class LiveLoggingStreamHandler(
-    salt.log.mixins.ExcInfoOnLogLevelFormatMixIn,
+    salt._logging.mixins.ExcInfoOnLogLevelFormatMixin,
     _pytest.logging._LiveLoggingStreamHandler,
 ):
     """
@@ -255,6 +255,10 @@ def pytest_configure(config):
         "markers",
         "slow_test: Mark test as being slow. These tests are skipped by default unless"
         " `--run-slow` is passed",
+    )
+    config.addinivalue_line(
+        "markers",
+        "async_timeout: Timeout, in seconds, for asynchronous test functions(`async def`)",
     )
     # "Flag" the slowTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))

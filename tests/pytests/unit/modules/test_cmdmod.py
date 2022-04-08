@@ -5,6 +5,7 @@
 """
 
 import builtins
+import getpass
 import logging
 import os
 import re
@@ -27,7 +28,8 @@ MOCK_SHELL_FILE = "# List of acceptable shells\n\n/bin/bash\n"
 
 @pytest.fixture
 def configure_loader_modules():
-    return {cmdmod: {}}
+    opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    return {cmdmod: {"__opts__": opts}}
 
 
 @pytest.fixture(scope="module")
@@ -50,6 +52,20 @@ def test_render_cmd_no_template():
     Tests return when template=None
     """
     assert cmdmod._render_cmd("foo", "bar", None) == ("foo", "bar")
+
+
+def test_render_cmd_saltenv_from_config():
+    mock_template = MagicMock()
+    with patch.dict(cmdmod.__opts__, {"saltenv": "base"}):
+        with patch.dict(
+            "salt.utils.templates.TEMPLATE_REGISTRY", {"test": mock_template}
+        ):
+            cmdmod._render_cmd("test", "test", "test")
+            assert mock_template.call_count == 2
+            assert mock_template.call_args[1]["saltenv"] == "base"
+            cmdmod._render_cmd("test", "test", "test", saltenv="fake")
+            assert mock_template.call_count == 4
+            assert mock_template.call_args[1]["saltenv"] == "fake"
 
 
 def test_render_cmd_unavailable_engine():
@@ -368,6 +384,47 @@ def test_os_environment_remains_intact():
                     getpwnam_mock.assert_called_with("foobar")
 
 
+@pytest.mark.skip_on_windows
+def test_os_environment_do_not_pass_notify_socket():
+    """
+    Make sure NOTIFY_SOCKET environment variable is not passed
+    to the command if not explicitly set with env parameter.
+    """
+    with patch("pwd.getpwnam") as getpwnam_mock:
+        new_env = os.environ.copy()
+        new_env.update({"NOTIFY_SOCKET": "/run/systemd/notify"})
+        with patch("subprocess.Popen") as popen_mock, patch(
+            "os.environ.copy", return_value=new_env
+        ):
+            popen_mock.return_value = Mock(
+                communicate=lambda *args, **kwags: [b"", None],
+                pid=lambda: 1,
+                retcode=0,
+            )
+
+            with patch.dict(cmdmod.__grains__, {"os": "SUSE", "os_family": "Suse"}):
+                if sys.platform.startswith(("freebsd", "openbsd")):
+                    shell = "/bin/sh"
+                else:
+                    shell = "/bin/bash"
+
+                cmdmod._run("ls", cwd=tempfile.gettempdir(), shell=shell)
+
+                assert "NOTIFY_SOCKET" not in popen_mock.call_args_list[0][1]["env"]
+
+                cmdmod._run(
+                    "ls",
+                    cwd=tempfile.gettempdir(),
+                    shell=shell,
+                    env={"NOTIFY_SOCKET": "/run/systemd/notify.new"},
+                )
+
+                assert (
+                    popen_mock.call_args_list[1][1]["env"]["NOTIFY_SOCKET"]
+                    == "/run/systemd/notify.new"
+                )
+
+
 @pytest.mark.skip_unless_on_darwin
 def test_shell_properly_handled_on_macOS():
     """
@@ -449,7 +506,7 @@ def test_run_cwd_in_combination_with_runas():
     """
     cmd = "pwd"
     cwd = "/tmp"
-    runas = os.getlogin()
+    runas = getpass.getuser()
 
     with patch.dict(cmdmod.__grains__, {"os": "Darwin", "os_family": "Solaris"}):
         stdout = cmdmod._run(cmd, cwd=cwd, runas=runas).get("stdout")
@@ -643,7 +700,7 @@ def test_run_chroot_runas():
         python_shell=True,
         reset_system_locale=True,
         rstrip=True,
-        saltenv="base",
+        saltenv=None,
         shell="/bin/sh",
         stdin=None,
         success_retcodes=None,
@@ -692,3 +749,63 @@ def test_log_cmd_non_str_tuple_list():
             return self.cmd
 
     assert cmdmod._log_cmd(cmd("foo bar")) == "foo"
+
+
+@pytest.mark.skip_on_windows
+def test_cmd_script_saltenv_from_config():
+    mock_cp_get_template = MagicMock()
+    mock_cp_cache_file = MagicMock()
+    mock_run = MagicMock()
+    with patch.dict(cmdmod.__opts__, {"saltenv": "base"}):
+        with patch.dict(
+            cmdmod.__salt__,
+            {
+                "cp.cache_file": mock_cp_cache_file,
+                "cp.get_template": mock_cp_get_template,
+                "file.user_to_uid": MagicMock(),
+                "file.remove": MagicMock(),
+            },
+        ):
+            with patch("salt.modules.cmdmod._run") as mock_run:
+                with patch("shutil.copyfile", MagicMock()):
+                    with patch("os.chmod", MagicMock()):
+                        with patch("os.chown", MagicMock()):
+                            cmdmod.script("test")
+                            assert mock_cp_cache_file.call_count == 1
+                            mock_cp_cache_file.assert_called_with("test", "base")
+                            assert mock_run.call_count == 1
+                            assert mock_run.call_args[1]["saltenv"] == "base"
+                            cmdmod.script("test", template="jinja")
+                            assert mock_cp_get_template.call_count == 1
+                            assert mock_cp_get_template.call_args[0][3] == "base"
+                            assert mock_run.call_count == 2
+                            assert mock_run.call_args[1]["saltenv"] == "base"
+
+
+@pytest.mark.skip_unless_on_windows
+def test_cmd_script_saltenv_from_config_windows():
+    mock_cp_get_template = MagicMock()
+    mock_cp_cache_file = MagicMock()
+    mock_run = MagicMock()
+    with patch.dict(cmdmod.__opts__, {"saltenv": "base"}):
+        with patch.dict(
+            cmdmod.__salt__,
+            {
+                "cp.cache_file": mock_cp_cache_file,
+                "cp.get_template": mock_cp_get_template,
+                "file.user_to_uid": MagicMock(),
+                "file.remove": MagicMock(),
+            },
+        ):
+            with patch("salt.modules.cmdmod._run") as mock_run:
+                with patch("shutil.copyfile", MagicMock()):
+                    cmdmod.script("test")
+                    assert mock_cp_cache_file.call_count == 1
+                    mock_cp_cache_file.assert_called_with("test", "base")
+                    assert mock_run.call_count == 1
+                    assert mock_run.call_args[1]["saltenv"] == "base"
+                    cmdmod.script("test", template="jinja")
+                    assert mock_cp_get_template.call_count == 1
+                    assert mock_cp_get_template.call_args[0][3] == "base"
+                    assert mock_run.call_count == 2
+                    assert mock_run.call_args[1]["saltenv"] == "base"

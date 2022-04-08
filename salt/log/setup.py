@@ -12,7 +12,6 @@
     logger instance uses our ``salt.log.setup.SaltLoggingClass``.
 """
 
-
 import logging
 import logging.handlers
 import multiprocessing
@@ -550,6 +549,7 @@ def setup_multiprocessing_logging_listener(opts, queue=None):
 
     __MP_MAINPROCESS_ID = os.getpid()
     __MP_LOGGING_QUEUE_PROCESS = multiprocessing.Process(
+        name="MultiprocessingLoggingQueue",
         target=__process_multiprocessing_logging_queue,
         args=(
             opts,
@@ -753,11 +753,6 @@ def patch_python_logging_handlers():
 
 
 def __process_multiprocessing_logging_queue(opts, queue):
-    # Avoid circular import
-    import salt.utils.process
-
-    salt.utils.process.appendproctitle("MultiprocessingLoggingQueue")
-
     # Assign UID/GID of user to proc if set
     from salt.utils.verify import check_user
 

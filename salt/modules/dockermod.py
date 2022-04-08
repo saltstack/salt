@@ -361,7 +361,7 @@ def _get_client(timeout=NOTSET, **kwargs):
         client_kwargs["base_url"] = os.environ.get("DOCKER_HOST")
 
     if "version" not in client_kwargs:
-        # Let docker-py auto detect docker version incase
+        # Let docker-py auto detect docker version in case
         # it's not defined by user.
         client_kwargs["version"] = "auto"
 
@@ -2505,11 +2505,11 @@ def version():
     if "Version" in ret:
         match = version_re.match(str(ret["Version"]))
         if match:
-            ret["VersionInfo"] = tuple([int(x) for x in match.group(1).split(".")])
+            ret["VersionInfo"] = tuple(int(x) for x in match.group(1).split("."))
     if "ApiVersion" in ret:
         match = version_re.match(str(ret["ApiVersion"]))
         if match:
-            ret["ApiVersionInfo"] = tuple([int(x) for x in match.group(1).split(".")])
+            ret["ApiVersionInfo"] = tuple(int(x) for x in match.group(1).split("."))
     return ret
 
 

@@ -5,6 +5,7 @@ plugin interfaces used by Salt.
 """
 
 import contextlib
+import inspect
 import logging
 import os
 import re
@@ -16,7 +17,6 @@ import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.loader.context
 import salt.syspaths
-import salt.utils.args
 import salt.utils.context
 import salt.utils.data
 import salt.utils.dictupdate
@@ -300,7 +300,12 @@ def minion_mods(
         _module_dirs(opts, "modules", "module"),
         opts,
         tag="module",
-        pack={"__context__": context, "__utils__": utils, "__proxy__": proxy},
+        pack={
+            "__context__": context,
+            "__utils__": utils,
+            "__proxy__": proxy,
+            "__opts__": opts,
+        },
         whitelist=whitelist,
         loaded_base_name=loaded_base_name,
         static_modules=static_modules,
@@ -934,7 +939,7 @@ def grains(opts, force_refresh=False, proxy=None, context=None):
             # proxymodule for retrieving information from the connected
             # device.
             log.trace("Loading %s grain", key)
-            parameters = salt.utils.args.get_function_argspec(funcs[key]).args
+            parameters = inspect.signature(funcs[key]).parameters
             kwargs = {}
             if "proxy" in parameters:
                 kwargs["proxy"] = proxy

@@ -7,7 +7,7 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
-Salt 3004 (2021-09-27)
+Salt 3004 (2021-10-11)
 ======================
 
 Removed
@@ -23,6 +23,7 @@ Removed
 Deprecated
 ----------
 
+- The _ext_nodes alias to the master_tops function was added back in 3004 to maintain backwards compatibility with older supported versions. This alias will now be removed in 3006. This change will break Master and Minion communication compatibility with Salt minions running versions 3003 and lower. (#60980)
 - utils/boto3_elasticsearch is no longer needed (#59882)
 - Changed "manufacture" grain to "manufacturer" for Solaris on SPARC to unify the name across all platforms. The old "manufacture" grain is now deprecated and will be removed in Sulfur (#60511)
 - Deprecate `salt.payload.Serial` (#60953)
@@ -41,6 +42,14 @@ Changed
 Fixed
 -----
 
+- Set default 'bootstrap_delay' to 0 (#61005)
+- Fixed issue where multiple args to netapi were not preserved (#59182)
+- Handle all repo formats in the aptpkg module. (#60971)
+- Do not break master_tops for minion with version lower to 3003
+  This is going to be removed in Salt 3006 (Sulfur) (#60980)
+- Reverting changes in PR #60150. Updating installed and removed functions to return changes when test=True. (#60995)
+- Handle signals and properly exit, instead of raising exceptions. (#60391, #60963)
+- Redirect imports of ``salt.ext.six`` to ``six`` (#60966)
 - Surface strerror to user state instead of returning false (#20789)
 - Fixing _get_envs() to preserve the order of pillar_roots. _get_envs() returned pillar_roots in a non-deterministic order. (#24501)
 - Fixes salt-cloud `KeyError` that occurs when there exists any subnets with no tags when profiles use `subnetname` (#44330)
@@ -61,10 +70,10 @@ Fixed
 - Fixed bug #55262 where `salt.modules.iptables` would call `cmd.run` and receive and interpret interspersed `stdout` and `stderr` output from subprocesses. (#55262)
 - Updated pcs support to handle auth and setup for new syntax supporting version 0.10 (#56924)
 - Reinstate ignore_cidr option in salt-cloud openstack driver (#57127)
-- Fix for network.wolmatch runner displaying 'invalid arguments' error with valid arguements (#57473)
+- Fix for network.wolmatch runner displaying 'invalid arguments' error with valid arguments (#57473)
 - Fixed bug 57490, which prevented package installation for Open Euler and Issabel PBX. Both Open Euler and Issabel PBX use Yum for package management, added them to yumpkg.py. (#57490)
 - Better handling of bad RSA public keys from minions (#57733)
-- Fixing various functions in the file state module that use user.info to get group information, certain hosts particularly proxy minions do not have the user.info function avaiable. (#57786)
+- Fixing various functions in the file state module that use user.info to get group information, certain hosts particularly proxy minions do not have the user.info function available. (#57786)
 - Do not monkey patch yaml loaders: Prevent breaking Ansible filter modules (#57995)
 - Fix --subset command line option, and support old 'sub' parameter name in cmd_subset for backwards compatibility (#58600)
 - When calling salt.utils.http.query with a HEAD method to check for the existence of a source ensure that decode_body is False, so the file is not downloaded into memory when we don't need the contents. (#58881)
@@ -131,7 +140,7 @@ Fixed
 - Port option reinstated for Junos Proxy (accidentally removed) (#60340)
 - Now hosts.rm_host can remove entries from /etc/hosts when this file have inline comments. (#60351)
 - Fixes issue where the full same name is not used when making rights assignments with group policy (#60357)
-- Fixed zabbix_host.present to not overwrite inventory_mode to "manual" everytime inventory is updated. (#60382)
+- Fixed zabbix_host.present to not overwrite inventory_mode to "manual" every time inventory is updated. (#60382)
 - Allowed zabbix_host.present to do partial updates of inventory, also don't erase everything if inventory is missing in state definition. (#60389)
 - Fixing the mysql_cache module to handle binary inserting binary data into the database. Initially adding tests. (#60398)
 - Fixed host_inventory_get to not throw an exception if host does not exist (#60418)
@@ -142,7 +151,7 @@ Fixed
 - virt.get_disks: properly report qemu-img errors (#60512)
 - Make all platforms have psutils. This prevents a minion from starting if an instance is all ready running. (#60523)
 - Ignore configuration for 'enable_fqdns_grains' for AIX, Solaris and Juniper, assume False (#60529)
-- Remove check for TIAMAT_BUILD enforcing USE_STATIC_REQUIREMENTS, this is now controled by Tiamat v7.10.1 and above (#60559)
+- Remove check for TIAMAT_BUILD enforcing USE_STATIC_REQUIREMENTS, this is now controlled by Tiamat v7.10.1 and above (#60559)
 - Have the beacon call run through a try...except, catching any errors, logging and firing an event that includes the error.
   Fixing the swapusage beacon to ensure value is a string before we attempt to filter out the %. (#60585)
 - Refactor loader into logical sub-modules (#60594)
@@ -178,7 +187,7 @@ Added
 - Add a salt.util.platform check to detect the AArch64 64-bit extension of the ARM architecture. (#59915)
 - Adding support for Deltaproxy controlled proxy minions into Salt Open. (#60090)
 - Added functions to slsutil execution module to test if files exist in the state tree
-  Added funtion to slsutil execution module to search for a file by walking up the state tree (#60159)
+  Added function to slsutil execution module to search for a file by walking up the state tree (#60159)
 - Allow module_refresh to also refresh available beacons, eg. following a Python library being installed and "refresh_modules" being passed as an argument in a state. (#60541)
 - Add the `detect_remote_minions` and `remote_minions_port` options to allow the master to detect remote ports for connected minions. This will allow users to detect Heist-Salt minions the master is connected to over port 22 by default. (#60612)
 - Add the python rpm-vercmp library in the rpm_lowpkg.py module. (#60814)
@@ -210,7 +219,7 @@ Fixed
 - Periodically restart the fileserver update process to avoid leaks (#50313)
 - Add ssh_timeout to kwargs in deploy_script (#59901)
 - Update the external ipaddress to the latest 3.9.5 version which has some security fixes. Updating the compat.p to use the vendored version if the python version is below 3.9.5 and only run the test_ipaddress.py tests if below 3.9.5. (#60168)
-- Use the right crypto libary for salt.utils.crypt.reinit_crypto (#60215)
+- Use the right crypto library for salt.utils.crypt.reinit_crypto (#60215)
 - Stop SSH from hanging if connection is lost. Also added args to customize grace period. (#60216)
 - Improve reliability of Terminal class (#60504)
 - Ignore configuration for 'enable_fqdns_grains' for AIX, Solaris and Juniper, assume False (#60529)
@@ -223,7 +232,7 @@ Fixed
 -----
 
 - Import salt.utils.azurearm instead of using __utils__ from loader in azure cloud.  This fixes an issue where __utils__ would become unavailable when we are using the ThreadPool in azurearm. (#59744)
-- Use contextvars libary from site-packages if it is intalled. Fixes salt ssh for targets with python <=3.6 (#59942)
+- Use contextvars library from site-packages if it is intalled. Fixes salt ssh for targets with python <=3.6 (#59942)
 
 Fixed
 -----
@@ -232,7 +241,7 @@ Fixed
 - Fixed dependencies for Amazon Linux 2 on https://repo.saltproject.io since Amazon Linux 2 now provides some of the python libraries in their repos. (#59982)
 - IPCMessageSubscriber objects expose their connect method as a coroutine so they can be wrapped by SyncWrapper. (#60049)
 - Import salt.utils.azurearm instead of using __utils__ from loader in azure cloud.  This fixes an issue where __utils__ would become unavailable when we are using the ThreadPool in azurearm. (#59744)
-- Use contextvars libary from site-packages if it is intalled. Fixes salt ssh for targets with python <=3.6 (#59942)
+- Use contextvars library from site-packages if it is intalled. Fixes salt ssh for targets with python <=3.6 (#59942)
 - Add back support to load old entrypoints by iterating instead of type checking (#59961)
 - Pass the value of the `__grains__` NamedContext to salt.pillar.get_pillar, instead of the NamedContext object itself. (#59975)
 - Fix pillar serialization in jinja templates (#60083)
@@ -273,7 +282,7 @@ Fixed
 - Fixed installation on Apple Silicon Macs by checking $HOMEBREW_PREFIX for `libcrypto` instead of assuming /usr/local. (#59808)
 - Fix incorrect documentation for pillar_source_merging_strategy (#26396)
 - Don't iterate through cloud map errors (#34033)
-- Supress noisy warnings when very old pyzmq is used. (#50327)
+- Suppress noisy warnings when very old pyzmq is used. (#50327)
 - Fixed glusterfs version parsing for pre-4.0 (#50707)
 - Prevent traceback when trying to list reactors when none are configured. (#53334)
 - Fixed zabbix_host.present to accept all Zabbix host properties (#53838)
@@ -295,7 +304,7 @@ Fixed
   minion not to start
   Use default timezone offset in scheduler when correct timezone cannot be determined (#58379)
 - Pop!_OS 20.04 and 20.10 now support using pkg.* / aptpkg.* (#58395)
-- Restoring functionallity of the textfsm module when using textfsm_path argument (#58499)
+- Restoring functionality of the textfsm module when using textfsm_path argument (#58499)
 - Invalidate file list cache when cache file has a future last modified time (#58529)
 - Fix issue with setting permissions in combination with the win_perms_reset
   option (#58541)
@@ -303,7 +312,7 @@ Fixed
   valid if Powershell 7 is installed on the system. (#58598)
 - Fixed the zabbix.host_create call on zabbix_host.present to include the
   optional parameter visible_name. Now working as documented. (#58602)
-- Fixed some bugs to allow zabbix_host.present to update a host already 
+- Fixed some bugs to allow zabbix_host.present to update a host already
   existent on Zabbix server:
 
   - Added checks before "pop" the elements "bulk" and "details" from
@@ -311,8 +320,8 @@ Fixed
     didn't works with Zabbix >= 5.0
   - Fixed the "inventory" comparison. It failed when both current and new
     inventory were missing.
-  - Rewrite of the update_interfaces routine to really "update" the 
-    interfaces and not trying to delete and recreate all interfaces, 
+  - Rewrite of the update_interfaces routine to really "update" the
+    interfaces and not trying to delete and recreate all interfaces,
     which almost always gives errors as interfaces with linked items
     can't be deleted. (#58603)
 - Added the "details" mandatory object with the properly default values
@@ -498,7 +507,7 @@ Fixed
 - Removing use of undefined varilable in utils/slack.py. (#58753)
 - Restored the ability to specify the amount of extents for a Logical
   Volume as a percentage. (#58759)
-- Ensuring that the version check function is run a second time in all the user related functions incase the user being managed is the connection user and the password has been updated. (#58773)
+- Ensuring that the version check function is run a second time in all the user related functions in case the user being managed is the connection user and the password has been updated. (#58773)
 - Allow bytes in gpg renderer (#58794)
 - Fix issue where win_wua module fails to load when BITS is set to Manual (#58848)
 - Ensure that elasticsearch.index_exists is available before loading the elasticsearch returner. (#58851)
@@ -546,7 +555,7 @@ Deprecated
 Changed
 -------
 
-- Allow to specify a custom port for Proxmox connection (#50620)
+- Allow specifying a custom port for Proxmox connection (#50620)
 - Changed the lvm.lv_present state to accept a resizefs switch. So, when
   the logical volume is resized, the filesystem will be resized too. (#55265)
 - Change the ``enable_fqdns_grains`` setting to default to ``False`` on proxy minions
@@ -739,7 +748,7 @@ Added
   even just maintaining highstate becomes unmanageable. (#57849)
 - - Added an execution module for running idem exec modules
   - Added a state module for running idem states (#57969)
-- - Added the ability for states to return `sub_state_run`s -- results frome external state engines (#57993)
+- - Added the ability for states to return `sub_state_run`s -- results from external state engines (#57993)
 - Added salt-cloud support for Linode APIv4 via the ``api_version`` provider configuration parameter. (#58093)
 - Added support to manage services in Slackware Linux. (#58206)
 - Added list_sources to chocolatey module to have an overview of the repositories present on the minions.

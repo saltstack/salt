@@ -1,0 +1,1 @@
+Fix error "'__opts__' is not defined" when using the boto v2 modules

@@ -1,0 +1,1 @@
+Fixed conflict between importlib_metada from Salt and importlib.metadata from Python 3.10

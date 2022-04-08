@@ -5,6 +5,7 @@ import contextlib
 import copy
 import errno
 import functools
+import inspect
 import io
 import json
 import logging
@@ -18,7 +19,6 @@ import subprocess
 import sys
 import threading
 import time
-import types
 
 import salt.defaults.exitcodes
 import salt.log.setup
@@ -51,7 +51,10 @@ def appendproctitle(name):
     Append "name" to the current process title
     """
     if HAS_SETPROCTITLE:
-        setproctitle.setproctitle(setproctitle.getproctitle() + " " + name)
+        current = setproctitle.getproctitle()
+        if current.strip().endswith("MainProcess"):
+            current, _ = current.rsplit("MainProcess", 1)
+        setproctitle.setproctitle("{} {}".format(current.rstrip(), name))
 
 
 def daemonize(redirect_out=True):
@@ -507,58 +510,15 @@ class ProcessManager:
         """
         if args is None:
             args = []
-
         if kwargs is None:
             kwargs = {}
 
-        if salt.utils.platform.is_windows():
-            # Need to ensure that 'log_queue' and 'log_queue_level' is
-            # correctly transferred to processes that inherit from
-            # 'Process'.
-            if type(Process) is type(tgt) and (issubclass(tgt, Process)):
-                need_log_queue = True
-            else:
-                need_log_queue = False
-
-            if need_log_queue:
-                if "log_queue" not in kwargs:
-                    if hasattr(self, "log_queue"):
-                        kwargs["log_queue"] = self.log_queue
-                    else:
-                        kwargs[
-                            "log_queue"
-                        ] = salt.log.setup.get_multiprocessing_logging_queue()
-                if "log_queue_level" not in kwargs:
-                    if hasattr(self, "log_queue_level"):
-                        kwargs["log_queue_level"] = self.log_queue_level
-                    else:
-                        kwargs[
-                            "log_queue_level"
-                        ] = salt.log.setup.get_multiprocessing_logging_level()
-
-        # create a nicer name for the debug log
-        if name is None:
-            if isinstance(tgt, types.FunctionType):
-                name = "{}.{}".format(
-                    tgt.__module__,
-                    tgt.__name__,
-                )
-            else:
-                name = "{}{}.{}".format(
-                    tgt.__module__,
-                    ".{}".format(tgt.__class__)
-                    if str(tgt.__class__) != "<type 'type'>"
-                    else "",
-                    tgt.__name__,
-                )
-
-        if type(multiprocessing.Process) is type(tgt) and issubclass(
-            tgt, multiprocessing.Process
-        ):
+        if inspect.isclass(tgt) and issubclass(tgt, multiprocessing.Process):
+            kwargs["name"] = name or tgt.__qualname__
             process = tgt(*args, **kwargs)
         else:
-            process = multiprocessing.Process(
-                target=tgt, args=args, kwargs=kwargs, name=name
+            process = Process(
+                target=tgt, args=args, kwargs=kwargs, name=name or tgt.__qualname__
             )
 
         if isinstance(process, SignalHandlingProcess):
@@ -566,7 +526,7 @@ class ProcessManager:
                 process.start()
         else:
             process.start()
-        log.debug("Started '%s' with pid %s", name, process.pid)
+        log.debug("Started '%s' with pid %s", process.name, process.pid)
         self._process_map[process.pid] = {
             "tgt": tgt,
             "args": args,
@@ -643,15 +603,16 @@ class ProcessManager:
         Load and start all available api modules
         """
         log.debug("Process Manager starting!")
-        appendproctitle(self.name)
+        if multiprocessing.current_process().name != "MainProcess":
+            appendproctitle(self.name)
 
         # make sure to kill the subprocesses if the parent is killed
         if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
             # There are no SIGTERM handlers installed, install ours
-            signal.signal(signal.SIGTERM, self.kill_children)
+            signal.signal(signal.SIGTERM, self._handle_signals)
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
             # There are no SIGINT handlers installed, install ours
-            signal.signal(signal.SIGINT, self.kill_children)
+            signal.signal(signal.SIGINT, self._handle_signals)
 
         while True:
             log.trace("Process manager iteration")
@@ -691,19 +652,6 @@ class ProcessManager:
         """
         Kill all of the children
         """
-        # first lets reset signal handlers to default one to prevent running this twice
-        signal.signal(signal.SIGTERM, signal.SIG_IGN)
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
-
-        # check that this is the correct process, children inherit this
-        # handler, if we are in a child lets just run the original handler
-        if os.getpid() != self._pid:
-            if callable(self._sigterm_handler):
-                return self._sigterm_handler(*args)
-            elif self._sigterm_handler is not None:
-                return signal.default_int_handler(signal.SIGTERM)(*args)
-            else:
-                return
         if salt.utils.platform.is_windows():
             if multiprocessing.current_process().name != "MainProcess":
                 # Since the main process will kill subprocesses by tree,
@@ -826,6 +774,27 @@ class ProcessManager:
         self.stop_restarting()
         self.send_signal_to_processes(signal.SIGTERM)
         self.kill_children()
+
+    def _handle_signals(self, *args, **kwargs):
+        # first lets reset signal handlers to default one to prevent running this twice
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+        self.stop_restarting()
+        self.send_signal_to_processes(signal.SIGTERM)
+
+        # check that this is the correct process, children inherit this
+        # handler, if we are in a child lets just run the original handler
+        if os.getpid() != self._pid:
+            if callable(self._sigterm_handler):
+                return self._sigterm_handler(*args)
+            elif self._sigterm_handler is not None:
+                return signal.default_int_handler(signal.SIGTERM)(*args)
+            else:
+                return
+
+        # Terminate child processes
+        self.kill_children(*args, **kwargs)
 
 
 class Process(multiprocessing.Process):
@@ -988,6 +957,7 @@ class Process(multiprocessing.Process):
         @functools.wraps(run_func)
         def wrapped_run_func():
             # Static after fork method, always needs to happen first
+            appendproctitle(self.name)
             try:
                 salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
             except Exception:  # pylint: disable=broad-except
@@ -1081,22 +1051,6 @@ class Process(multiprocessing.Process):
             self._finalize_methods.append(finalize_method_tuple)
 
 
-class MultiprocessingProcess(Process):
-    """
-    This class exists for backwards compatibility and to properly deprecate it.
-    """
-
-    def __init__(self, *args, **kwargs):
-        salt.utils.versions.warn_until_date(
-            "20220101",
-            "Please stop using '{name}.MultiprocessingProcess' and instead use "
-            "'{name}.Process'. '{name}.MultiprocessingProcess' will go away "
-            "after {{date}}.".format(name=__name__),
-            stacklevel=3,
-        )
-        super().__init__(*args, **kwargs)
-
-
 class SignalHandlingProcess(Process):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1150,23 +1104,6 @@ class SignalHandlingProcess(Process):
             super().start()
 
 
-class SignalHandlingMultiprocessingProcess(SignalHandlingProcess):
-    """
-    This class exists for backwards compatibility and to properly deprecate it.
-    """
-
-    def __init__(self, *args, **kwargs):
-        salt.utils.versions.warn_until_date(
-            "20220101",
-            "Please stop using '{name}.SignalHandlingMultiprocessingProcess' and"
-            " instead use '{name}.SignalHandlingProcess'."
-            " '{name}.SignalHandlingMultiprocessingProcess' will go away after"
-            " {{date}}.".format(name=__name__),
-            stacklevel=3,
-        )
-        super().__init__(*args, **kwargs)
-
-
 @contextlib.contextmanager
 def default_signals(*signals):
     old_signals = {}
@@ -1182,14 +1119,15 @@ def default_signals(*signals):
         else:
             old_signals[signum] = saved_signal
 
-    # Do whatever is needed with the reset signals
-    yield
+    try:
+        # Do whatever is needed with the reset signals
+        yield
+    finally:
+        # Restore signals
+        for signum in old_signals:
+            signal.signal(signum, old_signals[signum])
 
-    # Restore signals
-    for signum in old_signals:
-        signal.signal(signum, old_signals[signum])
-
-    del old_signals
+        del old_signals
 
 
 class SubprocessList:

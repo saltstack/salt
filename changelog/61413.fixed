@@ -1,0 +1,1 @@
+Use net instead of sc in salt cloud when restarting the salt service

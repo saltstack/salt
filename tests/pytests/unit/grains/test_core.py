@@ -88,6 +88,73 @@ def test_parse_etc_os_release(os_release_dir):
     }
 
 
+def test_network_grains_secondary_ip(tmp_path):
+    """
+    Secondary IP should be added to IPv4 or IPv6 address list depending on type
+    """
+    data = {
+        "wlo1": {
+            "up": True,
+            "hwaddr": "29:9f:9f:e9:67:f4",
+            "inet": [
+                {
+                    "address": "172.16.13.85",
+                    "netmask": "255.255.248.0",
+                    "broadcast": "172.16.15.255",
+                    "label": "wlo1",
+                }
+            ],
+            "inet6": [
+                {
+                    "address": "2001:4860:4860::8844",
+                    "prefixlen": "64",
+                    "scope": "fe80::6238:e0ff:fe06:3f6b%enp2s0",
+                }
+            ],
+            "secondary": [
+                {
+                    "type": "inet",
+                    "address": "172.16.13.86",
+                    "netmask": "255.255.248.0",
+                    "broadcast": "172.16.15.255",
+                    "label": "wlo1",
+                },
+                {
+                    "type": "inet6",
+                    "address": "2001:4860:4860::8888",
+                    "prefixlen": "64",
+                    "scope": "fe80::6238:e0ff:fe06:3f6b%enp2s0",
+                },
+            ],
+        }
+    }
+    cache_dir = tmp_path / "cache"
+    extmods = tmp_path / "extmods"
+    opts = {
+        "cachedir": str(cache_dir),
+        "extension_modules": str(extmods),
+        "optimization_order": [0],
+    }
+    with patch("salt.utils.network.interfaces", side_effect=[data]):
+        grains = salt.loader.grain_funcs(opts)
+        ret_ip4 = grains["core.ip4_interfaces"]()
+        assert ret_ip4["ip4_interfaces"]["wlo1"] == ["172.16.13.85", "172.16.13.86"]
+
+        ret_ip6 = grains["core.ip6_interfaces"]()
+        assert ret_ip6["ip6_interfaces"]["wlo1"] == [
+            "2001:4860:4860::8844",
+            "2001:4860:4860::8888",
+        ]
+
+        ret_ip = grains["core.ip_interfaces"]()
+        assert ret_ip["ip_interfaces"]["wlo1"] == [
+            "172.16.13.85",
+            "2001:4860:4860::8844",
+            "172.16.13.86",
+            "2001:4860:4860::8888",
+        ]
+
+
 def test_network_grains_cache(tmp_path):
     """
     Network interfaces are cache is cleared by the loader
@@ -1435,6 +1502,12 @@ def test_xen_virtual():
     ), patch.dict(core.__salt__, {"cmd.run": MagicMock(return_value="")}), patch.dict(
         core.__salt__,
         {"cmd.run_all": MagicMock(return_value={"retcode": 0, "stdout": ""})},
+    ), patch.object(
+        os.path,
+        "isfile",
+        MagicMock(side_effect=lambda x: True if x == "/proc/1/cgroup" else False),
+    ), patch(
+        "salt.utils.files.fopen", mock_open(read_data="")
     ):
         assert (
             core._virtual({"kernel": "Linux"}).get("virtual_subtype") == "Xen PV DomU"
@@ -1878,7 +1951,7 @@ def test_fqdns_return():
 
 
 @pytest.mark.skip_unless_on_linux
-def test_fqdns_socket_error():
+def test_fqdns_socket_error(caplog):
     """
     test the behavior on non-critical socket errors of the dns grain
     """
@@ -1907,17 +1980,12 @@ def test_fqdns_socket_error():
                 mock_log.debug.assert_called()
                 mock_log.error.assert_not_called()
 
-        mock_log = MagicMock()
+        caplog.set_level(logging.WARNING)
         with patch.dict(
             core.__salt__, {"network.fqdns": salt.modules.network.fqdns}
-        ), patch.object(
-            socket, "gethostbyaddr", side_effect=_gen_gethostbyaddr(-1)
-        ), patch(
-            "salt.modules.network.log", mock_log
-        ):
+        ), patch.object(socket, "gethostbyaddr", side_effect=_gen_gethostbyaddr(-1)):
             assert core.fqdns() == {"fqdns": []}
-            mock_log.debug.assert_called_once()
-            mock_log.error.assert_called()
+        assert "Failed to resolve address 1.2.3.4:" in caplog.text
 
 
 def test_core_virtual():

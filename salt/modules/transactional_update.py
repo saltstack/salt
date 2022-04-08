@@ -1052,7 +1052,7 @@ def _create_and_execute_salt_state(
     # Create the tar containing the state pkg and relevant files.
     salt.client.ssh.wrapper.state._cleanup_slsmod_low_data(chunks)
     trans_tar = salt.client.ssh.state.prep_trans_tar(
-        salt.fileclient.get_file_client(__opts__), chunks, file_refs, __pillar__
+        salt.fileclient.get_file_client(__opts__), chunks, file_refs, __pillar__.value()
     )
     trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, hash_type)
 
@@ -1134,7 +1134,7 @@ def sls(
 
     # Get a copy of the pillar data, to avoid overwriting the current
     # pillar, instead the one delegated
-    pillar = copy.deepcopy(__pillar__)
+    pillar = copy.deepcopy(__pillar__.value())
     pillar.update(kwargs.get("pillar", {}))
 
     # Clone the options data and apply some default values. May not be
@@ -1218,7 +1218,7 @@ def highstate(activate_transaction=False, queue=False, **kwargs):
 
     # Get a copy of the pillar data, to avoid overwriting the current
     # pillar, instead the one delegated
-    pillar = copy.deepcopy(__pillar__)
+    pillar = copy.deepcopy(__pillar__.value())
     pillar.update(kwargs.get("pillar", {}))
 
     # Clone the options data and apply some default values. May not be
@@ -1284,7 +1284,7 @@ def single(fun, name, test=None, activate_transaction=False, queue=False, **kwar
 
     # Get a copy of the pillar data, to avoid overwriting the current
     # pillar, instead the one delegated
-    pillar = copy.deepcopy(__pillar__)
+    pillar = copy.deepcopy(__pillar__.value())
     pillar.update(kwargs.get("pillar", {}))
 
     # Clone the options data and apply some default values. May not be

@@ -10,13 +10,12 @@ import sys
 import traceback
 
 import salt
+import salt.channel.client
 import salt.defaults.exitcodes
 import salt.loader
 import salt.minion
 import salt.output
 import salt.payload
-import salt.transport
-import salt.transport.client
 import salt.utils.args
 import salt.utils.files
 import salt.utils.jid
@@ -41,21 +40,7 @@ class Caller:
 
     @staticmethod
     def factory(opts, **kwargs):
-        # Default to ZeroMQ for now
-        ttype = "zeromq"
-
-        # determine the ttype
-        if "transport" in opts:
-            ttype = opts["transport"]
-        elif "transport" in opts.get("pillar", {}).get("master", {}):
-            ttype = opts["pillar"]["master"]["transport"]
-
-        # switch on available ttypes
-        if ttype in ("zeromq", "tcp", "detect"):
-            return ZeroMQCaller(opts, **kwargs)
-        else:
-            raise Exception("Callers are only defined for ZeroMQ and TCP")
-            # return NewKindOfCaller(opts, **kwargs)
+        return ZeroMQCaller(opts, **kwargs)
 
 
 class BaseCaller:
@@ -130,7 +115,7 @@ class BaseCaller:
             # _retcode will be available in the kwargs of the outputter function
             if self.opts.get("retcode_passthrough", False):
                 sys.exit(ret["retcode"])
-            elif ret["retcode"] != salt.defaults.exitcodes.EX_OK:
+            elif ret.get("retcode") != salt.defaults.exitcodes.EX_OK:
                 sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         except SaltInvocationError as err:
             raise SystemExit(err)
@@ -322,7 +307,7 @@ class ZeroMQCaller(BaseCaller):
         """
         Return the data up to the master
         """
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             self.opts, usage="salt_call"
         ) as channel:
             load = {"cmd": "_return", "id": self.opts["id"]}
