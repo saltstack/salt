@@ -121,7 +121,7 @@ def _set_attrib(name, key, value, param, root=None, validate=True):
 
     cmd.extend((param, value, name))
 
-    ret = not __salt__["cmd.retcode"](cmd, python_shell=False)
+    ret = not __salt__["cmd.run"](cmd, python_shell=False)
     if validate:
         ret = info(name, root=root).get(key) == value
     return ret
