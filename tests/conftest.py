@@ -261,6 +261,16 @@ def pytest_configure(config):
         "markers",
         "async_timeout: Timeout, in seconds, for asynchronous test functions(`async def`)",
     )
+    config.addinivalue_line(
+        "markers",
+        "requires_random_entropy(minimum={}, timeout={}, skip=True): Mark test as "
+        "requiring a minimum value of random entropy. In the case where the value is lower "
+        "than the provided 'minimum', an attempt will be made to raise that value up until "
+        "the provided 'timeout' minutes have passed, at which time, depending on the value "
+        "of 'skip' the test will skip or fail.".format(
+            EntropyGenerator.minimum_entropy, EntropyGenerator.max_minutes
+        ),
+    )
     # "Flag" the slowTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
 
@@ -544,6 +554,55 @@ def pytest_runtest_setup(item):
                     ", ".join(not_available_states)
                 )
             )
+
+    requires_random_entropy_marker = item.get_closest_marker("requires_random_entropy")
+    if requires_random_entropy_marker is not None:
+        if requires_random_entropy_marker.args:
+            raise pytest.UsageError(
+                "'requires_random_entropy' marker does not accept any arguments "
+                "only keyword arguments."
+            )
+        skip = requires_random_entropy_marker.kwargs.pop("skip", None)
+        if skip and not isinstance(skip, bool):
+            raise pytest.UsageError(
+                "The 'skip' keyword argument to the 'requires_random_entropy' marker "
+                "requires a boolean not '{}'.".format(type(skip))
+            )
+        minimum_entropy = requires_random_entropy_marker.kwargs.pop("minimum", None)
+        if minimum_entropy is not None:
+            if not isinstance(minimum_entropy, int):
+                raise pytest.UsageError(
+                    "The 'minimum' keyword argument to the 'requires_random_entropy' marker "
+                    "must be an integer not '{}'.".format(type(minimum_entropy))
+                )
+            if minimum_entropy <= 0:
+                raise pytest.UsageError(
+                    "The 'minimum' keyword argument to the 'requires_random_entropy' marker "
+                    "must be an positive integer not '{}'.".format(minimum_entropy)
+                )
+        max_minutes = requires_random_entropy_marker.kwargs.pop("timeout", None)
+        if max_minutes is not None:
+            if not isinstance(max_minutes, int):
+                raise pytest.UsageError(
+                    "The 'timeout' keyword argument to the 'requires_random_entropy' marker "
+                    "must be an integer not '{}'.".format(type(max_minutes))
+                )
+            if max_minutes <= 0:
+                raise pytest.UsageError(
+                    "The 'timeout' keyword argument to the 'requires_random_entropy' marker "
+                    "must be an positive integer not '{}'.".format(max_minutes)
+                )
+        if requires_random_entropy_marker.kwargs:
+            raise pytest.UsageError(
+                "Unsupported keyword arguments passed to the 'requires_random_entropy' "
+                "marker: {}".format(
+                    ", ".join(list(requires_random_entropy_marker.kwargs))
+                )
+            )
+        entropy_generator = EntropyGenerator(
+            minimum_entropy=minimum_entropy, max_minutes=max_minutes, skip=skip
+        )
+        entropy_generator.generate_entropy()
 
     if salt.utils.platform.is_windows():
         unit_tests_paths = (

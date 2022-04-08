@@ -614,9 +614,18 @@ class FakeSaltExtension:
 
 
 class EntropyGenerator:
-    def __init__(self, max_minutes=5, minimum_entropy=800):
-        self.max_minutes = max_minutes
-        self.minimum_entropy = minimum_entropy
+    max_minutes = 5
+    minimum_entropy = 800
+
+    def __init__(self, max_minutes=None, minimum_entropy=None, skip=None):
+        if max_minutes is not None:
+            self.max_minutes = max_minutes
+        if minimum_entropy is not None:
+            self.minimum_entropy = minimum_entropy
+        if skip is None:
+            skip = True
+        self.skip = skip
+        self.current_entropy = 0
 
     def generate_entropy(self):
         max_time = self.max_minutes * 60
@@ -625,9 +634,9 @@ class EntropyGenerator:
             log.info("The '%s' file is not avilable", kernel_entropy_file)
             return
 
-        available_entropy = int(kernel_entropy_file.read_text().strip())
-        log.info("Available Entropy: %s", available_entropy)
-        if available_entropy >= self.minimum_entropy:
+        self.current_entropy = int(kernel_entropy_file.read_text().strip())
+        log.info("Available Entropy: %s", self.current_entropy)
+        if self.current_entropy >= self.minimum_entropy:
             return
 
         exc_kwargs = {}
@@ -641,29 +650,33 @@ class EntropyGenerator:
             log.info("Using rngd to generate entropy")
             while True:
                 if time.time() >= timeout:
-                    raise pytest.skip.Exception(
+                    message = (
                         "Skipping test as generating entropy took more than {} minutes. "
                         "Current entropy value {}".format(
-                            self.max_minutes, available_entropy
-                        ),
-                        **exc_kwargs
+                            self.max_minutes, self.current_entropy
+                        )
                     )
+                    if self.skip:
+                        raise pytest.skip.Exception(message, **exc_kwargs)
+                    raise pytest.fail(message)
                 subprocess.run([rngd, "-r", "/dev/urandom"], shell=False, check=True)
-                available_entropy = int(kernel_entropy_file.read_text().strip())
-                log.info("Available Entropy: %s", available_entropy)
-                if available_entropy >= self.minimum_entropy:
+                self.current_entropy = int(kernel_entropy_file.read_text().strip())
+                log.info("Available Entropy: %s", self.current_entropy)
+                if self.current_entropy >= self.minimum_entropy:
                     break
         elif openssl:
             log.info("Using openssl to generate entropy")
             while True:
                 if time.time() >= timeout:
-                    raise pytest.skip.Exception(
+                    message = (
                         "Skipping test as generating entropy took more than {} minutes. "
                         "Current entropy value {}".format(
-                            self.max_minutes, available_entropy
-                        ),
-                        **exc_kwargs
+                            self.max_minutes, self.current_entropy
+                        )
                     )
+                    if self.skip:
+                        raise pytest.skip.Exception(message, **exc_kwargs)
+                    raise pytest.fail(message)
 
                 target_file = tempfile.NamedTemporaryFile(
                     delete=False, suffix="sample.txt"
@@ -671,7 +684,7 @@ class EntropyGenerator:
                 target_file.close()
                 subprocess.run(
                     [
-                        "openssl",
+                        openssl,
                         "rand",
                         "-out",
                         target_file.name,
@@ -682,17 +695,20 @@ class EntropyGenerator:
                     check=True,
                 )
                 os.unlink(target_file.name)
-                available_entropy = int(kernel_entropy_file.read_text().strip())
-                log.info("Available Entropy: %s", available_entropy)
-                if available_entropy >= self.minimum_entropy:
+                self.current_entropy = int(kernel_entropy_file.read_text().strip())
+                log.info("Available Entropy: %s", self.current_entropy)
+                if self.current_entropy >= self.minimum_entropy:
                     break
         else:
-            raise pytest.skip.Exception(
-                "Skipping test as there's not enough entropy({}) to continue".format(
-                    available_entropy
-                ),
-                **exc_kwargs
+            message = (
+                "Skipping test as there's not enough entropy({}) to continue and "
+                "neither 'rgn-tools' nor 'openssl' is available on the system.".format(
+                    self.current_entropy
+                )
             )
+            if self.skip:
+                raise pytest.skip.Exception(message, **exc_kwargs)
+            raise pytest.fail(message)
 
     def __enter__(self):
         self.generate_entropy()

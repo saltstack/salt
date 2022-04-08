@@ -12,6 +12,7 @@ from pytestshellutils.utils.processes import ProcessResult
 
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("gpg"),
+    pytest.mark.requires_random_entropy,
 ]
 
 log = logging.getLogger(__name__)
