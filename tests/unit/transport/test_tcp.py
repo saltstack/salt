@@ -5,7 +5,6 @@
 import logging
 import socket
 import threading
-import pytest
 
 import salt.config
 import salt.exceptions
@@ -25,7 +24,7 @@ from salt.transport.tcp import (
 from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.helpers import flaky, slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.mock import MagicMock, patch, create_autospec
+from tests.support.mock import MagicMock, create_autospec, patch
 from tests.support.unit import TestCase, skipIf
 from tests.unit.transport.mixins import (
     PubChannelMixin,
@@ -256,7 +255,6 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
 
 
 class AsyncTCPPubChannelTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
-
     @slowTest
     def test_connect_publish_port(self):
         """
@@ -275,20 +273,20 @@ class AsyncTCPPubChannelTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
             channel.connect()
         assert patch_client.call_args[0][0]["publish_port"] == opts["publish_port"]
 
-
-    def test_when_async_req_channel_with_syndic_role_should_use_syndic_master_pub_file_to_verify_master_sig(self):
+    def test_when_async_req_channel_with_syndic_role_should_use_syndic_master_pub_file_to_verify_master_sig(
+        self,
+    ):
         """
         test when publish_port is not 4506
         """
+
         @salt.ext.tornado.gen.coroutine
         def mocksend(msg, timeout=60, tries=3):
             raise salt.ext.tornado.gen.Return({"pillar": "data", "key": "value"})
 
         with patch(
-                "salt.transport.tcp.PKCS1_OAEP", autospec=True
-        ) as fake_crypto, patch(
-           "salt.crypt.AsyncAuth.get_keys", autospec=True
-        ):
+            "salt.transport.tcp.PKCS1_OAEP", autospec=True
+        ) as fake_crypto, patch("salt.crypt.AsyncAuth.get_keys", autospec=True):
             expected_pubkey_path = "/etc/salt/pki/minion/syndic_master.pub"
             fake_crypto.new.return_value.decrypt.return_value = "decrypted_return_value"
             mockloop = MagicMock()
@@ -337,14 +335,17 @@ class AsyncTCPPubChannelTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
                 ) as fake_verify, patch(
                     "salt.payload.Serial.loads",
                     autospec=True,
-                    return_value={"key": "value", "nonce": fake_nonce, "pillar": "data"},
+                    return_value={
+                        "key": "value",
+                        "nonce": fake_nonce,
+                        "pillar": "data",
+                    },
                 ), patch(
                     "uuid.uuid4", autospec=True
                 ) as fake_uuid:
                     fake_uuid.return_value.hex = fake_nonce
                     ret = client.crypted_transfer_decode_dictentry(
-                        load,
-                        dictkey="pillar",
+                        load, dictkey="pillar",
                     )
 
                     assert fake_verify.mock_calls[0].args[0] == expected_pubkey_path
@@ -384,10 +385,12 @@ class SaltMessageClientPoolTest(AsyncTestCase):
         for message_client_mock in self.message_client_pool.message_clients:
             message_client_mock.send_queue = [0, 0, 0]
             message_client_mock.send.return_value = []
+        # pylint: disable=E1120
         self.assertEqual([], self.message_client_pool.send())
         self.message_client_pool.message_clients[2].send_queue = [0]
         self.message_client_pool.message_clients[2].send.return_value = [1]
         self.assertEqual([1], self.message_client_pool.send())
+        # pylint: enable=E1120
 
     def test_write_to_stream(self):
         for message_client_mock in self.message_client_pool.message_clients:
