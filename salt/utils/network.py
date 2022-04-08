@@ -2327,3 +2327,21 @@ def filter_by_networks(values, networks):
             raise ValueError("Do not know how to filter a {}".format(type(values)))
     else:
         return values
+
+
+@jinja_filter("ipwrap")
+def ipwrap(data):
+    """
+    Returns any input (string, list, tuple) as a string or a list with any IPv6 addresses wrapped in square brackets ([]).
+    """
+
+    if isinstance(data, (list, tuple)):
+        ret = []
+        for element in data:
+            if _is_ipv(element, 6, options=None):
+                element = '[' + element + ']'
+            ret.append(element)
+    else:
+        if _is_ipv(data, 6, options=None):
+            ret = '[' + data + ']'
+    return ret
