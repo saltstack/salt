@@ -49,7 +49,7 @@ jaraco.functools==2.0
     #   tempora
 jaraco.text==3.5.0
     # via jaraco.collections
-jinja2==3.0.3
+jinja2==3.1.0
     # via -r requirements/base.txt
 libnacl==1.8.0
     # via -r requirements/windows.txt
@@ -68,7 +68,7 @@ more-itertools==8.2.0
     #   cherrypy
     #   jaraco.classes
     #   jaraco.functools
-msgpack==0.6.2
+msgpack==1.0.2
     # via -r requirements/base.txt
 portend==2.6
     # via cherrypy

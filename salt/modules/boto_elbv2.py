@@ -41,7 +41,6 @@ Connection module for Amazon ALB
 
 import logging
 
-import salt.utils.boto3mod
 import salt.utils.versions
 
 try:
@@ -68,7 +67,7 @@ def __virtual__():
     """
     has_boto_reqs = salt.utils.versions.check_boto_reqs()
     if has_boto_reqs is True:
-        salt.utils.boto3mod.assign_funcs(__name__, "elbv2")
+        __utils__["boto3.assign_funcs"](__name__, "elbv2")
     return has_boto_reqs
 
 
