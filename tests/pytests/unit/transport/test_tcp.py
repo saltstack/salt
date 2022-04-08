@@ -48,6 +48,7 @@ def fake_crypticle():
         fake_crypticle.generate_key_string.return_value = "fakey fake"
         yield fake_crypticle
 
+
 @pytest.fixture
 def message_client_pool():
     sock_pool_size = 5
