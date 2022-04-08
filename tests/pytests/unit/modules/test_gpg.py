@@ -167,6 +167,7 @@ def entropy_generation():
 def gpghome(tmp_path):
     root = tmp_path / "gpghome"
     root.mkdir(mode=0o0700)
+    root.joinpath(".gnupg").mkdir(mode=0o0700)
     pub = root / "gpgfile.pub"
     pub.write_text(GPG_TEST_PUB_KEY)
     priv = root / "gpgfile.priv"
