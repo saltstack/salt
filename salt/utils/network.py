@@ -2339,9 +2339,16 @@ def ipwrap(data):
         ret = []
         for element in data:
             if _is_ipv(element, 6, options=None):
-                element = "[" + element + "]"
+                if len(element.split("/")) == 2:
+                    element = "[" + "]/".join(element.split("/"))
+                else:
+                    element = "[" + element + "]"
             ret.append(element)
     else:
         if _is_ipv(data, 6, options=None):
-            ret = "[" + data + "]"
+            if len(data.split("/")) == 2:
+                data = "[" + "]/".join(data.split("/"))
+            else:
+                data = "[" + data + "]"
+        ret = data
     return ret
