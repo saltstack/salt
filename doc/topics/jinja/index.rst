@@ -1833,7 +1833,7 @@ Returns:
 
 .. code-block:: python
 
-  ["192.0.2.1", 'foo', 'bar', "[fe80::]", '[2001:db8::1]/64']
+  ["192.0.2.1", "foo", "bar", "[fe80::]", "[2001:db8::1]/64"]
 
 
 .. jinja_ref:: network_hosts
