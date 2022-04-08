@@ -1651,7 +1651,6 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
     @salt.ext.tornado.gen.coroutine
     def publish_payload(self, package, _):
         package = self.pack_publish(package)
-        log.debug("TCP PubServer sending payload: %s", package)
         payload = salt.transport.frame.frame_msg(package["payload"])
 
         to_remove = []
@@ -1725,7 +1724,8 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
 
         # Check if io_loop was set outside
         if self.io_loop is None:
-            self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
+            self.io_loop = salt.ext.tornado.ioloop.IOLoop()
+            self.io_loop.make_current()
 
         # Spin up the publisher
         pub_server = PubServer(
