@@ -644,11 +644,21 @@ def present(
             # wouldng't know if the IPv4 subnet in the existing network was
             # explicitly configured or was automatically assigned by Docker.
             enable_ipv6 = kwargs.pop("enable_ipv6", None)
+            kwargs2 = kwargs
+            driver = kwargs.get(
+                "driver",
+            )
+            driver_opts = kwargs.get("options", {})
+            bridge_name = driver_opts.get("com.docker.network.bridge.name", None)
+
+            if driver == "bridge" and bridge_name is not None:
+                tmp_name = str(bridge_name) + "comp"
+                kwargs2["options"]["com.docker.network.bridge.name"] = tmp_name[-14:]
             __salt__["docker.create_network"](
                 temp_net_name,
                 skip_translate=True,  # No need to translate (already did)
                 enable_ipv6=False,
-                **kwargs
+                **kwargs2
             )
         except CommandExecutionError as exc:
             ret["comment"] = "Failed to create temp network for comparison: {}".format(
