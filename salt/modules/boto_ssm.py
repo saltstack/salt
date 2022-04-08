@@ -14,7 +14,6 @@ Connection module for Amazon SSM
 """
 import logging
 
-import salt.utils.boto3mod
 import salt.utils.json as json
 import salt.utils.versions
 
@@ -27,7 +26,7 @@ def __virtual__():
     """
     has_boto_reqs = salt.utils.versions.check_boto_reqs()
     if has_boto_reqs is True:
-        salt.utils.boto3mod.assign_funcs(__name__, "ssm")
+        __utils__["boto3.assign_funcs"](__name__, "ssm")
     return has_boto_reqs
 
 

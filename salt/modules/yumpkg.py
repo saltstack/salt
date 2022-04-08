@@ -1448,6 +1448,8 @@ def install(
                 'version': '<new-version>',
                 'arch': '<new-arch>'}}}
     """
+    if "version" in kwargs:
+        kwargs["version"] = str(kwargs["version"])
     options = _get_options(**kwargs)
 
     if salt.utils.data.is_true(refresh):
@@ -1463,8 +1465,6 @@ def install(
 
     if pkg_params is None or len(pkg_params) == 0:
         return {}
-
-    version_num = kwargs.get("version")
 
     diff_attr = kwargs.get("diff_attr")
     old = (
