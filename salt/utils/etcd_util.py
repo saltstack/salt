@@ -73,20 +73,24 @@ except ImportError:
 # Set up logging
 log = logging.getLogger(__name__)
 
+
 class EtcdLibraryNotInstalled(SaltException):
     """
     We didn't find the required etcd library
     """
+
 
 class Etcd3DirectoryException(SaltException):
     """
     We didn't find the required etcd library
     """
 
+
 class EtcdUtilWatchTimeout(Exception):
     """
     A watch timed out without returning a result
     """
+
 
 class EtcdClient:
     """
@@ -94,6 +98,7 @@ class EtcdClient:
 
     This also serves as a documentation hub for all superclasses.
     """
+
     def __init__(
         self,
         opts,
@@ -229,7 +234,6 @@ class EtcdClient:
         """
         raise NotImplementedError()
 
-
     def set(self, key, value, ttl=None, directory=False):
         """
         Write a file or directory, a higher interface to write
@@ -284,6 +288,7 @@ class EtcdClient:
         """
         raise NotImplementedError()
 
+
 class EtcdApiV2Adapter(EtcdClient):
     def __init__(self, opts, **kwargs):
         if not HAS_ETCD_V2:
@@ -291,7 +296,7 @@ class EtcdApiV2Adapter(EtcdClient):
         log.debug("etcd_util has the libraries needed for etcd v2")
 
         super().__init__(opts, **kwargs)
-        
+
         self.client = etcd.Client(host=self.host, port=self.port, **self.xargs)
 
     def watch(self, key, recurse=False, timeout=0, index=None):
@@ -408,7 +413,6 @@ class EtcdApiV2Adapter(EtcdClient):
             log.error("etcd: uncaught exception %s", err)
             raise
         return result
-
 
     def update(self, fields, path=""):
         if not isinstance(fields, dict):
@@ -536,12 +540,14 @@ class EtcdApiV2Adapter(EtcdClient):
                 ret[comps[-1]] = item.value
         return ret
 
+
 class EtcdApiV3Adapter(EtcdClient):
     """
     Since etcd3 has no concept of directories, this class leaves some methods unimplemented.
 
     These are: ls and write_directory.
     """
+
     ENCODING = "UTF-8"
 
     def __init__(self, opts, **kwargs):
@@ -557,8 +563,16 @@ class EtcdApiV3Adapter(EtcdClient):
 
     def _decode_from_bytes(self, kv):
         try:
-            kv.key = kv.key.decode(encoding=self.ENCODING) if (kv.key and isinstance(kv.key, bytes)) else kv.key
-            kv.value = kv.value.decode(encoding=self.ENCODING) if (kv.value and isinstance(kv.value, bytes)) else kv.value
+            kv.key = (
+                kv.key.decode(encoding=self.ENCODING)
+                if (kv.key and isinstance(kv.key, bytes))
+                else kv.key
+            )
+            kv.value = (
+                kv.value.decode(encoding=self.ENCODING)
+                if (kv.value and isinstance(kv.value, bytes))
+                else kv.value
+            )
         except AttributeError as err:
             log.debug("etcd3 decoding error: %s", err)
         return kv
@@ -592,19 +606,21 @@ class EtcdApiV3Adapter(EtcdClient):
                 result = self.client.range(key, prefix=recursive)
                 kvs = getattr(result, "kvs", None)
                 if kvs is None:
-                    log.error("etcd3 read: No values found for key %", key)
+                    log.error("etcd3 read: No values found for key %s", key)
                 else:
                     for kv in kvs:
                         kv = self._decode_from_bytes(kv)
                 return kvs
-            except Exception as err: # pylint: disable-broad-except
+            except Exception as err:  # pylint: disable=W0703
                 log.error("etcd3 read: %s", err)
                 return None
         else:
             try:
-                watcher = self.client.Watcher(key=key, prefix=recursive, start_revision=waitIndex)
+                watcher = self.client.Watcher(
+                    key=key, prefix=recursive, start_revision=waitIndex
+                )
                 return self._decode_from_bytes(watcher.watch_once(timeout=timeout))
-            except Exception as err: # pylint: disable-broad-except
+            except Exception as err:  # pylint: disable=W0703
                 log.error("etcd3 watch: %s", err)
                 return None
 
@@ -625,7 +641,7 @@ class EtcdApiV3Adapter(EtcdClient):
     def write_file(self, key, value, ttl=None):
         if ttl:
             lease = self.client.Lease(ttl=ttl)
-            lease.grant() # We need to explicitly grant the lease
+            lease.grant()  # We need to explicitly grant the lease
             self.client.put(key, value, lease=lease.ID)
         else:
             self.client.put(key, value)
@@ -689,7 +705,7 @@ class EtcdApiV3Adapter(EtcdClient):
         if len(items) == 1 and items[0].key == path:
             kv = items.pop()
             return {kv.key.split("/")[-1]: kv.value}
-        kvs = {kv.key[len(path):]: kv.value for kv in items}
+        kvs = {kv.key[len(path) :]: kv.value for kv in items}
         return self._expand(kvs)
 
 

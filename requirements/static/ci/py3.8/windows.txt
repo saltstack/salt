@@ -397,10 +397,10 @@ xmltodict==0.12.0
     # via
     #   moto
     #   pywinrm
-yarl==1.7.2
-    # via aiohttp
 yamllint==1.26.3
     # via -r requirements/static/ci/windows.in
+yarl==1.7.2
+    # via aiohttp
 zc.lockfile==2.0
     # via cherrypy
 zipp==3.5.0

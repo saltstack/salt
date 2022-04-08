@@ -5,39 +5,17 @@
 """
 
 import pytest
-from requests import get
 import salt.utils.etcd_util as etcd_util
 from tests.support.mock import MagicMock, patch
 
-try:
+if etcd_util.HAS_ETCD_V2:
+    import etcd
     from urllib3.exceptions import ReadTimeoutError, MaxRetryError
 
-    HAS_URLLIB3 = True
-except ImportError:
-    HAS_URLLIB3 = False
-
-try:
-    import etcd
-
-    HAS_ETCD = True
-except ImportError:
-    HAS_ETCD = False
-
-try:
-    import etcd3
-
-    HAS_ETCD3 = True
-except ImportError:
-    HAS_ETCD3 = False
-
-pytestmark = [
-    pytest.mark.skipif(
-        HAS_URLLIB3 is False, reason="urllib3 module must be installed."
-    ),
-]
 
 def _version_id(value):
     return "etcd-v2" if value else "etcd-v3"
+
 
 @pytest.fixture(scope="module", params=(True, False), ids=_version_id)
 def use_v2(request):
@@ -107,13 +85,13 @@ def test_read(client_name, use_v2):
 
             etcd_client.range.side_effect = Exception
             assert client.read("/salt") is None
-            
+
             watcher_mock = MagicMock()
             with patch.object(etcd_client, "Watcher", return_value=watcher_mock):
                 client.read("salt", True, True, 10, 5)
                 etcd_client.range.assert_called_with("/salt", prefix=False)
                 watcher_mock.watch_once.assert_called_with(timeout=10)
-                
+
                 watcher_mock.watch_once.side_effect = Exception
                 assert client.read("salt", True, True, 10, 5) is None
 
@@ -174,7 +152,9 @@ def test_tree(use_v2, client_name):
                     MagicMock(key="/x/c", dir=True),
                 ]
                 c2.__iter__.return_value = [MagicMock(key="/x/c/d", value="3")]
-                mock.side_effect = iter([MagicMock(children=c1), MagicMock(children=c2)])
+                mock.side_effect = iter(
+                    [MagicMock(children=c1), MagicMock(children=c2)]
+                )
                 assert client.tree("/x") == {"a": "1", "b": "2", "c": {"d": "3"}}
                 mock.assert_any_call("/x")
                 mock.assert_any_call("/x/c")
@@ -199,6 +179,7 @@ def test_tree(use_v2, client_name):
                 assert client.tree("/x") == {"a": "1", "b": "2", "c": {"d": "3"}}
                 mock.assert_called_with("/x", recursive=True)
 
+
 def test_ls(use_v2, client_name):
     with patch(client_name, autospec=True):
         client = etcd_util.get_conn({"etcd.require_v2": use_v2})
@@ -212,7 +193,9 @@ def test_ls(use_v2, client_name):
                     MagicMock(key="/x/c", dir=True),
                 ]
                 mock.return_value = MagicMock(children=c1)
-                assert client.ls("/x") == {"/x": {"/x/a": "1", "/x/b": "2", "/x/c/": {}}}
+                assert client.ls("/x") == {
+                    "/x": {"/x/a": "1", "/x/b": "2", "/x/c/": {}}
+                }
                 mock.assert_called_with("/x")
 
                 # iter(list(Exception)) works correctly with both mock<1.1 and mock>=1.1
@@ -235,7 +218,9 @@ def test_write(use_v2, client_name):
         if use_v2:
             etcd_client.write.return_value = MagicMock(value="salt")
             assert client.write("/some-key", "salt") == "salt"
-            etcd_client.write.assert_called_with("/some-key", "salt", ttl=None, dir=False)
+            etcd_client.write.assert_called_with(
+                "/some-key", "salt", ttl=None, dir=False
+            )
 
             assert client.write("/some-key", "salt", ttl=5) == "salt"
             etcd_client.write.assert_called_with("/some-key", "salt", ttl=5, dir=False)
@@ -281,16 +266,17 @@ def test_write(use_v2, client_name):
         else:
             with pytest.raises(etcd_util.Etcd3DirectoryException):
                 client.write("key", None, directory=True)
-            
+
             with patch.object(client, "get", autospec=True) as get_mock:
                 get_mock.return_value = "stack"
                 assert client.write("salt", "stack") == "stack"
                 etcd_client.put.assert_called_with("salt", "stack")
-                
+
                 lease_mock = MagicMock(ID=1)
                 with patch.object(etcd_client, "Lease", return_value=lease_mock):
                     assert client.write("salt", "stack", ttl=5) == "stack"
                     etcd_client.put.assert_called_with("salt", "stack", lease=1)
+
 
 def test_flatten(use_v2, client_name):
     with patch(client_name, autospec=True) as mock:
@@ -436,7 +422,9 @@ def test_watch(use_v2, client_name):
                     "/some-key", wait=True, recursive=False, timeout=0, waitIndex=None
                 )
 
-                mock.side_effect = iter([etcd_util.EtcdUtilWatchTimeout, mock.return_value])
+                mock.side_effect = iter(
+                    [etcd_util.EtcdUtilWatchTimeout, mock.return_value]
+                )
                 assert client.watch("/some-key") == {
                     "value": "stack",
                     "changed": False,
@@ -534,12 +522,10 @@ def test_expand(use_v2, client_name):
 
         result = {
             "test": {
-                "x": {
-                    "y": {"a": "1", "b": "2"}
-                },
+                "x": {"y": {"a": "1", "b": "2"}},
                 "m": {"j": "3"},
                 "z": "4",
             },
         }
-        
+
         assert client._expand(some_data) == result

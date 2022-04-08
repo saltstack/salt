@@ -2,7 +2,7 @@ import logging
 
 import pytest
 import salt.pillar.etcd_pillar as etcd_pillar
-from salt.utils.etcd_util import get_conn, HAS_ETCD_V2, HAS_ETCD_V3
+from salt.utils.etcd_util import HAS_ETCD_V2, HAS_ETCD_V3, get_conn
 from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
@@ -89,7 +89,13 @@ def profile_name():
 
 @pytest.fixture(scope="module")
 def etcd_profile(profile_name, etcd_port, use_v2):
-    profile = {profile_name: {"etcd.host": "127.0.0.1", "etcd.port": etcd_port, "etcd.require_v2": use_v2}}
+    profile = {
+        profile_name: {
+            "etcd.host": "127.0.0.1",
+            "etcd.port": etcd_port,
+            "etcd.require_v2": use_v2,
+        }
+    }
 
     return profile
 

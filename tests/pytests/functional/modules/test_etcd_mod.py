@@ -94,7 +94,13 @@ def profile_name():
 
 @pytest.fixture(scope="module")
 def etcd_profile(profile_name, etcd_port, use_v2):
-    profile = {profile_name: {"etcd.host": "127.0.0.1", "etcd.port": etcd_port, "etcd.require_v2": use_v2}}
+    profile = {
+        profile_name: {
+            "etcd.host": "127.0.0.1",
+            "etcd.port": etcd_port,
+            "etcd.require_v2": use_v2,
+        }
+    }
 
     return profile
 
