@@ -2,7 +2,7 @@ import logging
 
 import pytest
 import salt.pillar.etcd_pillar as etcd_pillar
-from salt.utils.etcd_util import HAS_LIBS, EtcdClient
+from salt.utils.etcd_util import get_conn, HAS_ETCD_V2, HAS_ETCD_V3
 from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
@@ -13,7 +13,6 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
-    pytest.mark.skipif(not HAS_LIBS, reason="Need etcd libs to test etcd_util!"),
     pytest.mark.skip_if_binaries_missing("docker", "dockerd", check_all=False),
 ]
 
@@ -74,14 +73,23 @@ def etcd_apiv2_container(salt_factories, docker_client, etcd_port, docker_image_
         yield factory
 
 
+@pytest.fixture(scope="module", params=(True, False))
+def use_v2(request):
+    if request.param and not HAS_ETCD_V2:
+        pytest.skip("No etcd library installed")
+    if not request.param and not HAS_ETCD_V3:
+        pytest.skip("No etcd3 library installed")
+    return request.param
+
+
 @pytest.fixture(scope="module")
 def profile_name():
     return "etcd_util_profile"
 
 
 @pytest.fixture(scope="module")
-def etcd_profile(profile_name, etcd_port):
-    profile = {profile_name: {"etcd.host": "127.0.0.1", "etcd.port": etcd_port}}
+def etcd_profile(profile_name, etcd_port, use_v2):
+    profile = {profile_name: {"etcd.host": "127.0.0.1", "etcd.port": etcd_port, "etcd.require_v2": use_v2}}
 
     return profile
 
@@ -93,7 +101,7 @@ def minion_config_overrides(etcd_profile):
 
 @pytest.fixture(scope="module")
 def etcd_client(minion_opts, profile_name):
-    return EtcdClient(minion_opts, profile=profile_name)
+    return get_conn(minion_opts, profile=profile_name)
 
 
 @pytest.fixture(scope="module")

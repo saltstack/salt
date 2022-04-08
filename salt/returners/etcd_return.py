@@ -72,7 +72,10 @@ import salt.utils.json
 try:
     import salt.utils.etcd_util
 
-    HAS_LIBS = True
+    if salt.utils.etcd_util.HAS_ETCD_V2 or salt.utils.etcd_util.HAS_ETCD_V3:
+        HAS_LIBS = True
+    else:
+        HAS_LIBS = False
 except ImportError:
     HAS_LIBS = False
 

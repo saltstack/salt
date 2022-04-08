@@ -557,8 +557,8 @@ class EtcdApiV3Adapter(EtcdClient):
 
     def _decode_from_bytes(self, kv):
         try:
-            kv.key = kv.key.decode(encoding=self.ENCODING) if kv.key else kv.key
-            kv.value = kv.value.decode(encoding=self.ENCODING) if kv.value else kv.value
+            kv.key = kv.key.decode(encoding=self.ENCODING) if (kv.key and isinstance(kv.key, bytes)) else kv.key
+            kv.value = kv.value.decode(encoding=self.ENCODING) if (kv.value and isinstance(kv.value, bytes)) else kv.value
         except AttributeError as err:
             log.debug("etcd3 decoding error: %s", err)
         return kv
@@ -617,7 +617,7 @@ class EtcdApiV3Adapter(EtcdClient):
         for k, v in fields.items():
             if isinstance(v, dict):
                 # Not hard failing here so we don't get a partial update
-                log.debug("etcd3 has no concept of directories, skipping key %", k)
+                log.debug("etcd3 has no concept of directories, skipping key %s", k)
                 continue
             keys[k] = self.write(k, v)
         return keys
@@ -630,6 +630,12 @@ class EtcdApiV3Adapter(EtcdClient):
         else:
             self.client.put(key, value)
         return self.get(key)
+
+    def write_directory(self, key, value, ttl=None):
+        raise Etcd3DirectoryException("etcd3 does not have directories")
+
+    def ls(self, path):
+        raise Etcd3DirectoryException("etcd3 does not have directories, can't ls")
 
     def delete(self, key, recursive=False):
         result = self.client.delete_range(key, prefix=recursive)

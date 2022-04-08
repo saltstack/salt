@@ -127,7 +127,10 @@ __func_alias__ = {
 try:
     import salt.utils.etcd_util  # pylint: disable=W0611
 
-    HAS_ETCD = True
+    if salt.utils.etcd_util.HAS_ETCD_V2 or salt.utils.etcd_util.HAS_ETCD_V3:
+        HAS_LIBS = True
+    else:
+        HAS_LIBS = False
 except ImportError:
     HAS_ETCD = False
 

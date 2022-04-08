@@ -9,7 +9,8 @@ import pytest
 log = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.skip_if_binaries_missing("dockerd"),
+    pytest.mark.skip_if_binaries_missing("docker", "dockerd", check_all=False),
+    pytest.mark.windows_whitelisted,
 ]
 
 
