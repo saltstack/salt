@@ -39,7 +39,7 @@ class Cache:
         The name of the cache driver to use. This is the name of the python
         module of the `salt.cache` package. Default is `localfs`.
 
-    Terminology.
+    Terminology:
 
     Salt cache subsystem is organized as a tree with nodes and leafs like a
     filesystem. Cache consists of banks. Each bank can contain a number of
@@ -345,5 +345,10 @@ class MemCache(Cache):
         self.storage[(bank, key)] = [time.time(), data]
 
     def flush(self, bank, key=None):
-        self.storage.pop((bank, key), None)
+        if key is None:
+            for bank_, key_ in tuple(self.storage):
+                if bank == bank_:
+                    self.storage.pop((bank_, key_))
+        else:
+            self.storage.pop((bank, key), None)
         super().flush(bank, key)
