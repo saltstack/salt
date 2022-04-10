@@ -175,8 +175,13 @@ def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
     __opts__["grains"] = __grains__.value()
     __pillar__.update(kwargs.get("pillar", {}))
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
+    opts["test"] = _get_test_value(test, **kwargs)
     with salt.client.ssh.state.SSHHighState(
-        opts, __pillar__.value(), __salt__.value(), __context__["fileclient"]
+        opts,
+        __pillar__.value(),
+        __salt__.value(),
+        __context__["fileclient"],
+        context=__context__.value(),
     ) as st_:
         st_.push_active()
         mods = _parse_mods(mods)
@@ -340,7 +345,11 @@ def low(data, **kwargs):
     __opts__["grains"] = __grains__.value()
     chunks = [data]
     with salt.client.ssh.state.SSHHighState(
-        __opts__, __pillar__.value(), __salt__.value(), __context__["fileclient"]
+        __opts__,
+        __pillar__.value(),
+        __salt__.value(),
+        __context__["fileclient"],
+        context=__context__.value(),
     ) as st_:
         for chunk in chunks:
             chunk["__id__"] = (
@@ -429,7 +438,11 @@ def high(data, **kwargs):
     __opts__["grains"] = __grains__.value()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     with salt.client.ssh.state.SSHHighState(
-        opts, __pillar__.value(), __salt__.value(), __context__["fileclient"]
+        opts,
+        __pillar__.value(),
+        __salt__.value(),
+        __context__["fileclient"],
+        context=__context__.value(),
     ) as st_:
         st_.push_active()
         chunks = st_.state.compile_high_data(data)
@@ -661,8 +674,13 @@ def highstate(test=None, **kwargs):
     st_kwargs = __salt__.kwargs
     __opts__["grains"] = __grains__.value()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
+    opts["test"] = _get_test_value(test, **kwargs)
     with salt.client.ssh.state.SSHHighState(
-        opts, __pillar__.value(), __salt__.value(), __context__["fileclient"]
+        opts,
+        __pillar__.value(),
+        __salt__.value(),
+        __context__["fileclient"],
+        context=__context__.value(),
     ) as st_:
         st_.push_active()
         chunks = st_.compile_low_chunks()
@@ -743,7 +761,11 @@ def top(topfn, test=None, **kwargs):
     else:
         opts["test"] = __opts__.get("test", None)
     with salt.client.ssh.state.SSHHighState(
-        opts, __pillar__, __salt__, __context__["fileclient"]
+        opts,
+        __pillar__.value(),
+        __salt__.value(),
+        __context__["fileclient"],
+        context=__context__.value(),
     ) as st_:
         st_.opts["state_top"] = os.path.join("salt://", topfn)
         st_.push_active()
@@ -764,7 +786,7 @@ def top(topfn, test=None, **kwargs):
             __context__["fileclient"],
             chunks,
             file_refs,
-            __pillar__,
+            __pillar__.value(),
             st_kwargs["id_"],
             roster_grains,
         )
@@ -812,7 +834,11 @@ def show_highstate(**kwargs):
     __opts__["grains"] = __grains__.value()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     with salt.client.ssh.state.SSHHighState(
-        opts, __pillar__, __salt__, __context__["fileclient"]
+        opts,
+        __pillar__,
+        __salt__,
+        __context__["fileclient"],
+        context=__context__.value(),
     ) as st_:
         st_.push_active()
         chunks = st_.compile_highstate()
@@ -833,7 +859,11 @@ def show_lowstate(**kwargs):
     __opts__["grains"] = __grains__.value()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     with salt.client.ssh.state.SSHHighState(
-        opts, __pillar__.value(), __salt__, __context__["fileclient"]
+        opts,
+        __pillar__.value(),
+        __salt__,
+        __context__["fileclient"],
+        context=__context__.value(),
     ) as st_:
         st_.push_active()
         chunks = st_.compile_low_chunks()
@@ -888,7 +918,11 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         opts["saltenv"] = "base"
 
     with salt.client.ssh.state.SSHHighState(
-        __opts__, __pillar__.value(), __salt__, __context__["fileclient"]
+        __opts__,
+        __pillar__.value(),
+        __salt__,
+        __context__["fileclient"],
+        context=__context__.value(),
     ) as st_:
 
         if not _check_pillar(kwargs, st_.opts["pillar"]):
@@ -947,7 +981,11 @@ def show_sls(mods, saltenv="base", test=None, **kwargs):
     else:
         opts["test"] = __opts__.get("test", None)
     with salt.client.ssh.state.SSHHighState(
-        opts, __pillar__.value(), __salt__, __context__["fileclient"]
+        opts,
+        __pillar__.value(),
+        __salt__,
+        __context__["fileclient"],
+        context=__context__.value(),
     ) as st_:
         st_.push_active()
         mods = _parse_mods(mods)
@@ -989,7 +1027,11 @@ def show_low_sls(mods, saltenv="base", test=None, **kwargs):
     else:
         opts["test"] = __opts__.get("test", None)
     with salt.client.ssh.state.SSHHighState(
-        opts, __pillar__.value(), __salt__, __context__["fileclient"]
+        opts,
+        __pillar__.value(),
+        __salt__,
+        __context__["fileclient"],
+        context=__context__.value(),
     ) as st_:
         st_.push_active()
         mods = _parse_mods(mods)
@@ -1023,7 +1065,11 @@ def show_top(**kwargs):
     __opts__["grains"] = __grains__
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     with salt.client.ssh.state.SSHHighState(
-        opts, __pillar__.value(), __salt__, __context__["fileclient"]
+        opts,
+        __pillar__.value(),
+        __salt__,
+        __context__["fileclient"],
+        context=__context__.value(),
     ) as st_:
         top_data = st_.get_top()
         errors = []

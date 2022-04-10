@@ -61,8 +61,8 @@ def fixture_test_mode():
         yield
 
 
-@pytest.fixture(name="mocks")
-def fixture_mocks():
+@pytest.fixture
+def mocks():
     return {
         "postgres.role_get": create_autospec(postgres.role_get, return_value=None),
         "postgres.user_exists": create_autospec(
@@ -80,14 +80,12 @@ def fixture_mocks():
     }
 
 
-@pytest.fixture(autouse=True)
-def setup_loader(mocks):
-    setup_loader_modules = {
+@pytest.fixture
+def configure_loader_modules(mocks):
+    return {
         postgres_user: {"__opts__": {"test": False}, "__salt__": mocks},
         postgres: {"__opts__": {"test": False}},
     }
-    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-        yield loader_mock
 
 
 # ==========

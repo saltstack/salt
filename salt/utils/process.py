@@ -1051,22 +1051,6 @@ class Process(multiprocessing.Process):
             self._finalize_methods.append(finalize_method_tuple)
 
 
-class MultiprocessingProcess(Process):
-    """
-    This class exists for backwards compatibility and to properly deprecate it.
-    """
-
-    def __init__(self, *args, **kwargs):
-        salt.utils.versions.warn_until_date(
-            "20220101",
-            "Please stop using '{name}.MultiprocessingProcess' and instead use "
-            "'{name}.Process'. '{name}.MultiprocessingProcess' will go away "
-            "after {{date}}.".format(name=__name__),
-            stacklevel=3,
-        )
-        super().__init__(*args, **kwargs)
-
-
 class SignalHandlingProcess(Process):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1118,23 +1102,6 @@ class SignalHandlingProcess(Process):
     def start(self):
         with default_signals(signal.SIGINT, signal.SIGTERM):
             super().start()
-
-
-class SignalHandlingMultiprocessingProcess(SignalHandlingProcess):
-    """
-    This class exists for backwards compatibility and to properly deprecate it.
-    """
-
-    def __init__(self, *args, **kwargs):
-        salt.utils.versions.warn_until_date(
-            "20220101",
-            "Please stop using '{name}.SignalHandlingMultiprocessingProcess' and"
-            " instead use '{name}.SignalHandlingProcess'."
-            " '{name}.SignalHandlingMultiprocessingProcess' will go away after"
-            " {{date}}.".format(name=__name__),
-            stacklevel=3,
-        )
-        super().__init__(*args, **kwargs)
 
 
 @contextlib.contextmanager

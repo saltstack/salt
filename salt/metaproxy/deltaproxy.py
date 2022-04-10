@@ -349,7 +349,7 @@ def post_master_init(self, master):
 
         proxyopts["proxy"] = self.proxy_pillar[_id].get("proxy", {})
         if not proxyopts["proxy"]:
-            log.warn(
+            log.warning(
                 "Pillar data for proxy minion %s could not be loaded, skipping.", _id
             )
             continue
@@ -888,7 +888,7 @@ def handle_payload(self, payload):
                 if instance._target_load(payload["load"]):
                     instance._handle_decoded_payload(payload["load"])
             else:
-                log.warn("Proxy minion %s is not loaded, skipping.", _id)
+                log.warning("Proxy minion %s is not loaded, skipping.", _id)
 
     elif self.opts["zmq_filtering"]:
         # In the filtering enabled case, we"d like to know when minion sees something it shouldnt

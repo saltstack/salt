@@ -259,7 +259,7 @@ python-dateutil==2.8.1
     #   moto
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
-python-gnupg==0.4.7
+python-gnupg==0.4.8
     # via -r requirements/windows.txt
 pythonnet==2.5.2
     # via -r requirements/windows.txt

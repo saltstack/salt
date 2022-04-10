@@ -1,0 +1,1 @@
+Provide PyInstaller hooks that provide some runtime adjustments when Salt is running from a Tiamat(PyInstaller) bundled package.
