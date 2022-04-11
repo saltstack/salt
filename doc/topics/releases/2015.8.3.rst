@@ -299,7 +299,7 @@ Changelog for v2015.8.2..v2015.8.3
 
   * 15f83e180d Add more preset colors
 
-  * 44339f3dc1 Impement color setter with transition
+  * 44339f3dc1 Implement color setter with transition
 
   * 0f4d5b9eac Implement effects method
 
