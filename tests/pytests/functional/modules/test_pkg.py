@@ -18,10 +18,17 @@ def ctx():
 
 
 @pytest.fixture
-def default_rhel_yum_conf():
+@requires_system_grains
+def default_rhel_yum_conf(grains):
     try:
         yield
     finally:
+        if grains["os_family"] != "RedHat":
+            pytest.skip("Only runs on RedHat.")
+
+        if grains["os"] == "Amazon":
+            pytest.skip("Only runs on RedHat, Amazon /etc/yum.conf differs.")
+
         # ensure yum.com in reasonable state
         cfg_file = "/etc/yum.conf"
         with salt.utils.files.fpopen(cfg_file, "w", mode=0o644) as fp_:
