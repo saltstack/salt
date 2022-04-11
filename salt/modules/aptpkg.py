@@ -2185,7 +2185,7 @@ def get_repo_keys(aptkey=True, keydir=None):
             keydir = pathlib.Path(keydir)
 
         ret_output = []
-        for file in os.listdir(keydir):
+        for file in os.listdir(str(keydir)):
             key_file = keydir / file
             cmd_ret = __salt__["cmd.run_all"](
                 [
@@ -2382,7 +2382,7 @@ def _get_key_from_id(keydir, keyid):
     if not len(keyid) in (8, 16):
         log.error("The keyid needs to be either 8 or 16 characters")
         return False
-    for file in os.listdir(keydir):
+    for file in os.listdir(str(keydir)):
         key_file = keydir / file
         key_output = __salt__["cmd.run_all"](
             [

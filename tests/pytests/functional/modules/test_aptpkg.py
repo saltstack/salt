@@ -37,7 +37,7 @@ def get_key_file(state_tree, functional_files_dir):
     Create the key file used for the repo
     """
     key = Key()
-    shutil.copy(functional_files_dir / key.keyname, state_tree)
+    shutil.copy(str(functional_files_dir / key.keyname), str(state_tree))
     yield key.keyname
 
 
