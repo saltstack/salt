@@ -102,11 +102,13 @@ class Collector(salt.utils.process.SignalHandlingProcess):
     @salt.ext.tornado.gen.coroutine
     def _recv(self):
         if self.transport == "zeromq":
+            # test_zeromq_filtering requires catching the
+            # SaltDeserializationError in order to pass.
             try:
                 payload = self.sock.recv(zmq.NOBLOCK)
                 serial_payload = salt.payload.loads(payload)
                 raise salt.ext.tornado.gen.Return(serial_payload)
-            except zmq.ZMQError:
+            except (zmq.ZMQError, salt.exceptions.SaltDeserializationError):
                 raise RecvError("ZMQ Error")
         else:
             for msg in self.unpacker:
@@ -258,7 +260,7 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
     def __enter__(self):
         self.start()
         self.collector.__enter__()
-        attempts = 30
+        attempts = 60
         while attempts > 0:
             self.publish({"tgt_type": "glob", "tgt": "*", "jid": -1, "start": True})
             if self.collector.running.wait(1) is True:
@@ -342,7 +344,7 @@ def test_issue_36469_tcp(salt_master, salt_minion):
                 "xdata": "0" * size,
             }
             server_channel.publish(load)
-        time.sleep(0.3)
+        time.sleep(3)
         server_channel.close_pub()
 
     opts = dict(salt_master.config.copy(), ipc_mode="tcp", pub_hwm=0)
