@@ -12,7 +12,8 @@ salt/modules/(apkpkg|aptpkg|ebuildpkg|dpkg_lowpkg|freebsdpkg|mac_brew_pkg|mac_po
   - pytests.unit.states.test_pkg
   - pytests.functional.modules.test_pkg
   - pytests.functional.states.test_pkg
-  - integration.states.test_pkgrepo
+  - pytests.functional.states.pkgrepo.test_centos
+  - pytests.functional.states.pkgrepo.test_debian
 
 salt/modules/(mac_user|useradd|pw_user|solaris_user|win_useradd)\.py:
   - pytests.unit.states.test_user
