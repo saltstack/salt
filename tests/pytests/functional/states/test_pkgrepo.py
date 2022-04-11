@@ -59,7 +59,7 @@ def test_adding_repo_file_signedby(grains, states, tmp_path, key_path):
     and setting signedby
     """
     repo_file = str(tmp_path / "stable-binary.list")
-    fullname = grains["osfullname"].lower()
+    fullname = grains["osfullname"].lower().split()[0]
     arch = grains["osarch"]
     lsb_release = grains["lsb_distrib_release"]
     key_file = "https://repo.saltproject.io/py3/{}/{}/{}/latest/salt-archive-keyring.gpg".format(
@@ -92,7 +92,7 @@ def test_adding_repo_file_signedby_keyserver(grains, states, tmp_path, key_path)
     and setting signedby with a keyserver
     """
     repo_file = str(tmp_path / "stable-binary.list")
-    fullname = grains["osfullname"].lower()
+    fullname = grains["osfullname"].lower().split()[0]
     arch = grains["osarch"]
     lsb_release = grains["lsb_distrib_release"]
     key_file = "https://repo.saltproject.io/py3/{}/{}/{}/latest/salt-archive-keyring.gpg".format(
