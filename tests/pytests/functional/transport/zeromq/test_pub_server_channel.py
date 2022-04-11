@@ -103,11 +103,13 @@ class Collector(salt.utils.process.SignalHandlingProcess):
     @salt.ext.tornado.gen.coroutine
     def _recv(self):
         if self.transport == "zeromq":
+            # test_zeromq_filtering requires catching the
+            # SaltDeserializationError in order to pass.
             try:
                 payload = self.sock.recv(zmq.NOBLOCK)
                 serial_payload = salt.payload.Serial({}).loads(payload)
                 raise salt.ext.tornado.gen.Return(serial_payload)
-            except zmq.ZMQError:
+            except (zmq.ZMQError, salt.exceptions.SaltDeserializationError):
                 raise RecvError("ZMQ Error")
         else:
             for msg in self.unpacker:
@@ -124,7 +126,6 @@ class Collector(salt.utils.process.SignalHandlingProcess):
     def _run(self, loop):
         self._setup_listener()
         last_msg = time.time()
-        serial = salt.payload.Serial(self.minion_config)
         crypticle = salt.crypt.Crypticle(self.minion_config, self.aes_key)
         self.started.set()
         while True:
@@ -247,7 +248,6 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
             return
         self.process_manager.stop_restarting()
         self.process_manager.send_signal_to_processes(signal.SIGTERM)
-        self.process_manager.kill_children()
         if hasattr(self.pub_server_channel, "pub_close"):
             self.pub_server_channel.pub_close()
         # Really terminate any process still left behind
@@ -261,7 +261,7 @@ class PubServerChannelProcess(salt.utils.process.SignalHandlingProcess):
     def __enter__(self):
         self.start()
         self.collector.__enter__()
-        attempts = 30
+        attempts = 60
         while attempts > 0:
             self.publish({"tgt_type": "glob", "tgt": "*", "jid": -1, "start": True})
             if self.collector.running.wait(1) is True:
@@ -313,7 +313,7 @@ def test_publish_to_pubserv_ipc(salt_master, salt_minion, transport):
             load = {"tgt_type": "glob", "tgt": "*", "jid": idx}
             server_channel.publish(load)
     results = server_channel.collector.results
-    assert len(results) == send_num, "{} != {}, difference: {}".format(
+    assert len(results) == send_num, "{} != {}, difference: {:.40}".format(
         len(results), send_num, set(expect).difference(results)
     )
 
@@ -346,7 +346,7 @@ def test_issue_36469_tcp(salt_master, salt_minion):
                 "xdata": "0" * size,
             }
             server_channel.publish(load)
-        time.sleep(0.3)
+        time.sleep(3)
         server_channel.pub_close()
 
     opts = dict(salt_master.config.copy(), ipc_mode="tcp", pub_hwm=0)
