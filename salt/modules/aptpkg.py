@@ -221,12 +221,12 @@ if not HAS_APT:
         def add(self, type, uri, dist, orig_comps, architectures):
             repo_line = [
                 type,
-                " [arch={}] ".format(" ".join(architectures)) if architectures else "",
+                "[arch={}]".format(" ".join(architectures)) if architectures else "",
                 uri,
                 dist,
                 " ".join(orig_comps),
             ]
-            return SourceEntry(" ".join(repo_line))
+            return SourceEntry(" ".join([line for line in repo_line if line.strip()]))
 
         def remove(self, source):
             """
