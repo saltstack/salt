@@ -212,7 +212,7 @@ if not HAS_APT:
             Add the lines of a file to self.list
             """
             if file.is_file():
-                with salt.utils.files.fopen(file) as source:
+                with salt.utils.files.fopen(str(file)) as source:
                     for line in source:
                         self.list.append(SourceEntry(line, file=str(file)))
             else:
@@ -243,13 +243,13 @@ if not HAS_APT:
             with tempfile.TemporaryDirectory() as tmpdir:
                 for source in self.list:
                     fname = pathlib.Path(tmpdir, pathlib.Path(source.file).name)
-                    with salt.utils.files.fopen(fname, "a") as fp:
+                    with salt.utils.files.fopen(str(fname), "a") as fp:
                         fp.write(source.repo_line())
                     if source.file not in filemap:
                         filemap[source.file] = {"tmp": fname}
 
                 for fp in filemap:
-                    shutil.move(filemap[fp]["tmp"], fp)
+                    shutil.move(str(filemap[fp]["tmp"]), fp)
 
 
 def _get_ppa_info_from_launchpad(owner_name, ppa_name):
