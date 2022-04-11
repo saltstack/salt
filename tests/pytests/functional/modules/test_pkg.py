@@ -17,6 +17,22 @@ def ctx():
     return {}
 
 
+@pytest.fixture
+def default_rhel_yum_conf():
+    try:
+        yield
+    finally:
+        # ensure yum.com in reasonable state
+        cfg_file = "/etc/yum.conf"
+        with salt.utils.files.fpopen(cfg_file, "w", mode=0o644) as fp_:
+            fp_.write("[main]\n")
+            fp_.write("gpgcheck=1\n")
+            fp_.write("installonly_limit=3\n")
+            fp_.write("clean_requirements_on_remove=True\n")
+            fp_.write("best=True\n")
+            fp_.write("skip_if_unavailable=False\n")
+
+
 @pytest.fixture(autouse=True)
 @requires_system_grains
 def refresh_db(ctx, grains, modules):
@@ -490,7 +506,7 @@ def test_pkg_latest_version(grains, modules, states, test_pkg):
 @pytest.mark.destructive_test
 @pytest.mark.requires_salt_modules("pkg.list_repos")
 @pytest.mark.slow_test
-def test_list_repos_duplicate_entries(grains, modules):
+def test_list_repos_duplicate_entries(default_rhel_yum_conf, grains, modules):
     """
     test duplicate entries in /etc/yum.conf
 
@@ -528,12 +544,3 @@ def test_list_repos_duplicate_entries(grains, modules):
     with pytest.raises(configparser.DuplicateOptionError) as exc_info:
         result = modules.pkg.list_repos()
     assert "{}".format(exc_info.value) == expected
-
-    # leave yum.com in reasonable state
-    with salt.utils.files.fpopen(cfg_file, "w", mode=0o644) as fp_:
-        fp_.write("[main]\n")
-        fp_.write("gpgcheck=1\n")
-        fp_.write("installonly_limit=3\n")
-        fp_.write("clean_requirements_on_remove=True\n")
-        fp_.write("best=True\n")
-        fp_.write("skip_if_unavailable=False\n")
