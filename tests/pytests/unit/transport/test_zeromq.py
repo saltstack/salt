@@ -1051,7 +1051,7 @@ async def test_when_async_req_channel_with_syndic_role_should_use_syndic_master_
 ):
     # Syndics use the minion pki dir, but they also create a syndic_master.pub
     # file for comms with the Salt master
-    expected_pubkey_path = os.path.join(pki_dir, "minion", "syndic_master.pub")
+    expected_pubkey_path = str(pki_dir.join("minion").join("syndic_master.pub"))
     mockloop = MagicMock()
     opts = {
         "master_uri": "tcp://127.0.0.1:4506",
