@@ -1,0 +1,1 @@
+Changed linux_shadow to test success of commands using cmd.retcode instead of cmd.run
