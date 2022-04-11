@@ -3,10 +3,10 @@ Utilities for working with etcd
 
 .. versionadded:: 2014.7.0
 
-:depends:  - python-etcd
+:depends:  - python-etcd or etcd3-py
 
 This library sets up a client object for etcd, using the configuration passed
-into the client() function. Normally, this is __opts__. Optionally, a profile
+into the get_conn() function. Normally, this is __opts__. Optionally, a profile
 may be passed in. The following configurations are both valid:
 
 .. code-block:: yaml
@@ -19,6 +19,7 @@ may be passed in. The following configurations are both valid:
     etcd.ca: /path/to/your/ca_cert/ca.pem # Optional
     etcd.client_key: /path/to/your/client_key/client-key.pem # Optional; requires etcd.ca and etcd.client_cert to be set
     etcd.client_cert: /path/to/your/client_cert/client.pem # Optional; requires etcd.ca and etcd.client_key to be set
+    etcd.require_v2: True # Optional; defaults to True
 
     # One or more profiles defined
     my_etcd_config:
@@ -29,6 +30,7 @@ may be passed in. The following configurations are both valid:
       etcd.ca: /path/to/your/ca_cert/ca.pem # Optional
       etcd.client_key: /path/to/your/client_key/client-key.pem # Optional; requires etcd.ca and etcd.client_cert to be set
       etcd.client_cert: /path/to/your/client_cert/client.pem # Optional; requires etcd.ca and etcd.client_key to be set
+      etcd.require_v2: True # Optional; defaults to True
 
 Once configured, the client() function is passed a set of opts, and optionally,
 the name of a profile to be used.
@@ -36,18 +38,7 @@ the name of a profile to be used.
 .. code-block:: python
 
     import salt.utils.etcd_utils
-    client = salt.utils.etcd_utils.client(__opts__, profile='my_etcd_config')
-
-You may also use the newer syntax and bypass the generator function.
-
-.. code-block:: python
-
-    import salt.utils.etcd_utils
-    client = salt.utils.etcd_utils.EtcdClient(__opts__, profile='my_etcd_config')
-
-It should be noted that some usages of etcd require a profile to be specified,
-rather than top-level configurations. This being the case, it is better to
-always use a named configuration profile, as shown above.
+    client = salt.utils.etcd_utils.get_conn(__opts__, profile='my_etcd_config')
 """
 
 import logging

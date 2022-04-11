@@ -1,7 +1,7 @@
 """
 Return data to an etcd server or cluster
 
-:depends: - python-etcd
+:depends: - python-etcd or etcd3-py
 
 In order to return to an etcd server, a profile should be created in the master
 configuration file:
@@ -20,6 +20,14 @@ or clusters are available.
 
     etcd.host: 127.0.0.1
     etcd.port: 2379
+
+In order to choose whether to use etcd API v2 or v3, you can put the following
+configuration option in the same place as your etcd configuration.  This option
+defaults to true, meaning you will use v2 unless you specify otherwise.
+
+.. code-block:: yaml
+
+    etcd.require_v2: True
 
 Additionally, two more options must be specified in the top-level configuration
 in order to use the etcd returner:

@@ -3,7 +3,7 @@ etcd Database Module
 
 :maintainer:    SaltStack
 :maturity:      New
-:depends:       python-etcd
+:depends:       python-etcd or etcd3-py
 :platform:      all
 
 .. versionadded:: 2015.5.0
@@ -24,6 +24,14 @@ requires very little. In the example:
 
 The ``driver`` refers to the etcd module, ``etcd.host`` refers to the host that
 is hosting the etcd database and ``etcd.port`` refers to the port on that host.
+
+In order to choose whether to use etcd API v2 or v3, you can put the following
+configuration option in the same place as your etcd configuration.  This option
+defaults to true, meaning you will use v2 unless you specify otherwise.
+
+.. code-block:: yaml
+
+    etcd.require_v2: True
 
 .. code-block:: yaml
 

@@ -4,7 +4,7 @@ Manage etcd Keys
 
 .. versionadded:: 2015.8.0
 
-:depends:  - python-etcd
+:depends:  - python-etcd or etcd3-py
 
 This state module supports setting and removing keys from etcd.
 
@@ -28,6 +28,14 @@ or clusters are available.
 
     etcd.host: 127.0.0.1
     etcd.port: 4001
+
+In order to choose whether to use etcd API v2 or v3, you can put the following
+configuration option in the same place as your etcd configuration.  This option
+defaults to true, meaning you will use v2 unless you specify otherwise.
+
+.. code-block:: yaml
+
+    etcd.require_v2: True
 
 .. note::
 
