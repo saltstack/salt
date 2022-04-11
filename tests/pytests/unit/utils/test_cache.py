@@ -222,7 +222,14 @@ def test_everything(tmp_path):
     assert "foo" not in cd2
 
 
-def test_unicode_error(tmp_path):
+@pytest.mark.parametrize(
+    "data",
+    [
+        b"PK\x03\x04\n\x00\x00\x00\x00\x00\xb6B\x05S\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x06\x00\x1c\x00test2/",
+        b"\xc3\x83\xc2\xa6\xc3\x83\xc2\xb8\xc3\x83\xc2\xa5",
+    ],
+)
+def test_unicode_error(tmp_path, data):
     """
     Test when the data in the cache raises a UnicodeDecodeError
     we do not raise an error.
@@ -236,7 +243,7 @@ def test_unicode_error(tmp_path):
             b"poc-minion": {
                 None: {
                     b"secrets": {
-                        b"itsasecret": b"PK\x03\x04\n\x00\x00\x00\x00\x00\xb6B\x05S\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x06\x00\x1c\x00test2/",
+                        b"itsasecret": data,
                         b"CacheDisk_cachetime": {b"poc-minion": 1649339137.1236317},
                     }
                 }
