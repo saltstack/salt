@@ -1,0 +1,1 @@
+Add aptkey=False kwarg option to the aptpkg.py module and pkgrepo state. Apt-key is on the path to be deprecated. This will allow users to not use apt-key to manage the repo keys. It will set aptkey=False automatically if it does not detect apt-key exists on the machine.
