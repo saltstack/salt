@@ -517,7 +517,7 @@ def key_path():
     key_file.unlink()
 
 
-def test_adding_repo_file_signedby(grains, states, tmp_path, key_path):
+def test_adding_repo_file_signedby(pkgrepo, grains, states, tmp_path, key_path):
     """
     Test adding a repo file using pkgrepo.managed
     and setting signedby
@@ -546,7 +546,9 @@ def test_adding_repo_file_signedby(grains, states, tmp_path, key_path):
     assert key_path.is_file()
 
 
-def test_adding_repo_file_signedby_keyserver(grains, states, tmp_path, key_path):
+def test_adding_repo_file_signedby_keyserver(
+    pkgrepo, grains, states, tmp_path, key_path
+):
     """
     Test adding a repo file using pkgrepo.managed
     and setting signedby with a keyserver
