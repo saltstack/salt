@@ -342,7 +342,6 @@ def __get_auth_plugin(user, host, **connection_args):
         _execute(cur, qry, args)
     except MySQLdb.OperationalError as exc:
         err = "MySQL Error {}: {}".format(*exc.args)
-        __context__["mysql.error"] = err
         log.error(err)
         return "mysql_native_password"
     results = cur.fetchall()
