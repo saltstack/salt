@@ -1,0 +1,1 @@
+Changed yumpkg module to normalize versions to strings when they were ambiguously floats (example version=3005.0).

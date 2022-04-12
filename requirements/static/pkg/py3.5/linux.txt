@@ -64,7 +64,7 @@ pyopenssl==19.1.0
     # via -r requirements/static/pkg/linux.in
 python-dateutil==2.8.1
     # via -r requirements/static/pkg/linux.in
-python-gnupg==0.4.4
+python-gnupg==0.4.8
     # via -r requirements/static/pkg/linux.in
 pytz==2021.1
     # via tempora

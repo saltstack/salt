@@ -1,4 +1,8 @@
+import configparser
+import logging
 import os
+import shutil
+import tempfile
 import time
 
 import pytest
@@ -7,10 +11,30 @@ import salt.utils.pkg
 import salt.utils.platform
 from tests.support.helpers import requires_system_grains
 
+log = logging.getLogger(__name__)
+
 
 @pytest.fixture
 def ctx():
     return {}
+
+
+@pytest.fixture
+def preserve_rhel_yum_conf():
+
+    # save off current yum.conf
+    cfg_file = "/etc/yum.conf"
+    if not os.path.exists(cfg_file):
+        pytest.skip("Only runs on RedHat.")
+
+    tmp_dir = str(tempfile.gettempdir())
+    tmp_file = os.path.join(tmp_dir, "yum.conf")
+    shutil.copy2(cfg_file, tmp_file)
+    yield
+
+    # restore saved yum.conf
+    shutil.copy2(tmp_file, cfg_file)
+    os.remove(tmp_file)
 
 
 @pytest.fixture(autouse=True)
@@ -194,6 +218,10 @@ def test_owner(modules):
 
 
 # Similar to pkg.owner, but for FreeBSD's pkgng
+@pytest.mark.skipif(
+    not salt.utils.platform.is_freebsd(),
+    reason="test for new package manager for FreeBSD",
+)
 @pytest.mark.requires_salt_modules("pkg.which")
 def test_which(modules):
     """
@@ -477,3 +505,47 @@ def test_pkg_latest_version(grains, modules, states, test_pkg):
         pytest.skip("TODO: test not configured for {}".format(grains["os_family"]))
     pkg_latest = modules.pkg.latest_version(test_pkg)
     assert pkg_latest in cmd_pkg
+
+
+@pytest.mark.destructive_test
+@pytest.mark.requires_salt_modules("pkg.list_repos")
+@pytest.mark.slow_test
+@requires_system_grains
+def test_list_repos_duplicate_entries(preserve_rhel_yum_conf, grains, modules):
+    """
+    test duplicate entries in /etc/yum.conf
+
+    This is a destructive test as it installs and then removes a package
+    """
+    if grains["os_family"] != "RedHat":
+        pytest.skip("Only runs on RedHat.")
+
+    if grains["os"] == "Amazon":
+        pytest.skip("Only runs on RedHat, Amazon /etc/yum.conf differs.")
+
+    # write valid config with duplicates entries
+    cfg_file = "/etc/yum.conf"
+    with salt.utils.files.fpopen(cfg_file, "w", mode=0o644) as fp_:
+        fp_.write("[main]\n")
+        fp_.write("gpgcheck=1\n")
+        fp_.write("installonly_limit=3\n")
+        fp_.write("clean_requirements_on_remove=True\n")
+        fp_.write("best=True\n")
+        fp_.write("skip_if_unavailable=False\n")
+        fp_.write("http_caching=True\n")
+        fp_.write("http_caching=True\n")
+
+    ret = modules.pkg.list_repos(strict_config=False)
+    assert ret != []
+    assert isinstance(ret, dict) is True
+
+    # test explicitly strict_config
+    expected = "While reading from '/etc/yum.conf' [line  8]: option 'http_caching' in section 'main' already exists"
+    with pytest.raises(configparser.DuplicateOptionError) as exc_info:
+        result = modules.pkg.list_repos(strict_config=True)
+    assert "{}".format(exc_info.value) == expected
+
+    # test implicitly strict_config
+    with pytest.raises(configparser.DuplicateOptionError) as exc_info:
+        result = modules.pkg.list_repos()
+    assert "{}".format(exc_info.value) == expected
