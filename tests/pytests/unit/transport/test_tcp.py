@@ -19,7 +19,9 @@ def fake_keys():
 
 @pytest.fixture
 def fake_crypto():
-    with patch("salt.transport.tcp.PKCS1_OAEP", autospec=True, create=True) as fake_crypto:
+    with patch(
+        "salt.transport.tcp.PKCS1_OAEP", autospec=True, create=True
+    ) as fake_crypto:
         yield fake_crypto
 
 
