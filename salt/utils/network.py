@@ -2203,11 +2203,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
     if not ip_addrs:
         err = "DNS lookup or connection check of '{}' failed.".format(addr)
         if safe:
-            if salt.log.is_console_configured():
-                # If logging is not configured it also means that either
-                # the master or minion instance calling this hasn't even
-                # started running
-                log.error(err)
+            log.error(err)
             raise SaltClientError()
         raise SaltSystemExit(code=42, msg=err)
 

@@ -211,6 +211,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         old_present = set()
         while True:
             now = int(time.time())
+            log.trace("Running maintenance routines")
             if (now - last) >= self.loop_interval:
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
@@ -844,13 +845,10 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         )
 
         req_channels = []
-        tcp_only = True
         for transport, opts in iter_transport_opts(self.opts):
             chan = salt.channel.server.ReqServerChannel.factory(opts)
             chan.pre_fork(self.process_manager)
             req_channels.append(chan)
-            if transport != "tcp":
-                tcp_only = False
 
         if self.opts["req_server_niceness"] and not salt.utils.platform.is_windows():
             log.info(

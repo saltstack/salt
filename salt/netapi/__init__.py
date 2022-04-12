@@ -14,7 +14,6 @@ import salt.client.ssh.client
 import salt.config
 import salt.daemons.masterapi
 import salt.exceptions
-import salt.log  # pylint: disable=W0611
 import salt.runner
 import salt.syspaths
 import salt.utils.args

@@ -315,9 +315,9 @@ def check_module_indexes(ctx, files):
             package = "cloud"
         if package == "file_server":
             package = "fileserver"
-        if package == "configuration":
-            package = "log"
-            path_parts = ["handlers"]
+        if package == "configuration" and path_parts == ["logging"]:
+            package = "log_handlers"
+            path_parts = []
         python_package = SALT_CODE_DIR.joinpath(package, *path_parts).relative_to(
             CODE_DIR
         )

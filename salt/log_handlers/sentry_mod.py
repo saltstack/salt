@@ -89,7 +89,7 @@ import logging
 import re
 
 import salt.loader
-from salt.log import LOG_LEVELS
+from salt._logging import LOG_LEVELS
 
 try:
     import raven
@@ -100,8 +100,6 @@ except ImportError:
     HAS_RAVEN = False
 
 log = logging.getLogger(__name__)
-__grains__ = {}
-__salt__ = {}
 
 # Define the module's virtual name
 __virtualname__ = "sentry"

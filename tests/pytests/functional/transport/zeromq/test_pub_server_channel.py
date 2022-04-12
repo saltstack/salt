@@ -8,7 +8,6 @@ import salt.config
 import salt.exceptions
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
-import salt.log.setup
 import salt.master
 import salt.transport.zeromq
 import salt.utils.platform

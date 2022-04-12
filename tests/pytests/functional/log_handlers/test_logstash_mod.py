@@ -6,7 +6,7 @@ import time
 import pytest
 import salt.utils.stringutils
 import zmq
-from salt.log.handlers.logstash_mod import DatagramLogstashHandler, ZMQLogstashHander
+from salt.log_handlers.logstash_mod import DatagramLogstashHandler, ZMQLogstashHander
 from saltfactories.utils.ports import get_unused_localhost_port
 
 log = logging.getLogger(__name__)
