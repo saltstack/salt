@@ -1156,7 +1156,7 @@ def refresh_pillar(wait=False, timeout=30, clean_cache=True):
                     wait=timeout,
                 )
                 if not event_ret or event_ret["complete"] is False:
-                    log.warn(
+                    log.warning(
                         "Pillar refresh did not complete within timeout %s", timeout
                     )
         else:

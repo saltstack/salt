@@ -13,7 +13,7 @@ import pytest
 import salt.utils.files
 
 
-class TestRequestHandler(http.server.SimpleHTTPRequestHandler):
+class RequestHandler(http.server.SimpleHTTPRequestHandler):
     """
     Modified request handler class
     """
@@ -72,7 +72,7 @@ def serve(port=8000, directory=None):
     """
     Function to serve a directory via http.server
     """
-    handler = functools.partial(TestRequestHandler, directory=directory)
+    handler = functools.partial(RequestHandler, directory=directory)
     s = http.server.HTTPServer(("127.0.0.1", port), handler)
     s.serve_forever()
 

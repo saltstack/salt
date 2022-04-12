@@ -161,7 +161,7 @@ more-itertools==8.2.0
     #   jaraco.functools
 moto==3.0.1 ; python_version >= "3.6"
     # via -r requirements/static/ci/common.in
-msgpack==0.6.2
+msgpack==1.0.2
     # via
     #   -r requirements/base.txt
     #   pytest-salt-factories
@@ -252,7 +252,7 @@ python-dateutil==2.8.1
     #   moto
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
-python-gnupg==0.4.7
+python-gnupg==0.4.8
     # via -r requirements/windows.txt
 pythonnet==2.5.2
     # via -r requirements/windows.txt

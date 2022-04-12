@@ -1,3 +1,4 @@
+import os
 import pathlib
 import shutil
 
@@ -102,6 +103,9 @@ def test_list_repos():
             assert check_repo["comps"] in check_repo["line"]
 
 
+@pytest.mark.skipif(
+    not os.path.isfile("/etc/apt/sources.list"), reason="Missing /etc/apt/sources.list"
+)
 def test_get_repos():
     """
     Test aptpkg.get_repos
@@ -118,6 +122,9 @@ def test_get_repos():
     assert ret["file"] == "/etc/apt/sources.list"
 
 
+@pytest.mark.skipif(
+    not os.path.isfile("/etc/apt/sources.list"), reason="Missing /etc/apt/sources.list"
+)
 def test_get_repos_multiple_comps():
     """
     Test aptpkg.get_repos when multiple comps
@@ -162,6 +169,9 @@ def test_del_repo(revert_repo_file):
     assert "Repo {} doesn't exist".format(test_repo) in exc.value.message
 
 
+@pytest.mark.skipif(
+    not os.path.isfile("/etc/apt/sources.list"), reason="Missing /etc/apt/sources.list"
+)
 def test_expand_repo_def():
     """
     Test aptpkg.expand_repo_def when the repo exists.
