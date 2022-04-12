@@ -1,6 +1,8 @@
 import configparser
 import logging
 import os
+import shutil
+import tempfile
 import time
 
 import pytest
@@ -18,26 +20,17 @@ def ctx():
 
 
 @pytest.fixture
-@requires_system_grains
-def default_rhel_yum_conf(grains):
-    try:
-        yield
-    finally:
-        if grains["os_family"] != "RedHat":
-            pytest.skip("Only runs on RedHat.")
+def preserve_rhel_yum_conf():
+    # save off current yum.conf
+    cfg_file = "/etc/yum.conf"
+    tmp_dir = str(tempfile.gettempdir())
+    tmp_file = os.path.join(tmp_dir, "yum.conf")
+    shutil.copy2(cfg_file, tmp_file)
+    yield
 
-        if grains["os"] == "Amazon":
-            pytest.skip("Only runs on RedHat, Amazon /etc/yum.conf differs.")
-
-        # ensure yum.com in reasonable state
-        cfg_file = "/etc/yum.conf"
-        with salt.utils.files.fpopen(cfg_file, "w", mode=0o644) as fp_:
-            fp_.write("[main]\n")
-            fp_.write("gpgcheck=1\n")
-            fp_.write("installonly_limit=3\n")
-            fp_.write("clean_requirements_on_remove=True\n")
-            fp_.write("best=True\n")
-            fp_.write("skip_if_unavailable=False\n")
+    # restore saved yum.conf
+    shutil.copy2(tmp_file, cfg_file)
+    os.remove(tmp_file)
 
 
 @pytest.fixture(autouse=True)
@@ -513,7 +506,8 @@ def test_pkg_latest_version(grains, modules, states, test_pkg):
 @pytest.mark.destructive_test
 @pytest.mark.requires_salt_modules("pkg.list_repos")
 @pytest.mark.slow_test
-def test_list_repos_duplicate_entries(default_rhel_yum_conf, grains, modules):
+@requires_system_grains
+def test_list_repos_duplicate_entries(preserve_rhel_yum_conf, grains, modules):
     """
     test duplicate entries in /etc/yum.conf
 
