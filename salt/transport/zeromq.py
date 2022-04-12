@@ -91,7 +91,7 @@ def _get_master_uri(master_ip, master_port, source_ip=None, source_port=None):
             log.warning("Consider upgrading to pyzmq >= 16.0.1 and libzmq >= 4.1.6")
             log.warning(
                 "Specific source IP / port for connecting to master returner port:"
-                " configuraion ignored"
+                " configuration ignored"
             )
 
     return master_uri
@@ -203,7 +203,12 @@ class PublishClient(salt.transport.base.PublishClient):
 
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
     @salt.ext.tornado.gen.coroutine
-    def connect(self, publish_port, connect_callback=None, disconnect_callback=None):
+    def connect(
+        self, publish_port=None, connect_callback=None, disconnect_callback=None
+    ):
+        if not publish_port:
+            raise ValueError("publish_port must be set")
+
         self.publish_port = publish_port
         log.debug(
             "Connecting the Minion to the Master publish port, using the URI: %s",

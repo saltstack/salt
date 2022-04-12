@@ -730,7 +730,6 @@ class IPCMessageSubscriber(IPCClient):
     def read(self, timeout):
         """
         Asynchronously read messages and invoke a callback when they are ready.
-        :param callback: A callback with the received data
         """
         if self._saved_data:
             res = self._saved_data.pop(0)

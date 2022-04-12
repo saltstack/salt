@@ -227,7 +227,12 @@ class TCPPubClient(salt.transport.base.PublishClient):
     # pylint: enable=W1701
 
     @salt.ext.tornado.gen.coroutine
-    def connect(self, publish_port, connect_callback=None, disconnect_callback=None):
+    def connect(
+        self, publish_port=None, connect_callback=None, disconnect_callback=None
+    ):
+        if not publish_port:
+            raise ValueError("publish_port must be set")
+
         self.publish_port = publish_port
         self.message_client = MessageClient(
             self.opts,

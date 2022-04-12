@@ -101,7 +101,7 @@ class ReqServerChannel:
             self.transport.post_fork(self.handle_message, io_loop)
 
     @salt.ext.tornado.gen.coroutine
-    def handle_message(self, payload):
+    def handle_message(self, payload, **optional_transport_args):
         try:
             payload = self._decode_payload(payload)
         except Exception as exc:  # pylint: disable=broad-except
@@ -146,7 +146,9 @@ class ReqServerChannel:
         try:
             # Take the payload_handler function that was registered when we created the channel
             # and call it, returning control to the caller until it completes
-            ret, req_opts = yield self.payload_handler(payload)
+            ret, req_opts = yield self.payload_handler(
+                payload, **optional_transport_args
+            )
         except Exception as e:  # pylint: disable=broad-except
             # always attempt to return an error to the minion
             log.error("Some exception handling a payload from minion", exc_info=True)
@@ -626,6 +628,7 @@ class PubServerChannel:
                 # be handled here. Otherwise, it will be handled in the
                 # 'Maintenance' process.
                 presence_events = True
+
         transport = salt.transport.publish_server(opts, **kwargs)
         return cls(opts, transport, presence_events=presence_events)
 
@@ -773,8 +776,7 @@ class PubServerChannel:
         # add some targeting stuff for lists only (for now)
         if load["tgt_type"] == "list":
             int_payload["topic_lst"] = load["tgt"]
-
-        # If topics are upported, target matching has to happen master side
+        # If topics are supported, target matching has to happen master side
         match_targets = ["pcre", "glob", "list"]
         if self.transport.topic_support and load["tgt_type"] in match_targets:
             if isinstance(load["tgt"], str):
@@ -784,7 +786,7 @@ class PubServerChannel:
                 )
                 match_ids = _res["minions"]
                 log.debug("Publish Side Match: %s", match_ids)
-                # Send list of miions thru so zmq can target them
+                # Send list of minions thru so zmq can target them
                 int_payload["topic_lst"] = match_ids
             else:
                 int_payload["topic_lst"] = load["tgt"]

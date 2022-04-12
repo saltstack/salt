@@ -184,10 +184,10 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         if self.opts.get("presence_events", False):
             tcp_only = True
             for transport, _ in iter_transport_opts(self.opts):
-                if transport != "tcp":
+                if transport not in ("tcp", "rabbitmq"):
                     tcp_only = False
             if not tcp_only:
-                # For a TCP only transport, the presence events will be
+                # For a TCP and RabbitMQ transport, the presence events will be
                 # handled in the transport code.
                 self.presence_events = True
 
@@ -954,7 +954,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             pass
 
     @salt.ext.tornado.gen.coroutine
-    def _handle_payload(self, payload):
+    def _handle_payload(self, payload, **optional_transport_args):
         """
         The _handle_payload method is the key method used to figure out what
         needs to be done with communication to the server

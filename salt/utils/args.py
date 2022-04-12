@@ -430,8 +430,12 @@ def format_call(
         used_args_count = len(ret["args"]) + len(args)
         args_count = used_args_count + len(missing_args)
         raise SaltInvocationError(
-            "{} takes at least {} argument{} ({} given)".format(
-                fun.__name__, args_count, args_count > 1 and "s" or "", used_args_count
+            "{} takes at least {} argument{} ({} given). Missing args: [{}]".format(
+                fun.__name__,
+                args_count,
+                args_count > 1 and "s" or "",
+                used_args_count,
+                missing_args,
             )
         )
 

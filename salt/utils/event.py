@@ -389,7 +389,7 @@ class SaltEvent:
                     self.puburi, io_loop=self.io_loop
                 )
 
-            # For the asynchronous case, the connect will be defered to when
+            # For the asynchronous case, the connect will be deferred to when
             # set_event_handler() is invoked.
             self.cpub = True
         return self.cpub

@@ -374,7 +374,7 @@ def _runtests(session):
 
 @nox.session(python=_PYTHON_VERSIONS, name="runtests-parametrized")
 @nox.parametrize("coverage", [False, True])
-@nox.parametrize("transport", ["zeromq", "tcp"])
+@nox.parametrize("transport", ["zeromq", "tcp", "rabbitmq"])
 @nox.parametrize("crypto", [None, "m2crypto", "pycryptodome"])
 def runtests_parametrized(session, coverage, transport, crypto):
     """

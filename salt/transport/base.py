@@ -3,6 +3,7 @@ import salt.ext.tornado.gen
 TRANSPORTS = (
     "zeromq",
     "tcp",
+    "rabbitmq",
 )
 
 
@@ -16,6 +17,7 @@ def request_server(opts, **kwargs):
     elif "transport" in opts.get("pillar", {}).get("master", {}):
         ttype = opts["pillar"]["master"]["transport"]
 
+    # switch on available ttypes
     if ttype == "zeromq":
         import salt.transport.zeromq
 
@@ -24,16 +26,25 @@ def request_server(opts, **kwargs):
         import salt.transport.tcp
 
         return salt.transport.tcp.TCPReqServer(opts)
+    elif ttype == "rabbitmq":
+        import salt.transport.rabbitmq
+
+        return salt.transport.rabbitmq.RabbitMQReqServer(opts)
     elif ttype == "local":
         import salt.transport.local
 
-        transport = salt.transport.local.LocalServerChannel(opts)
+        return salt.transport.local.LocalServerChannel(opts)
     else:
-        raise Exception("Channels are only defined for ZeroMQ and TCP")
+        raise Exception(
+            "Unsupported transport channel {!r}. Channels are only defined for ZeroMQ, TCP and RabbitMQ".format(
+                ttype
+            )
+        )
 
 
 def request_client(opts, io_loop):
     ttype = "zeromq"
+    # determine the ttype
     if "transport" in opts:
         ttype = opts["transport"]
     elif "transport" in opts.get("pillar", {}).get("master", {}):
@@ -46,8 +57,16 @@ def request_client(opts, io_loop):
         import salt.transport.tcp
 
         return salt.transport.tcp.TCPReqClient(opts, io_loop=io_loop)
+    elif ttype == "rabbitmq":
+        import salt.transport.rabbitmq
+
+        return salt.transport.rabbitmq.RabbitMQRequestClient(opts, io_loop=io_loop)
     else:
-        raise Exception("Channels are only defined for tcp, zeromq")
+        raise Exception(
+            "Unsupported transport {!r}. Channels are only defined for TCP, ZeroMQ or RabbitMQ".format(
+                ttype
+            )
+        )
 
 
 def publish_server(opts, **kwargs):
@@ -67,6 +86,10 @@ def publish_server(opts, **kwargs):
         import salt.transport.tcp
 
         return salt.transport.tcp.TCPPublishServer(opts)
+    elif ttype == "rabbitmq":
+        import salt.transport.rabbitmq
+
+        return salt.transport.rabbitmq.RabbitMQPublishServer(opts, **kwargs)
     elif ttype == "local":  # TODO:
         import salt.transport.local
 
@@ -91,6 +114,10 @@ def publish_client(opts, io_loop):
         import salt.transport.tcp
 
         return salt.transport.tcp.TCPPubClient(opts, io_loop)
+    elif ttype == "rabbitmq":
+        import salt.transport.rabbitmq
+
+        return salt.transport.rabbitmq.RabbitMQPubClient(opts, io_loop)
     raise Exception("Transport type not found: {}".format(ttype))
 
 
@@ -154,7 +181,7 @@ class DaemonizedRequestServer(RequestServer):
 
 class PublishServer:
     """
-    The PublishServer publishes messages to PublishClients or to a borker
+    The PublishServer publishes messages to PublishClients or to a broker
     service.
     """
 
@@ -163,7 +190,7 @@ class PublishServer:
         Publish "load" to minions. This send the load to the publisher daemon
         process with does the actual sending to minions.
 
-        :param dict load: A load to be sent across the wire to minions
+        :param dict payload: A load to be sent across the wire to minions
         """
         raise NotImplementedError
 
@@ -212,7 +239,9 @@ class PublishClient:
         raise NotImplementedError
 
     @salt.ext.tornado.gen.coroutine
-    def connect(self, publish_port, connect_callback=None, disconnect_callback=None):
+    def connect(
+        self, publish_port=None, connect_callback=None, disconnect_callback=None
+    ):
         """
         Create a network connection to the the PublishServer or broker.
         """

@@ -1,0 +1,4 @@
+-r base.txt
+-r crypto.txt
+
+pika==1.2
