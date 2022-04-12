@@ -236,7 +236,7 @@ if not HAS_APT:
                 signedby = "signed-by={}".format(signedby)
             repo_line = [
                 type,
-                " [{} {}] ".format(architectures, signedby)
+                "[{}{}]".format(architectures, " " + signedby if signedby else "")
                 if architectures or signedby
                 else "",
                 uri,
