@@ -285,7 +285,7 @@ class AsyncTCPPubChannelTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
             raise salt.ext.tornado.gen.Return({"pillar": "data", "key": "value"})
 
         with patch(
-            "salt.transport.tcp.PKCS1_OAEP", autospec=True, create=True
+            "salt.transport.tcp.PKCS1_OAEP", create=True
         ) as fake_crypto, patch("salt.crypt.AsyncAuth.get_keys", autospec=True):
             expected_pubkey_path = "/etc/salt/pki/minion/syndic_master.pub"
             fake_crypto.new.return_value.decrypt.return_value = "decrypted_return_value"
