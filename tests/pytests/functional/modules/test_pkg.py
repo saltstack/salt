@@ -21,8 +21,12 @@ def ctx():
 
 @pytest.fixture
 def preserve_rhel_yum_conf():
+
     # save off current yum.conf
     cfg_file = "/etc/yum.conf"
+    if not os.path.exists(cfg_file):
+        pytest.skip("Only runs on RedHat.")
+
     tmp_dir = str(tempfile.gettempdir())
     tmp_file = os.path.join(tmp_dir, "yum.conf")
     shutil.copy2(cfg_file, tmp_file)
