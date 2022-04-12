@@ -439,8 +439,8 @@ def _produce_output(report, failed, setup):
     else:
         msg = MIMEText(report_text, report_format)
 
-        sender = setup.get("smtp_sender", "")
-        recipients = setup.get("smtp_recipients", "")
+        sender = _sprinkle(setup.get("smtp_sender", ""))
+        recipients = _sprinkle(setup.get("smtp_recipients", ""))
 
         if failed:
             subject = setup.get("smtp_failure_subject", "Installation failure")
