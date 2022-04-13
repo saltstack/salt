@@ -771,7 +771,7 @@ class PubServerChannel:
                 self.opts["pub_server_niceness"],
             )
             os.nice(self.opts["pub_server_niceness"])
-        secrets = kwargs.get("master_secrets", None)
+        secrets = kwargs.get("secrets", None)
         if secrets is not None:
             salt.master.SMaster.secrets = secrets
         self.transport.publish_daemon(self.publish_payload, self.presence_callback)
