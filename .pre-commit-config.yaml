@@ -4,7 +4,7 @@ default_language_version:
 exclude: ^(doc/_static/.*|doc/_themes/.*)$
 repos:
   - repo: https://github.com/saltstack/pip-tools-compile-impersonate
-    rev: dff9089c1003af49665064067ff63c75b9b69dcd
+    rev: "4.4"
     hooks:
 
   # ----- Packaging Requirements ------------------------------------------------------------------------------------>
