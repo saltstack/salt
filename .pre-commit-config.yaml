@@ -4,7 +4,7 @@ default_language_version:
 exclude: ^(doc/_static/.*|doc/_themes/.*)$
 repos:
   - repo: https://github.com/saltstack/pip-tools-compile-impersonate
-    rev: dff9089c1003af49665064067ff63c75b9b69dcd
+    rev: "4.4"
     hooks:
 
   # ----- Packaging Requirements ------------------------------------------------------------------------------------>
@@ -1161,6 +1161,9 @@ repos:
           - -e
           - lint-salt-pre-commit
           - --
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
 
   - repo: https://github.com/saltstack/mirrors-nox
     rev: v2020.8.22
@@ -1173,18 +1176,18 @@ repos:
           - -e
           - lint-tests-pre-commit
           - --
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
 
-  - repo: https://github.com/saltstack/mirrors-nox
-    rev: v2020.8.22
+  - repo: https://github.com/saltstack/invoke-pre-commit
+    rev: v1.9.0
     hooks:
-      - id: nox
+      - id: invoke
         alias: check-docs
         name: Check Docs
         files: ^(salt/.*\.py|doc/ref/.*\.rst)$
         args:
-          - -e
-          - invoke-pre-commit
-          - --
           - docs.check
         additional_dependencies:
           - blessings==1.7
@@ -1193,18 +1196,15 @@ repos:
           - jinja2==3.0.3
           - msgpack==1.0.3
 
-  - repo: https://github.com/saltstack/mirrors-nox
-    rev: v2020.8.22
+  - repo: https://github.com/saltstack/invoke-pre-commit
+    rev: v1.9.0
     hooks:
-      - id: nox
+      - id: invoke
         alias: check-filemap
         name: Check Filename Map Change Matching
-        files: ^tests/filename_map\.yml$
+        files: ^tests/(filename_map\.yml|.*\.py)$
         pass_filenames: false
         args:
-          - -e
-          - invoke-pre-commit
-          - --
           - filemap.check
         additional_dependencies:
           - blessings==1.7
