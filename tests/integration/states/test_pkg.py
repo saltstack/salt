@@ -58,7 +58,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 cls._PKG_DOT_TARGETS = ["tomcat-el-2.2-api"]
                 cls._PKG_EPOCH_TARGETS = ["comps-extras"]
             elif grains["osmajorrelease"] == 8:
-                cls._PKG_DOT_TARGETS = ["vid.stab"]
+                cls._PKG_DOT_TARGETS = ["aspnetcore-runtime-6.0"]
                 cls._PKG_EPOCH_TARGETS = ["traceroute"]
         elif grains["os_family"] == "Suse":
             cls._PKG_TARGETS = ["lynx", "htop"]
