@@ -624,7 +624,7 @@ class EtcdApiV3Adapter(EtcdClient):
         for k, v in fields.items():
             if isinstance(v, dict):
                 # Not hard failing here so we don't get a partial update
-                log.debug("etcd3 has no concept of directories, skipping key %s", k)
+                log.warning("etcd3 has no concept of directories, skipping key %s", k)
                 continue
             keys[k] = self.write(k, v)
         return keys
@@ -724,7 +724,8 @@ def get_conn(opts, profile=None, **kwargs):
     if use_v2:
         salt.utils.versions.warn_until(
             "Potassium",
-            "Starting with the Potassium release, etcd API v3 will be the default.",
+            "Starting with the Potassium release, etcd API v3 will be the default"
+            "and etcd API v2 will be deprecated.",
         )
         client = EtcdApiV2Adapter(conf, **kwargs)
         log.debug("etcd_util will be attempting to use etcd API v2: python-etcd")
