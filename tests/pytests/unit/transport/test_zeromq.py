@@ -17,7 +17,6 @@ import salt.crypt
 import salt.exceptions
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
-import salt.log.setup
 import salt.transport.zeromq
 import salt.utils.platform
 import salt.utils.process
