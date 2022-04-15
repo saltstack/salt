@@ -39,6 +39,24 @@ the name of a profile to be used.
 
     import salt.utils.etcd_utils
     client = salt.utils.etcd_utils.get_conn(__opts__, profile='my_etcd_config')
+
+You may also use the newer syntax and bypass the generator function.
+
+V2 API
+.. code-block:: python
+
+    import salt.utils.etcd_utils
+    client = salt.utils.etcd_utils.EtcdClient(__opts__, profile='my_etcd_config')
+
+V3 API
+.. code-block:: python
+
+    import salt.utils.etcd_utils
+    client = salt.utils.etcd_utils.EtcdClientV3(__opts__, profile='my_etcd_config')
+
+It should be noted that some usages of etcd require a profile to be specified,
+rather than top-level configurations. This being the case, it is better to
+always use a named configuration profile, as shown above.
 """
 
 import logging
@@ -71,6 +89,12 @@ class EtcdLibraryNotInstalled(SaltException):
     """
 
 
+class IncompatibleEtcdRequirements(SaltException):
+    """
+    A user is explicitly creating a client class, but requires a different version
+    """
+
+
 class Etcd3DirectoryException(SaltException):
     """
     We didn't find the required etcd library
@@ -83,7 +107,7 @@ class EtcdUtilWatchTimeout(Exception):
     """
 
 
-class EtcdClient:
+class EtcdBase:
     """
     Base class for the different versions of etcd clients.
 
@@ -93,6 +117,7 @@ class EtcdClient:
     def __init__(
         self,
         opts,
+        profile=None,
         host=None,
         port=None,
         username=None,
@@ -102,7 +127,12 @@ class EtcdClient:
         client_cert=None,
         **kwargs
     ):
-        self.conf = opts
+        if not kwargs.get("has_etcd_opts", False):
+            etcd_opts = _get_etcd_opts(opts, profile)
+        else:
+            etcd_opts = opts
+
+        self.conf = etcd_opts
         self.host = host or self.conf.get("etcd.host", "127.0.0.1")
         self.port = port or self.conf.get("etcd.port", 2379)
         username = username or self.conf.get("etcd.username")
@@ -138,7 +168,7 @@ class EtcdClient:
 
     def get(self, key, recurse=False):
         """
-        Get the value of a specific key.  If recurse is true, defer to EtcdClient.tree() instead.
+        Get the value of a specific key.  If recurse is true, defer to EtcdBase.tree() instead.
         """
         raise NotImplementedError()
 
@@ -280,13 +310,16 @@ class EtcdClient:
         raise NotImplementedError()
 
 
-class EtcdApiV2Adapter(EtcdClient):
+class EtcdClient(EtcdBase):
     def __init__(self, opts, **kwargs):
         if not HAS_ETCD_V2:
             raise EtcdLibraryNotInstalled("Don't have python-etcd, need to install it.")
         log.debug("etcd_util has the libraries needed for etcd v2")
 
         super().__init__(opts, **kwargs)
+
+        if not self.conf.get("etcd.require_v2", True):
+            raise IncompatibleEtcdRequirements("Can't create v2 with a v3 requirement")
 
         self.client = etcd.Client(host=self.host, port=self.port, **self.xargs)
 
@@ -532,7 +565,7 @@ class EtcdApiV2Adapter(EtcdClient):
         return ret
 
 
-class EtcdApiV3Adapter(EtcdClient):
+class EtcdClientV3(EtcdBase):
     """
     Since etcd3 has no concept of directories, this class leaves some methods unimplemented.
 
@@ -547,6 +580,9 @@ class EtcdApiV3Adapter(EtcdClient):
         log.debug("etcd_util has the libraries needed for etcd v3")
 
         super().__init__(opts, **kwargs)
+
+        if self.conf.get("etcd.require_v2", True):
+            raise IncompatibleEtcdRequirements("Can't create v3 with a v2 requirement")
 
         # etcd3-py uses verify instead of ca_cert
         self.xargs["verify"] = self.xargs.pop("ca_cert", None)
@@ -664,7 +700,7 @@ class EtcdApiV3Adapter(EtcdClient):
 
     def _expand(self, kvs):
         """
-        This does the opposite of EtcdClient._flatten
+        This does the opposite of EtcdBase._flatten
 
         For example, it will convert...
 
@@ -700,12 +736,7 @@ class EtcdApiV3Adapter(EtcdClient):
         return self._expand(kvs)
 
 
-def get_conn(opts, profile=None, **kwargs):
-    """
-    Client creation at the module level.
-
-    This is the way users are meant to instantiate a client
-    """
+def _get_etcd_opts(opts, profile=None):
     opts_pillar = opts.get("pillar", {})
     opts_master = opts_pillar.get("master", {})
 
@@ -715,9 +746,19 @@ def get_conn(opts, profile=None, **kwargs):
     opts_merged.update(opts)
 
     if profile:
-        conf = opts_merged.pop(profile, {})
+        return opts_merged.pop(profile, {})
     else:
-        conf = opts_merged
+        return opts_merged
+
+
+def get_conn(opts, profile=None, **kwargs):
+    """
+    Client creation at the module level.
+
+    This is the way users are meant to instantiate a client
+    """
+
+    conf = _get_etcd_opts(opts, profile=profile)
 
     # Figure out which API version they are using...
     use_v2 = conf.get("etcd.require_v2", True)
@@ -727,10 +768,10 @@ def get_conn(opts, profile=None, **kwargs):
             "Starting with the Potassium release, etcd API v3 will be the default"
             "and etcd API v2 will be deprecated.",
         )
-        client = EtcdApiV2Adapter(conf, **kwargs)
+        client = EtcdClient(conf, has_etcd_opts=True, **kwargs)
         log.debug("etcd_util will be attempting to use etcd API v2: python-etcd")
     else:
-        client = EtcdApiV3Adapter(conf, **kwargs)
+        client = EtcdClientV3(conf, has_etcd_opts=True, **kwargs)
         log.debug("etcd_util will be attempting to use etcd API v3: etcd3-py")
 
     return client

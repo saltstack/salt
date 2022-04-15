@@ -3,7 +3,9 @@ import threading
 import time
 
 import pytest
-from salt.utils.etcd_util import HAS_ETCD_V2, HAS_ETCD_V3, get_conn
+from salt.utils.etcd_util import (
+    HAS_ETCD_V2, HAS_ETCD_V3, get_conn, EtcdClient, EtcdClientV3
+)
 from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
@@ -120,7 +122,17 @@ def cleanup_prefixed_entries(etcd_client, prefix):
         etcd_client.delete(prefix, recursive=True)
 
 
-def test_etcd_client_creation(minion_opts, profile_name):
+def test_etcd_client_creation(minion_opts, profile_name, use_v2):
+    """
+    Client creation using client classes, just need to assert no errors.
+    """
+    if use_v2:
+        EtcdClient(minion_opts, profile=profile_name)
+    else:
+        EtcdClientV3(minion_opts, profile=profile_name)
+
+
+def test_etcd_client_creation_with_get_conn(minion_opts, profile_name):
     """
     Client creation using get_conn, just need to assert no errors.
     """

@@ -4,7 +4,9 @@ import time
 
 import pytest
 import salt.modules.etcd_mod as etcd_mod
-from salt.utils.etcd_util import HAS_ETCD_V2, HAS_ETCD_V3, get_conn
+from salt.utils.etcd_util import (
+    HAS_ETCD_V2, HAS_ETCD_V3, Etcd3DirectoryException, get_conn
+)
 from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
@@ -134,7 +136,7 @@ def cleanup_prefixed_entries(etcd_client, prefix):
 
 def test_basic_operations(subtests, profile_name, prefix, use_v2):
     """
-    Client creation using EtcdClient, just need to assert no errors.
+    Make sure we can do the basics
     """
     with subtests.test("There should be no entries at the start with our prefix."):
         assert etcd_mod.get_(prefix, recurse=True, profile=profile_name) is None
@@ -166,6 +168,9 @@ def test_basic_operations(subtests, profile_name, prefix, use_v2):
                 },
             }
             assert etcd_mod.ls_(path=prefix, profile=profile_name) == expected
+        else:
+            with pytest.raises(Etcd3DirectoryException):
+                etcd_mod.ls_(path=prefix, profile=profile_name) == expected
 
     with subtests.test("We should be able to remove values and get a tree hierarchy"):
         updated = {
