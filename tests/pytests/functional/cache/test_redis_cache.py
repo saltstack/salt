@@ -21,6 +21,7 @@ def ensure_deps(states):
     ), "unable to pip install requirements {}".format(installation_result.comment)
 
 
+@pytest.mark.requires_network
 def test_redis_cluster_cache_should_import_correctly(redis_cluster_cache):
     import rediscluster.exceptions
 
