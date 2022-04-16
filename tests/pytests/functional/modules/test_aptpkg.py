@@ -1,4 +1,3 @@
-import os
 import pathlib
 import shutil
 
@@ -62,18 +61,21 @@ def get_current_repo(multiple_comps=False):
         Search for a repo that contains multiple comps.
         For example: main, restricted
     """
-    with salt.utils.files.fopen("/etc/apt/sources.list") as fp:
-        for line in fp:
-            if line.startswith("#"):
-                continue
-            if "ubuntu.com" in line or "debian.org" in line:
-                test_repo = line.strip()
-                comps = test_repo.split()[3:]
-                if multiple_comps:
-                    if len(comps) > 1:
+    try:
+        with salt.utils.files.fopen("/etc/apt/sources.list") as fp:
+            for line in fp:
+                if line.startswith("#"):
+                    continue
+                if "ubuntu.com" in line or "debian.org" in line:
+                    test_repo = line.strip()
+                    comps = test_repo.split()[3:]
+                    if multiple_comps:
+                        if len(comps) > 1:
+                            break
+                    else:
                         break
-                else:
-                    break
+    except FileNotFoundError as error:
+        pytest.skip("Missing {}".format(error.filename))
     return test_repo, comps
 
 
@@ -103,9 +105,6 @@ def test_list_repos():
             assert check_repo["comps"] in check_repo["line"]
 
 
-@pytest.mark.skipif(
-    not os.path.isfile("/etc/apt/sources.list"), reason="Missing /etc/apt/sources.list"
-)
 def test_get_repos():
     """
     Test aptpkg.get_repos
@@ -122,9 +121,6 @@ def test_get_repos():
     assert ret["file"] == "/etc/apt/sources.list"
 
 
-@pytest.mark.skipif(
-    not os.path.isfile("/etc/apt/sources.list"), reason="Missing /etc/apt/sources.list"
-)
 def test_get_repos_multiple_comps():
     """
     Test aptpkg.get_repos when multiple comps
@@ -169,9 +165,6 @@ def test_del_repo(revert_repo_file):
     assert "Repo {} doesn't exist".format(test_repo) in exc.value.message
 
 
-@pytest.mark.skipif(
-    not os.path.isfile("/etc/apt/sources.list"), reason="Missing /etc/apt/sources.list"
-)
 def test_expand_repo_def():
     """
     Test aptpkg.expand_repo_def when the repo exists.
