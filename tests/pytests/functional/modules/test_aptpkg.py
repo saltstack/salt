@@ -99,6 +99,7 @@ def get_current_repo(multiple_comps=False):
         Search for a repo that contains multiple comps.
         For example: main, restricted
     """
+    test_repo = None
     try:
         with salt.utils.files.fopen("/etc/apt/sources.list") as fp:
             for line in fp:
@@ -114,6 +115,8 @@ def get_current_repo(multiple_comps=False):
                         break
     except FileNotFoundError as error:
         pytest.skip("Missing {}".format(error.filename))
+    if not test_repo:
+        pytest.skip("Did not detect an APT repo")
     return test_repo, comps
 
 
@@ -148,8 +151,6 @@ def test_get_repos():
     Test aptpkg.get_repos
     """
     test_repo, comps = get_current_repo()
-    if not test_repo:
-        pytest.skip("Did not detect an apt repo")
     exp_ret = test_repo.split()
     ret = aptpkg.get_repo(repo=test_repo)
     assert ret["type"] == exp_ret[0]
@@ -165,8 +166,6 @@ def test_get_repos_multiple_comps():
     exist in repo.
     """
     test_repo, comps = get_current_repo(multiple_comps=True)
-    if not test_repo:
-        pytest.skip("Did not detect an ubuntu repo")
     exp_ret = test_repo.split()
     ret = aptpkg.get_repo(repo=test_repo)
     assert ret["type"] == exp_ret[0]
