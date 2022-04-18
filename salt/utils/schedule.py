@@ -1534,13 +1534,6 @@ class Schedule:
             if "_splay" not in data:
                 data["_splay"] = None
 
-            if (
-                "run_on_start" in data
-                and data["run_on_start"]
-                and "_run_on_start" not in data
-            ):
-                data["_run_on_start"] = True
-
             if not now:
                 now = datetime.datetime.now()
 
@@ -1575,11 +1568,21 @@ class Schedule:
                 )
                 continue
 
+            uses_time_elements = True in [
+                True for item in time_elements if item in data
+            ]
+
+            # _run_on_start is later set to False, on the first run, after
+            # being read. So, only set it when it is not already set.
+            if "_run_on_start" not in data:
+                # default to True for time elements
+                data["_run_on_start"] = data.get("run_on_start", uses_time_elements)
+
             if "run_explicit" in data:
                 _handle_run_explicit(data, loop_interval)
                 run = data["run"]
 
-            if True in [True for item in time_elements if item in data]:
+            if uses_time_elements:
                 _handle_time_elements(data)
             elif "once" in data:
                 _handle_once(data, loop_interval)

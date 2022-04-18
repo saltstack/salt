@@ -335,7 +335,16 @@ def test_eval_schedule_time_eval(schedule):
     """
     schedule.opts.update({"pillar": {"schedule": {}}})
     schedule.opts.update(
-        {"schedule": {"testjob": {"function": "test.true", "seconds": 60, "splay": 5}}}
+        {
+            "schedule": {
+                "testjob": {
+                    "function": "test.true",
+                    "seconds": 60,
+                    "splay": 5,
+                    "run_on_start": False,
+                }
+            }
+        }
     )
     now = datetime.datetime.now()
     schedule.eval()
