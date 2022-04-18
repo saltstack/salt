@@ -1032,10 +1032,6 @@ class Schedule:
                 if interval < self.loop_interval:
                     self.loop_interval = interval
 
-                data["_next_scheduled_fire_time"] = now + datetime.timedelta(
-                    seconds=data["_seconds"]
-                )
-
         def _handle_once(data, loop_interval):
             """
             Handle schedule item with once
@@ -1065,7 +1061,6 @@ class Schedule:
                         log.error(data["_error"])
                         return
                 data["_next_fire_time"] = once
-                data["_next_scheduled_fire_time"] = once
                 # If _next_fire_time is less than now, continue
                 if once < now - loop_interval:
                     data["_continue"] = True
@@ -1169,8 +1164,6 @@ class Schedule:
                 if not data["_next_fire_time"]:
                     data["_next_fire_time"] = when
 
-                data["_next_scheduled_fire_time"] = when
-
                 if data["_next_fire_time"] < when and not run and not data["_run"]:
                     data["_next_fire_time"] = when
                     data["_run"] = True
@@ -1195,9 +1188,6 @@ class Schedule:
                 # executed before or already executed in the past.
                 try:
                     data["_next_fire_time"] = croniter.croniter(
-                        data["cron"], now
-                    ).get_next(datetime.datetime)
-                    data["_next_scheduled_fire_time"] = croniter.croniter(
                         data["cron"], now
                     ).get_next(datetime.datetime)
                 except (ValueError, KeyError):
