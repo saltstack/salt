@@ -77,15 +77,9 @@ MISSING_DOCSTRINGS = {
     "salt/grains/philips_hue.py": ["vendor", "kernel", "os", "os_family", "product"],
     "salt/grains/rest_sample.py": ["kernel", "os", "os_family", "location", "os_data"],
     "salt/grains/ssh_sample.py": ["location", "os_data", "kernel"],
-    "salt/log/handlers/fluent_mod.py": ["setup", "setup_handlers", "get_global_sender"],
-    "salt/log/handlers/log4mongo_mod.py": ["setup_handlers"],
-    "salt/log/handlers/logstash_mod.py": ["setup_handlers"],
-    "salt/metaproxy/proxy.py": [
-        "post_master_init",
-        "target",
-        "handle_payload",
-        "target_load",
-    ],
+    "salt/log_handlers/fluent_mod.py": ["setup", "setup_handlers", "get_global_sender"],
+    "salt/log_handlers/log4mongo_mod.py": ["setup_handlers"],
+    "salt/log_handlers/logstash_mod.py": ["setup_handlers"],
     "salt/modules/chassis.py": ["chassis_credentials", "cmd"],
     "salt/modules/csf.py": [
         "disable_testing_mode",

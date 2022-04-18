@@ -94,7 +94,7 @@ def PKG_DOT_TARGETS(grains):
         elif grains["osmajorrelease"] == 7:
             _PKG_DOT_TARGETS = ["tomcat-el-2.2-api"]
         elif grains["osmajorrelease"] == 8:
-            _PKG_DOT_TARGETS = ["vid.stab"]
+            _PKG_DOT_TARGETS = ["aspnetcore-runtime-6.0"]
     return _PKG_DOT_TARGETS
 
 
