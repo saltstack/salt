@@ -163,7 +163,7 @@ import os
 import salt.utils.json
 import salt.utils.network
 import salt.utils.stringutils
-from salt.log.setup import LOG_LEVELS
+from salt._logging import LOG_LEVELS
 
 try:
     import zmq

@@ -2,13 +2,8 @@
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-# DGM
-import logging
-
 import pytest
 import salt.utils.platform
-
-log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
