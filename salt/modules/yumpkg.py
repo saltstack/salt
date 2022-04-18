@@ -147,7 +147,7 @@ def _yum():
         if (
             "fedora" in __grains__["os"].lower() and int(__grains__["osrelease"]) >= 22
         ) or (
-            __grains__["os"].lower() in ("redhat", "centos")
+            __grains__["os"].lower() in ("redhat", "centos", "centos stream")
             and int(__grains__["osmajorrelease"]) >= 8
         ):
             __context__[contextkey] = "dnf"
