@@ -424,7 +424,7 @@ def test_eval_after(schedule):
 @pytest.mark.slow_test
 def test_eval_enabled(schedule):
     """
-    verify that scheduled job does not run
+    verify that scheduled job runs
     """
 
     job_name = "test_eval_enabled"
@@ -813,7 +813,7 @@ def test_eval_splay_global(schedule):
 @pytest.mark.slow_test
 def test_eval_seconds(schedule):
     """
-    verify that scheduled job run mutiple times with seconds
+    verify that scheduled job run multiple times with seconds
     """
 
     with patch.dict(schedule.opts, {"run_schedule_jobs_in_background": False}):
@@ -872,7 +872,7 @@ def test_eval_seconds(schedule):
 @pytest.mark.slow_test
 def test_eval_minutes(schedule):
     """
-    verify that scheduled job run mutiple times with minutes
+    verify that scheduled job run multiple times with minutes
     """
 
     with patch.dict(schedule.opts, {"run_schedule_jobs_in_background": False}):
@@ -926,7 +926,7 @@ def test_eval_minutes(schedule):
 @pytest.mark.slow_test
 def test_eval_hours(schedule):
     """
-    verify that scheduled job run mutiple times with hours
+    verify that scheduled job run multiple times with hours
     """
 
     with patch.dict(schedule.opts, {"run_schedule_jobs_in_background": False}):
@@ -982,7 +982,7 @@ def test_eval_hours(schedule):
 @pytest.mark.slow_test
 def test_eval_days(schedule):
     """
-    verify that scheduled job run mutiple times with days
+    verify that scheduled job run multiple times with days
     """
 
     job_name = "job_eval_days"

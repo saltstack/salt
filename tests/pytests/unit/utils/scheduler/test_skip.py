@@ -104,7 +104,7 @@ def test_skip_during_range(schedule):
 
 def test_skip_during_range_invalid_datestring(schedule):
     """
-    verify that scheduled job is not not and returns the right error string
+    verify that scheduled job is not run and returns the right error string
     """
     run_time = dateutil.parser.parse("11/29/2017 2:30pm")
 
