@@ -28,6 +28,13 @@ import salt.utils.validate.path
 import salt.utils.xdg
 import salt.utils.yaml
 import salt.utils.zeromq
+from salt._logging import (
+    DFLT_LOG_DATEFMT,
+    DFLT_LOG_DATEFMT_LOGFILE,
+    DFLT_LOG_FMT_CONSOLE,
+    DFLT_LOG_FMT_JID,
+    DFLT_LOG_FMT_LOGFILE,
+)
 
 try:
     import psutil
@@ -40,14 +47,6 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-_DFLT_LOG_DATEFMT = "%H:%M:%S"
-_DFLT_LOG_DATEFMT_LOGFILE = "%Y-%m-%d %H:%M:%S"
-_DFLT_LOG_FMT_CONSOLE = "[%(levelname)-8s] %(message)s"
-_DFLT_LOG_FMT_LOGFILE = (
-    "%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(levelname)-8s][%(process)d]"
-    " %(message)s"
-)
-_DFLT_LOG_FMT_JID = "[JID: %(jid)s]"
 _DFLT_REFSPECS = ["+refs/heads/*:refs/remotes/origin/*", "+refs/tags/*:refs/tags/*"]
 DEFAULT_INTERVAL = 60
 
@@ -1144,11 +1143,11 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "log_file": os.path.join(salt.syspaths.LOGS_DIR, "minion"),
         "log_level": "warning",
         "log_level_logfile": None,
-        "log_datefmt": _DFLT_LOG_DATEFMT,
-        "log_datefmt_logfile": _DFLT_LOG_DATEFMT_LOGFILE,
-        "log_fmt_console": _DFLT_LOG_FMT_CONSOLE,
-        "log_fmt_logfile": _DFLT_LOG_FMT_LOGFILE,
-        "log_fmt_jid": _DFLT_LOG_FMT_JID,
+        "log_datefmt": DFLT_LOG_DATEFMT,
+        "log_datefmt_logfile": DFLT_LOG_DATEFMT_LOGFILE,
+        "log_fmt_console": DFLT_LOG_FMT_CONSOLE,
+        "log_fmt_logfile": DFLT_LOG_FMT_LOGFILE,
+        "log_fmt_jid": DFLT_LOG_FMT_JID,
         "log_granular_levels": {},
         "log_rotate_max_bytes": 0,
         "log_rotate_backup_count": 0,
@@ -1471,11 +1470,11 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "log_file": os.path.join(salt.syspaths.LOGS_DIR, "master"),
         "log_level": "warning",
         "log_level_logfile": None,
-        "log_datefmt": _DFLT_LOG_DATEFMT,
-        "log_datefmt_logfile": _DFLT_LOG_DATEFMT_LOGFILE,
-        "log_fmt_console": _DFLT_LOG_FMT_CONSOLE,
-        "log_fmt_logfile": _DFLT_LOG_FMT_LOGFILE,
-        "log_fmt_jid": _DFLT_LOG_FMT_JID,
+        "log_datefmt": DFLT_LOG_DATEFMT,
+        "log_datefmt_logfile": DFLT_LOG_DATEFMT_LOGFILE,
+        "log_fmt_console": DFLT_LOG_FMT_CONSOLE,
+        "log_fmt_logfile": DFLT_LOG_FMT_LOGFILE,
+        "log_fmt_jid": DFLT_LOG_FMT_JID,
         "log_granular_levels": {},
         "log_rotate_max_bytes": 0,
         "log_rotate_backup_count": 0,
@@ -1662,11 +1661,11 @@ DEFAULT_CLOUD_OPTS = immutabletypes.freeze(
         "log_file": os.path.join(salt.syspaths.LOGS_DIR, "cloud"),
         "log_level": "warning",
         "log_level_logfile": None,
-        "log_datefmt": _DFLT_LOG_DATEFMT,
-        "log_datefmt_logfile": _DFLT_LOG_DATEFMT_LOGFILE,
-        "log_fmt_console": _DFLT_LOG_FMT_CONSOLE,
-        "log_fmt_logfile": _DFLT_LOG_FMT_LOGFILE,
-        "log_fmt_jid": _DFLT_LOG_FMT_JID,
+        "log_datefmt": DFLT_LOG_DATEFMT,
+        "log_datefmt_logfile": DFLT_LOG_DATEFMT_LOGFILE,
+        "log_fmt_console": DFLT_LOG_FMT_CONSOLE,
+        "log_fmt_logfile": DFLT_LOG_FMT_LOGFILE,
+        "log_fmt_jid": DFLT_LOG_FMT_JID,
         "log_granular_levels": {},
         "log_rotate_max_bytes": 0,
         "log_rotate_backup_count": 0,
