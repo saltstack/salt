@@ -5,57 +5,61 @@ Integration tests for the etcd modules
 import logging
 
 import pytest
+from salt.utils.etcd_util import HAS_ETCD_V2
+from saltfactories.daemons.container import Container
+from saltfactories.utils import random_string
+
+docker = pytest.importorskip("docker")
 
 log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("docker", "dockerd", check_all=False),
     pytest.mark.windows_whitelisted,
+    pytest.mark.skipIf(not HAS_ETCD_V2, "no etcd library installed")
 ]
 
 
-@pytest.fixture(scope="module", autouse=True)
-def etc_docker_container(salt_call_cli, sdb_etcd_port):
-    container_started = False
+@pytest.fixture(scope="module")
+def docker_client():
     try:
-        ret = salt_call_cli.run(
-            "state.single", "docker_image.present", name="bitnami/etcd", tag="latest"
-        )
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
-        assert state_run["result"] is True
-        ret = salt_call_cli.run(
-            "state.single",
-            "docker_container.running",
-            name="etcd",
-            image="bitnami/etcd:latest",
-            port_bindings="{}:2379".format(sdb_etcd_port),
-            environment={"ALLOW_NONE_AUTHENTICATION": "yes", "ETCD_ENABLE_V2": "true"},
-            cap_add="IPC_LOCK",
-        )
-        assert ret.exitcode == 0
-        assert ret.json
-        state_run = next(iter(ret.json.values()))
-        assert state_run["result"] is True
-        container_started = True
-        yield
-    finally:
-        if container_started:
-            ret = salt_call_cli.run(
-                "state.single", "docker_container.stopped", name="etcd"
-            )
-            assert ret.exitcode == 0
-            assert ret.json
-            state_run = next(iter(ret.json.values()))
-            assert state_run["result"] is True
-            ret = salt_call_cli.run(
-                "state.single", "docker_container.absent", name="etcd"
-            )
-            assert ret.exitcode == 0
-            assert ret.json
-            state_run = next(iter(ret.json.values()))
-            assert state_run["result"] is True
+        client = docker.from_env()
+    except docker.errors.DockerException:
+        pytest.skip("Failed to get a connection to docker running on the system")
+    connectable = Container.client_connectable(client)
+    if connectable is not True:  # pragma: nocover
+        pytest.skip(connectable)
+    return client
+
+
+@pytest.fixture(scope="module")
+def docker_image_name(docker_client):
+    image_name = "bitnami/etcd:3"
+    try:
+        docker_client.images.pull(image_name)
+    except docker.errors.APIError as exc:
+        pytest.skip("Failed to pull docker image '{}': {}".format(image_name, exc))
+    return image_name
+
+
+# TODO: Use our own etcd image to avoid reliance on a third party
+@pytest.fixture(scope="module", autouse=True)
+def etcd_container(salt_factories, docker_client, sdb_etcd_port, docker_image_name):
+    container = salt_factories.get_container(
+        random_string("etcd-server-"),
+        image_name=docker_image_name,
+        docker_client=docker_client,
+        check_ports=[sdb_etcd_port],
+        container_run_kwargs={
+            "environment": {
+                "ALLOW_NONE_AUTHENTICATION": "yes",
+                "ETCD_ENABLE_V2": "true",
+            },
+            "ports": {"2379/tcp": sdb_etcd_port},
+        },
+    )
+    with container.started() as factory:
+        yield factory
 
 
 @pytest.fixture(scope="module")
