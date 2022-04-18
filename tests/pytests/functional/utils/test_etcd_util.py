@@ -4,7 +4,11 @@ import time
 
 import pytest
 from salt.utils.etcd_util import (
-    HAS_ETCD_V2, HAS_ETCD_V3, get_conn, EtcdClient, EtcdClientV3
+    HAS_ETCD_V2,
+    HAS_ETCD_V3,
+    EtcdClient,
+    EtcdClientV3,
+    get_conn,
 )
 from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string

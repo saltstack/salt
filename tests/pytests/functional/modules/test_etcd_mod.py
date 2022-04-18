@@ -5,7 +5,10 @@ import time
 import pytest
 import salt.modules.etcd_mod as etcd_mod
 from salt.utils.etcd_util import (
-    HAS_ETCD_V2, HAS_ETCD_V3, Etcd3DirectoryException, get_conn
+    HAS_ETCD_V2,
+    HAS_ETCD_V3,
+    Etcd3DirectoryException,
+    get_conn,
 )
 from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
@@ -170,7 +173,7 @@ def test_basic_operations(subtests, profile_name, prefix, use_v2):
             assert etcd_mod.ls_(path=prefix, profile=profile_name) == expected
         else:
             with pytest.raises(Etcd3DirectoryException):
-                etcd_mod.ls_(path=prefix, profile=profile_name) == expected
+                etcd_mod.ls_(path=prefix, profile=profile_name)
 
     with subtests.test("We should be able to remove values and get a tree hierarchy"):
         updated = {
