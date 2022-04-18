@@ -990,9 +990,6 @@ def test_eval_days(schedule):
         "schedule": {job_name: {"function": "test.ping", "days": "2", "dry_run": True}}
     }
 
-    if salt.utils.platform.is_darwin():
-        job["schedule"][job_name]["dry_run"] = True
-
     # Add job to schedule
     schedule.opts.update(job)
 
