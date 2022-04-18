@@ -1,4 +1,6 @@
+import ctypes
 import logging
+import multiprocessing
 import os
 import pathlib
 import shutil
@@ -10,8 +12,10 @@ import salt.channel.server
 import salt.config
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
+import salt.master
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.stringutils
 from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
 
@@ -95,6 +99,21 @@ def process_manager():
         process_manager.terminate()
 
 
+@pytest.fixture
+def master_secrets():
+    salt.master.SMaster.secrets["aes"] = {
+        "secret": multiprocessing.Array(
+            ctypes.c_char,
+            salt.utils.stringutils.to_bytes(salt.crypt.Crypticle.generate_key_string()),
+        ),
+        "serial": multiprocessing.Value(
+            ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
+        ),
+    }
+    yield
+    salt.master.SMaster.secrets.pop("aes")
+
+
 @salt.ext.tornado.gen.coroutine
 def _connect_and_publish(
     io_loop, channel_minion_id, channel, server, received, timeout=60
@@ -117,7 +136,12 @@ def _connect_and_publish(
 
 
 def test_pub_server_channel(
-    io_loop, channel_minion_id, master_config, minion_config, process_manager
+    io_loop,
+    channel_minion_id,
+    master_config,
+    minion_config,
+    process_manager,
+    master_secrets,
 ):
     server_channel = salt.channel.server.PubServerChannel.factory(
         master_config,

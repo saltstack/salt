@@ -26,7 +26,6 @@ import salt.config
 import salt.defaults.exitcodes
 import salt.exceptions
 import salt.loader
-import salt.log.setup
 import salt.minion
 import salt.output
 import salt.roster
@@ -40,13 +39,14 @@ import salt.utils.hashutils
 import salt.utils.json
 import salt.utils.network
 import salt.utils.path
+import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.thin
 import salt.utils.url
 import salt.utils.verify
+from salt._logging import LOG_LEVELS
 from salt._logging.mixins import MultiprocessingStateMixin
 from salt.template import compile_template
-from salt.utils.platform import is_junos, is_windows
 from salt.utils.process import Process
 from salt.utils.zeromq import zmq
 
@@ -138,13 +138,11 @@ if [ -n "$SET_PATH" ]
 fi
 SUDO=""
 if [ -n "{{SUDO}}" ]
-    then SUDO="sudo "
+    then SUDO="{{SUDO}} "
 fi
 SUDO_USER="{{SUDO_USER}}"
 if [ "$SUDO" ] && [ "$SUDO_USER" ]
-then SUDO="sudo -u {{SUDO_USER}}"
-elif [ "$SUDO" ] && [ -n "$SUDO_USER" ]
-then SUDO="sudo "
+then SUDO="$SUDO -u $SUDO_USER"
 fi
 EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
 PYTHON_CMDS="python3 python27 python2.7 python26 python2.6 python2 python"
@@ -190,7 +188,7 @@ EOF'''.format(
     ]
 )
 
-if not is_windows() and not is_junos():
+if not salt.utils.platform.is_windows() and not salt.utils.platform.is_junos():
     shim_file = os.path.join(os.path.dirname(__file__), "ssh_py_shim.py")
     if not os.path.exists(shim_file):
         # On esky builds we only have the .pyc file
@@ -1279,7 +1277,14 @@ class Single:
         """
         Prepare the command string
         """
-        sudo = "sudo" if self.target["sudo"] else ""
+        if self.target.get("sudo"):
+            sudo = (
+                "sudo -p '{}'".format(salt.client.ssh.shell.SUDO_PROMPT)
+                if self.target.get("passwd")
+                else "sudo"
+            )
+        else:
+            sudo = ""
         sudo_user = self.target["sudo_user"]
         if "_caller_cachedir" in self.opts:
             cachedir = self.opts["_caller_cachedir"]
@@ -1289,10 +1294,7 @@ class Single:
         debug = ""
         if not self.opts.get("log_level"):
             self.opts["log_level"] = "info"
-        if (
-            salt.log.setup.LOG_LEVELS["debug"]
-            >= salt.log.setup.LOG_LEVELS[self.opts.get("log_level", "info")]
-        ):
+        if LOG_LEVELS["debug"] >= LOG_LEVELS[self.opts.get("log_level", "info")]:
             debug = "1"
         arg_str = '''
 OPTIONS.config = \
@@ -1329,7 +1331,7 @@ ARGS = {arguments}\n'''.format(
             cmd = SSH_SH_SHIM.format(
                 DEBUG=debug,
                 SUDO=sudo,
-                SUDO_USER=sudo_user,
+                SUDO_USER=sudo_user or "",
                 SSH_PY_CODE=py_code_enc,
                 HOST_PY_MAJOR=sys.version_info[0],
                 SET_PATH=self.set_path,
