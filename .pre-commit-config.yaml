@@ -4,7 +4,7 @@ default_language_version:
 exclude: ^(doc/_static/.*|doc/_themes/.*)$
 repos:
   - repo: https://github.com/saltstack/pip-tools-compile-impersonate
-    rev: dff9089c1003af49665064067ff63c75b9b69dcd
+    rev: "4.4"
     hooks:
 
   # ----- Packaging Requirements ------------------------------------------------------------------------------------>
@@ -1131,16 +1131,6 @@ repos:
             )$
         additional_dependencies:
           - click<8.1.0
-
-  - repo: https://github.com/myint/rstcheck
-    # This, for now, is meant to run when locally committing code and will be disabled(skipped) when we run pre-commit
-    # against all codebase to avoid MASSIVE code churn. This way, we do it in smaller chunks, a few at a time.
-    rev: 3f92957
-    hooks:
-      - id: rstcheck
-        name: Check reST files using rstcheck
-        args: [--report=warning]
-        additional_dependencies: [sphinx]
 
   - repo: https://github.com/asottile/blacken-docs
     rev: v1.7.0
