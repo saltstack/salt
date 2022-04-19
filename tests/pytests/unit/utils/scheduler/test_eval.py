@@ -37,9 +37,8 @@ pytestmark = [
 
 def _check_last_run(schedule, job_name, runtime=None):
     """
-    Check that last_run time exists and
-    is not the previous run time if prev_runtime
-    is passed.
+    Check that _last_run time exists; if runtime is passed, check that
+    _last_run matches runtime.
     """
 
     # The number of times to
@@ -741,9 +740,17 @@ def test_eval_splay(schedule):
     schedule.opts.update(job)
 
     with patch("random.randint", MagicMock(return_value=10)):
-        # eval at 2:00pm to prime, simulate minion start up.
+        # eval at 2:00pm to prime, simulate minion start up; will run.
         run_time = dateutil.parser.parse("11/29/2017 2:00pm")
+        init_run_time = run_time
         schedule.eval(now=run_time)
+        assert _check_last_run(schedule, job_name, run_time)
+
+        # eval at 2:00:30pm, will not run.
+        run_time = dateutil.parser.parse("11/29/2017 2:00:30pm")
+        schedule.eval(now=run_time)
+        ret = schedule.job_status(job_name)
+        assert ret["_last_run"] == init_run_time
 
         # eval at 2:00:40pm, will run.
         run_time = dateutil.parser.parse("11/29/2017 2:00:40pm")
@@ -772,9 +779,17 @@ def test_eval_splay_range(schedule):
     schedule.opts.update(job)
 
     with patch("random.randint", MagicMock(return_value=10)):
-        # eval at 2:00pm to prime, simulate minion start up.
+        # eval at 2:00pm to prime, simulate minion start up; will run.
         run_time = dateutil.parser.parse("11/29/2017 2:00pm")
+        init_run_time = run_time
         schedule.eval(now=run_time)
+        assert _check_last_run(schedule, job_name, run_time)
+
+        # eval at 2:00:30pm, will not run.
+        run_time = dateutil.parser.parse("11/29/2017 2:00:30pm")
+        schedule.eval(now=run_time)
+        ret = schedule.job_status(job_name)
+        assert ret["_last_run"] == init_run_time
 
         # eval at 2:00:40pm, will run.
         run_time = dateutil.parser.parse("11/29/2017 2:00:40pm")
@@ -800,9 +815,17 @@ def test_eval_splay_global(schedule):
     schedule.opts.update(job)
 
     with patch("random.randint", MagicMock(return_value=10)):
-        # eval at 2:00pm to prime, simulate minion start up.
+        # eval at 2:00pm to prime, simulate minion start up; will run.
         run_time = dateutil.parser.parse("11/29/2017 2:00pm")
+        init_run_time = run_time
         schedule.eval(now=run_time)
+        assert _check_last_run(schedule, job_name, run_time)
+
+        # eval at 2:00:30pm, will not run.
+        run_time = dateutil.parser.parse("11/29/2017 2:00:30pm")
+        schedule.eval(now=run_time)
+        ret = schedule.job_status(job_name)
+        assert ret["_last_run"] == init_run_time
 
         # eval at 2:00:40pm, will run.
         run_time = dateutil.parser.parse("11/29/2017 2:00:40pm")
