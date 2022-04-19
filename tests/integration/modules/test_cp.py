@@ -311,13 +311,13 @@ class CPModuleTest(ModuleCase):
         self.run_function(
             "cp.get_url",
             [
-                "ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/amd64/12.0-RELEASE/MANIFEST",
+                "ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/README.TXT",
                 tgt,
             ],
         )
         with salt.utils.files.fopen(tgt, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
-        self.assertIn("Base system", data)
+        self.assertIn("The official FreeBSD", data)
 
     # cp.get_file_str tests
 
