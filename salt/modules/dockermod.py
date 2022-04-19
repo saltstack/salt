@@ -3996,6 +3996,7 @@ def build(
     fileobj=None,
     dockerfile=None,
     buildargs=None,
+    logfile=None,
 ):
     """
     .. versionchanged:: 2018.3.0
@@ -4048,6 +4049,9 @@ def build(
 
     buildargs
         A dictionary of build arguments provided to the docker build process.
+
+    logfile
+        Path to log file. Output from build is written to this file if not None.
 
 
     **RETURN DATA**
@@ -4123,6 +4127,20 @@ def build(
     stream_data = []
     for line in response:
         stream_data.extend(salt.utils.json.loads(line, cls=DockerJSONDecoder))
+
+    if logfile:
+        try:
+            with salt.utils.files.fopen(logfile, "a") as f:
+                for item in stream_data:
+                    try:
+                        item_type = next(iter(item))
+                    except StopIteration:
+                        continue
+                    if item_type == "stream":
+                        f.write(item[item_type])
+        except OSError:
+            log.error("Unable to write logfile '%s'", logfile)
+
     errors = []
     # Iterate through API response and collect information
     for item in stream_data:
