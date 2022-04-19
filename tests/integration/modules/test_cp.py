@@ -310,10 +310,7 @@ class CPModuleTest(ModuleCase):
         """
         self.run_function(
             "cp.get_url",
-            [
-                "ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/README.TXT",
-                tgt,
-            ],
+            ["ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/README.TXT", tgt],
         )
         with salt.utils.files.fopen(tgt, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
