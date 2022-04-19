@@ -1,4 +1,4 @@
-@Library('salt@master-1.9') _
+@Library('salt@master-1.11') _
 
 if (env.CHANGE_ID) {
     // This is a PR
