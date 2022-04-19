@@ -16,6 +16,16 @@ log = logging.getLogger(__name__)
 JSONEncoder = json.JSONEncoder
 
 
+class DatetimeEncoder(json.JSONEncoder):
+    """Datetime encoder to handle json serialization"""
+
+    def default(self, obj):
+        try:
+            return super().default(obj)
+        except TypeError:
+            return str(obj)
+
+
 def __split(raw):
     """
     Performs a splitlines on the string. This function exists to make mocking
@@ -134,4 +144,4 @@ def dumps(obj, **kwargs):
     json_module = kwargs.pop("_json_module", json)
     if "ensure_ascii" not in kwargs:
         kwargs["ensure_ascii"] = False
-    return json_module.dumps(obj, **kwargs)
+    return json_module.dumps(obj, cls=DatetimeEncoder, **kwargs)
