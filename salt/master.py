@@ -178,6 +178,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
 
         :param dict opts: The salt options
         """
+        self.master_secrets = kwargs.pop("master_secrets", None)
         super().__init__(**kwargs)
         self.opts = opts
         # How often do we perform the maintenance tasks
@@ -193,6 +194,8 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         in the parent process, then once the fork happens you'll start getting
         errors like "WARNING: Mixing fork() and threads detected; memory leaked."
         """
+        if self.master_secrets is not None:
+            SMaster.secrets = self.master_secrets
         # Load Runners
         ropts = dict(self.opts)
         ropts["quiet"] = True
@@ -709,7 +712,10 @@ class Master(SMaster):
             log_queue = salt.log.setup.get_multiprocessing_logging_queue()
             for _, opts in iter_transport_opts(self.opts):
                 chan = salt.transport.server.PubServerChannel.factory(opts)
-                chan.pre_fork(self.process_manager, kwargs={"log_queue": log_queue})
+                chan.pre_fork(
+                    self.process_manager,
+                    kwargs={"secrets": SMaster.secrets, "log_queue": log_queue},
+                )
                 pub_channels.append(chan)
 
             log.info("Creating master event publisher process")
@@ -735,7 +741,11 @@ class Master(SMaster):
 
             # must be after channels
             log.info("Creating master maintenance process")
-            self.process_manager.add_process(Maintenance, args=(self.opts,))
+            self.process_manager.add_process(
+                Maintenance,
+                args=(self.opts,),
+                kwargs={"master_secrets": SMaster.secrets},
+            )
 
             if self.opts.get("event_return"):
                 log.info("Creating master event return process")
