@@ -86,7 +86,17 @@ def _fetch_secret(pass_path):
     if proc.returncode or not pass_data:
         log.warning("Could not fetch secret: %s %s", pass_data, pass_error)
         pass_data = pass_path
-    return pass_data.strip()
+
+    # Pass appends '\n' to the secrets that were specified interactively.
+    #
+    # NOTE: This doesn't apply to secrets specified in the multiline mode.
+    # If you want to use such secret and it may end with '\n',
+    # always add a trailing newline either manually or by running:
+    # $ echo | cat <path-to-secret> - | pass insert -m <pass-name>
+    if pass_data.endswith("\n"):
+        pass_data = pass_data[:-1]
+
+    return pass_data
 
 
 def _decrypt_object(obj):
