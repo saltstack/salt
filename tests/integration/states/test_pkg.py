@@ -47,7 +47,10 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             cls._PKG_TARGETS = ["vlc", "putty"]
         elif grains["os"] == "FreeBSD":
             cls._VERSION_SPEC_SUPPORTED = False
-        elif grains["os_family"] in ("Arch", "Debian"):
+        elif grains["os_family"] in "Arch":
+            cls._PKG_TARGETS = ["figlet", "paper"]
+            cls._WILDCARDS_SUPPORTED = True
+        elif grains["os_family"] in "Debian":
             cls._WILDCARDS_SUPPORTED = True
         elif grains["os"] == "Amazon":
             cls._PKG_TARGETS = ["lynx", "gnuplot"]
