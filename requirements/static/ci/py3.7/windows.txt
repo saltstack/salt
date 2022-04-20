@@ -31,6 +31,8 @@ botocore==1.20.67
     #   boto3
     #   moto
     #   s3transfer
+cached-property==1.5.2
+    # via pygit2
 cachetools==3.1.0
     # via google-auth
 cassandra-driver==3.23.0
@@ -93,7 +95,7 @@ dnspython==1.16.0
     #   python-etcd
 docker-pycreds==0.4.0
     # via docker
-docker==2.7.0
+docker==2.7.0 ; sys_platform == "win32"
     # via
     #   -r requirements/static/ci/common.in
     #   moto
@@ -262,7 +264,7 @@ pycurl==7.43.0.5
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/py3.7/windows.txt
-pygit2==0.28.2 ; python_version < "3.8"
+pygit2==1.9.1 ; python_version >= "3.7"
     # via -r requirements/static/ci/windows.in
 pymssql==2.1.5 ; python_version < "3.8"
     # via -r requirements/static/pkg/py3.7/windows.txt
@@ -376,7 +378,6 @@ six==1.16.0
     #   mock
     #   moto
     #   packaging
-    #   pygit2
     #   pyopenssl
     #   python-dateutil
     #   python-jose
@@ -390,7 +391,7 @@ smmap==3.0.4
     # via
     #   -r requirements/static/pkg/py3.7/windows.txt
     #   gitdb
-sqlparse==0.4.1
+sqlparse==0.4.2
     # via -r requirements/static/ci/common.in
 sshpubkeys==3.1.0
     # via moto
