@@ -642,3 +642,49 @@ def test_infinite_recursion_sls_prereq(state, state_tree):
         ret = state.sls("requisite")
         for state_return in ret:
             assert state_return.result is True
+
+
+def test_infinite_recursion_prereq(state, state_tree):
+    sls_contents = """
+    A:
+      test.nop:
+        - prereq:
+          - test: B
+    B:
+      test.nop:
+        - require:
+          - name: non-existant
+    C:
+      test.nop:
+        - require:
+          - test: B
+    """
+
+    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+        ret = state.sls("requisite")
+        for state_return in ret:
+            assert state_return.result is False
+
+
+def test_infinite_recursion_prereq2(state, state_tree):
+    sls_contents = """
+    A:
+      test.nop:
+        - prereq:
+          - test: B
+    B:
+      test.nop:
+        - require:
+          - test: D
+    C:
+      test.nop:
+        - require:
+          - test: B
+    D:
+      test.nop: []
+    """
+
+    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+        ret = state.sls("requisite")
+        for state_return in ret:
+            assert state_return.result is True

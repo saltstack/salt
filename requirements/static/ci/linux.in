@@ -9,3 +9,6 @@ ansible
 twilio
 python-telegram-bot==12.8; python_version <= '3.5'
 python-telegram-bot>=13.7; python_version > '3.5'
+yamllint
+mercurial
+hglib

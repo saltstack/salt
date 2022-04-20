@@ -8,6 +8,7 @@ This includes client side transport, for the ReqServer and the Publisher
 import logging
 import os
 import time
+import uuid
 
 import salt.crypt
 import salt.exceptions
@@ -35,6 +36,7 @@ except ImportError:
             from Crypto.Cipher import PKCS1_OAEP  # nosec
         except ImportError:
             pass
+
 
 log = logging.getLogger(__name__)
 
@@ -96,6 +98,7 @@ class AsyncReqChannel:
         "_crypted_transfer",
         "_uncrypted_transfer",
         "send",
+        "connect",
     ]
     close_methods = [
         "close",
@@ -125,7 +128,7 @@ class AsyncReqChannel:
         else:
             auth = None
 
-        transport = salt.transport.request_client(opts, io_loop)
+        transport = salt.transport.request_client(opts, io_loop=io_loop)
         return cls(opts, transport, auth)
 
     def __init__(self, opts, transport, auth, **kwargs):
@@ -148,18 +151,23 @@ class AsyncReqChannel:
         return {
             "enc": self.crypt,
             "load": load,
+            "version": 2,
         }
 
     @salt.ext.tornado.gen.coroutine
     def crypted_transfer_decode_dictentry(
-        self, load, dictkey=None, tries=3, timeout=60
+        self,
+        load,
+        dictkey=None,
+        timeout=60,
     ):
+        nonce = uuid.uuid4().hex
+        load["nonce"] = nonce
         if not self.auth.authenticated:
             yield self.auth.authenticate()
         ret = yield self.transport.send(
             self._package_load(self.auth.crypticle.dumps(load)),
             timeout=timeout,
-            tries=tries,
         )
         key = self.auth.get_keys()
         if "key" not in ret:
@@ -168,20 +176,38 @@ class AsyncReqChannel:
             ret = yield self.transport.send(
                 self._package_load(self.auth.crypticle.dumps(load)),
                 timeout=timeout,
-                tries=tries,
             )
         if HAS_M2:
             aes = key.private_decrypt(ret["key"], RSA.pkcs1_oaep_padding)
         else:
             cipher = PKCS1_OAEP.new(key)
             aes = cipher.decrypt(ret["key"])
+
+        # Decrypt using the public key.
         pcrypt = salt.crypt.Crypticle(self.opts, aes)
-        data = pcrypt.loads(ret[dictkey])
-        data = salt.transport.frame.decode_embedded_strs(data)
-        raise salt.ext.tornado.gen.Return(data)
+        signed_msg = pcrypt.loads(ret[dictkey])
+
+        # Validate the master's signature.
+        master_pubkey_path = os.path.join(self.opts["pki_dir"], "minion_master.pub")
+        if not salt.crypt.verify_signature(
+            master_pubkey_path, signed_msg["data"], signed_msg["sig"]
+        ):
+            raise salt.crypt.AuthenticationError(
+                "Pillar payload signature failed to validate."
+            )
+
+        # Make sure the signed key matches the key we used to decrypt the data.
+        data = salt.payload.loads(signed_msg["data"])
+        if data["key"] != ret["key"]:
+            raise salt.crypt.AuthenticationError("Key verification failed.")
+
+        # Validate the nonce.
+        if data["nonce"] != nonce:
+            raise salt.crypt.AuthenticationError("Pillar nonce verification failed.")
+        raise salt.ext.tornado.gen.Return(data["pillar"])
 
     @salt.ext.tornado.gen.coroutine
-    def _crypted_transfer(self, load, tries=3, timeout=60, raw=False):
+    def _crypted_transfer(self, load, timeout=60, raw=False):
         """
         Send a load across the wire, with encryption
 
@@ -192,9 +218,11 @@ class AsyncReqChannel:
         minion state execution call
 
         :param dict load: A load to send across the wire
-        :param int tries: The number of times to make before failure
         :param int timeout: The number of seconds on a response before failing
         """
+        nonce = uuid.uuid4().hex
+        if load and isinstance(load, dict):
+            load["nonce"] = nonce
 
         @salt.ext.tornado.gen.coroutine
         def _do_transfer():
@@ -202,14 +230,13 @@ class AsyncReqChannel:
             data = yield self.transport.send(
                 self._package_load(self.auth.crypticle.dumps(load)),
                 timeout=timeout,
-                tries=tries,
             )
             # we may not have always data
             # as for example for saltcall ret submission, this is a blind
             # communication, we do not subscribe to return events, we just
             # upload the results to the master
             if data:
-                data = self.auth.crypticle.loads(data, raw)
+                data = self.auth.crypticle.loads(data, raw, nonce=nonce)
             if not raw or self.ttype == "tcp":  # XXX Why is this needed for tcp
                 data = salt.transport.frame.decode_embedded_strs(data)
             raise salt.ext.tornado.gen.Return(data)
@@ -227,40 +254,50 @@ class AsyncReqChannel:
         raise salt.ext.tornado.gen.Return(ret)
 
     @salt.ext.tornado.gen.coroutine
-    def _uncrypted_transfer(self, load, tries=3, timeout=60):
+    def _uncrypted_transfer(self, load, timeout=60):
         """
         Send a load across the wire in cleartext
 
         :param dict load: A load to send across the wire
-        :param int tries: The number of times to make before failure
         :param int timeout: The number of seconds on a response before failing
         """
         ret = yield self.transport.send(
             self._package_load(load),
             timeout=timeout,
-            tries=tries,
         )
 
         raise salt.ext.tornado.gen.Return(ret)
 
     @salt.ext.tornado.gen.coroutine
+    def connect(self):
+        yield self.transport.connect()
+
+    @salt.ext.tornado.gen.coroutine
     def send(self, load, tries=3, timeout=60, raw=False):
         """
         Send a request, return a future which will complete when we send the message
+
+        :param dict load: A load to send across the wire
+        :param int tries: The number of times to make before failure
+        :param int timeout: The number of seconds on a response before failing
         """
-        try:
-            if self.crypt == "clear":
-                log.trace("ReqChannel send clear load=%r", load)
-                ret = yield self._uncrypted_transfer(load, tries=tries, timeout=timeout)
-            else:
-                log.trace("ReqChannel send crypt load=%r", load)
-                ret = yield self._crypted_transfer(
-                    load, tries=tries, timeout=timeout, raw=raw
-                )
-        except salt.ext.tornado.iostream.StreamClosedError:
-            # Convert to 'SaltClientError' so that clients can handle this
-            # exception more appropriately.
-            raise salt.exceptions.SaltClientError("Connection to master lost")
+        _try = 1
+        while True:
+            try:
+                if self.crypt == "clear":
+                    log.trace("ReqChannel send clear load=%r", load)
+                    ret = yield self._uncrypted_transfer(load, timeout=timeout)
+                else:
+                    log.trace("ReqChannel send crypt load=%r", load)
+                    ret = yield self._crypted_transfer(load, timeout=timeout, raw=raw)
+                break
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Failed to send msg %r", exc)
+                if _try >= tries:
+                    raise
+                else:
+                    _try += 1
+                    continue
         raise salt.ext.tornado.gen.Return(ret)
 
     def close(self):
@@ -393,6 +430,7 @@ class AsyncPubChannel:
         return {
             "enc": self.crypt,
             "load": load,
+            "version": 2,
         }
 
     @salt.ext.tornado.gen.coroutine

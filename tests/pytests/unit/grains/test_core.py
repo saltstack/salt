@@ -88,6 +88,73 @@ def test_parse_etc_os_release(os_release_dir):
     }
 
 
+def test_network_grains_secondary_ip(tmp_path):
+    """
+    Secondary IP should be added to IPv4 or IPv6 address list depending on type
+    """
+    data = {
+        "wlo1": {
+            "up": True,
+            "hwaddr": "29:9f:9f:e9:67:f4",
+            "inet": [
+                {
+                    "address": "172.16.13.85",
+                    "netmask": "255.255.248.0",
+                    "broadcast": "172.16.15.255",
+                    "label": "wlo1",
+                }
+            ],
+            "inet6": [
+                {
+                    "address": "2001:4860:4860::8844",
+                    "prefixlen": "64",
+                    "scope": "fe80::6238:e0ff:fe06:3f6b%enp2s0",
+                }
+            ],
+            "secondary": [
+                {
+                    "type": "inet",
+                    "address": "172.16.13.86",
+                    "netmask": "255.255.248.0",
+                    "broadcast": "172.16.15.255",
+                    "label": "wlo1",
+                },
+                {
+                    "type": "inet6",
+                    "address": "2001:4860:4860::8888",
+                    "prefixlen": "64",
+                    "scope": "fe80::6238:e0ff:fe06:3f6b%enp2s0",
+                },
+            ],
+        }
+    }
+    cache_dir = tmp_path / "cache"
+    extmods = tmp_path / "extmods"
+    opts = {
+        "cachedir": str(cache_dir),
+        "extension_modules": str(extmods),
+        "optimization_order": [0],
+    }
+    with patch("salt.utils.network.interfaces", side_effect=[data]):
+        grains = salt.loader.grain_funcs(opts)
+        ret_ip4 = grains["core.ip4_interfaces"]()
+        assert ret_ip4["ip4_interfaces"]["wlo1"] == ["172.16.13.85", "172.16.13.86"]
+
+        ret_ip6 = grains["core.ip6_interfaces"]()
+        assert ret_ip6["ip6_interfaces"]["wlo1"] == [
+            "2001:4860:4860::8844",
+            "2001:4860:4860::8888",
+        ]
+
+        ret_ip = grains["core.ip_interfaces"]()
+        assert ret_ip["ip_interfaces"]["wlo1"] == [
+            "172.16.13.85",
+            "2001:4860:4860::8844",
+            "172.16.13.86",
+            "2001:4860:4860::8888",
+        ]
+
+
 def test_network_grains_cache(tmp_path):
     """
     Network interfaces are cache is cleared by the loader
@@ -279,31 +346,6 @@ def test_missing_os_release():
     with patch("salt.utils.files.fopen", mock_open(read_data={})):
         os_release = core._parse_os_release("/etc/os-release", "/usr/lib/os-release")
     assert os_release == {}
-
-
-@pytest.mark.skip_unless_on_windows
-def test__windows_platform_data():
-    grains = core._windows_platform_data()
-    keys = [
-        "biosversion",
-        "osrelease",
-        "kernelrelease",
-        "motherboard",
-        "serialnumber",
-        "timezone",
-        "uuid",
-        "manufacturer",
-        "kernelversion",
-        "osservicepack",
-        "virtual",
-        "productname",
-        "osfullname",
-        "osmanufacturer",
-        "osversion",
-        "windowsdomain",
-    ]
-    for key in keys:
-        assert key in grains
 
 
 @pytest.mark.skip_unless_on_linux
@@ -1096,7 +1138,7 @@ def test_windows_platform_data():
         "productname",
         "serialnumber",
         "timezone",
-        "virtual",
+        # "virtual", <-- only present on VMs
         "windowsdomain",
         "windowsdomaintype",
     ]
@@ -1112,12 +1154,14 @@ def test_windows_platform_data():
         "8",
         "8.1",
         "10",
+        "11",
         "2008Server",
         "2008ServerR2",
         "2012Server",
         "2012ServerR2",
         "2016Server",
         "2019Server",
+        "2022Server",
     ]
     assert returned_grains["osrelease"] in valid_releases
 
@@ -1435,6 +1479,12 @@ def test_xen_virtual():
     ), patch.dict(core.__salt__, {"cmd.run": MagicMock(return_value="")}), patch.dict(
         core.__salt__,
         {"cmd.run_all": MagicMock(return_value={"retcode": 0, "stdout": ""})},
+    ), patch.object(
+        os.path,
+        "isfile",
+        MagicMock(side_effect=lambda x: True if x == "/proc/1/cgroup" else False),
+    ), patch(
+        "salt.utils.files.fopen", mock_open(read_data="")
     ):
         assert (
             core._virtual({"kernel": "Linux"}).get("virtual_subtype") == "Xen PV DomU"
@@ -2354,6 +2404,64 @@ def test_virtual_has_virtual_grain():
 
     assert "virtual" in virtual_grains
     assert virtual_grains["virtual"] != "physical"
+
+
+@pytest.mark.skip_unless_on_windows
+@pytest.mark.parametrize(
+    ("osdata", "expected"),
+    [
+        ({"kernel": "Not Windows"}, {}),
+        ({"kernel": "Windows"}, {"virtual": "physical"}),
+        ({"kernel": "Windows", "manufacturer": "QEMU"}, {"virtual": "kvm"}),
+        ({"kernel": "Windows", "manufacturer": "Bochs"}, {"virtual": "kvm"}),
+        (
+            {"kernel": "Windows", "productname": "oVirt"},
+            {"virtual": "kvm", "virtual_subtype": "oVirt"},
+        ),
+        (
+            {"kernel": "Windows", "productname": "RHEV Hypervisor"},
+            {"virtual": "kvm", "virtual_subtype": "rhev"},
+        ),
+        (
+            {"kernel": "Windows", "productname": "CloudStack KVM Hypervisor"},
+            {"virtual": "kvm", "virtual_subtype": "cloudstack"},
+        ),
+        (
+            {"kernel": "Windows", "productname": "VirtualBox"},
+            {"virtual": "VirtualBox"},
+        ),
+        (
+            # Old value
+            {"kernel": "Windows", "productname": "VMware Virtual Platform"},
+            {"virtual": "VMware"},
+        ),
+        (
+            # Server 2019 Value
+            {"kernel": "Windows", "productname": "VMware7,1"},
+            {"virtual": "VMware"},
+        ),
+        (
+            # Shorter value
+            {"kernel": "Windows", "productname": "VMware"},
+            {"virtual": "VMware"},
+        ),
+        (
+            {
+                "kernel": "Windows",
+                "manufacturer": "Microsoft",
+                "productname": "Virtual Machine",
+            },
+            {"virtual": "VirtualPC"},
+        ),
+        (
+            {"kernel": "Windows", "manufacturer": "Parallels Software"},
+            {"virtual": "Parallels"},
+        ),
+    ],
+)
+def test__windows_virtual(osdata, expected):
+    result = core._windows_virtual(osdata)
+    assert result == expected
 
 
 @pytest.mark.skip_unless_on_windows

@@ -275,7 +275,6 @@ class EventListener:
         self.event = salt.utils.event.get_event(
             "master",
             opts["sock_dir"],
-            opts["transport"],
             opts=opts,
             listen=True,
             io_loop=salt.ext.tornado.ioloop.IOLoop.current(),
@@ -460,8 +459,11 @@ class BaseSaltAPIHandler(salt.ext.tornado.web.RequestHandler):  # pylint: disabl
         """
         Boolean whether the request is auth'd
         """
-
-        return self.token and bool(self.application.auth.get_tok(self.token))
+        if self.token:
+            token_dict = self.application.auth.get_tok(self.token)
+            if token_dict and token_dict.get("expire", 0) > time.time():
+                return True
+        return False
 
     def prepare(self):
         """
@@ -1625,6 +1627,10 @@ class EventsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
         while True:
             try:
+                if not self._verify_auth():
+                    log.debug("Token is no longer valid")
+                    break
+
                 event = yield self.application.event_listener.get_event(self)
                 self.write("tag: {}\n".format(event.get("tag", "")))
                 self.write("data: {}\n\n".format(_json_dumps(event)))
@@ -1773,7 +1779,6 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         self.event = salt.utils.event.get_event(
             "master",
             self.application.opts["sock_dir"],
-            self.application.opts["transport"],
             opts=self.application.opts,
             listen=False,
         )

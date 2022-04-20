@@ -19,3 +19,7 @@ def test_run_log(caplog):
             netapi = salt.client.netapi.NetapiClient(opts)
             netapi.run()
     assert "Starting RunNetapi(salt.loaded.int.netapi.rest_cherrypy)" in caplog.text
+
+
+def test_run_netapi_can_take_process_kwargs():
+    salt.client.netapi.RunNetapi({}, "fname", name="name")

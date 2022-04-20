@@ -47,6 +47,7 @@ EXCLUDED_FILES = [
     os.path.join("tests", "virtualname.py"),
     os.path.join("tests", "wheeltest.py"),
     os.path.join("tests", "zypp_plugin.py"),
+    os.path.join("tests", "pytests", "unit", "states", "virt", "helpers.py"),
 ]
 
 
@@ -182,6 +183,7 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.states.test_renderers",
             "integration.wheel.test_client",
             "unit.cache.test_cache",
+            "unit.logging.test_deferred_stream_handler",
             "unit.serializers.test_serializers",
             "unit.setup.test_install",
             "unit.setup.test_man",

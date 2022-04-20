@@ -5,11 +5,9 @@ import salt.modules.pdbedit as pdbedit
 from tests.support.mock import MagicMock, patch
 
 
-@pytest.fixture(autouse=True)
-def setup_loader(request):
-    setup_loader_modules = {pdbedit: {}}
-    with pytest.helpers.loader_mock(request, setup_loader_modules) as loader_mock:
-        yield loader_mock
+@pytest.fixture
+def configure_loader_modules():
+    return {pdbedit: {}}
 
 
 @pytest.mark.parametrize("verbose", [True, False])

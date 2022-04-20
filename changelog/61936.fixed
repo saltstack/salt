@@ -1,0 +1,1 @@
+Fixed some whitespace and ``pathlib.Path`` issues when not using the sytem ``aptsources`` package.

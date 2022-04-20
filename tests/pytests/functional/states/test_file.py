@@ -3,6 +3,7 @@ import hashlib
 import http.server
 import multiprocessing
 import os
+import random
 import shutil
 import socket
 import sys
@@ -12,7 +13,7 @@ import pytest
 import salt.utils.files
 
 
-class TestRequestHandler(http.server.SimpleHTTPRequestHandler):
+class RequestHandler(http.server.SimpleHTTPRequestHandler):
     """
     Modified request handler class
     """
@@ -53,7 +54,13 @@ class TestRequestHandler(http.server.SimpleHTTPRequestHandler):
 
         # Return the Etag header if we have the checksum
         if checksum:
-            self.send_header("Etag", checksum)
+            # IMPORTANT: This introduces randomness into the tests. The Etag header key
+            # will be converted to lowercase in the code... but if someone breaks that,
+            # it'll rear it's head here as random failures that are hard to reproduce.
+            # Any alternatives seem overly complex. So... don't break the case insensitivity
+            # in the code.
+            possible_etags = ["Etag", "ETag"]
+            self.send_header(random.choice(possible_etags), checksum)
             self.end_headers()
 
         # Return file content
@@ -65,12 +72,12 @@ def serve(port=8000, directory=None):
     """
     Function to serve a directory via http.server
     """
-    handler = functools.partial(TestRequestHandler, directory=directory)
+    handler = functools.partial(RequestHandler, directory=directory)
     s = http.server.HTTPServer(("127.0.0.1", port), handler)
     s.serve_forever()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def free_port():
     """
     Utility fixture to grab a free port for the web server
@@ -81,7 +88,7 @@ def free_port():
         return s.getsockname()[1]
 
 
-@pytest.fixture(autouse=True, scope="session")
+@pytest.fixture(autouse=True, scope="module")
 def server(free_port, web_root):
     """
     Web server fixture
@@ -90,9 +97,10 @@ def server(free_port, web_root):
     p.start()
     yield
     p.terminate()
+    p.join()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def web_root(tmp_path_factory):
     """
     Temporary directory fixture for the web server root
