@@ -33,7 +33,9 @@ AVAIL = (
 )
 
 
-if not sys.platform.startswith("win"):
+if "TIAMAT_PIP_PYPATH" in os.environ:
+    PIP_PATH = pathlib.Path(os.environ["TIAMAT_PIP_PYPATH"]).resolve()
+elif not sys.platform.startswith("win"):
     PIP_PATH = pathlib.Path(f"{os.sep}opt", "saltstack", "salt", "pypath")
 else:
     PIP_PATH = pathlib.Path(os.getenv("LocalAppData"), "salt", "pypath")

@@ -176,8 +176,8 @@ def test_relative_import(
     result = tmpl.render()
     assert result == "Hey world !a b !"
     assert len(fc.requests) == 3
-    assert fc.requests[0]["path"] == os.path.join("salt://relative", "rhello")
-    assert fc.requests[1]["path"] == os.path.join("salt://relative", "rmacro")
+    assert fc.requests[0]["path"] == "salt://relative/rhello"
+    assert fc.requests[1]["path"] == "salt://relative/rmacro"
     assert fc.requests[2]["path"] == "salt://macro"
     # This must fail when rendered: attempts to import from outside file root
     template = jinja.get_template("relative/rescape")
