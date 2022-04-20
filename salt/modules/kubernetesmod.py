@@ -59,6 +59,7 @@ import salt.utils.templates
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError, TimeoutError
 
+# pylint: disable=import-error,no-name-in-module
 try:
     import kubernetes  # pylint: disable=import-self
     import kubernetes.client
@@ -78,6 +79,7 @@ try:
     HAS_LIBS = True
 except ImportError:
     HAS_LIBS = False
+# pylint: enable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
 
