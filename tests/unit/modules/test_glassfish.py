@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 tests.unit.modules.test_glassfish
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Unit tests for the glassfish module
 """
-from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 import salt.modules.glassfish as glassfish
@@ -17,7 +15,6 @@ log = logging.getLogger(__name__)
 
 
 class GlassFishTest(TestCase, LoaderModuleMockMixin):
-
     def setup_loader_modules(self):
         return {glassfish: {}}
 
@@ -28,13 +25,13 @@ class GlassFishTest(TestCase, LoaderModuleMockMixin):
 
         get_mock.assert_called_once_with(
             headers={
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'X-Requested-By': 'GlassFish REST HTML interface'
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "X-Requested-By": "GlassFish REST HTML interface",
             },
-            url='http://localhost:4848/management/domain/ThePath',
+            url="http://localhost:4848/management/domain/ThePath",
             verify=True,
-            auth=None
+            auth=None,
         )
 
     def test__api_post(self):
@@ -44,14 +41,14 @@ class GlassFishTest(TestCase, LoaderModuleMockMixin):
 
         post_mock.assert_called_once_with(
             headers={
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'X-Requested-By': 'GlassFish REST HTML interface'
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "X-Requested-By": "GlassFish REST HTML interface",
             },
-            url='http://localhost:4848/management/domain/ThePath',
+            url="http://localhost:4848/management/domain/ThePath",
             verify=True,
             auth=None,
-            data='{"1": 1}'
+            data='{"1": 1}',
         )
 
     def test__api_delete(self):
@@ -61,12 +58,12 @@ class GlassFishTest(TestCase, LoaderModuleMockMixin):
 
         delete_mock.assert_called_once_with(
             headers={
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'X-Requested-By': 'GlassFish REST HTML interface'
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "X-Requested-By": "GlassFish REST HTML interface",
             },
-            url='http://localhost:4848/management/domain/ThePath',
+            url="http://localhost:4848/management/domain/ThePath",
             verify=True,
             auth=None,
-            params={1: 1}
+            params={1: 1},
         )
