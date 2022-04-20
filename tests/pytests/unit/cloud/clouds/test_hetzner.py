@@ -238,7 +238,7 @@ def test_show_instance():
         "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
     ) as connect:
         with pytest.raises(SaltCloudSystemExit):
-            hetzner.show_instance("myvm", "action")
+            hetzner.show_instance("myvm")
 
         mock = MagicMock()
         mock.id = 123456
@@ -249,10 +249,10 @@ def test_show_instance():
         mock.labels = "abc"
         connect.return_value.servers.get_all.return_value = [mock]
 
-        nodes = hetzner.show_instance(mock.name)
+        nodes = hetzner.show_instance(mock.name, "action")
         assert nodes["id"] == mock.id
 
-        nodes = hetzner.show_instance("not-existing")
+        nodes = hetzner.show_instance("not-existing", "action")
         assert nodes == {}
 
 
@@ -556,3 +556,31 @@ def test_resize():
                 wait.reset_mock()
                 hetzner.resize("myvm", kwargs, "action")
                 wait.assert_not_called()
+
+
+def test_config_loading(vm):
+    """Test if usual config parameters are loaded via get_cloud_config_value()"""
+    with patch(
+        "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
+    ) as client:
+        with patch(
+            "salt.config.get_cloud_config_value", return_value=MagicMock()
+        ) as cloud_config:
+            hetzner.create(vm)
+
+            config_values = {
+                "automount",
+                "datacenter",
+                "image",
+                "labels",
+                "location",
+                "name",
+                "networks",
+                "private_key",
+                "size",
+                "ssh_keys",
+                "user_data",
+                "volumes",
+            }
+            calls = set(map(lambda call: call[0][0], cloud_config.call_args_list))
+            assert config_values.issubset(calls)

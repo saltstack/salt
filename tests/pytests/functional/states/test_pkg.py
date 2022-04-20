@@ -49,7 +49,10 @@ def PKG_TARGETS(grains):
     elif grains["os"] == "Amazon":
         _PKG_TARGETS = ["lynx", "gnuplot"]
     elif grains["os_family"] == "RedHat":
-        _PKG_TARGETS = ["units", "zsh-html"]
+        if grains["os"] == "VMware Photon OS":
+            _PKG_TARGETS = ["wget", "zsh-html"]
+        else:
+            _PKG_TARGETS = ["units", "zsh-html"]
     elif grains["os_family"] == "Suse":
         _PKG_TARGETS = ["lynx", "htop"]
 
@@ -91,7 +94,7 @@ def PKG_DOT_TARGETS(grains):
         elif grains["osmajorrelease"] == 7:
             _PKG_DOT_TARGETS = ["tomcat-el-2.2-api"]
         elif grains["osmajorrelease"] == 8:
-            _PKG_DOT_TARGETS = ["vid.stab"]
+            _PKG_DOT_TARGETS = ["aspnetcore-runtime-6.0"]
     return _PKG_DOT_TARGETS
 
 
@@ -699,6 +702,10 @@ def test_pkg_016_conditionally_ignore_epoch(PKG_EPOCH_TARGETS, latest_version, s
     assert ret.result is True
 
 
+@pytest.mark.skipif(
+    salt.utils.platform.is_photonos(),
+    reason="package hold/unhold unsupported on Photon OS",
+)
 @pytest.mark.requires_salt_modules(
     "pkg.hold", "pkg.unhold", "pkg.version", "pkg.list_pkgs"
 )

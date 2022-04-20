@@ -849,7 +849,7 @@ def create_network_interface(call=None, kwargs=None):
             time.sleep(5)
 
 
-def request_instance(vm_):
+def request_instance(vm_, kwargs=None):
     """
     Request a VM from Azure.
     """
@@ -1215,7 +1215,7 @@ def request_instance(vm_):
         location=vm_["location"],
         plan=None,
         hardware_profile=HardwareProfile(
-            vm_size=getattr(VirtualMachineSizeTypes, vm_["size"].lower()),
+            vm_size=getattr(VirtualMachineSizeTypes, vm_["size"].lower(), kwargs),
         ),
         storage_profile=StorageProfile(
             os_disk=os_disk,

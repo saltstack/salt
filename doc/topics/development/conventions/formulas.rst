@@ -224,9 +224,9 @@ it is ready. We will add you to the Contributors team on the
 Ping a SaltStack employee on IRC (`#salt`_ on LiberaChat), join the
 ``#formulas`` channel on the `salt-slack`_ (bridged to ``#saltstack-formulas``
 on LiberaChat) or send an email to the `salt-users`_ mailing list.  Note that
-IRC logs are available at https://freenode.logbot.info/salt,
-https://freenode.logbot.info/saltstack-formulas, and
-http://ngxbot.nginx.org/logs/%23salt/.
+IRC logs are available at http://ngxbot.nginx.org/logs/%23salt/ and archives
+for FreeNode (up to mid-June 2021) https://logbot-archive.s3.amazonaws.com/freenode/salt.gz
+and https://logbot-archive.s3.amazonaws.com/freenode/saltstack-formulas.gz.
 
 There are a lot of repositories in that organization! Team members can manage
 which repositories they are subscribed to on GitHub's watching page:

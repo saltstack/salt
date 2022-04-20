@@ -25,12 +25,12 @@ import sys
 import time
 import traceback
 
+import salt.channel.client
 import salt.fileclient
 import salt.loader
 import salt.minion
 import salt.pillar
 import salt.syspaths as syspaths
-import salt.transport.client
 import salt.utils.args
 import salt.utils.crypt
 import salt.utils.data
@@ -2864,7 +2864,7 @@ class State:
             preload = {"jid": self.jid}
             ev_func(ret, tag, preload=preload)
 
-    def call_chunk(self, low, running, chunks):
+    def call_chunk(self, low, running, chunks, depth=0):
         """
         Check if a chunk has any requires, execute the requires and then
         the chunk
@@ -3004,7 +3004,20 @@ class State:
                     self.pre[tag]["changes"] = {"watch": "watch"}
                     self.pre[tag]["result"] = None
             else:
-                running = self.call_chunk(low, running, chunks)
+                depth += 1
+                # even this depth is being generous. This shouldn't exceed 1 no
+                # matter how the loops are happening
+                if depth >= 20:
+                    log.error("Recursive requisite found")
+                    running[tag] = {
+                        "changes": {},
+                        "result": False,
+                        "comment": "Recursive requisite found",
+                        "__run_num__": self.__run_num,
+                        "__sls__": low["__sls__"],
+                    }
+                else:
+                    running = self.call_chunk(low, running, chunks, depth)
             if self.check_failhard(chunk, running):
                 running["__FAILHARD__"] = True
                 return running
@@ -3534,8 +3547,8 @@ class BaseHighState:
             opts["env_order"] = mopts.get("env_order", opts.get("env_order", []))
             opts["default_top"] = mopts.get("default_top", opts.get("default_top"))
             opts["state_events"] = mopts.get("state_events")
-            opts["state_aggregate"] = mopts.get(
-                "state_aggregate", opts.get("state_aggregate", False)
+            opts["state_aggregate"] = (
+                opts.get("state_aggregate") or mopts.get("state_aggregate") or False
             )
             opts["jinja_env"] = mopts.get("jinja_env", {})
             opts["jinja_sls_env"] = mopts.get("jinja_sls_env", {})
@@ -4618,7 +4631,7 @@ class BaseHighState:
                 "count_unused": 0,
             }
 
-            env_matches = matches.get(saltenv)
+            env_matches = matches.get(saltenv, [])
 
             for state in states:
                 env_usage["count_all"] += 1
@@ -4777,7 +4790,7 @@ class RemoteHighState:
         self.opts = opts
         self.grains = grains
         # self.auth = salt.crypt.SAuth(opts)
-        self.channel = salt.transport.client.ReqChannel.factory(self.opts["master_uri"])
+        self.channel = salt.channel.client.ReqChannel.factory(self.opts["master_uri"])
         self._closing = False
 
     def compile_master(self):

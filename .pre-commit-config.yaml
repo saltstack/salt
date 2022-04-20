@@ -4,7 +4,7 @@ default_language_version:
 exclude: ^(doc/_static/.*|doc/_themes/.*)$
 repos:
   - repo: https://github.com/saltstack/pip-tools-compile-impersonate
-    rev: "4.3"
+    rev: "4.4"
     hooks:
 
   # ----- Packaging Requirements ------------------------------------------------------------------------------------>
@@ -895,7 +895,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.6 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -912,7 +912,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.7 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -929,7 +929,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.8 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -946,7 +946,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.9 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/docs\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -963,7 +963,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.10 Requirements
-        files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(linux\.in|common\.in|docs\.in|py3\.10/linux\.txt)))$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
         pass_filenames: false
         args:
           - -v
@@ -1197,9 +1197,7 @@ repos:
 
   # ----- Code Formatting ------------------------------------------------------------------------------------------->
   - repo: https://github.com/asottile/pyupgrade
-    # This, for now, is meant to run when locally committing code and will be disabled(skipped) when we run pre-commit
-    # against all codebase to avoid MASSIVE code churn. This way, we do it in smaller chunks, a few at a time.
-    rev: v2.7.2
+    rev: v2.31.0
     hooks:
       - id: pyupgrade
         name: Drop six usage and Py2 support
@@ -1207,7 +1205,7 @@ repos:
         exclude: >
           (?x)^(
             salt/client/ssh/ssh_py_shim.py|
-            salt/ext/ipaddress.py
+            salt/ext/.*\.py
           )$
 
   - repo: https://github.com/saltstack/pre-commit-remove-import-headers
@@ -1265,6 +1263,8 @@ repos:
                 salt/ext/.*|
                 tests/kitchen/.*
             )$
+        additional_dependencies:
+          - click<8.1.0
 
   - repo: https://github.com/asottile/blacken-docs
     rev: v1.10.0
@@ -1272,7 +1272,9 @@ repos:
       - id: blacken-docs
         args: [--skip-errors]
         files: ^doc/.*\.rst
-        additional_dependencies: [black==21.7b0]
+        additional_dependencies:
+          - click<8.1.0
+          - black==21.7b0
 
   # <---- Code Formatting --------------------------------------------------------------------------------------------
 
@@ -1312,11 +1314,11 @@ repos:
         args:
           - docs.check
         additional_dependencies:
-          - blessings
-          - pyyaml
-          - distro
-          - jinja2
-          - msgpack
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1329,11 +1331,11 @@ repos:
         args:
           - filemap.check
         additional_dependencies:
-          - blessings
-          - pyyaml
-          - distro
-          - jinja2
-          - msgpack
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1350,11 +1352,11 @@ repos:
         args:
           - loader.check-virtual
         additional_dependencies:
-          - blessings
-          - pyyaml
-          - distro
-          - jinja2
-          - msgpack
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1371,11 +1373,11 @@ repos:
         args:
           - docstrings.check
         additional_dependencies:
-          - blessings
-          - pyyaml
-          - distro
-          - jinja2
-          - msgpack
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
 
   - repo: https://github.com/saltstack/invoke-pre-commit
     rev: v1.9.0
@@ -1394,11 +1396,11 @@ repos:
           - docstrings.check
           - --error-on-known-failures
         additional_dependencies:
-          - blessings
-          - pyyaml
-          - distro
-          - jinja2
-          - msgpack
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
 
   - repo: https://github.com/saltstack/mirrors-nox
     rev: v2020.8.22

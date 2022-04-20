@@ -151,6 +151,10 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
     @container_name
     @with_network(create=False)
     @pytest.mark.slow_test
+    @pytest.mark.skipif(
+        salt.utils.platform.is_photonos() is True,
+        reason="Skip on PhotonOS.  No busybox available.",
+    )
     def test_absent_with_disconnected_container(self, net, container_name):
         self.assertSaltTrueReturn(
             self.run_state(
@@ -193,6 +197,10 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
     @container_name
     @with_network(create=False)
     @pytest.mark.slow_test
+    @pytest.mark.skipif(
+        salt.utils.platform.is_photonos() is True,
+        reason="Skip on PhotonOS.  No busybox available.",
+    )
     def test_present_with_containers(self, net, container_name):
         ret = self.run_state(
             "docker_network.present", name=net.name, containers=[container_name]
@@ -248,6 +256,10 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
     @container_name
     @with_network(create=False)
     @pytest.mark.slow_test
+    @pytest.mark.skipif(
+        salt.utils.platform.is_photonos() is True,
+        reason="Skip on PhotonOS.  No busybox available.",
+    )
     def test_present_with_reconnect(self, net, container_name):
         """
         Test reconnecting with containers not passed to state
@@ -257,6 +269,10 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
     @container_name
     @with_network(create=False)
     @pytest.mark.slow_test
+    @pytest.mark.skipif(
+        salt.utils.platform.is_photonos() is True,
+        reason="Skip on PhotonOS.  No busybox available.",
+    )
     def test_present_with_no_reconnect(self, net, container_name):
         """
         Test reconnecting with containers not passed to state
@@ -448,4 +464,35 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(
             ret["comment"],
             "Network '{}' was replaced with updated config".format(ipv4_net.name),
+        )
+
+    @with_network(subnet="10.247.197.96/27")
+    @pytest.mark.slow_test
+    def test_bridge_dupname_update(self, net):
+        # com.docker.network.bridge.name can not have names over 15 chars. so grab the last 8
+        self.assertSaltTrueReturn(
+            self.run_state(
+                "docker_network.present",
+                name=net.name,
+                subnet=net.subnet,
+                driver="bridge",
+                driver_opts=[{"com.docker.network.bridge.name": net.name[-8:]}],
+            )
+        )
+        # Second run to make sure everything is still fine.
+        ret = self.run_state(
+            "docker_network.present",
+            name=net.name,
+            subnet=net.subnet,
+            driver="bridge",
+            driver_opts=[{"com.docker.network.bridge.name": net.name[-8:]}],
+        )
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertEqual(ret["changes"], {})
+        self.assertEqual(
+            ret["comment"],
+            "Network '{}' already exists, and is configured as specified".format(
+                net.name
+            ),
         )
