@@ -7,6 +7,19 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+Salt 3004.1 (2022-02-16)
+========================
+
+Security
+--------
+
+- Sign authentication replies to prevent MiTM (cve-2022-22935)
+- Prevent job and fileserver replays (cve-2022-22936)
+- Sign pillar data to prevent MiTM attacks. (cve-2202-22934)
+- Fixed targeting bug, especially visible when using syndic and user auth. (CVE-2022-22941) (#60413)
+- Fix denial of service in junos ifconfig output parsing.
+
+
 Salt 3004 (2021-10-11)
 ======================
 
