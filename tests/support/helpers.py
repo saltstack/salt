@@ -14,6 +14,7 @@ import errno
 import fnmatch
 import functools
 import inspect
+import io
 import json
 import logging
 import os
@@ -57,10 +58,16 @@ PRE_PYTEST_SKIP_OR_NOT = "PRE_PYTEST_DONT_SKIP" not in os.environ
 PRE_PYTEST_SKIP_REASON = (
     "PRE PYTEST - This test was skipped before running under pytest"
 )
-PRE_PYTEST_SKIP = pytest.mark.skipif(
-    PRE_PYTEST_SKIP_OR_NOT, reason=PRE_PYTEST_SKIP_REASON
+PRE_PYTEST_SKIP = pytest.mark.skip_on_env(
+    "PRE_PYTEST_DONT_SKIP", present=False, reason=PRE_PYTEST_SKIP_REASON
 )
 ON_PY35 = sys.version_info < (3, 6)
+
+SKIP_INITIAL_PHOTONOS_FAILURES = pytest.mark.skip_on_env(
+    "SKIP_INITIAL_PHOTONOS_FAILURES",
+    eq="1",
+    reason="Failing test when PhotonOS was added to CI",
+)
 
 
 def no_symlinks():
@@ -1868,3 +1875,48 @@ def get_virtualenv_binary_path():
         # We're not running inside a virtualenv
         virtualenv_binary = None
     return virtualenv_binary
+
+
+class CaptureOutput:
+    def __init__(self, capture_stdout=True, capture_stderr=True):
+        if capture_stdout:
+            self._stdout = io.StringIO()
+        else:
+            self._stdout = None
+        if capture_stderr:
+            self._stderr = io.StringIO()
+        else:
+            self._stderr = None
+        self._original_stdout = None
+        self._original_stderr = None
+
+    def __enter__(self):
+        if self._stdout:
+            self._original_stdout = sys.stdout
+            sys.stdout = self._stdout
+        if self._stderr:
+            self._original_stderr = sys.stderr
+            sys.stderr = self._stderr
+        return self
+
+    def __exit__(self, *args):
+        if self._stdout:
+            sys.stdout = self._original_stdout
+            self._original_stdout = None
+        if self._stderr:
+            sys.stderr = self._original_stderr
+            self._original_stderr = None
+
+    @property
+    def stdout(self):
+        if self._stdout is None:
+            return
+        self._stdout.seek(0)
+        return self._stdout.read()
+
+    @property
+    def stderr(self):
+        if self._stderr is None:
+            return
+        self._stderr.seek(0)
+        return self._stderr.read()

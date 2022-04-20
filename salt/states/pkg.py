@@ -3003,7 +3003,7 @@ def _uninstall(
         }
 
     comments = []
-    not_installed = sorted([x for x in pkg_params if x not in targets])
+    not_installed = sorted(x for x in pkg_params if x not in targets)
     if not_installed:
         comments.append(
             "The following packages were not installed: {}".format(

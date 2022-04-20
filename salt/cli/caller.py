@@ -3,33 +3,31 @@ The caller module is used as a front-end to manage direct calls to the salt
 minion modules.
 """
 
-
 import logging
 import os
 import sys
 import traceback
 
 import salt
+import salt.channel.client
 import salt.defaults.exitcodes
 import salt.loader
 import salt.minion
 import salt.output
 import salt.payload
-import salt.transport
-import salt.transport.client
 import salt.utils.args
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.minion
 import salt.utils.profile
 import salt.utils.stringutils
+from salt._logging import LOG_LEVELS
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
     SaltClientError,
     SaltInvocationError,
 )
-from salt.log import LOG_LEVELS
 
 log = logging.getLogger(__name__)
 
@@ -41,21 +39,7 @@ class Caller:
 
     @staticmethod
     def factory(opts, **kwargs):
-        # Default to ZeroMQ for now
-        ttype = "zeromq"
-
-        # determine the ttype
-        if "transport" in opts:
-            ttype = opts["transport"]
-        elif "transport" in opts.get("pillar", {}).get("master", {}):
-            ttype = opts["pillar"]["master"]["transport"]
-
-        # switch on available ttypes
-        if ttype in ("zeromq", "tcp", "detect"):
-            return ZeroMQCaller(opts, **kwargs)
-        else:
-            raise Exception("Callers are only defined for ZeroMQ and TCP")
-            # return NewKindOfCaller(opts, **kwargs)
+        return ZeroMQCaller(opts, **kwargs)
 
 
 class BaseCaller:
@@ -322,7 +306,7 @@ class ZeroMQCaller(BaseCaller):
         """
         Return the data up to the master
         """
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             self.opts, usage="salt_call"
         ) as channel:
             load = {"cmd": "_return", "id": self.opts["id"]}

@@ -1,0 +1,1 @@
+Batch runs now return proper retcodes in a tuple of the form (result, retcode)

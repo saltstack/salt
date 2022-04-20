@@ -1911,7 +1911,7 @@ class _policy_info:
                         "Registry": {
                             "Hive": "HKEY_LOCAL_MACHINE",
                             "Path": "SYSTEM\\CurrentControlSet\\Control\\Lsa",
-                            "Value": "AuditBaseObjects",
+                            "Value": "SCENoApplyLegacyAuditPolicy",
                             "Type": "REG_DWORD",
                         },
                         "Transform": self.enabled_one_disabled_zero_transform,
@@ -2883,11 +2883,25 @@ class _policy_info:
                             "Put": "_minutes_to_seconds",
                         },
                     },
-                    ########## LEGACY AUDIT POLICIES ##########
-                    # To use these set the following policy to DISABLED
-                    # "Audit: Force audit policy subcategory settings (Windows Vista or later) to override audit policy category settings"
-                    # or its alias...
-                    # SceNoApplyLegacyAuditPolicy
+                    ########## BASIC AUDIT POLICIES ##########
+                    # To use these set the following policy to DISABLED:
+                    # - Audit: Force audit policy subcategory settings (Windows
+                    #   Vista or later) to override audit policy category
+                    #   settings
+                    # or its alias:
+                    # - SceNoApplyLegacyAuditPolicy
+                    # These policies can NOT be set in conjunction with Advanced
+                    # Audit Policies. The Advanced Audit Policies will always
+                    # take precedence. If Advanced Audit Policies are set, the
+                    # Basic Audit Policies will fail to actually apply. The
+                    # LGPO module will complete successfully, but the settings
+                    # will not stick.
+                    # The only way to fix this issue is to remove the
+                    # `audit.csv` files blocking the auditing. Delete them from
+                    # the following locations:
+                    # - C:\Windows\security\audit
+                    # - C:\Windows\System32\GroupPolicy\Machine\Microsoft\
+                    #   Windows NT\Audit
                     "AuditAccountLogon": {
                         "Policy": "Audit account logon events",
                         "lgpo_section": self.audit_policy_gpedit_path,
@@ -2978,15 +2992,26 @@ class _policy_info:
                         },
                         "Transform": self.audit_transform,
                     },
-                    ########## END OF LEGACY AUDIT POLICIES ##########
+                    ########## END OF BASIC AUDIT POLICIES ##########
                     ########## ADVANCED AUDIT POLICIES ##########
                     # Advanced Audit Policies
-                    # To use these set the following policy to ENABLED
-                    # "Audit: Force audit policy subcategory settings (Windows
-                    # Vista or later) to override audit policy category
-                    # settings"
-                    # or its alias...
-                    # SceNoApplyLegacyAuditPolicy
+                    # To use these set the following policy to ENABLED:
+                    # - Audit: Force audit policy subcategory settings (Windows
+                    #   Vista or later) to override audit policy category
+                    #   settings
+                    # or its alias:
+                    # - SceNoApplyLegacyAuditPolicy
+                    # These will always take precedence over Basic Audit
+                    # Policies. In fact, setting these will block Basic Audit
+                    # Policies from being set at all, even if you set these
+                    # back to `Not Configured`.
+                    # The only way to fix this issue and allow Basic Audit
+                    # Policies to be set is to remove the `audit.csv` files
+                    # blocking the auditing. Delete them from the following
+                    # locations:
+                    # - C:\Windows\security\audit
+                    # - C:\Windows\System32\GroupPolicy\Machine\Microsoft\
+                    #   Windows NT\Audit
                     # Account Logon Section
                     "AuditCredentialValidation": {
                         "Policy": "Audit Credential Validation",
@@ -5721,26 +5746,34 @@ def _write_secedit_data(inf_data):
     Helper function to write secedit data to the database
     """
     # Set file names
-    f_sdb = os.path.join(__opts__["cachedir"], "secedit-{}.sdb".format(UUID))
+    # The database must persist in order for the settings to remain in effect
+    f_sdb = os.path.join(os.getenv("WINDIR"), "security", "database", "salt.sdb")
     f_inf = os.path.join(__opts__["cachedir"], "secedit-{}.inf".format(UUID))
 
     try:
         # Write the changes to the inf file
-        __salt__["file.write"](f_inf, inf_data)
-        # Run secedit to make the change
-        cmd = ["secedit", "/configure", "/db", f_sdb, "/cfg", f_inf]
+        with salt.utils.files.fopen(f_inf, "w", encoding="utf-16") as fp:
+            fp.write(inf_data)
+        # Import the template data into a database
+        cmd = ["secedit", "/import", "/db", f_sdb, "/cfg", f_inf]
         retcode = __salt__["cmd.retcode"](cmd)
-        # Success
-        if retcode == 0:
-            # Pop secedit data so it will always be current
-            __context__.pop("lgpo.secedit_data", None)
-            return True
-        # Failure
-        return False
+        if not retcode == 0:
+            log.debug("Secedit failed to import template data")
+            return False
+
+        # Apply the security database
+        cmd = ["secedit", "/configure", "/db", f_sdb]
+        retcode = __salt__["cmd.retcode"](cmd)
+        if not retcode == 0:
+            log.debug("Secedit failed to apply security database")
+            return False
+
+        # Pop secedit data so it will always be current
+        __context__.pop("lgpo.secedit_data", None)
+        return True
+
     finally:
-        # Cleanup our scratch files
-        if __salt__["file.file_exists"](f_sdb):
-            __salt__["file.remove"](f_sdb)
+        # Cleanup our scratch files, but not the database file
         if __salt__["file.file_exists"](f_inf):
             __salt__["file.remove"](f_inf)
 
@@ -6883,7 +6916,7 @@ def _checkAllAdmxPolicies(
 
                             if etree.QName(child_item).localname == "boolean":
                                 # https://msdn.microsoft.com/en-us/library/dn605978(v=vs.85).aspx
-                                if child_item:
+                                if child_item is not None:
                                     if (
                                         TRUE_VALUE_XPATH(child_item)
                                         and this_element_name not in configured_elements
@@ -8789,11 +8822,20 @@ def get_policy_info(policy_name, policy_class, adml_language="en-US"):
             ret["rights_assignment"] = True
         return ret
     else:
+        # Case-sensitive search first
         for pol in policy_data.policies[policy_class]["policies"]:
-            if (
-                policy_data.policies[policy_class]["policies"][pol]["Policy"].lower()
-                == policy_name.lower()
-            ):
+            _p = policy_data.policies[policy_class]["policies"][pol]["Policy"]
+            if _p == policy_name:
+                ret["policy_aliases"].append(pol)
+                ret["policy_found"] = True
+                ret["message"] = ""
+                if "LsaRights" in policy_data.policies[policy_class]["policies"][pol]:
+                    ret["rights_assignment"] = True
+                return ret
+        # Still not found, case-insensitive search
+        for pol in policy_data.policies[policy_class]["policies"]:
+            _p = policy_data.policies[policy_class]["policies"][pol]["Policy"]
+            if _p.lower() == policy_name.lower():
                 ret["policy_aliases"].append(pol)
                 ret["policy_found"] = True
                 ret["message"] = ""
@@ -8899,15 +8941,20 @@ def get(
             if policy_name in _policydata.policies[p_class]["policies"]:
                 _pol = _policydata.policies[p_class]["policies"][policy_name]
             else:
+                # Case-sensitive search first
                 for policy in _policydata.policies[p_class]["policies"]:
-                    if (
-                        _policydata.policies[p_class]["policies"][policy][
-                            "Policy"
-                        ].upper()
-                        == policy_name.upper()
-                    ):
+                    _p = _policydata.policies[p_class]["policies"][policy]["Policy"]
+                    if _p == policy_name:
                         _pol = _policydata.policies[p_class]["policies"][policy]
                         policy_name = policy
+                # Still not found, case-insensitive search
+                if _pol is None:
+                    for policy in _policydata.policies[p_class]["policies"]:
+                        _p = _policydata.policies[p_class]["policies"][policy]["Policy"]
+                        # Case-sensitive search first
+                        if _p.lower() == policy_name.lower():
+                            _pol = _policydata.policies[p_class]["policies"][policy]
+                            policy_name = policy
             if _pol:
                 vals_key_name = policy_name
                 class_vals[policy_name] = _get_policy_info_setting(_pol)
@@ -9266,7 +9313,7 @@ def _get_policy_adm_setting(
                     )
                     if etree.QName(child_item).localname == "boolean":
                         # https://msdn.microsoft.com/en-us/library/dn605978(v=vs.85).aspx
-                        if child_item:
+                        if child_item is not None:
                             if (
                                 TRUE_VALUE_XPATH(child_item)
                                 and this_element_name not in configured_elements
@@ -9797,13 +9844,21 @@ def get_policy(
     if policy_name in policy_data.policies[policy_class]["policies"]:
         policy_definition = policy_data.policies[policy_class]["policies"][policy_name]
     else:
+        # Case-sensitive search first
         for pol in policy_data.policies[policy_class]["policies"]:
-            if (
-                policy_data.policies[policy_class]["policies"][pol]["Policy"].lower()
-                == policy_name.lower()
-            ):
+            _p = policy_data.policies[policy_class]["policies"][pol]["Policy"]
+            if _p == policy_name:
                 policy_definition = policy_data.policies[policy_class]["policies"][pol]
                 break
+        if policy_definition is None:
+            # Still not found, case-insensitive search
+            for pol in policy_data.policies[policy_class]["policies"]:
+                _p = policy_data.policies[policy_class]["policies"][pol]["Policy"]
+                if _p.lower() == policy_name.lower():
+                    policy_definition = policy_data.policies[policy_class]["policies"][
+                        pol
+                    ]
+                    break
     if policy_definition:
         if return_value_only:
             return _get_policy_info_setting(policy_definition)
@@ -10032,15 +10087,26 @@ def set_(
                     if policy_name in _policydata.policies[p_class]["policies"]:
                         _pol = _policydata.policies[p_class]["policies"][policy_name]
                     else:
+                        # Case-sensitive search first
                         for policy in _policydata.policies[p_class]["policies"]:
-                            if (
-                                _policydata.policies[p_class]["policies"][policy][
-                                    "Policy"
-                                ].upper()
-                                == policy_name.upper()
-                            ):
+                            _p = _policydata.policies[p_class]["policies"][policy][
+                                "Policy"
+                            ]
+                            if _p == policy_name:
                                 _pol = _policydata.policies[p_class]["policies"][policy]
                                 policy_key_name = policy
+                        if _pol is None:
+                            # Still not found, case-insensitive search
+                            for policy in _policydata.policies[p_class]["policies"]:
+                                _p = _policydata.policies[p_class]["policies"][policy][
+                                    "Policy"
+                                ]
+                                # Case-sensitive search first
+                                if _p.lower() == policy_name.lower():
+                                    _pol = _policydata.policies[p_class]["policies"][
+                                        policy
+                                    ]
+                                    policy_key_name = policy
                     if _pol:
                         # transform and validate the setting
                         _value = _transform_value(
