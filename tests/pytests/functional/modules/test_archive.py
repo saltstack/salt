@@ -303,3 +303,31 @@ def test_unrar(archive, unicode_filename):
         ret = archive.unrar(str(arch.archive), str(arch.dst))
         assert isinstance(ret, list)
         arch.assert_artifacts_in_ret(ret)
+
+
+@pytest.mark.skip_on_windows
+@pytest.mark.skip_if_binaries_missing("tar")
+def test_tar_list_no_explicit_top_level_directory_member(archive, tmp_path):
+    rel_path = pathlib.Path("archive_top/second_level/file.txt")
+    srcfile = tmp_path / str(rel_path)
+    srcfile.parent.mkdir(parents=True, exist_ok=True)
+    srcfile.write_text("hey there")
+    archive.tar(
+        "-cvzf",
+        str(tmp_path / "tld_test.tar.gz"),
+        sources=str(rel_path.parent),
+        cwd=str(tmp_path),
+    )
+
+    expected = {
+        "dirs": ["archive_top/second_level/"],
+        "files": ["archive_top/second_level/file.txt"],
+        "links": [],
+        "top_level_dirs": ["archive_top/"],
+        "top_level_files": [],
+        "top_level_links": [],
+    }
+    ret = archive.list(
+        str(tmp_path / "tld_test.tar.gz"), archive_format="tar", verbose=True
+    )
+    assert ret["top_level_dirs"] == expected["top_level_dirs"]

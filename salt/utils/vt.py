@@ -32,7 +32,7 @@ import time
 import salt.utils.crypt
 import salt.utils.data
 import salt.utils.stringutils
-from salt.log.setup import LOG_LEVELS
+from salt._logging import LOG_LEVELS
 
 mswindows = sys.platform == "win32"
 
