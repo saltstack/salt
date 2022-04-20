@@ -50,7 +50,7 @@ jinja2==2.10.1
     # via -r requirements/base.txt
 libnacl==1.7.1
     # via -r requirements/windows.txt
-lxml==4.3.0
+lxml==4.8.0
     # via -r requirements/windows.txt
 mako==1.0.7
     # via -r requirements/windows.txt
@@ -70,7 +70,7 @@ portend==2.6
     # via cherrypy
 psutil==5.6.7
     # via -r requirements/windows.txt
-pyasn1==0.4.5
+pyasn1==0.4.8
     # via -r requirements/windows.txt
 pycparser==2.19
     # via
@@ -100,10 +100,8 @@ pywin32==302
     #   cherrypy
 pyyaml==5.3.1
     # via -r requirements/base.txt
-pyzmq==18.0.1 ; python_version < "3.8"
-    # via
-    #   -r requirements/windows.txt
-    #   -r requirements/zeromq.txt
+pyzmq==18.0.1 ; python_version < "3.9"
+    # via -r requirements/zeromq.txt
 requests==2.26.0
     # via
     #   -r requirements/base.txt

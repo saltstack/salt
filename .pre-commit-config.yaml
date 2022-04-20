@@ -245,31 +245,29 @@ repos:
           - --include=requirements/windows.txt
           - requirements/static/pkg/windows.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-pkg-windows-3.8-zmq-requirements
-#        name: Windows Packaging Py3.8 ZeroMQ Requirements
-#        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.8/windows\.txt))$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.8
-#          - --platform=windows
-#          - --include=requirements/windows.txt
-#          - requirements/static/pkg/windows.in
+      - id: pip-tools-compile
+        alias: compile-pkg-windows-3.8-zmq-requirements
+        name: Windows Packaging Py3.8 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.8/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=windows
+          - --include=requirements/windows.txt
+          - requirements/static/pkg/windows.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-pkg-windows-3.9-zmq-requirements
-#        name: Windows Packaging Py3.9 ZeroMQ Requirements
-#        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.9/windows\.txt))$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.9
-#          - --platform=windows
-#          - --include=requirements/windows.txt
-#          - requirements/static/pkg/windows.in
+      - id: pip-tools-compile
+        alias: compile-pkg-windows-3.9-zmq-requirements
+        name: Windows Packaging Py3.9 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.9/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=windows
+          - --include=requirements/windows.txt
+          - requirements/static/pkg/windows.in
 
   # <---- Packaging Requirements -------------------------------------------------------------------------------------
 
@@ -701,33 +699,31 @@ repos:
           - --include=requirements/pytest.txt
           - requirements/static/ci/windows.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-ci-windows-py3.8-zmq-requirements
-#        name: Windows CI Py3.8 ZeroMQ Requirements
-#        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/windows\.in|pkg/py3\.8/windows\.txt))$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.8
-#          - --platform=windows
-#          - --include=requirements/static/pkg/py{py_version}/windows.txt
-#          - --include=requirements/pytest.txt
-#          - requirements/static/ci/windows.in
+      - id: pip-tools-compile
+        alias: compile-ci-windows-py3.8-zmq-requirements
+        name: Windows CI Py3.8 ZeroMQ Requirements
+        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/windows\.in|pkg/py3\.8/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=windows
+          - --include=requirements/static/pkg/py{py_version}/windows.txt
+          - --include=requirements/pytest.txt
+          - requirements/static/ci/windows.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-ci-windows-py3.9-zmq-requirements
-#        name: Windows CI Py3.9 ZeroMQ Requirements
-#        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/windows\.in|pkg/py3\.9/windows\.txt))$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.9
-#          - --platform=windows
-#          - --include=requirements/static/pkg/py{py_version}/windows.txt
-#          - --include=requirements/pytest.txt
-#          - requirements/static/ci/windows.in
+      - id: pip-tools-compile
+        alias: compile-ci-windows-py3.9-zmq-requirements
+        name: Windows CI Py3.9 ZeroMQ Requirements
+        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/windows\.in|pkg/py3\.9/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=windows
+          - --include=requirements/static/pkg/py{py_version}/windows.txt
+          - --include=requirements/pytest.txt
+          - requirements/static/ci/windows.in
 
       - id: pip-tools-compile
         alias: compile-ci-windows-crypto-py3.5-requirements
@@ -765,31 +761,29 @@ repos:
           - --out-prefix=windows
           - requirements/static/ci/crypto.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-ci-windows-crypto-py3.8-requirements
-#        name: Windows CI Py3.8 Crypto Requirements
-#        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.8
-#          - --platform=windows
-#          - --out-prefix=windows
-#          - requirements/static/ci/crypto.in
+      - id: pip-tools-compile
+        alias: compile-ci-windows-crypto-py3.8-requirements
+        name: Windows CI Py3.8 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=windows
+          - --out-prefix=windows
+          - requirements/static/ci/crypto.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-ci-windows-crypto-py3.9-requirements
-#        name: Windows CI Py3.9 Crypto Requirements
-#        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.9
-#          - --platform=windows
-#          - --out-prefix=windows
-#          - requirements/static/ci/crypto.in
+      - id: pip-tools-compile
+        alias: compile-ci-windows-crypto-py3.9-requirements
+        name: Windows CI Py3.9 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=windows
+          - --out-prefix=windows
+          - requirements/static/ci/crypto.in
 
   # <---- CI Requirements --------------------------------------------------------------------------------------------
 
