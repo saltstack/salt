@@ -86,9 +86,9 @@ class Collector(salt.utils.process.SignalHandlingProcess):
             pub_uri = "tcp://{}:{}".format(self.interface, self.port)
             self.sock.connect(pub_uri)
         else:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             end = time.time() + 60
             while True:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 try:
                     sock.connect((self.interface, self.port))
                 except ConnectionRefusedError:
