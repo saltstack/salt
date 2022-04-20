@@ -14,7 +14,14 @@ Statistics
 - Total Issue References: **30**
 - Total PR References: **177**
 
-- Contributors: **49** (`Arabus`_, `Lothiraldan`_, `Snergster`_, `TaiSHiNet`_, `The-Loeki`_, `UtahDave`_, `aboe76`_, `ahus1`_, `basepi`_, `bastiaanb`_, `bradthurber`_, `cachedout`_, `cellscape`_, `corywright`_, `cro`_, `dennisjac`_, `dmyerscough`_, `galet`_, `garethgreenaway`_, `gladiatr72`_, `gtmanfred`_, `iggy`_, `ionutbalutoiu`_, `jacobhammons`_, `jayeshka`_, `jfindlay`_, `joejulian`_, `jpic`_, `justinta`_, `kaidokert`_, `kaithar`_, `kiorky`_, `lisa2lisa`_, `msciciel`_, `nleib`_, `notpeter`_, `optix2000`_, `rahulhan`_, `rallytime`_, `rubic`_, `ryan-lane`_, `s0undt3ch`_, `slinu3d`_, `steverweber`_, `techhat`_, `terminalmage`_, `ticosax`_, `twangboy`_, `whiteinge`_)
+- Contributors: **49** (`Arabus`_, `Lothiraldan`_, `Snergster`_, `TaiSHiNet`_, `The-Loeki`_,
+  `UtahDave`_, `aboe76`_, `ahus1`_, `basepi`_, `bastiaanb`_, `bradthurber`_, `cachedout`_,
+  `cellscape`_, `corywright`_, `cro`_, `dennisjac`_, `dmyerscough`_, `galet`_, `garethgreenaway`_,
+  `gladiatr72`_, `gtmanfred`_, `iggy`_, `ionutbalutoiu`_, `jacobhammons`_, `jayeshka`_,
+  `jfindlay`_, `joejulian`_, `jpic`_, `justinta`_, `kaidokert`_, `kaithar`_, `kiorky`_,
+  `lisa2lisa`_, `msciciel`_, `nleib`_, `notpeter`_, `optix2000`_, `rahulhan`_, `rallytime`_,
+  `rubic`_, `ryan-lane`_, `s0undt3ch`_, `slinu3d`_, `steverweber`_, `techhat`_, `terminalmage`_,
+  `ticosax`_, `twangboy`_, `whiteinge`_)
 
 
 Cloud Runner Changes
@@ -175,7 +182,7 @@ Changelog for v2015.5.0..v2015.5.1
 
   * 9d87fd335c add proper marker for format argument
 
-  * 197688ef0c Added exception handler to trap the RuntimeError raised when Depends.enforce_dependency() class method fires unsuccessfully. There appears to be no synchronization within the Depends decorator class wrt the class global dependency_dict which results in incomplete population of any loader instantiation occuring at the time of one of these exceptions.
+  * 197688ef0c Added exception handler to trap the RuntimeError raised when Depends.enforce_dependency() class method fires unsuccessfully. There appears to be no synchronization within the Depends decorator class wrt the class global dependency_dict which results in incomplete population of any loader instantiation occurring at the time of one of these exceptions.
 
 * **ISSUE** `#19852`_: (`TaiSHiNet`_) DigitalOcean APIv2 can't delete machines when there is only 1 page (refs: `#23955`_)
 
@@ -549,7 +556,7 @@ Changelog for v2015.5.0..v2015.5.1
 
   * 558798df1f Fix net_io_counters deprecation issue
 
-  * 8140f92ba8 Override unecessary pylint errors
+  * 8140f92ba8 Override unnecessary pylint errors
 
   * 7d02ad4f06 Fix some of the mock names for the new API
 
@@ -561,7 +568,7 @@ Changelog for v2015.5.0..v2015.5.1
 
   * e48982ff9c Fix version checking in psutil_compat
 
-  * 93ee411fd5 Create compatability psutil. psutil 3.0 drops 1.0 API, but we still support old psutil versions.
+  * 93ee411fd5 Create compatibility psutil. psutil 3.0 drops 1.0 API, but we still support old psutil versions.
 
 * **PR** `#23782`_: (`terminalmage`_) Replace "command -v" with "which" and get rid of spurious log messages
   @ *2015-05-16 04:03:10 UTC*
@@ -601,7 +608,7 @@ Changelog for v2015.5.0..v2015.5.1
 
       * 2d9aa2bb97 Avoid shadowing variables in lxc module
 
-      * 792e1021f2 Allow to override profile options in lxc.cloud_init_interface
+      * 792e1021f2 Allow overriding profile options in lxc.cloud_init_interface
 
       * 42bd64b9b3 Return changes on successful lxc.create from salt-cloud
 
@@ -830,12 +837,12 @@ Changelog for v2015.5.0..v2015.5.1
 
   * ecff2181e4 fix lvs_service
 
-* **PR** `#23686`_: (`jfindlay`_) remove superflous return statement
+* **PR** `#23686`_: (`jfindlay`_) remove superfluous return statement
   @ *2015-05-14 14:20:18 UTC*
 
   * 39973d4095 Merge pull request `#23686`_ from jfindlay/fix_lvs_server
 
-  * 5aaeb73532 remove superflous return statement
+  * 5aaeb73532 remove superfluous return statement
 
 * **PR** `#23690`_: (`rallytime`_) Backport `#23424`_ to 2015.5
   @ *2015-05-13 23:04:36 UTC*
@@ -955,11 +962,11 @@ Changelog for v2015.5.0..v2015.5.1
 
     * e96c5c5bf3 Merge pull request `#23474`_ from dr4Ke/fix_grains.append_nested
 
-      * a01a5bb51e grains.get, parameter delimititer, versionadded: 2014.7.6
+      * a01a5bb51e grains.get, parameter delimiter, versionadded: 2014.7.6
 
       * b39f50475d remove debugging output
 
-      * b6e15e295c fix grains.append in nested dictionnary grains `#23411`_
+      * b6e15e295c fix grains.append in nested dictionary grains `#23411`_
 
     * ab7e1aed8e Merge pull request `#23537`_ from t0rrant/patch-1
 
@@ -976,7 +983,7 @@ Changelog for v2015.5.0..v2015.5.1
 
   * 73cfda751a Remove unused import
 
-  * 52b68d695a Use the zip_longest from six module for python 3 compatiblity
+  * 52b68d695a Use the zip_longest from six module for python 3 compatibility
 
   * 18d5ff9a8e Fix salt.state.file._unify_sources_and_hashes when sources is used without sources_hashes
 
@@ -1552,7 +1559,7 @@ Changelog for v2015.5.0..v2015.5.1
 
     * 02658b1e60 Merge pull request `#23344`_ from cachedout/issue_22742
 
-      * 5adc96ce7f Explicitely set file_client on master
+      * 5adc96ce7f Explicitly set file_client on master
 
     * ba7605d1cb Merge pull request `#23318`_ from cellscape/honor-seed-argument
 

@@ -233,7 +233,7 @@ def rpc(commands, method="cli", **kwargs):
 
     .. code-block:: bash
 
-        salt-call --local nxps_api.rpc 'show version'
+        salt-call --local nxos_api.rpc 'show version'
     """
     nxos_api_kwargs = __salt__["config.get"]("nxos_api", {})
     nxos_api_kwargs.update(**kwargs)

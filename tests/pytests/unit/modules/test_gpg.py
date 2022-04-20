@@ -4,19 +4,27 @@
 """
 
 import datetime
+import logging
+import shutil
+import subprocess
 import time
 import types
 
+import psutil
 import pytest
 import salt.modules.gpg as gpg
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, patch
+from tests.support.pytest.helpers import EntropyGenerator
 
 pytest.importorskip("gnupg")
 
 pytestmark = [
     pytest.mark.skip_unless_on_linux,
 ]
+
+log = logging.getLogger(__name__)
+
 
 GPG_TEST_KEY_PASSPHRASE = "testkeypassphrase"
 GPG_TEST_KEY_ID = "7416F045"
@@ -149,15 +157,53 @@ OZV2Hg+93dg3Wi6g/JW4OuTKWKuHRqpRB1J4i4lO
 """
 
 
+@pytest.fixture(autouse=True)
+def entropy_generation():
+    with EntropyGenerator():
+        yield
+
+
 @pytest.fixture
 def gpghome(tmp_path):
     root = tmp_path / "gpghome"
     root.mkdir(mode=0o0700)
+    root.joinpath(".gnupg").mkdir(mode=0o0700)
     pub = root / "gpgfile.pub"
     pub.write_text(GPG_TEST_PUB_KEY)
     priv = root / "gpgfile.priv"
     priv.write_text(GPG_TEST_PRIV_KEY)
-    return types.SimpleNamespace(path=root, pub=pub, priv=priv)
+    try:
+        yield types.SimpleNamespace(path=root, pub=pub, priv=priv)
+    finally:
+        # Make sure we don't leave any gpg-agent's running behind
+        gpg_connect_agent = shutil.which("gpg-connect-agent")
+        if gpg_connect_agent:
+            gnupghome = root / ".gnupg"
+            if not gnupghome.is_dir():
+                gnupghome = root
+            try:
+                subprocess.run(
+                    [gpg_connect_agent, "killagent", "/bye"],
+                    env={"GNUPGHOME": str(gnupghome)},
+                    shell=False,
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            except subprocess.CalledProcessError:
+                # This is likely CentOS 7 or Amazon Linux 2
+                pass
+
+        # If the above errored or was not enough, as a last resort, let's check
+        # the running processes.
+        for proc in psutil.process_iter():
+            try:
+                if "gpg-agent" in proc.name():
+                    for arg in proc.cmdline():
+                        if str(root) in arg:
+                            proc.terminate()
+            except Exception:  # pylint: disable=broad-except
+                pass
 
 
 @pytest.fixture

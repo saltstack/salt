@@ -14,9 +14,7 @@ import salt.exceptions
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.ext.tornado.testing
-import salt.transport.client
 import salt.transport.ipc
-import salt.transport.server
 import salt.utils.platform
 from salt.ext.tornado.iostream import StreamClosedError
 from tests.support.runtests import RUNTIME_VARS
@@ -40,6 +38,8 @@ class IPCMessagePubSubCase(salt.ext.tornado.testing.AsyncTestCase):
     def setUp(self):
         super().setUp()
         self.opts = {"ipc_write_buffer": 0}
+        if not os.path.exists(RUNTIME_VARS.TMP):
+            os.mkdir(RUNTIME_VARS.TMP)
         self.socket_path = os.path.join(RUNTIME_VARS.TMP, "ipc_test.ipc")
         self.pub_channel = self._get_pub_channel()
         self.sub_channel = self._get_sub_channel()

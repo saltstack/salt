@@ -2,7 +2,12 @@ import os
 
 import pytest
 import salt.modules.tls as tls
+from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES
 from tests.support.mock import MagicMock, patch
+
+pytestmark = [
+    SKIP_INITIAL_PHOTONOS_FAILURES,
+]
 
 
 @pytest.fixture

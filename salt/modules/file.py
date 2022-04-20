@@ -874,9 +874,9 @@ def get_source_sum(
         # The source_hash is a hash expression
         ret = {}
         try:
-            ret["hash_type"], ret["hsum"] = [
+            ret["hash_type"], ret["hsum"] = (
                 x.strip() for x in source_hash.split("=", 1)
-            ]
+            )
         except AttributeError:
             _invalid_source_hash_format()
         except ValueError:
@@ -2487,7 +2487,7 @@ def replace(
     symlink = False
     if is_link(path):
         symlink = True
-        target_path = os.readlink(path)
+        target_path = salt.utils.path.readlink(path)
         given_path = os.path.expanduser(path)
 
     path = os.path.realpath(os.path.expanduser(path))
@@ -2593,6 +2593,8 @@ def replace(
                     else r_data.splitlines(True)
                 )
                 new_file = result.splitlines(True)
+                if orig_file == new_file:
+                    has_changes = False
 
     except OSError as exc:
         raise CommandExecutionError(
@@ -3707,9 +3709,22 @@ def is_link(path):
     return os.path.islink(os.path.expanduser(path))
 
 
-def symlink(src, path):
+def symlink(src, path, force=False):
     """
     Create a symbolic link (symlink, soft link) to a file
+
+    Args:
+
+        src (str): The path to a file or directory
+
+        path (str): The path to the link. Must be an absolute path
+
+        force (bool):
+            Overwrite an existing symlink with the same name
+            .. versionadded:: 3005
+
+    Returns:
+        bool: True if successful, otherwise False
 
     CLI Example:
 
@@ -3719,22 +3734,34 @@ def symlink(src, path):
     """
     path = os.path.expanduser(path)
 
-    try:
-        if os.path.normpath(os.readlink(path)) == os.path.normpath(src):
-            log.debug("link already in correct state: %s -> %s", path, src)
-            return True
-    except OSError:
-        pass
+    if os.path.islink(path):
+        try:
+            if os.path.normpath(salt.utils.path.readlink(path)) == os.path.normpath(
+                src
+            ):
+                log.debug("link already in correct state: %s -> %s", path, src)
+                return True
+        except OSError:
+            pass
+
+        if force:
+            os.unlink(path)
+        else:
+            msg = "Found existing symlink: {}".format(path)
+            raise CommandExecutionError(msg)
+
+    if os.path.exists(path):
+        msg = "Existing path is not a symlink: {}".format(path)
+        raise CommandExecutionError(msg)
 
     if not os.path.isabs(path):
-        raise SaltInvocationError("File path must be absolute.")
+        raise SaltInvocationError("Link path must be absolute: {}".format(path))
 
     try:
         os.symlink(src, path)
         return True
     except OSError:
         raise CommandExecutionError("Could not create '{}'".format(path))
-    return False
 
 
 def rename(src, dst):
@@ -3928,7 +3955,27 @@ def readlink(path, canonicalize=False):
     .. versionadded:: 2014.1.0
 
     Return the path that a symlink points to
-    If canonicalize is set to True, then it return the final target
+
+    Args:
+
+        path (str):
+            The path to the symlink
+
+        canonicalize (bool):
+            Get the canonical path eliminating any symbolic links encountered in
+            the path
+
+    Returns:
+
+        str: The path that the symlink points to
+
+    Raises:
+
+        SaltInvocationError: path is not absolute
+
+        SaltInvocationError: path is not a link
+
+        CommandExecutionError: error reading the symbolic link
 
     CLI Example:
 
@@ -3937,17 +3984,23 @@ def readlink(path, canonicalize=False):
         salt '*' file.readlink /path/to/link
     """
     path = os.path.expanduser(path)
+    path = os.path.expandvars(path)
 
     if not os.path.isabs(path):
-        raise SaltInvocationError("Path to link must be absolute.")
+        raise SaltInvocationError("Path to link must be absolute: {}".format(path))
 
     if not os.path.islink(path):
-        raise SaltInvocationError("A valid link was not specified.")
+        raise SaltInvocationError("A valid link was not specified: {}".format(path))
 
     if canonicalize:
         return os.path.realpath(path)
     else:
-        return os.readlink(path)
+        try:
+            return salt.utils.path.readlink(path)
+        except OSError as exc:
+            if exc.errno == errno.EINVAL:
+                raise CommandExecutionError("Not a symbolic link: {}".format(path))
+            raise CommandExecutionError(exc.__str__())
 
 
 def readdir(path):
@@ -4462,6 +4515,7 @@ def get_managed(
     defaults,
     skip_verify=False,
     verify_ssl=True,
+    use_etag=False,
     **kwargs
 ):
     """
@@ -4517,6 +4571,15 @@ def get_managed(
         will not attempt to validate the servers certificate. Default is True.
 
         .. versionadded:: 3002
+
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
 
     CLI Example:
 
@@ -4589,7 +4652,7 @@ def get_managed(
                         )
                     except CommandExecutionError as exc:
                         return "", {}, exc.strerror
-                else:
+                elif not use_etag:
                     msg = (
                         "Unable to verify upstream hash of source file {}, "
                         "please set source_hash or set skip_verify to True".format(
@@ -4602,7 +4665,7 @@ def get_managed(
         # Check if we have the template or remote file cached
         cache_refetch = False
         cached_dest = __salt__["cp.is_cached"](source, saltenv)
-        if cached_dest and (source_hash or skip_verify):
+        if cached_dest and (source_hash or skip_verify or use_etag):
             htype = source_sum.get("hash_type", "sha256")
             cached_sum = get_hash(cached_dest, form=htype)
             if skip_verify:
@@ -4610,7 +4673,9 @@ def get_managed(
                 # but `cached_sum == source_sum['hsum']` is elliptical as prev if
                 sfn = cached_dest
                 source_sum = {"hsum": cached_sum, "hash_type": htype}
-            elif cached_sum != source_sum.get("hsum", __opts__["hash_type"]):
+            elif use_etag or cached_sum != source_sum.get(
+                "hsum", __opts__["hash_type"]
+            ):
                 cache_refetch = True
             else:
                 sfn = cached_dest
@@ -4624,6 +4689,7 @@ def get_managed(
                     saltenv,
                     source_hash=source_sum.get("hsum"),
                     verify_ssl=verify_ssl,
+                    use_etag=use_etag,
                 )
             except Exception as exc:  # pylint: disable=broad-except
                 # A 404 or other error code may raise an exception, catch it
@@ -5812,6 +5878,7 @@ def manage_file(
     setype=None,
     serange=None,
     verify_ssl=True,
+    use_etag=False,
     **kwargs
 ):
     """
@@ -5932,6 +5999,15 @@ def manage_file(
 
         .. versionadded:: 3002
 
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
+
     CLI Example:
 
     .. code-block:: bash
@@ -5943,6 +6019,12 @@ def manage_file(
 
     """
     name = os.path.expanduser(name)
+    check_web_source_hash = bool(
+        source
+        and urllib.parse.urlparse(source).scheme != "salt"
+        and not skip_verify
+        and not use_etag
+    )
 
     if not ret:
         ret = {"name": name, "changes": {}, "comment": "", "result": True}
@@ -5988,13 +6070,15 @@ def manage_file(
             or source_sum.get("hsum", __opts__["hash_type"]) != name_sum
         ):
             if not sfn:
-                sfn = __salt__["cp.cache_file"](source, saltenv, verify_ssl=verify_ssl)
+                sfn = __salt__["cp.cache_file"](
+                    source, saltenv, verify_ssl=verify_ssl, use_etag=use_etag
+                )
             if not sfn:
                 return _error(ret, "Source file '{}' not found".format(source))
             # If the downloaded file came from a non salt server or local
             # source, and we are not skipping checksum verification, then
             # verify that it matches the specified checksum.
-            if not skip_verify and urllib.parse.urlparse(source).scheme != "salt":
+            if check_web_source_hash:
                 dl_sum = get_hash(sfn, source_sum["hash_type"])
                 if dl_sum != source_sum["hsum"]:
                     ret["comment"] = (
@@ -6016,9 +6100,9 @@ def manage_file(
                 ret["changes"]["diff"] = "<show_changes=False>"
             else:
                 try:
-                    ret["changes"]["diff"] = get_diff(
-                        real_name, sfn, show_filenames=False
-                    )
+                    file_diff = get_diff(real_name, sfn, show_filenames=False)
+                    if file_diff:
+                        ret["changes"]["diff"] = file_diff
                 except CommandExecutionError as exc:
                     ret["changes"]["diff"] = exc.strerror
 
@@ -6091,7 +6175,7 @@ def manage_file(
                 return _error(ret, "Source file '{}' not found".format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if not skip_verify and urllib.parse.urlparse(source).scheme != "salt":
+            if check_web_source_hash:
                 dl_sum = get_hash(sfn, source_sum["hash_type"])
                 if dl_sum != source_sum["hsum"]:
                     ret["comment"] = (
@@ -6200,7 +6284,7 @@ def manage_file(
                 return _error(ret, "Source file '{}' not found".format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
-            if not skip_verify and urllib.parse.urlparse(source).scheme != "salt":
+            if check_web_source_hash:
                 dl_sum = get_hash(sfn, source_sum["hash_type"])
                 if dl_sum != source_sum["hsum"]:
                     ret["comment"] = (

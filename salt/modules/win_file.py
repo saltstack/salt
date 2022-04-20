@@ -100,6 +100,7 @@ from salt.modules.file import (
     psed,
     read,
     readdir,
+    readlink,
     rename,
     replace,
     restore_backup,
@@ -159,7 +160,7 @@ def __virtual__():
             global get_diff, line, _get_flags, extract_hash, comment_line
             global access, copy, readdir, read, rmdir, truncate, replace, search
             global _binary_replace, _get_bkroot, list_backups, restore_backup
-            global _splitlines_preserving_trailing_newline
+            global _splitlines_preserving_trailing_newline, readlink
             global blockreplace, prepend, seek_read, seek_write, rename, lstat
             global write, pardir, join, _add_flags, apply_template_on_contents
             global path_exists_glob, comment, uncomment, _mkstemp_copy
@@ -208,6 +209,7 @@ def __virtual__():
             access = _namespaced_function(access, globals())
             copy = _namespaced_function(copy, globals())
             readdir = _namespaced_function(readdir, globals())
+            readlink = _namespaced_function(readlink, globals())
             read = _namespaced_function(read, globals())
             rmdir = _namespaced_function(rmdir, globals())
             truncate = _namespaced_function(truncate, globals())
@@ -1184,7 +1186,7 @@ def remove(path, force=False):
     return True
 
 
-def symlink(src, link):
+def symlink(src, link, force=False):
     """
     Create a symbolic link to a file
 
@@ -1196,10 +1198,17 @@ def symlink(src, link):
     If it doesn't, an error will be raised.
 
     Args:
+
         src (str): The path to a file or directory
-        link (str): The path to the link
+
+        link (str): The path to the link. Must be an absolute path
+
+        force (bool):
+            Overwrite an existing symlink with the same name
+            .. versionadded:: 3005
 
     Returns:
+
         bool: True if successful, otherwise False
 
     CLI Example:
@@ -1215,11 +1224,28 @@ def symlink(src, link):
             "Symlinks are only supported on Windows Vista or later."
         )
 
-    if not os.path.exists(src):
-        raise SaltInvocationError("The given source path does not exist.")
+    if os.path.islink(link):
+        try:
+            if os.path.normpath(salt.utils.path.readlink(link)) == os.path.normpath(
+                src
+            ):
+                log.debug("link already in correct state: %s -> %s", link, src)
+                return True
+        except OSError:
+            pass
 
-    if not os.path.isabs(src):
-        raise SaltInvocationError("File path must be absolute.")
+        if force:
+            os.unlink(link)
+        else:
+            msg = "Found existing symlink: {}".format(link)
+            raise CommandExecutionError(msg)
+
+    if os.path.exists(link):
+        msg = "Existing path is not a symlink: {}".format(link)
+        raise CommandExecutionError(msg)
+
+    if not os.path.isabs(link):
+        raise SaltInvocationError("Link path must be absolute: {}".format(link))
 
     # ensure paths are using the right slashes
     src = os.path.normpath(src)
@@ -1270,43 +1296,6 @@ def is_link(path):
 
     try:
         return __utils__["path.islink"](path)
-    except Exception as exc:  # pylint: disable=broad-except
-        raise CommandExecutionError(exc)
-
-
-def readlink(path):
-    """
-    Return the path that a symlink points to
-
-    This is only supported on Windows Vista or later.
-
-    Inline with Unix behavior, this function will raise an error if the path is
-    not a symlink, however, the error raised will be a SaltInvocationError, not
-    an OSError.
-
-    Args:
-        path (str): The path to the symlink
-
-    Returns:
-        str: The path that the symlink points to
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' file.readlink /path/to/link
-    """
-    if sys.getwindowsversion().major < 6:
-        raise SaltInvocationError(
-            "Symlinks are only supported on Windows Vista or later."
-        )
-
-    try:
-        return __utils__["path.readlink"](path)
-    except OSError as exc:
-        if exc.errno == errno.EINVAL:
-            raise CommandExecutionError("{} is not a symbolic link".format(path))
-        raise CommandExecutionError(exc.__str__())
     except Exception as exc:  # pylint: disable=broad-except
         raise CommandExecutionError(exc)
 
@@ -1743,9 +1732,9 @@ def set_perms(path, grant_perms=None, deny_perms=None, inheritance=True, reset=F
         grant_perms (dict):
             A dictionary containing the user/group and the basic permissions to
             grant, ie: ``{'user': {'perms': 'basic_permission'}}``. You can also
-            set the ``applies_to`` setting here. The default for ``applise_to``
-            is ``this_folder_subfolders_files``. Specify another ``applies_to``
-            setting like this:
+            set the ``applies_to`` setting here for directories. The default for
+            ``applies_to`` is ``this_folder_subfolders_files``. Specify another
+            ``applies_to`` setting like this:
 
             .. code-block:: yaml
 

@@ -102,6 +102,29 @@ def test_compile_state_usage(highstate, state_tree_dir):
         assert state_usage_dict["base"]["unused"] == ["bar", "top"]
 
 
+def test_compile_state_usage_empty_topfile(highstate, state_tree_dir):
+    """
+    See https://github.com/saltstack/salt/issues/61614.
+
+    The failure was triggered by having a saltenv that contained states but was
+    not referenced in any topfile. A simple test case is an empty topfile in
+    the base saltenv.
+    """
+    top = pytest.helpers.temp_file("top.sls", "", str(state_tree_dir))
+    unused_state = pytest.helpers.temp_file(
+        "foo.sls", "foo: test.nop", str(state_tree_dir)
+    )
+
+    with top, unused_state:
+        state_usage_dict = highstate.compile_state_usage()
+
+        assert state_usage_dict["base"]["count_unused"] == 2
+        assert state_usage_dict["base"]["count_used"] == 0
+        assert state_usage_dict["base"]["count_all"] == 2
+        assert state_usage_dict["base"]["used"] == []
+        assert state_usage_dict["base"]["unused"] == ["foo", "top"]
+
+
 def test_find_sls_ids_with_exclude(highstate, state_tree_dir):
     """
     See https://github.com/saltstack/salt/issues/47182
