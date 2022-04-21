@@ -1923,7 +1923,7 @@ def _read_conf_file(path):
     """
     log.debug("Reading configuration from %s", path)
     append_file_suffix_YAMLError = False
-    with salt.utils.files.fopen(path, "r", encoding="utf-8") as conf_file:
+    with salt.utils.files.fopen(path, "rb") as conf_file:
         try:
             conf_opts = salt.utils.yaml.safe_load(conf_file) or {}
         except salt.utils.yaml.YAMLError as err:
