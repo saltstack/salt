@@ -1,21 +1,18 @@
-@Library('salt@master-1.10') _
+@Library('salt@master-1.11') _
 
 runTestSuite(
-    ami_image_id: 'ami-091ceee536c181547',
+    ami_image_id: 'ami-018e8ade3ef00a445',
     concurrent_builds: 1,
     distro_name: 'windows',
     distro_version: '2016',
     distro_arch: 'x64',
     env: env,
-    golden_images_branch: 'master',
     jenkins_slave_label: 'kitchen-slave',
     nox_env_name: 'pytest-zeromq',
     nox_passthrough_opts: '',
     python_version: 'py3',
-    //splits: ['unit', 'integration'],
     testrun_timeout: 9,
     use_spot_instances: false,
-    //fast_slow_staged_testrun: true
 )
 
 // vim: ft=groovy

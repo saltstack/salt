@@ -419,7 +419,7 @@ dnspython==1.16.0
     #   python-etcd
 docker-pycreds==0.4.0
     # via docker
-docker==3.7.2
+docker==3.7.2 ; sys_platform != "win32"
     # via
     #   -r requirements/static/ci/common.in
     #   moto
@@ -838,7 +838,7 @@ smmap==3.0.2
     # via
     #   -r requirements/static/pkg/py3.6/darwin.txt
     #   gitdb
-sqlparse==0.4.1
+sqlparse==0.4.2
     # via -r requirements/static/ci/common.in
 sshpubkeys==3.1.0
     # via moto
