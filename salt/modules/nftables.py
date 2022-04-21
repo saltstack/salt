@@ -928,7 +928,9 @@ def delete(table, chain=None, position=None, rule=None, family='ipv4'):
     # nftables rules can only be deleted using the handle
     # if we don't have it, find it.
     if not position:
-        position = get_rule_handle(table, chain, rule, family)
+        res = get_rule_handle(table, chain, rule, family)
+        if res["result"]:
+            position = res["handle"]
 
     nft_family = _NFTABLES_FAMILIES[family]
     cmd = '{0} delete rule {1} {2} {3} handle {4}'.\
