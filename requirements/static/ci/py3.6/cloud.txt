@@ -391,7 +391,7 @@ dnspython==2.2.1
     # via
     #   -r requirements/static/ci/common.in
     #   python-etcd
-docker==5.0.3
+docker==5.0.3 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 filelock==3.4.1
     # via virtualenv

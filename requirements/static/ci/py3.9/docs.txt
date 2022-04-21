@@ -393,7 +393,7 @@ dnspython==2.2.1
     #   -r requirements/static/ci/common.in
     #   ciscoconfparse
     #   python-etcd
-docker==5.0.3
+docker==5.0.3 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 docutils==0.15.2
     # via sphinx
