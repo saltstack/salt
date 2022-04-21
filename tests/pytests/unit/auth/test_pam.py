@@ -2,6 +2,10 @@ import pytest
 import salt.auth.pam
 from tests.support.mock import patch
 
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+]
+
 
 @pytest.fixture
 def configure_loader_modules():
