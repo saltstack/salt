@@ -26,7 +26,7 @@ import _pytest.logging
 import _pytest.skipping
 import psutil
 import pytest
-import salt._logging.impl
+import salt._logging
 import salt._logging.mixins
 import salt.config
 import salt.loader
@@ -108,6 +108,7 @@ _pytest.logging._LiveLoggingStreamHandler = LiveLoggingStreamHandler
 # Reset logging root handlers
 for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
+    handler.close()
 
 
 # Reset the root logger to its default level(because salt changed it)
@@ -1429,6 +1430,23 @@ def ssl_webserver(integration_files_dir, scope="module"):
     webserver.start()
     yield webserver
     webserver.stop()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _disable_salt_logging():
+    # This fixture is used to set logging to a configuration that salt expects,
+    # however, no logging is actually configured since pytest's logging will be
+    # logging what we need.
+    logging_config = {
+        # Undocumented, on purpose, at least for now, options.
+        "configure_ext_handlers": False,
+        "configure_file_logger": False,
+        "configure_console_logger": False,
+        "configure_granular_levels": False,
+    }
+    salt._logging.set_logging_options_dict(logging_config)
+    # Run the test suite
+    yield
 
 
 # <---- Custom Fixtures ----------------------------------------------------------------------------------------------
