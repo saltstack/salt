@@ -302,7 +302,7 @@ class SSHStateTest(SSHCase):
             if expected in " ".join(get_sls):
                 # We found the expected return
                 break
-            time.sleep(0.3)
+            time.sleep(1)
         else:
             self.fail(
                 "Did not find '{}' in state.running return: {}".format(
