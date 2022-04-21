@@ -28,7 +28,7 @@ class EtcdTestCase(ModuleCase, ShellCase):
 
         if EtcdTestCase.count == 0:
             self.run_state("docker_image.present", name="bitnami/etcd", tag="latest")
-            self.run_state(
+            ret = self.run_state(
                 "docker_container.running",
                 name="etcd",
                 image="bitnami/etcd:latest",
@@ -39,6 +39,9 @@ class EtcdTestCase(ModuleCase, ShellCase):
                 },
                 cap_add="IPC_LOCK",
             )
+            _, val = ret.popitem()
+            if not val["result"]:
+                self.skipTest("etcd container not running")
         EtcdTestCase.count += 1
 
     def tearDown(self):
