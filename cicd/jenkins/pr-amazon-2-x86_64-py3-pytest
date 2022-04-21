@@ -1,7 +1,7 @@
 @Library('salt@master-1.10') _
 
 runTestSuite(
-    ami_image_id: 'ami-099d7623ded3199ea',
+    ami_image_id: 'ami-01226819a514516fe',
     concurrent_builds: 1,
     distro_name: 'amazon',
     distro_version: '2',
