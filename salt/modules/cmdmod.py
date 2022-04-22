@@ -37,12 +37,12 @@ import salt.utils.vt
 import salt.utils.win_chcp
 import salt.utils.win_dacl
 import salt.utils.win_reg
+from salt._logging import LOG_LEVELS
 from salt.exceptions import (
     CommandExecutionError,
     SaltInvocationError,
     TimedProcTimeoutError,
 )
-from salt.log import LOG_LEVELS
 
 # Only available on POSIX systems, nonfatal on windows
 try:

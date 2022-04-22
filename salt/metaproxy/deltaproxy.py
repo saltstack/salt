@@ -11,6 +11,7 @@ import traceback
 import types
 
 import salt
+import salt._logging
 import salt.beacons
 import salt.cli.daemons
 import salt.client
@@ -21,7 +22,6 @@ import salt.engines
 import salt.ext.tornado.gen  # pylint: disable=F0401
 import salt.ext.tornado.ioloop  # pylint: disable=F0401
 import salt.loader
-import salt.log.setup
 import salt.minion
 import salt.payload
 import salt.pillar
@@ -514,10 +514,12 @@ def thread_return(cls, minion_instance, opts, data):
     if opts["multiprocessing"] and not salt.utils.platform.is_windows():
 
         # Shutdown the multiprocessing before daemonizing
-        salt.log.setup.shutdown_multiprocessing_logging()
+        salt._logging.shutdown_logging()
+
+        salt.utils.process.daemonize_if(opts)
 
         # Reconfigure multiprocessing logging after daemonizing
-        salt.log.setup.setup_multiprocessing_logging()
+        salt._logging.setup_logging()
 
     salt.utils.process.appendproctitle("{}._thread_return".format(cls.__name__))
 
@@ -759,13 +761,14 @@ def thread_multi_return(cls, minion_instance, opts, data):
     fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
     if opts["multiprocessing"] and not salt.utils.platform.is_windows():
+
         # Shutdown the multiprocessing before daemonizing
-        salt.log.setup.shutdown_multiprocessing_logging()
+        salt._logging.shutdown_logging()
 
         salt.utils.process.daemonize_if(opts)
 
         # Reconfigure multiprocessing logging after daemonizing
-        salt.log.setup.setup_multiprocessing_logging()
+        salt._logging.setup_logging()
 
     salt.utils.process.appendproctitle("{}._thread_multi_return".format(cls.__name__))
 
