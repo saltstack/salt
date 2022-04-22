@@ -375,6 +375,7 @@ class MockSaltMinionMaster:
             minion_opts, crypt="clear"
         )
 
+    # pylint: disable=W1701
     def __del__(self):
         self.channel.close()
         del self.channel
@@ -393,6 +394,7 @@ class MockSaltMinionMaster:
         del self.process_manager
         del self.server_thread
 
+    # pylint: enable=W1701
     @classmethod
     @salt.ext.tornado.gen.coroutine
     def _handle_payload(cls, payload):
