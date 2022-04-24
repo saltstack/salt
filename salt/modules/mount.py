@@ -1924,7 +1924,7 @@ def set_filesystems(
         except OSError:
             raise CommandExecutionError("File not writable {}".format(config))
         except Exception as exc:
-            raise CommandExecutionError("set_filesystems error exception {exc}")
+            raise CommandExecutionError(f"set_filesystems error exception {exc}")
 
     return ret
 
@@ -1973,7 +1973,7 @@ def rm_filesystems(name, device, config="/etc/filesystems"):
         except OSError as exc:
             raise CommandExecutionError("Couldn't write to {}: {}".format(config, exc))
         except Exception as exc:
-            raise CommandExecutionError("rm_filesystems error exception {exc}")
+            raise CommandExecutionError(f"rm_filesystems error exception {exc}")
 
     return modified
 
