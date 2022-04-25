@@ -10,13 +10,8 @@ import yaml  # pylint: disable=blacklisted-import
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode, SequenceNode
 
-try:
-    yaml.Loader = yaml.CLoader
-    yaml.Dumper = yaml.CDumper
-    yaml.SafeLoader = yaml.CSafeLoader
-    yaml.SafeDumper = yaml.CSafeDumper
-except Exception:  # pylint: disable=broad-except
-    pass
+# prefer C bindings over python when available
+BaseLoader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
 
 __all__ = ["SaltYamlSafeLoader", "load", "safe_load"]
@@ -32,7 +27,7 @@ warnings.simplefilter("always", category=DuplicateKeyWarning)
 
 
 # with code integrated from https://gist.github.com/844388
-class SaltYamlSafeLoader(yaml.SafeLoader):
+class SaltYamlSafeLoader(BaseLoader):
     """
     Create a custom YAML loader that uses the custom constructor. This allows
     for the YAML loading defaults to be manipulated based on needs within salt
@@ -153,9 +148,8 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
                     raise ConstructorError(
                         "while constructing a mapping",
                         node.start_mark,
-                        "expected a mapping or list of mappings for merging, but found {}".format(
-                            value_node.id
-                        ),
+                        "expected a mapping or list of mappings for merging, but"
+                        " found {}".format(value_node.id),
                         value_node.start_mark,
                     )
             elif key_node.tag == "tag:yaml.org,2002:value":

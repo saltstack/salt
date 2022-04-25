@@ -43,7 +43,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "useradd execution module not loaded: either pwd python library not available or system not one of Linux, OpenBSD, NetBSD or AIX",
+        "useradd execution module not loaded: either pwd python library not available"
+        " or system not one of Linux, OpenBSD, NetBSD or AIX",
     )
 
 
@@ -873,7 +874,7 @@ def list_users(root=None):
     else:
         getpwall = functools.partial(pwd.getpwall)
 
-    return sorted([user.pw_name for user in getpwall()])
+    return sorted(user.pw_name for user in getpwall())
 
 
 def rename(name, new_name, root=None):

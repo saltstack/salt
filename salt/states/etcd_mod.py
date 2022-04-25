@@ -329,7 +329,9 @@ def mod_watch(name, **kwargs):
     return {
         "name": name,
         "changes": {},
-        "comment": "etcd.{0[sfun]} does not work with the watch requisite, "
-        "please use etcd.wait_set or etcd.wait_rm".format(kwargs),
+        "comment": (
+            "etcd.{0[sfun]} does not work with the watch requisite, "
+            "please use etcd.wait_set or etcd.wait_rm".format(kwargs)
+        ),
         "result": False,
     }

@@ -1,7 +1,6 @@
 @Library('salt@master-1.11') _
 
 runTestSuite(
-    ami_image_id: 'ami-033ed8f0f55cad1e0',
     concurrent_builds: 1,
     distro_name: 'debian',
     distro_version: '9',

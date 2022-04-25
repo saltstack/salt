@@ -33,8 +33,9 @@ class ProfitBricksTest(CloudTest):
         # If they are 'foo' and 'bar' it is the same as not being set
 
         self.skipTest(
-            "Conf items are missing that must be provided to run these tests:  username, password"
-            "\nCheck tests/integration/files/conf/cloud.providers.d/{}.conf".format(
+            "Conf items are missing that must be provided to run these tests: "
+            " username, password\nCheck"
+            " tests/integration/files/conf/cloud.providers.d/{}.conf".format(
                 self.PROVIDER
             )
         )

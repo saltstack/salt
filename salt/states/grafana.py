@@ -254,7 +254,7 @@ def dashboard_present(
         raise SaltInvocationError("profile is a required argument.")
     if dashboard and dashboard_from_pillar:
         raise SaltInvocationError(
-            "dashboard and dashboard_from_pillar are" " mutually exclusive arguments."
+            "dashboard and dashboard_from_pillar are mutually exclusive arguments."
         )
     hosts, index = _parse_profile(profile)
     if not index:

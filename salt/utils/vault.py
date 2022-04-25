@@ -15,6 +15,7 @@ import time
 import requests
 import salt.crypt
 import salt.exceptions
+import salt.utils.json
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
@@ -84,13 +85,11 @@ def _get_token_and_url_from_master():
         )
         raise salt.exceptions.CommandExecutionError(result)
     if not isinstance(result, dict):
-        log.error(
-            "Failed to get token from master! " "Response is not a dict: %s", result
-        )
+        log.error("Failed to get token from master! Response is not a dict: %s", result)
         raise salt.exceptions.CommandExecutionError(result)
     if "error" in result:
         log.error(
-            "Failed to get token from master! " "An error was returned: %s",
+            "Failed to get token from master! An error was returned: %s",
             result["error"],
         )
         raise salt.exceptions.CommandExecutionError(result)
@@ -313,7 +312,7 @@ def make_request(
         connection = get_cache()
     token = connection["token"] if not token else token
     vault_url = connection["url"] if not vault_url else vault_url
-    namespace = namespace or connection["namespace"]
+    namespace = namespace or connection.get("namespace")
     if "verify" in args:
         args["verify"] = args["verify"]
     else:
@@ -463,8 +462,10 @@ def _v2_the_path(path, pfilter, ptype="data"):
     """
     possible_types = ["data", "metadata", "destroy"]
     assert ptype in possible_types
-    msg = "Path {} already contains {} in the right place - saltstack duct tape?".format(
-        path, ptype
+    msg = (
+        "Path {} already contains {} in the right place - saltstack duct tape?".format(
+            path, ptype
+        )
     )
 
     path = path.rstrip("/").lstrip("/")

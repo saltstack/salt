@@ -131,7 +131,8 @@ def list_nodes():
             "public_ips": [],
         }
         ret[node]["size"] = "{} RAM, {} CPU".format(
-            nodes[node]["Memory size"], nodes[node]["Number of CPUs"],
+            nodes[node]["Memory size"],
+            nodes[node]["Number of CPUs"],
         )
     return ret
 

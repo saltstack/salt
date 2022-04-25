@@ -786,13 +786,17 @@ _win(ntdll.NtAllocateLocallyUniqueId, NTSTATUS, LPLUID)  # _Out_ LUID
 
 # https://msdn.microsoft.com/en-us/library/aa378279
 _win(
-    secur32.LsaFreeReturnBuffer, NTSTATUS, wintypes.LPVOID,
+    secur32.LsaFreeReturnBuffer,
+    NTSTATUS,
+    wintypes.LPVOID,
 )  # _In_ Buffer
 
 
 # https://msdn.microsoft.com/en-us/library/aa378265
 _win(
-    secur32.LsaConnectUntrusted, NTSTATUS, LPHANDLE,
+    secur32.LsaConnectUntrusted,
+    NTSTATUS,
+    LPHANDLE,
 )  # _Out_ LsaHandle
 
 

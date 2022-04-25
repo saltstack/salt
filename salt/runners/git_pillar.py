@@ -86,7 +86,7 @@ def update(branch=None, repo=None):
                 result = remote.fetch()
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
-                    "Exception '%s' caught while fetching git_pillar " "remote '%s'",
+                    "Exception '%s' caught while fetching git_pillar remote '%s'",
                     exc,
                     remote.id,
                     exc_info_on_loglevel=logging.DEBUG,

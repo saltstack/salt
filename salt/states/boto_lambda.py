@@ -227,8 +227,9 @@ def function_present(
             keyset = set(permission.keys())
             if not keyset.issuperset(required_keys):
                 raise SaltInvocationError(
-                    "{} are required for each permission "
-                    "specification".format(", ".join(required_keys))
+                    "{} are required for each permission specification".format(
+                        ", ".join(required_keys)
+                    )
                 )
             keyset = keyset - required_keys
             keyset = keyset - optional_keys
@@ -243,9 +244,7 @@ def function_present(
 
     if "error" in r:
         ret["result"] = False
-        ret["comment"] = "Failed to create function: " "{}.".format(
-            r["error"]["message"]
-        )
+        ret["comment"] = "Failed to create function: {}.".format(r["error"]["message"])
         return ret
 
     if not r.get("exists"):
@@ -276,7 +275,7 @@ def function_present(
         )
         if not r.get("created"):
             ret["result"] = False
-            ret["comment"] = "Failed to create function: " "{}.".format(
+            ret["comment"] = "Failed to create function: {}.".format(
                 r["error"]["message"]
             )
             return ret
@@ -294,7 +293,7 @@ def function_present(
                 )
                 if not r.get("updated"):
                     ret["result"] = False
-                    ret["comment"] = "Failed to create function: " "{}.".format(
+                    ret["comment"] = "Failed to create function: {}.".format(
                         r["error"]["message"]
                     )
 
@@ -808,7 +807,7 @@ def alias_present(
         )
         if not _r.get("updated"):
             ret["result"] = False
-            ret["comment"] = "Failed to update alias: " "{}.".format(
+            ret["comment"] = "Failed to update alias: {}.".format(
                 _r["error"]["message"]
             )
             ret["changes"] = {}
@@ -963,14 +962,14 @@ def event_source_mapping_present(
 
     if "error" in r:
         ret["result"] = False
-        ret["comment"] = "Failed to create event source mapping: " "{}.".format(
+        ret["comment"] = "Failed to create event source mapping: {}.".format(
             r["error"]["message"]
         )
         return ret
 
     if not r.get("exists"):
         if __opts__["test"]:
-            ret["comment"] = "Event source mapping {} is set " "to be created.".format(
+            ret["comment"] = "Event source mapping {} is set to be created.".format(
                 FunctionName
             )
             ret["result"] = None
@@ -988,7 +987,7 @@ def event_source_mapping_present(
         )
         if not r.get("created"):
             ret["result"] = False
-            ret["comment"] = "Failed to create event source mapping: " "{}.".format(
+            ret["comment"] = "Failed to create event source mapping: {}.".format(
                 r["error"]["message"]
             )
             return ret
@@ -1003,7 +1002,7 @@ def event_source_mapping_present(
         ret["name"] = _describe["event_source_mapping"]["UUID"]
         ret["changes"]["old"] = {"event_source_mapping": None}
         ret["changes"]["new"] = _describe
-        ret["comment"] = "Event source mapping {} " "created.".format(ret["name"])
+        ret["comment"] = "Event source mapping {} created.".format(ret["name"])
         return ret
 
     ret["comment"] = os.linesep.join(
@@ -1059,7 +1058,7 @@ def event_source_mapping_present(
         )
         if not _r.get("updated"):
             ret["result"] = False
-            ret["comment"] = "Failed to update mapping: " "{}.".format(
+            ret["comment"] = "Failed to update mapping: {}.".format(
                 _r["error"]["message"]
             )
             ret["changes"] = {}
@@ -1107,7 +1106,7 @@ def event_source_mapping_absent(
     )
     if "error" in desc:
         ret["result"] = False
-        ret["comment"] = "Failed to delete event source mapping: " "{}.".format(
+        ret["comment"] = "Failed to delete event source mapping: {}.".format(
             desc["error"]["message"]
         )
         return ret

@@ -20,7 +20,7 @@ from tests.unit.modules.nxos.nxos_platform import NXOSPlatform
 
 class N93KPlatform(NXOSPlatform):
 
-    """ Cisco Systems N93K Platform Unit Test Object """
+    """Cisco Systems N93K Platform Unit Test Object"""
 
     chassis = "Nexus9000 C9396PX Chassis"
 

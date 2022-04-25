@@ -34,7 +34,10 @@ def compare_and_update_config(config, update_config, changes, namespace=""):
                 if namespace:
                     _namespace = "{}.{}".format(namespace, _namespace)
                 update_config[key] = compare_and_update_config(
-                    value, update_config.get(key, None), changes, namespace=_namespace,
+                    value,
+                    update_config.get(key, None),
+                    changes,
+                    namespace=_namespace,
                 )
             return update_config
 
@@ -66,7 +69,10 @@ def compare_and_update_config(config, update_config, changes, namespace=""):
                     _update = update_config[idx]
                 if _update:
                     update_config[idx] = compare_and_update_config(
-                        config[idx], _update, changes, namespace=_namespace,
+                        config[idx],
+                        _update,
+                        changes,
+                        namespace=_namespace,
                     )
                 else:
                     changes[_namespace] = {

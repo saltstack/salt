@@ -59,7 +59,10 @@ def test_present_absent(rabbitmq_container):
         expected = {
             "name": "HA",
             "result": True,
-            "comment": 'Setting policy "HA" for pattern ".*" to "{"ha-mode": "all"}" with priority "0" for vhost "/" ...\n',
+            "comment": (
+                'Setting policy "HA" for pattern ".*" to "{"ha-mode": "all"}" with'
+                ' priority "0" for vhost "/" ...\n'
+            ),
             "changes": {"old": {}, "new": "HA"},
         }
         assert ret == expected

@@ -115,7 +115,9 @@ def returner(ret):
     client, path = _get_conn(__opts__, write_profile)
     # Make a note of this minion for the external job cache
     client.set(
-        "/".join((path, "minions", ret["id"])), ret["jid"], ttl=ttl,
+        "/".join((path, "minions", ret["id"])),
+        ret["jid"],
+        ttl=ttl,
     )
 
     for field in ret:
@@ -136,7 +138,9 @@ def save_load(jid, load, minions=None):
     else:
         ttl = __opts__.get("etcd.ttl")
     client.set(
-        "/".join((path, "jobs", jid, ".load.p")), salt.utils.json.dumps(load), ttl=ttl,
+        "/".join((path, "jobs", jid, ".load.p")),
+        salt.utils.json.dumps(load),
+        ttl=ttl,
     )
 
 
@@ -159,9 +163,7 @@ def get_load(jid):
     log.debug("sdstack_etcd returner <get_load> called jid: %s", jid)
     read_profile = __opts__.get("etcd.returner_read_profile")
     client, path = _get_conn(__opts__, read_profile)
-    return salt.utils.json.loads(
-        client.get("/".join((path, "jobs", jid, ".load.p"))).value
-    )
+    return salt.utils.json.loads(client.get("/".join((path, "jobs", jid, ".load.p"))))
 
 
 def get_jid(jid):
@@ -171,13 +173,12 @@ def get_jid(jid):
     log.debug("sdstack_etcd returner <get_jid> called jid: %s", jid)
     ret = {}
     client, path = _get_conn(__opts__)
-    items = client.get("/".join((path, "jobs", jid)))
-    for item in items.children:
-        if str(item.key).endswith(".load.p"):
+    items = client.get("/".join((path, "jobs", jid)), recurse=True)
+    for id, value in items.items():
+        if str(id).endswith(".load.p"):
             continue
-        comps = str(item.key).split("/")
-        data = client.get("/".join((path, "jobs", jid, comps[-1], "return"))).value
-        ret[comps[-1]] = {"return": salt.utils.json.loads(data)}
+        id = id.split("/")[-1]
+        ret[id] = {"return": salt.utils.json.loads(value["return"])}
     return ret
 
 
@@ -188,16 +189,14 @@ def get_fun(fun):
     log.debug("sdstack_etcd returner <get_fun> called fun: %s", fun)
     ret = {}
     client, path = _get_conn(__opts__)
-    items = client.get("/".join((path, "minions")))
-    for item in items.children:
-        comps = str(item.key).split("/")
+    items = client.get("/".join((path, "minions")), recurse=True)
+    for id, jid in items.items():
+        id = str(id).split("/")[-1]
         efun = salt.utils.json.loads(
-            client.get(
-                "/".join((path, "jobs", str(item.value), comps[-1], "fun"))
-            ).value
+            client.get("/".join((path, "jobs", str(jid), id, "fun")))
         )
         if efun == fun:
-            ret[comps[-1]] = str(efun)
+            ret[id] = str(efun)
     return ret
 
 
@@ -208,10 +207,10 @@ def get_jids():
     log.debug("sdstack_etcd returner <get_jids> called")
     ret = []
     client, path = _get_conn(__opts__)
-    items = client.get("/".join((path, "jobs")))
-    for item in items.children:
-        if item.dir is True:
-            jid = str(item.key).split("/")[-1]
+    items = client.get("/".join((path, "jobs")), recurse=True)
+    for key, value in items.items():
+        if isinstance(value, dict):  # dict means directory
+            jid = str(key).split("/")[-1]
             ret.append(jid)
     return ret
 
@@ -223,10 +222,10 @@ def get_minions():
     log.debug("sdstack_etcd returner <get_minions> called")
     ret = []
     client, path = _get_conn(__opts__)
-    items = client.get("/".join((path, "minions")))
-    for item in items.children:
-        comps = str(item.key).split("/")
-        ret.append(comps[-1])
+    items = client.get("/".join((path, "minions")), recurse=True)
+    for id, _ in items.items():
+        id = str(id).split("/")[-1]
+        ret.append(id)
     return ret
 
 

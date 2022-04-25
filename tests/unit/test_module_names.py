@@ -47,6 +47,7 @@ EXCLUDED_FILES = [
     os.path.join("tests", "virtualname.py"),
     os.path.join("tests", "wheeltest.py"),
     os.path.join("tests", "zypp_plugin.py"),
+    os.path.join("tests", "pytests", "unit", "states", "virt", "helpers.py"),
 ]
 
 
@@ -91,9 +92,11 @@ class BadTestModuleNamesTestCase(TestCase):
                 path, directory, filename.split("_test")[0]
             )
 
-        error_msg += "\nIf you believe one of the entries above should be ignored, please add it to either\n"
-        error_msg += "'EXCLUDED_DIRS' or 'EXCLUDED_FILES' in 'tests/unit/test_module_names.py'.\n"
-        error_msg += "If it is a tests module, then please rename as suggested."
+        error_msg += (
+            "\nIf you believe one of the entries above should be ignored, please add it to either\n"
+            "'EXCLUDED_DIRS' or 'EXCLUDED_FILES' in 'tests/unit/test_module_names.py'.\n"
+            "If it is a tests module, then please rename as suggested."
+        )
         self.assertEqual([], bad_names, error_msg)
 
     def test_module_name_source_match(self):
@@ -180,6 +183,7 @@ class BadTestModuleNamesTestCase(TestCase):
             "integration.states.test_renderers",
             "integration.wheel.test_client",
             "unit.cache.test_cache",
+            "unit.logging.test_deferred_stream_handler",
             "unit.serializers.test_serializers",
             "unit.setup.test_install",
             "unit.setup.test_man",

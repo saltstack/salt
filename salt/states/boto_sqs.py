@@ -75,7 +75,12 @@ def __virtual__():
 
 
 def present(
-    name, attributes=None, region=None, key=None, keyid=None, profile=None,
+    name,
+    attributes=None,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
 ):
     """
     Ensure the SQS queue exists.
@@ -107,7 +112,11 @@ def present(
     }
 
     r = __salt__["boto_sqs.exists"](
-        name, region=region, key=key, keyid=keyid, profile=profile,
+        name,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
     )
     if "error" in r:
         ret["result"] = False
@@ -119,7 +128,9 @@ def present(
     else:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"].append("SQS queue {} is set to be created.".format(name),)
+            ret["comment"].append(
+                "SQS queue {} is set to be created.".format(name),
+            )
             ret["changes"] = {"old": None, "new": name}
             return ret
 
@@ -148,11 +159,17 @@ def present(
         return ret
 
     r = __salt__["boto_sqs.get_attributes"](
-        name, region=region, key=key, keyid=keyid, profile=profile,
+        name,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
     )
     if "error" in r:
         ret["result"] = False
-        ret["comment"].append("Failed to get queue attributes: {}".format(r["error"]),)
+        ret["comment"].append(
+            "Failed to get queue attributes: {}".format(r["error"]),
+        )
         return ret
     current_attributes = r["result"]
 
@@ -198,27 +215,41 @@ def present(
         ret["result"] = None
         ret["comment"].append(
             "Attribute(s) {} set to be updated:\n{}".format(
-                attr_names, attributes_diff,
+                attr_names,
+                attributes_diff,
             )
         )
         ret["changes"] = {"attributes": {"diff": attributes_diff}}
         return ret
 
     r = __salt__["boto_sqs.set_attributes"](
-        name, attrs_to_set, region=region, key=key, keyid=keyid, profile=profile,
+        name,
+        attrs_to_set,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
     )
     if "error" in r:
         ret["result"] = False
-        ret["comment"].append("Failed to set queue attributes: {}".format(r["error"]),)
+        ret["comment"].append(
+            "Failed to set queue attributes: {}".format(r["error"]),
+        )
         return ret
 
-    ret["comment"].append("Updated SQS queue attribute(s) {}.".format(attr_names),)
+    ret["comment"].append(
+        "Updated SQS queue attribute(s) {}.".format(attr_names),
+    )
     ret["changes"]["attributes"] = {"diff": attributes_diff}
     return ret
 
 
 def absent(
-    name, region=None, key=None, keyid=None, profile=None,
+    name,
+    region=None,
+    key=None,
+    keyid=None,
+    profile=None,
 ):
     """
     Ensure the named sqs queue is deleted.
@@ -242,7 +273,11 @@ def absent(
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
     r = __salt__["boto_sqs.exists"](
-        name, region=region, key=key, keyid=keyid, profile=profile,
+        name,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
     )
     if "error" in r:
         ret["result"] = False
@@ -250,7 +285,10 @@ def absent(
         return ret
 
     if not r["result"]:
-        ret["comment"] = "SQS queue {} does not exist in {}.".format(name, region,)
+        ret["comment"] = "SQS queue {} does not exist in {}.".format(
+            name,
+            region,
+        )
         return ret
 
     if __opts__["test"]:
@@ -260,7 +298,11 @@ def absent(
         return ret
 
     r = __salt__["boto_sqs.delete"](
-        name, region=region, key=key, keyid=keyid, profile=profile,
+        name,
+        region=region,
+        key=key,
+        keyid=keyid,
+        profile=profile,
     )
     if "error" in r:
         ret["result"] = False

@@ -94,9 +94,6 @@ else:
 USE_STATIC_REQUIREMENTS = os.environ.get("USE_STATIC_REQUIREMENTS")
 if USE_STATIC_REQUIREMENTS is not None:
     USE_STATIC_REQUIREMENTS = USE_STATIC_REQUIREMENTS == "1"
-# Are we running pop-build
-if "TIAMAT_BUILD" in os.environ:
-    USE_STATIC_REQUIREMENTS = True
 
 try:
     # Add the esky bdist target if the module is available
@@ -272,7 +269,7 @@ def _parse_requirements_file(requirements_file):
                     platform.python_version(), _parse_op(op), _parse_ver(ver)
                 ):
                     continue
-            parsed_requirements.append(pkg)
+            parsed_requirements.append(line)
     return parsed_requirements
 
 
@@ -504,19 +501,21 @@ class DownloadWindowsDlls(Command):
                 yield
 
         platform_bits, _ = platform.architecture()
-        url = "https://repo.saltstack.com/windows/dependencies/{bits}/{fname}.dll"
-        dest = os.path.join(os.path.dirname(sys.executable), "{fname}.dll")
+        url = "https://repo.saltproject.io/windows/dependencies/{bits}/{fname}"
+        dest = os.path.join(os.path.dirname(sys.executable), "{fname}")
         with indent_log():
-            for fname in ("libeay32", "ssleay32", "libsodium"):
+            for fname in (
+                "openssl/1.1.1k/ssleay32.dll",
+                "openssl/1.1.1k/libeay32.dll",
+                "libsodium/1.0.18/libsodium.dll",
+            ):
                 # See if the library is already on the system
                 if find_library(fname):
                     continue
                 furl = url.format(bits=platform_bits[:2], fname=fname)
-                fdest = dest.format(fname=fname)
+                fdest = dest.format(fname=os.path.basename(fname))
                 if not os.path.exists(fdest):
-                    log.info(
-                        "Downloading {}.dll to {} from {}".format(fname, fdest, furl)
-                    )
+                    log.info("Downloading {} to {} from {}".format(fname, fdest, furl))
                     try:
                         from contextlib import closing
 
@@ -531,7 +530,7 @@ class DownloadWindowsDlls(Command):
                                             wfh.flush()
                             else:
                                 log.error(
-                                    "Failed to download {}.dll to {} from {}".format(
+                                    "Failed to download {} to {} from {}".format(
                                         fname, fdest, furl
                                     )
                                 )
@@ -548,7 +547,7 @@ class DownloadWindowsDlls(Command):
                                     wfh.flush()
                         else:
                             log.error(
-                                "Failed to download {}.dll to {} from {}".format(
+                                "Failed to download {} to {} from {}".format(
                                     fname, fdest, furl
                                 )
                             )
@@ -903,7 +902,6 @@ class SaltDistribution(distutils.dist.Distribution):
         * salt-cp
         * salt-minion
         * salt-syndic
-        * salt-unity
         * spm
 
     When packaged for salt-ssh, the following scripts should be installed:
@@ -1012,7 +1010,10 @@ class SaltDistribution(distutils.dist.Distribution):
 
         self.name = "salt-ssh" if PACKAGED_FOR_SALT_SSH else "salt"
         self.salt_version = __version__  # pylint: disable=undefined-variable
-        self.description = "Portable, distributed, remote execution and configuration management system"
+        self.description = (
+            "Portable, distributed, remote execution and configuration management"
+            " system"
+        )
         with open(SALT_LONG_DESCRIPTION_FILE, encoding="utf-8") as f:
             self.long_description = f.read()
         self.long_description_content_type = "text/x-rst"
@@ -1150,7 +1151,6 @@ class SaltDistribution(distutils.dist.Distribution):
                     "doc/man/salt-key.1",
                     "doc/man/salt-minion.1",
                     "doc/man/salt-syndic.1",
-                    "doc/man/salt-unity.1",
                     "doc/man/spm.1",
                 ]
             )
@@ -1170,7 +1170,6 @@ class SaltDistribution(distutils.dist.Distribution):
                 "doc/man/salt.1",
                 "doc/man/salt-ssh.1",
                 "doc/man/salt-syndic.1",
-                "doc/man/salt-unity.1",
             ]
         )
         return data_files
@@ -1234,7 +1233,6 @@ class SaltDistribution(distutils.dist.Distribution):
                     "scripts/salt-key",
                     "scripts/salt-minion",
                     "scripts/salt-syndic",
-                    "scripts/salt-unity",
                     "scripts/spm",
                 ]
             )
@@ -1253,7 +1251,6 @@ class SaltDistribution(distutils.dist.Distribution):
                 "scripts/salt-proxy",
                 "scripts/salt-ssh",
                 "scripts/salt-syndic",
-                "scripts/salt-unity",
                 "scripts/spm",
             ]
         )
@@ -1261,6 +1258,11 @@ class SaltDistribution(distutils.dist.Distribution):
 
     @property
     def _property_entry_points(self):
+        entrypoints = {
+            "pyinstaller40": [
+                "hook-dirs = salt.utils.pyinstaller:get_hook_dirs",
+            ],
+        }
         # console scripts common to all scenarios
         scripts = [
             "salt-call = salt.scripts:salt_call",
@@ -1271,7 +1273,8 @@ class SaltDistribution(distutils.dist.Distribution):
             if IS_WINDOWS_PLATFORM:
                 return {"console_scripts": scripts}
             scripts.append("salt-cloud = salt.scripts:salt_cloud")
-            return {"console_scripts": scripts}
+            entrypoints["console_scripts"] = scripts
+            return entrypoints
 
         if IS_WINDOWS_PLATFORM:
             scripts.extend(
@@ -1281,11 +1284,11 @@ class SaltDistribution(distutils.dist.Distribution):
                     "salt-key = salt.scripts:salt_key",
                     "salt-minion = salt.scripts:salt_minion",
                     "salt-syndic = salt.scripts:salt_syndic",
-                    "salt-unity = salt.scripts:salt_unity",
                     "spm = salt.scripts:salt_spm",
                 ]
             )
-            return {"console_scripts": scripts}
+            entrypoints["console_scripts"] = scripts
+            return entrypoints
 
         # *nix, so, we need all scripts
         scripts.extend(
@@ -1299,11 +1302,11 @@ class SaltDistribution(distutils.dist.Distribution):
                 "salt-minion = salt.scripts:salt_minion",
                 "salt-ssh = salt.scripts:salt_ssh",
                 "salt-syndic = salt.scripts:salt_syndic",
-                "salt-unity = salt.scripts:salt_unity",
                 "spm = salt.scripts:salt_spm",
             ]
         )
-        return {"console_scripts": scripts}
+        entrypoints["console_scripts"] = scripts
+        return entrypoints
 
     # <---- Dynamic Data ---------------------------------------------------------------------------------------------
 

@@ -216,7 +216,9 @@ def list_nodes_select(call=None):
     select fields.
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -434,7 +436,7 @@ def _verify(vm_):
 
 
 def destroy(name, call=None):
-    """ Destroy a node.
+    """Destroy a node.
 
     .. versionadded:: 2018.3.0
 
@@ -456,7 +458,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a, or --action."
+            "The destroy action must be called with -d, --destroy, -a, or --action."
         )
 
     opts = __opts__

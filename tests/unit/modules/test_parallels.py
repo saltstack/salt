@@ -29,7 +29,10 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertTrue(isinstance(arg, str))
 
         # Validate string arguments
-        str_args = "electrolytes --aqueous --anion hydroxide --cation=ammonium free radicals -- hydrogen"
+        str_args = (
+            "electrolytes --aqueous --anion hydroxide --cation=ammonium free radicals"
+            " -- hydrogen"
+        )
         _validate_ret(parallels._normalize_args(str_args))
 
         # Validate list arguments
@@ -542,7 +545,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
         # Validate creating a snapshot with a name and a description
         snap_name = "h_0"
         snap_desc = textwrap.dedent(
-            "The ground state particle of the higgs " "multiplet family of bosons"
+            "The ground state particle of the higgs multiplet family of bosons"
         )
         mock_snap_name = MagicMock(return_value="")
         with patch.object(parallels, "prlctl", mock_snap_name):
@@ -558,7 +561,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
         Test parallels.delete_snapshot
         """
         delete_message = (
-            "Delete the snapshot...\n" "The snapshot has been successfully deleted."
+            "Delete the snapshot...\nThe snapshot has been successfully deleted."
         )
 
         # Validate single ID

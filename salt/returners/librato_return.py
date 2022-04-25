@@ -52,8 +52,7 @@ def __virtual__():
     if not HAS_LIBRATO:
         return (
             False,
-            "Could not import librato module; "
-            "librato python client is not installed.",
+            "Could not import librato module; librato python client is not installed.",
         )
     return __virtualname__
 

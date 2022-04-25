@@ -38,7 +38,8 @@ def __virtual__():
     if salt.utils.platform.is_windows():
         return (
             False,
-            "The rbenv execution module failed to load: only available on non-Windows systems.",
+            "The rbenv execution module failed to load: only available on non-Windows"
+            " systems.",
         )
     return True
 

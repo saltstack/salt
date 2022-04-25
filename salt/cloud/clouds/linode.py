@@ -21,7 +21,7 @@ The following provider parameters are supported:
 
     APIv3 usage is deprecated and will be removed in a future release in favor of APIv4. To move to APIv4 now,
     set the ``api_version`` parameter in your provider configuration to ``v4``. See the full migration guide
-    here https://docs.saltstack.com/en/latest/topics/cloud/linode.html#migrating-to-apiv4.
+    here https://docs.saltproject.io/en/latest/topics/cloud/linode.html#migrating-to-apiv4.
 
 Set up the provider configuration at ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/linode.conf``:
 
@@ -179,7 +179,7 @@ def get_configured_provider():
     return config.is_provider_configured(
         __opts__,
         _get_active_provider_name() or __virtualname__,
-        ("apikey", "password",),
+        ("apikey", "password"),
     )
 
 
@@ -392,7 +392,8 @@ def _warn_for_api_v3():
         log.warning(
             "Linode APIv3 has been deprecated and support will be removed "
             "in future releases. Please plan to upgrade to APIv4. For more "
-            "information, see https://docs.saltstack.com/en/latest/topics/cloud/linode.html#migrating-to-apiv4."
+            "information, see"
+            " https://docs.saltproject.io/en/latest/topics/cloud/linode.html#migrating-to-apiv4."
         )
         HAS_WARNED_FOR_API_V3 = True
 
@@ -400,82 +401,82 @@ def _warn_for_api_v3():
 class LinodeAPI:
     @abc.abstractmethod
     def avail_images(self):
-        """ avail_images implementation """
+        """avail_images implementation"""
 
     @abc.abstractmethod
     def avail_locations(self):
-        """ avail_locations implementation """
+        """avail_locations implementation"""
 
     @abc.abstractmethod
     def avail_sizes(self):
-        """ avail_sizes implementation """
+        """avail_sizes implementation"""
 
     @abc.abstractmethod
     def boot(self, name=None, kwargs=None):
-        """ boot implementation """
+        """boot implementation"""
 
     @abc.abstractmethod
     def clone(self, kwargs=None):
-        """ clone implementation """
+        """clone implementation"""
 
     @abc.abstractmethod
     def create_config(self, kwargs=None):
-        """ create_config implementation """
+        """create_config implementation"""
 
     @abc.abstractmethod
     def create(self, vm_):
-        """ create implementation """
+        """create implementation"""
 
     @abc.abstractmethod
     def destroy(self, name):
-        """ destroy implementation """
+        """destroy implementation"""
 
     @abc.abstractmethod
     def get_config_id(self, kwargs=None):
-        """ get_config_id implementation """
+        """get_config_id implementation"""
 
     @abc.abstractmethod
     def list_nodes(self):
-        """ list_nodes implementation """
+        """list_nodes implementation"""
 
     @abc.abstractmethod
     def list_nodes_full(self):
-        """ list_nodes_full implementation """
+        """list_nodes_full implementation"""
 
     @abc.abstractmethod
     def list_nodes_min(self):
-        """ list_nodes_min implementation """
+        """list_nodes_min implementation"""
 
     @abc.abstractmethod
     def reboot(self, name):
-        """ reboot implementation """
+        """reboot implementation"""
 
     @abc.abstractmethod
     def show_instance(self, name):
-        """ show_instance implementation """
+        """show_instance implementation"""
 
     @abc.abstractmethod
     def show_pricing(self, kwargs=None):
-        """ show_pricing implementation """
+        """show_pricing implementation"""
 
     @abc.abstractmethod
     def start(self, name):
-        """ start implementation """
+        """start implementation"""
 
     @abc.abstractmethod
     def stop(self, name):
-        """ stop implementation """
+        """stop implementation"""
 
     @abc.abstractmethod
     def _get_linode_by_name(self, name):
-        """ _get_linode_by_name implementation """
+        """_get_linode_by_name implementation"""
 
     @abc.abstractmethod
     def _get_linode_by_id(self, linode_id):
-        """ _get_linode_by_id implementation """
+        """_get_linode_by_id implementation"""
 
     def get_plan_id(self, kwargs=None):
-        """ get_plan_id implementation """
+        """get_plan_id implementation"""
         raise SaltCloudSystemExit(
             "The get_plan_id is not supported by this api_version."
         )
@@ -495,7 +496,9 @@ class LinodeAPI:
 
     def list_nodes_select(self, call):
         return __utils__["cloud.list_nodes_select"](
-            self.list_nodes_full(), __opts__["query.selection"], call,
+            self.list_nodes_full(),
+            __opts__["query.selection"],
+            call,
         )
 
 
@@ -540,7 +543,7 @@ class LinodeAPIv4(LinodeAPI):
 
                 if status_code == 429:
                     log.debug(
-                        "recieved rate limit; retrying in %d seconds", ratelimit_sleep
+                        "received rate limit; retrying in %d seconds", ratelimit_sleep
                     )
                     time.sleep(ratelimit_sleep)
                     continue
@@ -1016,7 +1019,12 @@ class LinodeAPIv4(LinodeAPI):
         return (public, private)
 
     def _poll(
-        self, description, getter, condition, timeout=None, poll_interval=None,
+        self,
+        description,
+        getter,
+        condition,
+        timeout=None,
+        poll_interval=None,
     ):
         """
         Return true in handler to signal complete.
@@ -1415,8 +1423,7 @@ class LinodeAPIv3(LinodeAPI):
             node_id, status=(self._get_status_id_by_name("brand_new"))
         ):
             log.error(
-                "Error creating %s on LINODE\n\n"
-                "while waiting for initial ready status",
+                "Error creating %s on LINODE\n\nwhile waiting for initial ready status",
                 name,
                 exc_info_on_loglevel=logging.DEBUG,
             )
@@ -1696,18 +1703,16 @@ class LinodeAPIv3(LinodeAPI):
         if label not in sizes:
             if "GB" in label:
                 raise SaltCloudException(
-                    "Invalid Linode plan ({}) specified - call avail_sizes() for all available options".format(
-                        label
-                    )
+                    "Invalid Linode plan ({}) specified - call avail_sizes() for all"
+                    " available options".format(label)
                 )
             else:
                 plan = label.split()
 
                 if len(plan) != 2:
                     raise SaltCloudException(
-                        "Invalid Linode plan ({}) specified - call avail_sizes() for all available options".format(
-                            label
-                        )
+                        "Invalid Linode plan ({}) specified - call avail_sizes() for"
+                        " all available options".format(label)
                     )
 
                 plan_type = plan[0]
@@ -1727,9 +1732,8 @@ class LinodeAPIv3(LinodeAPI):
 
                 if new_label not in sizes:
                     raise SaltCloudException(
-                        "Invalid Linode plan ({}) specified - call avail_sizes() for all available options".format(
-                            new_label
-                        )
+                        "Invalid Linode plan ({}) specified - call avail_sizes() for"
+                        " all available options".format(new_label)
                     )
 
                 log.warning(
@@ -1802,17 +1806,15 @@ class LinodeAPIv3(LinodeAPI):
 
         if not distro_id:
             raise SaltCloudNotFound(
-                "The DistributionID for the '{}' profile could not be found.\n"
-                "The '{}' instance could not be provisioned. The following distributions "
-                "are available:\n{}".format(
+                "The DistributionID for the '{}' profile could not be found.\nThe '{}'"
+                " instance could not be provisioned. The following distributions are"
+                " available:\n{}".format(
                     vm_image_name,
                     vm_["name"],
                     pprint.pprint(
                         sorted(
-                            [
-                                distro["LABEL"].encode(__salt_system_encoding__)
-                                for distro in distributions
-                            ]
+                            distro["LABEL"].encode(__salt_system_encoding__)
+                            for distro in distributions
                         )
                     ),
                 )
@@ -2348,7 +2350,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudException(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
     return _get_cloud_interface().destroy(name)
 

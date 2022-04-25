@@ -145,7 +145,8 @@ class VultrTestCase(TestCase, LoaderModuleMockMixin):
             with TstSuiteLoggingHandler() as handler:
                 ret = vultr.create(kwargs)
                 self.assertIn(
-                    "ERROR:Your Vultr account does not have a firewall group with ID doesnotexist",
+                    "ERROR:Your Vultr account does not have a firewall group with ID"
+                    " doesnotexist",
                     handler.messages,
                 )
                 self.assertFalse(ret)

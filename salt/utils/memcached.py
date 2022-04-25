@@ -95,7 +95,7 @@ def get_conn(opts, profile=None, host=None, port=None):
         return memcache.Client(["{}:{}".format(host, port)])
     else:
         raise CommandExecutionError(
-            "(unable to import memcache, " "module most likely not installed)"
+            "(unable to import memcache, module most likely not installed)"
         )
 
 

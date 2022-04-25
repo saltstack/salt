@@ -99,8 +99,9 @@ def _windows_iqn():
     get = "iSCSINodeName"
 
     cmd_ret = salt.modules.cmdmod.run_all(
-        "{} /namespace:{} path {} get {} /format:table"
-        "".format(wmic, namespace, path, get)
+        "{} /namespace:{} path {} get {} /format:table".format(
+            wmic, namespace, path, get
+        )
     )
 
     for line in cmd_ret["stdout"].splitlines():

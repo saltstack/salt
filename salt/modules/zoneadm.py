@@ -419,7 +419,11 @@ def verify(zone):
     ret = {"status": True}
 
     ## verify zone
-    res = __salt__["cmd.run_all"]("zoneadm -z {zone} verify".format(zone=zone,))
+    res = __salt__["cmd.run_all"](
+        "zoneadm -z {zone} verify".format(
+            zone=zone,
+        )
+    )
     ret["status"] = res["retcode"] == 0
     ret["message"] = res["stdout"] if ret["status"] else res["stderr"]
     ret["message"] = ret["message"].replace("zoneadm: ", "")

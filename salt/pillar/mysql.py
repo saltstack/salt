@@ -133,8 +133,8 @@ class MySQLExtPillar(SqlBaseExtPillar):
 
     def extract_queries(self, args, kwargs):  # pylint: disable=useless-super-delegation
         """
-            This function normalizes the config block into a set of queries we
-            can use.  The return is a list of consistently laid out dicts.
+        This function normalizes the config block into a set of queries we
+        can use.  The return is a list of consistently laid out dicts.
         """
         return super().extract_queries(args, kwargs)
 

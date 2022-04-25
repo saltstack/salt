@@ -81,6 +81,22 @@ def test_diskusage_match(stub_disk_usage, stub_disk_partition):
         assert ret == [{"diskusage": 50, "mount": "/"}]
 
 
+def test_diskusage_match_no_percent(stub_disk_usage, stub_disk_partition):
+    disk_usage_mock = Mock(side_effect=stub_disk_usage)
+    with patch("salt.utils.platform.is_windows", MagicMock(return_value=False)), patch(
+        "psutil.disk_partitions", MagicMock(return_value=stub_disk_partition)
+    ), patch("psutil.disk_usage", disk_usage_mock):
+
+        # Test without the percent
+        config = [{"/": 50}]
+
+        ret = diskusage.validate(config)
+        assert ret == (True, "Valid beacon configuration")
+
+        ret = diskusage.beacon(config)
+        assert ret == [{"diskusage": 50, "mount": "/"}]
+
+
 def test_diskusage_nomatch(stub_disk_usage, stub_disk_partition):
     disk_usage_mock = Mock(side_effect=stub_disk_usage)
     with patch("salt.utils.platform.is_windows", MagicMock(return_value=False)), patch(

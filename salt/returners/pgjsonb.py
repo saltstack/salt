@@ -314,7 +314,8 @@ def returner(ret):
             )
     except salt.exceptions.SaltMasterError:
         log.critical(
-            "Could not store return with pgjsonb returner. PostgreSQL server unavailable."
+            "Could not store return with pgjsonb returner. PostgreSQL server"
+            " unavailable."
         )
 
 
@@ -463,7 +464,10 @@ def _purge_jobs(timestamp):
     """
     with _get_serv() as cursor:
         try:
-            sql = "delete from jids where jid in (select distinct jid from salt_returns where alter_time < %s)"
+            sql = (
+                "delete from jids where jid in (select distinct jid from salt_returns"
+                " where alter_time < %s)"
+            )
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")
         except psycopg2.DatabaseError as err:
@@ -521,8 +525,11 @@ def _archive_jobs(timestamp):
                 raise err
 
         try:
-            sql = "insert into {} select * from {} where jid in (select distinct jid from salt_returns where alter_time < %s)".format(
-                target_tables["jids"], "jids"
+            sql = (
+                "insert into {} select * from {} where jid in (select distinct jid from"
+                " salt_returns where alter_time < %s)".format(
+                    target_tables["jids"], "jids"
+                )
             )
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")

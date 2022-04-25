@@ -86,9 +86,9 @@ def absent(name, database, **client_args):
     if __salt__["influxdb.continuous_query_exists"](database, name, **client_args):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = (
-                "continuous query {} is present and needs to be removed"
-            ).format(name)
+            ret[
+                "comment"
+            ] = "continuous query {} is present and needs to be removed".format(name)
             return ret
         if __salt__["influxdb.drop_continuous_query"](database, name, **client_args):
             ret["comment"] = "continuous query {} has been removed".format(name)

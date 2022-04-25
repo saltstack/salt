@@ -76,8 +76,7 @@ class RosterEntryConfig(Schema):
     timeout = IntegerItem(
         title="Timeout",
         description=(
-            "Number of seconds to wait for response "
-            "when establishing an SSH connection"
+            "Number of seconds to wait for response when establishing an SSH connection"
         ),
     )
     thin_dir = StringItem(

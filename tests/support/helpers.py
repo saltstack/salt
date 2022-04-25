@@ -14,6 +14,7 @@ import errno
 import fnmatch
 import functools
 import inspect
+import io
 import json
 import logging
 import os
@@ -57,10 +58,16 @@ PRE_PYTEST_SKIP_OR_NOT = "PRE_PYTEST_DONT_SKIP" not in os.environ
 PRE_PYTEST_SKIP_REASON = (
     "PRE PYTEST - This test was skipped before running under pytest"
 )
-PRE_PYTEST_SKIP = pytest.mark.skipif(
-    PRE_PYTEST_SKIP_OR_NOT, reason=PRE_PYTEST_SKIP_REASON
+PRE_PYTEST_SKIP = pytest.mark.skip_on_env(
+    "PRE_PYTEST_DONT_SKIP", present=False, reason=PRE_PYTEST_SKIP_REASON
 )
 ON_PY35 = sys.version_info < (3, 6)
+
+SKIP_INITIAL_PHOTONOS_FAILURES = pytest.mark.skip_on_env(
+    "SKIP_INITIAL_PHOTONOS_FAILURES",
+    eq="1",
+    reason="Failing test when PhotonOS was added to CI",
+)
 
 
 def no_symlinks():
@@ -104,8 +111,8 @@ def destructiveTest(caller):
     """
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please stop using `@destructiveTest`, it will be removed in {date}, and instead use "
-        "`@pytest.mark.destructive_test`.",
+        "Please stop using `@destructiveTest`, it will be removed in {date}, and"
+        " instead use `@pytest.mark.destructive_test`.",
         stacklevel=3,
     )
     setattr(caller, "__destructive_test__", True)
@@ -142,8 +149,8 @@ def expensiveTest(caller):
     """
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please stop using `@expensiveTest`, it will be removed in {date}, and instead use "
-        "`@pytest.mark.expensive_test`.",
+        "Please stop using `@expensiveTest`, it will be removed in {date}, and instead"
+        " use `@pytest.mark.expensive_test`.",
         stacklevel=3,
     )
     setattr(caller, "__expensive_test__", True)
@@ -496,7 +503,7 @@ class ForceImportErrorOn:
     def patch_import_function(self):
         self.patcher.start()
 
-    def restore_import_funtion(self):
+    def restore_import_function(self):
         self.patcher.stop()
 
     def __fake_import__(
@@ -525,7 +532,7 @@ class ForceImportErrorOn:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.restore_import_funtion()
+        self.restore_import_function()
 
 
 class MockWraps:
@@ -578,8 +585,8 @@ def requires_network(only_local_network=False):
     """
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please stop using `@requires_network`, it will be removed in {date}, and instead use "
-        "`@pytest.mark.requires_network`.",
+        "Please stop using `@requires_network`, it will be removed in {date}, and"
+        " instead use `@pytest.mark.requires_network`.",
         stacklevel=3,
     )
 
@@ -739,7 +746,7 @@ def with_system_user(
                     return func(cls, username)
                 except Exception as exc:  # pylint: disable=W0703
                     log.error(
-                        "Running %r raised an exception: %s", func, exc, exc_info=True,
+                        "Running %r raised an exception: %s", func, exc, exc_info=True
                     )
                     # Store the original exception details which will be raised
                     # a little further down the code
@@ -833,7 +840,7 @@ def with_system_group(group, on_existing="delete", delete=True):
                     return func(cls, group)
                 except Exception as exc:  # pylint: disable=W0703
                     log.error(
-                        "Running %r raised an exception: %s", func, exc, exc_info=True,
+                        "Running %r raised an exception: %s", func, exc, exc_info=True
                     )
                     # Store the original exception details which will be raised
                     # a little further down the code
@@ -957,7 +964,7 @@ def with_system_user_and_group(username, group, on_existing="delete", delete=Tru
                     return func(cls, username, group)
                 except Exception as exc:  # pylint: disable=W0703
                     log.error(
-                        "Running %r raised an exception: %s", func, exc, exc_info=True,
+                        "Running %r raised an exception: %s", func, exc, exc_info=True
                     )
                     # Store the original exception details which will be raised
                     # a little further down the code
@@ -1181,8 +1188,8 @@ def requires_salt_states(*names):
     """
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please stop using `@requires_salt_states`, it will be removed in {date}, and instead use "
-        "`@pytest.mark.requires_salt_states`.",
+        "Please stop using `@requires_salt_states`, it will be removed in {date}, and"
+        " instead use `@pytest.mark.requires_salt_states`.",
         stacklevel=3,
     )
     not_available = _check_required_sminion_attributes("states", *names)
@@ -1199,8 +1206,8 @@ def requires_salt_modules(*names):
     """
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please stop using `@requires_salt_modules`, it will be removed in {date}, and instead use "
-        "`@pytest.mark.requires_salt_modules`.",
+        "Please stop using `@requires_salt_modules`, it will be removed in {date}, and"
+        " instead use `@pytest.mark.requires_salt_modules`.",
         stacklevel=3,
     )
     not_available = _check_required_sminion_attributes("functions", *names)
@@ -1212,8 +1219,8 @@ def requires_salt_modules(*names):
 def skip_if_binaries_missing(*binaries, **kwargs):
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please stop using `@skip_if_binaries_missing`, it will be removed in {date}, and instead use "
-        "`@pytest.mark.skip_if_binaries_missing`.",
+        "Please stop using `@skip_if_binaries_missing`, it will be removed in {date},"
+        " and instead use `@pytest.mark.skip_if_binaries_missing`.",
         stacklevel=3,
     )
     import salt.utils.path
@@ -1248,8 +1255,8 @@ def skip_if_binaries_missing(*binaries, **kwargs):
 def skip_if_not_root(func):
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please stop using `@skip_if_not_root`, it will be removed in {date}, and instead use "
-        "`@pytest.mark.skip_if_not_root`.",
+        "Please stop using `@skip_if_not_root`, it will be removed in {date}, and"
+        " instead use `@pytest.mark.skip_if_not_root`.",
         stacklevel=3,
     )
     setattr(func, "__skip_if_not_root__", True)
@@ -1388,8 +1395,10 @@ def generate_random_name(prefix, size=6):
     """
     salt.utils.versions.warn_until_date(
         "20220101",
-        "Please replace your call 'generate_random_name({0})' with 'random_string({0}, lowercase=False)' as "
-        "'generate_random_name' will be removed after {{date}}".format(prefix),
+        "Please replace your call 'generate_random_name({0})' with 'random_string({0},"
+        " lowercase=False)' as 'generate_random_name' will be removed after {{date}}".format(
+            prefix
+        ),
         stacklevel=3,
     )
     return random_string(prefix, size=size, lowercase=False)
@@ -1511,8 +1520,9 @@ class Webserver:
         if self.web_root is None:
             raise RuntimeError("Webserver instance has not been started")
         err_msg = (
-            "invalid path, must be either a relative path or a path "
-            "within {}".format(self.root)
+            "invalid path, must be either a relative path or a path within {}".format(
+                self.root
+            )
         )
         try:
             relpath = (
@@ -1660,6 +1670,10 @@ class VirtualEnv:
     venv_dir = attr.ib(converter=_cast_to_pathlib_path)
     env = attr.ib(default=None)
     system_site_packages = attr.ib(default=False)
+    pip_requirement = attr.ib(default="pip>=20.2.4,<21.2", repr=False)
+    setuptools_requirement = attr.ib(
+        default="setuptools!=50.*,!=51.*,!=52.*", repr=False
+    )
     environ = attr.ib(init=False, repr=False)
     venv_python = attr.ib(init=False, repr=False)
     venv_bin_dir = attr.ib(init=False, repr=False)
@@ -1698,6 +1712,11 @@ class VirtualEnv:
 
     def install(self, *args, **kwargs):
         return self.run(self.venv_python, "-m", "pip", "install", *args, **kwargs)
+
+    def uninstall(self, *args, **kwargs):
+        return self.run(
+            self.venv_python, "-m", "pip", "uninstall", "-y", *args, **kwargs
+        )
 
     def run(self, *args, **kwargs):
         check = kwargs.pop("check", True)
@@ -1784,7 +1803,7 @@ class VirtualEnv:
             python=self.get_real_python(),
             system_site_packages=self.system_site_packages,
         )
-        self.install("-U", "pip", "setuptools!=50.*,!=51.*,!=52.*")
+        self.install("-U", self.pip_requirement, self.setuptools_requirement)
         log.debug("Created virtualenv in %s", self.venv_dir)
 
 
@@ -1792,13 +1811,19 @@ class VirtualEnv:
 class SaltVirtualEnv(VirtualEnv):
     """
     This is a VirtualEnv implementation which has this salt checkout installed in it
+    using static requirements
     """
-
-    system_site_packages = attr.ib(init=False, default=True)
 
     def _create_virtualenv(self):
         super()._create_virtualenv()
-        self.install("--no-use-pep517", RUNTIME_VARS.CODE_DIR)
+        self.install(RUNTIME_VARS.CODE_DIR)
+
+    def install(self, *args, **kwargs):
+        env = self.environ.copy()
+        env.update(kwargs.pop("env", None) or {})
+        env["USE_STATIC_REQUIREMENTS"] = "1"
+        kwargs["env"] = env
+        return super().install(*args, **kwargs)
 
 
 @contextmanager
@@ -1850,3 +1875,48 @@ def get_virtualenv_binary_path():
         # We're not running inside a virtualenv
         virtualenv_binary = None
     return virtualenv_binary
+
+
+class CaptureOutput:
+    def __init__(self, capture_stdout=True, capture_stderr=True):
+        if capture_stdout:
+            self._stdout = io.StringIO()
+        else:
+            self._stdout = None
+        if capture_stderr:
+            self._stderr = io.StringIO()
+        else:
+            self._stderr = None
+        self._original_stdout = None
+        self._original_stderr = None
+
+    def __enter__(self):
+        if self._stdout:
+            self._original_stdout = sys.stdout
+            sys.stdout = self._stdout
+        if self._stderr:
+            self._original_stderr = sys.stderr
+            sys.stderr = self._stderr
+        return self
+
+    def __exit__(self, *args):
+        if self._stdout:
+            sys.stdout = self._original_stdout
+            self._original_stdout = None
+        if self._stderr:
+            sys.stderr = self._original_stderr
+            self._original_stderr = None
+
+    @property
+    def stdout(self):
+        if self._stdout is None:
+            return
+        self._stdout.seek(0)
+        return self._stdout.read()
+
+    @property
+    def stderr(self):
+        if self._stderr is None:
+            return
+        self._stderr.seek(0)
+        return self._stderr.read()

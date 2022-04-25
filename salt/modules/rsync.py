@@ -131,8 +131,8 @@ def rsync(
     additional_opts
         Any additional rsync options, should be specified as a list.
 
-   saltenv
-           Specify a salt fileserver environment to be used.
+    saltenv
+        Specify a salt fileserver environment to be used.
 
     CLI Example:
 

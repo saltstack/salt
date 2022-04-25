@@ -21,7 +21,7 @@ def test_no_adb_command():
         ret = adb.__virtual__()
 
         mock.assert_called_once_with("adb")
-        assert not ret
+        assert ret == (False, "adb is missing.")
 
 
 def test_with_adb_command():
@@ -54,7 +54,8 @@ def test_invalid_states():
     ret = adb.validate(config)
     assert ret == (
         False,
-        "Need a one of the following adb states: offline, bootloader, device, host, recovery, no permissions, sideload, unauthorized, unknown, missing",
+        "Need a one of the following adb states: offline, bootloader, device, host,"
+        " recovery, no permissions, sideload, unauthorized, unknown, missing",
     )
 
 
@@ -198,7 +199,9 @@ def test_with_startup():
     config = [{"states": ["device"]}]
 
     mock = Mock(
-        return_value="* daemon started successfully *\nList of devices attached\nHTC\tdevice",
+        return_value=(
+            "* daemon started successfully *\nList of devices attached\nHTC\tdevice"
+        ),
     )
     with patch.dict(adb.__salt__, {"cmd.run": mock}):
         ret = adb.validate(config)
@@ -212,7 +215,9 @@ def test_with_user():
     config = [{"states": ["device"], "user": "fred"}]
 
     mock = Mock(
-        return_value="* daemon started successfully *\nList of devices attached\nHTC\tdevice"
+        return_value=(
+            "* daemon started successfully *\nList of devices attached\nHTC\tdevice"
+        )
     )
     with patch.dict(adb.__salt__, {"cmd.run": mock}):
         ret = adb.validate(config)
@@ -357,7 +362,8 @@ def test_device_battery_not_found():
 
     out = [
         "List of devices attached\nHTC\tdevice",
-        "/system/bin/sh: cat: /sys/class/power_supply/*/capacity: No such file or directory",
+        "/system/bin/sh: cat: /sys/class/power_supply/*/capacity: No such file or"
+        " directory",
     ]
 
     mock = Mock(side_effect=out)

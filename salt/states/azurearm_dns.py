@@ -230,16 +230,17 @@ def zone_present(
                 if registration_virtual_networks and not isinstance(
                     registration_virtual_networks, list
                 ):
-                    ret[
-                        "comment"
-                    ] = "registration_virtual_networks must be supplied as a list of VNET ID paths!"
+                    ret["comment"] = (
+                        "registration_virtual_networks must be supplied as a list of"
+                        " VNET ID paths!"
+                    )
                     return ret
                 reg_vnets = zone.get("registration_virtual_networks", [])
                 remote_reg_vnets = sorted(
-                    [vnet["id"].lower() for vnet in reg_vnets if "id" in vnet]
+                    vnet["id"].lower() for vnet in reg_vnets if "id" in vnet
                 )
                 local_reg_vnets = sorted(
-                    [vnet.lower() for vnet in registration_virtual_networks or []]
+                    vnet.lower() for vnet in registration_virtual_networks or []
                 )
                 if local_reg_vnets != remote_reg_vnets:
                     ret["changes"]["registration_virtual_networks"] = {
@@ -251,16 +252,17 @@ def zone_present(
                 if resolution_virtual_networks and not isinstance(
                     resolution_virtual_networks, list
                 ):
-                    ret[
-                        "comment"
-                    ] = "resolution_virtual_networks must be supplied as a list of VNET ID paths!"
+                    ret["comment"] = (
+                        "resolution_virtual_networks must be supplied as a list of VNET"
+                        " ID paths!"
+                    )
                     return ret
                 res_vnets = zone.get("resolution_virtual_networks", [])
                 remote_res_vnets = sorted(
-                    [vnet["id"].lower() for vnet in res_vnets if "id" in vnet]
+                    vnet["id"].lower() for vnet in res_vnets if "id" in vnet
                 )
                 local_res_vnets = sorted(
-                    [vnet.lower() for vnet in resolution_virtual_networks or []]
+                    vnet.lower() for vnet in resolution_virtual_networks or []
                 )
                 if local_res_vnets != remote_res_vnets:
                     ret["changes"]["resolution_virtual_networks"] = {
@@ -575,15 +577,14 @@ def record_set_present(
                             ret["changes"] = {"new": {record_str: record}}
                 elif record_str[-1] == "s":
                     if not isinstance(record, list):
-                        ret[
-                            "comment"
-                        ] = "{} record information must be specified as a list of dictionaries!".format(
-                            record_str
+                        ret["comment"] = (
+                            "{} record information must be specified as a list of"
+                            " dictionaries!".format(record_str)
                         )
                         return ret
-                    local, remote = [
+                    local, remote = (
                         sorted(config) for config in (record, rec_set[record_str])
-                    ]
+                    )
                     for val in local:
                         for key in val:
                             local_val = val[key]

@@ -335,7 +335,7 @@ def _get_proxy_connection_details():
     elif proxytype == "esxvm":
         details = __salt__["esxvm.get_details"]()
     else:
-        raise CommandExecutionError("'{}' proxy is not supported" "".format(proxytype))
+        raise CommandExecutionError("'{}' proxy is not supported".format(proxytype))
     proxy_details = [
         details.get("vcenter") if "vcenter" in details else details.get("host"),
         details.get("username"),
@@ -365,8 +365,9 @@ def _supports_proxies(*proxy_types):
             proxy_type = get_proxy_type()
             if proxy_type not in proxy_types:
                 raise CommandExecutionError(
-                    "'{}' proxy is not supported by function {}"
-                    "".format(proxy_type, fn.__name__)
+                    "'{}' proxy is not supported by function {}".format(
+                        proxy_type, fn.__name__
+                    )
                 )
             return fn(*args, **salt.utils.args.clean_kwargs(**kwargs))
 
@@ -1525,7 +1526,7 @@ def reset_syslog_config(
     """
     if not syslog_config:
         raise CommandExecutionError(
-            "The 'reset_syslog_config' function requires a " "'syslog_config' setting."
+            "The 'reset_syslog_config' function requires a 'syslog_config' setting."
         )
 
     valid_resets = [
@@ -2408,7 +2409,12 @@ def test_vcenter_connection(service_instance=None):
 @depends(HAS_PYVMOMI)
 @ignores_kwargs("credstore")
 def system_info(
-    host, username, password, protocol=None, port=None, verify_ssl=True,
+    host,
+    username,
+    password,
+    protocol=None,
+    port=None,
+    verify_ssl=True,
 ):
     """
     Return system information about a VMware environment.
@@ -4200,7 +4206,9 @@ def vsan_add_disks(
                 ret.update(
                     {
                         host_name: {
-                            "Disks Added": "No new VSAN-eligible disks were found to add."
+                            "Disks Added": (
+                                "No new VSAN-eligible disks were found to add."
+                            )
                         }
                     }
                 )
@@ -4787,8 +4795,7 @@ def create_dvs(dvs_dict, dvs_name, service_instance=None):
         dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs_name])
         if not dvs_refs:
             raise VMwareObjectRetrievalError(
-                "DVS '{}' wasn't found in datacenter '{}'"
-                "".format(dvs_name, datacenter)
+                "DVS '{}' wasn't found in datacenter '{}'".format(dvs_name, datacenter)
             )
         dvs_ref = dvs_refs[0]
         salt.utils.vmware.set_dvs_network_resource_management_enabled(
@@ -4838,7 +4845,7 @@ def update_dvs(dvs_dict, dvs, service_instance=None):
     dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
     if not dvs_refs:
         raise VMwareObjectRetrievalError(
-            "DVS '{}' wasn't found in " "datacenter '{}'" "".format(dvs, datacenter)
+            "DVS '{}' wasn't found in datacenter '{}'".format(dvs, datacenter)
         )
     dvs_ref = dvs_refs[0]
     # Build the config spec from the input
@@ -5065,9 +5072,7 @@ def list_dvportgroups(dvs=None, portgroup_names=None, service_instance=None):
     if dvs:
         dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
         if not dvs_refs:
-            raise VMwareObjectRetrievalError(
-                "DVS '{}' was not " "retrieved".format(dvs)
-            )
+            raise VMwareObjectRetrievalError("DVS '{}' was not retrieved".format(dvs))
         dvs_ref = dvs_refs[0]
     get_all_portgroups = True if not portgroup_names else False
     for pg_ref in salt.utils.vmware.get_dvportgroups(
@@ -5107,7 +5112,7 @@ def list_uplink_dvportgroup(dvs, service_instance=None):
         dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
     dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
     if not dvs_refs:
-        raise VMwareObjectRetrievalError("DVS '{}' was not " "retrieved".format(dvs))
+        raise VMwareObjectRetrievalError("DVS '{}' was not retrieved".format(dvs))
     uplink_pg_ref = salt.utils.vmware.get_uplink_dvportgroup(dvs_refs[0])
     return _get_dvportgroup_dict(uplink_pg_ref)
 
@@ -5339,7 +5344,7 @@ def create_dvportgroup(portgroup_dict, portgroup_name, dvs, service_instance=Non
         dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
     dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
     if not dvs_refs:
-        raise VMwareObjectRetrievalError("DVS '{}' was not " "retrieved".format(dvs))
+        raise VMwareObjectRetrievalError("DVS '{}' was not retrieved".format(dvs))
     # Make the name of the dvportgroup consistent with the parameter
     portgroup_dict["name"] = portgroup_name
     spec = vim.DVPortgroupConfigSpec()
@@ -5392,13 +5397,13 @@ def update_dvportgroup(portgroup_dict, portgroup, dvs, service_instance=True):
         dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
     dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
     if not dvs_refs:
-        raise VMwareObjectRetrievalError("DVS '{}' was not " "retrieved".format(dvs))
+        raise VMwareObjectRetrievalError("DVS '{}' was not retrieved".format(dvs))
     pg_refs = salt.utils.vmware.get_dvportgroups(
         dvs_refs[0], portgroup_names=[portgroup]
     )
     if not pg_refs:
         raise VMwareObjectRetrievalError(
-            "Portgroup '{}' was not " "retrieved".format(portgroup)
+            "Portgroup '{}' was not retrieved".format(portgroup)
         )
     pg_props = salt.utils.vmware.get_properties_of_managed_object(
         pg_refs[0], ["config"]
@@ -5455,13 +5460,13 @@ def remove_dvportgroup(portgroup, dvs, service_instance=None):
         dc_ref = salt.utils.vmware.get_datacenter(service_instance, datacenter)
     dvs_refs = salt.utils.vmware.get_dvss(dc_ref, dvs_names=[dvs])
     if not dvs_refs:
-        raise VMwareObjectRetrievalError("DVS '{}' was not " "retrieved".format(dvs))
+        raise VMwareObjectRetrievalError("DVS '{}' was not retrieved".format(dvs))
     pg_refs = salt.utils.vmware.get_dvportgroups(
         dvs_refs[0], portgroup_names=[portgroup]
     )
     if not pg_refs:
         raise VMwareObjectRetrievalError(
-            "Portgroup '{}' was not " "retrieved".format(portgroup)
+            "Portgroup '{}' was not retrieved".format(portgroup)
         )
     salt.utils.vmware.remove_dvportgroup(pg_refs[0])
     return True
@@ -5559,7 +5564,7 @@ def list_default_vsan_policy(service_instance=None):
         p for p in policies if p.systemCreatedProfileType == "VsanDefaultProfile"
     ]
     if not def_policies:
-        raise VMwareObjectRetrievalError("Default VSAN policy was not " "retrieved")
+        raise VMwareObjectRetrievalError("Default VSAN policy was not retrieved")
     return _get_policy_dict(def_policies[0])
 
 
@@ -5720,7 +5725,7 @@ def update_storage_policy(policy, policy_dict, service_instance=None):
     profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
     policies = salt.utils.pbm.get_storage_policies(profile_manager, [policy])
     if not policies:
-        raise VMwareObjectRetrievalError("Policy '{}' was not found" "".format(policy))
+        raise VMwareObjectRetrievalError("Policy '{}' was not found".format(policy))
     policy_ref = policies[0]
     policy_update_spec = pbm.profile.CapabilityBasedProfileUpdateSpec()
     log.trace("Setting policy values in policy_update_spec")
@@ -5761,7 +5766,7 @@ def list_default_storage_policy_of_datastore(datastore, service_instance=None):
     )
     if not ds_refs:
         raise VMwareObjectRetrievalError(
-            "Datastore '{}' was not " "found".format(datastore)
+            "Datastore '{}' was not found".format(datastore)
         )
     profile_manager = salt.utils.pbm.get_profile_manager(service_instance)
     policy = salt.utils.pbm.get_default_storage_policy_of_datastore(
@@ -5801,7 +5806,7 @@ def assign_default_storage_policy_to_datastore(
     # Find policy
     policies = salt.utils.pbm.get_storage_policies(profile_manager, [policy])
     if not policies:
-        raise VMwareObjectRetrievalError("Policy '{}' was not found" "".format(policy))
+        raise VMwareObjectRetrievalError("Policy '{}' was not found".format(policy))
     policy_ref = policies[0]
     # Find datastore
     target_ref = _get_proxy_target(service_instance)
@@ -5810,7 +5815,7 @@ def assign_default_storage_policy_to_datastore(
     )
     if not ds_refs:
         raise VMwareObjectRetrievalError(
-            "Datastore '{}' was not " "found".format(datastore)
+            "Datastore '{}' was not found".format(datastore)
         )
     ds_ref = ds_refs[0]
     salt.utils.pbm.assign_default_storage_policy_to_datastore(
@@ -6051,11 +6056,15 @@ def _apply_cluster_dict(cluster_spec, cluster_dict, vsan_spec=None, vsan_61=True
                 vim.ClusterFailoverResourcesAdmissionControlPolicy,
             ):
 
-                das_config.admissionControlPolicy = vim.ClusterFailoverResourcesAdmissionControlPolicy(
-                    cpuFailoverResourcesPercent=adm_pol_dict["cpu_failover_percent"],
-                    memoryFailoverResourcesPercent=adm_pol_dict[
-                        "memory_failover_percent"
-                    ],
+                das_config.admissionControlPolicy = (
+                    vim.ClusterFailoverResourcesAdmissionControlPolicy(
+                        cpuFailoverResourcesPercent=adm_pol_dict[
+                            "cpu_failover_percent"
+                        ],
+                        memoryFailoverResourcesPercent=adm_pol_dict[
+                            "memory_failover_percent"
+                        ],
+                    )
                 )
         if "default_vm_settings" in ha_dict:
             vm_set_dict = ha_dict["default_vm_settings"]
@@ -6549,7 +6558,7 @@ def rename_datastore(datastore_name, new_datastore_name, service_instance=None):
     )
     if not datastores:
         raise VMwareObjectRetrievalError(
-            "Datastore '{}' was not found" "".format(datastore_name)
+            "Datastore '{}' was not found".format(datastore_name)
         )
     ds = datastores[0]
     salt.utils.vmware.rename_datastore(ds, new_datastore_name)
@@ -6684,7 +6693,7 @@ def _get_entity(service_instance, entity):
         return salt.utils.vmware.get_cluster(dc_ref, entity["cluster"])
     elif entity["type"] == "vcenter":
         return None
-    raise ArgumentValueError("Unsupported entity type '{}'" "".format(entity["type"]))
+    raise ArgumentValueError("Unsupported entity type '{}'".format(entity["type"]))
 
 
 def _validate_entity(entity):
@@ -6702,9 +6711,7 @@ def _validate_entity(entity):
     elif entity["type"] == "vcenter":
         schema = VCenterEntitySchema.serialize()
     else:
-        raise ArgumentValueError(
-            "Unsupported entity type '{}'" "".format(entity["type"])
-        )
+        raise ArgumentValueError("Unsupported entity type '{}'".format(entity["type"]))
     try:
         jsonschema.validate(entity, schema)
     except jsonschema.exceptions.ValidationError as exc:
@@ -6810,7 +6817,7 @@ def assign_license(
         licenses = salt.utils.vmware.get_licenses(service_instance)
         if not [l for l in licenses if l.licenseKey == license_key]:
             raise VMwareObjectRetrievalError(
-                "License '{}' wasn't found" "".format(license_name)
+                "License '{}' wasn't found".format(license_name)
             )
     salt.utils.vmware.assign_license(
         service_instance,
@@ -6964,7 +6971,7 @@ def erase_disk_partitions(disk_id=None, scsi_address=None, service_instance=None
     """
     if not disk_id and not scsi_address:
         raise ArgumentValueError(
-            "Either 'disk_id' or 'scsi_address' " "needs to be specified"
+            "Either 'disk_id' or 'scsi_address' needs to be specified"
         )
     host_ref = _get_proxy_target(service_instance)
     hostname = __proxy__["esxi.get_details"]()["esxi_host"]
@@ -6972,8 +6979,9 @@ def erase_disk_partitions(disk_id=None, scsi_address=None, service_instance=None
         scsi_address_to_lun = salt.utils.vmware.get_scsi_address_to_lun_map(host_ref)
         if scsi_address not in scsi_address_to_lun:
             raise VMwareObjectRetrievalError(
-                "Scsi lun with address '{}' was not found on host '{}'"
-                "".format(scsi_address, hostname)
+                "Scsi lun with address '{}' was not found on host '{}'".format(
+                    scsi_address, hostname
+                )
             )
         disk_id = scsi_address_to_lun[scsi_address].canonicalName
         log.trace(
@@ -7021,7 +7029,7 @@ def list_disk_partitions(disk_id=None, scsi_address=None, service_instance=None)
     """
     if not disk_id and not scsi_address:
         raise ArgumentValueError(
-            "Either 'disk_id' or 'scsi_address' " "needs to be specified"
+            "Either 'disk_id' or 'scsi_address' needs to be specified"
         )
     host_ref = _get_proxy_target(service_instance)
     hostname = __proxy__["esxi.get_details"]()["esxi_host"]
@@ -7029,8 +7037,9 @@ def list_disk_partitions(disk_id=None, scsi_address=None, service_instance=None)
         scsi_address_to_lun = salt.utils.vmware.get_scsi_address_to_lun_map(host_ref)
         if scsi_address not in scsi_address_to_lun:
             raise VMwareObjectRetrievalError(
-                "Scsi lun with address '{}' was not found on host '{}'"
-                "".format(scsi_address, hostname)
+                "Scsi lun with address '{}' was not found on host '{}'".format(
+                    scsi_address, hostname
+                )
             )
         disk_id = scsi_address_to_lun[scsi_address].canonicalName
         log.trace(
@@ -7169,8 +7178,7 @@ def create_diskgroup(
     for id in disk_ids:
         if not [d for d in disks if d.canonicalName == id]:
             raise VMwareObjectRetrievalError(
-                "No disk with id '{}' was found in ESXi host '{}'"
-                "".format(id, hostname)
+                "No disk with id '{}' was found in ESXi host '{}'".format(id, hostname)
             )
     cache_disk = [d for d in disks if d.canonicalName == cache_disk_id][0]
     capacity_disks = [d for d in disks if d.canonicalName in capacity_disk_ids]
@@ -7233,16 +7241,18 @@ def add_capacity_to_diskgroup(
         for id in capacity_disk_ids:
             if not [d for d in disks if d.canonicalName == id]:
                 raise VMwareObjectRetrievalError(
-                    "No disk with id '{}' was found in ESXi host '{}'"
-                    "".format(id, hostname)
+                    "No disk with id '{}' was found in ESXi host '{}'".format(
+                        id, hostname
+                    )
                 )
     diskgroups = salt.utils.vmware.get_diskgroups(
         host_ref, cache_disk_ids=[cache_disk_id]
     )
     if not diskgroups:
         raise VMwareObjectRetrievalError(
-            "No diskgroup with cache disk id '{}' was found in ESXi "
-            "host '{}'".format(cache_disk_id, hostname)
+            "No diskgroup with cache disk id '{}' was found in ESXi host '{}'".format(
+                cache_disk_id, hostname
+            )
         )
     vsan_disk_mgmt_system = salt.utils.vsan.get_vsan_disk_management_system(
         service_instance
@@ -7311,16 +7321,18 @@ def remove_capacity_from_diskgroup(
         for id in capacity_disk_ids:
             if not [d for d in disks if d.canonicalName == id]:
                 raise VMwareObjectRetrievalError(
-                    "No disk with id '{}' was found in ESXi host '{}'"
-                    "".format(id, hostname)
+                    "No disk with id '{}' was found in ESXi host '{}'".format(
+                        id, hostname
+                    )
                 )
     diskgroups = salt.utils.vmware.get_diskgroups(
         host_ref, cache_disk_ids=[cache_disk_id]
     )
     if not diskgroups:
         raise VMwareObjectRetrievalError(
-            "No diskgroup with cache disk id '{}' was found in ESXi "
-            "host '{}'".format(cache_disk_id, hostname)
+            "No diskgroup with cache disk id '{}' was found in ESXi host '{}'".format(
+                cache_disk_id, hostname
+            )
         )
     log.trace("data_evacuation = %s", data_evacuation)
     salt.utils.vsan.remove_capacity_from_diskgroup(
@@ -7363,8 +7375,9 @@ def remove_diskgroup(cache_disk_id, data_accessibility=True, service_instance=No
     )
     if not diskgroups:
         raise VMwareObjectRetrievalError(
-            "No diskgroup with cache disk id '{}' was found in ESXi "
-            "host '{}'".format(cache_disk_id, hostname)
+            "No diskgroup with cache disk id '{}' was found in ESXi host '{}'".format(
+                cache_disk_id, hostname
+            )
         )
     log.trace("data accessibility = %s", data_accessibility)
     salt.utils.vsan.remove_diskgroup(
@@ -7463,8 +7476,7 @@ def configure_host_cache(
         )
         if not ds_refs:
             raise VMwareObjectRetrievalError(
-                "Datastore '{}' was not found on host "
-                "'{}'".format(datastore, hostname)
+                "Datastore '{}' was not found on host '{}'".format(datastore, hostname)
             )
         ds_ref = ds_refs[0]
     salt.utils.vmware.configure_host_cache(host_ref, ds_ref, swap_size_MiB)
@@ -7741,9 +7753,7 @@ def _reset_syslog_config_params(
             all_success = False
             ret_dict[reset_param] = {}
             ret_dict[reset_param]["success"] = False
-            ret_dict[reset_param]["message"] = (
-                "Invalid syslog " "configuration parameter"
-            )
+            ret_dict[reset_param]["message"] = "Invalid syslog configuration parameter"
 
     ret_dict["success"] = all_success
 
@@ -8105,7 +8115,8 @@ def add_host_to_dvs(
         )
         pnic_backing = vim.dvs.HostMember.PnicBacking(pnicSpec=[dvs_pnic_spec])
         dvs_hostmember_config_spec = vim.dvs.HostMember.ConfigSpec(
-            host=host_ref, operation="add",
+            host=host_ref,
+            operation="add",
         )
         dvs_config = vim.DVSConfigSpec(
             configVersion=dvs.config.configVersion, host=[dvs_hostmember_config_spec]
@@ -8203,7 +8214,7 @@ def _get_proxy_target(service_instance):
     proxy_type = get_proxy_type()
     if not salt.utils.vmware.is_connection_to_a_vcenter(service_instance):
         raise CommandExecutionError(
-            "'_get_proxy_target' not supported " "when connected via the ESXi host"
+            "'_get_proxy_target' not supported when connected via the ESXi host"
         )
     reference = None
     if proxy_type == "esxcluster":
@@ -8245,7 +8256,7 @@ def _get_proxy_target(service_instance):
         details = __proxy__["esxi.get_details"]()
         if "vcenter" not in details:
             raise InvalidEntityError(
-                "Proxies connected directly to ESXi " "hosts are not supported"
+                "Proxies connected directly to ESXi hosts are not supported"
             )
         references = salt.utils.vmware.get_hosts(
             service_instance, host_names=details["esxi_host"]
@@ -8398,7 +8409,7 @@ def get_vm_config_file(name, datacenter, placement, datastore, service_instance=
         )
         if not container_objects:
             raise salt.exceptions.VMwareObjectRetrievalError(
-                "ESXi host named '{}' wasn't " "found.".format(placement["host"])
+                "ESXi host named '{}' wasn't found.".format(placement["host"])
             )
         container_object = container_objects[0]
 
@@ -8408,7 +8419,7 @@ def get_vm_config_file(name, datacenter, placement, datastore, service_instance=
     )
     if files and len(files[0].file) > 1:
         raise salt.exceptions.VMwareMultipleObjectsError(
-            "Multiple configuration files found in " "the same virtual machine folder"
+            "Multiple configuration files found in the same virtual machine folder"
         )
     elif files and files[0].file:
         return files[0]
@@ -8853,7 +8864,7 @@ def _create_network_backing(network_name, switch_type, parent_ref):
             )
             if not networks:
                 raise salt.exceptions.VMwareObjectRetrievalError(
-                    "The network '{}' could not be " "retrieved.".format(network_name)
+                    "The network '{}' could not be retrieved.".format(network_name)
                 )
             network_ref = networks[0]
             backing = vim.vm.device.VirtualEthernetCard.NetworkBackingInfo()
@@ -8865,8 +8876,7 @@ def _create_network_backing(network_name, switch_type, parent_ref):
             )
             if not networks:
                 raise salt.exceptions.VMwareObjectRetrievalError(
-                    "The port group '{}' could not be "
-                    "retrieved.".format(network_name)
+                    "The port group '{}' could not be retrieved.".format(network_name)
                 )
             network_ref = networks[0]
             dvs_port_connection = vim.dvs.PortConnection(
@@ -9432,8 +9442,7 @@ def _create_disks(service_instance, disks, scsi_controllers=None, parent=None):
                     break
             else:
                 raise salt.exceptions.VMwareObjectNotFoundError(
-                    "The given controller does not exist: "
-                    "{}".format(disk["controller"])
+                    "The given controller does not exist: {}".format(disk["controller"])
                 )
         if "datastore" in disk:
             datastore_ref = salt.utils.vmware.get_datastores(
@@ -9633,7 +9642,7 @@ def _get_device_by_key(devices, key):
         return device_keys[0]
     else:
         raise salt.exceptions.VMwareObjectNotFoundError(
-            "Virtual machine device with unique key " "{} does not exist".format(key)
+            "Virtual machine device with unique key {} does not exist".format(key)
         )
 
 
@@ -9653,7 +9662,7 @@ def _get_device_by_label(devices, label):
         return device_labels[0]
     else:
         raise salt.exceptions.VMwareObjectNotFoundError(
-            "Virtual machine device with " "label {} does not exist".format(label)
+            "Virtual machine device with label {} does not exist".format(label)
         )
 
 
@@ -10778,8 +10787,7 @@ def create_tag(
             tag_created = client.tagging.Tag.create(create_spec)
         except vsphere_errors:
             log.warning(
-                "Unable to create tag. Check user privilege and see"
-                " if category exists."
+                "Unable to create tag. Check user privilege and see if category exists."
             )
     return {"Tag created": tag_created}
 
@@ -11479,8 +11487,9 @@ def _remove_vm(name, datacenter, service_instance, placement=None, power_off=Non
     )
     if not vm_ref:
         raise salt.exceptions.VMwareObjectRetrievalError(
-            "The virtual machine object {} in datacenter "
-            "{} was not found".format(name, datacenter)
+            "The virtual machine object {} in datacenter {} was not found".format(
+                name, datacenter
+            )
         )
     return results, vm_ref
 

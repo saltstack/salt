@@ -1,14 +1,8 @@
 """
-    :codeauthor: Thayne Harbaugh (tharbaug@adobe.com)
-
-    tests.pytests.integration.cli.test_proxy
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    Various integration tests for the salt-proxy executable.
+:codeauthor: Thayne Harbaugh (tharbaug@adobe.com)
 """
 
 import logging
-import time
 
 import pytest
 import salt.defaults.exitcodes
@@ -20,7 +14,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def proxy_minion_id(salt_factories, salt_master):
+def proxy_minion_id(salt_master):
     _proxy_minion_id = random_string("proxy-minion-")
 
     try:
@@ -80,7 +74,7 @@ def test_exit_status_unknown_argument(salt_master, proxy_minion_id):
 # Hangs on Windows. You can add a timeout to the proxy.run command, but then
 # it just times out.
 @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
-def test_exit_status_correct_usage(salt_master, proxy_minion_id):
+def test_exit_status_correct_usage(salt_master, proxy_minion_id, salt_cli):
     """
     Ensure correct exit status when salt-proxy starts correctly.
 
@@ -93,6 +87,10 @@ def test_exit_status_correct_usage(salt_master, proxy_minion_id):
     )
     factory.start()
     assert factory.is_running()
-    time.sleep(0.5)
+    # Let's issue a ping before terminating
+    ret = salt_cli.run("test.ping", minion_tgt=proxy_minion_id)
+    assert ret.exitcode == 0
+    assert ret.json is True
+    # Terminate the proxy minion
     ret = factory.terminate()
     assert ret.exitcode == salt.defaults.exitcodes.EX_OK, ret

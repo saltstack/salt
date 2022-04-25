@@ -225,13 +225,15 @@ def update_dict_key_value(
         dict_pointer[last_key].update(value)
     except AttributeError:
         raise SaltInvocationError(
-            "The last key contains a {}, which cannot update."
-            "".format(type(dict_pointer[last_key]))
+            "The last key contains a {}, which cannot update.".format(
+                type(dict_pointer[last_key])
+            )
         )
     except (ValueError, TypeError):
         raise SaltInvocationError(
-            "Cannot update {} with a {}."
-            "".format(type(dict_pointer[last_key]), type(value))
+            "Cannot update {} with a {}.".format(
+                type(dict_pointer[last_key]), type(value)
+            )
         )
     return in_dict
 
@@ -263,8 +265,9 @@ def append_dict_key_value(
         dict_pointer[last_key].append(value)
     except AttributeError:
         raise SaltInvocationError(
-            "The last key contains a {}, which cannot append."
-            "".format(type(dict_pointer[last_key]))
+            "The last key contains a {}, which cannot append.".format(
+                type(dict_pointer[last_key])
+            )
         )
     return in_dict
 
@@ -296,12 +299,14 @@ def extend_dict_key_value(
         dict_pointer[last_key].extend(value)
     except AttributeError:
         raise SaltInvocationError(
-            "The last key contains a {}, which cannot extend."
-            "".format(type(dict_pointer[last_key]))
+            "The last key contains a {}, which cannot extend.".format(
+                type(dict_pointer[last_key])
+            )
         )
     except TypeError:
         raise SaltInvocationError(
-            "Cannot extend {} with a {}."
-            "".format(type(dict_pointer[last_key]), type(value))
+            "Cannot extend {} with a {}.".format(
+                type(dict_pointer[last_key]), type(value)
+            )
         )
     return in_dict

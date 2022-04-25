@@ -37,7 +37,14 @@ def readlink(path):
     """
     Equivalent to os.readlink()
     """
-    return os.readlink(path)
+    base = os.readlink(path)
+    if salt.utils.platform.is_windows():
+        # Python 3.8 added support for directory junctions which prefixes the
+        # return with `\\?\`. We need to strip that off.
+        # https://docs.python.org/3/library/os.html#os.readlink
+        if base.startswith("\\\\?\\"):
+            base = base[4:]
+    return base
 
 
 def _is_reparse_point(path):
@@ -117,7 +124,7 @@ def which(exe=None):
         real file.
         """
         while os.path.islink(path):
-            res = os.readlink(path)
+            res = readlink(path)
 
             # if the link points to a relative target, then convert it to an
             # absolute path relative to the original path

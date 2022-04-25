@@ -77,10 +77,9 @@ def present(
         else:
             if __opts__["test"]:
                 ret["result"] = None
-                ret[
-                    "comment"
-                ] = "LVS Server {} in service {}({}) is present but some options should update".format(
-                    name, service_address, protocol
+                ret["comment"] = (
+                    "LVS Server {} in service {}({}) is present but some options should"
+                    " update".format(name, service_address, protocol)
                 )
                 return ret
             else:

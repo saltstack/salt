@@ -126,9 +126,10 @@ def present(
             db_params.get("Ctype") != lc_ctype if lc_ctype else False,
         )
     ):
-        ret["comment"] = (
-            "Database {} has wrong parameters "
-            "which couldn't be changed on fly.".format(name)
+        ret[
+            "comment"
+        ] = "Database {} has wrong parameters which couldn't be changed on fly.".format(
+            name
         )
         ret["result"] = False
         return ret

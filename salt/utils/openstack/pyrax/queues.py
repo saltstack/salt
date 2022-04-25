@@ -62,7 +62,7 @@ class RackspaceQueues:
             return False
         except pyrax.exceptions as err_msg:
             log.error(
-                "RackSpace API got some problems during " "existing queue check: %s",
+                "RackSpace API got some problems during existing queue check: %s",
                 err_msg,
             )
         return False
@@ -81,7 +81,7 @@ class RackspaceQueues:
                     return queue
         except pyrax.exceptions as err_msg:
             log.error(
-                "RackSpace API got some problems during existing" " queue check: %s",
+                "RackSpace API got some problems during existing queue check: %s",
                 err_msg,
             )
         return {}

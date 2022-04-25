@@ -1,194 +1,20 @@
 import logging
+import pathlib
 import shutil
 
-import attr
 import pytest
-import salt.features
-import salt.loader
-import salt.pillar
+from saltfactories.daemons.container import Container
+from saltfactories.utils.functional import Loaders
+
+try:
+    import docker
+except ImportError:
+    # Test suites depending on docker should be using
+    #     docker = pytest.importorskip("docker")
+    # so any fixtures using docker shouldn't ever be called or used.
+    pass
 
 log = logging.getLogger(__name__)
-
-
-class Loaders:
-    def __init__(self, opts):
-        self.opts = opts
-        self.context = {}
-        self._reset_state_funcs = [self.context.clear]
-        self._grains = self._utils = self._modules = self._pillar = None
-        self._serializers = self._states = None
-        self.opts["grains"] = self.grains
-        self.refresh_pillar()
-        salt.features.setup_features(self.opts)
-
-    def reset_state(self):
-        for func in self._reset_state_funcs:
-            func()
-
-    @property
-    def grains(self):
-        if self._grains is None:
-            self._grains = salt.loader.grains(self.opts, context=self.context)
-        return self._grains
-
-    @property
-    def utils(self):
-        if self._utils is None:
-            self._utils = salt.loader.utils(self.opts, context=self.context)
-        return self._utils
-
-    @property
-    def modules(self):
-        if self._modules is None:
-            self._modules = salt.loader.minion_mods(
-                self.opts, context=self.context, utils=self.utils, initial_load=True
-            )
-        return self._modules
-
-    @property
-    def serializers(self):
-        if self._serializers is None:
-            self._serializers = salt.loader.serializers(self.opts)
-        return self._serializers
-
-    @property
-    def states(self):
-        if self._states is None:
-            _states = salt.loader.states(
-                self.opts,
-                functions=self.modules,
-                utils=self.utils,
-                serializers=self.serializers,
-                context=self.context,
-            )
-            # For state execution modules, because we'd have to almost copy/paste what salt.modules.state.single
-            # does, we actually "proxy" the call through salt.modules.state.single instead of calling the state
-            # execution modules directly. This was also how the non pytest test suite worked
-            # Let's load all modules now
-            _states._load_all()
-            # for funcname in list(_states):
-            #    _states[funcname]
-
-            # Now, we proxy loaded modules through salt.modules.state.single
-            for module_name in list(_states.loaded_modules):
-                for func_name in list(_states.loaded_modules[module_name]):
-                    full_func_name = "{}.{}".format(module_name, func_name)
-                    replacement_function = StateFunction(
-                        self.modules.state.single, full_func_name
-                    )
-                    _states._dict[full_func_name] = replacement_function
-                    _states.loaded_modules[module_name][
-                        func_name
-                    ] = replacement_function
-                    setattr(
-                        _states.loaded_modules[module_name],
-                        func_name,
-                        replacement_function,
-                    )
-            self._states = _states
-        return self._states
-
-    @property
-    def pillar(self):
-        if self._pillar is None:
-            self._pillar = salt.pillar.get_pillar(
-                self.opts,
-                self.grains,
-                self.opts["id"],
-                saltenv=self.opts["saltenv"],
-                pillarenv=self.opts.get("pillarenv"),
-            ).compile_pillar()
-        return self._pillar
-
-    def refresh_pillar(self):
-        self._pillar = None
-        self.opts["pillar"] = self.pillar
-
-
-@attr.s
-class StateResult:
-    raw = attr.ib()
-    state_id = attr.ib(init=False)
-    full_return = attr.ib(init=False)
-    filtered = attr.ib(init=False)
-
-    @state_id.default
-    def _state_id(self):
-        return next(iter(self.raw.keys()))
-
-    @full_return.default
-    def _full_return(self):
-        return self.raw[self.state_id]
-
-    @filtered.default
-    def _filtered_default(self):
-        _filtered = {}
-        for key, value in self.full_return.items():
-            if key.startswith("_") or key in ("duration", "start_time"):
-                continue
-            _filtered[key] = value
-        return _filtered
-
-    @property
-    def name(self):
-        return self.full_return["name"]
-
-    @property
-    def result(self):
-        return self.full_return["result"]
-
-    @property
-    def changes(self):
-        return self.full_return["changes"]
-
-    @property
-    def comment(self):
-        return self.full_return["comment"]
-
-    def __eq__(self, value):
-        raise RuntimeError(
-            "Please assert comparisons with {}.filtered instead".format(
-                self.__class__.__name__
-            )
-        )
-
-    def __contains__(self, value):
-        raise RuntimeError(
-            "Please assert comparisons with {}.filtered instead".format(
-                self.__class__.__name__
-            )
-        )
-
-    def __bool__(self):
-        raise RuntimeError(
-            "Please assert comparisons with {}.filtered instead".format(
-                self.__class__.__name__
-            )
-        )
-
-
-@attr.s
-class StateFunction:
-    proxy_func = attr.ib(repr=False)
-    state_func = attr.ib()
-
-    def __call__(self, *args, **kwargs):
-        name = None
-        if args and len(args) == 1:
-            name = args[0]
-        if name is not None and "name" in kwargs:
-            raise RuntimeError(
-                "Either pass 'name' as the single argument to the call or remove 'name' as a keyword argument"
-            )
-        if name is None:
-            name = kwargs.pop("name", None)
-        if name is None:
-            raise RuntimeError(
-                "'name' was not passed as the single argument to the function nor as a keyword argument"
-            )
-        log.info("Calling state.single(%s, name=%s, %s)", self.state_func, name, kwargs)
-        result = self.proxy_func(self.state_func, name=name, **kwargs)
-        return StateResult(result)
 
 
 @pytest.fixture(scope="package")
@@ -245,7 +71,6 @@ def minion_opts(
         {
             "file_client": "local",
             "file_roots": {"base": [str(state_tree)], "prod": [str(state_tree_prod)]},
-            "features": {"enable_slsvars_fixes": True},
         }
     )
     factory = salt_factories.salt_minion_daemon(
@@ -263,9 +88,115 @@ def loaders(minion_opts):
 
 @pytest.fixture(autouse=True)
 def reset_loaders_state(loaders):
+    # Delete the files cache after each test
+    cachedir = pathlib.Path(loaders.opts["cachedir"])
+    shutil.rmtree(str(cachedir), ignore_errors=True)
+    cachedir.mkdir(parents=True, exist_ok=True)
+    # The above can be deleted after pytest-salt-factories>=1.0.0rc7 has been merged
     try:
         # Run the tests
         yield
     finally:
         # Reset the loaders state
         loaders.reset_state()
+
+
+@pytest.fixture(scope="module")
+def docker_client():
+    try:
+        client = docker.from_env()
+    except docker.errors.DockerException:
+        pytest.skip("Failed to get a connection to docker running on the system")
+    connectable = Container.client_connectable(client)
+    if connectable is not True:  # pragma: nocover
+        pytest.skip(connectable)
+    return client
+
+
+def pull_or_skip(image_name, docker_client):
+    try:
+        docker_client.images.pull(image_name)
+    except docker.errors.APIError as exc:
+        pytest.skip("Failed to pull docker image {!r}: {}".format(image_name, exc))
+    except ImportError:
+        pytest.skip("docker module was not installed")
+    return image_name
+
+
+@pytest.fixture(scope="module")
+def docker_redis_image(docker_client):
+    return pull_or_skip("redis:alpine", docker_client)
+
+
+@pytest.fixture(scope="module")
+def docker_consul_image(docker_client):
+    return pull_or_skip("consul:latest", docker_client)
+
+
+# Pytest does not have the ability to parametrize fixtures with parametriezed
+# fixtures, which is super annoying. In other words, in order to have a `cache`
+# test fixture that takes different versions of the cache that depend on
+# different docker images, I've gotta make up fixtures for each
+# image+container. When https://github.com/pytest-dev/pytest/issues/349 is
+# actually fixed then we can go ahead and refactor all of these mysql images
+# (and container fixtures depending on it) into a single fixture.
+
+
+@pytest.fixture(scope="module")
+def docker_mysql_5_6_image(docker_client):
+    return pull_or_skip("mysql/mysql-server:5.6", docker_client)
+
+
+@pytest.fixture(scope="module")
+def docker_mysql_5_7_image(docker_client):
+    return pull_or_skip("mysql/mysql-server:5.7", docker_client)
+
+
+@pytest.fixture(scope="module")
+def docker_mysql_8_0_image(docker_client):
+    return pull_or_skip("mysql/mysql-server:8.0", docker_client)
+
+
+@pytest.fixture(scope="module")
+def docker_mariadb_10_1_image(docker_client):
+    return pull_or_skip("mariadb:10.1", docker_client)
+
+
+@pytest.fixture(scope="module")
+def docker_mariadb_10_2_image(docker_client):
+    return pull_or_skip("mariadb:10.2", docker_client)
+
+
+@pytest.fixture(scope="module")
+def docker_mariadb_10_3_image(docker_client):
+    return pull_or_skip("mariadb:10.3", docker_client)
+
+
+@pytest.fixture(scope="module")
+def docker_mariadb_10_4_image(docker_client):
+    return pull_or_skip("mariadb:10.4", docker_client)
+
+
+@pytest.fixture(scope="module")
+def docker_mariadb_10_5_image(docker_client):
+    return pull_or_skip("mariadb:10.5", docker_client)
+
+
+@pytest.fixture(scope="module")
+def docker_percona_5_5_image(docker_client):
+    return pull_or_skip("percona:5.5", docker_client)
+
+
+@pytest.fixture(scope="module")
+def docker_percona_5_6_image(docker_client):
+    return pull_or_skip("percona:5.6", docker_client)
+
+
+@pytest.fixture(scope="module")
+def docker_percona_5_7_image(docker_client):
+    return pull_or_skip("percona:5.7", docker_client)
+
+
+@pytest.fixture(scope="module")
+def docker_percona_8_0_image(docker_client):
+    return pull_or_skip("percona:8.0", docker_client)

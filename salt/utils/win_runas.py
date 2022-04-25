@@ -50,13 +50,13 @@ def __virtual__():
 
 
 def split_username(username):
-    # TODO: Is there a windows api for this?
     domain = "."
+    user_name = username
     if "@" in username:
-        username, domain = username.split("@")
+        user_name, domain = username.split("@")
     if "\\" in username:
-        domain, username = username.split("\\")
-    return username, domain
+        domain, user_name = username.split("\\")
+    return user_name, domain
 
 
 def create_env(user_token, inherit, timeout=1):
@@ -91,9 +91,9 @@ def runas(cmdLine, username, password=None, cwd=None):
     account provided.
     """
     # Validate the domain and sid exist for the username
-    username, domain = split_username(username)
     try:
-        _, domain, _ = win32security.LookupAccountName(domain, username)
+        _, domain, _ = win32security.LookupAccountName(None, username)
+        username, _ = split_username(username)
     except pywintypes.error as exc:
         message = win32api.FormatMessage(exc.winerror).rstrip("\n")
         raise CommandExecutionError(message)
@@ -108,7 +108,9 @@ def runas(cmdLine, username, password=None, cwd=None):
     # accounts have this permission by default.
     try:
         impersonation_token = salt.platform.win.impersonate_sid(
-            salt.platform.win.SYSTEM_SID, session_id=0, privs=["SeTcbPrivilege"],
+            salt.platform.win.SYSTEM_SID,
+            session_id=0,
+            privs=["SeTcbPrivilege"],
         )
     except OSError:
         log.debug("Unable to impersonate SYSTEM user")
@@ -253,9 +255,9 @@ def runas_unpriv(cmd, username, password, cwd=None):
     Runas that works for non-privileged users
     """
     # Validate the domain and sid exist for the username
-    username, domain = split_username(username)
     try:
-        _, domain, _ = win32security.LookupAccountName(domain, username)
+        _, domain, _ = win32security.LookupAccountName(None, username)
+        username, _ = split_username(username)
     except pywintypes.error as exc:
         message = win32api.FormatMessage(exc.winerror).rstrip("\n")
         raise CommandExecutionError(message)
@@ -263,14 +265,18 @@ def runas_unpriv(cmd, username, password, cwd=None):
     # Create a pipe to set as stdout in the child. The write handle needs to be
     # inheritable.
     c2pread, c2pwrite = salt.platform.win.CreatePipe(
-        inherit_read=False, inherit_write=True,
+        inherit_read=False,
+        inherit_write=True,
     )
     errread, errwrite = salt.platform.win.CreatePipe(
-        inherit_read=False, inherit_write=True,
+        inherit_read=False,
+        inherit_write=True,
     )
 
     # Create inheritable copy of the stdin
-    stdin = salt.platform.win.kernel32.GetStdHandle(salt.platform.win.STD_INPUT_HANDLE,)
+    stdin = salt.platform.win.kernel32.GetStdHandle(
+        salt.platform.win.STD_INPUT_HANDLE,
+    )
     dupin = salt.platform.win.DuplicateHandle(srchandle=stdin, inherit=True)
 
     # Get startup info structure

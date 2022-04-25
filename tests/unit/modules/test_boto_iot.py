@@ -76,7 +76,10 @@ if _has_required_boto():
     error_content = {"Error": {"Code": 101, "Message": "Test-defined error"}}
     policy_ret = dict(
         policyName="testpolicy",
-        policyDocument='{"Version": "2012-10-17", "Statement": [{"Action": ["iot:Publish"], "Resource": ["*"], "Effect": "Allow"}]}',
+        policyDocument=(
+            '{"Version": "2012-10-17", "Statement": [{"Action": ["iot:Publish"],'
+            ' "Resource": ["*"], "Effect": "Allow"}]}'
+        ),
         policyArn="arn:aws:iot:us-east-1:123456:policy/my_policy",
         policyVersionId=1,
         defaultVersionId=1,
@@ -112,8 +115,9 @@ if _has_required_boto():
 @skipIf(HAS_BOTO is False, "The boto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto3 module must be greater than"
-    " or equal to version {}".format(required_boto3_version),
+    "The boto3 module must be greater than or equal to version {}".format(
+        required_boto3_version
+    ),
 )
 class BotoIoTTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None

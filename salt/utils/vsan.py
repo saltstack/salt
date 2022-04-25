@@ -436,7 +436,7 @@ def remove_diskgroup(
         hostname = salt.utils.vmware.get_managed_object_name(host_ref)
     cache_disk_id = diskgroup.ssd.canonicalName
     log.debug(
-        "Removing disk group with cache disk '%s' on " "host '%s'",
+        "Removing disk group with cache disk '%s' on host '%s'",
         cache_disk_id,
         hostname,
     )
@@ -457,7 +457,7 @@ def remove_diskgroup(
     except vim.fault.NoPermission as exc:
         log.exception(exc)
         raise VMwareApiError(
-            "Not enough permissions. Required privilege: " "{}".format(exc.privilegeId)
+            "Not enough permissions. Required privilege: {}".format(exc.privilegeId)
         )
     except vim.fault.VimFault as exc:
         log.exception(exc)

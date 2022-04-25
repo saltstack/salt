@@ -201,7 +201,9 @@ def test_alias_absent():
 
         ret.update(
             {
-                "comment": "Failed to remove alias foo for index bar for unknown reasons",
+                "comment": (
+                    "Failed to remove alias foo for index bar for unknown reasons"
+                ),
                 "result": False,
                 "changes": {},
             }
@@ -291,7 +293,9 @@ def test_alias_present():
         with patch.dict(elasticsearch.__opts__, {"test": True}):
             ret.update(
                 {
-                    "comment": "Alias foo for index bar does not exist and will be created",
+                    "comment": (
+                        "Alias foo for index bar does not exist and will be created"
+                    ),
                     "result": None,
                     "changes": {"new": {"test2": "key"}},
                 }
@@ -300,7 +304,10 @@ def test_alias_present():
 
             ret.update(
                 {
-                    "comment": "Alias foo for index bar exists with wrong configuration and will be overridden",
+                    "comment": (
+                        "Alias foo for index bar exists with wrong configuration and"
+                        " will be overridden"
+                    ),
                     "result": None,
                     "changes": {"old": {"test": "key"}, "new": {"test2": "key"}},
                 }
@@ -669,7 +676,10 @@ def test_pipeline_present():
 
             ret.update(
                 {
-                    "comment": "Pipeline foo exists with wrong configuration and will be overridden",
+                    "comment": (
+                        "Pipeline foo exists with wrong configuration and will be"
+                        " overridden"
+                    ),
                     "result": None,
                     "changes": {"old": {"test": "key"}, "new": {"test2": "key"}},
                 }
@@ -824,7 +834,10 @@ def test_search_template_present():
 
             ret.update(
                 {
-                    "comment": "Search template foo exists with wrong configuration and will be overridden",
+                    "comment": (
+                        "Search template foo exists with wrong configuration and will"
+                        " be overridden"
+                    ),
                     "result": None,
                     "changes": {"old": {"test": "key"}, "new": {"test2": "key"}},
                 }

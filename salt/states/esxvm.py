@@ -222,10 +222,8 @@ def __virtual__():
 
         return (
             False,
-            (
-                "State module did not load: Incompatible versions "
-                "of Python and pyVmomi present. See Issue #29537."
-            ),
+            "State module did not load: Incompatible versions "
+            "of Python and pyVmomi present. See Issue #29537.",
         )
     return True
 
@@ -302,8 +300,9 @@ def vm_configured(
             if __opts__["test"]:
                 result.update(
                     {
-                        "comment": "The virtual machine {}"
-                        " will be registered.".format(vm_name)
+                        "comment": "The virtual machine {} will be registered.".format(
+                            vm_name
+                        )
                     }
                 )
                 __salt__["vsphere.disconnect"](service_instance)
@@ -316,8 +315,9 @@ def vm_configured(
             if __opts__["test"]:
                 result.update(
                     {
-                        "comment": "The virtual machine {}"
-                        " will be created.".format(vm_name)
+                        "comment": "The virtual machine {} will be created.".format(
+                            vm_name
+                        )
                     }
                 )
                 __salt__["vsphere.disconnect"](service_instance)

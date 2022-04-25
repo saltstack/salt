@@ -3,7 +3,12 @@ import salt.states.virt as virt
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
 
-from .test_helpers import domain_update_call
+from .helpers import domain_update_call
+
+
+@pytest.fixture
+def configure_loader_modules(libvirt_mock):
+    return {virt: {"libvirt": libvirt_mock}}
 
 
 def test_defined_no_change(test):
@@ -550,7 +555,10 @@ def test_stopped(test, running):
                 changes = {"stopped": [{"domain": "myvm", "shutdown": True}]}
                 comment = "Machine has been shut down"
             assert virt.stopped(
-                "myvm", connection="myconnection", username="user", password="secret",
+                "myvm",
+                connection="myconnection",
+                username="user",
+                password="secret",
             ) == {
                 "name": "myvm",
                 "changes": changes,
@@ -598,7 +606,8 @@ def test_stopped_not_existing(test):
     with patch.dict(virt.__opts__, {"test": test}):
         shutdown_mock = MagicMock(return_value=True)
         with patch.dict(
-            virt.__salt__, {"virt.list_domains": MagicMock(return_value=[])},
+            virt.__salt__,
+            {"virt.list_domains": MagicMock(return_value=[])},
         ):
             assert virt.stopped("myvm") == {
                 "name": "myvm",
@@ -629,7 +638,10 @@ def test_powered_off(test, running):
                 changes = {"unpowered": [{"domain": "myvm", "stop": True}]}
                 comment = "Machine has been powered off"
             assert virt.powered_off(
-                "myvm", connection="myconnection", username="user", password="secret",
+                "myvm",
+                connection="myconnection",
+                username="user",
+                password="secret",
             ) == {
                 "name": "myvm",
                 "result": True if not test or running == "shutdown" else None,
@@ -780,7 +792,10 @@ def test_rebooted(test):
             },
         ):
             assert virt.rebooted(
-                "myvm", connection="myconnection", username="user", password="secret",
+                "myvm",
+                connection="myconnection",
+                username="user",
+                password="secret",
             ) == {
                 "name": "myvm",
                 "result": True if not test else None,

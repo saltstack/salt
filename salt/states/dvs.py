@@ -230,10 +230,8 @@ def __virtual__():
 
         return (
             False,
-            (
-                "State module did not load: Incompatible versions "
-                "of Python and pyVmomi present. See Issue #29537."
-            ),
+            "State module did not load: Incompatible versions "
+            "of Python and pyVmomi present. See Issue #29537.",
         )
     return "dvs"
 
@@ -297,9 +295,9 @@ def dvs_configured(name, dvs):
             changes_required = True
             if __opts__["test"]:
                 comments.append(
-                    "State {} will create a new DVS "
-                    "'{}' in datacenter '{}'"
-                    "".format(name, dvs_name, datacenter_name)
+                    "State {} will create a new DVS '{}' in datacenter '{}'".format(
+                        name, dvs_name, datacenter_name
+                    )
                 )
                 log.info(comments[-1])
             else:
@@ -308,8 +306,9 @@ def dvs_configured(name, dvs):
                     dvs_dict=dvs, dvs_name=dvs_name, service_instance=si
                 )
                 comments.append(
-                    "Created a new DVS '{}' in datacenter "
-                    "'{}'".format(dvs_name, datacenter_name)
+                    "Created a new DVS '{}' in datacenter '{}'".format(
+                        dvs_name, datacenter_name
+                    )
                 )
                 log.info(comments[-1])
                 changes.update({"dvs": {"new": dvs}})
@@ -381,12 +380,11 @@ def dvs_configured(name, dvs):
                             for idx in range(len(props_to_updated_values[p])):
                                 d = props_to_updated_values[p][idx]
                                 s = props_to_original_values[p][idx]
-                                changes_string += (
-                                    "\t\t{} from '{}' to '{}'\n"
-                                    "".format(d["key"], s, d)
+                                changes_string += "\t\t{} from '{}' to '{}'\n".format(
+                                    d["key"], s, d
                                 )
                         else:
-                            changes_string += "\t{} from '{}' to '{}'\n" "".format(
+                            changes_string += "\t{} from '{}' to '{}'\n".format(
                                 p,
                                 props_to_original_values[p],
                                 props_to_updated_values[p],
@@ -404,8 +402,9 @@ def dvs_configured(name, dvs):
                         service_instance=si,
                     )
                     comments.append(
-                        "Updated DVS '{}' in datacenter '{}'"
-                        "".format(dvs_name, datacenter_name)
+                        "Updated DVS '{}' in datacenter '{}'".format(
+                            dvs_name, datacenter_name
+                        )
                     )
                     log.info(comments[-1])
                 changes.update(
@@ -747,9 +746,9 @@ def uplink_portgroup_configured(name, dvs, uplink_portgroup):
                     service_instance=si,
                 )
                 comments.append(
-                    "Updated the uplink portgroup in DVS "
-                    "'{}', datacenter '{}'"
-                    "".format(dvs, datacenter)
+                    "Updated the uplink portgroup in DVS '{}', datacenter '{}'".format(
+                        dvs, datacenter
+                    )
                 )
             log.info(comments[-1])
             changes.update(

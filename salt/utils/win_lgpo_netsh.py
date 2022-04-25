@@ -366,7 +366,7 @@ def set_firewall_settings(profile, inbound=None, outbound=None, store="local"):
         if not outbound:
             outbound = ret["Outbound"]
 
-    command = "set {}profile firewallpolicy {},{}" "".format(profile, inbound, outbound)
+    command = "set {}profile firewallpolicy {},{}".format(profile, inbound, outbound)
 
     results = _netsh_command(command=command, store=store)
 

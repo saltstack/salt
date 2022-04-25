@@ -28,7 +28,8 @@ def __virtual__():
         if __grains__["kernelrelease"] == "5.9":
             return (
                 False,
-                "The smf execution module failed to load: SMF not available on Solaris 9.",
+                "The smf execution module failed to load: SMF not available on"
+                " Solaris 9.",
             )
         return __virtualname__
     return (

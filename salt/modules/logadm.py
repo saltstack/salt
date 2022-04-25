@@ -295,7 +295,10 @@ def rotate(name, pattern=None, conf_file=default_conf, **kwargs):
     command = "logadm -f {}".format(conf_file)
     for arg, val in kwargs.items():
         if arg in option_toggles.values() and val:
-            command = "{} {}".format(command, _arg2opt(arg),)
+            command = "{} {}".format(
+                command,
+                _arg2opt(arg),
+            )
         elif arg in option_flags.values():
             command = "{} {} {}".format(command, _arg2opt(arg), _quote_args(str(val)))
         elif arg != "log_file":

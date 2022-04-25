@@ -289,7 +289,7 @@ def create(
         raise SaltInvocationError("master_user_password is required")
     if availability_zone and multi_az:
         raise SaltInvocationError(
-            "availability_zone and multi_az are mutually" " exclusive arguments."
+            "availability_zone and multi_az are mutually exclusive arguments."
         )
     if wait_status:
         wait_stati = ["available", "modifying", "backing-up"]
@@ -355,14 +355,17 @@ def create(
                 # Whoops, something is horribly wrong...
                 return {
                     "created": False,
-                    "error": "RDS instance {} should have been created but"
-                    " now I can't find it.".format(name),
+                    "error": (
+                        "RDS instance {} should have been created but"
+                        " now I can't find it.".format(name)
+                    ),
                 }
             if stat == wait_status:
                 return {
                     "created": True,
-                    "message": "RDS instance {} created (current status "
-                    "{})".format(name, stat),
+                    "message": "RDS instance {} created (current status {})".format(
+                        name, stat
+                    ),
                 }
             time.sleep(10)
             log.info("Instance status after 10 seconds is: %s", stat)
@@ -890,7 +893,7 @@ def delete(
                     "seconds".format(name, timeout)
                 )
             log.info(
-                "Waiting up to %s seconds for RDS instance %s to be " "deleted.",
+                "Waiting up to %s seconds for RDS instance %s to be deleted.",
                 timeout,
                 name,
             )

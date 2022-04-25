@@ -121,7 +121,9 @@ def test_egg(virtualenv, cache_dir, use_static_requirements, src_dir):
     # Let's create the testing virtualenv
     with virtualenv as venv:
         ret = venv.run(
-            venv.venv_python, "-c", "import setuptools; print(setuptools.__version__)",
+            venv.venv_python,
+            "-c",
+            "import setuptools; print(setuptools.__version__)",
         )
         setuptools_version = ret.stdout.strip()
         ret = venv.run(venv.venv_python, "-m", "easy_install", "--version", check=False)
@@ -165,7 +167,9 @@ def test_egg(virtualenv, cache_dir, use_static_requirements, src_dir):
         # Looks like, at least on windows, setuptools also get's downloaded as a salt dependency.
         # Let's check and see if this newly installed version also has easy_install
         ret = venv.run(
-            venv.venv_python, "-c", "import setuptools; print(setuptools.__version__)",
+            venv.venv_python,
+            "-c",
+            "import setuptools; print(setuptools.__version__)",
         )
         setuptools_version = ret.stdout.strip()
         ret = venv.run(venv.venv_python, "-m", "easy_install", "--version", check=False)

@@ -82,7 +82,9 @@ def present(
                     if current_keys[key]["trust"] != TRUST_MAP[trust]:
                         # update trust level
                         result = __salt__["gpg.trust_key"](
-                            keyid=key, trust_level=trust, user=user,
+                            keyid=key,
+                            trust_level=trust,
+                            user=user,
                         )
                         if "result" in result and not result["result"]:
                             ret["result"] = result["result"]
@@ -103,7 +105,12 @@ def present(
             ret["comment"].append("GPG Public Key {} already in keychain ".format(key))
 
         else:
-            result = __salt__["gpg.receive_keys"](keyserver, key, user, gnupghome,)
+            result = __salt__["gpg.receive_keys"](
+                keyserver,
+                key,
+                user,
+                gnupghome,
+            )
             if "result" in result and not result["result"]:
                 ret["result"] = result["result"]
                 ret["comment"].append(result["comment"])
@@ -113,7 +120,9 @@ def present(
             if trust:
                 if trust in _VALID_TRUST_VALUES:
                     result = __salt__["gpg.trust_key"](
-                        keyid=key, trust_level=trust, user=user,
+                        keyid=key,
+                        trust_level=trust,
+                        user=user,
                     )
                     if "result" in result and not result["result"]:
                         ret["result"] = result["result"]
@@ -163,7 +172,11 @@ def absent(name, keys=None, user=None, gnupghome=None, **kwargs):
 
     for key in keys:
         if key in current_keys:
-            result = __salt__["gpg.delete_key"](key, user, gnupghome,)
+            result = __salt__["gpg.delete_key"](
+                key,
+                user,
+                gnupghome,
+            )
             if "result" in result and not result["result"]:
                 ret["result"] = result["result"]
                 ret["comment"].append(result["comment"])

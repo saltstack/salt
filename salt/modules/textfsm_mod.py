@@ -408,13 +408,15 @@ def index(
             return ret
     if not textfsm_path:
         log.debug(
-            "No TextFSM templates path specified, trying to look into the opts and pillar"
+            "No TextFSM templates path specified, trying to look into the opts and"
+            " pillar"
         )
         textfsm_path = __opts__.get("textfsm_path") or __pillar__.get("textfsm_path")
         if not textfsm_path:
-            ret[
-                "comment"
-            ] = "No TextFSM templates path specified. Please configure in opts/pillar/function args."
+            ret["comment"] = (
+                "No TextFSM templates path specified. Please configure in"
+                " opts/pillar/function args."
+            )
             log.error(ret["comment"])
             return ret
     log.debug(

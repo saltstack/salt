@@ -937,9 +937,15 @@ def rename(name, new_name):
                 3: "Invalid parameter",
                 4: "User not found",
                 5: "Domain not found",
-                6: "Operation is allowed only on the primary domain controller of the domain",
+                6: (
+                    "Operation is allowed only on the primary domain controller of the"
+                    " domain"
+                ),
                 7: "Operation is not allowed on the last administrative account",
-                8: "Operation is not allowed on specified special groups: user, admin, local, or guest",
+                8: (
+                    "Operation is not allowed on specified special groups: user, admin,"
+                    " local, or guest"
+                ),
                 9: "Other API error",
                 10: "Internal error",
             }

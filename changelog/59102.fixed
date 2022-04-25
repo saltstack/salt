@@ -1,0 +1,1 @@
+Clarify the persist argument in the scheduler module. Adding code in the list function to indicate if the schedule job is saved or not.

@@ -93,7 +93,7 @@ class Repo:
     """
 
     def __init__(self, repo_uri):
-        """ Initialize a hg repo (or open it if it already exists) """
+        """Initialize a hg repo (or open it if it already exists)"""
         self.repo_uri = repo_uri
         cachedir = os.path.join(__opts__["cachedir"], "hg_pillar")
         hash_type = getattr(hashlib, __opts__.get("hash_type", "md5"))

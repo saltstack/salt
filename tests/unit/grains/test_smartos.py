@@ -140,7 +140,9 @@ class SmartOSGrainsTestCase(TestCase):
         Get pkgsrc information from a zone
         """
         grains_exp_res = {
-            "pkgsrcpath": "https://pkgsrc.joyent.com/packages/SmartOS/2018Q1/x86_64/All",
+            "pkgsrcpath": (
+                "https://pkgsrc.joyent.com/packages/SmartOS/2018Q1/x86_64/All"
+            ),
             "pkgsrcversion": "2018Q1",
         }
 

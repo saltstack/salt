@@ -132,7 +132,7 @@ except AttributeError:
     BaseDumper = yaml.SafeDumper
 
 ERROR_MAP = {
-    ("found character '\\t' " "that cannot start any token"): "Illegal tab character"
+    "found character '\\t' that cannot start any token": "Illegal tab character"
 }
 
 
@@ -230,10 +230,11 @@ class Loader(BaseLoader):  # pylint: disable=W0232
             try:
                 hash(key)
             except TypeError:
-                err = (
-                    "While constructing a mapping {} found unacceptable key {}"
-                ).format(node.start_mark, key_node.start_mark)
-                raise ConstructorError(err)
+                raise ConstructorError(
+                    "While constructing a mapping {} found unacceptable key {}".format(
+                        node.start_mark, key_node.start_mark
+                    )
+                )
             value = self.construct_object(value_node, deep=False)
             if key in sls_map and not reset:
                 value = merge_recursive(sls_map[key], value)

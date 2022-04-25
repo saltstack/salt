@@ -71,8 +71,12 @@ def _parse_image_meta(image=None, detail=False):
 
             if docker_repo and docker_tag:
                 name = "{}:{}".format(docker_repo, docker_tag)
-                description = "Docker image imported from {repo}:{tag} on {date}.".format(
-                    repo=docker_repo, tag=docker_tag, date=published,
+                description = (
+                    "Docker image imported from {repo}:{tag} on {date}.".format(
+                        repo=docker_repo,
+                        tag=docker_tag,
+                        date=published,
+                    )
                 )
 
         if name and detail:
@@ -86,7 +90,9 @@ def _parse_image_meta(image=None, detail=False):
             }
         elif name:
             ret = "{name}@{version} [{published}]".format(
-                name=name, version=version, published=published,
+                name=name,
+                version=version,
+                published=published,
             )
     else:
         log.debug("smartos_image - encountered invalid image payload: %s", image)

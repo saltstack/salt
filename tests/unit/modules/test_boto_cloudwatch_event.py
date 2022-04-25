@@ -71,8 +71,12 @@ if _has_required_boto():
         ScheduleExpression=rule_sched,
         State="ENABLED",
     )
-    create_rule_ret = dict(Name=rule_name,)
-    target_ret = dict(Id="target1",)
+    create_rule_ret = dict(
+        Name=rule_name,
+    )
+    target_ret = dict(
+        Id="target1",
+    )
 
 
 class BotoCloudWatchEventTestCaseBase(TestCase, LoaderModuleMockMixin):

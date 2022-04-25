@@ -8,6 +8,7 @@
 import logging
 import os
 
+import salt.utils.dictdiffer
 import salt.utils.json as json
 from salt.exceptions import CommandExecutionError
 from salt.utils.args import clean_kwargs
@@ -137,7 +138,7 @@ def freeze(name=None, force=False, **kwargs):
 
     if status(name) and not force:
         raise CommandExecutionError(
-            "The state is already present. Use " "force parameter to overwrite."
+            "The state is already present. Use force parameter to overwrite."
         )
     safe_kwargs = clean_kwargs(**kwargs)
     pkgs = __salt__["pkg.list_pkgs"](**safe_kwargs)
@@ -292,5 +293,45 @@ def restore(name=None, clean=False, **kwargs):
     if clean and not ret["comment"]:
         for fname in _paths(name):
             os.remove(fname)
+
+    return ret
+
+
+def compare(old, new):
+    """
+    Display the difference between two frozen states. The results are shown as
+    as a dictionary with keys for packages and repositories. Each key may
+    contain a changes dictionary showing items that differ between the two
+    frozen states. Items shown in the "old" changes but not the "new" were
+    removed. Items in "new" but not "old" were added. Items shown in both
+    probably updated/changed versions between freezes.
+
+    old
+        Name of the "old" frozen state. Required.
+
+    new
+        Name of the "new" frozen state. Required.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' freezer.freeze pre_install post_install
+
+    """
+    ret = {}
+
+    if not (status(old) and status(new)):
+        raise CommandExecutionError("Frozen state not found.")
+
+    for ofile, nfile in zip(_paths(old), _paths(new)):
+        with fopen(ofile, "r") as ofp:
+            old_dict = json.load(ofp)
+        with fopen(nfile, "r") as nfp:
+            new_dict = json.load(nfp)
+        if ofile.endswith("-pkgs.yml"):
+            ret["pkgs"] = salt.utils.dictdiffer.deep_diff(old_dict, new_dict)
+        elif ofile.endswith("-reps.yml"):
+            ret["repos"] = salt.utils.dictdiffer.deep_diff(old_dict, new_dict)
 
     return ret

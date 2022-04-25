@@ -228,7 +228,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
             name, version_num = line.split()[0:2]
         except ValueError:
             log.error(
-                "Problem parsing pacman -Q: Unexpected formatting in " "line: '%s'",
+                "Problem parsing pacman -Q: Unexpected formatting in line: '%s'",
                 line,
             )
         else:
@@ -270,7 +270,7 @@ def group_list():
             group, pkg = line.split()[0:2]
         except ValueError:
             log.error(
-                "Problem parsing pacman -Sgg: Unexpected formatting in " "line: '%s'",
+                "Problem parsing pacman -Sgg: Unexpected formatting in line: '%s'",
                 line,
             )
         else:
@@ -288,7 +288,7 @@ def group_list():
             group, pkg = line.split()[0:2]
         except ValueError:
             log.error(
-                "Problem parsing pacman -Qg: Unexpected formatting in " "line: '%s'",
+                "Problem parsing pacman -Qg: Unexpected formatting in line: '%s'",
                 line,
             )
         else:
@@ -350,7 +350,7 @@ def group_info(name):
             pkg = line.split()[1]
         except ValueError:
             log.error(
-                "Problem parsing pacman -Sgg: Unexpected formatting in " "line: '%s'",
+                "Problem parsing pacman -Sgg: Unexpected formatting in line: '%s'",
                 line,
             )
         else:
@@ -1036,7 +1036,7 @@ def list_repo_pkgs(*args, **kwargs):
             # Sort versions newest to oldest
             for pkgname in ret[reponame]:
                 sorted_versions = sorted(
-                    [_LooseVersion(x) for x in ret[reponame][pkgname]], reverse=True
+                    (_LooseVersion(x) for x in ret[reponame][pkgname]), reverse=True
                 )
                 ret[reponame][pkgname] = [x.vstring for x in sorted_versions]
         return ret
@@ -1047,7 +1047,7 @@ def list_repo_pkgs(*args, **kwargs):
                 byrepo_ret.setdefault(pkgname, []).extend(ret[reponame][pkgname])
         for pkgname in byrepo_ret:
             sorted_versions = sorted(
-                [_LooseVersion(x) for x in byrepo_ret[pkgname]], reverse=True
+                (_LooseVersion(x) for x in byrepo_ret[pkgname]), reverse=True
             )
             byrepo_ret[pkgname] = [x.vstring for x in sorted_versions]
         return byrepo_ret

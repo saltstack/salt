@@ -37,7 +37,7 @@ if salt.utils.path.which("initctl"):
         )
     except Exception as exc:  # pylint: disable=broad-except
         log.error(
-            "Unable to import helper functions from " "salt.modules.upstart: %s", exc
+            "Unable to import helper functions from salt.modules.upstart: %s", exc
         )
     else:
         HAS_UPSTART = True
@@ -52,7 +52,8 @@ def __virtual__():
     if __utils__["systemd.booted"](__context__):
         return (
             False,
-            "The rh_service execution module failed to load: this system was booted with systemd.",
+            "The rh_service execution module failed to load: this system was booted"
+            " with systemd.",
         )
 
     # Enable on these platforms only.
@@ -86,8 +87,8 @@ def __virtual__():
             if osrelease_major >= 7:
                 return (
                     False,
-                    "XenServer and XCP-ng >= 7 use systemd, will not load rh_service.py "
-                    "as virtual 'service'",
+                    "XenServer and XCP-ng >= 7 use systemd, will not load rh_service.py"
+                    " as virtual 'service'",
                 )
             return __virtualname__
 

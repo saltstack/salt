@@ -177,8 +177,10 @@ def test_present_create(substitute_params_create):
                 ret["changes"] = {
                     name: {
                         "old": 'Zabbix Template "{}" did not exist.'.format(name),
-                        "new": 'Zabbix Template "{}" created according definition.'.format(
-                            name
+                        "new": (
+                            'Zabbix Template "{}" created according definition.'.format(
+                                name
+                            )
                         ),
                     }
                 }
@@ -219,10 +221,9 @@ def test_present_exists(existing_obj, substitute_params_exists):
                 },
             ):
                 ret["result"] = True
-                ret[
-                    "comment"
-                ] = 'Zabbix Template "{}" already exists and corresponds to a definition.'.format(
-                    name
+                ret["comment"] = (
+                    'Zabbix Template "{}" already exists and corresponds to a'
+                    " definition.".format(name)
                 )
                 assert zabbix_template.present(name, {}) == ret
 
@@ -263,8 +264,10 @@ def test_present_update(diff_params, substitute_params_update):
                 ret["changes"] = {
                     name: {
                         "old": 'Zabbix Template "{}" differed.'.format(name),
-                        "new": 'Zabbix Template "{}" updated according definition.'.format(
-                            name
+                        "new": (
+                            'Zabbix Template "{}" updated according definition.'.format(
+                                name
+                            )
                         ),
                     }
                 }

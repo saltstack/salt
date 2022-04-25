@@ -116,7 +116,10 @@ def _determine_auth(**kwargs):
             credentials = MSIAuthentication(cloud_environment=cloud_env)
         except ImportError:
             raise SaltSystemExit(
-                msg="MSI authentication support not availabe (requires msrestazure >= 0.4.14)"
+                msg=(
+                    "MSI authentication support not availabe (requires msrestazure >="
+                    " 0.4.14)"
+                )
             )
 
     else:
@@ -180,7 +183,8 @@ def get_client(client_type, **kwargs):
 
     if client_type == "subscription":
         client = Client(
-            credentials=credentials, base_url=cloud_env.endpoints.resource_manager,
+            credentials=credentials,
+            base_url=cloud_env.endpoints.resource_manager,
         )
     else:
         client = Client(
@@ -302,9 +306,9 @@ def compare_list_of_dicts(old, new, convert_id_to_name=None):
         return ret
 
     try:
-        local_configs, remote_configs = [
+        local_configs, remote_configs = (
             sorted(config, key=itemgetter("name")) for config in (new, old)
-        ]
+        )
     except TypeError:
         ret["comment"] = "configurations must be provided as a list of dictionaries!"
         return ret

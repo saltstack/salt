@@ -43,7 +43,8 @@ def __virtual__():
     else:
         return (
             False,
-            "The `nix` binaries required cannot be found or are not installed. (`nix-store` and `nix-env`)",
+            "The `nix` binaries required cannot be found or are not installed."
+            " (`nix-store` and `nix-env`)",
         )
 
 

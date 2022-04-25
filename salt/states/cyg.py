@@ -53,10 +53,7 @@ def installed(name, cyg_arch="x86_64", mirrors=None):
 
     if cyg_arch not in ["x86", "x86_64"]:
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "The 'cyg_arch' argument must\
- be one of 'x86' or 'x86_64'"
+        ret["comment"] = "The 'cyg_arch' argument must be one of 'x86' or 'x86_64'"
         return ret
 
     log.debug("Installed State: Initial Mirror list: %s", mirrors)
@@ -75,12 +72,7 @@ def installed(name, cyg_arch="x86_64", mirrors=None):
         return ret
 
     if __opts__["test"]:
-        ret[
-            "comment"
-        ] = "The package {} would\
- have been installed".format(
-            name
-        )
+        ret["comment"] = "The package {} would have been installed".format(name)
         return ret
 
     if __salt__["cyg.install"](name, cyg_arch=cyg_arch, mirrors=mirrors):
@@ -123,10 +115,7 @@ def removed(name, cyg_arch="x86_64", mirrors=None):
 
     if cyg_arch not in ["x86", "x86_64"]:
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "The 'cyg_arch' argument must\
- be one of 'x86' or 'x86_64'"
+        ret["comment"] = "The 'cyg_arch' argument must be one of 'x86' or 'x86_64'"
         return ret
 
     if not __salt__["cyg.check_valid_package"](
@@ -183,10 +172,7 @@ def updated(name=None, cyg_arch="x86_64", mirrors=None):
 
     if cyg_arch not in ["x86", "x86_64"]:
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "The 'cyg_arch' argument must\
- be one of 'x86' or 'x86_64'"
+        ret["comment"] = "The 'cyg_arch' argument must be one of 'x86' or 'x86_64'"
         return ret
 
     if __opts__["test"]:
@@ -236,9 +222,9 @@ class DictDiffer:
         Iitialize the differ.
         """
         self.current_dict, self.past_dict = current_dict, past_dict
-        self.current_keys, self.past_keys = [
+        self.current_keys, self.past_keys = (
             set(d.keys()) for d in (current_dict, past_dict)
-        ]
+        )
         self.intersect = self.current_keys.intersection(self.past_keys)
 
     def same(self):

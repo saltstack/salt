@@ -57,8 +57,10 @@ class ApacheTestCase(TestCase, LoaderModuleMockMixin):
             "salt.modules.apache._detect_os", MagicMock(return_value="apachectl")
         ):
             mock = MagicMock(
-                return_value="unixd_module (static)\n \
-                             access_compat_module (shared)"
+                return_value=(
+                    "unixd_module (static)\n                             "
+                    " access_compat_module (shared)"
+                )
             )
             with patch.dict(apache.__salt__, {"cmd.run": mock}):
                 assert apache.modules() == {

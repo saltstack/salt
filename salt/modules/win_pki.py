@@ -103,10 +103,11 @@ def _validate_cert_format(name):
     cert_formats = ["cer", "pfx"]
 
     if name not in cert_formats:
-        message = (
-            "Invalid certificate format '{}' specified. Valid formats:" " {}"
-        ).format(name, cert_formats)
-        raise SaltInvocationError(message)
+        raise SaltInvocationError(
+            "Invalid certificate format '{}' specified. Valid formats: {}".format(
+                name, cert_formats
+            )
+        )
 
 
 def get_stores():
@@ -233,8 +234,7 @@ def get_cert_file(name, cert_format=_DEFAULT_FORMAT, password=""):
         cmd.append(" System.Security.Cryptography.X509Certificates.X509Certificate2;")
         cmd.append(r" $CertObject.Import('{}'); $CertObject".format(name))
         cmd.append(
-            " | Select-Object DnsNameList, SerialNumber, Subject, "
-            "Thumbprint, Version"
+            " | Select-Object DnsNameList, SerialNumber, Subject, Thumbprint, Version"
         )
 
     items = _cmd_run(cmd="".join(cmd), as_json=True)

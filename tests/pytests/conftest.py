@@ -6,8 +6,11 @@ import functools
 import inspect
 import logging
 import os
+import pathlib
 import shutil
 import stat
+import sys
+import tempfile
 
 import attr
 import pytest
@@ -318,15 +321,60 @@ def salt_proxy_factory(salt_master_factory):
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
         start_timeout=240,
     )
+    factory.before_start(pytest.helpers.remove_stale_proxy_minion_cache_file, factory)
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
     )
+    factory.after_terminate(
+        pytest.helpers.remove_stale_proxy_minion_cache_file, factory
+    )
+    return factory
+
+
+@pytest.fixture(scope="session")
+def salt_delta_proxy_factory(salt_factories, salt_master_factory):
+    proxy_minion_id = random_string("delta-proxy-test-")
+    root_dir = salt_factories.get_root_dir_for_daemon(proxy_minion_id)
+    conf_dir = root_dir / "conf"
+    conf_dir.mkdir(parents=True, exist_ok=True)
+
+    config_defaults = {
+        "root_dir": str(root_dir),
+        "hosts.file": os.path.join(
+            RUNTIME_VARS.TMP, "hosts"
+        ),  # Do we really need this for these tests?
+        "aliases.file": os.path.join(
+            RUNTIME_VARS.TMP, "aliases"
+        ),  # Do we really need this for these tests?
+        "transport": salt_master_factory.config["transport"],
+        "user": salt_master_factory.config["user"],
+        "metaproxy": "deltaproxy",
+        "master": "127.0.0.1",
+    }
+    factory = salt_master_factory.salt_proxy_minion_daemon(
+        proxy_minion_id,
+        defaults=config_defaults,
+        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        start_timeout=240,
+    )
+
+    for minion_id in [factory.id] + pytest.helpers.proxy.delta_proxy_minion_ids():
+        factory.before_start(
+            pytest.helpers.remove_stale_proxy_minion_cache_file, factory, minion_id
+        )
+        factory.after_terminate(
+            pytest.helpers.remove_stale_minion_key, salt_master_factory, minion_id
+        )
+        factory.after_terminate(
+            pytest.helpers.remove_stale_proxy_minion_cache_file, factory, minion_id
+        )
     return factory
 
 
 @pytest.fixture
 def temp_salt_master(
-    request, salt_factories,
+    request,
+    salt_factories,
 ):
     config_defaults = {
         "open_mode": True,
@@ -358,6 +406,59 @@ def temp_salt_minion(temp_salt_master):
 
 
 @pytest.fixture(scope="session")
+def get_python_executable():
+    """
+    Return the path to the python executable.
+
+    This is particularly important when running the test suite within a virtualenv, while trying
+    to create virtualenvs on windows.
+    """
+    try:
+        if salt.utils.platform.is_windows():
+            python_binary = os.path.join(
+                sys.real_prefix, os.path.basename(sys.executable)
+            )
+        else:
+            python_binary = os.path.join(
+                sys.real_prefix, "bin", os.path.basename(sys.executable)
+            )
+            if not os.path.exists(python_binary):
+                if not python_binary[-1].isdigit():
+                    versioned_python_binary = "{}{}".format(
+                        python_binary, *sys.version_info
+                    )
+                    log.info(
+                        "Python binary could not be found at %s. Trying %s",
+                        python_binary,
+                        versioned_python_binary,
+                    )
+                    if os.path.exists(versioned_python_binary):
+                        python_binary = versioned_python_binary
+        if not os.path.exists(python_binary):
+            log.warning("Python binary could not be found at %s", python_binary)
+            python_binary = None
+    except AttributeError:
+        # We're not running inside a virtualenv
+        python_binary = sys.executable
+    return python_binary
+
+
+@pytest.fixture
+def tmp_path_world_rw(request):
+    """
+    Temporary path which is world read/write for tests that run under a different account
+    """
+    tempdir_path = pathlib.Path(basetemp=tempfile.gettempdir()).resolve()
+    path = tempdir_path / "world-rw-{}".format(id(request.node))
+    path.mkdir(exist_ok=True)
+    path.chmod(0o777)
+    try:
+        yield path
+    finally:
+        shutil.rmtree(str(path), ignore_errors=True)
+
+
+@pytest.fixture(scope="session")
 def bridge_pytest_and_runtests():
     """
     We're basically overriding the same fixture defined in tests/conftest.py
@@ -372,8 +473,13 @@ def bridge_pytest_and_runtests():
 
 def get_test_timeout(pyfuncitem):
     default_timeout = 30
-    marker = pyfuncitem.get_closest_marker("timeout")
+    marker = pyfuncitem.get_closest_marker("async_timeout")
     if marker:
+        if marker.args:
+            raise pytest.UsageError(
+                "The 'async_timeout' marker does not accept any arguments "
+                "only 'seconds' as a keyword argument"
+            )
         return marker.kwargs.get("seconds") or default_timeout
     return default_timeout
 
@@ -416,6 +522,8 @@ def pytest_pyfunc_call(pyfuncitem):
     except KeyError:
         loop = salt.ext.tornado.ioloop.IOLoop.current()
 
+    __tracebackhide__ = True
+
     loop.run_sync(
         CoroTestFunction(pyfuncitem.obj, testargs), timeout=get_test_timeout(pyfuncitem)
     )
@@ -437,3 +545,14 @@ def io_loop():
 
 
 # <---- Async Test Fixtures ------------------------------------------------------------------------------------------
+
+# ----- Helpers ----------------------------------------------------------------------------------------------------->
+@pytest.helpers.proxy.register
+def delta_proxy_minion_ids():
+    return [
+        "dummy_proxy_one",
+        "dummy_proxy_two",
+    ]
+
+
+# <---- Helpers ------------------------------------------------------------------------------------------------------

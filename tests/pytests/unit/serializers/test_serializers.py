@@ -374,7 +374,8 @@ def test_serialize_plist():
     serialized = plist.serialize(data)
     expected = (
         b'<?xml version="1.0" encoding="UTF-8"?>\n'
-        b'<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
+        b'<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"'
+        b' "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
         b'<plist version="1.0">\n'
         b"<dict>\n"
         b"\t<key>foo</key>\n"

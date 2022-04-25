@@ -1,0 +1,48 @@
+name: New Issues Triage Assignment
+concurrency: 1
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  label-and-assign:
+    name: Triage New Issue
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Install Dependencies
+        run: |
+          pip install pygithub
+
+      - name: Download last assignment cache
+        continue-on-error: true
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: triage.yml
+          name: last-assignment
+          path: .cache
+
+      - name: Label And Assign
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          READ_ORG_TOKEN: ${{ secrets.READ_ORG_TEAM_MEMBERS_ISSUE_TRIAGE }}
+        run: |
+          python .github/workflows/scripts/label-and-assign.py \
+            --org ${{ github.repository_owner }} \
+            --repo ${{ github.event.repository.name }} \
+            --team team-triage \
+            --label needs-triage \
+            --issue ${{ github.event.issue.number }}
+
+      - name: Upload last assignment cache
+        uses: actions/upload-artifact@v2
+        with:
+          name: last-assignment
+          path: .cache

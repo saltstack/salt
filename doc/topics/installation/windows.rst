@@ -24,20 +24,20 @@ corresponding md5 file.
 
 There are installers available for Python 3. Starting with Salt 3001, only
 Python 3 builds of the Windows Salt Minion will be built. Python 2 builds
-exist for earlier Salt Minion versions.
+exist for earlier versions of Salt Minion.
 
 .. note::
     - `Earlier builds from supported branches
-      <https://repo.saltstack.com/windows/>`__
+      <https://repo.saltproject.io/windows/>`__
 
     Archived builds from unsupported branches:
 
-    - `Archive 1 <https://archive.saltstack.com/windows/>`__
-    - `Archive 2 <https://archive.saltstack.com/windows/archive/>`__
+    - `Archive 1 <https://archive.repo.saltproject.io/windows/>`__
+    - `Archive 2 <https://archive.repo.saltproject.io/windows/archive/>`__
 
 .. note::
 
-    The installation executable installs dependencies that the Salt minion
+    The installation executable installs all dependencies that the Salt minion
     requires.
 
 The 64bit and 32bit installers have been tested on Windows 8.1, Windows Server
@@ -45,34 +45,87 @@ The 64bit and 32bit installers have been tested on Windows 8.1, Windows Server
 installers have only been tested on 64bit systems. Please file a bug report on
 our GitHub repo if issues for other platforms are found.
 
-The installer will detect previous installations of Salt and ask if you would
-like to remove them. Clicking OK will remove the Salt binaries and related files
-but leave any existing config, cache, and PKI information.
-
 Salt Minion Installation
 ========================
+
+Prerequisites and Checks
+------------------------
+
+Before the installation starts the installer does a few checks for prerequisites
+and security issues.
+
+Existing Salt Installation check
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If Salt is already installed on the system the user will be prompted to remove
+the previous installation. Click ``OK`` to remove the Salt binaries and related
+files but leave any existing config, cache, and PKI information. Click
+``Cancel`` to abort the installation before making any modifications to the
+system.
+
+Visual C++ Redistributable check
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If the system is missing the appropriate version of the Visual C++
 Redistributable (vcredist) the user will be prompted to install it. Click ``OK``
 to install the vcredist. Click ``Cancel`` to abort the installation without
 making modifications to the system.
 
-If Salt is already installed on the system the user will be prompted to remove
-the previous installation. Click ``OK`` to uninstall Salt without removing the
-configuration, PKI information, or cached files. Click ``Cancel`` to abort the
-installation before making any modifications to the system.
+Insecure configuration check
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-After the Welcome and the License Agreement, the installer asks for two bits of
-information to configure the minion; the master hostname and the minion name.
-The installer will update the minion config with these options.
+Since existing configuration that may be present on the system can be used by
+the installer to configure the minion we need to make sure it is trusted. This
+is done by verifying that the owner of the ``conf`` directory is either System
+or Administrators. If an insecure ``conf`` directory is found, a dialog box will
+be displayed warning the user that an insecure config directory has been found.
+Click ``Yes`` to rename the insecure directory and continue the installation.
+Click ``No`` to abort the installation.
 
-If the installer finds an existing minion config file, these fields will be
-populated with values from the existing config, but they will be grayed out.
-There will also be a checkbox to use the existing config. If you continue, the
-existing config will be used. If the checkbox is unchecked, default values are
-displayed and can be changed. If you continue, the existing config file in
-``c:\salt\conf`` will be removed along with the ``c:\salt\conf\minion.d``
-directory. The values entered will be used with the default config.
+Installation
+------------
+After the Welcome and the License Agreement the user will be prompted to choose
+a destination directory. Starting in version 3004, the binary data has been
+separated from the configuration data. The user is allowed to choose the install
+directory for Salt. The default is ``%ProgramFiles%\Salt Project\salt``. All
+Salt binaries will be installed into the installation directory. Configuration
+data is stored in the ``root_dir`` which has been changed from ``C:\salt`` to
+``%ProgramData\Salt Project\Salt``. The ``root_dir`` can be changed from the
+default by setting the ``root_dir`` value in the minion config and then
+specifying that config when starting the salt minion using the ``-c`` option.
+
+.. code-block:: bat
+
+    salt-minion -c C:\my\custom\root_dir
+
+.. note::
+    If the installer finds config data in the old location, the user is prompted
+    to move the ``root_dir`` to the new location. The default is to leave
+    existing config in place.
+
+Next the installer will gather information needed to configure the minion. There
+are three config scenarios handled by the installer:
+
+===============  ===========
+Option           Description
+===============  ===========
+Default Config   A default config will be laid down and updated from the values
+                 in the Master and Minion Name fields
+Custom Config    The user is allowed to choose a custom config file which will
+                 be copied to the config directory and updated with the values
+                 in the Master and Minion Name fields
+Existing Config  An existing config is found and its values are displayed in the
+                 Master and Minion Name fields. The user is not allowed to
+                 modify these options. This option is only present if an
+                 existing config is found on the system.
+===============  ===========
+
+If an existing config is found in the old location (``C:\salt``), there is an
+additional option to move the ``root_dir`` to the new location
+(``%ProgramData%\Salt Project\Salt``). The default is to leave the ``root_dir``
+unchanged.
+
+Click the ``Install`` button to install using these settings.
 
 The final page allows you to start the minion service and optionally change its
 startup type. By default, the minion is set to ``Automatic``. You can change the
@@ -94,8 +147,8 @@ be managed there or from the command line like any other Windows service.
     sc start salt-minion
     net start salt-minion
 
-Installation Prerequisites
---------------------------
+Prerequisites
+-------------
 
 Most Salt functionality should work just fine right out of the box. A few Salt
 modules rely on PowerShell. The minimum version of PowerShell required for Salt
@@ -104,8 +157,8 @@ minimum.
 
 .. _windows-installer-options:
 
-Silent Installer Options
-========================
+Installer Options
+=================
 
 The installer can be run silently by providing the ``/S`` option at the command
 line. The installer also accepts the following options for configuring the Salt
@@ -138,14 +191,15 @@ Option                     Description
                            path to a custom config file. If ``/master`` and/or
                            ``/minion-name`` is passed, those values will be used
                            to update the new custom config.
+``/install-dir=``          Specify the installation location for the Salt
+                           binaries. This will be ignored for existing
+                           installations.
+``/move-config``           If config is found at ``C:\salt`` it will be moved to
+                           ``%ProgramData%\Salt Project\Salt``
 ``/S``                     Runs the installation silently. Uses the above
                            settings or the defaults.
 ``/?``                     Displays command line help.
 =========================  =====================================================
-
-.. note::
-    ``/start-service`` has been deprecated but will continue to function as
-    expected for the time being.
 
 .. note::
     ``/default-config`` and ``/custom-config=`` will backup an existing config
@@ -280,12 +334,10 @@ Scripts:
 ===================  ===========
 Script               Description
 ===================  ===========
-``build_env_2.ps1``  A PowerShell script that sets up a Python 2 build
-                     environment
-``build_env_3.ps1``  A PowerShell script that sets up a Python 3 build
+``build_env.ps1``    A PowerShell script that sets up a Python 3 build
                      environment
 ``build_pkg.bat``    A batch file that builds a Windows installer based on the
-                     contents of the ``C:\Python27`` directory
+                     contents of the ``C:\Python3`` directory
 ``build.bat``        A batch file that fully automates the building of the
                      Windows installer using the above two scripts
 ===================  ===========
@@ -294,9 +346,6 @@ Script               Description
     The ``build.bat`` and ``build_pkg.bat`` scripts both accept a parameter to
     specify the version of Salt that will be displayed in the Windows installer.
     If no version is passed, the version will be determined using git.
-
-    Both scripts also accept an additional parameter to specify the version of
-    Python to use. The default is 2.
 
 Prerequisite Software
 ---------------------
@@ -330,7 +379,7 @@ Go into the ``salt`` directory and checkout the version of salt to work with
 .. code-block:: bat
 
     cd salt
-    git checkout 2017.7.2
+    git checkout 3004
 
 2. Setup the Python Environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -341,14 +390,14 @@ PowerShell script.
 .. code-block:: bat
 
     cd pkg\windows
-    powershell -file build_env_2.ps1
+    powershell -file build_env.ps1
 
 .. note::
     You can also do this from Explorer by navigating to the ``pkg\windows``
-    directory, right clicking the **build_env_2.ps1** powershell script and
+    directory, right clicking the **build_env.ps1** powershell script and
     selecting **Run with PowerShell**
 
-This will download and install Python 2 with all the dependencies needed to
+This will download and install Python with all the dependencies needed to
 develop and build Salt.
 
 .. note::
@@ -383,25 +432,26 @@ with ``pip``
 
 .. note::
     If ``pip`` is still not recognized make sure that the Python Scripts folder
-    is in the System ``%PATH%``. (``C:\Python2\Scripts``)
+    is in the System ``%PATH%``. (``C:\Python3\Scripts``)
 
 4. Setup Salt Configuration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Salt requires a minion configuration file and a few other directories. The
-default config file is named ``minion`` located in ``C:\salt\conf``. The
-easiest way to set this up is to copy the contents of the
-``salt\pkg\windows\buildenv`` directory to ``C:\salt``.
+default config file is named ``minion`` located in
+``%ProgramData%\Salt Project\Salt\conf``. The easiest way to set this up is to
+copy the contents of the ``salt\pkg\windows\buildenv`` directory to
+``%ProgramData%\Salt Project\Salt``.
 
 .. code-block:: bat
 
     cd \
     md salt
-    xcopy /s /e \Salt-Dev\salt\pkg\windows\buildenv\* \salt\
+    xcopy /s /e \Salt-Dev\salt\pkg\windows\buildenv\* "%ProgramData%\Salt Project\Salt"
 
-Now go into the ``C:\salt\conf`` directory and edit the minion config file named
-``minion`` (no extension). You need to configure the master and id parameters in
-this file. Edit the following lines:
+Now go into the ``%ProgramData%\Salt Project\Salt\conf`` directory and edit the
+minion config file named ``minion`` (no extension). You need to configure the
+master and id parameters in this file. Edit the following lines:
 
 .. code-block:: bat
 
@@ -432,20 +482,16 @@ Navigate to the root ``salt`` directory and install Salt.
 -------------------------------
 
 Navigate to the ``pkg\windows`` directory and run the ``build_pkg.bat``
-with the build version (2017.7.2) and the Python version as parameters.
+with the build version (3004) and the Python version as parameters.
 
 .. code-block:: bat
 
     cd pkg\windows
-    build_pkg.bat 2017.7.2 2
-                  ^^^^^^^^ ^
-                      |    |
-    # build version --     |
-    # python version ------
+    build_pkg.bat 3004
 
 .. note::
     If no version is passed, the ``build_pkg.bat`` will guess the version number
-    using git. If the python version is not passed, the default is 2.
+    using git.
 
 .. _create-windows-installer-easy:
 
@@ -468,7 +514,7 @@ build.
 .. code-block:: bat
 
     cd salt
-    git checkout 2017.7.2
+    git checkout 3004
 
 Then navigate to ``pkg\windows`` and run the ``build.bat`` script with the
 version you're building.
@@ -476,11 +522,7 @@ version you're building.
 .. code-block:: bat
 
     cd pkg\windows
-    build.bat 2017.7.2 3
-              ^^^^^^^^ ^
-                  |    |
-    # build version    |
-    # python version --
+    build.bat 3004
 
 This will install everything needed to build a Windows installer for Salt using
 Python 3. The binary will be in the ``salt\pkg\windows\installer`` directory.
@@ -490,12 +532,12 @@ Python 3. The binary will be in the ``salt\pkg\windows\installer`` directory.
 Testing the Salt minion
 =======================
 
-1. Create the directory ``C:\salt`` (if it doesn't exist already)
+1. Create the directory ``%ProgramData\Salt Project\Salt`` (if it doesn't exist already)
 
 2. Copy the example ``conf`` and ``var`` directories from
-    ``pkg\windows\buildenv`` into ``C:\salt``
+    ``pkg\windows\buildenv`` into ``%ProgramData\Salt Project\Salt``
 
-3. Edit ``C:\salt\conf\minion``
+3. Edit ``%ProgramData\Salt Project\Salt\conf\minion``
 
     .. code-block:: bash
 
@@ -505,7 +547,7 @@ Testing the Salt minion
 
     .. code-block:: bash
 
-        cd C:\Python27\Scripts
+        cd C:\Python3\Scripts
         python salt-minion -l debug
 
 5. On the salt-master accept the new minion's key

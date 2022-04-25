@@ -1,0 +1,1 @@
+Ensure that `common_prefix` matching only occurs if a directory name is identified (in the `archive.list` execution module function, which affects the `archive.extracted` state).

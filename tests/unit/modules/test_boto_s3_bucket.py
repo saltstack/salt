@@ -110,7 +110,9 @@ if _has_required_boto():
         "get_bucket_notification_configuration": {
             "LambdaFunctionConfigurations": [
                 {
-                    "LambdaFunctionArn": "arn:aws:lambda:us-east-1:111111222222:function:my-function",
+                    "LambdaFunctionArn": (
+                        "arn:aws:lambda:us-east-1:111111222222:function:my-function"
+                    ),
                     "Id": "zxcvbnmlkjhgfdsa",
                     "Events": ["s3:ObjectCreated:*"],
                     "Filter": {
@@ -150,8 +152,9 @@ if _has_required_boto():
 @skipIf(HAS_BOTO is False, "The boto module must be installed.")
 @skipIf(
     _has_required_boto() is False,
-    "The boto3 module must be greater than"
-    " or equal to version {}".format(required_boto3_version),
+    "The boto3 module must be greater than or equal to version {}".format(
+        required_boto3_version
+    ),
 )
 class BotoS3BucketTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None

@@ -29,9 +29,8 @@ def __virtual__():
     if unavailable_exes:
         return (
             False,
-            (
-                "The puppet execution module cannot be loaded: "
-                "{} unavailable.".format(unavailable_exes)
+            "The puppet execution module cannot be loaded: {} unavailable.".format(
+                unavailable_exes
             ),
         )
     else:

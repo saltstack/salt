@@ -19,7 +19,8 @@ def __virtual__():
         return "sysbench"
     return (
         False,
-        "The sysbench execution module failed to load: the sysbench binary is not in the path.",
+        "The sysbench execution module failed to load: the sysbench binary is not in"
+        " the path.",
     )
 
 

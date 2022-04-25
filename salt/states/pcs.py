@@ -56,7 +56,10 @@ After modifying the cibfile, it can be pushed to the live CIB in the cluster:
 
 Create a cluster from scratch:
 
-1. Authorize nodes to each other:
+1. This authorizes nodes to each other. It probably won't work with Ubuntu as
+    it rolls out a default cluster that needs to be destroyed before the
+    new cluster can be created. This is a little complicated so it's best
+    to just run the cluster_setup below in most cases.:
 
    .. code-block:: yaml
 
@@ -67,7 +70,7 @@ Create a cluster from scratch:
                    - node2.example.com
                - pcsuser: hacluster
                - pcspasswd: hoonetorg
-               - extra_args: []
+
 
 2. Do the initial cluster setup:
 
@@ -82,6 +85,8 @@ Create a cluster from scratch:
                - extra_args:
                    - '--start'
                    - '--enable'
+               - pcsuser: hacluster
+               - pcspasswd: hoonetorg
 
 3. Optional: Set cluster properties:
 
@@ -238,6 +243,20 @@ def _get_cibfile_cksum(cibname):
     return cibfile_cksum
 
 
+def _get_node_list_for_version(nodes):
+    """
+    PCS with version < 0.10 returns lowercase hostnames. Newer versions return the proper hostnames.
+    This accomodates for the old functionality.
+    """
+    pcs_version = __salt__["pkg.version"]("pcs")
+    if __salt__["pkg.version_cmp"](pcs_version, "0.10") == -1:
+        log.info("Node list converted to lower case for backward compatibility")
+        nodes_for_version = [x.lower() for x in nodes]
+    else:
+        nodes_for_version = nodes
+    return nodes_for_version
+
+
 def _item_present(
     name,
     item,
@@ -377,7 +396,7 @@ def auth(name, nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=Non
     pcspasswd
         password for pcsuser (default: hacluster)
     extra_args
-        list of extra args for the \'pcs cluster auth\' command
+        list of extra args for the \'pcs cluster auth\' command, there are none so it's here for compatibility.
 
     Example:
 
@@ -396,7 +415,11 @@ def auth(name, nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=Non
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
     auth_required = False
 
-    authorized = __salt__["pcs.is_auth"](nodes=nodes)
+    nodes = _get_node_list_for_version(nodes)
+
+    authorized = __salt__["pcs.is_auth"](
+        nodes=nodes, pcsuser=pcsuser, pcspasswd=pcspasswd
+    )
     log.trace("Output of pcs.is_auth: %s", authorized)
 
     authorized_dict = {}
@@ -408,7 +431,10 @@ def auth(name, nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=Non
     log.trace("authorized_dict: %s", authorized_dict)
 
     for node in nodes:
-        if node in authorized_dict and authorized_dict[node] == "Already authorized":
+        if node in authorized_dict and (
+            authorized_dict[node] == "Already authorized"
+            or authorized_dict[node] == "Authorized"
+        ):
             ret["comment"] += "Node {} is already authorized\n".format(node)
         else:
             auth_required = True
@@ -421,10 +447,6 @@ def auth(name, nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=Non
     if __opts__["test"]:
         ret["result"] = None
         return ret
-    if not isinstance(extra_args, (list, tuple)):
-        extra_args = []
-    if "--force" not in extra_args:
-        extra_args += ["--force"]
 
     authorize = __salt__["pcs.auth"](
         nodes=nodes, pcsuser=pcsuser, pcspasswd=pcspasswd, extra_args=extra_args
@@ -459,11 +481,24 @@ def auth(name, nodes, pcsuser="hacluster", pcspasswd="hacluster", extra_args=Non
     return ret
 
 
-def cluster_setup(name, nodes, pcsclustername="pcscluster", extra_args=None):
+def cluster_setup(
+    name,
+    nodes,
+    pcsclustername="pcscluster",
+    extra_args=None,
+    pcsuser="hacluster",
+    pcspasswd="hacluster",
+    pcs_auth_extra_args=None,
+    wipe_default=False,
+):
     """
     Setup Pacemaker cluster on nodes.
-    Should be run on one cluster node only
-    (there may be races)
+    Should be run on one cluster node only to avoid race conditions.
+    This performs auth as well as setup so can be run in place of the auth state.
+    It is recommended not to run auth on Debian/Ubuntu for a new cluster and just
+    to run this because of the initial cluster config that is installed on
+    Ubuntu/Debian by default.
+
 
     name
         Irrelevant, not used (recommended: pcs_setup__setup)
@@ -473,6 +508,14 @@ def cluster_setup(name, nodes, pcsclustername="pcscluster", extra_args=None):
         Name of the Pacemaker cluster
     extra_args
         list of extra args for the \'pcs cluster setup\' command
+    pcsuser
+        The username for authenticating the cluster (default: hacluster)
+    pcspasswd
+        The password for authenticating the cluster (default: hacluster)
+    pcs_auth_extra_args
+        Extra args to be passed to the auth function in case of reauth.
+    wipe_default
+        This removes the files that are installed with Debian based operating systems.
 
     Example:
 
@@ -487,6 +530,8 @@ def cluster_setup(name, nodes, pcsclustername="pcscluster", extra_args=None):
                 - extra_args:
                     - '--start'
                     - '--enable'
+                - pcsuser: hacluster
+                - pcspasswd: hoonetorg
     """
 
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
@@ -512,11 +557,26 @@ def cluster_setup(name, nodes, pcsclustername="pcscluster", extra_args=None):
                         )
 
     if not setup_required:
+        log.info("No setup required")
         return ret
 
     if __opts__["test"]:
         ret["result"] = None
         return ret
+
+    # Debian based distros deploy corosync with some initial cluster setup.
+    # The following detects if it's a Debian based distro and then stops Corosync
+    # and removes the config files. I've put this here because trying to do all this in the
+    # state file can break running clusters and can also take quite a long time to debug.
+
+    log.debug("OS_Family: %s", __grains__.get("os_family"))
+    if __grains__.get("os_family") == "Debian" and wipe_default:
+        __salt__["file.remove"]("/etc/corosync/corosync.conf")
+        __salt__["file.remove"]("/var/lib/pacemaker/cib/cib.xml")
+        __salt__["service.stop"]("corosync")
+        auth("pcs_auth__auth", nodes, pcsuser, pcspasswd, pcs_auth_extra_args)
+
+    nodes = _get_node_list_for_version(nodes)
 
     if not isinstance(extra_args, (list, tuple)):
         extra_args = []
@@ -539,7 +599,11 @@ def cluster_setup(name, nodes, pcsclustername="pcscluster", extra_args=None):
     log.trace("setup_dict: %s", setup_dict)
 
     for node in nodes:
-        if node in setup_dict and setup_dict[node] in ["Succeeded", "Success"]:
+        if node in setup_dict and setup_dict[node] in [
+            "Succeeded",
+            "Success",
+            "Cluster enabled",
+        ]:
             ret["comment"] += "Set up {}\n".format(node)
             ret["changes"].update({node: {"old": "", "new": "Setup"}})
         else:
@@ -674,7 +738,7 @@ def cib_present(name, cibname, scope=None, extra_args=None):
     cibname
         name/path of the file containing the CIB
     scope
-        specific section of the CIB (default:
+        specific section of the CIB (default: None)
     extra_args
         additional options for creating the CIB-file
 

@@ -145,7 +145,7 @@ def _srvmgr(cmd, return_json=False):
         cmd = " ".join(cmd)
 
     if return_json:
-        cmd = "ConvertTo-Json -Compress -Depth 4 -InputObject @({})" "".format(cmd)
+        cmd = "ConvertTo-Json -Compress -Depth 4 -InputObject @({})".format(cmd)
 
     cmd = "Import-Module WebAdministration; {}".format(cmd)
 
@@ -247,7 +247,7 @@ def list_sites():
                     filtered_binding.update({key.lower(): binding[key]})
 
             binding_info = binding["bindingInformation"].split(":", 2)
-            ipaddress, port, hostheader = [element.strip() for element in binding_info]
+            ipaddress, port, hostheader = (element.strip() for element in binding_info)
             filtered_binding.update(
                 {"hostheader": hostheader, "ipaddress": ipaddress, "port": port}
             )
@@ -314,7 +314,7 @@ def create_site(
         return True
 
     if protocol not in _VALID_PROTOCOLS:
-        message = ("Invalid protocol '{}' specified. Valid formats:" " {}").format(
+        message = "Invalid protocol '{}' specified. Valid formats: {}".format(
             protocol, _VALID_PROTOCOLS
         )
         raise SaltInvocationError(message)
@@ -326,8 +326,9 @@ def create_site(
         "-PhysicalPath",
         r"'{}'".format(sourcepath),
         "-Bindings",
-        "@{{ protocol='{0}'; bindingInformation='{1}' }};"
-        "".format(protocol, binding_info),
+        "@{{ protocol='{0}'; bindingInformation='{1}' }};".format(
+            protocol, binding_info
+        ),
     ]
 
     if apppool:
@@ -352,7 +353,7 @@ def create_site(
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to create site: {}\nError: {}" "".format(name, cmd_ret["stderr"])
+        msg = "Unable to create site: {}\nError: {}".format(name, cmd_ret["stderr"])
         raise CommandExecutionError(msg)
 
     log.debug("Site created successfully: %s", name)
@@ -433,7 +434,7 @@ def modify_site(name, sourcepath=None, apppool=None):
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to modify site: {}\nError: {}" "".format(name, cmd_ret["stderr"])
+        msg = "Unable to modify site: {}\nError: {}".format(name, cmd_ret["stderr"])
         raise CommandExecutionError(msg)
 
     log.debug("Site modified successfully: %s", name)
@@ -472,7 +473,7 @@ def remove_site(name):
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to remove site: {}\nError: {}" "".format(name, cmd_ret["stderr"])
+        msg = "Unable to remove site: {}\nError: {}".format(name, cmd_ret["stderr"])
         raise CommandExecutionError(msg)
 
     log.debug("Site removed successfully: %s", name)
@@ -616,7 +617,7 @@ def create_binding(
     name = _get_binding_info(hostheader, ipaddress, port)
 
     if protocol not in _VALID_PROTOCOLS:
-        message = ("Invalid protocol '{}' specified. Valid formats:" " {}").format(
+        message = "Invalid protocol '{}' specified. Valid formats: {}".format(
             protocol, _VALID_PROTOCOLS
         )
         raise SaltInvocationError(message)
@@ -624,10 +625,11 @@ def create_binding(
     if sslflags:
         sslflags = int(sslflags)
         if sslflags not in _VALID_SSL_FLAGS:
-            message = (
-                "Invalid sslflags '{}' specified. Valid sslflags range:" " {}..{}"
-            ).format(sslflags, _VALID_SSL_FLAGS[0], _VALID_SSL_FLAGS[-1])
-            raise SaltInvocationError(message)
+            raise SaltInvocationError(
+                "Invalid sslflags '{}' specified. Valid sslflags range: {}..{}".format(
+                    sslflags, _VALID_SSL_FLAGS[0], _VALID_SSL_FLAGS[-1]
+                )
+            )
 
     current_bindings = list_bindings(site)
 
@@ -669,9 +671,7 @@ def create_binding(
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to create binding: {}\nError: {}" "".format(
-            site, cmd_ret["stderr"]
-        )
+        msg = "Unable to create binding: {}\nError: {}".format(site, cmd_ret["stderr"])
         raise CommandExecutionError(msg)
 
     if name in list_bindings(site):
@@ -716,10 +716,11 @@ def modify_binding(
         salt '*' win_iis.modify_binding site='site0' binding='*:80:' hostheader='example.com'
     """
     if sslflags is not None and sslflags not in _VALID_SSL_FLAGS:
-        message = (
-            "Invalid sslflags '{}' specified. Valid sslflags range:" " {}..{}"
-        ).format(sslflags, _VALID_SSL_FLAGS[0], _VALID_SSL_FLAGS[-1])
-        raise SaltInvocationError(message)
+        raise SaltInvocationError(
+            "Invalid sslflags '{}' specified. Valid sslflags range: {}..{}".format(
+                sslflags, _VALID_SSL_FLAGS[0], _VALID_SSL_FLAGS[-1]
+            )
+        )
 
     current_sites = list_sites()
 
@@ -760,7 +761,7 @@ def modify_binding(
         cmd_ret = _srvmgr(ps_cmd)
 
         if cmd_ret["retcode"] != 0:
-            msg = "Unable to modify binding: {}\nError: {}" "".format(
+            msg = "Unable to modify binding: {}\nError: {}".format(
                 binding, cmd_ret["stderr"]
             )
             raise CommandExecutionError(msg)
@@ -784,7 +785,7 @@ def modify_binding(
         cmd_ret = _srvmgr(ps_cmd)
 
         if cmd_ret["retcode"] != 0:
-            msg = "Unable to modify binding SSL Flags: {}\nError: {}" "".format(
+            msg = "Unable to modify binding SSL Flags: {}\nError: {}".format(
                 sslflags, cmd_ret["stderr"]
             )
             raise CommandExecutionError(msg)
@@ -831,9 +832,7 @@ def remove_binding(site, hostheader="", ipaddress="*", port=80):
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to remove binding: {}\nError: {}" "".format(
-            site, cmd_ret["stderr"]
-        )
+        msg = "Unable to remove binding: {}\nError: {}".format(site, cmd_ret["stderr"])
         raise CommandExecutionError(msg)
 
     if name not in list_bindings(site):
@@ -917,10 +916,11 @@ def create_cert_binding(name, site, hostheader="", ipaddress="*", port=443, sslf
     binding_path = r"IIS:\SslBindings\{}".format(binding_info.replace(":", "!"))
 
     if sslflags not in _VALID_SSL_FLAGS:
-        message = (
-            "Invalid sslflags '{}' specified. Valid sslflags range: " "{}..{}"
-        ).format(sslflags, _VALID_SSL_FLAGS[0], _VALID_SSL_FLAGS[-1])
-        raise SaltInvocationError(message)
+        raise SaltInvocationError(
+            "Invalid sslflags '{}' specified. Valid sslflags range: {}..{}".format(
+                sslflags, _VALID_SSL_FLAGS[0], _VALID_SSL_FLAGS[-1]
+            )
+        )
 
     # Verify that the target binding exists.
     current_bindings = list_bindings(site)
@@ -979,7 +979,7 @@ def create_cert_binding(name, site, hostheader="", ipaddress="*", port=443, sslf
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to create certificate binding: {}\nError: {}" "".format(
+        msg = "Unable to create certificate binding: {}\nError: {}".format(
             name, cmd_ret["stderr"]
         )
         raise CommandExecutionError(msg)
@@ -1059,7 +1059,7 @@ def remove_cert_binding(name, site, hostheader="", ipaddress="*", port=443):
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to remove certificate binding: {}\nError: {}" "".format(
+        msg = "Unable to remove certificate binding: {}\nError: {}".format(
             name, cmd_ret["stderr"]
         )
         raise CommandExecutionError(msg)
@@ -1109,7 +1109,8 @@ def list_apppools():
     )
     ps_cmd.append(r"| ForEach-Object { $_.Value };")
     ps_cmd.append(
-        "Get-WebConfigurationProperty -Filter $FilterNonRoot -PsPath $AppPath -Name Path"
+        "Get-WebConfigurationProperty -Filter $FilterNonRoot -PsPath $AppPath -Name"
+        " Path"
     )
     ps_cmd.append(r"| ForEach-Object { $_.Value } | Where-Object { $_ -ne '/' }")
     ps_cmd.append("} }")
@@ -1177,7 +1178,7 @@ def create_apppool(name):
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to create application pool: {}\nError: {}" "".format(
+        msg = "Unable to create application pool: {}\nError: {}".format(
             name, cmd_ret["stderr"]
         )
         raise CommandExecutionError(msg)
@@ -1214,7 +1215,7 @@ def remove_apppool(name):
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to remove application pool: {}\nError: {}" "".format(
+        msg = "Unable to remove application pool: {}\nError: {}".format(
             name, cmd_ret["stderr"]
         )
         raise CommandExecutionError(msg)
@@ -1363,7 +1364,10 @@ def get_container_setting(name, container, settings):
     cmd_ret = _srvmgr(cmd=ps_cmd_validate, return_json=True)
 
     if cmd_ret["retcode"] != 0:
-        message = "One or more invalid property names were specified for the provided container."
+        message = (
+            "One or more invalid property names were specified for the provided"
+            " container."
+        )
         raise SaltInvocationError(message)
 
     ps_cmd.append("$Settings")
@@ -1613,7 +1617,7 @@ def create_app(name, site, sourcepath, apppool=None):
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to create application: {}\nError: {}" "".format(
+        msg = "Unable to create application: {}\nError: {}".format(
             name, cmd_ret["stderr"]
         )
         raise CommandExecutionError(msg)
@@ -1662,7 +1666,7 @@ def remove_app(name, site):
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to remove application: {}\nError: {}" "".format(
+        msg = "Unable to remove application: {}\nError: {}".format(
             name, cmd_ret["stderr"]
         )
         raise CommandExecutionError(msg)
@@ -1777,7 +1781,7 @@ def create_vdir(name, site, sourcepath, app=_DEFAULT_APP):
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to create virtual directory: {}\nError: {}" "".format(
+        msg = "Unable to create virtual directory: {}\nError: {}".format(
             name, cmd_ret["stderr"]
         )
         raise CommandExecutionError(msg)
@@ -1829,7 +1833,7 @@ def remove_vdir(name, site, app=_DEFAULT_APP):
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to remove virtual directory: {}\nError: {}" "".format(
+        msg = "Unable to remove virtual directory: {}\nError: {}".format(
             name, cmd_ret["stderr"]
         )
         raise CommandExecutionError(msg)
@@ -1921,7 +1925,7 @@ def create_backup(name):
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to backup web configuration: {}\nError: {}" "".format(
+        msg = "Unable to backup web configuration: {}\nError: {}".format(
             name, cmd_ret["stderr"]
         )
         raise CommandExecutionError(msg)
@@ -1956,7 +1960,7 @@ def remove_backup(name):
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to remove web configuration: {}\nError: {}" "".format(
+        msg = "Unable to remove web configuration: {}\nError: {}".format(
             name, cmd_ret["stderr"]
         )
         raise CommandExecutionError(msg)
@@ -2041,7 +2045,8 @@ def get_webapp_settings(name, site, settings):
         if setting in availableSettings:
             if setting == "userName" or setting == "password":
                 pscmd.append(
-                    " $Property = Get-WebConfigurationProperty -Filter \"system.applicationHost/sites/site[@name='{}']/application[@path='/{}']/virtualDirectory[@path='/']\"".format(
+                    " $Property = Get-WebConfigurationProperty -Filter"
+                    " \"system.applicationHost/sites/site[@name='{}']/application[@path='/{}']/virtualDirectory[@path='/']\"".format(
                         site, name
                     )
                 )
@@ -2087,7 +2092,10 @@ def get_webapp_settings(name, site, settings):
         log.error("Unable to parse return data as Json.")
 
     if None in ret.values():
-        message = "Some values are empty - please validate site and web application names. Some commands are case sensitive"
+        message = (
+            "Some values are empty - please validate site and web application names."
+            " Some commands are case sensitive"
+        )
         raise SaltInvocationError(message)
 
     return ret
@@ -2168,7 +2176,8 @@ def set_webapp_settings(name, site, settings):
         # Append relevant update command per setting key
         if setting == "userName" or setting == "password":
             pscmd.append(
-                " Set-WebConfigurationProperty -Filter \"system.applicationHost/sites/site[@name='{}']/application[@path='/{}']/virtualDirectory[@path='/']\"".format(
+                " Set-WebConfigurationProperty -Filter"
+                " \"system.applicationHost/sites/site[@name='{}']/application[@path='/{}']/virtualDirectory[@path='/']\"".format(
                     site, name
                 )
             )
@@ -2274,9 +2283,8 @@ def get_webconfiguration_settings(name, settings):
                     )
                 )
             ps_cmd.append(
-                "$Settings.add(@{{filter='{0}';name='{1}';value=[System.Collections.ArrayList] @($Property)}})| Out-Null;".format(
-                    setting["filter"], setting["name"]
-                )
+                "$Settings.add(@{{filter='{0}';name='{1}';value=[System.Collections.ArrayList]"
+                " @($Property)}})| Out-Null;".format(setting["filter"], setting["name"])
             )
         else:
             ps_cmd.append(r"if (([String]::IsNullOrEmpty($Property) -eq $False) -and")
@@ -2284,9 +2292,8 @@ def get_webconfiguration_settings(name, settings):
             ps_cmd.append(r"$Property = $Property | Select-Object")
             ps_cmd.append(r"-ExpandProperty Value };")
             ps_cmd.append(
-                "$Settings.add(@{{filter='{0}';name='{1}';value=[String] $Property}})| Out-Null;".format(
-                    setting["filter"], setting["name"]
-                )
+                "$Settings.add(@{{filter='{0}';name='{1}';value=[String] $Property}})|"
+                " Out-Null;".format(setting["filter"], setting["name"])
             )
         ps_cmd.append(r"$Property = $Null;")
 
@@ -2294,7 +2301,10 @@ def get_webconfiguration_settings(name, settings):
     cmd_ret = _srvmgr(cmd=ps_cmd_validate, return_json=True)
 
     if cmd_ret["retcode"] != 0:
-        message = "One or more invalid property names were specified for the provided container."
+        message = (
+            "One or more invalid property names were specified for the provided"
+            " container."
+        )
         raise SaltInvocationError(message)
 
     ps_cmd.append("$Settings")

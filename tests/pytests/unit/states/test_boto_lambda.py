@@ -308,7 +308,9 @@ def test_present_when_function_exists_and_permissions_func(global_config):
                     {
                         "Condition": {
                             "ArnLike": {
-                                "AWS:SourceArn": "arn:aws:events:us-east-1:9999999999:rule/fooo"
+                                "AWS:SourceArn": (
+                                    "arn:aws:events:us-east-1:9999999999:rule/fooo"
+                                )
                             }
                         },
                         "Action": "lambda:InvokeFunction",

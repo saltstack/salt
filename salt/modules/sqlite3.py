@@ -15,7 +15,8 @@ def __virtual__():
     if not HAS_SQLITE3:
         return (
             False,
-            "The sqlite3 execution module failed to load: the sqlite3 python library is not available.",
+            "The sqlite3 execution module failed to load: the sqlite3 python library is"
+            " not available.",
         )
     return True
 

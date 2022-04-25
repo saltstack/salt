@@ -195,7 +195,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         Test for To maintain the feel of the nova command line,
          this function simply calls
          the server_list function.
-         """
+        """
         with patch.object(nova, "server_list", return_value=["A"]):
             self.assertEqual(nova.list_(), ["A"])
 
@@ -212,7 +212,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         Test for To maintain the feel of the nova command line,
          this function simply calls
          the server_show function.
-         """
+        """
         with patch.object(nova, "server_show", return_value=["A"]):
             self.assertEqual(nova.show("server_id"), ["A"])
 

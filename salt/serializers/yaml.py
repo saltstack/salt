@@ -29,7 +29,7 @@ BaseLoader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 BaseDumper = getattr(yaml, "CSafeDumper", yaml.SafeDumper)
 
 ERROR_MAP = {
-    ("found character '\\t' " "that cannot start any token"): "Illegal tab character"
+    "found character '\\t' that cannot start any token": "Illegal tab character"
 }
 
 

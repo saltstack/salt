@@ -318,7 +318,8 @@ def resource_present(
                     ret["result"] = True
                     if resource_selector_property:
                         ret["comment"] = "the {} resource {} is up to date.".format(
-                            resource_type, resource_selector_value,
+                            resource_type,
+                            resource_selector_value,
                         )
                     else:
                         ret["comment"] = "the {} resource is up to date.".format(
@@ -375,7 +376,8 @@ def resource_present(
                                     ret[
                                         "comment"
                                     ] = "The {} resource {} was updated.".format(
-                                        resource_type, resource_selector_value,
+                                        resource_type,
+                                        resource_selector_value,
                                     )
                                 else:
                                     ret[
@@ -388,7 +390,8 @@ def resource_present(
                                 ret[
                                     "comment"
                                 ] = "The {} resource {} was not updated.".format(
-                                    resource_type, resource_selector_value,
+                                    resource_type,
+                                    resource_selector_value,
                                 )
                             else:
                                 ret[
@@ -422,11 +425,13 @@ def resource_present(
                         ret["changes"][resource_type][key] = _parse_value(kwargs[key])
                 if ret["comment"] == "":
                     ret["comment"] = "The {} resource {} was added.".format(
-                        resource_type, resource_selector_value,
+                        resource_type,
+                        resource_selector_value,
                     )
             elif ret["comment"] == "":
                 ret["comment"] = "The {} resource {} was not added.".format(
-                    resource_type, resource_selector_value,
+                    resource_type,
+                    resource_selector_value,
                 )
     else:
         ## zone does not exist
@@ -515,20 +520,23 @@ def resource_absent(
                         ] = "removed"
                         if ret["comment"] == "":
                             ret["comment"] = "The {} resource {} was removed.".format(
-                                resource_type, resource_selector_value,
+                                resource_type,
+                                resource_selector_value,
                             )
                     elif "messages" in zonecfg_res:
                         ret["comment"] = zonecfg_res["message"]
                     else:
                         ret["comment"] = "The {} resource {} was not removed.".format(
-                            resource_type, resource_selector_value,
+                            resource_type,
+                            resource_selector_value,
                         )
 
         # resource already absent
         if ret["result"] is None:
             ret["result"] = True
             ret["comment"] = "The {} resource {} was absent.".format(
-                resource_type, resource_selector_value,
+                resource_type,
+                resource_selector_value,
             )
     else:
         ## zone does not exist
@@ -582,7 +590,8 @@ def booted(name, single=False):
             if zones[zone]["uuid"] == name:
                 ret["comment"].append(
                     "The zone {} has a uuid of {}, please use the zone name instead!".format(
-                        zone, name,
+                        zone,
+                        name,
                     )
                 )
 
@@ -634,7 +643,8 @@ def halted(name, graceful=True):
             if zones[zone]["uuid"] == name:
                 ret["comment"].append(
                     "The zone {} has a uuid of {}, please use the zone name instead!".format(
-                        zone, name,
+                        zone,
+                        name,
                     )
                 )
         ## note: a non existing zone is not running, we do not consider this a failure
@@ -665,7 +675,8 @@ def export(name, path, replace=False):
             ## pretend we did the correct thing
             ret["result"] = True
             ret["comment"] = "Zone configartion for {} exported to {}".format(
-                name, path,
+                name,
+                path,
             )
             ret["changes"][name] = "exported"
             if __salt__["file.file_exists"](path) and not replace:
@@ -674,7 +685,8 @@ def export(name, path, replace=False):
                 ret[
                     "comment"
                 ] = "File {} exists, zone configuration for {} not exported.".format(
-                    path, name,
+                    path,
+                    name,
                 )
         else:
             ## export and update file
@@ -691,14 +703,16 @@ def export(name, path, replace=False):
                     ret[
                         "comment"
                     ] = "Unable to export zone configuration for {} to {}!".format(
-                        name, path,
+                        name,
+                        path,
                     )
                 else:
                     ret["result"] = True
                     ret[
                         "comment"
                     ] = "Zone configuration for {} was exported to {}.".format(
-                        name, path,
+                        name,
+                        path,
                     )
                     ret["changes"][name] = "exported"
             else:
@@ -722,23 +736,24 @@ def export(name, path, replace=False):
                             ret["result"] = False
                             ret[
                                 "comment"
-                            ] = "Unable to be re-export zone configuration for {} to {}!".format(
-                                name, path,
+                            ] = "Unable to be re-export zone configuration for {}" " to {}!".format(
+                                name,
+                                path,
                             )
                         else:
                             ret["result"] = True
                             ret[
                                 "comment"
                             ] = "Zone configuration for {} was re-exported to {}.".format(
-                                name, path,
+                                name,
+                                path,
                             )
                             ret["changes"][name] = "exported"
                     else:
                         ret["result"] = False
-                        ret[
-                            "comment"
-                        ] = "Zone configuration for {} is different from the one exported to {}!".format(
-                            name, path
+                        ret["comment"] = (
+                            "Zone configuration for {} is different from the one"
+                            " exported to {}!".format(name, path)
                         )
                         if __salt__["file.file_exists"](cfg_tmp):
                             __salt__["file.remove"](cfg_tmp)
@@ -750,7 +765,8 @@ def export(name, path, replace=False):
             if zones[zone]["uuid"] == name:
                 ret["comment"].append(
                     "The zone {} has a uuid of {}, please use the zone name instead!".format(
-                        name, path,
+                        name,
+                        path,
                     )
                 )
 
@@ -793,7 +809,10 @@ def import_(name, path, mode="import", nodataset=False, brand_opts=None):
     if name not in zones:
         if __opts__["test"]:
             ret["result"] = True
-            ret["comment"] = "Zone {} was imported from {}.".format(name, path,)
+            ret["comment"] = "Zone {} was imported from {}.".format(
+                name,
+                path,
+            )
             ret["changes"][name] = "imported"
         else:
             if __salt__["file.file_exists"](path):
@@ -806,19 +825,26 @@ def import_(name, path, mode="import", nodataset=False, brand_opts=None):
                 else:
                     ret["result"] = True
                     ret["changes"][name] = "imported"
-                    ret["comment"] = "Zone {} was imported from {}.".format(name, path,)
+                    ret["comment"] = "Zone {} was imported from {}.".format(
+                        name,
+                        path,
+                    )
                     if mode.lower() == "attach":
                         res_attach = __salt__["zoneadm.attach"](name, False, brand_opts)
                         ret["result"] = res_attach["status"]
                         if res_attach["status"]:
                             ret["changes"][name] = "attached"
                             ret["comment"] = "Zone {} was attached from {}.".format(
-                                name, path,
+                                name,
+                                path,
                             )
                         else:
                             ret["comment"] = []
                             ret["comment"].append(
-                                "Failed to attach zone {} from {}!".format(name, path,)
+                                "Failed to attach zone {} from {}!".format(
+                                    name,
+                                    path,
+                                )
                             )
                             if "message" in res_attach:
                                 ret["comment"].append(res_attach["message"])
@@ -831,12 +857,16 @@ def import_(name, path, mode="import", nodataset=False, brand_opts=None):
                         if res_install["status"]:
                             ret["changes"][name] = "installed"
                             ret["comment"] = "Zone {} was installed from {}.".format(
-                                name, path,
+                                name,
+                                path,
                             )
                         else:
                             ret["comment"] = []
                             ret["comment"].append(
-                                "Failed to install zone {} from {}!".format(name, path,)
+                                "Failed to install zone {} from {}!".format(
+                                    name,
+                                    path,
+                                )
                             )
                             if "message" in res_install:
                                 ret["comment"].append(res_install["message"])
@@ -979,9 +1009,9 @@ def present(name, brand, zonepath, properties=None, resources=None):
                         not resource_selector_property
                         and key in _zonecfg_resource_default_selectors
                     ):
-                        resource_selector_property = _zonecfg_resource_default_selectors[
-                            key
-                        ]
+                        resource_selector_property = (
+                            _zonecfg_resource_default_selectors[key]
+                        )
 
                     res = None
                     if resource_prune:

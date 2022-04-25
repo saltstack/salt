@@ -24,7 +24,8 @@ class BotoIAMTest(ModuleCase):
             boto.connect_iam()
         except boto.exception.NoAuthHandlerFound:
             self.skipTest(
-                "Please setup boto AWS credentials before running boto integration tests."
+                "Please setup boto AWS credentials before running boto integration"
+                " tests."
             )
 
     def test_get_account_id(self):

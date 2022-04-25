@@ -177,8 +177,7 @@ class SSHSingleTests(TestCase):
         }
 
     def test_single_opts(self):
-        """ Sanity check for ssh.Single options
-        """
+        """Sanity check for ssh.Single options"""
 
         single = ssh.Single(
             self.opts,
@@ -220,6 +219,41 @@ class SSHSingleTests(TestCase):
         )
 
         cmd_ret = ("Success", "", 0)
+        mock_flight = MagicMock(return_value=cmd_ret)
+        mock_cmd = MagicMock(return_value=cmd_ret)
+        patch_flight = patch("salt.client.ssh.Single.run_ssh_pre_flight", mock_flight)
+        patch_cmd = patch("salt.client.ssh.Single.cmd_block", mock_cmd)
+        patch_exec_cmd = patch(
+            "salt.client.ssh.shell.Shell.exec_cmd", return_value=("", "", 1)
+        )
+        patch_os = patch("os.path.exists", side_effect=[True])
+
+        with patch_os, patch_flight, patch_cmd, patch_exec_cmd:
+            ret = single.run()
+            mock_cmd.assert_called()
+            mock_flight.assert_called()
+            assert ret == cmd_ret
+
+    def test_run_with_pre_flight_with_args(self):
+        """
+        test Single.run() when ssh_pre_flight is set
+        and script successfully runs
+        """
+        target = self.target.copy()
+        target["ssh_pre_flight"] = os.path.join(RUNTIME_VARS.TMP, "script.sh")
+        target["ssh_pre_flight_args"] = "foobar"
+        single = ssh.Single(
+            self.opts,
+            self.opts["argv"],
+            "localhost",
+            mods={},
+            fsclient=None,
+            thin=salt.utils.thin.thin_path(self.opts["cachedir"]),
+            mine=False,
+            **target
+        )
+
+        cmd_ret = ("Success", "foobar", 0)
         mock_flight = MagicMock(return_value=cmd_ret)
         mock_cmd = MagicMock(return_value=cmd_ret)
         patch_flight = patch("salt.client.ssh.Single.run_ssh_pre_flight", mock_flight)
@@ -504,6 +538,31 @@ class SSHTests(ShellCase):
             "salt.client.ssh.compile_template",
             MagicMock(return_value=salt.utils.yaml.safe_load(self.roster)),
         ):
+            client._expand_target()
+        assert opts["tgt"] == host
+
+    def test_expand_target_no_host(self):
+        """
+        test expand_target when host is not included in the rosterdata
+        """
+        host = "127.0.0.1"
+        user = "test-user@"
+        opts = self.opts
+        opts["tgt"] = user + host
+
+        roster = """
+            localhost: 127.0.0.1
+            """
+        roster_file = os.path.join(RUNTIME_VARS.TMP, "test_roster_no_host")
+        with salt.utils.files.fopen(roster_file, "w") as fp:
+            salt.utils.yaml.safe_dump(salt.utils.yaml.safe_load(roster), fp)
+
+        with patch(
+            "salt.utils.network.is_reachable_host", MagicMock(return_value=False)
+        ):
+            client = ssh.SSH(opts)
+        assert opts["tgt"] == user + host
+        with patch("salt.roster.get_roster_file", MagicMock(return_value=roster_file)):
             client._expand_target()
         assert opts["tgt"] == host
 

@@ -1,8 +1,13 @@
 """
 Tests for the SVN state
 """
+import logging
 
 import pytest
+import salt.utils.platform
+from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES
+
+log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.requires_network,
@@ -11,8 +16,8 @@ pytestmark = [
 
 
 @pytest.fixture
-def repo_target(tmp_path):
-    return tmp_path / "svn-repo-checkout"
+def repo_target(tmp_path_world_rw):
+    return tmp_path_world_rw / "svn-repo-checkout"
 
 
 @pytest.fixture
@@ -33,6 +38,12 @@ def svn(states):
 @pytest.fixture(scope="module")
 def svn_mod(modules):
     return modules.svn
+
+
+@pytest.fixture(scope="module")
+def account():
+    with pytest.helpers.create_account(create_group=True) as _account:
+        yield _account
 
 
 @pytest.mark.slow_test
@@ -62,6 +73,37 @@ def test_latest_failure(svn, repo_revision, repo_target):
     )
     assert ret.result is False
     assert not repo_target.joinpath(".svn").is_dir()
+
+
+@SKIP_INITIAL_PHOTONOS_FAILURES
+@pytest.mark.slow_test
+@pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
+def test_latest_user(svn, repo_url, repo_revision, repo_target, account):
+    """
+    svn.latest
+    """
+    ret = svn.latest(
+        name=repo_url, rev=repo_revision, target=str(repo_target), user=account.username
+    )
+    assert ret.result is True
+    assert repo_target.joinpath(".svn").is_dir()
+    assert ret.changes
+    assert "new" in ret.changes
+    assert ret.changes["new"] == repo_url
+    assert "revision" in ret.changes
+    assert ret.changes["revision"] == repo_revision
+
+    # Make sure that the files in the cloned repo are owned by the account that did the checkout
+    for entry in repo_target.iterdir():
+        entry_stat = entry.stat()
+        assert entry_stat.st_uid == account.info.uid
+        try:
+            assert entry_stat.st_gid == account.info.gid
+        except AssertionError:
+            if not salt.utils.platform.is_darwin():
+                raise
+            pytest.xfail("The 'cmd' module does not change to the user group on Darwin")
 
 
 @pytest.mark.slow_test

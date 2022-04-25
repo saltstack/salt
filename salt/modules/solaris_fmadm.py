@@ -485,7 +485,9 @@ def faulty():
         salt '*' fmadm.faulty
     """
     fmadm = _check_fmadm()
-    cmd = "{cmd} faulty".format(cmd=fmadm,)
+    cmd = "{cmd} faulty".format(
+        cmd=fmadm,
+    )
     res = __salt__["cmd.run_all"](cmd)
     result = {}
     if res["stdout"] == "":

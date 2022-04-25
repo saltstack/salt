@@ -336,8 +336,10 @@ def interfaces(
     net_runner_opts = _get_net_runner_opts()
 
     if pattern:
-        title = 'Pattern "{}" found in the description of the following interfaces'.format(
-            pattern
+        title = (
+            'Pattern "{}" found in the description of the following interfaces'.format(
+                pattern
+            )
         )
     if not title:
         title = "Details"
@@ -953,8 +955,10 @@ def find(addr, best=True, display=_DEFAULT_DISPLAY):
     elif ip:
         device, interface, mac = _find_interfaces_mac(ip)
         if device and interface:
-            title = "IP Address {ip} is set for interface {interface}, on {device}".format(
-                interface=interface, device=device, ip=ip
+            title = (
+                "IP Address {ip} is set for interface {interface}, on {device}".format(
+                    interface=interface, device=device, ip=ip
+                )
             )
             results["int_ip"] = interfaces(
                 device=device, interface=interface, title=title, display=display

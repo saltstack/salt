@@ -71,7 +71,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
         Test login while specifying login service with bad passwd
         This test ensures this PR is working correctly:
         https://github.com/saltstack/salt/pull/31826
-       """
+        """
         copyauth_creds = AUTH_CREDS.copy()
         copyauth_creds["service"] = "login"
         copyauth_creds["password"] = "wrong_password"

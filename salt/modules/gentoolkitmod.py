@@ -26,8 +26,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The gentoolkitmod execution module cannot be loaded: "
-        "either the system is not Gentoo or the gentoolkit.eclean python module not available",
+        "The gentoolkitmod execution module cannot be loaded: either the system is not"
+        " Gentoo or the gentoolkit.eclean python module not available",
     )
 
 

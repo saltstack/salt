@@ -212,9 +212,9 @@ class daclConstants:
                 return self.objectType[t]
             except KeyError:
                 raise CommandExecutionError(
-                    (
-                        'Invalid object type "{}".  It should be one of the following:  {}'
-                    ).format(t, ", ".join(self.objectType))
+                    'Invalid object type "{}". It should be one of the following:  {}'.format(
+                        t, ", ".join(self.objectType)
+                    )
                 )
         else:
             return t
@@ -227,7 +227,7 @@ class daclConstants:
             return self.hkeys_security[s]
         except KeyError:
             raise CommandExecutionError(
-                ('No HKEY named "{}".  It should be one of the following:  {}').format(
+                'No HKEY named "{}".  It should be one of the following:  {}'.format(
                     s, ", ".join(self.hkeys_security)
                 )
             )
@@ -343,10 +343,9 @@ def _getUserSid(user):
             sid = win32security.GetBinarySid(user)
         except Exception as e:  # pylint: disable=broad-except
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Unable to obtain the binary security identifier for {}.  The exception was {}.".format(
-                user, e
+            ret["comment"] = (
+                "Unable to obtain the binary security identifier for {}.  The exception"
+                " was {}.".format(user, e)
             )
         else:
             try:
@@ -355,10 +354,9 @@ def _getUserSid(user):
                 ret["sid"] = sid
             except Exception as e:  # pylint: disable=broad-except
                 ret["result"] = False
-                ret[
-                    "comment"
-                ] = "Unable to lookup the account for the security identifier {}.  The exception was {}.".format(
-                    user, e
+                ret["comment"] = (
+                    "Unable to lookup the account for the security identifier {}.  The"
+                    " exception was {}.".format(user, e)
                 )
     else:
         try:
@@ -367,10 +365,9 @@ def _getUserSid(user):
             ret["sid"] = sid
         except Exception as e:  # pylint: disable=broad-except
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Unable to obtain the security identifier for {}.  The exception was {}.".format(
-                user, e
+            ret["comment"] = (
+                "Unable to obtain the security identifier for {}.  The exception"
+                " was {}.".format(user, e)
             )
     return ret
 

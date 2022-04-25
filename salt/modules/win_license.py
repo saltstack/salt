@@ -115,7 +115,8 @@ def info():
     out = __salt__["cmd.run"](cmd)
 
     match = re.search(
-        r"Name: (.*)\r\nDescription: (.*)\r\nPartial Product Key: (.*)\r\nLicense Status: (.*)",
+        r"Name: (.*)\r\nDescription: (.*)\r\nPartial Product Key: (.*)\r\nLicense"
+        r" Status: (.*)",
         out,
         re.MULTILINE,
     )

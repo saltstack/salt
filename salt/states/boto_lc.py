@@ -245,7 +245,7 @@ def present(
     """
     if user_data and cloud_init:
         raise SaltInvocationError(
-            "user_data and cloud_init are mutually" " exclusive options."
+            "user_data and cloud_init are mutually exclusive options."
         )
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
     exists = __salt__["boto_asg.launch_configuration_exists"](

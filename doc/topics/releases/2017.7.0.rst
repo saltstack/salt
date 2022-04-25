@@ -316,11 +316,11 @@ structure to include job meta data such as ``retcode``.
 
 This is useful at the Python API:
 
-.. code-block:: python
+.. code-block:: pycon
 
     >>> import salt.client
     >>> client = salt.client.LocalClient()
-    >>> client.cmd('*', 'cmd.run', ['return 1'], full_return=True)
+    >>> client.cmd("*", "cmd.run", ["return 1"], full_return=True)
     {'jerry': {'jid': '20170520151213898053', 'ret': '', 'retcode': 1}}
 
 As well as from salt-api:

@@ -1,7 +1,6 @@
 @Library('salt@master-1.11') _
 
 runTestSuite(
-    ami_image_id: 'ami-0eb0a8e46caef07e8',
     concurrent_builds: 1,
     distro_name: 'fedora',
     distro_version: '34',

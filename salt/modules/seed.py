@@ -170,7 +170,7 @@ def apply_(
     if _check_install(mpt):
         # salt-minion is already installed, just move the config and keys
         # into place
-        log.info("salt-minion pre-installed on image, " "configuring as %s", id_)
+        log.info("salt-minion pre-installed on image, configuring as %s", id_)
         minion_config = salt.config.minion_config(cfg_files["config"])
         pki_dir = minion_config["pki_dir"]
         if not os.path.isdir(os.path.join(mpt, pki_dir.lstrip("/"))):

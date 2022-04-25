@@ -28,7 +28,8 @@ def __virtual__():
     if not tuned_adm:
         return (
             False,
-            "The tuned execution module failed to load: the tuned-adm binary is not in the path.",
+            "The tuned execution module failed to load: the tuned-adm binary is not in"
+            " the path.",
         )
     return __virtualname__
 

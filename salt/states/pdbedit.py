@@ -126,7 +126,8 @@ def managed(name, **kwargs):
         ret["changes"] = res
     elif res[name] in ["updated"]:
         ret["changes"][name] = salt.utils.data.compare_dicts(
-            saved, __salt__["pdbedit.list"](hashes=True)[name],
+            saved,
+            __salt__["pdbedit.list"](hashes=True)[name],
         )
     elif res[name] not in ["unchanged"]:
         ret["result"] = False

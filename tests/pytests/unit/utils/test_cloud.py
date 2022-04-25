@@ -12,6 +12,7 @@ import tempfile
 
 import pytest
 import salt.utils.cloud as cloud
+from salt.utils.cloud import __ssh_gateway_arguments as ssh_gateway_arguments
 from tests.support.mock import MagicMock, patch
 
 
@@ -98,10 +99,12 @@ def test__save_password_in_keyring(create_class):
         "fake_password_c8231",
     )
     stored_pw = keyring.get_password(
-        "salt.cloud.provider.test_case_provider", "fake_username",
+        "salt.cloud.provider.test_case_provider",
+        "fake_username",
     )
     keyring.delete_password(
-        "salt.cloud.provider.test_case_provider", "fake_username",
+        "salt.cloud.provider.test_case_provider",
+        "fake_username",
     )
     assert stored_pw == "fake_password_c8231"
 
@@ -151,21 +154,26 @@ def test_deploy_windows_default_port():
     """
     mock_true = MagicMock(return_value=True)
     mock_tuple = MagicMock(return_value=(0, 0, 0))
-    # fmt: off
-    with patch("salt.utils.smb.get_conn", MagicMock()) as mock,\
-            patch("salt.utils.smb.mkdirs", MagicMock()), \
-            patch("salt.utils.smb.put_file", MagicMock()), \
-            patch("salt.utils.smb.delete_file", MagicMock()), \
-            patch("salt.utils.smb.delete_directory", MagicMock()), \
-            patch("time.sleep", MagicMock()),\
-            patch.object(cloud, "wait_for_port", mock_true), \
-            patch.object(cloud, "fire_event", MagicMock()), \
-            patch.object(cloud, "wait_for_psexecsvc", mock_true),\
-            patch.object(cloud, "run_psexec_command", mock_tuple):
+    with patch("salt.utils.smb.get_conn", MagicMock()) as mock, patch(
+        "salt.utils.smb.mkdirs", MagicMock()
+    ), patch("salt.utils.smb.put_file", MagicMock()), patch(
+        "salt.utils.smb.delete_file", MagicMock()
+    ), patch(
+        "salt.utils.smb.delete_directory", MagicMock()
+    ), patch(
+        "time.sleep", MagicMock()
+    ), patch.object(
+        cloud, "wait_for_port", mock_true
+    ), patch.object(
+        cloud, "fire_event", MagicMock()
+    ), patch.object(
+        cloud, "wait_for_psexecsvc", mock_true
+    ), patch.object(
+        cloud, "run_psexec_command", mock_tuple
+    ):
 
         cloud.deploy_windows(host="test", win_installer="")
         mock.assert_called_once_with("test", "Administrator", None, 445)
-    # fmt: on
 
 
 @pytest.mark.skip_unless_on_windows(reason="Only applicable for Windows.")
@@ -175,21 +183,26 @@ def test_deploy_windows_custom_port():
     """
     mock_true = MagicMock(return_value=True)
     mock_tuple = MagicMock(return_value=(0, 0, 0))
-    # fmt: off
-    with patch("salt.utils.smb.get_conn", MagicMock()) as mock, \
-            patch("salt.utils.smb.mkdirs", MagicMock()), \
-            patch("salt.utils.smb.put_file", MagicMock()), \
-            patch("salt.utils.smb.delete_file", MagicMock()), \
-            patch("salt.utils.smb.delete_directory", MagicMock()), \
-            patch("time.sleep", MagicMock()), \
-            patch.object(cloud, "wait_for_port", mock_true), \
-            patch.object(cloud, "fire_event", MagicMock()), \
-            patch.object(cloud, "wait_for_psexecsvc", mock_true), \
-            patch.object(cloud, "run_psexec_command", mock_tuple):
+    with patch("salt.utils.smb.get_conn", MagicMock()) as mock, patch(
+        "salt.utils.smb.mkdirs", MagicMock()
+    ), patch("salt.utils.smb.put_file", MagicMock()), patch(
+        "salt.utils.smb.delete_file", MagicMock()
+    ), patch(
+        "salt.utils.smb.delete_directory", MagicMock()
+    ), patch(
+        "time.sleep", MagicMock()
+    ), patch.object(
+        cloud, "wait_for_port", mock_true
+    ), patch.object(
+        cloud, "fire_event", MagicMock()
+    ), patch.object(
+        cloud, "wait_for_psexecsvc", mock_true
+    ), patch.object(
+        cloud, "run_psexec_command", mock_tuple
+    ):
 
         cloud.deploy_windows(host="test", port=1234, win_installer="")
         mock.assert_called_once_with("test", "Administrator", None, 1234)
-    # fmt: on
 
 
 @pytest.mark.skip_unless_on_windows(reason="Only applicable for Windows.")
@@ -199,17 +212,23 @@ def test_winrm_pinnned_version():
     """
     mock_true = MagicMock(return_value=True)
     mock_tuple = MagicMock(return_value=(0, 0, 0))
-    # fmt: off
-    with patch("salt.utils.smb.get_conn", MagicMock()),\
-            patch("salt.utils.smb.mkdirs", MagicMock()), \
-            patch("salt.utils.smb.put_file", MagicMock()), \
-            patch("salt.utils.smb.delete_file", MagicMock()), \
-            patch("salt.utils.smb.delete_directory", MagicMock()), \
-            patch("time.sleep", MagicMock()),\
-            patch.object(cloud, "wait_for_port", mock_true), \
-            patch.object(cloud, "fire_event", MagicMock()), \
-            patch.object(cloud, "wait_for_psexecsvc", mock_true),\
-            patch.object(cloud, "run_psexec_command", mock_tuple):
+    with patch("salt.utils.smb.get_conn", MagicMock()), patch(
+        "salt.utils.smb.mkdirs", MagicMock()
+    ), patch("salt.utils.smb.put_file", MagicMock()), patch(
+        "salt.utils.smb.delete_file", MagicMock()
+    ), patch(
+        "salt.utils.smb.delete_directory", MagicMock()
+    ), patch(
+        "time.sleep", MagicMock()
+    ), patch.object(
+        cloud, "wait_for_port", mock_true
+    ), patch.object(
+        cloud, "fire_event", MagicMock()
+    ), patch.object(
+        cloud, "wait_for_psexecsvc", mock_true
+    ), patch.object(
+        cloud, "run_psexec_command", mock_tuple
+    ):
 
         try:
             import winrm
@@ -217,6 +236,159 @@ def test_winrm_pinnned_version():
             raise pytest.skip('The "winrm" python module is not installed in this env.')
         else:
             import pkg_resources
+
             winrm_pkg = pkg_resources.get_distribution("pywinrm")
-            assert winrm_pkg.version >= '0.3.0'
+            assert winrm_pkg.version >= "0.3.0"
     # fmt: on
+
+
+def test_ssh_gateway_arguments_default_alive_args():
+    server_alive_interval = 60
+    server_alive_count_max = 3
+    arguments = ssh_gateway_arguments({"ssh_gateway": "host"})
+    assert "-oServerAliveInterval={}".format(server_alive_interval) in arguments
+    assert "-oServerAliveCountMax={}".format(server_alive_count_max) in arguments
+
+
+def test_ssh_gateway_arguments_alive_args():
+    server_alive_interval = 10
+    server_alive_count_max = 8
+    arguments = ssh_gateway_arguments(
+        {
+            "ssh_gateway": "host",
+            "server_alive_interval": server_alive_interval,
+            "server_alive_count_max": server_alive_count_max,
+        }
+    )
+    assert "-oServerAliveInterval={}".format(server_alive_interval) in arguments
+    assert "-oServerAliveCountMax={}".format(server_alive_count_max) in arguments
+
+
+def test_wait_for_port_default_alive_args():
+    server_alive_interval = 60
+    server_alive_count_max = 3
+    with patch("salt.utils.cloud.socket", autospec=True), patch(
+        "salt.utils.cloud._exec_ssh_cmd", autospec=True, return_value=0
+    ) as exec_ssh_cmd:
+        cloud.wait_for_port(
+            "127.0.0.1",
+            gateway={"ssh_gateway": "host", "ssh_gateway_user": "user"},
+        )
+        assert exec_ssh_cmd.call_count == 2
+        ssh_call = exec_ssh_cmd.call_args[0][0]
+        assert "-oServerAliveInterval={}".format(server_alive_interval) in ssh_call
+        assert "-oServerAliveCountMax={}".format(server_alive_count_max) in ssh_call
+
+
+def test_wait_for_port_alive_args():
+    server_alive_interval = 66
+    server_alive_count_max = 1
+    with patch("salt.utils.cloud.socket", autospec=True), patch(
+        "salt.utils.cloud._exec_ssh_cmd", autospec=True, return_value=0
+    ) as exec_ssh_cmd:
+        cloud.wait_for_port(
+            "127.0.0.1",
+            server_alive_interval=server_alive_interval,
+            server_alive_count_max=server_alive_count_max,
+            gateway={"ssh_gateway": "host", "ssh_gateway_user": "user"},
+        )
+        assert exec_ssh_cmd.call_count == 2
+        ssh_call = exec_ssh_cmd.call_args[0][0]
+        assert "-oServerAliveInterval={}".format(server_alive_interval) in ssh_call
+        assert "-oServerAliveCountMax={}".format(server_alive_count_max) in ssh_call
+
+
+def test_scp_file_default_alive_args():
+    server_alive_interval = 60
+    server_alive_count_max = 3
+    with patch("salt.utils.cloud.socket", autospec=True), patch(
+        "salt.utils.cloud._exec_ssh_cmd", autospec=True, return_value=0
+    ) as exec_ssh_cmd:
+        cloud.scp_file(
+            "/salt.txt",
+            contents=None,
+            kwargs={"hostname": "127.0.0.1", "username": "user"},
+            local_file="/salt.txt",
+        )
+        assert exec_ssh_cmd.call_count == 1
+        ssh_call = exec_ssh_cmd.call_args[0][0]
+        assert "-oServerAliveInterval={}".format(server_alive_interval) in ssh_call
+        assert "-oServerAliveCountMax={}".format(server_alive_count_max) in ssh_call
+
+
+def test_scp_file_alive_args():
+    server_alive_interval = 64
+    server_alive_count_max = 4
+    with patch("salt.utils.cloud.socket", autospec=True), patch(
+        "salt.utils.cloud._exec_ssh_cmd", autospec=True, return_value=0
+    ) as exec_ssh_cmd:
+        cloud.scp_file(
+            "/salt.txt",
+            contents=None,
+            kwargs={
+                "hostname": "127.0.0.1",
+                "username": "user",
+                "server_alive_interval": server_alive_interval,
+                "server_alive_count_max": server_alive_count_max,
+            },
+            local_file="/salt.txt",
+        )
+        assert exec_ssh_cmd.call_count == 1
+        ssh_call = exec_ssh_cmd.call_args[0][0]
+        assert "-oServerAliveInterval={}".format(server_alive_interval) in ssh_call
+        assert "-oServerAliveCountMax={}".format(server_alive_count_max) in ssh_call
+
+
+def test_sftp_file_default_alive_args():
+    server_alive_interval = 60
+    server_alive_count_max = 3
+    with patch("salt.utils.cloud.socket", autospec=True), patch(
+        "salt.utils.cloud._exec_ssh_cmd", autospec=True, return_value=0
+    ) as exec_ssh_cmd:
+        cloud.sftp_file(
+            "/salt.txt",
+            contents=None,
+            kwargs={"hostname": "127.0.0.1", "username": "user"},
+            local_file="/salt.txt",
+        )
+        assert exec_ssh_cmd.call_count == 1
+        ssh_call = exec_ssh_cmd.call_args[0][0]
+        assert "-oServerAliveInterval={}".format(server_alive_interval) in ssh_call
+        assert "-oServerAliveCountMax={}".format(server_alive_count_max) in ssh_call
+
+
+def test_sftp_file_alive_args():
+    server_alive_interval = 62
+    server_alive_count_max = 6
+    with patch("salt.utils.cloud.socket", autospec=True), patch(
+        "salt.utils.cloud._exec_ssh_cmd", autospec=True, return_value=0
+    ) as exec_ssh_cmd:
+        cloud.sftp_file(
+            "/salt.txt",
+            contents=None,
+            kwargs={
+                "hostname": "127.0.0.1",
+                "username": "user",
+                "server_alive_interval": server_alive_interval,
+                "server_alive_count_max": server_alive_count_max,
+            },
+            local_file="/salt.txt",
+        )
+        assert exec_ssh_cmd.call_count == 1
+        ssh_call = exec_ssh_cmd.call_args[0][0]
+        assert "-oServerAliveInterval={}".format(server_alive_interval) in ssh_call
+        assert "-oServerAliveCountMax={}".format(server_alive_count_max) in ssh_call
+
+
+def test_deploy_script_ssh_timeout():
+    with patch("salt.utils.cloud.root_cmd", return_value=False) as root_cmd, patch(
+        "salt.utils.cloud.wait_for_port", return_value=True
+    ), patch("salt.utils.cloud.wait_for_passwd", return_value=True), patch(
+        "salt.utils.cloud._exec_ssh_cmd"
+    ):
+        cloud.deploy_script("127.0.0.1", ssh_timeout=34)
+        # verify that ssh_timeout made it into ssh_kwargs
+        assert root_cmd.call_count == 1
+        ssh_kwargs = root_cmd.call_args.kwargs
+        assert "ssh_timeout" in ssh_kwargs
+        assert ssh_kwargs["ssh_timeout"] == 34

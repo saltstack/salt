@@ -20,7 +20,8 @@ def __virtual__():
         return "nagios"
     return (
         False,
-        "The nagios execution module cannot be loaded: nagios-plugins are not installed.",
+        "The nagios execution module cannot be loaded: nagios-plugins are not"
+        " installed.",
     )
 
 

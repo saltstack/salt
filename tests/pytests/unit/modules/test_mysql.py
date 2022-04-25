@@ -154,7 +154,9 @@ def test_user_exists():
 
     with patch.object(mysql, "version", return_value="8.0.11"):
         with patch.object(
-            mysql, "__get_auth_plugin", MagicMock(return_value="mysql_native_password"),
+            mysql,
+            "__get_auth_plugin",
+            MagicMock(return_value="mysql_native_password"),
         ):
             _test_call(
                 mysql.user_exists,
@@ -245,7 +247,9 @@ def test_user_create():
     """
     with patch.object(mysql, "version", return_value="8.0.10"):
         with patch.object(
-            mysql, "__get_auth_plugin", MagicMock(return_value="mysql_native_password"),
+            mysql,
+            "__get_auth_plugin",
+            MagicMock(return_value="mysql_native_password"),
         ):
             _test_call(
                 mysql.user_create,
@@ -263,7 +267,9 @@ def test_user_create():
 
     with patch.object(mysql, "version", return_value="8.0.11"):
         with patch.object(
-            mysql, "__get_auth_plugin", MagicMock(return_value="mysql_native_password"),
+            mysql,
+            "__get_auth_plugin",
+            MagicMock(return_value="mysql_native_password"),
         ):
             _test_call(
                 mysql.user_create,
@@ -311,7 +317,9 @@ def test_user_create():
         with patch.object(
             mysql, "user_exists", MagicMock(return_value=False)
         ), patch.object(
-            mysql, "__get_auth_plugin", MagicMock(return_value="mysql_native_password"),
+            mysql,
+            "__get_auth_plugin",
+            MagicMock(return_value="mysql_native_password"),
         ):
             _test_call(
                 mysql.user_create,
@@ -501,8 +509,30 @@ def test_db_create():
     Test MySQL db_create function in mysql exec module
     """
     _test_call(
-        mysql.db_create, "CREATE DATABASE IF NOT EXISTS `test``'\" db`;", "test`'\" db",
+        mysql.db_create,
+        "CREATE DATABASE IF NOT EXISTS `test``'\" db`;",
+        "test`'\" db",
     )
+
+
+def test_alter_db():
+    """
+    Test MySQL alter_db function in mysql exec module
+    """
+    mock_get_db = {
+        "character_set": "utf8",
+        "collate": "utf8_unicode_ci",
+        "name": "my_test",
+    }
+    mock = MagicMock(return_value=mock_get_db)
+    with patch.object(mysql, "db_get", return_value=mock) as mock_db_get:
+        _test_call(
+            mysql.alter_db,
+            "ALTER DATABASE `my_test` CHARACTER SET utf8 COLLATE utf8_unicode_ci;",
+            "my_test",
+            "utf8",
+            "utf8_unicode_ci",
+        )
 
 
 def test_user_list():
@@ -646,7 +676,12 @@ def test_grant_add():
     Test grant_add function in mysql exec module
     """
     _test_call(
-        mysql.grant_add, "", "SELECT,INSERT,UPDATE", "database.*", "frank", "localhost",
+        mysql.grant_add,
+        "",
+        "SELECT,INSERT,UPDATE",
+        "database.*",
+        "frank",
+        "localhost",
     )
 
 
@@ -742,7 +777,9 @@ def test_plugin_remove():
     """
     with patch.object(mysql, "plugin_status", MagicMock(return_value="ACTIVE")):
         _test_call(
-            mysql.plugin_remove, "UNINSTALL PLUGIN auth_socket", "auth_socket",
+            mysql.plugin_remove,
+            "UNINSTALL PLUGIN auth_socket",
+            "auth_socket",
         )
 
 
@@ -927,7 +964,8 @@ def test__connect_mysqldb():
     """
     Test the _connect function in the MySQL module
     """
+    mysqldb_connect_mock = MagicMock(autospec=True, return_value=MockMySQLConnect())
     with patch.dict(mysql.__salt__, {"config.option": MagicMock()}):
-        with patch("MySQLdb.connect", return_value=MockMySQLConnect()):
-            ret = mysql._connect()
+        with patch("MySQLdb.connect", mysqldb_connect_mock):
+            mysql._connect()
             assert "mysql.error" not in mysql.__context__

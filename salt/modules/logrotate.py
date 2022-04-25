@@ -219,11 +219,10 @@ def set_(key, value, setting=None, conf_file=_DEFAULT_CONF):
         current_value = conf.get(key, False)
 
         if isinstance(current_value, dict):
-            error_msg = (
+            raise SaltInvocationError(
                 "Error: {} includes a dict, and a specific setting inside the "
-                "dict was not declared"
-            ).format(key)
-            raise SaltInvocationError(error_msg)
+                "dict was not declared".format(key)
+            )
 
         if value == current_value:
             _LOG.debug("Command '%s' already has: %s", key, value)
