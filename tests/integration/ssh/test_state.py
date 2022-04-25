@@ -288,6 +288,7 @@ class SSHStateTest(SSHCase):
         """
 
         retval = []
+
         def _run_in_background():
             retval.append(self.run_function("state.sls", ["running"], wipe=False))
 
