@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 tests.unit.runners.test_asam
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -6,7 +5,6 @@ tests.unit.runners.test_asam
 Unit tests for the asam runner
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
@@ -42,10 +40,10 @@ class AsamRunnerVerifySslTest(TestCase, LoaderModuleMockMixin):
             asam.add_platform("plat-foo-2", "plat-foo", "prov1.domain.com")
 
         requests_mock.assert_called_with(
-            'https://prov1.domain.com:3451/config/PlatformSetConfig.html',
-            auth=('TheUsername', 'ThePassword'),
-            data={'manual': 'false'},
-            verify=True
+            "https://prov1.domain.com:3451/config/PlatformSetConfig.html",
+            auth=("TheUsername", "ThePassword"),
+            data={"manual": "false"},
+            verify=True,
         )
 
     def test_remove_platform(self):

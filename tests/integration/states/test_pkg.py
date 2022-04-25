@@ -47,7 +47,10 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             cls._PKG_TARGETS = ["vlc", "putty"]
         elif grains["os"] == "FreeBSD":
             cls._VERSION_SPEC_SUPPORTED = False
-        elif grains["os_family"] in ("Arch", "Debian"):
+        elif grains["os_family"] in "Arch":
+            cls._PKG_TARGETS = ["figlet", "paper"]
+            cls._WILDCARDS_SUPPORTED = True
+        elif grains["os_family"] in "Debian":
             cls._WILDCARDS_SUPPORTED = True
         elif grains["os"] == "Amazon":
             cls._PKG_TARGETS = ["lynx", "gnuplot"]
@@ -67,7 +70,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 cls._PKG_DOT_TARGETS = ["tomcat-el-2.2-api"]
                 cls._PKG_EPOCH_TARGETS = ["comps-extras"]
             elif grains["osmajorrelease"] == 8:
-                cls._PKG_DOT_TARGETS = ["vid.stab"]
+                cls._PKG_DOT_TARGETS = ["aspnetcore-runtime-6.0"]
                 cls._PKG_EPOCH_TARGETS = ["traceroute"]
         elif grains["os_family"] == "Suse":
             cls._PKG_TARGETS = ["lynx", "htop"]

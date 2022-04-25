@@ -136,7 +136,9 @@ class SSHModuleTest(ModuleCase):
         """
         Check that known host information is returned from remote host
         """
-        ret = self.run_function("ssh.recv_known_host_entries", ["github.com"])
+        ret = self.run_function(
+            "ssh.recv_known_host_entries", ["github.com"], enc="ssh-rsa"
+        )
         try:
             self.assertNotEqual(ret, None)
             self.assertEqual(ret[0]["enc"], "ssh-rsa")
@@ -223,7 +225,10 @@ class SSHModuleTest(ModuleCase):
         """
         # add item
         ret = self.run_function(
-            "ssh.set_known_host", ["root", "github.com"], config=self.known_hosts
+            "ssh.set_known_host",
+            ["root", "github.com"],
+            enc="ssh-rsa",
+            config=self.known_hosts,
         )
         try:
             self.assertEqual(ret["status"], "updated")
