@@ -393,6 +393,9 @@ def managed(name, ppa=None, copr=None, **kwargs):
             else salt.utils.data.is_true(enabled)
         )
 
+    elif __grains__["os_family"] == "Debian":
+        repo = salt.utils.pkg.deb.strip_uri(repo)
+
     for kwarg in _STATE_INTERNAL_KEYWORDS:
         kwargs.pop(kwarg, None)
 
@@ -411,9 +414,6 @@ def managed(name, ppa=None, copr=None, **kwargs):
         sanitizedkwargs = __salt__["pkg.expand_repo_def"](repo=repo, **kwargs)
     else:
         sanitizedkwargs = kwargs
-
-    if __grains__["os_family"] == "Debian":
-        repo = salt.utils.pkg.deb.strip_uri(repo)
 
     if pre:
         # 22412: Remove file attribute in case same repo is set up multiple times but with different files
@@ -622,8 +622,13 @@ def absent(name, **kwargs):
         ret["comment"] = "Repo key management is not implemented for this platform"
         return ret
 
+    if __grains__["os_family"] == "Debian":
+        stripname = salt.utils.pkg.deb.strip_uri(name)
+    else:
+        stripname = name
+
     try:
-        repo = __salt__["pkg.get_repo"](name, **kwargs)
+        repo = __salt__["pkg.get_repo"](stripname, **kwargs)
     except CommandExecutionError as exc:
         ret["result"] = False
         ret["comment"] = "Failed to configure repo '{}': {}".format(name, exc)
@@ -644,14 +649,14 @@ def absent(name, **kwargs):
         return ret
 
     try:
-        __salt__["pkg.del_repo"](repo=name, **kwargs)
+        __salt__["pkg.del_repo"](repo=stripname, **kwargs)
     except (CommandExecutionError, SaltInvocationError) as exc:
         ret["result"] = False
         ret["comment"] = exc.strerror
         return ret
 
     repos = __salt__["pkg.list_repos"]()
-    if name not in repos:
+    if stripname not in repos:
         ret["changes"]["repo"] = name
         ret["comment"] = "Removed repo {}".format(name)
 
@@ -659,7 +664,7 @@ def absent(name, **kwargs):
             ret["result"] = True
         else:
             try:
-                removed_keyid = __salt__["pkg.del_repo_key"](name, **kwargs)
+                removed_keyid = __salt__["pkg.del_repo_key"](stripname, **kwargs)
             except (CommandExecutionError, SaltInvocationError) as exc:
                 ret["result"] = False
                 ret["comment"] += ", but failed to remove key: {}".format(exc)
