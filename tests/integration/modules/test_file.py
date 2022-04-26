@@ -180,6 +180,7 @@ class FileModuleTest(ModuleCase):
         ret = self.run_function("file.chgrp", arg=[self.myfile, group])
         self.assertIn("not exist", ret)
 
+    @skipIf(salt.utils.platform.is_windows(), "Patch support was only added in 3004")
     def test_patch(self):
         if not self.run_function("cmd.has_exec", ["patch"]):
             self.skipTest("patch is not installed")
