@@ -2,6 +2,10 @@ import pytest
 import salt.auth.pam
 from tests.support.mock import patch
 
+pytestmark = [
+    pytest.mark.skip_on_windows,
+]
+
 
 @pytest.fixture(autouse=True)
 def configure_loader_modules():
