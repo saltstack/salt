@@ -1620,6 +1620,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(ret["changes"])
         self.assertEqual(ret["comment"], "unless condition is true")
 
+    @skipIf(salt.utils.platform.is_darwin(), "Skip on 3002.9 branch on MacOS")
     @slowTest
     @pytest.mark.usefixtures("salt_sub_minion")
     def test_get_file_from_env_in_top_match(self):

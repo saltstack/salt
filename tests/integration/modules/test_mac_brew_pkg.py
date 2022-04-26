@@ -151,6 +151,7 @@ class BrewModuleTest(ModuleCase):
         refresh_brew = self.run_function("pkg.refresh_db")
         self.assertTrue(refresh_brew)
 
+    @skipIf(True, "Skipping on 3002.9 branch")
     @slowTest
     def test_list_upgrades(self):
         """
