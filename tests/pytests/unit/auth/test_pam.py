@@ -3,7 +3,7 @@ import salt.auth.pam
 from tests.support.mock import patch
 
 pytestmark = [
-    pytest.mark.windows_whitelisted,
+    pytest.mark.skip_on_windows,
 ]
 
 
