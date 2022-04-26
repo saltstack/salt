@@ -206,8 +206,16 @@ def test_ls(use_v2, client_name):
                 with pytest.raises(Exception):
                     client.tree("some-error")
         else:
-            with pytest.raises(etcd_util.Etcd3DirectoryException):
-                client.ls("/x")
+            with patch.object(client, "read", autospec=True) as mock:
+                mock.return_value = [
+                    MagicMock(key="/x/a", value="1"),
+                    MagicMock(key="/x/b", value="2"),
+                    MagicMock(key="/x/c", value={"d": "3"}),
+                ]
+                assert client.ls("/x") == {
+                    "/x": {"/x/a": "1", "/x/b": "2", "/x/c/": {}}
+                }
+                mock.assert_called_with("/x", recursive=True)
 
 
 def test_write(use_v2, client_name):

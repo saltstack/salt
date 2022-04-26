@@ -20,6 +20,8 @@ may be passed in. The following configurations are both valid:
     etcd.client_key: /path/to/your/client_key/client-key.pem # Optional; requires etcd.ca and etcd.client_cert to be set
     etcd.client_cert: /path/to/your/client_cert/client.pem # Optional; requires etcd.ca and etcd.client_key to be set
     etcd.require_v2: True # Optional; defaults to True
+    etcd.encode_keys: True # Optional (v3 ONLY); defaults to True
+    etcd.encode_values: True # Optional (v3 ONLY); defaults to True
 
     # One or more profiles defined
     my_etcd_config:
@@ -31,6 +33,8 @@ may be passed in. The following configurations are both valid:
       etcd.client_key: /path/to/your/client_key/client-key.pem # Optional; requires etcd.ca and etcd.client_cert to be set
       etcd.client_cert: /path/to/your/client_cert/client.pem # Optional; requires etcd.ca and etcd.client_key to be set
       etcd.require_v2: True # Optional; defaults to True
+      etcd.encode_keys: True # Optional (v3 ONLY); defaults to True
+      etcd.encode_values: True # Optional (v3 ONLY); defaults to True
 
 Once configured, the client() function is passed a set of opts, and optionally,
 the name of a profile to be used.
@@ -61,6 +65,7 @@ always use a named configuration profile, as shown above.
 
 import logging
 
+import salt.utils.msgpack
 import salt.utils.versions
 from salt.exceptions import SaltException
 
@@ -574,7 +579,7 @@ class EtcdClientV3(EtcdBase):
 
     ENCODING = "UTF-8"
 
-    def __init__(self, opts, **kwargs):
+    def __init__(self, opts, encode_keys=None, encode_values=None, **kwargs):
         if not HAS_ETCD_V3:
             raise EtcdLibraryNotInstalled("Don't have etcd3-py, need to install it.")
         log.debug("etcd_util has the libraries needed for etcd v3")
@@ -583,6 +588,9 @@ class EtcdClientV3(EtcdBase):
 
         if self.conf.get("etcd.require_v2", True):
             raise IncompatibleEtcdRequirements("Can't create v3 with a v2 requirement")
+
+        self.encode_keys = encode_keys or self.conf.get("etcd.encode_keys", True)
+        self.encode_values = encode_values or self.conf.get("etcd.encode_values", True)
 
         # etcd3-py uses verify instead of ca_cert
         self.xargs["verify"] = self.xargs.pop("ca_cert", None)
@@ -603,6 +611,30 @@ class EtcdClientV3(EtcdBase):
         except AttributeError as err:
             log.debug("etcd3 decoding error: %s", err)
         return kv
+    
+    def _maybe_decode_key(self, key, override=None, **extra_kwargs):
+        extra_kwargs.setdefault(unicode_errors="surrogateescape")
+        if override or self.encode_keys:
+            key = salt.utils.msgpack.loads(key, **extra_kwargs)
+        return key
+
+    def _maybe_encode_key(self, key, override=None, **extra_kwargs):
+        extra_kwargs.setdefault(unicode_errors="surrogateescape")
+        if override or self.encode_keys:
+            key = salt.utils.msgpack.dumps(key, **extra_kwargs)
+        return key
+    
+    def _maybe_decode_value(self, value, override=None, **extra_kwargs):
+        extra_kwargs.setdefault(unicode_errors="surrogateescape")
+        if override or self.encode_values:
+            value = salt.utils.msgpack.loads(value, **extra_kwargs)
+        return value
+
+    def _maybe_encode_value(self, value, override=None, **extra_kwargs):
+        extra_kwargs.setdefault(unicode_errors="surrogateescape")
+        if override or self.encode_values:
+            value = salt.utils.msgpack.dumps(value, **extra_kwargs)
+        return value
 
     def watch(self, key, recurse=False, timeout=0, index=None):
         ret = {"key": key, "value": None, "changed": False, "mIndex": 0, "dir": False}
@@ -678,7 +710,24 @@ class EtcdClientV3(EtcdBase):
         raise Etcd3DirectoryException("etcd3 does not have directories")
 
     def ls(self, path):
-        raise Etcd3DirectoryException("etcd3 does not have directories, can't ls")
+        ret = {}
+        tree = self.tree(path)
+
+        # Here we will simulate directories because v3 does not have them
+        if tree is None:
+            return {}
+        else:
+            for key, value in tree.items():
+                if not path.endswith("/"):
+                    ret_key = "{}/{}".format(path, key)
+                else:
+                    ret_key = "{}{}".format(path, key)
+                if isinstance(value, dict):
+                    ret["{}/".format(ret_key)] = {}
+                else:
+                    ret[ret_key] = value
+            
+        return {path: ret}
 
     def delete(self, key, recursive=False):
         result = self.client.delete_range(key, prefix=recursive)

@@ -428,11 +428,8 @@ def test_write_directory(subtests, etcd_client, prefix, use_v2):
 
 def test_ls(subtests, etcd_client, prefix, use_v2):
     """
-    Test solely writing directories
+    Test listing top level contents
     """
-    if not use_v2:
-        pytest.skip("ls is not defined for etcd_v3")
-
     with subtests.test("ls on a non-existent directory should return an empty dict"):
         assert not etcd_client.ls("{}/ls".format(prefix))
 

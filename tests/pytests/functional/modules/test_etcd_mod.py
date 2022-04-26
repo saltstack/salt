@@ -163,17 +163,13 @@ def test_basic_operations(subtests, profile_name, prefix, use_v2):
         assert etcd_mod.get_(prefix, recurse=True, profile=profile_name) == updated
 
     with subtests.test("We should be list all top level values at a directory"):
-        if use_v2:
-            expected = {
-                prefix: {
-                    "{}/1".format(prefix): "not one",
-                    "{}/2/".format(prefix): {},
-                },
-            }
-            assert etcd_mod.ls_(path=prefix, profile=profile_name) == expected
-        else:
-            with pytest.raises(Etcd3DirectoryException):
-                etcd_mod.ls_(path=prefix, profile=profile_name)
+        expected = {
+            prefix: {
+                "{}/1".format(prefix): "not one",
+                "{}/2/".format(prefix): {},
+            },
+        }
+        assert etcd_mod.ls_(path=prefix, profile=profile_name) == expected
 
     with subtests.test("We should be able to remove values and get a tree hierarchy"):
         updated = {
