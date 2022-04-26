@@ -234,31 +234,29 @@ repos:
           - --include=requirements/windows.txt
           - requirements/static/pkg/windows.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-pkg-windows-3.8-zmq-requirements
-#        name: Windows Packaging Py3.8 ZeroMQ Requirements
-#        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.8/windows\.txt))$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.8
-#          - --platform=windows
-#          - --include=requirements/windows.txt
-#          - requirements/static/pkg/windows.in
+      - id: pip-tools-compile
+        alias: compile-pkg-windows-3.8-zmq-requirements
+        name: Windows Packaging Py3.8 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.8/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=windows
+          - --include=requirements/windows.txt
+          - requirements/static/pkg/windows.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-pkg-windows-3.9-zmq-requirements
-#        name: Windows Packaging Py3.9 ZeroMQ Requirements
-#        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.9/windows\.txt))$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.9
-#          - --platform=windows
-#          - --include=requirements/windows.txt
-#          - requirements/static/pkg/windows.in
+      - id: pip-tools-compile
+        alias: compile-pkg-windows-3.9-zmq-requirements
+        name: Windows Packaging Py3.9 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.9/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=windows
+          - --include=requirements/windows.txt
+          - requirements/static/pkg/windows.in
 
   # <---- Packaging Requirements -------------------------------------------------------------------------------------
 
@@ -689,35 +687,33 @@ repos:
           - --include=requirements/static/ci/common.in
           - requirements/static/ci/windows.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-ci-windows-py3.8-zmq-requirements
-#        name: Windows CI Py3.8 ZeroMQ Requirements
-#        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.8/windows\.txt))$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.8
-#          - --platform=windows
-#          - --include=requirements/static/pkg/py{py_version}/windows.txt
-#          - --include=requirements/pytest.txt
-#          - --include=requirements/static/ci/common.in
-#          - requirements/static/ci/windows.in
+      - id: pip-tools-compile
+        alias: compile-ci-windows-py3.8-zmq-requirements
+        name: Windows CI Py3.8 ZeroMQ Requirements
+        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.8/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=windows
+          - --include=requirements/static/pkg/py{py_version}/windows.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
+          - requirements/static/ci/windows.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-ci-windows-py3.9-zmq-requirements
-#        name: Windows CI Py3.9 ZeroMQ Requirements
-#        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.9/windows\.txt))$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.9
-#          - --platform=windows
-#          - --include=requirements/static/pkg/py{py_version}/windows.txt
-#          - --include=requirements/pytest.txt
-#          - --include=requirements/static/ci/common.in
-#          - requirements/static/ci/windows.in
+      - id: pip-tools-compile
+        alias: compile-ci-windows-py3.9-zmq-requirements
+        name: Windows CI Py3.9 ZeroMQ Requirements
+        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.9/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=windows
+          - --include=requirements/static/pkg/py{py_version}/windows.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/ci/common.in
+          - requirements/static/ci/windows.in
 
       - id: pip-tools-compile
         alias: compile-ci-windows-crypto-py3.5-requirements
@@ -755,84 +751,96 @@ repos:
           - --out-prefix=windows
           - requirements/static/ci/crypto.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-ci-windows-crypto-py3.8-requirements
-#        name: Windows CI Py3.8 Crypto Requirements
-#        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.8
-#          - --platform=windows
-#          - --out-prefix=windows
-#          - requirements/static/ci/crypto.in
+      - id: pip-tools-compile
+        alias: compile-ci-windows-crypto-py3.8-requirements
+        name: Windows CI Py3.8 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=windows
+          - --out-prefix=windows
+          - requirements/static/ci/crypto.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-ci-windows-crypto-py3.9-requirements
-#        name: Windows CI Py3.9 Crypto Requirements
-#        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.9
-#          - --platform=windows
-#          - --out-prefix=windows
-#          - requirements/static/ci/crypto.in
+      - id: pip-tools-compile
+        alias: compile-ci-windows-crypto-py3.9-requirements
+        name: Windows CI Py3.9 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=windows
+          - --out-prefix=windows
+          - requirements/static/ci/crypto.in
 
   # <---- CI Requirements --------------------------------------------------------------------------------------------
 
 
   # ----- Cloud CI Requirements ------------------------------------------------------------------------------------->
       - id: pip-tools-compile
-        alias: compile-ci-cloud-py3.5-requirements
-        name: Cloud CI Py3.5 Requirements
-        files: ^requirements/(static/ci/cloud\.in)$
-        pass_filenames: false
-        args:
-          - -v
-          - --py-version=3.5
-          - requirements/static/ci/cloud.in
-
-      - id: pip-tools-compile
         alias: compile-ci-cloud-py3.6-requirements
         name: Cloud CI Py3.6 Requirements
-        files: ^requirements/(static/ci/cloud\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.6/cloud\.txt)))$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.6
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/linux.txt
           - requirements/static/ci/cloud.in
 
       - id: pip-tools-compile
         alias: compile-ci-cloud-py3.7-requirements
         name: Cloud CI Py3.7 Requirements
-        files: ^requirements/(static/ci/cloud\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.7/cloud\.txt)))$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.7
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/cloud.in
 
       - id: pip-tools-compile
         alias: compile-ci-cloud-py3.8-requirements
         name: Cloud CI Py3.8 Requirements
-        files: ^requirements/(static/ci/cloud\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.8/cloud\.txt)))$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.8
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/cloud.in
 
       - id: pip-tools-compile
         alias: compile-ci-cloud-py3.9-requirements
         name: Cloud CI Py3.9 Requirements
-        files: ^requirements/(static/ci/cloud\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.9/cloud\.txt)))$
         pass_filenames: false
         args:
           - -v
           - --py-version=3.9
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/cloud.in
   # <---- Cloud CI Requirements --------------------------------------------------------------------------------------
 
@@ -858,7 +866,12 @@ repos:
           - -v
           - --py-version=3.6
           - --platform=linux
-          - --include=requirements/static/pkg/py{py_version}/linux.txt
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 
       - id: pip-tools-compile
@@ -870,7 +883,12 @@ repos:
           - -v
           - --py-version=3.7
           - --platform=linux
-          - --include=requirements/static/pkg/py{py_version}/linux.txt
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 
       - id: pip-tools-compile
@@ -882,7 +900,12 @@ repos:
           - -v
           - --py-version=3.8
           - --platform=linux
-          - --include=requirements/static/pkg/py{py_version}/linux.txt
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 
       - id: pip-tools-compile
@@ -894,7 +917,12 @@ repos:
           - -v
           - --py-version=3.9
           - --platform=linux
-          - --include=requirements/static/pkg/py{py_version}/linux.txt
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
           - requirements/static/ci/docs.in
 
   # <---- Doc CI Requirements ----------------------------------------------------------------------------------------

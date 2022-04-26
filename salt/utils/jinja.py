@@ -25,7 +25,7 @@ import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.url
 import salt.utils.yaml
-from jinja2 import BaseLoader, Markup, TemplateNotFound, nodes
+from jinja2 import BaseLoader, TemplateNotFound, nodes
 from jinja2.environment import TemplateModule
 from jinja2.exceptions import TemplateRuntimeError
 from jinja2.ext import Extension
@@ -33,6 +33,12 @@ from salt.exceptions import TemplateError
 from salt.utils.decorators.jinja import jinja_filter, jinja_global, jinja_test
 from salt.utils.odict import OrderedDict
 from salt.utils.versions import LooseVersion
+
+try:
+    from markupsafe import Markup
+except ImportError:
+    # jinja < 3.1
+    from jinja2 import Markup
 
 log = logging.getLogger(__name__)
 
@@ -706,7 +712,13 @@ def method_call(obj, f_name, *f_args, **f_kwargs):
     return getattr(obj, f_name, lambda *args, **kwargs: None)(*f_args, **f_kwargs)
 
 
-@jinja2.contextfunction
+try:
+    contextfunction = jinja2.contextfunction
+except AttributeError:
+    contextfunction = jinja2.pass_context
+
+
+@contextfunction
 def show_full_context(ctx):
     return salt.utils.data.simple_types_filter(
         {key: value for key, value in ctx.items()}

@@ -410,7 +410,7 @@ dnspython==1.16.0
     #   python-etcd
 docker-pycreds==0.4.0
     # via docker
-docker==3.7.2
+docker==3.7.2 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 filelock==3.0.12
     # via virtualenv
@@ -774,7 +774,7 @@ six==1.16.0
     #   websocket-client
 smmap==3.0.4
     # via gitdb
-sqlparse==0.4.1
+sqlparse==0.4.2
     # via -r requirements/static/ci/common.in
 strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in

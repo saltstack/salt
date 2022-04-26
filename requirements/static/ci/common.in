@@ -12,7 +12,8 @@ cherrypy>=17.4.1
 clustershell
 croniter>=0.3.0,!=0.3.22"; sys_platform != 'win32'
 dnspython
-docker
+docker<3.0.0; sys_platform == 'win32'
+docker; sys_platform != 'win32'
 gitpython>=2.1.15
 jmespath
 jsonschema
@@ -32,7 +33,7 @@ python-etcd>0.4.2
 pyvmomi
 requests
 rfc3987
-sqlparse
+sqlparse>=0.4.2
 strict_rfc3339>=0.7
 toml
 vcert~=0.7.0; sys_platform != 'win32'

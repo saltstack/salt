@@ -16,10 +16,10 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
 
 docker = pytest.importorskip("docker")
-# pylint: disable=3rd-party-module-not-gated
+# pylint: disable=3rd-party-module-not-gated,no-name-in-module
 from docker.errors import DockerException  # isort:skip
 
-# pylint: enable=3rd-party-module-not-gated
+# pylint: enable=3rd-party-module-not-gated,no-name-in-module
 
 pytestmark = [
     pytest.mark.slow_test,

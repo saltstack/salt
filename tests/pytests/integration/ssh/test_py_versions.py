@@ -11,7 +11,7 @@ from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
 
 docker = pytest.importorskip("docker")
-from docker.errors import (  # isort:skip pylint: disable=3rd-party-module-not-gated
+from docker.errors import (  # isort:skip pylint: disable=3rd-party-module-not-gated,no-name-in-module
     DockerException,
 )
 
