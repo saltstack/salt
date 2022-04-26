@@ -146,7 +146,7 @@ kubernetes==3.0.0
     # via -r requirements/static/ci/windows.in
 libnacl==1.7.1
     # via -r requirements/static/pkg/py3.6/windows.txt
-lxml==4.3.0
+lxml==4.8.0
     # via -r requirements/static/pkg/py3.6/windows.txt
 mako==1.0.7
     # via
@@ -197,7 +197,7 @@ pyaml==19.4.1
     # via moto
 pyasn1-modules==0.2.4
     # via google-auth
-pyasn1==0.4.5
+pyasn1==0.4.8
     # via
     #   -r requirements/static/pkg/py3.6/windows.txt
     #   pyasn1-modules
@@ -272,7 +272,7 @@ pyyaml==5.3.1
     #   -r requirements/static/pkg/py3.6/windows.txt
     #   kubernetes
     #   pyaml
-pyzmq==18.0.1 ; python_version < "3.8"
+pyzmq==18.0.1 ; python_version < "3.9"
     # via
     #   -r requirements/static/pkg/py3.6/windows.txt
     #   pytest-salt-factories

@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 tests.unit.modules.test_bigip
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Unit tests for the bigip module
 """
-from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 import salt.modules.bigip as bigip
@@ -24,13 +22,15 @@ class RequestsSession:
 
 
 class BigipModuleTest(TestCase, LoaderModuleMockMixin):
-
     def setup_loader_modules(self):
         return {bigip: {}}
 
     def test__build_session_verify_ssl(self):
         requests_session = RequestsSession()
-        with patch("salt.modules.bigip.requests.sessions.Session", MagicMock(return_value=requests_session)):
+        with patch(
+            "salt.modules.bigip.requests.sessions.Session",
+            MagicMock(return_value=requests_session),
+        ):
             bigip._build_session("username", "password")
 
         self.assertEqual(requests_session.auth, ("username", "password"))
