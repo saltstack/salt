@@ -393,7 +393,7 @@ def managed(name, ppa=None, copr=None, **kwargs):
             else salt.utils.data.is_true(enabled)
         )
 
-    elif __grains__["os_family"] == "Debian":
+    if __grains__["os_family"] == "Debian":
         repo = salt.utils.pkg.deb.strip_uri(repo)
 
     for kwarg in _STATE_INTERNAL_KEYWORDS:
