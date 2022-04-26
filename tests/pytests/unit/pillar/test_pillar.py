@@ -2,6 +2,7 @@ import pytest
 import salt.loader
 import salt.pillar
 from salt.utils.odict import OrderedDict
+from tests.support.mock import patch
 
 
 @pytest.mark.parametrize(
@@ -122,3 +123,27 @@ def test_pillar_envs_path_substitution(env, temp_salt_minion, tmp_path):
 
     # The __env__ string in the path has been substituted for the actual env
     assert pillar.opts["pillar_roots"] == expected
+
+
+@pytest.mark.xfail
+def test_issue_61010_do_not_cache_pillar_errors(temp_salt_minion):
+    expected_cache_data = {"some": "totally cool pillar data"}
+    with patch("salt.pillar.Pillar", autospec=True) as fake_pillar:
+        fake_pillar.return_value.compile_pillar.return_value = {
+            "_errors": "these should not be",
+            "some": "totally cool pillar data",
+        }
+
+        opts = temp_salt_minion.config.copy()
+        grains = salt.loader.grains(opts)
+        cache = salt.pillar.PillarCache(
+            opts=temp_salt_minion.config.copy(),
+            grains=grains,
+            minion_id=temp_salt_minion.id,
+            saltenv="base",
+        )
+
+        actual_cache_data = cache.fetch_pillar()
+
+        assert "_errors" not in actual_cache_data
+        assert actual_cache_data == expected_cache_data
