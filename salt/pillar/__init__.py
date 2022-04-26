@@ -456,7 +456,11 @@ class PillarCache:
             pillar_override=self.pillar_override,
             pillarenv=self.pillarenv,
         )
-        return fresh_pillar.compile_pillar()
+        pillars = fresh_pillar.compile_pillar()
+        # Could .pop instead, but LBYL is slightly faster
+        if "_errors" in pillars:
+            del pillars["_errors"]
+        return pillars
 
     def clear_pillar(self):
         """

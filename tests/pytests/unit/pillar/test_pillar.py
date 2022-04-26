@@ -125,7 +125,6 @@ def test_pillar_envs_path_substitution(env, temp_salt_minion, tmp_path):
     assert pillar.opts["pillar_roots"] == expected
 
 
-@pytest.mark.xfail
 def test_issue_61010_do_not_cache_pillar_errors(temp_salt_minion):
     expected_cache_data = {"some": "totally cool pillar data"}
     with patch("salt.pillar.Pillar", autospec=True) as fake_pillar:

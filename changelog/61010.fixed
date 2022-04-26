@@ -1,0 +1,1 @@
+Stop caching `_errors` when pillars are loaded and `pillar_cache: True`.
