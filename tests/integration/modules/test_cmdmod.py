@@ -252,6 +252,7 @@ class CMDModuleTest(ModuleCase):
                 self.assertTrue("Success" in ret)
 
     @skip_if_binaries_missing(["which"])
+    @pytest.mark.skip_on_windows
     def test_which(self):
         """
         cmd.which
@@ -263,6 +264,7 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(cmd_which.rstrip(), cmd_run.rstrip())
 
     @skip_if_binaries_missing(["which"])
+    @pytest.mark.skip_on_windows
     def test_which_bin(self):
         """
         cmd.which_bin
