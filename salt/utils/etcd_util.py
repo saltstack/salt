@@ -177,7 +177,7 @@ class EtcdBase:
         """
         raise NotImplementedError()
 
-    def read(self, key, recursive=False, wait=False, timeout=None, waitIndex=None):
+    def read(self, key, recurse=False, wait=False, timeout=None, waitIndex=None, **kwargs):
         """
         Read a value of a key.
 
@@ -300,7 +300,7 @@ class EtcdBase:
         """
         return self.delete(key, recurse)
 
-    def delete(self, key, recursive=False):
+    def delete(self, key, recurse=False, **kwargs):
         """
         Delete keys or (recursively) whole directories
         """
@@ -332,7 +332,7 @@ class EtcdClient(EtcdBase):
         ret = {"key": key, "value": None, "changed": False, "mIndex": 0, "dir": False}
         try:
             result = self.read(
-                key, recursive=recurse, wait=True, timeout=timeout, waitIndex=index
+                key, recurse=recurse, wait=True, timeout=timeout, waitIndex=index
             )
         except EtcdUtilWatchTimeout:
             try:
@@ -391,19 +391,30 @@ class EtcdClient(EtcdBase):
 
         return self.tree(key)
 
-    def read(self, key, recursive=False, wait=False, timeout=None, waitIndex=None):
+    def read(self, key, recurse=False, wait=False, timeout=None, waitIndex=None, **kwargs):
+        recursive = kwargs.get("recursive", None)
+        if recursive is not None:
+            salt.utils.versions.warn_until(
+                "Argon",
+                "Starting with the Argon release, the recursive kwarg will be deprecated."
+                "Please use recurse instead.",
+            )
+            recurse = recursive
+        if kwargs:
+            log.warning("Invalid kwargs passed in will not be used: %s", kwargs)
+
         try:
             if waitIndex:
                 result = self.client.read(
                     key,
-                    recursive=recursive,
+                    recursive=recurse,
                     wait=wait,
                     timeout=timeout,
                     waitIndex=waitIndex,
                 )
             else:
                 result = self.client.read(
-                    key, recursive=recursive, wait=wait, timeout=timeout
+                    key, recursive=recurse, wait=wait, timeout=timeout
                 )
         except (etcd.EtcdConnectionFailed, etcd.EtcdKeyNotFound) as err:
             log.error("etcd: %s", err)
@@ -523,9 +534,20 @@ class EtcdClient(EtcdBase):
                 ret[item.key] = item.value
         return {path: ret}
 
-    def delete(self, key, recursive=False):
+    def delete(self, key, recurse=False, **kwargs):
+        recursive = kwargs.pop("recursive", None)
+        if recursive is not None:
+            salt.utils.versions.warn_until(
+                "Argon",
+                "Starting with the Argon release, the recursive kwarg will be "
+                "deprecated. Please use recurse instead.",
+            )
+            recurse = recursive
+        if kwargs:
+            log.warning("Invalid kwargs passed in will not be used: %s", kwargs)
+
         try:
-            if self.client.delete(key, recursive=recursive):
+            if self.client.delete(key, recurse=recurse):
                 return True
             else:
                 return False
@@ -639,7 +661,7 @@ class EtcdClientV3(EtcdBase):
     def watch(self, key, recurse=False, timeout=0, index=None):
         ret = {"key": key, "value": None, "changed": False, "mIndex": 0, "dir": False}
         result = self.read(
-            key, recursive=recurse, wait=True, timeout=timeout, waitIndex=index
+            key, recurse=recurse, wait=True, timeout=timeout, waitIndex=index
         )
         if result is not None:
             result = self._decode_from_bytes(result)
@@ -659,10 +681,21 @@ class EtcdClientV3(EtcdBase):
             return None
         return self.tree(key)
 
-    def read(self, key, recursive=False, wait=False, timeout=None, waitIndex=None):
+    def read(self, key, recurse=False, wait=False, timeout=None, waitIndex=None, **kwargs):
+        recursive = kwargs.pop("recursive", None)
+        if recursive is not None:
+            salt.utils.versions.warn_until(
+                "Argon",
+                "Starting with the Argon release, the recursive kwarg will be "
+                "deprecated. Please use recurse instead.",
+            )
+            recurse = recursive
+        if kwargs:
+            log.warning("Invalid kwargs passed in will not be used: %s", kwargs)
+
         if not wait:
             try:
-                result = self.client.range(key, prefix=recursive)
+                result = self.client.range(key, prefix=recurse)
                 kvs = getattr(result, "kvs", None)
                 if kvs is None:
                     log.error("etcd3 read: No values found for key %s", key)
@@ -676,7 +709,7 @@ class EtcdClientV3(EtcdBase):
         else:
             try:
                 watcher = self.client.Watcher(
-                    key=key, prefix=recursive, start_revision=waitIndex
+                    key=key, prefix=recurse, start_revision=waitIndex
                 )
                 return self._decode_from_bytes(watcher.watch_once(timeout=timeout))
             except Exception as err:  # pylint: disable=W0703
@@ -729,8 +762,19 @@ class EtcdClientV3(EtcdBase):
             
         return {path: ret}
 
-    def delete(self, key, recursive=False):
-        result = self.client.delete_range(key, prefix=recursive)
+    def delete(self, key, recurse=False, **kwargs):
+        recursive = kwargs.pop("recursive", None)
+        if recursive is not None:
+            salt.utils.versions.warn_until(
+                "Argon",
+                "Starting with the Argon release, the recursive kwarg will be "
+                "deprecated. Please use recurse instead.",
+            )
+            recurse = recursive
+
+        if kwargs:
+            log.warning("Invalid kwargs passed in will not be used: %s", kwargs)
+        result = self.client.delete_range(key, prefix=recurse)
         if hasattr(result, "deleted"):
             return True if result.deleted else None
         return False
@@ -775,7 +819,7 @@ class EtcdClientV3(EtcdBase):
         return dest
 
     def tree(self, path):
-        items = self.read(path, recursive=True)
+        items = self.read(path, recurse=True)
         if items is None:
             return None
         if len(items) == 1 and items[0].key == path:

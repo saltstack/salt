@@ -123,7 +123,7 @@ def cleanup_prefixed_entries(etcd_client, prefix):
         assert etcd_client.get(prefix, recurse=True) is None
         yield
     finally:
-        etcd_client.delete(prefix, recursive=True)
+        etcd_client.delete(prefix, recurse=True)
 
 
 def test_etcd_client_creation(minion_opts, profile_name, use_v2):
@@ -212,7 +212,7 @@ def test_read(subtests, etcd_client, prefix, use_v2):
             path="{}/read".format(prefix),
         )
 
-        result = etcd_client.read("{}/read".format(prefix), recursive=True)
+        result = etcd_client.read("{}/read".format(prefix), recurse=True)
         assert result
         assert result.children if use_v2 else len(result) > 1
 
@@ -251,7 +251,7 @@ def test_read(subtests, etcd_client, prefix, use_v2):
         def wait_func_2(return_list):
             return_list.append(
                 etcd_client.read(
-                    "{}/read".format(prefix), wait=True, timeout=30, recursive=True
+                    "{}/read".format(prefix), wait=True, timeout=30, recurse=True
                 )
             )
 
@@ -301,7 +301,7 @@ def test_read(subtests, etcd_client, prefix, use_v2):
                     "{}/read".format(prefix),
                     wait=True,
                     timeout=30,
-                    recursive=True,
+                    recurse=True,
                     waitIndex=last_modified + 1,
                 )
             )
@@ -452,14 +452,8 @@ def test_ls(subtests, etcd_client, prefix, use_v2):
         assert etcd_client.ls("{}/ls".format(prefix)) == expected
 
 
-@pytest.mark.parametrize(
-    "func,recurse_kwarg",
-    (
-        pytest.param("rm", {"recurse": True}),
-        pytest.param("delete", {"recursive": True}),
-    ),
-)
-def test_rm_and_delete(subtests, etcd_client, prefix, func, recurse_kwarg, use_v2):
+@pytest.mark.parametrize("func", ("rm", "delete"))
+def test_rm_and_delete(subtests, etcd_client, prefix, func, use_v2):
     """
     Ensure we can remove keys using rm
     """
@@ -476,7 +470,7 @@ def test_rm_and_delete(subtests, etcd_client, prefix, func, recurse_kwarg, use_v
     with subtests.test("we should be able to remove an empty directory"):
         if use_v2:
             etcd_client.write_directory("{}/rm/dir1".format(prefix), None)
-            assert func("{}/rm/dir1".format(prefix), **recurse_kwarg)
+            assert func("{}/rm/dir1".format(prefix), recurse=True)
             assert etcd_client.get("{}/rm/dir1".format(prefix), recurse=True) is None
 
     with subtests.test("we should be able to remove a directory with keys"):
@@ -491,7 +485,7 @@ def test_rm_and_delete(subtests, etcd_client, prefix, func, recurse_kwarg, use_v
         }
         etcd_client.update(updated, path="{}/rm".format(prefix))
 
-        assert func("{}/rm/dir1".format(prefix), **recurse_kwarg)
+        assert func("{}/rm/dir1".format(prefix), recurse=True)
         assert etcd_client.get("{}/rm/dir1".format(prefix), recurse=True) is None
         assert etcd_client.get("{}/rm/dir1/rm-1".format(prefix), recurse=True) is None
 

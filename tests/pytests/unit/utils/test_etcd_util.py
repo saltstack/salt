@@ -177,7 +177,7 @@ def test_tree(use_v2, client_name):
                     MagicMock(key="/x/c/d", value="3"),
                 ]
                 assert client.tree("/x") == {"a": "1", "b": "2", "c": {"d": "3"}}
-                mock.assert_called_with("/x", recursive=True)
+                mock.assert_called_with("/x", recurse=True)
 
 
 def test_ls(use_v2, client_name):
@@ -215,7 +215,7 @@ def test_ls(use_v2, client_name):
                 assert client.ls("/x") == {
                     "/x": {"/x/a": "1", "/x/b": "2", "/x/c/": {}}
                 }
-                mock.assert_called_with("/x", recursive=True)
+                mock.assert_called_with("/x", recurse=True)
 
 
 def test_write(use_v2, client_name):
@@ -377,9 +377,9 @@ def test_rm(use_v2, client_name):
         if use_v2:
             etcd_client.delete.return_value = True
             assert client.rm("/some-key")
-            etcd_client.delete.assert_called_with("/some-key", recursive=False)
+            etcd_client.delete.assert_called_with("/some-key", recurse=False)
             assert client.rm("/some-dir", recurse=True)
-            etcd_client.delete.assert_called_with("/some-dir", recursive=True)
+            etcd_client.delete.assert_called_with("/some-dir", recurse=True)
 
             etcd_client.delete.side_effect = etcd.EtcdNotFile()
             assert client.rm("/some-dir") is None
@@ -427,7 +427,7 @@ def test_watch(use_v2, client_name):
                     "dir": False,
                 }
                 mock.assert_called_with(
-                    "/some-key", wait=True, recursive=False, timeout=0, waitIndex=None
+                    "/some-key", wait=True, recurse=False, timeout=0, waitIndex=None
                 )
 
                 mock.side_effect = iter(
@@ -467,7 +467,7 @@ def test_watch(use_v2, client_name):
                     "dir": True,
                 }
                 mock.assert_called_with(
-                    "/some-dir", wait=True, recursive=True, timeout=5, waitIndex=10
+                    "/some-dir", wait=True, recurse=True, timeout=5, waitIndex=10
                 )
 
                 # iter(list(Exception)) works correctly with both mock<1.1 and mock>=1.1
@@ -493,7 +493,7 @@ def test_watch(use_v2, client_name):
                     "dir": False,
                 }
                 mock.assert_called_with(
-                    "/some-key", wait=True, recursive=False, timeout=0, waitIndex=None
+                    "/some-key", wait=True, recurse=False, timeout=0, waitIndex=None
                 )
                 mock.return_value = MagicMock(
                     value="stack", key="/some-key", mod_revision=1
@@ -506,7 +506,7 @@ def test_watch(use_v2, client_name):
                     "dir": False,
                 }
                 mock.assert_called_with(
-                    "/some-key", wait=True, recursive=True, timeout=5, waitIndex=10
+                    "/some-key", wait=True, recurse=True, timeout=5, waitIndex=10
                 )
 
                 mock.side_effect = None
