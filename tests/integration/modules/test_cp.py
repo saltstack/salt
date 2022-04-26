@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import hashlib
 import logging
 import os
@@ -12,7 +8,7 @@ import textwrap
 import time
 import uuid
 
-import psutil
+import psutil  # pylint: disable=3rd-party-module-not-gated
 import pytest
 import salt.ext.six as six
 import salt.utils.files
@@ -40,9 +36,7 @@ class CPModuleTest(ModuleCase):
 
         TODO: maybe move this behavior to ModuleCase itself?
         """
-        return salt.utils.data.decode(
-            super(CPModuleTest, self).run_function(*args, **kwargs)
-        )
+        return salt.utils.data.decode(super().run_function(*args, **kwargs))
 
     @with_tempfile()
     @slowTest
@@ -326,14 +320,11 @@ class CPModuleTest(ModuleCase):
         """
         self.run_function(
             "cp.get_url",
-            [
-                "ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/amd64/12.0-RELEASE/MANIFEST",
-                tgt,
-            ],
+            ["ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/README.TXT", tgt],
         )
         with salt.utils.files.fopen(tgt, "r") as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
-        self.assertIn("Base system", data)
+        self.assertIn("The official FreeBSD", data)
 
     # cp.get_file_str tests
 
@@ -437,7 +428,7 @@ class CPModuleTest(ModuleCase):
         cp.cache_file
         """
         nginx_port = get_unused_localhost_port()
-        url_prefix = "http://localhost:{0}/".format(nginx_port)
+        url_prefix = "http://localhost:{}/".format(nginx_port)
         temp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, temp_dir, ignore_errors=True)
         nginx_root_dir = os.path.join(temp_dir, "root")

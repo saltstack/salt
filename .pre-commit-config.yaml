@@ -4,7 +4,7 @@ default_language_version:
 exclude: ^(doc/_static/.*|doc/_themes/.*)$
 repos:
   - repo: https://github.com/saltstack/pip-tools-compile-impersonate
-    rev: dff9089c1003af49665064067ff63c75b9b69dcd
+    rev: "4.4"
     hooks:
 
   # ----- Packaging Requirements ------------------------------------------------------------------------------------>
@@ -245,31 +245,29 @@ repos:
           - --include=requirements/windows.txt
           - requirements/static/pkg/windows.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-pkg-windows-3.8-zmq-requirements
-#        name: Windows Packaging Py3.8 ZeroMQ Requirements
-#        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.8/windows\.txt))$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.8
-#          - --platform=windows
-#          - --include=requirements/windows.txt
-#          - requirements/static/pkg/windows.in
+      - id: pip-tools-compile
+        alias: compile-pkg-windows-3.8-zmq-requirements
+        name: Windows Packaging Py3.8 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.8/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=windows
+          - --include=requirements/windows.txt
+          - requirements/static/pkg/windows.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-pkg-windows-3.9-zmq-requirements
-#        name: Windows Packaging Py3.9 ZeroMQ Requirements
-#        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.9/windows\.txt))$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.9
-#          - --platform=windows
-#          - --include=requirements/windows.txt
-#          - requirements/static/pkg/windows.in
+      - id: pip-tools-compile
+        alias: compile-pkg-windows-3.9-zmq-requirements
+        name: Windows Packaging Py3.9 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.9/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=windows
+          - --include=requirements/windows.txt
+          - requirements/static/pkg/windows.in
 
   # <---- Packaging Requirements -------------------------------------------------------------------------------------
 
@@ -701,33 +699,31 @@ repos:
           - --include=requirements/pytest.txt
           - requirements/static/ci/windows.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-ci-windows-py3.8-zmq-requirements
-#        name: Windows CI Py3.8 ZeroMQ Requirements
-#        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/windows\.in|pkg/py3\.8/windows\.txt))$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.8
-#          - --platform=windows
-#          - --include=requirements/static/pkg/py{py_version}/windows.txt
-#          - --include=requirements/pytest.txt
-#          - requirements/static/ci/windows.in
+      - id: pip-tools-compile
+        alias: compile-ci-windows-py3.8-zmq-requirements
+        name: Windows CI Py3.8 ZeroMQ Requirements
+        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/windows\.in|pkg/py3\.8/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=windows
+          - --include=requirements/static/pkg/py{py_version}/windows.txt
+          - --include=requirements/pytest.txt
+          - requirements/static/ci/windows.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-ci-windows-py3.9-zmq-requirements
-#        name: Windows CI Py3.9 ZeroMQ Requirements
-#        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/windows\.in|pkg/py3\.9/windows\.txt))$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.9
-#          - --platform=windows
-#          - --include=requirements/static/pkg/py{py_version}/windows.txt
-#          - --include=requirements/pytest.txt
-#          - requirements/static/ci/windows.in
+      - id: pip-tools-compile
+        alias: compile-ci-windows-py3.9-zmq-requirements
+        name: Windows CI Py3.9 ZeroMQ Requirements
+        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/windows\.in|pkg/py3\.9/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=windows
+          - --include=requirements/static/pkg/py{py_version}/windows.txt
+          - --include=requirements/pytest.txt
+          - requirements/static/ci/windows.in
 
       - id: pip-tools-compile
         alias: compile-ci-windows-crypto-py3.5-requirements
@@ -765,31 +761,29 @@ repos:
           - --out-prefix=windows
           - requirements/static/ci/crypto.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-ci-windows-crypto-py3.8-requirements
-#        name: Windows CI Py3.8 Crypto Requirements
-#        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.8
-#          - --platform=windows
-#          - --out-prefix=windows
-#          - requirements/static/ci/crypto.in
+      - id: pip-tools-compile
+        alias: compile-ci-windows-crypto-py3.8-requirements
+        name: Windows CI Py3.8 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=windows
+          - --out-prefix=windows
+          - requirements/static/ci/crypto.in
 
-# Commented out since pywin32 and pymssql do not have packages or support for Py >= 3.8
-#      - id: pip-tools-compile
-#        alias: compile-ci-windows-crypto-py3.9-requirements
-#        name: Windows CI Py3.9 Crypto Requirements
-#        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
-#        pass_filenames: false
-#        args:
-#          - -v
-#          - --py-version=3.9
-#          - --platform=windows
-#          - --out-prefix=windows
-#          - requirements/static/ci/crypto.in
+      - id: pip-tools-compile
+        alias: compile-ci-windows-crypto-py3.9-requirements
+        name: Windows CI Py3.9 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=windows
+          - --out-prefix=windows
+          - requirements/static/ci/crypto.in
 
   # <---- CI Requirements --------------------------------------------------------------------------------------------
 
@@ -1125,16 +1119,8 @@ repos:
                 salt/ext/.*|
                 tests/kitchen/.*
             )$
-
-  - repo: https://github.com/myint/rstcheck
-    # This, for now, is meant to run when locally committing code and will be disabled(skipped) when we run pre-commit
-    # against all codebase to avoid MASSIVE code churn. This way, we do it in smaller chunks, a few at a time.
-    rev: 3f92957
-    hooks:
-      - id: rstcheck
-        name: Check reST files using rstcheck
-        args: [--report=warning]
-        additional_dependencies: [sphinx]
+        additional_dependencies:
+          - click<8.1.0
 
   - repo: https://github.com/asottile/blacken-docs
     rev: v1.7.0
@@ -1142,7 +1128,9 @@ repos:
       - id: blacken-docs
         args: [--skip-errors]
         files: ^doc/.*\.rst
-        additional_dependencies: [black==19.10b0]
+        additional_dependencies:
+          - click<8.1.0
+          - black==19.10b0
   # <---- Code Formatting --------------------------------------------------------------------------------------------
 
   # ----- Pre-Commit ------------------------------------------------------------------------------------------------>
@@ -1157,6 +1145,9 @@ repos:
           - -e
           - lint-salt-pre-commit
           - --
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
 
   - repo: https://github.com/saltstack/mirrors-nox
     rev: v2020.8.22
@@ -1169,33 +1160,42 @@ repos:
           - -e
           - lint-tests-pre-commit
           - --
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
 
-  - repo: https://github.com/saltstack/mirrors-nox
-    rev: v2020.8.22
+  - repo: https://github.com/saltstack/invoke-pre-commit
+    rev: v1.9.0
     hooks:
-      - id: nox
+      - id: invoke
         alias: check-docs
         name: Check Docs
         files: ^(salt/.*\.py|doc/ref/.*\.rst)$
         args:
-          - -e
-          - invoke-pre-commit
-          - --
           - docs.check
+        additional_dependencies:
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
 
-  - repo: https://github.com/saltstack/mirrors-nox
-    rev: v2020.8.22
+  - repo: https://github.com/saltstack/invoke-pre-commit
+    rev: v1.9.0
     hooks:
-      - id: nox
+      - id: invoke
         alias: check-filemap
         name: Check Filename Map Change Matching
-        files: ^tests/filename_map\.yml$
+        files: ^tests/(filename_map\.yml|.*\.py)$
         pass_filenames: false
         args:
-          - -e
-          - invoke-pre-commit
-          - --
           - filemap.check
+        additional_dependencies:
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
   # <---- Pre-Commit -------------------------------------------------------------------------------------------------
 
   # ----- Security -------------------------------------------------------------------------------------------------->

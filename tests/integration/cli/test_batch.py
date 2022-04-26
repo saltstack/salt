@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
 import salt.utils.platform
@@ -27,7 +25,7 @@ class BatchTest(ShellCase):
         """
         Tests executing a simple batch command to help catch regressions
         """
-        ret = "Executing run on [{0}]".format(repr("sub_minion"))
+        ret = "Executing run on [{}]".format(repr("sub_minion"))
         cmd = self.run_salt(
             '"*minion" test.echo "batch testing" -b 50%', timeout=self.run_timeout,
         )
@@ -39,7 +37,7 @@ class BatchTest(ShellCase):
         Tests executing a simple batch command using a number division instead of
         a percentage with full batch CLI call.
         """
-        ret = "Executing run on [{0}, {1}]".format(repr("minion"), repr("sub_minion"))
+        ret = "Executing run on [{}, {}]".format(repr("minion"), repr("sub_minion"))
         cmd = self.run_salt(
             '"*minion" test.ping --batch-size 2', timeout=self.run_timeout,
         )
@@ -52,8 +50,8 @@ class BatchTest(ShellCase):
         targeting.
         """
         os_grain = ""
-        sub_min_ret = "Executing run on [{0}]".format(repr("sub_minion"))
-        min_ret = "Executing run on [{0}]".format(repr("minion"))
+        sub_min_ret = "Executing run on [{}]".format(repr("sub_minion"))
+        min_ret = "Executing run on [{}]".format(repr("minion"))
 
         for item in self.run_salt("minion grains.get os"):
             if item != "minion:":
@@ -61,7 +59,9 @@ class BatchTest(ShellCase):
 
         os_grain = os_grain.strip()
         cmd = self.run_salt(
-            '-C "G@os:{0} and not localhost" -b 25% test.ping'.format(os_grain),
+            '-C "G@os:{} and not localhost" -b 25% test.ping'.format(
+                os_grain.replace(" ", "?")
+            ),
             timeout=self.run_timeout,
         )
         self.assertIn(sub_min_ret, cmd)
