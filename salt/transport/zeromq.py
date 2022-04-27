@@ -22,8 +22,8 @@ import salt.ext.tornado.concurrent
 import salt.ext.tornado.gen
 import salt.ext.tornado.ioloop
 import salt.log.setup
-import salt.payload
 import salt.master
+import salt.payload
 import salt.transport.client
 import salt.transport.mixins.auth
 import salt.transport.server
