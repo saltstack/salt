@@ -137,7 +137,7 @@ def CNAME(host, nameserver=None):
 
     .. code-block:: bash
 
-        salt ns1 dig.CNAME www.google.com
+        salt ns1 dig.CNAME mail.google.com
     """
     dig = ["dig", "+short", str(host), "CNAME"]
 
