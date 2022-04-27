@@ -612,6 +612,9 @@ def _grains(host, protocol=None, port=None):
 
 
 def is_connected_via_vcenter():
+    """
+    Returns ``True`` if the proxy is connected via vCenter
+    """
     return True if "vcenter" in DETAILS else False
 
 
