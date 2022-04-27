@@ -73,7 +73,7 @@ the ESXCLI package be installed on the machine running the Proxy Minion process.
 
 Until vSphere 6.7, the ESXCLI package was offered as part of VMware vSphere CLI, or vCLI.
 Beginning with vSphere 6.7, VMware provides a standalone ESXCLI package, and deprecates the
-vCLI package in vSphere 7.0. VMware provides vCLI package installation instructions for 
+vCLI package in vSphere 7.0. VMware provides vCLI package installation instructions for
 `vSphere 5.5-6.7`_ and ESXCLI for `vSphere 6.7u2-7.0`_.
 
 .. _vCLI for vSphere 5.5: https://developer.vmware.com/docs/1092/getting-started-with-vsphere-command-line-interfaces/doc/cli_install.4.1.html
@@ -188,7 +188,7 @@ credstore
 If the ESXi host is using an untrusted SSL certificate, set this value to
 the file path where the credential store is located. This file is passed to
 ``esxcli``. Default is ``<HOME>/.vmware/credstore/vicredentials.xml`` on Linux
-and ``<APPDATA>/VMware/credstore/vicredentials.xml`` on Windows. 
+and ``<APPDATA>/VMware/credstore/vicredentials.xml`` on Windows.
 
 .. note::
 
@@ -238,7 +238,7 @@ User domain. Required if mechanism is ``sspi``.
 
 principal
 ^^^^^^^^^
-Kerberos principal. Required if mechanism is ``sspi`.`
+Kerberos principal. Required if mechanism is ``sspi``.
 
 Salt Proxy
 ----------
