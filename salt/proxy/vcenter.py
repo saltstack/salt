@@ -66,7 +66,7 @@ To use this proxy module, please use on of the following configurations:
       principal: <host kerberos principal>
 
 proxytype
----------
+^^^^^^^^^
 The ``proxytype`` key and value pair is critical, as it tells Salt which
 interface to load from the ``proxy`` directory in Salt's install hierarchy,
 or from ``/srv/salt/_proxy`` on the Salt Master (if you have created your
@@ -74,44 +74,43 @@ own proxy module, for example). To use this Proxy Module, set this to
 ``vcenter``.
 
 vcenter
--------
+^^^^^^^
 The location of the VMware vCenter server (host of ip). Required
 
 username
---------
+^^^^^^^^
 The username used to login to the vcenter, such as ``root``.
 Required only for userpass.
 
 mechanism
----------
+^^^^^^^^^
 The mechanism used to connect to the vCenter server. Supported values are
 ``userpass`` and ``sspi``. Required.
 
 passwords
----------
+^^^^^^^^^
 A list of passwords to be used to try and login to the vCenter server. At least
 one password in this list is required if mechanism is ``userpass``
 
 The proxy integration will try the passwords listed in order.
 
 domain
-------
-User domain. Required if mechanism is ``sspi``
+^^^^^^
+User domain. Required if mechanism is ``sspi``.
 
 principal
----------
-Kerberos principal. Rquired if mechanism is ``sspi``
+^^^^^^^^^
+Kerberos principal. Required if mechanism is ``sspi``.
 
 protocol
---------
+^^^^^^^^
 If the vCenter is not using the default protocol, set this value to an
 alternate protocol. Default is ``https``.
 
 port
-----
+^^^^
 If the ESXi host is not using the default port, set this value to an
 alternate port. Default is ``443``.
-
 
 Salt Proxy
 ==========

@@ -71,12 +71,17 @@ ESXCLI
 Currently, about a third of the functions used in the vSphere Execution Module require
 the ESXCLI package be installed on the machine running the Proxy Minion process.
 
-The ESXCLI package is also referred to as the VMware vSphere CLI, or vCLI. VMware
-provides vCLI package installation instructions for `vSphere 5.5`_ and
-`vSphere 6.0`_.
+Until vSphere 6.7, the ESXCLI package was offered as part of VMware vSphere CLI, or vCLI.
+Beginning with vSphere 6.7, VMware provides a standalone ESXCLI package, and deprecates the
+vCLI package in vSphere 7.0. VMware provides vCLI package installation instructions for 
+`vSphere 5.5-6.7`_ and ESXCLI for `vSphere 6.7u2-7.0`_.
 
-.. _vSphere 5.5: http://pubs.vmware.com/vsphere-55/index.jsp#com.vmware.vcli.getstart.doc/cli_install.4.2.html
-.. _vSphere 6.0: http://pubs.vmware.com/vsphere-60/index.jsp#com.vmware.vcli.getstart.doc/cli_install.4.2.html
+.. _vCLI for vSphere 5.5: https://developer.vmware.com/docs/1092/getting-started-with-vsphere-command-line-interfaces/doc/cli_install.4.1.html
+.. _vCLI for vSphere 6.0: https://developer.vmware.com/docs/3037/getting-started-with-vsphere-command-line-interfaces/doc/cli_install.4.1.html
+.. _vCLI for vSphere 6.5: https://developer.vmware.com/docs/4162/getting-started-with-vsphere-command-line-interfaces/doc/GUID-38C02094-CEE2-469E-8FB9-5453DA416623.html
+.. _vCLI for vSphere 6.7: https://developer.vmware.com/docs/6526/getting-started-with-vsphere-command-line-interfaces/doc/GUID-38C02094-CEE2-469E-8FB9-5453DA416623.html
+.. _ESXCLI for vSphere 6.7u2: https://kb.vmware.com/s/article/66988
+.. _ESXCLI for vSphere 7.0: https://developer.vmware.com/docs/11789/getting-started-with-esxcli/GUID-E35D6CFC-4AAD-4D29-AE09-01E21BFA38A5.html
 
 Once all of the required dependencies are in place and the vCLI package is
 installed, you can check to see if you can connect to your ESXi host or vCenter
@@ -114,6 +119,8 @@ look like this:
         - third_password
       credstore: <path to credential store>
 
+Configuration options:
+
 proxytype
 ^^^^^^^^^
 The ``proxytype`` key and value pair is critical, as it tells Salt which
@@ -127,7 +134,7 @@ host
 The location, or ip/dns, of the ESXi host. Required.
 
 username
-^^^^^^^^
+^^^^^^^^^
 The username used to login to the ESXi host, such as ``root``. Required.
 
 passwords
@@ -181,13 +188,58 @@ credstore
 If the ESXi host is using an untrusted SSL certificate, set this value to
 the file path where the credential store is located. This file is passed to
 ``esxcli``. Default is ``<HOME>/.vmware/credstore/vicredentials.xml`` on Linux
-and ``<APPDATA>/VMware/credstore/vicredentials.xml`` on Windows.
+and ``<APPDATA>/VMware/credstore/vicredentials.xml`` on Windows. 
 
 .. note::
 
     ``HOME`` variable is sometimes not set for processes running as system
     services. If you want to rely on the default credential store location,
     make sure ``HOME`` is set for the proxy process.
+
+This proxy minion can optionally connect through a vCenter instance instead
+of directly to the ESXi host. This can be configured by specifying a ``vcenter``
+key instead of a ``host`` in the pillar, and configuring the authentication
+type using ``mechanism``:
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: vcenter
+      vcenter: <ip or dns name of parent vcenter>
+      username: <vCenter username>
+      mechanism: userpass
+      passwords:
+        - first_password
+        - second_password
+        - third_password
+
+    proxy:
+      proxytype: vcenter
+      vcenter: <ip or dns name of parent vcenter>
+      username: <vCenter username>
+      domain: <user domain>
+      mechanism: sspi
+      principal: <host kerberos principal>
+
+Additional configuration options when connecting through vCenter:
+
+vcenter
+^^^^^^^
+The location of the VMware vCenter server (host of ip). Required.
+
+mechanism
+^^^^^^^^^
+The mechanism used to connect to the vCenter server. Supported values are
+``userpass`` and ``sspi``. Required.
+
+domain
+^^^^^^
+User domain. Required if mechanism is ``sspi``.
+
+principal
+^^^^^^^^^
+Kerberos principal. Required if mechanism is ``sspi`.`
+
 
 Salt Proxy
 ----------
