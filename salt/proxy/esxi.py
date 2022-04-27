@@ -240,7 +240,6 @@ principal
 ^^^^^^^^^
 Kerberos principal. Required if mechanism is ``sspi`.`
 
-
 Salt Proxy
 ----------
 
