@@ -74,7 +74,7 @@ the ESXCLI package be installed on the machine running the Proxy Minion process.
 Until vSphere 6.7, the ESXCLI package was offered as part of VMware vSphere CLI, or vCLI.
 Beginning with vSphere 6.7, VMware provides a standalone ESXCLI package, and deprecates the
 vCLI package in vSphere 7.0. VMware provides vCLI package installation instructions for
-`vSphere 5.5-6.7`_ and ESXCLI for `vSphere 6.7u2-7.0`_.
+`vCLI for vSphere 5.5`_, `vCLI for vSphere 6.0`_, `vCLI for vSphere 6.5`_, `vCLI for vSphere 6.7`_; `ESXCLI for vSphere 6.7u2`_ and `ESXCLI for vSphere 7.0`_.
 
 .. _vCLI for vSphere 5.5: https://developer.vmware.com/docs/1092/getting-started-with-vsphere-command-line-interfaces/doc/cli_install.4.1.html
 .. _vCLI for vSphere 6.0: https://developer.vmware.com/docs/3037/getting-started-with-vsphere-command-line-interfaces/doc/cli_install.4.1.html
