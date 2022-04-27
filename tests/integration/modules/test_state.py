@@ -1621,6 +1621,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(ret["comment"], "unless condition is true")
 
     @slowTest
+    @skipIf(True, "Skipping on 3002.9 branch")
     @pytest.mark.usefixtures("salt_sub_minion")
     def test_get_file_from_env_in_top_match(self):
         tgt = os.path.join(RUNTIME_VARS.TMP, "prod-cheese-file")
