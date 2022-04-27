@@ -4639,7 +4639,6 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
 
 
 @skipIf(not salt.utils.path.which("patch"), "patch is not installed")
-@pytest.mark.windows_whitelisted
 class PatchTest(ModuleCase, SaltReturnAssertsMixin):
     def _check_patch_version(self, min_version):
         """
