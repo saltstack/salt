@@ -10,7 +10,7 @@ Dependencies
 - pyVmomi Python Module
 
 pyVmomi
--------
+^^^^^^^
 
 PyVmomi can be installed via pip:
 

@@ -134,7 +134,7 @@ host
 The location, or ip/dns, of the ESXi host. Required.
 
 username
-^^^^^^^^^
+^^^^^^^^
 The username used to login to the ESXi host, such as ``root``. Required.
 
 passwords
