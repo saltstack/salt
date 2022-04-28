@@ -2024,6 +2024,7 @@ class State:
         # duration in milliseconds.microseconds
         duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
         ret["duration"] = duration
+        ret["__parallel__"] = True
 
         if "retry" in low:
             retries = 1
