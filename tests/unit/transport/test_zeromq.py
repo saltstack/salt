@@ -3,8 +3,10 @@
 """
 
 import ctypes
+import logging
 import multiprocessing
 import os
+import signal
 import threading
 import time
 from concurrent.futures.thread import ThreadPoolExecutor
@@ -24,6 +26,7 @@ from salt.ext.six.moves import range
 from salt.ext.tornado.testing import AsyncTestCase
 from salt.transport.zeromq import AsyncReqMessageClientPool
 from saltfactories.utils.ports import get_unused_localhost_port
+from saltfactories.utils.processes import terminate_process
 from tests.support.helpers import flaky, not_runs_on, slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, call, patch
@@ -34,6 +37,8 @@ from tests.unit.transport.mixins import (
     ReqChannelMixin,
     run_loop_in_thread,
 )
+
+log = logging.getLogger(__name__)
 
 x = "fix pre"
 
@@ -96,7 +101,7 @@ class BaseZMQReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
         cls.evt = threading.Event()
         cls.server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
         cls.server_thread = threading.Thread(
-            target=run_loop_in_thread, args=(cls.io_loop, cls.evt)
+            target=run_loop_in_thread, args=(cls.io_loop, cls.evt), daemon=True
         )
         cls.server_thread.start()
 
@@ -259,7 +264,13 @@ class BaseZMQPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         cls.server_channel = salt.transport.server.PubServerChannel.factory(
             cls.master_config
         )
-        cls.server_channel.pre_fork(cls.process_manager)
+        cls.server_channel.pre_fork(
+            cls.process_manager,
+            kwargs={
+                "log_queue": salt.log.setup.get_multiprocessing_logging_queue(),
+                "secrets": salt.master.SMaster.secrets,
+            },
+        )
 
         # we also require req server for auth
         cls.req_server_channel = salt.transport.server.ReqServerChannel.factory(
@@ -273,7 +284,7 @@ class BaseZMQPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
             cls._handle_payload, io_loop=cls._server_io_loop
         )
         cls.server_thread = threading.Thread(
-            target=run_loop_in_thread, args=(cls._server_io_loop, cls.evt)
+            target=run_loop_in_thread, args=(cls._server_io_loop, cls.evt), daemon=True
         )
         cls.server_thread.start()
 
@@ -462,7 +473,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         # likely hood of dropped messages.
         self.io_loop = salt.ext.tornado.ioloop.IOLoop()
         self.io_loop.make_current()
-        self.io_loop_thread = threading.Thread(target=self.io_loop.start)
+        self.io_loop_thread = threading.Thread(target=self.io_loop.start, daemon=True)
         self.io_loop_thread.start()
         self.process_manager = salt.utils.process.ProcessManager(
             name="PubServer_ProcessManager"
@@ -472,7 +483,11 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         self.io_loop.add_callback(self.io_loop.stop)
         self.io_loop_thread.join()
         self.process_manager.stop_restarting()
+        self.process_manager.send_signal_to_processes(signal.SIGTERM)
         self.process_manager.kill_children()
+        # Really terminate any process still left behind
+        for pid in self.process_manager._process_map:
+            terminate_process(pid=pid, kill_children=True, slow_stop=False)
         del self.io_loop
         del self.io_loop_thread
         del self.process_manager
@@ -486,16 +501,20 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         ctx = zmq.Context()
         sock = ctx.socket(zmq.SUB)
         sock.setsockopt(zmq.LINGER, -1)
+        sock.setsockopt(zmq.BACKLOG, 1000)
         sock.setsockopt(zmq.SUBSCRIBE, b"")
+        sock.setsockopt(zmq.SNDHWM, 1000)
+        sock.setsockopt(zmq.RCVHWM, 1000)
         sock.connect(pub_uri)
         last_msg = time.time()
         serial = salt.payload.Serial(opts)
         crypticle = salt.crypt.Crypticle(
             opts, salt.master.SMaster.secrets["aes"]["secret"].value
         )
-        unpacker = salt.utils.msgpack.Unpacker()
+        # unpacker = salt.utils.msgpack.Unpacker()
         stop = False
-        while time.time() - last_msg < timeout:
+        start = time.time()
+        while time.time() - start < timeout:
             try:
                 wire_bytes = sock.recv(zmq.NOBLOCK)
             except zmq.ZMQError:
@@ -505,20 +524,19 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
                     if messages != 1:
                         messages -= 1
                         continue
-
-                unpacker.feed(wire_bytes)
-                for w_payload in unpacker:
-                    payload = crypticle.loads(w_payload[b"load"])
-                    if not payload:
-                        continue
-                    if "stop" in payload:
-                        stop = True
-                        break
-                    last_msg = time.time()
-                    results.append(payload["jid"])
+                w_payload = salt.payload.Serial({}).loads(wire_bytes)
+                payload = crypticle.loads(w_payload["load"])
+                if not payload:
+                    continue
+                if "stop" in payload:
+                    stop = True
+                    break
+                last_msg = time.time()
+                results.append(payload["jid"])
             if stop:
                 break
 
+    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
     @slowTest
     def test_publish_to_pubserv_ipc(self):
         """
@@ -530,14 +548,19 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(opts)
         server_channel.pre_fork(
             self.process_manager,
-            kwargs={"log_queue": salt.log.setup.get_multiprocessing_logging_queue()},
+            kwargs={
+                "log_queue": salt.log.setup.get_multiprocessing_logging_queue(),
+                "secrets": salt.master.SMaster.secrets,
+            },
         )
         pub_uri = "tcp://{interface}:{publish_port}".format(**server_channel.opts)
         send_num = 10000
         expect = []
         results = []
         gather = threading.Thread(
-            target=self._gather_results, args=(self.minion_config, pub_uri, results,)
+            target=self._gather_results,
+            args=(self.minion_config, pub_uri, results,),
+            daemon=True,
         )
         gather.start()
         # Allow time for server channel to start, especially on windows
@@ -572,14 +595,21 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         )
         opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
 
-        channel = salt.transport.zeromq.AsyncZeroMQPubChannel(opts)
+        channel = salt.transport.zeromq.AsyncZeroMQPubChannel(
+            opts, io_loop=self.io_loop
+        )
         patch_socket = MagicMock(return_value=True)
         patch_auth = MagicMock(return_value=True)
-        with patch.object(channel, "_socket", patch_socket), patch.object(
-            channel, "auth", patch_auth
-        ):
-            channel.connect()
-        assert str(opts["publish_port"]) in patch_socket.mock_calls[0][1][0]
+        try:
+            with patch.object(channel, "_socket", patch_socket), patch.object(
+                channel, "auth", patch_auth
+            ):
+                channel.connect()
+            assert str(opts["publish_port"]) in patch_socket.mock_calls[0][1][0]
+        finally:
+            channel.io_loop.stop()
+            channel.context.destroy(1)
+            channel.close()
 
     def test_zeromq_zeromq_filtering_decode_message_no_match(self):
         """
@@ -611,11 +641,15 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
 
         server_channel = salt.transport.zeromq.AsyncZeroMQPubChannel(opts)
-        with patch(
-            "salt.crypt.AsyncAuth.crypticle",
-            MagicMock(return_value={"tgt_type": "glob", "tgt": "*", "jid": 1}),
-        ) as mock_test:
-            res = server_channel._decode_messages(message)
+        try:
+            with patch(
+                "salt.crypt.AsyncAuth.crypticle",
+                MagicMock(return_value={"tgt_type": "glob", "tgt": "*", "jid": 1}),
+            ) as mock_test:
+                res = server_channel._decode_messages(message)
+        finally:
+            server_channel.io_loop.stop()
+            server_channel.context.destroy(1)
         assert res.result() is None
 
     def test_zeromq_zeromq_filtering_decode_message(self):
@@ -648,11 +682,15 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         opts["master_uri"] = "tcp://{interface}:{publish_port}".format(**opts)
 
         server_channel = salt.transport.zeromq.AsyncZeroMQPubChannel(opts)
-        with patch(
-            "salt.crypt.AsyncAuth.crypticle",
-            MagicMock(return_value={"tgt_type": "glob", "tgt": "*", "jid": 1}),
-        ) as mock_test:
-            res = server_channel._decode_messages(message)
+        try:
+            with patch(
+                "salt.crypt.AsyncAuth.crypticle",
+                MagicMock(return_value={"tgt_type": "glob", "tgt": "*", "jid": 1}),
+            ) as mock_test:
+                res = server_channel._decode_messages(message)
+        finally:
+            server_channel.io_loop.stop()
+            server_channel.context.destroy(1)
 
         assert res.result()["enc"] == "aes"
 
@@ -678,6 +716,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
             target=self._gather_results,
             args=(self.minion_config, pub_uri, results,),
             kwargs={"messages": 2},
+            daemon=True,
         )
         gather.start()
         with patch(
@@ -696,7 +735,8 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
             server_channel.pre_fork(
                 self.process_manager,
                 kwargs={
-                    "log_queue": salt.log.setup.get_multiprocessing_logging_queue()
+                    "log_queue": salt.log.setup.get_multiprocessing_logging_queue(),
+                    "secrets": salt.master.SMaster.secrets,
                 },
             )
             time.sleep(2)
@@ -727,26 +767,34 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         """
         Test sending 10K messags to ZeroMQPubServerChannel using TCP transport
         """
-        opts = dict(self.master_config, ipc_mode="tcp", pub_hwm=0)
-        server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(opts)
-        server_channel.pre_fork(
-            self.process_manager,
-            kwargs={"log_queue": salt.log.setup.get_multiprocessing_logging_queue()},
-        )
-        pub_uri = "tcp://{interface}:{publish_port}".format(**server_channel.opts)
         send_num = 10000
         expect = []
         results = []
+        opts = dict(self.master_config, ipc_mode="tcp", pub_hwm=0)
+        pub_uri = "tcp://{interface}:{publish_port}".format(**opts)
         gather = threading.Thread(
-            target=self._gather_results, args=(self.minion_config, pub_uri, results,)
+            target=self._gather_results,
+            args=(self.minion_config, pub_uri, results,),
+            daemon=True,
         )
         gather.start()
+        time.sleep(4)
+        server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(opts)
+        server_channel.pre_fork(
+            self.process_manager,
+            kwargs={
+                "log_queue": salt.log.setup.get_multiprocessing_logging_queue(),
+                "secrets": salt.master.SMaster.secrets,
+            },
+        )
+        time.sleep(4)
         # Allow time for server channel to start, especially on windows
-        time.sleep(2)
         for i in range(send_num):
             expect.append(i)
             load = {"tgt_type": "glob", "tgt": "*", "jid": i}
             server_channel.publish(load)
+        time.sleep(2)
+        server_channel.publish({"tgt_type": "glob", "tgt": "*", "stop": True})
         gather.join()
         server_channel.pub_close()
         assert len(results) == send_num, (len(results), set(expect).difference(results))
@@ -757,7 +805,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         for i in range(num):
             load = {"tgt_type": "glob", "tgt": "*", "jid": "{}-{}".format(sid, i)}
             server_channel.publish(load)
-        time.sleep(0.3)
+        time.sleep(5)
         server_channel.pub_close()
 
     @staticmethod
@@ -771,7 +819,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
                 "xdata": "0" * size,
             }
             server_channel.publish(load)
-        time.sleep(0.3)
+        time.sleep(5)
         server_channel.pub_close()
 
     @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
@@ -789,23 +837,28 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         pub_uri = "tcp://{interface}:{publish_port}".format(**opts)
         # Allow time for server channel to start, especially on windows
         gather = threading.Thread(
-            target=self._gather_results, args=(self.minion_config, pub_uri, results,)
+            target=self._gather_results,
+            args=(self.minion_config, pub_uri, results,),
+            daemon=True,
         )
         gather.start()
-        time.sleep(2)
+        time.sleep(4)
         server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(opts)
         server_channel.pre_fork(
             self.process_manager,
-            kwargs={"log_queue": salt.log.setup.get_multiprocessing_logging_queue()},
+            kwargs={
+                "log_queue": salt.log.setup.get_multiprocessing_logging_queue(),
+                "secrets": salt.master.SMaster.secrets,
+            },
         )
-        time.sleep(2)
+        time.sleep(4)
         with ThreadPoolExecutor(max_workers=4) as executor:
             executor.submit(self._send_small, opts, 1)
-            executor.submit(self._send_small, opts, 2)
+            executor.submit(self._send_large, opts, 2)
             executor.submit(self._send_small, opts, 3)
             executor.submit(self._send_large, opts, 4)
+        time.sleep(5)
         expect = ["{}-{}".format(a, b) for a in range(10) for b in (1, 2, 3, 4)]
-        time.sleep(0.1)
         server_channel.publish({"tgt_type": "glob", "tgt": "*", "stop": True})
         gather.join()
         server_channel.pub_close()
