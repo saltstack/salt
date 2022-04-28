@@ -596,7 +596,7 @@ def test_parallel_state_with_requires(state, state_tree):
     """
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         start_time = time.time()
-        state.sls(
+        ret = state.sls(
             "requisite",
             __pub_jid="1",  # Because these run in parallel we need a fake JID)
         )
@@ -606,6 +606,10 @@ def test_parallel_state_with_requires(state, state_tree):
         # they'll run in parallel so we should be below 30 seconds
         # confirm that the total runtime is below 30s
         assert (end_time - start_time) < 30
+
+        for item in range(1, 10):
+            _id = "cmd_|-blah-{}_|-sleep 2_|-run".format(item)
+            assert "__parallel__" in ret[_id]
 
 
 def test_issue_59922_conflict_in_name_and_id_for_require_in(state, state_tree):
