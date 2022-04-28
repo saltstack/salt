@@ -2020,6 +2020,7 @@ class State:
         # duration in milliseconds.microseconds
         duration = (delta.seconds * 1000000 + delta.microseconds) / 1000.0
         ret["duration"] = duration
+        ret["__parallel__"] = True
 
         troot = os.path.join(self.opts["cachedir"], self.jid)
         tfile = os.path.join(troot, salt.utils.hashutils.sha1_digest(tag))
