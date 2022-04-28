@@ -9,7 +9,6 @@ This is a base library used by a number of AWS services.
 """
 
 import binascii
-import copy
 import hashlib
 import hmac
 import logging
@@ -187,9 +186,9 @@ def assumed_creds(prov_dict, role_arn, location=None):
     # current time in epoch seconds
     now = time.mktime(datetime.utcnow().timetuple())
 
-    for key, creds in copy.deepcopy(__AssumeCache__.items()):
+    for key, creds in __AssumeCache__.items():
         if (creds["Expiration"] - now) <= 120:
-            del __AssumeCache__[key]
+            __AssumeCache__[key].delete()
 
     if role_arn in __AssumeCache__:
         c = __AssumeCache__[role_arn]
