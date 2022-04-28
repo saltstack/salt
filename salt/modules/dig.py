@@ -133,6 +133,8 @@ def CNAME(host, nameserver=None):
     """
     Return the CNAME record for ``host``.
 
+    .. versionadded:: 3005
+
     CLI Example:
 
     .. code-block:: bash
