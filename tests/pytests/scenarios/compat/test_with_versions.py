@@ -42,11 +42,6 @@ CMD . $VIRTUAL_ENV/bin/activate
 
 def _get_test_versions():
     test_versions = []
-    for python_version in ("2", "3"):
-        for salt_version in ("2019.2.4", "3000.6"):
-            test_versions.append(
-                PySaltCombo(python_version=python_version, salt_version=salt_version)
-            )
     for salt_version in ("3001.4", "3002.2"):
         test_versions.append(PySaltCombo(python_version="3", salt_version=salt_version))
     return test_versions
