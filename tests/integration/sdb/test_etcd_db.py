@@ -68,9 +68,21 @@ class EtcdTestCase(ModuleCase, ShellCase):
             "sdb.set", uri="sdb://sdbetcd/secret/test/test_sdb/foo", value="bar"
         )
         self.assertEqual(set_output, "bar")
-        get_output = self.run_function(
-            "sdb.get", arg=["sdb://sdbetcd/secret/test/test_sdb/foo"]
-        )
+        tries_left = 10
+        get_output = None
+        # It's possible that connections to the database are magically failing.
+        # So far we've only seen this failure happen on test_sdb, and only on
+        # the sdb.get. So we'll try to get the data 10 times and if we continue
+        # to get None, we'll keep retrying until it comes back.
+        #
+        # It's possible that some of the other functions, like sdb.set will
+        # need this treatment. We also have to add the 'known None' to
+        # tests/support/case.py
+        while get_output is None and tries_left > 0:
+            tries_left -= 1
+            get_output = self.run_function(
+                "sdb.get", arg=["sdb://sdbetcd/secret/test/test_sdb/foo"]
+            )
         self.assertEqual(get_output, "bar")
 
     @slowTest
