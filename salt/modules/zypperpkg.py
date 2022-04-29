@@ -1744,6 +1744,8 @@ def install(
 
 
 def upgrade(
+    name=None,
+    pkgs=None,
     refresh=True,
     dryrun=False,
     dist_upgrade=False,
@@ -1770,6 +1772,27 @@ def upgrade(
     .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
 
     Run a full system upgrade, a zypper upgrade
+
+    name
+        The name of the package to be installed. Note that this parameter is
+        ignored if ``pkgs`` is passed or if ``dryrun`` is set to True.
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' pkg.install name=<package name>
+
+    pkgs
+        A list of packages to install from a software repository. Must be
+        passed as a python list. Note that this parameter is ignored if
+        ``dryrun`` is set to True.
+
+        CLI Examples:
+
+        .. code-block:: bash
+
+            salt '*' pkg.install pkgs='["foo", "bar"]'
 
     refresh
         force a refresh if set to True (default).
@@ -1855,6 +1878,17 @@ def upgrade(
             __zypper__(systemd_scope=_systemd_scope(), root=root).noraise.call(
                 *cmd_update + ["--debug-solver"]
             )
+    else:
+        if name or pkgs:
+            try:
+                (pkg_params, _) = __salt__["pkg_resource.parse_targets"](
+                    name=name, pkgs=pkgs, sources=None, **kwargs
+                )
+                if pkg_params:
+                    cmd_update.extend(pkg_params.keys())
+
+            except MinionError as exc:
+                raise CommandExecutionError(exc)
 
     old = list_pkgs(root=root)
 
