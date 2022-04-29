@@ -3,7 +3,6 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 """
 
 
-import atexit
 import itertools
 import logging
 import os.path
@@ -220,9 +219,6 @@ class SaltCacheLoader(BaseLoader):
 
         # there is no template file within searchpaths
         raise TemplateNotFound(template)
-
-
-atexit.register(SaltCacheLoader.shutdown)
 
 
 class PrintableDict(OrderedDict):
