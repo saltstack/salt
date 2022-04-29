@@ -21,8 +21,9 @@ def configure_loader_modules():
             "rpm": None,
             "_systemd_scope": MagicMock(return_value=False),
             "osrelease_info": [15, 3],
+            "__salt__": {"pkg_resource.parse_targets": pkg_resource.parse_targets},
         },
-        pkg_resource: {},
+        pkg_resource: {"__grains__": {"os": "SUSE"}},
     }
 
 
@@ -224,14 +225,17 @@ def test_pkg_list_holds():
 
 
 @pytest.mark.parametrize(
-    "package,pre_version,post_version,fromrepo_param",
+    "package,pre_version,post_version,fromrepo_param,name_param,pkgs_param",
     [
-        ("vim", "1.1", "1.2", []),
-        ("kernel-default", "1.1", "1.1,1.2", ["dummy", "dummy2"]),
+        ("vim", "1.1", "1.2", [], "", []),
+        ("kernel-default", "1.1", "1.1,1.2", ["dummy", "dummy2"], "", []),
+        ("vim", "1.1", "1.2", [], "vim", []),
     ],
 )
 @patch.object(zypper, "refresh_db", MagicMock(return_value=True))
-def test_upgrade(package, pre_version, post_version, fromrepo_param):
+def test_upgrade(
+    package, pre_version, post_version, fromrepo_param, name_param, pkgs_param
+):
     with patch(
         "salt.modules.zypperpkg.__zypper__.noraise.call"
     ) as zypper_mock, patch.object(
@@ -243,7 +247,14 @@ def test_upgrade(package, pre_version, post_version, fromrepo_param):
         for repo in fromrepo_param:
             expected_call.extend(["--repo", repo])
 
-        result = zypper.upgrade(fromrepo=fromrepo_param)
+        if pkgs_param:
+            expected_call.extend(pkgs_param)
+        elif name_param:
+            expected_call.append(name_param)
+
+        result = zypper.upgrade(
+            name=name_param, pkgs=pkgs_param, fromrepo=fromrepo_param
+        )
         zypper_mock.assert_any_call(*expected_call)
         assert result == {package: {"old": pre_version, "new": post_version}}
 
