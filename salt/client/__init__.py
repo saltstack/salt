@@ -38,11 +38,11 @@ import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.minions
+import salt.utils.network
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
-import salt.utils.network
 from salt.exceptions import (
     AuthenticationError,
     AuthorizationError,

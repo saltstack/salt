@@ -27,9 +27,9 @@ import salt.utils.args
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.minions
+import salt.utils.network
 import salt.utils.user
 import salt.utils.versions
-import salt.utils.network
 
 log = logging.getLogger(__name__)
 
