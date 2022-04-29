@@ -4,7 +4,6 @@ ZMQ-specific functions
 
 import logging
 
-from salt._compat import ipaddress
 from salt.exceptions import SaltSystemExit
 
 log = logging.getLogger(__name__)
@@ -41,15 +40,3 @@ def check_ipc_path_max_len(uri):
             "path or switch to TCP; in the configuration file, "
             'set "ipc_mode: tcp".'.format(uri, ipc_path_max_len)
         )
-
-
-def ip_bracket(addr):
-    """
-    Ensure IP addresses are URI-compatible - specifically, add brackets
-    around IPv6 literals if they are not already present.
-    """
-    addr = str(addr)
-    addr = addr.lstrip("[")
-    addr = addr.rstrip("]")
-    addr = ipaddress.ip_address(addr)
-    return ("[{}]" if addr.version == 6 else "{}").format(addr)

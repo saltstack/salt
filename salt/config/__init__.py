@@ -27,7 +27,6 @@ import salt.utils.user
 import salt.utils.validate.path
 import salt.utils.xdg
 import salt.utils.yaml
-import salt.utils.zeromq
 from salt._logging import (
     DFLT_LOG_DATEFMT,
     DFLT_LOG_DATEFMT_LOGFILE,
@@ -4094,11 +4093,13 @@ def client_config(path, env_var="SALT_CLIENT_CONFIG", defaults=None):
     # On some platforms, like OpenBSD, 0.0.0.0 won't catch a master running on localhost
     if opts["interface"] == "0.0.0.0":
         opts["interface"] = "127.0.0.1"
+    elif opts["interface"] == "::":
+        opts["interface"] = "::1"
 
     # Make sure the master_uri is set
     if "master_uri" not in opts:
         opts["master_uri"] = "tcp://{ip}:{port}".format(
-            ip=salt.utils.zeromq.ip_bracket(opts["interface"]), port=opts["ret_port"]
+            ip=salt.utils.network.ip_bracket(opts["interface"]), port=opts["ret_port"]
         )
 
     # Return the client options
