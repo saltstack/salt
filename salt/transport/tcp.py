@@ -33,8 +33,8 @@ import salt.utils.files
 import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.versions
-from salt.utils.network import ip_bracket
 from salt.exceptions import SaltClientError, SaltReqTimeoutError
+from salt.utils.network import ip_bracket
 
 if salt.utils.platform.is_windows():
     USE_LOAD_BALANCER = True
@@ -43,6 +43,7 @@ else:
 
 if USE_LOAD_BALANCER:
     import multiprocessing
+
     import salt.ext.tornado.util
     from salt.utils.process import SignalHandlingProcess
 
