@@ -29,7 +29,7 @@ import salt.utils.files
 import salt.utils.minions
 import salt.utils.user
 import salt.utils.versions
-import salt.utils.zeromq
+import salt.utils.network
 
 log = logging.getLogger(__name__)
 
@@ -508,7 +508,7 @@ class Resolver:
 
     def _send_token_request(self, load):
         master_uri = "tcp://{}:{}".format(
-            salt.utils.zeromq.ip_bracket(self.opts["interface"]),
+            salt.utils.network.ip_bracket(self.opts["interface"]),
             str(self.opts["ret_port"]),
         )
         with salt.channel.client.ReqChannel.factory(

@@ -33,6 +33,7 @@ import salt.utils.files
 import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.versions
+from salt.utils.network import ip_bracket
 from salt.exceptions import SaltClientError, SaltReqTimeoutError
 
 if salt.utils.platform.is_windows():
@@ -41,7 +42,6 @@ else:
     USE_LOAD_BALANCER = False
 
 if USE_LOAD_BALANCER:
-    import threading
     import multiprocessing
     import salt.ext.tornado.util
     from salt.utils.process import SignalHandlingProcess
@@ -51,6 +51,20 @@ log = logging.getLogger(__name__)
 
 class ClosingError(Exception):
     """ """
+
+
+def _get_socket(opts):
+    family = socket.AF_INET
+    if opts.get("ipv6", False):
+        family = socket.AF_INET6
+    return socket.socket(family, socket.SOCK_STREAM)
+
+
+def _get_bind_addr(opts, port_type):
+    return (
+        ip_bracket(opts["interface"], strip=True),
+        int(opts[port_type]),
+    )
 
 
 def _set_tcp_keepalive(sock, opts):
@@ -152,11 +166,11 @@ if USE_LOAD_BALANCER:
             """
             Start the load balancer
             """
-            self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self._socket = _get_socket(self.opts)
             self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             _set_tcp_keepalive(self._socket, self.opts)
             self._socket.setblocking(1)
-            self._socket.bind((self.opts["interface"], int(self.opts["ret_port"])))
+            self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
             self._socket.listen(self.backlog)
 
             while True:
@@ -337,11 +351,11 @@ class TCPReqServer(salt.transport.base.DaemonizedRequestServer):
                 name="LoadBalancerServer",
             )
         elif not salt.utils.platform.is_windows():
-            self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self._socket = _get_socket(self.opts)
             self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             _set_tcp_keepalive(self._socket, self.opts)
             self._socket.setblocking(0)
-            self._socket.bind((self.opts["interface"], int(self.opts["ret_port"])))
+            self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
 
     def post_fork(self, message_handler, io_loop):
         """
@@ -361,13 +375,11 @@ class TCPReqServer(salt.transport.base.DaemonizedRequestServer):
                 )
             else:
                 if salt.utils.platform.is_windows():
-                    self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    self._socket = _get_socket(self.opts)
                     self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     _set_tcp_keepalive(self._socket, self.opts)
                     self._socket.setblocking(0)
-                    self._socket.bind(
-                        (self.opts["interface"], int(self.opts["ret_port"]))
-                    )
+                    self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
                 self.req_server = SaltMessageServer(
                     self.handle_message,
                     ssl_options=self.opts.get("ssl"),
@@ -519,7 +531,7 @@ class TCPClientKeepAlive(salt.ext.tornado.tcpclient.TCPClient):
         """
         # Always connect in plaintext; we'll convert to ssl if necessary
         # after one connection has completed.
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock = _get_socket(self.opts)
         _set_tcp_keepalive(sock, self.opts)
         stream = salt.ext.tornado.iostream.IOStream(
             sock, max_buffer_size=max_buffer_size
@@ -613,7 +625,10 @@ class MessageClient:
         while stream is None and (not self._closed and not self._closing):
             try:
                 stream = yield self._tcp_client.connect(
-                    self.host, self.port, ssl_options=self.opts.get("ssl"), **kwargs
+                    ip_bracket(self.host, strip=True),
+                    self.port,
+                    ssl_options=self.opts.get("ssl"),
+                    **kwargs
                 )
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
@@ -970,11 +985,11 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
             presence_callback=presence_callback,
             remove_presence_callback=remove_presence_callback,
         )
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock = _get_socket(self.opts)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         _set_tcp_keepalive(sock, self.opts)
         sock.setblocking(0)
-        sock.bind((self.opts["interface"], int(self.opts["publish_port"])))
+        sock.bind(_get_bind_addr(self.opts, "publish_port"))
         sock.listen(self.backlog)
         # pub_server will take ownership of the socket
         pub_server.add_socket(sock)

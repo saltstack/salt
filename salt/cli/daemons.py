@@ -45,7 +45,7 @@ warnings.filterwarnings(
 try:
     import salt.utils.parsers
     from salt.utils.verify import check_user, verify_env, verify_socket
-    from salt.utils.zeromq import ip_bracket
+    from salt.utils.network import ip_bracket
 except ImportError as exc:
     if exc.args[0] != "No module named _msgpack":
         raise
