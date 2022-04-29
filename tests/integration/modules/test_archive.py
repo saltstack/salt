@@ -157,6 +157,7 @@ class ArchiveTest(ModuleCase):
             self.assertTrue(dir_in_ret)
         self.assertTrue(file_in_ret)
 
+    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
     @skipIf(not salt.utils.path.which("tar"), "Cannot find tar executable")
     @slowTest
     def test_tar_pack(self):
@@ -172,6 +173,7 @@ class ArchiveTest(ModuleCase):
 
         self._tear_down()
 
+    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
     @skipIf(not salt.utils.path.which("tar"), "Cannot find tar executable")
     @slowTest
     def test_tar_unpack(self):
@@ -188,6 +190,7 @@ class ArchiveTest(ModuleCase):
 
         self._tear_down()
 
+    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
     @skipIf(not salt.utils.path.which("tar"), "Cannot find tar executable")
     @slowTest
     def test_tar_pack_unicode(self):
@@ -203,6 +206,7 @@ class ArchiveTest(ModuleCase):
 
         self._tear_down()
 
+    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
     @skipIf(not salt.utils.path.which("tar"), "Cannot find tar executable")
     @slowTest
     def test_tar_unpack_unicode(self):
@@ -219,6 +223,7 @@ class ArchiveTest(ModuleCase):
 
         self._tear_down()
 
+    @skipIf(salt.utils.platform.is_windows(), "Skip on Windows")
     @skipIf(not salt.utils.path.which("tar"), "Cannot find tar executable")
     @slowTest
     def test_tar_list_unicode(self):
