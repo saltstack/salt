@@ -302,7 +302,6 @@ class BasePillarTest(_CommonBase):
 
 
 @skipIf(not salt.utils.path.which("gpg"), "GPG is not installed")
-@pytest.mark.windows_whitelisted
 class DecryptGPGPillarTest(_CommonBase):
     """
     Tests for pillar decryption
