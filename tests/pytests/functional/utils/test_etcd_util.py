@@ -167,7 +167,9 @@ def test_simple_operations(etcd_client, prefix):
     assert not etcd_client.get("{}/mtg".format(prefix), recurse=True)
 
 
-def test_simple_operations_with_raw_keys_and_values(minion_opts, profile_name, prefix, use_v2):
+def test_simple_operations_with_raw_keys_and_values(
+    minion_opts, profile_name, prefix, use_v2
+):
     if use_v2:
         pytest.skip("Not testing with raw keys using v2")
     modified_opts = copy.deepcopy(minion_opts)
@@ -185,12 +187,13 @@ def test_simple_operations_with_raw_keys_and_values(minion_opts, profile_name, p
     assert etcd_client.ls("{}/mtg".format(prefix)) == {
         "{}/mtg".format(prefix).encode("UTF-8"): {
             "{}/mtg/ambush".format(prefix).encode("UTF-8"): b"viper",
-            "{}/mtg/counter".format(prefix).encode("UTF-8"): b"spell"
+            "{}/mtg/counter".format(prefix).encode("UTF-8"): b"spell",
         },
     }
     assert etcd_client.delete("{}/mtg/ambush".format(prefix))
     assert etcd_client.delete("{}/mtg".format(prefix), recurse=True)
     assert not etcd_client.get("{}/mtg".format(prefix), recurse=True)
+
 
 def test_get(subtests, etcd_client, prefix):
     """

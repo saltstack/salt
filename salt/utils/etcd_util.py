@@ -188,7 +188,9 @@ class EtcdBase:
         """
         raise NotImplementedError()
 
-    def read(self, key, recurse=False, wait=False, timeout=None, waitIndex=None, **kwargs):
+    def read(
+        self, key, recurse=False, wait=False, timeout=None, waitIndex=None, **kwargs
+    ):
         """
         Read a value of a key.
 
@@ -402,7 +404,9 @@ class EtcdClient(EtcdBase):
 
         return self.tree(key)
 
-    def read(self, key, recurse=False, wait=False, timeout=None, waitIndex=None, **kwargs):
+    def read(
+        self, key, recurse=False, wait=False, timeout=None, waitIndex=None, **kwargs
+    ):
         recursive = kwargs.get("recursive", None)
         if recursive is not None:
             salt.utils.versions.warn_until(
@@ -608,7 +612,16 @@ class EtcdClientV3(EtcdBase):
     Since etcd3 has no concept of directories, this class leaves write_directory unimplemented.
     """
 
-    def __init__(self, opts, encode_keys=None, encode_values=None, raw_keys=False, raw_values=False, unicode_errors=None, **kwargs):
+    def __init__(
+        self,
+        opts,
+        encode_keys=None,
+        encode_values=None,
+        raw_keys=False,
+        raw_values=False,
+        unicode_errors=None,
+        **kwargs
+    ):
         if not HAS_ETCD_V3:
             raise EtcdLibraryNotInstalled("Don't have etcd3-py, need to install it.")
         log.debug("etcd_util has the libraries needed for etcd v3")
@@ -622,12 +635,14 @@ class EtcdClientV3(EtcdBase):
         self.encode_values = encode_values or self.conf.get("etcd.encode_values", True)
         self.raw_keys = raw_keys or self.conf.get("etcd.raw_keys", False)
         self.raw_values = raw_values or self.conf.get("etcd.raw_values", False)
-        self.unicode_errors = unicode_errors or self.conf.get("etcd.unicode_errors", "surrogateescape")
-        
+        self.unicode_errors = unicode_errors or self.conf.get(
+            "etcd.unicode_errors", "surrogateescape"
+        )
+
         # etcd3-py uses verify instead of ca_cert
         self.xargs["verify"] = self.xargs.pop("ca_cert", None)
         self.client = etcd3.Client(host=self.host, port=self.port, **self.xargs)
-    
+
     def _maybe_decode_key(self, key, **extra_kwargs):
         extra_kwargs.setdefault("unicode_errors", self.unicode_errors)
         if self.encode_keys:
@@ -641,7 +656,7 @@ class EtcdClientV3(EtcdBase):
         if self.encode_keys:
             key = salt.utils.msgpack.dumps(key, **extra_kwargs)
         return key
-    
+
     def _maybe_decode_value(self, value, **extra_kwargs):
         extra_kwargs.setdefault("unicode_errors", self.unicode_errors)
         if self.encode_values:
@@ -686,7 +701,9 @@ class EtcdClientV3(EtcdBase):
             return None
         return self.tree(key)
 
-    def read(self, key, recurse=False, wait=False, timeout=None, waitIndex=None, **kwargs):
+    def read(
+        self, key, recurse=False, wait=False, timeout=None, waitIndex=None, **kwargs
+    ):
         recursive = kwargs.pop("recursive", None)
         if recursive is not None:
             salt.utils.versions.warn_until(
@@ -713,7 +730,9 @@ class EtcdClientV3(EtcdBase):
         else:
             try:
                 watcher = self.client.Watcher(
-                    key=self._maybe_encode_key(key), prefix=recurse, start_revision=waitIndex
+                    key=self._maybe_encode_key(key),
+                    prefix=recurse,
+                    start_revision=waitIndex,
                 )
                 watch_event = watcher.watch_once(timeout=timeout)
                 return self._decode_kv(watch_event)
@@ -739,9 +758,15 @@ class EtcdClientV3(EtcdBase):
         if ttl:
             lease = self.client.Lease(ttl=ttl)
             lease.grant()  # We need to explicitly grant the lease
-            self.client.put(self._maybe_encode_key(key), self._maybe_encode_value(value), lease=lease.ID)
+            self.client.put(
+                self._maybe_encode_key(key),
+                self._maybe_encode_value(value),
+                lease=lease.ID,
+            )
         else:
-            self.client.put(self._maybe_encode_key(key), self._maybe_encode_value(value))
+            self.client.put(
+                self._maybe_encode_key(key), self._maybe_encode_value(value)
+            )
         return self.get(key)
 
     def write_directory(self, key, value, ttl=None):
@@ -756,7 +781,11 @@ class EtcdClientV3(EtcdBase):
             return {}
         else:
             sep = "/" if not self.raw_keys else b"/"
-            path = path if not self.raw_keys or isinstance(path, bytes) else path.encode("UTF-8", errors=self.unicode_errors)
+            path = (
+                path
+                if not self.raw_keys or isinstance(path, bytes)
+                else path.encode("UTF-8", errors=self.unicode_errors)
+            )
 
             for key, value in tree.items():
                 if not path.endswith(sep):
@@ -767,7 +796,7 @@ class EtcdClientV3(EtcdBase):
                     ret[ret_key + sep] = {}
                 else:
                     ret[ret_key] = value
-            
+
         return {path: ret}
 
     def delete(self, key, recurse=False, **kwargs):
