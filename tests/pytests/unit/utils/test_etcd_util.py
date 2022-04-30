@@ -39,7 +39,7 @@ def test_read(client_name, use_v2):
     """
     with patch(client_name, autospec=True) as mock:
         etcd_client = mock.return_value
-        client = etcd_util.get_conn({"etcd.require_v2": use_v2})
+        client = etcd_util.get_conn({"etcd.require_v2": use_v2, "etcd.encode_values": False})
         if use_v2:
             etcd_return = MagicMock(value="salt")
             etcd_client.read.return_value = etcd_return
@@ -101,7 +101,7 @@ def test_get(client_name, use_v2):
     Test if it get a value from etcd, by direct path
     """
     with patch(client_name, autospec=True):
-        client = etcd_util.get_conn({"etcd.require_v2": use_v2})
+        client = etcd_util.get_conn({"etcd.require_v2": use_v2, "etcd.encode_values": False})
 
         if use_v2:
             with patch.object(client, "read", autospec=True) as mock:
@@ -141,7 +141,7 @@ def test_tree(use_v2, client_name):
     Test recursive gets
     """
     with patch(client_name, autospec=True):
-        client = etcd_util.get_conn({"etcd.require_v2": use_v2})
+        client = etcd_util.get_conn({"etcd.require_v2": use_v2, "etcd.encode_values": False})
 
         if use_v2:
             with patch.object(client, "read", autospec=True) as mock:
@@ -182,7 +182,7 @@ def test_tree(use_v2, client_name):
 
 def test_ls(use_v2, client_name):
     with patch(client_name, autospec=True):
-        client = etcd_util.get_conn({"etcd.require_v2": use_v2})
+        client = etcd_util.get_conn({"etcd.require_v2": use_v2, "etcd.encode_values": False})
 
         if use_v2:
             with patch.object(client, "read", autospec=True) as mock:
@@ -221,7 +221,7 @@ def test_ls(use_v2, client_name):
 def test_write(use_v2, client_name):
     with patch(client_name, autospec=True) as mock:
         etcd_client = mock.return_value
-        client = etcd_util.get_conn({"etcd.require_v2": use_v2})
+        client = etcd_util.get_conn({"etcd.require_v2": use_v2, "etcd.encode_values": False})
 
         if use_v2:
             etcd_client.write.return_value = MagicMock(value="salt")
@@ -288,7 +288,7 @@ def test_write(use_v2, client_name):
 
 def test_flatten(use_v2, client_name):
     with patch(client_name, autospec=True) as mock:
-        client = etcd_util.get_conn({"etcd.require_v2": use_v2})
+        client = etcd_util.get_conn({"etcd.require_v2": use_v2, "etcd.encode_values": False})
         some_data = {
             "/x/y/a": "1",
             "x": {"y": {"b": "2"}},
@@ -328,7 +328,7 @@ def test_flatten(use_v2, client_name):
 
 def test_update(use_v2, client_name):
     with patch(client_name, autospec=True) as mock:
-        client = etcd_util.get_conn({"etcd.require_v2": use_v2})
+        client = etcd_util.get_conn({"etcd.require_v2": use_v2, "etcd.encode_values": False})
         some_data = {
             "/x/y/a": "1",
             "x": {"y": {"b": "3"}},
@@ -372,14 +372,14 @@ def test_update(use_v2, client_name):
 def test_rm(use_v2, client_name):
     with patch(client_name, autospec=True) as mock:
         etcd_client = mock.return_value
-        client = etcd_util.get_conn({"etcd.require_v2": use_v2})
+        client = etcd_util.get_conn({"etcd.require_v2": use_v2, "etcd.encode_values": False})
 
         if use_v2:
             etcd_client.delete.return_value = True
             assert client.rm("/some-key")
-            etcd_client.delete.assert_called_with("/some-key", recurse=False)
+            etcd_client.delete.assert_called_with("/some-key", recursive=False)
             assert client.rm("/some-dir", recurse=True)
-            etcd_client.delete.assert_called_with("/some-dir", recurse=True)
+            etcd_client.delete.assert_called_with("/some-dir", recursive=True)
 
             etcd_client.delete.side_effect = etcd.EtcdNotFile()
             assert client.rm("/some-dir") is None
@@ -412,7 +412,7 @@ def test_rm(use_v2, client_name):
 
 def test_watch(use_v2, client_name):
     with patch(client_name, autospec=True):
-        client = etcd_util.get_conn({"etcd.require_v2": use_v2})
+        client = etcd_util.get_conn({"etcd.require_v2": use_v2, "etcd.encode_values": False})
 
         if use_v2:
             with patch.object(client, "read", autospec=True) as mock:
@@ -519,7 +519,7 @@ def test_expand(use_v2, client_name):
         pytest.skip("No expand in etcd v2 adapter")
 
     with patch(client_name, autospec=True) as mock:
-        client = etcd_util.get_conn({"etcd.require_v2": use_v2})
+        client = etcd_util.get_conn({"etcd.require_v2": use_v2, "etcd.encode_values": False})
 
         some_data = {
             "/test/x/y/a": "1",

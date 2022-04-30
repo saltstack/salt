@@ -20,8 +20,11 @@ may be passed in. The following configurations are both valid:
     etcd.client_key: /path/to/your/client_key/client-key.pem # Optional; requires etcd.ca and etcd.client_cert to be set
     etcd.client_cert: /path/to/your/client_cert/client.pem # Optional; requires etcd.ca and etcd.client_key to be set
     etcd.require_v2: True # Optional; defaults to True
-    etcd.encode_keys: True # Optional (v3 ONLY); defaults to True
+    etcd.encode_keys: False # Optional (v3 ONLY); defaults to False
     etcd.encode_values: True # Optional (v3 ONLY); defaults to True
+    etcd.raw_keys: False # Optional (v3 ONLY); defaults to False
+    etcd.raw_values: False # Optional (v3 ONLY); defaults to False
+    etcd.unicode_errors: "surrogateescape" # Optional (v3 ONLY); defaults to "surrogateescape"
 
     # One or more profiles defined
     my_etcd_config:
@@ -33,8 +36,16 @@ may be passed in. The following configurations are both valid:
       etcd.client_key: /path/to/your/client_key/client-key.pem # Optional; requires etcd.ca and etcd.client_cert to be set
       etcd.client_cert: /path/to/your/client_cert/client.pem # Optional; requires etcd.ca and etcd.client_key to be set
       etcd.require_v2: True # Optional; defaults to True
-      etcd.encode_keys: True # Optional (v3 ONLY); defaults to True
+      etcd.encode_keys: False # Optional (v3 ONLY); defaults to False
       etcd.encode_values: True # Optional (v3 ONLY); defaults to True
+      etcd.raw_keys: False # Optional (v3 ONLY); defaults to False
+      etcd.raw_values: False # Optional (v3 ONLY); defaults to False
+      etcd.unicode_errors: "surrogateescape" # Optional (v3 ONLY); defaults to "surrogateescape"
+
+Encoding keys for etcd v3 allows a differentiation within etcd between byte and string keys.
+It is worth noting that if you chose to encode keys, due to the way encoding pre-etcd with msgpack works,
+all recursive functionality will not work as intended. This includes tree and ls along
+with all methods that have recurse kwargs.  Thus, enabling this option is not recommended.
 
 Once configured, the client() function is passed a set of opts, and optionally,
 the name of a profile to be used.
@@ -547,7 +558,7 @@ class EtcdClient(EtcdBase):
             log.warning("Invalid kwargs passed in will not be used: %s", kwargs)
 
         try:
-            if self.client.delete(key, recurse=recurse):
+            if self.client.delete(key, recursive=recurse):
                 return True
             else:
                 return False
@@ -594,14 +605,10 @@ class EtcdClient(EtcdBase):
 
 class EtcdClientV3(EtcdBase):
     """
-    Since etcd3 has no concept of directories, this class leaves some methods unimplemented.
-
-    These are: ls and write_directory.
+    Since etcd3 has no concept of directories, this class leaves write_directory unimplemented.
     """
 
-    ENCODING = "UTF-8"
-
-    def __init__(self, opts, encode_keys=None, encode_values=None, **kwargs):
+    def __init__(self, opts, encode_keys=None, encode_values=None, raw_keys=False, raw_values=False, unicode_errors=None, **kwargs):
         if not HAS_ETCD_V3:
             raise EtcdLibraryNotInstalled("Don't have etcd3-py, need to install it.")
         log.debug("etcd_util has the libraries needed for etcd v3")
@@ -611,52 +618,51 @@ class EtcdClientV3(EtcdBase):
         if self.conf.get("etcd.require_v2", True):
             raise IncompatibleEtcdRequirements("Can't create v3 with a v2 requirement")
 
-        self.encode_keys = encode_keys or self.conf.get("etcd.encode_keys", True)
+        self.encode_keys = encode_keys or self.conf.get("etcd.encode_keys", False)
         self.encode_values = encode_values or self.conf.get("etcd.encode_values", True)
-
+        self.raw_keys = raw_keys or self.conf.get("etcd.raw_keys", False)
+        self.raw_values = raw_values or self.conf.get("etcd.raw_values", False)
+        self.unicode_errors = unicode_errors or self.conf.get("etcd.unicode_errors", "surrogateescape")
+        
         # etcd3-py uses verify instead of ca_cert
         self.xargs["verify"] = self.xargs.pop("ca_cert", None)
         self.client = etcd3.Client(host=self.host, port=self.port, **self.xargs)
-
-    def _decode_from_bytes(self, kv):
-        try:
-            kv.key = (
-                kv.key.decode(encoding=self.ENCODING)
-                if (kv.key and isinstance(kv.key, bytes))
-                else kv.key
-            )
-            kv.value = (
-                kv.value.decode(encoding=self.ENCODING)
-                if (kv.value and isinstance(kv.value, bytes))
-                else kv.value
-            )
-        except AttributeError as err:
-            log.debug("etcd3 decoding error: %s", err)
-        return kv
     
-    def _maybe_decode_key(self, key, override=None, **extra_kwargs):
-        extra_kwargs.setdefault(unicode_errors="surrogateescape")
-        if override or self.encode_keys:
-            key = salt.utils.msgpack.loads(key, **extra_kwargs)
+    def _maybe_decode_key(self, key, **extra_kwargs):
+        extra_kwargs.setdefault("unicode_errors", self.unicode_errors)
+        if self.encode_keys:
+            key = salt.utils.msgpack.loads(key, raw=self.raw_keys, **extra_kwargs)
+        elif not self.raw_keys and isinstance(key, bytes):
+            key = key.decode(encoding="UTF-8", errors=self.unicode_errors)
         return key
 
-    def _maybe_encode_key(self, key, override=None, **extra_kwargs):
-        extra_kwargs.setdefault(unicode_errors="surrogateescape")
-        if override or self.encode_keys:
+    def _maybe_encode_key(self, key, **extra_kwargs):
+        extra_kwargs.setdefault("unicode_errors", self.unicode_errors)
+        if self.encode_keys:
             key = salt.utils.msgpack.dumps(key, **extra_kwargs)
         return key
     
-    def _maybe_decode_value(self, value, override=None, **extra_kwargs):
-        extra_kwargs.setdefault(unicode_errors="surrogateescape")
-        if override or self.encode_values:
-            value = salt.utils.msgpack.loads(value, **extra_kwargs)
+    def _maybe_decode_value(self, value, **extra_kwargs):
+        extra_kwargs.setdefault("unicode_errors", self.unicode_errors)
+        if self.encode_values:
+            value = salt.utils.msgpack.loads(value, raw=self.raw_values, **extra_kwargs)
+        elif not self.raw_values and isinstance(value, bytes):
+            value = value.decode(encoding="UTF-8", errors=self.unicode_errors)
         return value
 
-    def _maybe_encode_value(self, value, override=None, **extra_kwargs):
-        extra_kwargs.setdefault(unicode_errors="surrogateescape")
-        if override or self.encode_values:
+    def _maybe_encode_value(self, value, **extra_kwargs):
+        extra_kwargs.setdefault("unicode_errors", self.unicode_errors)
+        if self.encode_values:
             value = salt.utils.msgpack.dumps(value, **extra_kwargs)
         return value
+
+    def _decode_kv(self, kv):
+        try:
+            kv.key = self._maybe_decode_key(kv.key)
+            kv.value = self._maybe_decode_value(kv.value)
+        except AttributeError as err:
+            log.error("etcd3 decoding error: %s", err)
+        return kv
 
     def watch(self, key, recurse=False, timeout=0, index=None):
         ret = {"key": key, "value": None, "changed": False, "mIndex": 0, "dir": False}
@@ -664,7 +670,6 @@ class EtcdClientV3(EtcdBase):
             key, recurse=recurse, wait=True, timeout=timeout, waitIndex=index
         )
         if result is not None:
-            result = self._decode_from_bytes(result)
             ret["key"] = result.key
             ret["value"] = result.value
             ret["mIndex"] = getattr(result, "mod_revision", 0)
@@ -692,16 +697,15 @@ class EtcdClientV3(EtcdBase):
             recurse = recursive
         if kwargs:
             log.warning("Invalid kwargs passed in will not be used: %s", kwargs)
-
         if not wait:
             try:
-                result = self.client.range(key, prefix=recurse)
+                result = self.client.range(self._maybe_encode_key(key), prefix=recurse)
                 kvs = getattr(result, "kvs", None)
                 if kvs is None:
                     log.error("etcd3 read: No values found for key %s", key)
                 else:
                     for kv in kvs:
-                        kv = self._decode_from_bytes(kv)
+                        kv = self._decode_kv(kv)
                 return kvs
             except Exception as err:  # pylint: disable=W0703
                 log.error("etcd3 read: %s", err)
@@ -709,9 +713,10 @@ class EtcdClientV3(EtcdBase):
         else:
             try:
                 watcher = self.client.Watcher(
-                    key=key, prefix=recurse, start_revision=waitIndex
+                    key=self._maybe_encode_key(key), prefix=recurse, start_revision=waitIndex
                 )
-                return self._decode_from_bytes(watcher.watch_once(timeout=timeout))
+                watch_event = watcher.watch_once(timeout=timeout)
+                return self._decode_kv(watch_event)
             except Exception as err:  # pylint: disable=W0703
                 log.error("etcd3 watch: %s", err)
                 return None
@@ -734,9 +739,9 @@ class EtcdClientV3(EtcdBase):
         if ttl:
             lease = self.client.Lease(ttl=ttl)
             lease.grant()  # We need to explicitly grant the lease
-            self.client.put(key, value, lease=lease.ID)
+            self.client.put(self._maybe_encode_key(key), self._maybe_encode_value(value), lease=lease.ID)
         else:
-            self.client.put(key, value)
+            self.client.put(self._maybe_encode_key(key), self._maybe_encode_value(value))
         return self.get(key)
 
     def write_directory(self, key, value, ttl=None):
@@ -750,13 +755,16 @@ class EtcdClientV3(EtcdBase):
         if tree is None:
             return {}
         else:
+            sep = "/" if not self.raw_keys else b"/"
+            path = path if not self.raw_keys or isinstance(path, bytes) else path.encode("UTF-8", errors=self.unicode_errors)
+
             for key, value in tree.items():
-                if not path.endswith("/"):
-                    ret_key = "{}/{}".format(path, key)
+                if not path.endswith(sep):
+                    ret_key = path + sep + key
                 else:
-                    ret_key = "{}{}".format(path, key)
+                    ret_key = path + key
                 if isinstance(value, dict):
-                    ret["{}/".format(ret_key)] = {}
+                    ret[ret_key + sep] = {}
                 else:
                     ret[ret_key] = value
             
@@ -774,7 +782,7 @@ class EtcdClientV3(EtcdBase):
 
         if kwargs:
             log.warning("Invalid kwargs passed in will not be used: %s", kwargs)
-        result = self.client.delete_range(key, prefix=recurse)
+        result = self.client.delete_range(self._maybe_encode_key(key), prefix=recurse)
         if hasattr(result, "deleted"):
             return True if result.deleted else None
         return False
@@ -783,7 +791,8 @@ class EtcdClientV3(EtcdBase):
         """
         Helper for _expand
         """
-        outer, *inner = key.lstrip("/").split("/", 1)
+        sep = "/" if not self.raw_keys else b"/"
+        outer, *inner = key.lstrip(sep).split(sep, 1)
         if inner:
             if outer not in dest:
                 dest[outer] = {}
@@ -822,9 +831,10 @@ class EtcdClientV3(EtcdBase):
         items = self.read(path, recurse=True)
         if items is None:
             return None
+        sep = "/" if not self.raw_keys else b"/"
         if len(items) == 1 and items[0].key == path:
             kv = items.pop()
-            return {kv.key.split("/")[-1]: kv.value}
+            return {kv.key.split(sep)[-1]: kv.value}
         kvs = {kv.key[len(path) :]: kv.value for kv in items}
         return self._expand(kvs)
 
@@ -858,7 +868,7 @@ def get_conn(opts, profile=None, **kwargs):
     if use_v2:
         salt.utils.versions.warn_until(
             "Potassium",
-            "Starting with the Potassium release, etcd API v3 will be the default"
+            "Starting with the Potassium release, etcd API v3 will be the default "
             "and etcd API v2 will be deprecated.",
         )
         client = EtcdClient(conf, has_etcd_opts=True, **kwargs)

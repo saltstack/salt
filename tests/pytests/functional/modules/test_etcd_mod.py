@@ -134,7 +134,7 @@ def cleanup_prefixed_entries(etcd_client, prefix):
         assert etcd_client.get(prefix, recurse=True) is None
         yield
     finally:
-        etcd_client.delete(prefix, recursive=True)
+        etcd_client.delete(prefix, recurse=True)
 
 
 def test_basic_operations(subtests, profile_name, prefix, use_v2):

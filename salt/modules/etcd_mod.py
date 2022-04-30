@@ -32,6 +32,36 @@ defaults to true, meaning you will use v2 unless you specify otherwise.
 
     etcd.require_v2: True
 
+When using API v3, there are some specific options available to be configured
+within your etcd profile.  They are defaulted to the following...
+
+.. code-block:: yaml
+
+    etcd.encode_keys: False
+    etcd.encode_values: True
+    etcd.raw_keys: False
+    etcd.raw_values: False
+    etcd.unicode_errors: "surrogateescape"
+
+``etcd.encode_keys`` indicates whether you want to pre-encode keys using msgpack before
+adding them to etcd.
+
+.. note::
+
+    If you set ``etcd.encode_keys`` to ``True``, all recursive functionality will no longer work.
+    This includes ``tree`` and ``ls`` and all other methods if you set ``recurse``/``recursive`` to ``True``.
+    This is due to the fact that when encoding with msgpack, keys like ``/salt`` and ``/salt/stack`` will have
+    differing byte prefixes, and etcd v3 searches recursively using prefixes.
+
+``etcd.encode_values`` indicates whether you want to pre-encode values using msgpack before
+adding them to etcd.  This defaults to ``True`` to avoid data loss on non-string values wherever possible.
+
+``etcd.raw_keys`` determines whether you want the raw key or a string returned.
+
+``etcd.raw_values`` determines whether you want the raw value or a string returned.
+
+``etcd.unicode_errors`` determines what you policy to follow when there are encoding/decoding errors.
+
 .. note::
 
     The etcd configuration can also be set in the Salt Master config file,

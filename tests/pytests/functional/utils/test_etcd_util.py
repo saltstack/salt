@@ -1,3 +1,4 @@
+import copy
 import logging
 import threading
 import time
@@ -150,9 +151,46 @@ def test_simple_operations(etcd_client, prefix):
     assert not etcd_client.get("{}/mtg/ambush".format(prefix))
     assert etcd_client.set("{}/mtg/ambush".format(prefix), "viper") == "viper"
     assert etcd_client.get("{}/mtg/ambush".format(prefix)) == "viper"
+    assert etcd_client.set("{}/mtg/counter".format(prefix), "spell") == "spell"
+    assert etcd_client.tree("{}/mtg".format(prefix)) == {
+        "ambush": "viper",
+        "counter": "spell",
+    }
+    assert etcd_client.ls("{}/mtg".format(prefix)) == {
+        "{}/mtg".format(prefix): {
+            "{}/mtg/ambush".format(prefix): "viper",
+            "{}/mtg/counter".format(prefix): "spell",
+        },
+    }
     assert etcd_client.delete("{}/mtg/ambush".format(prefix))
-    assert not etcd_client.get("{}/mtg/ambush".format(prefix))
+    assert etcd_client.delete("{}/mtg".format(prefix), recurse=True)
+    assert not etcd_client.get("{}/mtg".format(prefix), recurse=True)
 
+
+def test_simple_operations_with_raw_keys_and_values(minion_opts, profile_name, prefix, use_v2):
+    if use_v2:
+        pytest.skip("Not testing with raw keys using v2")
+    modified_opts = copy.deepcopy(minion_opts)
+    modified_opts[profile_name]["etcd.raw_keys"] = True
+    modified_opts[profile_name]["etcd.raw_values"] = True
+    etcd_client = get_conn(modified_opts, profile=profile_name)
+    assert not etcd_client.get("{}/mtg/ambush".format(prefix))
+    assert etcd_client.set("{}/mtg/ambush".format(prefix), "viper") == b"viper"
+    assert etcd_client.get("{}/mtg/ambush".format(prefix)) == b"viper"
+    assert etcd_client.set("{}/mtg/counter".format(prefix), "spell") == b"spell"
+    assert etcd_client.tree("{}/mtg".format(prefix)) == {
+        b"ambush": b"viper",
+        b"counter": b"spell",
+    }
+    assert etcd_client.ls("{}/mtg".format(prefix)) == {
+        "{}/mtg".format(prefix).encode("UTF-8"): {
+            "{}/mtg/ambush".format(prefix).encode("UTF-8"): b"viper",
+            "{}/mtg/counter".format(prefix).encode("UTF-8"): b"spell"
+        },
+    }
+    assert etcd_client.delete("{}/mtg/ambush".format(prefix))
+    assert etcd_client.delete("{}/mtg".format(prefix), recurse=True)
+    assert not etcd_client.get("{}/mtg".format(prefix), recurse=True)
 
 def test_get(subtests, etcd_client, prefix):
     """
@@ -335,7 +373,7 @@ def test_update(subtests, etcd_client, prefix):
         assert etcd_client.get("{}/read/2".format(prefix)) == "not two"
 
     # Update non-existent fields
-    with subtests.test("update should work on already existent field"):
+    with subtests.test("update should work on non-existent fields"):
         updated = {
             prefix: {
                 "read-2": "read-2",
@@ -408,7 +446,7 @@ def test_write_directory(subtests, etcd_client, prefix, use_v2):
     Test solely writing directories
     """
     if not use_v2:
-        pytest.skip("write_directory is not defined for etcd_v3")
+        pytest.skip("write_directory is not defined for etcd v3")
 
     with subtests.test("we should be able to create a non-existent directory"):
         assert etcd_client.write_directory("{}/write_dir/dir1".format(prefix), None)
