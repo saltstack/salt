@@ -51,6 +51,10 @@ def admin_password_present(name, password=None, **kwargs):
             zabbix_user.admin_password_present:
                 - password: SECRET_PASS
     """
+    login_error_messages = [
+        "Login name or password is incorrect",
+        "Incorrect user name or password",
+    ]
     dry_run = __opts__["test"]
     default_zabbix_user = "Admin"
     default_zabbix_password = "zabbix"
@@ -92,10 +96,9 @@ def admin_password_present(name, password=None, **kwargs):
                 default_zabbix_user, **connection_args
             )
         except SaltException as err:
-            if "Login name or password is incorrect" in str(err):
-                user_get = False
-            else:
+            if all([x not in str(err) for x in login_error_messages]):
                 raise
+            user_get = False
         if user_get:
             if pwd == desired_password:
                 ret["result"] = True
