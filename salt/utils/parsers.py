@@ -673,11 +673,9 @@ class LogLevelMixIn(metaclass=MixInMeta):
                 )
 
     def __shutdown_logging(self):
-        # In case we never got logging properly set up
-        temp_log_handler = salt._logging.get_temp_handler()
-        if temp_log_handler is not None:
-            temp_log_handler.flush()
-        salt._logging.shutdown_temp_handler()
+        salt._logging.shutdown_logging()
+        sys.stdout.flush()
+        sys.stderr.flush()
 
     def process_log_file(self):
         if not getattr(self.options, self._logfile_config_setting_name_, None):
