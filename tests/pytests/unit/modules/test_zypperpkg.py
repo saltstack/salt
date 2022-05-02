@@ -225,16 +225,22 @@ def test_pkg_list_holds():
 
 
 @pytest.mark.parametrize(
-    "package,pre_version,post_version,fromrepo_param,name_param,pkgs_param",
+    "package,pre_version,post_version,fromrepo_param,name_param,pkgs_param,diff_attr_param",
     [
-        ("vim", "1.1", "1.2", [], "", []),
-        ("kernel-default", "1.1", "1.1,1.2", ["dummy", "dummy2"], "", []),
-        ("vim", "1.1", "1.2", [], "vim", []),
+        ("vim", "1.1", "1.2", [], "", [], "all"),
+        ("kernel-default", "1.1", "1.1,1.2", ["dummy", "dummy2"], "", [], None),
+        ("vim", "1.1", "1.2", [], "vim", [], None),
     ],
 )
 @patch.object(zypper, "refresh_db", MagicMock(return_value=True))
 def test_upgrade(
-    package, pre_version, post_version, fromrepo_param, name_param, pkgs_param
+    package,
+    pre_version,
+    post_version,
+    fromrepo_param,
+    name_param,
+    pkgs_param,
+    diff_attr_param,
 ):
     with patch(
         "salt.modules.zypperpkg.__zypper__.noraise.call"
@@ -242,7 +248,7 @@ def test_upgrade(
         zypper,
         "list_pkgs",
         MagicMock(side_effect=[{package: pre_version}, {package: post_version}]),
-    ):
+    ) as list_pkgs_mock:
         expected_call = ["update", "--auto-agree-with-licenses"]
         for repo in fromrepo_param:
             expected_call.extend(["--repo", repo])
@@ -253,10 +259,14 @@ def test_upgrade(
             expected_call.append(name_param)
 
         result = zypper.upgrade(
-            name=name_param, pkgs=pkgs_param, fromrepo=fromrepo_param
+            name=name_param,
+            pkgs=pkgs_param,
+            fromrepo=fromrepo_param,
+            diff_attr=diff_attr_param,
         )
         zypper_mock.assert_any_call(*expected_call)
         assert result == {package: {"old": pre_version, "new": post_version}}
+        list_pkgs_mock.assert_any_call(root=None, attr=diff_attr_param)
 
 
 @pytest.mark.parametrize(
