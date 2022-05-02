@@ -1,11 +1,6 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 import shutil
 
-import pytest
 import salt.utils.files
 import salt.utils.user
 from tests.support.case import ModuleCase
@@ -20,7 +15,6 @@ from tests.support.unit import skipIf
 # Doesn't work. Why?
 # @requires_salt_modules('acl')
 # @requires_salt_modules('linux_acl')
-@pytest.mark.windows_whitelisted
 class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
     """
     Validate the linux_acl module
@@ -43,7 +37,7 @@ class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
         if os.path.islink(self.mybadsymlink):
             os.remove(self.mybadsymlink)
         os.symlink("/nonexistentpath", self.mybadsymlink)
-        super(LinuxAclModuleTest, self).setUp()
+        super().setUp()
 
     def tearDown(self):
         if os.path.isfile(self.myfile):
@@ -53,7 +47,7 @@ class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
         if os.path.islink(self.mybadsymlink):
             os.remove(self.mybadsymlink)
         shutil.rmtree(self.mydir, ignore_errors=True)
-        super(LinuxAclModuleTest, self).tearDown()
+        super().tearDown()
 
     @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
     def test_version(self):
