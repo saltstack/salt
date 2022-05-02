@@ -179,6 +179,7 @@ class Updates:
                 "KBs": ["KB" + item for item in update.KBArticleIDs],
                 "Categories": [item.Name for item in update.Categories],
                 "SupportUrl": update.SupportUrl,
+                "LastDeploymentChangeTime": str(update.LastDeploymentChangeTime),
             }
 
         return results
