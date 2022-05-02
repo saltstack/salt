@@ -4,17 +4,26 @@
 
 
 import os
+import textwrap
 
 import pytest
 
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.zypperpkg as zypper
+from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
 def configure_loader_modules():
-    return {zypper: {"rpm": None}, pkg_resource: {}}
+    return {
+        zypper: {
+            "rpm": None,
+            "_systemd_scope": MagicMock(return_value=False),
+            "osrelease_info": [15, 3],
+        },
+        pkg_resource: {},
+    }
 
 
 def test_list_pkgs_no_context():
@@ -212,3 +221,117 @@ def test_pkg_list_holds():
         ret = zypper.list_holds()
         assert len(ret) == 1
         assert "bar-2:2.3.4-2.1.*" in ret
+
+
+@pytest.mark.parametrize(
+    "package,pre_version,post_version,fromrepo_param",
+    [
+        ("vim", "1.1", "1.2", []),
+        ("kernel-default", "1.1", "1.1,1.2", ["dummy", "dummy2"]),
+    ],
+)
+@patch.object(zypper, "refresh_db", MagicMock(return_value=True))
+def test_upgrade(package, pre_version, post_version, fromrepo_param):
+    with patch(
+        "salt.modules.zypperpkg.__zypper__.noraise.call"
+    ) as zypper_mock, patch.object(
+        zypper,
+        "list_pkgs",
+        MagicMock(side_effect=[{package: pre_version}, {package: post_version}]),
+    ):
+        expected_call = ["update", "--auto-agree-with-licenses"]
+        for repo in fromrepo_param:
+            expected_call.extend(["--repo", repo])
+
+        result = zypper.upgrade(fromrepo=fromrepo_param)
+        zypper_mock.assert_any_call(*expected_call)
+        assert result == {package: {"old": pre_version, "new": post_version}}
+
+
+@pytest.mark.parametrize(
+    "package,pre_version,post_version,fromrepo_param",
+    [
+        ("vim", "1.1", "1.2", []),
+        ("emacs", "1.1", "1.2", ["Dummy", "Dummy2"]),
+    ],
+)
+@patch.object(zypper, "refresh_db", MagicMock(return_value=True))
+def test_dist_upgrade(package, pre_version, post_version, fromrepo_param):
+    with patch(
+        "salt.modules.zypperpkg.__zypper__.noraise.call"
+    ) as zypper_mock, patch.object(
+        zypper,
+        "list_pkgs",
+        MagicMock(side_effect=[{package: pre_version}, {package: post_version}]),
+    ):
+        expected_call = ["dist-upgrade", "--auto-agree-with-licenses"]
+
+        for repo in fromrepo_param:
+            expected_call.extend(["--from", repo])
+
+        result = zypper.upgrade(dist_upgrade=True, fromrepo=fromrepo_param)
+        zypper_mock.assert_any_call(*expected_call)
+        assert result == {package: {"old": pre_version, "new": post_version}}
+
+
+@pytest.mark.parametrize(
+    "package,pre_version,post_version,fromrepo_param",
+    [
+        ("vim", "1.1", "1.1", []),
+        ("emacs", "1.1", "1.1", ["Dummy", "Dummy2"]),
+    ],
+)
+@patch.object(zypper, "refresh_db", MagicMock(return_value=True))
+def test_dist_upgrade_dry_run(package, pre_version, post_version, fromrepo_param):
+    with patch(
+        "salt.modules.zypperpkg.__zypper__.noraise.call"
+    ) as zypper_mock, patch.object(
+        zypper,
+        "list_pkgs",
+        MagicMock(side_effect=[{package: pre_version}, {package: post_version}]),
+    ):
+        expected_call = ["dist-upgrade", "--auto-agree-with-licenses", "--dry-run"]
+
+        for repo in fromrepo_param:
+            expected_call.extend(["--from", repo])
+
+        zypper.upgrade(dist_upgrade=True, dryrun=True, fromrepo=fromrepo_param)
+        zypper_mock.assert_any_call(*expected_call)
+        # dryrun=True causes two calls, one with a trailing --debug-solver flag
+        expected_call.append("--debug-solver")
+        zypper_mock.assert_any_call(*expected_call)
+
+
+@patch.object(zypper, "refresh_db", MagicMock(return_value=True))
+def test_dist_upgrade_failure():
+    zypper_output = textwrap.dedent(
+        """\
+        Loading repository data...
+        Reading installed packages...
+        Computing distribution upgrade...
+        Use 'zypper repos' to get the list of defined repositories.
+        Repository 'DUMMY' not found by its alias, number, or URI.
+        """
+    )
+    call_spy = MagicMock()
+    zypper_mock = MagicMock()
+    zypper_mock.stdout = zypper_output
+    zypper_mock.stderr = ""
+    zypper_mock.exit_code = 3
+    zypper_mock.noraise.call = call_spy
+    with patch("salt.modules.zypperpkg.__zypper__", zypper_mock), patch.object(
+        zypper, "list_pkgs", MagicMock(side_effect=[{"vim": 1.1}, {"vim": 1.1}])
+    ):
+        expected_call = [
+            "dist-upgrade",
+            "--auto-agree-with-licenses",
+            "--from",
+            "Dummy",
+        ]
+
+        with pytest.raises(CommandExecutionError) as exc:
+            zypper.upgrade(dist_upgrade=True, fromrepo=["Dummy"])
+            call_spy.assert_called_with(*expected_call)
+
+            assert exc.exception.info["changes"] == {}
+            assert exc.exception.info["result"]["stdout"] == zypper_output
