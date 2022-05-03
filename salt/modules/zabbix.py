@@ -528,11 +528,18 @@ def user_create(alias, passwd, usrgrps, **connection_args):
         salt '*' zabbix.user_create james password007 '[7, 12]' firstname='James Bond'
     """
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
+
+    username_field = "alias"
+    # Zabbix 5.4 changed object fields
+    if _LooseVersion(zabbix_version) > _LooseVersion("5.2"):
+        username_field = "username"
+
     try:
         if conn_args:
             method = "user.create"
-            params = {"alias": alias, "passwd": passwd, "usrgrps": []}
+            params = {username_field: alias, "passwd": passwd, "usrgrps": []}
             # User groups
             if not isinstance(usrgrps, list):
                 usrgrps = [usrgrps]
@@ -605,11 +612,19 @@ def user_exists(alias, **connection_args):
         salt '*' zabbix.user_exists james
     """
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
+
+    username_field = "alias"
+    # Zabbix 5.4 changed object fields
+    if _LooseVersion(zabbix_version) > _LooseVersion("5.2"):
+        username_field = "username"
+
     try:
         if conn_args:
             method = "user.get"
-            params = {"output": "extend", "filter": {"alias": alias}}
+            # Zabbix 5.4 changed object fields
+            params = {"output": "extend", "filter": {username_field: alias}}
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
             return True if len(ret["result"]) > 0 else False
         else:
@@ -639,7 +654,14 @@ def user_get(alias=None, userids=None, **connection_args):
         salt '*' zabbix.user_get james
     """
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
+
+    username_field = "alias"
+    # Zabbix 5.4 changed object fields
+    if _LooseVersion(zabbix_version) > _LooseVersion("5.2"):
+        username_field = "username"
+
     try:
         if conn_args:
             method = "user.get"
@@ -652,7 +674,7 @@ def user_get(alias=None, userids=None, **connection_args):
                     ),
                 }
             if alias:
-                params["filter"].setdefault("alias", alias)
+                params["filter"].setdefault(username_field, alias)
             if userids:
                 params.setdefault("userids", userids)
             params = _params_extend(params, **connection_args)
