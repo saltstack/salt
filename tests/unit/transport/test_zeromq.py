@@ -536,6 +536,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
             if stop:
                 break
 
+    @skipIf(salt.utils.platform.is_darwin(), "Skip on Mac OS")
     @skipIf(salt.utils.platform.is_windows(), "Skip on Windows OS")
     @slowTest
     def test_publish_to_pubserv_ipc(self):
@@ -575,6 +576,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         assert len(results) == send_num, (len(results), set(expect).difference(results))
 
     @slowTest
+    @skipIf(salt.utils.platform.is_darwin(), "Skip on Mac OS")
     def test_zeromq_publish_port(self):
         """
         test when connecting that we
@@ -611,6 +613,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
             channel.context.destroy(1)
             channel.close()
 
+    @skipIf(salt.utils.platform.is_darwin(), "Skip on Mac OS")
     def test_zeromq_zeromq_filtering_decode_message_no_match(self):
         """
         test AsyncZeroMQPubChannel _decode_messages when
@@ -652,6 +655,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
             server_channel.context.destroy(1)
         assert res.result() is None
 
+    @skipIf(salt.utils.platform.is_darwin(), "Skip on Mac OS")
     def test_zeromq_zeromq_filtering_decode_message(self):
         """
         test AsyncZeroMQPubChannel _decode_messages
@@ -763,6 +767,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
             )
 
     @slowTest
+    @skipIf(salt.utils.platform.is_darwin(), "Skip on Mac OS")
     def test_publish_to_pubserv_tcp(self):
         """
         Test sending 10K messags to ZeroMQPubServerChannel using TCP transport
