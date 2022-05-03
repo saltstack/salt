@@ -611,7 +611,7 @@ oscrypto==1.2.1
     # via certvalidator
 packaging==21.0
     # via pytest
-paramiko==2.7.2 ; sys_platform != "win32" and sys_platform != "darwin"
+paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -r requirements/static/ci/common.in
     #   junos-eznc
@@ -704,7 +704,7 @@ python-dateutil==2.8.2
     #   vcert
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
-python-gnupg==0.4.7
+python-gnupg==0.4.8
     # via -r requirements/static/pkg/linux.in
 pytz==2021.1
     # via
@@ -781,6 +781,7 @@ six==1.16.0
     #   kubernetes
     #   msrestazure
     #   ncclient
+    #   paramiko
     #   profitbricks
     #   pynacl
     #   pyopenssl
