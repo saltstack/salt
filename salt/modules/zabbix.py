@@ -301,6 +301,12 @@ def get_zabbix_id_mapper():
     Make ZABBIX_ID_MAPPER constant available to state modules.
 
     :return: ZABBIX_ID_MAPPER
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zabbix.get_zabbix_id_mapper
     """
     return ZABBIX_ID_MAPPER
 
@@ -320,6 +326,12 @@ def substitute_params(input_object, extend_params=None, filter_key="name", **kwa
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
     :return: Params structure with values converted to string for further comparison purposes
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zabbix.substitute_params '{"query_object": "object_name", "query_name": "specific_object_name"}'
     """
     if extend_params is None:
         extend_params = {}
@@ -367,6 +379,12 @@ def compare_params(defined, existing, return_old_value=False):
     :param return_old_value: Default False. If True, returns dict("old"=old_val, "new"=new_val) for rollback purpose.
     :return: Params that are different from existing object. Result extended by
         object ID can be passed directly to Zabbix API update method.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zabbix.compare_params new_zabbix_object_dict existing_zabbix_onject_dict
     """
     # Comparison of data types
     if not isinstance(defined, type(existing)):
@@ -449,6 +467,12 @@ def get_object_id_by_params(obj, params=None, **connection_args):
     :param _connection_url: Optional - url of zabbix frontend (can also be set in opts, pillar, see module's docstring)
 
     :return: object ID
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zabbix.get_object_id_by_params object_type params=zabbix_api_query_parameters_dict
     """
     if params is None:
         params = {}
