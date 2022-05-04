@@ -28,7 +28,7 @@ class EtcdTestCase(ModuleCase, ShellCase):
 
         if EtcdTestCase.count == 0:
             self.run_state("docker_image.present", name="bitnami/etcd", tag="latest")
-            self.run_state(
+            ret = self.run_state(
                 "docker_container.running",
                 name="etcd",
                 image="bitnami/etcd:latest",
@@ -39,6 +39,9 @@ class EtcdTestCase(ModuleCase, ShellCase):
                 },
                 cap_add="IPC_LOCK",
             )
+            _, val = ret.popitem()
+            if not val["result"]:
+                self.skipTest("etcd container not running")
         EtcdTestCase.count += 1
 
     def tearDown(self):
@@ -61,13 +64,40 @@ class EtcdTestCase(ModuleCase, ShellCase):
 
     @slowTest
     def test_sdb(self):
-        set_output = self.run_function(
-            "sdb.set", uri="sdb://sdbetcd/secret/test/test_sdb/foo", value="bar"
-        )
+        set_output = None
+        tries_left = 10
+        while set_output is None and tries_left > 0:
+            tries_left -= 1
+            set_output = self.run_function(
+                "sdb.set", uri="sdb://sdbetcd/secret/test/test_sdb/foo", value="bar"
+            )
+            if (
+                "The minion function caused an exception" in set_output
+                and "etcd.EtcdConnectionFailed" in set_output
+            ):
+                # Currently there might be magic failures happening here, but
+                # also probably intermittently. This is the same thing we did
+                # below for sdb.get. 10 times should be enough, assuming that
+                # the server is up and running. Which it should be after 10
+                # different tries.
+                set_output = None
         self.assertEqual(set_output, "bar")
-        get_output = self.run_function(
-            "sdb.get", arg=["sdb://sdbetcd/secret/test/test_sdb/foo"]
-        )
+
+        tries_left = 10
+        get_output = None
+        # It's possible that connections to the database are magically failing.
+        # So far we've only seen this failure happen on test_sdb, and only on
+        # the sdb.get. So we'll try to get the data 10 times and if we continue
+        # to get None, we'll keep retrying until it comes back.
+        #
+        # It's possible that some of the other functions, will
+        # need this treatment. We also have to add the 'known None' to
+        # tests/support/case.py
+        while get_output is None and tries_left > 0:
+            tries_left -= 1
+            get_output = self.run_function(
+                "sdb.get", arg=["sdb://sdbetcd/secret/test/test_sdb/foo"]
+            )
         self.assertEqual(get_output, "bar")
 
     @slowTest

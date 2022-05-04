@@ -748,6 +748,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
             "time.sleep",
             "grains.delkey",
             "grains.delval",
+            "sdb.get",
         )
         if "f_arg" in kwargs:
             kwargs["arg"] = kwargs.pop("f_arg")
