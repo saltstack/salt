@@ -1,13 +1,20 @@
 import os
-import pythoncom
 import shutil
-from win32com.shell import shell
 
 import pytest
+
+try:
+    import pythoncom
+    from win32com.shell import shell
+
+    HAS_WIN32 = True
+except ImportError:
+    HAS_WIN32 = False
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_unless_on_windows,
+    pytest.mark.skipif(not HAS_WIN32, reason="Requires Win32 libraries"),
 ]
 
 
@@ -75,7 +82,7 @@ def test_present(shortcut, shortcut_mod, tmp_dir):
     assert ret.name == str(file_shortcut)
     assert ret.changes == {}
     assert "Shortcut created" in ret.comment
-    assert ret.result == True
+    assert ret.result is True
 
     expected = {
         "arguments": "present arguments",
@@ -110,7 +117,7 @@ def test_present_existing_same(shortcut, tmp_shortcut):
     assert ret.name == str(file_shortcut)
     assert ret.changes == {}
     assert "Shortcut already present and configured" in ret.comment
-    assert ret.result == True
+    assert ret.result is True
 
 
 def test_present_existing(shortcut, tmp_shortcut):
@@ -131,7 +138,7 @@ def test_present_existing(shortcut, tmp_shortcut):
     assert ret.name == str(file_shortcut)
     assert ret.changes == {}
     assert "Found existing shortcut" in ret.comment
-    assert ret.result == False
+    assert ret.result is False
 
 
 def test_present_existing_force(shortcut, shortcut_mod, tmp_shortcut):
@@ -160,7 +167,7 @@ def test_present_existing_force(shortcut, shortcut_mod, tmp_shortcut):
     assert ret.name == str(file_shortcut)
     assert ret.changes == changes
     assert "Shortcut modified" in ret.comment
-    assert ret.result == True
+    assert ret.result is True
 
     expected = {
         "arguments": "present arguments",
@@ -202,7 +209,7 @@ def test_present_existing_backup(shortcut, shortcut_mod, tmp_shortcut):
     assert ret.name == str(file_shortcut)
     assert ret.changes == changes
     assert "Shortcut modified" in ret.comment
-    assert ret.result == True
+    assert ret.result is True
 
     expected = {
         "arguments": "present arguments",
@@ -235,7 +242,7 @@ def test_present_existing_subdir(shortcut, tmp_dir):
     assert ret.name == str(file_shortcut)
     assert ret.changes == {}
     assert "Failed to create the shortcut" in ret.comment
-    assert ret.result == False
+    assert ret.result is False
 
 
 def test_present_existing_subdir_make_dirs(shortcut, shortcut_mod, tmp_dir):
@@ -255,7 +262,7 @@ def test_present_existing_subdir_make_dirs(shortcut, shortcut_mod, tmp_dir):
     assert ret.name == str(file_shortcut)
     assert ret.changes == {}
     assert "Shortcut created" in ret.comment
-    assert ret.result == True
+    assert ret.result is True
 
     expected = {
         "arguments": "present arguments",
@@ -289,7 +296,7 @@ def test_present_test_true(shortcut, tmp_dir):
     assert ret.name == str(file_shortcut)
     assert ret.changes == {}
     assert "Shortcut will be created" in ret.comment
-    assert ret.result == None
+    assert ret.result is None
 
 
 def test_present_existing_test_true(shortcut, tmp_shortcut):
@@ -315,4 +322,4 @@ def test_present_existing_test_true(shortcut, tmp_shortcut):
     assert ret.name == str(file_shortcut)
     assert ret.changes == changes
     assert "Shortcut will be modified" in ret.comment
-    assert ret.result == None
+    assert ret.result is None

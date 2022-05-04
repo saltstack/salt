@@ -13,7 +13,6 @@ import time
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.winapi
-
 from salt.exceptions import CommandExecutionError
 
 HAS_WIN32 = False
@@ -55,7 +54,7 @@ def __virtual__():
 
 
 def get(path):
-    """
+    r"""
     Gets the properties for a shortcut
 
     Args:
@@ -133,7 +132,7 @@ def _set_info(
     window_style="Normal",
     working_dir="",
 ):
-    """
+    r"""
     The main worker function for creating and modifying shortcuts. the `create`
     and `modify` functions are wrappers around this function.
 
@@ -227,7 +226,7 @@ def modify(
     window_style="Normal",
     working_dir="",
 ):
-    """
+    r"""
     Modify an existing shortcut. This can be a file shortcut (``.lnk``) or a
     url shortcut (``.url``).
 
@@ -315,7 +314,7 @@ def create(
     make_dirs=False,
     user=None,
 ):
-    """
+    r"""
     Create a new shortcut. This can be a file shortcut (``.lnk``) or a url
     shortcut (``.url``).
 
@@ -420,16 +419,16 @@ def create(
 
     if os.path.exists(path):
         if backup:
-            log.debug("Backing up: {}".format(path))
+            log.debug("Backing up: %s", path)
             file, ext = os.path.splitext(path)
             ext = ext.strip(".")
             backup_path = "{}-{}.{}".format(file, time.time_ns(), ext)
             os.rename(path, backup_path)
         elif force:
-            log.debug("Removing: {}".format(path))
+            log.debug("Removing: %s", path)
             os.remove(path)
         else:
-            log.debug("Shortcut exists: {}".format(path))
+            log.debug("Shortcut exists: %s", path)
             raise CommandExecutionError("Found existing shortcut")
 
     if not os.path.isdir(os.path.dirname(path)):

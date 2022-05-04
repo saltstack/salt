@@ -2,17 +2,24 @@
 Tests for win_shortcut execution module
 """
 import os
-import pythoncom
 import shutil
 import subprocess
-from win32com.shell import shell
 
 import pytest
 from salt.exceptions import CommandExecutionError
 
+try:
+    import pythoncom
+    from win32com.shell import shell
+
+    HAS_WIN32 = True
+except ImportError:
+    HAS_WIN32 = False
+
 pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_unless_on_windows,
+    pytest.mark.skipif(not HAS_WIN32, reason="Requires Win32 libraries"),
 ]
 
 
@@ -90,11 +97,11 @@ def tmp_share():
         "-command",
         '"Remove-SmbShare -Name {} -Force" | Out-Null'.format(share_name),
     ]
-    subprocess.run(create_cmd)
+    subprocess.run(create_cmd, check=True)
 
     yield share_name
 
-    subprocess.run(remove_cmd)
+    subprocess.run(remove_cmd, check=True)
 
 
 def test_get_missing(shortcut, tmp_dir):
