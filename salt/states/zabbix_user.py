@@ -336,7 +336,7 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
                 usrgrp_diff = list(set(usrgrps) - set(cur_usrgrps))
 
                 if usrgrp_diff and update_usrgrps:
-                    error.append("Unable to update group(s): diff={} old={} new={}".format(usrgrp_diff, cur_usrgrps, usrgrps))
+                    error.append("Unable to update group(s): {}".format(usrgrp_diff))
 
             else:
                 if update_usrgrps:
