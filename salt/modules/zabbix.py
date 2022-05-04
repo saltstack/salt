@@ -742,19 +742,37 @@ def user_update(userid, **connection_args):
         salt '*' zabbix.user_update 16 visible_name='James Brown'
     """
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
+
+    medias = connection_args.pop("medias", [])
+    medias.extend(connection_args.pop("user_medias", []))
+
     try:
         if conn_args:
             method = "user.update"
             params = {
                 "userid": userid,
             }
-            if "usrgrps" in connection_args.keys():
+
+            if _LooseVersion(zabbix_version) < _LooseVersion("3.4") and medias:
+                ret = {
+                    "result": False,
+                    "comment": "Setting medias available in Zabbix 3.4+",
+                }
+                return ret
+            elif _LooseVersion(zabbix_version) > _LooseVersion("5.0") and medias:
+                params["medias"] = medias
+            elif medias:
+                params["user_medias"] = medias
+
+            if "usrgrps" in connection_args:
                 groups = connection_args.pop("usrgrps")
                 grps = []
                 for group in groups:
                     grps.append({"usrgrpid": group})
                 params["usrgrps"] = grps
+
             params = _params_extend(params, _ignore_name=True, **connection_args)
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
             return ret["result"]["userids"]
