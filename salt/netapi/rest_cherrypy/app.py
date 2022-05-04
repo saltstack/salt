@@ -1888,6 +1888,8 @@ class Login(LowDataAdapter):
 
             if token["eauth"] == "django" and "^model" in eauth:
                 perms = token["auth_list"]
+            elif token["eauth"] == "rest":
+                perms = token["auth_list"]
             else:
                 # Get sum of '*' perms, user-specific perms, and group-specific perms
                 perms = eauth.get(token["name"], []).copy()
