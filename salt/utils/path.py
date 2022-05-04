@@ -367,3 +367,20 @@ def os_walk(top, *args, **kwargs):
     top_query = salt.utils.stringutils.to_str(top)
     for item in os.walk(top_query, *args, **kwargs):
         yield salt.utils.data.decode(item, preserve_tuples=True)
+
+
+def expand(path):
+    """
+    Expands all user and environment variables
+    .. versionadded: Sulfur
+
+    Args:
+
+        path (str): A path to a file or directory
+
+    Returns:
+        str: A fully expanded, real path
+    """
+    path = os.path.expanduser(path)  # expand ~ to home directory
+    path = os.path.expandvars(path)  # expand any other environment vars
+    return os.path.realpath(path)  # fix path format

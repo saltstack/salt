@@ -1,0 +1,1 @@
+Fixes issue with current directory being prepended to all paths
