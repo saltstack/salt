@@ -689,7 +689,13 @@ def user_get(alias=None, userids=None, **connection_args):
     try:
         if conn_args:
             method = "user.get"
-            params = {"output": "extend", "filter": {}}
+            params = {
+                "output": "extend",
+                "selectUsrgrps": "extend",
+                "selectMedias": "extend",
+                "selectMediatypes": "extend",
+                "filter": {},
+            }
             if not userids and not alias:
                 return {
                     "result": False,
