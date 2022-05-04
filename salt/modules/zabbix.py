@@ -743,6 +743,12 @@ def user_update(userid, **connection_args):
             params = {
                 "userid": userid,
             }
+            if "usrgrps" in connection_args.keys():
+                groups = connection_args.pop("usrgrps")
+                grps = []
+                for group in groups:
+                    grps.append({"usrgrpid": group})
+                params["usrgrps"] = grps
             params = _params_extend(params, _ignore_name=True, **connection_args)
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
             return ret["result"]["userids"]
