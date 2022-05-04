@@ -13,6 +13,7 @@ import salt.utils.json
 from salt.exceptions import SaltException
 from salt.utils.versions import LooseVersion as _LooseVersion
 
+
 def __virtual__():
     """
     Only make these states available if Zabbix module is available.
@@ -254,7 +255,6 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
     user_exists = __salt__["zabbix.user_exists"](alias, **connection_args)
     zabbix_version = __salt__["zabbix.apiinfo_version"](**connection_args)
 
-
     if user_exists:
         user = __salt__["zabbix.user_get"](alias, **connection_args)[0]
         userid = user["userid"]
@@ -354,7 +354,9 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
                     usrgrp_diff = list(set(usrgrps) - set(cur_usrgrps))
 
                     if usrgrp_diff:
-                        error.append("Unable to update group(s): {}".format(usrgrp_diff))
+                        error.append(
+                            "Unable to update group(s): {}".format(usrgrp_diff)
+                        )
 
                     ret["changes"]["usrgrps"] = str(updated_groups)
 
