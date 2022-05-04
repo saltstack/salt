@@ -779,17 +779,28 @@ def user_getmedia(userids=None, **connection_args):
         salt '*' zabbix.user_getmedia
     """
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
+
+    method = "usermedia.get"
+    params = {}
+    if _LooseVersion(zabbix_version) > _LooseVersion("3.4"):
+        method = "user.get"
+        params = {"selectMedias": "extend"}
+
     try:
         if conn_args:
-            method = "usermedia.get"
             if userids:
-                params = {"userids": userids}
-            else:
-                params = {}
+                params["userids"] = userids
             params = _params_extend(params, **connection_args)
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
-            return ret["result"]
+            medias = []
+            if method == "user.get":
+                for elem in ret["result"]:
+                    medias.extend(elem["medias"])
+            else:
+                medias = ret["result"]
+            return medias
         else:
             raise KeyError
     except KeyError:
