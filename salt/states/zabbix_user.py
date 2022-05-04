@@ -11,7 +11,7 @@ from copy import deepcopy
 
 import salt.utils.json
 from salt.exceptions import SaltException
-
+from salt.utils.versions import LooseVersion as _LooseVersion
 
 def __virtual__():
     """
@@ -252,6 +252,8 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
         return medias_list
 
     user_exists = __salt__["zabbix.user_exists"](alias, **connection_args)
+    zabbix_version = __salt__["zabbix.apiinfo_version"](**connection_args)
+
 
     if user_exists:
         user = __salt__["zabbix.user_get"](alias, **connection_args)[0]
@@ -260,7 +262,7 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
         update_usrgrps = False
         update_medias = False
 
-        usergroups = __salt__["zabbix.usergroup_get"](userids=userid, **connection_args)
+        usergroups = deepcopy(user.get("usrgrps", []))
         cur_usrgrps = list()
 
         for usergroup in usergroups:
@@ -269,7 +271,7 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
         if set(cur_usrgrps) != set(usrgrps):
             update_usrgrps = True
 
-        user_medias = __salt__["zabbix.user_getmedia"](userid, **connection_args)
+        user_medias = deepcopy(user.get("medias", []))
         medias_formated = _media_format(medias)
 
         if user_medias:
@@ -305,57 +307,89 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
         if update_usrgrps or password_reset or update_medias:
             ret["comment"] = comment_user_updated
 
-            if update_usrgrps:
-                __salt__["zabbix.user_update"](
-                    userid, usrgrps=usrgrps, **connection_args
-                )
-                updated_groups = __salt__["zabbix.usergroup_get"](
-                    userids=userid, **connection_args
-                )
+            if _LooseVersion(zabbix_version) > _LooseVersion("3.4"):
+                updates = deepcopy(connection_args)
+                if update_usrgrps:
+                    updates["usrgrps"] = usrgrps
+                if password_reset:
+                    updates["passwd"] = passwd
+                if update_medias:
+                    updates["medias"] = medias_formated
+                result = __salt__["zabbix.user_update"](userid, **updates)
+
+                new_user = __salt__["zabbix.user_get"](alias, **connection_args)[0]
+
+                if "error" in result:
+                    error.append(result["error"])
+                else:
+                    if update_usrgrps:
+                        ret["changes"]["usrgrps"] = str(new_user["usrgrps"])
+                    if update_medias:
+                        ret["changes"]["medias"] = str(medias_formated)
+                    if password_reset:
+                        ret["changes"]["passwd"] = "updated"
 
                 cur_usrgrps = list()
-                for usergroup in updated_groups:
+                for usergroup in new_user["usrgrps"]:
                     cur_usrgrps.append(int(usergroup["usrgrpid"]))
 
                 usrgrp_diff = list(set(usrgrps) - set(cur_usrgrps))
 
-                if usrgrp_diff:
-                    error.append("Unable to update grpup(s): {}".format(usrgrp_diff))
+                if usrgrp_diff and update_usrgrps:
+                    error.append("Unable to update group(s): diff={} old={} new={}".format(usrgrp_diff, cur_usrgrps, usrgrps))
 
-                ret["changes"]["usrgrps"] = str(updated_groups)
-
-            if password_reset:
-                updated_password = __salt__["zabbix.user_update"](
-                    userid, passwd=passwd, **connection_args
-                )
-                if "error" in updated_password:
-                    error.append(updated_groups["error"])
-                else:
-                    ret["changes"]["passwd"] = "updated"
-
-            if update_medias:
-                for user_med in user_medias:
-                    deletedmed = __salt__["zabbix.user_deletemedia"](
-                        user_med["mediaid"], **connection_args
+            else:
+                if update_usrgrps:
+                    __salt__["zabbix.user_update"](
+                        userid, usrgrps=usrgrps, **connection_args
                     )
-                    if "error" in deletedmed:
-                        error.append(deletedmed["error"])
-
-                for media in medias_formated:
-                    updatemed = __salt__["zabbix.user_addmedia"](
-                        userids=userid,
-                        active=media["active"],
-                        mediatypeid=media["mediatypeid"],
-                        period=media["period"],
-                        sendto=media["sendto"],
-                        severity=media["severity"],
-                        **connection_args
+                    updated_groups = __salt__["zabbix.usergroup_get"](
+                        userids=userid, **connection_args
                     )
 
-                    if "error" in updatemed:
-                        error.append(updatemed["error"])
+                    cur_usrgrps = list()
+                    for usergroup in updated_groups:
+                        cur_usrgrps.append(int(usergroup["usrgrpid"]))
 
-                ret["changes"]["medias"] = str(medias_formated)
+                    usrgrp_diff = list(set(usrgrps) - set(cur_usrgrps))
+
+                    if usrgrp_diff:
+                        error.append("Unable to update group(s): {}".format(usrgrp_diff))
+
+                    ret["changes"]["usrgrps"] = str(updated_groups)
+
+                if password_reset:
+                    updated_password = __salt__["zabbix.user_update"](
+                        userid, passwd=passwd, **connection_args
+                    )
+                    if "error" in updated_password:
+                        error.append(updated_groups["error"])
+                    else:
+                        ret["changes"]["passwd"] = "updated"
+
+                if update_medias:
+                    for user_med in user_medias:
+                        deletedmed = __salt__["zabbix.user_deletemedia"](
+                            user_med["mediaid"], **connection_args
+                        )
+                        if "error" in deletedmed:
+                            error.append(deletedmed["error"])
+
+                    for media in medias_formated:
+                        updatemed = __salt__["zabbix.user_addmedia"](
+                            userids=userid,
+                            active=media["active"],
+                            mediatypeid=media["mediatypeid"],
+                            period=media["period"],
+                            sendto=media["sendto"],
+                            severity=media["severity"],
+                            **connection_args
+                        )
+
+                        if "error" in updatemed:
+                            error.append(updatemed["error"])
+
+                    ret["changes"]["medias"] = str(medias_formated)
 
         else:
             ret["comment"] = comment_user_exists
