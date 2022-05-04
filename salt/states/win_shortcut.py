@@ -40,7 +40,7 @@ def present(
     make_dirs=False,
     user=None,
 ):
-    """
+    r"""
     Create a new shortcut. This can be a file shortcut (``.lnk``) or a url
     shortcut (``.url``).
 
