@@ -812,25 +812,22 @@ def user_getmedia(userids=None, **connection_args):
     zabbix_version = apiinfo_version(**connection_args)
     ret = False
 
-    method = "usermedia.get"
-    params = {}
     if _LooseVersion(zabbix_version) > _LooseVersion("3.4"):
-        method = "user.get"
-        params = {"selectMedias": "extend"}
+        users = user_get(userids=userids, **connection_args)
+        medias = []
+        for user in users:
+            medias.extend(user.get("medias", []))
+        return medias
 
     try:
         if conn_args:
+            method = "usermedia.get"
+            params = {}
             if userids:
                 params["userids"] = userids
             params = _params_extend(params, **connection_args)
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
-            medias = []
-            if method == "user.get":
-                for elem in ret["result"]:
-                    medias.extend(elem["medias"])
-            else:
-                medias = ret["result"]
-            return medias
+            return ret["result"]
         else:
             raise KeyError
     except KeyError:
