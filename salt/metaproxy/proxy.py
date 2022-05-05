@@ -21,7 +21,6 @@ import salt.engines
 import salt.ext.tornado.gen  # pylint: disable=F0401
 import salt.ext.tornado.ioloop  # pylint: disable=F0401
 import salt.loader
-import salt.log.setup
 import salt.minion
 import salt.payload
 import salt.pillar

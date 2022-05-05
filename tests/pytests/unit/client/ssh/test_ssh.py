@@ -1,8 +1,11 @@
+import os
+
 import pytest
 import salt.client.ssh.client
 import salt.utils.msgpack
 from salt.client import ssh
 from tests.support.mock import MagicMock, patch
+from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("ssh", "ssh-keygen", check_all=True),
@@ -135,3 +138,59 @@ def test_ssh_kwargs(test_opts):
     ), patch("salt.fileserver.Fileserver.update"), patch("salt.utils.thin.gen_thin"):
         ssh_obj = client._prep_ssh(**opts)
         assert ssh_obj.opts.get(opt_key, None) == opt_value
+
+
+@pytest.mark.skip_on_windows(reason="pre_flight_args is not implemented for Windows")
+@pytest.mark.parametrize(
+    "test_opts",
+    [
+        (None, ""),
+        ("one", " one"),
+        ("one two", " one two"),
+        ("| touch /tmp/test", " '|' touch /tmp/test"),
+        ("; touch /tmp/test", " ';' touch /tmp/test"),
+        (["one"], " one"),
+        (["one", "two"], " one two"),
+        (["one", "two", "| touch /tmp/test"], " one two '| touch /tmp/test'"),
+        (["one", "two", "; touch /tmp/test"], " one two '; touch /tmp/test'"),
+    ],
+)
+def test_run_with_pre_flight_args(ssh_target, test_opts):
+    """
+    test Single.run() when ssh_pre_flight is set
+    and script successfully runs
+    """
+    opts = ssh_target[0]
+    target = ssh_target[1]
+
+    opts["ssh_run_pre_flight"] = True
+    target["ssh_pre_flight"] = os.path.join(RUNTIME_VARS.TMP, "script.sh")
+
+    if test_opts[0] is not None:
+        target["ssh_pre_flight_args"] = test_opts[0]
+    expected_args = test_opts[1]
+
+    single = ssh.Single(
+        opts,
+        opts["argv"],
+        "localhost",
+        mods={},
+        fsclient=None,
+        thin=salt.utils.thin.thin_path(opts["cachedir"]),
+        mine=False,
+        **target
+    )
+
+    cmd_ret = ("Success", "", 0)
+    mock_cmd = MagicMock(return_value=cmd_ret)
+    mock_exec_cmd = MagicMock(return_value=("", "", 0))
+    patch_cmd = patch("salt.client.ssh.Single.cmd_block", mock_cmd)
+    patch_exec_cmd = patch("salt.client.ssh.shell.Shell.exec_cmd", mock_exec_cmd)
+    patch_shell_send = patch("salt.client.ssh.shell.Shell.send", return_value=None)
+    patch_os = patch("os.path.exists", side_effect=[True])
+
+    with patch_os, patch_cmd, patch_exec_cmd, patch_shell_send:
+        ret = single.run()
+        assert mock_exec_cmd.mock_calls[0].args[
+            0
+        ] == "/bin/sh '/tmp/script.sh'{}".format(expected_args)
