@@ -1,5 +1,8 @@
 """
 The networking module for SUSE based distros
+
+.. versionadded:: Phosphorus
+
 """
 
 import logging
@@ -925,6 +928,33 @@ def build_interface(iface, iface_type, enabled, **settings):
     """
     Build an interface script for a network interface.
 
+    Args:
+        :param iface:
+            The name of the interface to build the configuration for
+
+        :param iface_type:
+            The type of the interface. The following types are possible:
+              - eth
+              - bond
+              - alias
+              - clone
+              - ipsec
+              - dialup
+              - bridge
+              - slave
+              - vlan
+              - ipip
+              - ib
+
+        :param enabled:
+            Build the interface enabled or disabled
+
+        :param settings:
+            The settings for the interface
+
+    Returns:
+        dict: A dictionary of file/content
+
     CLI Example:
 
     .. code-block:: bash
@@ -988,6 +1018,16 @@ def build_routes(iface, **settings):
     """
     Build a route script for a network interface.
 
+    Args:
+        :param iface:
+            The name of the interface to build the routes for
+
+        :param settings:
+            The settings for the routes
+
+    Returns:
+        dict: A dictionary of file/content
+
     CLI Example:
 
     .. code-block:: bash
@@ -1029,6 +1069,19 @@ def down(iface, iface_type=None):
     """
     Shutdown a network interface
 
+    Args:
+        :param iface:
+            The name of the interface to shutdown
+
+        :param iface_type:
+            The type of the interface
+            If ``slave`` is specified, no any action is performing
+            Default is ``None``
+
+    Returns:
+        str: The result of ``ifdown`` command or ``None`` if ``slave``
+        iface_type was specified
+
     CLI Example:
 
     .. code-block:: bash
@@ -1045,6 +1098,13 @@ def get_interface(iface):
     """
     Return the contents of an interface script
 
+    Args:
+        :param iface:
+            The name of the interface to get settings for
+
+    Returns:
+        dict: A dictionary of file/content
+
     CLI Example:
 
     .. code-block:: bash
@@ -1058,6 +1118,19 @@ def get_interface(iface):
 def up(iface, iface_type=None):
     """
     Start up a network interface
+
+    Args:
+        :param iface:
+            The name of the interface to start up
+
+        :param iface_type:
+            The type of the interface
+            If ``slave`` is specified, no any action is performing
+            Default is ``None``
+
+    Returns:
+        str: The result of ``ifup`` command or ``None`` if ``slave``
+        iface_type was specified
 
     CLI Example:
 
@@ -1074,6 +1147,13 @@ def up(iface, iface_type=None):
 def get_routes(iface):
     """
     Return the contents of the interface routes script.
+
+    Args:
+        :param iface:
+            The name of the interface to get the routes for
+
+    Returns:
+        dict: A dictionary of file/content
 
     CLI Example:
 
@@ -1092,6 +1172,18 @@ def get_network_settings():
     """
     Return the contents of the global network script.
 
+    Args:
+        :param iface:
+            The name of the interface to start up
+
+        :param iface_type:
+            The type of the interface
+            If ``slave`` is specified, no any action is performing
+            Default is ``None``
+
+    Returns:
+        dict: A dictionary of file/content
+
     CLI Example:
 
     .. code-block:: bash
@@ -1104,6 +1196,13 @@ def get_network_settings():
 def apply_network_settings(**settings):
     """
     Apply global network configuration.
+
+    Args:
+        :param settings:
+            The network settings to apply
+
+    Returns:
+        The result of ``service.reload`` for ``network`` service
 
     CLI Example:
 
@@ -1144,6 +1243,13 @@ def apply_network_settings(**settings):
 def build_network_settings(**settings):
     """
     Build the global network script.
+
+    Args:
+        :param settings:
+            The network settings
+
+    Returns:
+        dict: A dictionary of file/content
 
     CLI Example:
 
