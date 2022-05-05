@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import logging
 
 import salt.utils.json
@@ -98,12 +94,11 @@ class VirtualboxCloudTestCase(ShellCase):
         # Args converted in the form of key1='value1' ... keyN='valueN'
         if kw_function_args:
             args = [
-                "{0}='{1}'".format(key, value)
-                for key, value in kw_function_args.items()
+                "{}='{}'".format(key, value) for key, value in kw_function_args.items()
             ]
 
         output = self.run_cloud(
-            "-f {0} {1} {2}".format(function, CONFIG_NAME, " ".join(args)), **kwargs
+            "-f {} {} {}".format(function, CONFIG_NAME, " ".join(args)), **kwargs
         )
         return output.get(CONFIG_NAME, {}).get(PROVIDER_NAME, {})
 
@@ -120,6 +115,6 @@ class VirtualboxCloudTestCase(ShellCase):
         """
 
         output = self.run_cloud(
-            "-a {0} {1} --assume-yes".format(action, instance_name), **kwargs
+            "-a {} {} --assume-yes".format(action, instance_name), **kwargs
         )
         return output.get(CONFIG_NAME, {}).get(PROVIDER_NAME, {})

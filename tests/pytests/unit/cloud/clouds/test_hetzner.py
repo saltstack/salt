@@ -167,7 +167,7 @@ def test_list_ssh_keys(ssh_keys):
 
 
 def test_list_nodes_full():
-    """ Test the list_nodes_full function by using a mock """
+    """Test the list_nodes_full function by using a mock"""
     with patch(
         "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
     ) as connect:
@@ -179,7 +179,12 @@ def test_list_nodes_full():
         mock.name = "abc"
         mock.public_net.ipv4.ip = "127.0.0.1/32"
         mock.public_net.ipv6.ip = "::1/64"
+
+        private_net_mock = MagicMock()
+        private_net_mock.ip = "10.0.0.1/16"
         mock.private_net = []
+        mock.private_net.append(private_net_mock)
+
         mock.labels = "abc"
         connect.return_value.servers.get_all.return_value = [mock]
 
@@ -188,9 +193,14 @@ def test_list_nodes_full():
         # Labels shouldn't be filtered
         assert "labels" in nodes[mock.name]
 
+        assert nodes[mock.name]["public_ips"]["ipv4"] == "127.0.0.1/32"
+        assert nodes[mock.name]["public_ips"]["ipv6"] == "::1/64"
+
+        assert nodes[mock.name]["private_ips"][0]["ip"] == "10.0.0.1/16"
+
 
 def test_list_nodes():
-    """ Test the list_nodes function by using a mock """
+    """Test the list_nodes function by using a mock"""
     with patch(
         "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
     ) as connect:
@@ -202,7 +212,12 @@ def test_list_nodes():
         mock.name = "abc"
         mock.public_net.ipv4.ip = "127.0.0.1/32"
         mock.public_net.ipv6.ip = "::1/64"
+
+        private_net_mock = MagicMock()
+        private_net_mock.ip = "10.0.0.1/16"
         mock.private_net = []
+        mock.private_net.append(private_net_mock)
+
         mock.labels = "abc"
         connect.return_value.servers.get_all.return_value = [mock]
 
@@ -211,14 +226,19 @@ def test_list_nodes():
         # Labels should be filtered
         assert "labels" not in nodes[mock.name]
 
+        assert nodes[mock.name]["public_ips"]["ipv4"] == "127.0.0.1/32"
+        assert nodes[mock.name]["public_ips"]["ipv6"] == "::1/64"
+
+        assert nodes[mock.name]["private_ips"][0]["ip"] == "10.0.0.1/16"
+
 
 def test_show_instance():
-    """ Test the show_instance function by using a mock """
+    """Test the show_instance function by using a mock"""
     with patch(
         "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
     ) as connect:
         with pytest.raises(SaltCloudSystemExit):
-            hetzner.show_instance("myvm", "action")
+            hetzner.show_instance("myvm")
 
         mock = MagicMock()
         mock.id = 123456
@@ -229,15 +249,15 @@ def test_show_instance():
         mock.labels = "abc"
         connect.return_value.servers.get_all.return_value = [mock]
 
-        nodes = hetzner.show_instance(mock.name)
+        nodes = hetzner.show_instance(mock.name, "action")
         assert nodes["id"] == mock.id
 
-        nodes = hetzner.show_instance("not-existing")
+        nodes = hetzner.show_instance("not-existing", "action")
         assert nodes == {}
 
 
 def test_wait_until():
-    """ Test the wait_until function """
+    """Test the wait_until function"""
 
     with patch("salt.cloud.clouds.hetzner.show_instance") as show_instance:
         show_instance.side_effect = [{"state": "done"}, IndexError()]
@@ -252,7 +272,7 @@ def test_wait_until():
 
 
 def test_create(images, sizes, vm):
-    """ Test the overall creation and the required parameters """
+    """Test the overall creation and the required parameters"""
     with patch(
         "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
     ) as connect:
@@ -284,7 +304,7 @@ def test_create(images, sizes, vm):
 
 
 def test_create_location(vm):
-    """ Test the locations during the creation """
+    """Test the locations during the creation"""
     vm["location"] = "abc"
 
     with patch(
@@ -308,7 +328,7 @@ def test_create_location(vm):
 
 
 def test_ssh_keys(vm):
-    """ Test the locations during the creation """
+    """Test the locations during the creation"""
     vm["ssh_keys"] = ["me"]
 
     with patch(
@@ -331,7 +351,7 @@ def test_ssh_keys(vm):
 
 
 def test_create_datacenter(vm):
-    """ Test the datacenters during the creation """
+    """Test the datacenters during the creation"""
     vm["datacenter"] = "abc"
 
     with patch(
@@ -354,7 +374,7 @@ def test_create_datacenter(vm):
 
 
 def test_create_volumes(vm):
-    """ Test the volumes during the creation """
+    """Test the volumes during the creation"""
     vm["volumes"] = ["a", "b"]
 
     with patch(
@@ -373,7 +393,7 @@ def test_create_volumes(vm):
 
 
 def test_create_networks(vm):
-    """ Test the networks during the creation """
+    """Test the networks during the creation"""
     vm["networks"] = ["a", "b"]
 
     with patch(
@@ -392,7 +412,7 @@ def test_create_networks(vm):
 
 
 def test_start():
-    """ Test the start action """
+    """Test the start action"""
     with patch(
         "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
     ) as connect:
@@ -413,7 +433,7 @@ def test_start():
 
 
 def test_stop():
-    """ Test the stop action """
+    """Test the stop action"""
     with patch(
         "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
     ) as connect:
@@ -434,7 +454,7 @@ def test_stop():
 
 
 def test_reboot():
-    """ Test the reboot action """
+    """Test the reboot action"""
     with patch(
         "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
     ) as connect:
@@ -455,7 +475,7 @@ def test_reboot():
 
 
 def test_destroy():
-    """ Test the destroy action """
+    """Test the destroy action"""
     with patch(
         "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
     ) as connect:
@@ -490,7 +510,7 @@ def test_destroy():
 
 
 def test_resize():
-    """ Test the resize action """
+    """Test the resize action"""
     kwargs = {"size": "cpx21"}
 
     with patch(
@@ -536,3 +556,31 @@ def test_resize():
                 wait.reset_mock()
                 hetzner.resize("myvm", kwargs, "action")
                 wait.assert_not_called()
+
+
+def test_config_loading(vm):
+    """Test if usual config parameters are loaded via get_cloud_config_value()"""
+    with patch(
+        "salt.cloud.clouds.hetzner._connect_client", return_value=MagicMock()
+    ) as client:
+        with patch(
+            "salt.config.get_cloud_config_value", return_value=MagicMock()
+        ) as cloud_config:
+            hetzner.create(vm)
+
+            config_values = {
+                "automount",
+                "datacenter",
+                "image",
+                "labels",
+                "location",
+                "name",
+                "networks",
+                "private_key",
+                "size",
+                "ssh_keys",
+                "user_data",
+                "volumes",
+            }
+            calls = set(map(lambda call: call[0][0], cloud_config.call_args_list))
+            assert config_values.issubset(calls)

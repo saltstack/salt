@@ -36,11 +36,6 @@ class SaltCPCli(salt.utils.parsers.SaltCPOptionParser):
         Execute salt-cp
         """
         self.parse_args()
-
-        # Setup file logging!
-        self.setup_logfile_logger()
-        salt.utils.verify.verify_log(self.config)
-
         cp_ = SaltCP(self.config)
         cp_.run()
 
@@ -120,9 +115,9 @@ class SaltCP:
                 files.update(self._file_dict(fn_))
             elif os.path.isdir(fn_):
                 salt.utils.stringutils.print_cli(
-                    fn_ + " is a directory, only files are supported "
+                    "{} is a directory, only files are supported "
                     'in non-chunked mode. Use "--chunked" command '
-                    "line argument."
+                    "line argument.".format(fn_)
                 )
                 sys.exit(1)
         return files

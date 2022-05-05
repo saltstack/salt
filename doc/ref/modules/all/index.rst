@@ -172,7 +172,6 @@ execution modules
     gentoolkitmod
     git
     github
-    glance
     glanceng
     glassfish
     glusterfs
@@ -394,6 +393,7 @@ execution modules
     rbac_solaris
     rbenv
     rdp
+    rebootmgr
     redismod
     reg
     rest_pkg
@@ -479,6 +479,7 @@ execution modules
     tls
     tomcat
     trafficserver
+    transactional_update
     travisci
     tuned
     twilio_notify
@@ -541,6 +542,7 @@ execution modules
     xfs
     xml
     xmpp
+    yaml
     yumpkg
     zabbix
     zcbuildout

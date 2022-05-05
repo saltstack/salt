@@ -1,19 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Unit tests for the Vault runner
 """
 
-# Import Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
 import salt.runners.vault as vault
-
-# Import salt libs
-from salt.ext import six
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import ANY, MagicMock, Mock, call, patch
 from tests.support.unit import TestCase
@@ -69,7 +61,7 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
 
         # The mappings dict is assembled in _get_policies, so emulate here
         mappings = {"minion": self.grains["id"], "grains": self.grains}
-        for case, correct_output in six.iteritems(cases):
+        for case, correct_output in cases.items():
             output = vault._expand_pattern_lists(
                 case, **mappings
             )  # pylint: disable=protected-access
@@ -85,14 +77,14 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
         # For non-existing minions, or the master-minion, grains will be None
         cases = {
             "no-tokens-to-replace": ["no-tokens-to-replace"],
-            "single-dict:{minion}": ["single-dict:{0}".format(minion_id)],
+            "single-dict:{minion}": ["single-dict:{}".format(minion_id)],
             "single-list:{grains[roles]}": [],
         }
         with patch(
             "salt.utils.minions.get_minion_data",
             MagicMock(return_value=(None, None, None)),
         ):
-            for case, correct_output in six.iteritems(cases):
+            for case, correct_output in cases.items():
                 test_config = {"policies": [case]}
                 output = vault._get_policies(
                     minion_id, test_config
@@ -136,7 +128,7 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
             "salt.utils.minions.get_minion_data",
             MagicMock(return_value=(None, self.grains, None)),
         ):
-            for case, correct_output in six.iteritems(cases):
+            for case, correct_output in cases.items():
                 test_config = {"policies": [case]}
                 output = vault._get_policies(
                     "test-minion", test_config
@@ -290,6 +282,37 @@ class VaultTokenAuthTest(TestCase, LoaderModuleMockMixin):
             self.assertTrue("error" in result)
             self.assertEqual(result["error"], "Test Exception Reason")
 
+    @patch("salt.runners.vault._validate_signature", MagicMock(return_value=None))
+    @patch(
+        "salt.runners.vault._get_token_create_url",
+        MagicMock(return_value="http://fake_url"),
+    )
+    def test_generate_token_with_namespace(self):
+        """
+        Basic tests for test_generate_token: all exits
+        """
+        mock = _mock_json_response(
+            {"auth": {"client_token": "test", "renewable": False, "lease_duration": 0}}
+        )
+        supplied_config = {"namespace": "test_namespace"}
+        with patch("requests.post", mock):
+            with patch.dict(vault.__opts__["vault"], supplied_config):
+                result = vault.generate_token("test-minion", "signature")
+                log.debug("generate_token result: %s", result)
+                self.assertIsInstance(result, dict)
+                self.assertNotIn("error", result)
+                self.assertIn("token", result)
+                self.assertEqual(result["token"], "test")
+                mock.assert_called_with(
+                    "http://fake_url",
+                    headers={
+                        "X-Vault-Token": "test",
+                        "X-Vault-Namespace": "test_namespace",
+                    },
+                    json=ANY,
+                    verify=ANY,
+                )
+
 
 class VaultAppRoleAuthTest(TestCase, LoaderModuleMockMixin):
     """
@@ -332,7 +355,12 @@ class VaultAppRoleAuthTest(TestCase, LoaderModuleMockMixin):
             self.assertTrue("token" in result)
             self.assertEqual(result["token"], "test")
             calls = [
-                call("http://127.0.0.1/v1/auth/approle/login", json=ANY, verify=ANY),
+                call(
+                    "http://127.0.0.1/v1/auth/approle/login",
+                    headers=ANY,
+                    json=ANY,
+                    verify=ANY,
+                ),
                 call("http://fake_url", headers=ANY, json=ANY, verify=ANY),
             ]
             mock.assert_has_calls(calls)

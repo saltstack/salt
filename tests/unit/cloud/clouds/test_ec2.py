@@ -182,3 +182,30 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
         self.assertRaises(
             salt.exceptions.SaltCloudConfigError, ec2.request_instance, vm
         )
+
+    @patch("salt.cloud.clouds.ec2.config.get_cloud_config_value")
+    @patch("salt.cloud.clouds.ec2.get_location")
+    @patch("salt.cloud.clouds.ec2.get_provider")
+    @patch("salt.cloud.clouds.ec2.aws.query")
+    def test_get_subnetname_id(self, aws_query, get_provider, get_location, config):
+        """
+        test querying subnetid function
+        """
+        vm = {}
+        subnetid = "subnet-5678"
+        subnetname = "valid-subnet-with-name"
+        config.return_value = subnetname
+        get_location.return_value = "us-west-2"
+        get_provider.return_value = "ec2"
+
+        # test for returns that include subnets with missing Name tags, see Issue 44330
+        aws_query.return_value = [
+            {"subnetId": "subnet-1234"},
+            {
+                "subnetId": subnetid,
+                "tagSet": {"item": {"key": "Name", "value": subnetname}},
+            },
+        ]
+
+        # test subnetname lookup
+        self.assertEqual(ec2._get_subnetname_id(subnetname), subnetid)

@@ -546,7 +546,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         collection_setting = {"name": "Collection[{yaml:\n\tdata}]", "filter": "value"}
         filter_setting = {
             "name": "enabled",
-            "filter": "system.webServer / security / authentication / anonymousAuthentication",
+            "filter": (
+                "system.webServer / security / authentication / anonymousAuthentication"
+            ),
         }
         settings = [collection_setting, filter_setting]
 
@@ -566,7 +568,8 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                     "($Property.GetType()).Name -eq 'ConfigurationAttribute') {",
                     "$Property = $Property | Select-Object",
                     "-ExpandProperty Value };",
-                    "$Settings.add(@{{filter='{filter}';name='{name}';value=[String] $Property}})| Out-Null;".format(
+                    "$Settings.add(@{{filter='{filter}';name='{name}';value=[String]"
+                    " $Property}})| Out-Null;".format(
                         filter=setting["filter"], name=setting["name"]
                     ),
                     "$Property = $Null;",
@@ -599,7 +602,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         name = "IIS"
         setting = {
             "name": "Collection[{yaml:\n\tdata}]",
-            "filter": "system.webServer / security / authentication / anonymousAuthentication",
+            "filter": (
+                "system.webServer / security / authentication / anonymousAuthentication"
+            ),
             "value": [],
         }
         settings = [setting]
@@ -628,7 +633,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         name = "IIS"
         setting = {
             "name": "Collection[{yaml:\n\tdata}]",
-            "filter": "system.webServer / security / authentication / anonymousAuthentication",
+            "filter": (
+                "system.webServer / security / authentication / anonymousAuthentication"
+            ),
             "value": [],
         }
         settings = [setting]
@@ -656,7 +663,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         name = "IIS"
         setting = {
             "name": "Collection[{yaml:\n\tdata}]",
-            "filter": "system.webServer / security / authentication / anonymousAuthentication",
+            "filter": (
+                "system.webServer / security / authentication / anonymousAuthentication"
+            ),
             "value": [],
         }
         settings = [setting]
@@ -686,7 +695,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         settings = [
             {
                 "name": "enabled",
-                "filter": "system.webServer/security/authentication/anonymousAuthentication",
+                "filter": (
+                    "system.webServer/security/authentication/anonymousAuthentication"
+                ),
             }
         ]
 
@@ -707,12 +718,15 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         ps_cmd = [
             "$Settings = New-Object System.Collections.ArrayList;",
             "$Property = Get-WebConfigurationProperty -PSPath 'salt'",
-            "-Name 'enabled' -Filter 'system.webServer/security/authentication/anonymousAuthentication' -ErrorAction Stop;",
+            "-Name 'enabled' -Filter"
+            " 'system.webServer/security/authentication/anonymousAuthentication'"
+            " -ErrorAction Stop;",
             "if (([String]::IsNullOrEmpty($Property) -eq $False) -and",
             "($Property.GetType()).Name -eq 'ConfigurationAttribute') {",
             "$Property = $Property | Select-Object",
             "-ExpandProperty Value };",
-            "$Settings.add(@{filter='system.webServer/security/authentication/anonymousAuthentication';name='enabled';value=[String] $Property})| Out-Null;",
+            "$Settings.add(@{filter='system.webServer/security/authentication/anonymousAuthentication';name='enabled';value=[String]"
+            " $Property})| Out-Null;",
             "$Property = $Null;",
             "$Settings",
         ]
@@ -744,7 +758,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         settings = [
             {
                 "name": "enabled",
-                "filter": "system.webServer/security/authentication/anonymousAuthentication",
+                "filter": (
+                    "system.webServer/security/authentication/anonymousAuthentication"
+                ),
                 "value": False,
             }
         ]
@@ -752,7 +768,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         current_settings = [
             {
                 "name": "enabled",
-                "filter": "system.webServer/security/authentication/anonymousAuthentication",
+                "filter": (
+                    "system.webServer/security/authentication/anonymousAuthentication"
+                ),
                 "value": True,
             }
         ]
@@ -760,7 +778,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         new_settings = [
             {
                 "name": "enabled",
-                "filter": "system.webServer/security/authentication/anonymousAuthentication",
+                "filter": (
+                    "system.webServer/security/authentication/anonymousAuthentication"
+                ),
                 "value": False,
             }
         ]
@@ -805,7 +825,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         settings = [
             {
                 "name": "enabled",
-                "filter": "system.webServer/security/authentication/anonymousAuthentication",
+                "filter": (
+                    "system.webServer/security/authentication/anonymousAuthentication"
+                ),
                 "value": False,
             }
         ]
@@ -813,7 +835,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         current_settings = [
             {
                 "name": "enabled",
-                "filter": "system.webServer/security/authentication/anonymousAuthentication",
+                "filter": (
+                    "system.webServer/security/authentication/anonymousAuthentication"
+                ),
                 "value": True,
             }
         ]
@@ -821,7 +845,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         new_settings = [
             {
                 "name": "enabled",
-                "filter": "system.webServer/security/authentication/anonymousAuthentication",
+                "filter": (
+                    "system.webServer/security/authentication/anonymousAuthentication"
+                ),
                 "value": True,
             }
         ]

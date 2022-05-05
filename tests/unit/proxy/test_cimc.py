@@ -432,7 +432,10 @@ class ValidateSSLTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(cimc.__utils__, {"http.query": http_query_mock}):
                 cimc.set_config_modify(
                     dn="sys/rack-unit-1/locator-led",
-                    inconfig="<inConfig><equipmentLocatorLed adminState='on' dn='sys/rack-unit-1/locator-led'></equipmentLocatorLed></inConfig>",
+                    inconfig=(
+                        "<inConfig><equipmentLocatorLed adminState='on'"
+                        " dn='sys/rack-unit-1/locator-led'></equipmentLocatorLed></inConfig>"
+                    ),
                 )
 
             for idx, call in enumerate(http_query_mock.mock_calls, 1):

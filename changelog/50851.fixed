@@ -1,0 +1,1 @@
+Ensure that NOTIFY_SOCKET is not passed to child processes created with cmdmod unless it's set explicitly for such call.

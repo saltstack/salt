@@ -4,8 +4,6 @@
 Salt 3003 Release Notes - Codename Aluminium
 ============================================
 
-Salt 3003 is an *unreleased* upcoming feature release.
-
 New Features
 ============
 
@@ -18,22 +16,46 @@ and :py:func:`postgres_group.present <salt.states.postgres_group.present>`
 states. This allows migration away from the insecure and deprecated
 previous storage methods.
 
+Added
+=====
 
-Removed
--------
-
-- removed the arg `managed_private_key` from 'salt.states.x509.certificate_managed' (#59247)
-- Drop support for python 3.5 on Windows (#59479)
-
-
-Deprecated
-----------
-
-- Added deprecation warning for grains.get_or_set_hash (#59425)
-
+- Added "fips_mode" config option to master and minion configs. (#59427)
+- Firewall groups support to Vultr Salt Cloud provider
+- Adding the ability to clear and show the pillar cache enabled when pillar_cache is True. (#37080)
+- SCRAM-SHA-256 support for PostgreSQL passwords.
+  Pass encrypted=scram-sha-256 to the postgres_user.present (or postgres_group.present) state. (#51271)
+- The yumpkg module has been updated to support VMWare's Photon OS, which uses tdnf (a C implementation of dnf).  "VMware Photon OS" has been added to the "RedHat" `os_family` map as part of this change. (#51912)
+- The pkgrepo state now supports VMware Photon OS. (#52550)
+- Added firewallgroups to Vultr Salt Cloud provider (#53677)
+- Added arbitrary kwarg support for tojson filter. (#56012)
+- Add salt monitor beacon to execute salt execution module functions. (#56461)
+- Allow the nameservers to be populated from systemd-resolve. (#57618)
+- Adding reactor_niceness to the default minion configuration. (#57701)
+- CPU model, topology and NUMA node tuning (#57880)
+- Added ``pkg.services_need_restart`` which lists system services that should be restarted after package management operations. (#58261)
+- Allow handling special first boot definition on virtual machine (#58589)
+- Added vgcreate custom parameters to module call: addtag, alloc, autobackup, metadatatype, zero (#58747)
+- Enhance console and serial support in virt module (#58844)
+- Salt's versions report `salt --versions-report` now includes all installed salt extensions into its versions report. (#58938)
+- Support loading entrypoints by passing a module instead of a function. (#58939)
+- Added shadow.gen_password for BSD operating systems. (#59140)
+- Add more network and PCI/USB host devices passthrough support to virt module and states (#59143)
+- Add interface channels management support to rh_ip module. (#59147)
+- Add new minion option return_retry_tries for dynamic return retry tries (#59236)
+- Added salt-cloud support for Hetzner Cloud via the ``hcloud`` library of the provider. (#59301)
+- "AlmaLinux" has been added to the "RedHat" `os_family` map (#59404)
+- Added `blocks` and `attachments` params to the `slack_notify.post_message` function (#59428)
+- Added tcp_reconnect_backoff minion config option for specifying reconnection backoff time for TCP transport (#59431)
+- Added ``swapusage`` beacon to complement the existing ``memusage`` beacon. (#59460)
+- The `salt-run` CLI now accepts `--jid` (#59527)
+- Add bytes option for FreeBSD pkg-stats(8) module. (#59540)
+- Adding mod_beacon function to pkg, service, and file state modules. This function will act similar to the mod_watch function. This will allow supported functions in those state modules to automatically add associated beacons to monitor for changes to the respective resources in the state file and fire events to the event bus when changes occur. (#59559)
+- Add -B flag to FreeBSD pkgng.check() to regenerate the library dependency
+  metadata for a package by extracting library requirement information from the
+  binary ELF files in the package. (#59569)
 
 Changed
--------
+=======
 
 - The :py:mod:`pkg <salt.modules.yumpkg>` module now supports ``tdnf`` used by
   VMWare Photon OS.  As part of this change, ``VMWare Photon OS``'s
@@ -46,14 +68,31 @@ Changed
 - Changed package manager detection in yumpkg module (#59201)
 - Updating the pkg beacon to fire the events when there are upgrades to packages, but also when watched packages are installed or removed. Breaking out the logic for listing pkgs from context into a separate function to aid in testing. Updating tests to ensure context is not used when use_context option to list_pkgs is False. (#59463)
 
+Removed
+=======
+
+- Removed the deprecated glance state and execution module in favor of the glance_image
+  state module and the glanceng execution module. (#59079)
+- Removing the _ext_nodes deprecation warning and alias to the master_tops function.  This change will break compatibility with a Salt master running versions 2017.7.8 and older and Salt minions running versions 3003 and newer. (#59804)
+- removed the arg `managed_private_key` from 'salt.states.x509.certificate_managed' (#59247)
+- Drop support for python 3.5 on Windows (#59479)
+- Removed support for Ubuntu 16.04 (#59913)
+
+Deprecated
+==========
+
+- Added deprecation warning for grains.get_or_set_hash (#59425)
 
 Fixed
------
+=====
 
+- When instantiating the loader grab values of grains and pillars if
+  they are NamedLoaderContext instances. (#59773)
+- Fixed installation on Apple Silicon Macs by checking $HOMEBREW_PREFIX for `libcrypto` instead of assuming /usr/local. (#59808)
 - The Google Cloud Engine salt-cloud provider now requires `apache-libcloud>=2.5.0`. Service account authentication is broken on older versions.
 - Fix incorrect documentation for pillar_source_merging_strategy (#26396)
 - Don't iterate through cloud map errors (#34033)
-- Supress noisy warnings when very old pyzmq is used. (#50327)
+- Suppress noisy warnings when very old pyzmq is used. (#50327)
 - Fixed glusterfs version parsing for pre-4.0 (#50707)
 - Prevent traceback when trying to list reactors when none are configured. (#53334)
 - Fixed zabbix_host.present to accept all Zabbix host properties (#53838)
@@ -75,7 +114,7 @@ Fixed
   minion not to start
   Use default timezone offset in scheduler when correct timezone cannot be determined (#58379)
 - Pop!_OS 20.04 and 20.10 now support using pkg.* / aptpkg.* (#58395)
-- Restoring functionallity of the textfsm module when using textfsm_path argument (#58499)
+- Restoring functionality of the textfsm module when using textfsm_path argument (#58499)
 - Invalidate file list cache when cache file has a future last modified time (#58529)
 - Fix issue with setting permissions in combination with the win_perms_reset
   option (#58541)
@@ -146,41 +185,3 @@ Fixed
 - Fixing the virtual function for the netimiko module to allow it to run outside of a proxy minion. Adding additional tests. (#59635)
 - Allow "extra_filerefs" as sanitized kwargs for SSH client.
   Fix regression on "cmd.run" when passing tuples as cmd. (#59664)
-
-
-Added
------
-
-- Firewall groups support to Vultr Salt Cloud provider
-- Adding the ability to clear and show the pillar cache enabled when pillar_cache is True. (#37080)
-- SCRAM-SHA-256 support for PostgreSQL passwords.
-  Pass encrypted=scram-sha-256 to the postgres_user.present (or postgres_group.present) state. (#51271)
-- The yumpkg module has been updated to support VMWare's Photon OS, which uses tdnf (a C implementation of dnf).  "VMware Photon OS" has been added to the "RedHat" `os_family` map as part of this change. (#51912)
-- The pkgrepo state now supports VMware Photon OS. (#52550)
-- Added firewallgroups to Vultr Salt Cloud provider (#53677)
-- Added arbitrary kwarg support for tojson filter. (#56012)
-- Add salt monitor beacon to execute salt execution module functions. (#56461)
-- Allow the nameservers to be populated from systemd-resolve. (#57618)
-- Adding reactor_niceness to the default minion configuration. (#57701)
-- CPU model, topology and NUMA node tuning (#57880)
-- Added ``pkg.services_need_restart`` which lists system services that should be restarted after package management operations. (#58261)
-- Allow handling special first boot definition on virtual machine (#58589)
-- Added vgcreate custom parameters to module call: addtag, alloc, autobackup, metadatatype, zero (#58747)
-- Enhance console and serial support in virt module (#58844)
-- Salt's versions report `salt --versions-report` now includes all installed salt extensions into its versions report. (#58938)
-- Support loading entrypoints by passing a module instead of a function. (#58939)
-- Added shadow.gen_password for BSD operating systems. (#59140)
-- Add more network and PCI/USB host devices passthrough support to virt module and states (#59143)
-- Add interface channels management support to rh_ip module. (#59147)
-- Add new minion option return_retry_tries for dynamic return retry tries (#59236)
-- Added salt-cloud support for Hetzner Cloud via the ``hcloud`` library of the provider. (#59301)
-- "AlmaLinux" has been added to the "RedHat" `os_family` map (#59404)
-- Added `blocks` and `attachments` params to the `slack_notify.post_message` function (#59428)
-- Added tcp_reconnect_backoff minion config option for specifying reconnection backoff time for TCP transport (#59431)
-- Added ``swapusage`` beacon to complement the existing ``memusage`` beacon. (#59460)
-- The `salt-run` CLI now accepts `--jid` (#59527)
-- Add bytes option for FreeBSD pkg-stats(8) module. (#59540)
-- Adding mod_beacon function to pkg, service, and file state modules. This function will act similar to the mod_watch function. This will allow supported functions in those state modules to automatically add associated beacons to monitor for changes to the respective resources in the state file and fire events to the event bus when changes occur. (#59559)
-- Add -B flag to FreeBSD pkgng.check() to regenerate the library dependency
-  metadata for a package by extracting library requirement information from the
-  binary ELF files in the package. (#59569)

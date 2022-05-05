@@ -47,16 +47,15 @@ class BuildoutTestCase(Base):
     def test_error(self):
         b_dir = os.path.join(self.tdir, "e")
         ret = buildout.installed(b_dir, python=self.py_st)
-        self.assertTrue(
-            "We did not get any expectable answer from buildout" in ret["comment"]
-        )
+        self.assertTrue("Unexpected response from buildout" in ret["comment"])
         self.assertFalse(ret["result"])
 
     @pytest.mark.slow_test
     def test_installed(self):
         if salt.modules.virtualenv_mod.virtualenv_ver(self.ppy_st) >= (20, 0, 0):
             self.skipTest(
-                "Skiping until upstream resolved https://github.com/pypa/virtualenv/issues/1715"
+                "Skiping until upstream resolved"
+                " https://github.com/pypa/virtualenv/issues/1715"
             )
         b_dir = os.path.join(self.tdir, "b")
         ret = buildout.installed(

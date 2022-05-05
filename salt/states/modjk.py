@@ -1,15 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 State to control Apache modjk
 """
 
 # Python Libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +26,7 @@ def _bulk_state(saltfunc, lbn, workers, profile):
 
     if not isinstance(workers, list):
         ret["result"] = False
-        ret["comment"] = "workers should be a list not a {0}".format(type(workers))
+        ret["comment"] = "workers should be a list not a {}".format(type(workers))
         return ret
 
     if __opts__["test"]:
@@ -43,18 +38,18 @@ def _bulk_state(saltfunc, lbn, workers, profile):
         cmdret = __salt__[saltfunc](workers, lbn, profile=profile)
     except KeyError:
         ret["result"] = False
-        ret["comment"] = "unsupported function {0}".format(saltfunc)
+        ret["comment"] = "unsupported function {}".format(saltfunc)
         return ret
 
     errors = []
-    for worker, ok in six.iteritems(cmdret):
+    for worker, ok in cmdret.items():
         if not ok:
             errors.append(worker)
 
     ret["changes"] = {"status": cmdret}
     if errors:
         ret["result"] = False
-        ret["comment"] = "{0} failed on some workers".format(saltfunc)
+        ret["comment"] = "{} failed on some workers".format(saltfunc)
 
     return ret
 

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Decrypt pillar data through the builtin NACL renderer
 
@@ -20,9 +18,16 @@ Set ``nacl.config`` in your config.
 
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt
+
+__virtualname__ = "nacl"
+
+
+def __virtual__():
+    if __opts__["fips_mode"] is True:
+        return False, "nacl pillar data not available in FIPS mode"
+    return __virtualname__
 
 
 def ext_pillar(minion_id, pillar, *args, **kwargs):

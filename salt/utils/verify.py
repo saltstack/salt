@@ -3,6 +3,7 @@ A few checks to make sure the environment is sane
 """
 
 import errno
+import itertools
 import logging
 import os
 import re
@@ -15,15 +16,15 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
+from salt._logging import LOG_LEVELS
 from salt.exceptions import CommandExecutionError, SaltClientError, SaltSystemExit
-from salt.log import is_console_configured
-from salt.log.setup import LOG_LEVELS
 
 # Original Author: Jeff Schroeder <jeffschroeder@computer.org>
 
 
 try:
     import win32file
+    import salt.utils.win_reg
 except ImportError:
     import resource
 
@@ -49,11 +50,7 @@ def zmq_version():
 
     # Fallthrough and hope for the best
     if not match:
-        msg = "Using untested zmq python bindings version: '{}'".format(ver)
-        if is_console_configured():
-            log.warning(msg)
-        else:
-            sys.stderr.write("WARNING {}\n".format(msg))
+        log.warning("Using untested zmq python bindings version: '%s'", ver)
         return True
 
     major, minor, point = match.groups()
@@ -70,11 +67,7 @@ def zmq_version():
     if major == 2 and minor == 1:
         # zmq 2.1dev could be built against a newer libzmq
         if "dev" in ver and not point:
-            msg = "Using dev zmq module, please report unexpected results"
-            if is_console_configured():
-                log.warning(msg)
-            else:
-                sys.stderr.write("WARNING: {}\n".format(msg))
+            log.warning("Using dev zmq module, please report unexpected results")
             return True
         elif point and point >= 9:
             return True
@@ -84,15 +77,11 @@ def zmq_version():
     # If all else fails, gracefully croak and warn the user
     log.critical("ZeroMQ python bindings >= 2.1.9 are required")
     if "salt-master" in sys.argv[0]:
-        msg = (
+        log.critical(
             "The Salt Master is unstable using a ZeroMQ version "
             "lower than 2.1.11 and requires this fix: http://lists.zeromq."
             "org/pipermail/zeromq-dev/2011-June/012094.html"
         )
-        if is_console_configured():
-            log.critical(msg)
-        else:
-            sys.stderr.write("CRITICAL {}\n".format(msg))
     return False
 
 
@@ -133,10 +122,7 @@ def verify_socket(interface, pub_port, ret_port):
             else:
                 msg = "{}, this might not be a problem.".format(msg)
             msg += "; Is there another salt-master running?"
-            if is_console_configured():
-                log.warning(msg)
-            else:
-                sys.stderr.write("WARNING: {}\n".format(msg))
+            log.warning(msg)
             return False
         finally:
             sock.close()
@@ -145,6 +131,9 @@ def verify_socket(interface, pub_port, ret_port):
 
 
 def verify_logs_filter(files):
+    """
+    Filter files to verify.
+    """
     to_verify = []
     for filename in files:
         verify_file = True
@@ -177,13 +166,12 @@ def _get_pwnam(user):
     try:
         return pwd.getpwnam(user)
     except KeyError:
-        msg = "Failed to prepare the Salt environment for user {}. The user is not available.".format(
-            user
+        print(
+            "Failed to prepare the Salt environment for user {}. "
+            "The user is not available.".format(user),
+            file=sys.stderr,
+            flush=True,
         )
-        if is_console_configured():
-            log.critical(msg)
-        else:
-            print(msg, file=sys.stderr, flush=True)
         sys.exit(salt.defaults.exitcodes.EX_NOUSER)
 
 
@@ -285,29 +273,21 @@ def verify_env(
                 if "{}jobs".format(os.path.sep) in fsubdir:
                     continue
                 for root, dirs, files in salt.utils.path.os_walk(fsubdir):
-                    for name in files:
+                    for name in itertools.chain(files, dirs):
                         if name.startswith("."):
                             continue
                         path = os.path.join(root, name)
                         try:
                             fmode = os.stat(path)
+                            if fmode.st_uid != uid or fmode.st_gid != gid:
+                                if permissive and fmode.st_gid in groups:
+                                    pass
+                                else:
+                                    # chown the file for the new user
+                                    os.chown(path, uid, gid)
                         except OSError:
-                            pass
-                        if fmode.st_uid != uid or fmode.st_gid != gid:
-                            if permissive and fmode.st_gid in groups:
-                                pass
-                            else:
-                                # chown the file for the new user
-                                os.chown(path, uid, gid)
-                    for name in dirs:
-                        path = os.path.join(root, name)
-                        fmode = os.stat(path)
-                        if fmode.st_uid != uid or fmode.st_gid != gid:
-                            if permissive and fmode.st_gid in groups:
-                                pass
-                            else:
-                                # chown the file for the new user
-                                os.chown(path, uid, gid)
+                            continue
+
         # Allow the pki dir to be 700 or 750, but nothing else.
         # This prevents other users from writing out keys, while
         # allowing the use-case of 3rd-party software (like django)
@@ -323,12 +303,9 @@ def verify_env(
                 if os.access(dir_, os.W_OK):
                     os.chmod(dir_, 448)
                 else:
-                    msg = 'Unable to securely set the permissions of "{0}".'
-                    msg = msg.format(dir_)
-                    if is_console_configured():
-                        log.critical(msg)
-                    else:
-                        sys.stderr.write("CRITICAL: {}\n".format(msg))
+                    log.critical(
+                        'Unable to securely set the permissions of "%s".', dir_
+                    )
 
     if skip_extra is False:
         # Run the extra verification checks
@@ -368,11 +345,7 @@ def check_user(user):
                 os.environ[envvar] = pwuser.pw_name
 
     except OSError:
-        msg = 'Salt configured to run as user "{}" but unable to switch.'.format(user)
-        if is_console_configured():
-            log.critical(msg)
-        else:
-            sys.stderr.write("CRITICAL: {}\n".format(msg))
+        log.critical('Salt configured to run as user "%s" but unable to switch.', user)
         return False
     return True
 
@@ -483,8 +456,8 @@ def check_max_open_files(opts):
         msg += (
             "According to the system's hard limit, there's still a "
             "margin of {} to raise the salt's max_open_files "
-            "setting. "
-        ).format(mof_h - mof_c)
+            "setting. ".format(mof_h - mof_c)
+        )
 
     msg += "Please consider raising this value."
     log.log(level=level, msg=msg)
@@ -508,7 +481,8 @@ def _realpath_windows(path):
     for part in path.split(os.path.sep):
         if base != "":
             try:
-                part = os.readlink(os.path.sep.join([base, part]))
+                # Need to use salt.utils.path.readlink as it handles junctions
+                part = salt.utils.path.readlink(os.path.sep.join([base, part]))
                 base = os.path.abspath(part)
             except OSError:
                 base = os.path.abspath(os.path.sep.join([base, part]))
@@ -616,20 +590,67 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
     if not os.path.isdir(path):
         os.makedirs(path)
 
-    # Set permissions to the root path directory
     current_user = salt.utils.win_functions.get_current_user()
+    # Set permissions to the registry key
+    if salt.utils.win_functions.is_admin(current_user):
+        reg_path = "HKLM\\SOFTWARE\\Salt Project\\salt"
+        if not salt.utils.win_reg.key_exists(
+            hive="HKLM", key="SOFTWARE\\Salt Project\\salt"
+        ):
+            salt.utils.win_reg.set_value(
+                hive="HKLM", key="SOFTWARE\\Salt Project\\salt"
+            )
+        try:
+            # Make the Administrators group owner
+            # Use the SID to be locale agnostic
+            salt.utils.win_dacl.set_owner(
+                obj_name=reg_path, principal="S-1-5-32-544", obj_type="registry"
+            )
+        except CommandExecutionError:
+            log.critical("Unable to securely set the owner of '%s'.", reg_path)
+
+        try:
+            # Get a clean dacl by not passing an obj_name
+            dacl = salt.utils.win_dacl.dacl(obj_type="registry")
+
+            # Add aces to the dacl, use the GUID (locale non-specific)
+            # Administrators Group
+            dacl.add_ace(
+                principal="S-1-5-32-544",
+                access_mode="grant",
+                permissions="full_control",
+                applies_to="this_key_subkeys",
+            )
+            # System
+            dacl.add_ace(
+                principal="S-1-5-18",
+                access_mode="grant",
+                permissions="full_control",
+                applies_to="this_key_subkeys",
+            )
+            # Owner
+            dacl.add_ace(
+                principal="S-1-3-4",
+                access_mode="grant",
+                permissions="full_control",
+                applies_to="this_key_subkeys",
+            )
+
+            # Save the dacl to the object
+            dacl.save(obj_name=reg_path, protected=True)
+
+        except CommandExecutionError:
+            log.critical("Unable to securely set the permissions of '%s'.", reg_path)
+
+    # Set permissions to the root path directory
     if salt.utils.win_functions.is_admin(current_user):
         try:
             # Make the Administrators group owner
             # Use the SID to be locale agnostic
-            salt.utils.win_dacl.set_owner(path, "S-1-5-32-544")
+            salt.utils.win_dacl.set_owner(obj_name=path, principal="S-1-5-32-544")
 
         except CommandExecutionError:
-            msg = 'Unable to securely set the owner of "{}".'.format(path)
-            if is_console_configured():
-                log.critical(msg)
-            else:
-                sys.stderr.write("CRITICAL: {}\n".format(msg))
+            log.critical('Unable to securely set the owner of "%s".', path)
 
         if not permissive:
             try:
@@ -639,29 +660,31 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
                 # Add aces to the dacl, use the GUID (locale non-specific)
                 # Administrators Group
                 dacl.add_ace(
-                    "S-1-5-32-544",
-                    "grant",
-                    "full_control",
-                    "this_folder_subfolders_files",
+                    principal="S-1-5-32-544",
+                    access_mode="grant",
+                    permissions="full_control",
+                    applies_to="this_folder_subfolders_files",
                 )
                 # System
                 dacl.add_ace(
-                    "S-1-5-18", "grant", "full_control", "this_folder_subfolders_files"
+                    principal="S-1-5-18",
+                    access_mode="grant",
+                    permissions="full_control",
+                    applies_to="this_folder_subfolders_files",
                 )
                 # Owner
                 dacl.add_ace(
-                    "S-1-3-4", "grant", "full_control", "this_folder_subfolders_files"
+                    principal="S-1-3-4",
+                    access_mode="grant",
+                    permissions="full_control",
+                    applies_to="this_folder_subfolders_files",
                 )
 
                 # Save the dacl to the object
-                dacl.save(path, True)
+                dacl.save(obj_name=path, protected=True)
 
             except CommandExecutionError:
-                msg = "Unable to securely set the permissions of " '"{}".'.format(path)
-                if is_console_configured():
-                    log.critical(msg)
-                else:
-                    sys.stderr.write("CRITICAL: {}\n".format(msg))
+                log.critical("Unable to securely set the permissions of '%s'", path)
 
     # Create the directories
     for dir_ in dirs:
@@ -679,7 +702,7 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
         if dir_ == pki_dir:
             try:
                 # Make Administrators group the owner
-                salt.utils.win_dacl.set_owner(path, "S-1-5-32-544")
+                salt.utils.win_dacl.set_owner(obj_name=path, principal="S-1-5-32-544")
 
                 # Give Admins, System and Owner permissions
                 # Get a clean dacl by not passing an obj_name
@@ -688,30 +711,31 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
                 # Add aces to the dacl, use the GUID (locale non-specific)
                 # Administrators Group
                 dacl.add_ace(
-                    "S-1-5-32-544",
-                    "grant",
-                    "full_control",
-                    "this_folder_subfolders_files",
+                    principal="S-1-5-32-544",
+                    access_mode="grant",
+                    permissions="full_control",
+                    applies_to="this_folder_subfolders_files",
                 )
                 # System
                 dacl.add_ace(
-                    "S-1-5-18", "grant", "full_control", "this_folder_subfolders_files"
+                    principal="S-1-5-18",
+                    access_mode="grant",
+                    permissions="full_control",
+                    applies_to="this_folder_subfolders_files",
                 )
                 # Owner
                 dacl.add_ace(
-                    "S-1-3-4", "grant", "full_control", "this_folder_subfolders_files"
+                    principal="S-1-3-4",
+                    access_mode="grant",
+                    permissions="full_control",
+                    applies_to="this_folder_subfolders_files",
                 )
 
                 # Save the dacl to the object
-                dacl.save(dir_, True)
+                dacl.save(obj_name=dir_, protected=True)
 
             except CommandExecutionError:
-                msg = 'Unable to securely set the permissions of "{0}".'
-                msg = msg.format(dir_)
-                if is_console_configured():
-                    log.critical(msg)
-                else:
-                    sys.stderr.write("CRITICAL: {}\n".format(msg))
+                log.critical("Unable to securely set the permissions of '%s'.", dir_)
 
     if skip_extra is False:
         # Run the extra verification checks

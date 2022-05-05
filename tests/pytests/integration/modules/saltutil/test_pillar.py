@@ -11,7 +11,9 @@ import salt.defaults.events
 
 log = logging.getLogger(__name__)
 
-pytestmark = [pytest.mark.windows_whitelisted]
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+]
 
 
 @pytest.fixture(autouse=True)
@@ -30,10 +32,10 @@ def refresh_pillar(salt_call_cli, salt_minion):
 @pytest.mark.slow_test
 @pytest.mark.parametrize("sync_refresh", [False, True])
 def test_pillar_refresh(
+    salt_master,
     salt_minion,
     salt_call_cli,
     event_listener,
-    base_env_pillar_tree_root_dir,
     sync_refresh,
 ):
     """
@@ -62,20 +64,19 @@ def test_pillar_refresh(
         pre_pillar.pop(key, None)
     assert pillar_key not in pre_pillar
 
-    top_file = pytest.helpers.temp_file(
-        "top.sls", top_pillar_contents, base_env_pillar_tree_root_dir
-    )
-    add_pillar_file = pytest.helpers.temp_file(
+    top_file = salt_master.pillar_tree.base.temp_file("top.sls", top_pillar_contents)
+    add_pillar_file = salt_master.pillar_tree.base.temp_file(
         "add-pillar-{}.sls".format("sync" if sync_refresh else "async"),
         add_pillar_contents,
-        base_env_pillar_tree_root_dir,
     )
 
     with top_file, add_pillar_file:
         start_time = time.time()
 
         ret = salt_call_cli.run(
-            "--retcode-passthrough", "saltutil.refresh_pillar", wait=sync_refresh,
+            "--retcode-passthrough",
+            "saltutil.refresh_pillar",
+            wait=sync_refresh,
         )
         assert ret.exitcode == 0
 

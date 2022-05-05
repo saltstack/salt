@@ -1,7 +1,13 @@
+import pytest
 import salt.states.virt as virt
 from tests.support.mock import MagicMock, patch
 
-from .test_helpers import network_update_call
+from .helpers import network_update_call
+
+
+@pytest.fixture
+def configure_loader_modules(libvirt_mock):
+    return {virt: {"libvirt": libvirt_mock}}
 
 
 def test_network_defined_not_existing(test):
@@ -19,12 +25,7 @@ def test_network_defined_not_existing(test):
                 "virt.network_define": define_mock,
             },
         ):
-            assert {
-                "name": "mynet",
-                "changes": {"mynet": "Network defined"},
-                "result": None if test else True,
-                "comment": "Network mynet defined",
-            } == virt.network_defined(
+            assert virt.network_defined(
                 "mynet",
                 "br2",
                 "bridge",
@@ -58,7 +59,12 @@ def test_network_defined_not_existing(test):
                 connection="myconnection",
                 username="user",
                 password="secret",
-            )
+            ) == {
+                "name": "mynet",
+                "changes": {"mynet": "Network defined"},
+                "result": None if test else True,
+                "comment": "Network mynet defined",
+            }
             if not test:
                 define_mock.assert_called_with(
                     "mynet",
@@ -117,16 +123,16 @@ def test_network_defined_no_change(test):
                 "virt.network_update": update_mock,
             },
         ):
-            assert {
+            assert virt.network_defined("mynet", "br2", "bridge") == {
                 "name": "mynet",
                 "changes": {},
                 "result": True,
                 "comment": "Network mynet unchanged",
-            } == virt.network_defined("mynet", "br2", "bridge")
+            }
             define_mock.assert_not_called()
-            assert [
+            assert update_mock.call_args_list == [
                 network_update_call("mynet", "br2", "bridge", test=True)
-            ] == update_mock.call_args_list
+            ]
 
 
 def test_network_defined_change(test):
@@ -148,12 +154,7 @@ def test_network_defined_change(test):
                 "virt.network_set_autostart": autostart_mock,
             },
         ):
-            assert {
-                "name": "mynet",
-                "changes": {"mynet": "Network updated, autostart flag changed"},
-                "result": None if test else True,
-                "comment": "Network mynet updated, autostart flag changed",
-            } == virt.network_defined(
+            assert virt.network_defined(
                 "mynet",
                 "br2",
                 "bridge",
@@ -187,7 +188,12 @@ def test_network_defined_change(test):
                 connection="myconnection",
                 username="user",
                 password="secret",
-            )
+            ) == {
+                "name": "mynet",
+                "changes": {"mynet": "Network updated, autostart flag changed"},
+                "result": None if test else True,
+                "comment": "Network mynet updated, autostart flag changed",
+            }
             define_mock.assert_not_called()
             expected_update_kwargs = {
                 "vport": "openvswitch",
@@ -226,7 +232,7 @@ def test_network_defined_change(test):
                 )
             ]
             if test:
-                assert calls == update_mock.call_args_list
+                assert update_mock.call_args_list == calls
                 autostart_mock.assert_not_called()
             else:
                 calls.append(
@@ -234,7 +240,7 @@ def test_network_defined_change(test):
                         "mynet", "br2", "bridge", **expected_update_kwargs, test=False
                     )
                 )
-                assert calls == update_mock.call_args_list
+                assert update_mock.call_args_list == calls
                 autostart_mock.assert_called_with(
                     "mynet",
                     state="off",
@@ -258,12 +264,12 @@ def test_network_defined_error(test):
                 )
             },
         ):
-            assert {
+            assert virt.network_defined("mynet", "br2", "bridge") == {
                 "name": "mynet",
                 "changes": {},
                 "result": False,
                 "comment": "Some error",
-            } == virt.network_defined("mynet", "br2", "bridge")
+            }
             define_mock.assert_not_called()
 
 
@@ -285,12 +291,7 @@ def test_network_running_not_existing(test):
                 "virt.network_start": start_mock,
             },
         ):
-            assert {
-                "name": "mynet",
-                "changes": {"mynet": "Network defined and started"},
-                "comment": "Network mynet defined and started",
-                "result": None if test else True,
-            } == virt.network_running(
+            assert virt.network_running(
                 "mynet",
                 "br2",
                 "bridge",
@@ -324,7 +325,12 @@ def test_network_running_not_existing(test):
                 connection="myconnection",
                 username="user",
                 password="secret",
-            )
+            ) == {
+                "name": "mynet",
+                "changes": {"mynet": "Network defined and started"},
+                "comment": "Network mynet defined and started",
+                "result": None if test else True,
+            }
             if not test:
                 define_mock.assert_called_with(
                     "mynet",
@@ -390,15 +396,15 @@ def test_network_running_nochange(test):
                 "virt.network_update": update_mock,
             },
         ):
-            assert {
+            assert virt.network_running("mynet", "br2", "bridge") == {
                 "name": "mynet",
                 "changes": {},
                 "comment": "Network mynet unchanged and is running",
                 "result": None if test else True,
-            } == virt.network_running("mynet", "br2", "bridge")
-            assert [
+            }
+            assert update_mock.call_args_list == [
                 network_update_call("mynet", "br2", "bridge", test=True)
-            ] == update_mock.call_args_list
+            ]
 
 
 def test_network_running_stopped(test):
@@ -420,20 +426,20 @@ def test_network_running_stopped(test):
                 "virt.network_update": update_mock,
             },
         ):
-            assert {
-                "name": "mynet",
-                "changes": {"mynet": "Network started"},
-                "comment": "Network mynet unchanged and started",
-                "result": None if test else True,
-            } == virt.network_running(
+            assert virt.network_running(
                 "mynet",
                 "br2",
                 "bridge",
                 connection="myconnection",
                 username="user",
                 password="secret",
-            )
-            assert [
+            ) == {
+                "name": "mynet",
+                "changes": {"mynet": "Network started"},
+                "comment": "Network mynet unchanged and started",
+                "result": None if test else True,
+            }
+            assert update_mock.call_args_list == [
                 network_update_call(
                     "mynet",
                     "br2",
@@ -443,7 +449,7 @@ def test_network_running_stopped(test):
                     password="secret",
                     test=True,
                 )
-            ] == update_mock.call_args_list
+            ]
             if not test:
                 start_mock.assert_called_with(
                     "mynet",
@@ -468,9 +474,9 @@ def test_network_running_error(test):
                 ),
             },
         ):
-            assert {
+            assert virt.network_running("mynet", "br2", "bridge") == {
                 "name": "mynet",
                 "changes": {},
                 "comment": "Some error",
                 "result": False,
-            } == virt.network_running("mynet", "br2", "bridge")
+            }

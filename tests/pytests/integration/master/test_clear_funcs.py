@@ -5,9 +5,9 @@ import time
 
 import attr
 import pytest
+import salt.channel.client
 import salt.config
 import salt.master
-import salt.transport.client
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.user
@@ -71,7 +71,7 @@ def client_config(salt_minion, salt_master):
 
 @pytest.fixture
 def clear_channel(client_config):
-    with salt.transport.client.ReqChannel.factory(
+    with salt.channel.client.ReqChannel.factory(
         client_config, crypt="clear"
     ) as channel:
         yield channel
@@ -130,9 +130,8 @@ def test_pub_not_allowed(
                 break
             if time.time() > stop_time:
                 pytest.fail(
-                    "Took more than {} seconds to confirm the presense of {!r} in the logs".format(
-                        timeout, expected_log_message
-                    )
+                    "Took more than {} seconds to confirm the presence of {!r} in the"
+                    " logs".format(timeout, expected_log_message)
                 )
             for record in caplog.records:
                 if record in seen_records:

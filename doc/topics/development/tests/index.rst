@@ -276,7 +276,7 @@ command would be:
 
 .. code-block:: bash
 
-    nox -e 'runtests-zeromq-3(coverage=False)' -- --run-destuctive
+    nox -e 'runtests-zeromq-3(coverage=False)' -- --run-destructive
 
 
 Running Cloud Provider Tests
@@ -366,7 +366,7 @@ As soon as the pull request is merged, the changes will be added to the
 next branch test run on Jenkins.
 
 For a full list of currently running test environments, go to
-https://jenkinsci.saltstack.com.
+https://jenkins.saltproject.io.
 
 
 Using Salt-Cloud on Jenkins
@@ -475,6 +475,61 @@ question if the path forward is unclear.
     that is untested.It would be wise to see if new functionality could use additional
     testing once the test file has propagated to newer release branches.
 
+Module/Global Level Variables
+-----------------------------
+
+If you need access to module or global level variables, please use a pytest fixture. The
+use of module and global variables can introduce mutable global objects and increases
+processing time because all globals are evaluated when collecting tests. If there is a use
+case where you cannot use a fixture and you are using a type of string, integer, or tuple
+you can use global/module level variables. Any mutable types such as lists and dictionaries must
+use pytest fixtures. For an example, if all of your tests need access to a string variable:
+
+.. code-block:: python
+
+    FOO = "bar"
+
+
+    def test_foo_bar():
+        assert FOO == "bar"
+
+
+    def test_foo_not():
+        assert not FOO == "foo"
+
+We recommend using a pytest fixture:
+
+.. code-block:: python
+
+    import pytest
+
+
+    @pytest.fixture()
+    def foo():
+        return "bar"
+
+
+    def test_foo_bar(foo):
+        assert foo == "bar"
+
+
+    def test_foo_not(foo):
+        assert not foo == "foo"
+
+
+If you need a class to mock something, it can be defined at the global scope,
+but it should only be initialized on the fixture:
+
+.. code-block:: python
+
+    class Foo:
+        def __init__(self):
+            self.bar = True
+
+
+    @pytest.fixture
+    def foo():
+        return Foo()
 
 Test Helpers
 ------------
@@ -513,8 +568,8 @@ See implementation details in `tests.support.helpers` for details.
 within a test case.  See implementation details in `tests.support.helpers` for details.
 
 
-.. _kitchen-salt jenkins setup: https://kitchen.saltstack.com/docs/file/docs/jenkins.md
-.. _getting started: https://kitchen.saltstack.com/docs/file/docs/gettingstarted.md
+.. _kitchen-salt jenkins setup: https://kitchen.saltproject.io/docs/file/docs/jenkins.md
+.. _getting started: https://kitchen.saltproject.io/docs/file/docs/gettingstarted.md
 .. _salt-jenkins: https://github.com/saltstack/salt-jenkins
-.. _Kitchen Salt: https://kitchen.saltstack.com/
+.. _Kitchen Salt: https://kitchen.saltproject.io/
 .. _pytest: https://docs.pytest.org/en/latest/usage.html#specifying-tests-selecting-tests

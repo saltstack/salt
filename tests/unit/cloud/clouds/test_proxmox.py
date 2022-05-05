@@ -2,12 +2,8 @@
     :codeauthor: Tyler Johnson <tjohnson@saltstack.com>
 """
 
-# Import Salt Libs
 
-# Import Salt Libs
 from salt.cloud.clouds import proxmox
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import ANY, MagicMock, patch
 from tests.support.unit import TestCase
@@ -126,7 +122,9 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
             # CASE 1: Numeric ID
             result = proxmox.create_node(vm_, ANY)
             mock_query.assert_called_once_with(
-                "post", "nodes/myhost/qemu/123/clone", {"newid": ANY},
+                "post",
+                "nodes/myhost/qemu/123/clone",
+                {"newid": ANY},
             )
             assert result == {}
 
@@ -135,9 +133,64 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
             vm_["clone_from"] = "otherhost:123"
             result = proxmox.create_node(vm_, ANY)
             mock_query.assert_called_once_with(
-                "post", "nodes/otherhost/qemu/123/clone", {"newid": ANY},
+                "post",
+                "nodes/otherhost/qemu/123/clone",
+                {"newid": ANY},
             )
             assert result == {}
+
+    def test_find_agent_ips(self):
+        """
+        Test find_agent_ip will return an IP
+        """
+
+        with patch(
+            "salt.cloud.clouds.proxmox.query",
+            return_value={
+                "result": [
+                    {
+                        "name": "eth0",
+                        "ip-addresses": [
+                            {"ip-address": "1.2.3.4", "ip-address-type": "ipv4"},
+                            {"ip-address": "2001::1:2", "ip-address-type": "ipv6"},
+                        ],
+                    },
+                    {
+                        "name": "eth1",
+                        "ip-addresses": [
+                            {"ip-address": "2.3.4.5", "ip-address-type": "ipv4"},
+                        ],
+                    },
+                    {
+                        "name": "dummy",
+                    },
+                ]
+            },
+        ) as mock_query:
+            vm_ = {
+                "technology": "qemu",
+                "host": "myhost",
+                "driver": "proxmox",
+                "ignore_cidr": "1.0.0.0/8",
+            }
+
+            # CASE 1: Test ipv4 and ignore_cidr
+            result = proxmox._find_agent_ip(vm_, ANY)
+            mock_query.assert_any_call(
+                "get", "nodes/myhost/qemu/{}/agent/network-get-interfaces".format(ANY)
+            )
+
+            assert result == "2.3.4.5"
+
+            # CASE 2: Test ipv6
+
+            vm_["protocol"] = "ipv6"
+            result = proxmox._find_agent_ip(vm_, ANY)
+            mock_query.assert_any_call(
+                "get", "nodes/myhost/qemu/{}/agent/network-get-interfaces".format(ANY)
+            )
+
+            assert result == "2001::1:2"
 
     def test__authenticate_with_custom_port(self):
         """

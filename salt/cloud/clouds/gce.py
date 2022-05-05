@@ -1180,6 +1180,7 @@ def create_address(kwargs=None, call=None):
     name = kwargs["name"]
     ex_region = kwargs["region"]
     ex_address = kwargs.get("address", None)
+    kwargs["region"] = {"name": ex_region.name}
 
     conn = get_conn()
 
@@ -1187,7 +1188,7 @@ def create_address(kwargs=None, call=None):
         "event",
         "create address",
         "salt/cloud/address/creating",
-        args=kwargs,
+        args=salt.utils.data.simple_types_filter(kwargs),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
@@ -1198,7 +1199,7 @@ def create_address(kwargs=None, call=None):
         "event",
         "created address",
         "salt/cloud/address/created",
-        args=kwargs,
+        args=salt.utils.data.simple_types_filter(kwargs),
         sock_dir=__opts__["sock_dir"],
         transport=__opts__["transport"],
     )
@@ -2253,7 +2254,7 @@ def create_attach_volumes(name, kwargs, call=None):
     """
     if call != "action":
         raise SaltCloudSystemExit(
-            "The create_attach_volumes action must be called with " "-a or --action."
+            "The create_attach_volumes action must be called with -a or --action."
         )
 
     volumes = literal_eval(kwargs["volumes"])
@@ -2287,8 +2288,8 @@ def request_instance(vm_):
     """
     if not GCE_VM_NAME_REGEX.match(vm_["name"]):
         raise SaltCloudSystemExit(
-            "VM names must start with a letter, only contain letters, numbers, or dashes "
-            "and cannot end in a dash."
+            "VM names must start with a letter, only contain letters, numbers, or"
+            " dashes and cannot end in a dash."
         )
 
     try:
@@ -2333,13 +2334,20 @@ def request_instance(vm_):
 
     if external_ip.lower() == "ephemeral":
         external_ip = "ephemeral"
+        vm_["external_ip"] = external_ip
     elif external_ip == "None":
         external_ip = None
+        vm_["external_ip"] = external_ip
     else:
         region = __get_region(conn, vm_)
         external_ip = __create_orget_address(conn, external_ip, region)
+
+        vm_["external_ip"] = {
+            "name": external_ip.name,
+            "address": external_ip.address,
+            "region": external_ip.region.name,
+        }
     kwargs["external_ip"] = external_ip
-    vm_["external_ip"] = external_ip
 
     if LIBCLOUD_VERSION_INFO > (0, 15, 1):
 

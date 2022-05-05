@@ -2,19 +2,10 @@
 Simple Smoke Tests for Connected Proxy Minion
 """
 import logging
-import os
 
 import pytest
 
 log = logging.getLogger(__name__)
-
-
-@pytest.fixture(scope="module")
-def salt_proxy(salt_proxy):
-    cachefile = os.path.join(salt_proxy.config["cachedir"], "dummy-proxy.cache")
-    if os.path.exists(cachefile):
-        os.unlink(cachefile)
-    return salt_proxy
 
 
 def test_can_it_ping(salt_cli, salt_proxy):
@@ -91,7 +82,7 @@ def test_grains_items(salt_cli, salt_proxy):
     assert ret.json["kernelrelease"] == "proxy"
 
 
-def test_state_apply(salt_cli, salt_proxy, tmp_path, base_env_state_tree_root_dir):
+def test_state_apply(salt_master, salt_cli, salt_proxy, tmp_path):
     test_file = tmp_path / "testfile"
     core_state = """
     {}:
@@ -103,14 +94,14 @@ def test_state_apply(salt_cli, salt_proxy, tmp_path, base_env_state_tree_root_di
         test_file
     )
 
-    with pytest.helpers.temp_file("core.sls", core_state, base_env_state_tree_root_dir):
+    with salt_master.state_tree.base.temp_file("core.sls", core_state):
         ret = salt_cli.run("state.apply", "core", minion_tgt=salt_proxy.id)
         for value in ret.json.values():
             assert value["result"] is True
 
 
 @pytest.mark.slow_test
-def test_state_highstate(salt_cli, salt_proxy, tmp_path, base_env_state_tree_root_dir):
+def test_state_highstate(salt_master, salt_cli, salt_proxy, tmp_path):
     test_file = tmp_path / "testfile"
     top_sls = """
     base:
@@ -128,9 +119,9 @@ def test_state_highstate(salt_cli, salt_proxy, tmp_path, base_env_state_tree_roo
         test_file
     )
 
-    with pytest.helpers.temp_file(
-        "top.sls", top_sls, base_env_state_tree_root_dir
-    ), pytest.helpers.temp_file("core.sls", core_state, base_env_state_tree_root_dir):
+    with salt_master.state_tree.base.temp_file(
+        "top.sls", top_sls
+    ), salt_master.state_tree.base.temp_file("core.sls", core_state):
         ret = salt_cli.run("state.highstate", minion_tgt=salt_proxy.id)
         for value in ret.json.values():
             assert value["result"] is True

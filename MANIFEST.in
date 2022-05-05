@@ -5,6 +5,7 @@ include LICENSE
 include NOTICE
 include README.rst
 include SUPPORT.rst
+include run.py
 include tests/*.py
 recursive-include tests *
 recursive-include requirements *.txt

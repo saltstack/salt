@@ -2,7 +2,9 @@
 Functions for identifying which platform a machine is
 """
 
+import multiprocessing
 import os
+import platform
 import subprocess
 import sys
 
@@ -94,7 +96,9 @@ def is_smartos_globalzone():
     else:
         try:
             zonename_proc = subprocess.Popen(
-                ["zonename"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                ["zonename"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
             )
             zonename_output = (
                 zonename_proc.communicate()[0].strip().decode(__salt_system_encoding__)
@@ -120,7 +124,9 @@ def is_smartos_zone():
     else:
         try:
             zonename_proc = subprocess.Popen(
-                ["zonename"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                ["zonename"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
             )
             zonename_output = (
                 zonename_proc.communicate()[0].strip().decode(__salt_system_encoding__)
@@ -181,9 +187,9 @@ def is_fedora():
     """
     Simple function to return if host is Fedora or not
     """
-    (osname, osrelease, oscodename) = [
+    (osname, osrelease, oscodename) = (
         x.strip('"').strip("'") for x in linux_distribution()
-    ]
+    )
     return osname == "Fedora"
 
 
@@ -192,7 +198,24 @@ def is_photonos():
     """
     Simple function to return if host is Photon OS or not
     """
-    (osname, osrelease, oscodename) = [
+    (osname, osrelease, oscodename) = (
         x.strip('"').strip("'") for x in linux_distribution()
-    ]
+    )
     return osname == "VMware Photon OS"
+
+
+@real_memoize
+def is_aarch64():
+    """
+    Simple function to return if host is AArch64 or not
+    """
+    return platform.machine().startswith("aarch64")
+
+
+def spawning_platform():
+    """
+    Returns True if multiprocessing.get_start_method(allow_none=False) returns "spawn"
+
+    This is the default for Windows Python >= 3.4 and macOS on Python >= 3.8.
+    """
+    return multiprocessing.get_start_method(allow_none=False) == "spawn"

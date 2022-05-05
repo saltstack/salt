@@ -69,9 +69,8 @@ def test_requisites_use(state, state_tree):
     """
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        ret = pytest.helpers.state_return(ret)
-        for comment in ret.get_within_state_return("comment"):
-            assert comment == "onlyif condition is false"
+        for state_return in ret:
+            assert state_return.comment == "onlyif condition is false"
 
 
 @pytest.mark.skip(
@@ -102,8 +101,8 @@ def test_requisites_use_recursion_1(state, state_tree):
     errmsg = 'A recursive requisite was found, SLS "requisite" ID "B" ID "A"'
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        assert isinstance(ret, list)  # Error
-        assert ret == [errmsg]
+        assert ret.failed
+        assert ret.errors == [errmsg]
 
 
 @pytest.mark.skip(
@@ -145,8 +144,8 @@ def test_requisites_use_recursion_2(state, state_tree):
     errmsg = 'A recursive requisite was found, SLS "requisite" ID "C" ID "A"'
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        assert isinstance(ret, list)  # Error
-        assert ret == [errmsg]
+        assert ret.failed
+        assert ret.errors == [errmsg]
 
 
 @pytest.mark.skip(
@@ -169,8 +168,8 @@ def test_requisites_use_recursion_3(state, state_tree):
     errmsg = 'A recursive requisite was found, SLS "requisite" ID "A" ID "A"'
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        assert isinstance(ret, list)  # Error
-        assert ret == [errmsg]
+        assert ret.failed
+        assert ret.errors == [errmsg]
 
 
 def test_requisites_use_no_state_module(state, state_tree):
@@ -235,6 +234,5 @@ def test_requisites_use_no_state_module(state, state_tree):
     """
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        ret = pytest.helpers.state_return(ret)
-        for comment in ret.get_within_state_return("comment"):
-            assert comment == "onlyif condition is false"
+        for state_return in ret:
+            assert state_return.comment == "onlyif condition is false"

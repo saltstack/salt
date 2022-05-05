@@ -77,6 +77,7 @@ state modules
     cloud
     cmd
     composer
+    consul
     cron
     cryptdev
     csf
@@ -109,7 +110,6 @@ state modules
     gem
     git
     github
-    glance
     glance_image
     glassfish
     glusterfs

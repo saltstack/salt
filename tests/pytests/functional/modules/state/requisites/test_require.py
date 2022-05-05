@@ -54,9 +54,7 @@ def test_requisites_full_sls_require(state, state_tree):
         "requisite.sls", sls_contents, state_tree
     ), pytest.helpers.temp_file("fullsls.sls", full_sls_contents, state_tree):
         ret = state.sls("requisite")
-        result = normalize_ret(ret)
-        ret = pytest.helpers.state_return(ret)
-        ret.assert_return_non_empty_state_type()
+        result = normalize_ret(ret.raw)
         assert result == expected_result
 
 
@@ -175,9 +173,7 @@ def test_requisites_require_no_state_module(state, state_tree):
     }
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        result = normalize_ret(ret)
-        ret = pytest.helpers.state_return(ret)
-        ret.assert_return_non_empty_state_type()
+        result = normalize_ret(ret.raw)
         assert result == expected_result
 
 
@@ -310,9 +306,7 @@ def test_requisites_require_ordering_and_errors_1(state, state_tree):
     """
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        result = normalize_ret(ret)
-        ret = pytest.helpers.state_return(ret)
-        ret.assert_return_non_empty_state_type()
+        result = normalize_ret(ret.raw)
         assert result == expected_result
 
 
@@ -331,18 +325,17 @@ def test_requisites_require_ordering_and_errors_2(state, state_tree):
           - foobar: W
     """
     errmsg = (
-        "Cannot extend ID 'W' in 'base:requisite'. It is not part of the high state.\n"
-        "This is likely due to a missing include statement or an incorrectly typed ID.\n"
-        "Ensure that a state with an ID of 'W' is available\n"
-        "in environment 'base' and to SLS 'requisite'"
+        "Cannot extend ID 'W' in 'base:requisite'. It is not part of the high"
+        " state.\nThis is likely due to a missing include statement or an incorrectly"
+        " typed ID.\nEnsure that a state with an ID of 'W' is available\nin environment"
+        " 'base' and to SLS 'requisite'"
     )
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        assert isinstance(ret, list)  # Error
-        assert ret == [errmsg]
+        assert ret.failed
+        assert ret.errors == [errmsg]
 
 
-@pytest.mark.skip("Skipped until a fix is made for issue #8772")
 def test_requisites_require_ordering_and_errors_3(state, state_tree):
     """
     Call sls file containing several require_in and require.
@@ -363,11 +356,16 @@ def test_requisites_require_ordering_and_errors_3(state, state_tree):
       cmd.run:
         - name: echo A first
     """
-    errmsg = 'Cannot extend state foobar for ID A in "base:requisite". It is not part of the high state.'
+    errmsg = (
+        "Cannot extend ID 'A' in 'base:requisite'. It is not part of the high state.\n"
+        "This is likely due to a missing include statement or an incorrectly typed ID.\n"
+        "Ensure that a state with an ID of 'A' is available\n"
+        "in environment 'base' and to SLS 'requisite'"
+    )
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        assert isinstance(ret, list)  # Error
-        assert ret == [errmsg]
+        assert ret.failed
+        assert ret.errors == [errmsg]
 
 
 def test_requisites_require_ordering_and_errors_4(state, state_tree):
@@ -397,11 +395,14 @@ def test_requisites_require_ordering_and_errors_4(state, state_tree):
     # FIXME: Why is require enforcing list syntax while require_in does not?
     # And why preventing it?
     # Currently this state fails, should return C/B/A
-    errmsg = "The require statement in state 'B' in SLS 'requisite' needs to be formed as a list"
+    errmsg = (
+        "The require statement in state 'B' in SLS 'requisite' needs to be formed as a"
+        " list"
+    )
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        assert isinstance(ret, list)  # Error
-        assert ret == [errmsg]
+        assert ret.failed
+        assert ret.errors == [errmsg]
 
 
 def test_requisites_require_ordering_and_errors_5(state, state_tree):
@@ -430,8 +431,8 @@ def test_requisites_require_ordering_and_errors_5(state, state_tree):
     errmsg = 'A recursive requisite was found, SLS "requisite" ID "B" ID "A"'
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        assert isinstance(ret, list)  # Error
-        assert ret == [errmsg]
+        assert ret.failed
+        assert ret.errors == [errmsg]
 
 
 def test_requisites_require_any(state, state_tree):
@@ -504,9 +505,7 @@ def test_requisites_require_any(state, state_tree):
     }
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        result = normalize_ret(ret)
-        ret = pytest.helpers.state_return(ret)
-        ret.assert_return_non_empty_state_type()
+        result = normalize_ret(ret.raw)
         assert result == expected_result
 
 
@@ -535,9 +534,7 @@ def test_requisites_require_any_fail(state, state_tree):
     """
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-        assert (
-            "One or more requisite failed" in ret["cmd_|-D_|-echo D_|-run"]["comment"]
-        )
+        assert "One or more requisite failed" in ret["cmd_|-D_|-echo D_|-run"].comment
 
 
 def test_issue_38683_require_order_failhard_combination(state, state_tree):
@@ -569,8 +566,8 @@ def test_issue_38683_require_order_failhard_combination(state, state_tree):
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
         assert state_id in ret
-        assert ret[state_id]["result"] is False
-        assert ret[state_id]["comment"] == "Failure!"
+        assert ret[state_id].result is False
+        assert ret[state_id].comment == "Failure!"
 
 
 @pytest.mark.slow_test
@@ -609,3 +606,86 @@ def test_parallel_state_with_requires(state, state_tree):
         # they'll run in parallel so we should be below 30 seconds
         # confirm that the total runtime is below 30s
         assert (end_time - start_time) < 30
+
+
+def test_issue_59922_conflict_in_name_and_id_for_require_in(state, state_tree):
+    """
+    Make sure that state_type is always honored while compiling down require_in to
+
+    corresponding require statement.
+    """
+    sls_contents = """
+    X:
+      test.succeed_without_changes:
+        - name: A
+
+    A:
+      cmd.run:
+        - name: echo A
+
+    B:
+      cmd.run:
+        - name: echo B
+        - require_in:
+          - test: A
+    """
+    expected_result = {
+        "cmd_|-A_|-echo A_|-run": {
+            "__run_num__": 2,
+            "comment": 'Command "echo A" run',
+            "result": True,
+            "changes": True,
+        },
+        "test_|-X_|-A_|-succeed_without_changes": {
+            "__run_num__": 1,
+            "comment": "Success!",
+            "result": True,
+            "changes": False,
+        },
+        "cmd_|-B_|-echo B_|-run": {
+            "__run_num__": 0,
+            "comment": 'Command "echo B" run',
+            "result": True,
+            "changes": True,
+        },
+    }
+    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+        ret = state.sls("requisite")
+        result = normalize_ret(ret.raw)
+        assert result == expected_result
+
+
+def test_issue_61121_extend_is_to_strict(state, state_tree):
+    """
+    test that extend works as advertised with adding new service_types to
+    a state id
+    """
+
+    sls_contents = """
+    A:
+      test.succeed_without_changes:
+        - name: a
+    extend:
+      A:
+        cmd:
+          - run
+          - name: echo A
+    """
+    expected_result = {
+        "test_|-A_|-a_|-succeed_without_changes": {
+            "__run_num__": 0,
+            "changes": False,
+            "result": True,
+            "comment": "Success!",
+        },
+        "cmd_|-A_|-echo A_|-run": {
+            "__run_num__": 1,
+            "changes": True,
+            "result": True,
+            "comment": 'Command "echo A" run',
+        },
+    }
+    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+        ret = state.sls("requisite")
+        result = normalize_ret(ret.raw)
+        assert result == expected_result

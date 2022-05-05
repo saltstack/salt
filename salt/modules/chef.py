@@ -1,23 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Execute chef in server or solo mode
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 import os
 import tempfile
 
 import salt.utils.decorators.path
-
-# Import Salt libs
 import salt.utils.path
 import salt.utils.platform
-
-# Import 3rd-party libs
-from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -45,7 +37,7 @@ def _default_logfile(exe_name):
         logfile = logfile_tmp.name
         logfile_tmp.close()
     else:
-        logfile = salt.utils.path.join("/var/log", "{0}.log".format(exe_name))
+        logfile = salt.utils.path.join("/var/log", "{}.log".format(exe_name))
 
     return logfile
 
@@ -125,7 +117,7 @@ def client(whyrun=False, localmode=False, logfile=None, **kwargs):
         "chef-client",
         "--no-color",
         "--once",
-        '--logfile "{0}"'.format(logfile),
+        '--logfile "{}"'.format(logfile),
         "--format doc",
     ]
 
@@ -193,7 +185,7 @@ def solo(whyrun=False, logfile=None, **kwargs):
     args = [
         "chef-solo",
         "--no-color",
-        '--logfile "{0}"'.format(logfile),
+        '--logfile "{}"'.format(logfile),
         "--format doc",
     ]
 
@@ -208,13 +200,9 @@ def _exec_cmd(*args, **kwargs):
     # Compile the command arguments
     cmd_args = " ".join(args)
     cmd_kwargs = "".join(
-        [
-            " --{0} {1}".format(k, v)
-            for k, v in six.iteritems(kwargs)
-            if not k.startswith("__")
-        ]
+        [" --{} {}".format(k, v) for k, v in kwargs.items() if not k.startswith("__")]
     )
-    cmd_exec = "{0}{1}".format(cmd_args, cmd_kwargs)
+    cmd_exec = "{}{}".format(cmd_args, cmd_kwargs)
     log.debug("Chef command: %s", cmd_exec)
 
     return __salt__["cmd.run_all"](cmd_exec, python_shell=False)

@@ -22,4 +22,10 @@ class TestSyndic(SyndicCase):
         """
         test.fib
         """
-        self.assertEqual(self.run_function("test.fib", ["20"],)[0], 6765)
+        self.assertEqual(
+            self.run_function(
+                "test.fib",
+                ["20"],
+            )[0],
+            6765,
+        )

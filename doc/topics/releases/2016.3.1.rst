@@ -12,7 +12,10 @@ Statistics
 - Total Issue References: **23**
 - Total PR References: **58**
 
-- Contributors: **25** (`abednarik`_, `amontalban`_, `anlutro`_, `babilen`_, `cachedout`_, `clburlison`_, `danslimmon`_, `eliasp`_, `glomium`_, `jacobhammons`_, `jfindlay`_, `kev009`_, `lomeroe`_, `michalsuba`_, `neil-williamson`_, `onorua`_, `opdude`_, `rallytime`_, `sjorge`_, `terminalmage`_, `thatch45`_, `ticosax`_, `tomlaredo`_, `twangboy`_, `zigarn`_)
+- Contributors: **25** (`abednarik`_, `amontalban`_, `anlutro`_, `babilen`_, `cachedout`_,
+  `clburlison`_, `danslimmon`_, `eliasp`_, `glomium`_, `jacobhammons`_, `jfindlay`_, `kev009`_,
+  `lomeroe`_, `michalsuba`_, `neil-williamson`_, `onorua`_, `opdude`_, `rallytime`_, `sjorge`_,
+  `terminalmage`_, `thatch45`_, `ticosax`_, `tomlaredo`_, `twangboy`_, `zigarn`_)
 
 
 Final Release of Debian 7 Packages
@@ -190,7 +193,7 @@ Changelog for v2016.3.0..v2016.3.1
 
   * **PR** `#33861`_: (`cachedout`_) Set master and cloud to log level warning
 
-  * **PR** `#33821`_: (`cachedout`_) Restore deafault log level to warning (refs: `#33861`_)
+  * **PR** `#33821`_: (`cachedout`_) Restore default log level to warning (refs: `#33861`_)
 
 * **PR** `#33698`_: (`opdude`_) Vsphere fixes
   @ *2016-06-08 14:12:17 UTC*
@@ -259,12 +262,12 @@ Changelog for v2016.3.0..v2016.3.1
 
 * **ISSUE** `#33818`_: (`saltuser`_) 2016.3.0 minion default log level INFO (refs: `#33821`_, `#33861`_)
 
-* **PR** `#33821`_: (`cachedout`_) Restore deafault log level to warning (refs: `#33861`_)
+* **PR** `#33821`_: (`cachedout`_) Restore default log level to warning (refs: `#33861`_)
   @ *2016-06-07 16:51:46 UTC*
 
   * 3f6d06a060 Merge pull request `#33821`_ from cachedout/issue_33818
 
-  * 52f1f77a38 Restore deafault log level to warning
+  * 52f1f77a38 Restore default log level to warning
 
 * **ISSUE** `#33578`_: (`ohauer`_) 2016.3.0 FreeBSD Failed to load grains defined in grain file disks.disks in function <function disks at 0x80cff9320>, error: (refs: `#33604`_, `#33767`_)
 
@@ -632,7 +635,7 @@ Changelog for v2016.3.0..v2016.3.1
 
   * c738a0de76 fix a KeyError if group is provided but not user
 
-* **ISSUE** `#33543`_: (`arthurlogilab`_) Thorium documentation is incorrectly formated and appears partially on docs.saltstack.com (refs: `#33550`_)
+* **ISSUE** `#33543`_: (`arthurlogilab`_) Thorium documentation is incorrectly formatted and appears partially on docs.saltproject.io (refs: `#33550`_)
 
 * **PR** `#33550`_: (`jacobhammons`_) Fixes display of thorium docs
   @ *2016-05-26 17:57:05 UTC*
@@ -723,7 +726,7 @@ Changelog for v2016.3.0..v2016.3.1
 
     * 9deb70fd8e jobs.exit_success() now works parsing the results of jobs.lookup_id()
 
-    * 7ba40c4f31 jobs.exit_success allow to check if a job has executed and exit successfully
+    * 7ba40c4f31 jobs.exit_success allow checking if a job has executed and exit successfully
 
   * 70eb7b66f3 Merge pull request `#33487`_ from jtand/glance_doc_fixes
 

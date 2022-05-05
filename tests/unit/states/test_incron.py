@@ -1,14 +1,8 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Libs
 import salt.states.incron as incron
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -36,7 +30,7 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = {"name": name, "result": None, "comment": "", "changes": {}}
 
-        comt4 = "Incron {0} for user root failed to commit with error \nabsent".format(
+        comt4 = "Incron {} for user root failed to commit with error \nabsent".format(
             name
         )
         mock_dict = MagicMock(
@@ -47,20 +41,20 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
             incron.__salt__, {"incron.list_tab": mock_dict, "incron.set_job": mock}
         ):
             with patch.dict(incron.__opts__, {"test": True}):
-                comt = "Incron {0} is set to be added".format(name)
+                comt = "Incron {} is set to be added".format(name)
                 ret.update({"comment": comt})
                 self.assertDictEqual(incron.present(name, path, mask, cmd), ret)
 
             with patch.dict(incron.__opts__, {"test": False}):
-                comt = "Incron {0} already present".format(name)
+                comt = "Incron {} already present".format(name)
                 ret.update({"comment": comt, "result": True})
                 self.assertDictEqual(incron.present(name, path, mask, cmd), ret)
 
-                comt = "Incron {0} added to root's incrontab".format(name)
+                comt = "Incron {} added to root's incrontab".format(name)
                 ret.update({"comment": comt, "changes": {"root": "salt"}})
                 self.assertDictEqual(incron.present(name, path, mask, cmd), ret)
 
-                comt = "Incron {0} updated".format(name)
+                comt = "Incron {} updated".format(name)
                 ret.update({"comment": comt})
                 self.assertDictEqual(incron.present(name, path, mask, cmd), ret)
 
@@ -81,7 +75,7 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
-        comt4 = "Incron {0} for user root failed to commit with error new".format(name)
+        comt4 = "Incron {} for user root failed to commit with error new".format(name)
         mock_dict = MagicMock(
             return_value={"crons": [{"path": path, "cmd": cmd, "mask": mask}]}
         )
@@ -90,16 +84,16 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
             incron.__salt__, {"incron.list_tab": mock_dict, "incron.rm_job": mock}
         ):
             with patch.dict(incron.__opts__, {"test": True}):
-                comt = "Incron {0} is absent".format(name)
+                comt = "Incron {} is absent".format(name)
                 ret.update({"comment": comt})
                 self.assertDictEqual(incron.absent(name, path, mask, cmd), ret)
 
             with patch.dict(incron.__opts__, {"test": False}):
-                comt = "Incron {0} already absent".format(name)
+                comt = "Incron {} already absent".format(name)
                 ret.update({"comment": comt, "result": True})
                 self.assertDictEqual(incron.absent(name, path, mask, cmd), ret)
 
-                comt = "Incron {0} removed from root's crontab".format(name)
+                comt = "Incron {} removed from root's crontab".format(name)
                 ret.update({"comment": comt, "changes": {"root": "salt"}})
                 self.assertDictEqual(incron.absent(name, path, mask, cmd), ret)
 

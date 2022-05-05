@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage Windows features via the ServerManager powershell module. Can list
 available and installed roles/features. Can install and remove roles/features.
@@ -8,12 +7,9 @@ available and installed roles/features. Can install and remove roles/features.
 :depends:       PowerShell module ``ServerManager``
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
 
-# Import Salt libs
 import salt.utils.json
 import salt.utils.platform
 import salt.utils.powershell
@@ -65,9 +61,9 @@ def _pshell_json(cmd, cwd=None):
     Execute the desired powershell command and ensure that it returns data
     in JSON format and load that into python
     """
-    cmd = "Import-Module ServerManager; {0}".format(cmd)
+    cmd = "Import-Module ServerManager; {}".format(cmd)
     if "convertto-json" not in cmd.lower():
-        cmd = "{0} | ConvertTo-Json".format(cmd)
+        cmd = "{} | ConvertTo-Json".format(cmd)
     log.debug("PowerShell: %s", cmd)
     ret = __salt__["cmd.run_all"](cmd, shell="powershell", cwd=cwd)
 
@@ -81,7 +77,7 @@ def _pshell_json(cmd, cwd=None):
     if "retcode" not in ret or ret["retcode"] != 0:
         # run_all logs an error to log.error, fail hard back to the user
         raise CommandExecutionError(
-            "Issue executing PowerShell {0}".format(cmd), info=ret
+            "Issue executing PowerShell {}".format(cmd), info=ret
         )
 
     # Sometimes Powershell returns an empty string, which isn't valid JSON
@@ -232,12 +228,12 @@ def install(feature, recurse=False, restart=False, source=None, exclude=None):
         command = "Install-WindowsFeature"
         management_tools = "-IncludeManagementTools"
 
-    cmd = "{0} -Name {1} {2} {3} {4} " "-WarningAction SilentlyContinue".format(
+    cmd = "{} -Name {} {} {} {} -WarningAction SilentlyContinue".format(
         command,
         _cmd_quote(feature),
         management_tools,
         "-IncludeAllSubFeature" if recurse else "",
-        "" if source is None else "-Source {0}".format(source),
+        "" if source is None else "-Source {}".format(source),
     )
     out = _pshell_json(cmd)
 
@@ -297,7 +293,7 @@ def install(feature, recurse=False, restart=False, source=None, exclude=None):
         # Restart here if needed
         if restart:
             if ret["RestartNeeded"]:
-                if __salt__["system.restart"](in_seconds=True):
+                if __salt__["system.reboot"](in_seconds=True):
                     ret["Restarted"] = True
 
         return ret
@@ -376,7 +372,7 @@ def remove(feature, remove_payload=False, restart=False):
         if remove_payload:
             _remove_payload = "-Remove"
 
-    cmd = "{0} -Name {1} {2} {3} {4} " "-WarningAction SilentlyContinue".format(
+    cmd = "{} -Name {} {} {} {} -WarningAction SilentlyContinue".format(
         command,
         _cmd_quote(feature),
         management_tools,

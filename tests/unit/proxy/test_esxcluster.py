@@ -131,7 +131,7 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
                 esxcluster.init(opts)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Mechanism is set to 'sspi', but no " "'domain' key found in proxy config.",
+            "Mechanism is set to 'sspi', but no 'domain' key found in proxy config.",
         )
 
     def test_no_principal(self):
@@ -144,8 +144,7 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
                 esxcluster.init(opts)
         self.assertEqual(
             excinfo.exception.strerror,
-            "Mechanism is set to 'sspi', but no "
-            "'principal' key found in proxy config.",
+            "Mechanism is set to 'sspi', but no 'principal' key found in proxy config.",
         )
 
     def test_find_credentials(self):

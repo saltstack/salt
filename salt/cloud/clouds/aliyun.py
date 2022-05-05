@@ -293,7 +293,7 @@ def list_nodes_full(call=None):
     """
     if call == "action":
         raise SaltCloudSystemExit(
-            "The list_nodes_full function must be called with -f " "or --function."
+            "The list_nodes_full function must be called with -f or --function."
         )
 
     ret = {}
@@ -364,7 +364,9 @@ def list_nodes_select(call=None):
     Return a list of the VMs that are on the provider, with select fields
     """
     return salt.utils.cloud.list_nodes_select(
-        list_nodes_full("function"), __opts__["query.selection"], call,
+        list_nodes_full("function"),
+        __opts__["query.selection"],
+        call,
     )
 
 
@@ -912,7 +914,7 @@ def _get_node(name):
         except KeyError:
             attempts -= 1
             log.debug(
-                "Failed to get the data for node '%s'. Remaining " "attempts: %s",
+                "Failed to get the data for node '%s'. Remaining attempts: %s",
                 name,
                 attempts,
             )
@@ -927,7 +929,7 @@ def show_image(kwargs, call=None):
     """
     if call != "function":
         raise SaltCloudSystemExit(
-            "The show_images function must be called with " "-f or --function"
+            "The show_images function must be called with -f or --function"
         )
 
     if not isinstance(kwargs, dict):
@@ -974,7 +976,7 @@ def destroy(name, call=None):
     """
     if call == "function":
         raise SaltCloudSystemExit(
-            "The destroy action must be called with -d, --destroy, " "-a or --action."
+            "The destroy action must be called with -d, --destroy, -a or --action."
         )
 
     __utils__["cloud.fire_event"](

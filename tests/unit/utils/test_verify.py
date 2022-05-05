@@ -190,9 +190,7 @@ class TestVerify(TestCase):
                     for n in range(prev, newmax):
                         kpath = os.path.join(keys_dir, str(n))
                         with salt.utils.files.fopen(kpath, "w") as fp_:
-                            fp_.write(
-                                str(n)
-                            )  # future lint: disable=blacklisted-function
+                            fp_.write(str(n))
 
                     opts = {"max_open_files": newmax, "pki_dir": tempdir}
 
@@ -222,7 +220,7 @@ class TestVerify(TestCase):
                 for n in range(prev, newmax):
                     kpath = os.path.join(keys_dir, str(n))
                     with salt.utils.files.fopen(kpath, "w") as fp_:
-                        fp_.write(str(n))  # future lint: disable=blacklisted-function
+                        fp_.write(str(n))
 
                 opts = {"max_open_files": newmax, "pki_dir": tempdir}
 

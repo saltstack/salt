@@ -3,15 +3,11 @@ Module to provide Postgres compatibility to salt for debian family specific tool
 
 """
 
-# Import python libs
 
 import logging
 import pipes
 
-# Import salt libs
 import salt.utils.path
-
-# Import 3rd-party libs
 
 log = logging.getLogger(__name__)
 
@@ -151,7 +147,7 @@ def cluster_remove(version, name="main", stop=False):
     if ret.get("retcode", 0) != 0:
         log.error("Error removing a Postgresql cluster %s/%s", version, name)
     else:
-        ret["changes"] = ("Successfully removed" " cluster {}/{}").format(version, name)
+        ret["changes"] = "Successfully removed cluster {}/{}".format(version, name)
     return ret
 
 

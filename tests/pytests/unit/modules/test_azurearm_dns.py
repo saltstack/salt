@@ -18,9 +18,11 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.skipif(
-    HAS_LIBS is False, reason="The azure.mgmt.dns module must be installed."
-)
+pytestmark = [
+    pytest.mark.skipif(
+        HAS_LIBS is False, reason="The azure.mgmt.dns module must be installed."
+    ),
+]
 
 
 class AzureObjMock:

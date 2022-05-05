@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Manage users with the useradd command
 
@@ -8,23 +7,18 @@ Manage users with the useradd command
     *'user.info' is not available*), see :ref:`here
     <module-provider-override>`.
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import functools
 import logging
 import os
 
-# Import salt libs
 import salt.utils.data
 import salt.utils.decorators.path
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.user
 from salt.exceptions import CommandExecutionError
-
-# Import 3rd-party libs
-from salt.ext import six
 
 try:
     import pwd
@@ -49,7 +43,8 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "useradd execution module not loaded: either pwd python library not available or system not one of Linux, OpenBSD, NetBSD or AIX",
+        "useradd execution module not loaded: either pwd python library not available"
+        " or system not one of Linux, OpenBSD, NetBSD or AIX",
     )
 
 
@@ -57,8 +52,8 @@ def _quote_username(name):
     """
     Usernames can only contain ascii chars, so make sure we return a str type
     """
-    if not isinstance(name, six.string_types):
-        return str(name)  # future lint: disable=blacklisted-function
+    if not isinstance(name, str):
+        return str(name)
     else:
         return salt.utils.stringutils.to_str(name)
 
@@ -95,7 +90,7 @@ def _build_gecos(gecos_dict):
     Accepts a dictionary entry containing GECOS field names and their values,
     and returns a full GECOS comment string, to be used with usermod.
     """
-    return "{0},{1},{2},{3},{4}".format(
+    return "{},{},{},{},{}".format(
         gecos_dict.get("fullname", ""),
         gecos_dict.get("roomnumber", ""),
         gecos_dict.get("workphone", ""),
@@ -110,8 +105,8 @@ def _update_gecos(name, key, value, root=None):
     """
     if value is None:
         value = ""
-    elif not isinstance(value, six.string_types):
-        value = six.text_type(value)
+    elif not isinstance(value, str):
+        value = str(value)
     else:
         value = salt.utils.stringutils.to_unicode(value)
     pre_info = _get_gecos(name, root=root)
@@ -421,7 +416,7 @@ def _chattrib(name, key, value, param, persist=False, root=None):
     """
     pre_info = info(name, root=root)
     if not pre_info:
-        raise CommandExecutionError("User '{0}' does not exist".format(name))
+        raise CommandExecutionError("User '{}' does not exist".format(name))
 
     if value == pre_info[key]:
         return True
@@ -556,7 +551,7 @@ def chgroups(name, groups, append=False, root=None):
         salt '*' user.chgroups foo wheel,root
         salt '*' user.chgroups foo wheel,root append=True
     """
-    if isinstance(groups, six.string_types):
+    if isinstance(groups, str):
         groups = groups.split(",")
     ugrps = set(list_groups(name))
     if ugrps == set(groups):
@@ -879,7 +874,7 @@ def list_users(root=None):
     else:
         getpwall = functools.partial(pwd.getpwall)
 
-    return sorted([user.pw_name for user in getpwall()])
+    return sorted(user.pw_name for user in getpwall())
 
 
 def rename(name, new_name, root=None):
@@ -902,7 +897,7 @@ def rename(name, new_name, root=None):
         salt '*' user.rename name new_name
     """
     if info(new_name, root=root):
-        raise CommandExecutionError("User '{0}' already exists".format(new_name))
+        raise CommandExecutionError("User '{}' already exists".format(new_name))
 
     return _chattrib(name, "name", new_name, "-l", root=root)
 

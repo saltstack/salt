@@ -73,7 +73,16 @@ def __virtual__():
     except Exception:  # pylint: disable=broad-except
         return (False, "Module yumpkg: no yum based system detected")
 
-    enabled = ("amazon", "xcp", "xenserver", "virtuozzolinux", "virtuozzo")
+    enabled = (
+        "amazon",
+        "xcp",
+        "xenserver",
+        "virtuozzolinux",
+        "virtuozzo",
+        "issabel pbx",
+        "openeuler",
+    )
+
     if os_family == "redhat" or os_grain in enabled:
         if _yum() is None:
             return (False, "DNF nor YUM found")
@@ -163,11 +172,11 @@ def _yum():
             if _check(os.path.join(dir, "dnf")):
                 context[contextkey] = "dnf"
                 break
-            elif _check(os.path.join(dir, "yum")):
-                context[contextkey] = "yum"
-                break
             elif _check(os.path.join(dir, "tdnf")):
                 context[contextkey] = "tdnf"
+                break
+            elif _check(os.path.join(dir, "yum")):
+                context[contextkey] = "yum"
                 break
     return context.get(contextkey)
 
@@ -337,7 +346,7 @@ def _get_options(**kwargs):
     return ret
 
 
-def _get_yum_config():
+def _get_yum_config(strict_parser=True):
     """
     Returns a dict representing the yum config options and values.
 
@@ -389,7 +398,7 @@ def _get_yum_config():
                 "No suitable yum config file found in: {}".format(paths)
             )
 
-        cp = configparser.ConfigParser()
+        cp = configparser.ConfigParser(strict=strict_parser)
         try:
             cp.read(fn)
         except OSError as exc:
@@ -410,17 +419,17 @@ def _get_yum_config():
     return conf
 
 
-def _get_yum_config_value(name):
+def _get_yum_config_value(name, strict_config=True):
     """
     Look for a specific config variable and return its value
     """
-    conf = _get_yum_config()
+    conf = _get_yum_config(strict_config)
     if name in conf.keys():
         return conf.get(name)
     return None
 
 
-def _normalize_basedir(basedir=None):
+def _normalize_basedir(basedir=None, strict_config=True):
     """
     Takes a basedir argument as a string or a list. If the string or list is
     empty, then look up the default from the 'reposdir' option in the yum
@@ -437,7 +446,7 @@ def _normalize_basedir(basedir=None):
 
     # nothing specified, so use the reposdir option as the default
     if not basedir:
-        basedir = _get_yum_config_value("reposdir")
+        basedir = _get_yum_config_value("reposdir", strict_config)
 
     if not isinstance(basedir, list) or not basedir:
         raise SaltInvocationError("Could not determine any repo directories")
@@ -924,7 +933,7 @@ def list_repo_pkgs(*args, **kwargs):
     else:
         repos = [
             repo_name
-            for repo_name, repo_info in list_repos().items()
+            for repo_name, repo_info in list_repos(**kwargs).items()
             if repo_name in enablerepo
             or (
                 repo_name not in disablerepo
@@ -986,7 +995,16 @@ def list_repo_pkgs(*args, **kwargs):
                 _parse_output(out["stdout"], strict=True)
     else:
         for repo in repos:
-            cmd = ["--quiet", "--showduplicates", "repository-packages", repo, "list"]
+            if _yum() == "tdnf":
+                cmd = ["--quiet", "--enablerepo={}".format(repo), "list"]
+            else:
+                cmd = [
+                    "--quiet",
+                    "--showduplicates",
+                    "repository-packages",
+                    repo,
+                    "list",
+                ]
             if cacheonly:
                 cmd.append("-C")
             # Can't concatenate because args is a tuple, using list.extend()
@@ -1001,7 +1019,7 @@ def list_repo_pkgs(*args, **kwargs):
             # Sort versions newest to oldest
             for pkgname in ret[reponame]:
                 sorted_versions = sorted(
-                    [_LooseVersion(x) for x in ret[reponame][pkgname]], reverse=True
+                    (_LooseVersion(x) for x in ret[reponame][pkgname]), reverse=True
                 )
                 ret[reponame][pkgname] = [x.vstring for x in sorted_versions]
         return ret
@@ -1012,7 +1030,7 @@ def list_repo_pkgs(*args, **kwargs):
                 byrepo_ret.setdefault(pkgname, []).extend(ret[reponame][pkgname])
         for pkgname in byrepo_ret:
             sorted_versions = sorted(
-                [_LooseVersion(x) for x in byrepo_ret[pkgname]], reverse=True
+                (_LooseVersion(x) for x in byrepo_ret[pkgname]), reverse=True
             )
             byrepo_ret[pkgname] = [x.vstring for x in sorted_versions]
         return byrepo_ret
@@ -1430,6 +1448,8 @@ def install(
                 'version': '<new-version>',
                 'arch': '<new-arch>'}}}
     """
+    if "version" in kwargs:
+        kwargs["version"] = str(kwargs["version"])
     options = _get_options(**kwargs)
 
     if salt.utils.data.is_true(refresh):
@@ -1445,8 +1465,6 @@ def install(
 
     if pkg_params is None or len(pkg_params) == 0:
         return {}
-
-    version_num = kwargs.get("version")
 
     diff_attr = kwargs.get("diff_attr")
     old = (
@@ -1958,6 +1976,15 @@ def upgrade(
 
         salt '*' pkg.upgrade security=True exclude='kernel*'
     """
+    if _yum() == "dnf" and not obsoletes:
+        # for dnf we can just disable obsoletes
+        _setopt = [
+            opt
+            for opt in salt.utils.args.split_input(kwargs.pop("setopt", []))
+            if not opt.startswith("obsoletes=")
+        ]
+        _setopt.append("obsoletes=False")
+        kwargs["setopt"] = _setopt
     options = _get_options(get_extra_options=True, **kwargs)
 
     if salt.utils.data.is_true(refresh):
@@ -1988,8 +2015,6 @@ def upgrade(
     else:
         # do not force the removal of obsolete packages
         if _yum() == "dnf":
-            # for dnf we can just disable obsoletes
-            cmd.append("--obsoletes=False")
             cmd.append("upgrade" if not minimal else "upgrade-minimal")
         else:
             # for yum we have to use update instead of upgrade
@@ -2026,6 +2051,8 @@ def update(
     ``obsoletes=False``. Mirrors the CLI behavior of ``yum update``.
     See :py:func:`pkg.upgrade <salt.modules.yumpkg.upgrade>` for
     further documentation.
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -2084,12 +2111,33 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
 
     old = list_pkgs()
     targets = []
+
+    # Loop through pkg_params looking for any
+    # which contains a wildcard and get the
+    # real package names from the packages
+    # which are currently installed.
+    pkg_matches = {}
+    for pkg_param in list(pkg_params):
+        if "*" in pkg_param:
+            pkg_matches = {
+                x: pkg_params[pkg_param] for x in old if fnmatch.fnmatch(x, pkg_param)
+            }
+
+            # Remove previous pkg_param
+            pkg_params.pop(pkg_param)
+
+    # Update pkg_params with the matches
+    pkg_params.update(pkg_matches)
+
     for target in pkg_params:
+        if target not in old:
+            continue
+        version_to_remove = pkg_params[target]
+
         # Check if package version set to be removed is actually installed:
-        # old[target] contains a comma-separated list of installed versions
-        if target in old and not pkg_params[target]:
+        if target in old and not version_to_remove:
             targets.append(target)
-        elif target in old and pkg_params[target] in old[target].split(","):
+        elif target in old and version_to_remove in old[target].split(","):
             arch = ""
             pkgname = target
             try:
@@ -2100,7 +2148,11 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
                 if archpart in salt.utils.pkg.rpm.ARCHES:
                     arch = "." + archpart
                     pkgname = namepart
-            targets.append("{}-{}{}".format(pkgname, pkg_params[target], arch))
+            # Since we don't always have the arch info, epoch information has to parsed out. But
+            # a version check was already performed, so we are removing the right version.
+            targets.append(
+                "{}-{}{}".format(pkgname, version_to_remove.split(":", 1)[-1], arch)
+            )
     if not targets:
         return {}
 
@@ -2525,7 +2577,7 @@ def group_info(name, expand=False, ignore_groups=None):
     g_info = {}
     for line in salt.utils.itertools.split(out, "\n"):
         try:
-            key, value = [x.strip() for x in line.split(":")]
+            key, value = (x.strip() for x in line.split(":"))
             g_info[key.lower()] = value
         except ValueError:
             continue
@@ -2717,16 +2769,20 @@ def list_repos(basedir=None, **kwargs):
     """
     Lists all repos in <basedir> (default: all dirs in `reposdir` yum option).
 
+    Strict parsing of configuration files is the default, this can be disabled
+    using the  ``strict_config`` keyword argument set to False
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.list_repos
         salt '*' pkg.list_repos basedir=/path/to/dir
-        salt '*' pkg.list_repos basedir=/path/to/dir,/path/to/another/dir
+        salt '*' pkg.list_repos basedir=/path/to/dir,/path/to/another/dir strict_config=False
     """
 
-    basedirs = _normalize_basedir(basedir)
+    strict_parser = kwargs.get("strict_config", True)
+    basedirs = _normalize_basedir(basedir, strict_parser)
     repos = {}
     log.debug("Searching for repos in %s", basedirs)
     for bdir in basedirs:
@@ -2736,7 +2792,7 @@ def list_repos(basedir=None, **kwargs):
             repopath = "{}/{}".format(bdir, repofile)
             if not repofile.endswith(".repo"):
                 continue
-            filerepos = _parse_repo_file(repopath)[1]
+            filerepos = _parse_repo_file(repopath, strict_parser)[1]
             for reponame in filerepos:
                 repo = filerepos[reponame]
                 repo["file"] = repopath
@@ -2757,7 +2813,7 @@ def get_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
         salt '*' pkg.get_repo myrepo basedir=/path/to/dir
         salt '*' pkg.get_repo myrepo basedir=/path/to/dir,/path/to/another/dir
     """
-    repos = list_repos(basedir)
+    repos = list_repos(basedir, **kwargs)
 
     if repo.startswith("copr:"):
         repo = _get_copr_repo(repo)
@@ -2770,7 +2826,8 @@ def get_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
 
     if repofile:
         # Return just one repo
-        filerepos = _parse_repo_file(repofile)[1]
+        strict_parser = kwargs.get("strict_config", True)
+        filerepos = _parse_repo_file(repofile, strict_parser)[1]
         return filerepos[repo]
     return {}
 
@@ -2783,12 +2840,15 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
     If the .repo file in which the repo exists does not contain any other repo
     configuration, the file itself will be deleted.
 
+    Strict parsing of configuration files is the default, this can be disabled
+    using the  ``strict_config`` keyword argument set to False
+
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' pkg.del_repo myrepo
-        salt '*' pkg.del_repo myrepo basedir=/path/to/dir
+        salt '*' pkg.del_repo myrepo basedir=/path/to/dir strict_config=False
         salt '*' pkg.del_repo myrepo basedir=/path/to/dir,/path/to/another/dir
     """
 
@@ -2796,8 +2856,9 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
         repo = _get_copr_repo(repo)
 
     # this is so we know which dirs are searched for our error messages below
-    basedirs = _normalize_basedir(basedir)
-    repos = list_repos(basedirs)
+    strict_parser = kwargs.get("strict_config", True)
+    basedirs = _normalize_basedir(basedir, strict_parser)
+    repos = list_repos(basedirs, **kwargs)
 
     if repo not in repos:
         return "Error: the {} repo does not exist in {}".format(repo, basedirs)
@@ -2822,7 +2883,7 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
         return "File {} containing repo {} has been removed".format(repofile, repo)
 
     # There must be other repos in this file, write the file with them
-    header, filerepos = _parse_repo_file(repofile)
+    header, filerepos = _parse_repo_file(repofile, strict_parser)
     content = header
     for stanza in filerepos.keys():
         if stanza == repo:
@@ -2867,12 +2928,15 @@ def mod_repo(repo, basedir=None, **kwargs):
     a key to a blank value. Bear in mind that a name cannot be deleted, and a
     baseurl can only be deleted if a mirrorlist is specified (or vice versa).
 
+    Strict parsing of configuration files is the default, this can be disabled
+    using the  ``strict_config`` keyword argument set to False
+
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' pkg.mod_repo reponame enabled=1 gpgcheck=1
-        salt '*' pkg.mod_repo reponame basedir=/path/to/dir enabled=1
+        salt '*' pkg.mod_repo reponame basedir=/path/to/dir enabled=1 strict_config=False
         salt '*' pkg.mod_repo reponame baseurl= mirrorlist=http://host.com/
     """
     # Filter out '__pub' arguments, as well as saltenv
@@ -2912,9 +2976,9 @@ def mod_repo(repo, basedir=None, **kwargs):
 
     # Give the user the ability to change the basedir
     repos = {}
-    basedirs = _normalize_basedir(basedir)
-    repos = list_repos(basedirs)
-
+    strict_parser = kwargs.get("strict_config", True)
+    basedirs = _normalize_basedir(basedir, strict_parser)
+    repos = list_repos(basedirs, **kwargs)
     repofile = ""
     header = ""
     filerepos = {}
@@ -2955,9 +3019,9 @@ def mod_repo(repo, basedir=None, **kwargs):
                     )
                 )
             # Repo has been added, update repos list
-            repos = list_repos(basedirs)
+            repos = list_repos(basedirs, **kwargs)
             repofile = repos[repo]["file"]
-            header, filerepos = _parse_repo_file(repofile)
+            header, filerepos = _parse_repo_file(repofile, strict_parser)
         else:
             repofile = "{}/{}.repo".format(newdir, repo)
 
@@ -2976,7 +3040,7 @@ def mod_repo(repo, basedir=None, **kwargs):
     else:
         # The repo does exist, open its file
         repofile = repos[repo]["file"]
-        header, filerepos = _parse_repo_file(repofile)
+        header, filerepos = _parse_repo_file(repofile, strict_parser)
 
     # Error out if they tried to delete baseurl or mirrorlist improperly
     if "baseurl" in todelete:
@@ -3021,11 +3085,11 @@ def mod_repo(repo, basedir=None, **kwargs):
     return {repofile: filerepos}
 
 
-def _parse_repo_file(filename):
+def _parse_repo_file(filename, strict_config=True):
     """
     Turn a single repo file into a dict
     """
-    parsed = configparser.ConfigParser()
+    parsed = configparser.ConfigParser(strict=strict_config)
     config = {}
 
     try:
@@ -3314,10 +3378,17 @@ def _get_patches(installed_only=False):
 
     cmd = [_yum(), "--quiet", "updateinfo", "list", "all"]
     ret = __salt__["cmd.run_stdout"](cmd, python_shell=False)
+    parsing_errors = False
+
     for line in salt.utils.itertools.split(ret, os.linesep):
-        inst, advisory_id, sev, pkg = re.match(
-            r"([i|\s]) ([^\s]+) +([^\s]+) +([^\s]+)", line
-        ).groups()
+        try:
+            inst, advisory_id, sev, pkg = re.match(
+                r"([i|\s]) ([^\s]+) +([^\s]+) +([^\s]+)", line
+            ).groups()
+        except Exception:  # pylint: disable=broad-except
+            parsing_errors = True
+            continue
+
         if advisory_id not in patches:
             patches[advisory_id] = {
                 "installed": True if inst == "i" else False,
@@ -3327,6 +3398,13 @@ def _get_patches(installed_only=False):
             patches[advisory_id]["summary"].append(pkg)
             if inst != "i":
                 patches[advisory_id]["installed"] = False
+
+    if parsing_errors:
+        log.warning(
+            "Skipped some unexpected output while running '%s' to list "
+            "patches. Please check output",
+            " ".join(cmd),
+        )
 
     if installed_only:
         patches = {k: v for k, v in patches.items() if v["installed"]}
@@ -3379,7 +3457,6 @@ def services_need_restart(**kwargs):
     package manager. It might be needed to restart them.
 
     Requires systemd.
-
 
     CLI Examples:
 

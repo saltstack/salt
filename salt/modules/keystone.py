@@ -86,7 +86,8 @@ def __virtual__():
         return "keystone"
     return (
         False,
-        "keystone execution module cannot be loaded: keystoneclient python library not available.",
+        "keystone execution module cannot be loaded: keystoneclient python library not"
+        " available.",
     )
 
 
@@ -172,11 +173,9 @@ def auth(profile=None, **connection_args):
         salt '*' keystone.auth
     """
     __utils__["versions.warn_until"](
-        "Sodium",
-        (
-            "The keystone module has been deprecated and will be removed in {version}.  "
-            "Please update to using the keystoneng module"
-        ),
+        "Argon",
+        "The keystone module has been deprecated and will be removed in {version}.  "
+        "Please update to using the keystoneng module",
     )
     kwargs = _get_kwargs(profile=profile, **connection_args)
 
@@ -370,8 +369,9 @@ def endpoint_get(service, region=None, profile=None, interface=None, **connectio
     ]
     if len(e) > 1:
         return {
-            "Error": "Multiple endpoints found ({}) for the {} service. Please specify region.".format(
-                e, service
+            "Error": (
+                "Multiple endpoints found ({}) for the {} service. Please specify"
+                " region.".format(e, service)
             )
         }
     if len(e) == 1:

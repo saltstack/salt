@@ -1,18 +1,13 @@
-# -*- coding: utf-8 -*-
 """
 Manage Linux kernel packages on APT-based systems
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import functools
 import logging
 import re
 
 try:
-    # Import Salt libs
-    from salt.ext import six
     from salt.utils.versions import LooseVersion as _LooseVersion
-    from salt.ext.six.moves import filter
     from salt.exceptions import CommandExecutionError
 
     HAS_REQUIRED_LIBS = True
@@ -21,7 +16,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-# Define the module's virtual name
+
 __virtualname__ = "kernelpkg"
 
 
@@ -67,7 +62,7 @@ def list_installed():
 
         salt '*' kernelpkg.list_installed
     """
-    pkg_re = re.compile(r"^{0}-[\d.-]+-{1}$".format(_package_prefix(), _kernel_type()))
+    pkg_re = re.compile(r"^{}-[\d.-]+-{}$".format(_package_prefix(), _kernel_type()))
     pkgs = __salt__["pkg.list_pkgs"](versions_as_list=True)
     if pkgs is None:
         pkgs = []
@@ -78,12 +73,9 @@ def list_installed():
 
     prefix_len = len(_package_prefix()) + 1
 
-    if six.PY2:
-        return sorted([pkg[prefix_len:] for pkg in result], cmp=_cmp_version)
-    else:
-        return sorted(
-            [pkg[prefix_len:] for pkg in result], key=functools.cmp_to_key(_cmp_version)
-        )
+    return sorted(
+        (pkg[prefix_len:] for pkg in result), key=functools.cmp_to_key(_cmp_version)
+    )
 
 
 def latest_available():
@@ -97,13 +89,13 @@ def latest_available():
         salt '*' kernelpkg.latest_available
     """
     result = __salt__["pkg.latest_version"](
-        "{0}-{1}".format(_package_prefix(), _kernel_type())
+        "{}-{}".format(_package_prefix(), _kernel_type())
     )
     if result == "":
         return latest_installed()
 
     version = re.match(r"^(\d+\.\d+\.\d+)\.(\d+)", result)
-    return "{0}-{1}-{2}".format(version.group(1), version.group(2), _kernel_type())
+    return "{}-{}-{}".format(version.group(1), version.group(2), _kernel_type())
 
 
 def latest_installed():
@@ -170,7 +162,7 @@ def upgrade(reboot=False, at_time=None):
         useful to ensure the result is delivered to the master.
     """
     result = __salt__["pkg.install"](
-        name="{0}-{1}".format(_package_prefix(), latest_available())
+        name="{}-{}".format(_package_prefix(), latest_available())
     )
     _needs_reboot = needs_reboot()
 
@@ -220,13 +212,13 @@ def remove(release):
     """
     if release not in list_installed():
         raise CommandExecutionError(
-            "Kernel release '{0}' is not installed".format(release)
+            "Kernel release '{}' is not installed".format(release)
         )
 
     if release == active():
         raise CommandExecutionError("Active kernel cannot be removed")
 
-    target = "{0}-{1}".format(_package_prefix(), release)
+    target = "{}-{}".format(_package_prefix(), release)
     log.info("Removing kernel package %s", target)
 
     __salt__["pkg.purge"](target)

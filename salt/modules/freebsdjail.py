@@ -1,16 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 The jail module for FreeBSD
 """
 
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import os
 import re
 import subprocess
 
-# Import salt libs
 import salt.utils.args
 import salt.utils.files
 import salt.utils.stringutils
@@ -42,7 +38,7 @@ def start(jail=""):
 
         salt '*' jail.start [<jail name>]
     """
-    cmd = "service jail onestart {0}".format(jail)
+    cmd = "service jail onestart {}".format(jail)
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -56,7 +52,7 @@ def stop(jail=""):
 
         salt '*' jail.stop [<jail name>]
     """
-    cmd = "service jail onestop {0}".format(jail)
+    cmd = "service jail onestop {}".format(jail)
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -70,7 +66,7 @@ def restart(jail=""):
 
         salt '*' jail.restart [<jail name>]
     """
-    cmd = "service jail onerestart {0}".format(jail)
+    cmd = "service jail onerestart {}".format(jail)
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -149,7 +145,7 @@ def show_config(jail):
                         line = salt.utils.stringutils.to_unicode(line)
                         if not line.strip():
                             continue
-                        if not line.startswith("jail_{0}_".format(jail)):
+                        if not line.startswith("jail_{}_".format(jail)):
                             continue
                         key, value = line.split("=")
                         ret[key.split("_", 2)[2]] = value.split('"')[1]

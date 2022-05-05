@@ -5,7 +5,9 @@ Integration tests for the saltutil module.
 
 import pytest
 
-pytestmark = [pytest.mark.windows_whitelisted]
+pytestmark = [
+    pytest.mark.windows_whitelisted,
+]
 
 
 @pytest.fixture(autouse=True)

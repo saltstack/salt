@@ -10,7 +10,7 @@ from io import StringIO
 
 import salt.utils.templates
 from salt.exceptions import SaltRenderError
-from salt.loader_context import NamedLoaderContext
+from salt.loader.context import NamedLoaderContext
 
 log = logging.getLogger(__name__)
 

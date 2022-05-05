@@ -1,18 +1,12 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: :email:`Simon Dodsley <simon@purestorage.com>`
 """
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import errno
 import textwrap
 
-# Import Salt Libs
 import salt.grains.nvme as nvme
 from tests.support.mock import MagicMock, mock_open, patch
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase
 
 

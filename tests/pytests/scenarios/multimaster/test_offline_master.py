@@ -2,8 +2,11 @@ import time
 
 import pytest
 
+pytestmark = [
+    pytest.mark.slow_test,
+]
 
-@pytest.mark.slow_test
+
 def test_minion_hangs_on_master_failure_50814(
     event_listener,
     salt_mm_master_1,
@@ -34,8 +37,8 @@ def test_minion_hangs_on_master_failure_50814(
             expected_patterns, after_time=check_event_start_time, timeout=30
         )
         assert matched_events.found_all_events, (
-            "Minion is not responding to the second master after the first one has gone. "
-            "Check #50814 for details."
+            "Minion is not responding to the second master after the first one has"
+            " gone. Check #50814 for details."
         )
         event_count -= 1
         if event_count <= 0:
@@ -53,8 +56,8 @@ def test_minion_hangs_on_master_failure_50814(
 
     # Wait for the minion to re-connect so this test will not affect any
     # others.
-    salt_mm_master_1.register_after_start_callback(
-        wait_for_minion, salt_mm_master_1.get_salt_cli(), salt_mm_minion_1.id
+    salt_mm_master_1.after_start(
+        wait_for_minion, salt_mm_master_1.salt_cli(), salt_mm_minion_1.id
     )
 
     # Now, let's try this one of the masters offline
@@ -79,8 +82,10 @@ def test_minion_hangs_on_master_failure_50814(
                 expected_patterns, after_time=check_event_start_time, timeout=30
             )
             assert matched_events.found_all_events, (
-                "Minion is not responding to the second master(events sent: {}) after the first "
-                "has gone offline. Check #50814 for details.".format(event_count)
+                "Minion is not responding to the second master(events sent: {}) after"
+                " the first has gone offline. Check #50814 for details.".format(
+                    event_count
+                )
             )
             event_count += 1
             if event_count > 3:

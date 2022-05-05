@@ -1,18 +1,18 @@
-import datetime
 import functools
 import io
+import logging
 import multiprocessing
 import os
 import signal
 import sys
+import tempfile
 import threading
 import time
-import warnings
 
 import pytest
+import salt._logging
 import salt.utils.platform
 import salt.utils.process
-from salt.utils.versions import warn_until_date
 from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
 
@@ -23,6 +23,8 @@ try:
     HAS_PSUTIL = True
 except ImportError:
     pass
+
+log = logging.getLogger(__name__)
 
 
 def die(func):
@@ -97,25 +99,17 @@ class TestProcessManager(TestCase):
         Make sure that the process is alive 2s later
         """
         process_manager = salt.utils.process.ProcessManager()
+        self.addCleanup(process_manager.terminate)
         process_manager.add_process(self.spin_basic)
         initial_pid = next(iter(process_manager._process_map.keys()))
         time.sleep(2)
         process_manager.check_children()
-        try:
-            assert initial_pid == next(iter(process_manager._process_map.keys()))
-        finally:
-            process_manager.stop_restarting()
-            process_manager.kill_children()
-            time.sleep(0.5)
-            # Are there child processes still running?
-            if process_manager._process_map.keys():
-                process_manager.send_signal_to_processes(signal.SIGKILL)
-                process_manager.stop_restarting()
-                process_manager.kill_children()
+        assert initial_pid == next(iter(process_manager._process_map.keys()))
 
     @spin
     def test_kill(self):
         process_manager = salt.utils.process.ProcessManager()
+        self.addCleanup(process_manager.terminate)
         process_manager.add_process(self.spin_kill)
         initial_pid = next(iter(process_manager._process_map.keys()))
         # kill the child
@@ -126,17 +120,7 @@ class TestProcessManager(TestCase):
         # give the OS time to give the signal...
         time.sleep(0.1)
         process_manager.check_children()
-        try:
-            assert initial_pid != next(iter(process_manager._process_map.keys()))
-        finally:
-            process_manager.stop_restarting()
-            process_manager.kill_children()
-            time.sleep(0.5)
-            # Are there child processes still running?
-            if process_manager._process_map.keys():
-                process_manager.send_signal_to_processes(signal.SIGKILL)
-                process_manager.stop_restarting()
-                process_manager.kill_children()
+        assert initial_pid != next(iter(process_manager._process_map.keys()))
 
     @die
     def test_restarting(self):
@@ -144,43 +128,24 @@ class TestProcessManager(TestCase):
         Make sure that the process is alive 2s later
         """
         process_manager = salt.utils.process.ProcessManager()
+        self.addCleanup(process_manager.terminate)
         process_manager.add_process(self.die_restarting)
         initial_pid = next(iter(process_manager._process_map.keys()))
         time.sleep(2)
         process_manager.check_children()
-        try:
-            assert initial_pid != next(iter(process_manager._process_map.keys()))
-        finally:
-            process_manager.stop_restarting()
-            process_manager.kill_children()
-            time.sleep(0.5)
-            # Are there child processes still running?
-            if process_manager._process_map.keys():
-                process_manager.send_signal_to_processes(signal.SIGKILL)
-                process_manager.stop_restarting()
-                process_manager.kill_children()
+        assert initial_pid != next(iter(process_manager._process_map.keys()))
 
-    @skipIf(sys.version_info < (2, 7), "Needs > Py 2.7 due to bug in stdlib")
     @incr
     def test_counter(self):
         counter = multiprocessing.Value("i", 0)
         process_manager = salt.utils.process.ProcessManager()
+        self.addCleanup(process_manager.terminate)
         process_manager.add_process(self.incr_counter, args=(counter, 2))
         time.sleep(1)
         process_manager.check_children()
         time.sleep(1)
         # we should have had 2 processes go at it
-        try:
-            assert counter.value == 4
-        finally:
-            process_manager.stop_restarting()
-            process_manager.kill_children()
-            time.sleep(0.5)
-            # Are there child processes still running?
-            if process_manager._process_map.keys():
-                process_manager.send_signal_to_processes(signal.SIGKILL)
-                process_manager.stop_restarting()
-                process_manager.kill_children()
+        assert counter.value == 4
 
 
 class TestThreadPool(TestCase):
@@ -255,15 +220,18 @@ class TestProcessCallbacks(TestCase):
 
     def test_callbacks(self):
         "Validate Process call after fork and finalize methods"
-        teardown_to_mock = "salt.log.setup.shutdown_multiprocessing_logging"
-        log_to_mock = "salt.utils.process.Process._setup_process_logging"
-        with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
+        with patch(
+            "salt._logging.get_logging_options_dict", return_value={"1": 1}
+        ) as ls1, patch("salt._logging.setup_logging") as ls2, patch(
+            "salt._logging.shutdown_logging"
+        ) as ls3:
             evt = multiprocessing.Event()
             proc = salt.utils.process.Process(target=self.process_target, args=(evt,))
             proc.run()
             assert evt.is_set()
-        mb.assert_called()
-        ma.assert_called()
+        ls1.assert_called()
+        ls2.assert_called()
+        ls3.assert_called()
 
     def test_callbacks_called_when_run_overridden(self):
         "Validate Process sub classes call after fork and finalize methods when run is overridden"
@@ -276,16 +244,20 @@ class TestProcessCallbacks(TestCase):
             def run(self):
                 self.evt.set()
 
-        teardown_to_mock = "salt.log.setup.shutdown_multiprocessing_logging"
-        log_to_mock = "salt.utils.process.Process._setup_process_logging"
-        with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
+        with patch(
+            "salt._logging.get_logging_options_dict", return_value={"1": 1}
+        ) as ls1, patch("salt._logging.setup_logging") as ls2, patch(
+            "salt._logging.shutdown_logging"
+        ) as ls3:
             proc = MyProcess()
             proc.run()
             assert proc.evt.is_set()
-        ma.assert_called()
-        mb.assert_called()
+        ls1.assert_called()
+        ls2.assert_called()
+        ls3.assert_called()
 
 
+@skipIf(not HAS_PSUTIL, "Missing psutil")
 class TestSignalHandlingProcess(TestCase):
     @classmethod
     def Process(cls, pid):
@@ -378,6 +350,7 @@ class TestSignalHandlingProcess(TestCase):
         "Validate SignalHandlingProcess handles signals"
         # Gloobal event to stop all processes we're creating
         evt = multiprocessing.Event()
+        sig_handled = multiprocessing.Event()
 
         # Create a process to test signal handler
         val = multiprocessing.Value("i", 0)
@@ -385,11 +358,13 @@ class TestSignalHandlingProcess(TestCase):
             target=self.pid_setting_target,
             args=(self.run_forever_sub_target, val, evt),
         )
+        proc.register_finalize_method(sig_handled.set)
         proc.start()
 
         # Create a second process that should not respond to SIGINT or SIGTERM
         proc2 = multiprocessing.Process(
-            target=self.run_forever_target, args=(self.run_forever_sub_target, evt),
+            target=self.run_forever_target,
+            args=(self.run_forever_sub_target, evt),
         )
         proc2.start()
 
@@ -397,7 +372,7 @@ class TestSignalHandlingProcess(TestCase):
         while not val.value:
             time.sleep(0.3)
 
-        assert not proc.signal_handled()
+        assert not sig_handled.is_set()
 
         # Send a signal that should get handled by the subprocess
         os.kill(val.value, signal.SIGTERM)
@@ -405,13 +380,13 @@ class TestSignalHandlingProcess(TestCase):
         # wait up to 10 seconds for signal handler:
         start = time.time()
         while time.time() - start < 10:
-            if proc.signal_handled():
+            if sig_handled.is_set():
                 break
             time.sleep(0.3)
 
         try:
             # Allow some time for the signal handler to do its thing
-            assert proc.signal_handled()
+            assert sig_handled.is_set()
             # Reap the signaled process
             proc.join(1)
             assert proc2.is_alive()
@@ -429,20 +404,23 @@ class TestSignalHandlingProcessCallbacks(TestCase):
     def test_callbacks(self):
         "Validate SignalHandlingProcess call after fork and finalize methods"
 
-        teardown_to_mock = "salt.log.setup.shutdown_multiprocessing_logging"
-        log_to_mock = "salt.utils.process.Process._setup_process_logging"
         sig_to_mock = "salt.utils.process.SignalHandlingProcess._setup_signals"
         # Mock _setup_signals so we do not register one for this process.
         evt = multiprocessing.Event()
         with patch(sig_to_mock):
-            with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
+            with patch(
+                "salt._logging.get_logging_options_dict", return_value={"1": 1}
+            ) as ls1, patch("salt._logging.setup_logging") as ls2, patch(
+                "salt._logging.shutdown_logging"
+            ) as ls3:
                 sh_proc = salt.utils.process.SignalHandlingProcess(
                     target=self.process_target, args=(evt,)
                 )
                 sh_proc.run()
                 assert evt.is_set()
-        ma.assert_called()
-        mb.assert_called()
+        ls1.assert_called()
+        ls2.assert_called()
+        ls3.assert_called()
 
     def test_callbacks_called_when_run_overridden(self):
         "Validate SignalHandlingProcess sub classes call after fork and finalize methods when run is overridden"
@@ -455,17 +433,20 @@ class TestSignalHandlingProcessCallbacks(TestCase):
             def run(self):
                 self.evt.set()
 
-        teardown_to_mock = "salt.log.setup.shutdown_multiprocessing_logging"
-        log_to_mock = "salt.utils.process.Process._setup_process_logging"
         sig_to_mock = "salt.utils.process.SignalHandlingProcess._setup_signals"
         # Mock _setup_signals so we do not register one for this process.
         with patch(sig_to_mock):
-            with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
+            with patch(
+                "salt._logging.get_logging_options_dict", return_value={"1": 1}
+            ) as ls1, patch("salt._logging.setup_logging") as ls2, patch(
+                "salt._logging.shutdown_logging"
+            ) as ls3:
                 sh_proc = MyProcess()
                 sh_proc.run()
                 assert sh_proc.evt.is_set()
-        ma.assert_called()
-        mb.assert_called()
+        ls1.assert_called()
+        ls2.assert_called()
+        ls3.assert_called()
 
 
 class TestDup2(TestCase):
@@ -542,150 +523,6 @@ class TestProcessList(TestCase):
         assert proc not in plist.processes
 
 
-class TestDeprecatedClassNames(TestCase):
-    @staticmethod
-    def process_target():
-        pass
-
-    @staticmethod
-    def patched_warn_until_date(current_date):
-        def _patched_warn_until_date(
-            date,
-            message,
-            category=DeprecationWarning,
-            stacklevel=None,
-            _current_date=current_date,
-            _dont_call_warnings=False,
-        ):
-            # Because we add another function in between, the stacklevel
-            # set in salt.utils.process, 3, needs to now be 4
-            stacklevel = 4
-            return warn_until_date(
-                date,
-                message,
-                category=category,
-                stacklevel=stacklevel,
-                _current_date=_current_date,
-                _dont_call_warnings=_dont_call_warnings,
-            )
-
-        return _patched_warn_until_date
-
-    def test_multiprocessing_process_warning(self):
-        # We *always* want *all* warnings thrown on this module
-        warnings.filterwarnings("always", "", DeprecationWarning, __name__)
-
-        fake_utcnow = datetime.date(2021, 1, 1)
-
-        proc = None
-
-        try:
-            with patch(
-                "salt.utils.versions.warn_until_date",
-                self.patched_warn_until_date(fake_utcnow),
-            ):
-                # Test warning
-                with warnings.catch_warnings(record=True) as recorded_warnings:
-                    proc = salt.utils.process.MultiprocessingProcess(
-                        target=self.process_target
-                    )
-                    self.assertEqual(
-                        "Please stop using 'salt.utils.process.MultiprocessingProcess' "
-                        "and instead use 'salt.utils.process.Process'. "
-                        "'salt.utils.process.MultiprocessingProcess' will go away "
-                        "after 2022-01-01.",
-                        str(recorded_warnings[0].message),
-                    )
-        finally:
-            if proc is not None:
-                del proc
-
-    def test_multiprocessing_process_runtime_error(self):
-        fake_utcnow = datetime.date(2022, 1, 1)
-
-        proc = None
-
-        try:
-            with patch(
-                "salt.utils.versions.warn_until_date",
-                self.patched_warn_until_date(fake_utcnow),
-            ):
-                with self.assertRaisesRegex(
-                    RuntimeError,
-                    r"Please stop using 'salt.utils.process.MultiprocessingProcess' "
-                    r"and instead use 'salt.utils.process.Process'. "
-                    r"'salt.utils.process.MultiprocessingProcess' will go away "
-                    r"after 2022-01-01. "
-                    r"This warning\(now exception\) triggered on "
-                    r"filename '(.*)test_process.py', line number ([\d]+), is "
-                    r"supposed to be shown until ([\d-]+). Today is ([\d-]+). "
-                    r"Please remove the warning.",
-                ):
-                    proc = salt.utils.process.MultiprocessingProcess(
-                        target=self.process_target
-                    )
-        finally:
-            if proc is not None:
-                del proc
-
-    def test_signal_handling_multiprocessing_process_warning(self):
-        # We *always* want *all* warnings thrown on this module
-        warnings.filterwarnings("always", "", DeprecationWarning, __name__)
-
-        fake_utcnow = datetime.date(2021, 1, 1)
-
-        proc = None
-
-        try:
-            with patch(
-                "salt.utils.versions.warn_until_date",
-                self.patched_warn_until_date(fake_utcnow),
-            ):
-                # Test warning
-                with warnings.catch_warnings(record=True) as recorded_warnings:
-                    proc = salt.utils.process.SignalHandlingMultiprocessingProcess(
-                        target=self.process_target
-                    )
-                    self.assertEqual(
-                        "Please stop using 'salt.utils.process.SignalHandlingMultiprocessingProcess' "
-                        "and instead use 'salt.utils.process.SignalHandlingProcess'. "
-                        "'salt.utils.process.SignalHandlingMultiprocessingProcess' will go away "
-                        "after 2022-01-01.",
-                        str(recorded_warnings[0].message),
-                    )
-        finally:
-            if proc is not None:
-                del proc
-
-    def test_signal_handling_multiprocessing_process_runtime_error(self):
-        fake_utcnow = datetime.date(2022, 1, 1)
-
-        proc = None
-
-        try:
-            with patch(
-                "salt.utils.versions.warn_until_date",
-                self.patched_warn_until_date(fake_utcnow),
-            ):
-                with self.assertRaisesRegex(
-                    RuntimeError,
-                    r"Please stop using 'salt.utils.process.SignalHandlingMultiprocessingProcess' "
-                    r"and instead use 'salt.utils.process.SignalHandlingProcess'. "
-                    r"'salt.utils.process.SignalHandlingMultiprocessingProcess' will go away "
-                    r"after 2022-01-01. "
-                    r"This warning\(now exception\) triggered on "
-                    r"filename '(.*)test_process.py', line number ([\d]+), is "
-                    r"supposed to be shown until ([\d-]+). Today is ([\d-]+). "
-                    r"Please remove the warning.",
-                ):
-                    proc = salt.utils.process.SignalHandlingMultiprocessingProcess(
-                        target=self.process_target
-                    )
-        finally:
-            if proc is not None:
-                del proc
-
-
 class CMORProcessHelper:
     def __init__(self, file_name):
         self._lock = threading.Lock()
@@ -746,6 +583,11 @@ class CMORProcessHelper:
 
 @skipIf(not HAS_PSUTIL, "Missing psutil")
 class TestGetProcessInfo(TestCase):
+    def setUp(self):
+        handle, self.cmor_test_file_path = tempfile.mkstemp()
+        os.close(handle)
+        self.addCleanup(os.unlink, self.cmor_test_file_path)
+
     def test_this_process(self):
         this_process_info = salt.utils.process.get_process_info()
 
@@ -766,109 +608,108 @@ class TestGetProcessInfo(TestCase):
 
     def test_random_processes(self):
         for _ in range(3):
-            with CMORProcessHelper("CMOR_TEST_FILE") as p1:
+            with CMORProcessHelper(self.cmor_test_file_path) as p1:
                 pid = p1.pid
                 self.assertIsInstance(salt.utils.process.get_process_info(pid), dict)
             self.assertIsNone(salt.utils.process.get_process_info(pid))
 
 
+@skipIf(not HAS_PSUTIL, "Missing psutil")
 class TestClaimMantleOfResponsibility(TestCase):
-    @skipIf(HAS_PSUTIL, "Has psutil")
+    def setUp(self):
+        handle, self.cmor_test_file_path = tempfile.mkstemp()
+        os.close(handle)
+        self.addCleanup(os.unlink, self.cmor_test_file_path)
+
     def test_simple_claim_no_psutil(self):
-        salt.utils.process.claim_mantle_of_responsibility("CMOR_TEST_FILE")
+        salt.utils.process.claim_mantle_of_responsibility(self.cmor_test_file_path)
 
-    @skipIf(not HAS_PSUTIL, "Missing psutil")
     def test_simple_claim(self):
-        try:
-            for _ in range(5):
-                self.assertTrue(
-                    salt.utils.process.claim_mantle_of_responsibility("CMOR_TEST_FILE")
-                )
-        finally:
-            os.remove("CMOR_TEST_FILE")
-
-    @skipIf(not HAS_PSUTIL, "Missing psutil")
-    def test_multiple_processes(self):
-        try:
-            with CMORProcessHelper("CMOR_TEST_FILE") as p1:
-                self.assertTrue(p1.claim())
-                self.assertFalse(
-                    salt.utils.process.claim_mantle_of_responsibility("CMOR_TEST_FILE")
-                )
-                with CMORProcessHelper("CMOR_TEST_FILE") as p2:
-                    for _ in range(3):
-                        self.assertFalse(p2.claim())
-                self.assertTrue(p1.claim())
-
-            with CMORProcessHelper("CMOR_TEST_FILE") as p1:
-                self.assertTrue(p1.claim())
-                self.assertFalse(
-                    salt.utils.process.claim_mantle_of_responsibility("CMOR_TEST_FILE")
-                )
-
+        for _ in range(5):
             self.assertTrue(
-                salt.utils.process.claim_mantle_of_responsibility("CMOR_TEST_FILE")
+                salt.utils.process.claim_mantle_of_responsibility(
+                    self.cmor_test_file_path
+                )
             )
-        finally:
-            os.remove("CMOR_TEST_FILE")
 
-
-class TestCheckMantleOfResponsibility(TestCase):
-    @skipIf(HAS_PSUTIL, "Has psutil")
-    def test_simple_claim_no_psutil(self):
-        try:
-            self.assertIsNone(
-                salt.utils.process.check_mantle_of_responsibility("CMOR_TEST_FILE")
-            )
-        finally:
-            os.remove("CMOR_TEST_FILE")
-
-    @skipIf(not HAS_PSUTIL, "Missing psutil")
-    def test_simple_claim(self):
-        try:
-            self.assertIsNone(
-                salt.utils.process.check_mantle_of_responsibility("CMOR_TEST_FILE")
-            )
-            salt.utils.process.claim_mantle_of_responsibility("CMOR_TEST_FILE")
-            pid = salt.utils.process.get_process_info()["pid"]
-            self.assertEqual(
-                pid, salt.utils.process.check_mantle_of_responsibility("CMOR_TEST_FILE")
-            )
-        finally:
-            os.remove("CMOR_TEST_FILE")
-
-    @skipIf(not HAS_PSUTIL, "Missing psutil")
     def test_multiple_processes(self):
-        try:
-            self.assertIsNone(
-                salt.utils.process.check_mantle_of_responsibility("CMOR_TEST_FILE")
+        with CMORProcessHelper(self.cmor_test_file_path) as p1:
+            self.assertTrue(p1.claim())
+            self.assertFalse(
+                salt.utils.process.claim_mantle_of_responsibility(
+                    self.cmor_test_file_path
+                )
+            )
+            with CMORProcessHelper(self.cmor_test_file_path) as p2:
+                for _ in range(3):
+                    self.assertFalse(p2.claim())
+            self.assertTrue(p1.claim())
+
+        with CMORProcessHelper(self.cmor_test_file_path) as p1:
+            self.assertTrue(p1.claim())
+            self.assertFalse(
+                salt.utils.process.claim_mantle_of_responsibility(
+                    self.cmor_test_file_path
+                )
             )
 
-            with CMORProcessHelper("CMOR_TEST_FILE") as p1:
-                self.assertTrue(p1.claim())
-                random_pid = salt.utils.process.check_mantle_of_responsibility(
-                    "CMOR_TEST_FILE"
+        self.assertTrue(
+            salt.utils.process.claim_mantle_of_responsibility(self.cmor_test_file_path)
+        )
+
+
+@skipIf(not HAS_PSUTIL, "Missing psutil")
+class TestCheckMantleOfResponsibility(TestCase):
+    def setUp(self):
+        handle, self.cmor_test_file_path = tempfile.mkstemp()
+        os.close(handle)
+        self.addCleanup(os.unlink, self.cmor_test_file_path)
+
+    def test_simple_claim_no_psutil(self):
+        self.assertIsNone(
+            salt.utils.process.check_mantle_of_responsibility(self.cmor_test_file_path)
+        )
+
+    def test_simple_claim(self):
+        self.assertIsNone(
+            salt.utils.process.check_mantle_of_responsibility(self.cmor_test_file_path)
+        )
+        salt.utils.process.claim_mantle_of_responsibility(self.cmor_test_file_path)
+        pid = salt.utils.process.get_process_info()["pid"]
+        self.assertEqual(
+            pid,
+            salt.utils.process.check_mantle_of_responsibility(self.cmor_test_file_path),
+        )
+
+    def test_multiple_processes(self):
+        self.assertIsNone(
+            salt.utils.process.check_mantle_of_responsibility(self.cmor_test_file_path)
+        )
+
+        with CMORProcessHelper(self.cmor_test_file_path) as p1:
+            self.assertTrue(p1.claim())
+            random_pid = salt.utils.process.check_mantle_of_responsibility(
+                self.cmor_test_file_path
+            )
+
+            self.assertIsInstance(random_pid, int)
+
+            with CMORProcessHelper(self.cmor_test_file_path) as p2:
+                for _ in range(3):
+                    self.assertFalse(p2.claim())
+                self.assertEqual(
+                    random_pid,
+                    salt.utils.process.check_mantle_of_responsibility(
+                        self.cmor_test_file_path
+                    ),
                 )
 
-                self.assertIsInstance(random_pid, int)
-
-                with CMORProcessHelper("CMOR_TEST_FILE") as p2:
-                    for _ in range(3):
-                        self.assertFalse(p2.claim())
-                    self.assertEqual(
-                        random_pid,
-                        salt.utils.process.check_mantle_of_responsibility(
-                            "CMOR_TEST_FILE"
-                        ),
-                    )
-
-            self.assertIsNone(
-                salt.utils.process.check_mantle_of_responsibility("CMOR_TEST_FILE")
-            )
-            salt.utils.process.claim_mantle_of_responsibility("CMOR_TEST_FILE")
-            pid = salt.utils.process.get_process_info()["pid"]
-            self.assertEqual(
-                pid, salt.utils.process.check_mantle_of_responsibility("CMOR_TEST_FILE")
-            )
-        finally:
-            os.remove("CMOR_TEST_FILE")
+        self.assertIsNone(
+            salt.utils.process.check_mantle_of_responsibility(self.cmor_test_file_path)
+        )
+        salt.utils.process.claim_mantle_of_responsibility(self.cmor_test_file_path)
+        pid = salt.utils.process.get_process_info()["pid"]
+        self.assertEqual(
+            pid,
+            salt.utils.process.check_mantle_of_responsibility(self.cmor_test_file_path),
+        )

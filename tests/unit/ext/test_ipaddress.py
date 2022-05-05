@@ -3,8 +3,8 @@
 #
 #
 
-# This is test_ipaddress.py from Python 3.9.1, verbatim, with minor compatility changes
-#    https://github.com/python/cpython/blob/v3.9.1/Lib/test/test_ipaddress.py
+# This is test_ipaddress.py from Python 3.9.5, verbatim, with minor compatility changes
+#    https://github.com/python/cpython/blob/v3.9.5/Lib/test/test_ipaddress.py
 #
 # Modifications:
 #  - Switch the ipaddress import to salt._compat
@@ -25,7 +25,7 @@ import weakref
 
 import pytest
 from salt._compat import ipaddress
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 
 @functools.total_ordering
@@ -112,6 +112,7 @@ class BaseTestCase(TestCase):
         self.assertEqual(self.factory(lhs), self.factory(rhs))
 
 
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class CommonTestMixin:
     def test_empty_address(self):
         with self.assertAddressError("Address cannot be empty"):
@@ -136,12 +137,26 @@ class CommonTestMixin:
                 self.assertEqual(y, x)
 
 
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class CommonTestMixin_v4(CommonTestMixin):
     def test_leading_zeros(self):
-        self.assertInstancesEqual("000.000.000.000", "0.0.0.0")
-        self.assertInstancesEqual("192.168.000.001", "192.168.0.1")
-        self.assertInstancesEqual("016.016.016.016", "16.16.16.16")
-        self.assertInstancesEqual("001.000.008.016", "1.0.8.16")
+        # bpo-36384: no leading zeros to avoid ambiguity with octal notation
+        msg = r"Leading zeros are not permitted in '\d+'"
+        addresses = [
+            "000.000.000.000",
+            "192.168.000.001",
+            "016.016.016.016",
+            "192.168.000.001",
+            "001.000.008.016",
+            "01.2.3.40",
+            "1.02.3.40",
+            "1.2.03.40",
+            "1.2.3.040",
+        ]
+        for address in addresses:
+            with self.subTest(address=address):
+                with self.assertAddressError(msg):
+                    self.factory(address)
 
     def test_int(self):
         self.assertInstancesEqual(0, "0.0.0.0")
@@ -172,6 +187,7 @@ class CommonTestMixin_v4(CommonTestMixin):
         assertBadLength(5)
 
 
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class CommonTestMixin_v6(CommonTestMixin):
     def test_leading_zeros(self):
         self.assertInstancesEqual("0000::0000", "::")
@@ -221,6 +237,7 @@ class CommonTestMixin_v6(CommonTestMixin):
             self.factory(address)
 
 
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class AddressTestCase_v4(BaseTestCase, CommonTestMixin_v4):
     factory = ipaddress.IPv4Address
 
@@ -333,6 +350,7 @@ class AddressTestCase_v4(BaseTestCase, CommonTestMixin_v4):
         weakref.ref(self.factory("192.0.2.1"))
 
 
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class AddressTestCase_v6(BaseTestCase, CommonTestMixin_v6):
     factory = ipaddress.IPv6Address
 
@@ -528,7 +546,7 @@ class AddressTestCase_v6(BaseTestCase, CommonTestMixin_v6):
         assertBadAddressPart("::1.2.3.4.5", "Expected 4 octets in '1.2.3.4.5'")
         assertBadAddressPart(
             "3ffe::1.1.1.net",
-            "Only decimal digits permitted in 'net' " "in '1.1.1.net'",
+            "Only decimal digits permitted in 'net' in '1.1.1.net'",
         )
 
         assertBadAddressPart("3ffe::1.net%scope", "Expected 4 octets in '1.net'")
@@ -537,7 +555,7 @@ class AddressTestCase_v6(BaseTestCase, CommonTestMixin_v6):
         assertBadAddressPart("::1.2.3.4.5%scope", "Expected 4 octets in '1.2.3.4.5'")
         assertBadAddressPart(
             "3ffe::1.1.1.net%scope",
-            "Only decimal digits permitted in 'net' " "in '1.1.1.net'",
+            "Only decimal digits permitted in 'net' in '1.1.1.net'",
         )
 
     def test_invalid_characters(self):
@@ -586,6 +604,7 @@ class AddressTestCase_v6(BaseTestCase, CommonTestMixin_v6):
         weakref.ref(self.factory("2001:db8::%scope"))
 
 
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class NetmaskTestMixin_v4(CommonTestMixin_v4):
     """Input validation on interfaces and networks is very similar"""
 
@@ -673,6 +692,7 @@ class InterfaceTestCase_v4(BaseTestCase, NetmaskTestMixin_v4):
     factory = ipaddress.IPv4Interface
 
 
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class NetworkTestCase_v4(BaseTestCase, NetmaskTestMixin_v4):
     factory = ipaddress.IPv4Network
 
@@ -731,6 +751,7 @@ class NetworkTestCase_v4(BaseTestCase, NetmaskTestMixin_v4):
             )
 
 
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class NetmaskTestMixin_v6(CommonTestMixin_v6):
     """Input validation on interfaces and networks is very similar"""
 
@@ -843,6 +864,7 @@ class InterfaceTestCase_v6(BaseTestCase, NetmaskTestMixin_v6):
     factory = ipaddress.IPv6Interface
 
 
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class NetworkTestCase_v6(BaseTestCase, NetmaskTestMixin_v6):
     factory = ipaddress.IPv6Network
 
@@ -894,6 +916,7 @@ class NetworkTestCase_v6(BaseTestCase, NetmaskTestMixin_v6):
         )
 
 
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class FactoryFunctionErrors(BaseTestCase):
     def assertFactoryError(self, factory, kind):
         """Ensure a clean ValueError with the expected message"""
@@ -912,6 +935,7 @@ class FactoryFunctionErrors(BaseTestCase):
         self.assertFactoryError(ipaddress.ip_network, "network")
 
 
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class ComparisonTests(TestCase):
 
     v4addr = ipaddress.IPv4Address(1)
@@ -1098,6 +1122,7 @@ class ComparisonTests(TestCase):
         self.assertRaises(TypeError, v6net_scoped.__gt__, v4net)
 
 
+@skipIf(sys.version_info >= (3, 9, 5), "We use builtin ipaddress on Python >= 3.9.5")
 class IpaddrUnitTest(TestCase):
     def setUp(self):
         self.ipv4_address = ipaddress.IPv4Address("1.2.3.4")
@@ -1341,7 +1366,7 @@ class IpaddrUnitTest(TestCase):
         self.assertEqual(
             self.ipv6_interface.ip,
             ipaddress.ip_interface(
-                b"\x20\x01\x06\x58\x02\x2a\xca\xfe" b"\x02\x00\x00\x00\x00\x00\x00\x01"
+                b"\x20\x01\x06\x58\x02\x2a\xca\xfe\x02\x00\x00\x00\x00\x00\x00\x01"
             ).ip,
         )
         self.assertEqual(
@@ -2344,7 +2369,7 @@ class IpaddrUnitTest(TestCase):
         )
         self.assertEqual(
             self.ipv6_address.packed,
-            b"\x20\x01\x06\x58\x02\x2a\xca\xfe" b"\x02\x00\x00\x00\x00\x00\x00\x01",
+            b"\x20\x01\x06\x58\x02\x2a\xca\xfe\x02\x00\x00\x00\x00\x00\x00\x01",
         )
         self.assertEqual(
             ipaddress.IPv6Interface("ffff:2:3:4:ffff::").packed,
@@ -2356,7 +2381,7 @@ class IpaddrUnitTest(TestCase):
         )
         self.assertEqual(
             self.ipv6_scoped_address.packed,
-            b"\x20\x01\x06\x58\x02\x2a\xca\xfe" b"\x02\x00\x00\x00\x00\x00\x00\x01",
+            b"\x20\x01\x06\x58\x02\x2a\xca\xfe\x02\x00\x00\x00\x00\x00\x00\x01",
         )
         self.assertEqual(
             ipaddress.IPv6Interface("ffff:2:3:4:ffff::%scope").packed,

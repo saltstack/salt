@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Default values, to be imported elsewhere in Salt code
 

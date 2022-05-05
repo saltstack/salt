@@ -265,7 +265,8 @@ class OpenstackTestCase(TestCase, LoaderModuleMockMixin):
             "thisgetsdropped": "yup",
         }
         patch_utils = patch.dict(
-            openstack.__utils__, {"dictupdate.update": dictupdate.update},
+            openstack.__utils__,
+            {"dictupdate.update": dictupdate.update},
         )
         with patch_utils:
             ret = openstack._clean_create_kwargs(**params)

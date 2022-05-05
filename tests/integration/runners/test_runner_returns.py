@@ -37,7 +37,10 @@ class RunnerReturnsTest(ShellCase):
                 raise
 
         self.conf = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".conf", dir=self.master_d_dir, delete=False,
+            mode="w",
+            suffix=".conf",
+            dir=self.master_d_dir,
+            delete=False,
         )
 
     def tearDown(self):
@@ -114,9 +117,8 @@ class RunnerReturnsTest(ShellCase):
             "master",
             "return.p",
         )
-        serial = salt.payload.Serial(self.master_opts)
         with salt.utils.files.fopen(serialized_return, "rb") as fp_:
-            deserialized = serial.loads(fp_.read(), encoding="utf-8")
+            deserialized = salt.payload.loads(fp_.read(), encoding="utf-8")
 
         self.clean_return(deserialized["return"])
 

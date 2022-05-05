@@ -8,7 +8,9 @@ import pytest
 
 log = logging.getLogger(__name__)
 
-pytestmark = [pytest.mark.skip_if_binaries_missing("dockerd")]
+pytestmark = [
+    pytest.mark.skip_if_binaries_missing("dockerd"),
+]
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -36,6 +38,18 @@ def etc_docker_container(salt_call_cli, sdb_etcd_port):
         state_run = next(iter(ret.json.values()))
         assert state_run["result"] is True
         container_started = True
+        tries_left = 10
+        while tries_left > 0:
+            tries_left -= 1
+            ret = salt_call_cli.run(
+                "sdb.set", uri="sdb://sdbetcd/secret/test/test_sdb/fnord", value="bar"
+            )
+            if ret.exitcode == 0:
+                break
+        else:
+            pytest.skip(
+                "Failed to actually connect to etcd inside the running container - skipping test today"
+            )
         yield
     finally:
         if container_started:

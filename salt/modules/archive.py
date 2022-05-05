@@ -55,10 +55,11 @@ def list_(
     verbose=False,
     saltenv="base",
     source_hash=None,
+    use_etag=False,
 ):
     """
     .. versionadded:: 2016.11.0
-    .. versionchanged:: 2016.11.2
+    .. versionchanged:: 2016.11.2,3005
         The rarfile_ Python module is now supported for listing the contents of
         rar archives. This is necessary on minions with older releases of the
         ``rar`` CLI tool, which do not support listing the contents in a
@@ -151,6 +152,15 @@ def list_(
         hash.
 
         .. versionadded:: 2018.3.0
+
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
 
     .. _tarfile: https://docs.python.org/2/library/tarfile.html
     .. _xz: http://tukaani.org/xz/
@@ -321,7 +331,9 @@ def list_(
                 )
         return dirs, files, []
 
-    cached = __salt__["cp.cache_file"](name, saltenv, source_hash=source_hash)
+    cached = __salt__["cp.cache_file"](
+        name, saltenv, source_hash=source_hash, use_etag=use_etag
+    )
     if not cached:
         raise CommandExecutionError("Failed to cache {}".format(name))
 
@@ -413,7 +425,15 @@ def list_(
                 "files": sorted(salt.utils.data.decode_list(files)),
                 "links": sorted(salt.utils.data.decode_list(links)),
             }
-            ret["top_level_dirs"] = [x for x in ret["dirs"] if x.count("/") == 1]
+            top_level_dirs = [x for x in ret["dirs"] if x.count("/") == 1]
+            # the common_prefix logic handles scenarios where the TLD
+            # isn't listed as an archive member on its own
+            common_prefix = os.path.commonprefix(ret["dirs"])
+            if "/" in common_prefix:
+                common_prefix = common_prefix.split("/")[0] + "/"
+                if common_prefix not in top_level_dirs:
+                    top_level_dirs.append(common_prefix)
+            ret["top_level_dirs"] = top_level_dirs
             ret["top_level_files"] = [x for x in ret["files"] if x.count("/") == 0]
             ret["top_level_links"] = [x for x in ret["links"] if x.count("/") == 0]
         else:
@@ -1107,9 +1127,10 @@ def unzip(
     return _trim_files(cleaned_files, trim_output)
 
 
-def is_encrypted(name, clean=False, saltenv="base", source_hash=None):
+def is_encrypted(name, clean=False, saltenv="base", source_hash=None, use_etag=False):
     """
     .. versionadded:: 2016.11.0
+    .. versionchanged:: 3005
 
     Returns ``True`` if the zip archive is password-protected, ``False`` if
     not. If the specified file is not a ZIP archive, an error will be raised.
@@ -1139,6 +1160,15 @@ def is_encrypted(name, clean=False, saltenv="base", source_hash=None):
 
         .. versionadded:: 2018.3.0
 
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
+
     CLI Examples:
 
     .. code-block:: bash
@@ -1150,7 +1180,9 @@ def is_encrypted(name, clean=False, saltenv="base", source_hash=None):
             salt '*' archive.is_encrypted https://domain.tld/myfile.zip source_hash=f1d2d2f924e986ac86fdf7b36c94bcdf32beec15
             salt '*' archive.is_encrypted ftp://10.1.2.3/foo.zip
     """
-    cached = __salt__["cp.cache_file"](name, saltenv, source_hash=source_hash)
+    cached = __salt__["cp.cache_file"](
+        name, saltenv, source_hash=source_hash, use_etag=use_etag
+    )
     if not cached:
         raise CommandExecutionError("Failed to cache {}".format(name))
 
@@ -1294,8 +1326,7 @@ def _render_filenames(filenames, zip_file, saltenv, template):
     # render the path as a template using path_template_engine as the engine
     if template not in salt.utils.templates.TEMPLATE_REGISTRY:
         raise CommandExecutionError(
-            "Attempted to render file paths with unavailable engine "
-            "{}".format(template)
+            "Attempted to render file paths with unavailable engine {}".format(template)
         )
 
     kwargs = {}

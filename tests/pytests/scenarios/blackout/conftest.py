@@ -126,9 +126,9 @@ def salt_master(salt_factories, pillar_state_tree):
         "pillar_roots": {"base": [str(pillar_state_tree)]},
         "open_mode": True,
     }
-    factory = salt_factories.get_salt_master_daemon(
+    factory = salt_factories.salt_master_daemon(
         "blackout-master",
-        config_defaults=config_defaults,
+        defaults=config_defaults,
         extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
     )
     with factory.started():
@@ -137,8 +137,8 @@ def salt_master(salt_factories, pillar_state_tree):
 
 @pytest.fixture(scope="package")
 def salt_minion_1(salt_master):
-    factory = salt_master.get_salt_minion_daemon(
-        "blackout-minion-1", config_defaults={"open_mode": True}
+    factory = salt_master.salt_minion_daemon(
+        "blackout-minion-1", defaults={"open_mode": True}
     )
     with factory.started():
         yield factory
@@ -146,8 +146,8 @@ def salt_minion_1(salt_master):
 
 @pytest.fixture(scope="package")
 def salt_minion_2(salt_master):
-    factory = salt_master.get_salt_minion_daemon(
-        "blackout-minion-2", config_defaults={"open_mode": True}
+    factory = salt_master.salt_minion_daemon(
+        "blackout-minion-2", defaults={"open_mode": True}
     )
     with factory.started():
         yield factory
@@ -155,7 +155,7 @@ def salt_minion_2(salt_master):
 
 @pytest.fixture(scope="package")
 def salt_cli(salt_master):
-    return salt_master.get_salt_cli()
+    return salt_master.salt_cli()
 
 
 @pytest.fixture(scope="package")

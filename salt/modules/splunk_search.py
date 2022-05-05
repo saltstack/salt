@@ -270,7 +270,7 @@ def list_all(
 
     results = OrderedDict()
     # sort the splunk searches by name, so we get consistent output
-    searches = sorted([(s.name, s) for s in client.saved_searches])
+    searches = sorted((s.name, s) for s in client.saved_searches)
     for name, search in searches:
         if app and search.access.app != app:
             continue

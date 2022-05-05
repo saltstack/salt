@@ -2,13 +2,13 @@ import time
 import uuid
 
 import attr
-from saltfactories.factories.daemons.container import SaltMinionContainerFactory
+from saltfactories.daemons.container import SaltMinion
 from saltfactories.utils import ports
 from tests.support.runtests import RUNTIME_VARS
 
 
 @attr.s(kw_only=True, slots=True)
-class SaltVirtMinionContainerFactory(SaltMinionContainerFactory):
+class SaltVirtMinionContainerFactory(SaltMinion):
 
     host_uuid = attr.ib(default=attr.Factory(uuid.uuid4))
     ssh_port = attr.ib(
@@ -31,10 +31,12 @@ class SaltVirtMinionContainerFactory(SaltMinionContainerFactory):
         self.uri = "localhost:{}".format(self.sshd_port)
         self.ssh_uri = "qemu+ssh://{}/system".format(self.uri)
         self.tcp_uri = "qemu+tcp://localhost:{}/system".format(self.libvirt_tcp_port)
-        self.tls_uri = "qemu+tls://localhost:{}/system".format(self.libvirt_tls_port)
+        self.tls_uri = "qemu+tls://127.0.0.1:{}/system".format(self.libvirt_tls_port)
 
+        # pylint: disable=access-member-before-definition
         if self.check_ports is None:
             self.check_ports = []
+        # pylint: enable=access-member-before-definition
         self.check_ports.extend(
             [self.sshd_port, self.libvirt_tcp_port, self.libvirt_tls_port]
         )

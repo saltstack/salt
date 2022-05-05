@@ -65,6 +65,7 @@ https://github.com/unbit/uwsgi/commit/ac1e354
 
 import random
 import string
+import sys
 
 import pytest
 import salt.utils.path
@@ -88,7 +89,7 @@ from tests.support.gitfs import (  # pylint: disable=unused-import
     webserver_pillar_tests_prep,
     webserver_pillar_tests_prep_authenticated,
 )
-from tests.support.helpers import requires_system_grains
+from tests.support.helpers import SKIP_INITIAL_PHOTONOS_FAILURES, requires_system_grains
 from tests.support.unit import skipIf
 
 # Check for requisite components
@@ -105,6 +106,10 @@ except Exception:  # pylint: disable=broad-except
 HAS_SSHD = bool(salt.utils.path.which("sshd"))
 HAS_NGINX = bool(salt.utils.path.which("nginx"))
 HAS_VIRTUALENV = bool(salt.utils.path.which_bin(VIRTUALENV_NAMES))
+
+pytestmark = [
+    SKIP_INITIAL_PHOTONOS_FAILURES,
+]
 
 
 def _rand_key_name(length):
@@ -726,6 +731,7 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
     password = PASSWORD
 
 
+@skipIf(salt.utils.platform.is_aarch64(), "Test is broken on aarch64")
 @skipIf(_windows_or_mac(), "minion is windows or mac")
 @skipIf(
     not HAS_PYGIT2,
@@ -735,6 +741,13 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
 @pytest.mark.usefixtures("ssh_pillar_tests_prep")
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skipif(
+    sys.version_info >= (3, 10),
+    reason=(
+        "Temporarily Skip under Py3.10. Issue with ssh and newer ssh keys. "
+        "See https://github.com/saltstack/salt/issues/61704"
+    ),
+)
 class TestPygit2SSH(GitPillarSSHTestBase):
     """
     Test git_pillar with pygit2 using SSH authentication

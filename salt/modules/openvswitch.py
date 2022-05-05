@@ -421,8 +421,8 @@ def port_create_gre(br, port, id, remote):
         return _retcode_to_bool(result["retcode"])
     else:
         cmd = (
-            "ovs-vsctl add-port {0} {1} -- set interface {1} type=gre options:remote_ip={2} "
-            "options:key={3}".format(br, port, remote, id)
+            "ovs-vsctl add-port {0} {1} -- set interface {1} type=gre"
+            " options:remote_ip={2} options:key={3}".format(br, port, remote, id)
         )
         result = __salt__["cmd.run_all"](cmd)
         return _retcode_to_bool(result["retcode"])
@@ -466,8 +466,10 @@ def port_create_vxlan(br, port, id, remote, dst_port=None):
         return _retcode_to_bool(result["retcode"])
     else:
         cmd = (
-            "ovs-vsctl add-port {0} {1} -- set interface {1} type=vxlan options:remote_ip={2} "
-            "options:key={3}{4}".format(br, port, remote, id, dst_port)
+            "ovs-vsctl add-port {0} {1} -- set interface {1} type=vxlan"
+            " options:remote_ip={2} options:key={3}{4}".format(
+                br, port, remote, id, dst_port
+            )
         )
         result = __salt__["cmd.run_all"](cmd)
         return _retcode_to_bool(result["retcode"])

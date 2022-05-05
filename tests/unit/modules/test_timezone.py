@@ -69,8 +69,8 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
 
 class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
     """
-        Timezone test case
-        """
+    Timezone test case
+    """
 
     TEST_TZ = "UTC"
 

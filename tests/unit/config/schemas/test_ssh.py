@@ -1,24 +1,16 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Pedro Algarvio (pedro@algarvio.me)
 
     tests.unit.config.schemas.test_ssh
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-# Import python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.utils.stringutils
-
-# Import Salt Libs
 from salt.config.schemas import ssh as ssh_schemas
 from salt.config.schemas.minion import MinionConfiguration
 from salt.utils.versions import LooseVersion as _LooseVersion
-
-# Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
 
-# Import 3rd-party libs
 try:
     import jsonschema
     import jsonschema.exceptions
@@ -71,7 +63,9 @@ class RosterEntryConfigTest(TestCase):
                 },
                 "priv": {
                     "type": "string",
-                    "description": "File path to ssh private key, defaults to salt-ssh.rsa",
+                    "description": (
+                        "File path to ssh private key, defaults to salt-ssh.rsa"
+                    ),
                     "title": "Private Key",
                     "minLength": 1,
                 },
@@ -90,12 +84,18 @@ class RosterEntryConfigTest(TestCase):
                 },
                 "timeout": {
                     "type": "integer",
-                    "description": "Number of seconds to wait for response when establishing an SSH connection",
+                    "description": (
+                        "Number of seconds to wait for response when establishing an"
+                        " SSH connection"
+                    ),
                     "title": "Timeout",
                 },
                 "thin_dir": {
                     "type": "string",
-                    "description": "The target system's storage directory for Salt components. Defaults to /tmp/salt-<hash>.",
+                    "description": (
+                        "The target system's storage directory for Salt components."
+                        " Defaults to /tmp/salt-<hash>."
+                    ),
                     "title": "Thin Directory",
                 },
                 # The actuall representation of the minion options would make this HUGE!
@@ -141,7 +141,7 @@ class RosterEntryConfigTest(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         try:
             jsonschema.validate(
@@ -150,7 +150,7 @@ class RosterEntryConfigTest(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         try:
             jsonschema.validate(
@@ -159,7 +159,7 @@ class RosterEntryConfigTest(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         try:
             jsonschema.validate(
@@ -168,7 +168,7 @@ class RosterEntryConfigTest(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         try:
             jsonschema.validate(
@@ -183,7 +183,7 @@ class RosterEntryConfigTest(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         try:
             jsonschema.validate(
@@ -197,7 +197,7 @@ class RosterEntryConfigTest(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
@@ -252,7 +252,7 @@ class RosterItemTest(TestCase):
                 format_checker=jsonschema.FormatChecker(),
             )
         except jsonschema.exceptions.ValidationError as exc:
-            self.fail("ValidationError raised: {0}".format(exc))
+            self.fail("ValidationError raised: {}".format(exc))
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
