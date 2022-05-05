@@ -1,0 +1,1 @@
+Fix tracabacks caused by missing block device type and wrong mode used for gzip.open while calling inspector.export
