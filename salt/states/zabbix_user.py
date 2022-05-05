@@ -177,6 +177,7 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
     """
     if medias is None:
         medias = []
+    usrgrps = [int(x) for x in usrgrps]
     connection_args = {}
     if "_connection_user" in kwargs:
         connection_args["_connection_user"] = kwargs["_connection_user"]
