@@ -838,7 +838,7 @@ def user_addmedia(
     userids, active, mediatypeid, period, sendto, severity, **connection_args
 ):
     """
-    Add new media to multiple users.
+    Add new media to multiple users. Available only for Zabbix version 3.4 or older.
 
     .. versionadded:: 2016.3.0
 
@@ -863,7 +863,20 @@ def user_addmedia(
 
     """
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
+
+    method = "user.addmedia"
+
+    if _LooseVersion(zabbix_version) > _LooseVersion("3.4"):
+        ret = {
+            "result": False,
+            "comment": "Method '{}' removed in Zabbix 4.0+ use 'user.update'".format(
+                method
+            ),
+        }
+        return ret
+
     try:
         if conn_args:
             method = "user.addmedia"
@@ -894,7 +907,7 @@ def user_addmedia(
 
 def user_deletemedia(mediaids, **connection_args):
     """
-    Delete media by id.
+    Delete media by id. Available only for Zabbix version 3.4 or older.
 
     .. versionadded:: 2016.3.0
 
@@ -912,11 +925,22 @@ def user_deletemedia(mediaids, **connection_args):
         salt '*' zabbix.user_deletemedia 27
     """
     conn_args = _login(**connection_args)
+    zabbix_version = apiinfo_version(**connection_args)
     ret = False
+
+    method = "user.deletemedia"
+
+    if _LooseVersion(zabbix_version) > _LooseVersion("3.4"):
+        ret = {
+            "result": False,
+            "comment": "Method '{}' removed in Zabbix 4.0+ use 'user.update'".format(
+                method
+            ),
+        }
+        return ret
+
     try:
         if conn_args:
-            method = "user.deletemedia"
-
             if not isinstance(mediaids, list):
                 mediaids = [mediaids]
             params = mediaids
