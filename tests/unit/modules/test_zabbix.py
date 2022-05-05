@@ -350,18 +350,19 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
         module_return = ["3"]
         query_return = {"jsonrpc": "2.0", "result": {"userids": ["3"]}, "id": 0}
 
-        with patch.object(zabbix, "_query", return_value=query_return):
-            with patch.object(zabbix, "_login", return_value=CONN_ARGS):
-                self.assertEqual(
-                    zabbix.user_create(
-                        "james",
-                        "password007",
-                        "[7, 12]",
-                        firstname="James Bond",
-                        **CONN_ARGS
-                    ),
-                    module_return,
-                )
+        with patch.object(zabbix, "apiinfo_version", return_value="3.2"):
+            with patch.object(zabbix, "_query", return_value=query_return):
+                with patch.object(zabbix, "_login", return_value=CONN_ARGS):
+                    self.assertEqual(
+                        zabbix.user_create(
+                            "james",
+                            "password007",
+                            "[7, 12]",
+                            firstname="James Bond",
+                            **CONN_ARGS
+                        ),
+                        module_return,
+                    )
 
     def test_user_delete(self):
         """
@@ -409,11 +410,12 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
             "id": 0,
         }
 
-        with patch.object(zabbix, "_query", return_value=query_return):
-            with patch.object(zabbix, "_login", return_value=CONN_ARGS):
-                self.assertEqual(
-                    zabbix.user_exists("Admin", **CONN_ARGS), module_return
-                )
+        with patch.object(zabbix, "apiinfo_version", return_value="3.2"):
+            with patch.object(zabbix, "_query", return_value=query_return):
+                with patch.object(zabbix, "_login", return_value=CONN_ARGS):
+                    self.assertEqual(
+                        zabbix.user_exists("Admin", **CONN_ARGS), module_return
+                    )
 
     def test_user_get(self):
         """
@@ -466,12 +468,15 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
             "id": 0,
         }
 
-        with patch.object(zabbix, "_query", return_value=query_return):
-            with patch.object(zabbix, "_login", return_value=CONN_ARGS):
-                self.assertEqual(zabbix.user_get("Admin", **CONN_ARGS), module_return)
-                self.assertEqual(
-                    zabbix.user_get(userids="1", **CONN_ARGS), module_return
-                )
+        with patch.object(zabbix, "apiinfo_version", return_value="3.2"):
+            with patch.object(zabbix, "_query", return_value=query_return):
+                with patch.object(zabbix, "_login", return_value=CONN_ARGS):
+                    self.assertEqual(
+                        zabbix.user_get("Admin", **CONN_ARGS), module_return
+                    )
+                    self.assertEqual(
+                        zabbix.user_get(userids="1", **CONN_ARGS), module_return
+                    )
 
     def test_user_update(self):
         """
@@ -482,12 +487,37 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
         module_return = ["3"]
         query_return = {"jsonrpc": "2.0", "result": {"userids": ["3"]}, "id": 0}
 
-        with patch.object(zabbix, "_query", return_value=query_return):
-            with patch.object(zabbix, "_login", return_value=CONN_ARGS):
-                self.assertEqual(
-                    zabbix.user_update("3", visible_name="James Brown", **CONN_ARGS),
-                    module_return,
-                )
+        with patch.object(zabbix, "apiinfo_version", return_value="3.4"):
+            with patch.object(zabbix, "_query", return_value=query_return):
+                with patch.object(zabbix, "_login", return_value=CONN_ARGS):
+                    self.assertEqual(
+                        zabbix.user_update(
+                            "3", visible_name="James Brown", medias=[], **CONN_ARGS
+                        ),
+                        module_return,
+                    )
+
+    def test_user_update_v32(self):
+        """
+        query_submitted = {"params": {"userid": 3, "name": "James Brown"}, "jsonrpc": "2.0",
+        "id": 0, "auth": "cdf2ee35e3bc47560585e9c457cbc398", "method": "user.update"}
+        """
+
+        module_return = {
+            "result": False,
+            "comment": "Setting medias available in Zabbix 3.4+",
+        }
+        query_return = {"jsonrpc": "2.0", "result": {"userids": ["3"]}, "id": 0}
+
+        with patch.object(zabbix, "apiinfo_version", return_value="3.2"):
+            with patch.object(zabbix, "_query", return_value=query_return):
+                with patch.object(zabbix, "_login", return_value=CONN_ARGS):
+                    self.assertEqual(
+                        zabbix.user_update(
+                            "3", visible_name="James Brown", medias=[], **CONN_ARGS
+                        ),
+                        module_return,
+                    )
 
     def test_user_getmedia(self):
         """
@@ -523,9 +553,12 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
             "id": 0,
         }
 
-        with patch.object(zabbix, "_query", return_value=query_return):
-            with patch.object(zabbix, "_login", return_value=CONN_ARGS):
-                self.assertEqual(zabbix.user_getmedia("3", **CONN_ARGS), module_return)
+        with patch.object(zabbix, "apiinfo_version", return_value="3.2"):
+            with patch.object(zabbix, "_query", return_value=query_return):
+                with patch.object(zabbix, "_login", return_value=CONN_ARGS):
+                    self.assertEqual(
+                        zabbix.user_getmedia("3", **CONN_ARGS), module_return
+                    )
 
     def test_user_addmedia(self):
         """
@@ -538,20 +571,48 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
         module_return = ["2"]
         query_return = {"jsonrpc": "2.0", "result": {"mediaids": ["2"]}, "id": 0}
 
-        with patch.object(zabbix, "_query", return_value=query_return):
-            with patch.object(zabbix, "_login", return_value=CONN_ARGS):
-                self.assertEqual(
-                    zabbix.user_addmedia(
-                        "1",
-                        active="0",
-                        mediatypeid="1",
-                        period="1-7,00:00-24:00",
-                        sendto="support2@example.com",
-                        severity="63",
-                        **CONN_ARGS
-                    ),
-                    module_return,
-                )
+        with patch.object(zabbix, "apiinfo_version", return_value="3.2"):
+            with patch.object(zabbix, "_query", return_value=query_return):
+                with patch.object(zabbix, "_login", return_value=CONN_ARGS):
+                    self.assertEqual(
+                        zabbix.user_addmedia(
+                            "1",
+                            active="0",
+                            mediatypeid="1",
+                            period="1-7,00:00-24:00",
+                            sendto="support2@example.com",
+                            severity="63",
+                            **CONN_ARGS
+                        ),
+                        module_return,
+                    )
+
+    def test_user_addmedia_v40(self):
+        method = "user.addmedia"
+        module_return = {
+            "result": False,
+            "comment": "Method '{}' removed in Zabbix 4.0+ use 'user.update'".format(
+                method
+            ),
+        }
+
+        query_return = {"jsonrpc": "2.0", "result": {"mediaids": ["2"]}, "id": 0}
+
+        with patch.object(zabbix, "apiinfo_version", return_value="4.0"):
+            with patch.object(zabbix, "_query", return_value=query_return):
+                with patch.object(zabbix, "_login", return_value=CONN_ARGS):
+                    self.assertEqual(
+                        zabbix.user_addmedia(
+                            "1",
+                            active="0",
+                            mediatypeid="1",
+                            period="1-7,00:00-24:00",
+                            sendto="support2@example.com",
+                            severity="63",
+                            **CONN_ARGS
+                        ),
+                        module_return,
+                    )
 
     def test_user_deletemedia(self):
         """
@@ -562,11 +623,30 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
         module_return = [1]
         query_return = {"jsonrpc": "2.0", "result": {"mediaids": [1]}, "id": 0}
 
-        with patch.object(zabbix, "_query", return_value=query_return):
-            with patch.object(zabbix, "_login", return_value=CONN_ARGS):
-                self.assertEqual(
-                    zabbix.user_deletemedia("1", **CONN_ARGS), module_return
-                )
+        with patch.object(zabbix, "apiinfo_version", return_value="3.2"):
+            with patch.object(zabbix, "_query", return_value=query_return):
+                with patch.object(zabbix, "_login", return_value=CONN_ARGS):
+                    self.assertEqual(
+                        zabbix.user_deletemedia("1", **CONN_ARGS), module_return
+                    )
+
+    def test_user_deletemedia_v40(self):
+        method = "user.deletemedia"
+        module_return = {
+            "result": False,
+            "comment": "Method '{}' removed in Zabbix 4.0+ use 'user.update'".format(
+                method
+            ),
+        }
+
+        query_return = {"jsonrpc": "2.0", "result": {"mediaids": ["2"]}, "id": 0}
+
+        with patch.object(zabbix, "apiinfo_version", return_value="4.0"):
+            with patch.object(zabbix, "_query", return_value=query_return):
+                with patch.object(zabbix, "_login", return_value=CONN_ARGS):
+                    self.assertEqual(
+                        zabbix.user_deletemedia("1", **CONN_ARGS), module_return
+                    )
 
     def test_user_list(self):
         """
