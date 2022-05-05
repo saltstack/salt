@@ -7,8 +7,8 @@ Management of Zabbix users.
 """
 
 
-from copy import deepcopy
 import logging
+from copy import deepcopy
 
 import salt.utils.json
 from salt.exceptions import SaltException
@@ -277,8 +277,8 @@ def present(alias, passwd, usrgrps, medias=None, password_reset=False, **kwargs)
 
         user_medias = user.get("medias", [])
         medias_formated = _media_format(medias)
-        log.debug("user_medias = {}".format(user_medias))
-        log.debug("medias_formated = {}".format(medias_formated))
+        log.debug(user_medias)
+        log.debug(medias_formated)
 
         if user_medias:
             user_medias_copy = deepcopy(user_medias)

@@ -795,7 +795,6 @@ def user_update(userid, **connection_args):
                 )
 
             params = _params_extend(params, _ignore_name=True, **connection_args)
-            log.debug("params = {}".format(params))
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
             return ret["result"]["userids"]
         else:
