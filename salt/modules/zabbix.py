@@ -745,8 +745,11 @@ def user_update(userid, **connection_args):
     zabbix_version = apiinfo_version(**connection_args)
     ret = False
 
-    medias = connection_args.pop("medias", [])
-    medias.extend(connection_args.pop("user_medias", []))
+    medias = connection_args.pop("medias", None)
+    if medias is None:
+        medias = connection_args.pop("user_medias", None)
+    else:
+        medias.extend(connection_args.pop("user_medias", []))
 
     try:
         if conn_args:
@@ -755,15 +758,21 @@ def user_update(userid, **connection_args):
                 "userid": userid,
             }
 
-            if _LooseVersion(zabbix_version) < _LooseVersion("3.4") and medias:
+            if (
+                _LooseVersion(zabbix_version) < _LooseVersion("3.4")
+                and medias is not None
+            ):
                 ret = {
                     "result": False,
                     "comment": "Setting medias available in Zabbix 3.4+",
                 }
                 return ret
-            elif _LooseVersion(zabbix_version) > _LooseVersion("5.0") and medias:
+            elif (
+                _LooseVersion(zabbix_version) > _LooseVersion("5.0")
+                and medias is not None
+            ):
                 params["medias"] = medias
-            elif medias:
+            elif medias is not None:
                 params["user_medias"] = medias
 
             if "usrgrps" in connection_args:
@@ -774,6 +783,7 @@ def user_update(userid, **connection_args):
                 params["usrgrps"] = grps
 
             params = _params_extend(params, _ignore_name=True, **connection_args)
+            log.debug("params = {}".format(params))
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
             return ret["result"]["userids"]
         else:
