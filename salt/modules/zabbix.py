@@ -294,6 +294,21 @@ def _params_extend(params, _ignore_name=False, **kwargs):
     return params
 
 
+def _map_to_list_of_dicts(source, key):
+    """
+    Maps list of values to list of dicts of values, eg:
+        [usrgrpid1, usrgrpid2, ...] => [{"usrgrpid": usrgrpid1}, {"usrgrpid": usrgrpid2}, ...]
+
+    :param source:  list of values
+    :param key: name of dict key
+    :return: List of dicts in format: [{key: elem}, ...]
+    """
+    output = []
+    for elem in source:
+        output.append({key: elem})
+    return output
+
+
 def get_zabbix_id_mapper():
     """
     .. versionadded:: 2017.7
@@ -567,8 +582,7 @@ def user_create(alias, passwd, usrgrps, **connection_args):
             # User groups
             if not isinstance(usrgrps, list):
                 usrgrps = [usrgrps]
-            for usrgrp in usrgrps:
-                params["usrgrps"].append({"usrgrpid": usrgrp})
+            params["usrgrps"] = _map_to_list_of_dicts(usrgrps, "usrgrpid")
 
             params = _params_extend(params, _ignore_name=True, **connection_args)
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
@@ -776,11 +790,9 @@ def user_update(userid, **connection_args):
                 params["user_medias"] = medias
 
             if "usrgrps" in connection_args:
-                groups = connection_args.pop("usrgrps")
-                grps = []
-                for group in groups:
-                    grps.append({"usrgrpid": group})
-                params["usrgrps"] = grps
+                params["usrgrps"] = _map_to_list_of_dicts(
+                    connection_args.pop("usrgrps"), "usrgrpid"
+                )
 
             params = _params_extend(params, _ignore_name=True, **connection_args)
             log.debug("params = {}".format(params))
@@ -1300,10 +1312,7 @@ def host_create(host, groups, interfaces, **connection_args):
             # Groups
             if not isinstance(groups, list):
                 groups = [groups]
-            grps = []
-            for group in groups:
-                grps.append({"groupid": group})
-            params["groups"] = grps
+            params["groups"] = _map_to_list_of_dicts(groups, "groupid")
             # Interfaces
             if not isinstance(interfaces, list):
                 interfaces = [interfaces]
@@ -1514,12 +1523,10 @@ def host_update(hostid, **connection_args):
         if conn_args:
             method = "host.update"
             params = {"hostid": hostid}
-            if "groups" in connection_args.keys():
-                groups = connection_args.pop("groups")
-                grps = []
-                for group in groups:
-                    grps.append({"groupid": group})
-                params["groups"] = grps
+            if "groups" in connection_args:
+                params["groups"] = _map_to_list_of_dicts(
+                    connection_args.pop("groups"), "groupid"
+                )
             params = _params_extend(params, _ignore_name=True, **connection_args)
             ret = _query(method, params, conn_args["url"], conn_args["auth"])
             return ret["result"]["hostids"]
