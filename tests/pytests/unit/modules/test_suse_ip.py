@@ -42,29 +42,32 @@ def test_build_interface():
 
         with patch.dict(
             suse_ip.__salt__, {"network.interfaces": lambda: {"eth": True}}
-        ), pytest.raises(AttributeError):
-            suse_ip.build_interface(
-                "iface",
-                "eth",
-                True,
-                netmask="255.255.255.255",
-                prefix=32,
-                test=True,
-            )
-            suse_ip.build_interface(
-                "iface",
-                "eth",
-                True,
-                ipaddrs=["A"],
-                test=True,
-            )
-            suse_ip.build_interface(
-                "iface",
-                "eth",
-                True,
-                ipv6addrs=["A"],
-                test=True,
-            )
+        ):
+            with pytest.raises(AttributeError):
+                suse_ip.build_interface(
+                    "iface",
+                    "eth",
+                    True,
+                    netmask="255.255.255.255",
+                    prefix=32,
+                    test=True,
+                )
+            with pytest.raises(AttributeError):
+                suse_ip.build_interface(
+                    "iface",
+                    "eth",
+                    True,
+                    ipaddrs=["A"],
+                    test=True,
+                )
+            with pytest.raises(AttributeError):
+                suse_ip.build_interface(
+                    "iface",
+                    "eth",
+                    True,
+                    ipv6addrs=["A"],
+                    test=True,
+                )
 
     with patch.object(suse_ip, "_raise_error_iface", return_value=None), patch.object(
         suse_ip, "_parse_settings_bond", MagicMock()
