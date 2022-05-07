@@ -54,8 +54,8 @@ def test_extracted_tar():
     """
 
     if salt.utils.platform.is_windows():
-        source = "C:\\tmp\\foo.tar.gz"
-        tmp_dir = "C:\\tmp\\test_extracted_tar"
+        source = "c:\\tmp\\foo.tar.gz"
+        tmp_dir = "c:\\tmp\\test_extracted_tar"
     elif salt.utils.platform.is_darwin():
         source = "/private/tmp/foo.tar.gz"
         tmp_dir = "/private/tmp/test_extracted_tar"
@@ -429,8 +429,8 @@ def test_skip_files_list_verify_success():
     """
 
     if salt.utils.platform.is_windows():
-        source = "C:\\tmp\\foo.tar.gz"
-        tmp_dir = "C:\\tmp\\test_extracted_tar"
+        source = "c:\\tmp\\foo.tar.gz"
+        tmp_dir = "c:\\tmp\\test_extracted_tar"
     elif salt.utils.platform.is_darwin():
         source = "/private/tmp/foo.tar.gz"
         tmp_dir = "/private/tmp/test_extracted_tar"
