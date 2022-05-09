@@ -1,21 +1,14 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: jmoney <justin@saltstack.com>
 """
 
-# Import Python libs
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.modules.cp as cp
 import salt.transport.client
-
-# Import Salt Libs
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.templates as templates
 from salt.exceptions import CommandExecutionError
-
-# Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, mock_open, patch
 from tests.support.unit import TestCase
@@ -128,7 +121,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
         """
         filename = "/saltines/test.file"
         if salt.utils.platform.is_windows():
-            filename = "c:\\saltines\\test.file"
+            filename = "C:\\saltines\\test.file"
         with patch(
             "salt.modules.cp.os.path",
             MagicMock(isfile=Mock(return_value=True), wraps=cp.os.path),

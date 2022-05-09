@@ -241,6 +241,7 @@ def test_publish_to_pubserv_ipc(salt_master, salt_minion):
     )
 
 
+@pytest.mark.skip_on_darwin
 @pytest.mark.skip_on_freebsd
 @pytest.mark.slow_test
 def test_issue_36469_tcp(salt_master, salt_minion):
