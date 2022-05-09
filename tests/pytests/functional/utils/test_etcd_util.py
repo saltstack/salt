@@ -318,7 +318,7 @@ def test_read(subtests, etcd_client, prefix, use_v2):
                     "{}/read/1".format(prefix),
                     wait=True,
                     timeout=30,
-                    waitIndex=last_modified + 1,
+                    start_revision=last_modified + 1,
                 )
             )
 
@@ -343,7 +343,7 @@ def test_read(subtests, etcd_client, prefix, use_v2):
                     wait=True,
                     timeout=30,
                     recurse=True,
-                    waitIndex=last_modified + 1,
+                    start_revision=last_modified + 1,
                 )
             )
 
@@ -651,7 +651,7 @@ def test_watch(subtests, etcd_client, prefix, use_v2):
         def wait_func_3(return_list):
             return_list.append(
                 etcd_client.watch(
-                    "{}/watch/1".format(prefix), timeout=30, index=last_modified + 1
+                    "{}/watch/1".format(prefix), timeout=30, start_revision=last_modified + 1
                 )
             )
 
@@ -675,7 +675,7 @@ def test_watch(subtests, etcd_client, prefix, use_v2):
                     "{}/watch".format(prefix),
                     timeout=30,
                     recurse=True,
-                    index=last_modified + 1,
+                    start_revision=last_modified + 1,
                 )
             )
 

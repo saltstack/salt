@@ -179,7 +179,7 @@ class EtcdBase:
         self.xargs = auth.copy()
         self.xargs.update(certs)
 
-    def watch(self, key, recurse=False, timeout=0, index=None):
+    def watch(self, key, recurse=False, timeout=0, start_revision=None, **kwargs):
         raise NotImplementedError()
 
     def get(self, key, recurse=False):
@@ -189,7 +189,7 @@ class EtcdBase:
         raise NotImplementedError()
 
     def read(
-        self, key, recurse=False, wait=False, timeout=None, waitIndex=None, **kwargs
+        self, key, recurse=False, wait=False, timeout=None, start_revision=None, **kwargs
     ):
         """
         Read a value of a key.
@@ -341,11 +341,26 @@ class EtcdClient(EtcdBase):
 
         self.client = etcd.Client(host=self.host, port=self.port, **self.xargs)
 
-    def watch(self, key, recurse=False, timeout=0, index=None):
+    def watch(self, key, recurse=False, timeout=0, start_revision=None, **kwargs):
+        index = kwargs.pop("index", None)
+        if index is not None:
+            salt.utils.versions.warn_until(
+                "Argon",
+                "The index kwarg has been deprecated, and will be removed "
+                "in the Argon release. Please use start_revision instead.",
+            )
+            start_revision = index
+        if kwargs:
+            log.warning("Invalid kwargs passed in will not be used: %s", kwargs)
+
         ret = {"key": key, "value": None, "changed": False, "mIndex": 0, "dir": False}
         try:
             result = self.read(
-                key, recurse=recurse, wait=True, timeout=timeout, waitIndex=index
+                key,
+                recurse=recurse,
+                wait=True,
+                timeout=timeout,
+                start_revision=start_revision,
             )
         except EtcdUtilWatchTimeout:
             try:
@@ -405,27 +420,35 @@ class EtcdClient(EtcdBase):
         return self.tree(key)
 
     def read(
-        self, key, recurse=False, wait=False, timeout=None, waitIndex=None, **kwargs
+        self, key, recurse=False, wait=False, timeout=None, start_revision=None, **kwargs
     ):
-        recursive = kwargs.get("recursive", None)
+        recursive = kwargs.pop("recursive", None)
+        wait_index = kwargs.pop("waitIndex", None)
         if recursive is not None:
             salt.utils.versions.warn_until(
                 "Argon",
-                "Starting with the Argon release, the recursive kwarg will be deprecated."
-                "Please use recurse instead.",
+                "The recursive kwarg has been deprecated, and will be removed "
+                "in the Argon release. Please use recurse instead.",
             )
             recurse = recursive
+        if wait_index is not None:
+            salt.utils.versions.warn_until(
+                "Argon",
+                "The waitIndex kwarg has been deprecated, and will be removed "
+                "in the Argon release. Please use start_revision instead.",
+            )
+            start_revision = wait_index
         if kwargs:
             log.warning("Invalid kwargs passed in will not be used: %s", kwargs)
 
         try:
-            if waitIndex:
+            if start_revision:
                 result = self.client.read(
                     key,
                     recursive=recurse,
                     wait=wait,
                     timeout=timeout,
-                    waitIndex=waitIndex,
+                    waitIndex=start_revision,
                 )
             else:
                 result = self.client.read(
@@ -554,8 +577,8 @@ class EtcdClient(EtcdBase):
         if recursive is not None:
             salt.utils.versions.warn_until(
                 "Argon",
-                "Starting with the Argon release, the recursive kwarg will be "
-                "deprecated. Please use recurse instead.",
+                "The recursive kwarg has been deprecated, and will be removed "
+                "in the Argon release. Please use recurse instead.",
             )
             recurse = recursive
         if kwargs:
@@ -679,10 +702,25 @@ class EtcdClientV3(EtcdBase):
             log.error("etcd3 decoding error: %s", err)
         return kv
 
-    def watch(self, key, recurse=False, timeout=0, index=None):
+    def watch(self, key, recurse=False, timeout=0, start_revision=None, **kwargs):
+        index = kwargs.pop("index", None)
+        if index is not None:
+            salt.utils.versions.warn_until(
+                "Argon",
+                "The index kwarg has been deprecated, and will be removed "
+                "in the Argon release. Please use start_revision instead.",
+            )
+            start_revision = index
+        if kwargs:
+            log.warning("Invalid kwargs passed in will not be used: %s", kwargs)
+
         ret = {"key": key, "value": None, "changed": False, "mIndex": 0, "dir": False}
         result = self.read(
-            key, recurse=recurse, wait=True, timeout=timeout, waitIndex=index
+            key,
+            recurse=recurse,
+            wait=True,
+            timeout=timeout,
+            start_revision=start_revision,
         )
         if result is not None:
             ret["key"] = result.key
@@ -702,18 +740,27 @@ class EtcdClientV3(EtcdBase):
         return self.tree(key)
 
     def read(
-        self, key, recurse=False, wait=False, timeout=None, waitIndex=None, **kwargs
+        self, key, recurse=False, wait=False, timeout=None, start_revision=None, **kwargs
     ):
         recursive = kwargs.pop("recursive", None)
+        wait_index = kwargs.pop("waitIndex", None)
         if recursive is not None:
             salt.utils.versions.warn_until(
                 "Argon",
-                "Starting with the Argon release, the recursive kwarg will be "
-                "deprecated. Please use recurse instead.",
+                "The recursive kwarg has been deprecated, and will be removed "
+                "in the Argon release. Please use recurse instead.",
             )
             recurse = recursive
+        if wait_index is not None:
+            salt.utils.versions.warn_until(
+                "Argon",
+                "The waitIndex kwarg has been deprecated, and will be removed "
+                "in the Argon release. Please use start_revision instead.",
+            )
+            start_revision = wait_index
         if kwargs:
             log.warning("Invalid kwargs passed in will not be used: %s", kwargs)
+
         if not wait:
             try:
                 result = self.client.range(self._maybe_encode_key(key), prefix=recurse)
@@ -732,7 +779,7 @@ class EtcdClientV3(EtcdBase):
                 watcher = self.client.Watcher(
                     key=self._maybe_encode_key(key),
                     prefix=recurse,
-                    start_revision=waitIndex,
+                    start_revision=start_revision,
                 )
                 watch_event = watcher.watch_once(timeout=timeout)
                 return self._decode_kv(watch_event)
@@ -804,8 +851,8 @@ class EtcdClientV3(EtcdBase):
         if recursive is not None:
             salt.utils.versions.warn_until(
                 "Argon",
-                "Starting with the Argon release, the recursive kwarg will be "
-                "deprecated. Please use recurse instead.",
+                "The recursive kwarg has been deprecated, and will be removed "
+                "in the Argon release. Please use recurse instead.",
             )
             recurse = recursive
 
@@ -897,8 +944,8 @@ def get_conn(opts, profile=None, **kwargs):
     if use_v2:
         salt.utils.versions.warn_until(
             "Potassium",
-            "Starting with the Potassium release, etcd API v3 will be the default "
-            "and etcd API v2 will be deprecated.",
+            "etcd API v2 has been deprecated.  It will be removed in "
+            "the Potassium release, and etcd API v3 will be the default.",
         )
         client = EtcdClient(conf, has_etcd_opts=True, **kwargs)
         log.debug("etcd_util will be attempting to use etcd API v2: python-etcd")
