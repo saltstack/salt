@@ -445,7 +445,11 @@ def test_watch(use_v2, client_name):
                     "dir": False,
                 }
                 mock.assert_called_with(
-                    "/some-key", wait=True, recurse=False, timeout=0, start_revision=None
+                    "/some-key",
+                    wait=True,
+                    recurse=False,
+                    timeout=0,
+                    start_revision=None,
                 )
 
                 mock.side_effect = iter(
@@ -477,7 +481,9 @@ def test_watch(use_v2, client_name):
                 mock.return_value = MagicMock(
                     value="stack", key="/some-key", modifiedIndex=1, dir=True
                 )
-                assert client.watch("/some-dir", recurse=True, timeout=5, start_revision=10) == {
+                assert client.watch(
+                    "/some-dir", recurse=True, timeout=5, start_revision=10
+                ) == {
                     "value": "stack",
                     "key": "/some-key",
                     "mIndex": 1,
@@ -511,12 +517,18 @@ def test_watch(use_v2, client_name):
                     "dir": False,
                 }
                 mock.assert_called_with(
-                    "/some-key", wait=True, recurse=False, timeout=0, start_revision=None
+                    "/some-key",
+                    wait=True,
+                    recurse=False,
+                    timeout=0,
+                    start_revision=None,
                 )
                 mock.return_value = MagicMock(
                     value="stack", key="/some-key", mod_revision=1
                 )
-                assert client.watch("/some-key", recurse=True, timeout=5, start_revision=10) == {
+                assert client.watch(
+                    "/some-key", recurse=True, timeout=5, start_revision=10
+                ) == {
                     "value": "stack",
                     "key": "/some-key",
                     "mIndex": 1,

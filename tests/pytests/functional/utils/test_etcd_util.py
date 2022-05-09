@@ -651,7 +651,9 @@ def test_watch(subtests, etcd_client, prefix, use_v2):
         def wait_func_3(return_list):
             return_list.append(
                 etcd_client.watch(
-                    "{}/watch/1".format(prefix), timeout=30, start_revision=last_modified + 1
+                    "{}/watch/1".format(prefix),
+                    timeout=30,
+                    start_revision=last_modified + 1,
                 )
             )
 

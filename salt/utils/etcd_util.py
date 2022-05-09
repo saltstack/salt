@@ -189,7 +189,13 @@ class EtcdBase:
         raise NotImplementedError()
 
     def read(
-        self, key, recurse=False, wait=False, timeout=None, start_revision=None, **kwargs
+        self,
+        key,
+        recurse=False,
+        wait=False,
+        timeout=None,
+        start_revision=None,
+        **kwargs
     ):
         """
         Read a value of a key.
@@ -420,7 +426,13 @@ class EtcdClient(EtcdBase):
         return self.tree(key)
 
     def read(
-        self, key, recurse=False, wait=False, timeout=None, start_revision=None, **kwargs
+        self,
+        key,
+        recurse=False,
+        wait=False,
+        timeout=None,
+        start_revision=None,
+        **kwargs
     ):
         recursive = kwargs.pop("recursive", None)
         wait_index = kwargs.pop("waitIndex", None)
@@ -740,7 +752,13 @@ class EtcdClientV3(EtcdBase):
         return self.tree(key)
 
     def read(
-        self, key, recurse=False, wait=False, timeout=None, start_revision=None, **kwargs
+        self,
+        key,
+        recurse=False,
+        wait=False,
+        timeout=None,
+        start_revision=None,
+        **kwargs
     ):
         recursive = kwargs.pop("recursive", None)
         wait_index = kwargs.pop("waitIndex", None)

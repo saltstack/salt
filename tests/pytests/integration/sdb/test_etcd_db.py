@@ -5,23 +5,17 @@ Integration tests for the etcd modules
 import logging
 
 import pytest
-from salt.utils.etcd_util import HAS_ETCD_V2
-from saltfactories.daemons.container import Container
-from saltfactories.utils import random_string
-
-docker = pytest.importorskip("docker")
 
 log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("dockerd"),
-    pytest.mark.windows_whitelisted,
-    pytest.mark.skipIf(not HAS_ETCD_V2, "no etcd library installed"),
 ]
 
 
-@pytest.fixture(scope="module")
-def docker_client():
+@pytest.fixture(scope="module", autouse=True)
+def etc_docker_container(salt_call_cli, sdb_etcd_port):
+    container_started = False
     try:
         ret = salt_call_cli.run(
             "state.single", "docker_image.present", name="bitnami/etcd", tag="latest"
