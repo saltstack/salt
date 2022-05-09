@@ -4,12 +4,7 @@ import time
 
 import pytest
 import salt.modules.etcd_mod as etcd_mod
-from salt.utils.etcd_util import (
-    HAS_ETCD_V2,
-    HAS_ETCD_V3,
-    Etcd3DirectoryException,
-    get_conn,
-)
+from salt.utils.etcd_util import HAS_ETCD_V2, HAS_ETCD_V3, get_conn
 from saltfactories.daemons.container import Container
 from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
