@@ -119,15 +119,16 @@ class SaltCacheLoader(BaseLoader):
         Cache a file from the salt master
         """
         saltpath = salt.utils.url.create(template)
-        self.file_client().get_file(saltpath, "", True, self.saltenv)
+        return self.file_client().get_file(saltpath, "", True, self.saltenv)
 
     def check_cache(self, template):
         """
         Cache a file only once
         """
         if template not in self.cached:
-            self.cache_file(template)
-            self.cached.append(template)
+            ret = self.cache_file(template)
+            if ret is not False:
+                self.cached.append(template)
 
     def get_source(self, environment, template):
         """
@@ -181,25 +182,26 @@ class SaltCacheLoader(BaseLoader):
             }
             environment.globals.update(tpldata)
 
-        # pylint: disable=cell-var-from-loop
-        for spath in self.searchpath:
-            filepath = os.path.join(spath, _template)
-            try:
-                with salt.utils.files.fopen(filepath, "rb") as ifile:
-                    contents = ifile.read().decode(self.encoding)
-                    mtime = os.path.getmtime(filepath)
+        if _template in self.cached:
+            # pylint: disable=cell-var-from-loop
+            for spath in self.searchpath:
+                filepath = os.path.join(spath, _template)
+                try:
+                    with salt.utils.files.fopen(filepath, "rb") as ifile:
+                        contents = ifile.read().decode(self.encoding)
+                        mtime = os.path.getmtime(filepath)
 
-                    def uptodate():
-                        try:
-                            return os.path.getmtime(filepath) == mtime
-                        except OSError:
-                            return False
+                        def uptodate():
+                            try:
+                                return os.path.getmtime(filepath) == mtime
+                            except OSError:
+                                return False
 
-                    return contents, filepath, uptodate
-            except OSError:
-                # there is no file under current path
-                continue
-        # pylint: enable=cell-var-from-loop
+                        return contents, filepath, uptodate
+                except OSError:
+                    # there is no file under current path
+                    continue
+            # pylint: enable=cell-var-from-loop
 
         # there is no template file within searchpaths
         raise TemplateNotFound(template)
