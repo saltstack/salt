@@ -86,7 +86,9 @@ def test_comment():
             with patch.dict(
                 filestate.__salt__,
                 {
-                    "file.search": MagicMock(side_effect=[True, True, True]),
+                    "file.search": MagicMock(
+                        side_effect=[True, True, True, False, True]
+                    ),
                     "file.comment": mock_t,
                     "file.comment_line": mock_t,
                 },
@@ -105,6 +107,11 @@ def test_comment():
                         comt = "Commented lines successfully"
                         ret.update({"comment": comt, "result": True, "changes": {}})
                         assert filestate.comment(name, regex) == ret
+
+                with patch.dict(filestate.__opts__, {"test": True}):
+                    comt = "Pattern already commented"
+                    ret.update({"comment": comt, "result": True, "changes": {}})
+                    assert filestate.comment(name, regex) == ret
 
 
 # 'uncomment' function tests: 1
