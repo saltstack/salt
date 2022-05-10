@@ -48,7 +48,9 @@ def test_minion_hangs_on_master_failure_50814(
     def wait_for_minion(salt_cli, tgt, timeout=30):
         start = time.time()
         while True:
-            ret = salt_cli.run("test.ping", "--timeout=5", minion_tgt=tgt)
+            ret = salt_cli.run(
+                "test.ping", "--timeout=5", minion_tgt=tgt, _timeout=timeout
+            )
             if ret.returncode == 0 and ret.data is True:
                 break
             if time.time() - start > timeout:
