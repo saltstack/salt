@@ -6062,10 +6062,11 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
     # remove (?i)-like flags, ^ and $
     unanchor_regex = re.sub(r"^(\(\?[iLmsux]\))?\^?(.*?)\$?$", r"\2", regex)
 
+    uncomment_regex = "[^{}]".format(char) + unanchor_regex
     comment_regex = char + unanchor_regex
 
     # Make sure the pattern appears in the file before continuing
-    if not __salt__["file.search"](name, regex, multiline=True):
+    if not __salt__["file.search"](name, uncomment_regex, multiline=True):
         if __salt__["file.search"](name, comment_regex, multiline=True):
             ret["comment"] = "Pattern already commented"
             ret["result"] = True
@@ -6097,7 +6098,7 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
         nlines = nlines.splitlines(True)
 
     # Check the result
-    ret["result"] = __salt__["file.search"](name, unanchor_regex, multiline=True)
+    ret["result"] = __salt__["file.search"](name, comment_regex, multiline=True)
 
     if slines != nlines:
         if not __utils__["files.is_text"](name):
