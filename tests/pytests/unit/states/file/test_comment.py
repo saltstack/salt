@@ -65,11 +65,19 @@ def test_comment():
         with patch.object(os.path, "isabs", mock_t):
             with patch.dict(
                 filestate.__salt__,
-                {"file.search": MagicMock(side_effect=[False, True, False, False])},
+                {
+                    "file.search": MagicMock(
+                        side_effect=[False, True, False, False, False, False]
+                    )
+                },
             ):
                 comt = "Pattern already commented"
                 ret.update({"comment": comt, "result": True})
                 assert filestate.comment(name, regex) == ret
+
+                comt = "Pattern not found and ignore_missing set to True"
+                ret.update({"comment": comt, "result": True})
+                assert filestate.comment(name, regex, ignore_missing=True) == ret
 
                 comt = "{}: Pattern not found".format(regex)
                 ret.update({"comment": comt, "result": False})
