@@ -396,6 +396,24 @@ def __get_size(conn, vm_):
     return conn.ex_get_size(size, __get_location(conn, vm_))
 
 
+def __get_labels(vm_):
+    """
+    Get configured labels.
+    """
+    l = config.get_cloud_config_value(
+        "labels", vm_, __opts__, default="{}", search_global=False
+    )
+    # Consider warning the user that the labels in the cloud profile
+    # could not be interpreted, bad formatting?
+    try:
+        labels = literal_eval(l)
+    except Exception:  # pylint: disable=W0703
+        labels = None
+    if not labels or not isinstance(labels, dict):
+        labels = None
+    return labels
+
+
 def __get_tags(vm_):
     """
     Get configured tags.
@@ -2323,6 +2341,7 @@ def request_instance(vm_):
         "size": __get_size(conn, vm_),
         "image": __get_image(conn, vm_),
         "location": __get_location(conn, vm_),
+        "ex_labels": __get_labels(vm_),
         "ex_network": __get_network(conn, vm_),
         "ex_subnetwork": __get_subnetwork(vm_),
         "ex_tags": __get_tags(vm_),
