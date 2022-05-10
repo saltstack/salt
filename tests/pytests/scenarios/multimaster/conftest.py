@@ -159,6 +159,7 @@ def run_salt_cmds():
                             "--timeout={}".format(timeout),
                             "test.ping",
                             minion_tgt=minion,
+                            _timeout=2 * timeout,
                         )
                         if ret.returncode == 0 and ret.data is True:
                             returned_minions.append((cli, minion_instances[minion]))
