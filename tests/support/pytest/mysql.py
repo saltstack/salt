@@ -85,47 +85,58 @@ def mysql_container(request, salt_factories, salt_call_cli):
     mysql_user = "root"
     mysql_passwd = "password"
 
-    combo = MySQLCombo(
-        mysql_name=mysql_image.name,
-        mysql_version=mysql_image.tag,
-        mysql_user=mysql_user,
-        mysql_passwd=mysql_passwd,
-    )
-    container = salt_factories.get_container(
-        mysql_image.container_id,
-        "{}:{}".format(combo.mysql_name, combo.mysql_version),
-        docker_client=docker_client,
-        check_ports=[combo.mysql_port],
-        container_run_kwargs={
-            "ports": {"3306/tcp": combo.mysql_port},
-            "environment": {
-                "MYSQL_ROOT_PASSWORD": mysql_passwd,
-                "MYSQL_ROOT_HOST": "%",
+    port_was_actually_used = True
+    while port_was_actually_used:
+        combo = MySQLCombo(
+            mysql_name=mysql_image.name,
+            mysql_version=mysql_image.tag,
+            mysql_user=mysql_user,
+            mysql_passwd=mysql_passwd,
+        )
+        container = salt_factories.get_container(
+            mysql_image.container_id,
+            "{}:{}".format(combo.mysql_name, combo.mysql_version),
+            docker_client=docker_client,
+            check_ports=[combo.mysql_port],
+            container_run_kwargs={
+                "ports": {"3306/tcp": combo.mysql_port},
+                "environment": {
+                    "MYSQL_ROOT_PASSWORD": mysql_passwd,
+                    "MYSQL_ROOT_HOST": "%",
+                },
             },
-        },
-    )
-    with container.started():
-        authenticated = False
-        login_attempts = 6
-        while login_attempts:
-            login_attempts -= 1
-            # Make sure "MYSQL" is ready
-            ret = salt_call_cli.run(
-                "docker.run",
-                name=mysql_image.container_id,
-                cmd="mysql --user=root --password=password -e 'SELECT 1'",
-            )
-            authenticated = ret.exitcode == 0
-            if authenticated:
-                break
+        )
+        try:
+            with container.started():
+                authenticated = False
+                login_attempts = 6
+                while login_attempts:
+                    login_attempts -= 1
+                    # Make sure "MYSQL" is ready
+                    ret = salt_call_cli.run(
+                        "docker.run",
+                        name=mysql_image.container_id,
+                        cmd="mysql --user=root --password=password -e 'SELECT 1'",
+                    )
+                    authenticated = ret.exitcode == 0
+                    if authenticated:
+                        break
 
-            time.sleep(2)
+                    time.sleep(2)
 
-        if authenticated:
-            yield combo
+                if authenticated:
+                    yield combo
+                else:
+                    pytest.fail(
+                        "Failed to login into mysql server running in container(id: {})".format(
+                            mysql_image.container_id
+                        )
+                    )
+        except docker.errors.APIError as e:
+            # If there's an API error because the port or something else is in
+            # use, the container won't magically get removed. This should go
+            # ahead and remove the container since we're not generating a new
+            # container name next time around.
+            container.docker_client.containers.get(container.name).remove()
         else:
-            pytest.fail(
-                "Failed to login into mysql server running in container(id: {})".format(
-                    mysql_image.container_id
-                )
-            )
+            port_was_actually_used = False
