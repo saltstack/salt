@@ -1,4 +1,5 @@
 import contextlib
+import os
 import socket
 
 import attr
@@ -446,7 +447,7 @@ async def test_when_async_req_channel_with_syndic_role_should_use_syndic_master_
 ):
     # Syndics use the minion pki dir, but they also create a syndic_master.pub
     # file for comms with the Salt master
-    expected_pubkey_path = "/etc/salt/pki/minion/syndic_master.pub"
+    expected_pubkey_path = os.path.join("/etc/salt/pki/minion", "syndic_master.pub")
     fake_crypto.new.return_value.decrypt.return_value = "decrypted_return_value"
     mockloop = MagicMock()
     opts = {
@@ -510,7 +511,7 @@ async def test_mixin_should_use_correct_path_when_syndic(
     fake_keys, fake_authd, fake_crypticle
 ):
     mockloop = MagicMock()
-    expected_pubkey_path = "/etc/salt/pki/minion/syndic_master.pub"
+    expected_pubkey_path = os.path.join("/etc/salt/pki/minion", "syndic_master.pub")
     opts = {
         "master_uri": "tcp://127.0.0.1:4506",
         "interface": "127.0.0.1",
