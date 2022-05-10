@@ -147,6 +147,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
       location: europe-west1-b
       network: default
       subnetwork: default
+      labels:
+        name: myinstance
       tags: '["one", "two", "three"]'
       metadata: '{"one": "1", "2": "two"}'
       use_persistent_disk: True
@@ -192,6 +194,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
       location: europe-west1-b
       network: default
       subnetwork: default
+      labels:
+        name: myinstance
       tags: '["one", "two", "three"]'
       metadata: '{"one": "1", "2": "two"}'
       use_persistent_disk: True
@@ -234,6 +238,13 @@ This requires that the network your instance is created under has a mode of 'cus
 Additionally, the subnetwork your instance is created under is associated with the location you provide.
 
 .. versionadded:: 2017.7.0
+
+labels
+----
+
+This setting allows you to set labels on your GCE instances. It
+should be a dictionary and must be parse-able by the python
+ast.literal_eval() function to convert it to a python dictionary.
 
 tags
 ----
@@ -322,6 +333,8 @@ key in your cloud profile. The following example enables the bigquery scope.
     location: us-central1-a
     network: default
     subnetwork: default
+    labels:
+        name: myinstance
     tags: '["one", "two", "three"]'
     metadata: '{"one": "1", "2": "two",
                 "sshKeys": ""}'
