@@ -6,12 +6,17 @@
 """
 import logging
 import os
+import pathlib
 import shutil
+import subprocess
+import tempfile
 import textwrap
+import time
 import types
 import warnings
 from contextlib import contextmanager
 
+import _pytest._version
 import attr
 import pytest
 import salt.utils.platform
@@ -21,6 +26,9 @@ from saltfactories.utils.tempfiles import temp_file
 from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
+
+PYTEST_GE_7 = getattr(_pytest._version, "version_tuple", (-1, -1)) >= (7, 0)
+
 
 log = logging.getLogger(__name__)
 
@@ -167,6 +175,16 @@ def remove_stale_minion_key(master, minion_id):
         os.unlink(key_path)
     else:
         log.debug("The minion(id=%r) key was not found at %s", minion_id, key_path)
+
+
+@pytest.helpers.register
+def remove_stale_proxy_minion_cache_file(proxy_minion, minion_id=None):
+    cachefile = os.path.join(
+        proxy_minion.config["cachedir"],
+        "dummy-proxy-{}.cache".format(minion_id or proxy_minion.id),
+    )
+    if os.path.exists(cachefile):
+        os.unlink(cachefile)
 
 
 @attr.s(kw_only=True, slots=True)
@@ -593,6 +611,95 @@ class FakeSaltExtension:
 
     def __exit__(self, *_):
         shutil.rmtree(str(self.srcdir), ignore_errors=True)
+
+
+class EntropyGenerator:
+    def __init__(self, max_minutes=5, minimum_entropy=800):
+        self.max_minutes = max_minutes
+        self.minimum_entropy = minimum_entropy
+
+    def generate_entropy(self):
+        max_time = self.max_minutes * 60
+        kernel_entropy_file = pathlib.Path("/proc/sys/kernel/random/entropy_avail")
+        if not kernel_entropy_file.exists():
+            log.info("The '%s' file is not avilable", kernel_entropy_file)
+            return
+
+        available_entropy = int(kernel_entropy_file.read_text().strip())
+        log.info("Available Entropy: %s", available_entropy)
+        if available_entropy >= self.minimum_entropy:
+            return
+
+        exc_kwargs = {}
+        if PYTEST_GE_7:
+            exc_kwargs["_use_item_location"] = True
+
+        rngd = shutil.which("rngd")
+        openssl = shutil.which("openssl")
+        timeout = time.time() + max_time
+        if rngd:
+            log.info("Using rngd to generate entropy")
+            while True:
+                if time.time() >= timeout:
+                    raise pytest.skip.Exception(
+                        "Skipping test as generating entropy took more than {} minutes. "
+                        "Current entropy value {}".format(
+                            self.max_minutes, available_entropy
+                        ),
+                        **exc_kwargs
+                    )
+                subprocess.run([rngd, "-r", "/dev/urandom"], shell=False, check=True)
+                available_entropy = int(kernel_entropy_file.read_text().strip())
+                log.info("Available Entropy: %s", available_entropy)
+                if available_entropy >= self.minimum_entropy:
+                    break
+        elif openssl:
+            log.info("Using openssl to generate entropy")
+            while True:
+                if time.time() >= timeout:
+                    raise pytest.skip.Exception(
+                        "Skipping test as generating entropy took more than {} minutes. "
+                        "Current entropy value {}".format(
+                            self.max_minutes, available_entropy
+                        ),
+                        **exc_kwargs
+                    )
+
+                target_file = tempfile.NamedTemporaryFile(
+                    delete=False, suffix="sample.txt"
+                )
+                target_file.close()
+                subprocess.run(
+                    [
+                        "openssl",
+                        "rand",
+                        "-out",
+                        target_file.name,
+                        "-base64",
+                        str(int(2 ** 30 * 3 / 4)),  # 1GB
+                    ],
+                    shell=False,
+                    check=True,
+                )
+                os.unlink(target_file.name)
+                available_entropy = int(kernel_entropy_file.read_text().strip())
+                log.info("Available Entropy: %s", available_entropy)
+                if available_entropy >= self.minimum_entropy:
+                    break
+        else:
+            raise pytest.skip.Exception(
+                "Skipping test as there's not enough entropy({}) to continue".format(
+                    available_entropy
+                ),
+                **exc_kwargs
+            )
+
+    def __enter__(self):
+        self.generate_entropy()
+        return self
+
+    def __exit__(self, *_):
+        pass
 
 
 # Only allow star importing the functions defined in this module

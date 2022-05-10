@@ -1,8 +1,8 @@
-import salt.defaults.exitcodes  # pylint: disable=W0611
+import salt.defaults.exitcodes
 import salt.utils.parsers
 import salt.utils.profile
 from salt.exceptions import SaltClientError
-from salt.utils.verify import check_user, verify_log
+from salt.utils.verify import check_user
 
 
 class SaltRun(salt.utils.parsers.SaltRunOptionParser):
@@ -18,9 +18,6 @@ class SaltRun(salt.utils.parsers.SaltRunOptionParser):
 
         self.parse_args()
 
-        # Setup file logging!
-        self.setup_logfile_logger()
-        verify_log(self.config)
         profiling_enabled = self.options.profiling_enabled
 
         runner = salt.runner.Runner(self.config)

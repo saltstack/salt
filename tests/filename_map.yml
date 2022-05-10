@@ -8,11 +8,18 @@ setup.py:
   - pytests.scenarios.setup.test_man
   - pytests.scenarios.setup.test_install
 
+salt/_logging/(impl|handlers).py:
+  - pytests.integration._logging.test_jid_logging
+  - pytests.integration._logging.test_multiple_processes_logging
+  - pytests.unit._logging.handlers.test_deferred_stream_handler
+
+
 salt/modules/(apkpkg|aptpkg|ebuildpkg|dpkg_lowpkg|freebsdpkg|mac_brew_pkg|mac_ports_pkg|openbsdpkg|opkg|pacmanpkg|pkgin|pkgng|pkg_resource|rpm_lowpkg|solarisipspkg|solarispkg|win_pkg|xbpspkg|yumpkg|zypperpkg)\.py:
   - pytests.unit.states.test_pkg
-  - integration.modules.test_pkg
-  - integration.states.test_pkg
-  - integration.states.test_pkgrepo
+  - pytests.functional.modules.test_pkg
+  - pytests.functional.states.test_pkg
+  - pytests.functional.states.pkgrepo.test_centos
+  - pytests.functional.states.pkgrepo.test_debian
 
 salt/modules/(mac_user|useradd|pw_user|solaris_user|win_useradd)\.py:
   - pytests.unit.states.test_user
@@ -43,7 +50,16 @@ salt/modules/augeas_cfg.py:
   - pytests.unit.states.test_augeas
 
 salt/modules/cp.py:
-  - unit.modules.test_file
+  - pytests.functional.modules.file.test_replace
+  - pytests.unit.modules.file.test_file_basics
+  - pytests.unit.modules.file.test_file_block_replace
+  - pytests.unit.modules.file.test_file_chattr
+  - pytests.unit.modules.file.test_file_comment_line
+  - pytests.unit.modules.file.test_file_grep
+  - pytests.unit.modules.file.test_file_line
+  - pytests.unit.modules.file.test_file_lsattr
+  - pytests.unit.modules.file.test_file_module
+  - pytests.unit.modules.file.test_file_selinux
   - pytests.unit.states.file.test_copy
   - integration.modules.test_file
   - integration.states.test_file
@@ -184,6 +200,7 @@ salt/(client/ssh/.+|cli/ssh\.py):
 
 salt/config/*:
   - unit.test_config
+  - pytests.unit.config.test__validate_opts
 
 salt/loader/*:
   - integration.loader.test_ext_grains
@@ -232,7 +249,8 @@ salt/serializers/*:
   - pytests.unit.serializers.test_serializers
 
 salt/(cli/spm\.py|spm/.+):
-  - unit.test_spm
+  - pytests.unit.spm.test_spm
+  - pytests.unit.spm.test_pkgfiles
   - integration.shell.test_spm
   - integration.spm.test_build
   - integration.spm.test_files
@@ -240,9 +258,6 @@ salt/(cli/spm\.py|spm/.+):
   - integration.spm.test_install
   - integration.spm.test_remove
   - integration.spm.test_repo
-
-salt/transport/*:
-  - unit.test_transport
 
 salt/utils/docker/*:
   - unit.utils.test_dockermod
@@ -268,5 +283,23 @@ salt/utils/vt.py:
 salt/wheel/*:
   - integration.wheel.test_client
 
+salt/(minion\.py|channel/.+|transport/.+):
+  - pytests.scenarios.multimaster.test_multimaster
+  - pytests.scenarios.multimaster.test_offline_master
+  - pytests.scenarios.multimaster.beacons.test_inotify
+  - pytests.scenarios.multimaster.modules.test_test
+  - pytests.scenarios.failover.multimaster.test_failover_master
+
 tests/support/mock.py:
   - unit.test_mock
+
+tests/support/pytest/mysql.py:
+  - pytests.integration.states.test_mysql
+  - pytests.integration.modules.test_mysql
+
+tests/pytests/scenarios/multimaster:
+  - pytests.scenarios.multimaster.test_multimaster
+  - pytests.scenarios.multimaster.test_offline_master
+  - pytests.scenarios.multimaster.beacons.test_inotify
+  - pytests.scenarios.multimaster.modules.test_test
+  - pytests.scenarios.failover.multimaster.test_failover_master

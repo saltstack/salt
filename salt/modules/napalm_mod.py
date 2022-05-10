@@ -161,6 +161,57 @@ def _junos_prep_fun(napalm_device):
     return {"result": True}
 
 
+@proxy_napalm_wrap
+def _netmiko_conn(**kwargs):
+    """
+    .. versionadded:: 2019.2.0
+
+    Return the connection object with the network device, over Netmiko, passing
+    the authentication details from the existing NAPALM connection.
+
+    .. warning::
+
+        This function is not suitable for CLI usage, more rather to be used
+        in various Salt modules.
+
+    USAGE Example:
+
+    .. code-block:: python
+
+        conn = __salt__['napalm.netmiko_conn']()
+        res = conn.send_command('show interfaces')
+        conn.disconnect()
+    """
+    netmiko_kwargs = netmiko_args()
+    kwargs.update(netmiko_kwargs)
+    return __salt__["netmiko.get_connection"](**kwargs)
+
+
+@proxy_napalm_wrap
+def _pyeapi_conn(**kwargs):
+    """
+    .. versionadded:: 2019.2.0
+
+    Return the connection object with the Arista switch, over ``pyeapi``,
+    passing the authentication details from the existing NAPALM connection.
+
+    .. warning::
+        This function is not suitable for CLI usage, more rather to be used in
+        various Salt modules, to reusing the established connection, as in
+        opposite to opening a new connection for each task.
+
+    Usage example:
+
+    .. code-block:: python
+
+        conn = __salt__['napalm.pyeapi_conn']()
+        res1 = conn.run_commands('show version')
+        res2 = conn.get_config(as_string=True)
+    """
+    pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
+    return __salt__["pyeapi.get_connection"](**pyeapi_kwargs)
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 # callable functions
 # ----------------------------------------------------------------------------------------------------------------------
@@ -614,7 +665,7 @@ def netmiko_commands(*commands, **kwargs):
 
         salt '*' napalm.netmiko_commands 'show version' 'show interfaces'
     """
-    conn = netmiko_conn(**kwargs)
+    conn = _netmiko_conn(**kwargs)
     ret = []
     for cmd in commands:
         ret.append(conn.send_command(cmd))
@@ -712,9 +763,13 @@ def netmiko_conn(**kwargs):
         res = conn.send_command('show interfaces')
         conn.disconnect()
     """
-    netmiko_kwargs = netmiko_args()
-    kwargs.update(netmiko_kwargs)
-    return __salt__["netmiko.get_connection"](**kwargs)
+    salt.utils.versions.warn_until(
+        "Chlorine",
+        "This 'napalm_mod.netmiko_conn' function as been deprecated and "
+        "will be removed in the {version} release, as such, it has been "
+        "made an internal function since it is not suitable for CLI usage",
+    )
+    return _netmiko_conn(**kwargs)
 
 
 @proxy_napalm_wrap
@@ -1015,8 +1070,17 @@ def pyeapi_nxos_api_args(**prev_kwargs):
     kwargs["username"] = napalm_opts["USERNAME"]
     kwargs["password"] = napalm_opts["PASSWORD"]
     kwargs["timeout"] = napalm_opts["TIMEOUT"]
-    kwargs["transport"] = optional_args.get("transport")
-    kwargs["port"] = optional_args.get("port")
+
+    if "transport" in optional_args and optional_args["transport"]:
+        kwargs["transport"] = optional_args["transport"]
+    else:
+        kwargs["transport"] = "https"
+
+    if "port" in optional_args and optional_args["port"]:
+        kwargs["port"] = optional_args["port"]
+    else:
+        kwargs["port"] = 80 if kwargs["transport"] == "http" else 443
+
     kwargs["verify"] = optional_args.get("verify")
     prev_kwargs.update(kwargs)
     return prev_kwargs
@@ -1096,8 +1160,13 @@ def pyeapi_conn(**kwargs):
         res1 = conn.run_commands('show version')
         res2 = conn.get_config(as_string=True)
     """
-    pyeapi_kwargs = pyeapi_nxos_api_args(**kwargs)
-    return __salt__["pyeapi.get_connection"](**pyeapi_kwargs)
+    salt.utils.versions.warn_until(
+        "Chlorine",
+        "This 'napalm_mod.pyeapi_conn' function as been deprecated and "
+        "will be removed in the {version} release, as such, it has been "
+        "made an internal function since it is not suitable for CLI usage",
+    )
+    return _pyeapi_conn(**kwargs)
 
 
 @proxy_napalm_wrap

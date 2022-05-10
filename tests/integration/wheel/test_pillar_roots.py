@@ -29,9 +29,23 @@ class WheelPillarRootsTest(TestCase, AdaptedConfigurationTestCaseMixin):
         assert os.path.exists(os.path.join(self.pillar_dir, "foo"))
         assert ret.find("Wrote data to file") != -1
 
+    def test_write_subdir(self):
+        ret = self.wheel.cmd(
+            "pillar_roots.write", kwarg={"data": "foo: bar", "path": "sub/dir/file"}
+        )
+        assert os.path.exists(os.path.join(self.pillar_dir, "sub/dir/file"))
+        assert ret.find("Wrote data to file") != -1
+
     def test_cvr_2021_25282(self):
         ret = self.wheel.cmd(
             "pillar_roots.write", kwarg={"data": "foo", "path": "../foo"}
+        )
+        assert not os.path.exists(os.path.join(self.traversed_dir, "foo"))
+        assert ret.find("Invalid path") != -1
+
+    def test_cvr_2021_25282_subdir(self):
+        ret = self.wheel.cmd(
+            "pillar_roots.write", kwarg={"data": "foo", "path": "sub/../../foo"}
         )
         assert not os.path.exists(os.path.join(self.traversed_dir, "foo"))
         assert ret.find("Invalid path") != -1

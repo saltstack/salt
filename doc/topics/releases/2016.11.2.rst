@@ -12,7 +12,13 @@ Statistics
 - Total Issue References: **34**
 - Total PR References: **116**
 
-- Contributors: **45** (`Ch3LL`_, `Cybolic`_, `DmitryKuzmenko`_, `UtahDave`_, `Vaelatern`_, `alex-zel`_, `alxwr`_, `amendlik`_, `anlutro`_, `aosagie`_, `basdusee`_, `bbinet`_, `benediktwerner`_, `cachedout`_, `clinta`_, `cro`_, `dereckson`_, `disaster123`_, `ewapptus`_, `ezh`_, `folti`_, `gmacon`_, `gqgunhed`_, `gtmanfred`_, `kkoppel`_, `lorengordon`_, `martintamare`_, `mcalmer`_, `meaksh`_, `mirceaulinic`_, `mostafahussein`_, `mvdwalle`_, `rallytime`_, `rbjorklin`_, `scthi`_, `sjorge`_, `techhat`_, `terminalmage`_, `tsaridas`_, `twangboy`_, `vutny`_, `wolfpackmars2`_, `yhekma`_, `yopito`_, `yue9944882`_)
+- Contributors: **45** (`Ch3LL`_, `Cybolic`_, `DmitryKuzmenko`_, `UtahDave`_, `Vaelatern`_,
+  `alex-zel`_, `alxwr`_, `amendlik`_, `anlutro`_, `aosagie`_, `basdusee`_, `bbinet`_,
+  `benediktwerner`_, `cachedout`_, `clinta`_, `cro`_, `dereckson`_, `disaster123`_, `ewapptus`_,
+  `ezh`_, `folti`_, `gmacon`_, `gqgunhed`_, `gtmanfred`_, `kkoppel`_, `lorengordon`_,
+  `martintamare`_, `mcalmer`_, `meaksh`_, `mirceaulinic`_, `mostafahussein`_, `mvdwalle`_,
+  `rallytime`_, `rbjorklin`_, `scthi`_, `sjorge`_, `techhat`_, `terminalmage`_, `tsaridas`_,
+  `twangboy`_, `vutny`_, `wolfpackmars2`_, `yhekma`_, `yopito`_, `yue9944882`_)
 
 
 Security Fixes
@@ -179,9 +185,9 @@ Changelog for v2016.11.1..v2016.11.2
 
     * fd2ee7db30 Add some simple unit tests for salt.config.api_config function
 
-    * 3d2fefc83b Make sure the pidfile and log_file values are overriden by api opts
+    * 3d2fefc83b Make sure the pidfile and log_file values are overridden by api opts
 
-    * 1f6b540e46 Make sure the pidfile and log_file values are overriden by api opts
+    * 1f6b540e46 Make sure the pidfile and log_file values are overridden by api opts
 
     * 04d307f917 salt-api no longer forces the default timeout
 
@@ -421,7 +427,7 @@ Changelog for v2016.11.1..v2016.11.2
 
     * 7b657ca4ae add the ability to use keystone v2 and v3
 
-    * 5646ae1b34 add ability to use keystoneauth to authenitcate in nova driver
+    * 5646ae1b34 add ability to use keystoneauth to authenticate in nova driver
 
   * 383768d838 Merge pull request `#38650`_ from rallytime/remove-ubuntu-ppa-docs
 
@@ -566,7 +572,7 @@ Changelog for v2016.11.1..v2016.11.2
 
   * 26fae54f5b network.ifacestartswith throws exception on Solaris-like platforms
 
-* **ISSUE** `#37027`_: (`sjorge`_) Solaris FQDN/UQDN and documentation/consistancy (refs: `#38615`_)
+* **ISSUE** `#37027`_: (`sjorge`_) Solaris FQDN/UQDN and documentation/consistency (refs: `#38615`_)
 
 * **PR** `#38615`_: (`sjorge`_) add note related to issue `#37027`_
   @ *2017-01-06 16:38:34 UTC*
@@ -772,7 +778,7 @@ Changelog for v2016.11.1..v2016.11.2
 
   * 68d5475c1f Fixing Snapper unit tests for SUBVOLUME support
 
-  * e9919a913f Removing posible double '/' from the file paths
+  * e9919a913f Removing possible double '/' from the file paths
 
   * 8b4f87f226 Updating and fixing the documentation
 
@@ -1202,14 +1208,14 @@ Changelog for v2016.11.1..v2016.11.2
 
   * 6b9060c38f [2016.3] Bump latest release version to 2016.11.1 (`#38256`_)
 
-* **ISSUE** `#38231`_: (`tjuup`_) Typo: salt-key deleteed (refs: `#38232`_)
+* **ISSUE** `#38231`_: (`tjuup`_) Typo: salt-key deleted (refs: `#38232`_)
 
-* **PR** `#38232`_: (`rallytime`_) Strip final 'e' in key cmd to correct "deleteed" misspelling
+* **PR** `#38232`_: (`rallytime`_) Strip final 'e' in key cmd to correct "deleted" misspelling
   @ *2016-12-15 10:38:49 UTC*
 
   * 0af343e71f Merge pull request `#38232`_ from rallytime/fix-38231
 
-  * 26e1ee3650 Strip final 'e' in key cmd to correct "deleteed" misspelling
+  * 26e1ee3650 Strip final 'e' in key cmd to correct "deleted" misspelling
 
 * **ISSUE** `#38200`_: (`sebw`_) selinux.mode doesn't return any output and doesn't persist (refs: `#38236`_)
 

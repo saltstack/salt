@@ -911,26 +911,12 @@ def _handle_unit(s, def_unit="m"):
     """
     Handle the unit conversion, return the value in bytes
     """
-    m = re.match(r"(?P<value>[0-9.]*)\s*(?P<unit>.*)$", str(s).strip())
-    value = m.group("value")
-    # default unit
-    unit = m.group("unit").lower() or def_unit
-    try:
-        value = int(value)
-    except ValueError:
-        try:
-            value = float(value)
-        except ValueError:
-            raise SaltInvocationError("invalid number")
-    # flag for base ten
-    dec = False
-    if re.match(r"[kmgtpezy]b$", unit):
-        dec = True
-    elif not re.match(r"(b|[kmgtpezy](ib)?)$", unit):
-        raise SaltInvocationError("invalid units")
-    p = "bkmgtpezy".index(unit[0])
-    value *= 10 ** (p * 3) if dec else 2 ** (p * 10)
-    return int(value)
+    ret = salt.utils.stringutils.human_to_bytes(
+        s, default_unit=def_unit, handle_metric=True
+    )
+    if ret == 0:
+        raise SaltInvocationError("invalid number or unit")
+    return ret
 
 
 def nesthash(value=None):
@@ -1059,45 +1045,6 @@ def _gen_xml(
                     chardev_context["port"] = chardev.get("port", default_port)
                     chardev_context["protocol"] = chardev.get("protocol", "telnet")
                 context[chardev_type + "s"].append(chardev_context)
-
-    # processing of deprecated parameters
-    old_port = kwargs.get("telnet_port")
-    if old_port:
-        salt.utils.versions.warn_until(
-            "Phosphorus",
-            "'telnet_port' parameter has been deprecated, use the 'serials' and"
-            " 'consoles' parameters instead. 'telnet_port' parameter has been"
-            " deprecated, use the 'serials' parameter with a value like ``{{{{'type':"
-            " 'tcp', 'protocol': 'telnet', 'port': {}}}}}`` instead and a similar"
-            " `consoles` parameter. It will be removed in {{version}}.".format(
-                old_port
-            ),
-        )
-
-    old_serial_type = kwargs.get("serial_type")
-    if old_serial_type:
-        salt.utils.versions.warn_until(
-            "Phosphorus",
-            "'serial_type' parameter has been deprecated, use the 'serials' parameter"
-            " with a value like ``{{{{'type': '{}', 'protocol':  'telnet' }}}}``"
-            " instead and a similar `consoles` parameter. It will be removed in"
-            " {{version}}.".format(old_serial_type),
-        )
-        serial_context = {"type": old_serial_type}
-        if serial_context["type"] == "tcp":
-            serial_context["port"] = old_port or default_port
-            serial_context["protocol"] = "telnet"
-        context["serials"].append(serial_context)
-
-        old_console = kwargs.get("console")
-        if old_console:
-            salt.utils.versions.warn_until(
-                "Phosphorus",
-                "'console' parameter has been deprecated, use the 'serials' and"
-                " 'consoles' parameters instead. It will be removed in {version}.",
-            )
-            if old_console is True:
-                context["consoles"].append(serial_context)
 
     context["disks"] = []
     disk_bus_map = {"virtio": "vd", "xen": "xvd", "fdc": "fd", "ide": "hd"}
@@ -1780,11 +1727,7 @@ def _fill_disk_filename(conn, vm_name, disk, hypervisor, pool_caps):
                         int(re.sub("[a-z]+", "", vol_name)) for vol_name in all_volumes
                     ] or [0]
                     index = min(
-                        [
-                            idx
-                            for idx in range(1, max(indexes) + 2)
-                            if idx not in indexes
-                        ]
+                        idx for idx in range(1, max(indexes) + 2) if idx not in indexes
                     )
                     disk["filename"] = "{}{}".format(os.path.basename(device), index)
 
@@ -2255,9 +2198,6 @@ def init(
     :param config: minion configuration to use when seeding.
                    See :mod:`seed module for more details <salt.modules.seed>`
     :param boot_dev: String of space-separated devices to boot from (Default: ``'hd'``)
-    :param serial_type: Serial device type. One of ``'pty'``, ``'tcp'`` (Default: ``None``)
-    :param telnet_port: Telnet port to use for serial device of type ``tcp``.
-    :param console: ``True`` to add a console device along with serial one (Default: ``True``)
     :param connection: libvirt connection URI, overriding defaults
 
                        .. versionadded:: 2019.2.0
@@ -2448,7 +2388,7 @@ def init(
         NUMA node, number of dies per socket, number of cores per die, and number of threads per core, respectively.
 
     features
-        A dictionary conains a set of cpu features to fine-tune features provided by the selected CPU model. Use cpu
+        A dictionary contains a set of cpu features to fine-tune features provided by the selected CPU model. Use cpu
         feature ``name`` as the key and the ``policy`` as the value. ``policy`` Attribute takes ``force``, ``require``,
         ``optional``, ``disable`` or ``forbid``.
 
@@ -3294,10 +3234,10 @@ def _serial_or_concole_equal(old, new):
         """
         return {
             "type": item.attrib["type"],
-            "port": item.find("source").attrib["service"]
+            "port": item.find("source").get("service")
             if item.find("source") is not None
             else None,
-            "protocol": item.find("protocol").attrib["type"]
+            "protocol": item.find("protocol").get("type")
             if item.find("protocol") is not None
             else None,
         }
@@ -7057,7 +6997,7 @@ def network_define(
 
         .. versionadded:: 3003
 
-    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+    :param addresses: whitespace separated list of addresses of PCI devices that can be used for this network in `hostdev` forward mode.
         (default ``None``)
 
         .. code-block:: yaml
@@ -7336,7 +7276,7 @@ def network_update(
           - forward: passthrough
           - interfaces: "eth10 eth11 eth12"
 
-    :param addresses: whitespace separated list of addreses of PCI devices that can be used for this network in `hostdev` forward mode.
+    :param addresses: whitespace separated list of addresses of PCI devices that can be used for this network in `hostdev` forward mode.
         (default ``None``)
 
         .. code-block:: yaml

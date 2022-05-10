@@ -7,7 +7,7 @@ import salt.utils.crypt
 from tests.support.mock import patch
 
 try:
-    import M2Crypt  # pylint: disable=unused-import
+    import M2Crypto  # pylint: disable=unused-import
 
     HAS_M2CRYPTO = True
 except ImportError:

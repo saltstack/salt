@@ -26,10 +26,10 @@ import _pytest.logging
 import _pytest.skipping
 import psutil
 import pytest
-import salt._logging.impl
+import salt._logging
+import salt._logging.mixins
 import salt.config
 import salt.loader
-import salt.log.mixins
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -80,7 +80,7 @@ collect_ignore = ["setup.py"]
 
 # Patch PyTest logging handlers
 class LogCaptureHandler(
-    salt.log.mixins.ExcInfoOnLogLevelFormatMixIn, _pytest.logging.LogCaptureHandler
+    salt._logging.mixins.ExcInfoOnLogLevelFormatMixin, _pytest.logging.LogCaptureHandler
 ):
     """
     Subclassing PyTest's LogCaptureHandler in order to add the
@@ -94,7 +94,7 @@ _pytest.logging.LogCaptureHandler = LogCaptureHandler
 
 
 class LiveLoggingStreamHandler(
-    salt.log.mixins.ExcInfoOnLogLevelFormatMixIn,
+    salt._logging.mixins.ExcInfoOnLogLevelFormatMixin,
     _pytest.logging._LiveLoggingStreamHandler,
 ):
     """
@@ -108,6 +108,7 @@ _pytest.logging._LiveLoggingStreamHandler = LiveLoggingStreamHandler
 # Reset logging root handlers
 for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
+    handler.close()
 
 
 # Reset the root logger to its default level(because salt changed it)
@@ -255,6 +256,10 @@ def pytest_configure(config):
         "markers",
         "slow_test: Mark test as being slow. These tests are skipped by default unless"
         " `--run-slow` is passed",
+    )
+    config.addinivalue_line(
+        "markers",
+        "async_timeout: Timeout, in seconds, for asynchronous test functions(`async def`)",
     )
     # "Flag" the slowTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
@@ -1425,6 +1430,23 @@ def ssl_webserver(integration_files_dir, scope="module"):
     webserver.start()
     yield webserver
     webserver.stop()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _disable_salt_logging():
+    # This fixture is used to set logging to a configuration that salt expects,
+    # however, no logging is actually configured since pytest's logging will be
+    # logging what we need.
+    logging_config = {
+        # Undocumented, on purpose, at least for now, options.
+        "configure_ext_handlers": False,
+        "configure_file_logger": False,
+        "configure_console_logger": False,
+        "configure_granular_levels": False,
+    }
+    salt._logging.set_logging_options_dict(logging_config)
+    # Run the test suite
+    yield
 
 
 # <---- Custom Fixtures ----------------------------------------------------------------------------------------------

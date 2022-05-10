@@ -5,17 +5,15 @@
     Salt's logging handlers
 """
 
-
 import copy
 import logging
 import logging.handlers
-import queue
+import queue as _queue
 import sys
 from collections import deque
 
-from salt._logging.mixins import ExcInfoOnLogLevelFormatMixin, NewStyleClassMixin
-
-# from salt.utils.versions import warn_until_date
+from salt._logging.mixins import ExcInfoOnLogLevelFormatMixin
+from salt.utils.versions import warn_until_date
 
 log = logging.getLogger(__name__)
 
@@ -37,13 +35,12 @@ class TemporaryLoggingHandler(logging.NullHandler):
     """
 
     def __init__(self, level=logging.NOTSET, max_queue_size=10000):
-        # warn_until_date(
-        #    '20220101',
-        #    'Please stop using \'{name}.TemporaryLoggingHandler\'. '
-        #    '\'{name}.TemporaryLoggingHandler\' will go away after '
-        #    '{{date}}.'.format(name=__name__)
-        # )
-        self.__max_queue_size = max_queue_size
+        warn_until_date(
+            "20240101",
+            "Please stop using '{name}.TemporaryLoggingHandler'. "
+            "'{name}.TemporaryLoggingHandler' will go away after "
+            "{{date}}.".format(name=__name__),
+        )
         super().__init__(level=level)
         self.__messages = deque(maxlen=max_queue_size)
 
@@ -69,25 +66,77 @@ class TemporaryLoggingHandler(logging.NullHandler):
                 handler.handle(record)
 
 
-class StreamHandler(
-    ExcInfoOnLogLevelFormatMixin, logging.StreamHandler, NewStyleClassMixin
-):
+class StreamHandler(ExcInfoOnLogLevelFormatMixin, logging.StreamHandler):
     """
     Stream handler which properly handles exc_info on a per handler basis
     """
 
 
-class FileHandler(
-    ExcInfoOnLogLevelFormatMixin, logging.FileHandler, NewStyleClassMixin
-):
+class DeferredStreamHandler(StreamHandler):
+    """
+    This logging handler will store all the log records up to its maximum
+    queue size at which stage the first messages stored will be dropped.
+
+    Should only be used as a temporary logging handler, while the logging
+    system is not fully configured.
+
+    Once configured, pass any logging handlers that should have received the
+    initial log messages to the function
+    :func:`DeferredStreamHandler.sync_with_handlers` and all stored log
+    records will be dispatched to the provided handlers.
+
+    If anything goes wrong before logging is properly setup, all stored messages
+    will be flushed to the handler's stream, ie, written to console.
+
+    .. versionadded:: 3005.0
+    """
+
+    def __init__(self, stream, max_queue_size=10000):
+        super().__init__(stream)
+        self.__messages = deque(maxlen=max_queue_size)
+        self.__emitting = False
+
+    def handle(self, record):
+        self.acquire()
+        self.__messages.append(record)
+        self.release()
+
+    def flush(self):
+        if self.__emitting:
+            # We set the flushing flag because the stream handler actually calls flush when
+            # emitting a log record and we don't want to cause a RecursionError
+            return
+        while self.__messages:
+            try:
+                self.__emitting = True
+                record = self.__messages.popleft()
+                # We call the parent's class handle method so it's actually
+                # handled and not queued back
+                # However, temporarily
+                super().handle(record)
+            finally:
+                self.__emitting = False
+        super().flush()
+
+    def sync_with_handlers(self, handlers=()):
+        """
+        Sync the stored log records to the provided log handlers.
+        """
+        while self.__messages:
+            record = self.__messages.popleft()
+            for handler in handlers:
+                if handler is self:
+                    continue
+                handler.handle(record)
+
+
+class FileHandler(ExcInfoOnLogLevelFormatMixin, logging.FileHandler):
     """
     File handler which properly handles exc_info on a per handler basis
     """
 
 
-class SysLogHandler(
-    ExcInfoOnLogLevelFormatMixin, logging.handlers.SysLogHandler, NewStyleClassMixin
-):
+class SysLogHandler(ExcInfoOnLogLevelFormatMixin, logging.handlers.SysLogHandler):
     """
     Syslog handler which properly handles exc_info on a per handler basis
     """
@@ -117,9 +166,7 @@ class SysLogHandler(
 
 
 class RotatingFileHandler(
-    ExcInfoOnLogLevelFormatMixin,
-    logging.handlers.RotatingFileHandler,
-    NewStyleClassMixin,
+    ExcInfoOnLogLevelFormatMixin, logging.handlers.RotatingFileHandler
 ):
     """
     Rotating file handler which properly handles exc_info on a per handler basis
@@ -162,100 +209,14 @@ class RotatingFileHandler(
 
 
 class WatchedFileHandler(
-    ExcInfoOnLogLevelFormatMixin,
-    logging.handlers.WatchedFileHandler,
-    NewStyleClassMixin,
+    ExcInfoOnLogLevelFormatMixin, logging.handlers.WatchedFileHandler
 ):
     """
     Watched file handler which properly handles exc_info on a per handler basis
     """
 
 
-if sys.version_info < (3, 2):
-
-    class QueueHandler(
-        ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMixin
-    ):
-        """
-        This handler sends events to a queue. Typically, it would be used together
-        with a multiprocessing Queue to centralise logging to file in one process
-        (in a multi-process application), so as to avoid file write contention
-        between processes.
-
-        This code is new in Python 3.2, but this class can be copy pasted into
-        user code for use with earlier Python versions.
-        """
-
-        def __init__(self, queue):
-            """
-            Initialise an instance, using the passed queue.
-            """
-            # warn_until_date(
-            #    '20220101',
-            #    'Please stop using \'{name}.QueueHandler\' and instead '
-            #    'use \'logging.handlers.QueueHandler\'. '
-            #    '\'{name}.QueueHandler\' will go away after '
-            #    '{{date}}.'.format(name=__name__)
-            # )
-            logging.Handler.__init__(self)
-            self.queue = queue
-
-        def enqueue(self, record):
-            """
-            Enqueue a record.
-
-            The base implementation uses put_nowait. You may want to override
-            this method if you want to use blocking, timeouts or custom queue
-            implementations.
-            """
-            try:
-                self.queue.put_nowait(record)
-            except queue.Full:
-                sys.stderr.write(
-                    "[WARNING ] Message queue is full, "
-                    'unable to write "{}" to log'.format(record)
-                )
-
-        def prepare(self, record):
-            """
-            Prepares a record for queuing. The object returned by this method is
-            enqueued.
-            The base implementation formats the record to merge the message
-            and arguments, and removes unpickleable items from the record
-            in-place.
-            You might want to override this method if you want to convert
-            the record to a dict or JSON string, or send a modified copy
-            of the record while leaving the original intact.
-            """
-            # The format operation gets traceback text into record.exc_text
-            # (if there's exception data), and also returns the formatted
-            # message. We can then use this to replace the original
-            # msg + args, as these might be unpickleable. We also zap the
-            # exc_info and exc_text attributes, as they are no longer
-            # needed and, if not None, will typically not be pickleable.
-            msg = self.format(record)
-            # bpo-35726: make copy of record to avoid affecting other handlers in the chain.
-            record = copy.copy(record)
-            record.message = msg
-            record.msg = msg
-            record.args = None
-            record.exc_info = None
-            record.exc_text = None
-            return record
-
-        def emit(self, record):
-            """
-            Emit a record.
-
-            Writes the LogRecord to the queue, preparing it for pickling first.
-            """
-            try:
-                self.enqueue(self.prepare(record))
-            except Exception:  # pylint: disable=broad-except
-                self.handleError(record)
-
-
-elif sys.version_info < (3, 7):
+if sys.version_info < (3, 7):
     # On python versions lower than 3.7, we sill subclass and overwrite prepare to include the fix for:
     #  https://bugs.python.org/issue35726
     class QueueHandler(
@@ -263,13 +224,13 @@ elif sys.version_info < (3, 7):
     ):  # pylint: disable=no-member,inconsistent-mro
         def __init__(self, queue):  # pylint: disable=useless-super-delegation
             super().__init__(queue)
-            # warn_until_date(
-            #    '20220101',
-            #    'Please stop using \'{name}.QueueHandler\' and instead '
-            #    'use \'logging.handlers.QueueHandler\'. '
-            #    '\'{name}.QueueHandler\' will go away after '
-            #    '{{date}}.'.format(name=__name__)
-            # )
+            warn_until_date(
+                "20240101",
+                "Please stop using '{name}.QueueHandler' and instead "
+                "use 'logging.handlers.QueueHandler'. "
+                "'{name}.QueueHandler' will go away after "
+                "{{date}}.".format(name=__name__),
+            )
 
         def enqueue(self, record):
             """
@@ -281,7 +242,7 @@ elif sys.version_info < (3, 7):
             """
             try:
                 self.queue.put_nowait(record)
-            except queue.Full:
+            except _queue.Full:
                 sys.stderr.write(
                     "[WARNING ] Message queue is full, "
                     'unable to write "{}" to log.\n'.format(record)
@@ -322,13 +283,13 @@ else:
     ):  # pylint: disable=no-member,inconsistent-mro
         def __init__(self, queue):  # pylint: disable=useless-super-delegation
             super().__init__(queue)
-            # warn_until_date(
-            #    '20220101',
-            #    'Please stop using \'{name}.QueueHandler\' and instead '
-            #    'use \'logging.handlers.QueueHandler\'. '
-            #    '\'{name}.QueueHandler\' will go away after '
-            #    '{{date}}.'.format(name=__name__)
-            # )
+            warn_until_date(
+                "20240101",
+                "Please stop using '{name}.QueueHandler' and instead "
+                "use 'logging.handlers.QueueHandler'. "
+                "'{name}.QueueHandler' will go away after "
+                "{{date}}.".format(name=__name__),
+            )
 
         def enqueue(self, record):
             """
@@ -340,7 +301,7 @@ else:
             """
             try:
                 self.queue.put_nowait(record)
-            except queue.Full:
+            except _queue.Full:
                 sys.stderr.write(
                     "[WARNING ] Message queue is full, "
                     'unable to write "{}" to log.\n'.format(record)

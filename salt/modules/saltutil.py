@@ -17,6 +17,7 @@ import time
 import urllib.error
 
 import salt
+import salt.channel.client
 import salt.client
 import salt.client.ssh.client
 import salt.config
@@ -24,7 +25,6 @@ import salt.defaults.events
 import salt.payload
 import salt.runner
 import salt.state
-import salt.transport.client
 import salt.utils.args
 import salt.utils.event
 import salt.utils.extmods
@@ -128,7 +128,7 @@ def _sync(form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
 def update(version=None):
     """
     Update the salt minion from the URL defined in opts['update_url']
-    SaltStack, Inc provides the latest builds here:
+    VMware, Inc provides the latest builds here:
     update_url: https://repo.saltproject.io/windows/
 
     Be aware that as of 2014-8-11 there's a bug in esky such that only the
@@ -1120,7 +1120,7 @@ def refresh_matchers():
     return ret
 
 
-def refresh_pillar(wait=False, timeout=30):
+def refresh_pillar(wait=False, timeout=30, clean_cache=True):
     """
     Signal the minion to refresh the in-memory pillar data. See :ref:`pillar-in-memory`.
 
@@ -1128,6 +1128,9 @@ def refresh_pillar(wait=False, timeout=30):
     :type wait:             bool, optional
     :param timeout:         How long to wait in seconds, only used when wait is True, defaults to 30.
     :type timeout:          int, optional
+    :param clean_cache:     Clean the pillar cache, only used when `pillar_cache` is True. Defaults to True
+    :type clean_cache:      bool, optional
+        .. versionadded:: 3005
     :return:                Boolean status, True when the pillar_refresh event was fired successfully.
 
     CLI Example:
@@ -1137,13 +1140,14 @@ def refresh_pillar(wait=False, timeout=30):
         salt '*' saltutil.refresh_pillar
         salt '*' saltutil.refresh_pillar wait=True timeout=60
     """
+    data = {"clean_cache": clean_cache}
     try:
         if wait:
             #  If we're going to block, first setup a listener
             with salt.utils.event.get_event(
                 "minion", opts=__opts__, listen=True
             ) as eventer:
-                ret = __salt__["event.fire"]({}, "pillar_refresh")
+                ret = __salt__["event.fire"](data, "pillar_refresh")
                 # Wait for the finish event to fire
                 log.trace("refresh_pillar waiting for pillar refresh to complete")
                 # Blocks until we hear this event or until the timeout expires
@@ -1152,11 +1156,11 @@ def refresh_pillar(wait=False, timeout=30):
                     wait=timeout,
                 )
                 if not event_ret or event_ret["complete"] is False:
-                    log.warn(
+                    log.warning(
                         "Pillar refresh did not complete within timeout %s", timeout
                     )
         else:
-            ret = __salt__["event.fire"]({}, "pillar_refresh")
+            ret = __salt__["event.fire"](data, "pillar_refresh")
     except KeyError:
         log.error("Event module not available. Pillar refresh failed.")
         ret = False  # Effectively a no-op, since we can't really return without an event system
@@ -1509,7 +1513,7 @@ def regen_keys():
             pass
     # TODO: move this into a channel function? Or auth?
     # create a channel again, this will force the key regen
-    with salt.transport.client.ReqChannel.factory(__opts__) as channel:
+    with salt.channel.client.ReqChannel.factory(__opts__) as channel:
         log.debug("Recreating channel to force key regen")
 
 
@@ -1537,7 +1541,7 @@ def revoke_auth(preserve_minion_cache=False):
         masters.append(__opts__["master_uri"])
 
     for master in masters:
-        with salt.transport.client.ReqChannel.factory(
+        with salt.channel.client.ReqChannel.factory(
             __opts__, master_uri=master
         ) as channel:
             tok = channel.auth.gen_token(b"salt")
