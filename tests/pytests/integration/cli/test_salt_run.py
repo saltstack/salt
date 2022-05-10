@@ -130,6 +130,7 @@ def test_salt_run_with_eauth_bad_passwd(salt_run_cli, saltdev_account):
     )
 
 
+@pytest.mark.skip_if_not_root
 def test_salt_run_with_wrong_eauth(salt_run_cli, saltdev_account):
     """
     test salt-run with wrong eauth parameter
