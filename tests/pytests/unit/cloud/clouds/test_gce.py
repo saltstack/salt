@@ -209,6 +209,7 @@ def test_request_instance_with_accelerator(config, location, conn, fake_libcloud
         "external_ip": "ephemeral",
         "ex_accelerator_type": "foo",
         "ex_tags": None,
+        "ex_labels": None,
         "ex_disk_auto_delete": True,
         "ex_network": "default",
         "ex_disks_gce_struct": None,
