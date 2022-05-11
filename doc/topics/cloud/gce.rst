@@ -147,8 +147,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
       location: europe-west1-b
       network: default
       subnetwork: default
-      labels:
-        name: myinstance
+      labels: '{"name": "myinstance"}'
       tags: '["one", "two", "three"]'
       metadata: '{"one": "1", "2": "two"}'
       use_persistent_disk: True
@@ -194,8 +193,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
       location: europe-west1-b
       network: default
       subnetwork: default
-      labels:
-        name: myinstance
+      labels: '{"name": "myinstance"}'
       tags: '["one", "two", "three"]'
       metadata: '{"one": "1", "2": "two"}'
       use_persistent_disk: True
@@ -333,8 +331,7 @@ key in your cloud profile. The following example enables the bigquery scope.
     location: us-central1-a
     network: default
     subnetwork: default
-    labels:
-        name: myinstance
+    labels: '{"name": "myinstance"}'
     tags: '["one", "two", "three"]'
     metadata: '{"one": "1", "2": "two",
                 "sshKeys": ""}'
