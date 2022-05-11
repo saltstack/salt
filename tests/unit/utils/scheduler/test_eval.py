@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import
-
 import datetime
 import logging
 import random
@@ -39,13 +35,13 @@ log = logging.getLogger(__name__)
 @pytest.mark.windows_whitelisted
 class SchedulerEvalTest(SchedulerTestsBase):
     def setUp(self):
-        super(SchedulerEvalTest, self).setUp()
+        super().setUp()
         self.schedule.opts["loop_interval"] = 1
         self.schedule.opts["grains"]["whens"] = {"tea time": "11/29/2017 12:00pm"}
 
     def tearDown(self):
         self.schedule.reset()
-        super(SchedulerEvalTest, self).tearDown()
+        super().tearDown()
 
     @slowTest
     def test_eval(self):
@@ -617,156 +613,164 @@ class SchedulerEvalTest(SchedulerTestsBase):
         """
         verify that scheduled job run mutiple times with seconds
         """
-        job_name = "job_eval_seconds"
-        job = {"schedule": {job_name: {"function": "test.ping", "seconds": "30"}}}
+        with patch.dict(self.schedule.opts, {"run_schedule_jobs_in_background": False}):
+            job_name = "job_eval_seconds"
+            job = {"schedule": {job_name: {"function": "test.ping", "seconds": "30"}}}
 
-        if salt.utils.platform.is_darwin():
-            job["schedule"][job_name]["dry_run"] = True
+            if salt.utils.platform.is_darwin():
+                job["schedule"][job_name]["dry_run"] = True
 
-        # Add job to schedule
-        self.schedule.opts.update(job)
+            # Add job to schedule
+            self.schedule.opts.update(job)
 
-        # eval at 2:00pm to prime, simulate minion start up.
-        run_time = dateutil.parser.parse("11/29/2017 2:00pm")
-        next_run_time = run_time + datetime.timedelta(seconds=30)
-        self.schedule.eval(now=run_time)
-        ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret["_next_fire_time"], next_run_time)
+            # eval at 2:00pm to prime, simulate minion start up.
+            run_time = dateutil.parser.parse("11/29/2017 2:00pm")
+            next_run_time = run_time + datetime.timedelta(seconds=30)
+            jids = self.schedule.eval(now=run_time)
+            assert len(jids) == 0
+            ret = self.schedule.job_status(job_name)
+            self.assertEqual(ret["_next_fire_time"], next_run_time)
 
-        # eval at 2:00:01pm, will not run.
-        run_time = dateutil.parser.parse("11/29/2017 2:00:01pm")
-        self.schedule.eval(now=run_time)
-        ret = self.schedule.job_status(job_name)
-        self.assertNotIn("_last_run", ret)
-        self.assertEqual(ret["_next_fire_time"], next_run_time)
+            # eval at 2:00:01pm, will not run.
+            run_time = dateutil.parser.parse("11/29/2017 2:00:01pm")
+            jids = self.schedule.eval(now=run_time)
+            assert len(jids) == 0
+            ret = self.schedule.job_status(job_name)
+            self.assertNotIn("_last_run", ret)
+            self.assertEqual(ret["_next_fire_time"], next_run_time)
 
-        # eval at 2:00:30pm, will run.
-        run_time = dateutil.parser.parse("11/29/2017 2:00:30pm")
-        next_run_time = run_time + datetime.timedelta(seconds=30)
-        self.schedule.eval(now=run_time)
-        ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret["_last_run"], run_time)
-        self.assertEqual(ret["_next_fire_time"], next_run_time)
+            # eval at 2:00:30pm, will run.
+            run_time = dateutil.parser.parse("11/29/2017 2:00:30pm")
+            next_run_time = run_time + datetime.timedelta(seconds=30)
+            jids = self.schedule.eval(now=run_time)
+            assert len(jids) == 1
+            ret = self.schedule.job_status(job_name)
+            self.assertEqual(ret["_last_run"], run_time)
+            self.assertEqual(ret["_next_fire_time"], next_run_time)
 
-        time.sleep(2)
+            # eval at 2:01:00pm, will run.
+            run_time = dateutil.parser.parse("11/29/2017 2:01:00pm")
+            next_run_time = run_time + datetime.timedelta(seconds=30)
+            jids = self.schedule.eval(now=run_time)
+            assert len(jids) == 1
+            ret = self.schedule.job_status(job_name)
+            self.assertEqual(ret["_last_run"], run_time)
+            self.assertEqual(ret["_next_fire_time"], next_run_time)
 
-        # eval at 2:01:00pm, will run.
-        run_time = dateutil.parser.parse("11/29/2017 2:01:00pm")
-        next_run_time = run_time + datetime.timedelta(seconds=30)
-        self.schedule.eval(now=run_time)
-        ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret["_last_run"], run_time)
-        self.assertEqual(ret["_next_fire_time"], next_run_time)
-
-        time.sleep(2)
-
-        # eval at 2:01:30pm, will run.
-        run_time = dateutil.parser.parse("11/29/2017 2:01:30pm")
-        next_run_time = run_time + datetime.timedelta(seconds=30)
-        self.schedule.eval(now=run_time)
-        ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret["_last_run"], run_time)
-        self.assertEqual(ret["_next_fire_time"], next_run_time)
+            # eval at 2:01:30pm, will run.
+            run_time = dateutil.parser.parse("11/29/2017 2:01:30pm")
+            next_run_time = run_time + datetime.timedelta(seconds=30)
+            jids = self.schedule.eval(now=run_time)
+            assert len(jids) == 1
+            ret = self.schedule.job_status(job_name)
+            self.assertEqual(ret["_last_run"], run_time)
+            self.assertEqual(ret["_next_fire_time"], next_run_time)
 
     @slowTest
     def test_eval_minutes(self):
         """
         verify that scheduled job run mutiple times with minutes
         """
-        job_name = "job_eval_minutes"
-        job = {"schedule": {job_name: {"function": "test.ping", "minutes": "30"}}}
+        with patch.dict(self.schedule.opts, {"run_schedule_jobs_in_background": False}):
+            job_name = "job_eval_minutes"
+            job = {"schedule": {job_name: {"function": "test.ping", "minutes": "30"}}}
 
-        if salt.utils.platform.is_darwin():
-            job["schedule"][job_name]["dry_run"] = True
+            if salt.utils.platform.is_darwin():
+                job["schedule"][job_name]["dry_run"] = True
 
-        # Add job to schedule
-        self.schedule.opts.update(job)
+            # Add job to schedule
+            self.schedule.opts.update(job)
 
-        # eval at 2:00pm to prime, simulate minion start up.
-        run_time = dateutil.parser.parse("11/29/2017 2:00pm")
-        next_run_time = run_time + datetime.timedelta(minutes=30)
-        self.schedule.eval(now=run_time)
-        ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret["_next_fire_time"], next_run_time)
+            # eval at 2:00pm to prime, simulate minion start up.
+            run_time = dateutil.parser.parse("11/29/2017 2:00pm")
+            next_run_time = run_time + datetime.timedelta(minutes=30)
+            jids = self.schedule.eval(now=run_time)
+            assert len(jids) == 0
+            ret = self.schedule.job_status(job_name)
+            self.assertEqual(ret["_next_fire_time"], next_run_time)
 
-        # eval at 2:00:01pm, will not run.
-        run_time = dateutil.parser.parse("11/29/2017 2:00:01pm")
-        self.schedule.eval(now=run_time)
-        ret = self.schedule.job_status(job_name)
-        self.assertNotIn("_last_run", ret)
-        self.assertEqual(ret["_next_fire_time"], next_run_time)
+            # eval at 2:00:01pm, will not run.
+            run_time = dateutil.parser.parse("11/29/2017 2:00:01pm")
+            jids = self.schedule.eval(now=run_time)
+            assert len(jids) == 0
+            ret = self.schedule.job_status(job_name)
+            self.assertNotIn("_last_run", ret)
+            self.assertEqual(ret["_next_fire_time"], next_run_time)
 
-        # eval at 2:30:00pm, will run.
-        run_time = dateutil.parser.parse("11/29/2017 2:30:00pm")
-        self.schedule.eval(now=run_time)
-        ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret["_last_run"], run_time)
+            # eval at 2:30:00pm, will run.
+            run_time = dateutil.parser.parse("11/29/2017 2:30:00pm")
+            jids = self.schedule.eval(now=run_time)
+            assert len(jids) == 1
+            ret = self.schedule.job_status(job_name)
+            self.assertEqual(ret["_last_run"], run_time)
 
-        time.sleep(2)
+            # eval at 3:00:00pm, will run.
+            run_time = dateutil.parser.parse("11/29/2017 3:00:00pm")
+            jids = self.schedule.eval(now=run_time)
+            assert len(jids) == 1
+            ret = self.schedule.job_status(job_name)
+            self.assertEqual(ret["_last_run"], run_time)
 
-        # eval at 3:00:00pm, will run.
-        run_time = dateutil.parser.parse("11/29/2017 3:00:00pm")
-        self.schedule.eval(now=run_time)
-        ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret["_last_run"], run_time)
-
-        time.sleep(2)
-
-        # eval at 3:30:00pm, will run.
-        run_time = dateutil.parser.parse("11/29/2017 3:30:00pm")
-        self.schedule.eval(now=run_time)
-        ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret["_last_run"], run_time)
+            # eval at 3:30:00pm, will run.
+            run_time = dateutil.parser.parse("11/29/2017 3:30:00pm")
+            jids = self.schedule.eval(now=run_time)
+            assert len(jids) == 1
+            ret = self.schedule.job_status(job_name)
+            self.assertEqual(ret["_last_run"], run_time)
 
     @slowTest
     def test_eval_hours(self):
         """
         verify that scheduled job run mutiple times with hours
         """
-        job_name = "job_eval_hours"
-        job = {"schedule": {job_name: {"function": "test.ping", "hours": "2"}}}
+        with patch.dict(self.schedule.opts, {"run_schedule_jobs_in_background": False}):
+            job_name = "job_eval_hours"
+            job = {"schedule": {job_name: {"function": "test.ping", "hours": "2"}}}
 
-        if salt.utils.platform.is_darwin():
-            job["schedule"][job_name]["dry_run"] = True
+            if salt.utils.platform.is_darwin():
+                job["schedule"][job_name]["dry_run"] = True
 
-        # Add job to schedule
-        self.schedule.opts.update(job)
+            # Add job to schedule
+            self.schedule.opts.update(job)
 
-        # eval at 2:00pm to prime, simulate minion start up.
-        run_time = dateutil.parser.parse("11/29/2017 2:00pm")
-        next_run_time = run_time + datetime.timedelta(hours=2)
-        self.schedule.eval(now=run_time)
-        ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret["_next_fire_time"], next_run_time)
+            # eval at 2:00pm to prime, simulate minion start up.
+            run_time = dateutil.parser.parse("11/29/2017 2:00pm")
+            next_run_time = run_time + datetime.timedelta(hours=2)
+            jids = self.schedule.eval(now=run_time)
+            assert len(jids) == 0
+            ret = self.schedule.job_status(job_name)
+            self.assertEqual(ret["_next_fire_time"], next_run_time)
 
-        # eval at 2:00:01pm, will not run.
-        run_time = dateutil.parser.parse("11/29/2017 2:00:01pm")
-        self.schedule.eval(now=run_time)
-        ret = self.schedule.job_status(job_name)
-        self.assertNotIn("_last_run", ret)
-        self.assertEqual(ret["_next_fire_time"], next_run_time)
+            # eval at 2:00:01pm, will not run.
+            run_time = dateutil.parser.parse("11/29/2017 2:00:01pm")
+            jids = self.schedule.eval(now=run_time)
+            assert len(jids) == 0
+            ret = self.schedule.job_status(job_name)
+            self.assertNotIn("_last_run", ret)
+            self.assertEqual(ret["_next_fire_time"], next_run_time)
 
-        # eval at 4:00:00pm, will run.
-        run_time = dateutil.parser.parse("11/29/2017 4:00:00pm")
-        self.schedule.eval(now=run_time)
-        ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret["_last_run"], run_time)
+            # eval at 4:00:00pm, will run.
+            run_time = dateutil.parser.parse("11/29/2017 4:00:00pm")
+            jids = self.schedule.eval(now=run_time)
+            assert len(jids) == 1
+            ret = self.schedule.job_status(job_name)
+            self.assertEqual(ret["_last_run"], run_time)
 
-        time.sleep(2)
+            # eval at 6:00:00pm, will run.
+            run_time = dateutil.parser.parse("11/29/2017 6:00:00pm")
+            jids = self.schedule.eval(now=run_time)
+            assert len(jids) == 1
 
-        # eval at 6:00:00pm, will run.
-        run_time = dateutil.parser.parse("11/29/2017 6:00:00pm")
-        self.schedule.eval(now=run_time)
-        ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret["_last_run"], run_time)
+            ret = self.schedule.job_status(job_name)
+            self.assertEqual(ret["_last_run"], run_time)
 
-        time.sleep(2)
+            # eval at 8:00:00pm, will run.
+            run_time = dateutil.parser.parse("11/29/2017 8:00:00pm")
+            pids = self.schedule.eval(now=run_time)
+            assert len(jids) == 1
 
-        # eval at 8:00:00pm, will run.
-        run_time = dateutil.parser.parse("11/29/2017 8:00:00pm")
-        self.schedule.eval(now=run_time)
-        ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret["_last_run"], run_time)
+            ret = self.schedule.job_status(job_name)
+            self.assertEqual(ret["_last_run"], run_time)
 
     @slowTest
     def test_eval_days(self):

@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
-from __future__ import absolute_import, print_function, unicode_literals
 
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
@@ -15,6 +12,7 @@ from tests.support.helpers import (
     skip_if_not_root,
     slowTest,
 )
+from tests.support.unit import skipIf
 
 # Brew doesn't support local package installation - So, let's
 # Grab some small packages available online for brew
@@ -83,7 +81,7 @@ class BrewModuleTest(ModuleCase):
                 self.assertTrue(
                     version,
                     msg=(
-                        "version: {0} is empty,\
+                        "version: {} is empty,\
                                 or other issue is present".format(
                             version
                         )
@@ -93,8 +91,8 @@ class BrewModuleTest(ModuleCase):
                     ADD_PKG,
                     pkg_list,
                     msg=(
-                        "package: {0} is not in\
-                              the list of installed packages: {1}".format(
+                        "package: {} is not in\
+                              the list of installed packages: {}".format(
                             ADD_PKG, pkg_list
                         )
                     ),
@@ -102,10 +100,10 @@ class BrewModuleTest(ModuleCase):
                 # make sure the version is accurate and is listed in the pkg_list
                 self.assertIn(
                     version,
-                    six.text_type(pkg_list[ADD_PKG]),
+                    str(pkg_list[ADD_PKG]),
                     msg=(
-                        "The {0} version: {1} is \
-                              not listed in the pkg_list: {2}".format(
+                        "The {} version: {} is \
+                              not listed in the pkg_list: {}".format(
                             ADD_PKG, version, pkg_list[ADD_PKG]
                         )
                     ),
@@ -134,7 +132,7 @@ class BrewModuleTest(ModuleCase):
             installed_latest = self.run_function("pkg.latest_version", [ADD_PKG])
             version = self.run_function("pkg.version", [ADD_PKG])
             try:
-                self.assertTrue(isinstance(uninstalled_latest, six.string_types))
+                self.assertTrue(isinstance(uninstalled_latest, str))
                 self.assertEqual(installed_latest, version)
             except AssertionError:
                 self.run_function("pkg.remove", [ADD_PKG])
@@ -151,6 +149,7 @@ class BrewModuleTest(ModuleCase):
         refresh_brew = self.run_function("pkg.refresh_db")
         self.assertTrue(refresh_brew)
 
+    @skipIf(True, "Skipping on 3002.9 branch")
     @slowTest
     def test_list_upgrades(self):
         """
@@ -163,8 +162,8 @@ class BrewModuleTest(ModuleCase):
                 self.assertTrue(isinstance(upgrades, dict))
                 if upgrades:
                     for name in upgrades:
-                        self.assertTrue(isinstance(name, six.string_types))
-                        self.assertTrue(isinstance(upgrades[name], six.string_types))
+                        self.assertTrue(isinstance(name, str))
+                        self.assertTrue(isinstance(upgrades[name], str))
             except AssertionError:
                 self.run_function("pkg.remove", [ADD_PKG])
                 raise

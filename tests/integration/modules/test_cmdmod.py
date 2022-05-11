@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import, print_function, unicode_literals
-
 import os
 import sys
 import tempfile
@@ -11,7 +7,6 @@ import pytest
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.user
-from salt.ext import six
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     dedent,
@@ -65,7 +60,7 @@ class CMDModuleTest(ModuleCase):
         self.assertTrue(self.run_function("cmd.run", ["echo $SHELL"]))
         self.assertEqual(
             self.run_function(
-                "cmd.run", ["echo $SHELL", "shell={0}".format(shell)], python_shell=True
+                "cmd.run", ["echo $SHELL", "shell={}".format(shell)], python_shell=True
             ).rstrip(),
             shell,
         )
@@ -117,7 +112,7 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(
             self.run_function(
                 "cmd.run_stderr",
-                ['echo "cheese" 1>&2', "shell={0}".format(shell)],
+                ['echo "cheese" 1>&2', "shell={}".format(shell)],
                 python_shell=True,
             ).rstrip(),
             "cheese" if not salt.utils.platform.is_windows() else '"cheese"',
@@ -135,7 +130,7 @@ class CMDModuleTest(ModuleCase):
 
         ret = self.run_function(
             "cmd.run_all",
-            ['echo "cheese" 1>&2', "shell={0}".format(shell)],
+            ['echo "cheese" 1>&2', "shell={}".format(shell)],
             python_shell=True,
         )
         self.assertTrue("pid" in ret)
@@ -144,8 +139,8 @@ class CMDModuleTest(ModuleCase):
         self.assertTrue("stderr" in ret)
         self.assertTrue(isinstance(ret.get("pid"), int))
         self.assertTrue(isinstance(ret.get("retcode"), int))
-        self.assertTrue(isinstance(ret.get("stdout"), six.string_types))
-        self.assertTrue(isinstance(ret.get("stderr"), six.string_types))
+        self.assertTrue(isinstance(ret.get("stdout"), str))
+        self.assertTrue(isinstance(ret.get("stderr"), str))
         self.assertEqual(
             ret.get("stderr").rstrip(),
             "cheese" if not salt.utils.platform.is_windows() else '"cheese"',
@@ -231,7 +226,7 @@ class CMDModuleTest(ModuleCase):
         """
         cmd.script with cwd
         """
-        tmp_cwd = "{0}{1}test 2".format(
+        tmp_cwd = "{}{}test 2".format(
             tempfile.mkdtemp(dir=RUNTIME_VARS.TMP), os.path.sep
         )
         os.mkdir(tmp_cwd)
@@ -252,6 +247,7 @@ class CMDModuleTest(ModuleCase):
                 self.assertTrue("Success" in ret)
 
     @skip_if_binaries_missing(["which"])
+    @pytest.mark.skip_on_windows
     def test_which(self):
         """
         cmd.which
@@ -263,6 +259,7 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(cmd_which.rstrip(), cmd_run.rstrip())
 
     @skip_if_binaries_missing(["which"])
+    @pytest.mark.skip_on_windows
     def test_which_bin(self):
         """
         cmd.which_bin
@@ -472,7 +469,7 @@ class CMDModuleTest(ModuleCase):
             out = self.run_function(
                 "cmd.run", ["env"], runas=self.runas_usr
             ).splitlines()
-        self.assertIn("USER={0}".format(self.runas_usr), out)
+        self.assertIn("USER={}".format(self.runas_usr), out)
 
     @skipIf(not salt.utils.path.which_bin("sleep"), "sleep cmd not installed")
     def test_timeout(self):
@@ -586,7 +583,7 @@ class CMDModuleTest(ModuleCase):
         Ensure that powershell processes inline script in args
         """
         val = "i like cheese"
-        args = '-SecureString (ConvertTo-SecureString -String "{0}" -AsPlainText -Force) -ErrorAction Stop'.format(
+        args = '-SecureString (ConvertTo-SecureString -String "{}" -AsPlainText -Force) -ErrorAction Stop'.format(
             val
         )
         script = "salt://issue-56195/test.ps1"
