@@ -34,7 +34,7 @@ from salt.utils.odict import OrderedDict
 
 # Integrations
 try:
-    import dns.resolver
+    import dns.resolver  # pylint: disable=no-name-in-module
 
     HAS_DNSPYTHON = True
 except ImportError:
