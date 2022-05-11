@@ -103,7 +103,7 @@ try:
     from netaddr import IPNetwork
     from netaddr import IPAddress
 
-    from napalm.base import helpers as napalm_helpers  # pylint: disable=unused-import
+    from napalm.base import helpers as napalm_helpers  # pylint: disable=unused-import,no-name-in-module
 
     HAS_NAPALM = True
 except ImportError:
