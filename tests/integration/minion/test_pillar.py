@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
 
-from __future__ import absolute_import
 
 import copy
 import errno
@@ -240,7 +238,7 @@ class BasePillarTest(_CommonBase):
 
     @classmethod
     def setUpClass(cls):
-        super(BasePillarTest, cls).setUpClass()
+        super().setUpClass()
         os.makedirs(cls.pillar_base)
         with salt.utils.files.fopen(cls.top_sls, "w") as fp_:
             fp_.write(
@@ -302,7 +300,6 @@ class BasePillarTest(_CommonBase):
 
 
 @skipIf(not salt.utils.path.which("gpg"), "GPG is not installed")
-@pytest.mark.windows_whitelisted
 class DecryptGPGPillarTest(_CommonBase):
     """
     Tests for pillar decryption
@@ -312,7 +309,7 @@ class DecryptGPGPillarTest(_CommonBase):
 
     @classmethod
     def setUpClass(cls):
-        super(DecryptGPGPillarTest, cls).setUpClass()
+        super().setUpClass()
         try:
             os.makedirs(cls.gpg_homedir, mode=0o700)
         except Exception:  # pylint: disable=broad-except
