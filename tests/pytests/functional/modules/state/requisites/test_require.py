@@ -571,6 +571,7 @@ def test_issue_38683_require_order_failhard_combination(state, state_tree):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skip_on_windows
 def test_parallel_state_with_requires(state, state_tree):
     """
     This is a test case for https://github.com/saltstack/salt/issues/49273
