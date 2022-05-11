@@ -65,6 +65,7 @@ def config(location):
         "location": location,
         "ex_network": "mynetwork",
         "ex_subnetwork": "mysubnetwork",
+        "ex_labels": "mylabels",
         "ex_tags": "mytags",
         "ex_metadata": "metadata",
     }
