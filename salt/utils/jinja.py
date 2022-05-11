@@ -103,10 +103,10 @@ class SaltCacheLoader(BaseLoader):
         # If there was no file_client passed to the class, create a cache_client
         # and use that. This avoids opening a new file_client every time this
         # class is instantiated
-        if self._file_client is None:
+        if self._file_client is None or self._file_client.opts != self.opts:
             attr = "_cached_pillar_client" if self.pillar_rend else "_cached_client"
             cached_client = getattr(self, attr, None)
-            if cached_client is None:
+            if cached_client is None or cached_client.opts != self.opts:
                 cached_client = salt.fileclient.get_file_client(
                     self.opts, self.pillar_rend
                 )
@@ -119,7 +119,8 @@ class SaltCacheLoader(BaseLoader):
         Cache a file from the salt master
         """
         saltpath = salt.utils.url.create(template)
-        return self.file_client().get_file(saltpath, "", True, self.saltenv)
+        fcl = self.file_client()
+        return fcl.get_file(saltpath, "", True, self.saltenv)
 
     def check_cache(self, template):
         """
