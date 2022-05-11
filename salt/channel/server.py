@@ -137,10 +137,24 @@ class ReqServerChannel:
                 "bad load: id {} is not a string".format(id_)
             )
 
+        version = 0
+        if "version" in payload:
+            version = payload["version"]
+
+        sign_messages = False
+        if version > 1:
+            sign_messages = True
+
         # intercept the "_auth" commands, since the main daemon shouldn't know
         # anything about our key auth
         if payload["enc"] == "clear" and payload.get("load", {}).get("cmd") == "_auth":
-            raise salt.ext.tornado.gen.Return(self._auth(payload["load"]))
+            raise salt.ext.tornado.gen.Return(
+                self._auth(payload["load"], sign_messages)
+            )
+
+        nonce = None
+        if version > 1:
+            nonce = payload["load"].pop("nonce", None)
 
         # TODO: test
         try:
@@ -156,20 +170,22 @@ class ReqServerChannel:
         if req_fun == "send_clear":
             raise salt.ext.tornado.gen.Return(ret)
         elif req_fun == "send":
-            raise salt.ext.tornado.gen.Return(self.crypticle.dumps(ret))
+            raise salt.ext.tornado.gen.Return(self.crypticle.dumps(ret, nonce))
         elif req_fun == "send_private":
             raise salt.ext.tornado.gen.Return(
                 self._encrypt_private(
                     ret,
                     req_opts["key"],
                     req_opts["tgt"],
+                    nonce,
+                    sign_messages,
                 ),
             )
         log.error("Unknown req_fun %s", req_fun)
         # always attempt to return an error to the minion
         salt.ext.tornado.Return("Server-side exception handling payload")
 
-    def _encrypt_private(self, ret, dictkey, target):
+    def _encrypt_private(self, ret, dictkey, target, nonce=None, sign_messages=True):
         """
         The server equivalent of ReqChannel.crypted_transfer_decode_dictentry
         """
@@ -184,7 +200,6 @@ class ReqServerChannel:
         except OSError:
             log.error("AES key not found")
             return {"error": "AES key not found"}
-
         pret = {}
         key = salt.utils.stringutils.to_bytes(key)
         if HAS_M2:
@@ -192,8 +207,32 @@ class ReqServerChannel:
         else:
             cipher = PKCS1_OAEP.new(pub)
             pret["key"] = cipher.encrypt(key)
-        pret[dictkey] = pcrypt.dumps(ret if ret is not False else {})
+        if ret is False:
+            ret = {}
+        if sign_messages:
+            if nonce is None:
+                return {"error": "Nonce not included in request"}
+            tosign = salt.payload.dumps(
+                {"key": pret["key"], "pillar": ret, "nonce": nonce}
+            )
+            master_pem_path = os.path.join(self.opts["pki_dir"], "master.pem")
+            signed_msg = {
+                "data": tosign,
+                "sig": salt.crypt.sign_message(master_pem_path, tosign),
+            }
+            pret[dictkey] = pcrypt.dumps(signed_msg)
+        else:
+            pret[dictkey] = pcrypt.dumps(ret)
         return pret
+
+    def _clear_signed(self, load):
+        master_pem_path = os.path.join(self.opts["pki_dir"], "master.pem")
+        tosign = salt.payload.dumps(load)
+        return {
+            "enc": "clear",
+            "load": tosign,
+            "sig": salt.crypt.sign_message(master_pem_path, tosign),
+        }
 
     def _update_aes(self):
         """
@@ -223,7 +262,7 @@ class ReqServerChannel:
                 payload["load"] = self.crypticle.loads(payload["load"])
         return payload
 
-    def _auth(self, load):
+    def _auth(self, load, sign_messages=False):
         """
         Authenticate the client, use the sent public key to encrypt the AES key
         which was generated at start up.
@@ -242,7 +281,10 @@ class ReqServerChannel:
 
         if not salt.utils.verify.valid_id(self.opts, load["id"]):
             log.info("Authentication request from invalid id %s", load["id"])
-            return {"enc": "clear", "load": {"ret": False}}
+            if sign_messages:
+                return self._clear_signed({"ret": False, "nonce": load["nonce"]})
+            else:
+                return {"enc": "clear", "load": {"ret": False}}
         log.info("Authentication request from %s", load["id"])
 
         # 0 is default which should be 'unlimited'
@@ -280,7 +322,12 @@ class ReqServerChannel:
                         self.event.fire_event(
                             eload, salt.utils.event.tagify(prefix="auth")
                         )
-                    return {"enc": "clear", "load": {"ret": "full"}}
+                    if sign_messages:
+                        return self._clear_signed(
+                            {"ret": "full", "nonce": load["nonce"]}
+                        )
+                    else:
+                        return {"enc": "clear", "load": {"ret": "full"}}
 
         # Check if key is configured to be auto-rejected/signed
         auto_reject = self.auto_key.check_autoreject(load["id"])
@@ -307,8 +354,10 @@ class ReqServerChannel:
             eload = {"result": False, "id": load["id"], "pub": load["pub"]}
             if self.opts.get("auth_events") is True:
                 self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
-            return {"enc": "clear", "load": {"ret": False}}
-
+            if sign_messages:
+                return self._clear_signed({"ret": False, "nonce": load["nonce"]})
+            else:
+                return {"enc": "clear", "load": {"ret": False}}
         elif os.path.isfile(pubfn):
             # The key has been accepted, check it
             with salt.utils.files.fopen(pubfn, "r") as pubfn_handle:
@@ -332,7 +381,12 @@ class ReqServerChannel:
                         self.event.fire_event(
                             eload, salt.utils.event.tagify(prefix="auth")
                         )
-                    return {"enc": "clear", "load": {"ret": False}}
+                    if sign_messages:
+                        return self._clear_signed(
+                            {"ret": False, "nonce": load["nonce"]}
+                        )
+                    else:
+                        return {"enc": "clear", "load": {"ret": False}}
 
         elif not os.path.isfile(pubfn_pend):
             # The key has not been accepted, this is a new minion
@@ -342,7 +396,10 @@ class ReqServerChannel:
                 eload = {"result": False, "id": load["id"], "pub": load["pub"]}
                 if self.opts.get("auth_events") is True:
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
-                return {"enc": "clear", "load": {"ret": False}}
+                if sign_messages:
+                    return self._clear_signed({"ret": False, "nonce": load["nonce"]})
+                else:
+                    return {"enc": "clear", "load": {"ret": False}}
 
             if auto_reject:
                 key_path = pubfn_rejected
@@ -365,7 +422,6 @@ class ReqServerChannel:
                 # Write the key to the appropriate location
                 with salt.utils.files.fopen(key_path, "w+") as fp_:
                     fp_.write(load["pub"])
-                ret = {"enc": "clear", "load": {"ret": key_result}}
                 eload = {
                     "result": key_result,
                     "act": key_act,
@@ -374,7 +430,12 @@ class ReqServerChannel:
                 }
                 if self.opts.get("auth_events") is True:
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
-                return ret
+                if sign_messages:
+                    return self._clear_signed(
+                        {"ret": key_result, "nonce": load["nonce"]}
+                    )
+                else:
+                    return {"enc": "clear", "load": {"ret": key_result}}
 
         elif os.path.isfile(pubfn_pend):
             # This key is in the pending dir and is awaiting acceptance
@@ -390,7 +451,6 @@ class ReqServerChannel:
                     "Pending public key for %s rejected via autoreject_file",
                     load["id"],
                 )
-                ret = {"enc": "clear", "load": {"ret": False}}
                 eload = {
                     "result": False,
                     "act": "reject",
@@ -399,7 +459,10 @@ class ReqServerChannel:
                 }
                 if self.opts.get("auth_events") is True:
                     self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
-                return ret
+                if sign_messages:
+                    return self._clear_signed({"ret": False, "nonce": load["nonce"]})
+                else:
+                    return {"enc": "clear", "load": {"ret": False}}
 
             elif not auto_sign:
                 # This key is in the pending dir and is not being auto-signed.
@@ -427,7 +490,12 @@ class ReqServerChannel:
                             self.event.fire_event(
                                 eload, salt.utils.event.tagify(prefix="auth")
                             )
-                        return {"enc": "clear", "load": {"ret": False}}
+                        if sign_messages:
+                            return self._clear_signed(
+                                {"ret": False, "nonce": load["nonce"]}
+                            )
+                        else:
+                            return {"enc": "clear", "load": {"ret": False}}
                     else:
                         log.info(
                             "Authentication failed from host %s, the key is in "
@@ -446,7 +514,12 @@ class ReqServerChannel:
                             self.event.fire_event(
                                 eload, salt.utils.event.tagify(prefix="auth")
                             )
-                        return {"enc": "clear", "load": {"ret": True}}
+                        if sign_messages:
+                            return self._clear_signed(
+                                {"ret": True, "nonce": load["nonce"]}
+                            )
+                        else:
+                            return {"enc": "clear", "load": {"ret": True}}
             else:
                 # This key is in pending and has been configured to be
                 # auto-signed. Check to see if it is the same key, and if
@@ -468,7 +541,12 @@ class ReqServerChannel:
                             self.event.fire_event(
                                 eload, salt.utils.event.tagify(prefix="auth")
                             )
-                        return {"enc": "clear", "load": {"ret": False}}
+                        if sign_messages:
+                            return self._clear_signed(
+                                {"ret": False, "nonce": load["nonce"]}
+                            )
+                        else:
+                            return {"enc": "clear", "load": {"ret": False}}
                     else:
                         os.remove(pubfn_pend)
 
@@ -478,7 +556,10 @@ class ReqServerChannel:
             eload = {"result": False, "id": load["id"], "pub": load["pub"]}
             if self.opts.get("auth_events") is True:
                 self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
-            return {"enc": "clear", "load": {"ret": False}}
+            if sign_messages:
+                return self._clear_signed({"ret": False, "nonce": load["nonce"]})
+            else:
+                return {"enc": "clear", "load": {"ret": False}}
 
         log.info("Authentication accepted from %s", load["id"])
         # only write to disk if you are adding the file, and in open mode,
@@ -497,7 +578,10 @@ class ReqServerChannel:
                     fp_.write(load["pub"])
             elif not load["pub"]:
                 log.error("Public key is empty: %s", load["id"])
-                return {"enc": "clear", "load": {"ret": False}}
+                if sign_messages:
+                    return self._clear_signed({"ret": False, "nonce": load["nonce"]})
+                else:
+                    return {"enc": "clear", "load": {"ret": False}}
 
         pub = None
 
@@ -511,7 +595,10 @@ class ReqServerChannel:
             pub = salt.crypt.get_rsa_pub_key(pubfn)
         except salt.crypt.InvalidKeyError as err:
             log.error('Corrupt public key "%s": %s', pubfn, err)
-            return {"enc": "clear", "load": {"ret": False}}
+            if sign_messages:
+                return self._clear_signed({"ret": False, "nonce": load["nonce"]})
+            else:
+                return {"enc": "clear", "load": {"ret": False}}
 
         if not HAS_M2:
             cipher = PKCS1_OAEP.new(pub)
@@ -592,12 +679,16 @@ class ReqServerChannel:
                 ret["aes"] = pub.public_encrypt(aes, RSA.pkcs1_oaep_padding)
             else:
                 ret["aes"] = cipher.encrypt(aes)
+
         # Be aggressive about the signature
         digest = salt.utils.stringutils.to_bytes(hashlib.sha256(aes).hexdigest())
         ret["sig"] = salt.crypt.private_encrypt(self.master_key.key, digest)
         eload = {"result": True, "act": "accept", "id": load["id"], "pub": load["pub"]}
         if self.opts.get("auth_events") is True:
             self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
+        if sign_messages:
+            ret["nonce"] = load["nonce"]
+            return self._clear_signed(ret)
         return ret
 
     def close(self):
@@ -662,7 +753,7 @@ class PubServerChannel:
             self.aes_funcs.destroy()
             self.aes_funcs = None
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, kwargs=None):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
@@ -671,15 +762,18 @@ class PubServerChannel:
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         """
         if hasattr(self.transport, "publish_daemon"):
-            process_manager.add_process(self._publish_daemon)
+            process_manager.add_process(self._publish_daemon, kwargs=kwargs)
 
-    def _publish_daemon(self):
+    def _publish_daemon(self, **kwargs):
         if self.opts["pub_server_niceness"] and not salt.utils.platform.is_windows():
             log.info(
                 "setting Publish daemon niceness to %i",
                 self.opts["pub_server_niceness"],
             )
             os.nice(self.opts["pub_server_niceness"])
+        secrets = kwargs.get("secrets", None)
+        if secrets is not None:
+            salt.master.SMaster.secrets = secrets
         self.transport.publish_daemon(self.publish_payload, self.presence_callback)
 
     def presence_callback(self, subscriber, msg):
@@ -745,7 +839,8 @@ class PubServerChannel:
                 )
 
     @salt.ext.tornado.gen.coroutine
-    def publish_payload(self, unpacked_package, *args):
+    def publish_payload(self, load, *args):
+        unpacked_package = self.wrap_payload(load)
         try:
             payload = salt.payload.loads(unpacked_package["payload"])
         except KeyError:
@@ -760,6 +855,7 @@ class PubServerChannel:
 
     def wrap_payload(self, load):
         payload = {"enc": "aes"}
+        load["serial"] = salt.master.SMaster.get_serial()
         crypticle = salt.crypt.Crypticle(
             self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
         )
@@ -770,13 +866,12 @@ class PubServerChannel:
             payload["sig"] = salt.crypt.sign_message(master_pem_path, payload["load"])
         int_payload = {"payload": salt.payload.dumps(payload)}
 
-        # add some targeting stuff for lists only (for now)
-        if load["tgt_type"] == "list":
-            int_payload["topic_lst"] = load["tgt"]
-
         # If topics are upported, target matching has to happen master side
         match_targets = ["pcre", "glob", "list"]
         if self.transport.topic_support and load["tgt_type"] in match_targets:
+            # add some targeting stuff for lists only (for now)
+            if load["tgt_type"] == "list":
+                int_payload["topic_lst"] = load["tgt"]
             if isinstance(load["tgt"], str):
                 # Fetch a list of minions that match
                 _res = self.ckminions.check_minions(
@@ -795,10 +890,9 @@ class PubServerChannel:
         """
         Publish "load" to minions
         """
-        payload = self.wrap_payload(load)
         log.debug(
-            "Sending payload to publish daemon. jid=%s load=%r",
+            "Sending payload to publish daemon. jid=%s load=%s",
             load.get("jid", None),
-            load,
+            repr(load)[:40],
         )
-        self.transport.publish(payload)
+        self.transport.publish(load)

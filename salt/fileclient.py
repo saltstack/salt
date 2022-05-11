@@ -678,10 +678,16 @@ class Client:
             #   False to signify that we are done parsing.
             #
             # write_body[2] is where the encoding will be stored
-            write_body = [None, False, None]
+            #
+            # write_body[3] is where the etag will be stored if use_etag is
+            #   enabled. This allows us to iterate over the headers until
+            #   both content encoding and etag are found.
+            write_body = [None, False, None, None]
 
             def on_header(hdr):
-                if write_body[1] is not False and write_body[2] is None:
+                if write_body[1] is not False and (
+                    write_body[2] is None or (use_etag and write_body[3] is None)
+                ):
                     if not hdr.strip() and "Content-Type" not in write_body[1]:
                         # If write_body[0] is True, then we are not following a
                         # redirect (initial response was a 200 OK). So there is
@@ -691,7 +697,8 @@ class Client:
                             # write_body[0] so that we properly follow it.
                             write_body[0] = None
                         # We don't need the HTTPHeaders object anymore
-                        write_body[1] = False
+                        if not use_etag or write_body[3]:
+                            write_body[1] = False
                         return
                     # Try to find out what content type encoding is used if
                     # this is a text file
@@ -701,20 +708,21 @@ class Client:
                     # in the tests. Note: http.server and apache2 use "Etag" and nginx
                     # uses "ETag" as the header key. Yay standards!
                     if use_etag and "etag" in map(str.lower, write_body[1]):
+                        etag = write_body[3] = [
+                            val
+                            for key, val in write_body[1].items()
+                            if key.lower() == "etag"
+                        ][0]
                         with salt.utils.files.fopen(dest_etag, "w") as etagfp:
-                            etag = etagfp.write(
-                                [
-                                    val
-                                    for key, val in write_body[1].items()
-                                    if key.lower() == "etag"
-                                ][0]
-                            )
+                            etag = etagfp.write(etag)
                     elif "Content-Type" in write_body[1]:
                         content_type = write_body[1].get(
                             "Content-Type"
                         )  # pylint: disable=no-member
                         if not content_type.startswith("text"):
-                            write_body[1] = write_body[2] = False
+                            write_body[2] = False
+                            if not use_etag or write_body[3]:
+                                write_body[1] = False
                         else:
                             encoding = "utf-8"
                             fields = content_type.split(";")
@@ -723,7 +731,8 @@ class Client:
                                     encoding = field.split("encoding=")[-1]
                             write_body[2] = encoding
                             # We have found our encoding. Stop processing headers.
-                            write_body[1] = False
+                            if not use_etag or write_body[3]:
+                                write_body[1] = False
 
                         # If write_body[0] is False, this means that this
                         # header is a 30x redirect, so we need to reset
@@ -790,6 +799,10 @@ class Client:
             # 304 Not Modified is returned when If-None-Match header
             # matches server ETag for requested file.
             if use_etag and query.get("status") == 304:
+                if not no_cache:
+                    destfp.close()
+                    destfp = None
+                    os.remove(dest_tmp)
                 return dest
             if "handle" not in query:
                 raise MinionError(

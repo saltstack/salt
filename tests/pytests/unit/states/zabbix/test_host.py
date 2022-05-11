@@ -10,11 +10,9 @@ import salt.states.zabbix_host as zabbix_host
 from tests.support.mock import MagicMock, patch
 
 
-@pytest.fixture(autouse=True)
-def setup_loader():
-    setup_loader_modules = {zabbix_host: {"__opts__": {"test": False}}}
-    with pytest.helpers.loader_mock(setup_loader_modules) as loader_mock:
-        yield loader_mock
+@pytest.fixture
+def configure_loader_modules():
+    return {zabbix_host: {"__opts__": {"test": False}}}
 
 
 @pytest.fixture()

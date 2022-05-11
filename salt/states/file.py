@@ -1935,14 +1935,31 @@ def absent(name, **kwargs):
     return ret
 
 
-def tidied(name, age=0, matches=None, rmdirs=False, size=0, **kwargs):
+def tidied(
+    name,
+    age=0,
+    matches=None,
+    rmdirs=False,
+    size=0,
+    exclude=None,
+    full_path_match=False,
+    followlinks=False,
+    time_comparison="atime",
+    **kwargs
+):
     """
+    .. versionchanged:: 3005
+
     Remove unwanted files based on specific criteria. Multiple criteria
     are OR’d together, so a file that is too large but is not old enough
     will still get tidied.
 
     If neither age nor size is given all files which match a pattern in
     matches will be removed.
+
+    NOTE: The regex patterns in this function are used in ``re.match()``, so
+    there is an implicit "beginning of string" anchor (``^``) in the regex and
+    it is unanchored at the other end unless explicitly entered (``$``).
 
     name
         The directory tree that should be tidied
@@ -1959,6 +1976,35 @@ def tidied(name, age=0, matches=None, rmdirs=False, size=0, **kwargs):
     size
         Maximum allowed file size. Files greater or equal to this size are
         removed. Doesn't apply to directories or symbolic links
+
+    exclude
+        List of regular expressions to filter the ``matches`` parameter and better
+        control what gets removed.
+
+        .. versionadded:: 3005
+
+    full_path_match
+        Match the ``matches`` and ``exclude`` regex patterns against the entire
+        file path instead of just the file or directory name. Default: ``False``
+
+        .. versionadded:: 3005
+
+    followlinks
+        This module will not descend into subdirectories which are pointed to by
+        symbolic links. If you wish to force it to do so, you may give this
+        option the value ``True``. Default: ``False``
+
+        .. versionadded:: 3005
+
+    time_comparison
+        Default: ``atime``. Options: ``atime``/``mtime``/``ctime``. This value
+        is used to set the type of time comparison made using ``age``. The
+        default is to compare access times (atime) or the last time the file was
+        read. A comparison by modification time (mtime) uses the last time the
+        contents of the file was changed. The ctime parameter is the last time
+        the contents, owner,  or permissions of the file were changed.
+
+        .. versionadded:: 3005
 
     .. code-block:: yaml
 
@@ -1980,6 +2026,17 @@ def tidied(name, age=0, matches=None, rmdirs=False, size=0, **kwargs):
     if not os.path.isdir(name):
         return _error(ret, "{} does not exist or is not a directory.".format(name))
 
+    # Check time_comparison parameter
+    poss_comp = ["atime", "ctime", "mtime"]
+    if not isinstance(time_comparison, str) or time_comparison.lower() not in poss_comp:
+        time_comparison = "atime"
+    time_comparison = time_comparison.lower()
+
+    # Convert size with human units to bytes
+    if isinstance(size, str):
+        # add handle_metric=True when #61833 is merged
+        size = salt.utils.stringutils.human_to_bytes(size)
+
     # Define some variables
     todelete = []
     today = date.today()
@@ -1990,17 +2047,23 @@ def tidied(name, age=0, matches=None, rmdirs=False, size=0, **kwargs):
     progs = []
     for regex in matches:
         progs.append(re.compile(regex))
+    exes = []
+    for regex in exclude or []:
+        exes.append(re.compile(regex))
 
     # Helper to match a given name against one or more pre-compiled regular
-    # expressions
+    # expressions and also allow for excluding matched names by regex
     def _matches(name):
         for prog in progs:
             if prog.match(name):
+                for _ex in exes:
+                    if _ex.match(name):
+                        return False
                 return True
         return False
 
     # Iterate over given directory tree, depth-first
-    for root, dirs, files in os.walk(top=name, topdown=False):
+    for root, dirs, files in os.walk(top=name, topdown=False, followlinks=followlinks):
         # Check criteria for the found files and directories
         for elem in files + dirs:
             myage = 0
@@ -2008,20 +2071,39 @@ def tidied(name, age=0, matches=None, rmdirs=False, size=0, **kwargs):
             deleteme = True
             path = os.path.join(root, elem)
             if os.path.islink(path):
-                # Get age of symlink (not symlinked file)
-                myage = abs(today - date.fromtimestamp(os.lstat(path).st_atime))
-            elif elem in dirs:
-                # Get age of directory, check if directories should be deleted at all
-                myage = abs(today - date.fromtimestamp(os.path.getatime(path)))
-                deleteme = rmdirs
+                # Get timestamp of symlink (not symlinked file)
+                if time_comparison == "ctime":
+                    mytimestamp = os.lstat(path).st_ctime
+                elif time_comparison == "mtime":
+                    mytimestamp = os.lstat(path).st_mtime
+                else:
+                    mytimestamp = os.lstat(path).st_atime
             else:
-                # Get age and size of regular file
-                myage = abs(today - date.fromtimestamp(os.path.getatime(path)))
-                mysize = os.path.getsize(path)
+                # Get timestamp of file or directory
+                if time_comparison == "ctime":
+                    mytimestamp = os.path.getctime(path)
+                elif time_comparison == "mtime":
+                    mytimestamp = os.path.getmtime(path)
+                else:
+                    mytimestamp = os.path.getatime(path)
+
+                if elem in dirs:
+                    # Check if directories should be deleted at all
+                    deleteme = rmdirs
+                else:
+                    # Get size of regular file
+                    mysize = os.path.getsize(path)
+
+            # Calculate the age and set the name to match
+            myage = abs(today - date.fromtimestamp(mytimestamp))
+            filename = elem
+            if full_path_match:
+                filename = path
+
             # Verify against given criteria, collect all elements that should be removed
             if (
                 (mysize >= size or myage.days >= age)
-                and _matches(name=elem)
+                and _matches(name=filename)
                 and deleteme
             ):
                 todelete.append(path)
@@ -3701,7 +3783,10 @@ def directory(
         u_check = _check_user(user, group)
         if u_check:
             # The specified user or group do not exist
-            return _error(ret, u_check)
+            if __opts__["test"]:
+                log.warning(u_check)
+            else:
+                return _error(ret, u_check)
 
     # Must be an absolute path
     if not os.path.isabs(name):
@@ -8577,10 +8662,16 @@ def shortcut(
 
 
 def cached(
-    name, source_hash="", source_hash_name=None, skip_verify=False, saltenv="base"
+    name,
+    source_hash="",
+    source_hash_name=None,
+    skip_verify=False,
+    saltenv="base",
+    use_etag=False,
 ):
     """
     .. versionadded:: 2017.7.3
+    .. versionchanged:: 3005
 
     Ensures that a file is saved to the minion's cache. This state is primarily
     invoked by other states to ensure that we do not re-download a source file
@@ -8624,6 +8715,15 @@ def cached(
     saltenv
         Used to specify the environment from which to download a file from the
         Salt fileserver (i.e. those with ``salt://`` URL).
+
+    use_etag
+        If ``True``, remote http/https file sources will attempt to use the
+        ETag header to determine if the remote file needs to be downloaded.
+        This provides a lightweight mechanism for promptly refreshing files
+        changed on a web server without requiring a full hash comparison via
+        the ``source_hash`` parameter.
+
+        .. versionadded:: 3005
 
 
     This state will in most cases not be useful in SLS files, but it is useful
@@ -8670,11 +8770,12 @@ def cached(
     if (
         not skip_verify
         and not source_hash
+        and not use_etag
         and parsed.scheme in salt.utils.files.REMOTE_PROTOS
     ):
         ret["comment"] = (
             "Unable to verify upstream hash of source file {}, please set "
-            "source_hash or set skip_verify to True".format(
+            "source_hash or set skip_verify or use_etag to True".format(
                 salt.utils.url.redact_http_basic_auth(name)
             )
         )
@@ -8763,47 +8864,23 @@ def cached(
     else:
         pre_hash = None
 
-    def _try_cache(path, checksum):
-        """
-        This helper is not needed anymore in develop as the fileclient in the
-        develop branch now has means of skipping a download if the existing
-        hash matches one passed to cp.cache_file. Remove this helper and the
-        code that invokes it, once we have merged forward into develop.
-        """
-        if not path or not checksum:
-            return True
-        form = salt.utils.files.HASHES_REVMAP.get(len(checksum))
-        if form is None:
-            # Shouldn't happen, an invalid checksum length should be caught
-            # before we get here. But in the event this gets through, don't let
-            # it cause any trouble, and just return True.
-            return True
-        try:
-            return salt.utils.hashutils.get_hash(path, form=form) != checksum
-        except (OSError, ValueError):
-            # Again, shouldn't happen, but don't let invalid input/permissions
-            # in the call to get_hash blow this up.
-            return True
-
     # Cache the file. Note that this will not actually download the file if
-    # either of the following is true:
+    # any of the following are true:
     #   1. source is a salt:// URL and the fileserver determines that the hash
     #      of the minion's copy matches that of the fileserver.
     #   2. File is remote (http(s), ftp, etc.) and the specified source_hash
     #      matches the cached copy.
+    #   3. File is a remote web source (http[s]), use_etag is enabled, and the
+    #      remote file hasn't changed since the last cache.
     # Remote, non salt:// sources _will_ download if a copy of the file was
     # not already present in the minion cache.
-    if _try_cache(local_copy, source_sum.get("hsum")):
-        # The _try_cache helper is obsolete in the develop branch. Once merged
-        # forward, remove the helper as well as this if statement, and dedent
-        # the below block.
-        try:
-            local_copy = __salt__["cp.cache_file"](
-                name, saltenv=saltenv, source_hash=source_sum.get("hsum")
-            )
-        except Exception as exc:  # pylint: disable=broad-except
-            ret["comment"] = salt.utils.url.redact_http_basic_auth(exc.__str__())
-            return ret
+    try:
+        local_copy = __salt__["cp.cache_file"](
+            name, saltenv=saltenv, source_hash=source_sum.get("hsum"), use_etag=use_etag
+        )
+    except Exception as exc:  # pylint: disable=broad-except
+        ret["comment"] = salt.utils.url.redact_http_basic_auth(exc.__str__())
+        return ret
 
     if not local_copy:
         ret[

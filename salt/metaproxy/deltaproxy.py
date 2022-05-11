@@ -11,6 +11,7 @@ import traceback
 import types
 
 import salt
+import salt._logging
 import salt.beacons
 import salt.cli.daemons
 import salt.client
@@ -21,7 +22,6 @@ import salt.engines
 import salt.ext.tornado.gen  # pylint: disable=F0401
 import salt.ext.tornado.ioloop  # pylint: disable=F0401
 import salt.loader
-import salt.log.setup
 import salt.minion
 import salt.payload
 import salt.pillar
@@ -349,7 +349,7 @@ def post_master_init(self, master):
 
         proxyopts["proxy"] = self.proxy_pillar[_id].get("proxy", {})
         if not proxyopts["proxy"]:
-            log.warn(
+            log.warning(
                 "Pillar data for proxy minion %s could not be loaded, skipping.", _id
             )
             continue
@@ -514,10 +514,12 @@ def thread_return(cls, minion_instance, opts, data):
     if opts["multiprocessing"] and not salt.utils.platform.is_windows():
 
         # Shutdown the multiprocessing before daemonizing
-        salt.log.setup.shutdown_multiprocessing_logging()
+        salt._logging.shutdown_logging()
+
+        salt.utils.process.daemonize_if(opts)
 
         # Reconfigure multiprocessing logging after daemonizing
-        salt.log.setup.setup_multiprocessing_logging()
+        salt._logging.setup_logging()
 
     salt.utils.process.appendproctitle("{}._thread_return".format(cls.__name__))
 
@@ -759,13 +761,14 @@ def thread_multi_return(cls, minion_instance, opts, data):
     fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
     if opts["multiprocessing"] and not salt.utils.platform.is_windows():
+
         # Shutdown the multiprocessing before daemonizing
-        salt.log.setup.shutdown_multiprocessing_logging()
+        salt._logging.shutdown_logging()
 
         salt.utils.process.daemonize_if(opts)
 
         # Reconfigure multiprocessing logging after daemonizing
-        salt.log.setup.setup_multiprocessing_logging()
+        salt._logging.setup_logging()
 
     salt.utils.process.appendproctitle("{}._thread_multi_return".format(cls.__name__))
 
@@ -888,7 +891,7 @@ def handle_payload(self, payload):
                 if instance._target_load(payload["load"]):
                     instance._handle_decoded_payload(payload["load"])
             else:
-                log.warn("Proxy minion %s is not loaded, skipping.", _id)
+                log.warning("Proxy minion %s is not loaded, skipping.", _id)
 
     elif self.opts["zmq_filtering"]:
         # In the filtering enabled case, we"d like to know when minion sees something it shouldnt
