@@ -1,233 +1,154 @@
-r"""
-Return salt data to Zabbix with keys of the form `salt.return.<fun>`
+"""
+Return salt data to Zabbix.
 
-Missing items will be ignored.
-The value will be either OK or FAILED, followed by the formatted return data:
+Zabbix items should be configured with the type "Zabbix trapper".
+By default, the key will be `salt.return.{fun}`, and the data will
+be formatted with the `nested` outputter.
+State output will instead use the `highstate` outputter by default.
 
-.. code-block
+Requires the `zabbix_sender` executable to be available on the minion.
 
-    salt.return.test.ping: OK True
+Configuration will be taken from the Zabbix agent config by default,
+but can be overridden via pillars, grains, minion or master config, with
+the `zabbix.` prefix.
 
-To use the Zabbix returner, append '--return zabbix' to the salt command:
++----------------------+-------------------------+--------------------------------+
+| Config key           | return_kwargs           | Default value                  |
++======================+=========================+================================+
+| output               | output                  | nested                         |
++----------------------+-------------------------+--------------------------------+
+| sender_bin           | sender_bin              | /usr/bin/zabbix_sender         |
++----------------------+-------------------------+--------------------------------+
+| config_file          | config                  | /etc/zabbix/zabbix_agentd.conf |
++----------------------+-------------------------+--------------------------------+
+| serveractive         | zabbix_server           |                                |
++----------------------+-------------------------+--------------------------------+
+| port                 | port                    | 10051                          |
++----------------------+-------------------------+--------------------------------+
+| sourceip             | source_address          |                                |
++----------------------+-------------------------+--------------------------------+
+| timeout              | timeout                 | 60                             |
++----------------------+-------------------------+--------------------------------+
+| hostname             | host                    |                                |
++----------------------+-------------------------+--------------------------------+
+| return_key           | key                     | salt.return.{fun}              |
++----------------------+-------------------------+--------------------------------+
+| tlsconnect           | tls_connect             | unencrypted                    |
++----------------------+-------------------------+--------------------------------+
+| tlscafile            | tls_ca_file             |                                |
++----------------------+-------------------------+--------------------------------+
+| tlscrlfile           | tls_crl_file            |                                |
++----------------------+-------------------------+--------------------------------+
+| tlsservercertissuer  | tls_server_cert_issuer  |                                |
++----------------------+-------------------------+--------------------------------+
+| tlsservercertsubject | tls_server_cert_subject |                                |
++----------------------+-------------------------+--------------------------------+
+| tlscertfile          | tls_cert_file           |                                |
++----------------------+-------------------------+--------------------------------+
+| tlskeyfile           | tls_key_file            |                                |
++----------------------+-------------------------+--------------------------------+
+| tlspskidentity       | tls_psk_identity        |                                |
++----------------------+-------------------------+--------------------------------+
+| tlspskfile           | tls_psk_file            |                                |
++----------------------+-------------------------+--------------------------------+
+| tlscipher13          | tls_cipher13            |                                |
++----------------------+-------------------------+--------------------------------+
+| tlscipher            | tls_cipher              |                                |
++----------------------+-------------------------+--------------------------------+
+
+For example, this will send the value "True" to Zabbix with the key "salt.return.test.ping",
+ assuming every minion has a standard Zabbix agent installation.
 
 .. code-block:: bash
 
     salt '*' test.ping --return zabbix
 
-An example Zabbix template:
-
-.. code-block:: xml
-
-    <?xml version="1.0" encoding="UTF-8"?>
-    <zabbix_export>
-      <version>4.0</version>
-      <date>2019-01-21T19:16:50Z</date>
-      <groups><group><name>Templates/Applications</name></group></groups>
-      <templates>
-        <template>
-          <template>Template App Saltstack</template>
-          <name>Template App Saltstack</name>
-          <description/>
-          <groups><group><name>Templates/Applications</name></group></groups>
-          <applications><application><name>Saltstack</name></application></applications>
-          <items>
-            <item>
-              <name>Salt state.apply</name>
-              <type>2</type>
-              <snmp_community/>
-              <snmp_oid/>
-              <key>salt.return.state.apply</key>
-              <delay>0</delay>
-              <history>90d</history>
-              <trends>0</trends>
-              <status>0</status>
-              <value_type>4</value_type>
-              <allowed_hosts/>
-              <units/>
-              <snmpv3_contextname/>
-              <snmpv3_securityname/>
-              <snmpv3_securitylevel>0</snmpv3_securitylevel>
-              <snmpv3_authprotocol>0</snmpv3_authprotocol>
-              <snmpv3_authpassphrase/>
-              <snmpv3_privprotocol>0</snmpv3_privprotocol>
-              <snmpv3_privpassphrase/>
-              <params/>
-              <ipmi_sensor/>
-              <authtype>0</authtype>
-              <username/>
-              <password/>
-              <publickey/>
-              <privatekey/>
-              <port/>
-              <description/>
-              <inventory_link>0</inventory_link>
-              <applications><application><name>Saltstack</name></application></applications>
-              <valuemap/>
-              <logtimefmt/>
-              <preprocessing/>
-              <jmx_endpoint/>
-              <timeout>3s</timeout>
-              <url/>
-              <query_fields/>
-              <posts/>
-              <status_codes>200</status_codes>
-              <follow_redirects>1</follow_redirects>
-              <post_type>0</post_type>
-              <http_proxy/>
-              <headers/>
-              <retrieve_mode>0</retrieve_mode>
-              <request_method>0</request_method>
-              <output_format>0</output_format>
-              <allow_traps>0</allow_traps>
-              <ssl_cert_file/>
-              <ssl_key_file/>
-              <ssl_key_password/>
-              <verify_peer>0</verify_peer>
-              <verify_host>0</verify_host>
-              <master_item/>
-            </item>
-            <item>
-              <name>Salt test.ping</name>
-              <type>2</type>
-              <snmp_community/>
-              <snmp_oid/>
-              <key>salt.return.test.ping</key>
-              <delay>0</delay>
-              <history>90d</history>
-              <trends>0</trends>
-              <status>0</status>
-              <value_type>4</value_type>
-              <allowed_hosts/>
-              <units/>
-              <snmpv3_contextname/>
-              <snmpv3_securityname/>
-              <snmpv3_securitylevel>0</snmpv3_securitylevel>
-              <snmpv3_authprotocol>0</snmpv3_authprotocol>
-              <snmpv3_authpassphrase/>
-              <snmpv3_privprotocol>0</snmpv3_privprotocol>
-              <snmpv3_privpassphrase/>
-              <params/>
-              <ipmi_sensor/>
-              <authtype>0</authtype>
-              <username/>
-              <password/>
-              <publickey/>
-              <privatekey/>
-              <port/>
-              <description/>
-              <inventory_link>0</inventory_link>
-              <applications><application><name>Saltstack</name></application></applications>
-              <valuemap/>
-              <logtimefmt/>
-              <preprocessing/>
-              <jmx_endpoint/>
-              <timeout>3s</timeout>
-              <url/>
-              <query_fields/>
-              <posts/>
-              <status_codes>200</status_codes>
-              <follow_redirects>1</follow_redirects>
-              <post_type>0</post_type>
-              <http_proxy/>
-              <headers/>
-              <retrieve_mode>0</retrieve_mode>
-              <request_method>0</request_method>
-              <output_format>0</output_format>
-              <allow_traps>0</allow_traps>
-              <ssl_cert_file/>
-              <ssl_key_file/>
-              <ssl_key_password/>
-              <verify_peer>0</verify_peer>
-              <verify_host>0</verify_host>
-              <master_item/>
-            </item>
-          </items>
-          <discovery_rules/>
-          <httptests/>
-          <macros/>
-          <templates/>
-          <screens/>
-        </template>
-      </templates>
-      <triggers>
-        <trigger>
-          <expression>{Template App Saltstack:salt.return.test.ping.str(True)}=0</expression>
-          <recovery_mode>0</recovery_mode>
-          <recovery_expression/>
-          <name>Salt ping failed</name>
-          <correlation_mode>0</correlation_mode>
-          <correlation_tag/>
-          <url/>
-          <status>0</status>
-          <priority>2</priority>
-          <description/>
-          <type>0</type>
-          <manual_close>0</manual_close>
-          <dependencies/>
-          <tags/>
-        </trigger>
-        <trigger>
-          <expression>{Template App Saltstack:salt.return.state.apply.regexp(Failed:\s*0)}=0</expression>
-          <recovery_mode>0</recovery_mode>
-          <recovery_expression/>
-          <name>Salt state failed</name>
-          <correlation_mode>0</correlation_mode>
-          <correlation_tag/>
-          <url/>
-          <status>0</status>
-          <priority>4</priority>
-          <description/>
-          <type>1</type>
-          <manual_close>1</manual_close>
-          <dependencies/>
-          <tags/>
-        </trigger>
-      </triggers>
-    </zabbix_export>
 """
 
-
+import logging
 import os
 import shlex
 
-import salt.output
 from salt.exceptions import CommandExecutionError
+from salt.output import try_printout
+from salt.returners import get_returner_options
+from salt.utils.path import which_bin
 
-# Define the module's virtual name
 __virtualname__ = "zabbix"
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    if zbx():
-        return True
-    return False, "Zabbix returner: No zabbix_sender and zabbix_agend.conf found."
-
-
-def zbx():
-    if os.path.exists("/usr/local/zabbix/bin/zabbix_sender") and os.path.exists(
-        "/usr/local/zabbix/etc/zabbix_agentd.conf"
-    ):
-        zabbix_sender = "/usr/local/zabbix/bin/zabbix_sender"
-        zabbix_config = "/usr/local/zabbix/etc/zabbix_agentd.conf"
-        return {"sender": zabbix_sender, "config": zabbix_config}
-    elif os.path.exists("/usr/bin/zabbix_sender") and os.path.exists(
-        "/etc/zabbix/zabbix_agentd.conf"
-    ):
-        zabbix_sender = "/usr/bin/zabbix_sender"
-        zabbix_config = "/etc/zabbix/zabbix_agentd.conf"
-        return {"sender": zabbix_sender, "config": zabbix_config}
+    cfg_key = "{}.sender_bin".format(__virtualname__)
+    sender_bin = __pillar__.get(
+        cfg_key,
+        __grains__.get(cfg_key, __opts__.get(cfg_key, which_bin(["zabbix_sender"]))),
+    )
+    if sender_bin and os.path.exists(sender_bin):
+        return __virtualname__
     else:
-        return False
+        return False, "Zabbix returner: No zabbix_sender executable found."
 
 
-def zabbix_send(key, value):
-    cmd = "{} -c {} -k {} -o {}".format(
-        zbx()["sender"], zbx()["config"], shlex.quote(key), shlex.quote(value)
+def _get_config(ret):
+    defaults = {
+        "key": "salt.return.{}".format(ret["fun"]),
+        "output": "highstate" if ret["fun"].startswith("state.") else "nested",
+        "sender_bin": which_bin(["zabbix_sender"]),
+    }
+    if os.path.exists("/etc/zabbix/zabbix_agentd.conf"):
+        defaults["config"] = "/etc/zabbix/zabbix_agentd.conf"
+
+    return get_returner_options(
+        virtualname=__virtualname__,
+        ret=ret,
+        attrs={
+            "output": "output",
+            "sender_bin": "sender_bin",
+            # The rest are all zabbix_sender CLI options
+            #  https://www.zabbix.com/documentation/current/en/manpages/zabbix_sender
+            # Config keys match those used by the zabbix_agentd.conf and zabbix formula
+            #  https://github.com/saltstack-formulas/zabbix-formula
+            "config": "config_file",
+            "zabbix_server": "serveractive",
+            "port": "port",
+            "source_address": "sourceip",
+            "timeout": "timeout",
+            "host": "hostname",
+            "key": "return_key",
+            "tls_connect": "tlsconnect",
+            "tls_ca_file": "tlscafile",
+            "tls_crl_file": "tlscrlfile",
+            "tls_server_cert_issuer": "tlsservercertissuer",
+            "tls_server_cert_subject": "tlsservercertsubject",
+            "tls_cert_file": "tlscertfile",
+            "tls_key_file": "tlskeyfile",
+            "tls_psk_identity": "tlspskidentity",
+            "tls_psk_file": "tlspskfile",
+            "tls_cipher13": "tlscipher13",
+            "tls_cipher": "tlscipher",
+        },
+        defaults=defaults,
+        __salt__=__salt__,
+        __opts__=__opts__,
     )
 
-    retcode = __salt__["cmd.retcode"](cmd, ignore_retcode=True)
-    if retcode == 1:
-        msg = "Command '{}' failed with return code: {}".format(cmd, retcode)
+
+def _zabbix_send(exe, options):
+    cmd = shlex.quote(exe)
+    for option, value in options.items():
+        option = option.replace("_", "-")
+        cmd += " --{} {}".format(shlex.quote(option), shlex.quote(value))
+
+    log.debug("%s", cmd)
+    result = __salt__["cmd.run_all"](cmd, ignore_retcode=True, output_loglevel="quiet")
+    if result["retcode"] == 0:
+        log.debug("zabbix_sender: %s", result["stdout"])
+    elif result["retcode"] == 2:
+        log.warning("zabbix_sender: %s", result["stdout"])
+    else:
+        log.error("zabbix_sender: %s", result["stdout"])
+        msg = "zabbix_sender failed with retcode {}".format(result["retcode"])
         raise CommandExecutionError(msg)
 
 
@@ -238,16 +159,18 @@ def save_load(jid, load, minions=None):
 
 
 def returner(ret):
-    if ret["fun"].split(".")[0] == "state":
-        out = "highstate"
+    config = _get_config(ret)
+    log.debug("Config: %s", config)
+
+    if config["output"] == "highstate":
         data = {ret["id"]: ret["return"]}
     else:
-        out = "nested"
         data = ret["return"]
 
     opts = __opts__.copy()
     opts["color"] = False
 
-    key = "salt.return.{}".format(ret["fun"])
-    value = salt.output.try_printout(data, ret.get("out", out), opts)
-    zabbix_send(key, value)
+    exe = config.pop("sender_bin")
+    out = ret.get("out", config.pop("output"))
+    config["value"] = try_printout(data, out, opts)
+    _zabbix_send(exe, config)
