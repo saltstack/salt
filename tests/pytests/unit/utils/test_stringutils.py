@@ -684,3 +684,104 @@ def test_check_include_exclude_regex():
         )
         is False
     )
+
+
+@pytest.mark.parametrize(
+    "unit",
+    [
+        "B",
+        "K",
+        "KB",
+        "KiB",
+        "M",
+        "MB",
+        "MiB",
+        "G",
+        "GB",
+        "GiB",
+        "T",
+        "TB",
+        "TiB",
+        "P",
+        "PB",
+        "PiB",
+        "E",
+        "EB",
+        "EiB",
+        "Z",
+        "ZB",
+        "ZiB",
+        "Y",
+        "YB",
+        "YiB",
+    ],
+)
+def test_human_to_bytes(unit):
+    # first multiplier is IEC/binary
+    # second multiplier is metric/decimal
+    conversion = {
+        "B": (1, 1),
+        "K": (2 ** 10, 10 ** 3),
+        "M": (2 ** 20, 10 ** 6),
+        "G": (2 ** 30, 10 ** 9),
+        "T": (2 ** 40, 10 ** 12),
+        "P": (2 ** 50, 10 ** 15),
+        "E": (2 ** 60, 10 ** 18),
+        "Z": (2 ** 70, 10 ** 21),
+        "Y": (2 ** 80, 10 ** 24),
+    }
+
+    idx = 0
+    if len(unit) == 2:
+        idx = 1
+
+    # pull out the multipliers for the units
+    multiplier = conversion[unit.upper()[0]][idx]
+    iec = conversion[unit.upper()[0]][0]
+
+    vals = [32]
+    # don't calculate a half a byte
+    if unit != "B":
+        # otherwise, test a float as well
+        vals.append(64.5)
+
+    for val in vals:
+        # calculate KB, MB, GB, etc. as 1024 instead of 1000 (legacy use)
+        assert (
+            salt.utils.stringutils.human_to_bytes("{}{}".format(val, unit)) == val * iec
+        )
+        assert (
+            salt.utils.stringutils.human_to_bytes("{} {}".format(val, unit))
+            == val * iec
+        )
+        # handle metric (KB, MB, GB, etc.) per standard
+        assert (
+            salt.utils.stringutils.human_to_bytes(
+                "{}{}".format(val, unit), handle_metric=True
+            )
+            == val * multiplier
+        )
+        assert (
+            salt.utils.stringutils.human_to_bytes(
+                "{} {}".format(val, unit), handle_metric=True
+            )
+            == val * multiplier
+        )
+
+
+def test_human_to_bytes_edge_cases():
+    # no unit - bytes
+    assert salt.utils.stringutils.human_to_bytes("32") == 32
+    # no unit - default MB
+    assert salt.utils.stringutils.human_to_bytes("32", default_unit="M") == 32 * 2 ** 20
+    # bad value
+    assert salt.utils.stringutils.human_to_bytes("32-1") == 0
+    assert salt.utils.stringutils.human_to_bytes("3.4.MB") == 0
+    assert salt.utils.stringutils.human_to_bytes("") == 0
+    assert salt.utils.stringutils.human_to_bytes("bytes") == 0
+    # bad unit
+    assert salt.utils.stringutils.human_to_bytes("32gigajammers") == 0
+    assert salt.utils.stringutils.human_to_bytes("512bytes") == 0
+    assert salt.utils.stringutils.human_to_bytes("4 Kbytes") == 0
+    assert salt.utils.stringutils.human_to_bytes("9ib") == 0
+    assert salt.utils.stringutils.human_to_bytes("2HB") == 0
