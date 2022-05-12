@@ -1006,10 +1006,10 @@ def _junos_interfaces_ifconfig(out):
 
     pip = re.compile(
         r".*?inet\s*(primary)*\s+mtu"
-        r" (\d+)\s+local=[^\d]*(.*?)\s+dest=[^\d]*(.*?)\/([\d]*)\s+bcast=((?:[0-9]{1,3}\.){3}[0-9]{1,3})"
+        r" (\d+)\s+local=[^\d]*(.*?)\s{0,40}dest=[^\d]*(.*?)\/([\d]*)\s{0,40}bcast=((?:[0-9]{1,3}\.){3}[0-9]{1,3})"
     )
     pip6 = re.compile(
-        r".*?inet6 mtu [^\d]+\s+local=([0-9a-f:]+)%([a-zA-Z0-9]*)/([\d]*)\s"
+        r".*?inet6 mtu [^\d]+\s{0,40}local=([0-9a-f:]+)%([a-zA-Z0-9]*)/([\d]*)\s"
     )
 
     pupdown = re.compile("UP")
@@ -2203,11 +2203,7 @@ def dns_check(addr, port, safe=False, ipv6=None):
     if not ip_addrs:
         err = "DNS lookup or connection check of '{}' failed.".format(addr)
         if safe:
-            if salt.log.is_console_configured():
-                # If logging is not configured it also means that either
-                # the master or minion instance calling this hasn't even
-                # started running
-                log.error(err)
+            log.error(err)
             raise SaltClientError()
         raise SaltSystemExit(code=42, msg=err)
 
