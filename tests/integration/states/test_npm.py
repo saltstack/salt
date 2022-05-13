@@ -52,7 +52,7 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         if grains["os_family"] == "RedHat":
             if (
                 grains["osfinger"] == "CentOS Linux-7"
-                or grains["osfinger"] == "CentOS Linux-8"
+                or grains["osfinger"] == "CentOS Stream-8"
             ):
                 self.skipTest("Skipping CentOS 7 and CentoS 8")
 
