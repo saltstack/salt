@@ -37,12 +37,12 @@ import salt.utils.vt
 import salt.utils.win_chcp
 import salt.utils.win_dacl
 import salt.utils.win_reg
+from salt._logging import LOG_LEVELS
 from salt.exceptions import (
     CommandExecutionError,
     SaltInvocationError,
     TimedProcTimeoutError,
 )
-from salt.log import LOG_LEVELS
 
 # Only available on POSIX systems, nonfatal on windows
 try:
@@ -615,6 +615,9 @@ def _run(
 
     if prepend_path:
         run_env["PATH"] = ":".join((prepend_path, run_env["PATH"]))
+
+    if "NOTIFY_SOCKET" not in env:
+        run_env.pop("NOTIFY_SOCKET", None)
 
     if python_shell is None:
         python_shell = False
@@ -2643,8 +2646,7 @@ def script(
             salt myminion cmd.script salt://foo.sh "arg1 'arg two' arg3"
 
     :param str cwd: The directory from which to execute the command. Defaults
-        to the home directory of the user specified by ``runas`` (or the user
-        under which Salt is running if ``runas`` is not specified).
+        to the directory returned from Python's tempfile.mkstemp.
 
     :param str stdin: A string of standard input can be specified for the
         command to be run using the ``stdin`` parameter. This can be useful in

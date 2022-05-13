@@ -213,7 +213,6 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
         with salt.utils.event.get_event(
             self.opts["__role"],
             self.opts["sock_dir"],
-            self.opts["transport"],
             opts=self.opts,
             listen=True,
         ) as event:

@@ -7,7 +7,6 @@ from saltfactories.utils import random_string
 from saltfactories.utils.ports import get_unused_localhost_port
 
 docker = pytest.importorskip("docker")
-docker_errors = pytest.importorskip("docker.errors")
 
 
 @attr.s(kw_only=True, slots=True)
@@ -65,22 +64,36 @@ def get_test_versions():
     return test_versions
 
 
+@pytest.fixture(scope="module")
+def docker_client():
+    try:
+        client = docker.from_env()
+    except docker.errors.DockerException:
+        pytest.skip("Failed to get a connection to docker running on the system")
+    connectable = Container.client_connectable(client)
+    if connectable is not True:  # pragma: nocover
+        pytest.skip(connectable)
+    return client
+
+
 def get_test_version_id(value):
     return "container={}".format(value)
 
 
 @pytest.fixture(scope="module", params=get_test_versions(), ids=get_test_version_id)
-def mysql_container(request, salt_factories, salt_call_cli):
-
+def mysql_image(request, docker_client):
+    image = request.param
     try:
-        docker_client = docker.from_env()
-    except docker_errors.DockerException:
-        pytest.skip("Failed to get a connection to docker running on the system")
-    connectable = Container.client_connectable(docker_client)
-    if connectable is not True:  # pragma: no cover
-        pytest.skip(connectable)
+        docker_client.images.pull(image.name, tag=image.tag)
+    except docker.errors.APIError as exc:
+        pytest.skip(
+            "Failed to pull docker image '{}:{}': {}".format(image.name, image.tag, exc)
+        )
+    return image
 
-    mysql_image = request.param
+
+@pytest.fixture(scope="module")
+def mysql_container(salt_factories, docker_client, salt_call_cli, mysql_image):
 
     mysql_user = "root"
     mysql_passwd = "password"

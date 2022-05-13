@@ -95,9 +95,10 @@ def salt_mm_failover_minion_1(salt_mm_failover_master_1, salt_mm_failover_master
         ],
         "publish_port": salt_mm_failover_master_1.config["publish_port"],
         "master_type": "failover",
-        "master_alive_interval": 30,
+        "master_alive_interval": 10,
         "master_tries": -1,
         "verify_master_pubkey_sign": True,
+        "retry_dns": 1,
     }
     factory = salt_mm_failover_master_1.salt_minion_daemon(
         "mm-failover-minion-1",
@@ -132,9 +133,10 @@ def salt_mm_failover_minion_2(salt_mm_failover_master_1, salt_mm_failover_master
         ],
         "publish_port": salt_mm_failover_master_1.config["publish_port"],
         "master_type": "failover",
-        "master_alive_interval": 30,
+        "master_alive_interval": 10,
         "master_tries": -1,
         "verify_master_pubkey_sign": True,
+        "retry_dns": 1,
     }
     factory = salt_mm_failover_master_2.salt_minion_daemon(
         "mm-failover-minion-2",
@@ -158,21 +160,34 @@ def run_salt_cmds():
         Run test.ping from all clis to all minions
         """
         returned_minions = []
+        minions_to_check = {minion.id: minion for minion in minions}
 
-        for cli in clis:
-            for minion in minions:
-                try:
-                    ret = cli.run("test.ping", minion_tgt=minion.id, _timeout=20)
-                    if ret and ret.json:
-                        assert ret.json
-                        assert ret.exitcode == 0
-                        returned_minions.append((cli, minion))
-                except FactoryTimeout:
-                    log.debug(
-                        "Failed to execute test.ping from %s to %s.",
-                        cli.get_display_name(),
-                        minion.id,
-                    )
+        attempts = 6
+        timeout = 5
+        if salt.utils.platform.spawning_platform():
+            timeout *= 2
+        while attempts:
+            if not minions_to_check:
+                break
+            for cli in clis:
+                for minion in list(minions_to_check):
+                    try:
+                        ret = cli.run(
+                            "--timeout={}".format(timeout),
+                            "test.ping",
+                            minion_tgt=minion,
+                        )
+                        if ret.exitcode == 0 and ret.json is True:
+                            returned_minions.append((cli, minions_to_check[minion]))
+                            minions_to_check.pop(minion)
+                    except FactoryTimeout:
+                        log.debug(
+                            "Failed to execute test.ping from %s to %s.",
+                            cli.get_display_name(),
+                            minion,
+                        )
+            time.sleep(1)
+            attempts -= 1
 
         return returned_minions
 
@@ -220,7 +235,9 @@ def ensure_connections(
                 if not (minion_1_alive and minion_2_alive):
                     with salt_mm_failover_minion_1.stopped(), salt_mm_failover_minion_2.stopped():
                         with salt_mm_failover_master_1.stopped(), salt_mm_failover_master_2.stopped():
-                            pass
+                            log.debug(
+                                "All masters and minions are shutdown. Restarting."
+                            )
             except FactoryNotStarted:
                 log.debug("One or more minions failed to start, retrying")
             else:

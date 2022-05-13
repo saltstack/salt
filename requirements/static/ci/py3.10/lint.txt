@@ -358,7 +358,6 @@ cffi==1.14.6
     #   azure-datalake-store
     #   bcrypt
     #   cryptography
-    #   napalm
     #   pygit2
     #   pynacl
 charset-normalizer==2.0.4
@@ -371,14 +370,10 @@ cherrypy==18.6.1
     # via
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/linux.in
-ciscoconfparse==1.5.46
-    # via napalm
 click==8.0.1
     # via geomet
 clustershell==1.8.3
     # via -r requirements/static/ci/common.in
-colorama==0.4.4
-    # via ciscoconfparse
 contextvars==2.4
     # via -r requirements/base.txt
 croniter==1.0.15 ; sys_platform != "win32"
@@ -401,16 +396,11 @@ distro==1.6.0
 dnspython==2.1.0
     # via
     #   -r requirements/static/ci/common.in
-    #   ciscoconfparse
     #   python-etcd
 docker==5.0.0
     # via -r requirements/static/ci/common.in
 filelock==3.0.12
     # via virtualenv
-future==0.18.2
-    # via
-    #   napalm
-    #   textfsm
 genshi==0.7.5
     # via -r requirements/static/ci/common.in
 geomet==0.2.1.post1
@@ -452,7 +442,6 @@ jinja2==3.0.3
     #   ansible-core
     #   junos-eznc
     #   moto
-    #   napalm
 jmespath==0.10.0
     # via
     #   -r requirements/static/ci/common.in
@@ -461,9 +450,7 @@ jmespath==0.10.0
 jsonschema==3.2.0
     # via -r requirements/static/ci/common.in
 junos-eznc==2.6.0 ; sys_platform != "win32" and python_version >= "3.10"
-    # via
-    #   -r requirements/static/ci/common.in
-    #   napalm
+    # via -r requirements/static/ci/common.in
 jxmlease==1.0.3 ; sys_platform != "win32"
     # via -r requirements/static/ci/common.in
 kazoo==2.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
@@ -476,12 +463,9 @@ lazy-object-proxy==1.4.3
     # via astroid
 libnacl==1.8.0 ; sys_platform != "win32" and sys_platform != "darwin"
     # via -r requirements/static/ci/common.in
-loguru==0.6.0
-    # via ciscoconfparse
 lxml==4.7.1
     # via
     #   junos-eznc
-    #   napalm
     #   ncclient
 mako==1.1.5
     # via -r requirements/static/ci/common.in
@@ -599,39 +583,26 @@ msrestazure==0.6.4
     #   azure-mgmt-subscription
     #   azure-mgmt-trafficmanager
     #   azure-mgmt-web
-napalm==3.3.1 ; sys_platform != "win32" and python_version > "3.6"
-    # via -r requirements/static/ci/common.in
 ncclient==0.6.9
-    # via
-    #   junos-eznc
-    #   napalm
+    # via junos-eznc
 netaddr==0.8.0
-    # via
-    #   junos-eznc
-    #   napalm
-    #   pyeapi
-netmiko==3.4.0
-    # via napalm
-ntc-templates==2.2.2
-    # via netmiko
+    # via junos-eznc
 oauthlib==3.1.1
     # via requests-oauthlib
 oscrypto==1.2.1
     # via certvalidator
 packaging==21.0
     # via ansible-core
-paramiko==2.7.2 ; sys_platform != "win32" and sys_platform != "darwin"
+paramiko==2.10.1 ; sys_platform != "win32" and sys_platform != "darwin"
     # via
     #   -r requirements/static/ci/common.in
     #   junos-eznc
-    #   napalm
     #   ncclient
-    #   netmiko
     #   scp
 passlib==1.7.4 ; sys_platform != "win32"
-    # via
-    #   -r requirements/static/ci/common.in
-    #   ciscoconfparse
+    # via -r requirements/static/ci/common.in
+pathspec==0.9.0
+    # via yamllint
 platformdirs==2.2.0
     # via virtualenv
 portend==2.7.1
@@ -652,8 +623,6 @@ pycryptodomex==3.10.1
     # via -r requirements/crypto.txt
 pycurl==7.44.1 ; python_version >= "3.10"
     # via -r requirements/static/ci/common.in
-pyeapi==0.8.4
-    # via napalm
 pygit2==1.7.1 ; python_version >= "3.10"
     # via -r requirements/static/ci/linux.in
 pyiface==0.0.11
@@ -681,9 +650,7 @@ pyparsing==2.4.7
 pyrsistent==0.18.0
     # via jsonschema
 pyserial==3.5
-    # via
-    #   junos-eznc
-    #   netmiko
+    # via junos-eznc
 python-dateutil==2.8.2
     # via
     #   -r requirements/static/pkg/linux.in
@@ -697,7 +664,7 @@ python-dateutil==2.8.2
     #   vcert
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
-python-gnupg==0.4.7
+python-gnupg==0.4.8
     # via -r requirements/static/pkg/linux.in
 python-telegram-bot==13.7 ; python_version > "3.5"
     # via -r requirements/static/ci/linux.in
@@ -717,7 +684,7 @@ pyyaml==5.4.1
     #   clustershell
     #   junos-eznc
     #   kubernetes
-    #   napalm
+    #   yamllint
     #   yamlordereddictloader
 pyzmq==21.0.2 ; python_version >= "3.9"
     # via -r requirements/zeromq.txt
@@ -739,7 +706,6 @@ requests==2.26.0
     #   kubernetes
     #   moto
     #   msrest
-    #   napalm
     #   pyvmomi
     #   requests-oauthlib
     #   responses
@@ -760,10 +726,7 @@ s3transfer==0.5.0
 saltpylint==2020.9.28
     # via -r requirements/static/ci/lint.in
 scp==0.13.6
-    # via
-    #   junos-eznc
-    #   napalm
-    #   netmiko
+    # via junos-eznc
 setproctitle==1.2.2 ; python_version >= "3.10"
     # via -r requirements/static/pkg/linux.in
 six==1.16.0
@@ -782,12 +745,12 @@ six==1.16.0
     #   kubernetes
     #   msrestazure
     #   ncclient
+    #   paramiko
     #   pynacl
     #   pyopenssl
     #   python-dateutil
     #   pyvmomi
     #   responses
-    #   textfsm
     #   transitions
     #   twilio
     #   vcert
@@ -801,12 +764,6 @@ strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in
 tempora==4.1.1
     # via portend
-tenacity==8.0.1
-    # via netmiko
-textfsm==1.1.2
-    # via
-    #   napalm
-    #   ntc-templates
 timelib==0.2.5
     # via -r requirements/static/pkg/linux.in
 toml==0.10.2
@@ -844,6 +801,8 @@ wrapt==1.11.1
     # via astroid
 xmltodict==0.12.0
     # via moto
+yamllint==1.26.3
+    # via -r requirements/static/ci/linux.in
 yamlordereddictloader==0.4.0
     # via junos-eznc
 zc.lockfile==2.0

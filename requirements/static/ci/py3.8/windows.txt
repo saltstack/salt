@@ -70,7 +70,9 @@ cryptography==3.4.7
 distlib==0.3.2
     # via virtualenv
 distro==1.5.0
-    # via -r requirements/base.txt
+    # via
+    #   -r requirements/base.txt
+    #   pytest-skip-markers
 dmidecode==0.9.0
     # via -r requirements/static/ci/windows.in
 dnspython==1.16.0
@@ -120,7 +122,7 @@ jaraco.functools==2.0
     #   tempora
 jaraco.text==3.5.0
     # via jaraco.collections
-jinja2==3.0.3
+jinja2==3.1.0
     # via
     #   -r requirements/base.txt
     #   moto
@@ -159,7 +161,7 @@ more-itertools==8.2.0
     #   jaraco.functools
 moto==3.0.1 ; python_version >= "3.6"
     # via -r requirements/static/ci/common.in
-msgpack==0.6.2
+msgpack==1.0.2
     # via
     #   -r requirements/base.txt
     #   pytest-salt-factories
@@ -169,6 +171,8 @@ packaging==19.2
     # via pytest
 patch==1.16
     # via -r requirements/static/ci/windows.in
+pathspec==0.9.0
+    # via yamllint
 pathtools==0.1.2
     # via watchdog
 platformdirs==2.2.0
@@ -217,9 +221,11 @@ pytest-helpers-namespace==2021.4.29
     # via
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
+pytest-httpserver==1.0.4
+    # via -r requirements/pytest.txt
 pytest-salt-factories==0.912.1
     # via -r requirements/pytest.txt
-pytest-skip-markers==1.1.2
+pytest-skip-markers==1.2.0
     # via pytest-salt-factories
 pytest-subtests==0.4.0
     # via -r requirements/pytest.txt
@@ -246,7 +252,7 @@ python-dateutil==2.8.1
     #   moto
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
-python-gnupg==0.4.7
+python-gnupg==0.4.8
     # via -r requirements/windows.txt
 pythonnet==2.5.2
     # via -r requirements/windows.txt
@@ -269,6 +275,7 @@ pyyaml==5.4.1
     #   -r requirements/base.txt
     #   clustershell
     #   kubernetes
+    #   yamllint
 pyzmq==19.0.0 ; python_version < "3.9"
     # via
     #   -r requirements/zeromq.txt
@@ -349,8 +356,10 @@ websocket-client==0.40.0
     # via
     #   docker
     #   kubernetes
-werkzeug==0.15.6
-    # via moto
+werkzeug==2.0.3
+    # via
+    #   moto
+    #   pytest-httpserver
 wheel==0.36.2
     # via -r requirements/windows.txt
 wmi==1.5.1
@@ -359,6 +368,8 @@ xmltodict==0.12.0
     # via
     #   moto
     #   pywinrm
+yamllint==1.26.3
+    # via -r requirements/static/ci/windows.in
 zc.lockfile==2.0
     # via cherrypy
 zipp==3.5.0

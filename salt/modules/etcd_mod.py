@@ -79,10 +79,7 @@ def get_(key, recurse=False, profile=None, **kwargs):
         salt myminion etcd.get /path/to/key host=127.0.0.1 port=2379
     """
     client = __utils__["etcd_util.get_conn"](__opts__, profile, **kwargs)
-    if recurse:
-        return client.tree(key)
-    else:
-        return client.get(key, recurse=recurse)
+    return client.get(key, recurse=recurse)
 
 
 def set_(key, value, profile=None, ttl=None, directory=False, **kwargs):
@@ -102,7 +99,6 @@ def set_(key, value, profile=None, ttl=None, directory=False, **kwargs):
         salt myminion etcd.set /path/to/dir '' directory=True
         salt myminion etcd.set /path/to/key value ttl=5
     """
-
     client = __utils__["etcd_util.get_conn"](__opts__, profile, **kwargs)
     return client.set(key, value, ttl=ttl, directory=directory)
 

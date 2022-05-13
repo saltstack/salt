@@ -9,6 +9,7 @@ import logging
 import os
 import sys
 import traceback
+import uuid
 
 import salt.channel.client
 import salt.ext.tornado.gen
@@ -262,6 +263,9 @@ class AsyncRemotePillar(RemotePillarMixin):
                 load,
                 dictkey="pillar",
             )
+        except salt.crypt.AuthenticationError as exc:
+            log.error(exc.message)
+            raise SaltClientError("Exception getting pillar.")
         except Exception:  # pylint: disable=broad-except
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
@@ -651,6 +655,10 @@ class Pillar:
                     env,
                 )
                 opts["pillar_roots"][env] = opts["pillar_roots"].pop("__env__")
+                for idx, root in enumerate(opts["pillar_roots"][env]):
+                    opts["pillar_roots"][env][idx] = opts["pillar_roots"][env][
+                        idx
+                    ].replace("__env__", env)
             else:
                 log.debug(
                     "pillar_roots __env__ ignored (environment '%s' found in pillar_roots)",
