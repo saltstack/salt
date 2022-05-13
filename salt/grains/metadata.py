@@ -69,6 +69,9 @@ def _search(prefix="latest/"):
     for line in body.split("\n"):
         if line.endswith("/"):
             ret[line[:-1]] = _search(prefix=os.path.join(prefix, line))
+        elif line.endswith(("user-data")):
+            retdata = http.query(os.path.join(HOST, prefix, line)).get("body", None)
+            ret[line] = retdata
         elif prefix == "latest/":
             # (gtmanfred) The first level should have a forward slash since
             # they have stuff underneath. This will not be doubled up though,
