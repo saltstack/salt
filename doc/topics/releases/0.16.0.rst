@@ -1,0 +1,137 @@
+.. _release-0-16-0:
+
+=========================
+Salt 0.16.0 Release Notes
+=========================
+
+:release: 2013-07-01
+
+The 0.16.0 release is an exciting one, with new features in master redundancy,
+and a new, powerful requisite.
+
+Major Features
+==============
+
+Multi-Master
+------------
+
+This new capability allows for a minion to be actively connected to multiple
+salt masters at the same time. This allows for multiple masters to send out commands
+to minions and for minions to automatically reconnect to masters that have gone
+down. A tutorial is available to help get started here:
+
+:ref:`Multi Master Tutorial <tutorial-multi-master>`
+
+Prereq, the New Requisite
+-------------------------
+
+The new `prereq` requisite is very powerful! It allows for states to execute
+based on a state that is expected to make changes in the future. This allows
+for a change on the system to be preempted by another execution. A good example
+is needing to shut down a service before modifying files associated with it,
+allowing, for instance, a webserver to be shut down allowing a load balancer to
+stop sending requests while server side code is updated. In this case, the
+prereq will only run if changes are expected to happen in the prerequired
+state, and the prerequired state will always run after the prereq state and
+only if the prereq state succeeds.
+
+Peer System Improvements
+------------------------
+
+The peer system has been revamped to make it more reliable, faster, and like
+the rest of Salt, async. The peer calls when an updated minion and master are
+used together will be much faster!
+
+Relative Includes
+-----------------
+
+The ability to include an sls relative to the defined sls has been added, the
+new syntax id documented here:
+
+:ref:`Includes <states-include>`
+
+More State Output Options
+-------------------------
+
+The ``state_output`` option in the past only supported `full` and `terse`,
+0.16.0 add the `mixed` and `changes` modes further refining how states are sent
+to users' eyes.
+
+Improved Windows Support
+------------------------
+
+Support for Salt on Windows continues to improve. Software management on
+Windows has become more seamless with Linux/UNIX/BSD software management.
+Installed software is now recognized by the short names defined in the
+:ref:`repository SLS <windows-package-manager>`. This makes it
+possible to run ``salt '*' pkg.version firefox`` and get back results from
+Windows and non-Windows minions alike.
+
+When templating files on Windows, Salt will now correctly use Windows
+appropriate line endings. This makes it much easier to edit and consume files
+on Windows.
+
+When using the cmd state the ``shell`` option now allows for specifying
+Windows Powershell as an alternate shell to execute cmd.run and cmd.script.
+This opens up Salt to all the power of Windows Powershell and its advanced
+Windows management capabilities.
+
+Several fixes and optimizations were added for the Windows networking modules,
+especially when working with IPv6.
+
+A system module was added that makes it easy to restart and shutdown Windows
+minions.
+
+The Salt Minion will now look for its config file in ``c:\salt\conf`` by
+default. This means that it's no longer necessary to specify the ``-c`` option
+to specify the location of the config file when starting the Salt Minion on
+Windows in a terminal.
+
+Multiple Targets for pkg.removed, pkg.purged States
+---------------------------------------------------
+
+Both :mod:`pkg.removed <salt.states.pkg.removed>` and :mod:`pkg.purged
+<salt.states.pkg.purged>` now support the ``pkgs`` argument, which allow for
+multiple packages to be targeted in a single state. This, as in
+:mod:`pkg.installed <salt.states.pkg.installed>`, helps speed up these
+states by reducing the number of times that the package management tools (apt,
+yum, etc.) need to be run.
+
+Random Times in Cron States
+---------------------------
+
+The temporal parameters in :mod:`cron.present <salt.states.cron.present>`
+states (minute, hour, etc.) can now be randomized by using ``random`` instead
+of a specific value. For example, by using the ``random`` keyword in the
+``minute`` parameter of a cron state, the same cron job can be pushed to
+hundreds or thousands of hosts, and they would each use a randomly-generated
+minute. This can be helpful when the cron job accesses a network resource, and
+it is not desirable for all hosts to run the job concurrently.
+
+.. code-block:: yaml
+
+    /path/to/cron/script:
+      cron.present:
+        - user: root
+        - minute: random
+        - hour: 2
+
+Since Salt assumes a value of ``*`` for unspecified temporal parameters, adding
+a parameter to the state and setting it to ``random`` will change that value
+from ``*`` to a randomized numeric value. However, if that field in the cron
+entry on the minion already contains a numeric value, then using the ``random``
+keyword will not modify it.
+
+Confirmation Prompt on Key Acceptance
+-------------------------------------
+
+When accepting new keys with ``salt-key -a minion-id`` or ``salt-key -A``,
+there is now a prompt that will show the affected keys and ask for confirmation
+before proceeding. This prompt can be bypassed using the ``-y`` or ``--yes``
+command line argument, as with other ``salt-key`` commands.
+
+Support for Setting Password Hashes on BSD Minions
+--------------------------------------------------
+
+FreeBSD, NetBSD, and OpenBSD all now support setting passwords in
+:mod:`user.present <salt.states.user.present>` states.

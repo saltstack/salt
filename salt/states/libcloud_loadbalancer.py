@@ -1,0 +1,192 @@
+"""
+Apache Libcloud Load Balancer State
+===================================
+
+Manage load balancers using libcloud
+
+    :codeauthor: ``Anthony Shaw <anthonyshaw@apache.org>``
+
+Apache Libcloud load balancer management for a full list
+of supported clouds, see http://libcloud.readthedocs.io/en/latest/loadbalancer/supported_providers.html
+
+Clouds include Amazon ELB, ALB, Google, Aliyun, CloudStack, Softlayer
+
+.. versionadded:: 2018.3.0
+
+:configuration:
+    This module uses a configuration profile for one or multiple Cloud providers
+
+    .. code-block:: yaml
+
+        libcloud_loadbalancer:
+            profile_test1:
+              driver: gce
+              key: GOOG0123456789ABCXYZ
+              secret: mysecret
+            profile_test2:
+              driver: alb
+              key: 12345
+              secret: mysecret
+
+Example:
+
+Using States to deploy a load balancer with extended arguments to specify region
+
+.. code-block:: yaml
+
+    lb_test:
+        libcloud_loadbalancer.balancer_present:
+            - name: example
+            - port: 80
+            - protocol: http
+            - profile: google
+            - ex_region: us-east1
+
+:depends: apache-libcloud
+"""
+
+
+import logging
+
+log = logging.getLogger(__name__)
+
+
+def __virtual__():
+    if "libcloud_loadbalancer.list_balancers" in __salt__:
+        return True
+    return (False, "libcloud_loadbalancer module could not be loaded")
+
+
+def state_result(result, message, name, changes=None):
+    if changes is None:
+        changes = {}
+    return {"result": result, "comment": message, "name": name, "changes": changes}
+
+
+def balancer_present(
+    name, port, protocol, profile, algorithm=None, members=None, **libcloud_kwargs
+):
+    """
+    Ensures a load balancer is present.
+
+    :param name: Load Balancer name
+    :type  name: ``str``
+
+    :param port: Port the load balancer should listen on, defaults to 80
+    :type  port: ``str``
+
+    :param protocol: Loadbalancer protocol, defaults to http.
+    :type  protocol: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+
+    :param algorithm: Load balancing algorithm, defaults to ROUND_ROBIN. See Algorithm type
+        in Libcloud documentation for a full listing.
+    :type algorithm: ``str``
+
+    :param members: An optional list of members to create on deployment
+    :type  members: ``list`` of ``dict`` (ip, port)
+    """
+    balancers = __salt__["libcloud_loadbalancer.list_balancers"](profile)
+    match = [z for z in balancers if z["name"] == name]
+    if len(match) > 0:
+        return state_result(True, "Balancer already exists", name)
+    else:
+        starting_members = None
+        if members is not None:
+            starting_members = []
+            for m in members:
+                starting_members.append({"ip": m["ip"], "port": m["port"]})
+        balancer = __salt__["libcloud_loadbalancer.create_balancer"](
+            name,
+            port,
+            protocol,
+            profile,
+            algorithm=algorithm,
+            members=starting_members,
+            **libcloud_kwargs
+        )
+        return state_result(True, "Created new load balancer", name, balancer)
+
+
+def balancer_absent(name, profile, **libcloud_kwargs):
+    """
+    Ensures a load balancer is absent.
+
+    :param name: Load Balancer name
+    :type  name: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+    """
+    balancers = __salt__["libcloud_loadbalancer.list_balancers"](profile)
+    match = [z for z in balancers if z["name"] == name]
+    if len(match) == 0:
+        return state_result(True, "Balancer already absent", name)
+    else:
+        result = __salt__["libcloud_loadbalancer.destroy_balancer"](
+            match[0]["id"], profile, **libcloud_kwargs
+        )
+        return state_result(result, "Deleted load balancer", name)
+
+
+def member_present(ip, port, balancer_id, profile, **libcloud_kwargs):
+    """
+    Ensure a load balancer member is present
+
+    :param ip: IP address for the new member
+    :type  ip: ``str``
+
+    :param port: Port for the new member
+    :type  port: ``int``
+
+    :param balancer_id: id of a load balancer you want to attach the member to
+    :type  balancer_id: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+    """
+    existing_members = __salt__["libcloud_loadbalancer.list_balancer_members"](
+        balancer_id, profile
+    )
+    for member in existing_members:
+        if member["ip"] == ip and member["port"] == port:
+            return state_result(True, "Member already present", balancer_id)
+    member = __salt__["libcloud_loadbalancer.balancer_attach_member"](
+        balancer_id, ip, port, profile, **libcloud_kwargs
+    )
+    return state_result(
+        True,
+        "Member added to balancer, id: {}".format(member["id"]),
+        balancer_id,
+        member,
+    )
+
+
+def member_absent(ip, port, balancer_id, profile, **libcloud_kwargs):
+    """
+    Ensure a load balancer member is absent, based on IP and Port
+
+    :param ip: IP address for the member
+    :type  ip: ``str``
+
+    :param port: Port for the member
+    :type  port: ``int``
+
+    :param balancer_id: id of a load balancer you want to detach the member from
+    :type  balancer_id: ``str``
+
+    :param profile: The profile key
+    :type  profile: ``str``
+    """
+    existing_members = __salt__["libcloud_loadbalancer.list_balancer_members"](
+        balancer_id, profile
+    )
+    for member in existing_members:
+        if member["ip"] == ip and member["port"] == port:
+            result = __salt__["libcloud_loadbalancer.balancer_detach_member"](
+                balancer_id, member["id"], profile, **libcloud_kwargs
+            )
+            return state_result(result, "Member removed", balancer_id)
+    return state_result(True, "Member already absent", balancer_id)

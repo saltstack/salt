@@ -1,0 +1,142 @@
+=========================
+Salt 0.11.0 Release Notes
+=========================
+
+:release: 2012-12-14
+
+Salt 0.11.0 is here, with some highly sought after and exciting features.
+These features include the new overstate system, the reactor system, a new
+state run scope component called __context__, the beginning of the search
+system (still needs a great deal of work), multiple package states, the MySQL
+returner and a better system to arbitrarily reference outputters.
+
+It is also noteworthy that we are changing how we mark release numbers. For the
+life of the project we have been pushing every release with features and fixes
+as point releases. We will now be releasing point releases for only bug fixes
+on a more regular basis and major feature releases on a slightly less regular
+basis. This means that the next release will be a bugfix only release with a
+version number of 0.11.1. The next feature release will be named 0.12.0 and
+will mark the end of life for the 0.11 series.
+
+Major Features
+==============
+
+OverState
+---------
+
+The overstate system is a simple way to manage rolling state executions across
+many minions. The overstate allows for a state to depend on the successful
+completion of another state.
+
+Reactor System
+--------------
+
+The new reactor system allows for a reactive logic engine to be created which
+can respond to events within a salted environment. The reactor system uses sls
+files to match events fired on the master with actions, enabling Salt
+to react to problems in an infrastructure.
+
+Your load-balanced group of webservers is under extra load? Spin up a new VM
+and add it to the group. Your fileserver is filling up? Send a notification to
+your sysadmin on call. The possibilities are endless!
+
+Module Context
+--------------
+
+A new component has been added to the module loader system. The module context
+is a data structure that can hold objects for a given scope within the module.
+
+This allows for components that are initialized to be stored in a persistent
+context which can greatly speed up ongoing connections. Right now the best
+example can be found in the `cp` execution module.
+
+Multiple Package Management
+---------------------------
+
+A long desired feature has been added to package management. By definition Salt
+States have always installed packages one at a time. On most platforms this is
+not the fastest way to install packages. Erik Johnson, aka terminalmage, has
+modified the package modules for many providers and added new capabilities to
+install groups of packages. These package groups can be defined as a list of
+packages available in repository servers:
+
+.. code-block:: yaml
+
+    python_pkgs:
+      pkg.installed:
+        - pkgs:
+          - python-mako
+          - whoosh
+          - python-git
+
+or specify based on the location of specific packages:
+
+.. code-block:: yaml
+
+    python_pkgs:
+      pkg.installed:
+        - sources:
+          - python-mako: http://some-rpms.org/python-mako.rpm
+          - whoosh: salt://whoosh/whoosh.rpm
+          - python-git: ftp://companyserver.net/python-git.rpm
+
+Search System
+-------------
+
+The bones to the search system have been added. This is a very basic interface
+that allows for search backends to be added as search modules. The first
+supported search module is the whoosh search backend. Right now only the basic
+paths for the search system are in place, making this very experimental.
+Further development will involve improving the search routines and index
+routines for whoosh and other search backends.
+
+The search system has been made to allow for searching through all of the state
+and pillar files, configuration files and all return data from minion
+executions.
+
+
+Notable Changes
+===============
+
+All previous versions of Salt have shared many directories between the master
+and minion. The default locations for keys, cached data and sockets has been
+shared by master and minion. This has created serious problems with running a
+master and a minion on the same systems. 0.11.0 changes the defaults to be
+separate directories. Salt will also attempt to migrate all of the old key data
+into the correct new directories, but if it is not successful it may need to be
+done manually. If your keys exhibit issues after updating make sure that they
+have been moved from ``/etc/salt/pki`` to ``/etc/salt/pki/{master,minion}``.
+
+The old setup will look like this:
+
+.. code-block:: text
+
+    /etc/salt/pki
+    |-- master.pem
+    |-- master.pub
+    |-- minions
+    |   `-- ragnarok.saltstack.net
+    |-- minions_pre
+    |-- minion.pem
+    |-- minion.pub
+    |-- minion_master.pub
+    |-- minions_pre
+    `-- minions_rejected
+
+With the accepted minion keys in ``/etc/salt/pki/minions``, the new setup
+places the accepted minion keys in ``/etc/salt/pki/master/minions``.
+
+.. code-block:: text
+
+    /etc/salt/pki
+    |-- master
+    |   |-- master.pem
+    |   |-- master.pub
+    |   |-- minions
+    |   |   `-- ragnarok.saltstack.net
+    |   |-- minions_pre
+    |   `-- minions_rejected
+    |-- minion
+    |   |-- minion.pem
+    |   |-- minion.pub
+    |   `-- minion_master.pub

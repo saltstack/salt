@@ -1,0 +1,102 @@
+==============
+salt-api 0.8.4
+==============
+
+:program:`salt-api` 0.8.4 sees a number of new features and feature
+enhancements in the :py:mod:`rest_cherrypy <salt.netapi.rest_cherrypy.app>`
+netapi module.
+
+Work to merge :program:`salt-api` into the main Salt distribution continues and
+it is likely to be included in Salt's 2014.7.0 release.
+
+:py:mod:`rest_cherrypy <salt.netapi.rest_cherrypy.app>` changes
+==================================================================
+
+Web hooks
+---------
+
+This release adds a :py:class:`new URL /hook
+<salt.netapi.rest_cherrypy.app.Webhook>` that allows salt-api to serve as a
+generic web hook interface for Salt. POST requests to the URL trigger events on
+Salt's event bus.
+
+External services like Amazon SNS, Travis CI, GitHub, etc can easily send
+signals through Salt's Reactor.
+
+The following HTTP call will trigger the following Salt event.
+
+.. code-block:: bash
+
+    % curl -sS http://localhost:8000/hook/some/tag \
+        -d some='Data!'
+
+Event tag: ``salt/netapi/hook/some/tag``. Event data:
+
+.. code-block:: json
+
+    {
+      "_stamp": "2014-04-04T12:14:54.389614",
+      "post": {
+        "some": "Data!"
+      },
+      "headers": {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Host": "localhost:8000",
+        "User-Agent": "curl/7.32.0",
+        "Accept": "*/*",
+        "Content-Length": "10",
+        "Remote-Addr": "127.0.0.1"
+      }
+    }
+
+Batch mode
+----------
+
+The :py:meth:`~salt.netapi.NetapiClient.local_batch` client exposes Salt's batch mode
+for executing commands on incremental subsets of minions.
+
+Tests!
+------
+
+We have added the necessary framework for testing the rest_cherrypy module and
+this release includes a number of both unit and integration tests. The suite
+can be run with the following command:
+
+.. code-block:: bash
+
+    python -m unittest discover -v
+
+CherryPy server stats and configuration
+---------------------------------------
+
+A number of settings have been added to better configure the performance of the
+CherryPy web server. In addition, a :py:class:`new URL /stats
+<salt.netapi.rest_cherrypy.app.Stats>` has been added to expose metrics on
+the health of the CherryPy web server.
+
+Improvements for running with external WSGI servers
+---------------------------------------------------
+
+Running the ``rest_cherrypy`` module via a WSGI-capable server such as Apache
+or Nginx can be tricky since the user the server is running as must have
+permission to access the running Salt system. This release eases some of those
+restrictions by accessing Salt's key interface through the external auth
+system. Read access to the Salt configuration is required for the user the
+server is running as and everything else should go through external auth.
+
+More information in the jobs URLs
+---------------------------------
+
+The output for the :py:class:`/jobs/<jid> URLs
+<salt.netapi.rest_cherrypy.app.Jobs>` has been augmented with more
+information about the job such as which minions are expected to return for that
+job. This same output will be added to the other salt-api URLs in the next
+release.
+
+Improvements to the Server Sent Events stream
+---------------------------------------------
+
+Event tags have been added to :py:class:`the HTTP event stream
+<salt.netapi.rest_cherrypy.app.Event>` as SSE tags which allows JavaScript
+or other consumers to more easily match on certain tags without having to
+inspect the whole event.

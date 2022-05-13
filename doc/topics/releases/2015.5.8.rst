@@ -1,0 +1,265 @@
+.. _release-2015-5-8:
+
+===========================
+Salt 2015.5.8 Release Notes
+===========================
+
+:release: 2015-12-01
+
+Version 2015.5.8 is a bugfix release for :ref:`2015.5.0 <release-2015-5-0>`.
+
+
+Statistics
+==========
+
+- Total Merges: **17**
+- Total Issue References: **12**
+- Total PR References: **27**
+
+- Contributors: **12** (`MasterNayru`_, `TronPaul`_, `basepi`_, `cachedout`_, `cxmcc`_,
+  `jfindlay`_, `kevinlondon`_, `messa`_, `rallytime`_, `tehmaspc`_, `twangboy`_, `whiteinge`_)
+
+
+Security Fix
+============
+
+**CVE-2015-8034** Saving :py:func:`state.sls <salt.modules.state.sls>` cache
+data to disk with insecure permissions
+
+This affects users of the :py:func:`state.sls <salt.modules.state.sls>`
+function. The state run cache on the minion was being created with incorrect
+permissions. This file could potentially contain sensitive data that was
+inserted via jinja into the state SLS files. The permissions for this file are
+now being set correctly. Thanks to `zmalone`_ for bringing this issue to our
+attention.
+
+
+Changelog for v2015.5.7..v2015.5.8
+==================================
+
+*Generated at: 2018-05-27 22:25:07 UTC*
+
+* **ISSUE** `#28883`_: (`ldelossa`_) Issues running select states -  local variable 'salt' referenced before assignment (refs: `#29113`_)
+
+* **PR** `#29164`_: (`jfindlay`_) Backport `#29113`_
+  @ *2015-11-24 21:26:17 UTC*
+
+  * **PR** `#29113`_: (`TronPaul`_) Kill unneeded import (refs: `#29164`_)
+
+  * **PR** `#28740`_: (`MasterNayru`_) Add missing S3 module import (refs: `#28839`_, `#29113`_)
+
+  * a26c10a811 Merge pull request `#29164`_ from jfindlay/bp-29113
+
+  * 50fab35188 kill unneeded import
+
+* **PR** `#29138`_: (`jfindlay`_) add 2015.5.8 release notes
+  @ *2015-11-23 23:22:48 UTC*
+
+  * 4f03196e7d Merge pull request `#29138`_ from jfindlay/2015.5
+
+  * be045f5cb1 add 2015.5.8 release notes
+
+* **ISSUE** `#29110`_: (`mohshami`_) 2015.8.2 broke orchestration (refs: `#29122`_)
+
+* **ISSUE** `#28010`_: (`vakulich`_) Error "KeyError: 'ret'" appeared during salt.state run in orchestrate module if minion had an exception (refs: `#28012`_)
+
+* **PR** `#29128`_: (`cachedout`_) Set a safer default value for ret in saltmod
+  @ *2015-11-23 17:07:40 UTC*
+
+  * **PR** `#29122`_: (`cachedout`_) Fix broken state orchestration (refs: `#29128`_)
+
+  * **PR** `#28012`_: (`rallytime`_) Clean up stack trace when something goes wrong with minion output (refs: `#29122`_)
+
+  * 219367a23d Merge pull request `#29128`_ from cachedout/tweak_29122
+
+  * b08858b040 Missed check
+
+  * 584efe81ee Set a safer default value for ret in saltmod
+
+* **ISSUE** `#29110`_: (`mohshami`_) 2015.8.2 broke orchestration (refs: `#29122`_)
+
+* **ISSUE** `#28010`_: (`vakulich`_) Error "KeyError: 'ret'" appeared during salt.state run in orchestrate module if minion had an exception (refs: `#28012`_)
+
+* **PR** `#29122`_: (`cachedout`_) Fix broken state orchestration (refs: `#29128`_)
+  @ *2015-11-23 16:24:18 UTC*
+
+  * **PR** `#28012`_: (`rallytime`_) Clean up stack trace when something goes wrong with minion output (refs: `#29122`_)
+
+  * 2250a36647 Merge pull request `#29122`_ from cachedout/issue_29110
+
+  * 4b9302d794 Fix broken state orchestration
+
+* **PR** `#29096`_: (`rallytime`_) Back-port `#29093`_ to 2015.5
+  @ *2015-11-22 17:02:51 UTC*
+
+  * **PR** `#29093`_: (`cxmcc`_) Compare gem versions as a string. (refs: `#29096`_)
+
+  * 200e771efb Merge pull request `#29096`_ from rallytime/bp-29093
+
+  * f5734423a4 Compare gem versions as a string.
+
+* **PR** `#29084`_: (`rallytime`_) Back-port `#29055`_ to 2015.5
+  @ *2015-11-20 20:57:54 UTC*
+
+  * **PR** `#29055`_: (`cachedout`_) Add section to style guide (refs: `#29084`_)
+
+  * d8a2018bc8 Merge pull request `#29084`_ from rallytime/bp-29055
+
+  * 52e650aed9 Add section to style guide
+
+* **PR** `#29083`_: (`rallytime`_) Back-port `#29053`_ to 2015.5
+  @ *2015-11-20 20:57:38 UTC*
+
+  * **PR** `#29053`_: (`kevinlondon`_) Update rabbitmq_user.py (refs: `#29083`_)
+
+  * b5cff1a351 Merge pull request `#29083`_ from rallytime/bp-29053
+
+  * f1884de0e7 Update rabbitmq_user.py
+
+* **ISSUE** `#28928`_: (`twangboy`_) Fix user.present 2015.5 (refs: `#28932`_)
+
+* **PR** `#28932`_: (`twangboy`_) Fixed user.present / user.absent in windows
+  @ *2015-11-18 21:45:53 UTC*
+
+  * **PR** `#28627`_: (`twangboy`_) Backport win_useradd (refs: `#28932`_)
+
+  * b3e3bebef0 Merge pull request `#28932`_ from twangboy/fix_28928
+
+  * 0653a04887 Fixed user.present / user.absent in windows
+
+* **ISSUE** `#26911`_: (`dsumsky`_) file.manage state does not work with Amazon S3 URLs on Windows (refs: `#28630`_)
+
+* **ISSUE** `#13850`_: (`ryan-lane`_) s3:// urls in file.managed (and likely elsewhere) require s3.key and s3.keyid to be in minion config (refs: `#28630`_)
+
+* **PR** `#29011`_: (`rallytime`_) Back-port `#28630`_ to 2015.5
+  @ *2015-11-18 17:50:05 UTC*
+
+  * **PR** `#28630`_: (`messa`_) Use S3 credentials from Pillar (refs: `#29011`_)
+
+  * a2e4a227e0 Merge pull request `#29011`_ from rallytime/bp-28630
+
+  * 7baccc1b05 Lint - newline before def
+
+  * 9e5c16d4da Reading S3 credentials from Pillar
+
+  * a3216f813d Fixed requests HTTPError handler, it was still in urllib2 style
+
+* **PR** `#28982`_: (`basepi`_) [2015.5] Merge forward from 2014.7 to 2015.5
+  @ *2015-11-18 00:49:32 UTC*
+
+  * 1a4cd6002f Merge pull request `#28982`_ from basepi/merge-forward-2015.5
+
+  * bfbb109fbd Merge remote-tracking branch 'upstream/2014.7' into merge-forward-2015.5
+
+  * 4b8bdd0afb Merge pull request `#28839`_ from cachedout/revert_28740
+
+  * 215b26c06f Revert `#28740`_
+
+* **ISSUE** `#28947`_: (`dmyerscough`_) sdb modules are not synced out (refs: `#28949`_)
+
+* **PR** `#28949`_: (`whiteinge`_) Add sync_sdb execution function
+  @ *2015-11-17 15:35:38 UTC*
+
+  * edd26d763a Merge pull request `#28949`_ from whiteinge/sync-sdb
+
+  * b0ec9ab25b Add sync_sdb execution function
+
+* **ISSUE** `#28888`_: (`twangboy`_) Fix file.comment (refs: `#28930`_)
+
+* **PR** `#28930`_: (`twangboy`_) Added missing import mmap required by file.py
+  @ *2015-11-16 23:17:23 UTC*
+
+  * 43da1bc4ce Merge pull request `#28930`_ from twangboy/fix_28888
+
+  * f5c489eaad Added missing import mmap required by file.py
+
+* **PR** `#28908`_: (`rallytime`_) A couple of spelling fixes for doc conventions page.
+  @ *2015-11-16 02:29:35 UTC*
+
+  * 2488b873b8 Merge pull request `#28908`_ from rallytime/doc-convention-spelling
+
+  * 60e6eddb77 A couple of spelling fixes for doc conventions page.
+
+* **ISSUE** `#22442`_: (`allanliu`_) rest_cherrypy /keys URL does not handle JSON requests (refs: `#28902`_)
+
+* **PR** `#28902`_: (`whiteinge`_) Fix missing JSON support for /keys endpoint
+  @ *2015-11-15 15:36:05 UTC*
+
+  * 827a1ae020 Merge pull request `#28902`_ from whiteinge/json-keys
+
+  * 9745903301 Fix missing JSON support for /keys endpoint
+
+* **PR** `#28897`_: (`rallytime`_) Back-port `#28873`_ to 2015.5
+  @ *2015-11-15 00:43:35 UTC*
+
+  * **PR** `#28873`_: (`tehmaspc`_) Fix salt-cloud help output typo (refs: `#28897`_)
+
+  * d23bd49130 Merge pull request `#28897`_ from rallytime/bp-28873
+
+  * 077e671ead Fix salt-cloud help output typo
+
+* **ISSUE** `#28870`_: (`basepi`_) mdadm commands failing (refs: `#28871`_)
+
+* **PR** `#28871`_: (`basepi`_) [2015.5] Fix command generation for mdadm.assemble
+  @ *2015-11-13 21:54:33 UTC*
+
+  * a9dc8b6ca6 Merge pull request `#28871`_ from basepi/mdadm.fix.28870
+
+  * 323bc2d2ac Fix command generation for mdadm.assemble
+
+.. _`#13850`: https://github.com/saltstack/salt/issues/13850
+.. _`#22442`: https://github.com/saltstack/salt/issues/22442
+.. _`#26911`: https://github.com/saltstack/salt/issues/26911
+.. _`#28010`: https://github.com/saltstack/salt/issues/28010
+.. _`#28012`: https://github.com/saltstack/salt/pull/28012
+.. _`#28627`: https://github.com/saltstack/salt/pull/28627
+.. _`#28630`: https://github.com/saltstack/salt/pull/28630
+.. _`#28740`: https://github.com/saltstack/salt/pull/28740
+.. _`#28839`: https://github.com/saltstack/salt/pull/28839
+.. _`#28870`: https://github.com/saltstack/salt/issues/28870
+.. _`#28871`: https://github.com/saltstack/salt/pull/28871
+.. _`#28873`: https://github.com/saltstack/salt/pull/28873
+.. _`#28883`: https://github.com/saltstack/salt/issues/28883
+.. _`#28888`: https://github.com/saltstack/salt/issues/28888
+.. _`#28897`: https://github.com/saltstack/salt/pull/28897
+.. _`#28902`: https://github.com/saltstack/salt/pull/28902
+.. _`#28908`: https://github.com/saltstack/salt/pull/28908
+.. _`#28928`: https://github.com/saltstack/salt/issues/28928
+.. _`#28930`: https://github.com/saltstack/salt/pull/28930
+.. _`#28932`: https://github.com/saltstack/salt/pull/28932
+.. _`#28947`: https://github.com/saltstack/salt/issues/28947
+.. _`#28949`: https://github.com/saltstack/salt/pull/28949
+.. _`#28982`: https://github.com/saltstack/salt/pull/28982
+.. _`#29011`: https://github.com/saltstack/salt/pull/29011
+.. _`#29053`: https://github.com/saltstack/salt/pull/29053
+.. _`#29055`: https://github.com/saltstack/salt/pull/29055
+.. _`#29083`: https://github.com/saltstack/salt/pull/29083
+.. _`#29084`: https://github.com/saltstack/salt/pull/29084
+.. _`#29093`: https://github.com/saltstack/salt/pull/29093
+.. _`#29096`: https://github.com/saltstack/salt/pull/29096
+.. _`#29110`: https://github.com/saltstack/salt/issues/29110
+.. _`#29113`: https://github.com/saltstack/salt/pull/29113
+.. _`#29122`: https://github.com/saltstack/salt/pull/29122
+.. _`#29128`: https://github.com/saltstack/salt/pull/29128
+.. _`#29138`: https://github.com/saltstack/salt/pull/29138
+.. _`#29164`: https://github.com/saltstack/salt/pull/29164
+.. _`MasterNayru`: https://github.com/MasterNayru
+.. _`TronPaul`: https://github.com/TronPaul
+.. _`allanliu`: https://github.com/allanliu
+.. _`basepi`: https://github.com/basepi
+.. _`cachedout`: https://github.com/cachedout
+.. _`cxmcc`: https://github.com/cxmcc
+.. _`dmyerscough`: https://github.com/dmyerscough
+.. _`dsumsky`: https://github.com/dsumsky
+.. _`jfindlay`: https://github.com/jfindlay
+.. _`kevinlondon`: https://github.com/kevinlondon
+.. _`ldelossa`: https://github.com/ldelossa
+.. _`messa`: https://github.com/messa
+.. _`mohshami`: https://github.com/mohshami
+.. _`rallytime`: https://github.com/rallytime
+.. _`ryan-lane`: https://github.com/ryan-lane
+.. _`tehmaspc`: https://github.com/tehmaspc
+.. _`twangboy`: https://github.com/twangboy
+.. _`vakulich`: https://github.com/vakulich
+.. _`whiteinge`: https://github.com/whiteinge
+.. _`zmalone`: https://github.com/zmalone

@@ -1,0 +1,69 @@
+<pool type='{{ ptype }}'>
+  <name>{{ name }}</name>
+  {% if target.path or target.permissions %}
+  <target>
+    {% if target.path %}
+    <path>{{ target.path }}</path>
+    {% endif %}
+    {% if target.permissions %}
+    <permissions>
+      {% for key in ['mode', 'owner', 'group', 'label'] %}
+      {% if key in target.permissions %}
+      <{{ key }}>{{ target.permissions[key] }}</{{ key }}>
+      {% endif %}
+      {% endfor %}
+    </permissions>
+    {% endif %}
+  </target>
+  {% endif %}
+  {% if source %}
+  <source>
+    {% if ptype in ['fs', 'logical', 'disk', 'iscsi', 'zfs', 'vstorage', 'iscsi-direct'] %}
+    {% for device in source.devices %}
+    <device path='{{ device.path }}'
+            {% if 'part_separator' in device %}part_separator='{{ device.part_separator }}'{% endif %}/>
+    {% endfor %}
+    {% elif ptype in ['dir', 'netfs', 'gluster'] %}
+    <dir path='{{ source.dir }}'/>
+    {% elif ptype == 'scsi' %}
+    <adapter type='{{ source.adapter.type }}'
+         {% for key in ['name', 'parent', 'managed', 'parent_wwnn', 'parent_wwpn', 'parent_fabric_wwn', 'wwnn', 'wwpn'] %}
+         {% if key in source.adapter %}{{ key }}='{{ source.adapter[key] }}'{% endif %}
+         {% endfor %}>
+         {% if 'parent_address' in source.adapter %}
+         <parentaddr
+            {% if 'unique_id' in source.adapter.parent_address %}
+            unique_id='{{ source.adapter.parent_address.unique_id }}'
+            {% endif %}>
+           <address
+             {% for key in source.adapter.parent_address.address %}
+             {{ key }}='{{ source.adapter.parent_address.address[key] }}'
+             {% endfor %}/>
+         </parentaddr>
+         {% endif %}
+    </adapter>
+    {% endif %}
+    {% if ptype in ['netfs', 'iscsi', 'rbd', 'sheepdog', 'gluster', 'iscsi-direct'] and source.hosts %}
+    {% for host in source.hosts %}
+    <host name='{{ host.name }}' {% if host.port %}port='{{ host.port }}'{% endif %}/>
+    {% endfor %}
+    {% endif %}
+    {% if ptype in ['iscsi', 'rbd', 'iscsi-direct'] and source.auth %}
+    <auth type='{{source.auth.type}}' username='{{ source.auth.username }}'>
+      <secret {{ source.auth.secret.type }}='{{source.auth.secret.value}}'/>
+    </auth>
+    {% endif %}
+    {% if ptype in ['logical', 'rbd', 'sheepdog', 'gluster'] and source.name %}
+    <name>{{ source.name }}</name>
+    {% endif %}
+    {% if ptype in ['fs', 'netfs', 'logical', 'disk'] and source.format %}
+    <format type='{{ source.format }}'/>
+    {% endif %}
+    {% if ptype == 'iscsi-direct' and source.initiator %}
+    <initiator>
+      <iqn name='{{ source.initiator }}'/>
+    </initiator>
+    {% endif %}
+  </source>
+  {% endif %}
+</pool>

@@ -1,0 +1,28 @@
+version: "2"
+
+languages:
+   Ruby: false
+   JavaScript: false
+   Python: true
+   PHP: false
+
+exclude_patterns:
+  - "*.js"
+  - "*.rb"
+  - "*.php"
+  - "tests/"
+
+plugins:
+  radon:
+    enabled: true
+    exclude_patterns:
+      - "templates/"
+    config:
+      threshold: "D"
+
+checks:
+  argument-count:
+    enabled: false
+  similar-code:
+    config:
+      threshold: 40

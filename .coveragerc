@@ -1,0 +1,76 @@
+[run]
+branch = True
+cover_pylib = False
+parallel = True
+concurrency = multiprocessing
+relative_files = True
+omit =
+  setup.py
+  .nox/*
+
+[report]
+# Regexes for lines to exclude from consideration
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+
+    # Don't complain about missing debug-only code:
+    def __repr__
+
+    # Don't complain if tests don't hit defensive assertion code:
+    raise AssertionError
+    raise NotImplementedError
+
+    # Don't complain if non-runnable code isn't run:
+    if 0:
+    if False:
+    if __name__ == .__main__.:
+
+
+ignore_errors = True
+
+[paths]
+salt =
+  salt/
+  /tmp/kitchen/testing/salt/
+  /private/tmp/kitchen/testing/salt/
+  C:\Users\admini~1\AppData\Local\Temp\kitchen\testing\salt\
+  C:\Users\Administrator\AppData\Local\Temp\kitchen\testing\salt\
+tests =
+  tests/
+  /tmp/kitchen/testing/tests/
+  /private/tmp/kitchen/testing/tests/
+  C:\Users\admini~1\AppData\Local\Temp\kitchen\testing\tests\
+  C:\Users\Administrator\AppData\Local\Temp\kitchen\testing\tests\
+extension_modules =
+  tests/integration/files/extension_modules/
+  */extension_modules/
+  *\extension_modules\
+executors =
+  tests/integration/files/file/base/_executors/
+  */extmods/executors/
+  *\extmods\executors\
+grains =
+  tests/integration/files/file/base/_grains/
+  */extmods/grains/
+  *\extmods\grains\
+modules =
+  tests/integration/files/file/base/_modules/
+  */extmods/modules/
+  *\extmods\modules\
+renderers =
+  tests/integration/files/file/base/_renderers/
+  */extmods/renderers/
+  *\extmods\renderers\
+runners =
+  tests/integration/files/file/base/_runners/
+  */extmods/runners/
+  *\extmods\runners\
+states =
+  tests/integration/files/file/base/_states/
+  */extmods/states/
+  *\extmods\states\
+wheel =
+  tests/integration/files/file/base/_wheel/
+  */extmods/wheel/
+  *\extmods\wheel\

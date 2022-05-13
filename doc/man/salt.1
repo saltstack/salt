@@ -1,0 +1,357 @@
+.\" Man page generated from reStructuredText.
+.
+.TH "SALT" "1" "Feb 16, 2022" "3004.1" "Salt"
+.SH NAME
+salt \- salt
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.SH SYNOPSIS
+.INDENT 0.0
+.INDENT 3.5
+salt \(aq*\(aq [ options ] sys.doc
+.sp
+salt \-E \(aq.*\(aq [ options ] sys.doc cmd
+.sp
+salt \-G \(aqos:Arch.*\(aq [ options ] test.version
+.sp
+salt \-C \fI\%\(aqG@os\fP:Arch.* and webserv* or \fI\%G@kernel\fP:FreeBSD\(aq [ options ] test.version
+.UNINDENT
+.UNINDENT
+.SH DESCRIPTION
+.sp
+Salt allows for commands to be executed across a swath of remote systems in
+parallel. This means that remote systems can be both controlled and queried
+with ease.
+.SH OPTIONS
+.INDENT 0.0
+.TP
+.B \-\-version
+Print the version of Salt that is running.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-versions\-report
+Show program\(aqs dependencies and version number, and then exit
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+Show the help message and exit
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-c CONFIG_DIR, \-\-config\-dir=CONFIG_dir
+The location of the Salt configuration directory. This directory contains
+the configuration files for Salt master and minions. The default location
+on most systems is \fB/etc/salt\fP\&.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-t TIMEOUT, \-\-timeout=TIMEOUT
+The timeout in seconds to wait for replies from the Salt minions. The
+timeout number specifies how long the command line client will wait to
+query the minions and check on running jobs. Default: 5
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-s, \-\-static
+By default as of version 0.9.8 the salt command returns data to the
+console as it is received from minions, but previous releases would return
+data only after all data was received. Use the static option to only return
+the data with a hard timeout and after all minions have returned.
+Without the static option, you will get a separate JSON string per minion
+which makes JSON output invalid as a whole.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-async
+Instead of waiting for the job to run on minions only print the job id of
+the started execution and complete.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-subset=SUBSET
+Execute the routine on a random subset of the targeted minions.  The
+minions will be verified that they have the named function before
+executing. The SUBSET argument is the count of the minions to target.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-v VERBOSE, \-\-verbose
+Turn on verbosity for the salt call, this will cause the salt command to
+print out extra data like the job id.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-hide\-timeout
+Instead of showing the return data for all minions. This option
+prints only the online minions which could be reached.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-b BATCH, \-\-batch\-size=BATCH
+Instead of executing on all targeted minions at once, execute on a
+progressive set of minions. This option takes an argument in the form of
+an explicit number of minions to execute at once, or a percentage of
+minions to execute on.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-batch\-wait=BATCH_WAIT
+Wait the specified time in seconds after each job is done before
+freeing the slot in the batch of the next one.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-batch\-safe\-limit=BATCH_SAFE_LIMIT
+Execute the salt job in batch mode if the job would have executed
+on at least this many minions.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-batch\-safe\-size=BATCH_SAFE_SIZE
+Batch size to use for batch jobs created by \-\-batch\-safe\-limit.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-a EAUTH, \-\-auth=EAUTH
+Pass in an external authentication medium to validate against. The
+credentials will be prompted for. The options are \fIauto\fP,
+\fIkeystone\fP, \fIldap\fP, and \fIpam\fP\&. Can be used with the \-T
+option.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-T, \-\-make\-token
+Used in conjunction with the \-a option. This creates a token that allows
+for the authenticated user to send commands without needing to
+re\-authenticate.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-return=RETURNER
+Choose an alternative returner to call on the minion, if an
+alternative returner is used then the return will not come back to
+the command line but will be sent to the specified return system.
+The options are \fIcarbon\fP, \fIcassandra\fP, \fIcouchbase\fP, \fIcouchdb\fP,
+\fIelasticsearch\fP, \fIetcd\fP, \fIhipchat\fP, \fIlocal\fP, \fIlocal_cache\fP,
+\fImemcache\fP, \fImongo\fP, \fImysql\fP, \fIodbc\fP, \fIpostgres\fP, \fIredis\fP,
+\fIsentry\fP, \fIslack\fP, \fIsms\fP, \fIsmtp\fP, \fIsqlite3\fP, \fIsyslog\fP, and \fIxmpp\fP\&.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-d, \-\-doc, \-\-documentation
+Return the documentation for the module functions available on the minions
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-args\-separator=ARGS_SEPARATOR
+Set the special argument used as a delimiter between command arguments of
+compound commands. This is useful when one wants to pass commas as
+arguments to some of the commands in a compound command.
+.UNINDENT
+.SS Logging Options
+.sp
+Logging options which override any settings defined on the configuration files.
+.INDENT 0.0
+.TP
+.B \-l LOG_LEVEL, \-\-log\-level=LOG_LEVEL
+Console logging log level. One of \fBall\fP, \fBgarbage\fP, \fBtrace\fP,
+\fBdebug\fP, \fBinfo\fP, \fBwarning\fP, \fBerror\fP, \fBquiet\fP\&. Default:
+\fBwarning\fP\&.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-log\-file=LOG_FILE
+Log file path. Default: /var/log/salt/master\&.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-log\-file\-level=LOG_LEVEL_LOGFILE
+Logfile logging log level. One of \fBall\fP, \fBgarbage\fP, \fBtrace\fP,
+\fBdebug\fP, \fBinfo\fP, \fBwarning\fP, \fBerror\fP, \fBquiet\fP\&. Default:
+\fBwarning\fP\&.
+.UNINDENT
+.SS Target Selection
+.sp
+The default matching that Salt utilizes is shell\-style globbing around the
+minion id. See \fI\%https://docs.python.org/3/library/fnmatch.html#module\-fnmatch\fP\&.
+.INDENT 0.0
+.TP
+.B \-E, \-\-pcre
+The target expression will be interpreted as a PCRE regular expression
+rather than a shell glob.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-L, \-\-list
+The target expression will be interpreted as a comma\-delimited list;
+example: server1.foo.bar,server2.foo.bar,example7.quo.qux
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-G, \-\-grain
+The target expression matches values returned by the Salt grains system on
+the minions. The target expression is in the format of \(aq<grain value>:<glob
+expression>\(aq; example: \(aqos:Arch*\(aq
+.sp
+This was changed in version 0.9.8 to accept glob expressions instead of
+regular expression. To use regular expression matching with grains, use
+the \-\-grain\-pcre option.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-grain\-pcre
+The target expression matches values returned by the Salt grains system on
+the minions. The target expression is in the format of \(aq<grain value>:<
+regular expression>\(aq; example: \(aqos:Arch.*\(aq
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-N, \-\-nodegroup
+Use a predefined compound target defined in the Salt master configuration
+file.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-R, \-\-range
+Instead of using shell globs to evaluate the target, use a range expression
+to identify targets. Range expressions look like %cluster.
+.sp
+Using the Range option requires that a range server is set up and the
+location of the range server is referenced in the master configuration
+file.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-C, \-\-compound
+Utilize many target definitions to make the call very granular. This option
+takes a group of targets separated by \fBand\fP or \fBor\fP\&. The default matcher is a
+glob as usual. If something other than a glob is used, preface it with the
+letter denoting the type; example: \(aqwebserv* and \fI\%G@os\fP:Debian or \fI\%E@db*\fP\(aq
+Make sure that the compound target is encapsulated in quotes.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-I, \-\-pillar
+Instead of using shell globs to evaluate the target, use a pillar value to
+identify targets. The syntax for the target is the pillar key followed by
+a glob expression: "role:production*"
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-S, \-\-ipcidr
+Match based on Subnet (CIDR notation) or IPv4 address.
+.UNINDENT
+.SS Output Options
+.INDENT 0.0
+.TP
+.B \-\-out
+Pass in an alternative outputter to display the return of data. This
+outputter can be any of the available outputters:
+.INDENT 7.0
+.INDENT 3.5
+\fBhighstate\fP, \fBjson\fP, \fBkey\fP, \fBoverstatestage\fP, \fBpprint\fP, \fBraw\fP, \fBtxt\fP, \fByaml\fP, and many others\&.
+.UNINDENT
+.UNINDENT
+.sp
+Some outputters are formatted only for data returned from specific functions.
+If an outputter is used that does not support the data passed into it, then
+Salt will fall back on the \fBpprint\fP outputter and display the return data
+using the Python \fBpprint\fP standard library module.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-out\-indent OUTPUT_INDENT, \-\-output\-indent OUTPUT_INDENT
+Print the output indented by the provided value in spaces. Negative values
+disable indentation. Only applicable in outputters that support
+indentation.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-out\-file=OUTPUT_FILE, \-\-output\-file=OUTPUT_FILE
+Write the output to the specified file.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-out\-file\-append, \-\-output\-file\-append
+Append the output to the specified file.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-no\-color
+Disable all colored output
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-force\-color
+Force colored output
+.sp
+\fBNOTE:\fP
+.INDENT 7.0
+.INDENT 3.5
+When using colored output the color codes are as follows:
+.sp
+\fBgreen\fP denotes success, \fBred\fP denotes failure, \fBblue\fP denotes
+changes and success and \fByellow\fP denotes a expected future change in configuration.
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-state\-output=STATE_OUTPUT, \-\-state_output=STATE_OUTPUT
+Override the configured state_output value for minion
+output. One of \(aqfull\(aq, \(aqterse\(aq, \(aqmixed\(aq, \(aqchanges\(aq or
+\(aqfilter\(aq. Default: \(aqnone\(aq.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-state\-verbose=STATE_VERBOSE, \-\-state_verbose=STATE_VERBOSE
+Override the configured state_verbose value for minion
+output. Set to True or False. Default: none.
+.UNINDENT
+.sp
+\fBNOTE:\fP
+.INDENT 0.0
+.INDENT 3.5
+If using \fB\-\-out=json\fP, you will probably want \fB\-\-static\fP as well.
+Without the static option, you will get a separate JSON string per minion
+which makes JSON output invalid as a whole.
+This is due to using an iterative outputter. So if you want to feed it
+to a JSON parser, use \fB\-\-static\fP as well.
+.UNINDENT
+.UNINDENT
+.SH SEE ALSO
+.sp
+\fBsalt(7)\fP
+\fBsalt\-master(1)\fP
+\fBsalt\-minion(1)\fP
+.SH AUTHOR
+Thomas S. Hatch <thatch45@gmail.com> and many others, please see the Authors file
+.\" Generated by docutils manpage writer.
+.

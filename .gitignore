@@ -1,0 +1,123 @@
+/build
+/src
+__pycache__/
+*.py[co]
+pkg/arch/*.tar.xz
+*.sw[a-p]
+doc/_build
+doc/doc-archive.tar.gz
+dist
+MANIFEST
+*~
+*#
+*.wpr
+*.wpu
+*.DS_Store
+.pytest_cache
+Pipfile.lock
+.mypy_cache/*
+
+# virtualenv
+# - ignores directories of a virtualenv when you create it right on
+#   top of salt such as
+# - /some/path$ git clone https://github.com/thatch45/salt.git
+# - /some/path$ virtualenv --python=/usr/bin/python2.6 salt
+/env/
+/bin/
+/etc/
+/include/
+/lib/
+/lib64/
+/local/
+/pip/
+/share/
+/tests/integration/tmp/
+/tests/cachedir/
+/tests/unit/templates/roots/
+/var/
+/venv/
+
+# setuptools stuff
+*.egg-info
+
+# code coverage outputs genereated by coverage.py
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# IDE files
+/.settings
+/.project
+/.pydevproject
+/.idea
+/.ropeproject
+.ropeproject
+*_flymake.py
+/*.iml
+*.sublime-project
+*.sublime-workspace
+
+# ignore ctags file
+tags
+
+# ignore Vagrant file
+**/Vagrantfile
+**/.vagrant
+
+# Compiled translation files should not be VCS'ed
+# locale/zh_CN/LC_MESSAGES/topics/virt/nic.mo
+*.mo
+.doctrees
+
+# Allow a user to set their own _version.py for testing
+_version.py
+
+# Ignore auto generated _syspaths.py file
+_syspaths.py
+
+# Ignore grains file written out during tests
+tests/integration/files/conf/grains
+/salt/_syspaths.py
+
+# ignore the local root
+/root/**
+
+# Ignore file cache created by jinja tests
+tests/unit/templates/roots
+
+# Pycharm
+.idea
+venv/
+
+# VS Code
+.vscode
+
+# Ignore the log directory created by tests
+/logs
+tests/integration/cloud/providers/logs
+
+# Private keys from the integration tests
+tests/integration/cloud/providers/pki/minions
+/helpers/
+
+# Ignore tox virtualenvs
+/.tox/
+
+# Ignore nox virtualenvs
+/.nox/
+
+# Ignore pyenv files
+.python-version
+
+# Kitchen tests files
+.kitchen.local.yml
+kitchen.local.yml
+.kitchen/
+.bundle/
+Gemfile.lock
+/artifacts/
+requirements/static/*/py*/*.log
+
+# Vim's default session file
+Session.vim

@@ -1,0 +1,34 @@
+==============
+salt-api 0.7.5
+==============
+
+This release is a mostly a minor release to pave a better path for
+:program:`salt-ui` though there are some small feature additions and bugfixes.
+
+Changes
+=======
+
+* Convenience URLs ``/minions`` and ``/jobs`` have been added as well as a
+  async client wrapper. This starts a job and immediately returns the job ID,
+  allowing you to fetch the result of that job at a later time.
+* The return format will now default to JSON if no specific format is
+  requested.
+* A new setting ``static`` has been added that will serve any static media from
+  the directory specified. In addition if an :file:`index.html` file is found
+  in that directory and the ``Accept`` header in the request prefer HTML that
+  file will be served.
+* All HTML, including the login form, has been removed from :program:`salt-api`
+  and moved into the :program:`salt-ui` project.
+* Sessions now live as long as the Salt token.
+
+Participation
+=============
+
+:program:`salt-api` is just getting off the ground so feedback, questions, and
+ideas are critical as we solidify how this project fits into the overall Salt
+infrastructure management stack. Please get involved by `filing issues`__ on
+GitHub, `discussing on the mailing list`__, and chatting in ``#salt-devel`` on
+Freenode.
+
+.. __: https://github.com/saltstack/salt-api/issues
+.. __: https://groups.google.com/forum/#!forum/salt-users

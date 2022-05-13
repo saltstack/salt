@@ -1,0 +1,197 @@
+=========================
+Salt 0.16.2 Release Notes
+=========================
+
+:release: 2013-08-01
+
+Version 0.16.2 is a bugfix release for :ref:`0.16.0 <release-0-16-0>`,
+and contains a number of fixes.
+
+Windows
+-------
+
+- Only allow Administrator's group and SYSTEM user access to C:\\salt. This
+  eliminates a race condition where a non-admin user could modify a template or
+  managed file before it is executed by the minion (which is running as an
+  elevated user), thus avoiding a potential escalation of privileges. (:issue:`6361`)
+
+
+Grains
+------
+- Fixed detection of ``virtual`` grain on OpenVZ hardware nodes
+- Gracefully handle lsb_release data when it is enclosed in quotes
+- LSB grains are now prefixed with ``lsb_distrib_`` instead of simply ``lsb_``.
+  The old naming is not preserved, so SLS may be affected.
+- Improved grains detection on MacOS
+
+Pillar
+------
+- Don't try to load :mod:`git_pillar <salt.pillar.git_pillar>`
+  if not enabled in master config (:issue:`6052`)
+- Functions :mod:`pillar.item <salt.modules.pillar.item>` and
+  :mod:`pillar.items <salt.modules.pillar.items>` added for parity with
+  :mod:`grains.item <salt.modules.grains.item>`/:mod:`grains.items
+  <salt.modules.grains.items>`. The old function ``pillar.data`` is preserved
+  for backwards compatibility.
+- Fixed minion traceback when Pillar SLS is malformed (:issue:`5910`)
+
+
+Peer Publishing
+---------------
+- More gracefully handle improperly quoted publish commands (:issue:`5958`)
+- Fixed traceback when timeout specified via the CLI fo :mod:`publish.publish
+  <salt.modules.publish.publish>`, :mod:`publish.full_data
+  <salt.modules.publish.full_data>` (:issue:`5959`)
+- Fixed unintended change in output of :mod:`publish.publish
+  <salt.modules.publish.publish>` (:issue:`5928`)
+
+
+Minion
+------
+- Fixed salt-key usage in minionswarm script
+- Quieted warning about :strong:`SALT_MINION_CONFIG` environment variable on
+  minion startup and for CLI commands run via ``salt-call`` (:issue:`5956`)
+- Added minion config parameter :conf_minion:`random_reauth_delay` to stagger
+  re-auth attempts when the minion is waiting for the master to approve its
+  public key. This helps prevent SYN flooding in larger environments.
+
+
+User/Group Management
+---------------------
+- Implement previously-ignored ``unique`` option for :mod:`user.present
+  <salt.states.user.present>` states in FreeBSD
+- Report in state output when a :mod:`group.present
+  <salt.states.group.present>` state attempts to use a gid in use by another
+  group
+- Fixed regression that prevents a :mod:`user.present
+  <salt.states.user.present>` state to set the password hash to the system
+  default (i.e. an unset password)
+- Fixed multiple :mod:`group.present <salt.states.group.present>` states with
+  the same group (:issue:`6439`)
+
+
+File Management
+---------------
+- Fixed file.mkdir setting incorrect permissions (:issue:`6033`)
+- Fixed cleanup of source files for templates when ``/tmp`` is in file_roots
+  (:issue:`6118`)
+- Fixed caching of zero-byte files when a non-empty file was previously cached
+  at the same path
+- Added HTTP authentication support to the cp module (:issue:`5641`)
+- Diffs are now suppressed when binary files are changed
+
+
+Package/Repository Management
+-----------------------------
+- Fixed traceback when there is only one target for :mod:`pkg.latest
+  <salt.states.pkg.latest>` states
+- Fixed regression in detection of virtual packages (apt)
+- Limit number of pkg database refreshes to once per :mod:`state.sls
+  <salt.modules.state.sls>`/:mod:`state.highstate
+  <salt.modules.state.highstate>`
+- YUM: Allow 32-bit packages with arches other than i686 to be managed on
+  64-bit systems (:issue:`6299`)
+- Fixed incorrect reporting in pkgrepo.managed states (:issue:`5517`)
+- Fixed 32-bit binary package installs on 64-bit RHEL-based distros, and added
+  proper support for 32-bit packages on 64-bit Debian-based distros
+  (:issue:`6303`)
+- Fixed issue where requisites were inadvertently being put into YUM repo files
+  (:issue:`6471`)
+
+
+Service Management
+------------------
+- Fixed inaccurate reporting of results in :mod:`service.running
+  <salt.states.service.running>` states when the service fails to start
+  (:issue:`5894`)
+- Fixed handling of custom initscripts in RHEL-based distros so that they are
+  immediately available, negating the need for a second state run to manage the
+  service that the initscript controls
+
+
+Networking
+----------
+- Function network.hwaddr renamed to :mod:`network.hw_addr
+  <salt.modules.network.hw_addr>` to match :mod:`network.ip_addrs
+  <salt.modules.network.ip_addrs>` and :mod:`network.ip_addrs6
+  <salt.modules.network.ip_addrs6>`. All three functions also now work without
+  the underscore in the name, as well.
+- Fixed traceback in :mod:`bridge.show <salt.modules.bridge.show>` when
+  interface is not present (:issue:`6326`)
+
+
+SSH
+---
+- Fixed incorrect result reporting for some :mod:`ssh_known_hosts.present
+  <salt.states.ssh_known_hosts.present>` states
+- Fixed inaccurate reporting when :mod:`ssh_auth.present
+  <salt.states.ssh_auth.present>` states are run with ``test=True``, when
+  rsa/dss is used for the ``enc`` param instead of ssh-rsa/ssh-dss
+  (:issue:`5374`)
+
+
+pip
+---
+- Properly handle ``-f`` lines in pip freeze output
+- Fixed regression in pip.installed states with specifying a requirements file
+  (:issue:`6003`)
+- Fixed use of ``editable`` argument in :mod:`pip.installed
+  <salt.states.pip.installed>` states (:issue:`6025`)
+- Deprecated ``runas`` parameter in execution function calls, in favor of
+  ``user``
+
+
+MySQL
+-----
+- Allow specification of :mod:`MySQL <salt.modules.mysql>`
+  connection arguments via the CLI, overriding/bypassing minion config params
+- Allow :mod:`mysql_user.present <salt.states.mysql_user.present>` states to
+  set a passwordless login (:issue:`5550`)
+- Fixed endless loop when :mod:`mysql.processlist
+  <salt.modules.mysql.processlist>` is run (:issue:`6297`)
+
+
+PostgreSQL
+----------
+- Fixed traceback in :mod:`postgres.user_list
+  <salt.modules.postgres.user_list>` (:issue:`6352`)
+
+
+Miscellaneous
+-------------
+- Don't allow :mod:`npm states <salt.states.npm>` to be used if
+  :mod:`npm module <salt.modules.npm>` is not available
+- Fixed :mod:`alternatives.install <salt.states.alternatives.install>` states
+  for which the target is a symlink (:issue:`6162`)
+- Fixed traceback in :mod:`sysbench module
+  <salt.modules.sysbench>` (:issue:`6175`)
+- Fixed traceback in job cache
+- Fixed tempfile cleanup for windows
+- Fixed issue where SLS files using the :mod:`pydsl renderer
+  <salt.renderers.pydsl>` were not being run
+- Fixed issue where returners were being passed incorrect information
+  (:issue:`5518`)
+- Fixed traceback when numeric args are passed to :mod:`cmd.script
+  <salt.states.cmd.script>` states
+- Fixed bug causing :mod:`cp.get_dir <salt.modules.cp.get_dir>` to return more
+  directories than expected (:issue:`6048`)
+- Fixed traceback when :mod:`supervisord.running
+  <salt.states.supervisord.running>` states are run with ``test=True``
+  (:issue:`6053`)
+- Fixed tracebacks when Salt encounters problems running rbenv (:issue:`5888`)
+- Only make the :mod:`monit module <salt.modules.monit>`
+  available if monit binary is present (:issue:`5871`)
+- Fixed incorrect behavior of :mod:`img.mount_image
+  <salt.modules.img.mount_image>`
+- Fixed traceback in :mod:`tomcat.deploy_war <salt.modules.tomcat.deploy_war>`
+  in Windows
+- Don't re-write /etc/fstab if mount fails
+- Fixed tracebacks when Salt encounters problems running gem (:issue:`5886`)
+- Fixed incorrect behavior of :mod:`selinux.boolean
+  <salt.states.selinux.boolean>` states (:issue:`5912`)
+- :mod:`RabbitMQ <salt.modules.rabbitmq>`: Quote passwords to
+  avoid symbols being interpolated by the shell (:issue:`6338`)
+- Fixed tracebacks in :mod:`extfs.mkfs <salt.modules.extfs.mkfs>` and
+  :mod:`extfs.tune <salt.modules.extfs.tune>` (:issue:`6462`)
+- Fixed a regression with the :mod:`module.run <salt.states.module.run>` state
+  where the ``m_name`` and ``m_fun`` arguments were being ignored (:issue:`6464`)

@@ -1,0 +1,123 @@
+========================
+Salt 0.9.0 Release Notes
+========================
+
+:release: 2011-08-27
+
+Salt 0.9.0 is here. This is an exciting release, 0.9.0 includes the new network
+topology features allowing peer salt commands and masters of masters via the
+syndic interface.
+
+0.9.0 also introduces many more modules, improvements to the API and
+improvements to the ZeroMQ systems.
+
+Download!
+---------
+
+The Salt source can be downloaded from PyPI:
+
+https://pypi.python.org/packages/source/s/salt/salt-0.9.0.tar.gz
+
+Here is the md5sum:
+
+9a925da04981e65a0f237f2e77ddab37
+
+For instructions on how to set up Salt please see the :ref:`installation`
+instructions.
+
+New Features
+------------
+
+Salt Syndic
+```````````
+
+The new :ref:`Syndic interface <syndic>` allows a master to be
+commanded via another higher level salt master. This is a powerful solution
+allowing a master control structure to exist, allowing salt to scale to much
+larger levels then before.
+
+Peer Communication
+``````````````````
+
+0.9.0 introduces the capability for a minion to call a publication on the
+master and receive the return from another set of minions. This allows salt
+to act as a communication channel between minions and as a general
+infrastructure message bus.
+
+Peer communication is turned off by default but can be enabled via the ``peer``
+option in the master configuration file. Documentation on the new :ref:`Peer
+interface <peer>`.
+
+Easily Extensible API
+`````````````````````
+
+The minion and master classes have been redesigned to allow for specialized
+minion and master servers to be easily created. An example on how this is done
+for the master can be found in the ``master.py`` salt module:
+
+:blob:`salt/master.py`
+
+The ``Master`` class extends the ``SMaster`` class and set up the main master
+server.
+
+The minion functions can now also be easily added to another application via
+the ``SMinion`` class, this class can be found in the ``minion.py`` module:
+
+:blob:`salt/minion.py`
+
+Cleaner Key Management
+``````````````````````
+
+This release changes some of the key naming to allow for multiple master keys
+to be held based on the type of minion gathering the master key.
+
+The -d option has also been added to the salt-key command allowing for easy
+removal of accepted public keys.
+
+The --gen-keys option is now available as well for salt-key, this allows
+for a salt specific RSA key pair to be easily generated from the command line.
+
+Improved 0MQ Master Workers
+```````````````````````````
+
+The 0MQ worker system has been further refined to be faster and more robust.
+This new system has been able to handle a much larger load than the previous
+setup. The new system uses the IPC protocol in 0MQ instead of TCP.
+
+New Modules
+-----------
+
+Quite a few new modules have been made.
+
+New Minion Modules
+``````````````````
+
+apache
+~~~~~~
+
+Work directly with apache servers, great for managing balanced web servers
+
+cron
+~~~~
+
+Read out the contents of a systems crontabs
+
+mdadm
+~~~~~
+
+Module to manage raid devices in Linux, appears as the ``raid`` module
+
+mysql
+~~~~~
+
+Gather simple data from MySQL databases
+
+ps
+~~
+
+Extensive utilities for managing processes
+
+publish
+~~~~~~~
+
+Used by the peer interface to allow minions to make publications

@@ -1,0 +1,224 @@
+<!doctype html>
+<html>
+<script>
+(function() {
+    // -- Scaffolding ---------------------------------------------------------
+    // Functions and observables that make up the application.
+
+    // Store the session token in-memory. Real apps will want to use
+    // localstorage and proper escaping to guard against XSS.
+    var XAuthToken;
+
+    var Observable = getObservable();
+
+    // Various Salt event tag matchers.
+    var isJobEvent = fnmatch('salt/job/*');
+    var isJobNew = fnmatch('salt/job/*/new');
+    var isJobReturn = fnmatch('salt/job/*/ret/*');
+
+    // An observable stream of Salt events.
+    var saltEvents = new Observable(function(observer) {
+        var source = new EventSource('/events?salt_token=' + XAuthToken);
+
+        source.onmessage = function(message) {
+            observer(JSON.parse(message.data));
+        };
+    });
+
+    // Keep a counter of all events seen.
+    var eventCounter = saltEvents.scan(count => count += 1, 0);
+
+    // Keep a list of recent job returns.
+    // Salt's event stream is very busy and can easily overwhelm the available
+    // memory for a browser tab so keep uneeded data out of the DOM.
+    var jobReturnBufferSize = 10;
+    var jobReturns = saltEvents.scan(function eventCounter(acc, ev) {
+        var tag = ev.tag,
+            data = ev.data;
+
+        if (isJobReturn(tag)) {
+            if (acc.length >= jobReturnBufferSize) {
+                acc.pop();
+            }
+            acc.unshift(data);
+        }
+
+        return acc;
+    }, [])
+    // Transform the job returns into HTML.
+    .map(function(returns) {
+        var li = returns.map(function(ret) {
+            return `
+                <li title="${JSON.stringify(ret, null, 4)}">
+                    ${ret.jid} : ${JSON.stringify(ret.return)}
+                </li>
+            `;
+        });
+
+        return `<ul>${li.join('')}</ul>`;
+    });
+
+    // Document ready.
+    function ready(fn) {
+        if (document.readyState != 'loading'){ fn(); }
+        else { document.addEventListener('DOMContentLoaded', fn); }
+    }
+
+    // Handle the login form and store the resulting token.
+    function login(callback) {
+        return function(ev) {
+            ev.preventDefault();
+
+            post('/token', getFormData(ev, {}))
+                .then(resp => resp.ok ? resp.json() : resp)
+                .then(body => XAuthToken = body[0].token)
+                .then(callback);
+        };
+    }
+
+    // Handle the run job form.
+    function runJob(ev) {
+        ev.preventDefault();
+
+        // The already-established SSE connection is very fast so we are likely
+        // to get the job returns for quick jobs (`cmd.run`, `test.ping`, etc)
+        // **before** this xhr call finishes to give us the resulting Salt
+        // JID. We have a few options:
+        //
+        // 1. We simply output all job returns as they come in and don't worry
+        //    about individual JIDs. This is the approach taken in this app
+        //    which is why we're ignoring the xhr return below.
+        // 2. We keep a buffer of JIDs run from this app, once they're
+        //    available, and we highlight matching returns in the stream.
+        // 3. We generate the JID here on the client and send it as a the jid
+        //    kwarg to Salt so that we already have it for when the return
+        //    rolls in.
+        var data = getFormData(ev, {client: 'local_async', arg: []});
+        post('/run', [data]);
+    }
+
+    // -- App -----------------------------------------------------------------
+    // Activate and use all the scaffolding above at the right time.
+
+    ready(function app() {
+        var body = document.querySelector('body');
+
+        if (!XAuthToken) {
+            // Show the login form.
+            var tmplLogin = document.querySelector('#tmpl-login');
+            body.innerHTML = tmplLogin.innerHTML;
+
+            document.querySelector('#login').onsubmit = login(app);
+        } else {
+            // Show the main app.
+            var tmplEvents = document.querySelector('#tmpl-events');
+            body.innerHTML = tmplEvents.innerHTML;
+
+            document.querySelector('#runJob').onsubmit = runJob;
+
+            var eventCounterDOM = document.querySelector('#eventCount');
+            eventCounter.subscribe(content =>
+                eventCounterDOM.textContent = content);
+
+            var jobReturnsDOM = document.querySelector('#jobReturns');
+            jobReturns.subscribe(content =>
+                jobReturnsDOM.innerHTML = content);
+        }
+    });
+
+    // -- Util ----------------------------------------------------------------
+    // Misc utility functions.
+
+    // A simple function to allow Salt-style globbing on event tags.
+    function fnmatch(pattern) {
+        if (pattern.indexOf('*') === -1) {
+            return filename => pattern === filename;
+        } else {
+            // Taken from Lodash (MIT).
+            // Use _.escapeRegExp directly if available.
+            var reRegExpChar = /[\\^$.*+?()[\]{}|]/g;
+            var escaped = pattern.replace(reRegExpChar, '\\$&');
+            var matcher = new RegExp('^'+ escaped.replace(/\\\*/g, '.*') +'$');
+            return filename => matcher.test(filename);
+        }
+    }
+
+    // A wrapper around fetch to send/receive JSON and add the auth token.
+    function post(path, body) {
+        var headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+        };
+        if (XAuthToken) {
+            body.forEach(x => x['token'] = XAuthToken);
+        }
+        return fetch(path, {
+            method: 'post',
+            body: JSON.stringify(body),
+            headers: headers,
+        });
+    }
+
+    // Get an object of form name/values.
+    function getFormData(ev, seed) {
+        return Array.prototype.reduce.call(ev.target, function(acc, el) {
+            if (el.name && el.value !== '') {
+                if (Array.isArray(acc[el.name])) {
+                    acc[el.name].push(el.value);
+                } else {
+                    acc[el.name] = el.value;
+                }
+            }
+            return acc;
+        }, seed);
+    }
+
+    // A bare-bones Observable implementation without
+    // cancelation or unsubscription or anything else.
+    // Use a full implementation or an event emitter in real apps.
+    function getObservable() {
+        class Observable {
+            constructor(_sub) { this._sub = _sub }
+            subscribe(next) { this._sub(next) }
+            map(f) { return new Observable(next =>
+                this.subscribe(x => next(f(x)))) }
+            do(f) { return new Observable(next =>
+                this.subscribe(x => { f(x); next(x) }) )}
+            scan(f, seed) { return new Observable(next => {
+                var acc = seed;
+                return this.subscribe(cur => { acc = f(acc, cur); next(acc) });
+            }) }
+            filter(f) { return new Observable(next =>
+                this.subscribe(x => f(x) && next(x))) }
+        }
+        return Observable;
+    }
+})();
+</script>
+
+<script type='text/tmpl' id='tmpl-events'>
+    <form id="runJob">
+        <label>Target (compound): <input name="tgt"></label><br>
+        <label>Function: <input name="fun"></label><br>
+        <label>Arg: <input name="arg"></label><br>
+        <label>Arg: <input name="arg"></label><br>
+        <label>Arg: <input name="arg"></label><br>
+        <button type="submit">Submit job</button>
+    </form>
+
+    <div>
+        <p>Salt Events Seen: <span id="eventCount">0</span></p>
+        <p>Salt Job Returns:</p>
+        <ul id="jobReturns"></ul>
+    </div>
+</script>
+
+<script type='text/tmpl' id='tmpl-login'>
+    <form id="login">
+        <label>Username: <input name="username"></label><br>
+        <label>Password: <input name="password" type="password"></label><br>
+        <label>Eauth: <input name="eauth"></label><br>
+        <button type="submit">Login</button>
+    </form>
+</script>
+</html>

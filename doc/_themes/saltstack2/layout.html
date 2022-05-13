@@ -1,0 +1,385 @@
+{%- block doctype -%}
+<!DOCTYPE html>
+{%- endblock %}
+
+{% set xxx = rellinks.extend([
+    ('glossary', 'Glossary', 'g', 'Glossary'),
+    ('contents', 'Table of Contents', 't', 'Table of Contents'),
+]) %}
+
+{%- set reldelim1 = reldelim1 is not defined and ' &raquo;' or reldelim1 %}
+{%- set reldelim2 = reldelim2 is not defined and ' |' or reldelim2 %}
+{%- set render_sidebar = (not embedded) and (not theme_nosidebar|tobool) and (sidebars != []) %}
+{%- set url_root = pathto('', 1) %}
+{# XXX necessary? #}
+{%- if url_root == '#' %}{% set url_root = '' %}{% endif %}
+{%- if not embedded and docstitle %}
+    {%- set titlesuffix = " &mdash; "|safe + docstitle|e %}
+{%- else %}
+    {%- set titlesuffix = "" %}
+{%- endif %}
+
+{% set script_files = [
+    '_static/js/core.min.js',
+    '_static/js/webhelp.min_v1.4.4.js',
+] %}
+
+{% set css_files = [
+    '_static/css/core.min.css',
+    '_static/css/webhelp.min_v1.4.5.css',
+] %}
+
+{%- macro relbar() %}
+
+        {%- for rellink in rellinks|reverse %}
+        <li>
+            <a href="{{ pathto(rellink[0]) }}" title="{{ rellink[1]|striptags|e }}">{{ rellink[3] }}</a>
+            {#
+            {%- if not loop.last %}{{ reldelim2 }}{% endif %}
+            #}
+        </li>
+        {%- endfor %}
+
+        {%- block relbaritems %} {% endblock %}
+
+{%- endmacro %}
+
+{%- macro script() %}
+    <script>
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:    '{{ url_root }}',
+            VERSION:     '{{ release|e }}',
+            SEARCH_CX:   '{{ search_cx }}',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '{{ '' if no_search_suffix else file_suffix }}',
+            HAS_SOURCE:  '{{ has_source|lower }}',
+            REPO_PRIMARY_BRANCH_TAB_NAME: '{{ repo_primary_branch | capitalize }}'
+        };
+    </script>
+    {%- for scriptfile in script_files %}
+
+    <script type="text/javascript" src="{{ pathto(scriptfile, 1) }}"></script>
+
+    {%- endfor %}
+{%- endmacro %}
+
+{%- macro css() %}
+
+    {%- for cssfile in css_files %}
+        <link rel="stylesheet" href="{{ pathto(cssfile, 1) }}">
+    {%- endfor %}
+
+{%- endmacro %}
+<html>
+    <head>
+        <!-- Google Tag Manager -->
+        <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+        new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+        j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+        'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+        })(window,document,'script','dataLayer','GTM-MCK7VL3');</script>
+        <!-- End Google Tag Manager -->
+
+        <meta charset="{{ encoding }}">
+        {{ metatags }}
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+        {%- block htmltitle %}
+        <title>{{ title|striptags|e }}{{ titlesuffix }}</title>
+        {%- endblock %}
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="google-site-verification" content="1Y-ojT3ndjxA9coB77iUDyXPWxeuQ3T4_r0j-QG6QHg" />
+
+        {{ css() }}
+
+        {%- if favicon %}
+            <link rel="shortcut icon" href="{{ pathto('_static/' + favicon, 1) }}">
+        {%- endif %}
+
+        <!--[if lt IE 9]>
+        <script type="text/javascript" src="{{ pathto('_static/js/respond.min.js', 1) }}"></script>
+        <![endif]-->
+
+        {%- block linktags %}
+        {%- if hasdoc('about') %}
+        <link rel="author" title="{{ _('About these documents') }}" href="{{ pathto('about') }}">
+        {%- endif %}
+        {%- if hasdoc('genindex') %}
+        <link rel="index" title="{{ _('Index') }}" href="{{ pathto('genindex') }}">
+        {%- endif %}
+        {%- if hasdoc('search') %}
+        <link rel="search" title="{{ _('Search') }}" href="{{ pathto('search') }}">
+        {%- endif %}
+        {%- if hasdoc('copyright') %}
+        <link rel="copyright" title="{{ _('Copyright') }}" href="{{ pathto('copyright') }}">
+        {%- endif %}
+        <link rel="top" title="{{ docstitle|e }}" href="{{ pathto('index') }}">
+        {%- if parents %}
+        <link rel="up" title="{{ parents[-1].title|striptags|e }}" href="{{ parents[-1].link|e }}">
+        {%- endif %}
+        {%- if next %}
+        <link rel="next" title="{{ next.title|striptags|e }}" href="{{ next.link|e }}">
+        {%- endif %}
+        {%- if prev %}
+        <link rel="prev" title="{{ prev.title|striptags|e }}" href="{{ prev.link|e }}">
+        {%- endif %}
+        {%- endblock %}
+    </head>
+
+    <body class="index">
+        <!-- Google Tag Manager (noscript) -->
+        <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MCK7VL3"
+        height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+        <!-- End Google Tag Manager (noscript) -->
+
+        <!--[if lt IE 8]>
+            <p>You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser.</a></p>
+        <![endif]-->
+
+        {%- block content %}
+
+        <div id="wrapper">
+            <!--start navbar-->
+            <nav id="globalNavbar" class="navbar navbar-default navbar-inverse navbar-fixed-top" role="navigation">
+                <!-- Brand and toggle get grouped for better mobile display -->
+                <div class="container">
+                    <div class="navbar-header">
+                        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbarCollapse">
+                            <span class="sr-only">Toggle navigation</span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                        </button>
+                        <a href="http://saltstack.com/" target="_blank"><img src="{{ pathto('_static/images/SaltStack_white.svg', 1) }}" class="nolightbox" height="40px" width="170px"></a>
+                    </div>
+                    <!-- Collect the nav links, forms, and other content for toggling -->
+                    <div class="collapse navbar-collapse" id="navbarCollapse">
+                        <ul class="nav navbar-nav">
+                <li><a href="/en/latest/">Overview</a></li>
+                <li><a href="/en/getstarted/">Tutorials</a></li>
+                <li><a href="/en/latest/contents.html">Documentation</a></li>
+                <li><a href="https://repo.saltproject.io">Downloads</a></li>
+                <li><a href="/en/latest/topics/development/">Develop</a></li>
+                            <!--<li><a href="/en/2016.3/faq/">FAQ</a></li>
+                            <li><a href="/en/2016.3/samples/">Code Samples</a></li>-->
+                            <!--                <li><a href="https://repo.saltproject.io" target="_blank">Downloads</a></li>-->
+                            <!--<li><a href="http://saltstack.com/training" target="_blank">Training</a></li>
+                            <li><a href="http://saltstack.com/support" target="_blank">Support</a></li>-->
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+            <!--end navbar-->
+            <div id="page-content-wrapper">
+                <div class="container-fluid">
+
+                    <!--start navbar-->
+                    <div class="row">
+                        <div class="col-sm-12 col-md-11 col-md-offset-1 col-lg-10 col-lg-offset-1">
+                            <nav class="pull-left text-muted">
+                                <a href="https://github.com/saltstack/salt/edit/{{ repo_primary_branch }}/doc/{{pagename}}.rst">Edit on GitHub</a>
+                            </nav>
+                            <nav id="localnav">
+                                <ul class="nav navbar-nav">
+                                    {%- block relbar_small %}{{ relbar() }}{% endblock %}
+
+                                    {% if not (build_type == repo_primary_branch or build_type == "next") and on_saltstack %}
+                                    <li><a class="icon-dl" href="/en/pdf/Salt-{{ release }}.pdf"><img height="25" width="25" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.svg', 1) }}"></a></li>
+                                    <li><a class="icon-dl" href="/en/epub/Salt-{{ release }}.epub"><img height="25" width="18" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
+                                    {% elif build_type == repo_primary_branch and on_saltstack %}
+                                    <li><a class="icon-dl" href="/en/pdf/Salt-{{ repo_primary_branch }}.pdf"><img height="25" width="25" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.svg', 1) }}"></a></li>
+                                    <li><a class="icon-dl" href="/en/epub/Salt-{{ repo_primary_branch }}.epub"><img height="25" width="18" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                    <!--end navbar-->
+
+
+                    <div class="row">
+                        <div class="col-sm-12 col-md-11 col-md-offset-1 col-lg-10 col-lg-offset-1">
+
+                            {% if "topics/releases" in pagename and "0" in pagename and not release in pagename and not "In Progress" in title %}
+
+                                <div class="alert alert-warning dev-notification-text" role="alert"><i class="glyphicon glyphicon-warning-sign"></i> These release notes are for an old release of Salt. This release might contain known security and other issues that are fixed in the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Release notes for the latest release" href="{{ release }}.html">latest release</a>.</div>
+
+                            {% elif build_type == repo_primary_branch and on_saltstack %}
+
+                                <div class="alert alert-warning dev-notification-text" role="alert"><i class="glyphicon glyphicon-warning-sign"></i> You are viewing docs from the {{ repo_primary_branch }} branch, some of these features are not yet released.</div>
+
+                            {% elif build_type == "inactive" and on_saltstack %}
+
+                                <div class="alert alert-warning dev-notification-text releaselinks" role="alert"><i class="glyphicon glyphicon-warning-sign"></i> You are viewing docs from a branch that is no longer active. You might want to view docs for the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a> release instead.</div>
+                            {% endif %}
+
+                            {% if build_type == "next" and on_saltstack %}
+
+                                <div class="alert alert-warning dev-notification-text" role="alert"><i class="glyphicon glyphicon-warning-sign"></i> You are previewing docs for the next major release, <a target="_blank" data-container="body" data-toggle="tooltip" data-placement="bottom" title="View this branch on GitHub" href="https://github.com/saltstack/salt/tree/{{ next_release_dir }}"> {{ next_release }}.</a></div>
+                            {% endif %}
+
+                            {%- block document %}
+                            <div class="body-content">
+                                {% block body %} {% endblock %}
+                            </div>
+                            {%- endblock %}
+
+                            {%- if prev %}
+                            <a href="{{ prev.link|e }}"><button data-container="body" data-toggle="tooltip" data-placement="bottom" title="{{ prev.title|striptags|e }}" id="prev-button" type="button" class="btn btn-secondary"><span class="glyphicon glyphicon-chevron-left"></span> Previous</button></a>
+                            {%- endif %}
+
+                            {%- if next %}
+                            <a href="{{ next.link|e }}"><button data-container="body" data-toggle="tooltip" data-placement="bottom" title="{{ next.title|striptags|e }}" id="next-button" type="button" class="btn btn-primary">
+                                Next <span class="glyphicon glyphicon-chevron-right"></span></button></a>
+                            {%- endif %}
+                        </div>
+                    </div>
+
+                    {%- block footer %}
+                    <div class="footer">
+                        <hr />
+
+                        <div class="row">
+
+                            {% if on_saltstack %}
+                            <div class="col-sm-6">
+                            <p><i>{{ today }}</i></p>
+
+                                {% if build_type == "latest" %}
+                                <p>You are viewing docs for the latest stable release, {{ latest_release }}. Switch to docs for the previous stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the previous stable release" href="/en/{{ previous_release_dir }}/">{{ previous_release }}</a>, or to a recent doc build from the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the {{ repo_primary_branch }} branch" href="/en/{{ repo_primary_branch }}/">{{ repo_primary_branch }}</a> branch.</p>
+
+                                {% elif build_type == "previous" %}
+                                <p>You are viewing docs for the previous stable release, {{ previous_release }}. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a>, or to a recent doc build from the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the {{ repo_primary_branch }} branch" href="/en/{{ repo_primary_branch }}/">{{ repo_primary_branch }}</a> branch.</p>
+
+                                {% elif build_type == "inactive" %}
+                                <p>You are viewing docs for an inactive release, {{ previous_release }}. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a>, or to a recent doc build from the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the {{ repo_primary_branch }} branch" href="/en/{{ repo_primary_branch }}/">{{ repo_primary_branch }}</a> branch.</p>
+
+                                {% elif build_type == repo_primary_branch %}
+                                <p>You are viewing docs built from a recent snapshot of the {{ repo_primary_branch }} branch. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a>.</p>
+
+                                {% elif build_type == "next" %}
+                                <p>You are viewing preview docs for the next major release, {{ next_release }}. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a>.</p>
+                                {% endif %}
+                                <br>
+                                <p><a href="http://saltstack.com">saltstack.com</a></p>
+
+                                <div class="footer">
+                                    <p>© {{ copyright }} SaltStack. All Rights Reserved, SaltStack Inc. | <a href="http://saltstack.com/privacy-policy" target="_blank">Privacy Policy</a></p>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                 <!--
+                                 <a href="https://saltstack.com/saltstack-enterprise/" target="_blank"><img class="nolightbox footer-banner center" src="{{ pathto('_static/images/enterprise_ad.jpg', 1) }}"/></a>
+                                 -->
+                                 <a href="https://saltconf.com/ad" target="_blank"><img class="nolightbox footer-banner center" src="https://gitlab.com/saltstack/open/salt-branding-guide/-/raw/master/misc/banners/try_salt_now.png"/></a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div> <!--end footer-->
+                    {%- endblock %}
+
+                    </div>
+                </div>
+            <!--start sidebar-->
+            <div id="sidebar-wrapper">
+            <div id="sidebar-static">
+
+<!--                <a class="ss-logo" href="http://saltstack.com"><img width="250" height="63" class="nolightbox sidebar-logo" src="{{ pathto('_static/images/saltstack_logo.svg', 1) }}"></a>
+
+                {% if on_saltstack %}
+                {#
+                {% if [True, False]|random %}
+                <a href="http://saltconf.com/register" target="_blank"><img class="nolightbox sidebar-banner center" src="{{ pathto('_static/images/banner-saltconf.png', 1) }}"/></a>
+                {% else %}
+                <a href="http://saltstack.com/support" target="_blank"><img class="nolightbox sidebar-banner center" src="{{ pathto('_static/images/banner-support.png', 1) }}"/></a>
+                {% endif %} #}-->
+                <a href="https://saltconf.com/menu-ad" target="_blank"><img class="nolightbox sidebar-banner center" src="https://gitlab.com/saltstack/open/salt-branding-guide/-/raw/master/misc/banners/saltconf.png"/></a>
+
+
+                {% if build_type=="next" %}
+
+                <div class="versions">
+                    <p><b>{{ next_release }}</b> (Not Released)</p>
+                </div>
+
+                {% else %}
+
+                <div class="releaselinks versions {{ build_type }}">
+
+                <a class="btn btn-secondary{% if build_type == "previous" or build_type == "inactive" %} active{% endif %}" id="previous"{% if build_type == "previous" or build_type == "inactive" %} title="View release notes"{% else %} title="Switch to docs for the previous stable release"{% endif %} data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/{{ previous_release_dir }}/">{{ previous_release }}{% if build_type == "previous" or build_type == "inactive" %} <i class="glyphicon glyphicon-ok"></i>{% endif %}</a>
+
+                <a  class="btn btn-secondary{% if build_type == "latest" %} active{% endif %}" id="latest"{% if build_type == "latest" %} title="View release notes"{% else %} title="Switch to docs for the latest stable release"{% endif %} data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/latest/">{{ latest_release }}{% if build_type == "latest" %} <i class="glyphicon glyphicon-ok"></i>{% endif %}</a>
+
+                <a  class="btn btn-secondary{% if build_type == repo_primary_branch %} active{% endif %}" id="{{ repo_primary_branch }}"{% if build_type == repo_primary_branch %} title="View all release notes"{% endif %} title="Switch to docs built recently from the {{ repo_primary_branch }} branch" data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/{{ repo_primary_branch }}/">{{ repo_primary_branch | capitalize }}{% if build_type == repo_primary_branch %} <i class="glyphicon glyphicon-ok"></i>{% endif %}</a>
+
+                </div>
+
+                {% endif %}
+
+                {% else %}
+                <div class="versions">
+                    <p>Version {{ version }}</p>
+                </div>
+                {% endif %}
+
+                <div id="search-form" class="inner-addon left-addon">
+                    <i class="glyphicon glyphicon-search"></i>
+                    <input type="text" class="form-control">
+                </div>
+
+            </div> <!--end sidebar-static-->
+
+                <div id="sidebar-nav">
+                    {% block menu %}
+                    {% set toctree = toctree(maxdepth=8, collapse=True, includehidden=True) %}
+                    {% if toctree %}
+                    {{ toctree }}
+                    {% else %}
+                    <!-- Local TOC -->
+                    <div class="local-toc">{{ toc }}</div>
+                    {% endif %}
+                    {% endblock %}
+                </div>
+
+                <div id="sidebar-static-bottom">
+                <!--<div class="text-nowrap">
+                    &lt;!&ndash;social icons from http://vervex.deviantart.com/art/somacro-45-300dpi-social-media-icons-267955425&ndash;&gt;
+                    <ul id="social-links" class="list-inline">
+                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="watch saltstack videos on youtube" href="https://www.youtube.com/channel/UCpveTIucFx9ljGelW63-BWg" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/youtube-variation.png', 1) }}" ></a></li>
+                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="view the latest saltstack tweets" href="https://twitter.com/Salt_Project_OS" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/twitter.png', 1) }}" ></a></li>
+                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="subscribe to the salt users mailing list" href="https://groups.google.com/forum/#!forum/salt-users" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/email.png', 1) }}" ></a></li>
+                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="download saltstack code from github" href="https://github.com/saltstack/salt" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/github.png', 1) }}" ></a></li>
+                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="chat in #salt on liberachat irc" href="https://web.libera.chat/#salt" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/messenger-generic.png', 1) }}" ></a></li>
+                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="/r/saltstack" href="http://www.reddit.com/r/saltstack/" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/reddit.png', 1) }}" ></a></li>
+                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="ask a saltstack question on stackoverflow" href="https://stackoverflow.com/questions/tagged/salt-stack+or+salt-cloud+or+salt-creation" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/stackoverflow.png', 1) }}" ></a></li>
+                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="join or start a saltstack meetup" href="http://www.meetup.com/find/?keywords=saltstack" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/meetup.png', 1) }}" ></a></li>
+                        <li><a data-container="body" data-delay='{ "show": 500, "hide": 100 }' data-toggle="tooltip" data-placement="top" title="follow saltstack on linkedin" href="http://www.linkedin.com/company/salt-stack-inc" target="_blank"><img class="nolightbox" width="24" src="{{ pathto('_static/images/linkedin.png', 1) }}" ></a></li>
+                    </ul>
+                </div>-->
+                </div>
+            </div>
+            <!--end sidebar-->
+
+            </div> <!--end wrapper-->
+        {%- endblock %} <!--end block content-->
+
+        {%- if not embedded %}
+        {{ script() }}
+            {%- if use_opensearch %}
+                <link rel="search" type="application/opensearchdescription+xml"
+                title="{% trans docstitle=docstitle|e %}Search within {{ docstitle }}{% endtrans %}"
+                href="{{ pathto('_static/opensearch.xml', 1) }}">
+            {%- endif %}
+        {%- endif %}
+
+        {% if on_saltstack %}
+
+        <!--analytics-->
+        <script type="text/javascript" language="javascript">llactid=23943</script>
+        <script type="text/javascript" language="javascript" src="https://trackalyzer.com/trackalyze_secure.js"></script>
+
+        {% endif %}
+    </body>
+</html>

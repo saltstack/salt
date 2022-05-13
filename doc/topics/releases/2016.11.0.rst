@@ -1,0 +1,829 @@
+.. _release-2016-11-0:
+
+==============================================
+Salt 2016.11.0 Release Notes - Codename Carbon
+==============================================
+
+New Features
+============
+
+Docker Introspection and Configuration
+--------------------------------------
+
+Major additions have been made to the Docker support in 2016.11.0. The new
+addition allows Salt to be executed within a Docker container without a
+minion running or installed in the container. This allows states to
+be run inside a container, but also all of Salt's remote execution
+commands to be run inside docker containers as well. This makes
+container introspection simple and powerful. See the tutorial on using
+this new feature here:
+
+See :ref:`Salt in Docker Containers <docker-sls>`.
+
+Advanced Ceph Control
+---------------------
+
+Our friends over at SUSE have delivered a powerful new tool to make the
+deployment of Ceph storage systems using Salt very easy. These new Ceph
+tools allow for a storage system to be easily defined using the new
+`ceph.quorum` state.
+
+Thorium Additions and Improvements
+----------------------------------
+
+The Thorium advanced reactor has undergone extensive testing and updates.
+These updates include many more Thorium states, a system for automating
+key management, the ability to use Thorium to easily replace old
+reactors and a great deal of stability and bug fixes.
+
+State Rollback Using Snapper
+----------------------------
+
+Rollback has been one of the most prevalent requests for Salt. We
+have researched it extensively and concluded that the only way to
+accomplish truly reliable rollback would be to execute it at
+the filesystem layer. To accomplish this we have introduced Snapper
+integration into Salt States.
+
+Snapper is a tool which allows for simple and reliable snapshots
+of the filesystem to be made. With the new `snapper_states` option
+set to `True` in the minion config a snapshot will be made before
+and after every Salt State run.
+
+These snapshots can be viewed, managed and rolled back to via the
+`snapper` execution module.
+
+Preserve File Perms in File States
+----------------------------------
+
+This feature has been requested for years, the ability to set a flag
+and use the same file permissions for files deployed to a minion as
+the permissions set to the file on the master. Just set the `keep_mode`
+option on any file management state to `True`.
+
+Ponies!
+-------
+
+We all agreed that cowsay was just not good enough, install the `ponysay`
+command and the new `pony` outputter will work. Fun for the whole family!
+
+Additional Features
+-------------------
+
+- Minions can run in stand-alone mode to use beacons and engines without
+  having to connect to a master. (Thanks @adelcast!)
+- Added a ``salt`` runner to allow running salt modules via salt-run.
+
+    .. code-block:: bash
+
+        salt-run salt.cmd test.ping
+        # call functions with arguments and keyword arguments
+        salt-run salt.cmd test.arg 1 2 3 a=1
+- Added SSL support to Cassandra CQL returner.
+  SSL can be enabled by setting ``ssl_options`` for the returner.
+  Also added support for specifying ``protocol_version`` when establishing
+  cluster connection.
+- The ``mode`` parameter in the :py:mod:`file.managed
+  <salt.states.file.managed>` state, and the ``file_mode`` parameter in the
+  :py:mod:`file.recurse <salt.states.file.recurse>` state, can both now be set
+  to ``keep`` and the minion will keep the mode of the file from the Salt
+  fileserver. This works only with files coming from sources prefixed with
+  ``salt://``, or files local to the minion (i.e. those which are absolute
+  paths, or are prefixed with ``file://``). For example:
+
+  .. code-block:: yaml
+
+      /etc/myapp/myapp.conf:
+        file.managed:
+          - source: salt://conf/myapp/myapp.conf
+          - mode: keep
+
+      /var/www/myapp:
+        file.recurse:
+          - source: salt://path/to/myapp
+          - dir_mode: 755
+          - file_mode: keep
+
+- The ``junos`` state module is now available. It has all the functions
+  that are present in the ``junos`` execution module.
+
+- The ``junos`` state module is now available. It has all the functions
+  that are present in the ``junos`` execution module.
+- The minion data cache is a pluggable data store now. It's configurable with
+  :conf_master:`cache` option. Default is ``localfs``.
+- User names in :conf_master:`client_acl` support glob matching now.
+
+New Top File Merging Strategy for States
+========================================
+
+A new strategy called ``merge_all`` has been added to provide a new way of
+merging top file matches when executing a :ref:`highstate <running-highstate>`.
+See the :conf_master:`top_file_merging_strategy` documentation for further
+information.
+
+In addition, the ``same`` merging strategy was not functioning as documented.
+This has now been corrected. While this is technically a bugfix, we decided to
+hold a change in top file merging until a feature release to minimize user
+impact.
+
+Improved Archive Extraction Support
+===================================
+
+The :py:func:`archive.extracted <salt.states.archive.extracted>` state has been
+overhauled. Notable changes include the following:
+
+- When enforcing ownership (with the ``user`` and/or ``group`` arguments), the
+  ``if_missing`` argument no longer has any connection to which path(s) have
+  ownership enforced. Instead, the paths are determined using the either the
+  newly-added :py:func:`archive.list <salt.modules.archive.list_>` function, or
+  the newly-added ``enforce_ownership_on`` argument.
+- ``if_missing`` also is no longer required to skip extraction, as Salt is now
+  able to tell which paths would be present if the archive were extracted. It
+  should, in most cases, only be necessary in cases where a semaphore file is
+  used to conditionally skip extraction of the archive.
+- Password-protected ZIP archives are now detected before extraction, and the
+  state fails without attempting to extract the archive if no password was
+  specified.
+- By default, a single top-level directory is enforced, to guard against
+  'tar-bombs'. This enforcement can be disabled by setting ``enforce_toplevel``
+  to ``False``.
+- The ``tar_options`` and ``zip_options`` arguments have been deprecated in
+  favor of a single ``options`` argument.
+- The ``archive_format`` argument is now optional. The ending of the ``source``
+  argument is used to guess whether it is a tar, zip or rar file. If the
+  ``archive_format`` cannot be guessed, then it will need to be specified, but
+  in many cases it can now be omitted.
+- Ownership enforcement is now performed irrespective of whether or not the
+  archive needed to be extracted. This means that the state can be re-run after
+  the archive has been fully extracted to repair changes to ownership.
+
+A number of new arguments were also added. See the docs py:func:`docs for the
+archive.extracted state <salt.states.archive.extracted>` for more information.
+
+Additionally, the following changes have been made to the :mod:`archive
+<salt.modules.archive>` execution module:
+
+- A new function (:py:func:`archive.list <salt.modules.archive.list_>`) has
+  been added. This function lists the files/directories in an archive file, and
+  supports a ``verbose`` argument that gives a more detailed breakdown of which
+  paths are files, which are directories, and which paths are at the top level
+  of the archive.
+- A new function (:py:func:`archive.is_encrypted
+  <salt.modules.archive.is_encrypted>`) has been added. This function will
+  return ``True`` if the archive is a password-protected ZIP file, ``False`` if
+  not. If the archive is not a ZIP file, an error will be raised.
+- :py:func:`archive.cmd_unzip <salt.modules.archive.cmd_unzip>` now supports
+  passing a password, bringing it to feature parity with
+  :py:func:`archive.unzip <salt.modules.archive.unzip>`. Note that this is
+  still not considered to be secure, and :py:func:`archive.unzip
+  <salt.modules.archive.unzip>` is recommended for dealing with
+  password-protected ZIP archives.
+- The default value for the ``extract_perms`` argument to
+  :py:func:`archive.unzip <salt.modules.archive.unzip>` has been changed to
+  ``True``.
+
+Improved Checksum Handling in :py:func:`file.managed <salt.states.file.managed>`, :py:func:`archive.extracted <salt.states.archive.extracted>` States
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+
+When the ``source_hash`` argument for these states refers to a file containing
+checksums, Salt now looks for checksums matching the name of the source URI, as
+well as the file being managed. Prior releases only looked for checksums
+matching the filename being managed. Additionally, a new argument
+(``source_hash_name``) has been added, which allows the user to disambiguate
+ambiguous matches when more than one matching checksum is found in the
+``source_hash`` file.
+
+A more detailed explanation of this functionality can be found in the
+:py:func:`file.managed <salt.states.file.managed>` documentation, in the
+section for the new ``source_hash_name`` argument.
+
+.. note::
+    This improved functionality is also available in the ``2016.3`` (Boron)
+    release cycle, starting with the 2016.3.5 release.
+
+Config Changes
+==============
+
+The following default config values were changed:
+
+- ``gitfs_ssl_verify``: Changed from ``False`` to ``True``
+- ``git_pillar_ssl_verify``: Changed from ``False`` to ``True``
+- ``winrepo_ssl_verify``: Changed from ``False`` to ``True``
+
+Grains Changes
+==============
+
+- All core grains containing ``VMWare`` have been changed to ``VMware``, which
+  is the `official capitalization <https://www.vmware.com>`_.  Additionally,
+  all references to ``VMWare`` in the documentation have been changed to
+  ``VMware`` :issue:`30807`.  Environments using versions of Salt before and
+  after Salt 2016.11.0 should employ case-insensitive grain matching on these
+  grains.
+
+  .. code-block:: jinja
+
+      {% set on_vmware = grains['virtual'].lower() == 'vmware' %}
+
+
+- On Windows the ``cpu_model`` grain has been changed to provide the actual cpu
+  model name and not the cpu family.
+
+  Old behavior:
+
+  .. code-block:: bash
+
+      root@master:~# salt 'testwin200' grains.item cpu_model
+      testwin200:
+          ----------
+          cpu_model:
+              Intel64 Family 6 Model 58 Stepping 9, GenuineIntel
+
+  New behavior:
+
+  .. code-block:: console
+
+      root@master:~# salt 'testwin200' grains.item cpu_model
+      testwin200:
+          ----------
+          cpu_model:
+              Intel(R) Core(TM) i7-3520M CPU @ 2.90GHz
+
+
+Beacons Changes
+===============
+
+- The ``loadavg`` beacon now outputs averages as integers instead of strings.
+  (Via :issue:`31124`.)
+
+Runner Changes
+==============
+
+- Runners can now call out to :ref:`utility modules <writing-utility-modules>`
+  via ``__utils__``.
+- ref:`Utility modules <writing-utility-modules>` (placed in
+  ``salt://_utils/``) are now able to be synced to the master, making it easier
+  to use them in custom runners. A :py:mod:`saltutil.sync_utils
+  <salt.runners.saltutil.sync_utils>` function has been added to the
+  :py:mod:`saltutil runner <salt.runners.saltutil>` to facilitate the syncing of
+  utility modules to the master.
+
+Pillar Changes
+==============
+
+- Thanks to the new :py:mod:`saltutil.sync_utils
+  <salt.runners.saltutil.sync_utils>` runner, it is now easier to get
+  ref:`utility modules <writing-utility-modules>` synced to the correct
+  location on the Master so that they are available in execution modules called
+  from Pillar SLS files.
+
+Junos Module Changes
+====================
+
+- The following new functionalities were added to the junos module
+
+  - facts - Displays the facts gathered during the connection.
+  - shutdown - Shut down or reboot a device running Junos OS.
+  - install_config - Modify the configuration of a Junos device.
+  - install_os - Install Junos OS software package.
+  - zeroize - Remove all configuration information on the Routing Engines and reset all key values on a device.
+  - file_copy - Copy file from proxy to the Junos device.
+
+.. _release-2016-11-0-network-automation-napalm:
+
+Network Automation: NAPALM
+==========================
+
+Beginning with 2016.11.0, network automation is included by default in the core
+of Salt. It is based on a the `NAPALM <https://github.com/napalm-automation/napalm>`_
+library and provides facilities to manage the configuration and retrieve data
+from network devices running widely used operating systems such: JunOS, IOS-XR,
+eOS, IOS, NX-OS etc.
+
+- see `the complete list of supported devices
+  <https://napalm.readthedocs.io/en/latest/support/index.html#supported-devices>`_.
+
+The connection is established via the :mod:`NAPALM proxy <salt.proxy.napalm>`.
+
+In the current release, the following modules were included:
+
+- :mod:`NAPALM grains <salt.grains.napalm>` - Select network devices based on their characteristics
+- :mod:`NET execution module <salt.modules.napalm_network>` - Networking basic features
+- :mod:`NTP execution module <salt.modules.napalm_ntp>`
+- :mod:`BGP execution module <salt.modules.napalm_bgp>`
+- :mod:`Routes execution module <salt.modules.napalm_route>`
+- :mod:`SNMP execution module <salt.modules.napalm_snmp>`
+- :mod:`Users execution module <salt.modules.napalm_users>`
+- :mod:`Probes execution module <salt.modules.napalm_probes>`
+- :mod:`NTP peers management state <salt.states.netntp>`
+- :mod:`SNMP configuration management state <salt.states.netsnmp>`
+- :mod:`Users management state <salt.states.netusers>`
+
+Cisco NXOS Proxy Minion
+=======================
+
+Beginning with 2016.11.0, there is a proxy minion that can be used to configure
+nxos cisco devices over ssh.
+
+- :mod:`Proxy Minion <salt.proxy.nxos>`
+- :mod:`Execution Module <salt.modules.nxos>`
+- :mod:`State Module <salt.states.nxos>`
+
+Cisco Network Services Orchestrator Proxy Minion
+================================================
+
+Beginning with 2016.11.0, there is a proxy minion to use the Cisco Network
+Services Orchestrator as a proxy minion.
+
+- :mod:`Proxy Minion <salt.proxy.cisconso>`
+- :mod:`Execution Module <salt.modules.cisconso>`
+- :mod:`State Module <salt.states.cisconso>`
+
+Junos Module Changes
+====================
+
+- The following new functionalities were added to the junos module
+
+  - facts - Displays the facts gathered during the connection.
+  - shutdown - Shut down or reboot a device running Junos OS.
+  - install_config - Modify the configuration of a Junos device.
+  - install_os - Install Junos OS software package.
+  - zeroize - Remove all configuration information on the Routing Engines and reset all key values on a device.
+  - file_copy - Copy file from proxy to the Junos device.
+
+Returner Changes
+================
+
+- Any returner which implements a `save_load` function is now required to
+  accept a `minions` keyword argument. All returners which ship with Salt
+  have been modified to do so.
+
+Renderer Changes
+================
+
+Added the ability to restrict allowed renderers. Two new config parameters,
+:conf_master:`renderer_whitelist` and :conf_master:`renderer_blacklist` are
+introduced for this purpose.
+
+eAuth Changes
+=============
+
+- External auth modules' ``auth`` method can return an ACL list for the given
+  username instead of ``True``. This list should be in the same format as
+  described in the :ref:`eAuth documentation <acl-eauth>`. It will be
+  used for the user instead of one set in master config.
+
+  Example of the ``auth`` method return that allows a user to execute functions
+  in the ``test`` and ``network`` modules on the minions that match the ``web*``
+  target and allow access to ``wheel`` and ``runner`` modules:
+
+  .. code-block:: python
+
+      [{"web*": ["test.*", "network.*"]}, "@wheel", "@runner"]
+
+- External auth is supported by :ref:`salt-run <salt-run>` and
+  :ref:`salt-key <salt-key>` now. Note that master must be started to
+  use them with eAuth.
+
+External Module Packaging
+=========================
+
+Modules may now be packaged via entry-points in setuptools. See
+:ref:`external module packaging <tutorial-packaging-modules>` tutorial
+for more information.
+
+Functionality Changes
+=====================
+
+- The ``onfail`` requisite now uses OR logic instead of AND logic.
+  :issue:`22370`
+- The consul external pillar now strips leading and trailing whitespace.
+  :issue:`31165`
+- The win_system.py state is now case sensitive for computer names. Previously
+  computer names set with a state were converted to all caps. If you have a
+  state setting computer names with lower case letters in the name that has
+  been applied, the computer name will be changed again to apply the case
+  sensitive name.
+- The ``mac_user.list_groups`` function in the ``mac_user`` execution module
+  now lists all groups for the specified user, including groups beginning with
+  an underscore. In previous releases, groups beginning with an underscore were
+  excluded from the list of groups.
+- The ``junos.call_rpc`` function in the ``junos`` execution module can now be used
+  to call any valid rpc. Earlier it used to call only "get_software_information".
+- A new option for minions called ``master_tries`` has been added. This
+  specifies the number of times a minion should attempt to contact a master to
+  attempt a connection.  This allows better handling of occasional master
+  downtime in a multi-master topology.
+- The default hash_type is now sha256 instead of md5. You will need to make sure both
+  your master and minion share the same hash_type.
+- Nodegroups consisting of a simple list of minion IDs can now also be declared
+  as a yaml list. The below two examples are equivalent:
+
+  .. code-block:: yaml
+
+      # Traditional way
+      nodegroups:
+        - group1: L@host1,host2,host3
+
+      # New way (optional)
+      nodegroups:
+        - group1:
+          - host1
+          - host2
+          - host3
+
+New Azure ARM Cloud Driver
+==========================
+A new cloud driver has been added for Azure ARM, aka, the Azure Resource
+Manager. The older Azure driver is still required to work with the older Azure
+API. This new driver works with the newer ARM API, which is managed via the
+newer Azure Portal website.
+
+
+New Modules
+===========
+
+Beacons
+-------
+
+- :mod:`salt.beacons.avahi_announce <salt.beacons.avahi_announce>`
+- :mod:`salt.beacons.bonjour_announce <salt.beacons.bonjour_announce>`
+- :mod:`salt.beacons.haproxy <salt.beacons.haproxy>`
+- :mod:`salt.beacons.status <salt.beacons.status>`
+
+Clouds
+------
+
+- :mod:`salt.cloud.clouds.azurearm <salt.cloud.clouds.azurearm>`
+
+Engines
+-------
+
+- :mod:`salt.engines.hipchat <salt.engines.hipchat>`
+- :mod:`salt.engines.http_logstash <salt.engines.http_logstash>`
+
+Modules
+-------
+
+- :mod:`salt.modules.boto_cloudwatch_event <salt.modules.boto_cloudwatch_event>`
+- :mod:`salt.modules.celery <salt.modules.celery>`
+- :mod:`salt.modules.ceph <salt.modules.ceph>`
+- :mod:`salt.modules.influx08 <salt.modules.influx08>`
+- :mod:`salt.modules.inspectlib.entities <salt.modules.inspectlib.entities>`
+- :mod:`salt.modules.inspectlib.fsdb <salt.modules.inspectlib.fsdb>`
+- :mod:`salt.modules.inspectlib.kiwiproc <salt.modules.inspectlib.kiwiproc>`
+- :mod:`salt.modules.inspector <salt.modules.inspector>`
+- :mod:`salt.modules.libcloud_dns <salt.modules.libcloud_dns>`
+- :mod:`salt.modules.openstack_mng <salt.modules.openstack_mng>`
+- :mod:`salt.modules.servicenow <salt.modules.servicenow>`
+- :mod:`salt.modules.testinframod <salt.modules.testinframod>`
+- :mod:`salt.modules.win_lgpo <salt.modules.win_lgpo>`
+- :mod:`salt.modules.win_pki <salt.modules.win_pki>`
+- :mod:`salt.modules.win_psget <salt.modules.win_psget>`
+- :mod:`salt.modules.win_snmp <salt.modules.win_snmp>`
+- :mod:`salt.modules.xbpspkg <salt.modules.xbpspkg>`
+
+Outputters
+----------
+
+- :mod:`salt.output.pony <salt.output.pony>`
+
+Pillar
+------
+
+- :mod:`salt.pillar.csvpillar <salt.pillar.csvpillar>`
+- :mod:`salt.pillar.http_json <salt.pillar.http_json>`
+- :mod:`salt.pillar.makostack <salt.pillar.makostack>`
+
+Returners
+---------
+
+- :mod:`salt.returners.zabbix_return <salt.returners.zabbix_return>`
+
+Runners
+-------
+
+- :mod:`salt.runners.auth <salt.runners.auth>`
+- :mod:`salt.runners.event <salt.runners.event>`
+- :mod:`salt.runners.smartos_vmadm <salt.runners.smartos_vmadm>`
+- :mod:`salt.runners.vistara <salt.runners.vistara>`
+
+SDB
+---
+
+- :mod:`salt.sdb.env <salt.sdb.env>`
+
+States
+------
+
+- :mod:`salt.states.boto_cloudwatch_event <salt.states.boto_cloudwatch_event>`
+- :mod:`salt.states.csf <salt.states.csf>`
+- :mod:`salt.states.ethtool <salt.states.ethtool>`
+- :mod:`salt.states.influxdb08_database <salt.states.influxdb08_database>`
+- :mod:`salt.states.influxdb08_user <salt.states.influxdb08_user>`
+- :mod:`salt.states.libcloud_dns <salt.states.libcloud_dns>`
+- :mod:`salt.states.snapper <salt.states.snapper>`
+- :mod:`salt.states.testinframod <salt.states.testinframod>`
+- :mod:`salt.states.win_lgpo <salt.states.win_lgpo>`
+- :mod:`salt.states.win_pki <salt.states.win_pki>`
+- :mod:`salt.states.win_snmp <salt.states.win_snmp>`
+
+Thorium
+-------
+
+- :mod:`salt.thorium.calc <salt.thorium.calc>`
+- :mod:`salt.thorium.key <salt.thorium.key>`
+- :mod:`salt.thorium.runner <salt.thorium.runner>`
+- :mod:`salt.thorium.status <salt.thorium.status>`
+- :mod:`salt.thorium.wheel <salt.thorium.wheel>`
+
+
+Deprecations
+============
+
+General Deprecations
+--------------------
+
+- ``env`` to ``saltenv``
+
+  All occurrences of ``env`` and some occurrences of ``__env__`` marked for
+  deprecation in Salt 2016.11.0 have been removed.  The new way to use the salt
+  environment setting is with a variable called ``saltenv``:
+
+  .. code-block:: python
+
+    def fcn(msg="", env="base", refresh=True, saltenv="base", **kwargs):
+        ...
+
+  has been changed to
+
+  .. code-block:: python
+
+    def fcn(msg="", refresh=True, saltenv="base", **kwargs):
+        ...
+
+  - If ``env`` (or ``__env__``) is supplied as a keyword argument to a function
+    that also accepts arbitrary keyword arguments, then a new warning informs the
+    user that ``env`` is no longer used if it is found.  This new warning will be
+    removed in Salt 2017.7.0.
+
+    .. code-block:: python
+
+      def fcn(msg="", refresh=True, saltenv="base", **kwargs):
+          ...
+
+    .. code-block:: python
+
+      # will result in a warning log message
+      fcn(msg="add more salt", env="prod", refresh=False)
+
+  - If ``env`` (or ``__env__``) is supplied as a keyword argument to a function
+    that does not accept arbitrary keyword arguments, then python will issue an
+    error.
+
+    .. code-block:: python
+
+      def fcn(msg="", refresh=True, saltenv="base"):
+          ...
+
+    .. code-block:: python
+
+      # will result in a python TypeError
+      fcn(msg="add more salt", env="prod", refresh=False)
+
+  - If ``env`` (or ``__env__``) is supplied as a positional argument to a
+    function, then undefined behavior will occur, as the removal of ``env`` and
+    ``__env__`` from the function's argument list changes the function's
+    signature.
+
+    .. code-block:: python
+
+      def fcn(msg="", refresh=True, saltenv="base"):
+          ...
+
+    .. code-block:: python
+
+      # will result in refresh evaluating to True and saltenv likely not being a string at all
+      fcn("add more salt", "prod", False)
+
+- Deprecations in ``minion.py``:
+
+  - The ``salt.minion.parse_args_and_kwargs`` function has been removed. Please
+    use the ``salt.minion.load_args_and_kwargs`` function instead.
+
+Cloud Deprecations
+------------------
+
+- The ``vsphere`` cloud driver has been removed. Please use the ``vmware`` cloud driver
+  instead.
+
+- The ``private_ip`` option in the ``linode`` cloud driver is deprecated and has been
+  removed. Use the ``assign_private_ip`` option instead.
+
+- The ``create_dns_record`` and ``delete_dns_record`` functions are deprecated and have
+  been removed from the ``digital_ocean`` driver. Use the ``post_dns_record`` function
+  instead.
+
+
+Execution Module Deprecations
+-----------------------------
+
+- The ``blockdev`` execution module had four functions removed:
+
+  - dump
+  - tune
+  - resize2fs
+  - wipe
+
+  The ``disk`` module should be used instead with the same function names.
+
+- The ``boto_vpc`` execution module had two functions removed,
+  ``boto_vpc.associate_new_dhcp_options_to_vpc`` and
+  ``boto_vpc.associate_new_network_acl_to_subnet`` in favor of more concise function
+  names, ``boto_vpc.create_dhcp_options`` and ``boto_vpc.create_network_acl``, respectively.
+
+- The ``data`` execution module had ``getval`` and ``getvals`` functions removed
+  in favor of one function, ``get``, which combines the functionality of the
+  removed functions.
+
+- File module deprecations:
+
+  - The ``contains_regex_multiline`` function was removed. Use ``file.search`` instead.
+  - Additional command line options for ``file.grep`` should be passed one at a time.
+    Please do not pass more than one in a single argument.
+
+- The ``lxc`` execution module has the following changes:
+
+  - The ``run_cmd`` function was removed. Use ``lxc.run`` instead.
+  - The ``nic`` argument was removed from the ``lxc.init`` function. Use ``network_profile``
+    instead.
+  - The ``clone`` argument was removed from the ``lxc.init`` function. Use ``clone_from``
+    instead.
+  - passwords passed to the ``lxc.init`` function will be assumed to be hashed, unless
+    ``password_encrypted=False``.
+  - The ``restart`` argument for ``lxc.start`` was removed. Use ``lxc.restart`` instead.
+  - The old style of defining lxc containers has been removed. Please use keys under which
+    LXC profiles should be configured such as ``lxc.container_profile.profile_name``.
+
+- The ``env`` and ``activate`` keyword arguments have been removed from the ``install``
+  function in the ``pip`` execution module. The use of ``bin_env`` replaces both of these
+  options.
+
+- ``reg`` execution module
+
+  Functions in the ``reg`` execution module had misleading and confusing names
+  for dealing with the Windows registry. They failed to clearly differentiate
+  between hives, keys, and name/value pairs. Keys were treated like value names.
+  There was no way to delete a key.
+
+  New functions were added in 2015.5 to properly work with the registry. They
+  also made it possible to edit key default values as well as delete an entire
+  key tree recursively. With the new functions in place, the following functions
+  have been deprecated:
+
+  - read_key
+  - set_key
+  - create_key
+  - delete_key
+
+  Use the following functions instead:
+
+  - for ``read_key`` use ``read_value``
+  - for ``set_key`` use ``set_value``
+  - for ``create_key`` use ``set_value`` with no ``vname`` and no ``vdata``
+  - for ``delete_key`` use ``delete_key_recursive``. To delete a value, use
+    ``delete_value``.
+
+- The ``hash_hostname`` option was removed from the ``salt.modules.ssh`` execution
+  module. The ``hash_known_hosts`` option should be used instead.
+
+- The ``human_readable`` option was removed from the ``uptime`` function in the
+  ``status`` execution module. The function was also updated in 2015.8.9 to return
+  a more complete offering of uptime information, formatted as an easy-to-read
+  dictionary. This updated function replaces the need for the ``human_readable``
+  option.
+
+- The ``persist`` kwarg was removed from the ``win_useradd`` execution module. This
+  option is no longer supported for Windows. ``persist`` is only supported as part
+  of user management in UNIX/Linux.
+
+- The ``zpool_list`` function in the ``zpool`` execution module was removed. Use ``list``
+  instead.
+
+
+Outputter Module Deprecations
+-----------------------------
+
+- The ``compact`` outputter has been removed. Set ``state_verbose`` to ``False`` instead.
+
+
+Runner Module Deprecations
+--------------------------
+
+- The ``grains.cache`` runner no longer accepts ``outputter`` or ``minion`` as keyword arguments.
+  Users will need to specify an outputter using the ``--out`` option. ``tgt`` is
+  replacing the ``minion`` kwarg.
+
+- The ``fileserver`` runner no longer accepts the ``outputter`` keyword argument. Users will
+  need to specify an outputter using the ``--out`` option.
+
+- The ``jobs`` runner no longer accepts the ``outputter`` keyword argument. Users will need to
+  specify an outputter using the ``--out`` option.
+
+- ``virt`` runner module:
+
+  - The ``hyper`` kwarg was removed from the ``init``, ``list``, and ``query`` functions.
+    Use the ``host`` option instead.
+  - The ``next_hyper`` function was removed. Use the ``next_host`` function instead.
+  - The ``hyper_info`` function was removed. Use the ``host_info`` function instead.
+
+
+State Module Deprecations
+-------------------------
+
+- The ``env`` and ``activate`` keyword arguments were removed from the ``installed``
+  function in the ``pip`` state module. The use of ``bin_env`` replaces both of these
+  options.
+
+- ``reg`` state module
+
+  The ``reg`` state module was modified to work with the new functions in the
+  execution module. Some logic was left in the ``reg.present`` and the
+  ``reg.absent`` functions to handle existing state files that used the final
+  key in the name as the value name. That logic has been removed so you now must
+  specify value name (``vname``) and, if needed, value data (``vdata``).
+
+  For example, a state file that adds the version value/data pair to the
+  Software\\Salt key in the HKEY_LOCAL_MACHINE hive used to look like this:
+
+  .. code-block:: yaml
+
+      HKEY_LOCAL_MACHINE\\Software\\Salt\\version:
+        reg.present:
+          - value: 2016.3.1
+
+  Now it should look like this:
+
+  .. code-block:: yaml
+
+      HKEY_LOCAL_MACHINE\\Software\\Salt
+        reg.present:
+          - vname: version
+          - vdata: 2016.3.1
+
+  A state file for removing the same value added above would have looked like
+  this:
+
+  .. code-block:: yaml
+
+      HKEY_LOCAL_MACHINE\\Software\\Salt\\version:
+        reg.absent:
+
+  Now it should look like this:
+
+  .. code-block:: yaml
+
+      HKEY_LOCAL_MACHINE\\Software\\Salt
+        reg.absent:
+          - vname: version
+
+  This new structure is important as it allows salt to deal with key default
+  values which was not possible before. If vname is not passed, salt will work
+  with the default value for that hive\key.
+
+  Additionally, since you could only delete a value from a the state module, a
+  new function (``key_absent``) has been added to allow you to delete a registry
+  key and all subkeys and name/value pairs recursively. It uses the new
+  ``delete_key_recursive`` function.
+
+  For additional information see the documentation for the ``reg`` execution and
+  state modules.
+
+- ``lxc`` state module: The following functions were removed from the ``lxc`` state
+  module:
+
+  - ``created``: replaced by the ``present`` state.
+  - ``started``: replaced by the ``running`` state.
+  - ``cloned``: replaced by the ``present`` state. Use the ``clone_from`` argument
+    to set the name of the clone source.
+
+- The ``hash_hostname`` option was removed from the ``salt.states.ssh_known_hosts``
+  state. The ``hash_known_hosts`` option should be used instead.
+
+- The ``always`` kwarg used in the ``built`` function of the ``pkgbuild`` state module
+  was removed. Use ``force`` instead.
+
+
+Utils Module Deprecations
+-------------------------
+
+- The use of ``jid_dir`` and ``jid_load`` were removed from the
+  ``salt.utils.jid``. ``jid_dir`` functionality for job_cache management was moved to
+  the ``local_cache`` returner. ``jid_load`` data is now retrieved from the
+  ``master_job_cache``.
+
+- ``ip_in_subnet`` function in ``salt.utils.network.py`` has been removed. Use the
+  ``in_subnet`` function instead.
+
+- The ``iam`` utils module had two functions removed: ``salt.utils.iam.get_iam_region``
+  and ``salt.utils.iam.get_iam_metadata`` in favor of the aws utils functions
+  ``salt.utils.aws.get_region_from_metadata`` and ``salt.utils.aws.creds``, respectively.

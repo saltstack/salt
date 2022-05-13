@@ -1,0 +1,105 @@
+# Official distro images for Arch, Centos, Debian, Fedora, FreeBSD, Ubuntu
+
+# Arch Linux
+# https://wiki.archlinux.org/index.php/Arch_Linux_AMIs_for_Amazon_Web_Services
+#arch_ec2:
+#  provider: my-ec2-config
+#  image: ami-337d5b76
+#  size: t1.micro
+#  ssh_username: root
+#  location: us-west-1
+#  minion:
+#    grains:
+#      cloud: ec2-us-west-1
+
+#arch_cloud-init_ec2:
+#  provider: my-ec2-config
+#  image: ami-6a5f7c2f
+#  size: t1.micro
+#  ssh_username: root
+#  location: us-west-1
+#  minion:
+#    grains:
+#      cloud: ec2-us-west-1
+
+# Centos 6, available from ec2 marketplace for no-charge
+# http://wiki.centos.org/Cloud/AWS
+#centos_6:
+#  provider: my-ec2-config
+#  image: ami-f61630b3
+#  size: t1.micro
+#  ssh_username: root
+#  location: us-west-1
+#  minion:
+#    grains:
+#      cloud: ec2-us-west-1
+
+# official Debian, available at no-charge from ec2 marketplace:
+# http://wiki.debian.org/Cloud/AmazonEC2Image
+#debian_squeeze_ec2:
+#  provider: my-ec2-config
+#  image: ami-2c735269
+#  size: t1.micro
+#  ssh_username: admin
+#  location: us-west-1
+#  minion:
+#    grains:
+#      cloud: ec2-us-west-1
+
+# Fedora project cloud images
+# https://fedoraproject.org/wiki/Cloud_images
+#fedora_17_ec2:
+#  provider: my-ec2-config
+#  image: ami-877e24c2
+#  size: t1.micro
+#  ssh_username: ec2-user
+#  location: us-west-1
+#  minion:
+#    grains:
+#      cloud: ec2-us-west-1
+
+#fedora_18_ec2:
+#  provider: my-ec2-config
+#  image: ami-0899b94d
+#  size: t1.micro
+#  ssh_username: ec2-user
+#  location: us-west-1
+#  minion:
+#    grains:
+#      cloud: ec2-us-west-1
+
+# FreeBSD 9.1
+# http://www.daemonology.net/freebsd-on-ec2/
+
+# this t1.micro instance does not auto-populate SSH keys see above link
+#freebsd_91_ec2:
+#  provider: my-ec2-config
+#  image: ami-4c8baa09
+#  size: t1.micro
+#  ssh_username: ec2-user
+#  location: us-west-1
+#  minion:
+#    grains:
+#      cloud: ec2-us-west-1
+
+# Canonical Ubuntu LTS images
+# http://cloud-images.ubuntu.com/releases/
+#ubuntu_lucid_ec2:
+#  provider: my-ec2-config
+#  image: ami-e63013a3
+#  size: t1.micro
+#  ssh_username: ubuntu
+#  location: us-west-1
+#  minion:
+#    grains:
+#      cloud: ec2-us-west-1
+
+#ubuntu_precise_ec2:
+#  provider: my-ec2-config
+#  image: ami-3ed8fb7b
+#  size: t1.micro
+#  ssh_username: ubuntu
+#  location: us-west-1
+#  minion:
+#    grains:
+#      cloud: ec2-us-west-1

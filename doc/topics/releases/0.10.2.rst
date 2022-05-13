@@ -1,0 +1,179 @@
+=========================
+Salt 0.10.2 Release Notes
+=========================
+
+:release: 2012-07-30
+
+0.10.2 is out! This release comes with enhancements to the pillar interface,
+cleaner ways to access the salt-call capabilities in the API, minion data
+caching and the event system has been added to salt minions.
+
+There have also been updates to the ZeroMQ functions, many more tests
+(thanks to sponsors, the code sprint and many contributors) and a swath
+of bug fixes.
+
+Major Features
+==============
+
+Ext Pillar Modules
+------------------
+
+The ranks of available Salt modules directories sees a new member in 0.10.2.
+With the popularity of pillar a higher demand has arisen for ``ext_pillar``
+interfaces to be more like regular Salt module additions. Now ext_pillar
+interfaces can be added in the same way as other modules, just drop it into
+the pillar directory in the salt source.
+
+Minion Events
+-------------
+
+In 0.10.0 an event system was added to the Salt master. 0.10.2 adds the event
+system to the minions as well. Now event can be published on a local minion
+as well.
+
+The minions can also send events back up to the master. This means that Salt is
+able to communicate individual events from the minions back up to the Master
+which are not associated with command.
+
+Minion Data Caching
+-------------------
+
+When pillar was introduced the landscape for available data was greatly
+enhanced. The minion's began sending grain data back to the master on a
+regular basis.
+
+The new config option on the master called ``minion_data_cache`` instructs the
+Salt master to maintain a cache of the minion's grains and pillar data in the
+cachedir. This option is turned off by default to avoid hitting the disk more,
+but when enabled the cache is used to make grain matching from the salt command
+more powerful, since the minions that will match can be predetermined.
+
+Backup Files
+------------
+
+By default all files replaced by the file.managed and file.recurse states we
+simply deleted. 0.10.2 adds a new option. By setting the backup option to
+``minion`` the files are backed up before they are replaced.
+
+The backed up files are located in the cachedir under the file_backup
+directory. On a default system this will be at:
+``/var/cache/salt/file_backup``
+
+Configuration files
+-------------------
+
+``salt-master`` and ``salt-minion`` automatically load additional configuration
+files from ``master.d/*.conf`` respective ``minion.d/*.conf`` where
+``master.d``/``minion.d`` is a directory in the same directory as the main
+configuration file.
+
+Salt Key Verification
+---------------------
+
+A number of users complained that they had inadvertently deleted the wrong salt
+authentication keys. 0.10.2 now displays what keys are going to be deleted
+and verifies that they are the keys that are intended for deletion.
+
+Key auto-signing
+----------------
+
+If ``autosign_file`` is specified in the configuration file incoming keys
+will be compared to the list of keynames in ``autosign_file``. Regular
+expressions as well as globbing is supported.
+
+The file must only be writable by the user otherwise the file will be
+ignored. To relax the permission and allow group write access set the
+``permissive_pki_access`` option.
+
+Module changes
+--------------
+
+Improved OpenBSD support
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+New modules for managing services and packages were provided by Joshua
+Elsasser to further improve the support for OpenBSD.
+
+Existing modules like the `disk` module were also improved to support
+OpenBSD.
+
+
+SQL Modules
+^^^^^^^^^^^
+
+The MySQL and PostgreSQL modules have both received a number of additions thanks
+to the work of Avi Marcus and Roman Imankulov.
+
+ZFS Support on FreeBSD
+^^^^^^^^^^^^^^^^^^^^^^
+
+A new ZFS module has been added by Kurtis Velarde for FreeBSD supporting
+various ZFS operations like creating, extending or removing zpools.
+
+
+Augeas
+^^^^^^
+
+A new Augeas module by Ulrich Dangel for editing and verifying config files.
+
+Native Debian Service module
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The support for the Debian was further improved with an new service module
+for Debian by Ahmad Khayyat supporting `disable` and `enable`.
+
+
+Cassandra
+^^^^^^^^^
+
+Cassandra support has been added by Adam Garside. Currently only
+status and diagnostic information are supported.
+
+Networking
+^^^^^^^^^^
+
+The networking support for `RHEL` has been improved and supports bonding
+support as well as zeroconf configuration.
+
+
+Monit
+^^^^^
+
+Basic monit support by Kurtis Velarde to control services via monit.
+
+nzbget
+^^^^^^
+
+Basic support for controlling nzbget by Joseph Hall
+
+Bluetooth
+^^^^^^^^^
+
+Baisc ``bluez`` support for managing and controlling Bluetooth devices.
+Supports scanning as well as pairing/unpairing by Joseph Hall.
+
+Test Updates
+============
+
+Consistency Testing
+-------------------
+
+Another testing script has been added. A bug was found in pillar when many
+minions generated pillar data at the same time. The new ``consist.py`` script
+is the tests directory was created to reproduce bugs where data should always
+be consistent.
+
+Many Fixes
+==========
+
+To get a good idea for the number of bugfixes this release offers take a look
+at the closed tickets for 0.10.2, this is a very substantial update:
+
+https://github.com/saltstack/salt/issues?milestone=24&page=1&state=closed
+
+Master and Minion Stability Fixes
+---------------------------------
+
+As Salt deployments grow new ways to break Salt are discovered. 0.10.2 comes
+with a number of fixes for the minions and master greatly improving Salt
+stability.

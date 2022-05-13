@@ -1,0 +1,96 @@
+==============================
+Salt Cloud 0.8.1 Release Notes
+==============================
+
+In a somewhat quicker timeline than usual, Salt Cloud 0.8.1 has been released!
+While many of the updates in this release focus on stability, users of map
+files and AWS also have some new features to look forward to.
+
+Documentation
+=============
+
+The documentation for Salt Cloud can be found on Read the Docs:
+https://salt-cloud.readthedocs.io
+
+Download
+========
+
+Salt Cloud can be downloaded and install via pypi or github:
+
+https://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.1.tar.gz
+
+https://cloud.github.com/downloads/saltstack/salt-cloud/salt-cloud-0.8.1.tar.gz
+
+Some packages have been made available for salt-cloud and more on their
+way. Packages for Arch, and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. Package availability will be announced on the salt mailing list.
+
+Full Query Option
+=================
+
+The -Q or --query option only displays a small amount of information about
+each virtual machine. This is to keep command-line reports small and
+manageable. Now the -F or --full-query option can be used to display all
+of the information about a VM that salt-cloud knows about. The amount of
+information returned varies between providers, depending on the kinds of
+functionality available through them.
+
+Increased Map Functionality
+===========================
+
+Previously, map files were only used for creating VMs. Now they can also be
+used to query and delete VMs. The -Q, -F, and -d options can all be used in
+conjunction with -m, to display map-specific data. If a VM that is specified
+in the map does not exist, it will still show up under -Q and -F as "Absent".
+If a VM specified in the map does not exist when a -d is specified, it will
+of course be ignored.
+
+Multiple Security Groups in AWS
+===============================
+
+AWS allows for multiple security groups to be applied to any given VM, but
+until this release, Salt Cloud only supported managing one. This update allows
+a list of security groups to be specified. In the main configuration file, an
+example of multiple security groups would look like:
+
+.. code-block:: yaml
+
+  AWS.securitygroup:
+    - default
+    - extra
+
+In a profile, an example would be:
+
+.. code-block:: yaml
+
+  micro_amazon:
+    provider: aws
+    image: ami-e565ba8c
+    size: Micro Instance
+    os: RHEL6
+    securitygroup:
+        - default
+        - extra
+
+Bug Fixes
+=========
+
+A number of bugs have been fixed in this release. Most of these were internal
+fixes related to authentication and deployment across various providers. Bug
+fixes in this release include:
+
+Ubuntu users may notice that deploying an instance has become significantly
+noisier. A change was made to make Ubuntu display information returned as
+packages are installed, which is more aligned with how yum-based machines
+already behaved. This also forced these VMs to deploy salt in a much more
+reliable manner.
+
+Requirements listed in requirements.txt are also pulled into setup.py, to make
+it easy to use the easy_install tool.
+
+Most cloud providers default to root as the initial user, but AWS typically
+providers a different user (ec2-user, ubuntu, bitnami, etc). Deployment on
+such images must be handled using sudo. Previously, sudo was used to issue
+all deployment commands, but this failed on images where sudo was not installed
+by default (such as FreeBSD). Now sudo will only be used with non-root logins.

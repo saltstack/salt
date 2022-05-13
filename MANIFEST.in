@@ -1,0 +1,22 @@
+include AUTHORS
+include CODE_OF_CONDUCT.md
+include CONTRIBUTING.rst
+include LICENSE
+include NOTICE
+include README.rst
+include SUPPORT.rst
+include run.py
+include tests/*.py
+recursive-include tests *
+recursive-include requirements *.txt
+include tests/integration/modules/files/*
+include tests/integration/files/*
+include tests/unit/templates/files/*
+recursive-include doc *
+recursive-include scripts *
+recursive-include conf *
+recursive-include pkg *
+recursive-include salt *.jinja
+recursive-include templates *
+include salt/templates/git/*
+include salt/templates/lxc/*

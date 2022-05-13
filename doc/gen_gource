@@ -1,0 +1,7 @@
+#!/bin/bash
+#
+# This script is used to generate the gource video released with each release of Salt
+#
+#
+gource -1280x720 -s 0.5 --stop-at-end --hide filenames --highlight-all-users --file-filter po -a 5 --camera-mode overview --disable-progress --disable-bloom  --output-ppm-stream - --output-framerate 30 -o - | ffmpeg -y -r 60 -f image2pipe -vcodec ppm -i - -vcodec libvpx -b 10000K gource.webm
+

@@ -1,0 +1,285 @@
+========================
+Salt 0.9.3 Release Notes
+========================
+
+:release: 2011-11-05
+
+Salt 0.9.3 is finally arrived. This is another big step forward for Salt, new
+features range from proper FreeBSD support to fixing issues seen when
+attaching a minion to a master over the Internet.
+
+The biggest improvements in 0.9.3 though can be found in the state system, it
+has progressed from something ready for early testers to a system ready to
+compete with platforms such as Puppet and Chef. The backbone of the state
+system has been greatly refined and many new features are available.
+
+Download!
+---------
+
+The Salt source can be downloaded from PyPI:
+
+https://pypi.python.org/packages/source/s/salt/salt-0.9.3.tar.gz
+
+For instructions on how to set up Salt please see the :ref:`installation`
+instructions.
+
+New Features
+------------
+
+WAN Support
+```````````
+
+Recently more people have been testing Salt minions connecting to Salt Masters
+over the Internet. It was found that Minions would commonly loose their
+connection to the master when working over the internet. The minions can now
+detect if the connection has been lost and reconnect to the master, making
+WAN connections much more reliable.
+
+State System Fixes
+```````````````````
+
+Substantial testing has gone into the state system and it is ready for real
+world usage. A great deal has been added to the documentation for states and
+the modules and functions available to states have been cleanly documented.
+
+A number of State System bugs have also been founds and repaired, the output
+from the state system has also been refined to be extremely clear and concise.
+
+Error reporting has also been introduced, issues found in sls files will now
+be clearly reported when executing Salt States.
+
+Extend Declaration
+``````````````````
+
+The Salt States have also gained the ``extend`` declaration. This declaration
+allows for states to be cleanly modified in a post environment. Simply said,
+if there is an apache.sls file that declares the apache service, then another
+sls can include apache and then extend it:
+
+.. code-block:: yaml
+
+    include:
+      - apache
+
+    extend:
+      apache:
+        service:
+          - require:
+            - pkg: mod_python
+
+    mod_python:
+      pkg:
+        - installed
+
+The notable behavior with the extend functionality is that it literally extends
+or overwrites a declaration set up in another sls module. This means that Salt
+will behave as though the modifications were made directly to the apache sls.
+This ensures that the apache service in this example is directly tied to all
+requirements.
+
+Highstate Structure Specification
+`````````````````````````````````
+
+This release comes with a clear specification of the Highstate data structure
+that is used to declare Salt States. This specification explains everything
+that can be declared in the Salt SLS modules.
+
+The specification is extremely simple, and illustrates how Salt has been able
+to fulfill the requirements of a central configuration manager within a simple
+and easy to understand format and specification.
+
+SheBang Renderer Switch
+```````````````````````
+
+It came to our attention that having many renderers means that there may be a
+situation where more than one State Renderer should be available within a
+single State Tree.
+
+The method chosen to accomplish this was something already familiar to
+developers and systems administrators, a SheBang. The Python State Renderer
+displays this new capability.
+
+Python State Renderer
+`````````````````````
+
+Until now Salt States could only be declared in yaml or json using Jinja or
+Mako. A new, very powerful, renderer has been added, making it possible to
+write Salt States in pure Python:
+
+.. code-block:: python
+
+    #!py
+
+
+    def run():
+        """
+        Install the python-mako package
+        """
+        return {"include": ["python"], "python-mako": {"pkg": ["installed"]}}
+
+This renderer is used by making a run function that returns the Highstate data
+structure. Any capabilities of Python can be used in pure Python sls modules.
+
+This example of a pure Python sls module is the same as this example in yaml:
+
+.. code-block:: yaml
+
+    include:
+      - python
+
+    python-mako:
+      pkg:
+        - installed
+
+FreeBSD Support
+```````````````
+
+Additional support has been added for FreeBSD, this is Salt's first branch out
+of the Linux world and proves the viability of Salt on non-Linux platforms.
+
+Salt remote execution already worked on FreeBSD, and should work without issue
+on any Unix-like platform. But this support comes in the form of package
+management and user support, so Salt States also work on FreeBSD now.
+
+The new freebsdpkg module provides package management support for FreeBSD
+and the new pw_user and pw_group provide user and group management.
+
+Module and State Additions
+--------------------------
+
+Cron Support
+````````````
+
+Support for managing the system crontab has been added, declaring a cron state
+can be done easily:
+
+.. code-block:: yaml
+
+    date > /tmp/datestamp:
+      cron:
+        - present
+        - user: fred
+        - minute: 5
+        - hour: 3
+
+File State Additions
+````````````````````
+
+The file state has been given a number of new features, primarily the
+directory, recurse, symlink, and absent functions.
+
+file.directory
+    Make sure that a directory exists and has the right permissions.
+
+    .. code-block:: yaml
+
+        /srv/foo:
+          file:
+            - directory
+            - user: root
+            - group: root
+            - mode: 1755
+
+file.symlink
+    Make a symlink.
+
+    .. code-block:: yaml
+
+        /var/lib/www:
+          file:
+            - symlink
+            - target: /srv/www
+            - force: True
+
+file.recurse
+    The recurse state function will recursively download a directory on the
+    master file server and place it on the minion. Any change in the files on
+    the master will be pushed to the minion. The recurse function is very
+    powerful and has been tested by pushing out the full Linux kernel source.
+
+    .. code-block:: yaml
+
+        /opt/code:
+          file:
+            - recurse
+            - source: salt://linux
+
+file.absent
+    Make sure that the file is not on the system, recursively deletes
+    directories, files, and symlinks.
+
+    .. code-block:: yaml
+
+        /etc/httpd/conf.d/somebogusfile.conf:
+          file:
+            - absent
+
+Sysctl Module and State
+```````````````````````
+
+The sysctl module and state allows for sysctl components in the kernel to be
+managed easily. the sysctl module contains the following functions:
+
+sysctl.show
+    Return a list of sysctl parameters for this minion
+
+sysctl.get
+    Return a single sysctl parameter for this minion
+
+sysctl.assign
+    Assign a single sysctl parameter for this minion
+
+sysctl.persist
+    Assign and persist a simple sysctl parameter for this minion
+
+The sysctl state allows for sysctl parameters to be assigned:
+
+.. code-block:: yaml
+
+    vm.swappiness:
+      sysctl:
+        - present
+        - value: 20
+
+Kernel Module Management
+````````````````````````
+
+A module for managing Linux kernel modules has been added. The new functions
+are as follows:
+
+kmod.available
+    Return a list of all available kernel modules
+
+kmod.check_available
+    Check to see if the specified kernel module is available
+
+kmod.lsmod
+    Return a dict containing information about currently loaded modules
+
+kmod.load
+    Load the specified kernel module
+
+kmod.remove
+    Unload the specified kernel module
+
+The kmod state can enforce modules be either present or absent:
+
+.. code-block:: yaml
+
+    kvm_intel:
+      kmod:
+        - present
+
+Ssh Authorized Keys
+```````````````````
+The ssh_auth state can distribute ssh authorized keys out to minions. Ssh
+authorized keys can be present or absent.
+
+.. code-block:: yaml
+
+    AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyYvlRBsJdDOo49CNfhlWHWXQRqul6rwL4KIuPrhY7hBw0tV7UNC7J9IZRNO4iGod9C+OYutuWGJ2x5YNf7P4uGhH9AhBQGQ4LKOLxhDyT1OrDKXVFw3wgY3rHiJYAbd1PXNuclJHOKL27QZCRFjWSEaSrUOoczvAAAAFQD9d4jp2dCJSIseSkk4Lez3LqFcqQAAAIAmovHIVSrbLbXAXQE8eyPoL9x5C+x2GRpEcA7AeMH6bGx/xw6NtnQZVMcmZIre5Elrw3OKgxcDNomjYFNHuOYaQLBBMosyO++tJe1KTAr3A2zGj2xbWO9JhEzu8xvSdF8jRu0N5SRXPpzSyU4o1WGIPLVZSeSq1VFTHRT4lXB7PQAAAIBXUz6ZO0bregF5xtJRuxUN583HlfQkXvxLqHAGY8WSEVlTnuG/x75wolBDbVzeTlxWxgxhafj7P6Ncdv25Wz9wvc6ko/puww0b3rcLNqK+XCNJlsM/7lB8Q26iK5mRZzNsGeGwGTyzNIMBekGYQ5MRdIcPv5dBIP/1M6fQDEsAXQ==:
+      ssh_auth:
+        - present
+        - user: frank
+        - enc: dsa
+        - comment: 'Frank's key'

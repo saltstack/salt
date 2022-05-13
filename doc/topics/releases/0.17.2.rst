@@ -1,0 +1,74 @@
+=========================
+Salt 0.17.2 Release Notes
+=========================
+
+:release: 2013-11-14
+
+Version 0.17.2 is another bugfix release for :ref:`0.17.0
+<release-0-17-0>`.  The changes include:
+
+- Add ability to delete key with grains.delval (:issue:`7872`)
+- Fix possible state compiler stack trace (:issue:`5767`)
+- Fix architecture regression in yumpkg (:issue:`7813`)
+- Use correct ``ps`` on Debian to prevent truncating (:issue:`5646`)
+- Fix grains targeting for new grains (:issue:`5737`)
+- Fix bug with merging in git_pillar (:issue:`6992`)
+- Fix print_jobs duplicate results
+- Fix apt version specification for pkg.install
+- Fix possible KeyError from ext_job_cache missing option
+- Fix auto_order for ``- names`` states (:issue:`7649`)
+- Fix regression in new gitfs installs (directory not found error)
+- Fix escape pipe issue on Windows for file.recurse (:issue:`7967`)
+- Fix fileclient in case of master restart (:issue:`7987`)
+- Try to output warning if CLI command malformed (:issue:`6538`)
+- Fix ``--out=quiet`` to actually be quiet (:issue:`8000`)
+- Fix for state.sls in salt-ssh (:issue:`7991`)
+- Fix for MySQL grants ordering issue (:issue:`5817`)
+- Fix traceback for certain missing CLI args (:issue:`8016`)
+- Add ability to disable lspci queries on master (:issue:`4906`)
+- Fail if sls defined in topfile does not exist (:issue:`5998`)
+- Add ability to downgrade MySQL grants (:issue:`6606`)
+- Fix ssh_auth.absent traceback (:issue:`8043`)
+- Add upstart detection for Debian/Raspbian (:issue:`8039`)
+- Fix ID-related issues (:issue:`8052`, :issue:`8050`, and others)
+- Fix for jinja rendering issues (:issue:`8066` and :issue:`8079`)
+- Fix argument parsing in salt-ssh (:issue:`7928`)
+- Fix some GPU detection instances (:issue:`6945`)
+- Fix bug preventing includes from other environments in SLS files
+- Fix for kwargs with dashes (:issue:`8102`)
+- Fix salt.utils.which for windows '.exe' (:issue:`7904`)
+- Fix apache.adduser without apachectl (:issue:`8123`)
+- Fix issue with evaluating ``test`` kwarg in states (:issue:`7788`)
+- Fix regression in ``salt.client.Caller()`` (:issue:`8078`)
+- Fix apt-key silent failure
+- Fix bug where cmd.script would try to run even if caching failed (:issue:`7601`)
+- Fix apt ``pkg.latest`` regression (:issue:`8067`)
+- Fix for mine data not being updated (:issue:`8144`)
+- Fix for noarch packages in yum
+- Fix a Xen detection edge case (:issue:`7839`)
+- Fix windows ``__opts__`` dictionary persistence (:issue:`7714`)
+- Fix version generation for when it's part of another git repo (:issue:`8090`)
+- Fix _handle_iorder stacktrace so that the real syntax error is shown (:issue:`8114` and :issue:`7905`)
+- Fix ``git.latest`` state when a commit SHA is used (:issue:`8163`)
+- Fix various small bugs in yumpkg.py (:issue:`8201`)
+- Fix for specifying identify file in git.latest (:issue:`8094`)
+- Fix for ``--output-file`` CLI arg (:issue:`8205`)
+- Add ability to specify shutdown time for system.shutdown (:issue:`7833`)
+- Fix for salt version using non-salt git repo info (:issue:`8266`)
+- Add additional hints at impact of ``pkgrepo`` states when ``test=True`` (:issue:`8247`)
+- Fix for salt-ssh files not being owned by root (:issue:`8216`)
+- Fix retry logic and error handling in fileserver (related to :issue:`7755`)
+- Fix file.replace with ``test=True`` (:issue:`8279`)
+- Add flag for limiting file traversal in fileserver (:issue:`6928`)
+- Fix for extra mine processes (:issue:`5729`)
+- Fix for unloading custom modules (:issue:`7691`)
+- Fix for salt-ssh opts (:issue:`8005` and :issue:`8271`)
+- Fix compound matcher for grains (:issue:`7944`)
+- Improve error reporting in ebuild module (related to :issue:`5393`)
+- Add ``dir_mode`` to ``file.managed`` (:issue:`7860`)
+- Improve traceroute support for FreeBSD and macOS (:issue:`4927`)
+- Fix for matching minions under syndics (:issue:`7671`)
+- Improve exception handling for missing ID (:issue:`8259`)
+- Fix grain mismatch for ScientificLinux (:issue:`8338`)
+- Add configuration option for minion_id_caching
+- Fix open mode auth errors (:issue:`8402`)

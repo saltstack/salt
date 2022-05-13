@@ -1,0 +1,21 @@
+states:
+  - app
+
+pillars:
+  app:
+    config:
+      dns:
+        srv1: ${default:network:dns:srv1}
+        srv2: ${default:network:dns:srv2}
+      uri: https://application.domain/call?\${test}
+      prod_parameters:
+        - p1
+        - p2
+        - p3
+    pkg:
+      - app-core
+      - app-backend
+# Safe minion_id matching
+{% if minion_id == 'zrh.node3' %}
+  safe_pillar: '_only_ zrh.node3 will see this pillar and this cannot be overridden like grains'
+{% endif %}

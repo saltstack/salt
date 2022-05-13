@@ -1,0 +1,397 @@
+========================
+Salt 0.9.8 Release Notes
+========================
+
+:release: 2012-03-21
+
+Salt 0.9.8 is a big step forward, with many additions and enhancements, as
+well as a number of precursors to advanced future developments.
+
+This version of Salt adds much more power to the command line, making the
+old hard timeout issues a thing of the past and adds keyword argument
+support. These additions are also available in the salt client API, making
+the available API tools much more powerful.
+
+The new pillar system allows for data to be stored on the master and
+assigned to minions in a granular way similar to the state system. It also
+allows flexibility for users who want to keep data out of their state tree
+similar to 'external lookup' functionality in other tools.
+
+A new way to extend requisites was added, the "requisite in" statement.
+This makes adding requires or watch statements to external state decs
+much easier.
+
+Additions to requisites making them much more powerful have been added as well
+as improved error checking for sls files in the state system. A new provider
+system has been added to allow for redirecting what modules run in the
+background for individual states.
+
+Support for openSUSE has been added and support for Solaris has begun
+serious development. Windows support has been significantly enhanced as well.
+
+The matcher and target systems have received a great deal of attention. The
+default behavior of grain matching has changed slightly to reflect the rest
+of salt and the compound matcher system has been refined.
+
+A number of impressive features with keyword arguments have been added to both
+the CLI and to the state system. This makes states much more powerful and
+flexible while maintaining the simple configuration everyone loves.
+
+The new batch size capability allows for executions to be rolled through a
+group of targeted minions a percentage or specific number at a time. This
+was added to prevent the "thundering herd" problem when targeting large
+numbers of minions for things like service restarts or file downloads.
+
+Upgrade Considerations
+======================
+
+Upgrade Issues
+--------------
+
+There was a previously missed oversight which could cause a newer minion to
+crash an older master. That oversight has been resolved so the version
+incompatibility issue will no longer occur. When upgrading to 0.9.8 make
+sure to upgrade the master first, followed by the minions.
+
+Debian/Ubuntu Packages
+----------------------
+
+The original Debian/Ubuntu packages were called salt and included all salt
+applications. New packages in the ppa are split by function. If an old salt
+package is installed then it should be manually removed and the new split
+packages need to be freshly installed.
+
+On the master:
+
+.. code-block:: sh
+
+    # apt-get purge salt
+    # apt-get install salt-{master,minion}
+
+On the minions:
+
+.. code-block:: sh
+
+    # apt-get purge salt
+    # apt-get install salt-minion
+
+And on any Syndics:
+
+.. code-block:: sh
+
+    # apt-get install salt-syndic
+
+The official Salt PPA for Ubuntu is located at:
+https://launchpad.net/~saltstack/+archive/ubuntu/salt
+
+
+Major Features
+==============
+
+
+Pillar
+------
+
+:ref:`Pillar <pillar>` offers an interface to declare variable data on the master that is then
+assigned to the minions. The pillar data is made available to all modules,
+states, sls files etc. It is compiled on the master and is declared using the
+existing renderer system. This means that learning pillar should be fairly
+trivial to those already familiar with salt states.
+
+CLI Additions
+-------------
+
+The ``salt`` command has received a serious overhaul and is more powerful
+than ever. Data is returned to the terminal as it is received, and the salt
+command will now wait for all running minions to return data before stopping.
+This makes adding very large *--timeout* arguments completely unnecessary and
+gets rid of long running operations returning empty ``{}`` when the timeout is
+exceeded.
+
+When calling salt via sudo, the user originally running salt is saved to the
+log for auditing purposes. This makes it easy to see who ran what by just
+looking through the minion logs.
+
+The *salt-key* command gained the *-D* and *--delete-all* arguments for
+removing all keys. Be careful with this one!
+
+Running States Without a Master
+-------------------------------
+
+The addition of running states without a salt-master has been added
+to 0.9.8. This feature allows for the unmodified salt state tree to be
+read locally from a minion. The result is that the UNMODIFIED state tree
+has just become portable, allowing minions to have a local copy of states
+or to manage states without a master entirely.
+
+This is accomplished via the new file client interface in Salt that allows
+for the ``salt://`` URI to be redirected to custom interfaces. This means that
+there are now two interfaces for the salt file server, calling the master
+or looking in a local, minion defined ``file_roots``.
+
+This new feature can be used by modifying the minion config to point to a
+local ``file_roots`` and setting the ``file_client`` option to ``local``.
+
+
+Keyword Arguments and States
+----------------------------
+
+State modules now accept the ``**kwargs`` argument. This results in all data
+in a sls file assigned to a state being made available to the state function.
+
+This passes data in a transparent way back to the modules executing the logic.
+In particular, this allows adding arguments to the ``pkg.install`` module that
+enable more advanced and granular controls with respect to what the state is
+capable of.
+
+An example of this along with the new debconf module for installing ldap
+client packages on Debian:
+
+.. code-block:: yaml
+
+    ldap-client-packages:
+      pkg:
+        - debconf: salt://debconf/ldap-client.ans
+        - installed
+        - names:
+          - nslcd
+          - libpam-ldapd
+          - libnss-ldapd
+
+Keyword Arguments and the CLI
+-----------------------------
+
+In the past it was required that all arguments be passed in the proper order to
+the *salt* and *salt-call* commands. As of 0.9.8, keyword arguments can be
+passed in the form of ``kwarg=argument``.
+
+.. code-block:: sh
+
+    # salt -G 'type:dev' git.clone \
+        repository=https://github.com/saltstack/salt.git cwd=/tmp/salt user=jeff
+
+
+Matcher Refinements and Changes
+-------------------------------
+
+A number of fixes and changes have been applied to the Matcher system. The
+most noteworthy is the change in the grain matcher. The grain matcher used to
+use a regular expression to match the passed data to a grain, but now defaults
+to a shell glob like the majority of match interfaces in Salt. A new option
+is available that still uses the old style regex matching to grain data called
+``grain-pcre``. To use regex matching in compound matches use the letter *P*.
+
+For example, this would match any ArchLinux or Fedora minions:
+
+.. code-block:: sh
+
+  # salt --grain-pcre 'os:(Arch:Fed).*' test.ping
+
+And the associated compound matcher suitable for ``top.sls`` is *P*:
+
+.. code-block:: sh
+
+  P@os:(Arch|Fed).*
+
+**NOTE**: Changing the grains matcher from pcre to glob is backwards
+incompatible.
+
+Support has been added for matching minions with Yahoo's range library. This
+is handled by passing range syntax with *-R* or *--range* arguments to salt.
+
+More information at:
+https://github.com/ytoolshed/range/wiki/%22yamlfile%22-module-file-spec
+
+
+Requisite "in"
+--------------
+
+A new means to updating requisite statements has been added to make adding
+watchers and requires to external states easier. Before 0.9.8 the only way
+to extend the states that were watched by a state outside of the sls was to
+use an extend statement:
+
+.. code-block:: yaml
+
+    include:
+      - http
+    extend:
+      apache:
+        service:
+          - watch:
+            - pkg: tomcat
+
+    tomcat:
+      pkg:
+        - installed
+
+But the new ``Requisite in`` statement allows for easier extends for
+requisites:
+
+.. code-block:: yaml
+
+    include:
+      - http
+
+    tomcat:
+      pkg:
+        - installed
+        - watch_in:
+          - service: apache
+
+Requisite in is part of the extend system, so still remember to always include
+the sls that is being extended!
+
+Providers
+---------
+
+Salt predetermines what modules should be mapped to what uses based on the
+properties of a system. These determinations are generally made for modules
+that provide things like package and service management. The apt module
+maps to pkg on Debian and the yum module maps to pkg on Fedora for instance.
+
+Sometimes in states, it may be necessary for a non-default module to be used
+for the desired functionality. For instance, an Arch Linux system may have
+been set up with systemd support. Instead of using the default service module
+detected for Arch Linux, the systemd module can be used:
+
+.. code-block:: yaml
+
+    http:
+      service:
+        - running
+        - enable: True
+        - provider: systemd
+
+Default providers can also be defined in the minion config file:
+
+.. code-block:: yaml
+
+    providers:
+      service: systemd
+
+When default providers are passed in the minion config, then those providers
+will be applied to all functionality in Salt, this means that the functions
+called by the minion will use these modules, as well as states.
+
+Requisite Glob Matching
+-----------------------
+
+Requisites can now be defined with glob expansion. This means that if there are
+many requisites, they can be defined on a single line.
+
+To watch all files in a directory:
+
+.. code-block:: yaml
+
+    http:
+      service:
+        - running
+        - enable: True
+        - watch:
+          - file: /etc/http/conf.d/*
+
+This example will watch all defined files that match the glob
+``/etc/http/conf.d/*``
+
+Batch Size
+----------
+
+The new batch size option allows commands to be executed while maintaining that
+only so many hosts are executing the command at one time. This option can
+take a percentage or a finite number:
+
+.. code-block:: bash
+
+    salt '*' -b 10 test.ping
+
+    salt -G 'os:RedHat' --batch-size 25% apache.signal restart
+
+This will only run test.ping on 10 of the targeted minions at a time and then
+restart apache on 25% of the minions matching ``os:RedHat`` at a time and work
+through them all until the task is complete. This makes jobs like rolling web
+server restarts behind a load balancer or doing maintenance on BSD firewalls
+using carp much easier with salt.
+
+Module Updates
+--------------
+
+This is a list of notable, but non-exhaustive updates with new and existing
+modules.
+
+Windows support has seen a flurry of support this release cycle. We've gained
+all new :mod:`file <alt.modules.win_file>`,
+:mod:`network <salt.modules.win_network>`, and
+:mod:`shadow <salt.modules.win_shadow>` modules. Please note
+that these are still a work in progress.
+
+For our ruby users, new :mod:`rvm <salt.modules.rvm>` and
+:mod:`gem <salt.modules.gem>` modules have been added along
+with the :mod:`associated <salt.states.rvm>`
+:mod:`states <salt.states.gem>`
+
+The :mod:`virt <salt.modules.virt>` module gained basic Xen support.
+
+The :mod:`yum <salt.modules.yumpkg>` module gained
+Scientific Linux support.
+
+The :mod:`pkg <salt.modules.aptpkg>` module on Debian, Ubuntu,
+and derivatives force apt to run in a non-interactive mode. This prevents
+issues when package installation waits for confirmation.
+
+A :mod:`pkg <salt.modules.zypper>` module for OpenSUSE's
+zypper was added.
+
+The :mod:`service <salt.modules.upstart>` module on Ubuntu
+natively supports upstart.
+
+A new :mod:`debconf <salt.modules.debconfmod>` module was
+contributed by our community for more advanced control over deb package
+deployments on Debian based distributions.
+
+The :mod:`mysql.user <salt.states.mysql_user>` state and
+:mod:`mysql <salt.modules.mysql>` module gained a
+*password_hash* argument.
+
+The :mod:`cmd <salt.modules.cmdmod>` module and state gained
+a *shell* keyword argument for specifying a shell other than ``/bin/sh`` on
+Linux / Unix systems.
+
+New :mod:`git <salt.modules.git>` and
+:mod:`mercurial <salt.modules.hg>` modules have been added
+for fans of distributed version control.
+
+
+In Progress Development
+=======================
+
+Master Side State Compiling
+---------------------------
+
+While we feel strongly that the advantages gained with minion side state
+compiling are very critical, it does prevent certain features that may be
+desired. 0.9.8 has support for initial master side state compiling, but many
+more components still need to be developed, it is hoped that these can be
+finished for 0.9.9.
+
+The goal is that states can be compiled on both the master and the minion
+allowing for compilation to be split between master and minion. Why will
+this be great? It will allow storing sensitive data on the master and sending
+it to some minions without all minions having access to it. This will be
+good for handling ssl certificates on front-end web servers for instance.
+
+
+Solaris Support
+---------------
+
+Salt 0.9.8 sees the introduction of basic Solaris support. The daemon runs
+well, but grains and more of the modules need updating and testing.
+
+
+Windows Support
+---------------
+
+Salt states on windows are now much more viable thanks to contributions from
+our community! States for file, service, local user, and local group management are more fully
+fleshed out along with network and disk modules. Windows users can also now manage
+registry entries using the new "reg" module.

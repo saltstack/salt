@@ -1,0 +1,76 @@
+========================
+Salt 0.8.8 release notes
+========================
+
+Salt 0.8.8 is here! This release adds a great deal of code and some serious new
+features.
+
+Improved Documentation has been set up for salt using sphinx thanks to the
+efforts of Seth House. This new documentation system will act as the back end
+to the salt website which is still under heavy development. The new sphinx
+documentation system has also been used to greatly clean up the salt manpages.
+The salt 7 manpage in particular now contains extensive information which was
+previously only in the wiki. The new documentation can be found at:
+https://docs.saltproject.io/
+We still have a lot to add, and when the domain is set up I will post another
+announcement.
+
+More additions have been made to the ZeroMQ setup, particularly in the realm
+of file transfers. Salt 0.8.8 introduces a built in, stateless, encrypted file
+server which allows salt minions to download files from the salt master using
+the same encryption system used for all other salt communications. The main
+motivation for the salt file server has been to facilitate the new salt state
+system.
+
+Much of the salt code has been cleaned up and a new cleaner logging system has
+been introduced thanks to the efforts of Pedro Algarvio. These additions will
+allow for much more flexible logging to be executed by salt, and fixed a great
+deal of my poor spelling in the salt docstrings! Pedro Algarvio has also
+cleaned up the API, making it easier to embed salt into another application.
+
+The biggest addition to salt found in 0.8.8 is the new state system. The salt
+module system has received a new front end which allows salt to be used as a
+configuration management system. The configuration management system allows for
+system configuration to be defined in data structures. The configuration
+management system, or as it is called in salt, the “salt state system” supports
+many of the features found in other configuration managers, but allows for
+system states to be written in a far simpler format, executes at blazing speeds,
+and operates via the salt minion matching system. The state system also operates
+within the normal scope of salt, and requires no additional configuration to
+use.
+
+The salt state system can enforce the following states with many more to come:
+Packages
+Files
+Services
+Executing commands
+Hosts
+
+The system used to define the salt states is based on a data structure, the
+data structure used to define the salt states has been made to be as easy to
+use as possible. The data structure is defined by default using a YAML file
+rendered via a Jinja template. This means that the state definition language
+supports all of the data structures that YAML supports, and all of the
+programming constructs and logic that Jinja supports. If the user does not
+like YAML or Jinja the states can be defined in yaml-mako, json-jinja, or
+json-mako. The system used to render the states is completely dynamic, and any
+rendering system can be added to the capabilities of Salt, this means that a
+rendering system that renders XML data in a cheetah template, or whatever you
+can imagine, can be easily added to the capabilities of salt.
+
+The salt state system also supports isolated environments, as well as matching
+code from several environments to a single salt minion.
+
+The feature base for Salt has grown quite a bit since my last serious
+documentation push. As we approach 0.9.0 the goals are becoming very clear, and
+the documentation needs a lot of work. The main goals for 0.9.0 are to further
+refine the state system, fix any bugs we find, get Salt running on as many
+platforms as we can, and get the documentation filled out. There is a lot more
+to come as Salt moves forward to encapsulate a much larger scope, while
+maintaining supreme usability and simplicity.
+
+If you would like a more complete overview of Salt please watch the Salt
+presentation:
+Slides:
+
+-Thomas S Hatch

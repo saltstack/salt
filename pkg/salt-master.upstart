@@ -1,0 +1,17 @@
+description "Salt Master"
+
+start on (net-device-up
+          and local-filesystems
+          and runlevel [2345])
+stop on runlevel [!2345]
+limit nofile 100000 100000
+
+script
+  # Read configuration variable file if it is present
+  [ -f /etc/default/$UPSTART_JOB ] && . /etc/default/$UPSTART_JOB
+
+  # Activate the virtualenv if defined
+  [ -f $SALT_USE_VIRTUALENV/bin/activate ] && . $SALT_USE_VIRTUALENV/bin/activate
+
+  exec salt-master
+end script

@@ -1,0 +1,157 @@
+=========================
+Salt 0.10.5 Release Notes
+=========================
+
+:release: 2012-11-15
+
+Salt 0.10.5 is ready, and comes with some great new features. A few more
+interfaces have been modularized, like the outputter system. The job cache
+system has been made more powerful and can now store and retrieve jobs archived
+in external databases. The returner system has been extended to allow minions
+to easily retrieve data from a returner interface.
+
+As usual, this is an exciting release, with many noteworthy additions!
+
+Major Features
+==============
+
+External Job Cache
+------------------
+
+The external job cache is a system which allows for a returner interface to
+also act as a job cache. This system is intended to allow users to store
+job information in a central location for longer periods of time and to make
+the act of looking up information from jobs executed on other minions easier.
+
+Currently the external job cache is supported via the mongo and redis
+returners:
+
+.. code-block:: yaml
+
+    ext_job_cache: redis
+    redis.host: salt
+
+Once the external job cache is turned on the new `ret` module can be used on
+the minions to retrieve return information from the job cache. This can be a
+great way for minions to respond and react to other minions.
+
+OpenStack Additions
+--------------------
+
+OpenStack integration with Salt has been moving forward at a blistering pace.
+The new `nova`, `glance`, and `keystone` modules represent the beginning of
+ongoing OpenStack integration.
+
+The Salt team has had many conversations with core OpenStack developers and
+is working on linking to OpenStack in powerful new ways.
+
+Wheel System
+------------
+
+A new API was added to the Salt Master which allows the master to be managed
+via an external API. This new system allows Salt API to easily hook into the
+Salt Master and manage configs, modify the state tree, manage the pillar and
+more. The main motivation for the wheel system is to enable features needed
+in the upcoming web UI so users can manage the master just as easily as they
+manage minions.
+
+The wheel system has also been hooked into the external auth system. This
+allows specific users to have granular access to manage components of the
+Salt Master.
+
+Render Pipes
+------------
+
+Jack Kuan has added a substantial new feature. The render pipes system allows
+Salt to treat the render system like unix pipes. This new system enables sls
+files to be passed through specific render engines. While the default renderer
+is still recommended, different engines can now be more easily merged. So to
+pipe the output of Mako used in YAML use this shebang line:
+
+#!mako|yaml
+
+Salt Key Overhaul
+-----------------
+
+The Salt Key system was originally developed as only a CLI interface, but as
+time went on it was pressed into becoming a clumsy API. This release marks a
+complete overhaul of Salt Key. Salt Key has been rewritten to function purely
+from an API and to use the outputter system. The benefit here is that the
+outputter system works much more cleanly with Salt Key now, and the internals
+of Salt Key can be used much more cleanly.
+
+Modular Outputters
+------------------
+
+The outputter system is now loaded in a modular way. This means that output
+systems can be more easily added by dropping a python file down on the master
+that contains the function `output`.
+
+Gzip from Fileserver
+--------------------
+
+Gzip compression has been added as an option to the cp.get_file and cp.get_dir
+commands. This will make file transfers more efficient and faster, especially
+over slower network links.
+
+Unified Module Configuration
+----------------------------
+
+In past releases of Salt, the minions needed to be configured for certain
+modules to function. This was difficult because it required pre-configuring the
+minions. 0.10.5 changes this by making all module configs on minions search the
+master config file for values.
+
+Now if a single database server is needed, then it can be defined in the master
+config and all minions will become aware of the configuration value.
+
+Salt Call Enhancements
+----------------------
+
+The ``salt-call`` command has been updated in a few ways. Now, ``salt-call``
+can take the --return option to send the data to a returner. Also,
+``salt-call`` now reports executions in the minion proc system, this allows the
+master to be aware of the operation salt-call is running.
+
+Death to pub_refresh and sub_timeout
+------------------------------------
+
+The old configuration values `pub_refresh` and `sub_timeout` have been removed.
+These options were in place to alleviate problems found in earlier versions of
+ZeroMQ which have since been fixed. The continued use of these options has
+proven to cause problems with message passing and have been completely removed.
+
+Git Revision Versions
+---------------------
+
+When running Salt directly from git (for testing or development, of course)
+it has been difficult to know exactly what code is being executed. The new
+versioning system will detect the git revision when building and how many
+commits have been made since the last release. A release from git will look
+like this:
+
+0.10.4-736-gec74d69
+
+Svn Module Addition
+-------------------
+
+Anthony Cornehl (twinshadow) contributed a module that adds Subversion support
+to Salt.  This great addition helps round out Salt's VCS support.
+
+Noteworthy Changes
+==================
+
+Arch Linux Defaults to Systemd
+------------------------------
+
+Arch Linux recently changed to use systemd by default and discontinued support
+for init scripts. Salt has followed suit and defaults to systemd now for
+managing services in Arch.
+
+Salt, Salt Cloud and Openstack
+------------------------------
+
+With the releases of Salt 0.10.5 and Salt Cloud 0.8.2, OpenStack becomes the
+first (non-OS) piece of software to include support both on the user level
+(with Salt Cloud) and the admin level (with Salt). We are excited to continue
+to extend support of other platforms at this level.

@@ -1,0 +1,111 @@
+==============================
+Salt Cloud 0.8.0 Release Notes
+==============================
+
+Salt Cloud has reached another milestone, with the 0.8.0 release. This
+release includes many improvements to usability, error handling and general
+stability of the product.
+
+Documentation
+=============
+
+The documentation for Salt Cloud can be found on Read the Docs:
+https://salt-cloud.readthedocs.io
+
+Download
+========
+
+Salt Cloud can be downloaded and install via pypi or github:
+
+https://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.8.0.tar.gz
+
+https://cloud.github.com/downloads/saltstack/salt-cloud/salt-cloud-0.8.0.tar.gz
+
+Some packages have been made available for salt-cloud and more on their
+way. Packages for Arch, and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. Package availability will be announced on the salt mailing list.
+
+Increased Formatting Options
+============================
+
+Additional options have been added to salt-cloud -Q, to support the same kinds
+of formatting already available in Salt:
+
+.. code-block:: bash
+
+  --raw-out
+  --text-out
+  --yaml-out
+  --json-out
+  --no-color
+
+More Helpful Error Messages
+===========================
+
+As an ongoing effort, we have been cleaning up and adding error messages in an
+attempt to make salt-cloud more helpful when something goes wrong. This
+includes displaying messages as they are received from libcloud.
+
+Specify Grains in Map Files
+===========================
+
+Previously, map files only had the ability to specify a profile name, and the
+node names that would be associated with it. Now you can also specify grains
+that will be laid down in each individual node:
+
+.. code-block:: yaml
+
+  vm_profile:
+    - mynodename:
+      minion:
+        master: salt-master
+      grains:
+        fromage: tasty
+
+These grains can also be specified in the profile itself. When this happens,
+the grains in map files will override grains in the profile. For example:
+
+.. code-block:: yaml
+
+  vm_profile:
+    provider: gogrid
+    size: 512MB
+    image: CentOS 6.2 (64-bit) w/ None
+    os: RHEL6
+    minion:
+      master: salt.example.com
+    grains:
+      french: fries
+
+In this example, mynodename will include grains for both fromage and french,
+but the master will be salt-master, not salt.example.com.
+
+AWS Improvements
+================
+
+AWS is much more complex to work with than any of the other supported cloud
+providers. As such, additional configuration has been added in order to
+accommodate their usage:
+
+AWS.ssh_username:
+  Because AWS images can include a variety of different usernames for the
+  initial login, this option allows you to specify which one(s) to use to
+  install salt upon firstboot.
+
+AWS.ssh_interface:
+  AWS instances include both private and public IP addresses. By default,
+  salt-cloud will use the public IP to login. In situations where the
+  salt-master is also located within AWS, the private IP can be used instead.
+
+AWS.location and AWS.availability_zone:
+  These options allow you to specify from within salt-cloud, which AWS
+  locations your machines spin up in.
+
+Ubuntu Fixes
+============
+
+Ubuntu packages automatically start the service upon installation, and needed
+to be handled differently in the deploy script. Configuration is now laid down
+before the package is installed, so that the minion can make its initial start
+happen with the correct configuration.

@@ -1,0 +1,25 @@
+===========================
+Salt 2014.7.2 Release Notes
+===========================
+
+:release: 2015-02-09
+
+Version 2014.7.2 is a bugfix release for :ref:`2014.7.0 <release-2014-7-0>`.
+
+The changes include:
+
+- Fix erroneous warnings for systemd service enabled check (:issue:`19606`)
+- Fix FreeBSD kernel module loading, listing, and persistence
+  :mod:`kmod <salt.modules.freebsdkmod>` (:issue:`197151`, :issue:`19682`)
+- Allow case-sensitive npm package names in the :py:mod:`npm state
+  <salt.states.npm>`.  This may break behavior for people expecting the state
+  to lowercase their npm package names for them.  The :py:mod:`npm module
+  <salt.modules.npm>` was never affected by mandatory lowercasing.
+  (:issue:`20329`)
+- Deprecate the ``activate`` parameter for pip.install for both the
+  :py:mod:`module <salt.modules.pip>` and the :py:mod:`state <salt.state.pip>`.
+  If ``bin_env`` is given and points to a virtualenv, there is no need to
+  activate that virtualenv in a shell for pip to install to the virtualenv.
+- Fix a file-locking bug in gitfs (:issue:`18839`)
+- Deprecated ``archive_user`` in favor of standardized ``user`` parameter in
+  :py:mod:`state <salt.state.archive>` and added ``group`` parameter.

@@ -1,0 +1,8 @@
+#
+master_config: master
+log_file: logs/cloud
+pki_dir: pki
+
+# Influences the list_nodes_select function of cloud providers
+query.selection:
+    - id

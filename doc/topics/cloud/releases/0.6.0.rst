@@ -1,0 +1,111 @@
+==============================
+Salt Cloud 0.6.0 Release Notes
+==============================
+
+The new Salt project, Salt Cloud, is introduced with version 0.6.0. Salt Cloud
+has been developed to ease the automation and integration of Salt with public
+cloud providers by allowing cloud vms to be cleanly defined, created, and
+automatically hooked back into a Salt Master.
+
+While Salt Cloud is primarily made to build cloud vms to tie into a Salt Mater,
+it has been created in a generic way, so that it can be used to provision and
+hook systems of any type via the familiar Salt modules system.
+
+This release supports three public cloud providers (all via libcloud),
+Amazon EC2, Rackspace Cloud and Linode.
+
+Documentation
+=============
+
+The documentation for Salt Cloud can be found on Read the Docs:
+https://salt-cloud.readthedocs.io
+
+Download
+========
+
+Salt Cloud can be downloaded and install via pypi or github:
+
+https://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.6.0.tar.gz
+
+https://cloud.github.com/downloads/saltstack/salt-cloud/salt-cloud-0.6.0.tar.gz
+
+Packages are not yet available, Salt Cloud requires three dependencies, the
+salt libs, libcloud, and paramiko.
+
+Extensible With Cloud Modules
+=============================
+
+The Salt loader system has been employed to make adding support for additional
+public cloud systems just as modular and simple as adding support for new
+package managers in Salt.
+
+Adding support for a new cloud provider is extremely simple, just add a cloud
+module and everything cleanly links together.
+
+Define VM Profiles
+==================
+
+The way a vms is created is done via profiles. Profiles are used to define what
+properties a vm will have, the cloud provider, the size and the image.
+
+.. code-block:: yaml
+
+    centos_rackspace:
+      provider: rackspace
+      image: CentOS 6.2
+      size: 1024 server
+      os: RHEL6
+      minion:
+        grains:
+            role: webserver
+        master: salt.example.com
+
+This profile will be used to create vms on Rackspace cloud with the CentOS 6.2
+image and the Rackspace 1024 vm size. Particulars of the minion config can
+also be specified.
+
+Individual vms can be created from profiles:
+
+.. code-block:: bash
+
+    # salt-cloud -p centos_rackspace web1
+
+This command creates a vms with the name web1 on the Rackspace cloud and
+connects the new vm to a Salt Master located at salt.example.com. The new VM
+has the Salt id of web1.
+
+Define Maps of Profiles
+=======================
+
+When it is desired to have a predefined mapping of many, or a specific group
+of vms then a cloud map can be defined:
+
+.. code-block:: yaml
+
+    centos_rackspace:
+      web1
+      web2
+      web3
+      web4
+    centos_linode:
+      redis1
+      riak1
+      riak2
+      riak3
+    ubuntu_ec2:
+      dev1
+      dev2
+      cassandra1
+      cassandra2
+      cassandra3
+
+This map file will create vms named web 1-4 using the centos_rackspace profile
+on rackspace, the redis and riak vms on linode and the dev and Cassandra vms on
+ec2. It can be run with salt-cloud:
+
+.. code-block:: bash
+
+    # salt-cloud -m mapfile
+
+When creating more than one vm the -P option can be passed, to make the vms
+provision in parallel, greatly speeding up large scale expansions of vms.

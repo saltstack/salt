@@ -1,0 +1,182 @@
+=========================
+Salt 0.10.3 Release Notes
+=========================
+
+:release: 2012-09-30
+
+The latest taste of Salt has come, this release has many fixes and feature
+additions. Modifications have been made to make ZeroMQ connections more
+reliable, the beginning of the ACL system is in place, a new command line
+parsing system has been added, dynamic module distribution has become more
+environment aware, the new `master_finger` option and many more!
+
+Major Features
+==============
+
+ACL System
+----------
+
+The new ACL system has been introduced. The ACL system allows for system users
+other than root to execute salt commands. Users can be allowed to execute
+specific commands in the same way that minions are opened up to the peer
+system.
+
+The configuration value to open up the ACL system is called ``client_acl``
+and is configured like so:
+
+.. code-block:: yaml
+
+    client_acl:
+      fred:
+        - test..*
+        - pkg.list_pkgs
+
+Where `fred` is allowed access to functions in the test module and to the
+``pkg.list_pkgs`` function.
+
+Master Finger Option
+--------------------
+
+The `master_finger` option has been added to improve the security of minion
+provisioning. The `master_finger` option allows for the fingerprint of the
+master public key to be set in the configuration file to double verify that the
+master is valid. This option was added in response to a motivation to
+pre-authenticate the master when provisioning new minions to help prevent
+man in the middle attacks in some situations.
+
+Salt Key Fingerprint Generation
+-------------------------------
+
+The ability to generate fingerprints of keys used by Salt has been added to
+``salt-key``. The new option `finger` accepts the name of the key to generate
+and display a fingerprint for.
+
+.. code-block:: bash
+
+    salt-key -F master
+
+Will display the fingerprints for the master public and private keys.
+
+Parsing System
+--------------
+
+Pedro Algavio, aka s0undt3ch, has added a substantial update to the command
+line parsing system that makes the help message output much cleaner and easier
+to search through. Salt parsers now have `--versions-report` besides usual
+`--version` info which you can provide when reporting any issues found.
+
+Key Generation
+--------------
+
+We have reduced the requirements needed for `salt-key` to generate minion keys.
+You're no longer required to have salt configured and its common directories
+created just to generate keys. This might prove useful if you're batch creating
+keys to pre-load on minions.
+
+Startup States
+--------------
+
+A few configuration options have been added which allow for states to be run
+when the minion daemon starts. This can be a great advantage when deploying
+with Salt because the minion can apply states right when it first runs. To
+use startup states set the ``startup_states`` configuration option on the
+minion to `highstate`.
+
+New Exclude Declaration
+-----------------------
+
+Some users have asked about adding the ability to ensure that other sls files
+or ids are excluded from a state run. The exclude statement will delete all of
+the data loaded from the specified sls file or will delete the specified id:
+
+.. code-block:: yaml
+
+    exclude:
+      - sls: http
+      - id: /etc/vimrc
+
+Max Open Files
+--------------
+
+While we're currently unable to properly handle ZeroMQ's abort signals when the
+max open files is reached, due to the way that's handled on ZeroMQ's, we have
+minimized the chances of this happening without at least warning the user.
+
+More State Output Options
+-------------------------
+
+Some major changes have been made to the state output system. In the past state
+return data was printed in a very verbose fashion and only states that failed
+or made changes were printed by default. Now two options can be passed to the
+master and minion configuration files to change the behavior of the state
+output. State output can be set to verbose (default) or non-verbose with the
+``state_verbose`` option:
+
+.. code-block:: yaml
+
+    state_verbose: False
+
+It is noteworthy that the state_verbose option used to be set to `False` by
+default but has been changed to `True` by default in 0.10.3 due to many
+requests for the change.
+
+Te next option to be aware of new and called ``state_output``. This option
+allows for the state output to be set to `full` (default) or `terse`.
+
+The `full` output is the standard state output, but the new `terse` output
+will print only one line per state making the output much easier to follow when
+executing a large state system.
+
+.. code-block:: yaml
+
+    state_output: terse
+
+
+`state.file.append` Improvements
+--------------------------------
+
+The salt state `file.append()` tries *not* to append existing text. Previously
+the matching check was being made line by line. While this kind of check might
+be enough for most cases, if the text being appended was multi-line, the check
+would not work properly. This issue is now properly handled, the match is done
+as a whole ignoring any white space addition or removal except inside commas.
+For those thinking that, in order to properly match over multiple lines, salt
+will load the whole file into memory, that's not true. For most cases this is
+not important but an erroneous order to read a 4GB file, if not properly
+handled, like salt does, could make salt chew that amount of memory.  Salt has
+a buffered file reader which will keep in memory a maximum of 256KB and
+iterates over the file in chunks of 32KB to test for the match, more than
+enough, if not, explain your usage on a ticket. With this change, also
+`salt.modules.file.contains()`, `salt.modules.file.contains_regex()`,
+`salt.modules.file.contains_glob()` and `salt.utils.find` now do the searching
+and/or matching using the buffered chunks approach explained above.
+
+Two new keyword arguments were also added, `makedirs`, and `source`.
+The first, `makedirs` will create the necessary directories in order to append
+to the specified file, of course, it only applies if we're trying to append to
+a non-existing file on a non-existing directory:
+
+.. code-block:: yaml
+
+    /tmp/salttest/file-append-makedirs:
+        file.append:
+            text: foo
+            makedirs: True
+
+
+The second, `source`, allows one to append the contents of a file instead of
+specifying the text.
+
+.. code-block:: yaml
+
+    /tmp/salttest/file-append-source:
+
+    file.append:
+        - source: salt://testfile
+
+Security Fix
+============
+
+A timing vulnerability was uncovered in the code which decrypts the AES
+messages sent over the network. This has been fixed and upgrading is
+strongly recommended.

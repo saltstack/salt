@@ -1,0 +1,60 @@
+========================
+Salt 0.6.0 release notes
+========================
+
+The Salt remote execution manager has reached initial functionality! Salt is a
+management application which can be used to execute commands on remote sets of
+servers.
+
+The whole idea behind Salt is to create a system where a group of servers can
+be remotely controlled from a single master, not only can commands be executed
+on remote systems, but salt can also be used to gather information about your
+server environment.
+
+Unlike similar systems, like Func and MCollective, Salt is extremely simple to
+setup and use, the entire application is contained in a single package, and the
+master and minion daemons require no running dependencies in the way that Func
+requires Certmaster and MCollective requires activeMQ.
+
+Salt also manages authentication and encryption. Rather than using SSL for
+encryption, salt manages encryption on a payload level, so the data sent across
+the network is encrypted with fast AES encryption, and authentication uses RSA
+keys. This means that Salt is fast, secure, and very efficient.
+
+Messaging in Salt is executed with ZeroMQ, so the message passing interface is
+built into salt and does not require an external ZeroMQ server. This also adds
+speed to Salt since there is no additional bloat on the networking layer, and
+ZeroMQ has already proven itself as a very fast networking system.
+
+The remote execution in Salt is "Lazy Execution", in that once the command is
+sent the requesting network connection is closed. This makes it easier to
+detach the execution from the calling process on the master, it also means that
+replies are cached, so that information gathered from historic commands can be
+queried in the future.
+
+Salt also allows users to make execution modules in Python. Writers of these
+modules should also be pleased to know that they have access to the impressive
+information gathered from PuppetLabs' Facter application, making Salt module
+more flexible. In the future I hope to also allow Salt to group servers based
+on Facter information as well.
+
+All in all Salt is fast, efficient, and clean, can be used from a simple command
+line client or through an API, uses message queue technology to make network
+execution extremely fast, and encryption is handled in a very fast and
+efficient manner. Salt is also VERY easy to use and VERY easy to extend.
+
+You can find the source code for Salt on my GitHub page, I have also set up a
+few wiki pages explaining how to use and set up Salt. If you are using Arch
+Linux there is a package available in the Arch Linux AUR.
+
+GitHub page: |saltrepo|
+
+Wiki: https://github.com/saltstack/salt/wiki
+
+Arch Linux Package: https://aur.archlinux.org/packages/salt-git/
+
+I am very open to contributions, for instance I need packages for more Linux
+distributions as well as BSD packages and testers.
+
+Give Salt a try, this is the initial release and is not a 1.0 quality release,
+but it has been working well for me! I am eager to get your feedback!

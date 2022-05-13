@@ -1,0 +1,57 @@
+# Package generated configuration file
+# See the sshd_config(5) manpage for details
+
+Port 2827
+ListenAddress 127.0.0.1
+Protocol 2
+#UsePrivilegeSeparation yes
+# Turn strict modes off so that we can operate in /tmp
+StrictModes no
+
+# Lifetime and size of ephemeral version 1 server key
+#KeyRegenerationInterval 3600
+#ServerKeyBits 1024
+
+# Logging
+SyslogFacility AUTH
+LogLevel INFO
+
+# Authentication:
+LoginGraceTime 120
+PermitRootLogin without-password
+StrictModes yes
+
+#RSAAuthentication yes
+PubkeyAuthentication yes
+#AuthorizedKeysFile	%h/.ssh/authorized_keys
+#AuthorizedKeysFile	key_test.pub
+
+# Don't read the user's ~/.rhosts and ~/.shosts files
+IgnoreRhosts yes
+# For this to work you will also need host keys in /etc/ssh_known_hosts
+#RhostsRSAAuthentication no
+# similar for protocol version 2
+HostbasedAuthentication no
+#IgnoreUserKnownHosts yes
+
+# To enable empty passwords, change to yes (NOT RECOMMENDED)
+PermitEmptyPasswords no
+
+# Change to yes to enable challenge-response passwords (beware issues with
+# some PAM modules and threads)
+ChallengeResponseAuthentication no
+
+# Change to no to disable tunnelled clear text passwords
+PasswordAuthentication no
+
+X11Forwarding no
+X11DisplayOffset 10
+PrintMotd no
+PrintLastLog yes
+TCPKeepAlive yes
+#UseLogin no
+AcceptEnv LANG LC_*
+
+Subsystem sftp /usr/lib/openssh/sftp-server
+
+UsePAM yes

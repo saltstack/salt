@@ -1,0 +1,150 @@
+# Master Settings
+# Connects to syndic_master via syndic
+id: master
+interface: 127.0.0.1
+publish_port: 64505
+ret_port: 64506
+worker_threads: 3
+pidfile: master.pid
+sock_dir: master_sock
+timeout: 12
+fileserver_list_cache_time: 0
+file_buffer_size: 8192
+file_recv: True
+pillar_opts: True
+log_file: master.log
+log_fmt: '[%(asctime)s.%(msecs)s] %(colorlevel)s%(colorname)s%(colorprocess)s %(funcName)s() L%(lineno)s %(processName)s %(message)s'
+log_level_logfile: debug
+key_logfile: key.log
+ssh_log_file: ssh.log
+token_file: /tmp/ksfjhdgiuebfgnkefvsikhfjdgvkjahcsidk
+
+# These settings needed for tests on Windows which defaults
+# to ipc_mode: tcp
+tcp_master_pub_port: 64512
+tcp_master_pull_port: 64513
+tcp_master_publish_pull: 64514
+tcp_master_workers: 64515
+
+peer:
+  '.*':
+    - '(x509|test).*'
+    - 'match.*'
+
+ext_pillar:
+  - ext_pillar_opts:
+    - test_issue_5951_actual_file_roots_in_opts
+
+config_opt:
+  layer2: 'kosher'
+yaml_utf8: True
+
+external_auth:
+  pam:
+    saltdev-auth:
+      - test.*
+    saltdev-netapi:
+      - '@wheel'
+      - '@runner'
+      - test.*
+    saltdev-key:
+      - '@wheel'
+      - '@runner'
+      - test.*
+    saltdev-runner:
+      - '@wheel'
+      - '@runner'
+      - test.*
+    saltops%:
+      - '@wheel'
+      - '@runner'
+      - 'test.*'
+  auto:
+    saltdev_auto:
+      - '@wheel'
+      - '@runner'
+      - test.*
+    saltdev_api:
+      - '@wheel'
+      - '@runner'
+      - test.*
+      - grains.*
+    '*':
+      - '@wheel'
+      - '@runner'
+      - test.*
+
+master_tops:
+  master_tops_test: True
+
+nodegroups:
+  min: minion
+  sub_min: sub_minion
+  mins: N@min or N@sub_min
+  list_nodegroup:
+    - 'minion'
+    - 'sub_minion'
+  multiline_nodegroup:
+    - 'minion'
+    - 'or'
+    - 'sub_minion'
+  one_minion_list:
+    - 'minion'
+  redundant_minions: N@min or N@mins
+  nodegroup_loop_a: N@nodegroup_loop_b
+  nodegroup_loop_b: N@nodegroup_loop_a
+  missing_minion: L@minion,ghostminion
+  list_group: N@multiline_nodegroup
+  one_list_group: N@one_minion_list
+  list_group2: N@list_nodegroup
+
+
+mysql.host: localhost
+mysql.user: 'salt'
+mysql.pass: 'salt'
+mysql.db: 'salt'
+mysql.port: 3306
+
+libcloud_dns:
+  profile_test1:
+    driver: cloudflare
+    key: 12345
+    secret: mysecret
+  profile_test2:
+    driver: godaddy
+    key: 12345
+    secret: mysecret
+    shopper_id: 12345
+
+autosign_grains_dir: autosign_grains
+autosign_file: autosign_file
+
+# disable discovery for test suite saltstack/salt-jenkins#683
+discovery: false
+
+# enable using ssh minions and regular minions
+#enable_ssh_minions: True
+#ignore_host_keys: True
+
+# test vault
+# set uses to 0 so the token
+# has unlimited uses available.
+vault:
+  url: http://127.0.0.1:8200
+  auth:
+    method: token
+    token: testsecret
+    uses: 0
+  policies:
+  - testpolicy
+peer_run:
+  .*:
+  - vault.generate_token
+sdbvault:
+  driver: vault
+sdbetcd:
+  driver: etcd
+  etcd.host: 127.0.0.1
+  etcd.port: 2379
+venafi:
+  fake: "true"

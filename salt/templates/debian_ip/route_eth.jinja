@@ -1,0 +1,6 @@
+#!/bin/sh
+# {{route_type}}
+test "${IFACE}" = "{{iface}}" || exit 0
+{% for route in routes %}{% if route.name %}# {{route.name}}
+{%endif%}ip route {{route_type}} {% if route.ipaddr %}{{route.ipaddr}}{%endif%}{% if route.netmask %}/{{route.netmask}}{%endif%} {% if route.gateway %}via {{route.gateway}}{%endif%} dev {{iface}}{% if route.metric %} metric {{route.metric}}{%endif%}
+{% endfor %}

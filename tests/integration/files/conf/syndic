@@ -1,0 +1,11 @@
+# Syndic Settings
+id: syndic
+interface: 127.0.0.1
+syndic_master: localhost
+syndic_master_port: 54506
+syndic_log_file: logs/syndic.log
+syndic_pidfile: run/syndic.pid
+tcp_pub_port: 64510
+tcp_pull_port: 64511
+sock_dir: syndic_sock
+zmq_filtering: True

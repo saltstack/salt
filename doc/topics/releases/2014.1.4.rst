@@ -1,0 +1,29 @@
+===========================
+Salt 2014.1.4 Release Notes
+===========================
+
+:release: 2014-05-05
+
+Version 2014.1.4 is another bugfix release for :ref:`2014.1.0
+<release-2014-1-0>`.  Changes include:
+
+- Fix setup.py dependency issue (:issue:`12031`)
+- Fix handling for IOErrors under certain circumstances (:issue:`11783` and
+  :issue:`11853`)
+- Fix fatal exception when ``/proc/1/cgroup`` is not readable (:issue:`11619`)
+- Fix os grains for OpenSolaris (:issue:`11907`)
+- Fix ``lvs.zero`` module argument pass-through (:issue:`9001`)
+- Fix bug in ``debian_ip`` interaction with :mod:`network.system
+  <salt.states.network.system>` state (:issue:`11164`)
+- Remove bad binary package verification code (:issue:`12177`)
+- Fix traceback in solaris package installation (:issue:`12237`)
+- Fix :mod:`file.directory <salt.states.file.directory>` state symlink handling
+  (:issue:`12209`)
+- Remove ``external_ip`` grain
+- Fix :mod:`file.managed <salt.states.file.managed>` makedirs issues
+  (:issue:`10446`)
+- Fix hang on non-existent Windows drive letter for :mod:`file
+  <salt.modules.win_file>` module (:issue:`9880`)
+- Fix salt minion caching all users on the server (:issue:`9743`)
+- Add strftime formatting for :mod:`ps.boot_time <salt.modules.ps.boot_time>`
+  (:issue:`12428`)

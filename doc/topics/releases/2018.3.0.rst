@@ -1,0 +1,1978 @@
+.. _release-2018-3-0:
+
+=============================================
+Salt 2018.3.0 Release Notes - Codename Oxygen
+=============================================
+
+.. warning::
+    If you are using Jinja to dump lists or dictionaries in your SLS files,
+    this will now cause errors in Python 2 since Jinja does not produce
+    YAML-compatible output when strings in the data structures contain unicode
+    types. The dictionary must be passed through a Jinja filter to produce
+    YAML-compatible strings.
+
+    The below is an example of invalid SLS:
+
+    .. code-block:: yaml
+
+      /etc/foo.conf:
+        file.mangaged:
+          - source: salt://foo.conf
+          - template: jinja
+          - defaults: {{ mydict }}
+
+    To make it valid, use either one of Salt's own ``json`` or ``yaml``
+    filters:
+
+    .. code-block:: yaml
+
+      /etc/foo.conf:
+        file.mangaged:
+          - source: salt://foo.conf
+          - template: jinja
+          - defaults: {{ mydict | json }}
+
+Unicode/Python 3 Compatibility Improvements
+===========================================
+
+This release fixes a number of nagging issues with Unicode strings in Salt
+under Python 2 (ex.  ``'ascii' codec can't decode byte 0xd0``). For best
+results, use a UTF-8 locale (such as by setting the ``LANG`` environment
+variable to one which supports UTF-8. For example ``en_US.UTF-8``,
+``de_DE.UTF-8``, ``ru_RU.UTF-8``, ``C.UTF-8``).
+
+Additionally, a number of Python 3 compatibility fixes have been made, many of
+them having to do with file I/O and str/bytes mismatches.
+
+We continue to work toward improving both Unicode and Python 3 compatibility
+and welcome any feedback.
+
+
+Lots of Docker Improvements
+---------------------------
+
+Much Improved Support for Docker Networking
+*******************************************
+
+The :py:func:`docker_network.present <salt.states.docker_network.present>`
+state has undergone a full rewrite, which includes the following improvements:
+
+Full API Support for Network Management
+***************************************
+
+The improvements made to input handling in the
+:py:func:`docker_container.running <salt.states.docker_container.running>`
+state for 2017.7.0 have now been expanded to :py:func:`docker_network.present
+<salt.states.docker_network.present>`. This brings with it full support for all
+tunable configuration arguments.
+
+Custom Subnets
+**************
+
+Custom subnets can now be configured. Both IPv4 and mixed IPv4/IPv6 networks
+are supported. See :ref:`here <salt-states-docker-network-present-ipam>` for
+more information.
+
+Network Configuration in :py:func:`docker_container.running <salt.states.docker_container.running>` States
+**********************************************************************************************************
+
+A long-requested feature has finally been added! It is now possible to
+configure static IPv4/IPv6 addresses, as well as links and labels. See
+:ref:`here <salt-states-docker-container-network-management>` for more
+information.
+
+.. note::
+    While the ``containers`` argument to :py:func:`docker_network.present
+    <salt.states.docker_network.present>` will continue to be supported, it
+    will no longer be the recommended way of ensuring that a container is
+    attached to a network.
+
+Improved Handling of Images from Custom Registries
+**************************************************
+
+Rather than attempting to parse the tag from the passed image name, Salt will
+now resolve that tag down to an image ID and use that ID instead.
+
+.. important::
+    Due to this change, there are some backward-incompatible changes to image
+    management. See below for a full list of these changes.
+
+Backward-incompatible Changes to Docker Image Management
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Passing image names to the following functions must now be done using separate
+``repository`` and ``tag`` arguments:
+
+- :py:func:`docker.build <salt.modules.dockermod.build>`
+- :py:func:`docker.commit <salt.modules.dockermod.commit>`
+- :py:func:`docker.import <salt.modules.dockermod.import_>`
+- :py:func:`docker.load <salt.modules.dockermod.load>`
+- :py:func:`docker.tag <salt.modules.dockermod.tag_>`
+- :py:func:`docker.sls_build <salt.modules.dockermod.sls_build>`
+
+Additionally, the ``tag`` argument must now be explicitly passed to the
+:py:func:`docker_image.present <salt.states.docker_image.present>` state,
+unless the image is being pulled from a docker registry.
+
+State and Execution Module Support for ``docker run`` Functionality
+*******************************************************************
+
+The :py:func:`docker_container.running <salt.states.docker_container.running>`
+state is good for containers which run services, but it is not as useful for
+cases in which the container only needs to run once. The ``start`` argument to
+:py:func:`docker_container.running <salt.states.docker_container.running>` can
+be set to ``False`` to prevent the container from being started again on a
+subsequent run, but for many use cases this is not sufficient. Therefore, the
+:py:func:`docker.run_container <salt.modules.dockermod.run_container>`
+remote-execution function was added. When used on the Salt CLI, it will return
+information about the container, such as its name, ID, exit code, and any
+output it produces.
+
+State support has also been added via the :py:func:`docker_container.run
+<salt.states.docker_container.run>` state. This state is modeled after the
+:py:func:`cmd.run <salt.states.cmd.run>` state, and includes arguments like
+``onlyif``, ``unless``, and ``creates`` to control whether or not the container
+is run.
+
+Full API Support for :py:func:`docker.logs <salt.modules.dockermod.logs>`
+*************************************************************************
+
+This function now supports all of the functions that its Docker API counterpart
+does, allowing you to do things like include timestamps, and also suppress
+stdout/stderr, etc. in the return.
+
+`start` Argument Added to :py:func:`docker.create <salt.modules.dockermod.create>` Function
+*******************************************************************************************
+
+This removes the need to run :py:func:`docker.start
+<salt.modules.dockermod.start_>` separately when creating containers on the
+Salt CLI.
+
+.. code-block:: bash
+
+    salt myminion docker.create image=foo/bar:baz command=/path/to/command start=True
+
+Use SaltSSH Minions like regular Master-Minions
+===============================================
+
+The Master process can now also call SSH minions as if they were connected to
+the master using ZeroMQ.  By setting ``enable_ssh_minions: True`` in the master
+config file, the master will create a Salt SSH client process which connects to
+the minion and returns the output for the ``salt`` CLI to use like a regular
+minion. This can be used anywhere the LocalClient is used.
+
+Exceptions Raised for Authentication/Authorization Errors
+=========================================================
+
+When sending ``publish`` commands via ``master.py`` and ``masterapi.py`` and an
+authorization or authentication problem is encountered, Salt will now raise the
+appropriate exceptions instead of returning an empty string: ``''``.
+
+The reasoning behind this change is to make it easier to debug various scenarios
+surrounding authentication and authorization issues more effectively.
+
+Comparison Operators in Package Installation
+============================================
+
+Salt now supports using comparison operators (e.g. ``>=1.2.3``) when installing
+packages on minions which use :mod:`yum/dnf <salt.modules.yumpkg>` or
+:mod:`apt <salt.modules.aptpkg>`. This is supported both in the
+:py:func:`pkg.installed <salt.states.pkg.installed>` state and in the ``pkg.install``
+remote execution function.
+
+:ref:`Master Tops <master-tops-system>` Changes
+===============================================
+
+When both :ref:`Master Tops <master-tops-system>` and a
+:ref:`Top File <states-top>` produce SLS matches for a given minion, the matches
+were being merged in an unpredictable manner which did not preserve ordering. This has
+been changed. The top file matches now execute in the expected order, followed
+by any master tops matches that are not matched via a top file.
+
+To make master tops matches execute first, followed by top file matches, set
+the new :conf_minion:`master_tops_first` minion config option to ``True``.
+
+Several Jinja Filters Renamed
+=============================
+
+The following Jinja filters (originally added in 2017.7.0) have been renamed
+due to the fact that they were inaccurately named when initially added. The
+original names will be supported until the 3000 release of Salt.
+
+- :jinja_ref:`rand_str` renamed to :jinja_ref:`random_hash`
+- :jinja_ref:`jinja_decode_dict` renamed to :jinja_ref:`jinja_encode_dict`
+- :jinja_ref:`jinja_decode_list` renamed to :jinja_ref:`jinja_encode_list`
+
+Return Codes for Runner/Wheel Functions
+=======================================
+
+When using :ref:`orchestration <orchestrate-runner>`, runner and wheel
+functions used to report a ``True`` result if the function ran to completion
+without raising an exception. It is now possible to set a return code in the
+``__context__`` dictionary, allowing runner and wheel functions to report that
+they failed. Here's some example pseudocode:
+
+.. code-block:: python
+
+    def myrunner():
+        ...
+        # do stuff
+        ...
+        if some_error_condition:
+            __context__["retcode"] = 1
+        return result
+
+Variable Update Intervals for Fileserver Backends
+=================================================
+
+Prior to this release, fileservers would be updated as part of a dedicated
+"maintenance" process, in which various routine maintenance tasks were
+performed. This tied the update interval to the :conf_master:`loop_interval`
+config option, and also forced all fileservers to update at the same interval.
+
+2018.3.0 adds the following configuration options for the various fileserver
+backends:
+
+- :conf_master:`roots_update_interval`
+- :conf_master:`azurefs_update_interval`
+- :conf_master:`gitfs_update_interval`
+- :conf_master:`hgfs_update_interval`
+- :conf_master:`minionfs_update_interval`
+- :conf_master:`s3fs_update_interval`
+- :conf_master:`svnfs_update_interval`
+
+These allow for update intervals to be set for each individual backend. The
+default value for each of these is 60 seconds.
+
+In addition, for :ref:`GitFS <tutorial-gitfs>` it is also possible to apply
+intervals to individual remotes. See :ref:`here <gitfs-update-intervals>` for
+examples.
+
+.. note::
+    git_pillar does not yet support variable update intervals, this is targeted
+    for the next feature release (2019.2.0).
+
+LDAP via External Authentication Changes
+========================================
+
+In this release of Salt, if LDAP Bind Credentials are supplied, then
+these credentials will be used for all LDAP access except the first
+authentication when a job is submitted.  The first authentication will
+use the user's credentials as passed on the CLI.  This behavior is to
+accommodate certain two-factor authentication schemes where the authentication
+token can only be used once.
+
+In previous releases the bind credentials would only be used to determine
+the LDAP user's existence and group membership.  The user's LDAP credentials
+were used from then on.
+
+Stormpath External Authentication Removed
+=========================================
+
+Per Stormpath's announcement, their API will be shutting down on 8/17/2017 at
+noon PST so the Stormpath external authentication module has been removed.
+
+https://stormpath.com/oktaplusstormpath
+
+
+New (Proxy) Minion Configuration Options
+========================================
+
+To be able to connect the Minion to the Master using a certain source IP address
+or port, the following options have been added:
+
+- :conf_minion:`source_interface_name`
+- :conf_minion:`source_address`
+- :conf_minion:`source_ret_port`
+- :conf_minion:`source_publish_port`
+
+:conf_minion:`environment` config option renamed to :conf_minion:`saltenv`
+==========================================================================
+
+The :conf_minion:`environment` config option predates referring to a salt
+fileserver environment as a **saltenv**. To pin a minion to a single
+environment for running states, one would use :conf_minion:`environment`, but
+overriding that environment would be done with the ``saltenv`` argument. For
+consistency, :conf_minion:`environment` is now simply referred to as
+:conf_minion:`saltenv`. There are no plans to deprecate or remove
+:conf_minion:`environment`, if used it will log a warning and its value will be
+used as :conf_minion:`saltenv`.
+
+:conf_minion:`lock_saltenv` config option added
+===============================================
+
+If set to ``True``, this option will prevent a minion from allowing the
+``saltenv`` argument to override the value set in :conf_minion:`saltenv` when
+running states.
+
+Failed Minions for State/Function Orchestration Jobs Added to Changes Dictionary
+================================================================================
+
+For orchestration jobs which run states (or run remote execution functions and
+also use a :ref:`fail function <orchestrate-runner-fail-functions>` to indicate
+success or failure), minions which have ``False`` results were previously
+included as a formatted string in the comment field of the return for that
+orchestration job. This made the failed returns difficult to :ref:`parse
+programatically <orchestrate-runner-parsing-results-programatically>`. The
+failed returns in these cases are now included in the changes dictionary,
+making for much easier parsing.
+
+Grains
+======
+
+- ``fc_wwn`` - Show all fibre channel world wide port names for a host, must be
+  enabled with `fibre_channel_grains`
+
+- ``iscsi_iqn`` - Show the iSCSI IQN name for a host
+
+- ``swap_total`` - Show the configured swap_total for Linux, \*BSD, OS X and
+  Solaris/SunOS
+
+- ``virtual``:
+
+    - identifies reports KVM and VMM hypervisors when running an OpenBSD guest
+
+    - for detecting Solaris Logical Domains (LDOMs) running on T-Series SPARC
+      hardware. The ``virtual_subtype`` grain is populated as a list of domain
+      roles.
+
+Salt Minion Auto-discovery
+==========================
+
+Using auto-discovery, the Salt Minion now no longer needs to be configured
+against a specific DNS name or IP address of a Master.
+
+For this feature Salt Master now requires port 4520 for UDP broadcast packets to be opened
+and the Salt Minion be able to send UDP packets to the same port.
+
+Configuration
+=============
+
+By default, automatic discovery is disabled.
+
+.. warning::
+    Due to the current limitations that will be changing in a future release,
+    before you turn on auto-discovery, make sure your network is secured and
+    trusted.
+
+Auto-discovery is configured on Master and Minion. Both of them are configured via the ``discovery`` option
+as follows:
+
+**Master configuration**
+
+To use the default configuration, which accepts any minion, simply set ``discovery`` to True:
+
+.. code-block:: yaml
+
+       discovery: true
+
+A sub-option called `mapping` allows auto-discovery to help find the proper
+Master. The mapping contains an arbitrary set of key/value pairs, which the
+Minion configuration can target. By default, no mappings are set.
+
+Example:
+
+.. code-block:: yaml
+
+       discovery:
+         mapping:
+           description: SES 5.0
+           node: 1
+
+It is also possible to change the port used from the default of ``4520``, by
+setting a ``port`` option under the Master's ``discovery`` configuration:
+
+.. code-block:: yaml
+
+    discovery:
+      port: 4567
+
+.. note::
+    When using a port number other than the default, the Minion's ``discovery``
+    configuration must *also* have a port specified, otherwise the Minion will
+    still attempt to contact the Master on port ``4520``.
+
+**Minion configuration**
+
+In addition to the ``mapping`` and ``port`` options, the following additional options are available to Minions:
+
+- ``attempts`` - This option specifies how many broadcast requests should be
+  sent to the network, waiting for any Master response. Each attempt takes a
+  couple of seconds, so raising this value may result in a slower Minion
+  startup. Note that, on a properly-configured network, autodiscovery should
+  succeed on the first attempt. By default, this value is set to ``3``.
+- ``match`` - This option can be set to either ``all`` or ``any``, and it
+  determines how the values configured in ``mapping`` are matched. If set to
+  ``all``, then all of the key/value pairs in the Minion's ``mapping`` must
+  match a given Master. If set to ``any`` (the default), then any match to a
+  key/value mapping will constitute a match.
+- ``pause`` - The interval in seconds between attempts (default: 5).
+- ``fibre_channel_grains`` - Enables the ``fc_wwn`` grain. (Default: False)
+- ``iscsi_grains`` - Enables the ``iscsi_iqn`` grain. (Default: False)
+
+Connection to a type instead of DNS
+===================================
+
+By now each Minion was connecting to a Master by DNS or IP address. From now on
+it is possible also to connect to a _type_ of a Master. For example, in a
+network there are three different Masters, each corresponds for a particular
+niche or environment or specific role etc. The Minion is supposed to connect
+only to one of those Masters that is described appropriately.
+
+To achieve such an effect, each ``/etc/salt/master`` configuration should have
+a ``discovery`` option, which should have a ``mapping`` element with arbitrary
+key/value pairs. The same configuration should be on the Minion, so then when
+mapping matches, Minion recognises Master as its connection target.
+
+Example for Master configuration (``/etc/salt/master``):
+
+.. code-block:: yaml
+
+       discovery:
+         mapping:
+           description: SES 5.0
+           node: 1
+
+The example above describes a system that is running a particular product,
+where ``description`` is an arbitrary key and ``SES 5.0`` is just a string. In
+order to match exactly this Master, the following configuration at Minion
+should be present:
+
+.. code-block:: yaml
+
+       discovery:
+         match: all  # Can be "all" or "any"
+         mapping:
+           description: SES 5.0
+           node: 1
+
+Notice ``match`` criteria is set to ``all``. This would mean that from all
+found Masters select only that, which ``description`` is set to ``SES 5.0``
+_and_ ``node`` is set to ``1``. All other Masters will be ignored.
+
+
+Limitations
+===========
+
+This feature has a couple of _temporary_ limitations that are subject to change
+in the future:
+
+- Only one Master on the network is supported. Currently the Minion cannot
+  select which Master out of few the same to choose. This will change to
+  choosing the Master that is least loaded.
+
+- Minions will accept _any_ master that matches connection criteria without any
+  particular security applied (priv/pub key check, signature, fingerprint etc).
+  That implies that administrator is expected to know his network and make sure
+  it is clean.
+
+New Modules
+===========
+
+- :mod:`salt.modules.purefa <salt.modules.purefa>`
+
+New NaCl Renderer
+=================
+
+A new renderer has been added for encrypted data.
+
+New support for Cisco UCS Chassis
+=================================
+
+The salt proxy minion now allows for control of Cisco USC chassis. See
+the ``cimc`` modules for details.
+
+New support for Cassandra v3
+============================
+
+The ``cassandra_cql`` module now supports Cassandra v3 which has changed
+its internal schema to define keyspaces and columns.
+
+New salt-ssh roster
+===================
+
+A new roster has been added that allows users to pull in a list of hosts
+for salt-ssh targeting from a ``~/.ssh`` configuration. For full details,
+please see the ``sshconfig`` roster.
+
+New GitFS Features
+==================
+
+Two new features which affect how GitFS maps branches/tags to fileserver
+environments (i.e. ``saltenvs``) have been added:
+
+1. It is now possible to completely turn off Salt's default mapping logic
+   (aside from the mapping of the ``base`` saltenv). This can be triggered
+   using the new :conf_master:`gitfs_disable_saltenv_mapping` config option.
+
+   .. note::
+       When this is disabled, only the ``base`` saltenv and any configured
+       using :ref:`per-saltenv configuration parameters
+       <gitfs-per-saltenv-config>` will be available.
+
+2. The types of refs which Salt will use as saltenvs can now be controlled. In
+   previous releases, branches and tags were both mapped as environments, and
+   individual commit SHAs could be specified as saltenvs in states (and when
+   caching files using :py:func:`cp.cache_file <salt.modules.cp.cache_file>`).
+   Using the new :conf_master:`gitfs_ref_types` config option, the types of
+   refs which are used as saltenvs can be restricted. This makes it possible to
+   ignore all tags and use branches only, and also to keep SHAs from being made
+   available as saltenvs.
+
+Additional output modes
+=======================
+
+The ``state_output`` parameter now supports ``full_id``, ``changes_id`` and
+``terse_id``.  Just like ``mixed_id``, these use the state ID as name in the
+highstate output.  For more information on these output modes, see the docs for
+the :mod:`Highstate Outputter <salt.output.highstate>`.
+
+Windows
+=======
+
+Python Version
+--------------
+
+Python 2 Windows API was design when Windows did not support Unicode. Windows
+now supports Unicode however to keep backwards compatibility Python 2 Windows
+API has not been changed.  Python 3 Windows API supports Unicode. Salt Python 3
+installer is the recommend choice for users who need characters other than
+Non-ASCII (7bit) characters.
+
+:py:mod:`pkg <salt.modules.win_pkg>` Execution module changes
+-------------------------------------------------------------
+
+Significant changes have been made to the :mod:`win_pkg <salt.modules.win_pkg>`
+execution module. Users should test this release against their existing package
+sls definition files. These changes are also in 2016.11.9 & 2017.7.3.
+
+- ``pkg.list_available`` no longer defaults to refreshing the winrepo meta
+  database.
+
+- ``pkg.install`` without a ``version`` parameter no longer upgrades software
+  if the software is already installed. Use ``pkg.install version=latest`` or
+  in a state use ``pkg.latest`` to get the old behavior.
+
+- ``pkg.list_pkgs`` now returns multiple versions if software installed more
+  than once.
+
+- ``pkg.list_pkgs`` now returns 'Not Found' when the version is not found
+  instead of '(value not set)' which matches the contents of the sls
+  definitions.
+
+- ``pkg.remove()`` will wait up to 3 seconds (normally about a second) to detect
+  changes in the registry after removing software, improving reporting of
+  version changes.
+
+- ``pkg.remove()`` can remove ``latest`` software, if ``latest`` is defined in
+  sls definition.
+
+- Documentation was update for the execution module to match the style in new
+  versions, some corrections as well.
+
+- All install/remove commands are prefix with cmd.exe shell and cmdmod is
+  called with a command line string instead of a list. Some sls files in
+  saltstack/salt-winrepo-ng expected the commands to be prefixed with cmd.exe
+  (i.e. the use of ``&``).
+
+- Some execution module functions results, now behavour more like their
+  Unix/Linux versions.
+
+Installer
+---------
+
+Changes to config handling
+**************************
+
+Behavior with existing configuration has changed. With previous windows
+installers the existing config was used and the master and minion id could be
+modified via the installer. It was problematic in that it didn't account for
+configuration that may be defined in the ``minion.d`` directory. This change
+gives you the option via a drop-down list to use one of the following:
+
+- Default Config: Use the config that comes with the installer
+- Existing Config: Use the current config without changes
+- Custom Config: Select a custom config using the file picker
+
+The existing config option will only be available if the installer detects an
+existing config. If there is an existing config, and you choose ``Default`` or
+``Custom``, the existing config will be deleted, including the ``minion.d``
+directory, and replaced by your selection.
+
+The ``Default Config`` and ``Custom Config`` options will allow you to modify
+the Master and the Minion ID. ``Existing Config`` will leave the existing
+configuration unchanged.
+
+These settings can be defined on the command line using the following switches:
+
+- ``/default-config``
+- ``/custom-config=C:\Path\To\Custom\Config\minion``
+
+If neither option is passed and there is an existing config, the default is to
+use the existing config. If there is no existing config (new install) the
+default config will be used.
+
+Multi-master configuration
+**************************
+
+The installer now has the ability to apply a multi-master configuration either
+from the GUI or the command line. The ``master`` field in the GUI can accept
+either a single master or a comma-separated list of masters. The command-line
+switch (``/master=``) can accept the same.
+
+Command-line help
+*****************
+
+The Windows installer will now display command-line help when a help switch
+(``/?``) is passed.
+
+New utils module ``salt.utils.pkg.win``
+---------------------------------------
+
+A new utils module has been added, which gathers information about windows
+installed software. This is currently not used by any salt execution module or
+state at this time. Users are encouraged to run this and report any issues.
+Running the command with the ``detail`` option will be useful for anyone
+developing windows package definitions.  With salt installed in the default
+location the following command will print the help message.
+
+.. code-block:: text
+
+    chcp 65001
+    c:\salt\bin\python.exe c:\salt\bin\lib\site-packages\salt\utils\pkg\win.py
+    c:\salt\bin\python.exe c:\salt\bin\lib\site-packages\salt\utils\pkg\win.py detail system
+
+Salt Cloud Features
+===================
+
+OpenStack Revamp
+----------------
+
+The OpenStack Driver has been rewritten mostly from scratch.  Salt is now using
+the `shade driver <https://docs.openstack.org/shade/latest/>`.
+
+With this, the ``nova`` driver is being deprecated.
+
+:mod:`openstack driver <salt.cloud.clouds.openstack>`
+
+There have also been several new modules and states added for managing OpenStack
+setups using shade as well.
+
+:mod:`keystone <salt.modules.keystoneng>`
+:mod:`keystone role grant <salt.states.keystone_role_grant>`
+:mod:`keystone group <salt.states.keystone_group>`
+:mod:`keystone role <salt.states.keystone_role>`
+:mod:`keystone service <salt.states.keystone_service>`
+:mod:`keystone user <salt.states.keystone_user>`
+:mod:`keystone domain <salt.states.keystone_domain>`
+:mod:`keystone project <salt.states.keystone_project>`
+:mod:`keystone endpoint <salt.states.keystone_endpoint>`
+:mod:`glance <salt.modules.glanceng>`
+:mod:`glance_image <salt.states.glance_image>`
+:mod:`neutron <salt.modules.neutronng>`
+:mod:`neutron subnet <salt.states.neutron_subnet>`
+:mod:`neutron secgroup <salt.states.neutron_secgroup>`
+:mod:`neutron secgroup rule <salt.states.neutron_secgroup_rule>`
+:mod:`neutron network <salt.states.neutron_network>`
+
+
+Pre-Flight Commands
+-------------------
+
+Support has been added for specified "preflight commands" to run on a VM before
+the deploy script is run. These must be defined as a list in a cloud configuration
+file. For example:
+
+.. code-block:: yaml
+
+       my-cloud-profile:
+         provider: linode-config
+         image: Ubuntu 16.04 LTS
+         size: Linode 2048
+         preflight_cmds:
+           - whoami
+           - echo 'hello world!'
+
+These commands will run in sequence **before** the bootstrap script is executed.
+
+New salt-cloud Grains
+---------------------
+
+When salt-cloud creates a new minion, it will now add grain information
+to the minion configuration file, identifying the resources originally used
+to create it.
+
+The generated grain information will appear similar to:
+
+.. code-block:: yaml
+
+    grains:
+      salt-cloud:
+        driver: ec2
+        provider: my_ec2:ec2
+        profile: ec2-web
+
+The generation of salt-cloud grains can be suppressed by the
+option ``enable_cloud_grains: 'False'`` in the cloud configuration file.
+
+Upgraded Saltify Driver
+-----------------------
+
+The salt-cloud Saltify driver is used to provision machines which
+are not controlled by a dedicated cloud supervisor (such as typical hardware
+machines) by pushing a salt-bootstrap command to them and accepting them on
+the salt master. Creation of a node has been its only function and no other
+salt-cloud commands were implemented.
+
+With this upgrade, it can use the salt-api to provide advanced control,
+such as rebooting a machine, querying it along with conventional cloud minions,
+and, ultimately, disconnecting it from its master.
+
+After disconnection from ("destroying" on) one master, a machine can be
+re-purposed by connecting to ("creating" on) a subsequent master.
+
+New Vagrant Driver
+------------------
+
+The salt-cloud Vagrant driver brings virtual machines running in a limited
+environment, such as a programmer's workstation, under salt-cloud control.
+This can be useful for experimentation, instruction, or testing salt configurations.
+
+Using salt-api on the master, and a salt-minion running on the host computer,
+the Vagrant driver can create (``vagrant up``), restart (``vagrant reload``),
+and destroy (``vagrant destroy``) VMs, as controlled by salt-cloud profiles
+which designate a ``Vagrantfile`` on the host machine.
+
+The master can be a very limited machine, such as a Raspberry Pi, or a small
+VagrantBox VM.
+
+Python PyWinRM Module
+---------------------
+
+Versions of ``pywinrm>=0.2.1`` are finally able to disable validation of self
+signed certificates.  :ref:`Here <new-pywinrm>` for more information.
+
+DigitalOcean
+------------
+
+The DigitalOcean driver has been renamed to conform to the company name.  The
+new driver name is ``digitalocean``.  The old name ``digital_ocean`` and a
+short one ``do`` will still be supported through virtual aliases, this is
+mostly cosmetic.
+
+Azure Cloud
+-----------
+
+The azure sdk used for the ``azurearm`` cloud driver now depends on
+``azure-cli>=2.0.12``
+
+New ``saltclass`` pillar/master_tops modules
+============================================
+
+This module clones the behaviour of reclass (http://reclass.pantsfullofunix.net/), without the need of an external app, and add several features to improve flexibility.
+Saltclass lets you define your nodes from simple ``yaml`` files (``.yml``) through hierarchical class inheritance with the possibility to override pillars down the tree.
+
+**Features**
+
+- Define your nodes through hierarchical class inheritance
+
+- Reuse your reclass data with minimal modifications
+
+    - applications => states
+
+    - parameters => pillars
+
+- Use Jinja templating in your yaml definitions
+
+- Access to the following Salt objects in Jinja
+
+    - ``__opts__``
+
+    - ``__salt__``
+
+    - ``__grains__``
+
+    - ``__pillars__``
+
+    - ``minion_id``
+
+- Chose how to merge or override your lists using ^ character (see examples)
+
+- Expand variables ${} with possibility to escape them if needed \${} (see
+  examples)
+
+- Ignores missing node/class and will simply return empty without breaking the
+  pillar module completely - will be logged
+
+An example subset of data is available here:
+https://git.mauras.ch/salt/saltclass/src/branch/master/examples
+
+==========================  ===========
+Terms usable in yaml files  Description
+==========================  ===========
+classes                     A list of classes that will be processed in order
+states                      A list of states that will be returned by master_tops function
+pillars                     A yaml dictionary that will be returned by the ext_pillar function
+environment                 Node saltenv that will be used by master_tops
+==========================  ===========
+
+A class consists of:
+
+- zero or more parent classes
+- zero or more states
+- any number of pillars
+
+A child class can override pillars from a parent class. A node definition is a
+class in itself with an added ``environment`` parameter for ``saltenv``
+definition.
+
+**Class Names**
+
+Class names mimic salt way of defining states and pillar files.
+This means that ``default.users`` class name will correspond to one of these:
+
+- ``<saltclass_path>/classes/default/users.yml``
+- ``<saltclass_path>/classes/default/users/init.yml``
+
+**Saltclass Tree**
+
+A saltclass tree would look like this:
+
+.. code-block:: text
+
+    <saltclass_path>
+    ├── classes
+    │   ├── app
+    │   │   ├── borgbackup.yml
+    │   │   └── ssh
+    │   │       └── server.yml
+    │   ├── default
+    │   │   ├── init.yml
+    │   │   ├── motd.yml
+    │   │   └── users.yml
+    │   ├── roles
+    │   │   ├── app.yml
+    │   │   └── nginx
+    │   │       ├── init.yml
+    │   │       └── server.yml
+    │   └── subsidiaries
+    │       ├── gnv.yml
+    │       ├── qls.yml
+    │       └── zrh.yml
+    └── nodes
+        ├── geneva
+        │   └── gnv.node1.yml
+        ├── lausanne
+        │   ├── qls.node1.yml
+        │   └── qls.node2.yml
+        ├── node127.yml
+        └── zurich
+            ├── zrh.node1.yml
+            ├── zrh.node2.yml
+            └── zrh.node3.yml
+
+**Examples**
+
+``<saltclass_path>/nodes/lausanne/qls.node1.yml``
+
+.. code-block:: jinja
+
+    environment: base
+
+    classes:
+    {% for class in ['default'] %}
+      - {{ class }}
+    {% endfor %}
+      - subsidiaries.{{ __grains__['id'].split('.')[0] }}
+
+``<saltclass_path>/classes/default/init.yml``
+
+.. code-block:: yaml
+
+    classes:
+      - default.users
+      - default.motd
+
+    states:
+      - openssh
+
+    pillars:
+      default:
+        network:
+          dns:
+            srv1: 192.168.0.1
+            srv2: 192.168.0.2
+            domain: example.com
+        ntp:
+          srv1: 192.168.10.10
+          srv2: 192.168.10.20
+
+``<saltclass_path>/classes/subsidiaries/gnv.yml``
+
+.. code-block:: yaml
+
+    pillars:
+      default:
+        network:
+          sub: Geneva
+          dns:
+            srv1: 10.20.0.1
+            srv2: 10.20.0.2
+            srv3: 192.168.1.1
+            domain: gnv.example.com
+        users:
+          adm1:
+            uid: 1210
+            gid: 1210
+            gecos: 'Super user admin1'
+            homedir: /srv/app/adm1
+          adm3:
+            uid: 1203
+            gid: 1203
+            gecos: 'Super user adm
+
+Variable expansions:
+
+Escaped variables are rendered as is - ``${test}``
+
+Missing variables are rendered as is - ``${net:dns:srv2}``
+
+.. code-block:: yaml
+
+    pillars:
+      app:
+      config:
+        dns:
+          srv1: ${default:network:dns:srv1}
+          srv2: ${net:dns:srv2}
+        uri: https://application.domain/call?\${test}
+        prod_parameters:
+          - p1
+          - p2
+          - p3
+      pkg:
+        - app-core
+        - app-backend
+
+List override:
+
+Not using ``^`` as the first entry will simply merge the lists
+
+.. code-block:: yaml
+
+    pillars:
+      app:
+        pkg:
+          - ^
+          - app-frontend
+
+
+**Known limitation**
+
+Currently you can't have both a variable and an escaped variable in the same
+string as the escaped one will not be correctly rendered - '\${xx}' will stay
+as is instead of being rendered as '${xx}'
+
+Lists of comments in state returns
+==================================
+
+State functions can now return a list of strings for the ``comment`` field, as
+opposed to only a single string.  This is meant to ease writing states with
+multiple or multi-part comments.
+
+Beacon configuration changes
+============================
+
+In order to remain consistent and to align with other Salt components such as
+states, support for configuring beacons using dictionary based configuration
+has been deprecated in favor of list based configuration.  All beacons have a
+validation function which will check the configuration for the correct format
+and only load if the validation passes.
+
+avahi_announce
+--------------
+
+Old behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      avahi_announce:
+        run_once: True
+        servicetype: _demo._tcp
+        port: 1234
+        txt:
+          ProdName: grains.productname
+          SerialNo: grains.serialnumber
+          Comments: 'this is a test'
+
+New behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      avahi_announce:
+        - run_once: True
+        - servicetype: _demo._tcp
+        - port: 1234
+        - txt:
+            ProdName: grains.productname
+            SerialNo: grains.serialnumber
+            Comments: 'this is a test'
+
+bonjour_announce
+----------------
+
+Old behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      bonjour_announce:
+        run_once: True
+        servicetype: _demo._tcp
+        port: 1234
+        txt:
+          ProdName: grains.productname
+          SerialNo: grains.serialnumber
+          Comments: 'this is a test'
+
+New behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      bonjour_announce:
+        - run_once: True
+        - servicetype: _demo._tcp
+        - port: 1234
+        - txt:
+            ProdName: grains.productname
+            SerialNo: grains.serialnumber
+            Comments: 'this is a test'
+
+btmp
+----
+
+Old behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      btmp: {}
+
+New behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      btmp: []
+
+glxinfo
+-------
+
+Old behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      glxinfo:
+        user: frank
+        screen_event: True
+
+New behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      glxinfo:
+        - user: frank
+        - screen_event: True
+
+haproxy
+-------
+
+Old behavior:
+
+.. code-block:: yaml
+
+    beacons:
+        haproxy:
+            - www-backend:
+                threshold: 45
+                servers:
+                    - web1
+                    - web2
+            - interval: 120
+
+New behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      haproxy:
+        - backends:
+            www-backend:
+              threshold: 45
+              servers:
+                - web1
+                - web2
+        - interval: 120
+
+inotify
+-------
+
+Old behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      inotify:
+        /path/to/file/or/dir:
+            mask:
+              - open
+              - create
+              - close_write
+            recurse: True
+            auto_add: True
+            exclude:
+              - /path/to/file/or/dir/exclude1
+              - /path/to/file/or/dir/exclude2
+              - /path/to/file/or/dir/regex[a-m]*$:
+            regex: True
+        coalesce: True
+
+New behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      inotify:
+        - files:
+            /path/to/file/or/dir:
+              mask:
+                - open
+                - create
+                - close_write
+              recurse: True
+              auto_add: True
+              exclude:
+                - /path/to/file/or/dir/exclude1
+                - /path/to/file/or/dir/exclude2
+                - /path/to/file/or/dir/regex[a-m]*$:
+              regex: True
+        - coalesce: True
+
+journald
+--------
+
+Old behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      journald:
+        sshd:
+          SYSLOG_IDENTIFIER: sshd
+          PRIORITY: 6
+
+New behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      journald:
+        - services:
+            sshd:
+              SYSLOG_IDENTIFIER: sshd
+              PRIORITY: 6
+
+load
+----
+
+Old behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      load:
+        1m:
+          - 0.0
+          - 2.0
+        5m:
+          - 0.0
+          - 1.5
+        15m:
+          - 0.1
+          - 1.0
+        emitatstartup: True
+        onchangeonly: False
+
+New behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      load:
+        - averages:
+            1m:
+              - 0.0
+              - 2.0
+            5m:
+              - 0.0
+              - 1.5
+            15m:
+              - 0.1
+              - 1.0
+        - emitatstartup: True
+        - onchangeonly: False
+
+log
+---
+
+Old behavior:
+
+.. code-block:: yaml
+
+    beacons:
+        log:
+          file: <path>
+          <tag>:
+            regex: <pattern>
+
+New behavior:
+
+.. code-block:: yaml
+
+    beacons:
+        log:
+          - file: <path>
+          - tags:
+              <tag>:
+                regex: <pattern>
+
+network_info
+------------
+
+Old behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      network_info:
+        - eth0:
+            type: equal
+            bytes_sent: 100000
+            bytes_recv: 100000
+            packets_sent: 100000
+            packets_recv: 100000
+            errin: 100
+            errout: 100
+            dropin: 100
+            dropout: 100
+
+New behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      network_info:
+        - interfaces:
+            eth0:
+              type: equal
+              bytes_sent: 100000
+              bytes_recv: 100000
+              packets_sent: 100000
+              packets_recv: 100000
+              errin: 100
+              errout: 100
+              dropin: 100
+              dropout: 100
+
+network_settings
+----------------
+
+Old behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      network_settings:
+        eth0:
+          ipaddr:
+          promiscuity:
+            onvalue: 1
+        eth1:
+          linkmode:
+
+New behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      network_settings:
+        - interfaces:
+            - eth0:
+                ipaddr:
+                promiscuity:
+                  onvalue: 1
+            - eth1:
+                linkmode:
+
+proxy_example
+-------------
+
+Old behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      proxy_example:
+        endpoint: beacon
+
+New behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      proxy_example:
+        - endpoint: beacon
+
+ps
+--
+
+Old behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      ps:
+        - salt-master: running
+        - mysql: stopped
+
+New behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      ps:
+        - processes:
+            salt-master: running
+            mysql: stopped
+
+salt_proxy
+----------
+
+Old behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      salt_proxy:
+        - p8000: {}
+        - p8001: {}
+
+New behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      salt_proxy:
+        - proxies:
+            p8000: {}
+            p8001: {}
+
+sensehat
+--------
+
+Old behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      sensehat:
+        humidity: 70%
+        temperature: [20, 40]
+        temperature_from_pressure: 40
+        pressure: 1500
+
+New behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      sensehat:
+        - sensors:
+            humidity: 70%
+            temperature: [20, 40]
+            temperature_from_pressure: 40
+            pressure: 1500
+
+service
+-------
+
+Old behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      service:
+        salt-master:
+        mysql:
+
+New behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      service:
+        - services:
+            nginx:
+                onchangeonly: True
+                delay: 30
+                uncleanshutdown: /run/nginx.pid
+
+sh
+--
+
+Old behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      sh: {}
+
+New behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      sh: []
+
+status
+------
+
+Old behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      status: {}
+
+New behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      status: []
+
+telegram_bot_msg
+----------------
+
+Old behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      telegram_bot_msg:
+        token: "<bot access token>"
+        accept_from:
+          - "<valid username>"
+        interval: 10
+
+New behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      telegram_bot_msg:
+        - token: "<bot access token>"
+        - accept_from:
+          - "<valid username>"
+        - interval: 10
+
+twilio_txt_msg
+--------------
+
+Old behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      twilio_txt_msg:
+        account_sid: "<account sid>"
+        auth_token: "<auth token>"
+        twilio_number: "+15555555555"
+        interval: 10
+
+New behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      twilio_txt_msg:
+        - account_sid: "<account sid>"
+        - auth_token: "<auth token>"
+        - twilio_number: "+15555555555"
+        - interval: 10
+
+wtmp
+----
+
+Old behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      wtmp: {}
+
+New behavior:
+
+.. code-block:: yaml
+
+    beacons:
+      wtmp: []
+
+
+New requisites available in state compiler
+==========================================
+
+require_any
+-----------
+
+The use of ``require_any`` demands that one of the required states executes
+before the dependent state. The state containing the ``require_any`` requisite
+is defined as the dependent state. The states specified in the ``require_any``
+statement are defined as the required states. If at least one of the required
+state's execution succeeds, the dependent state will then execute. If all of
+the executions by the required states fail, the dependent state will not
+execute.
+
+watch_any
+---------
+
+The state containing the ``watch_any`` requisite is defined as the watching
+state. The states specified in the ``watch_any`` statement are defined as the
+watched states. When the watched states execute, they will return a dictionary
+containing a key named "changes".
+
+If the "result" of any of the watched states is ``True``, the watching state
+*will execute normally*, and if all of them are ``False``, the watching state
+will never run.  This part of ``watch`` mirrors the functionality of the
+``require`` requisite.
+
+If the "result" of any of the watched states is ``True`` *and* the "changes"
+key contains a populated dictionary (changes occurred in the watched state),
+then the ``watch`` requisite can add additional behavior. This additional
+behavior is defined by the ``mod_watch`` function within the watching state
+module. If the ``mod_watch`` function exists in the watching state module, it
+will be called *in addition to* the normal watching state. The return data from
+the ``mod_watch`` function is what will be returned to the master in this case;
+the return data from the main watching function is discarded.
+
+If the "changes" key contains an empty dictionary, the ``watch`` requisite acts
+exactly like the ``require`` requisite (the watching state will execute if
+"result" is ``True``, and fail if "result" is ``False`` in the watched state).
+
+onchanges_any
+-------------
+
+The ``onchanges_any`` requisite makes a state only apply one of the required
+states generates changes, and if one of the watched state's "result" is
+``True``. This can be a useful way to execute a post hook after changing
+aspects of a system.
+
+onfail_any
+----------
+
+The ``onfail_any`` requisite allows for reactions to happen strictly as a
+response to the failure of at least one other state. This can be used in a
+number of ways, such as executing a second attempt to set up a service or begin
+to execute a separate thread of states because of a failure.
+
+The ``onfail_any`` requisite is applied in the same way as ``require_any`` and
+``watch_any``.
+
+Basic Slots support in state compiler
+=====================================
+
+Slots extend the state syntax and allows you to do things right before the
+state function is executed. So you can make a decision in the last moment right
+before a state is executed.
+
+Slot syntax looks close to the simple python function call. Here is a simple example:
+
+.. code-block:: yaml
+
+    copy-some-file:
+      file.copy:
+        - name: __slot__:salt:test.echo(text=/tmp/some_file)
+        - source: __slot__:salt:test.echo(/etc/hosts)
+
+Read more :ref:`here <slots-subsystem>`.
+
+Cryptographic layer changes
+===========================
+
+M2Crypto is coming back. We are making the crypto backend modular but in this
+release M2Crypto is enabled if it's importable by Python. If not Cryptodome or
+PyCrypto is used as it was in the previous releases. M2Crypto is used in the
+same way as PyCrypto so there would be no compatibility issues, different nodes
+could use different backends.
+
+NaCL Module and Runner changes
+==============================
+
+In addition to argument changes in both the NaCL module and runner for future
+removal in the 3000 release, the default "box_type" has changed from
+``secretbox`` to ``sealedbox``.  SecretBox is data encrypted using private key
+``sk`` and Sealedbox is encrypted using public key ``pk``.
+
+``utils`` functions reorganized into separate modules
+=====================================================
+
+The Salt utility functions from ``salt.utils`` (typically used by those
+developing extension modules for Salt) have been moved into different modules,
+grouped logically based on their functionality. The old function names will
+continue to work until the ``3000`` release of Salt (due around Q1 2019).
+
+The renamed functions are:
+
+- ``salt.utils.appendproctitle``: use ``salt.utils.process.appendproctitle``
+  instead.
+- ``salt.utils.daemonize``: use ``salt.utils.process.daemonize`` instead.
+- ``salt.utils.daemonize_if``: use ``salt.utils.process.daemonize_if`` instead.
+- ``salt.utils.reinit_crypto``: use ``salt.utils.crypt.reinit_crypto`` instead.
+- ``salt.utils.pem_finger``: use ``salt.utils.crypt.pem_finger`` instead.
+- ``salt.utils.to_bytes``: use ``salt.utils.stringutils.to_bytes`` instead.
+- ``salt.utils.to_str``: use ``salt.utils.stringutils.to_str`` instead.
+- ``salt.utils.to_unicode``: use ``salt.utils.stringutils.to_unicode`` instead.
+- ``salt.utils.str_to_num``: use ``salt.utils.stringutils.to_num`` instead.
+- ``salt.utils.is_quoted``: use ``salt.utils.stringutils.is_quoted`` instead.
+- ``salt.utils.dequote``: use ``salt.utils.stringutils.dequote`` instead.
+- ``salt.utils.is_hex``: use ``salt.utils.stringutils.is_hex`` instead.
+- ``salt.utils.is_bin_str``: use ``salt.utils.stringutils.is_bin_str`` instead.
+- ``salt.utils.rand_string``: use ``salt.utils.stringutils.random`` instead.
+- ``salt.utils.contains_whitespace``: use
+  ``salt.utils.stringutils.contains_whitespace`` instead.
+- ``salt.utils.build_whitespace_split_regex``: use
+  ``salt.utils.stringutils.build_whitespace_split_regex`` instead.
+- ``salt.utils.expr_match``: use ``salt.utils.stringutils.expr_match`` instead.
+- ``salt.utils.check_whitelist_blacklist``: use
+  ``salt.utils.stringutils.check_whitelist_blacklist`` instead.
+- ``salt.utils.check_include_exclude``: use
+  ``salt.utils.stringutils.check_include_exclude`` instead.
+- ``salt.utils.print_cli``: use ``salt.utils.stringutils.print_cli`` instead.
+- ``salt.utils.clean_kwargs``: use ``salt.utils.args.clean_kwargs`` instead.
+- ``salt.utils.invalid_kwargs``: use ``salt.utils.args.invalid_kwargs``
+  instead.
+- ``salt.utils.shlex_split``: use ``salt.utils.args.shlex_split`` instead.
+- ``salt.utils.arg_lookup``: use ``salt.utils.args.arg_lookup`` instead.
+- ``salt.utils.argspec_report``: use ``salt.utils.args.argspec_report``
+  instead.
+- ``salt.utils.split_input``: use ``salt.utils.args.split_input`` instead.
+- ``salt.utils.test_mode``: use ``salt.utils.args.test_mode`` instead.
+- ``salt.utils.format_call``: use ``salt.utils.args.format_call`` instead.
+- ``salt.utils.which``: use ``salt.utils.path.which`` instead.
+- ``salt.utils.which_bin``: use ``salt.utils.path.which_bin`` instead.
+- ``salt.utils.path_join``: use ``salt.utils.path.join`` instead.
+- ``salt.utils.check_or_die``: use ``salt.utils.path.check_or_die`` instead.
+- ``salt.utils.sanitize_win_path_string``: use
+  ``salt.utils.path.sanitize_win_path`` instead.
+- ``salt.utils.rand_str``: use ``salt.utils.hashutils.random_hash`` instead.
+- ``salt.utils.get_hash``: use ``salt.utils.hashutils.get_hash`` instead.
+- ``salt.utils.is_windows``: use ``salt.utils.platform.is_windows`` instead.
+- ``salt.utils.is_proxy``: use ``salt.utils.platform.is_proxy`` instead.
+- ``salt.utils.is_linux``: use ``salt.utils.platform.is_linux`` instead.
+- ``salt.utils.is_darwin``: use ``salt.utils.platform.is_darwin`` instead.
+- ``salt.utils.is_sunos``: use ``salt.utils.platform.is_sunos`` instead.
+- ``salt.utils.is_smartos``: use ``salt.utils.platform.is_smartos`` instead.
+- ``salt.utils.is_smartos_globalzone``: use
+  ``salt.utils.platform.is_smartos_globalzone`` instead.
+- ``salt.utils.is_smartos_zone``: use ``salt.utils.platform.is_smartos_zone``
+  instead.
+- ``salt.utils.is_freebsd``: use ``salt.utils.platform.is_freebsd`` instead.
+- ``salt.utils.is_netbsd``: use ``salt.utils.platform.is_netbsd`` instead.
+- ``salt.utils.is_openbsd``: use ``salt.utils.platform.is_openbsd`` instead.
+- ``salt.utils.is_aix``: use ``salt.utils.platform.is_aix`` instead.
+- ``salt.utils.safe_rm``: use ``salt.utils.files.safe_rm`` instead.
+- ``salt.utils.is_empty``: use ``salt.utils.files.is_empty`` instead.
+- ``salt.utils.fopen``: use ``salt.utils.files.fopen`` instead.
+- ``salt.utils.flopen``: use ``salt.utils.files.flopen`` instead.
+- ``salt.utils.fpopen``: use ``salt.utils.files.fpopen`` instead.
+- ``salt.utils.rm_rf``: use ``salt.utils.files.rm_rf`` instead.
+- ``salt.utils.mkstemp``: use ``salt.utils.files.mkstemp`` instead.
+- ``salt.utils.istextfile``: use ``salt.utils.files.is_text_file`` instead.
+- ``salt.utils.is_bin_file``: use ``salt.utils.files.is_binary`` instead.
+- ``salt.utils.list_files``: use ``salt.utils.files.list_files`` instead.
+- ``salt.utils.safe_walk``: use ``salt.utils.files.safe_walk`` instead.
+- ``salt.utils.st_mode_to_octal``: use ``salt.utils.files.st_mode_to_octal``
+  instead.
+- ``salt.utils.normalize_mode``: use ``salt.utils.files.normalize_mode``
+  instead.
+- ``salt.utils.human_size_to_bytes``: use
+  ``salt.utils.files.human_size_to_bytes`` instead.
+- ``salt.utils.backup_minion``: use ``salt.utils.files.backup_minion`` instead.
+- ``salt.utils.str_version_to_evr``: use ``salt.utils.pkg.rpm.version_to_evr``
+  instead.
+- ``salt.utils.parse_docstring``: use ``salt.utils.doc.parse_docstring``
+  instead.
+- ``salt.utils.compare_versions``: use ``salt.utils.versions.compare`` instead.
+- ``salt.utils.version_cmp``: use ``salt.utils.versions.version_cmp`` instead.
+- ``salt.utils.warn_until``: use ``salt.utils.versions.warn_until`` instead.
+- ``salt.utils.kwargs_warn_until``: use
+  ``salt.utils.versions.kwargs_warn_until`` instead.
+- ``salt.utils.get_color_theme``: use ``salt.utils.color.get_color_theme``
+  instead.
+- ``salt.utils.get_colors``: use ``salt.utils.color.get_colors`` instead.
+- ``salt.utils.gen_state_tag``: use ``salt.utils.state.gen_tag`` instead.
+- ``salt.utils.search_onfail_requisites``: use
+  ``salt.utils.state.search_onfail_requisites`` instead.
+- ``salt.utils.check_state_result``: use ``salt.utils.state.check_result``
+  instead.
+- ``salt.utils.get_user``: use ``salt.utils.user.get_user`` instead.
+- ``salt.utils.get_uid``: use ``salt.utils.user.get_uid`` instead.
+- ``salt.utils.get_specific_user``: use ``salt.utils.user.get_specific_user``
+  instead.
+- ``salt.utils.chugid``: use ``salt.utils.user.chugid`` instead.
+- ``salt.utils.chugid_and_umask``: use ``salt.utils.user.chugid_and_umask``
+  instead.
+- ``salt.utils.get_default_group``: use ``salt.utils.user.get_default_group``
+  instead.
+- ``salt.utils.get_group_list``: use ``salt.utils.user.get_group_list``
+  instead.
+- ``salt.utils.get_group_dict``: use ``salt.utils.user.get_group_dict``
+  instead.
+- ``salt.utils.get_gid_list``: use ``salt.utils.user.get_gid_list`` instead.
+- ``salt.utils.get_gid``: use ``salt.utils.user.get_gid`` instead.
+- ``salt.utils.enable_ctrl_logoff_handler``: use
+  ``salt.utils.win_functions.enable_ctrl_logoff_handler`` instead.
+- ``salt.utils.traverse_dict``: use ``salt.utils.data.traverse_dict`` instead.
+- ``salt.utils.traverse_dict_and_list``: use
+  ``salt.utils.data.traverse_dict_and_list`` instead.
+- ``salt.utils.filter_by``: use ``salt.utils.data.filter_by`` instead.
+- ``salt.utils.subdict_match``: use ``salt.utils.data.subdict_match`` instead.
+- ``salt.utils.substr_in_list``: use ``salt.utils.data.substr_in_list`` instead.
+- ``salt.utils.is_dictlist``: use ``salt.utils.data.is_dictlist``.
+- ``salt.utils.repack_dictlist``: use ``salt.utils.data.repack_dictlist``
+  instead.
+- ``salt.utils.compare_dicts``: use ``salt.utils.data.compare_dicts`` instead.
+- ``salt.utils.compare_lists``: use ``salt.utils.data.compare_lists`` instead.
+- ``salt.utils.decode_dict``: use ``salt.utils.data.encode_dict`` instead.
+- ``salt.utils.decode_list``: use ``salt.utils.data.encode_list`` instead.
+- ``salt.utils.exactly_n``: use ``salt.utils.data.exactly_n`` instead.
+- ``salt.utils.exactly_one``: use ``salt.utils.data.exactly_one`` instead.
+- ``salt.utils.is_list``: use ``salt.utils.data.is_list`` instead.
+- ``salt.utils.is_iter``: use ``salt.utils.data.is_iter`` instead.
+- ``salt.utils.isorted``: use ``salt.utils.data.sorted_ignorecase`` instead.
+- ``salt.utils.is_true``: use ``salt.utils.data.is_true`` instead.
+- ``salt.utils.mysql_to_dict``: use ``salt.utils.data.mysql_to_dict`` instead.
+- ``salt.utils.simple_types_filter``: use
+  ``salt.utils.data.simple_types_filter`` instead.
+- ``salt.utils.ip_bracket``: use ``salt.utils.zeromq.ip_bracket`` instead.
+- ``salt.utils.gen_mac``: use ``salt.utils.network.gen_mac`` instead.
+- ``salt.utils.mac_str_to_bytes``: use ``salt.utils.network.mac_str_to_bytes``
+  instead.
+- ``salt.utils.refresh_dns``: use ``salt.utils.network.refresh_dns`` instead.
+- ``salt.utils.dns_check``: use ``salt.utils.network.dns_check`` instead.
+- ``salt.utils.get_context``: use ``salt.utils.stringutils.get_context`` instead.
+- ``salt.utils.get_master_key``: use ``salt.utils.master.get_master_key``
+  instead.
+- ``salt.utils.get_values_of_matching_keys``: use
+  ``salt.utils.master.get_values_of_matching_keys`` instead.
+- ``salt.utils.date_cast``: use ``salt.utils.dateutils.date_cast`` instead.
+- ``salt.utils.date_format``: use ``salt.utils.dateutils.strftime`` instead.
+- ``salt.utils.total_seconds``: use ``salt.utils.dateutils.total_seconds``
+  instead.
+- ``salt.utils.find_json``: use ``salt.utils.json.find_json`` instead.
+- ``salt.utils.import_json``: use ``salt.utils.json.import_json`` instead.
+- ``salt.utils.namespaced_function``: use
+  ``salt.utils.functools.namespaced_function`` instead.
+- ``salt.utils.alias_function``: use ``salt.utils.functools.alias_function``
+  instead.
+- ``salt.utils.profile_func``: use ``salt.utils.profile.profile_func`` instead.
+- ``salt.utils.activate_profile``: use ``salt.utils.profile.activate_profile``
+  instead.
+- ``salt.utils.output_profile``: use ``salt.utils.profile.output_profile``
+  instead.
+
+Deprecations
+============
+
+Configuration Option Deprecations
+---------------------------------
+
+- The ``requests_lib`` configuration option has been removed. Please use
+  ``backend`` instead.
+
+Profitbricks Cloud Updated Dependency
+-------------------------------------
+
+The minimum version of the ``profitbrick`` python package for the ``profitbricks``
+cloud driver has changed from 3.0.0 to 3.1.0.
+
+
+Execution Module Deprecations
+-----------------------------
+
+- The ``blockdev`` execution module has been removed. Its functions were merged
+  with the :py:mod:`disk <salt.modules.disk>` module.
+
+- The :py:mod:`lxc <salt.modules.lxc>` execution module has been changed as
+  follows:
+
+    - The ``dnsservers`` option to :py:func:`lxc.cloud_init_interface
+      <salt.modules.lxc.cloud_init_interface>` no longer defaults to
+      ``4.4.4.4`` and ``8.8.8.8``.
+
+    - The ``dns_via_dhcp`` option to :py:func:`lxc.cloud_init_interface
+      <salt.modules.lxc.cloud_init_interface>` now defaults to ``True`` instead
+      of ``False``.
+
+- The :py:mod:`win_psget <salt.modules.win_psget>` module has been changed as
+  follows:
+
+    - The ``psget.psversion`` function was removed. Please use
+      :py:func:`cmd.shell_info <salt.modules.cmdmod.shell_info>` instead.
+
+- The :py:mod:`win_service <salt.modules.win_service>` module (which provides
+  the ``service`` module on Windows platforms) has been changed as follows:
+
+    - The ``config`` function was removed. Please use :py:func:`service.modify
+      <salt.modules.win_service.modify>` instead.
+
+    - The following arguments to the :py:func:`service.create
+      <salt.modules.win_service.create>` function have been renamed:
+
+        - ``binpath`` has been renamed to ``bin_path``
+
+        - ``depend`` has been renamed to ``dependencies``
+
+        - ``DisplayName`` has been renamed to ``display_name``
+
+        - ``error`` has been renamed to ``error_control``
+
+        - ``group`` has been renamed to ``load_order_group``
+
+        - ``obj`` has been renamed to ``account_name``
+
+        - ``password`` has been renamed to ``account_password``
+
+        - ``start`` has been renamed to ``start_type``
+
+        - ``type`` has been renamed to ``service_type``
+
+- The :py:mod:`nacl <salt.modules.nacl>` module has been changed as follows:
+
+    - The following arguments have been renamed in the :py:mod:`nacl.keygen
+      <salt.modules.nacl.keygen>`, :py:mod:`nacl.enc <salt.modules.nacl.enc>`, and
+      :py:mod:`nacl.dec <salt.modules.nacl.dec>`:
+
+        - ``key_file`` has been renamed to ``sk_file``
+
+        - ``key`` has been renamed to ``sk``
+
+Runner Deprecations
+-------------------
+
+- The :py:mod:`manage <salt.runners.manage>` runner has been changed as follows:
+
+    - ``root_user`` argument was removed from the :py:func:`manage.bootstrap
+      <salt.runners.manage.bootstrap>` function. Please use ``salt-ssh`` roster
+      entries for the host instead.
+
+- The :py:mod:`nacl <salt.modules.nacl>` runner has been changed as follows:
+
+    - The following arguments have been renamed in the :py:mod:`nacl.keygen
+      <salt.runners.nacl.keygen>`, :py:mod:`nacl.enc <salt.runners.nacl.enc>`, and
+      :py:mod:`nacl.dec <salt.runners.nacl.dec>`:
+
+        - ``key_file`` has been renamed to ``sk_file``
+
+        - ``key`` has been renamed to ``sk``
+
+State Deprecations
+------------------
+
+- In the :py:func:`archive <salt.modules.archive.extracted>` state, the
+  ``tar_options`` and ``zip_options`` options were removed. Please use
+  ``options`` instead.
+
+- The :py:func:`cmd <salt.states.cmdmod>` state had the following changes:
+
+    - The ``user`` and ``group`` options were removed from the following functions
+      (please use ``runas`` instead):
+
+        - :py:func:`cmd.run <salt.modules.cmdmod.run>`
+
+        - :py:func:`cmd.script <salt.modules.cmdmod.script>`
+
+        - :py:func:`cmd.wait <salt.modules.cmdmod.wait>`
+
+        - :py:func:`cmd.wait_script <salt.modules.cmdmod.wait_script>`
+
+- In the :py:mod:`file <salt.states.file>` states, the ``show_diff`` option was
+  removed in all states where it was previously supported. Please use
+  ``show_changes`` instead.
+
+Grain Deprecations
+------------------
+
+- For ``smartos``, some grains have been deprecated. These grains will be
+  removed in 3000:
+
+    - The ``hypervisor_uuid`` grain has been replaced with
+      ``mdata:sdc:server_uuid``
+
+    - The ``datacenter`` grain has been replaced with
+      ``mdata:sdc:datacenter_name``
+
+Pillar Deprecations
+-------------------
+
+The legacy configuration for ``git_pillar`` has been removed. Please use the
+new configuration for ``git_pillar`` which was added in 2015.8.0, which is
+documented :py:mod:`here <salt.pillar.git_pillar>`.
+
+Utils Deprecations
+------------------
+
+- In ``salt.utils.cloud``, the ``fire_event`` function now requires a
+  ``sock_dir`` argument. It was previously optional.
+
+Other Miscellaneous Deprecations
+--------------------------------
+
+- In ``version.py``, the ``rc_info`` function was removed. Please use
+  ``pre_info`` instead.
+
+- Warnings for moving away from the ``env`` option were removed. ``saltenv``
+  should be used instead. The removal of these warnings does not have a
+  behavior change. Only the warning text was removed.
+
+Minion Blackout
+===============
+
+During a blackout, minions will not execute any remote execution commands,
+except for :mod:`saltutil.refresh_pillar
+<salt.modules.saltutil.refresh_pillar>`.  Previously, support was added so that
+blackouts are enabled using a special pillar key, ``minion_blackout`` set to
+``True`` and an optional pillar key ``minion_blackout_whitelist`` to specify
+additional functions that are permitted during blackout. This release adds
+support for using this feature in the grains as well, by using special grains
+keys ``minion_blackout`` and ``minion_blackout_whitelist``.
+
+Sentry Log Handler
+==================
+
+Configuring sentry raven python client via ``project``, ``servers``,
+``public_key and ``secret_key`` is deprecated and won't work with sentry
+clients > 3.0.  Instead, the ``dsn`` config param must be used.
+
+RAET transport
+==============
+
+We haven't been doing development on RAET for quite some time and decided that
+2018.3.0 is the time to announce the deprecation. RAET support will be removed
+in 3000. Please consider to move to ``zeromq`` or ``tcp`` transport instead of
+``raet``.

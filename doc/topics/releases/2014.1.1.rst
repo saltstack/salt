@@ -1,0 +1,49 @@
+===========================
+Salt 2014.1.1 Release Notes
+===========================
+
+:release: 2014-03-18
+
+Version 2014.1.1 is a bugfix release for :ref:`2014.1.0
+<release-2014-1-0>`.  The changes include:
+
+- Various doc fixes, including up-to-date Salt Cloud installation documentation.
+- Renamed state.sls runner to state.orchestrate, to reduce confusion with the :mod:`state.sls <salt.modules.state.sls>` execution function
+- Fix various bugs in the ``dig`` module (:issue:`10367`)
+- Add retry for query on certain EC2 status codes (:issue:`10154`)
+- Fix various bugs in mongodb_user state module (:issue:`10430`)
+- Fix permissions on ``~/.salt_token`` (:issue:`10422`)
+- Add PyObjects support
+- Fix launchctl module crash with missing files
+- Fix :mod:`saltutil.find_job <salt.modules.saltutil.find_job>` for Windows (:issue:`10581`)
+- Fix OS detection for OpenSolaris (:issue:`10601`)
+- Fix broken salt-ssh key_deploy
+- Add support for multiline cron comments (:issue:`10721`)
+- Fix timezone module for Arch (:issue:`10789`)
+- Fix symlink support for ``file.recurse`` (:issue:`10809`)
+- Fix multi-master bugs (:issue:`10732` and :issue:`10969`)
+- Fix file.patch to error when source file is unavailable (:issue:`10380`)
+- Fix pkg to handle packages set as ``purge`` in ``pkg.installed`` (:issue:`10719`)
+- Add ``zmqversion`` grain
+- Fix highstate summary for masterless minions (:issue:`10945`)
+- Fix :mod:`saltutil.find_job <salt.modules.saltutil.find_job>` for 2014.1 masters talking to 0.17 minions (:issue:`11020`)
+- Fix :mod:`file.recurse <salt.states.file.recurse>` states with trailing slashes in source (:issue:`11002`)
+- Fix :mod:`pkg states <salt.states.pkg>` to allow ``pkgname.x86_64`` (:issue:`7306`)
+- Make :mod:`iptables states <salt.states.iptables>` set a default table for flush (:issue:`11037`)
+- Added iptables ``--reject-with`` after final iptables call in :mod:`iptables states <salt.states.iptables>` (issue:`10757`)
+- Fix improper passing of “family” in :mod:`iptables states <salt.states.iptables>` (:issue:`10774`)
+- Fix traceback in :mod:`iptables.insert <salt.states.iptables.insert>` states (:issue:`10988`)
+- Fix zombie processes (:issue:`10867` and others)
+- Fix batch mode to obey ``--return`` settings (:issue:`9146`)
+- Fix localclient issue that was causing batch mode breakage (:issue:`11094`, :issue:`10470`, and others)
+- Multiple salt-ssh fixes
+- FreeBSD: look in /usr/local/etc/salt for configuration by default, if installed using ``pip --editable``.
+- Add a ``skip_suggestions`` parameter to pkg.installed states which allows pre-flight check to be skipped (:issue:`11106`)
+- Fixed tag-based gitfs fileserver environments regression (:issue:`10956`)
+- Yum: fix cache of available pkgs not cleared when repos are changed (:issue:`11001`)
+- Yum: fix for plugin-provided repositories (i.e. RHN/Spacewalk) (:issue:`11145`)
+- Fix regression in :mod:`chocolatey.bootstrap <salt.modules.chocolatey.bootstrap>` (:issue:`10541`)
+- Fix fail on unknown target in :mod:`jobs runner <salt.runners.jobs>` (:issue:`11151`)
+- Don’t log errors for commands which are expected to sometimes exit with non-zero exit status (:issue:`11154`, :issue:`11090`)
+- Fix ``test=True`` CLI override of config option (:issue:`10877`)
+- Log sysctl key listing at loglevel TRACE (:issue:`10931`)

@@ -1,0 +1,57 @@
+===========================
+Salt 2014.7.5 Release Notes
+===========================
+
+:release: 2015-04-16
+
+Version 2014.7.5 is a bugfix release for :ref:`2014.7.0 <release-2014-7-0>`.
+
+Changes:
+
+- Fixed a key error bug in salt-cloud
+- Updated man pages to better match documentation
+- Fixed bug concerning high CPU usage with salt-ssh
+- Fixed bugs with remounting cvfs and fuse filesystems
+- Fixed bug with alowing requisite tracking of entire sls files
+- Fixed bug with aptpkg.mod_repo returning OK even if apt-add-repository fails
+- Increased frequency of ssh terminal output checking
+- Fixed malformed locale string in localmod module
+- Fixed checking of available version of package when accept_keywords were changed
+- Fixed bug to make git.latest work with empty repositories
+- Added \*\*kwargs to service.mod_watch which removes warnings about `enable` and `__reqs__` not being supported by the function
+- Improved state comments to not grow so quickly on failed requisites
+- Added force argument to service to trigger force_reload
+- Fixed bug to andle pkgrepo keyids that have been converted to int
+- Fixed module.portage_config bug with appending accept_keywords
+- Fixed bug to correctly report disk usage on windows minion
+- Added the ability to specify key prefix for S3 ext_pillar
+- Fixed issues with batch mode operating on the incorrect number of minions
+- Fixed a bug with the proxmox cloud provider stacktracing on disk definition
+- Fixed a bug with the changes dictionary in the file state
+- Fixed the TCP keep alive settings to work better with SREQ caching
+- Fixed many bugs within the iptables state and module
+- Fixed bug with states by adding `fun`, `state`, and `unless` to the state runtime internal keywords listing
+- Added ability to eAuth against Active Directory
+- Fixed some salt-ssh issues when running on Fedora 21
+- Fixed grains.get_or_set_hash to work with multiple entries under same key
+- Added better explanations and more examples of how the Reactor calls functions to docs
+- Fixed bug to not pass `ex_config_drive` to libcloud unless it's explicitly enabled
+- Fixed bug with pip.install on windows
+- Fixed bug where puppet.run always returns a 0 retcode
+- Fixed race condition bug with minion scheduling via pillar
+- Made efficiency improvements and bug fixes to the windows installer
+- Updated environment variables to fix bug with pygit2 when running salt as non-root user
+- Fixed cas behavior on data module -- data.cas was not saving changes
+- Fixed GPG rendering error
+- Fixed strace error in virt.query
+- Fixed stacktrace when running chef-solo command
+- Fixed possible bug wherein uncaught exceptions seem to make zmq3 tip over when threading is involved
+- Fixed argument passing to the reactor
+- Fixed glibc caching to prevent bug where salt-minion getaddrinfo in dns_check() never got updated nameservers
+
+Known issues:
+
+- In multimaster mode, a minion may become temporarily unresponsive
+  if modules or pillars are refreshed at the same time that one
+  or more masters are down. This can be worked around by setting
+  'auth_timeout' and 'auth_tries' down to shorter periods.

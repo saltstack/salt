@@ -1,0 +1,25 @@
+==============
+salt-api 0.8.2
+==============
+
+:program:`salt-api` 0.8.2 is largely a bugfix release that fixes a
+compatibility issue with changes in Salt 0.15.9.
+
+.. note::
+
+    Requires Salt 0.15.9 or greater
+
+The following changes have been made to the :py:mod:`rest_cherrypy
+<salt.netapi.rest_cherrypy.app>` netapi module that provides a RESTful
+interface for a running Salt system:
+
+* Fixed issue #87 which caused the Salt master's PID file to be overwritten.
+* Fixed an inconsistency with the return format for the ``/minions``
+  convenience URL.
+
+  .. warning::
+
+        This is a backward incompatible change.
+
+* Added a dedicated URL for serving an HTML app
+* Added dedicated URL for serving static media

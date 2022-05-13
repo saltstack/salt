@@ -1,0 +1,104 @@
+# basic config
+# Connects to master
+master: localhost
+master_port: 64506
+interface: 127.0.0.1
+tcp_pub_port: 64510
+tcp_pull_port: 64511
+sock_dir: minion_sock
+id: minion
+open_mode: True
+log_file: minion.log
+log_level_logfile: debug
+log_fmt_console: '%(asctime)s,%(msecs)03d [%(levelname)-8s] %(message)s'
+pidfile: minion.pid
+
+# Give the minion extra attempts to find the master
+# This is especially needed for the TCP tests as we
+# wait for the master to come up in 2016.3. See #35489.
+master_tries: 5
+
+# module extension
+test.foo: baz
+integration.test: True
+
+# Grains addons
+grains:
+  test_grain: cheese
+  script: grail
+  alot: many
+  planets:
+    - mercury
+    - venus
+    - earth
+    - mars
+  level1:
+    level2: foo
+  companions:
+    one:
+      - susan
+      - ian
+      - barbara
+  tokenv2:
+    keystone.endpoint: http://localhost:35357/v2.0
+    keystone.token: administrator
+  tokenv3:
+    keystone.endpoint: http://localhost:35357/v3
+    keystone.token: administrator
+  adminv2:
+    keystone.user: admin
+    keystone.password: adminpass
+    keystone.tenant: admin
+    keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+  demov2:
+    keystone.user: demo
+    keystone.password: demopass
+    keystone.tenant: demo
+    keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+  adminv3:
+    keystone.user: admin
+    keystone.password: adminpass
+    keystone.tenant: admin
+    keystone.auth_url: 'http://127.0.0.1:5000/v3/'
+  demov3:
+    keystone.user: demo
+    keystone.password: demopass
+    keystone.tenant: demo
+    keystone.auth_url: 'http://127.0.0.1:5000/v3/'
+
+config_test:
+  spam: eggs
+
+mine_functions:
+  test.ping: []
+  test.arg:
+    - isn't
+    - allow_tgt: 'sub_minion'
+
+# sdb env module
+osenv:
+  driver: env
+
+# cmd blacklist
+cmd_blacklist_glob:
+  - 'bad_command *'
+  - 'second_bad_command *'
+
+autosign_grains:
+  - test_grain
+
+# disable discovery for test suite saltstack/salt-jenkins#683
+discovery: false
+sdbvault:
+  driver: vault
+vault:
+  url: http://127.0.0.1:8200
+  auth:
+    method: token
+    token: testsecret
+  policies:
+  - testpolicy
+sdbetcd:
+  driver: etcd
+  etcd.host: 127.0.0.1
+  etcd.port: 2379

@@ -1,0 +1,46 @@
+============================
+Salt 2015.8.10 Release Notes
+============================
+
+Version 2015.8.10 is a bugfix release for :ref:`2015.8.0 <release-2015-8-0>`.
+
+This release includes fixes for two issues discovered in :ref:`2015.8.9
+<release-2015-8-9>`:
+
+- Pip state broken in 2015.8.9 with pip <6.0 (:issue:`33376`)
+- Fix traceback in logging for config validation (:pull:`33386`)
+
+Final Release of Debian 7 Packages
+==================================
+
+Regular security support for Debian 7 ended on April 25th 2016. As a result,
+2016.3.1 and 2015.8.10 will be the last Salt releases for which Debian
+7 packages are created.
+
+Important Post-Upgrade Instructions for Linux Mint
+==================================================
+
+As a result of some upstream changes, the ``os`` grain on Mint Linux is now
+being detected as ``LinuxMint`` (:issue:`33295`). Run the following command
+**after you upgrade to 2015.8.10** to reset the ``os`` grain to ``Mint`` and
+the ``os_family`` grain to ``Debian``:
+
+.. code-block:: bash
+
+    salt -G 'os:LinuxMint' grains.setvals "{'os': 'Mint', 'os_family': 'Debian'}"
+
+
+Changelog for v2015.8.9..v2015.8.10
+===================================
+
+*Generated at: 2018-05-28 00:51:57 UTC*
+
+* c3d2c4eaae Fix traceback in logging for config validation (`#33386`_)
+
+* 2a060ea1e8 restore whitespace
+
+* aa1f45d664 blast, put the try/except int he right place
+
+* be1a7659a3 maintain the fallabck because I am totally sick of this crap
+
+.. _`#33386`: https://github.com/saltstack/salt/pull/33386

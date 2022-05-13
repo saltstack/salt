@@ -1,0 +1,154 @@
+========================
+Salt 0.8.9 Release Notes
+========================
+
+Salt 0.8.9 has finally arrived! Unfortunately this is much later than I had
+hoped to release 0.8.9, life has been very crazy over the last month. But
+despite challenges, Salt has moved forward!
+
+This release, as expected, adds few new features and many refinements. One
+of the most exciting aspect of this release is that the development community
+for salt has grown a great deal and much of the code is from contributors.
+
+Also, I have filled out the documentation a great deal. So information on
+States is properly documented, and much of the documentation that was out of
+date has been filled in.
+
+Download!
+---------
+
+The Salt source can be downloaded from PyPI:
+
+https://pypi.python.org/packages/source/s/salt/salt-0.8.9.tar.gz
+
+Here s the md5sum:
+
+7d5aca4633bc22f59045f59e82f43b56
+
+For instructions on how to set up Salt please see the :ref:`installation`
+instructions.
+
+New Features
+------------
+
+Salt Run
+````````
+
+A big feature is the addition of Salt run, the ``salt-run`` command allows for
+master side execution modules to be made that gather specific information or
+execute custom routines from the master.
+
+Documentation for salt-run can be found :ref:`here <runners>`
+
+Refined Outputters
+``````````````````
+
+One problem often complained about in salt was the fact that the output was
+so messy. Thanks to help from Jeff Schroeder a cleaner interface for the
+command output for the Salt CLI has been made. This new interface makes
+adding new printout formats easy and additions to the capabilities of minion
+modules makes it possible to set the printout mode or ``outputter`` for
+functions in minion modules.
+
+Cross Calling Salt Modules
+```````````````````````````
+
+Salt modules can now call each other, the ``__salt__`` dict has been added to
+the predefined references in minion modules. This new feature is documented in
+the :ref:`modules documentation <writing-execution-modules>`.
+
+Watch Option Added to Salt State System
+````````````````````````````````````````
+
+Now in Salt states you can set the watch option, this will allow watch enabled
+states to change based on a change in the other defined states. This is similar
+to subscribe and notify statements in puppet.
+
+Root Dir Option
+```````````````
+
+Travis Cline has added the ability to define the option ``root_dir`` which
+allows the salt minion to operate in a subdir. This is a strong move in
+supporting the minion running as an unprivileged user
+
+Config Files Defined in Variables
+`````````````````````````````````
+
+Thanks again to Travis Cline, the master and minion configuration file locations
+can be defined in environment variables now.
+
+New Modules
+-----------
+
+Quite a few new modules, states, returners, and runners have been made.
+
+New Minion Modules
+``````````````````
+
+apt
+~~~
+
+Support for apt-get has been added, this adds greatly improved Debian and
+Ubuntu support to Salt!
+
+useradd and groupadd
+~~~~~~~~~~~~~~~~~~~~
+
+Support for manipulating users and groups on Unix-like systems.
+
+moosefs
+~~~~~~~
+
+Initial support for reporting on aspects of the distributed file system,
+MooseFS. For more information on MooseFS please see: http://www.moosefs.org
+
+Thanks to Joseph Hall for his work on MooseFS support.
+
+mount
+~~~~~
+
+Manage mounts and the fstab.
+
+puppet
+~~~~~~
+
+Execute puppet on remote systems.
+
+shadow
+~~~~~~
+
+Manipulate and manage the user password file.
+
+ssh
+~~~
+
+Interact with ssh keys.
+
+New States
+``````````
+
+user and group
+~~~~~~~~~~~~~~
+
+Support for managing users and groups in Salt States.
+
+mount
+~~~~~
+
+Enforce mounts and the fstab.
+
+New Returners
+`````````````
+
+mongo_return
+~~~~~~~~~~~~
+
+Send the return information to a MongoDB server.
+
+New Runners
+```````````
+
+manage
+~~~~~~
+
+Display minions that are up or down.

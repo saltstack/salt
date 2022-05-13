@@ -1,0 +1,77 @@
+========================
+Salt 0.8.7 release notes
+========================
+
+It has been a month since salt 0.8.0, and it has been a long month! But Salt is
+still coming along strong. 0.8.7 has a lot of changes and a lot of updates.
+This update makes Salt’s ZeroMQ back end better, strips Facter from the
+dependencies, and introduces interfaces to handle more capabilities.
+
+Many of the major updates are in the background, but the changes should shine
+through to the surface. A number of the new features are still a little thin,
+but the back end to support expansion is in place.
+
+I also recently gave a presentation to the Utah Python users group in Salt Lake
+City, the slides from this presentation are available here:
+
+The video from this presentation will be available shortly.
+
+The major new features and changes in Salt 0.8.7 are:
+
+* Revamp ZeroMQ topology on the master for better scalability
+* State enforcement
+* Dynamic state enforcement managers
+* Extract the module loader into salt.loader
+* Make Job ids more granular
+* Replace Facter functionality with the new salt grains interface
+* Support for “virtual” salt modules
+* Introduce the salt-call command
+* Better debugging for minion modules
+
+The new ZeroMQ topology allows for better scalability, this will be required by
+the need to execute massive file transfers to multiple machines in parallel and
+state management. The new ZeroMQ topology is available in the aforementioned
+presentation.
+
+0.8.7 introduces the capability to declare states, this is similar to the
+capabilities of Puppet. States in salt are declared via state data structures.
+This system is very young, but the core feature set is available. Salt states
+work around rendering files which represent Salt high data. More on the Salt
+state system will be documented in the near future.
+
+The system for loading salt modules has been pulled out of the minion class to
+be a standalone module, this has enabled more dynamic loading of Salt modules
+and enables many of the updates in 0.8.7 –
+
+:blob:`salt/loader.py`
+
+Salt Job ids are now microsecond precise, this was needed to repair a race
+condition unveiled by the speed improvements in the new ZeroMQ topology.
+
+The new grains interface replaces the functionality of Facter, the idea behind
+grains differs from Facter in that the grains are only used for static system
+data, dynamic data needs to be derived from a call to a salt module. This makes
+grains much faster to use, since the grains data is generated when the minion
+starts.
+
+Virtual salt modules allows for a salt module to be presented as something
+other than its module name. The idea here is that based on information from the
+minion decisions about which module should be presented can be made. The best
+example is the pacman module. The pacman module will only load on Arch Linux
+minions, and will be called pkg. Similarly the yum module will be presented as
+pkg when the minion starts on a Fedora/RedHat system.
+
+The new salt-call command allows for minion modules to be executed from the
+minion. This means that on the minion a salt module can be executed, this is a
+great tool for testing Salt modules. The salt-call command can also be used to
+view the grains data.
+
+In previous releases when a minion module threw an exception very little data
+was returned to the master. Now the stack trace from the failure is returned
+making debugging of minion modules MUCH easier.
+
+Salt is nearing the goal of 1.0, where the core feature set and capability is
+complete!
+
+
+-Thomas S Hatch

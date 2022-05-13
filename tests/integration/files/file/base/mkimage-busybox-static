@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# Based off of https://github.com/docker/docker/blob/master/contrib/mkimage/busybox-static
+
+set -e
+
+rootfsDir="$1"
+imageName="$2"
+
+echo "Making image $2 using $1 as a root directory"
+
+busybox="$(which busybox 2>/dev/null || true)"
+if [ -z "$busybox" ]; then
+	echo >&2 'error: busybox: not found'
+	echo >&2 '  install it with your distribution "busybox-static" package'
+	exit 1
+fi
+if ! ldd "$busybox" 2>&1 | grep -q 'not a dynamic executable'; then
+	echo >&2 "error: '$busybox' appears to be a dynamic executable"
+	echo >&2 '  you should install your distribution "busybox-static" package instead'
+	exit 1
+fi
+
+etc_passwd="\
+root:x:0:0:root:/root:/bin/sh
+daemon:x:1:1:daemon:/usr/sbin:/bin/false
+bin:x:2:2:bin:/bin:/bin/false
+sys:x:3:3:sys:/dev:/bin/false
+sync:x:4:100:sync:/bin:/bin/sync
+mail:x:8:8:mail:/var/spool/mail:/bin/false
+www-data:x:33:33:www-data:/var/www:/bin/false
+operator:x:37:37:Operator:/var:/bin/false
+nobody:x:65534:65534:nobody:/home:/bin/false"
+
+etc_group="\
+root:x:0:
+daemon:x:1:
+bin:x:2:
+sys:x:3:
+adm:x:4:
+tty:x:5:
+disk:x:6:
+lp:x:7:
+mail:x:8:
+kmem:x:9:
+wheel:x:10:root
+cdrom:x:11:
+dialout:x:18:
+floppy:x:19:
+video:x:28:
+audio:x:29:
+tape:x:32:
+www-data:x:33:
+operator:x:37:
+utmp:x:43:
+plugdev:x:46:
+staff:x:50:
+lock:x:54:
+netdev:x:82:
+users:x:100:
+nogroup:x:65534:"
+
+etc_shadow="\
+root::10933:0:99999:7:::
+daemon:*:10933:0:99999:7:::
+bin:*:10933:0:99999:7:::
+sys:*:10933:0:99999:7:::
+sync:*:10933:0:99999:7:::
+mail:*:10933:0:99999:7:::
+www-data:*:10933:0:99999:7:::
+operator:*:10933:0:99999:7:::
+nobody:*:10933:0:99999:7:::"
+
+mkdir -p "$rootfsDir/bin"
+rm -f "$rootfsDir/bin/busybox" # just in case
+cp "$busybox" "$rootfsDir/bin/busybox"
+
+(
+	cd "$rootfsDir"
+
+	IFS=$'\n'
+	modules=( $(bin/busybox --list-modules) )
+	unset IFS
+
+	for module in "${modules[@]}"; do
+		# Don't stomp on the busybox binary (newer busybox releases
+		# include busybox in the --list-modules output)
+		test "$module" == "bin/busybox" && continue
+		mkdir -p "$(dirname "$module")"
+		ln -sf /bin/busybox "$module"
+	done
+	# Make sure the image has the needed files to make users work
+	mkdir etc
+	echo "$etc_passwd" >etc/passwd
+	echo "$etc_group" >etc/group
+	echo "$etc_shadow" >etc/shadow
+	# Import the image
+	tar --numeric-owner -cf- . | docker import --change "CMD sleep 300" - "$imageName"
+	docker run --rm -i "$imageName" /bin/true
+	exit $?
+)

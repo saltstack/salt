@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+"""
+Publish commands to the salt system from the command line on the master.
+"""
+
+from salt.scripts import salt_cloud
+
+if __name__ == "__main__":
+    salt_cloud()

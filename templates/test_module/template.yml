@@ -1,0 +1,6 @@
+description: "Execution module unit test"
+questions:
+    full_name:
+        question: "What is your name?"
+    email:
+        question: "What is your email?"

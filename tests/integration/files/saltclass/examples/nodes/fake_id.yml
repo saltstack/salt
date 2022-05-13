@@ -1,0 +1,6 @@
+environment: base
+
+classes:
+{% for class in ['default', 'roles.*', 'empty.*'] %}
+  - {{ class }}
+{% endfor %}

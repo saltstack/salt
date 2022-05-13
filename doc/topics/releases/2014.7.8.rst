@@ -1,0 +1,105 @@
+===========================
+Salt 2014.7.8 Release Notes
+===========================
+
+:release: 2015-11-13
+
+Version 2014.7.8 is a bugfix release for :ref:`2014.7.0 <release-2014-7-0>`.
+
+
+Statistics
+==========
+
+- Total Merges: **7**
+- Total Issue References: **3**
+- Total PR References: **10**
+
+- Contributors: **5** (`DmitryKuzmenko`_, `JaseFace`_, `MasterNayru`_, `cachedout`_, `rallytime`_)
+
+
+Changelog for v2014.7.7..v2014.7.8
+==================================
+
+*Generated at: 2018-05-27 20:47:34 UTC*
+
+* **PR** `#28839`_: (`cachedout`_) Revert `#28740`_
+  @ *2015-11-12 22:54:28 UTC*
+
+  * **PR** `#28740`_: (`MasterNayru`_) Add missing S3 module import (refs: `#28777`_, `#28839`_)
+
+  * 4b8bdd0afb Merge pull request `#28839`_ from cachedout/revert_28740
+
+  * 215b26c06f Revert `#28740`_
+
+* **PR** `#28777`_: (`rallytime`_) Back-port `#28740`_ to 2014.7
+  @ *2015-11-11 18:00:00 UTC*
+
+  * **PR** `#28740`_: (`MasterNayru`_) Add missing S3 module import (refs: `#28777`_, `#28839`_)
+
+  * 76e69b4bff Merge pull request `#28777`_ from rallytime/bp-28740-2014.7
+
+  * da5fac2b36 Back-port `#28740`_ to 2014.7
+
+* **PR** `#28716`_: (`rallytime`_) Back-port `#28705`_ to 2014.7
+  @ *2015-11-10 16:15:03 UTC*
+
+  * **PR** `#28705`_: (`cachedout`_) Account for new headers class in tornado 4.3 (refs: `#28716`_)
+
+  * 45c73ebf2f Merge pull request `#28716`_ from rallytime/bp-28705
+
+  * 32e7bd3ea0 Account for new headers class in tornado 4.3
+
+* **ISSUE** `#28199`_: (`felskrone`_) Non-standard umasks might break the master (refs: `#28717`_)
+
+* **PR** `#28717`_: (`cachedout`_) Add note about recommended umask
+  @ *2015-11-09 23:26:20 UTC*
+
+  * f4fe921965 Merge pull request `#28717`_ from cachedout/umask_note
+
+  * 1874300e08 Add note about recommended umask
+
+* **ISSUE** `#28455`_: (`zmalone`_) highstate.cache is world readable, and contains secrets (refs: `#28461`_)
+
+* **PR** `#28461`_: (`cachedout`_) Wrap all cache calls in state.sls in correct umask
+  @ *2015-11-02 17:11:02 UTC*
+
+  * 4bf56cad3f Merge pull request `#28461`_ from cachedout/issue_28455
+
+  * 097838ec0c Wrap all cache calls in state.sls in correct umask
+
+* **ISSUE** `#24910`_: (`bocig`_) -T, --make-token flag does NOT work- LDAP Groups (refs: `#28407`_)
+
+* **PR** `#28407`_: (`DmitryKuzmenko`_) Don't request creds if auth with key.
+  @ *2015-10-29 16:12:30 UTC*
+
+  * f3e61db045 Merge pull request `#28407`_ from DSRCompany/issues/24910_token_auth_fix_2014
+
+  * b7b5bec309 Don't request creds if auth with key.
+
+* **PR** `#27390`_: (`JaseFace`_) Ensure we pass on the enable setting if present, or use the default of True if not in build_schedule_item()
+  @ *2015-10-05 18:09:33 UTC*
+
+  * d284eb165b Merge pull request `#27390`_ from JaseFace/schedule-missing-enabled
+
+  * 563db71bfd Ensure we pass on the enable setting if present, or use the default of True if not in build_schedule_item() Prior to this, when schedule.present compares the existing schedule to the one crafted by this function, enabled will actually be removed at each run.  schedule.present sees a modification needs to be made, and invokes schedule.modify, which does so with enabled: True, creating and endless loop of an 'enabled' removal and addition.
+
+.. _`#24910`: https://github.com/saltstack/salt/issues/24910
+.. _`#27390`: https://github.com/saltstack/salt/pull/27390
+.. _`#28199`: https://github.com/saltstack/salt/issues/28199
+.. _`#28407`: https://github.com/saltstack/salt/pull/28407
+.. _`#28455`: https://github.com/saltstack/salt/issues/28455
+.. _`#28461`: https://github.com/saltstack/salt/pull/28461
+.. _`#28705`: https://github.com/saltstack/salt/pull/28705
+.. _`#28716`: https://github.com/saltstack/salt/pull/28716
+.. _`#28717`: https://github.com/saltstack/salt/pull/28717
+.. _`#28740`: https://github.com/saltstack/salt/pull/28740
+.. _`#28777`: https://github.com/saltstack/salt/pull/28777
+.. _`#28839`: https://github.com/saltstack/salt/pull/28839
+.. _`DmitryKuzmenko`: https://github.com/DmitryKuzmenko
+.. _`JaseFace`: https://github.com/JaseFace
+.. _`MasterNayru`: https://github.com/MasterNayru
+.. _`bocig`: https://github.com/bocig
+.. _`cachedout`: https://github.com/cachedout
+.. _`felskrone`: https://github.com/felskrone
+.. _`rallytime`: https://github.com/rallytime
+.. _`zmalone`: https://github.com/zmalone

@@ -1,0 +1,124 @@
+=============
+Salt Authors
+=============
+
+Whos Who in Salt
+============================
+
+The Man With the Plan
+----------------------------
+
+Thomas S. Hatch is the main developer of Salt. He is the founder, owner,
+maintainer and lead of the Salt project, as well as author of the majority
+of the Salt code and documentation.
+
+Documentation System
+----------------------------
+
+The documentation system was put together by Seth House, much of the
+documentation is being maintained by Seth.
+
+Developers
+----------------------------
+
+Aaron Bull Schaefer <aaron@elasticdog.com>
+Aaron Toponce <aaron.toponce@gmail.com>
+Andrew Hammond <andrew.george.hammond@gmail.com>
+Aditya Kulkarni <adi@saltstack.com>
+Alexander Pyatkin <asp@thexyz.net>
+Andre Sachs <andre@sachs.nom.za>
+Andrew Colin Kissa <andrew@topdog.za.net>
+Andrew Kuhnhausen <trane@errstr.com>
+Antti Kaihola <akaihol+github@ambitone.com>
+archme <archme.mail@gmail.com>
+Brad Barden <brad@mifflinet.net>
+Bret Palsson <bretep@gmail.com>
+Brian Wagner <wags@wagsworld.net>
+C. R. Oldham <cr@saltstack.com>
+Carl Loa Odin <carlodin@gmail.com>
+Carlo Pires <carlopires@gmail.com>
+Chris Rebert <chris.rebert@hulu.com>
+Chris Scheller <schelcj@umich.edu>
+Christer Edwards <christer.edwards@gmail.com>
+Clint Savage <herlo1@gmail.com>
+Colton Myers <cmyers@saltstack.com>
+Corey Quinn <corey@sequestered.net>
+Corin Kochenower <ckochenower@saltstack.com>
+Dan Garthwaite <dan@garthwaite.org>
+Daniel Wallace <danielwallace at gtmanfred dot com>
+David Boucha <boucha@gmail.com>
+David Pravec <alekibango@pravec.tk>
+deutsche
+Dmitry Kuzmenko <dkuzmenko@saltstack.com>
+Doug Renn <renn@nestegg.com>
+Eivind Uggedal <eivind@uggedal.com>
+epoelke@gmail.com <epoelke@heartflow.com>
+Eric Poelke <epoelke@gmail.com>
+Erik Nolte <enolte@beyondoblivion.com>
+Evan Borgstrom <evan@fatbox.ca>
+Forrest Alvarez <forrest.alvarez@gmail.com>
+Fred Reimer <freimer@freimer.org>
+Henrik Holmboe <henrik@holmboe.se>
+Gareth J. Greenaway <gareth@wiked.org>
+Jacob Albretsen <jakea@xmission.com>
+Jed Glazner <jglazner@coldcrow.com>
+Jeff Bauer <jbauer@rubic.com>
+Jeff Hutchins <jhutchins@getjive.com>
+Jeffrey C. Ollie <jeff@ocjtech.us>
+Jeff Schroeder <jeffschroeder@computer.org>
+Johnny Bergström
+Jonas Buckner <buckner.jonas@gmail.com>
+Jonathan Harker <k.jonathan.harker@hp.com>
+Joseph Hall <joseph@saltstack.com>
+Josmar Dias <josmarnet@gmail.com>
+Kent Tenney <ktenney@gmail.com>
+lexual
+Marat Shakirov
+Marc Abramowitz <marc+github@marc-abramowitz.com>
+Martin Schnabel <mb0@mb0.org>
+Mathieu Le Marec - Pasquet <kiorky@cryptelium.net>
+Matt Black
+Matthew Printz <hipokrit@gmail.com>
+Matthias Teege <matthias-git@mteege.de>
+Maxim Burgerhout <maxim@wzzrd.com>
+Mickey Malone <mickey.malone@gmail.com>
+Michael Steed <msteed@saltstack.com>
+Mike Place <mp@saltstack.com>
+Mircea Ulinic <ping@mirceaulinic.net>
+Mitch Anderson <mitch@metauser.net>
+Mostafa Hussein <mostafa.hussein91@gmail.com>
+Nathaniel Whiteinge <seth@eseth.com>
+Nicolas Delaby <nicolas.delaby@ezeep.com>
+Nicole Thomas <nicole@saltstack.com>
+Nigel Owen <nigelowen2.gmail.com>
+Nitin Madhok <nmadhok@g.clemson.edu>
+Oleg Anashkin <oleg.anashkin@gmail.com>
+Pedro Algarvio <pedro@algarvio.me>
+Peter Baumgartner
+Pierre Carrier <pierre@spotify.com>
+Rhys Elsmore <me@rhys.io>
+Rafael Caricio <rafael@caricio.com>
+Robert Fielding
+Sean Channel <pentabular@gmail.com>
+Seth House <seth@eseth.com>
+Seth Vidal <skvidal@fedoraproject.org>
+Stas Alekseev <stas.alekseev@gmail.com>
+Thibault Cohen <titilambert@gmail.com>
+Thomas Schreiber <tom@rizumu.us>
+Thomas S Hatch <thatch45@gmail.com>
+Tor Hveem <xt@bash.no>
+Travis Cline <travis.cline@gmail.com>
+Wieland Hoffmann <themineo+github@gmail.com>
+
+
+Growing Community
+--------------------------------
+
+Salt is a rapidly growing project with a large community, to view all
+contributors please check Github, this file can sometimes be out of date:
+
+https://github.com/saltstack/salt/graphs/contributors
+
+To see current statistics check out the GitHub Pulse page:
+
+https://github.com/saltstack/salt/pulse

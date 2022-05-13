@@ -1,0 +1,57 @@
+========================
+Salt 0.7.0 release notes
+========================
+
+I am pleased to announce the release of Salt 0.7.0!
+
+This release marks what is the first stable release of salt, 0.7.0 should be
+suitable for general use.
+
+0.7.0 Brings the following new features to Salt:
+
+- Integration with Facter data from puppet labs
+- Allow for matching minions from the salt client via Facter information
+- Minion job threading, many jobs can be executed from the master at once
+- Preview of master clustering support - Still experimental
+- Introduce new minion modules for stats, virtualization, service management and more
+- Add extensive logging to the master and minion daemons
+- Add sys.reload_functions for dynamic function reloading
+- Greatly improve authentication
+- Introduce the saltkey command for managing public keys
+- Begin backend development preparatory to introducing butter
+- Addition of man pages for the core commands
+- Extended and cleaned configuration
+
+0.7.0 Fixes the following major bugs:
+
+- Fix crash in minions when matching failed
+- Fix configuration file lookups for the local client
+- Repair communication bugs in encryption
+- Numerous fixes in the minion modules
+
+The next release of Salt should see the following features:
+
+- Stabilize the cluster support
+- Introduce a remote client for salt command tiers
+- salt-ftp system for distributed file copies
+- Initial support for "butter"
+
+Coming up next is a higher level management framework for salt called
+Butter. I want salt to stay as a simple and effective communication
+framework, and allow for more complicated executions to be managed via
+Butter.
+
+Right now Butter is being developed to act as a cloud controller using salt
+as the communication layer, but features like system monitoring and advanced
+configuration control (a puppet manager) are also in the pipe.
+
+Special thanks to Joseph Hall for the status and network modules, and thanks
+to Matthias Teege for tracking down some configuration bugs!
+
+Salt can be downloaded from the following locations;
+
+Arch Linux Package:
+
+https://aur.archlinux.org/packages/salt-git/
+
+Please enjoy the latest Salt release!

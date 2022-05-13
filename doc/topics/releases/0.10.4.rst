@@ -1,0 +1,136 @@
+=========================
+Salt 0.10.4 Release Notes
+=========================
+
+:release: 2012-10-23
+
+Salt 0.10.4 is a monumental release for the Salt team, with two new module
+systems, many additions to allow granular access to Salt, improved platform
+support and much more.
+
+This release is also exciting because we have been able to shorten the release
+cycle back to under a month. We are working hard to keep up the aggressive pace
+and look forward to having releases happen more frequently!
+
+This release also includes a serious security fix and all users are very
+strongly recommended to upgrade. As usual, upgrade the master first, and then
+the minion to ensure that the process is smooth.
+
+Major Features
+==============
+
+External Authentication System
+------------------------------
+
+The new external authentication system allows for Salt to pass through
+authentication to any authentication system to determine if a user has
+permission to execute a Salt command. The Unix PAM system is the first
+supported system with more to come!
+
+The external authentication system allows for specific users to be granted
+access to execute specific functions on specific minions. Access is configured
+in the master configuration file, and uses the new access control system:
+
+.. code-block:: yaml
+
+    external_auth:
+      pam:
+        thatch:
+          - 'web*':
+            - test.*
+            - network.*
+
+The configuration above allows the user `thatch` to execute functions in the
+test and network modules on minions that match the web* target.
+
+Access Control System
+---------------------
+
+All Salt systems can now be configured to grant access to non-administrative
+users in a granular way. The old configuration continues to work. Specific
+functions can be opened up to specific minions from specific users in the case
+of external auth and client ACLs, and for specific minions in the case of the
+peer system.
+
+Access controls are configured like this:
+
+.. code-block:: yaml
+
+    client_acl:
+      fred:
+        - web\*:
+          - pkg.list_pkgs
+          - test.*
+          - apache.*
+
+Target by Network
+-----------------
+
+A new matcher has been added to the system which allows for minions to be
+targeted by network. This new matcher can be called with the `-S` flag on the
+command line and is available in all places that the matcher system is
+available. Using it is simple:
+
+.. code-block:: bash
+
+    $ salt -S '192.168.1.0/24' test.ping
+    $ salt -S '192.168.1.100' test.ping
+
+Nodegroup Nesting
+-----------------
+
+Previously a nodegroup was limited by not being able to include another
+nodegroup, this restraint has been lifted and now nodegroups will be expanded
+within other nodegroups with the `N@` classifier.
+
+Salt Key Delete by Glob
+-----------------------
+
+The ability to delete minion keys by glob has been added to ``salt-key``.  To
+delete all minion keys whose minion name starts with 'web':
+
+.. code-block:: bash
+
+    $ salt-key -d 'web*'
+
+Master Tops System
+------------------
+
+The `external_nodes` system has been upgraded to allow for modular subsystems
+to be used to generate the top file data for a highstate run.
+
+The `external_nodes` option still works but will be deprecated in the future in
+favor of the new `master_tops` option.
+
+Example of using `master_tops`:
+
+.. code-block:: yaml
+
+    master_tops:
+      ext_nodes: cobbler-external-nodes
+
+Next Level Solaris Support
+--------------------------
+
+A lot of work has been put into improved Solaris support by Romeo Theriault.
+Packaging modules (pkgadd/pkgrm and pkgutil) and states, cron support and user
+and group management have all been added and improved upon. These additions
+along with SMF (Service Management Facility) service support and improved
+Solaris grain detection in 0.10.3 add up to Salt becoming a great tool
+to manage Solaris servers with.
+
+Security
+========
+
+A vulnerability in the security handshake was found and has been repaired, old
+minions should be able to connect to a new master, so as usual, the master
+should be updated first and then the minions.
+
+Pillar Updates
+--------------
+
+The pillar communication has been updated to add some extra levels of
+verification so that the intended minion is the only one allowed to gather the
+data. Once all minions and the master are updated to salt 0.10.4 please
+activate pillar `2` by changing the `pillar_version` in the master config to
+`2`. This will be set to `2` by default in a future release.

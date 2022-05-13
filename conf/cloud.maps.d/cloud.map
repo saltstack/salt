@@ -1,0 +1,19 @@
+# This is a sample cloud map file.  By convention, map files are stored in
+# /etc/cloud/cloud.maps.d/.
+#
+# Because the location to this file must be explicitly declared when using it,
+# its actual location on disk is up to the user.
+
+#fedora_rs:
+#  - fedora1
+#  - fedora2
+#  - fedora3
+#  - fedora4
+#  - fedora5
+
+#ubuntu_rs:
+#  - ubuntu1
+#  - ubuntu2
+#  - ubuntu3
+#  - ubuntu4
+#  - ubuntu5

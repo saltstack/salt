@@ -1,0 +1,25 @@
+{%- set iface = data.data.inet -%}
+{% if iface['user'] %}user {{ iface['user']}}
+{% if iface['password']%}password {{ iface['password'] }} {% endif %}
+plugin rp-pppoe.so {{iface['pppoe_iface']|default('eth0')}}
+
+{% if iface['noipdefault']!="False"|default("True") %}noipdefault{% endif %}
+{% if iface['usepeerdns']!="False"|default("True") %}usepeerdns {% endif %}
+{% if iface['defaultroute']!="False"|default("True") %}defaultroute{% endif %}
+
+{% if iface['holdoff']!=""|default('15') %}holdoff {{iface['holdoff']|default('15')}}{% endif %}
+{% if iface['maxfail']!=""|default('0') %}maxfail {{iface['maxfail']|default('0')}}{% endif %}
+
+{% if iface['hide-password']!="False"|default("True") %}hide-password{% endif %}
+{% if iface['lcp-echo-interval']!=""|default('20') %}lcp-echo-interval {{ iface['lcp-echo-interval']|default('20')}} {% endif %}
+{% if iface['lcp-echo-failure']!=""|default('3') %}lcp-echo-failure {{iface['lcp-echo-failure']|default('3')}} {% endif %}
+
+{% if iface['noauth']!="False"|default("True") %}noauth{% endif %}
+{% if iface['persist']!="False"|default("True") %}persist{% endif %}
+{% if iface['mtu']!=""|default('1492')  %}mtu {{iface['mtu']|default('1492')}} {% endif %}
+{% if iface['noaccomp']!="False"|default("True") %}noaccomp{% endif %}
+{% if iface['default-asyncmap'] %}default-asyncmap{% endif %}
+{% if iface['linkname'] is defined %}
+linkname {{ iface['linkname'] }}
+{% endif %}
+{% endif %}

@@ -1,0 +1,12 @@
+{% if networking %}NETWORKING={{networking}}
+{%endif%}{% if networking_ipv6 %}NETWORKING_IPV6={{networking_ipv6}}
+{%endif%}{% if hostname %}HOSTNAME={{hostname}}
+{%endif%}{% if gateway %}GATEWAY={{gateway}}
+{%endif%}{% if gatewaydev %}GATEWAYDEV={{gatewaydev}}
+{%endif%}{% if nisdomain %}NISDOMAIN={{nisdomain}}
+{%endif%}{% if networkdelay %}NETWORKDELAY={{networkdelay}}
+{%endif%}{% if devtimeout %}DEVTIMEOUT={{devtimeout}}
+{%endif%}{% if nozeroconf %}NOZEROCONF={{nozeroconf}}
+{%endif%}{% if enable_ipv6 %}IPV6INIT="yes"
+{%endif%}{% if ipv6gateway %}IPV6_DEFAULTGW="{{ipv6gateway}}"
+{%endif%}

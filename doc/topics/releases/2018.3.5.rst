@@ -1,0 +1,15 @@
+===========================
+Salt 2018.3.5 Release Notes
+===========================
+
+Version 2018.3.5 is a CVE-fix release for :ref:`2018.3.0 <release-2018-3-0>`.
+
+Security Fix
+============
+
+**CVE-2019-17361** 
+
+With the Salt NetAPI enabled in addition to having a SSH roster defined,
+unauthenticated access is possible when specifying the client as SSH.
+Additionally, when the raw_shell option is specified any arbitrary command
+may be run on the Salt master when specifying SSH options.

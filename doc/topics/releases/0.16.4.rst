@@ -1,0 +1,31 @@
+=========================
+Salt 0.16.4 Release Notes
+=========================
+
+:release: 2013-09-07
+
+Version 0.16.4 is another bugfix release for :ref:`0.16.0
+<release-0-16-0>`, likely to be the last before 0.17.0 is released.
+The changes include:
+
+
+- Multiple documentation improvements/additions
+- Added the ``osfinger`` and ``osarch`` grains
+- Properly handle 32-bit packages for debian32 on x86_64 (:issue:`6607`)
+- Fix regression in yum package installation in CentOS 5 (:issue:`6677`)
+- Fix bug in :mod:`hg.latest <salt.states.hg.latest>` state that would
+  erroneously delete directories (:issue:`6661`)
+- Fix bug related to pid not existing for :mod:`ps.top <salt.modules.ps.top>`
+  (:issue:`6679`)
+- Fix regression in :mod:`MySQL returner <salt.returners.mysql>`
+  (:issue:`6695`)
+- Fix IP addresses grains (``ipv4`` and ``ipv6``) to include all addresses
+  (:issue:`6656`)
+- Fix regression preventing authenticated FTP (:issue:`6733`)
+- Fix setting password for windows users (:issue:`6824`)
+- Fix :mod:`file.contains <salt.modules.file.contains>` on values YAML parses
+  as non-string (:issue:`6817`)
+- Fix :mod:`file.get_gid <salt.modules.file.get_gid>`, :mod:`file.get_uid
+  <salt.modules.file.get_uid>`, and :mod:`file.chown <salt.modules.file.chown>`
+  for broken symlinks (:issue:`6826`)
+- Fix comment for service reloads in service state (:issue:`6851`)

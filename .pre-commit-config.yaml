@@ -1,0 +1,1439 @@
+default_language_version:
+    python: python3
+
+exclude: ^(doc/_static/.*|doc/_themes/.*)$
+repos:
+  - repo: https://github.com/saltstack/pip-tools-compile-impersonate
+    rev: "4.4"
+    hooks:
+
+  # ----- Packaging Requirements ------------------------------------------------------------------------------------>
+      - id: pip-tools-compile
+        alias: compile-pkg-linux-3.5-zmq-requirements
+        name: Linux Packaging Py3.5 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(linux\.in|py3\.5/linux\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.5
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/pkg/linux.in
+
+      - id: pip-tools-compile
+        alias: compile-pkg-linux-3.6-zmq-requirements
+        name: Linux Packaging Py3.6 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(linux\.in|py3\.6/linux\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/pkg/linux.in
+
+      - id: pip-tools-compile
+        alias: compile-pkg-linux-3.7-zmq-requirements
+        name: Linux Packaging Py3.7 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(linux\.in|py3\.7/linux\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/pkg/linux.in
+
+      - id: pip-tools-compile
+        alias: compile-pkg-linux-3.8-zmq-requirements
+        name: Linux Packaging Py3.8 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(linux\.in|py3\.8/linux\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/pkg/linux.in
+
+      - id: pip-tools-compile
+        alias: compile-pkg-linux-3.9-zmq-requirements
+        name: Linux Packaging Py3.9 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(linux\.in|py3\.9/linux\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/pkg/linux.in
+
+      - id: pip-tools-compile
+        alias: compile-pkg-linux-3.10-zmq-requirements
+        name: Linux Packaging Py3.10 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(linux\.in|py3\.10/linux\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.10
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/pkg/linux.in
+
+      - id: pip-tools-compile
+        alias: compile-pkg-freebsd-3.7-zmq-requirements
+        name: FreeBSD Packaging Py3.7 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(freebsd\.in|py3\.7/freebsd\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=freebsd
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/pkg/freebsd.in
+
+      - id: pip-tools-compile
+        alias: compile-pkg-freebsd-3.8-zmq-requirements
+        name: FreeBSD Packaging Py3.8 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(freebsd\.in|py3\.8/freebsd\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=freebsd
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/pkg/freebsd.in
+
+      - id: pip-tools-compile
+        alias: compile-pkg-freebsd-3.9-zmq-requirements
+        name: FreeBSD Packaging Py3.9 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(freebsd\.in|py3\.9/freebsd\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=freebsd
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/pkg/freebsd.in
+
+      - id: pip-tools-compile
+        alias: compile-pkg-freebsd-3.10-zmq-requirements
+        name: FreeBSD Packaging Py3.10 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto)\.txt|static/pkg/(freebsd\.in|py3\.10/freebsd\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.10
+          - --platform=freebsd
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - requirements/static/pkg/freebsd.in
+
+      - id: pip-tools-compile
+        alias: compile-pkg-darwin-3.7-zmq-requirements
+        name: Darwin Packaging Py3.7 ZeroMQ Requirements
+        files: ^(requirements/((base|zeromq|crypto|darwin|pyobjc)\.txt|static/pkg/(darwin\.in|py3\.7/darwin\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=darwin
+          - --include=requirements/darwin.txt
+          - --include=requirements/pyobjc.txt
+          - --passthrough-line-from-input=^pyobjc(.*)$
+          - requirements/static/pkg/darwin.in
+
+      - id: pip-tools-compile
+        alias: compile-pkg-darwin-3.8-zmq-requirements
+        name: Darwin Packaging Py3.8 ZeroMQ Requirements
+        files: ^(requirements/((base|zeromq|crypto|darwin|pyobjc)\.txt|static/pkg/(darwin\.in|py3\.8/darwin\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=darwin
+          - --include=requirements/darwin.txt
+          - --include=requirements/pyobjc.txt
+          - --passthrough-line-from-input=^pyobjc(.*)$
+          - requirements/static/pkg/darwin.in
+
+      - id: pip-tools-compile
+        alias: compile-pkg-darwin-3.9-zmq-requirements
+        name: Darwin Packaging Py3.9 ZeroMQ Requirements
+        files: ^(requirements/((base|zeromq|crypto|darwin|pyobjc)\.txt|static/pkg/(darwin\.in|py3\.9/darwin\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=darwin
+          - --include=requirements/darwin.txt
+          - --include=requirements/pyobjc.txt
+          - --passthrough-line-from-input=^pyobjc(.*)$
+          - requirements/static/pkg/darwin.in
+
+      - id: pip-tools-compile
+        alias: compile-pkg-darwin-3.10-zmq-requirements
+        name: Darwin Packaging Py3.10 ZeroMQ Requirements
+        files: ^(requirements/((base|zeromq|crypto|darwin|pyobjc)\.txt|static/pkg/(darwin\.in|py3\.10/darwin\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.10
+          - --platform=darwin
+          - --include=requirements/darwin.txt
+          - --include=requirements/pyobjc.txt
+          - --passthrough-line-from-input=^pyobjc(.*)$
+          - requirements/static/pkg/darwin.in
+
+      - id: pip-tools-compile
+        alias: compile-pkg-windows-3.7-zmq-requirements
+        name: Windows Packaging Py3.7 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.7/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=windows
+          - --include=requirements/windows.txt
+          - requirements/static/pkg/windows.in
+
+      - id: pip-tools-compile
+        alias: compile-pkg-windows-3.8-zmq-requirements
+        name: Windows Packaging Py3.8 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.8/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=windows
+          - --include=requirements/windows.txt
+          - requirements/static/pkg/windows.in
+
+      - id: pip-tools-compile
+        alias: compile-pkg-windows-3.9-zmq-requirements
+        name: Windows Packaging Py3.9 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.9/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=windows
+          - --include=requirements/windows.txt
+          - requirements/static/pkg/windows.in
+
+      # There's no pywin32 package for Py3.10 yet
+#      - id: pip-tools-compile
+#        alias: compile-pkg-windows-3.10-zmq-requirements
+#        name: Windows Packaging Py3.10 ZeroMQ Requirements
+#        files: ^requirements/((base|zeromq|crypto|windows)\.txt|static/pkg/(windows\.in|py3\.10/windows\.txt))$
+#        pass_filenames: false
+#        args:
+#          - -v
+#          - --py-version=3.10
+#          - --platform=windows
+#          - --include=requirements/windows.txt
+#          - requirements/static/pkg/windows.in
+
+  # <---- Packaging Requirements -------------------------------------------------------------------------------------
+
+  # ----- CI Requirements ------------------------------------------------------------------------------------------->
+      - id: pip-tools-compile
+        alias: compile-ci-linux-py3.5-zmq-requirements
+        name: Linux CI Py3.5 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in)|pkg/py3\.5/linux\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.5
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/linux.txt
+          - requirements/static/ci/linux.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-linux-py3.6-zmq-requirements
+        name: Linux CI Py3.6 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in)|pkg/py3\.6/linux\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/linux.txt
+          - requirements/static/ci/linux.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-linux-py3.7-zmq-requirements
+        name: Linux CI Py3.7 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in)|pkg/py3\.7/linux\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/linux.txt
+          - requirements/static/ci/linux.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-linux-py3.8-zmq-requirements
+        name: Linux CI Py3.8 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in)|pkg/py3\.8/linux\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/linux.txt
+          - requirements/static/ci/linux.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-linux-py3.9-zmq-requirements
+        name: Linux CI Py3.9 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in)|pkg/py3\.9/linux\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/linux.txt
+          - requirements/static/ci/linux.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-linux-py3.10-zmq-requirements
+        name: Linux CI Py3.10 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.in|common\.in)|pkg/py3\.10/linux\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.10
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/linux.txt
+          - requirements/static/ci/linux.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-linux-crypto-py3.5-requirements
+        name: Linux CI Py3.5 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.5/linux-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.5
+          - --platform=linux
+          - --out-prefix=linux
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/crypto.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-linux-crypto-py3.6-requirements
+        name: Linux CI Py3.6 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.6/linux-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=linux
+          - --out-prefix=linux
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/crypto.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-linux-crypto-py3.7-requirements
+        name: Linux CI Py3.7 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.7/linux-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=linux
+          - --out-prefix=linux
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/linux.txt
+          - requirements/static/ci/crypto.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-linux-crypto-py3.8-requirements
+        name: Linux CI Py3.8 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.8/linux-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=linux
+          - --out-prefix=linux
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/crypto.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-linux-crypto-py3.9-requirements
+        name: Linux CI Py3.9 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.9/linux-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=linux
+          - --out-prefix=linux
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/crypto.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-linux-crypto-py3.10-requirements
+        name: Linux CI Py3.10 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.10/linux-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.10
+          - --platform=linux
+          - --out-prefix=linux
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/crypto.in
+
+
+      - id: pip-tools-compile
+        alias: compile-ci-freebsd-py3.7-zmq-requirements
+        name: FreeBSD CI Py3.7 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.in|pkg/py3\.7/freebsd\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=freebsd
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/freebsd.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/freebsd.txt
+          - requirements/static/ci/freebsd.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-freebsd-py3.8-zmq-requirements
+        name: FreeBSD CI Py3.8 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.in|pkg/py3\.8/freebsd\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=freebsd
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/freebsd.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/freebsd.txt
+          - requirements/static/ci/freebsd.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-freebsd-py3.9-zmq-requirements
+        name: FreeBSD CI Py3.9 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.in|pkg/py3\.9/freebsd\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=freebsd
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/freebsd.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/freebsd.txt
+          - requirements/static/ci/freebsd.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-freebsd-py3.10-zmq-requirements
+        name: FreeBSD CI Py3.10 ZeroMQ Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.in|pkg/py3\.10/freebsd\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.10
+          - --platform=freebsd
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/freebsd.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/freebsd.txt
+          - requirements/static/ci/freebsd.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-freebsd-crypto-py3.7-requirements
+        name: FreeBSD CI Py3.7 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.7/freebsd-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=freebsd
+          - --out-prefix=freebsd
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/freebsd.txt
+          - requirements/static/ci/crypto.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-freebsd-crypto-py3.8-requirements
+        name: FreeBSD CI Py3.8 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.8/freebsd-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=freebsd
+          - --out-prefix=freebsd
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/freebsd.txt
+          - requirements/static/ci/crypto.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-freebsd-crypto-py3.9-requirements
+        name: FreeBSD CI Py3.9 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.9/freebsd-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=freebsd
+          - --out-prefix=freebsd
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/freebsd.txt
+          - requirements/static/ci/crypto.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-freebsd-crypto-py3.10-requirements
+        name: FreeBSD CI Py3.10 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/crypto\.in)$
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.10/freebsd-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.10
+          - --platform=freebsd
+          - --out-prefix=freebsd
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/freebsd.txt
+          - requirements/static/ci/crypto.in
+
+
+      - id: pip-tools-compile
+        alias: compile-ci-darwin-py3.7-zmq-requirements
+        name: Darwin CI Py3.7 ZeroMQ Requirements
+        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.in|pkg/py3\.7/darwin\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=darwin
+          - --include=requirements/darwin.txt
+          - --include=requirements/pyobjc.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/darwin.in
+          - --include=requirements/static/ci/common.in
+          - --passthrough-line-from-input=^pyobjc(.*)$
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/darwin.txt
+          - requirements/static/ci/darwin.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-darwin-py3.8-zmq-requirements
+        name: Darwin CI Py3.8 ZeroMQ Requirements
+        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.in|pkg/py3\.8/darwin\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=darwin
+          - --include=requirements/darwin.txt
+          - --include=requirements/pyobjc.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/darwin.in
+          - --include=requirements/static/ci/common.in
+          - --passthrough-line-from-input=^pyobjc(.*)$
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/darwin.txt
+          - requirements/static/ci/darwin.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-darwin-py3.9-zmq-requirements
+        name: Darwin CI Py3.9 ZeroMQ Requirements
+        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.in|pkg/py3\.9/darwin\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=darwin
+          - --include=requirements/darwin.txt
+          - --include=requirements/pyobjc.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/darwin.in
+          - --include=requirements/static/ci/common.in
+          - --passthrough-line-from-input=^pyobjc(.*)$
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/darwin.txt
+          - requirements/static/ci/darwin.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-darwin-py3.10-zmq-requirements
+        name: Darwin CI Py3.10 ZeroMQ Requirements
+        files: ^(pkg/osx/(req|req_pyobjc)\.txt|requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.in|pkg/py3\.10/darwin\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.10
+          - --platform=darwin
+          - --include=requirements/darwin.txt
+          - --include=requirements/pyobjc.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/darwin.in
+          - --include=requirements/static/ci/common.in
+          - --passthrough-line-from-input=^pyobjc(.*)$
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/darwin.txt
+          - requirements/static/ci/darwin.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-darwin-crypto-py3.7-requirements
+        name: Darwin CI Py3.7 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.7/darwin-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=darwin
+          - --out-prefix=darwin
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/darwin.txt
+          - requirements/static/ci/crypto.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-darwin-crypto-py3.8-requirements
+        name: Darwin CI Py3.8 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.8/darwin-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=darwin
+          - --out-prefix=darwin
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/darwin.txt
+          - requirements/static/ci/crypto.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-darwin-crypto-py3.9-requirements
+        name: Darwin CI Py3.9 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.9/darwin-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=darwin
+          - --out-prefix=darwin
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/darwin.txt
+          - requirements/static/ci/crypto.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-darwin-crypto-py3.10-requirements
+        name: Darwin CI Py3.10 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.10/darwin-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.10
+          - --platform=darwin
+          - --out-prefix=darwin
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/darwin.txt
+          - requirements/static/ci/crypto.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-windows-py3.7-zmq-requirements
+        name: Windows CI Py3.7 ZeroMQ Requirements
+        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.7/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=windows
+          - --include=requirements/windows.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/windows.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/windows.txt
+          - requirements/static/ci/windows.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-windows-py3.8-zmq-requirements
+        name: Windows CI Py3.8 ZeroMQ Requirements
+        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.8/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=windows
+          - --include=requirements/windows.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/windows.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/windows.txt
+          - requirements/static/ci/windows.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-windows-py3.9-zmq-requirements
+        name: Windows CI Py3.9 ZeroMQ Requirements
+        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.9/windows\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=windows
+          - --include=requirements/windows.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/windows.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/windows.txt
+          - requirements/static/ci/windows.in
+
+      # There's no pywin32 package for Py3.10 yet
+#      - id: pip-tools-compile
+#        alias: compile-ci-windows-py3.10-zmq-requirements
+#        name: Windows CI Py3.10 ZeroMQ Requirements
+#        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.in|pkg/py3\.10/windows\.txt))$
+#        pass_filenames: false
+#        args:
+#          - -v
+#          - --py-version=3.10
+#          - --platform=windows
+#          - --include=requirements/windows.txt
+#          - --include=requirements/pytest.txt
+#          - --include=requirements/static/pkg/windows.in
+#          - --include=requirements/static/ci/common.in
+#          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/windows.txt
+#          - requirements/static/ci/windows.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-windows-crypto-py3.6-requirements
+        name: Windows CI Py3.6 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.6/windows-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=windows
+          - --out-prefix=windows
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/windows.txt
+          - requirements/static/ci/crypto.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-windows-crypto-py3.7-requirements
+        name: Windows CI Py3.7 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.7/windows-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=windows
+          - --out-prefix=windows
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/windows.txt
+          - requirements/static/ci/crypto.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-windows-crypto-py3.8-requirements
+        name: Windows CI Py3.8 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.8/windows-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=windows
+          - --out-prefix=windows
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/windows.txt
+          - requirements/static/ci/crypto.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-windows-crypto-py3.9-requirements
+        name: Windows CI Py3.9 Crypto Requirements
+        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.9/windows-crypto\.txt))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=windows
+          - --out-prefix=windows
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/windows.txt
+          - requirements/static/ci/crypto.in
+
+      # There's no pywin32 package for Py3.10 yet
+#      - id: pip-tools-compile
+#        alias: compile-ci-windows-crypto-py3.10-requirements
+#        name: Windows CI Py3.10 Crypto Requirements
+#        files: ^requirements/(crypto\.txt|static/ci/(crypto\.in|py3\.10/windows-crypto\.txt))$
+#        pass_filenames: false
+#        args:
+#          - -v
+#          - --py-version=3.10
+#          - --platform=windows
+#          - --out-prefix=windows
+#          - --pip-args=--constraint=requirements/static/ci/py{py_version}/windows.txt
+#          - requirements/static/ci/crypto.in
+#
+  # <---- CI Requirements --------------------------------------------------------------------------------------------
+
+
+  # ----- Cloud CI Requirements ------------------------------------------------------------------------------------->
+      - id: pip-tools-compile
+        alias: compile-ci-cloud-py3.6-requirements
+        name: Cloud CI Py3.6 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.6/cloud\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.6
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/pkg/py{py_version}/linux.txt
+          - requirements/static/ci/cloud.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-cloud-py3.7-requirements
+        name: Cloud CI Py3.7 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.7/cloud\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.7
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/cloud.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-cloud-py3.8-requirements
+        name: Cloud CI Py3.8 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.8/cloud\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/cloud.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-cloud-py3.9-requirements
+        name: Cloud CI Py3.9 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.9/cloud\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/cloud.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-cloud-py3.10-requirements
+        name: Cloud CI Py3.10 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/(pkg/linux\.in|ci/((cloud|common)\.in|py3\.10/cloud\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.10
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/pytest.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/cloud.in
+  # <---- Cloud CI Requirements --------------------------------------------------------------------------------------
+
+  # ----- Doc CI Requirements --------------------------------------------------------------------------------------->
+      - id: pip-tools-compile
+        alias: compile-doc-requirements
+        name: Docs CI Py3.6 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/docs.in
+
+      - id: pip-tools-compile
+        alias: compile-doc-requirements
+        name: Docs CI Py3.7 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/docs.in
+
+      - id: pip-tools-compile
+        alias: compile-doc-requirements
+        name: Docs CI Py3.8 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/docs.in
+
+      - id: pip-tools-compile
+        alias: compile-doc-requirements
+        name: Docs CI Py3.9 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/docs.in
+
+      - id: pip-tools-compile
+        alias: compile-doc-requirements
+        name: Docs CI Py3.10 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/ci/(docs|common|linux)\.in|static/pkg/linux\.in|static/pkg/.*/linux\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.10
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/docs.in
+
+  # <---- Doc CI Requirements ----------------------------------------------------------------------------------------
+
+  # ----- Lint CI Requirements -------------------------------------------------------------------------------------->
+      - id: pip-tools-compile
+        alias: compile-ci-lint-py3.6-requirements
+        name: Lint CI Py3.6 Requirements
+        files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(linux\.in|common\.in|lint\.in|py3\.6/linux\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/lint.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-lint-py3.7-requirements
+        name: Lint CI Py3.7 Requirements
+        files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(linux\.in|common\.in|lint\.in|py3\.7/linux\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/lint.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-lint-py3.8-requirements
+        name: Lint CI Py3.8 Requirements
+        files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(linux\.in|common\.in|lint\.in|py3\.8/linux\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/lint.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-lint-py3.9-requirements
+        name: Lint CI Py3.9 Requirements
+        files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(linux\.in|common\.in|lint\.in|py3\.9/linux\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/lint.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-lint-py3.10-requirements
+        name: Lint CI Py3.10 Requirements
+        files: ^requirements/((base|zeromq)\.txt|static/(pkg/linux\.in|ci/(linux\.in|common\.in|lint\.in|py3\.10/linux\.txt)))$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.10
+          - --platform=linux
+          - --include=requirements/base.txt
+          - --include=requirements/zeromq.txt
+          - --include=requirements/static/pkg/linux.in
+          - --include=requirements/static/ci/linux.in
+          - --include=requirements/static/ci/common.in
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/lint.in
+
+  # <---- Lint CI Requirements ---------------------------------------------------------------------------------------
+
+  # ----- Changelog ------------------------------------------------------------------------------------------------->
+      - id: pip-tools-compile
+        alias: compile-ci-changelog-py3.6-requirements
+        name: Changelog CI Py3.6 Requirements
+        files: ^requirements/static/ci/(changelog\.in|py3\.6/(changelog|linux)\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=linux
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/changelog.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-changelog-py3.7-requirements
+        name: Changelog CI Py3.7 Requirements
+        files: ^requirements/static/ci/(changelog\.in|py3\.7/(changelog|linux)\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=linux
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/changelog.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-changelog-py3.8-requirements
+        name: Changelog CI Py3.8 Requirements
+        files: ^requirements/static/ci/(changelog\.in|py3\.8/(changelog|linux)\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --platform=linux
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/changelog.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-changelog-py3.9-requirements
+        name: Changelog CI Py3.9 Requirements
+        files: ^requirements/static/ci/(changelog\.in|py3\.9/(changelog|linux)\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --platform=linux
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/changelog.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-changelog-py3.10-requirements
+        name: Changelog CI Py3.10 Requirements
+        files: ^requirements/static/ci/(changelog\.in|py3\.10/(changelog|linux)\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.10
+          - --platform=linux
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/changelog.in
+  # <---- Changelog --------------------------------------------------------------------------------------------------
+
+  # ----- Invoke ---------------------------------------------------------------------------------------------------->
+      - id: pip-tools-compile
+        alias: compile-ci-invoke-py3.6-requirements
+        name: Linux CI Py3.6 Invoke Requirements
+        files: ^requirements/static/ci/(invoke\.in|py3.6/(invoke|linux)\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.6
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/invoke.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-invoke-py3.7-requirements
+        name: Linux CI Py3.7 Invoke Requirements
+        files: ^requirements/static/ci/(invoke\.in|py3.7/(invoke|linux)\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.7
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/invoke.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-invoke-py3.8-requirements
+        name: Linux CI Py3.8 Invoke Requirements
+        files: ^requirements/static/ci/(invoke\.in|py3.8/(invoke|linux)\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.8
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/invoke.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-invoke-py3.9-requirements
+        name: Linux CI Py3.9 Invoke Requirements
+        files: ^requirements/static/ci/(invoke\.in|py3.9/(invoke|linux)\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.9
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/invoke.in
+
+      - id: pip-tools-compile
+        alias: compile-ci-invoke-py3.10-requirements
+        name: Linux CI Py3.10 Invoke Requirements
+        files: ^requirements/static/ci/(invoke\.in|py3.10/(invoke|linux)\.txt)$
+        pass_filenames: false
+        args:
+          - -v
+          - --py-version=3.10
+          - --pip-args=--constraint=requirements/static/ci/py{py_version}/linux.txt
+          - requirements/static/ci/invoke.in
+  # <---- Invoke -----------------------------------------------------------------------------------------------------
+
+  # ----- Local Hooks ----------------------------------------------------------------------------------------------->
+  - repo: local
+    hooks:
+      - id: check-changelog-entries
+        name: Check Changelog Entries
+        entry: .pre-commit-hooks/check-changelog-entries.py
+        language: script
+  # <---- Local Hooks ------------------------------------------------------------------------------------------------
+
+  # ----- Code Formatting ------------------------------------------------------------------------------------------->
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.31.0
+    hooks:
+      - id: pyupgrade
+        name: Drop six usage and Py2 support
+        args: [--py3-plus, --keep-mock]
+        exclude: >
+          (?x)^(
+            salt/client/ssh/ssh_py_shim.py|
+            salt/ext/.*\.py
+          )$
+
+  - repo: https://github.com/saltstack/pre-commit-remove-import-headers
+    rev: 1.1.0
+    hooks:
+      - id: remove-import-headers
+
+  - repo: https://github.com/s0undt3ch/salt-rewrite
+    # Automatically rewrite code with known rules
+    rev: 1.3.2
+    hooks:
+      - id: salt-rewrite
+        alias: rewrite-docstrings
+        name: Salt docstrings auto-fixes
+        files: ^salt/.*\.py$
+        args: [--silent, -F, fix_docstrings]
+        exclude: >
+            (?x)^(
+                salt/ext/.*
+            )$
+
+  - repo: https://github.com/s0undt3ch/salt-rewrite
+    # Automatically rewrite code with known rules
+    rev: 1.3.2
+    hooks:
+      - id: salt-rewrite
+        alias: rewrite-tests
+        name: Rewrite Salt's Test Suite
+        files: ^tests/.*\.py$
+        args: [--silent, -E, fix_asserts, -E, fix_docstrings]
+
+  - repo: https://github.com/timothycrosley/isort
+    rev: "1e78a9acf3110e1f9721feb591f89a451fc9876a"
+    hooks:
+      - id: isort
+        additional_dependencies: ['toml']
+        # This tells pre-commit not to pass files to isort.
+        # This should be kept in sync with pyproject.toml
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+                tests/kitchen/.*
+            )$
+
+  - repo: https://github.com/psf/black
+    rev: 21.7b0
+    hooks:
+      - id: black
+        # This tells pre-commit not to pass files to black.
+        # This should be kept in sync with pyproject.toml
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+                tests/kitchen/.*
+            )$
+        additional_dependencies:
+          - click<8.1.0
+
+  - repo: https://github.com/asottile/blacken-docs
+    rev: v1.10.0
+    hooks:
+      - id: blacken-docs
+        args: [--skip-errors]
+        files: ^doc/.*\.rst
+        additional_dependencies:
+          - click<8.1.0
+          - black==21.7b0
+
+  # <---- Code Formatting --------------------------------------------------------------------------------------------
+
+  # ----- Security -------------------------------------------------------------------------------------------------->
+  - repo: https://github.com/PyCQA/bandit
+    rev: "1.7.0"
+    hooks:
+      - id: bandit
+        alias: bandit-salt
+        name: Run bandit against Salt
+        args: [--silent, -lll, --skip, B701]
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+                tests/.*
+            )$
+  - repo: https://github.com/PyCQA/bandit
+    rev: "1.7.0"
+    hooks:
+      - id: bandit
+        alias: bandit-tests
+        name: Run bandit against the test suite
+        args: [--silent, -lll, --skip, B701]
+        files: ^tests/.*
+        exclude: ^tests/minionswarm\.py
+  # <---- Security ---------------------------------------------------------------------------------------------------
+
+  # ----- Pre-Commit ------------------------------------------------------------------------------------------------>
+  - repo: https://github.com/saltstack/invoke-pre-commit
+    rev: v1.9.0
+    hooks:
+      - id: invoke
+        alias: check-docs
+        name: Check Docs
+        files: ^(salt/.*\.py|doc/ref/.*\.rst)$
+        args:
+          - docs.check
+        additional_dependencies:
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
+
+  - repo: https://github.com/saltstack/invoke-pre-commit
+    rev: v1.9.0
+    hooks:
+      - id: invoke
+        alias: check-filemap
+        name: Check Filename Map Change Matching
+        files: ^tests/(filename_map\.yml|.*\.py)$
+        pass_filenames: false
+        args:
+          - filemap.check
+        additional_dependencies:
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
+
+  - repo: https://github.com/saltstack/invoke-pre-commit
+    rev: v1.9.0
+    hooks:
+      - id: invoke
+        alias: loader-check-virtual
+        name: Check loader modules __virtual__
+        files: salt/.*\.py$
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+            )$
+        args:
+          - loader.check-virtual
+        additional_dependencies:
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
+
+  - repo: https://github.com/saltstack/invoke-pre-commit
+    rev: v1.9.0
+    hooks:
+      - id: invoke
+        alias: check-docstrings
+        name: Check docstrings
+        files: salt/.*\.py$
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+            )$
+        args:
+          - docstrings.check
+        additional_dependencies:
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
+
+  - repo: https://github.com/saltstack/invoke-pre-commit
+    rev: v1.9.0
+    hooks:
+      - id: invoke
+        alias: check-known-missing-docstrings
+        name: Check Known Missing Docstrings
+        stages: [manual]
+        files: salt/.*\.py$
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+            )$
+        args:
+          - docstrings.check
+          - --error-on-known-failures
+        additional_dependencies:
+          - blessings==1.7
+          - pyyaml==6.0
+          - distro==1.7.0
+          - jinja2==3.0.3
+          - msgpack==1.0.3
+
+  - repo: https://github.com/saltstack/mirrors-nox
+    rev: v2020.8.22
+    hooks:
+      - id: nox
+        alias: lint-salt
+        name: Lint Salt
+        files: ^((setup|noxfile)|(salt|tasks)/.*)\.py$
+        exclude: >
+            (?x)^(
+                templates/.*|
+                salt/ext/.*|
+            )$
+        args:
+          - -e
+          - lint-salt-pre-commit
+          - --
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
+
+  - repo: https://github.com/saltstack/mirrors-nox
+    rev: v2020.8.22
+    hooks:
+      - id: nox
+        alias: lint-tests
+        name: Lint Tests
+        files: ^tests/.*\.py$
+        args:
+          - -e
+          - lint-tests-pre-commit
+          - --
+        additional_dependencies:
+          - setuptools<58.0
+          - pip>=20.2.4,<21.2
+  # <---- Pre-Commit -------------------------------------------------------------------------------------------------

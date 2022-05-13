@@ -1,0 +1,16 @@
+============================
+Salt 2014.1.11 Release Notes
+============================
+
+:release: 2014-08-29
+
+Version 2014.1.11 is another bugfix release for :ref:`2014.1.0
+<release-2014-1-0>`.  Changes include:
+
+- Fix for minion_id with byte-order mark (BOM) (:issue:`12296`)
+- Fix ``runas`` deprecation in ``at`` module
+- Fix trailing slash befhavior for ``file.makedirs_`` (:issue:`14019`)
+- Fix chocolatey path (:issue:`13870`)
+- Fix git_pillar infinite loop issues (:issue:`14671`)
+- Fix json outputter ``null`` case
+- Fix for minion error if one of multiple masters are down (:issue:`14099`)

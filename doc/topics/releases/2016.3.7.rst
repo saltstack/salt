@@ -1,0 +1,28 @@
+===========================
+Salt 2016.3.7 Release Notes
+===========================
+
+Version 2016.3.7 is a bugfix release for :ref:`2016.3.0 <release-2016-3-0>`.
+
+
+Security Fix
+============
+
+**CVE-2017-12791** Maliciously crafted minion IDs can cause unwanted directory
+traversals on the Salt-master
+
+This release corrects a flaw in minion ID validation which could allow certain minions to
+authenticate to a master despite not having the correct credentials. To exploit
+the vulnerability, an attacker must create a salt-minion with an ID containing
+characters that will cause a directory traversal. Credit for discovering the
+security flaw goes to: Vernhk@qq.com
+
+
+Changelog for v2016.3.6..v2016.3.7
+==================================
+
+*Generated at: 2018-05-27 14:09:17 UTC*
+
+* 11d176ff1b Add release notes for 2016.3.7 release
+
+* dc649ded51 Add clean_id function to salt.utils.verify.py

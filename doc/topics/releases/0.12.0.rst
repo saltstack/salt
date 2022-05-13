@@ -1,0 +1,112 @@
+=========================
+Salt 0.12.0 Release Notes
+=========================
+
+:release: 2013-01-15
+
+Another feature release of Salt is here! Some exciting additions are included
+with more ways to make salt modular and even easier management of the salt
+file server.
+
+Major Features
+==============
+
+Modular Fileserver Backend
+--------------------------
+
+The new modular fileserver backend allows for any external system to be used as
+a salt file server. The main benefit here is that it is now possible to tell
+the master to directly use a git remote location, or many git remote locations,
+automatically mapping git branches and tags to salt environments.
+
+Windows is First Class!
+-----------------------
+
+A new Salt Windows installer is now available! Much work has been put in to
+improve Windows support. With this much easier method of getting Salt on your
+Windows machines, we hope even more development and progress will occur. Please
+file bug reports on the Salt GitHub repo issue tracker so we can continue
+improving.
+
+One thing that is missing on Windows that Salt uses extensively is a software
+package manager and a software package repository. The Salt pkg state allows
+sys admins to install software across their infrastructure and across operating
+systems. Software on Windows can now be managed in the same way. The SaltStack
+team built a package manager that interfaces with the standard Salt pkg module
+to allow for installing and removing software on Windows. In addition, a
+software package repository has been built on top of the Salt fileserver. A
+small YAML file provides the information necessary for the package manager to
+install and remove software.
+
+An interesting feature of the new Salt Windows software package repository is
+that one or more remote git repositories can supplement the master's local
+repository. The repository can point to software on the master's fileserver or
+on an HTTP, HTTPS, or ftp server.
+
+New Default Outputter
+---------------------
+
+Salt displays data to the terminal via the outputter system. For a long time
+the default outputter for Salt has been the python pretty print library.  While
+this has been a generally reasonable outputter, it did have many failings.  The
+new default outputter is called "nested", it recursively scans return data
+structures and prints them out cleanly.
+
+If the result of the new nested outputter is not desired any other outputter
+can be used via the --out option, or the output option can be set in the master
+and minion configs to change the default outputter.
+
+Internal Scheduler
+------------------
+
+The internal Salt scheduler is a new capability which allows for functions to
+be executed at given intervals on the minion, and for runners to be executed
+at given intervals on the master. The scheduler allows for sequences
+such as executing state runs (locally on the minion or remotely via an
+overstate) or continually gathering system data to be run at given intervals.
+
+The configuration is simple, add the schedule option to the master or minion
+config and specify jobs to run, this in the master config will execute the
+state.over runner every 60 minutes:
+
+.. code-block:: yaml
+
+    schedule:
+      overstate:
+        function: state.over
+        minutes: 60
+
+This example for the minion configuration will execute a highstate every 30
+minutes:
+
+.. code-block:: yaml
+
+    schedule:
+      highstate:
+        function: state.highstate
+        minutes: 30
+
+Optional DSL for SLS Formulas
+-----------------------------
+
+Jack Kuan, our renderer expert, has created something that is astonishing.
+Salt, now comes with an optional Python based DSL, this is a very powerful
+interface that makes writing SLS files in pure python easier than it was
+with the raw py renderer. As usual this can be used with the renderer shebang
+line, so a single sls can be written with the DSL if pure python power is
+needed while keeping other sls files simple with YAML.
+
+Set Grains Remotely
+-------------------
+
+A new execution function and state module have been added that allows for
+grains to be set on the minion. Now grains can be set via a remote execution or
+via states. Use the `grains.present` state or the `grains.setval` execution
+functions.
+
+Gentoo Additions
+----------------
+
+Major additions to Gentoo specific components have been made. The encompasses
+executions modules and states ranging from supporting the make.conf file to
+tools like layman.

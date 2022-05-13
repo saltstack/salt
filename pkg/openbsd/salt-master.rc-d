@@ -1,0 +1,10 @@
+#!/bin/sh
+
+daemon="/usr/local/bin/salt-master"
+daemon_flags="-d"
+
+. /etc/rc.d/rc.subr
+
+pexp="/usr/local/bin/python2.7 $daemon"
+
+rc_cmd $1

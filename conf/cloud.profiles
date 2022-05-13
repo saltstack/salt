@@ -1,0 +1,38 @@
+# This file may be used in addition to, or instead of, the files in the
+# cloud.profiles.d/ directory. The format for this file, and all files in that
+# directory, is identical.
+
+#base_ec2:
+#  provider: my-ec2-config
+#  image: ami-e565ba8c
+#  size: t1.micro
+#  script: python-bootstrap
+#  minion:
+#      cheese: edam
+
+#ubuntu_rs:
+#  provider: my-openstack-rackspace-config
+#  image: Ubuntu 12.04 LTS
+#  size: 256 server
+#  script: Ubuntu
+#  minion:
+#      cheese: edam
+
+#fedora_rs:
+#  provider: my-openstack-rackspace-config
+#  image: Fedora 17
+#  size: 256 server
+#  script: Fedora
+#  minion:
+#      cheese: edam
+
+#tencentcloud-guangzhou-s1sm1:
+#    provider: my-tencentcloud-config
+#    availability_zone: ap-guangzhou-3
+#    image: img-31tjrtph
+#    size: S1.SMALL1
+#    allocate_public_ip: True
+#    internet_max_bandwidth_out: 1
+#    password: '153e41ec96140152'
+#    securitygroups:
+#        - sg-5e90804b

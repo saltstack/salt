@@ -1,0 +1,45 @@
+.. _release-2015-8-5:
+
+===========================
+Salt 2015.8.5 Release Notes
+===========================
+
+Version 2015.8.5 is a bugfix release for :ref:`2015.8.0 <release-2015-8-0>`.
+
+.. important:: About this Release
+    Salt 2015.8.5 is identical to the 2015.8.4 release with the addition of a
+    fix for :issue:`30820`, fixed by :pull:`30833`. See :ref:`here
+    <release-2015-8-4>` for the 2015.8.4 release notes.
+
+Known Issue in ``boto_*`` execution modules
+===========================================
+
+This release contains an issue that causes the ``boto_*`` execution modules to
+display a ``__salt__ not defined`` error (:issue:`30300`). This issue will be
+fixed in an upcoming release, but can be manually resolved by completing the
+following:
+
+1. Download the ``boto_*`` execution modules that you would like to update from
+   the 2015.8 branch of Salt. A complete list of affected modules with the
+   specific changes is available in :pull`30867`.
+
+   A simple way to get the updated modules is to `download
+   <https://github.com/saltstack/salt/archive/2015.8.zip>`_ a zip file of the
+   2015.8 branch from GitHub. The updated modules are in the ``salt\modules``
+   directory.
+
+2. Place the ``boto_*`` modules into ``salt://_modules``.
+
+3. Run the following command to sync these modules to all Salt minions:
+
+   .. code-block:: bash
+
+       salt '*' saltutil.sync_modules
+
+
+Changelog for v2015.8.4..v2015.8.5
+==================================
+
+*Generated at: 2018-05-27 23:47:32 UTC*
+
+* c7db4350d5 Fix regression in scanning for state with 'name' param

@@ -1,0 +1,71 @@
+===========================
+Salt 2014.7.9 Release Notes
+===========================
+
+:release: 2016-03-11
+
+Version 2014.7.9 is a bugfix release for :ref:`2014.7.0 <release-2014-7-0>`.
+
+
+Statistics
+==========
+
+- Total Merges: **5**
+- Total Issue References: **1**
+- Total PR References: **5**
+
+- Contributors: **4** (`douardda`_, `gtmanfred`_, `jacobhammons`_, `jfindlay`_)
+
+
+Changelog for v2014.7.8..v2014.7.9
+==================================
+
+*Generated at: 2018-05-27 20:55:35 UTC*
+
+* **PR** `#31834`_: (`jfindlay`_) add 2014.7.8 release notes
+  @ *2016-03-11 21:35:42 UTC*
+
+  * 218c902091 Merge pull request `#31834`_ from jfindlay/2014.7
+
+  * 358fdad0c8 add 2014.7.8 release notes
+
+* **PR** `#31833`_: (`jfindlay`_) add 2014.7.9 release notes
+  @ *2016-03-11 21:19:55 UTC*
+
+  * a423c6cd04 Merge pull request `#31833`_ from jfindlay/2014.7
+
+  * 6910fcc584 add 2014.7.9 release notes
+
+* **PR** `#31826`_: (`gtmanfred`_) Remove ability of authenticating user to specify pam service
+  @ *2016-03-11 20:41:01 UTC*
+
+  * c5e7c03953 Merge pull request `#31826`_ from gtmanfred/2014.7
+
+  * d73f70ebb2 Remove ability of authenticating user to specify pam service
+
+* **PR** `#29392`_: (`jacobhammons`_) updated version number to not reference a specific build from the lat…
+  @ *2015-12-03 15:54:31 UTC*
+
+  * 85aa70a6cb Merge pull request `#29392`_ from jacobhammons/2014.7
+
+  * d7f0db1dd8 updated version number to not reference a specific build from the latest branch
+
+* **ISSUE** `#29295`_: (`douardda`_) systemd's service file should use the 'process' KillMode option on Debian also (refs: `#29296`_)
+
+* **PR** `#29296`_: (`douardda`_) Use process KillMode on Debian systems also
+  @ *2015-12-01 16:00:16 UTC*
+
+  * d2fb2109a3 Merge pull request `#29296`_ from douardda/patch-3
+
+  * d2885390f4 Use process KillMode on Debian systems also
+
+.. _`#29295`: https://github.com/saltstack/salt/issues/29295
+.. _`#29296`: https://github.com/saltstack/salt/pull/29296
+.. _`#29392`: https://github.com/saltstack/salt/pull/29392
+.. _`#31826`: https://github.com/saltstack/salt/pull/31826
+.. _`#31833`: https://github.com/saltstack/salt/pull/31833
+.. _`#31834`: https://github.com/saltstack/salt/pull/31834
+.. _`douardda`: https://github.com/douardda
+.. _`gtmanfred`: https://github.com/gtmanfred
+.. _`jacobhammons`: https://github.com/jacobhammons
+.. _`jfindlay`: https://github.com/jfindlay

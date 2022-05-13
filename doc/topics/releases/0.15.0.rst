@@ -1,0 +1,133 @@
+=========================
+Salt 0.15.0 Release Notes
+=========================
+
+:release: 2013-05-03
+
+The many new features of Salt 0.15.0 have arrived! Salt 0.15.0 comes with many
+smaller features and a few larger ones.
+
+These features range from better debugging tools to the new Salt Mine system.
+
+Major Features
+==============
+
+The Salt Mine
+-------------
+
+First there was the peer system, allowing for commands to be executed from a
+minion to other minions to gather data live. Then there was the external job
+cache for storing and accessing long term data. Now the middle ground is being
+filled in with the Salt Mine. The Salt Mine is a system used to execute
+functions on a regular basis on minions and then store only the most recent
+data from the functions on the master, then the data is looked up via targets.
+
+The mine caches data that is public to all minions, so when a minion posts
+data to the mine all other minions can see it.
+
+IPV6 Support
+------------
+
+0.13.0 saw the addition of initial IPV6 support but errors were encountered and
+it needed to be stripped out. This time the code covers more cases and must be
+explicitly enabled. But the support is much more extensive than before.
+
+Copy Files From Minions to the Master
+-------------------------------------
+
+Minions have long been able to copy files down from the master file server, but
+until now files could not be easily copied from the minion up to the master.
+
+A new function called ``cp.push`` can push files from the minions up to the
+master server. The uploaded files are then cached on the master in the master
+cachedir for each minion.
+
+Better Template Debugging
+-------------------------
+
+Template errors have long been a burden when writing states and pillar. 0.15.0
+will now send the compiled template data to the debug log, this makes tracking
+down the intermittent stage templates much easier. So running state.sls or
+state.highstate with `-l debug` will now print out the rendered templates in
+the debug information.
+
+State Event Firing
+------------------
+
+The state system is now more closely tied to the master's event bus. Now when
+a state fails the failure will be fired on the master event bus so that the
+reactor can respond to it.
+
+Major Syndic Updates
+--------------------
+
+The Syndic system has been basically re-written. Now it runs in a completely
+asynchronous way and functions primarily as an event broker. This means that
+the events fired on the syndic are now pushed up to the higher level master
+instead of the old method used which waited for the client libraries to
+return.
+
+This makes the syndic much more accurate and powerful, it also means that
+all events fired on the syndic master make it up the pipe as well making a
+reactor on the higher level master able to react to minions further
+downstream.
+
+Peer System Updates
+-------------------
+
+The Peer System has been updated to run using the client libraries instead
+of firing directly over the publish bus. This makes the peer system much more
+consistent and reliable.
+
+Minion Key Revocation
+---------------------
+
+In the past when a minion was decommissioned the key needed to be manually
+deleted on the master, but now a function on the minion can be used to revoke
+the calling minion's key:
+
+.. code-block:: bash
+
+    $ salt-call saltutil.revoke_auth
+
+Function Return Codes
+---------------------
+
+Functions can now be assigned numeric return codes to determine if the function
+executed successfully. While not all functions have been given return codes,
+many have and it is an ongoing effort to fill out all functions that might
+return a non-zero return code.
+
+Functions in Overstate
+----------------------
+
+The overstate system was originally created to just manage the execution of
+states, but with the addition of return codes to functions, requisite logic can
+now be used with respect to the overstate. This means that an overstate stage
+can now run single functions instead of just state executions.
+
+Pillar Error Reporting
+----------------------
+
+Previously if errors surfaced in pillar, then the pillar would consist of only
+an empty dict. Now all data that was successfully rendered stays in pillar and
+the render error is also made available. If errors are found in the pillar,
+states will refuse to run.
+
+Using Cached State Data
+-----------------------
+
+Sometimes states are executed purely to maintain a specific state rather than
+to update states with new configs. This is grounds for the new cached state
+system. By adding `cache=True` to a state call the state will not be generated
+fresh from the master but the last state data to be generated will be used.
+If no previous state data is available then fresh data will be generated.
+
+Monitoring States
+-----------------
+
+The new monitoring states system has been started. This is very young but
+allows for states to be used to configure monitoring routines. So far only one
+monitoring state is available, the ``disk.status`` state. As more capabilities
+are added to Salt UI the monitoring capabilities of Salt will continue to be
+expanded.

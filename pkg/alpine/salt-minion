@@ -1,0 +1,11 @@
+#!/sbin/openrc-run
+command="/usr/bin/salt-minion"
+command_args="--daemon"
+pidfile="/var/run/salt-minion.pid"
+name="Salt Minion"
+
+depend() {
+	need localmount
+	use net
+	after bootmisc
+}

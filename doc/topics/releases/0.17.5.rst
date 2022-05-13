@@ -1,0 +1,26 @@
+=========================
+Salt 0.17.5 Release Notes
+=========================
+
+:release: 2014-01-27
+
+Version 0.17.5 is another bugfix release for :ref:`0.17.0
+<release-0-17-0>`.  The changes include:
+
+- Fix ``user.present`` states with non-string fullname (:issue:`9085`)
+- Fix ``virt.init`` return value on failure (:issue:`6870`)
+- Fix reporting of ``file.blockreplace`` state when ``test=True``
+- Fix ``network.interfaces`` when used in cron (:issue:`7990`)
+- Fix bug in pkgrepo when switching to/from mirrorlist-based repo def (:issue:`9121`)
+- Fix infinite recursion when cache file is corrupted
+- Add checking for rev and mirror/bare args in ``git.latest`` (:issue:`9107`)
+- Add ``cmd.watch`` alias (points to ``cmd.wait``) (:issue:`8612`)
+- Fix stacktrace when prereq is not formed as a list (:issue:`8235`)
+- Fix stdin issue with lvdisplay command (:issue:`9128`)
+- Add pre-check function for range matcher (:issue:`9236`)
+- Add exception handling for psutil for processes that go missing (:issue:`9274`)
+- Allow ``_in`` requisites to match both on ID and name (:issue:`9061`)
+- Fix multiple client timeout issues (:issue:`7157` and :issue:`9302`, probably others)
+- Fix ``ZMQError: Operation cannot be accomplished in current state`` errors (:issue:`6306`)
+- Multiple optimization in minion auth routines
+- Clarify logs for minion ID caching

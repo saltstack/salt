@@ -1,0 +1,82 @@
+=========================
+Salt 0.14.0 Release Notes
+=========================
+
+:release: 2013-03-23
+
+Salt 0.14.0 is here! This release was held up primarily by PyCon, Scale, and
+illness, but has arrived! 0.14.0 comes with many new features and is breaking
+ground for Salt in the area of cloud management with the introduction of Salt
+providing basic cloud controller functionality.
+
+Major Features
+==============
+
+Salt - As a Cloud Controller
+----------------------------
+
+This is the first primitive inroad to using Salt as a cloud controller is
+available in 0.14.0. Be advised that this is alpha, only tested in a few very
+small environments.
+
+The cloud controller is built using kvm and libvirt for the hypervisors.
+Hypervisors are autodetected as minions and only need to have libvirt running
+and kvm installed to function. The features of the Salt cloud controller are
+as follows:
+
+    - Basic vm discovery and reporting
+    - Creation of new virtual machines
+    - Seeding virtual machines with Salt via qemu-nbd or libguestfs
+    - Live migration (shared and non shared storage)
+    - Delete existing VMs
+
+It is noteworthy that this feature is still Alpha, meaning that all rights
+are reserved to change the interface if needs be in future releases!
+
+Libvirt State
+-------------
+
+One of the problems with libvirt is management of certificates needed for live
+migration and cross communication between hypervisors. The new ``libvirt``
+state makes the Salt Master hold a CA and manage the signing and distribution
+of keys onto hypervisors, just add a call to the libvirt state in the sls
+formulas used to set up a hypervisor:
+
+.. code-block:: yaml
+
+    libvirt_keys:
+      libvirt.keys
+
+New get Functions
+-----------------
+
+An easier way to manage data has been introduced. The pillar, grains, and config
+execution modules have been extended with the new ``get`` function. This
+function works much in the same way as the get method in a python dict, but with
+an enhancement, nested dict components can be extracted using a `:` delimiter.
+
+If a structure like this is in pillar:
+
+.. code-block:: yaml
+
+    foo:
+      bar:
+        baz: quo
+
+Extracting it from the raw pillar in an sls formula or file template is done
+this way:
+
+.. code-block:: jinja
+
+    {{ pillar['foo']['bar']['baz'] }}
+
+Now with the new get function the data can be safely gathered and a default
+can be set allowing the template to fall back if the value is not available:
+
+.. code-block:: jinja
+
+    {{ salt['pillar.get']('foo:bar:baz', 'qux') }}
+
+This makes handling nested structures much easier, and defaults can be cleanly
+set. This new function is being used extensively in the new formulae repository
+of salt sls formulas.

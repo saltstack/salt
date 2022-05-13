@@ -1,0 +1,95 @@
+=========================
+Salt 0.13.0 Release Notes
+=========================
+
+:release: 2013-02-12
+
+The lucky number 13 has turned the corner! From CLI notifications when quitting
+a salt command, to substantial improvements on Windows, Salt 0.13.0 has
+arrived!
+
+Major Features
+==============
+
+Improved file.recurse Performance
+---------------------------------
+
+The file.recurse system has been deployed and used in a vast array of
+situations. Fixes to the file state and module have led towards opening up
+new ways of running file.recurse to make it faster. Now the file.recurse
+state will download fewer files and will run substantially faster.
+
+Windows Improvements
+--------------------
+
+Minion stability on Windows has improved. Many file operations, including
+file.recurse, have been fixed and improved. The network module works better, to
+include network.interfaces. Both 32bit and 64bit installers are now available.
+
+Nodegroup Targeting in Peer System
+-----------------------------------
+
+In the past, nodegroups were not available for targeting via the peer system.
+This has been fixed, allowing the new nodegroup expr_form argument for the
+publish.publish function:
+
+    salt-call publish.publish group1 test.ping expr_form=nodegroup
+
+Blacklist Additions
+-------------------
+
+Additions allowing more granular blacklisting are available in 0.13.0. The
+ability to blacklist users and functions in client_acl have been added, as
+well as the ability to exclude state formulas from the command line.
+
+Command Line Pillar Embedding
+-----------------------------
+
+Pillar data can now be embedded on the command line when calling ``state.sls``
+and ``state.highstate``. This allows for on the fly changes or settings to
+pillar and makes parameterizing state formulas even easier. This is done via
+the keyword argument:
+
+.. code-block:: bash
+
+    salt '*' state.highstate pillar='{"cheese": "spam"}'
+
+The above example will extend the existing pillar to hold the ``cheese`` key
+with a value of ``spam``. If the ``cheese`` key is already specified in the
+minion's pillar then it will be overwritten.
+
+CLI Notifications
+-----------------
+
+In the past hitting ctrl-C and quitting from the ``salt`` command would just
+drop to a shell prompt, this caused confusion with users who expected the
+remote executions to also quit. Now a message is displayed showing what
+command can be used to track the execution and what the job id is for the
+execution.
+
+Version Specification in Multiple-Package States
+------------------------------------------------
+
+Versions can now be specified within multiple-package :mod:`pkg.installed
+<salt.states.pkg.installed>` states. An example can be found below:
+
+.. code-block:: yaml
+
+    mypkgs:
+      pkg.installed:
+        - pkgs:
+          - foo
+          - bar: 1.2.3-4
+          - baz
+
+Noteworthy Changes
+==================
+
+The configuration subsystem in Salt has been overhauled to make the ``opts``
+dict used by Salt applications more portable, the problem is that this is an
+incompatible change with salt-cloud, and salt-cloud will need to be updated
+to the latest git to work with Salt 0.13.0. Salt Cloud 0.8.5 will also require
+Salt 0.13.0 or later to function.
+
+The SaltStack team is sorry for the inconvenience here, we work hard to make
+sure these sorts of things do not happen, but sometimes hard changes get in.

@@ -1,0 +1,163 @@
+==============================
+Salt Cloud 0.7.0 Release Notes
+==============================
+
+Salt Cloud marches forward with the 0.7.0 release. As is customary for Salt
+Stack projects the 0.7.0 release is intended to be much more robust and
+deliver a more complete core feature set. Salt Cloud 0.7.0 is just that.
+
+With new tools to help look into what is available on cloud providers,
+new additions to make cloud management more stateful and the addition of
+more supported cloud platforms 0.7.0 has greatly enhanced the capabilities
+of the overall Salt platform.
+
+Documentation
+=============
+
+The documentation for Salt Cloud can be found on Read the Docs:
+https://salt-cloud.readthedocs.io
+
+Download
+========
+
+Salt Cloud can be downloaded and install via pypi or github:
+
+https://pypi.python.org/packages/source/s/salt-cloud/salt-cloud-0.7.0.tar.gz
+
+https://cloud.github.com/downloads/saltstack/salt-cloud/salt-cloud-0.7.0.tar.gz
+
+Some packages have been made available for salt-cloud and more on their
+way. Packages for Arch, and FreeBSD are being made available thanks to the
+work of Christer Edwards, and packages for RHEL and Fedora are being created
+by Clint Savage. Package availability will be announced on the salt mailing list.
+
+New Cloud Provider Support
+==========================
+
+The following cloud providers are now supported:
+
+Amazon AWS
+  https://aws.amazon.com/ec2/
+
+Rackspace Cloud
+  https://www.rackspace.com/cloud
+
+Linode
+  https://www.linode.com/
+
+Joyent
+  https://www.joyent.com/
+
+GoGrid
+  http://www.gogrid.com/
+
+List Available Resources
+========================
+
+Setting up Salt Cloud requires knowledge of the available sizes and images on
+cloud providers. Listing the available images and sizes can now be done with
+the salt-cloud command:
+
+.. code-block:: bash
+
+    [root@saltmaster]# salt-cloud --list-sizes linode
+    linode
+      Linode 1024
+        bandwidth: 400
+        disk: 40960
+        id: 3
+        name: Linode 1024
+        ram: 1024
+        uuid: 56e6f495190cb2ed1a343f7159ad447cf27d906d
+      Linode 12GB
+        bandwidth: 2000
+        disk: 491520
+        id: 8
+        name: Linode 12GB
+        ram: 12288
+        uuid: 3d1731ebefdbcb4c283957b43d45f89a01f67c5f
+      Linode 1536
+        bandwidth: 600
+        disk: 61440
+        id: 4
+        name: Linode 1536
+        ram: 1536
+        uuid: f0f28628cc70c5f2656aa3f313588d8509ee3787
+      Linode 16GB
+        bandwidth: 2000
+        disk: 655360
+        id: 9
+        name: Linode 16GB
+        ram: 16384
+        uuid: 208cc3c0a60c4eab6ed6861344fef0311c13ffd2
+      Linode 2048
+        bandwidth: 800
+        disk: 81920
+        id: 5
+        name: Linode 2048
+        ram: 2048
+        uuid: 0c9ee69dc7ef7a4cdce71963f8d18e76c61dd57f
+      Linode 20GB
+        bandwidth: 2000
+        disk: 819200
+        id: 10
+        name: Linode 20GB
+        ram: 20480
+        uuid: e0a7b61e3830a120eec94459c9fc34ef7c9e0e36
+      Linode 4GB
+        bandwidth: 1600
+        disk: 163840
+        id: 6
+        name: Linode 4GB
+        ram: 4096
+        uuid: 09585e0f1d4ef4aad486cfa3d53f9d8960f575e7
+      Linode 512
+        bandwidth: 200
+        disk: 20480
+        id: 1
+        name: Linode 512
+        ram: 512
+        uuid: 3497f7def3d6081e6f65ac6e577296bc6b810c05
+      Linode 768
+        bandwidth: 300
+        disk: 30720
+        id: 2
+        name: Linode 768
+        ram: 768
+        uuid: da9f0dbc144aaa234aa5d555426863c8068a8c70
+      Linode 8GB
+        bandwidth: 2000
+        disk: 327680
+        id: 7
+        name: Linode 8GB
+        ram: 8192
+        uuid: e08f8a57551297b9310545430c67667f59120606
+
+
+Destroy!
+========
+
+Salt Cloud can now destroy cloud vms as easily as it can create them. The new
+``--destroy`` option can be passed to end the life of a vm:
+
+.. code-block:: bash
+
+    $ salt-cloud -d web1
+
+The map operation can now also destroy vms, the new ``hard`` option can be
+passed which makes vm maps much more stateful. With the ``hard`` option the
+vm maps are viewed as the absolute source of information for the state of
+cloud resources, and any vm that is not specified in the map file will be
+destroyed:
+
+.. code-block:: bash
+
+    [root@saltmaster]# salt-cloud -m /etc/salt/cloud.map -H
+    The following virtual machines are set to be created:
+      web1
+      riak4
+    The following virtual machines are set to be destroyed:
+      app7
+      devtest4
+
+    Proceed? [N/y]

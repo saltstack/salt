@@ -1,0 +1,188 @@
+.. _release-0-17-0:
+
+=========================
+Salt 0.17.0 Release Notes
+=========================
+
+:release: 2013-09-26
+
+The 0.17.0 release is a very exciting release of Salt, this brings to Salt
+some very powerful new features and advances. The advances range from the
+state system to the test suite, covering new transport capabilities and
+making states easier and more powerful, to extending Salt Virt and much more!
+
+The 0.17.0 release will also be the last release of Salt to follow the old
+0.XX.X numbering system, the next release of Salt will change the numbering to
+be date based following this format:
+
+<Year>.<Month>.<Minor>
+
+So if the release happens in November of 2013 the number will be 13.11.0, the
+first bugfix release will be 13.11.1 and so forth.
+
+
+Major Features
+==============
+
+Halite
+------
+
+The new Halite web GUI is now available on PyPI. A great deal of work has
+been put into Halite to make it fully event driven and amazingly fast. The
+Halite UI can be started from within the Salt Master (after being installed
+from PyPI), or standalone, and does not require an external database to run.
+It is very lightweight!
+
+This initial release of Halite is primarily the framework for the UI and the
+communication systems, making it easy to extend and build the UI up. It
+presently supports watching the event bus and firing commands over Salt.
+
+At this time, Halite is not available as a package, but installation
+documentation is available at:
+https://docs.saltproject.io/topics/tutorials/halite.html
+
+Halite is, like the rest of Salt, Open Source!
+
+Much more will be coming in the future of Halite!
+
+Salt SSH
+--------
+
+The new ``salt-ssh`` command has been added to Salt. This system allows for
+remote execution and states to be run over ssh. The benefit here being, that
+salt can run relying only on the ssh agent, rather than requiring a minion
+to be deployed.
+
+The ``salt-ssh`` system runs states in a compatible way as Salt and states
+created and run with salt-ssh can be moved over to a standard salt deployment
+without modification.
+
+Since this is the initial release of salt-ssh, there is plenty of room for
+improvement, but it is fully operational, not just a bootstrap tool.
+
+Rosters
+-------
+
+Salt is designed to have the minions be aware of the master and the master does
+not need to be aware of the location of the minions. The new salt roster system
+was created and designed to facilitate listing the targets for salt-ssh.
+
+The roster system, like most of Salt, is a plugin system, allowing for the list
+of systems to target to be derived from any pluggable backend. The rosters
+shipping with 0.17.0 are flat and scan. Flat is a file which is read in via the
+salt render system and the scan roster does simple network scanning to discover
+ssh servers.
+
+State Auto Order
+----------------
+
+This is a major change in how states are evaluated in Salt. State Auto Order
+is a new feature that makes states get evaluated and executed in the order in
+which they are defined in the sls file. This feature makes it very easy to
+see the finite order in which things will be executed, making Salt now, fully
+imperative AND fully declarative.
+
+The requisite system still takes precedence over the order in which states are
+defined, so no existing states should break with this change. But this new
+feature can be turned off by setting ``state_auto_order: False`` in the master
+config, thus reverting to the old lexicographical order.
+
+state.sls Runner
+----------------
+
+The ``state.sls`` runner has been created to allow for a more powerful system
+for orchestrating state runs and function calls across the salt minions. This
+new system uses the state system for organizing executions.
+
+This allows for states to be defined that are executed on the master to call
+states on minions via ``salt-run state.sls``.
+
+Salt Thin
+---------
+
+Salt Thin is an exciting new component of Salt, this is the ability to execute
+Salt routines without any transport mechanisms installed, it is a pure python
+subset of Salt.
+
+Salt Thin does not have any networking capability, but can be dropped into any
+system with Python installed and then ``salt-call`` can be called directly. The
+Salt Thin system, is used by the ``salt-ssh`` command, but can still be used to
+just drop salt somewhere for easy use.
+
+Event Namespacing
+-----------------
+
+Events have been updated to be much more flexible. The tags in events have all
+been namespaced allowing easier tracking of event names.
+
+Mercurial Fileserver Backend
+----------------------------
+
+The popular git fileserver backend has been joined by the mercurial fileserver
+backend, allowing the state tree to be managed entirely via mercurial.
+
+External Logging Handlers
+-------------------------
+
+The external logging handler system allows for Salt to directly hook into any
+external logging system. Currently supported are sentry and logstash.
+
+Jenkins Testing
+---------------
+
+The testing systems in Salt have been greatly enhanced, tests for salt are now
+executed, via jenkins.saltstack.com, across many supported platforms. Jenkins
+calls out to salt-cloud to create virtual machines on Rackspace, then the
+minion on the virtual machine checks into the master running on Jenkins where
+a state run is executed that sets up the minion to run tests and executes the
+test suite.
+
+This now automates the sequence of running platform tests and allows for
+continuous destructive tests to be run.
+
+Salt Testing Project
+--------------------
+
+The testing libraries for salt have been moved out of the main salt code base
+and into a standalone codebase. This has been done to ease the use of the
+testing systems being used in salt based projects other than Salt itself.
+
+StormPath External Authentication
+---------------------------------
+
+The external auth system now supports the fantastic Stormpath cloud based
+authentication system.
+
+LXC Support
+-----------
+
+Extensive additions have been added to Salt for LXC support. This included
+the backend libs for managing LXC containers. Addition into the salt-virt
+system is still in the works.
+
+macOS User/Group Support
+------------------------
+
+Salt is now able to manage users and groups on Minions running macOS.
+However, at this time user passwords cannot be managed.
+
+Django ORM External Pillar
+--------------------------
+
+Pillar data can now be derived from Django managed databases.
+
+Fixes from RC to release
+------------------------
+
+- Multiple documentation fixes
+- Add multiple source files + templating for :mod:`file.append
+  <salt.states.file.append>` (:issue:`6905`)
+- Support sysctl configuration files in systemd>=207 (:issue:`7351`)
+- Add :mod:`file.search <salt.modules.file.search>` and :mod:`file.replace
+  <salt.modules.file.replace>`
+- Fix cross-calling execution functions in provider overrides
+- Fix locale override for postgres (:issue:`4543`)
+- Fix Raspbian identification for service/pkg support (:issue:`7371`)
+- Fix :mod:`cp.push <salt.modules.cp.push>` file corruption (:issue:`6495`)
+- Fix ALT Linux password hash specification (:issue:`3474`)
+- Multiple salt-ssh-related fixes and improvements

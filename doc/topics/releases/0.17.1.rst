@@ -1,0 +1,260 @@
+=========================
+Salt 0.17.1 Release Notes
+=========================
+
+:release: 2013-10-17
+
+.. note::
+
+    THIS RELEASE IS NOT COMPATIBLE WITH PREVIOUS VERSIONS.  If you update your
+    master to 0.17.1, you must update your minions as well.  Sorry for the
+    inconvenience -- this is a result of one of the security fixes listed
+    below.
+
+The 0.17.1 release comes with a number of improvements to salt-ssh, many
+bugfixes, and a number of security updates.
+
+Salt SSH has been improved to be faster, more featureful and more secure.
+Since the original release of Salt SSH was primarily a proof of concept, it has
+been very exciting to see its rapid adoption. We appreciate the willingness of
+security experts to review Salt SSH and help discover oversights and ensure
+that security issues only exist for such a tiny window of time.
+
+
+SSH Enhancements
+================
+
+Shell Improvements
+------------------
+
+Improvements to Salt SSH's communication have been added that improve routine
+execution regardless of the target system's login shell.
+
+Performance
+-----------
+
+Deployment of routines is now faster and takes fewer commands to execute.
+
+Security Updates
+================
+
+Be advised that these security issues all apply to a small subset of Salt
+users and mostly apply to Salt SSH.
+
+Insufficient Argument Validation
+--------------------------------
+
+This issue allowed for a user with limited privileges to embed executions
+inside of routines to execute routines that should be restricted. This applies
+to users using external auth or client ACL and opening up specific routines.
+
+Be advised that these patches address the direct issue. Additional commits have
+been applied to help mitigate this issue from resurfacing.
+
+CVE
+~~~
+
+CVE-2013-4435
+
+Affected Versions
+-----------------
+
+0.15.0 - 0.17.0
+
+Patches
+~~~~~~~
+https://github.com/saltstack/salt/commit/6d8ef68b605fd63c36bb8ed96122a75ad2e80269
+https://github.com/saltstack/salt/commit/ebdef37b7e5d2b95a01d34b211c61c61da67e46a
+https://github.com/saltstack/salt/commit/7f190ff890e47cdd591d9d7cefa5126574660824
+https://github.com/saltstack/salt/commit/8e5afe59cef6743fe5dbd510dcf463dbdfca1ced
+https://github.com/saltstack/salt/commit/aca78f314481082862e96d4f0c1b75fa382bb885
+https://github.com/saltstack/salt/commit/6a9752cdb1e8df2c9505ea910434c79d132eb1e2
+https://github.com/saltstack/salt/commit/b73677435ba54ecfc93c1c2d840a7f9ba6f53410
+https://github.com/saltstack/salt/commit/07972eb0a6f985749a55d8d4a2e471596591c80d
+https://github.com/saltstack/salt/commit/1e3f197726aa13ac5c3f2416000089f477f489b5
+
+Found By
+~~~~~~~~
+
+Feth Arezki, of Majerti
+
+MITM SSH attack in salt-ssh
+---------------------------
+
+SSH host keys were being accepted by default and not enforced on future SSH
+connections. These patches set SSH host key checking by default and can be
+overridden by passing the -i flag to `salt-ssh`.
+
+CVE
+~~~
+
+CVE-2013-4436
+
+Affected Versions
+~~~~~~~~~~~~~~~~~
+
+0.17.0
+
+Found By
+~~~~~~~~
+
+Michael Scherer, Red Hat
+
+Insecure Usage of /tmp in salt-ssh
+----------------------------------
+
+The initial release of salt-ssh used the /tmp directory in an insecure way.
+These patches not only secure usage of files under /tmp in salt-ssh, but
+also add checksum validation for all packages sent into the now secure
+locations on target systems.
+
+CVE
+~~~
+
+CVE-2013-4438
+
+Affected Versions
+~~~~~~~~~~~~~~~~~
+
+0.17.0
+
+Patches
+~~~~~~~
+https://github.com/saltstack/salt/commit/aa4bb77ef230758cad84381dde0ec660d2dc340a
+https://github.com/saltstack/salt/commit/8f92b6b2cb2e4ec3af8783eb6bf4ff06f5a352cf
+https://github.com/saltstack/salt/commit/c58e56811d5a50c908df0597a0ba0b643b45ebfd
+https://github.com/saltstack/salt/commit/0359db9b46e47614cff35a66ea6a6a76846885d2
+https://github.com/saltstack/salt/commit/4348392860e0fd43701c331ac3e681cf1a8c17b0
+https://github.com/saltstack/salt/commit/664d1a1cac05602fad2693f6f97092d98a72bf61
+https://github.com/saltstack/salt/commit/bab92775a576e28ff9db262f32db9cf2375bba87
+https://github.com/saltstack/salt/commit/c6d34f1acf64900a3c87a2d37618ff414e5a704e
+
+Found By
+~~~~~~~~
+
+Michael Scherer, Red Hat
+
+YAML Calling Unsafe Loading Routine
+-----------------------------------
+
+It has been argued that this is not a valid security issue, as the YAML loading
+that was happening was only being called after an initial gateway filter in
+Salt has already safely loaded the YAML and would fail if non-safe routines
+were embedded. Nonetheless, the CVE was filed and patches applied.
+
+CVE
+~~~
+
+CVE-2013-4438
+
+Patches
+-------
+https://github.com/saltstack/salt/commit/339b0a51befae6b6b218ebcb55daa9cd3329a1c5
+
+Found By
+~~~~~~~~
+
+Michael Scherer, Red Hat
+
+Failure to Drop Supplementary Group on Salt Master
+--------------------------------------------------
+
+If a salt master was started as a non-root user by the root user, root's
+groups would still be applied to the running process. This fix changes the
+process to have only the groups of the running user.
+
+CVE
+~~~
+
+CVE not considered necessary by submitter.
+
+Affected Versions
+~~~~~~~~~~~~~~~~~
+
+0.11.0 - 0.17.0
+
+Patches
+~~~~~~~
+https://github.com/saltstack/salt/commit/b89fa9135822d029795ab1eecd68cce2d1ced715
+
+Found By
+~~~~~~~~
+
+Michael Scherer, Red Hat
+
+Failure to Validate Minions Posting Data
+----------------------------------------
+
+This issue allowed a minion to pose as another authorized minion when posting
+data such as the mine data. All minions now pass through the id challenge
+before posting such data.
+
+CVE
+~~~
+
+CVE-2013-4439
+
+Affected Versions
+~~~~~~~~~~~~~~~~~
+
+0.15.0 - 0.17.0
+
+Patches
+-------
+https://github.com/saltstack/salt/commit/7b850ff3d07ef6782888914ac4556c01e8a1c482
+https://github.com/saltstack/salt/commit/151759b2a1e1c6ce29277aa81b054219147f80fd
+
+Found By
+~~~~~~~~
+
+David Anderson
+
+Fix Reference
+=============
+
+Version 0.17.1 is the first bugfix release for :ref:`0.17.0
+<release-0-17-0>`.  The changes include:
+
+- Fix symbolic links in thin.tgz (:issue:`7482`)
+- Pass env through to file.patch state (:issue:`7452`)
+- Service provider fixes and reporting improvements (:issue:`7361`)
+- Add ``--priv`` option for specifying salt-ssh private key
+- Fix salt-thin's salt-call on setuptools installations (:issue:`7516`)
+- Fix salt-ssh to support passwords with spaces (:issue:`7480`)
+- Fix regression in wildcard includes (:issue:`7455`)
+- Fix salt-call outputter regression (:issue:`7456`)
+- Fix custom returner support for startup states (:issue:`7540`)
+- Fix value handling in augeas (:issue:`7605`)
+- Fix regression in apt (:issue:`7624`)
+- Fix minion ID guessing to use ``socket.getfqdn()`` first (:issue:`7558`)
+- Add minion ID caching (:issue:`7558`)
+- Fix salt-key race condition (:issue:`7304`)
+- Add ``--include-all`` flag to salt-key (:issue:`7399`)
+- Fix custom grains in pillar (part of :issue:`5716`, :issue:`6083`)
+- Fix race condition in salt-key (:issue:`7304`)
+- Fix regression in minion ID guessing, prioritize ``socket.getfqdn()``
+  (:issue:`7558`)
+- Cache minion ID on first guess (:issue:`7558`)
+- Allow trailing slash in ``file.directory`` state
+- Fix reporting of file_roots in pillar return (:issue:`5449` and
+  :issue:`5951`)
+- Remove pillar matching for mine.get (:issue:`7197`)
+- Sanitize args for multiple execution modules
+- Fix yumpkg mod_repo functions to filter hidden args (:issue:`7656`)
+- Fix conflicting IDs in state includes (:issue:`7526`)
+- Fix mysql_grants.absent string formatting issue (:issue:`7827`)
+- Fix postgres.version so it won't return None (:issue:`7695`)
+- Fix for trailing slashes in mount.mounted state
+- Fix rogue AttributErrors in the outputter system (:issue:`7845`)
+- Fix for incorrect ssh key encodings resulting in incorrect key added
+  (:issue:`7718`)
+- Fix for pillar/grains naming regression in python renderer (:issue:`7693`)
+- Fix args/kwargs handling in the scheduler (:issue:`7422`)
+- Fix logfile handling for `file://`, `tcp://`, and `udp://` (:issue:`7754`)
+- Fix error handling in config file parsing (:issue:`6714`)
+- Fix RVM using sudo when running as non-root user (:issue:`2193`)
+- Fix client ACL and underlying logging bugs (:issue:`7706`)
+- Fix scheduler bug with returner (:issue:`7367`)
+- Fix user management bug related to default groups (:issue:`7690`)
+- Fix various salt-ssh bugs (:issue:`7528`)
+- Many various documentation fixes

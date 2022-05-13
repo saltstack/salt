@@ -1,0 +1,49 @@
+===========================
+Salt 2014.1.5 Release Notes
+===========================
+
+:release: 2014-06-11
+
+Version 2014.1.5 is another bugfix release for :ref:`2014.1.0
+<release-2014-1-0>`.  Changes include:
+
+- Add function for finding cached job on the minion
+- Fix iptables save file location for Debian (:issue:`11730`)
+- Fix for minion caching jobs when master is down
+- Bump default ``syndic_wait`` to 5 to fix syndic-related problems
+  (:issue:`12262`)
+- Add OpenBSD, FreeBSD, and NetBSD support for ``network.netstat``
+  (:issue:`12121`)
+- Fix false positive error in logs for ``makeconf`` state (:issue:`9762`)
+- Fix for yum ``fromrepo`` package installs when repo is disabled by default
+  (:issue:`12466`)
+- Fix for extra blank lines in ``file.blockreplace`` (:issue:`12422`)
+- Fix grain detection for OpenVZ guests (:issue:`11877`)
+- Fix ``get_dns_servers`` function for Windows ``win_dns_client``
+- Use system locale for ports package installations
+- Use correct stop/restart procedure for Debian networking in ``debian_ip``
+  (:issue:`12614`)
+- Fix for ``cmd_iter``/``cmd_iter_no_block`` blocking issues (:issue:`12617`)
+- Fix traceback when syncing custom types (:issue:`12883`)
+- Fix cleaning directory symlinks in ``file.directory``
+- Add performance optimizations for ``saltutil.sync_all`` and
+  ``state.highstate``
+- Fix possible error in ``saltutil.running``
+- Fix for kmod modules with dashes (:issue:`13239`)
+- Fix possible race condition for Windows minions in state module reloading
+  (:issue:`12370`)
+- Fix bug with roster for ``passwd`` option that is loaded as a non-string object
+  (:issue:`13249`)
+- Keep duplicate version numbers from showing up in ``pkg.list_pkgs`` output
+- Fixes for Jinja renderer, timezone :mod:`module
+  <salt.modules.timezone>`/:mod:`state <salt.states.timezone>` (:issue:`12724`)
+- Fix timedatectl parsing for systemd>=210 (:issue:`12728`)
+- Fix ``saltenv`` being written to YUM repo config files (:issue:`12887`)
+- Removed the deprecated external nodes classifier (originally accessible by
+  setting a value for external_nodes in the master configuration file).  Note
+  that this functionality has been marked deprecated for some time and was
+  replaced by the more general :ref:`master tops <master-tops-system>`
+  system.
+- More robust escaping of ldap filter strings.
+- Fix trailing slash in :conf_master:`gitfs_root` causing files not to be
+  available (:issue:`13185`)

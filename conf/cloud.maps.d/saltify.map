@@ -1,0 +1,6 @@
+#make_salty:
+#  - myinstance:
+#    ssh_host: 54.262.11.38
+#    ssh_username: ubuntu
+#    ssh_keyfile: '/etc/salt/mysshkey.pem'
+#    sudo: True

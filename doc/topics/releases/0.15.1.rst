@@ -1,0 +1,91 @@
+=========================
+Salt 0.15.1 Release Notes
+=========================
+
+:release: 2013-05-08
+
+The 0.15.1 release has been posted, this release includes fixes to a number of
+bugs in 0.15.1 and a three security patches.
+
+Security Updates
+================
+
+A number of security issues have been resolved via the 0.15.1 release.
+
+Path Injection in Minion IDs
+----------------------------
+
+Salt masters did not properly validate the id of a connecting minion. This can
+lead to an attacker uploading files to the master in arbitrary locations.
+In particular this can be used to bypass the manual validation of new unknown
+minions. Exploiting this vulnerability does not require authentication.
+
+This issue affects all known versions of Salt.
+
+This issue was reported by Ronald Volgers.
+
+Patch
+~~~~~
+
+The issue is fixed in Salt 0.15.1. Updated packages are available in the usual
+locations.
+
+Specific commits:
+
+https://github.com/saltstack/salt/commit/5427b9438e452a5a8910d9128c6aafb45d8fd5d3
+
+https://github.com/saltstack/salt/commit/7560908ee62351769c3cd43b03d74c1ca772cc52
+
+https://github.com/saltstack/salt/commit/e200b8a7ff53780124e08d2bdefde7587e52bfca
+
+RSA Key Generation Fault
+------------------------
+
+RSA key generation was done incorrectly, leading to very insecure keys. It is
+recommended to regenerate all RSA keys.
+
+This issue can be used to impersonate Salt masters or minions, or decrypt any
+transferred data.
+
+This issue can only be exploited by attackers who are able to observe or modify
+traffic between Salt minions and the legitimate Salt master.
+
+A tool was included in 0.15.1 to assist in mass key regeneration, the
+manage.regen_keys runner.
+
+This issue affects all known versions of Salt.
+
+This issue was reported by Ronald Volgers.
+
+
+Patch
+~~~~~
+
+The issue is fixed in Salt 0.15.1. Updated packages are available in the usual
+locations.
+
+Specific commits:
+
+https://github.com/saltstack/salt/commit/5dd304276ba5745ec21fc1e6686a0b28da29e6fc
+
+Command Injection Via ext_pillar
+--------------------------------
+
+Arbitrary shell commands could be executed on the master by an authenticated
+minion through options passed when requesting a pillar.
+
+Ext pillar options have been restricted to only allow safe external pillars to
+be called when prompted by the minion.
+
+This issue affects Salt versions from 0.14.0 to 0.15.0.
+
+This issue was reported by Ronald Volgers.
+
+Patch
+~~~~~
+
+The issue is fixed in Salt 0.15.1. Updated packages are available in the usual locations.
+
+Specific commits:
+
+https://github.com/saltstack/salt/commit/43d8c16bd26159d827d1a945c83ac28159ec5865

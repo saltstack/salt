@@ -1,0 +1,545 @@
+
+
+/* ==========================================================================
+Author's custom styles
+========================================================================== */
+html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, font, img, ins, kbd, q, s, samp, small, strike, strong, sub, sup, tt, var, b, u, i, center, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td {
+    -webkit-transition: all 0.2s ease;
+    -moz-transition: all 0.2s ease;
+    -ms-transition: all 0.2s ease;
+    -o-transition: all 0.2s ease;
+    transition: all 0.2s ease;
+}
+body {
+    font-family: 'Open Sans', sans-serif;
+}
+.navbar .nav {
+    float:right;
+    margin: 0;
+    padding-top: 18px;
+}
+.navbar-inverse .brand, .navbar-inverse .nav > li > a {
+    color: #484c51;
+    font: 14px/24px 'Open Sans';
+    font-weight: 200;
+}
+.navbar .nav li.currentNav {
+    background: url(../img/navCurrentArrow.png) center 32px no-repeat;
+}
+.hero-unit {
+    margin-bottom: 0;
+}
+.shaded {
+    background: #f7f9f8;
+}
+.shaded img {
+    margin: 8px 12px;
+}
+.articleCredits {
+    padding-left: 12px;
+    font: 12px/24px 'Open Sans';
+    font-weight: 100;
+    white-space: pre;
+}
+.fullwidth {
+    padding: 30px;
+}
+body.contact .shaded img {
+    margin: 0;
+}
+.map img {
+    margin-top: 30px;
+    float: left;
+}
+body.index .success, body.index .clients {
+    margin-top: 0;
+}
+.success h2 {
+    margin-top: 25px;
+}
+.testimonialAuthor {
+    display: block;
+    margin-bottom: 30px;
+    font: 12px/24px 'Open Sans';
+    color: #aa2b39;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+.success hr, .events hr, .productnews hr {
+    margin-top: 0;
+}
+.clients {
+    background-color: #415a72;
+}
+.clients img {
+    margin: 15px 21px;
+}
+.news {
+    margin-bottom: 40px;
+}
+h2.homeSecTitles {
+    color: #8d9caa;
+    font-style: italic;
+    font-family: 'Open Sans';
+    font-weight: 800;
+    text-transform: capitalize;
+    margin-bottom: 0;
+}
+.success h3 {
+    font-weight: 100;
+    font-style: italic;
+    font: 18px/30px 'Open Sans';
+    color: #4f575b; margin: 25px 0;
+}
+.success img {
+    margin: 30px 10px 10px 80px;
+}
+.about img {
+    margin-bottom: 21px;
+}
+.carousel-inner {
+    max-height: 387px;
+}
+.carousel-control {
+    opacity: 1;
+    background: none;
+    border: none;
+    border-radius: 0;
+}
+.carousel-caption h1 {
+    text-transform:uppercase;
+    margin-top: 20px;
+    display:none;
+}
+.carousel-caption p {
+    margin-top: 25px;
+    font-weight: 100;
+    font: 16px/24px 'Open Sans';
+    color: #000;
+    display: none;
+}
+.carousel-caption img {
+    margin-top: 10px;
+}
+#myCarousel img {
+    width: 100%;
+    height: auto;
+}
+#myCarousel .carousel-control img {
+    width: auto;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 100;
+    font-family: 'Open Sans';
+    font-weight: normal;
+}
+
+h2 {
+    font: 18px/28px 'Open Sans';
+    text-transform: uppercase;
+    font-weight: 800;
+    color: #373e4b;
+    margin-bottom: 0;
+}
+h3 {
+    font-size: 16px; line-height:26px;
+}
+p {
+    font-size: 14px; line-height: 24px; color: #313131;
+}
+.lede {
+    text-align: center;
+    margin-bottom:20px;
+    max-width: 80%;
+    margin-left: 10%;
+}
+body.services .lede {
+    max-width: 95%;
+    margin-left: 2.5%;
+    margin-top: 30px;
+}
+body.products .lede {
+    margin-top: 30px;
+}
+.lede h3 {
+    font-weight: 100;
+    font: 24px/30px 'Open Sans';
+    color: #aa2b39;
+}
+.lede h4 {
+    font-weight: 100;
+    font-style: italic;
+    font: 20px/30px 'Open Sans';
+    color: #373e4b;
+}
+body.services .lede h4 {
+    font-size: 16px;
+    line-height: 150%;
+}
+body.services .lede {
+    margin-bottom: 30px;
+}
+body.about h1, body.services h1, body.contact h1 {
+    font: 20px/30px 'Open Sans';
+    font-style: italic;
+    font-weight: 800;
+    color: #4f575b;
+    margin-top: 0;
+}
+.row-fluid {
+    margin-top: 50px;
+}
+body.about h6 {
+    margin: 0;
+    font-weight: 100;
+    font-style: italic;
+    font-family: 'Open Sans';
+    text-transform: uppercase;
+    line-height: 80%;
+    margin-bottom: 10px;
+    color: #AA2B39;
+}
+body.services table {
+    margin: 0;
+    padding: 0;
+    table-layout: fixed;
+}
+body.services table th, body.services table td {
+    padding: 10px 0;
+    text-align: left;
+}
+body.services table td {
+    color: #373e4b;
+    font-style: italic;
+    font-weight: 100;
+    font-family: 'Open Sans';
+    width: 206px;
+}
+body.services table tr:last-child th, body.services table tr:last-child td {
+    border-bottom: none;
+}
+body.services table tr:nth-child(even) {
+    background: #eff3f1;
+}
+body.services table td:first-child {
+    padding-left: 30px;
+}
+body.services table td.tableCenter {
+    text-align: center;
+}
+.singleProduct ul {
+    margin-left: 15px;
+}
+.singleProduct li {
+    padding: 5px 0;
+}
+.btn-red {
+    display:block;
+    padding: 5px 0;
+    background: #aa2b39;
+    color: #FFF;
+    font-style: italic;
+    font-weight: 100;
+    font-family: 'Open Sans';
+    text-shadow: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    width: 100px;
+    margin-left: 75px;
+}
+.btn-red:hover, .bth-red:focus {
+    background-color: #9B1C2E;
+    color: white;
+}
+body.contact .btn-red {
+    margin-left: 0; margin-top: 5px;
+}
+#myCarousel .btn-red {
+    margin-left: 12px; margin-top:-7px;
+}
+.map {
+    border: 0; border-right: 1px solid #eee;
+}
+.map h2, .connect h2 {
+    margin: 0;
+}
+.map img {
+    padding-right: 30px;
+}
+.connect a {
+    margin: 0 8px 0 0; display: block; float: left;
+}
+.connect a img:hover {
+    margin-top: -5px;
+    -webkit-transition: margin 0.2s ease-out;
+    -moz-transition: margin 0.2s ease-out;
+    -o-transition: margin 0.2s ease-out;
+    transition: margin 0.2s ease-out;
+}
+
+footer {
+    background: url(../images/footerBG.jpg) 50% 0 no-repeat;
+    min-height: 340px;
+    margin-top: 50px;
+    position:relative;
+    -webkit-background-size: cover; /*for webKit*/
+    -moz-background-size: cover; /*Mozilla*/
+    -o-background-size: cover; /*opera*/
+    background-size: cover; /*generic*/
+}
+footer p, footer a {
+    color: #FFF;
+    font-weight: 100;
+    font: 12px 'Open Sans';
+}
+footer a {
+    display:block;
+    float: left;
+    margin: 0 0 6px 0;
+    clear: left;
+}
+footer .row-fluid {
+    margin-top: 30px;
+}
+.footerCol {
+    width: 20%;
+    float:left;
+}
+.footerCol h4 {
+    color: #FFF;
+    font-weight: 800;
+    font: 14px/24px 'Open Sans';
+    text-transform: uppercase;
+    margin-bottom: 0;
+}
+footer .social a {
+    clear: none;
+    margin: 0 4px;
+}
+footer .social img:hover {
+    margin-top: -5px;
+    -webkit-transition: margin 0.2s ease-out;
+    -moz-transition: margin 0.2s ease-out;
+    -o-transition: margin 0.2s ease-out;
+    transition: margin 0.2s ease-out;
+}
+body.contact footer, body.index footer {
+    margin-top: 0;
+}
+.news img {
+    max-width: 275px;
+    height: auto;
+}
+.news h2, .news p, .events hr {
+    max-width: 275px;
+}
+.productnews hr {
+    max-width: 595px;
+}
+
+/* ==========================================================================
+Sphinx custom styles
+========================================================================== */
+
+h1:hover > .headerlink,
+h2:hover > .headerlink,
+h3:hover > .headerlink,
+h4:hover > .headerlink,
+h5:hover > .headerlink,
+h6:hover > .headerlink,
+dt:hover > .headerlink { visibility: visible; }
+
+.sidebar .toctree-l1.current a {
+    border-right: 5px solid #fcaf3e;
+}
+.line-block {
+    display: block;
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+.line-block .line-block {
+    margin-top: 0;
+    margin-bottom: 0;
+    margin-left: 1.5em;
+}
+div.header div.rel a {
+    color:  #fcaf3e;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+.descname {
+    font-weight: bold;
+}
+.literal {
+    background-color: #eeeeec;
+}
+blockquote {
+    margin: 1em;
+}
+.footer, .footer a {
+    color: #888a85;
+}
+div.admonition {
+    font-size: 0.9em;
+    margin: 1em 0 1em 0;
+    padding: 0.5em 1em 0.5em 1em;
+    border: 1px solid #ddd;
+}
+div.admonition p.admonition-title {
+    font-weight: bold; color: #3465a4;
+}
+div.warning {
+    border-color: #940000;
+}
+div.warning p.admonition-title {
+    color: #940000;
+}
+div.viewcode-block:target {
+    background-color: #f4debf;
+    border-top: 1px solid #ac9;
+    border-bottom: 1px solid #ac9;
+}
+
+/* ==========================================================================
+SaltStack custom styles
+========================================================================== */
+
+.lit-docs {
+    list-style-type: none;
+    margin: 0;
+}
+
+.lit-item {
+    padding-bottom: 2em;
+}
+
+.lit-annotation,
+.lit-content {
+    display: inline-block;
+    vertical-align: top;
+}
+
+.lit-annotation {
+    width: 40.42553191489362%; /* span-5 */
+}
+
+.lit-content {
+    width: 57.44680851063829%; /* span-7 */
+}
+
+/* Override a few Bootstrap-isms */
+
+.lit-annotation pre,
+.lit-content pre {
+    word-break: normal;
+    word-wrap: normal;
+    white-space: pre;
+    overflow-x: auto;
+}
+
+.lit-content pre {
+    border: none;
+}
+
+.lit-container {
+    position: relative;
+}
+
+.lit-background {
+    position: absolute;
+    top: -1px;
+    bottom: 0;
+    right: 1.1em;
+    width: 57.44680851063829%; /* span-7 */
+
+    z-index: -1;
+    background-color: #f5f5f5;
+
+    border: 1px solid #e5e5ee;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+}
+
+/* rST automatically puts the .container class on ``.. container`` directives
+* which conflicts with the bootstrap class of the same name. >.<
+*/
+
+.scrollable.container {
+    width: auto;
+}
+
+.scrollable {
+    overflow-x:auto;
+    position:relative;
+}
+
+/* Code blocks */
+
+pre {
+    position: relative;
+    border-top-width: 4px;
+    padding-top: 18px; /* :before height */
+}
+
+.highlight-bash,
+.highlight-jinja,
+.highlight-python,
+.highlight-yaml {
+    position: relative;
+}
+.highlight-bash:before,
+.highlight-jinja:before,
+.highlight-python:before,
+.highlight-yaml:before {
+    z-index: 10;
+    font-size: 9px;
+    padding: 0.1em 0.8em;
+    text-align: center;
+    color: #999;
+    display: block;
+    position: absolute;
+    border-radius: 0 3px 0 3px;
+    border-top: none;
+    border-right: none;
+    background-color: #f1f1f1;
+    top: 0;
+    right: 0;
+    height: 18px;
+}
+.highlight-bash pre {
+    /* bit more subdued ... */
+    border-color: #999;
+}
+.highlight-jinja pre {
+    border-color: #e00a1b;
+}
+.highlight-python pre {
+    border-color: #3377b0;
+}
+.highlight-yaml pre {
+    border-color: #ccc;
+}
+.highlight-bash:before {
+    content: 'BASH';
+    background-color: #444;
+    color: white;
+}
+.highlight-jinja:before {
+    content: 'JINJA';
+    background-color: #e00a1b;
+    color: white;
+}
+.highlight-python:before {
+    content: 'PYTHON';
+    background-color: #3377b0;
+    color: #ffe243;
+}
+.highlight-yaml:before {
+    content: 'YAML';
+    background-color: #ccc;
+    color: black;
+}

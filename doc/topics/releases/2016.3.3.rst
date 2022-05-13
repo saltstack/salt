@@ -1,0 +1,1274 @@
+===========================
+Salt 2016.3.3 Release Notes
+===========================
+
+Version 2016.3.3 is a bugfix release for :ref:`2016.3.0 <release-2016-3-0>`.
+
+
+Statistics
+==========
+
+- Total Merges: **108**
+- Total Issue References: **26**
+- Total PR References: **115**
+
+- Contributors: **36** (`The-Loeki`_, `abednarik`_, `cachedout`_, `cro`_, `deniszh`_, `dkruger`_,
+  `dmurphy18`_, `eliasp`_, `farcaller`_, `galet`_, `gtmanfred`_, `hu-dabao`_, `isbm`_,
+  `jacobhammons`_, `jacobweinstock`_, `jfindlay`_, `justinta`_, `kstreee`_, `lubyou`_,
+  `markuskramerIgitt`_, `meaksh`_, `miihael`_, `mzupan`_, `nishigori`_, `rallytime`_, `s0undt3ch`_,
+  `skizunov`_, `tankywoo`_, `terminalmage`_, `thatch45`_, `theredcat`_, `ticosax`_, `tonybaloney`_,
+  `twangboy`_, `vutny`_, `whiteinge`_)
+
+
+Known Issues
+============
+
+:issue:`36055`: Salt Cloud events (``salt/cloud``) are not generated on the
+master event bus when provisioning cloud systems.
+
+`Bootstrap Issue #973`_: ``python-futures`` is not installed when installing
+from a git tag on RedHat-based distributions. ``Python futures`` is needed when
+
+running Salt with the TCP transport. This is fixed on the ``develop`` branch of
+the `salt-bootstrap repo`_ and the fix will be included in the upcoming release
+of salt-bootstrap, but is a bug in the bootstrap release that ships with this
+version of Salt. Please see the `salt-bootstrap repo`_ for more information on
+how to update your bootstrap version.
+
+.. _`Bootstrap Issue #973`: https://github.com/saltstack/salt-bootstrap/issues/973
+.. _`salt-bootstrap repo`: https://github.com/saltstack/salt-bootstrap
+
+
+Changelog for v2016.3.2..v2016.3.3
+==================================
+
+*Generated at: 2018-05-27 04:47:36 UTC*
+
+* **PR** `#35603`_: (`rallytime`_) Make sure version label is correct in header
+
+* **PR** `#35602`_: (`rallytime`_) Update release notes for 2016.3.3
+
+* **ISSUE** `#35102`_: (`TheBigBear`_) Exception raised when processing __virtual__ function for mac_system - (mac os x installation relies on un-installed 'mac_service_helper.sh') (refs: `#35580`_)
+
+* **PR** `#35580`_: (`twangboy`_) Fix mac_service attempts to parse non-plist files
+  @ *2016-08-19 09:24:38 UTC*
+
+  * 9683bb3c58 Merge pull request `#35580`_ from twangboy/fix_35102
+
+  * 4122e66ed5 Handle malformed plist files
+
+  * 52feff9309 Fix mac_service attempts to parse non-plist files
+
+* **PR** `#35586`_: (`hu-dabao`_) Fix 35420,  add run_on_start in build_schedule_item
+  @ *2016-08-19 09:23:32 UTC*
+
+  * c4ec94d6e8 Merge pull request `#35586`_ from hu-dabao/fix-35420
+
+  * 2d3a882cc2 fix 35420, add run_on_start in build_schedule_item, remove redundancy of enabled
+
+  * **PR** `#35583`_: (`terminalmage`_) Fix localemod tests
+
+* **PR** `#35579`_: (`rallytime`_) [2016.3] Merge forward from 2015.8 to 2016.3
+  @ *2016-08-18 22:00:41 UTC*
+
+  * d1339fd9f5 Merge pull request `#35579`_ from rallytime/merge-2016.3
+
+  * 00dff9dcbd Merge branch '2015.8' into '2016.3'
+
+  * 26a7f7d9f7 Merge pull request `#35577`_ from terminalmage/unit-file-changes
+
+    * 6cb0fb47f3 pkg/salt-syndic.service: change Type to notify
+
+    * 175ba99e0e pkg/salt-minion.service: remove KillMode, change Type to notify
+
+    * 540ec28954 pkg/salt-master.service: remove KillMode
+
+    * 69fad464ab pkg/salt-api.service: change Type to notify
+
+* **PR** `#35571`_: (`rallytime`_) [2016.3] Merge forward from 2015.8 to 2016.3
+  @ *2016-08-18 19:50:03 UTC*
+
+  * f7a18234db Merge pull request `#35571`_ from rallytime/merge-2016.3
+
+  * 2930df924e Update localemod_test systemd.sd_booted mock to use salt.utils.systemd.booted
+
+  * e61b04a707 Merge branch '2015.8' into '2016.3'
+
+    * 2a5d1a0eee fix-35384, fix the logic caused by wrong indent (`#35566`_)
+
+    * feb852f8c0 Clarify config.get docstring (`#35492`_)
+
+    * 205d8e2e7b Merge pull request `#35483`_ from gtmanfred/2015.8
+
+      * 2d8ec1e9db use __opts__ in salt.utils.cloud for cache functions
+
+    * 70fa2d0901 Merge pull request `#35546`_ from whiteinge/salt-api-eauth-fail-gracefully
+
+      * eb3574adae Don't fail hard if the user's permissions cannot be found
+
+      * ec597bd54c Change groups check in token to look for truthy values
+
+    * 61fec6caa9 add missing glob import (`#35525`_)
+
+    * 0e3f2fc6cb Whitespace fix for 2015.8 (`#35540`_)
+
+    * fd3274c800 Merge pull request `#35510`_ from terminalmage/issue33516
+
+      * 5b5f19d269 Update zypper unit test to reflect call to config.get
+
+      * 2730edb516 Add note about systemd-run usage in package states
+
+      * e2d9e87e10 salt/modules/systemd.py: Use systemd-run --scope where needed
+
+      * 22919a25bc Notify systemd on salt-api start
+
+      * a40b3f8a08 Notify systemd on syndic start
+
+      * e847d3af30 Notify systemd on minion start
+
+      * d648887afc salt/modules/zypper.py: Use systemd-run --scope where needed
+
+      * 2e17976722 salt/modules/yumpkg.py: Use systemd-run --scope where needed
+
+      * 86b59c1e74 salt/modules/pacman.py: Use systemd-run --scope where needed
+
+      * e32d92c6d5 salt/modules/ebuild.py: Use systemd-run --scope where needed
+
+      * c7d21d3ae3 salt/modules/aptpkg.py: Use systemd-run --scope where needed
+
+      * f83e0ef242 Add unit tests for salt.utils.systemd
+
+      * 5b12f030c6 Add func to salt.utils.systemd to tell if scopes are available
+
+  * **PR** `#35573`_: (`rallytime`_) Back-port `#33337`_ to 2016.3
+
+  * **PR** `#33337`_: (`mzupan`_) adding the () to make changes work (refs: `#35573`_)
+
+* **PR** `#35572`_: (`terminalmage`_) Fix poor formatting in pkg state docs
+  @ *2016-08-18 18:15:52 UTC*
+
+  * 73b549ed00 Merge pull request `#35572`_ from terminalmage/docs
+
+  * 7d7a7de9e6 Fix poor formatting in pkg state docs
+
+  * **PR** `#35545`_: (`hu-dabao`_) fix-35384, fix cmd.run unless (refs: `#35566`_)
+
+  * **PR** `saltstack/salt#35463`_: (`skizunov`_) Make `auth_timeout` user configurable again (refs: `#35489`_)
+
+* **PR** `#35489`_: (`rallytime`_) Back-port `#35463`_ to 2016.3
+  @ *2016-08-18 07:16:03 UTC*
+
+  * **PR** `#35463`_: (`skizunov`_) Make `auth_timeout` user configurable again (refs: `#35489`_)
+
+  * f2eb3dc105 Merge pull request `#35489`_ from rallytime/bp-35463
+
+  * bbf7ce121b Remove final self.MINION_CONNECT_TIMEOUT ref
+
+  * cf2e2daab9 Make `auth_timeout` user configurable again
+
+  * **PR** `#35538`_: (`thatch45`_) Treat python XML as an optdep
+
+* **PR** `#35526`_: (`thatch45`_) Always deploy the thin to /var/tmp
+  @ *2016-08-17 19:44:26 UTC*
+
+  * e2bd575461 Merge pull request `#35526`_ from thatch45/ssh_W_tmp
+
+  * a381f02cfe Always deploy the thin to /var/tmp
+
+* **PR** `#35522`_: (`rallytime`_) [2016.3] Merge forward from 2015.8 to 2016.3
+  @ *2016-08-17 18:07:16 UTC*
+
+  * 8b770869e4 Merge pull request `#35522`_ from rallytime/merge-2016.3
+
+  * ff212d8976 Whitespace fix
+
+  * c305d8d99b Merge branch '2015.8' into '2016.3'
+
+  * b3b28cb760 Might be a good idea to be able to download the software we make (`#35513`_)
+
+  * 9f87081cef Merge pull request `#35302`_ from Ch3LL/add_job_cache_test
+
+    * ccb2a5cadf remove unused imports
+
+    * 512ae81dfd remove TMP and add integration.TMP
+
+    * c9b7c3cf80 need to add returners option in other places
+
+    * 7316df7a02 fix pylint
+
+    * 50a4f0fe6a fix comment
+
+    * 6837acf742 add job cache integration tests
+
+  * 1c82c6bee5 Merge pull request `#35512`_ from cachedout/fixup_35419
+
+    * 253662541a Fix import
+
+    * f16a30786b Fixes consul.agent_service_register which was broken for registering service checks.
+
+  * e1a373fa4c Merge pull request `#35497`_ from deepakhj/2015.8
+
+    * 685db4ab88 Fix spacing
+
+  * 4048255ed6 Merge pull request `#35508`_ from terminalmage/update-docstring
+
+    * 67c945fce0 Add Carbon to versionadded for git.diff
+
+* **PR** `#35516`_: (`rallytime`_) Back-port `#34441`_ to 2016.3
+  @ *2016-08-17 15:47:23 UTC*
+
+  * **PR** `#34441`_: (`markuskramerIgitt`_) Copy and delete silently, do not list each file (refs: `#35516`_)
+
+  * e86a39a115 Merge pull request `#35516`_ from rallytime/bp-34441
+
+  * e47c661cb0 Copy and delete silently, do not list each file
+
+  * **PR** `saltstack/salt#34502`_: (`markuskramerIgitt`_) Windows installer build scripts will exit on error (refs: `#35517`_)
+
+* **PR** `#35517`_: (`rallytime`_) Back-port `#34502`_ to 2016.3
+  @ *2016-08-17 15:47:10 UTC*
+
+  * **PR** `#34502`_: (`markuskramerIgitt`_) Windows installer build scripts will exit on error (refs: `#35517`_)
+
+  * 45080d9860 Merge pull request `#35517`_ from rallytime/bp-34502
+
+  * 32da48df08 setup.py will not print each individual file
+
+  * 698a076a39 Completely remove Python and verify
+
+  * 7406bd22a6 Errors will stop the scripts
+
+* **PR** `#35429`_: (`tankywoo`_) Fix iptables target options with no arguments
+  @ *2016-08-17 10:05:17 UTC*
+
+  * c1deb945d7 Merge pull request `#35429`_ from tankywoo/fix-iptables-target-options
+
+  * 914eb60d51 Fix iptables target options with no arguments
+
+* **ISSUE** `#35458`_: (`iggy`_) SALT.STATES.APACHE_MODULE needs version annotations (refs: `#35495`_)
+
+* **PR** `#35495`_: (`rallytime`_) Use correct deprecated notation instead of a warning for apache_module.enable state function.
+  @ *2016-08-17 09:36:40 UTC*
+
+  * 678759ba6c Merge pull request `#35495`_ from rallytime/fix-35458
+
+  * 9bae3d09a6 Use correct deprecated notation instead of a warning.
+
+* **ISSUE** `#35336`_: (`Sylvain303`_) documentation state.file.managed parameter template not reflecting TEMPLATE_REGISTRY (refs: `#35360`_, `#35498`_, `#35406`_, #saltstack/salt`#35360`_)
+
+  * **PR** `saltstack/salt#35360`_: (`rallytime`_) Add all template registery templates to file.managed docs (refs: `#35406`_)
+
+* **PR** `#35498`_: (`rallytime`_) Add supported templates list to all template doc references in file state
+  @ *2016-08-17 09:33:36 UTC*
+
+  * **PR** `#35406`_: (`rallytime`_) Provide links to the renderers in the template docs (refs: `#35498`_)
+
+  * **PR** `#35360`_: (`rallytime`_) Add all template registery templates to file.managed docs (refs: `#35498`_)
+
+  * 5bd44b10a7 Merge pull request `#35498`_ from rallytime/file-state-docs
+
+  * 6190b2d738 Add supported templates list to all template doc references in file state
+
+* **PR** `#35487`_: (`rallytime`_) [2016.3] Merge forward from 2015.8 to 2016.3
+  @ *2016-08-16 18:36:21 UTC*
+
+  * 6df4648765 Merge pull request `#35487`_ from rallytime/merge-2016.3
+
+  * c6c82be1de Merge branch '2015.8' into '2016.3'
+
+  * bfe7107a87 Update bootstrap script to latest stable (2016.08.16) (`#35486`_)
+
+  * 240fc12863 Merge pull request `#35413`_ from cachedout/issue_35296
+
+    * fb8a12d677 Fix silly error
+
+    * 3646cf1afa Additional checks on master and integration test
+
+    * 09efde7634 Splat the list into os.path.join
+
+    * fc0d5878bc Set file_recv on test master
+
+    * 81c4d136c5 Transition file push paths to lists
+
+  * c3319b2a8b Merge pull request `#35476`_ from cachedout/issue_35380
+
+    * c05fcf33d1 Fixup SSH bug where sudo without sudo user would break
+
+  * 004778c966 Merge pull request `#35471`_ from terminalmage/issue34479
+
+    * e243c63e43 win_pkg: Fix traceback when package is not installed
+
+  * 5c9428c32d Merge pull request `#35448`_ from isbm/isbm-zypper-106-fix
+
+    * dd82e6a848 Add ignore_repo_failure option to suppress zypper's exit code 106 on unavailable repos
+
+  * 1473474b04 Merge pull request `#35451`_ from isbm/isbm-zypper-mod_repo-unchanged
+
+    * 8790197d86 Fix Unit test for suppressing the exception removal on non-modified repos
+
+    * 3f00c6997a Remove zypper's raise exception if mod_repo has no arguments and/or no changes
+
+  * a8c4f17f50 Merge pull request `#35453`_ from theothergraham/fix_CacheDisk
+
+    * ae5b233d51 fixes `#34279`_
+
+  * d8c35b5260 Merge pull request `#35459`_ from thatch45/shim_fix
+
+    * 10037b00cb Some environments refuse to return the command output
+
+  * 38b60a32e5 [2015.8] Update bootstrap script to latest stable (2016.08.15) (`#35460`_)
+
+* **ISSUE** `#34161`_: (`bobrik`_) Salt command can hang forever because of one broken minion (refs: `#35446`_)
+
+  * **PR** `#35446`_: (`cachedout`_) Make salt-client aware of edge-case where saltutil might be broken
+
+* **ISSUE** `#35422`_: (`ViaviSolutions`_) aptpkg.py: install_recommends: True does not force "--install-recommends" (refs: `#35449`_)
+
+* **PR** `#35449`_: (`dkruger`_) aptpkg will specify --install-recommends if enabled by the SLS
+  @ *2016-08-16 01:38:56 UTC*
+
+  * f90ecbb15e Merge pull request `#35449`_ from dkruger/fix-35422
+
+  * f54bf445b5 aptpkg will specify --install-recommends if enabled by the SLS
+
+* **ISSUE** `#33367`_: (`supertom`_) [salt-cloud] libcloud >= 1.0.0 incompatible regarding node_state (refs: `#33518`_)
+
+* **PR** `#35467`_: (`rallytime`_) Back-port `#33518`_ to 2016.3
+  @ *2016-08-16 01:17:01 UTC*
+
+  * **PR** `#35235`_: (`rallytime`_) Back-port `#33518`_ to 2016.3 (refs: `#35467`_)
+
+  * **PR** `#33518`_: (`tonybaloney`_) Fix libcloud bug `#33367`_ (refs: `#35235`_, `#35467`_)
+
+  * d2dd78e25b Merge pull request `#35467`_ from rallytime/bp-33518
+
+  * e427815caf fix clrf
+
+  * be41a400fa commit fix
+
+  * 06530b5461 add a test to check existing functionality is broken
+
+  * **PR** `#35461`_: (`rallytime`_) [2016.3] Update bootstrap script to latest stable (2016.08.15)
+
+* **PR** `#35456`_: (`rallytime`_) [2016.3] Merge forward from 2015.8 to 2016.3
+  @ *2016-08-15 19:16:23 UTC*
+
+  * 9b2c075611 Merge pull request `#35456`_ from rallytime/merge-2016.3
+
+  * 6a86a12294 Merge branch '2015.8' into '2016.3'
+
+  * d75005c519 Fix cp.push_dir pushing empty dirs (`#35442`_)
+
+  * 09925ba353 Minor doc fixup (`#35436`_)
+
+  * a0b128a85a Merge pull request `#35132`_ from sjorge/2015.8-35121
+
+    * 5cb38c8ae0 switch to fpread().splitlines(), as per @lorengordon suggestion
+
+    * 634f1dded5 fixes `#35121`_, causing lots of mayham (onchange) with 2016.3.2 for me
+
+  * **PR** `saltstack/salt#35308`_: (`farcaller`_) Actually fixed dockerng.list_tags (refs: `#35447`_)
+
+  * **PR** `saltstack/salt#34702`_: (`farcaller`_) Fixed dockerng.list_tags (refs: `#35447`_)
+
+  * **PR** `#35447`_: (`ticosax`_) [dockerng] RepoTags can be also be None with docker 1.12
+
+  * **PR** `#34702`_: (`farcaller`_) Fixed dockerng.list_tags (refs: #`saltstack/salt#35308`_)
+
+* **ISSUE** `saltstack/salt#35403`_: (`randomed`_) Setting ext_job_cache breaks on salt-master (refs: `#35427`_)
+
+  * **PR** `#35427`_: (`cachedout`_) Correct errant call to argspec from master. Fix ext_job_cache.
+
+* **ISSUE** `#35423`_: (`Ch3LL`_) Stacktrace when running state.sls against an sls does not exist (refs: `#35428`_)
+
+  * **PR** `#35428`_: (`cachedout`_) Resolve stacktrace logged by highstate outputter if sls cannot be found
+
+* **PR** `#35412`_: (`s0undt3ch`_) Only allow one sync read to happen at a time.
+  @ *2016-08-12 23:57:29 UTC*
+
+  * 607169a01b Merge pull request `#35412`_ from s0undt3ch/2016.3
+
+  * f54b3cc514 Only allow one sync read to happen at a time.
+
+* **ISSUE** `#35336`_: (`Sylvain303`_) documentation state.file.managed parameter template not reflecting TEMPLATE_REGISTRY (refs: `#35360`_, `#35498`_, `#35406`_, #saltstack/salt`#35360`_)
+
+  * **PR** `saltstack/salt#35360`_: (`rallytime`_) Add all template registery templates to file.managed docs (refs: `#35406`_)
+
+  * **PR** `#35406`_: (`rallytime`_) Provide links to the renderers in the template docs (refs: `#35498`_)
+
+* **PR** `#35393`_: (`deniszh`_) No need to run ddns update every time
+  @ *2016-08-12 12:40:36 UTC*
+
+  * b3e9e98b40 Merge pull request `#35393`_ from deniszh/2016.3_fix35350
+
+  * 6f2f080f4a No need to run dns update every time
+
+* **PR** `#35407`_: (`hu-dabao`_) [Fix-35094] None will not be added to grains which generate [none]
+  @ *2016-08-12 12:34:05 UTC*
+
+  * a5fe05b7f9 Merge pull request `#35407`_ from hu-dabao/fix-35094
+
+  * a23108f795 None will not be added to grains which generate [none]
+
+* **PR** `#35411`_: (`eliasp`_) modules.event.send(): Prevent backtrace for masterless Minions
+  @ *2016-08-12 12:29:02 UTC*
+
+  * 4dc776ffbf Merge pull request `#35411`_ from eliasp/2016.3-modules.event-handle-file_client-opt
+
+  * 8d7244bdd9 modules.event.send(): Also check for `file_client` and `use_master_when_local` opts
+
+* **PR** `#35395`_: (`rallytime`_) [2016.3] Merge forward from 2015.8 to 2016.3
+  @ *2016-08-11 20:59:37 UTC*
+
+  * c032506e6b Merge pull request `#35395`_ from rallytime/merge-2016.3
+
+  * 0d1aa630f1 Lint fix
+
+  * cf038ee3fe Merge branch '2015.8' into '2016.3'
+
+  * d9c20c0456 Update freebsd.rst (`#35394`_)
+
+  * a375dd7e1f Clean up open filehandles (`#35359`_)
+
+  * 9ea7a34c30 Merge pull request `#35339`_ from isbm/isbm-2015.8-minion-importerror-fix
+
+    * 12af60b7be Fix continuous minion restart if a dependency wasn't installed
+
+  * fd9b05ace4 Merge pull request `#35357`_ from twangboy/file.recurse.clean.2015.8
+
+    * d328ec0157 Fix file.recurse with clean: True
+
+* **ISSUE** `#35226`_: (`mathieubouchard`_) Do not throw an exception when an invalid requisite is set (refs: `#35373`_)
+
+  * **PR** `#35373`_: (`cachedout`_) Raise SaltRenderError on bad requisite
+
+* **PR** `#35352`_: (`twangboy`_) Fix file.recurse with clean: True  on Windows (2016.3)
+  @ *2016-08-11 00:46:11 UTC*
+
+  * 72f3548671 Merge pull request `#35352`_ from twangboy/file.recurse.clean
+
+  * ecad616d08 Fix file.recurse with clean: True
+
+* **PR** `#35356`_: (`jfindlay`_) document log levels and warn on all logging below info
+  @ *2016-08-11 00:45:56 UTC*
+
+  * 0fcfc70cc8 Merge pull request `#35356`_ from jfindlay/log_levels
+
+  * 2fc3a55338 utils.verify.verify_log: warn at all levels less than info
+
+  * 72a3f18a2e log.setup: minor optimization
+
+  * 66332510c6 doc.ref.configuration.logging: document log levels
+
+  * 93616eff3e doc.ref.configuration.logging: fix formatting
+
+  * 472a2d31de doc.ref.configuration.logging: cleanup formatting
+
+* **PR** `#35358`_: (`twangboy`_) Update libsodium deps
+  @ *2016-08-11 00:36:30 UTC*
+
+  * 2f7be03053 Merge pull request `#35358`_ from twangboy/update_libsodium_deps
+
+  * d120a8906f Add vcredist 14 dlls
+
+* **ISSUE** `#35336`_: (`Sylvain303`_) documentation state.file.managed parameter template not reflecting TEMPLATE_REGISTRY (refs: `#35360`_, `#35498`_, `#35406`_, #saltstack/salt`#35360`_)
+
+* **PR** `#35360`_: (`rallytime`_) Add all template registery templates to file.managed docs (refs: `#35498`_)
+  @ *2016-08-11 00:35:20 UTC*
+
+  * f9e03b9c59 Merge pull request `#35360`_ from rallytime/fix-35336
+
+  * 30badb5402 Add all template registery templates to file.managed docs
+
+* **ISSUE** `#24745`_: (`The-Loeki`_) RFC: disk versus blockdev (refs: `#24893`_)
+
+  * **PR** `saltstack/salt#25267`_: (`jfindlay`_) Disk module improvements (refs: `#35361`_)
+
+* **PR** `#35362`_: (`rallytime`_) Correct deprecation version tags
+  @ *2016-08-11 00:34:38 UTC*
+
+  * **PR** `#35361`_: (`rallytime`_) Blockdev deprecations (refs: `#35362`_)
+
+  * **PR** `#25267`_: (`jfindlay`_) Disk module improvements (refs: `#35362`_)
+
+  * **PR** `#24893`_: (`The-Loeki`_) Contribution: Disk module improvements (refs: #`saltstack/salt`#25267`_`_, `#25267`_)
+
+  * 3c628d3cbc Merge pull request `#35362`_ from rallytime/correct-deprecated-tag
+
+  * 507827a014 Correct deprecation version tags
+
+* **PR** `#35347`_: (`rallytime`_) [2016.3] Merge forward from 2015.8 to 2016.3
+  @ *2016-08-10 20:07:42 UTC*
+
+  * 87e29188c0 Merge pull request `#35347`_ from rallytime/merge-2016.3
+
+  * a651962e95 Merge branch '2015.8' into '2016.3'
+
+  * 4618b433e9 Merge pull request `#35323`_ from thatch45/ssh_crazy
+
+    * 8a5b47b5d7 Collect all error data from the wfuncs call
+
+    * 11864c31b7 suppress a stack trace to show clean ssh error
+
+    * 9fbfa282fa wow this solves an issue!
+
+  * cfae862972 Merge pull request `#35325`_ from kev009/fbsd-netstat-route
+
+    * 0d49dd3c29 Fix fbsd netstat route on fbsd 10+
+
+  * 244c3bd495 Pass port to ssh.check_known_host, closes `#35264`_ (`#35301`_)
+
+  * 243909f39d file.recurse: Do not convert octal mode string to int (`#35309`_)
+
+  * **PR** `#35334`_: (`cachedout`_) Restore random_master functionality
+
+* **PR** `#35331`_: (`hu-dabao`_) fix 35165, salt-run jobs.exit_success jid is broken
+  @ *2016-08-10 11:50:10 UTC*
+
+  * 78dfd18ec6 Merge pull request `#35331`_ from hu-dabao/fix-35165
+
+  * 4dcce18d01 fix 35165, salt-run jobs.exit_success jid is broken
+
+* **PR** `#35318`_: (`rallytime`_) Remove legacy compat docs in mysql pillar since the code was removed already
+  @ *2016-08-10 11:34:48 UTC*
+
+  * **PR** `#30913`_: (`justinta`_) Deprecated code removed.  (refs: `#35318`_)
+
+  * fcca0b9333 Merge pull request `#35318`_ from rallytime/remove-deprecation-docs
+
+  * 75f205e485 Remove legacy compat docs in mysql pillar since the code was removed already
+
+* **PR** `#35329`_: (`hu-dabao`_) sys.doc will skip all not connected minions
+  @ *2016-08-10 11:18:22 UTC*
+
+  * 3446dc9ec6 Merge pull request `#35329`_ from hu-dabao/fix-tiny-salt-cli
+
+  * 4b806a70ea sys.doc will skip all not connected minions
+
+* **PR** `#35306`_: (`rallytime`_) [2016.3] Merge forward from 2015.8 to 2016.3
+  @ *2016-08-09 18:50:44 UTC*
+
+  * 31f7d307a7 Merge pull request `#35306`_ from rallytime/merge-2016.3
+
+  * 2d3eadfe49 Merge branch '2015.8' into '2016.3'
+
+  * 2efc1b333b Merge pull request `#35290`_ from terminalmage/issue35051
+
+    * d621aa7b61 Update runner/wheel unit tests to reflect new key in ret dict
+
+    * 90c12a9c7b Add __orchestration__ key to orch returns for runner/wheel funcs
+
+    * 7b8c3b86e7 Suppress error about invalid changes data for orchestration jobs
+
+    * 54a1704d6c Suppress event for wheel/runner funcs executed from orchestration
+
+    * f409f62bf2 Accept print_event option in WheelClient.cmd()
+
+    * b42b25ccce Add cmd func for RunnerClient
+
+    * 480065fe00 Add print_event option to client mixins
+
+* **PR** `#35229`_: (`lubyou`_) Ignore import error for pwd module in mac_shadow
+  @ *2016-08-09 15:48:16 UTC*
+
+  * 94529d0578 Merge pull request `#35229`_ from lubyou/fix-mac_shadow
+
+  * b45039c240 Do not blindly ignore import failures
+
+  * c1d5670b79 Ignore import error for pwd module
+
+* **PR** `#35227`_: (`isbm`_) Isbm osfinger ubuntu fix
+  @ *2016-08-09 15:38:31 UTC*
+
+  * ce7aeb6ca4 Merge pull request `#35227`_ from isbm/isbm-osfinger-ubuntu-fix
+
+  * fe5da97283 Lintfix: E8303
+
+  * 6eea62d4ec Add a deprecation warning
+
+  * 4dc45f2509 Add grains unit test for Ubuntu systems
+
+  * 3904e4b81c Bugfix: Ubuntu osfinger should contain also minor version
+
+  * a69f97f9ad Bugfix: use oscodename if lsb_distrib_codename key exists empty.
+
+* **PR** `#35286`_: (`hu-dabao`_) fix 34425, a bug that sys.doc cannot output format
+  @ *2016-08-09 09:50:12 UTC*
+
+  * 47e328f755 Merge pull request `#35286`_ from hu-dabao/fix-34425
+
+  * 86fb359f58 fix 34425, a bug that sys.doc cannot output format
+
+* **ISSUE** `#27294`_: (`stenstad`_) salt-cloud should support Openstack Identitiy v3 for authentication (refs: `#35213`_)
+
+* **PR** `#35275`_: (`rallytime`_) Back-port `#35213`_ to 2016.3
+  @ *2016-08-09 00:02:43 UTC*
+
+  * **PR** `#35213`_: (`gtmanfred`_) add identity v3 support to openstack driver (refs: `#35275`_)
+
+  * d79cb1b4ec Merge pull request `#35275`_ from rallytime/bp-35213
+
+  * 9b9fc508cc add identity v3 support to openstack driver
+
+  * **PR** `#35278`_: (`dmurphy18`_) Increase timeout for siging to 10 seconds when signing rpm packages
+
+* **PR** `#35276`_: (`rallytime`_) [2016.3] Merge forward from 2015.8 to 2016.3
+  @ *2016-08-08 18:20:29 UTC*
+
+  * 959a00e4b7 Merge pull request `#35276`_ from rallytime/merge-2016.3
+
+  * 2b4c156df1 Merge branch '2015.8' into '2016.3'
+
+  * f8158124d5 Merge pull request `#35211`_ from cachedout/issue_31074
+
+    * 6f53232e6d Better error handling and a workaround for group mismatch.
+
+    * 5b56a4acf7 Docs
+
+    * ae04e7aaeb Initial POC
+
+  * 3e4eb13daa Merge pull request `#35271`_ from bobrik/default-output-profile
+
+    * 6cdee21036 Default state_output_profile to True everywhere, closes `#35166`_
+
+  * 673e1aa1aa Merge pull request `#35233`_ from terminalmage/issue32719
+
+    * 730a077041 Do not attempt to get fqdn_ip{4,6} grains when ipv{4,6} grains are empty
+
+  * cdf3c0fe73 Merge pull request `#35202`_ from multani/fix/test-doc
+
+    * 1642dba5d1 doc: fix broken links in the test documentation page
+
+  * e1331cd2a3 Merge pull request `#35236`_ from rallytime/bp-35119
+
+    * 9ade78de7b Revise unnecessary code duplication
+
+    * 7c15f5b20a Fix formatting
+
+    * 64f93f8938 Assume two EVRs are equal if E and V are equal but one R is missing.
+
+  * 4f2b8aa5b6 Merge pull request `#35240`_ from derekmaciel/bp-35225
+
+    * 9ed47f713a Add missing documentation for pkg.installed
+
+  * 4bcfaa97d0 Merge pull request `#35241`_ from terminalmage/gitfs-fixes
+
+    * e05648cc2d Break from loop when file is found
+
+    * 6764a88601 Ensure that failed recursion results in no blob object being returned
+
+  * f6d7360e0b Merge pull request `#35245`_ from rallytime/bp-35039
+
+    * 51ab9cd6d4 Add saltenv support to module.run
+
+  * d65a5c7134 Merge pull request `#35249`_ from terminalmage/issue35214
+
+    * bcd5129e9f Fix regression in git.latest when update is fast-forward
+
+    * e2e8bbbfde Add integration test for `#35214`_
+
+* **ISSUE** `#35003`_: (`edgan`_) rabbitmq_user.present broken on Ubuntu 16.04 Xenial (refs: `#35232`_)
+
+* **ISSUE** `#34481`_: (`L4rS6`_) rabbitmq_user.present with password keyword throws exception (refs: `#35232`_)
+
+* **ISSUE** `#33588`_: (`whytewolf`_) rabbitmq_user.present error  (refs: `#35232`_)
+
+* **PR** `#35274`_: (`rallytime`_) Lint fixes for 2016.3 branch
+  @ *2016-08-08 16:45:41 UTC*
+
+  * **PR** `#35232`_: (`theredcat`_) fix rabbitmq version detection using a package-agnostic version (refs: `#35274`_)
+
+  * 157939d5b0 Merge pull request `#35274`_ from rallytime/lint-2016.3
+
+  * 0d3d711e9c Lint fixes for 2016.3 branch
+
+* **PR** `#35269`_: (`meaksh`_) Checksum validation for zypper pkg.download in 2016.3 and develop
+  @ *2016-08-08 14:45:16 UTC*
+
+  * c58bb18624 Merge pull request `#35269`_ from meaksh/checksum-during-zypper-pkg-download-for-2016.3-and-develop
+
+  * 18700e821e unit tests for rpm.checksum() and zypper.download()
+
+  * c3f29ab205 checksum validation during zypper pkg.download
+
+* **PR** `#35197`_: (`vutny`_) Make `pkgbuild.repo` state recognize `createrepo` command return code
+  @ *2016-08-06 23:20:47 UTC*
+
+  * d3f2ce2a1a Merge pull request `#35197`_ from vutny/pkgbuild-repo-failure-detection
+
+  * a5f6630e97 Make `pkgbuild.repo` state recognize `createrepo` command return code
+
+* **ISSUE** `#34446`_: (`mirceaulinic`_) Proxy minions & straight minion using the same caching directory (refs: `#35178`_)
+
+* **PR** `#35178`_: (`cro`_) Add append_minionid_config_dirs option
+  @ *2016-08-06 22:21:14 UTC*
+
+  * f004b831d2 Merge pull request `#35178`_ from cro/proxy_cache_fix2
+
+  * 84cc7d67c0 Add documentation for append_minionid_config_dirs.
+
+  * f0961e741e Merge with 2016.3
+
+* **ISSUE** `#35234`_: (`Sylvain303`_) Bug: module disk.wipe don't wipe the filesystem information (refs: `#35253`_)
+
+* **PR** `#35259`_: (`cachedout`_) Fixup 35253
+  @ *2016-08-06 21:59:48 UTC*
+
+  * **PR** `#35253`_: (`abednarik`_) Fix disk.wipe missing option. (refs: `#35259`_)
+
+  * 6eb1c48469 Merge pull request `#35259`_ from cachedout/fixup_35253
+
+  * 104116f464 Add release notes and include entry about disk.wipe fix
+
+  * 6714e8f386 Fix mock call in disk wipe test
+
+* **ISSUE** `#35234`_: (`Sylvain303`_) Bug: module disk.wipe don't wipe the filesystem information (refs: `#35253`_)
+
+* **PR** `#35253`_: (`abednarik`_) Fix disk.wipe missing option. (refs: `#35259`_)
+  @ *2016-08-06 21:55:01 UTC*
+
+  * 4e7d7f8e4c Merge pull request `#35253`_ from abednarik/disk_wipe_fix
+
+  * ff33df4ba1 Fix disk.wipe missing option.
+
+* **PR** `#35206`_: (`hu-dabao`_) Make the log level back to warning for unclassified exc
+  @ *2016-08-06 21:40:38 UTC*
+
+  * eeede82109 Merge pull request `#35206`_ from hu-dabao/fix-exc-log
+
+  * 676be7d711 Make the log level back to warning for unclassified exc
+
+* **PR** `#35196`_: (`isbm`_) Deprecate status.uptime one version later
+  @ *2016-08-06 08:39:40 UTC*
+
+  * 21808e27d5 Merge pull request `#35196`_ from isbm/isbm-too-fast-uptime-deprecation
+
+  * 6f3a32dace Deprecate status.uptime one version later
+
+* **PR** `#35207`_: (`eliasp`_) Handle exceptions in `_get_virtual()` and in `_get_virtual()` consumers
+  @ *2016-08-06 08:29:08 UTC*
+
+  * 100645e557 Merge pull request `#35207`_ from eliasp/2016.3-modules.aptpkg-handle-exceptions
+
+  * 2f11df98ca Handle exceptions in `_get_virtual()` and in `_get_virtual()` consumers
+
+* **ISSUE** `#35003`_: (`edgan`_) rabbitmq_user.present broken on Ubuntu 16.04 Xenial (refs: `#35232`_)
+
+* **ISSUE** `#34481`_: (`L4rS6`_) rabbitmq_user.present with password keyword throws exception (refs: `#35232`_)
+
+* **ISSUE** `#33588`_: (`whytewolf`_) rabbitmq_user.present error  (refs: `#35232`_)
+
+* **PR** `#35232`_: (`theredcat`_) fix rabbitmq version detection using a package-agnostic version (refs: `#35274`_)
+  @ *2016-08-06 08:13:02 UTC*
+
+  * 7302a8a6e5 Merge pull request `#35232`_ from theredcat/fix-rabbitmq-version-detection
+
+  * f75eb2ecc7 Fix runas in code order and make the check_password work with the new >3.5.7 version
+
+  * 4d8119b88b fix rabbitmq version detection using a package-agnostic version
+
+* **PR** `#35244`_: (`rallytime`_) Back-port `#31677`_ to 2016.3
+  @ *2016-08-06 07:53:28 UTC*
+
+  * **PR** `#31677`_: (`miihael`_) Return correct value for services that must be enabled in Systemd (refs: `#35244`_)
+
+  * 2e9fa3799c Merge pull request `#35244`_ from rallytime/bp-31677
+
+  * 45d563d5ac Return correct value for services that must be enabled in Systemd, not in SysV
+
+* **PR** `#35182`_: (`rallytime`_) [2016.3] Merge forward from 2015.8 to 2016.3
+  @ *2016-08-03 20:57:29 UTC*
+
+  * bd0496eef5 Merge pull request `#35182`_ from rallytime/merge-2016.3
+
+  * c35974f78f Merge branch '2015.8' into '2016.3'
+
+  * 67d8dd0fd0 Don't discard running beacons config when listing becaons (`#35174`_)
+
+  * 3754550dd2 Add missing CLI Examples to aws_sqs module funcs (`#35173`_)
+
+  * 4967ed275f doc version update to 2015.8.11, updates to release notes (`#35145`_)
+
+* **PR** `#35150`_: (`rallytime`_) Start release notes for 2016.3.3
+  @ *2016-08-03 13:46:31 UTC*
+
+  * f9f92ad326 Merge pull request `#35150`_ from rallytime/2016.3.3-release-notes
+
+  * a64026fc99 Start release notes for 2016.3.3
+
+* **PR** `#35157`_: (`hu-dabao`_) master returned from func should be a string as designed so far
+  @ *2016-08-03 13:29:16 UTC*
+
+  * 518ecf897a Merge pull request `#35157`_ from hu-dabao/func-return-string
+
+  * a7506af4c9 master returned from func should be a string as designed so far
+
+  * **PR** `#35147`_: (`jacobhammons`_) doc version updated to 2016.3.2
+
+* **PR** `#35136`_: (`s0undt3ch`_) Don't restart processes if the manager is not set to restart them
+  @ *2016-08-02 18:40:05 UTC*
+
+  * dc7d7db3d5 Merge pull request `#35136`_ from s0undt3ch/2016.3
+
+  * 7b8bf2d2b4 Don't restart processes if the manager is not set to restart them
+
+* **PR** `#35133`_: (`rallytime`_) [2016.3] Merge forward from 2015.8 to 2016.3
+  @ *2016-08-02 18:06:18 UTC*
+
+  * bf04bd3316 Merge pull request `#35133`_ from rallytime/merge-2016.3
+
+  * 0d5f0b6016 Merge branch '2015.8' into '2016.3'
+
+  * 81845ee31d Merge pull request `#35114`_ from terminalmage/git_pillar-env-remap-docs
+
+    * 5951554e9f Add clarification docs on a common git_pillar misconfiguration
+
+  * 88a9fb1b31 Merge pull request `#34768`_ from hrumph/bad-installed-state
+
+    * e1fcb8311d Put pkg.latest_version in try/except structure Move refreshed or refresh to different spot (just for code tidyness)
+
+    * e0b6261659 changed name of variable 'refreshed' to 'was_refreshed'
+
+    * 340110b4b4 Move check for rtag to outermost-nesting in function
+
+    * ac67c6b493 Lint fix
+
+    * 0435a1375e Get rid of repetition in code by using new "refreshed" variable instead
+
+    * 3b1dc978e2 Lint fix
+
+    * a9bd1b92b9 lint fixes
+
+    * 71d69343ef Fixes `#34767`_
+
+  * 343576408f Merge pull request `#35043`_ from rallytime/new-release-notes
+
+    * bdcc81a384 Start release notes file for 2015.8.12
+
+* **PR** `#35120`_: (`kstreee`_) The '_handle_event_socket_recv' function in Salt Api is missing first data of stream.
+  @ *2016-08-02 16:22:50 UTC*
+
+  * dd91006ed7 Merge pull request `#35120`_ from kstreee/fix-missing-first-stream-data
+
+  * 28f793caac Fix missing first data in stream when subscribing stream using a function 'read_async'.
+
+  * **PR** `saltstack/salt#35011`_: (`nishigori`_) Fix docstring for code-block of rst (refs: `#35131`_)
+
+  * **PR** `#35131`_: (`rallytime`_) Back-port `#35011`_ to 2016.3
+
+  * **PR** `#35011`_: (`nishigori`_) Fix docstring for code-block of rst (refs: `#35131`_)
+
+* **PR** `#35110`_: (`hu-dabao`_) Do not return job status back to master for master_alive and master_failback schedules
+  @ *2016-08-02 07:49:46 UTC*
+
+  * 77b1f43b0d Merge pull request `#35110`_ from hu-dabao/master-check-lighter
+
+  * 3a3b66e27d don't return job status back to master for master_alive and master_failback schedules
+
+* **PR** `#35104`_: (`rallytime`_) [2016.3] Merge forward from 2015.8 to 2016.3
+  @ *2016-08-01 18:56:43 UTC*
+
+  * 94a983f129 Merge pull request `#35104`_ from rallytime/merge-2016.3
+
+  * dda2c32325 Merge branch '2015.8' into '2016.3'
+
+    * 848bf0272f Merge pull request `#35050`_ from terminalmage/fix-saltdev-arg
+
+      * 40cfa7cf17 Avoid needlessly running 2 argspecs in salt.utils.format_call()
+
+      * fd186b7e4c Pass environment as 'saltdev' if runner/wheel func accepts a saltdev argument
+
+      * 951b52ab93 Pass __env__ from saltmod orch states to to saltutil.{runner,wheel}
+
+    * 2144178ae0 Merge pull request `#35066`_ from jfindlay/postgres_log
+
+      * c2c442234f returners.postgres_local_cache: do not log in __virtual__
+
+    * 7121618142 Merge pull request `#35024`_ from bobrik/daemon-reload-fix
+
+      * c300615e9d Cache systemd unit update check per unit, closes `#34927`_
+
+    * 865c29f126 Expressly deny a minion if a key cannot be found instead of raising stacktrace (`#35026`_)
+
+* **ISSUE** `#32761`_: (`notpeter`_) Ubuntu 16.04 Xenial Xerus Support (refs: #`saltstack/salt#33870`_)
+
+  * **PR** `saltstack/salt#33870`_: (`rallytime`_) Add note about Xenial packages to 2016.3.0 release notes (refs: `#35105`_)
+
+* **PR** `#35105`_: (`rallytime`_) Update 2016.3.0 release notes with repo.saltstack.com Xenial pkg availability
+  @ *2016-08-01 17:26:55 UTC*
+
+  * 6c056a829e Merge pull request `#35105`_ from rallytime/update-2016.3.0-release-notes
+
+  * fbaff3e98e Update 2016.3.0 release notes with repo.saltstack.com Xenial pkg availability
+
+* **PR** `#35059`_: (`vutny`_) Add `fun_args` field to events generated by execution of Master modules
+  @ *2016-08-01 13:01:42 UTC*
+
+  * 1f8a0fd1e7 Merge pull request `#35059`_ from vutny/event-function-args
+
+  * 19d080445b Add `fun_args` field to events generated by execution of Master modules
+
+* **PR** `#34955`_: (`lubyou`_) force dism to always output english text
+  @ *2016-08-01 12:54:03 UTC*
+
+  * d137c4b986 Merge pull request `#34955`_ from lubyou/fix-dism-on-non-english-systems
+
+  * 63c974a3d0 add missing comma
+
+  * 775ea73578 fix unit tests
+
+  * 51869807f1 force dism to always output english text
+
+* **PR** `#35078`_: (`jacobweinstock`_) added missing non-keyword argument skip_verify to __get_artifact func…
+  @ *2016-08-01 12:22:47 UTC*
+
+  * ff7ddf0b68 Merge pull request `#35078`_ from jacobweinstock/fix-missing-non-keyword-argument
+
+  * c40314ba80 added missing non-keyword argument skip_verify to __get_artifact function
+
+* **PR** `#35008`_: (`hu-dabao`_) Fix multimaster failover on more than two masters and failback behaviour
+  @ *2016-07-29 16:34:37 UTC*
+
+  * 878e200cd9 Merge pull request `#35008`_ from hu-dabao/fix-multimaster
+
+  * 12da890910 Fix multimaster failover on more than two masters and failback behaviour
+
+* **ISSUE** `saltstack/salt#33536`_: (`murzick`_) pkgrepo.managed does not disable a yum repo with "disabled: True" (refs: `#35055`_)
+
+* **ISSUE** `#33536`_: (`murzick`_) pkgrepo.managed does not disable a yum repo with "disabled: True" (refs: `#35055`_)
+
+* **PR** `#35055`_: (`galet`_) `#33536`_ pkgrepo.managed does not disable a yum repo with "disabled: True"
+  @ *2016-07-29 15:40:15 UTC*
+
+  * 11ed147448 Merge pull request `#35055`_ from galet/2016.3
+
+  * d70796bbfe `#33536`_ pkgrepo.managed does not disable a yum repo with "disabled: True"
+
+* **PR** `#35039`_: (`whiteinge`_) Add saltenv support to module.run (refs: `#35245`_)
+  @ *2016-07-29 14:01:03 UTC*
+
+  * ebaee39b2b Merge pull request `#35039`_ from whiteinge/module-run-saltenv
+
+  * 7ef287e09e Add saltenv support to module.run
+
+* **PR** `#35046`_: (`eliasp`_) Prevent backtrace in `salt.states.network`
+  @ *2016-07-29 13:59:09 UTC*
+
+  * 32ed78a399 Merge pull request `#35046`_ from eliasp/2016.3-salt.states.network-prevent-backtrace
+
+  * 1542cd5124 Prevent backtrace in `salt.states.network`
+
+* **PR** `#35054`_: (`lubyou`_) Only fail user lookup is the user parameter is required
+  @ *2016-07-29 13:58:41 UTC*
+
+  * f34bb7a8de Merge pull request `#35054`_ from lubyou/fix-win_dacl-disable_inheritance
+
+  * 1e4e856fb2 Only fail user lookup is the user parameter is required
+
+* **PR** `#35029`_: (`rallytime`_) [2016.3] Merge forward from 2015.8 to 2016.3
+  @ *2016-07-28 18:01:35 UTC*
+
+  * bee303db51 Merge pull request `#35029`_ from rallytime/merge-2016.3
+
+  * 65f9365ee0 Merge branch '2015.8' into '2016.3'
+
+  * 2b511f3013 Merge pull request `#35000`_ from rallytime/bp-33875
+
+    * 35696ad637 Pylint fix
+
+    * f9fd6ddd8a Fixup `#33875`_
+
+    * 56b1f6c651 Fix naive fileserver map diff algorithm
+
+  * 837bc6ba7d Merge pull request `#34994`_ from rallytime/bp-34835
+
+    * 9268a793de same thing for the mine in salt-ssh
+
+    * 3e11e19714 Fix the mine in salt ssh
+
+  * **PR** `#35021`_: (`terminalmage`_) Don't add '.' to strerror when passed string ends in ? or !
+
+  * **PR** `#34983`_: (`eliasp`_) modules.slack.post_message: Allow sending messages to direct-message …
+
+* **PR** `#34996`_: (`rallytime`_) [2016.3] Merge forward from 2015.8 to 2016.3
+  @ *2016-07-27 19:03:04 UTC*
+
+  * 05cfb1cefc Merge pull request `#34996`_ from rallytime/merge-2016.3
+
+  * a7d4f93697 Merge branch '2015.8' into '2016.3'
+
+    * b58c663d8d Merge pull request `#34991`_ from cachedout/ssh_timeout
+
+      * 39cd8da399 Lint diff against salt-testing
+
+      * 443e5cdde2 Add timeout to ssh tests
+
+    * 5f8370ae8d Refine errors in client (`#34976`_)
+
+    * a83cdf9339 Merge pull request `#34831`_ from thatch45/recoverssh
+
+    * fa73041a49 If the thin does not match, then redeploy, don't error
+
+  * **PR** `#34987`_: (`eliasp`_) salt.states.slack: check correct result attribute
+
+* **ISSUE** `saltstack/salt#34526`_: (`danielmotaleite`_) salt-ssh + mine = weird error (refs: `#34835`_, #saltstack/salt`#34835`_)
+
+* **PR** `#34835`_: (`thatch45`_) Make the mine and publish combine minion and master opts in salt-ssh (refs: `#34994`_)
+  @ *2016-07-27 17:25:26 UTC*
+
+  * edeb0eda36 Merge pull request `#34835`_ from thatch45/34526\_
+
+  * 1d2477df05 same thing for the mine in salt-ssh
+
+  * 6b6c5ff278 Fix the mine in salt ssh
+
+.. _`#24745`: https://github.com/saltstack/salt/issues/24745
+.. _`#24893`: https://github.com/saltstack/salt/pull/24893
+.. _`#25267`: https://github.com/saltstack/salt/pull/25267
+.. _`#27294`: https://github.com/saltstack/salt/issues/27294
+.. _`#30913`: https://github.com/saltstack/salt/pull/30913
+.. _`#31677`: https://github.com/saltstack/salt/pull/31677
+.. _`#32761`: https://github.com/saltstack/salt/issues/32761
+.. _`#33337`: https://github.com/saltstack/salt/pull/33337
+.. _`#33367`: https://github.com/saltstack/salt/issues/33367
+.. _`#33518`: https://github.com/saltstack/salt/pull/33518
+.. _`#33536`: https://github.com/saltstack/salt/issues/33536
+.. _`#33588`: https://github.com/saltstack/salt/issues/33588
+.. _`#33875`: https://github.com/saltstack/salt/pull/33875
+.. _`#34161`: https://github.com/saltstack/salt/issues/34161
+.. _`#34279`: https://github.com/saltstack/salt/issues/34279
+.. _`#34441`: https://github.com/saltstack/salt/pull/34441
+.. _`#34446`: https://github.com/saltstack/salt/issues/34446
+.. _`#34481`: https://github.com/saltstack/salt/issues/34481
+.. _`#34502`: https://github.com/saltstack/salt/pull/34502
+.. _`#34702`: https://github.com/saltstack/salt/pull/34702
+.. _`#34767`: https://github.com/saltstack/salt/issues/34767
+.. _`#34768`: https://github.com/saltstack/salt/pull/34768
+.. _`#34831`: https://github.com/saltstack/salt/pull/34831
+.. _`#34835`: https://github.com/saltstack/salt/pull/34835
+.. _`#34927`: https://github.com/saltstack/salt/issues/34927
+.. _`#34955`: https://github.com/saltstack/salt/pull/34955
+.. _`#34976`: https://github.com/saltstack/salt/pull/34976
+.. _`#34983`: https://github.com/saltstack/salt/pull/34983
+.. _`#34987`: https://github.com/saltstack/salt/pull/34987
+.. _`#34991`: https://github.com/saltstack/salt/pull/34991
+.. _`#34994`: https://github.com/saltstack/salt/pull/34994
+.. _`#34996`: https://github.com/saltstack/salt/pull/34996
+.. _`#35000`: https://github.com/saltstack/salt/pull/35000
+.. _`#35003`: https://github.com/saltstack/salt/issues/35003
+.. _`#35008`: https://github.com/saltstack/salt/pull/35008
+.. _`#35011`: https://github.com/saltstack/salt/pull/35011
+.. _`#35021`: https://github.com/saltstack/salt/pull/35021
+.. _`#35024`: https://github.com/saltstack/salt/pull/35024
+.. _`#35026`: https://github.com/saltstack/salt/pull/35026
+.. _`#35029`: https://github.com/saltstack/salt/pull/35029
+.. _`#35039`: https://github.com/saltstack/salt/pull/35039
+.. _`#35043`: https://github.com/saltstack/salt/pull/35043
+.. _`#35046`: https://github.com/saltstack/salt/pull/35046
+.. _`#35050`: https://github.com/saltstack/salt/pull/35050
+.. _`#35054`: https://github.com/saltstack/salt/pull/35054
+.. _`#35055`: https://github.com/saltstack/salt/pull/35055
+.. _`#35059`: https://github.com/saltstack/salt/pull/35059
+.. _`#35066`: https://github.com/saltstack/salt/pull/35066
+.. _`#35078`: https://github.com/saltstack/salt/pull/35078
+.. _`#35102`: https://github.com/saltstack/salt/issues/35102
+.. _`#35104`: https://github.com/saltstack/salt/pull/35104
+.. _`#35105`: https://github.com/saltstack/salt/pull/35105
+.. _`#35110`: https://github.com/saltstack/salt/pull/35110
+.. _`#35114`: https://github.com/saltstack/salt/pull/35114
+.. _`#35120`: https://github.com/saltstack/salt/pull/35120
+.. _`#35121`: https://github.com/saltstack/salt/issues/35121
+.. _`#35131`: https://github.com/saltstack/salt/pull/35131
+.. _`#35132`: https://github.com/saltstack/salt/pull/35132
+.. _`#35133`: https://github.com/saltstack/salt/pull/35133
+.. _`#35136`: https://github.com/saltstack/salt/pull/35136
+.. _`#35145`: https://github.com/saltstack/salt/pull/35145
+.. _`#35147`: https://github.com/saltstack/salt/pull/35147
+.. _`#35150`: https://github.com/saltstack/salt/pull/35150
+.. _`#35157`: https://github.com/saltstack/salt/pull/35157
+.. _`#35166`: https://github.com/saltstack/salt/issues/35166
+.. _`#35173`: https://github.com/saltstack/salt/pull/35173
+.. _`#35174`: https://github.com/saltstack/salt/pull/35174
+.. _`#35178`: https://github.com/saltstack/salt/pull/35178
+.. _`#35182`: https://github.com/saltstack/salt/pull/35182
+.. _`#35196`: https://github.com/saltstack/salt/pull/35196
+.. _`#35197`: https://github.com/saltstack/salt/pull/35197
+.. _`#35202`: https://github.com/saltstack/salt/pull/35202
+.. _`#35206`: https://github.com/saltstack/salt/pull/35206
+.. _`#35207`: https://github.com/saltstack/salt/pull/35207
+.. _`#35211`: https://github.com/saltstack/salt/pull/35211
+.. _`#35213`: https://github.com/saltstack/salt/pull/35213
+.. _`#35214`: https://github.com/saltstack/salt/issues/35214
+.. _`#35226`: https://github.com/saltstack/salt/issues/35226
+.. _`#35227`: https://github.com/saltstack/salt/pull/35227
+.. _`#35229`: https://github.com/saltstack/salt/pull/35229
+.. _`#35232`: https://github.com/saltstack/salt/pull/35232
+.. _`#35233`: https://github.com/saltstack/salt/pull/35233
+.. _`#35234`: https://github.com/saltstack/salt/issues/35234
+.. _`#35235`: https://github.com/saltstack/salt/pull/35235
+.. _`#35236`: https://github.com/saltstack/salt/pull/35236
+.. _`#35240`: https://github.com/saltstack/salt/pull/35240
+.. _`#35241`: https://github.com/saltstack/salt/pull/35241
+.. _`#35244`: https://github.com/saltstack/salt/pull/35244
+.. _`#35245`: https://github.com/saltstack/salt/pull/35245
+.. _`#35249`: https://github.com/saltstack/salt/pull/35249
+.. _`#35253`: https://github.com/saltstack/salt/pull/35253
+.. _`#35259`: https://github.com/saltstack/salt/pull/35259
+.. _`#35264`: https://github.com/saltstack/salt/issues/35264
+.. _`#35269`: https://github.com/saltstack/salt/pull/35269
+.. _`#35271`: https://github.com/saltstack/salt/pull/35271
+.. _`#35274`: https://github.com/saltstack/salt/pull/35274
+.. _`#35275`: https://github.com/saltstack/salt/pull/35275
+.. _`#35276`: https://github.com/saltstack/salt/pull/35276
+.. _`#35278`: https://github.com/saltstack/salt/pull/35278
+.. _`#35286`: https://github.com/saltstack/salt/pull/35286
+.. _`#35290`: https://github.com/saltstack/salt/pull/35290
+.. _`#35301`: https://github.com/saltstack/salt/pull/35301
+.. _`#35302`: https://github.com/saltstack/salt/pull/35302
+.. _`#35306`: https://github.com/saltstack/salt/pull/35306
+.. _`#35309`: https://github.com/saltstack/salt/pull/35309
+.. _`#35318`: https://github.com/saltstack/salt/pull/35318
+.. _`#35323`: https://github.com/saltstack/salt/pull/35323
+.. _`#35325`: https://github.com/saltstack/salt/pull/35325
+.. _`#35329`: https://github.com/saltstack/salt/pull/35329
+.. _`#35331`: https://github.com/saltstack/salt/pull/35331
+.. _`#35334`: https://github.com/saltstack/salt/pull/35334
+.. _`#35336`: https://github.com/saltstack/salt/issues/35336
+.. _`#35339`: https://github.com/saltstack/salt/pull/35339
+.. _`#35347`: https://github.com/saltstack/salt/pull/35347
+.. _`#35352`: https://github.com/saltstack/salt/pull/35352
+.. _`#35356`: https://github.com/saltstack/salt/pull/35356
+.. _`#35357`: https://github.com/saltstack/salt/pull/35357
+.. _`#35358`: https://github.com/saltstack/salt/pull/35358
+.. _`#35359`: https://github.com/saltstack/salt/pull/35359
+.. _`#35360`: https://github.com/saltstack/salt/pull/35360
+.. _`#35361`: https://github.com/saltstack/salt/pull/35361
+.. _`#35362`: https://github.com/saltstack/salt/pull/35362
+.. _`#35373`: https://github.com/saltstack/salt/pull/35373
+.. _`#35393`: https://github.com/saltstack/salt/pull/35393
+.. _`#35394`: https://github.com/saltstack/salt/pull/35394
+.. _`#35395`: https://github.com/saltstack/salt/pull/35395
+.. _`#35406`: https://github.com/saltstack/salt/pull/35406
+.. _`#35407`: https://github.com/saltstack/salt/pull/35407
+.. _`#35411`: https://github.com/saltstack/salt/pull/35411
+.. _`#35412`: https://github.com/saltstack/salt/pull/35412
+.. _`#35413`: https://github.com/saltstack/salt/pull/35413
+.. _`#35422`: https://github.com/saltstack/salt/issues/35422
+.. _`#35423`: https://github.com/saltstack/salt/issues/35423
+.. _`#35427`: https://github.com/saltstack/salt/pull/35427
+.. _`#35428`: https://github.com/saltstack/salt/pull/35428
+.. _`#35429`: https://github.com/saltstack/salt/pull/35429
+.. _`#35436`: https://github.com/saltstack/salt/pull/35436
+.. _`#35442`: https://github.com/saltstack/salt/pull/35442
+.. _`#35446`: https://github.com/saltstack/salt/pull/35446
+.. _`#35447`: https://github.com/saltstack/salt/pull/35447
+.. _`#35448`: https://github.com/saltstack/salt/pull/35448
+.. _`#35449`: https://github.com/saltstack/salt/pull/35449
+.. _`#35451`: https://github.com/saltstack/salt/pull/35451
+.. _`#35453`: https://github.com/saltstack/salt/pull/35453
+.. _`#35456`: https://github.com/saltstack/salt/pull/35456
+.. _`#35458`: https://github.com/saltstack/salt/issues/35458
+.. _`#35459`: https://github.com/saltstack/salt/pull/35459
+.. _`#35460`: https://github.com/saltstack/salt/pull/35460
+.. _`#35461`: https://github.com/saltstack/salt/pull/35461
+.. _`#35463`: https://github.com/saltstack/salt/pull/35463
+.. _`#35467`: https://github.com/saltstack/salt/pull/35467
+.. _`#35471`: https://github.com/saltstack/salt/pull/35471
+.. _`#35476`: https://github.com/saltstack/salt/pull/35476
+.. _`#35483`: https://github.com/saltstack/salt/pull/35483
+.. _`#35486`: https://github.com/saltstack/salt/pull/35486
+.. _`#35487`: https://github.com/saltstack/salt/pull/35487
+.. _`#35489`: https://github.com/saltstack/salt/pull/35489
+.. _`#35492`: https://github.com/saltstack/salt/pull/35492
+.. _`#35495`: https://github.com/saltstack/salt/pull/35495
+.. _`#35497`: https://github.com/saltstack/salt/pull/35497
+.. _`#35498`: https://github.com/saltstack/salt/pull/35498
+.. _`#35508`: https://github.com/saltstack/salt/pull/35508
+.. _`#35510`: https://github.com/saltstack/salt/pull/35510
+.. _`#35512`: https://github.com/saltstack/salt/pull/35512
+.. _`#35513`: https://github.com/saltstack/salt/pull/35513
+.. _`#35516`: https://github.com/saltstack/salt/pull/35516
+.. _`#35517`: https://github.com/saltstack/salt/pull/35517
+.. _`#35522`: https://github.com/saltstack/salt/pull/35522
+.. _`#35525`: https://github.com/saltstack/salt/pull/35525
+.. _`#35526`: https://github.com/saltstack/salt/pull/35526
+.. _`#35538`: https://github.com/saltstack/salt/pull/35538
+.. _`#35540`: https://github.com/saltstack/salt/pull/35540
+.. _`#35545`: https://github.com/saltstack/salt/pull/35545
+.. _`#35546`: https://github.com/saltstack/salt/pull/35546
+.. _`#35566`: https://github.com/saltstack/salt/pull/35566
+.. _`#35571`: https://github.com/saltstack/salt/pull/35571
+.. _`#35572`: https://github.com/saltstack/salt/pull/35572
+.. _`#35573`: https://github.com/saltstack/salt/pull/35573
+.. _`#35577`: https://github.com/saltstack/salt/pull/35577
+.. _`#35579`: https://github.com/saltstack/salt/pull/35579
+.. _`#35580`: https://github.com/saltstack/salt/pull/35580
+.. _`#35583`: https://github.com/saltstack/salt/pull/35583
+.. _`#35586`: https://github.com/saltstack/salt/pull/35586
+.. _`#35602`: https://github.com/saltstack/salt/pull/35602
+.. _`#35603`: https://github.com/saltstack/salt/pull/35603
+.. _`Ch3LL`: https://github.com/Ch3LL
+.. _`L4rS6`: https://github.com/L4rS6
+.. _`Sylvain303`: https://github.com/Sylvain303
+.. _`The-Loeki`: https://github.com/The-Loeki
+.. _`TheBigBear`: https://github.com/TheBigBear
+.. _`ViaviSolutions`: https://github.com/ViaviSolutions
+.. _`abednarik`: https://github.com/abednarik
+.. _`bobrik`: https://github.com/bobrik
+.. _`cachedout`: https://github.com/cachedout
+.. _`cro`: https://github.com/cro
+.. _`danielmotaleite`: https://github.com/danielmotaleite
+.. _`deniszh`: https://github.com/deniszh
+.. _`dkruger`: https://github.com/dkruger
+.. _`dmurphy18`: https://github.com/dmurphy18
+.. _`edgan`: https://github.com/edgan
+.. _`eliasp`: https://github.com/eliasp
+.. _`farcaller`: https://github.com/farcaller
+.. _`galet`: https://github.com/galet
+.. _`gtmanfred`: https://github.com/gtmanfred
+.. _`hu-dabao`: https://github.com/hu-dabao
+.. _`iggy`: https://github.com/iggy
+.. _`isbm`: https://github.com/isbm
+.. _`jacobhammons`: https://github.com/jacobhammons
+.. _`jacobweinstock`: https://github.com/jacobweinstock
+.. _`jfindlay`: https://github.com/jfindlay
+.. _`justinta`: https://github.com/justinta
+.. _`kstreee`: https://github.com/kstreee
+.. _`lubyou`: https://github.com/lubyou
+.. _`markuskramerIgitt`: https://github.com/markuskramerIgitt
+.. _`mathieubouchard`: https://github.com/mathieubouchard
+.. _`meaksh`: https://github.com/meaksh
+.. _`miihael`: https://github.com/miihael
+.. _`mirceaulinic`: https://github.com/mirceaulinic
+.. _`murzick`: https://github.com/murzick
+.. _`mzupan`: https://github.com/mzupan
+.. _`nishigori`: https://github.com/nishigori
+.. _`notpeter`: https://github.com/notpeter
+.. _`rallytime`: https://github.com/rallytime
+.. _`randomed`: https://github.com/randomed
+.. _`s0undt3ch`: https://github.com/s0undt3ch
+.. _`saltstack/salt#25267`: https://github.com/saltstack/salt/pull/25267
+.. _`saltstack/salt#33536`: https://github.com/saltstack/salt/issues/33536
+.. _`saltstack/salt#33870`: https://github.com/saltstack/salt/pull/33870
+.. _`saltstack/salt#34502`: https://github.com/saltstack/salt/pull/34502
+.. _`saltstack/salt#34526`: https://github.com/saltstack/salt/issues/34526
+.. _`saltstack/salt#34702`: https://github.com/saltstack/salt/pull/34702
+.. _`saltstack/salt#34835`: https://github.com/saltstack/salt/pull/34835
+.. _`saltstack/salt#35011`: https://github.com/saltstack/salt/pull/35011
+.. _`saltstack/salt#35308`: https://github.com/saltstack/salt/pull/35308
+.. _`saltstack/salt#35360`: https://github.com/saltstack/salt/pull/35360
+.. _`saltstack/salt#35403`: https://github.com/saltstack/salt/issues/35403
+.. _`saltstack/salt#35463`: https://github.com/saltstack/salt/pull/35463
+.. _`skizunov`: https://github.com/skizunov
+.. _`stenstad`: https://github.com/stenstad
+.. _`supertom`: https://github.com/supertom
+.. _`tankywoo`: https://github.com/tankywoo
+.. _`terminalmage`: https://github.com/terminalmage
+.. _`thatch45`: https://github.com/thatch45
+.. _`theredcat`: https://github.com/theredcat
+.. _`ticosax`: https://github.com/ticosax
+.. _`tonybaloney`: https://github.com/tonybaloney
+.. _`twangboy`: https://github.com/twangboy
+.. _`vutny`: https://github.com/vutny
+.. _`whiteinge`: https://github.com/whiteinge
+.. _`whytewolf`: https://github.com/whytewolf

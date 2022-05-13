@@ -1,0 +1,57 @@
+===========================
+Salt 2014.1.3 Release Notes
+===========================
+
+:release: 2014-04-15
+
+Version 2014.1.3 is another bugfix release for :ref:`2014.1.0
+<release-2014-1-0>`.  It was created as a hotfix for a regression
+found in 2014.1.2, which was not distributed.  The only change made was as
+follows:
+
+- Fix regression that caused ``saltutil.find_job`` to fail, causing premature
+  terminations of salt CLI commands.
+
+Changes in the not-distributed 2014.1.2, also included in 2014.1.3:
+
+- Fix username detection when su'ed to root on FreeBSD (:issue:`11628`)
+- Fix minionfs backend for file.recurse states
+- Fix 32-bit packages of different arches than the CPU arch, on 32-bit
+  RHEL/CentOS (:issue:`11822`)
+- Fix bug with specifying alternate home dir on user creation (FreeBSD)
+  (:issue:`11790`)
+- Don’t reload ``site`` module on module refresh for MacOS
+- Fix regression with running execution functions in Pillar SLS
+  (:issue:`11453`)
+- Fix some modules missing from Windows installer
+- Don’t log an error for yum commands that return nonzero exit status on
+  non-failure (:issue:`11645`)
+- Fix bug in rabbitmq state (:issue:`8703`)
+- Fix missing ssh config options (:issue:`10604`)
+- Fix top.sls ordering (:issue:`10810` and :issue:`11691`)
+- Fix ``salt-key --list all`` (:issue:`10982`)
+- Fix win_servermanager install/remove function (:issue:`11038`)
+- Fix interaction with tokens when running commands as root (:issue:`11223`)
+- Fix overstate bug with ``find_job`` and ``**kwargs`` (:issue:`10503`)
+- Fix ``saltenv`` for ``aptpkg.mod_repo`` from ``pkgrepo`` state
+- Fix environment issue causing file caching problems (:issue:`11189`)
+- Fix bug in ``__parse_key`` in registry state (:issue:`11408`)
+- Add minion auth retry on rejection (:issue:`10763`)
+- Fix publish_session updating the encryption key (:issue:`11493`)
+- Fix for bad ``AssertionError`` raised by GitPython (:issue:`11473`)
+- Fix ``debian_ip`` to allow disabling and enabling networking on Ubuntu (:issue:`11164`)
+- Fix potential memory leak caused by saved (and unused) events (:issue:`11582`)
+- Fix exception handling in the MySQL module (:issue:`11616`)
+- Fix environment-related error (:issue:`11534`)
+- Include ``psutil`` on Windows
+- Add ``file.replace`` and ``file.search`` to Windows (:issue:`11471`)
+- Add additional ``file`` module helpers to Windows (:issue:`11235`)
+- Add ``pid`` to netstat output on Windows (:issue:`10782`)
+- Fix Windows not caching new versions of installers in winrepo (:issue:`10597`)
+- Fix hardcoded md5 hashing
+- Fix kwargs in salt-ssh (:issue:`11609`)
+- Fix file backup timestamps (:issue:`11745`)
+- Fix stacktrace on ``sys.doc`` with invalid eauth (:issue:`11293`)
+- Fix ``git.latest`` with ``test=True`` (:issue:`11595`)
+- Fix ``file.check_perms`` hardcoded ``follow_symlinks`` (:issue:`11387`)
+- Fix certain ``pkg`` states for RHEL5/Cent5 machines (:issue:`11719`)

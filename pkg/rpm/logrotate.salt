@@ -1,0 +1,39 @@
+/var/log/salt/master {
+    weekly
+    missingok
+    rotate 5
+    compress
+    notifempty
+}
+
+/var/log/salt/minion {
+    weekly
+    missingok
+    rotate 5
+    compress
+    notifempty
+}
+
+/var/log/salt/key {
+    weekly
+    missingok
+    rotate 5
+    compress
+    notifempty
+}
+
+/var/log/salt/cloud {
+    weekly
+    missingok
+    rotate 5
+    compress
+    notifempty
+}
+
+/var/log/salt/ssh {
+    weekly
+    missingok
+    rotate 5
+    compress
+    notifempty
+}

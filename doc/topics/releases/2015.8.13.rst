@@ -1,0 +1,25 @@
+============================
+Salt 2015.8.13 Release Notes
+============================
+
+Version 2015.8.13 is a bugfix release for :ref:`2015.8.0 <release-2015-8-0>`.
+
+
+Security Fixes
+==============
+
+**CVE-2017-5192** local_batch client external authentication not respected
+
+The ``LocalClient.cmd_batch()`` method client does not accept ``external_auth``
+credentials and so access to it from salt-api has been removed for now. This
+vulnerability allows code execution for already-authenticated users and is only
+in effect when running salt-api as the ``root`` user.
+
+**CVE-2017-5200** Salt-api allows arbitrary command execution on a salt-master
+via Salt's ssh_client
+
+Users of Salt-API and salt-ssh could execute a command on the salt master via a
+hole when both systems were enabled.
+
+We recommend everyone on the 2015.8 branch upgrade to a patched release as soon
+as possible.

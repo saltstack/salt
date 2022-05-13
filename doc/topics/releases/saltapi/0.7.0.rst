@@ -1,0 +1,49 @@
+==============
+salt-api 0.7.0
+==============
+
+:program:`salt-api` is ready for alpha-testing in the real world. This release
+solidifies how :program:`salt-api` will communicate with the larger Salt
+ecosystem. In addition authentication and encryption (via SSL) have been added.
+
+The first netapi module was a proof of concept written in Flask. It was quite
+useful to be able to quickly hammer out a URL structure and solidify on an
+interface for programmatically calling out to Salt components. As of this
+release that module has been deprecated and removed in favor of a netapi module
+written in CherryPy. CherryPy affords tremendous flexibility when composing a
+REST interface and will present a stable platform for building out a very
+adaptable and featureful REST API—also we're using the excellent and fast
+CherryPy webserver for securely serving the API.
+
+Low-data interface
+==================
+
+The last release introduced a proof-of-concept for how the various Salt
+components will communicate with each other. This is done by passing a data
+structure to a client interface. This release expands on that. There are
+currently three client interfaces in Salt.
+
+.. seealso:: :ref:`netapi-introduction`
+
+Encryption and authentication
+=============================
+
+Encryption has been added via SSL. You can supply an existing certificate or
+generate a self-signed certificate through Salt's :py:mod:`~salt.modules.tls`
+module.
+
+Authentication is performed through Salt's incredibly flexible :ref:`external
+auth <acl-eauth>` system and is maintained when accessing the API via session
+tokens.
+
+Participation
+=============
+
+:program:`salt-api` is just getting off the ground so feedback, questions, and
+ideas are critical as we solidify how this project fits into the overall Salt
+infrastructure management stack. Please get involved by `filing issues`__ on
+GitHub, `discussing on the mailing list`__, and chatting in ``#salt-devel`` on
+Freenode.
+
+.. __: https://github.com/saltstack/salt-api/issues
+.. __: https://groups.google.com/forum/#!forum/salt-users

@@ -1,0 +1,335 @@
+.\" Man page generated from reStructuredText.
+.
+.TH "SALT-KEY" "1" "Feb 16, 2022" "3004.1" "Salt"
+.SH NAME
+salt-key \- salt-key Documentation
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.SH SYNOPSIS
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+salt\-key [ options ]
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SH DESCRIPTION
+.sp
+Salt\-key executes simple management of Salt server public keys used for
+authentication.
+.sp
+On initial connection, a Salt minion sends its public key to the Salt
+master. This key must be accepted using the \fBsalt\-key\fP command on the
+Salt master.
+.sp
+Salt minion keys can be in one of the following states:
+.INDENT 0.0
+.IP \(bu 2
+\fBunaccepted\fP: key is waiting to be accepted.
+.IP \(bu 2
+\fBaccepted\fP: key was accepted and the minion can communicate with the Salt
+master.
+.IP \(bu 2
+\fBrejected\fP: key was rejected using the \fBsalt\-key\fP command. In
+this state the minion does not receive any communication from the Salt
+master.
+.IP \(bu 2
+\fBdenied\fP: key was rejected automatically by the Salt master.
+This occurs when a minion has a duplicate ID, or when a minion was rebuilt or
+had new keys generated and the previous key was not deleted from the Salt
+master. In this state the minion does not receive any communication from the
+Salt master.
+.UNINDENT
+.sp
+To change the state of a minion key, use \fB\-d\fP to delete the key and then
+accept or reject the key.
+.SH OPTIONS
+.INDENT 0.0
+.TP
+.B \-\-version
+Print the version of Salt that is running.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-versions\-report
+Show program\(aqs dependencies and version number, and then exit
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-h, \-\-help
+Show the help message and exit
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-c CONFIG_DIR, \-\-config\-dir=CONFIG_dir
+The location of the Salt configuration directory. This directory contains
+the configuration files for Salt master and minions. The default location
+on most systems is \fB/etc/salt\fP\&.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-u USER, \-\-user=USER
+Specify user to run salt\-key
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-hard\-crash
+Raise any original exception rather than exiting gracefully. Default is
+False.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-q, \-\-quiet
+Suppress output
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-y, \-\-yes
+Answer \(aqYes\(aq to all questions presented, defaults to False
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-rotate\-aes\-key=ROTATE_AES_KEY
+Setting this to False prevents the master from refreshing the key session
+when keys are deleted or rejected, this lowers the security of the key
+deletion/rejection operation. Default is True.
+.UNINDENT
+.SS Logging Options
+.sp
+Logging options which override any settings defined on the configuration files.
+.INDENT 0.0
+.TP
+.B \-\-log\-file=LOG_FILE
+Log file path. Default: /var/log/salt/minion\&.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-log\-file\-level=LOG_LEVEL_LOGFILE
+Logfile logging log level. One of \fBall\fP, \fBgarbage\fP, \fBtrace\fP,
+\fBdebug\fP, \fBinfo\fP, \fBwarning\fP, \fBerror\fP, \fBquiet\fP\&. Default:
+\fBwarning\fP\&.
+.UNINDENT
+.SS Output Options
+.INDENT 0.0
+.TP
+.B \-\-out
+Pass in an alternative outputter to display the return of data. This
+outputter can be any of the available outputters:
+.INDENT 7.0
+.INDENT 3.5
+\fBhighstate\fP, \fBjson\fP, \fBkey\fP, \fBoverstatestage\fP, \fBpprint\fP, \fBraw\fP, \fBtxt\fP, \fByaml\fP, and many others\&.
+.UNINDENT
+.UNINDENT
+.sp
+Some outputters are formatted only for data returned from specific functions.
+If an outputter is used that does not support the data passed into it, then
+Salt will fall back on the \fBpprint\fP outputter and display the return data
+using the Python \fBpprint\fP standard library module.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-out\-indent OUTPUT_INDENT, \-\-output\-indent OUTPUT_INDENT
+Print the output indented by the provided value in spaces. Negative values
+disable indentation. Only applicable in outputters that support
+indentation.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-out\-file=OUTPUT_FILE, \-\-output\-file=OUTPUT_FILE
+Write the output to the specified file.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-out\-file\-append, \-\-output\-file\-append
+Append the output to the specified file.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-no\-color
+Disable all colored output
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-force\-color
+Force colored output
+.sp
+\fBNOTE:\fP
+.INDENT 7.0
+.INDENT 3.5
+When using colored output the color codes are as follows:
+.sp
+\fBgreen\fP denotes success, \fBred\fP denotes failure, \fBblue\fP denotes
+changes and success and \fByellow\fP denotes a expected future change in configuration.
+.UNINDENT
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-state\-output=STATE_OUTPUT, \-\-state_output=STATE_OUTPUT
+Override the configured state_output value for minion
+output. One of \(aqfull\(aq, \(aqterse\(aq, \(aqmixed\(aq, \(aqchanges\(aq or
+\(aqfilter\(aq. Default: \(aqnone\(aq.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-state\-verbose=STATE_VERBOSE, \-\-state_verbose=STATE_VERBOSE
+Override the configured state_verbose value for minion
+output. Set to True or False. Default: none.
+.UNINDENT
+.SS Actions
+.INDENT 0.0
+.TP
+.B \-l ARG, \-\-list=ARG
+List the public keys. The args \fBpre\fP, \fBun\fP, and \fBunaccepted\fP will
+list unaccepted/unsigned keys. \fBacc\fP or \fBaccepted\fP will list
+accepted/signed keys. \fBrej\fP or \fBrejected\fP will list rejected keys.
+Finally, \fBall\fP will list all keys.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-L, \-\-list\-all
+List all public keys. (Deprecated: use \fB\-\-list all\fP)
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-a ACCEPT, \-\-accept=ACCEPT
+Accept the specified public key (use \-\-include\-all to match rejected keys
+in addition to pending keys). Globs are supported.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-A, \-\-accept\-all
+Accepts all pending keys.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-r REJECT, \-\-reject=REJECT
+Reject the specified public key (use \-\-include\-all to match accepted keys
+in addition to pending keys). Globs are supported.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-R, \-\-reject\-all
+Rejects all pending keys.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-include\-all
+Include non\-pending keys when accepting/rejecting.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-p PRINT, \-\-print=PRINT
+Print the specified public key.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-P, \-\-print\-all
+Print all public keys
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-d DELETE, \-\-delete=DELETE
+Delete the specified key. Globs are supported.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-D, \-\-delete\-all
+Delete all keys.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-f FINGER, \-\-finger=FINGER
+Print the specified key\(aqs fingerprint.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-F, \-\-finger\-all
+Print all keys\(aq fingerprints.
+.UNINDENT
+.SS Key Generation Options
+.INDENT 0.0
+.TP
+.B \-\-gen\-keys=GEN_KEYS
+Set a name to generate a keypair for use with salt
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-gen\-keys\-dir=GEN_KEYS_DIR
+Set the directory to save the generated keypair.  Only works
+with \(aqgen_keys_dir\(aq option; default is the current directory.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-keysize=KEYSIZE
+Set the keysize for the generated key, only works with
+the \(aq\-\-gen\-keys\(aq option, the key size must be 2048 or
+higher, otherwise it will be rounded up to 2048. The
+default is 2048.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-gen\-signature
+Create a signature file of the master\(aqs public\-key named
+master_pubkey_signature. The signature can be sent to a minion in the
+master\(aqs auth\-reply and enables the minion to verify the master\(aqs public\-key
+cryptographically. This requires a new signing\-key\-pair which can be
+auto\-created with the \-\-auto\-create parameter.
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-priv=PRIV
+The private\-key file to create a signature with
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-signature\-path=SIGNATURE_PATH
+The path where the signature file should be written
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-pub=PUB
+The public\-key file to create a signature for
+.UNINDENT
+.INDENT 0.0
+.TP
+.B \-\-auto\-create
+Auto\-create a signing key\-pair if it does not yet exist
+.UNINDENT
+.SH SEE ALSO
+.sp
+\fBsalt(7)\fP
+\fBsalt\-master(1)\fP
+\fBsalt\-minion(1)\fP
+.SH AUTHOR
+Thomas S. Hatch <thatch45@gmail.com> and many others, please see the Authors file
+.\" Generated by docutils manpage writer.
+.

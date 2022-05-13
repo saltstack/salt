@@ -1,0 +1,98 @@
+# This file may be used in addition to, or instead of the files in the
+# cloud.providers.d/ directory. The format for this file, and all files in that
+# directory is identical.
+
+#my-digitalocean-config:
+#  driver: digitalocean
+#  client_key: wFGEwgregeqw3435gDger
+#  api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
+#  location: New York 1
+
+#my-aws-quick-start:
+#  driver: ec2
+#  id: HJGRYCILJLKJYG
+#  key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+#  keyname: test
+#  securitygroup: quick-start
+#  private_key: /root/test.pem
+
+#my-aws-default:
+#  driver: ec2
+#  id: HJGRYCILJLKJYG
+#  key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+#  keyname: test
+#  securitygroup: default
+#  private_key: /root/test.pem
+
+#my-gogrid-config:
+#  driver: gogrid
+#  apikey: asdff7896asdh789
+#  sharedsecret: saltybacon
+
+#my-openstack-hp-config:
+#  driver: openstack
+#  identity_url: 'https://region-a.geo-1.identity.hpcloudsvc.com:35357/v2.0/'
+#  compute_name: Compute
+#  compute_region: 'az-1.region-a.geo-1'
+#  tenant: myuser-tenant1
+#  user: myuser
+#  ssh_key_name: mykey
+#  ssh_key_file: '/etc/salt/hpcloud/mykey.pem'
+#  password: mypass
+
+#my-ibmsce-config:
+#  driver: ibmsce
+#  user: myuser@mycorp.com
+#  password: mypass
+#  ssh_key_name: mykey
+#  ssh_key_file: '/etc/salt/ibm/mykey.pem'
+#  location: Raleigh
+
+#my-joyent-config:
+#    driver: joyent
+#    user: fred
+#    password: saltybacon
+#    private_key: /root/joyent.pem
+
+#my-linode-config:
+#  driver: linode
+#  apikey: asldkgfakl;sdfjsjaslfjaklsdjf;askldjfaaklsjdfhasldsadfghdkf
+#  password: F00barbaz
+
+#my-parallels-config:
+#  driver: parallels
+#  user: myuser
+#  password: xyzzy
+#  url: https://api.cloud.xmission.com:4465/paci/v1.0/
+
+#my-proxmox-config:
+#  driver: proxmox
+#  user: saltcloud@pve
+#  password: xyzzy
+#  url: your.proxmox.host
+
+#my-openstack-rackspace-config:
+#  driver: openstack
+#  identity_url: 'https://identity.api.rackspacecloud.com/v2.0/tokens'
+#  compute_name: cloudServersOpenStack
+#  protocol: ipv4
+#  compute_region: DFW
+#  protocol: ipv4
+#  user: myuser
+#  tenant: 5555555
+#  apikey: 901d3f579h23c8v73q9
+
+#my-saltify-config:
+#  driver: saltify
+
+#my-scaleway-config:
+#  driver: scaleway
+
+#my-tencentcloud-config:
+    # driver: tencentcloud
+    # Tencent Cloud Secret Id
+    # id: AKIDA64pOio9BMemkApzevX0HS169S4b750A
+    # Tencent Cloud Secret Key
+    # key: 8r2xmPn0C5FDvRAlmcJimiTZKVRsk260
+    # Tencent Cloud Region
+    # location: ap-guangzhou

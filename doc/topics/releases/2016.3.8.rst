@@ -1,0 +1,30 @@
+===========================
+Salt 2016.3.8 Release Notes
+===========================
+
+Version 2016.3.8 is a bugfix release for :ref:`2016.3.0 <release-2016-3-0>`.
+
+
+Security Fix
+============
+
+**CVE-2017-14695** Directory traversal vulnerability in minion id validation in
+SaltStack. Allows remote minions with incorrect credentials to authenticate to
+a master via a crafted minion ID. Credit for discovering the security flaw goes
+to: Julian Brost (julian@0x4a42.net)
+
+**CVE-2017-14696** Remote Denial of Service with a specially crafted
+authentication request. Credit for discovering the security flaw goes to:
+Julian Brost (julian@0x4a42.net)
+
+
+Changelog for v2016.3.7..v2016.3.8
+==================================
+
+*Generated at: 2018-05-27 14:11:36 UTC*
+
+* 8cf08bd7be Update 2016.3.7 Release Notes
+
+* 0425defe84 Do not allow IDs with null bytes in decoded payloads
+
+* 31b38f50eb Don't allow path separators in minion ID

@@ -1,0 +1,44 @@
+==============
+salt-api 0.8.3
+==============
+
+:program:`salt-api` 0.8.3 is a small release largely concerning changes and
+fixes to the :py:mod:`rest_cherrypy <salt.netapi.rest_cherrypy.app>` netapi
+module.
+
+This release will likely be the final salt-api release as a separate project.
+The Salt team has begun the process of merging this project directly in to the
+main Salt project. What this means for end users is only that there will be one
+fewer package to install. Salt itself will ship with the current ``netapi``
+modules and the API and configuration will remain otherwise unchanged.
+
+The reasoning behind merging the two projects is simply to lower the barrier to
+entry. Having a separate project was useful for experimentation and exploration
+but there was no technical reason for the separation -- salt-api uses the same
+flexible module system that Salt uses and those modules will simply be moved
+into Salt.
+
+Going forward, Salt will ship with the same REST interface that salt-api
+currently provides. This will have the side benefit of not having to coordinate
+incompatible Salt and salt-api releases.
+
+:py:mod:`rest_cherrypy <salt.netapi.rest_cherrypy.app>` changes
+==================================================================
+
+An HTTP stream of Salt's event bus has been added. This stream conforms to the
+SSE (Server Sent Events) spec and is easily consumed via JavaScript clients.
+This HTTP stream allows a real-time window into a running Salt system. A client
+watching the stream can see as soon as individual minions return data for a
+job, authentication events, and any other events that go through the Salt
+master.
+
+A new configuration option to only allow access to whitelisted IP addresses. Of
+course, IP addresses can be easily spoofed so this feature should be thought of
+as a usability addition and not used for security purposes.
+
+An option to disable SSL has been added. Previously SSL could only be disabled
+while running the HTTP server with debugging options enabled. Now each item can
+be enabled or disabled independently of the other.
+
+In addition, there has been several bug fixes, packaging fixes, and minor code
+simplification.

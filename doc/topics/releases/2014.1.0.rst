@@ -1,0 +1,296 @@
+.. _release-2014-1-0:
+
+===============================================
+Salt 2014.1.0 Release Notes - Codename Hydrogen
+===============================================
+
+.. note::
+
+   Due to a change in master to minion communication, 2014.1.0 minions are not
+   compatible with older-version masters.  Please upgrade masters first.
+   More info on backwards-compatibility policy :ref:`here
+   <installation>`, under the "Upgrading Salt" subheading.
+
+.. note::
+
+    A change in the grammar in the state compiler makes ``module.run`` in
+    requisites illegal syntax.  Its use is replaced simply with the word
+    ``module``.  In other words you will need to change requisites like this::
+
+        require:
+            module.run: some_module_name
+
+    to::
+
+        require:
+            module: some_module_name
+
+    This is a breaking change.  We apologize for the inconvenience, we needed to
+    do this to remove some ambiguity in parsing requisites.
+
+:release: 2014-02-24
+
+The 2014.1.0 release of Salt is a major release which not only increases
+stability but also brings new capabilities in virtualization, cloud
+integration, and more. This release brings a great focus on the expansion of
+testing making roughly double the coverage in the Salt tests, and comes with
+many new features.
+
+2014.1.0 is the first release to follow the new date-based release naming
+system. See the :ref:`version numbers<version-numbers>`
+page for more details.
+
+Major Features
+==============
+
+Salt Cloud Merged into Salt
+---------------------------
+
+Salt Cloud is a tool for provisioning salted minions across various cloud
+providers. Prior to this release, Salt Cloud was a separate project but this
+marks its full integration with the Salt distribution. A Getting Started guide
+and additional documentation for Salt Cloud can be found :ref:`here <salt-cloud>`:
+
+
+Google Compute Engine
+---------------------
+
+Alongside Salt Cloud comes new support for the Google Compute Engine. Salt Stack
+can now deploy and control GCE virtual machines and the application stacks that
+they run.
+
+For more information on Salt Stack and GCE, please see `this blog post`_.
+
+Documentation for Salt and GCE can be found :ref:`here <cloud-getting-started-gce>`.
+
+.. _this blog post: https://cloudplatform.googleblog.com/2013/12/saltstack-for-google-compute-engine.html
+
+
+Salt Virt
+---------
+
+Salt Virt is a cloud controller that supports virtual machine deployment,
+inspection, migration, and integration with many aspects of Salt.
+
+Salt Virt has undergone a major overhaul with this release and now supports
+many more features and includes a number of critical improvements.
+
+
+Docker Integration
+------------------
+
+Salt now ships with :mod:`states <salt.states.dockerio>` and an :mod:`execution
+module <salt.states.dockerio>` to manage Docker containers.
+
+
+Substantial Testing Expansion
+-----------------------------
+
+Salt continues to increase its unit/regression test coverage. This release
+includes over 300 new tests.
+
+
+BSD Package Management
+----------------------
+
+BSD package management has been entirely rewritten. FreeBSD 9 and older now
+default to using pkg_add, while FreeBSD 10 and newer will use pkgng. FreeBSD 9
+can be forced to use pkgng, however, by specifying the following option in the
+minion config file:
+
+.. code-block:: yaml
+
+    providers:
+      pkg: pkgng
+
+In addition, support for installing software from the ports tree has been
+added. See the documentation for the ports :mod:`state <salt.states.ports>` and
+:mod:`execution module <salt.modules.freebsdports>` for more information.
+
+
+Network Management for Debian/Ubuntu
+------------------------------------
+
+Initial support for management of network interfaces on Debian-based distros
+has been added. See the documentation for the :mod:`network state
+<salt.states.network>` and the :mod:`debian_ip <salt.modules.debian_ip>` for
+more information.
+
+
+IPv6 Support for iptables State/Module
+--------------------------------------
+
+The iptables :mod:`state <salt.states.iptables>` and :mod:`module
+<salt.modules.iptables>` now have IPv6 support. A new parameter ``family`` has
+been added to the states and execution functions, to distinguish between IPv4
+and IPv6. The default value for this parameter is ``ipv4``, specifying ``ipv6``
+will use ip6tables to manage firewall rules.
+
+
+GitFS Improvements
+------------------
+
+Several performance improvements have been made to the :mod:`Git fileserver
+backend <salt.fileserver.gitfs>`. Additionally, file states can now use any
+SHA1 commit hash as a fileserver environment:
+
+.. code-block:: yaml
+
+    /etc/httpd/httpd.conf:
+      file.managed:
+        - source: salt://webserver/files/httpd.conf
+        - saltenv: 45af879
+
+This applies to the functions in the :mod:`cp module <salt.modules.cp>` as
+well:
+
+.. code-block:: yaml
+
+    salt '*' cp.get_file salt://readme.txt /tmp/readme.txt saltenv=45af879
+
+
+MinionFS
+--------
+
+This new fileserver backend allows files which have been pushed from the minion
+to the master (using :mod:`cp.push <salt.modules.cp.push>`) to be served up
+from the salt fileserver. The path for these files takes the following format::
+
+    salt://minion-id/path/to/file
+
+``minion-id`` is the id of the "source" minion, the one from which the files
+were pushed to the master. ``/path/to/file`` is the full path of the file.
+
+The :ref:`MinionFS Walkthrough <tutorial-minionfs>` contains a more
+thorough example of how to use this backend.
+
+
+saltenv
+-------
+
+To distinguish between fileserver environments and execution functions which
+deal with environment variables, fileserver environments are now specified
+using the ``saltenv`` parameter. ``env`` will continue to work, but is
+deprecated and will be removed in a future release.
+
+
+Grains Caching
+--------------
+
+A caching layer has been added to the Grains system, which can help speed up
+minion startup. Disabled by default, it can be enabled by setting the minion
+config option ``grains_cache``:
+
+.. code-block:: yaml
+
+    grains_cache: True
+
+    # Seconds before grains cache is considered to be stale.
+    grains_cache_expiration: 300
+
+If set to ``True``, the grains loader will read from/write to a
+msgpack-serialized file containing the grains data.
+
+Additional command-line parameters have been added to salt-call, mainly for
+testing purposes:
+
+* ``--skip-grains`` will completely bypass the grains loader when salt-call is
+  invoked.
+* ``--refresh-grains-cache`` will force the grains loader to bypass the grains
+  cache and refresh the grains, writing a new grains cache file.
+
+
+Improved Command Logging Control
+--------------------------------
+
+When using the :mod:`cmd module <salt.modules.cmdmod>`, either on the CLI or
+when developing Salt execution modules, a new keyword argument
+``output_loglevel`` allows for greater control over how (or even if) the
+command and its output are logged. For example:
+
+.. code-block:: bash
+
+    salt '*' cmd.run 'tail /var/log/messages' output_loglevel=debug
+
+The package management modules (``apt``, ``yumpkg``, etc.) have been updated to
+log the copious output generated from these commands at loglevel ``debug``.
+
+
+.. note::
+
+    To keep a command from being logged, ``output_loglevel=quiet`` can be used.
+
+    Prior to this release, this could be done using ``quiet=True``. This
+    argument is still supported, but will be removed in a future Salt release.
+
+
+PagerDuty Support
+-----------------
+
+Initial support for firing events via PagerDuty_ has been added. See the
+documentation for the :mod:`pagerduty <salt.modules.pagerduty>` module.
+
+.. _PagerDuty: https://www.pagerduty.com/
+
+
+Virtual Terminal
+----------------
+
+Sometimes the subprocess module is not good enough, and, in fact, not even
+``askpass`` is. This virtual terminal is still in its infant childhood, needs
+quite some love, and was originally created to replace ``askpass``, but, while
+developing it, it immediately proved that it could do so much more. It's
+currently used by salt-cloud when bootstrapping salt on clouds which require
+the use of a password.
+
+
+Proxy Minions
+-------------
+
+Initial basic support for Proxy Minions is in this release. Documentation can
+be found :ref:`here <proxy-minion>`.
+
+Proxy minions are a developing feature in Salt that enables control of devices
+that cannot run a minion. Examples include network gear like switches and
+routers that run a proprietary OS but offer an API, or "dumb" devices that just
+don't have the horsepower or ability to handle a Python VM.
+
+Proxy minions can be difficult to write, so a simple REST-based example proxy
+is included. A Python bottle-based webserver can be found at
+https://github.com/cro/salt-proxy-rest as an endpoint for this proxy.
+
+This is an ALPHA-quality feature. There are a number of issues with it
+currently, mostly centering around process control, logging, and inability to
+work in a masterless configuration.
+
+
+Additional Bugfixes (Release Candidate Period)
+----------------------------------------------
+
+Below are many of the fixes that were implemented in salt during the release
+candidate phase.
+
+- Fix mount.mounted leaving conflicting entries in fstab (:issue:`7079`)
+- Fix mysql returner serialization to use json (:issue:`9590`)
+- Fix ``ZMQError: Operation cannot be accomplished in current state`` errors (:issue:`6306`)
+- Rbenv and ruby improvements
+- Fix quoting issues with mysql port (:issue:`9568`)
+- Update mount module/state to support multiple swap partitions (:issue:`9520`)
+- Fix ``archive`` state to work with ``bsdtar``
+- Clarify logs for minion ID caching
+- Add numeric revision support to git state (:issue:`9718`)
+- Update ``master_uri`` with ``master_ip`` (:issue:`9694`)
+- Add comment to Debian ``mod_repo`` (:issue:`9923`)
+- Fix potential undefined loop variable in rabbitmq state (:issue:`8703`)
+- Fix for salt-virt runner to delete key on VM deletion
+- Fix for ``salt-run -d`` to limit results to specific runner or function (:issue:`9975`)
+- Add tracebacks to jinja renderer when applicable (:issue:`10010`)
+- Fix parsing in monit module (:issue:`10041`)
+- Fix highstate output from syndic minions (:issue:`9732`)
+- Quiet logging when dealing with passwords/hashes (:issue:`10000`)
+- Fix for multiple remotes in git_pillar (:issue:`9932`)
+- Fix npm installed command (:issue:`10109`)
+- Add safeguards for utf8 errors in zcbuildout module
+- Fix compound commands (:issue:`9746`)
+- Add systemd notification when master is started
+- Many doc improvements

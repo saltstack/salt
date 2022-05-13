@@ -1,0 +1,23 @@
+ARCH=i386
+BASEDIR=/
+CATEGORY=system
+DESC=Source for the GNU Bourne-Again shell (bash) version 3.0
+EMAIL=
+HOTLINE=Please contact your local service provider
+MAXINST=1000
+NAME=Source for the GNU Bourne-Again shell (bash)
+PKG=SUNWbashS
+SUNW_PKGTYPE=usr
+SUNW_PKGVERS=1.0
+SUNW_PRODNAME=SunOS
+SUNW_PRODVERS=5.10/SunOS Development
+VENDOR=Sun Microsystems, Inc.
+VERSION=11.10.0,REV=2005.01.08.01.09
+PSTAMP=sfw10-patch-x20070430084430
+CLASSES=none
+PATCHLIST=126547-01
+PATCH_INFO_126547-01=Installed: Wed Sep 16 13:42:56 PDT 2009 From: mum Obsoletes:  Requires:  Incompatibles:
+PKG_SRC_NOVERIFY= none
+PKG_DST_QKVERIFY= none
+PKG_CAS_PASSRELATIVE= none
+#FASPACD= none

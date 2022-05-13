@@ -1,0 +1,32 @@
+# Maintainer: Christer Edwards <christer.edwards@gmail.com>
+
+pkgname=salt-api
+pkgver=0.8.0
+pkgrel=1
+pkgdesc="Salt API is used to expose the fundamental aspects of Salt control to external sources."
+arch=(any)
+url="https://github.com/saltstack/salt-api"
+license=("APACHE")
+depends=('python2'
+	 'salt')
+
+backup=()
+
+makedepends=()
+optdepends=()
+options=()
+conflicts=()
+
+source=("http://pypi.python.org/packages/source/s/${pkgname}/${pkgname}-${pkgver}.tar.gz"
+        salt-api.service)
+
+md5sums=('e9239a7184ced5d426696735456ee829'
+         '37f667db44f63fb5dd7b81acf736b0db')
+
+package() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  python2 setup.py install --root=${pkgdir}/ --optimize=1
+
+  install -Dm644 ${srcdir}/salt-api.service ${pkgdir}/usr/lib/systemd/system/salt-api.service
+
+}

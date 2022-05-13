@@ -1,0 +1,274 @@
+{%- block doctype -%}
+<!DOCTYPE html>
+{%- endblock %}
+
+{% set xxx = rellinks.extend([
+    ('glossary', 'Glossary', 'g', 'Glossary'),
+    ('contents', 'Table of Contents', 't', 'Table of Contents'),
+]) %}
+
+{%- set reldelim1 = reldelim1 is not defined and ' &raquo;' or reldelim1 %}
+{%- set reldelim2 = reldelim2 is not defined and ' |' or reldelim2 %}
+{%- set render_sidebar = (not embedded) and (not theme_nosidebar|tobool) and (sidebars != []) %}
+{%- set url_root = pathto('', 1) %}
+{# XXX necessary? #}
+{%- if url_root == '#' %}{% set url_root = '' %}{% endif %}
+{%- if not embedded and docstitle %}
+    {%- set titlesuffix = " &mdash; "|safe + docstitle|e %}
+{%- else %}
+    {%- set titlesuffix = "" %}
+{%- endif %}
+
+{# Remove old version of jQuery #}
+{% set js_blacklist = [
+    '_static/jquery.js',
+] %}
+
+{# Add to top of the list #}
+{% set script_files = [
+    '_static/js/vendor/jquery-1.9.1.js',
+    '_static/js/vendor/bootstrap.min.js',
+] + script_files %}
+
+{%- macro relbar() %}
+    <div class="related">
+        {#
+        <ul class="nav rel-main">
+            {%- block rootrellink %}
+            <li><a href="{{ pathto('index') }}">Documentation</a> &raquo;</li>
+            {%- endblock %}
+        </ul>
+        #}
+
+        <ul class="nav rel-extra">
+            {%- for rellink in rellinks|reverse %}
+            <li>
+                <a href="{{ pathto(rellink[0]) }}" title="{{ rellink[1]|striptags|e }}">{{ rellink[3] }}</a>
+                {#
+                {%- if not loop.last %}{{ reldelim2 }}{% endif %}
+                #}
+            </li>
+            {%- endfor %}
+
+            {%- block relbaritems %} {% endblock %}
+        </ul>
+    </div>
+{%- endmacro %}
+
+{%- macro sidebar() %}
+    {%- if render_sidebar %}
+    <div class="span3">
+    <div>
+        {%- block sidebarlogo %}{%- endblock %}
+
+        {%- for sidebartemplate in sidebars|default(html_default_sidebars, true) %}
+            {%- include sidebartemplate %}
+        {%- endfor %}
+    </div>
+    </div>
+    {%- endif %}
+{%- endmacro %}
+
+{%- macro script() %}
+    <script>
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:    '{{ url_root }}',
+            VERSION:     '{{ release|e }}',
+            LANGUAGE: '{{ language }}',
+            COLLAPSE_INDEX: false,
+            BUILDER: '{{ builder }}',
+            FILE_SUFFIX: '{{ '' if no_search_suffix else file_suffix }}',
+            LINK_SUFFIX: '{{ link_suffix }}',
+            HAS_SOURCE: {{ has_source|lower }},
+            SOURCELINK_SUFFIX: '{{ sourcelink_suffix }}',
+            NAVIGATION_WITH_KEYS: {{ 'true' if theme_navigation_with_keys|tobool else 'false'}}
+        };
+    </script>
+    {%- for scriptfile in script_files %}
+    {% if scriptfile not in js_blacklist %}
+    <script type="text/javascript" src="{{ pathto(scriptfile, 1) }}"></script>
+    {% endif %}
+    {%- endfor %}
+{%- endmacro %}
+
+{%- macro css() %}
+    {% if style %}
+    <link rel="stylesheet" href="{{ pathto('_static/' + style, 1) }}">
+    {% endif %}
+    <link rel="stylesheet" href="{{ pathto('_static/basic.css', 1) }}">
+    <link rel="stylesheet" href="{{ pathto('_static/pygments.css', 1) }}">
+    <link rel="stylesheet" href="{{ pathto('_static/css/bootstrap.css', 1) }}">
+    <style>
+        body { padding-top: 20px; }
+    </style>
+    <link rel="stylesheet" href="{{ pathto('_static/css/bootstrap-responsive.css', 1) }}">
+    <link rel="stylesheet" href="{{ pathto('_static/css/main.css', 1) }}">
+{%- endmacro %}
+
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+    <head>
+        <meta charset="{{ encoding }}">
+        {{ metatags }}
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+        {%- block htmltitle %}
+        <title>{{ title|striptags|e }}{{ titlesuffix }}</title>
+        {%- endblock %}
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="google-site-verification" content="1Y-ojT3ndjxA9coB77iUDyXPWxeuQ3T4_r0j-QG6QHg" />
+
+        <link href='http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,600,700,800,300' rel='stylesheet' type='text/css'>
+        {{ css() }}
+
+        {%- if not embedded %}
+        {{ script() }}
+        {%- if use_opensearch %}
+        <link rel="search" type="application/opensearchdescription+xml"
+            title="{% trans docstitle=docstitle|e %}Search within {{ docstitle }}{% endtrans %}"
+            href="{{ pathto('_static/opensearch.xml', 1) }}">
+        {%- endif %}
+
+        {%- if favicon %}
+        <link rel="shortcut icon" href="{{ pathto('_static/' + favicon, 1) }}">
+        {%- endif %}
+        {%- endif %}
+
+        {%- block linktags %}
+        {%- if hasdoc('about') %}
+        <link rel="author" title="{{ _('About these documents') }}" href="{{ pathto('about') }}">
+        {%- endif %}
+        {%- if hasdoc('genindex') %}
+        <link rel="index" title="{{ _('Index') }}" href="{{ pathto('genindex') }}">
+        {%- endif %}
+        {%- if hasdoc('search') %}
+        <link rel="search" title="{{ _('Search') }}" href="{{ pathto('search') }}">
+        {%- endif %}
+        {%- if hasdoc('copyright') %}
+        <link rel="copyright" title="{{ _('Copyright') }}" href="{{ pathto('copyright') }}">
+        {%- endif %}
+        <link rel="top" title="{{ docstitle|e }}" href="{{ pathto('index') }}">
+        {%- if parents %}
+        <link rel="up" title="{{ parents[-1].title|striptags|e }}" href="{{ parents[-1].link|e }}">
+        {%- endif %}
+        {%- if next %}
+        <link rel="next" title="{{ next.title|striptags|e }}" href="{{ next.link|e }}">
+        {%- endif %}
+        {%- if prev %}
+        <link rel="prev" title="{{ prev.title|striptags|e }}" href="{{ prev.link|e }}">
+        {%- endif %}
+        {%- endblock %}
+
+        {%- block extrahead %} {% endblock %}
+        <script type="text/javascript" src="{{ pathto('_static/js/vendor/modernizr-2.6.2-respond-1.1.0.min.js', 1) }}"></script>
+
+        {%- block analytics %}
+        {% endblock %}
+    </head>
+
+    <body class="index">
+        <!--[if lt IE 7]>
+            <p class="chromeframe">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">activate Google Chrome Frame</a> to improve your experience.</p>
+        <![endif]-->
+
+        <!-- This code is taken from http://twitter.github.com/bootstrap/examples/hero.html -->
+
+        {% block header %}
+        <div class="navbar navbar-inverse navbar-fixed-top">
+            <div class="navbar-inner">
+                <div class="container">
+                    <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </a>
+                    <a class="brand" href="{{ pathto('index') }}"><img src="{{ pathto('_static/images/SaltStack-Logo.png', 1) }}" /></a>
+                    <div class="nav-collapse collapse">
+                        {%- block relbar1 %}{{ relbar() }}{% endblock %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endblock %}
+
+
+        {%- block content %}
+
+        {%- block sidebar1 %}{% endblock %}
+
+        <div class="content row-fluid">
+            <div class="container">
+                <div class="span12">
+                    <div class="{{ 'span9' if render_sidebar else 'span12' }}">
+                    {%- block document %}
+                        {% block body %} {% endblock %}
+                    {%- endblock %}
+                    </div>
+
+                    {%- block sidebar2 %}{{ sidebar() }}{% endblock %}
+                </div>
+            </div>
+        </div>
+        {%- endblock %}
+
+        {%- block relbar2 %}
+            <div class="navbar navbar-inverse navbar-fixed-top">
+                <div class="container">{{ relbar() }}</div>
+            </div>
+        {% endblock %}
+
+        {%- block footer %}
+            <footer>
+                <div class="container">
+                        <div class="row-fluid">
+                                <div class="footerCol">
+                                        <h4>About Us</h4>
+                                        <a href="http://saltstack.com/">SaltStack</a>
+                                        <a href="http://saltstack.com/about/">Leadership</a>
+                                </div>
+                                <div class="footerCol">
+                                        <h4>Products</h4>
+                                        <a href="http://saltstack.com/enterprise/">Enterprise</a>
+                                        <a href="http://saltstack.com/services/">Integration</a>
+                                </div>
+                                <div class="footerCol">
+                                        <h4>Services</h4>
+                                        <a href="http://saltstack.com/training/">Onsite Training</a>
+                                        <a href="http://saltstack.com/services/">Custom Professional Services</a>
+                                </div>
+                                <div class="footerCol">
+                                        <h4>Contact Us</h4>
+                                        <a href="http://saltstack.com/contact/">Support</a>
+                                        <a href="http://saltstack.com/contact/">Contact us</a>
+                                </div>
+                                <div class="footerCol">
+                                        <h4>Community</h4>
+                                        <a href="http://saltstack.org">saltstack.org</a>
+                                        <a href="http://docs.saltstack.org/en/latest/">Documentation</a>
+<!--                                    <a href="#">Blogs</a> -->
+                                </div>
+                        </div>
+                            <div class="row-fluid social">
+<!--                                <a href="https://www.facebook.com/SaltProjectOSS"><img src="images/socialFB.png" alt="SaltStack on Facebook" /></a> -->
+                                    <a href="https://twitter.com/Salt_Project_OS"><img src="{{ pathto('_static/images/socialTW.png', 1) }}" alt="Salt Project on Twitter" /></a>
+                                    <a href="https://www.linkedin.com/company/saltproject/"><img src="{{ pathto('_static/images/socialLI.png', 1) }}" alt="Salt Project on LinkedIn" /></a>
+<!--                                <a href="http://plus.google.com/114449193225626631691"><img src="images/socialG+.png" alt="SaltStack on Google+" /></a> -->
+                                    <a href="https://github.com/saltstack"><img src="{{ pathto('_static/images/socialGitHub.png', 1) }}" alt="SaltStack on GitHub" />
+                            </div>
+                </div>
+            </footer>
+        {%- endblock %}
+
+        <script type="text/javascript" src="{{ pathto('_static/js/main.js', 1) }}"></script>
+
+        {% if on_saltstack %}
+        <script type="text/javascript" language="javascript">llactid=23943</script>
+        <script type="text/javascript" language="javascript" src="http://t6.trackalyzer.com/trackalyze.js"></script>
+
+        {% endif %}
+    </body>
+</html>

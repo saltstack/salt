@@ -1,0 +1,129 @@
+========================
+Salt 0.8.0 release notes
+========================
+
+Salt 0.8.0 is ready for general consumption!
+The source tarball is available on GitHub for download:
+
+A lot of work has gone into salt since the last release just 2 weeks ago, and
+salt has improved a great deal. A swath of new features are here along with
+performance and threading improvements!
+
+The main new features of salt 0.8.0 are:
+
+Salt-cp
+
+Cython minion modules
+
+Dynamic returners
+
+Faster return handling
+
+Lowered required Python version to 2.6
+
+Advanced minion threading
+
+Configurable minion modules
+
+
+Salt-cp
+=======
+
+The salt-cp command introduces the ability to copy simple files via salt to
+targeted servers. Using salt-cp is very simple, just call salt-cp with a target
+specification, the source file(s) and where to copy the files on the minions.
+For instance:
+
+# salt-cp ‘*’ /etc/hosts /etc/hosts
+
+Will copy the local /etc/hosts file to all of the minions.
+
+Salt-cp is very young, in the future more advanced features will be added, and
+the functionality will much more closely resemble the cp command.
+
+Cython minion modules
+=====================
+
+Cython is an amazing tool used to compile Python modules down to c. This is
+arguably the fastest way to run Python code, and since pyzmq requires cython,
+adding support to salt for cython adds no new dependencies.
+
+Cython minion modules allow minion modules to be written in cython and
+therefore executed in compiled c. Simply write the salt module in cython and
+use the file extension “.pyx” and the minion module will be compiled when
+the minion is started. An example cython module is included in the main
+distribution called cytest.pyx:
+
+:blob:`salt/modules/cytest.pyx`
+
+Dynamic Returners
+=================
+
+By default salt returns command data back to the salt master, but now salt can
+return command data to any system. This is enabled via the new returners
+modules feature for salt. The returners modules take the return data and sends
+it to a specific module. The returner modules work like minion modules, so any
+returner can be added to the minions.
+
+This means that a custom data returner can be added to communicate the return
+data so anything from MySQL, Redis, MongoDB, and more!
+
+There are 2 simple stock returners in the returners directory:
+
+:blob:`salt/returners`
+
+The documentation on writing returners will be added to the wiki shortly, and
+returners can be written in pure Python, or in cython.
+
+Configurable Minion Modules
+===========================
+Minion modules may need to be configured, now the options passed to the minion
+configuration file can be accessed inside of the minion modules via the __opt__
+dict.
+
+Information on how to use this simple addition has been added to the wiki:
+:ref:`Writing modules <state-modules>`
+
+The test module has an example of using the __opts__ dict, and how to set
+default options:
+
+:blob:`salt/modules/test.py`
+
+Advanced Minion Threading
+=========================
+
+In 0.7.0 the minion would block after receiving a command from the master, now
+the minion will spawn a thread or multiprocess. By default Python threads are
+used because for general use they have proved to be faster, but the minion can
+now be configured to use the Python multiprocessing module instead. Using
+multiprocessing will cause executions that are CPU bound or would otherwise
+exploit the negative aspects of the Python GIL to run faster and more reliably,
+but simple calls will still be faster with Python threading.
+The configuration option can be found in the minion configuration file:
+
+:blob:`conf/minion`
+
+Lowered Supported Python to 2.6
+===============================
+
+The requirement for Python 2.7 has been removed to support Python 2.6. I have
+received requests to take the minimum Python version back to 2.4, but
+unfortunately this will not be possible, since the ZeroMQ Python bindings do
+not support Python 2.4.
+
+Salt 0.8.0 is a very major update, it also changes the network protocol slightly
+which makes communication with older salt daemons impossible, your master and
+minions need to be upgraded together!
+
+I could use some help bringing salt to the people! Right now I only have
+packages for Arch Linux, Fedora 14 and Gentoo. We need packages for Debian and
+people willing to help test on more platforms. We also need help writing more
+minion modules and returner modules. If you want to contribute to salt please
+hop on the mailing list and send in patches, make a fork on GitHub and send in
+pull requests! If you want to help but are not sure where you can, please email
+me directly or post tot he mailing list!
+
+I hope you enjoy salt, while it is not yet 1.0 salt is completely viable and
+usable!
+
+-Thomas S. Hatch

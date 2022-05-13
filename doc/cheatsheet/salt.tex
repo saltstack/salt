@@ -1,0 +1,286 @@
+\documentclass[landscape,a4paper,10pt]{article}
+\usepackage{multicol}
+\usepackage[landscape]{geometry}
+
+\usepackage{concmath}
+\usepackage[T1]{fontenc}
+
+\geometry{top=.5in,left=.5in,right=.5in,bottom=.5in}
+
+\pagestyle{empty}
+
+\setcounter{secnumdepth}{0}
+
+\setlength\columnseprule{.4pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt plus 0.5ex}
+
+\begin{document}
+
+\begin{multicols}{3}
+
+\bfseries{\Huge{Salt States}}\\[-0.3cm]
+\line(1,0){125}\\
+
+\bfseries{\LARGE{top.sls}}
+
+The \texttt{top.sls} file is used to map what SLS modules get loaded onto what minions via the state system.\\
+
+It is located in the file defined in the \texttt{file_roots} variable of the
+salt master configuration file which is found in
+\texttt{CONFIG_DIR}/master.
+
+The file roots is defined like this by default.
+\begin{verbatim}
+file_roots:
+  base:
+    - /srv/salt
+\end{verbatim}
+
+Here is an example \texttt{top.sls} file which uses \texttt{pkg}, \texttt{file} and \texttt{service} states:
+
+\begin{verbatim}
+apache:
+  pkg:
+    - installed
+    - version: 2.2.23
+  service:
+    - running
+    - enable: True
+/var/www/index.html: # ID declaration
+  file:              # state declaration
+    - managed        # function
+    - source: salt://webserver/index.html
+    - user: root
+    - group: root
+    - mode: 644
+    - require:       # requisite declaration
+      - pkg: apache  # requisite reference
+\end{verbatim}
+
+
+\bfseries{\LARGE{file}}
+
+Manages files.
+
+FUNCTIONS
+
+
+\begin{itemize}
+  \item \texttt{absent}  -- verify that a file or directory is absent
+  \item \texttt{accumulated}  -- prepare accumulator which can be used for template in \texttt{file.managed}
+  \item \texttt{append}  -- put some text at the end of file
+  \item \texttt{comment}  -- comment out some lines
+  \item \texttt{directory}  -- ensure that a directory is present
+  \item \texttt{exists}  -- ensure that a directory or file is present
+  \item \texttt{managed}  -- this file is managed by the salt master and can be run through templating system
+  \item \texttt{patch}  -- apply a patch to a file
+  \item \texttt{recurse}  -- recurse through a subdirectory on master
+  \item \texttt{rename}  -- rename a file
+  \item \texttt{sed}  -- edit a file
+  \item \texttt{symlink}  -- create a symlink
+  \item \texttt{touch}  -- create an empty file or update the access and modification time
+  \item \texttt{uncomment}  -- uncomment lines in a file
+\end{itemize}
+
+\begin{verbatim}
+/etc/http/conf/http.conf:
+  file.managed:
+    - source: salt://apache/http.conf
+    - user: root
+    - group: root
+    - mode: 644
+    - template: jinja
+    - context:
+        custom_var: "override"
+    - defaults:
+        custom_var: "default value"
+        other_var: 123
+\end{verbatim}
+
+\bfseries{\LARGE{pkg}}
+
+Manage software packages.
+
+FUNCTIONS
+
+\begin{itemize}
+  \item \texttt{installed} -- verify if a package is installed
+  \item \texttt{latest} -- verify that the package is the latest version
+  \item \texttt{purged}
+  \item \texttt{removed} -- verify if the package is removed
+\end{itemize}
+
+\begin{verbatim}
+httpd:
+  pkg:
+    - installed
+    - repo: mycustomrepo
+    - skip_verify: True
+    - version: 2.0.6~ubuntu3
+\end{verbatim}
+
+\bfseries{\LARGE{service}}
+
+Manage system daemons/services.
+
+FUNCTIONS
+
+\begin{itemize}
+  \item \texttt{dead}
+  \item \texttt{disabled}
+  \item \texttt{enabled}
+  \item \texttt{mod\_watch}
+  \item \texttt{running}
+\end{itemize}
+
+\begin{verbatim}
+apache:
+  service:
+    - running
+    - name: httpd
+    - enable: True
+    - sig: httpd
+\end{verbatim}
+
+
+\bfseries{\LARGE{cmd}}
+
+Execution of arbitrary commands.
+
+FUNCTIONS
+
+\begin{itemize}
+  \item \texttt{mod\_watch}
+  \item \texttt{run}
+  \item \texttt{script}
+  \item \texttt{wait}
+  \item \texttt{wait\_script}
+\end{itemize}
+
+\begin{verbatim}
+date > /tmp/salt-run:
+  cmd:
+    - run
+\end{verbatim}
+
+\bfseries{\LARGE{cron}}
+
+Manage cron jobs (scheduler).
+
+\begin{verbatim}
+date > /tmp/crontest:
+  cron.present:
+    - user: root
+    - minute: 7
+    - hour: 2
+\end{verbatim}
+
+FUNCTIONS
+
+\begin{itemize}
+ \item \texttt{absent}
+ \item \texttt{file} -- provides file.managed-like functionality (templating, etc.) for a pre-made crontab file, to be assigned to a given user
+ \item \texttt{present}
+\end{itemize}
+
+\bfseries{\LARGE{user}}
+
+The user module is used to create and manage user settings, users can be set as either absent or present.
+
+\begin{verbatim}
+fred:
+  user.present:
+    - fullname: Fred Jones
+    - shell: /bin/zsh
+    - home: /home/fred
+    - uid: 4000
+    - gid: 4000
+    - groups:
+      - wheel
+      - storage
+      - games
+
+testuser:
+  user.absent
+\end{verbatim}
+
+FUNCTIONS
+
+\bfseries{\LARGE{group}}
+
+The group module is used to create and manage unix group settings, groups can be either present or absent.
+
+FUNCTIONS
+
+\begin{itemize}
+ \item \texttt{present}
+ \item \texttt{absent}
+\end{itemize}
+
+\begin{verbatim}
+cheese:
+  group.present:
+    - gid: 7648
+    - system: True
+\end{verbatim}
+
+\bfseries{\LARGE{git}}
+
+Interaction with Git repositories.
+
+\begin{verbatim}
+https://github.com/saltstack/salt.git:
+  git.latest:
+    - rev: develop
+    - target: /tmp/salt
+\end{verbatim}
+
+\bfseries{\LARGE{host}}
+
+Management of addresses and names in hosts file.
+
+\begin{verbatim}
+salt-master:
+  host.present:
+    - ip: 192.168.0.42
+\end{verbatim}
+
+\bfseries{\LARGE{kmod}}
+
+Loading and unloading of kernel modules.
+
+\begin{verbatim}
+kvm_amd:
+  kmod.present
+pcspkr:
+  kmod.absent
+\end{verbatim}
+
+\bfseries{\LARGE{mount}}
+
+Mounting of filesystems.
+
+\begin{verbatim}
+/mnt/sdb:
+  mount.mounted:
+    - device: /dev/sdb1
+    - fstype: ext4
+    - mkmnt: True
+    - opts:
+      - defaults
+\end{verbatim}
+
+\bfseries{\LARGE{sysctl}}
+
+Configuration of the Linux kernel using sysctl.
+
+\begin{verbatim}
+vm.swappiness:
+  sysctl.present:
+    - value: 20
+\end{verbatim}
+
+\end{multicols}
+\end{document}
+
