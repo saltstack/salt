@@ -1,0 +1,1 @@
+add minion configs parameter metadata_server_host for /salt/metadata.py to handle the cloud providers which not using 169.254.169.254 as metadata server
