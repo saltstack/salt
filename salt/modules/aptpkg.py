@@ -212,7 +212,7 @@ if not HAS_APT:
             Add the lines of a file to self.list
             """
             if file.is_file():
-                with salt.utils.files.fopen(file) as source:
+                with salt.utils.files.fopen(str(file)) as source:
                     for line in source:
                         self.list.append(SourceEntry(line, file=str(file)))
             else:
@@ -221,12 +221,12 @@ if not HAS_APT:
         def add(self, type, uri, dist, orig_comps, architectures):
             repo_line = [
                 type,
-                " [arch={}] ".format(" ".join(architectures)) if architectures else "",
+                "[arch={}]".format(" ".join(architectures)) if architectures else "",
                 uri,
                 dist,
                 " ".join(orig_comps),
             ]
-            return SourceEntry(" ".join(repo_line))
+            return SourceEntry(" ".join([line for line in repo_line if line.strip()]))
 
         def remove(self, source):
             """
@@ -243,13 +243,13 @@ if not HAS_APT:
             with tempfile.TemporaryDirectory() as tmpdir:
                 for source in self.list:
                     fname = pathlib.Path(tmpdir, pathlib.Path(source.file).name)
-                    with salt.utils.files.fopen(fname, "a") as fp:
+                    with salt.utils.files.fopen(str(fname), "a") as fp:
                         fp.write(source.repo_line())
                     if source.file not in filemap:
                         filemap[source.file] = {"tmp": fname}
 
                 for fp in filemap:
-                    shutil.move(filemap[fp]["tmp"], fp)
+                    shutil.move(str(filemap[fp]["tmp"]), fp)
 
 
 def _get_ppa_info_from_launchpad(owner_name, ppa_name):
@@ -1226,6 +1226,11 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
 
         .. versionadded:: 2015.8.0
 
+    allow_downgrades
+        Allow apt to downgrade packages without a prompt.
+
+        .. versionadded:: 3005
+
     CLI Example:
 
     .. code-block:: bash
@@ -1256,6 +1261,8 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         cmd.append("--allow-unauthenticated")
     if kwargs.get("download_only", False) or kwargs.get("downloadonly", False):
         cmd.append("--download-only")
+    if kwargs.get("allow_downgrades", False):
+        cmd.append("--allow-downgrades")
 
     cmd.append("dist-upgrade" if dist_upgrade else "upgrade")
     result = _call_apt(cmd, env=DPKG_ENV_VARS.copy())

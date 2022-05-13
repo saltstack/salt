@@ -28,6 +28,13 @@ import salt.utils.validate.path
 import salt.utils.xdg
 import salt.utils.yaml
 import salt.utils.zeromq
+from salt._logging import (
+    DFLT_LOG_DATEFMT,
+    DFLT_LOG_DATEFMT_LOGFILE,
+    DFLT_LOG_FMT_CONSOLE,
+    DFLT_LOG_FMT_JID,
+    DFLT_LOG_FMT_LOGFILE,
+)
 
 try:
     import psutil
@@ -40,14 +47,6 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-_DFLT_LOG_DATEFMT = "%H:%M:%S"
-_DFLT_LOG_DATEFMT_LOGFILE = "%Y-%m-%d %H:%M:%S"
-_DFLT_LOG_FMT_CONSOLE = "[%(levelname)-8s] %(message)s"
-_DFLT_LOG_FMT_LOGFILE = (
-    "%(asctime)s,%(msecs)03d [%(name)-17s:%(lineno)-4d][%(levelname)-8s][%(process)d]"
-    " %(message)s"
-)
-_DFLT_LOG_FMT_JID = "[JID: %(jid)s]"
 _DFLT_REFSPECS = ["+refs/heads/*:refs/remotes/origin/*", "+refs/tags/*:refs/tags/*"]
 DEFAULT_INTERVAL = 60
 
@@ -118,7 +117,7 @@ VALID_OPTS = immutabletypes.freeze(
         # specify 'default' or 'ip_only'. If 'ip_only' is specified, then the
         # master address will not be split into IP and PORT.
         "master_uri_format": str,
-        # The following optiosn refer to the Minion only, and they specify
+        # The following options refer to the Minion only, and they specify
         # the details of the source address / port to be used when connecting to
         # the Master. This is useful when dealing withmachines where due to firewall
         # rules you are restricted to use a certain IP/port combination only.
@@ -157,7 +156,7 @@ VALID_OPTS = immutabletypes.freeze(
         # Instead of computing the signature for each auth-reply, use a pre-calculated signature.
         # The master_pubkey_signature must also be set for this.
         "master_use_pubkey_signature": bool,
-        # Enable master stats eveents to be fired, these events will contain information about
+        # Enable master stats events to be fired, these events will contain information about
         # what commands the master is processing and what the rates are of the executions
         "master_stats": bool,
         "master_stats_event_iter": int,
@@ -646,7 +645,7 @@ VALID_OPTS = immutabletypes.freeze(
         "fileserver_followsymlinks": bool,
         "fileserver_ignoresymlinks": bool,
         "fileserver_verify_config": bool,
-        # Optionally apply '*' permissioins to any user. By default '*' is a fallback case that is
+        # Optionally apply '*' permissions to any user. By default '*' is a fallback case that is
         # applied only if the user didn't matched by other matchers.
         "permissive_acl": bool,
         # Optionally enables keeping the calculated user's auth list in the token file.
@@ -749,6 +748,8 @@ VALID_OPTS = immutabletypes.freeze(
         "grains_blacklist": list,
         # The number of minutes between the minion refreshing its cache of grains
         "grains_refresh_every": int,
+        # Enable grains refresh prior to any operation
+        "grains_refresh_pre_exec": bool,
         # Use lspci to gather system data for grains on a minion
         "enable_lspci": bool,
         # The number of seconds for the salt client to wait for additional syndics to
@@ -870,7 +871,7 @@ VALID_OPTS = immutabletypes.freeze(
         "no_proxy": list,
         # Minion de-dup jid cache max size
         "minion_jid_queue_hwm": int,
-        # Minion data cache driver (one of satl.cache.* modules)
+        # Minion data cache driver (one of salt.cache.* modules)
         "cache": str,
         # Enables a fast in-memory cache booster and sets the expiration time.
         "memcache_expire_seconds": int,
@@ -1142,11 +1143,11 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "log_file": os.path.join(salt.syspaths.LOGS_DIR, "minion"),
         "log_level": "warning",
         "log_level_logfile": None,
-        "log_datefmt": _DFLT_LOG_DATEFMT,
-        "log_datefmt_logfile": _DFLT_LOG_DATEFMT_LOGFILE,
-        "log_fmt_console": _DFLT_LOG_FMT_CONSOLE,
-        "log_fmt_logfile": _DFLT_LOG_FMT_LOGFILE,
-        "log_fmt_jid": _DFLT_LOG_FMT_JID,
+        "log_datefmt": DFLT_LOG_DATEFMT,
+        "log_datefmt_logfile": DFLT_LOG_DATEFMT_LOGFILE,
+        "log_fmt_console": DFLT_LOG_FMT_CONSOLE,
+        "log_fmt_logfile": DFLT_LOG_FMT_LOGFILE,
+        "log_fmt_jid": DFLT_LOG_FMT_JID,
         "log_granular_levels": {},
         "log_rotate_max_bytes": 0,
         "log_rotate_backup_count": 0,
@@ -1469,11 +1470,11 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "log_file": os.path.join(salt.syspaths.LOGS_DIR, "master"),
         "log_level": "warning",
         "log_level_logfile": None,
-        "log_datefmt": _DFLT_LOG_DATEFMT,
-        "log_datefmt_logfile": _DFLT_LOG_DATEFMT_LOGFILE,
-        "log_fmt_console": _DFLT_LOG_FMT_CONSOLE,
-        "log_fmt_logfile": _DFLT_LOG_FMT_LOGFILE,
-        "log_fmt_jid": _DFLT_LOG_FMT_JID,
+        "log_datefmt": DFLT_LOG_DATEFMT,
+        "log_datefmt_logfile": DFLT_LOG_DATEFMT_LOGFILE,
+        "log_fmt_console": DFLT_LOG_FMT_CONSOLE,
+        "log_fmt_logfile": DFLT_LOG_FMT_LOGFILE,
+        "log_fmt_jid": DFLT_LOG_FMT_JID,
         "log_granular_levels": {},
         "log_rotate_max_bytes": 0,
         "log_rotate_backup_count": 0,
@@ -1660,11 +1661,11 @@ DEFAULT_CLOUD_OPTS = immutabletypes.freeze(
         "log_file": os.path.join(salt.syspaths.LOGS_DIR, "cloud"),
         "log_level": "warning",
         "log_level_logfile": None,
-        "log_datefmt": _DFLT_LOG_DATEFMT,
-        "log_datefmt_logfile": _DFLT_LOG_DATEFMT_LOGFILE,
-        "log_fmt_console": _DFLT_LOG_FMT_CONSOLE,
-        "log_fmt_logfile": _DFLT_LOG_FMT_LOGFILE,
-        "log_fmt_jid": _DFLT_LOG_FMT_JID,
+        "log_datefmt": DFLT_LOG_DATEFMT,
+        "log_datefmt_logfile": DFLT_LOG_DATEFMT_LOGFILE,
+        "log_fmt_console": DFLT_LOG_FMT_CONSOLE,
+        "log_fmt_logfile": DFLT_LOG_FMT_LOGFILE,
+        "log_fmt_jid": DFLT_LOG_FMT_JID,
         "log_granular_levels": {},
         "log_rotate_max_bytes": 0,
         "log_rotate_backup_count": 0,
@@ -1832,7 +1833,12 @@ def _validate_opts(opts):
                         # VALID_OPTS[key] is not iterable and not None
                         pass
 
-            if isinstance(val, VALID_OPTS[key]):
+            # int(True) evaluates to 1, int(False) evaluates to 0
+            # We want to make sure True and False are only valid for bool
+            if val is True or val is False:
+                if VALID_OPTS[key] is bool:
+                    continue
+            elif isinstance(val, VALID_OPTS[key]):
                 continue
 
             # We don't know what data type sdb will return at run-time so we
@@ -1840,33 +1846,80 @@ def _validate_opts(opts):
             if isinstance(val, str) and val.startswith("sdb://"):
                 continue
 
+            # Non-failing types that don't convert properly
+            nf_types = {
+                str: [list, tuple, dict],
+                list: [dict, str],
+                tuple: [dict, str],
+                bool: [list, tuple, str, int, float, dict, type(None)],
+                int: [bool, float],
+                float: [bool],
+            }
+
+            # Is this a single type (not a tuple of types)?
             if hasattr(VALID_OPTS[key], "__call__"):
+                # This config option has a single defined type
                 try:
+                    # This will try to evaluate the specified value type
                     VALID_OPTS[key](val)
-                    if isinstance(val, (list, dict)):
-                        # We'll only get here if VALID_OPTS[key] is str or
-                        # bool, and the passed value is a list/dict. Attempting
-                        # to run int() or float() on a list/dict will raise an
-                        # exception, but running str() or bool() on it will
-                        # pass despite not being the correct type.
-                        errors.append(
-                            err.format(
-                                key, val, type(val).__name__, VALID_OPTS[key].__name__
-                            )
-                        )
+
+                    # Since it evaluated properly, let's make sure it's valid
+                    # Some value types don't evaluate properly. For example,
+                    # running list on a string: `list("test")` will return
+                    # a list of individual characters:`['t', 'e', 's', 't']` and
+                    # therefore won't fail on evaluation
+                    for nf_type in nf_types:
+                        if VALID_OPTS[key] is nf_type:
+                            # Is it one of the non-failing types that we don't
+                            # want for this type
+                            if isinstance(val, tuple(nf_types[nf_type])):
+                                errors.append(
+                                    err.format(
+                                        key,
+                                        val,
+                                        type(val).__name__,
+                                        VALID_OPTS[key].__name__,
+                                    )
+                                )
                 except (TypeError, ValueError):
                     errors.append(
                         err.format(
                             key, val, type(val).__name__, VALID_OPTS[key].__name__
                         )
                     )
-                continue
+            else:
+                # This config option has multiple defined types (tuple of types)
+                if type(val) in VALID_OPTS[key]:
+                    continue
 
-            errors.append(
-                err.format(
-                    key, val, type(val).__name__, format_multi_opt(VALID_OPTS[key])
-                )
-            )
+                valid = []
+                for nf_type in nf_types:
+                    try:
+                        nf_type(val)
+
+                        if nf_type in VALID_OPTS[key]:
+                            nf = nf_types[nf_type]
+                            for item in VALID_OPTS[key]:
+                                if item in nf:
+                                    nf.remove(item)
+                            if isinstance(val, tuple(nf)):
+                                # Running str on any of the above types will succeed,
+                                # however, it will change the value in such a way
+                                # that it is invalid.
+                                valid.append(False)
+                            else:
+                                valid.append(True)
+                    except (TypeError, ValueError):
+                        valid.append(False)
+                if True not in valid:
+                    errors.append(
+                        err.format(
+                            key,
+                            val,
+                            type(val).__name__,
+                            format_multi_opt(VALID_OPTS[key]),
+                        )
+                    )
 
     # Convert list to comma-delimited string for 'return' config option
     if isinstance(opts.get("return"), list):

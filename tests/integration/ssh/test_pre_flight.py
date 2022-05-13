@@ -25,10 +25,14 @@ class SSHPreFlightTest(SSHCase):
             RUNTIME_VARS.TMP, "test-pre-flight-script-worked.txt"
         )
 
-    def _create_roster(self):
-        self.custom_roster(self.roster, self.data)
+    def _create_roster(self, pre_flight_script_args=None):
+        data = dict(self.data)
+        if pre_flight_script_args:
+            data["ssh_pre_flight_args"] = pre_flight_script_args
 
-        with salt.utils.files.fopen(self.data["ssh_pre_flight"], "w") as fp_:
+        self.custom_roster(self.roster, data)
+
+        with salt.utils.files.fopen(data["ssh_pre_flight"], "w") as fp_:
             fp_.write("touch {}".format(self.test_script))
 
     @pytest.mark.slow_test
@@ -59,6 +63,45 @@ class SSHPreFlightTest(SSHCase):
         assert os.path.exists(self.test_script)
 
     @pytest.mark.slow_test
+    def test_ssh_run_pre_flight_args(self):
+        """
+        test ssh when --pre-flight is passed to salt-ssh
+        to ensure the script runs successfully passing some args
+        """
+        self._create_roster(pre_flight_script_args="foobar test")
+        # make sure we previously ran a command so the thin dir exists
+        self.run_function("test.ping", wipe=False)
+        assert not os.path.exists(self.test_script)
+
+        assert self.run_function(
+            "test.ping", ssh_opts="--pre-flight", roster_file=self.roster, wipe=False
+        )
+        assert os.path.exists(self.test_script)
+
+    @pytest.mark.slow_test
+    def test_ssh_run_pre_flight_args_prevent_injection(self):
+        """
+        test ssh when --pre-flight is passed to salt-ssh
+        and evil arguments are used in order to produce shell injection
+        """
+        injected_file = os.path.join(RUNTIME_VARS.TMP, "injection")
+        self._create_roster(
+            pre_flight_script_args="foobar; echo injected > {}".format(injected_file)
+        )
+        # make sure we previously ran a command so the thin dir exists
+        self.run_function("test.ping", wipe=False)
+        assert not os.path.exists(self.test_script)
+        assert not os.path.isfile(injected_file)
+
+        assert self.run_function(
+            "test.ping", ssh_opts="--pre-flight", roster_file=self.roster, wipe=False
+        )
+
+        assert not os.path.isfile(
+            injected_file
+        ), "File injection suceeded. This shouldn't happend"
+
+    @pytest.mark.slow_test
     def test_ssh_run_pre_flight_failure(self):
         """
         test ssh_pre_flight when there is a failure
@@ -77,7 +120,12 @@ class SSHPreFlightTest(SSHCase):
         """
         make sure to clean up any old ssh directories
         """
-        files = [self.roster, self.data["ssh_pre_flight"], self.test_script]
+        files = [
+            self.roster,
+            self.data["ssh_pre_flight"],
+            self.test_script,
+            os.path.join(RUNTIME_VARS.TMP, "injection"),
+        ]
         for fp_ in files:
             if os.path.exists(fp_):
                 os.remove(fp_)
