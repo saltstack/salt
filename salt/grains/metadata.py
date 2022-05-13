@@ -21,7 +21,6 @@ ify the custom metadata server.
 # Import python libs
 import os
 import socket
-from telnetlib import IP
 
 # Import salt libs
 import salt.utils.data
@@ -29,14 +28,18 @@ import salt.utils.http as http
 import salt.utils.json
 import salt.utils.stringutils
 
+# metadata server information
+IP = "169.254.169.254"
+HOST = "http://{}/".format(IP)
 
 def __virtual__():
     global IP
     global HOST
     # metadata server information
-    IP = "169.254.169.254"
-    IP = __opts__.get("metadata_server_host", "169.254.169.254")
-    HOST = "http://{}/".format(IP)
+    metadata_server_host = __opts__.get("metadata_server_host", "")
+    if metadata_server_host != "":
+        IP = metadata_server_host
+        HOST = "http://{}/".format(IP)
     if __opts__.get("metadata_server_grains", False) is False:
         return False
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
