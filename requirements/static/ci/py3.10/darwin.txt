@@ -595,7 +595,7 @@ oscrypto==1.2.0
     # via certvalidator
 packaging==19.2
     # via pytest
-paramiko==2.7.1
+paramiko==2.10.1
     # via
     #   junos-eznc
     #   ncclient
@@ -689,7 +689,7 @@ python-dateutil==2.8.0
     #   vcert
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.in
-python-gnupg==0.4.4
+python-gnupg==0.4.8
     # via -r requirements/darwin.txt
 pytz==2021.1
     # via
@@ -763,6 +763,7 @@ six==1.16.0
     #   msrestazure
     #   ncclient
     #   packaging
+    #   paramiko
     #   pynacl
     #   pyopenssl
     #   python-dateutil

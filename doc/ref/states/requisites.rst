@@ -1118,9 +1118,9 @@ Check Command is used for determining that a state did or did not run as
 expected.
 
 **NOTE**: Under the hood ``check_cmd`` calls ``cmd.retcode`` with
-``python_shell=True``. This means the commands referenced by unless will be
-parsed by a shell, so beware of side-effects as this shell will be run with the
-same privileges as the salt-minion.
+``python_shell=True``. This means the command will be parsed by a shell, so
+beware of side-effects as this shell will be run with the same privileges as
+the salt-minion.
 
 .. code-block:: yaml
 

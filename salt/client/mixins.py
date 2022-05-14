@@ -5,15 +5,16 @@ A collection of mixins useful for the various *Client interfaces
 import copy
 import fnmatch
 import logging
+import os
 import signal
 import traceback
 import weakref
 from collections.abc import Mapping, MutableMapping
 
+import salt._logging
 import salt.channel.client
 import salt.exceptions
 import salt.ext.tornado.stack_context
-import salt.log.setup
 import salt.minion
 import salt.output
 import salt.utils.args
@@ -479,13 +480,15 @@ class AsyncClientMixin(ClientStateMixin):
         master and fire the return data on the event bus
         """
         if daemonize and not salt.utils.platform.is_windows():
-            # Shutdown the multiprocessing before daemonizing
-            salt.log.setup.shutdown_multiprocessing_logging()
-
+            # Shutdown logging before daemonizing
+            salt._logging.shutdown_logging()
             salt.utils.process.daemonize()
-
-            # Reconfigure multiprocessing logging after daemonizing
-            salt.log.setup.setup_multiprocessing_logging()
+            # Because we have daemonized, salt._logging.in_mainprocess() will
+            # return False. We'll just force it to return True for this
+            # particular case so that proper logging can be set up.
+            salt._logging.in_mainprocess.__pid__ = os.getpid()
+            # Configure logging once daemonized
+            salt._logging.setup_logging()
 
         # pack a few things into low
         low["__jid__"] = jid
@@ -503,13 +506,15 @@ class AsyncClientMixin(ClientStateMixin):
         locally and fire the return data on the event bus
         """
         if daemonize and not salt.utils.platform.is_windows():
-            # Shutdown the multiprocessing before daemonizing
-            salt.log.setup.shutdown_multiprocessing_logging()
-
+            # Shutdown logging before daemonizing
+            salt._logging.shutdown_logging()
             salt.utils.process.daemonize()
-
-            # Reconfigure multiprocessing logging after daemonizing
-            salt.log.setup.setup_multiprocessing_logging()
+            # Because we have daemonized, salt._logging.in_mainprocess() will
+            # return False. We'll just force it to return True for this
+            # particular case so that proper logging can be set up.
+            salt._logging.in_mainprocess.__pid__ = os.getpid()
+            # Configure logging once daemonized
+            salt._logging.setup_logging()
 
         # pack a few things into low
         low["__jid__"] = jid

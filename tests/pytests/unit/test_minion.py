@@ -10,6 +10,7 @@ import salt.minion
 import salt.syspaths
 import salt.utils.crypt
 import salt.utils.event as event
+import salt.utils.jid
 import salt.utils.platform
 import salt.utils.process
 from salt._compat import ipaddress
@@ -893,7 +894,7 @@ def test_sock_path_len():
 
 
 @pytest.mark.skip_on_windows(reason="Skippin, no Salt master running on Windows.")
-def test_master_type_failover():
+async def test_master_type_failover():
     """
     Tests master_type "failover" to not fall back to 127.0.0.1 address when master does not resolve in DNS
     """
@@ -934,10 +935,10 @@ def test_master_type_failover():
     ), patch("salt.loader.grains", MagicMock(return_value=[])):
         with pytest.raises(SaltClientError):
             minion = salt.minion.Minion(mock_opts)
-            yield minion.connect_master()
+            await minion.connect_master()
 
 
-def test_master_type_failover_no_masters():
+async def test_master_type_failover_no_masters():
     """
     Tests master_type "failover" to not fall back to 127.0.0.1 address when no master can be resolved
     """
@@ -960,7 +961,7 @@ def test_master_type_failover_no_masters():
     ):
         with pytest.raises(SaltClientError):
             minion = salt.minion.Minion(mock_opts)
-            yield minion.connect_master()
+            await minion.connect_master()
 
 
 def test_config_cache_path_overrides():

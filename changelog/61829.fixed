@@ -1,0 +1,1 @@
+Ensure that `salt://` URIs never contain backslashes, converting them to forward slashes instead.  A specific situation to handle is caching files on Windows minions, where Jinja relative imports introduce a backslash into the path.
