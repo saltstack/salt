@@ -2211,8 +2211,7 @@ class Minion(MinionBase):
                 load["return"][key] = value
         else:
             load = {"cmd": ret_cmd, "id": self.opts["id"]}
-            for key, value in ret.items():
-                load[key] = value
+            load.update(ret)
 
         if "out" in ret:
             if isinstance(ret["out"], str):
