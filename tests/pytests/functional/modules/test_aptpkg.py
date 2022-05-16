@@ -43,6 +43,7 @@ def configure_loader_modules(minion_opts):
 @pytest.fixture()
 def revert_repo_file(tmp_path):
     try:
+        aptpkg.refresh_db()
         repo_file = pathlib.Path("/etc") / "apt" / "sources.list"
         backup = tmp_path / "repo_backup"
         # make copy of repo file
