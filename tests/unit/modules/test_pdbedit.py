@@ -46,7 +46,6 @@ class PdbeditTestCase(TestCase, LoaderModuleMockMixin):
         (osname, osrelease, oscodename) = (
             x.strip('"').strip("'") for x in _linux_distribution()
         )
-        print(osname, osrelease, oscodename)
 
         # NOTE: no pdbedit installed
         with patch("salt.utils.path.which", MagicMock(return_value=None)):
