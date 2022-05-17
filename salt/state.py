@@ -2864,7 +2864,7 @@ class State:
             preload = {"jid": self.jid}
             ev_func(ret, tag, preload=preload)
 
-    def call_chunk(self, low, running, chunks):
+    def call_chunk(self, low, running, chunks, depth=0):
         """
         Check if a chunk has any requires, execute the requires and then
         the chunk
@@ -3004,7 +3004,20 @@ class State:
                     self.pre[tag]["changes"] = {"watch": "watch"}
                     self.pre[tag]["result"] = None
             else:
-                running = self.call_chunk(low, running, chunks)
+                depth += 1
+                # even this depth is being generous. This shouldn't exceed 1 no
+                # matter how the loops are happening
+                if depth >= 20:
+                    log.error("Recursive requisite found")
+                    running[tag] = {
+                        "changes": {},
+                        "result": False,
+                        "comment": "Recursive requisite found",
+                        "__run_num__": self.__run_num,
+                        "__sls__": low["__sls__"],
+                    }
+                else:
+                    running = self.call_chunk(low, running, chunks, depth)
             if self.check_failhard(chunk, running):
                 running["__FAILHARD__"] = True
                 return running
@@ -4131,8 +4144,7 @@ class BaseHighState:
                             log.error(msg)
                             errors.append(msg)
                             continue
-                        # relative paths become abolute paths, otherwise issue allowing for both
-                        inc_sls = os.sep.join(p_comps[:-level_count] + [include])
+                        inc_sls = ".".join(p_comps[:-level_count] + [include])
 
                     if env_key != xenv_key:
                         if matches is None:

@@ -234,6 +234,41 @@ class SSHSingleTests(TestCase):
             mock_flight.assert_called()
             assert ret == cmd_ret
 
+    def test_run_with_pre_flight_with_args(self):
+        """
+        test Single.run() when ssh_pre_flight is set
+        and script successfully runs
+        """
+        target = self.target.copy()
+        target["ssh_pre_flight"] = os.path.join(RUNTIME_VARS.TMP, "script.sh")
+        target["ssh_pre_flight_args"] = "foobar"
+        single = ssh.Single(
+            self.opts,
+            self.opts["argv"],
+            "localhost",
+            mods={},
+            fsclient=None,
+            thin=salt.utils.thin.thin_path(self.opts["cachedir"]),
+            mine=False,
+            **target
+        )
+
+        cmd_ret = ("Success", "foobar", 0)
+        mock_flight = MagicMock(return_value=cmd_ret)
+        mock_cmd = MagicMock(return_value=cmd_ret)
+        patch_flight = patch("salt.client.ssh.Single.run_ssh_pre_flight", mock_flight)
+        patch_cmd = patch("salt.client.ssh.Single.cmd_block", mock_cmd)
+        patch_exec_cmd = patch(
+            "salt.client.ssh.shell.Shell.exec_cmd", return_value=("", "", 1)
+        )
+        patch_os = patch("os.path.exists", side_effect=[True])
+
+        with patch_os, patch_flight, patch_cmd, patch_exec_cmd:
+            ret = single.run()
+            mock_cmd.assert_called()
+            mock_flight.assert_called()
+            assert ret == cmd_ret
+
     def test_run_with_pre_flight_stderr(self):
         """
         test Single.run() when ssh_pre_flight is set

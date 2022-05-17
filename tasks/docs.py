@@ -231,7 +231,17 @@ def check_virtual(ctx, files):
     for path in files:
         if path.name == "index.rst":
             continue
-        contents = path.read_text()
+        try:
+            contents = path.read_text()
+        except Exception as exc:  # pylint: disable=broad-except
+            utils.error(
+                "Error while processing '{}': {}".format(
+                    path,
+                    exc,
+                )
+            )
+            exitcode += 1
+            continue
         if ".. _virtual-" in contents:
             try:
                 python_module = doc_path_to_python_module[path]
@@ -305,9 +315,9 @@ def check_module_indexes(ctx, files):
             package = "cloud"
         if package == "file_server":
             package = "fileserver"
-        if package == "configuration":
-            package = "log"
-            path_parts = ["handlers"]
+        if package == "configuration" and path_parts == ["logging"]:
+            package = "log_handlers"
+            path_parts = []
         python_package = SALT_CODE_DIR.joinpath(package, *path_parts).relative_to(
             CODE_DIR
         )

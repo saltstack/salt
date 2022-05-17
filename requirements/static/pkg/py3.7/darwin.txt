@@ -47,7 +47,7 @@ jaraco.functools==2.0
     #   tempora
 jaraco.text==3.5.1
     # via jaraco.collections
-jinja2==3.0.3
+jinja2==3.1.0
     # via -r requirements/base.txt
 linode-python==1.1.1
     # via -r requirements/darwin.txt
@@ -82,7 +82,7 @@ pyopenssl==19.0.0
     # via -r requirements/darwin.txt
 python-dateutil==2.8.0
     # via -r requirements/darwin.txt
-python-gnupg==0.4.4
+python-gnupg==0.4.8
     # via -r requirements/darwin.txt
 pytz==2021.1
     # via tempora
