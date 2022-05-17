@@ -171,14 +171,14 @@ try:
     else:
         HAS_LIBS = False
 except ImportError:
-    HAS_ETCD = False
+    HAS_LIBS = False
 
 
 def __virtual__():
     """
     Only return if python-etcd is installed
     """
-    if HAS_ETCD:
+    if HAS_LIBS:
         return __virtualname__
     return (False, "Unable to import etcd_util")
 
@@ -362,11 +362,11 @@ def mod_watch(name, **kwargs):
 
     # Watch to set etcd key
     if kwargs.get("sfun") in ["wait_set_key", "wait_set"]:
-        return set_(name, kwargs.get("value"), kwargs.get("profile"))
+        return set_(name, kwargs.get("value"), profile=kwargs.get("profile"))
 
     # Watch to rm etcd key
     if kwargs.get("sfun") in ["wait_rm_key", "wait_rm"]:
-        return rm(name, kwargs.get("profile"))
+        return rm(name, profile=kwargs.get("profile"))
 
     return {
         "name": name,
