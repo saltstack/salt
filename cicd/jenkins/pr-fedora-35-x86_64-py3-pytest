@@ -2,9 +2,9 @@
 
 runTestSuite(
     concurrent_builds: 1,
-    distro_name: 'freebsd',
-    distro_version: '130',
-    distro_arch: 'amd64',
+    distro_name: 'fedora',
+    distro_version: '35',
+    distro_arch: 'x86-64',
     env: env,
     jenkins_slave_label: 'kitchen-slave',
     nox_env_name: 'pytest-zeromq',

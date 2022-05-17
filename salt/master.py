@@ -128,6 +128,44 @@ class SMaster:
         """
         return salt.daemons.masterapi.access_keys(self.opts)
 
+    @classmethod
+    def get_serial(cls, opts=None, event=None):
+        with cls.secrets["aes"]["secret"].get_lock():
+            if cls.secrets["aes"]["serial"].value == sys.maxsize:
+                cls.rotate_secrets(opts, event, use_lock=False)
+            else:
+                cls.secrets["aes"]["serial"].value += 1
+            return cls.secrets["aes"]["serial"].value
+
+    @classmethod
+    def rotate_secrets(cls, opts=None, event=None, use_lock=True):
+        log.info("Rotating master AES key")
+        if opts is None:
+            opts = {}
+
+        for secret_key, secret_map in cls.secrets.items():
+            # should be unnecessary-- since no one else should be modifying
+            if use_lock:
+                with secret_map["secret"].get_lock():
+                    secret_map["secret"].value = salt.utils.stringutils.to_bytes(
+                        secret_map["reload"]()
+                    )
+                    if "serial" in secret_map:
+                        secret_map["serial"].value = 0
+            else:
+                secret_map["secret"].value = salt.utils.stringutils.to_bytes(
+                    secret_map["reload"]()
+                )
+                if "serial" in secret_map:
+                    secret_map["serial"].value = 0
+            if event:
+                event.fire_event({"rotate_{}_key".format(secret_key): True}, tag="key")
+
+        if opts.get("ping_on_rotate"):
+            # Ping all minions to get them to pick up the new key
+            log.debug("Pinging all connected minions due to key rotation")
+            salt.utils.master.ping_all_connected_minions(opts)
+
 
 class Maintenance(salt.utils.process.SignalHandlingProcess):
     """
@@ -140,6 +178,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
 
         :param dict opts: The salt options
         """
+        self.master_secrets = kwargs.pop("master_secrets", None)
         super().__init__(**kwargs)
         self.opts = opts
         # How often do we perform the maintenance tasks
@@ -155,6 +194,8 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         in the parent process, then once the fork happens you'll start getting
         errors like "WARNING: Mixing fork() and threads detected; memory leaked."
         """
+        if self.master_secrets is not None:
+            SMaster.secrets = self.master_secrets
         # Load Runners
         ropts = dict(self.opts)
         ropts["quiet"] = True
@@ -279,21 +320,8 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                 to_rotate = True
 
         if to_rotate:
-            log.info("Rotating master AES key")
-            for secret_key, secret_map in SMaster.secrets.items():
-                # should be unnecessary-- since no one else should be modifying
-                with secret_map["secret"].get_lock():
-                    secret_map["secret"].value = salt.utils.stringutils.to_bytes(
-                        secret_map["reload"]()
-                    )
-                self.event.fire_event(
-                    {"rotate_{}_key".format(secret_key): True}, tag="key"
-                )
+            SMaster.rotate_secrets(self.opts, self.event)
             self.rotate = now
-            if self.opts.get("ping_on_rotate"):
-                # Ping all minions to get them to pick up the new key
-                log.debug("Pinging all connected minions due to key rotation")
-                salt.utils.master.ping_all_connected_minions(self.opts)
 
     def handle_git_pillar(self):
         """
@@ -667,8 +695,12 @@ class Master(SMaster):
                         salt.crypt.Crypticle.generate_key_string()
                     ),
                 ),
+                "serial": multiprocessing.Value(
+                    ctypes.c_longlong, lock=False  # We'll use the lock from 'secret'
+                ),
                 "reload": salt.crypt.Crypticle.generate_key_string,
             }
+
             log.info("Creating master process manager")
             # Since there are children having their own ProcessManager we should wait for kill more time.
             self.process_manager = salt.utils.process.ProcessManager(wait_for_kill=5)
@@ -676,7 +708,7 @@ class Master(SMaster):
             log.info("Creating master publisher process")
             for _, opts in iter_transport_opts(self.opts):
                 chan = salt.channel.server.PubServerChannel.factory(opts)
-                chan.pre_fork(self.process_manager)
+                chan.pre_fork(self.process_manager, kwargs={"secrets": SMaster.secrets})
                 pub_channels.append(chan)
 
             log.info("Creating master event publisher process")
