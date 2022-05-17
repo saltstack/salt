@@ -1,21 +1,29 @@
 #!/bin/bash
-############################################################################
+################################################################################
 #
-# Title: Build Salt Script for macOS
+# Title: Build Salt Package Script for macOS
 # Authors: CR Oldham, Shane Lee
 # Date: December 2015
 #
 # Description: This script downloads and installs all dependencies and build
 #              tools required to create a .pkg file for installation on macOS.
-#              Salt and all dependencies will be installed to /opt/salt. A
-#              .pkg file will then be created based on the contents of
-#              /opt/salt
+#              Salt and all dependencies will be installed to a pyenv
+#              environment in /opt/salt. A .pkg file will then be created based
+#              on the contents of /opt/salt. The pkg will be signed
+#
+#              This script must be run with sudo. In order for the environment
+#              variables to be available in sudo you need to pass the `-E`
+#              option. For example:
+#
+#              sudo -E ./build.sh 3003
 #
 # Requirements:
 #     - Xcode Command Line Tools (xcode-select --install)
+#       or
+#     - Xcode
 #
 # Usage:
-#     This script can be passed 3 parameters
+#     This script can be passed 3 positional arguments:
 #         $1 : <version> : the version of salt to build
 #                          (a git tag, not a branch)
 #                          (defaults to git-repo state)
@@ -31,22 +39,49 @@
 #         The following will build Salt v3001 with an optimized python and
 #         stage all files in /tmp/custom_pkg:
 #
-#         ./build.sh v3001 false /tmp/custom_pkg
+#         sudo -E ./build.sh 3001 false /tmp/custom_pkg
 #
-############################################################################
+# This script calls out to the following scripts:
+#
+#     build_env.sh
+#         Builds python using pyenv, libsodium, and zeromq. OpenSSL and Readline
+#         are compiled by pyenv.
+#
+#     build_pkg.sh
+#         Builds the package from the contents of /opt/salt
+#
+#     build_sig.sh
+#         Signs the installer package
+#
+# Environment Setup:
+#     This script requires certificates and environment variables be present on
+#     the system. They are used by the above scripts. Details can be found in
+#     the individual scripts that use them.
+#
+#     Import Certificates:
+#         Import the Salt Developer Application and Installer Signing
+#         certificates using the following commands:
+#
+#         security import "developerID_application.p12" -k ~/Library/Keychains/login.keychain
+#         security import "developerID_installer.p12" -k ~/Library/Keychains/login.keychain
+#
+################################################################################
+echo "#########################################################################"
+echo "Salt Package Build Script"
+echo "#########################################################################"
 
-############################################################################
+################################################################################
 # Make sure the script is launched with sudo
-############################################################################
-if [[ $(id -u) -ne 0 ]]
-    then
-        exec sudo /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
+################################################################################
+if [[ $(id -u) -ne 0 ]]; then
+    echo ">>>>>> Re-launching as sudo <<<<<<"
+    exec sudo /bin/bash -c "$(printf '%q ' "$BASH_SOURCE" "$@")"
 fi
 
-############################################################################
+################################################################################
 # Check passed parameters, set defaults
-############################################################################
-echo -n -e "\033]0;Build: Variables\007"
+################################################################################
+echo "**** Setting Variables"
 
 if [ "$1" == "" ]; then
     VERSION=`git describe`
@@ -66,49 +101,53 @@ else
     PKGDIR=$3
 fi
 
-############################################################################
+################################################################################
 # Additional Parameters Required for the script to function properly
-############################################################################
+################################################################################
 SRCDIR=`git rev-parse --show-toplevel`
 PKGRESOURCES=$SRCDIR/pkg/osx
 PYTHON=/opt/salt/bin/python3
 CPUARCH=`uname -m`
 
-############################################################################
+################################################################################
 # Make sure this is the Salt Repository
-############################################################################
+################################################################################
 if [[ ! -e "$SRCDIR/.git" ]] && [[ ! -e "$SRCDIR/scripts/salt" ]]; then
     echo "This directory doesn't appear to be a git repository."
     echo "The macOS build process needs some files from a Git checkout of Salt."
     echo "Run this script from the root of the Git checkout."
-    exit -1
+    echo -en "\033]0;\a"
+    exit 1
 fi
 
-############################################################################
+################################################################################
 # Create the Build Environment
-############################################################################
-echo -n -e "\033]0;Build: Build Environment\007"
+################################################################################
+echo "**** Building the environment"
 $PKGRESOURCES/build_env.sh $TEST_MODE
 if [[ "$?" != "0" ]]; then
     echo "Failed to build the environment."
-    exit -1
+    echo -en "\033]0;\a"
+    exit 1
 fi
-############################################################################
+################################################################################
 # Install Salt
-############################################################################
+################################################################################
+echo "**** Installing Salt into the environment"
 echo -n -e "\033]0;Build: Install Salt\007"
 rm -rf $SRCDIR/build
 rm -rf $SRCDIR/dist
-$PYTHON $SRCDIR/setup.py build -e "$PYTHON -E -s"
+$PYTHON $SRCDIR/setup.py build -e "$PYTHON -E -s --upgrade"
 $PYTHON $SRCDIR/setup.py install
 
-############################################################################
-# Build Package
-############################################################################
+################################################################################
+# Build and Sign Package
+################################################################################
+echo "**** Building the package"
 echo -n -e "\033]0;Build: Package Salt\007"
 $PKGRESOURCES/build_pkg.sh $VERSION $PKGDIR
 
-############################################################################
-# Sign Package
-############################################################################
-$PKGRESOURCES/build_sig.sh salt-$VERSION-py3-$CPUARCH.pkg salt-$VERSION-py3-$CPUARCH-signed.pkg
+echo -en "\033]0;\a"
+echo "#########################################################################"
+echo "Salt Package Build Script Complete"
+echo "#########################################################################"
