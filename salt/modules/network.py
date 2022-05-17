@@ -2076,6 +2076,12 @@ def fqdns():
     """
     Return all known FQDNs for the system by enumerating all interfaces and
     then trying to reverse resolve them (excluding 'lo' interface).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.fqdns
     """
     # Provides:
     # fqdns
