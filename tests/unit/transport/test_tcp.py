@@ -3,6 +3,7 @@
 """
 
 import logging
+import os
 import socket
 import threading
 
@@ -24,7 +25,7 @@ from salt.transport.tcp import (
 from saltfactories.utils.ports import get_unused_localhost_port
 from tests.support.helpers import flaky, slowTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, create_autospec, patch
 from tests.support.unit import TestCase, skipIf
 from tests.unit.transport.mixins import (
     PubChannelMixin,
@@ -273,6 +274,85 @@ class AsyncTCPPubChannelTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
             channel.connect()
         assert patch_client.call_args[0][0]["publish_port"] == opts["publish_port"]
 
+    def test_when_async_req_channel_with_syndic_role_should_use_syndic_master_pub_file_to_verify_master_sig(
+        self,
+    ):
+        """
+        test when publish_port is not 4506
+        """
+
+        @salt.ext.tornado.gen.coroutine
+        def mocksend(msg, timeout=60, tries=3):
+            raise salt.ext.tornado.gen.Return({"pillar": "data", "key": "value"})
+
+        with patch("salt.transport.tcp.PKCS1_OAEP", create=True) as fake_crypto, patch(
+            "salt.crypt.AsyncAuth.get_keys", autospec=True
+        ):
+            expected_pubkey_path = os.path.join(
+                "/etc/salt/pki/minion", "syndic_master.pub"
+            )
+            fake_crypto.new.return_value.decrypt.return_value = "decrypted_return_value"
+            mockloop = MagicMock()
+            opts = {
+                "master_uri": "tcp://127.0.0.1:4506",
+                "interface": "127.0.0.1",
+                "ret_port": 4506,
+                "ipv6": False,
+                "sock_dir": ".",
+                "pki_dir": "/etc/salt/pki/minion",
+                "id": "syndic",
+                "__role": "syndic",
+                "keysize": 4096,
+            }
+            client = salt.transport.tcp.AsyncTCPReqChannel(opts, io_loop=mockloop)
+
+            dictkey = "pillar"
+            target = "minion"
+
+            # Mock auth and message client.
+            client.auth._authenticate_future = MagicMock()
+            client.auth._authenticate_future.done.return_value = True
+            client.auth._authenticate_future.exception.return_value = None
+            client.auth._crypticle = MagicMock()
+            client.message_client = create_autospec(client.message_client)
+
+            client.message_client.send = mocksend
+
+            # Note the 'ver' value in 'load' does not represent the the 'version' sent
+            # in the top level of the transport's message.
+            load = {
+                "id": target,
+                "grains": {},
+                "saltenv": "base",
+                "pillarenv": "base",
+                "pillar_override": True,
+                "extra_minion_data": {},
+                "ver": "2",
+                "cmd": "_pillar",
+            }
+            fake_nonce = 42
+            with patch("salt.crypt.Crypticle") as fake_crypticle:
+                fake_crypticle.generate_key_string.return_value = "fakey fake"
+                with patch(
+                    "salt.crypt.verify_signature", autospec=True, return_value=True
+                ) as fake_verify, patch(
+                    "salt.payload.Serial.loads",
+                    autospec=True,
+                    return_value={
+                        "key": "value",
+                        "nonce": fake_nonce,
+                        "pillar": "data",
+                    },
+                ), patch(
+                    "uuid.uuid4", autospec=True
+                ) as fake_uuid:
+                    fake_uuid.return_value.hex = fake_nonce
+                    ret = client.crypted_transfer_decode_dictentry(
+                        load, dictkey="pillar",
+                    )
+
+                    assert fake_verify.mock_calls[0].args[0] == expected_pubkey_path
+
 
 @skipIf(True, "Skip until we can devote time to fix this test")
 class AsyncPubChannelTest(BaseTCPPubCase, PubChannelMixin):
@@ -308,10 +388,12 @@ class SaltMessageClientPoolTest(AsyncTestCase):
         for message_client_mock in self.message_client_pool.message_clients:
             message_client_mock.send_queue = [0, 0, 0]
             message_client_mock.send.return_value = []
+        # pylint: disable=E1120
         self.assertEqual([], self.message_client_pool.send())
         self.message_client_pool.message_clients[2].send_queue = [0]
         self.message_client_pool.message_clients[2].send.return_value = [1]
         self.assertEqual([1], self.message_client_pool.send())
+        # pylint: enable=E1120
 
     def test_write_to_stream(self):
         for message_client_mock in self.message_client_pool.message_clients:
