@@ -2094,11 +2094,11 @@ def fqdns():
     fqdns = set()
 
     def _lookup_fqdn(ip):
-        # Random sleep between 0.025 and 0.050 to avoid hitting
+        # Random sleep between 0.005 and 0.025 to avoid hitting
         # the GLIBC race condition.
         # For more info, see:
         #   https://sourceware.org/bugzilla/show_bug.cgi?id=19329
-        time.sleep(random.randint(25, 50) / 1000)
+        time.sleep(random.randint(5, 25) / 1000)
         try:
             return [socket.getfqdn(socket.gethostbyaddr(ip)[0])]
         except socket.herror as err:
