@@ -2094,6 +2094,11 @@ def fqdns():
     fqdns = set()
 
     def _lookup_fqdn(ip):
+        # Random sleep between 0.025 and 0.050 to avoid hitting
+        # the GLIBC race condition.
+        # For more info, see:
+        #   https://sourceware.org/bugzilla/show_bug.cgi?id=19329
+        time.sleep(random.randint(25, 50) / 1000)
         try:
             return [socket.getfqdn(socket.gethostbyaddr(ip)[0])]
         except socket.herror as err:
@@ -2123,14 +2128,9 @@ def fqdns():
     # blocking execution for several seconds.
     try:
         with concurrent.futures.ThreadPoolExecutor(8) as pool:
-            future_lookups = {}
-            for address in addresses:
-                future_lookups[pool.submit(_lookup_fqdn, address)] = address
-                # Random sleep between 0.025 and 0.050 to avoid hitting
-                # the GLIBC race condition.
-                # For more info, see:
-                #   https://sourceware.org/bugzilla/show_bug.cgi?id=19329
-                time.sleep(random.randint(25, 50) / 1000)
+            future_lookups = {
+                pool.submit(_lookup_fqdn, address): address for address in addresses
+            }
             for future in concurrent.futures.as_completed(future_lookups):
                 try:
                     resolved_fqdn = future.result()
