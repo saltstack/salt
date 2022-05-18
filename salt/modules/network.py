@@ -7,6 +7,7 @@ import datetime
 import hashlib
 import logging
 import os
+import random
 import re
 import socket
 import time
@@ -2122,16 +2123,21 @@ def fqdns():
     # blocking execution for several seconds.
     try:
         with concurrent.futures.ThreadPoolExecutor(8) as pool:
-            future_lookups = {
-                pool.submit(_lookup_fqdn, address): address for address in addresses
-            }
+            future_lookups = {}
+            for address in addresses:
+                future_lookups[pool.submit(_lookup_fqdn, address)] = address
+                # Random sleep between 0.025 and 0.050 to avoid hitting
+                # the GLIBC race condition.
+                # For more info, see:
+                #   https://sourceware.org/bugzilla/show_bug.cgi?id=19329
+                time.sleep(random.randint(25, 50) / 1000)
             for future in concurrent.futures.as_completed(future_lookups):
-                address = future_lookups[future]
                 try:
                     resolved_fqdn = future.result()
                     if resolved_fqdn:
                         fqdns.update(resolved_fqdn)
                 except Exception as exc:  # pylint: disable=broad-except
+                    address = future_lookups[future]
                     log.error("Failed to resolve address %s: %s", address, exc)
     except Exception as exc:  # pylint: disable=broad-except
         log.error(
