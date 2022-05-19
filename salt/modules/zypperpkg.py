@@ -1214,6 +1214,9 @@ def mod_repo(repo, **kwargs):
         Enable or disable (True or False) repository,
         but do not remove if disabled.
 
+    name
+        This is used as the name value in the repo file.
+
     refresh
         Enable or disable (True or False) auto-refresh of the repository.
 
@@ -1328,8 +1331,9 @@ def mod_repo(repo, **kwargs):
     if "priority" in kwargs:
         cmd_opt.append("--priority={}".format(kwargs.get("priority", DEFAULT_PRIORITY)))
 
-    if "humanname" in kwargs:
-        cmd_opt.append("--name='{}'".format(kwargs.get("humanname")))
+    if "name" in kwargs:
+        cmd_opt.append("--name")
+        cmd_opt.append(kwargs.get("name"))
 
     if kwargs.get("gpgautoimport") is True:
         global_cmd_opt.append("--gpg-auto-import-keys")
