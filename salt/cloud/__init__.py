@@ -1143,7 +1143,7 @@ class Cloud:
 
         return ret
 
-    def create(self, vm_, local_master=True):
+    def create(self, vm_, local_master=True, sync_sleep=3):
         """
         Create a single VM
         """
@@ -1254,10 +1254,10 @@ class Cloud:
                     self.opts["sync_after_install"] = "all"
 
                 # A small pause helps the sync work more reliably
-                time.sleep(3)
+                time.sleep(sync_sleep)
 
-                start = int(time.time())
-                while int(time.time()) < start + 60:
+                expiration_time = time.time() + 60
+                while time.time() < expiration_time:
                     # We'll try every <timeout> seconds, up to a minute
                     mopts_ = copy.deepcopy(salt.config.DEFAULT_MASTER_OPTS)
                     conf_path = "/".join(self.opts["conf_file"].split("/")[:-1])
