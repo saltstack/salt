@@ -1,0 +1,3 @@
+Added support for changed user object in Zabbix 5.4+
+Added compatibility with Zabbix 4.0+ for `zabbix.user_getmedia` method
+Added support for setting medias in `zabbix.user_update` for Zabbix 3.4+
