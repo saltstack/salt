@@ -660,6 +660,8 @@ pycurl==7.44.1 ; python_version <= "3.9"
     # via -r requirements/static/ci/common.in
 pyeapi==0.8.4
     # via napalm
+pyftpdlib==1.5.6
+    # via pytest-localftpserver
 pyinotify==0.9.6 ; sys_platform != "win32" and sys_platform != "darwin" and platform_system != "openbsd"
     # via -r requirements/static/ci/common.in
 pyjwt==2.1.0
@@ -667,7 +669,9 @@ pyjwt==2.1.0
 pynacl==1.4.0
     # via paramiko
 pyopenssl==20.0.1
-    # via -r requirements/static/pkg/linux.in
+    # via
+    #   -r requirements/static/pkg/linux.in
+    #   pytest-localftpserver
 pyparsing==2.4.7
     # via
     #   junos-eznc
@@ -686,6 +690,8 @@ pytest-helpers-namespace==2021.4.29
     #   pytest-salt-factories
 pytest-httpserver==1.0.4
     # via -r requirements/pytest.txt
+pytest-localftpserver==1.1.3
+    # via -r requirements/pytest.txt
 pytest-salt-factories==0.912.1
     # via -r requirements/pytest.txt
 pytest-skip-markers==1.2.0
@@ -702,6 +708,7 @@ pytest==6.2.5 ; python_version <= "3.9"
     # via
     #   -r requirements/pytest.txt
     #   pytest-helpers-namespace
+    #   pytest-localftpserver
     #   pytest-salt-factories
     #   pytest-skip-markers
     #   pytest-subtests
